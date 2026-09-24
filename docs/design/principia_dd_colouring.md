@@ -102,7 +102,7 @@ Stability×Hue:  L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)
 
 ### 3.5 Combiners
 
-**Replace-L (Principia default)**: base RGB → OKLab; `L ← L_min + (L_max − L_min)·b`; `(a, b_ab)` untouched; → RGB. Preserves hue and chroma exactly. **Multiply**: `rgb·b` in linear space — preserves the base's own L structure (the escape hatch for monotone-L LUTs).
+**Replace-L (Principia default)**: base RGB → OKLab; `L ← L_min + (L_max − L_min)·b`, with defaults `L_min = 0`, `L_max = 1` — so the default is `L = b`, as `principia_colour_composition.md` §4.1's truth table has it; the range form is the general case (R-77); `(a, b_ab)` untouched; → RGB. Preserves hue and chroma exactly. **Multiply**: `rgb·b` in linear space — preserves the base's own L structure (the escape hatch for monotone-L LUTs).
 
 ### 3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)
 
@@ -118,7 +118,7 @@ flag       b ∈ {0, 1}
 
 ### 3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)
 
-State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
+The outcome `state` takes `principia_colour_composition.md` §1.4's canonical nine-class palette (R-77). Other categorical fields → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
 
 **The mixed-pixel question is anti-aliasing, not semantics** (sampling/SSAA note, ratified). Samples ≠ pixels: at a fractal boundary several disagreeing samples fall under one display pixel. Resolution: **each sample is coloured independently through the full pipeline, then a render-side resolve pass averages the sample *colours* into the pixel colour** (`post(combine(colour, brightness))` runs per sample; only then are colours averaged). Consequences:
 

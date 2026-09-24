@@ -231,7 +231,7 @@ dimension gets its own key:**
 - coordinate maps: their colour square (e.g. `u → red`, `v → green`);
 - post operations: line samples (quad boundaries, grid).
 
-It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §3's canonical palette and 0-based
+It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
 labels (R-22).
 
 ## G7. Chart builder (`03_chartbuilder.png`)

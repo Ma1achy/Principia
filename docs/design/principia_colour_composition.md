@@ -274,6 +274,8 @@ gain.
 | **None** | B        | `OKLab(L=B, 0, 0)` | `white · B` | **greyscale of the brightness field** (also the most CVD-robust encoding possible) |
 | **None** | **None** | flat mid-grey `OKLab(0.6,0,0)` | flat mid-grey | well-defined, harmless, instantly visible |
 
+Replace-L here is `L = B`: the range form `L_min + (L_max − L_min)·B` (`principia_dd_colouring.md` §3.5) at its defaults `L_min = 0`, `L_max = 1` (R-77).
+
 This gives, for free, exactly the "use anything as colour, anything as brightness, or neither"
 requirement: any field can occupy either slot (channel is independent of source — the *only*
 constraint is the output signature, `vec3` vs `f32`), and either slot can be empty.
