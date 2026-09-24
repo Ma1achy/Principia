@@ -333,3 +333,562 @@ Settled by a ruling or the notes, so not questions: the 1-based labels (R-22); t
 edges" (notes: no camera object; "Legend", never "Fate").
 - **Ruling:** R-68 (decisions.md): artboard values are illustrative; corpus values win; the Run window uses contract
   names. Closed in step 6.
+
+## RQ-25: Is the logH experiment and a refinement re-take milestone work, or settled? *(step 7, build plan)*
+
+Nothing is chosen.
+- `principia_00_philosophy.md` §7.8 "Sequencing — what is next, and why in this order" (:444): (1) "**logH experiment.** The
+  falsification test for the re-registration mechanism"; (2) "**The refinement mechanism, from scratch.**" — "**What must be
+  re-taken:** everything else, *including* "nothing beats breadth-first""; only then (3) "The GUI, and actually building the thing."
+- `principia_canonical_spec.md` §11, "Milestone/implementation build plan" (:153): "**The vertical slice has since collapsed the
+  research phases** — integrator, step control, escape criterion and refinement policy are settled with evidence — so the plan
+  is now a *build* plan."
+- **Needed:** whether the build plan carries the logH experiment and a refinement re-take as milestone work (and before which
+  milestone), or treats both as settled by the vertical slice (and §7.8 is marked as superseded by §11).
+
+## RQ-26: Kernel debug modes — four baked kernel variants, or fragment presets plus one bring-up mode *(step 7, render)*
+
+Nothing is chosen. R-41 settles only baked variants vs flag bits. It doesn't say which kernel modes exist.
+- `principia_render_contract.md` Part 6, Cross-check views (:202): "**Kernel debug dispatch modes** (a `DEBUG_MODE` enum,
+  selected as a baked kernel variant …): `NORMAL`, `UV_PASSTHROUGH`, `DECODE_PASSTHROUGH`, `ROUNDTRIP`".
+  `principia_lowering_contract.md` compute-side table (:52): "Kernel debug modes (UV / DECODE / ROUNDTRIP) | **BAKED**".
+  `principia_debug_tooling_plan.md` §A (:26) lists the same four.
+- `principia_colour_composition.md` §6 (:379): "**§A kernel modes → mostly presets, via fragment-side recompute (§3).**"
+  Appendix A (:508): "The **only** debug item that is *not* a render-key preset and *does* touch the kernel. A single
+  minimal mode". Its header (:6) says it supersedes "the mode-enumeration in `principia_debug_tooling_plan.md` §B–§G".
+- **Needed:** whether the kernel keeps the four `DEBUG_MODE` variants, or only Appendix A's bring-up mode (UV / DECODE /
+  ROUNDTRIP become fragment presets). If the latter, render_contract Part 6, lowering :52 and debug_tooling_plan §A are rewritten.
+
+## RQ-27: Stability × Hue — deleted, or the house pattern *(step 7, colour)*
+
+Nothing is chosen.
+- `principia_colour_composition.md` §4.1 (:288): "This **replaces the deleted "Stability × Hue"**".
+- The same file's §7 table (:424) still lists "| **Stability × Hue** | pipeline preset: … `brightness = FieldRamp{stability, lin}`",
+  and §7.1 (:480) lists "Stability × Hue | the house encoding, dd_colouring §3.4". Golden tests are pinned to §7.1 (R-16).
+- `principia_render_contract.md` Part 4 (:71): "Stability×Hue is the house pattern: hue = shape-sphere position, L = metric,
+  default BC proximity". `principia_dd_colouring.md` §3.4 heading (:88): "the house encoding (stability × hue)", with
+  `L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)`.
+- **Needed:** whether Stability × Hue is a preset (and on the golden list), or deleted (and §7, §7.1, render_contract Part 4 and
+  dd_colouring §3.4 drop it). If kept, what `stability` is as a field.
+
+## RQ-28: dd_colouring vs colour_composition — the Replace-L mapping and the outcome palette *(step 7, colour)*
+
+Nothing is chosen. colour_composition §8 (:494) says dd_colouring's "combine L-ownership rules (Replace-L / Multiply) are
+unchanged and referenced by §4.1", and that dd_colouring's "mode-by-mode presentation is superseded".
+1. **Replace-L.** `principia_dd_colouring.md` §3.5 (:103): "`L ← L_min + (L_max − L_min)·b`". `principia_colour_composition.md`
+   §4.1 truth table (:272–274): "`OKLab(L=B, a=Cₐ, b=C_b)`" and "`OKLab(L=B, 0, 0)`". These agree only if `L_min = 0`,
+   `L_max = 1`. Neither file gives default `L_min` / `L_max`.
+2. **The outcome palette.** dd_colouring §3.7: "State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond". colour_composition
+   §1.4 (:150–162): the `state` field has "a **canonical default palette**" of nine fixed sRGB classes. R-68 says the corpus's
+   palette hex codes win over the artboards, but doesn't say which corpus palette.
+- **Needed:** (1) which Replace-L formula, and the default `L_min` / `L_max` if the range form stays; (2) whether §1.4's
+  nine-class palette replaces dd_colouring §3.7's index rule for `state`.
+
+## RQ-29: The CVD matrices are not the Viénot/Brettel forms the text names *(step 7, colour)*
+
+Nothing is chosen.
+- `principia_colour_composition.md` §4.3 (:329): "The CVD matrices and linear-sRGB path are the Viénot/Brettel forms already in
+  the reference artefacts." §8 (:497) points to them: "its Eq. 5 and CVD matrices are in `principia_dd_colouring.md` §3.2 and §3.8".
+- `principia_dd_colouring.md` §3.8 (:136): single 3×3 matrices on linear RGB, e.g. deutan
+  `(0.625 0.375 0 / 0.700 0.300 0 / 0 0.300 0.700)`. Viénot (1999) and Brettel (1997) work through LMS space; these matrices
+  are not those forms.
+- **Needed:** which is authoritative: the §3.8 matrices as written, or real Viénot/Brettel (and the reference to replace them
+  with, for the golden tests).
+
+## RQ-30: Invalid values — NaN or sentinel, in storage and on screen *(step 7, render)*
+
+Nothing is chosen. Three passages pull different ways.
+1. **An absent field.** `principia_render_contract.md` Part 3 (:65): "reading anyway shows the sentinel/0 with the suspect
+   styling". Part 2 and the unpack layer (:15 area): an absent feature reads NaN (at E = 0, `ensemble_spread` → NaN).
+2. **A blown-up sample.** render_contract Field views, SimState row (:175): "**NaN is a deliberate sentinel** for a tier-absent
+   feature or a blown-up sample". Part 4 (:79): "**never NaN in storage buffers**". A tier-absent value is derived, not stored;
+   a blown-up sample's stored fields are.
+3. **Debug fields.** `principia_render_gui_spec.md` §13 (:714): "every colouring has an explicit invalid-pixel colour — a NaN /
+   sentinel must read as "no data", not as a value". §10.1 (:600): "**Debug fields are raw:** apart from the NaN guard there is
+   no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value".
+- **Needed:** (1) whether an absent field reads NaN or sentinel/0; (2) whether a blown-up sample may store NaN (payload §2's
+  "Failed-state contents are defined" may already answer it); (3) whether debug fields are a stated exception to §13.
+
+## RQ-31: How many samples per footprint, and where copy 0 sits *(step 7, sampling)*
+
+Nothing is chosen.
+- `principia_sampling_msaa_note.md` "The sampling pattern" (:95): "**copy_index** — `0 … E−1`: which of the E ensemble copies …
+  Copy 0 = the un-jittered nominal (offset 0, i.e. the pixel centre); copies 1…E−1 are Halton points 1…E−1." That is E
+  samples in all, E−1 of them jittered.
+- The same note (:29, :44, :68), render_contract and dd_colouring: "the resolve averages the E+1 colours"; "(E+1) full sims".
+  That is a nominal plus E jittered copies.
+- Also: Halton index 0 is `(0, 0)`, and Halton points lie in `[0,1)²`. "offset 0, i.e. the pixel centre" holds only if offsets
+  are centred (e.g. minus ½). The note doesn't say.
+- **Needed:** whether a footprint has E or E+1 samples (and the copy_index range to match), and whether the Halton offsets are
+  centred on the nominal.
+
+## RQ-32: The embedded "What travels" block uses the prototype's names and a 10-D latent *(step 7, image embedding)*
+
+Nothing is chosen.
+- `principia_dd_image_embedding.md` §6 (:106–109): "slice  z0[10], dimH, dimV, mag, zoom, pan, tilt, gamma"; "sim  horizon,
+  dtMacro, maxSteps, rColl, rEsc, eta, nSync"; "ensemble  E, N, jitter_frac".
+- `principia_colour_composition.md` §3 (:224): "`z` (the full 8-D latent"; `principia_canonical_spec.md` :48: "`z ∈ ℝ⁸`". The
+  contracts name `T`, `dt_macro`, `N_max`, `r_coll`, … ; `jitter_frac` has no counterpart in the fixed Halton-offset model (RQ-31).
+- **Needed:** whether the embedded record is rewritten against the contract names and the 8-D latent (and what replaces
+  `jitter_frac`), or keeps the prototype's fields with a mapping table.
+
+## RQ-33: Two decode rules that differ between files — the mirror deadband and seed selection *(step 7, decode)*
+
+Nothing is chosen. T1 (bit-determinism) depends on both.
+1. **The mirror boundary and its variable.**
+   - `principia_dd_decoder.md` §3.3 (:90–91): "mirror … if λ_y < 0, with deadband |λ_y| < δ_λ = 10⁻¹² → fixed no-mirror choice".
+   - `principia_chart_reference.md` §0.4 (:97): "if λ_y < −δ_λ:          mirror". `principia_dd_encode.md` §3.2 (:48–49):
+     "if λ_y < −δ_λ" and "|λ_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror".
+   - `principia_inverse_encode_contract.md` Part 6 (:151): "Mirror if `λ̃_y < 0` … Tie `|λ̃_y| < δ_λ`", on λ̃ = √μ_λ·λ, not λ.
+   - At λ_y = −δ_λ exactly, the first and last mirror and the middle two don't; and the threshold differs by √μ_λ.
+2. **The momentum seed.** chart_reference §2.2 (:256–257): "take the first seed with `‖w⁽²⁾‖²_m > ε_w` (default `1e−10`); if
+   several qualify, **choose the largest `‖w⁽²⁾‖_m` for conditioning**". "First" and "largest" pick different seeds. dd_decoder
+   §3.4 (:121): "all seeds < ε_w → DEGENERATE" puts the threshold on the norm, not its square.
+- **Needed:** (1) one mirror test: the variable (λ or λ̃), and `<` vs `≤` at `−δ_λ`; (2) first-qualifying or largest seed, and
+  whether `ε_w` bounds the norm or its square.
+
+## RQ-34: The affine slice — a common scale in `q`, or per-axis `s_u`, `s_v` *(step 7, chart)*
+
+Nothing is chosen.
+- `principia_chart_decoder_contract.md` Part 3 (:113): "z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂", with zoom as a common scale on `q`
+  (Part 4). `principia_coordinate_conventions_note.md` (:38): "same map, one authoritative form."
+- `principia_chart_reference.md` §1.1 (:142): "z(u, v) = z0 + (2u − 1)·s_u·q_1 + (2v − 1)·s_v·q_2". `s_u`, `s_v` are not defined.
+- **Needed:** whether the scale lives in `q` (chart_reference drops `s_u`, `s_v`) or in separate per-axis factors (and where they
+  live in the view state and the lock formula).
+
+## RQ-35: Must branch decisions match across precisions along a trajectory? *(step 7, parity)*
+
+Nothing is chosen.
+- **Yes:** `principia_integrator_contract.md` (:299): "branch decisions still match, by the comparison-only rule — Part 4";
+  Part 4 (:343): "values may diverge by precision; **branch decisions in the wrapper may not**". `principia_dd_integrator.md`
+  seam 1 (:258): "branch-trace equality over fuzzed ICs"; §3.3: "`N_sub`, `state`, `total_substeps`, and terminal labels are
+  **bit-identical across CPU-f64, CPU-f32, …** on every golden input". `principia_gpu_determinism_note.md`: branch words "are
+  asserted **bit-exact**".
+- **No:** `principia_parity_contract.md` Tier L (:47): "The previous wording said *"branch decisions must be identical across
+  precisions"*. **That is false and cannot be made true.**" Tier B table (:101): "a **label on a real trajectory** | **none — it
+  will differ**".
+- **And, within the parity contract:** Tier S (:120): "**do** assert: same **outcome class** (Tier L, exact)" — against Tier B's
+  "none — it will differ" for a label on a real trajectory.
+- **Needed:** the guarantee: branch decisions equal on identical inputs only (the integrator and determinism texts are
+  reworded), or along whole golden trajectories (and on which inputs); and, following from it, whether Tier S asserts the
+  outcome class.
+
+## RQ-36: Which backends pin the Tier-N tolerances — CI Dawn, or native `wgpu` *(step 7, parity)*
+
+Nothing is chosen.
+- `principia_parity_contract.md` §4 (:144): "run the same kernel on the CI Dawn backend and on a real browser … the matrix is
+  small — CI Dawn + one or two real browsers".
+- §6 (:173): the sim-parity runner is native, in-process via `wgpu`: "Native in-process parity is *simpler* than the old
+  Dawn-in-Node harness".
+- **Needed:** whether CI still runs Dawn, and which backend pair sets the Tier-N tolerances.
+
+## RQ-37: Payload descriptions that disagree with the payload doc *(step 7, payload)*
+
+Nothing is chosen. `principia_dd_simstate_payload.md` is the consolidated doc; the ledger's own canonical clause
+(`principia_dd_generation_root.md` :29) covers only its §3.1–3.3a. These are outside that clause.
+1. **The `times` word.** payload §2 (:192): "**Exact unsigned 16-bit macro-step indices** — the *only* format (no Q0.16
+   fallback". `principia_render_contract.md` unpack layer (:111): "requires horizon_steps = ceil(T/dt) <= 65535 (dispatch
+   invariant); else these revert to Q0.16 normalised". Ledger §5 test 4 (:443): "**Fixed-point:** `t_end`/`t_dmin` (in `times`)
+   round-trip with ≤ 1/65535 error". Also unstated: what dispatch does when `ceil(T/dt) > 65535` (refuse the config?).
+2. **Phase-state grouping.** Ledger §3.5 (:151): "`r, p` — 12 × f32 (vec4-grouped for alignment)". payload §1 (:36):
+   `array<vec2<f32>, 3>`, and §6: 8-byte aligned, vec2 groupings.
+3. **The debug catalogue's struct tables.** `principia_debug_tooling_plan.md` §D (:70): "`SimState` scalars (11 × f32)" over a
+   10-row table that lists `t_end_step` as a scalar (§C puts it in `times`) and `d_min` as an f32 (§B: "`d_min`, `dE_max`,
+   `dLz_max` (f16, packed)"). §E (:89): "`ICDescriptor` (12 × f32)" = 48 B, against `principia_canonical_spec.md` :79
+   "`ICDescriptor` (64 B)"; the padding isn't stated.
+4. **The `ICDescriptor` field set.** `principia_dd_decoder.md` §3.6 (:135–136) lists "E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes,
+   ρ_ratio, ρ_angle, r_min_pair₀" as ICDescriptor quantities. Ledger §3.6 (:162) has `m0 m1 m2`, `q_mass`, …, `K_0`, `V_0`,
+   `virial_ratio`, `r_min_pair_0` — `q_mass` and no `E₀` (render_contract :175 puts `E_0` among the `SimState` scalars).
+5. **Descriptor bits 8–15.** payload §2 (:163): "**`last_symbol` (bits 8–9) is a deliberate, versioned assignment**", reserved
+   10–15. `principia_canonical_spec.md` :79: "Descriptor: 8 bits used, 8–15 reserved." render_contract (:91, :96, :115, :120):
+   "bits 8–15 are reserved"; (:176) "`sample_descriptor` sub-fields — 8 bits". (Ledger :41–43 says the same, under its clause.)
+6. **The `saturated` condition.** payload §2: set when "`N_sub == N_max` occurred". render_contract (:94): "substep exponent ever
+   hit ⌈log2 N_max⌉"; `principia_debug_tooling_plan.md` §B (:45): "set iff the substep exponent hit `⌈log2 N_max⌉`". Ledger :39
+   agrees with the exponent form. The two agree only for power-of-two `N_max` (R-68's default 64 is).
+7. **The complexity proxy's rounding.** payload §6 (:396): `select(0u, 31u - countLeadingZeros(max(total,1u)), total > 1u)` and
+   render_contract (:97) `31u - countLeadingZeros(max(n, 1u))` are ⌊log₂⌋ (and differ at `total = 1`). debug_tooling_plan §B
+   (:47): "matches `⌈log2 Σ N_sub⌉`".
+8. **Accessor names.** payload §3 (:286) `fgw_prefix_length` and §6 (:352) `fgw_retained_prefix_length` for the same clamp.
+   render_contract uses `fgw_reduced_length` (:155) and `tm_t_dmin` (:109) beside `fgw_length_raw` (:132); only the last is in
+   its unpack layer.
+- **Needed:** confirm the payload doc governs all eight (and the others are conformed), or rule each; one name per accessor;
+  the `ICDescriptor` field list and size with its padding; floor or ceiling for the proxy.
+
+## RQ-38: `failed_fraction` vs "there is no failed category" *(step 7, payload)*
+
+Nothing is chosen.
+- `principia_dd_generation_root.md` §3.7 Refinement: `worst_energy_drift` is "input to the per-copy classifier that sets
+  `failed_fraction`"; (:323) "**`failed_fraction > 0.10` detects estimator failure**"; "Open" (:391): with `failed_fraction` as a
+  contributor, "a pixel whose copies cannot be integrated reads **indeterminate**".
+- The same section, "Ensemble spread" (:246, :253): "**There is also no "failed" category.**" … "**`error_ratio` replaces any
+  notion of a failure count**". `failed_fraction` is in no member table.
+- **Needed:** whether `failed_fraction` is a `QuadReduction` member (with a row, type and classifier), or retired in favour of
+  `error_ratio` (and the references are removed).
+
+## RQ-39: What stops in-view refinement — the screen-floor veto and `MAX_REL_DEPTH` vs policy §0.1 *(step 7, scheduler)*
+
+Nothing is chosen. R-15 gives the split decision to `Policy::Tolerance`; the stop rules around it still disagree.
+- `principia_scheduler_contract.md` Part 4 (:94): "Refinement happens iff the policy splits **AND** no veto has fired", with the
+  screen floor as the "everyday … view-relative veto" — yet the same Part says "Whether the criterion supersamples below it is
+  the refinement policy's call". (:86): "`MAX_REL_DEPTH` is a *voluntary* tighter cap … that may stop refinement *before* the
+  screen floor … `MAX_REL_DEPTH ≤ screen floor` always."
+- `principia_dd_refinement_policy.md` §0.1 (:58): "| **in view, below screen floor** | the **criterion** — supersampling where
+  unresolved | decides depth |"; (:51–52): "every in-view quad above the screen floor must split … **The in-view tree is complete
+  at screen resolution**".
+- `principia_memory_tiers.md` §2 (:58): sample density "is *fully determined* by the quadtree's screen-space floor" — one real
+  sample per render pixel.
+- **Needed:** (a) whether the screen floor is a hard veto or the criterion may supersample below it (and memory_tiers §2 with
+  it); (b) whether `MAX_REL_DEPTH` may stop an in-view quad above the screen floor, against §0.1's "must split".
+
+## RQ-40: The quality device note vs memory_tiers — sim-key knobs and the rung count *(step 7, quality)*
+
+Nothing is chosen.
+1. **Depth.** `principia_scheduler_contract.md` (:70): "**`MAX_REL_DEPTH` is not on the sim key.** … Lowering it while zoomed
+   invalidates *no payload*". `principia_quality_device_note.md` (:109): "**Sample count and depth are sim-key parameters**", and
+   §6: "sim-key rungs (samples, depth) trigger a re-boot". Its own struct (:14) marks `max_rel_depth` "scheduler knob".
+2. **`E`.** quality_device_note (:17): "`E, // ensemble/SSAA copies per nominal sample — sim key`"; §6 (:148): "sim-key knobs
+   adjust only at natural invalidation moments". `principia_memory_tiers.md` §5 (:187): "**E and the refinement floor move live
+   under motion** (copies drop/respawn without invalidating the nominal". quality_device_note itself (:117) has the heuristic
+   set "`e_motion_gating` to reduce E (→0/1) during an active march".
+3. **Rungs.** quality_device_note §3 (:132): "an ordered ladder of **~8–12 rungs**". memory_tiers §5 (:191): "The controller
+   subdivides each named tier into ~8–12 unnamed internal steps" (~48–72 in all).
+- **Needed:** (1) whether depth is a sim-key knob; (2) whether `E` can change live, and if so how that squares with its sim-key
+  status; (3) ~8–12 rungs in total, or per named tier.
+
+## RQ-41: The decoder switchover trigger *(step 7, deep zoom)*
+
+Nothing is chosen.
+- `principia_deep_zoom.md` §2 (:57): "Depth `≤ ℓ_switch` (default 20) → full decoder; depth `> ℓ_switch` → linearised … The more
+  robust trigger is *adaptive* … **switch when the energy-drift diagnostic sees adjacent samples collapsing to identical results.**"
+- `principia_scheduler_contract.md` Part 4 (:90): "When the *full nonlinear decoder's* adjacent samples collapse to
+  bitwise-identical ICs … switch to the linearised decoder".
+- `principia_lowering_contract.md` Part 5 (:137): "`decodeMode: quad.depth > SWITCH ? LIN : FULL`" (a depth threshold; `SWITCH`
+  is not defined there).
+- **Needed:** depth threshold, adaptive trigger, or both; and, if adaptive, whether collapse is detected by the energy-drift
+  diagnostic or by bitwise IC comparison.
+
+## RQ-42: Temporal accumulators as a second split trigger, beside `Policy::Tolerance` *(step 7, refinement)*
+
+Nothing is chosen.
+- `principia_scheduler_contract.md` Part 8 (:180): "**Split fires on either of two orthogonal signals:**" — spatial coherence
+  ("wide state spread", not `spread_shape > eps`) and "**Temporal accumulators** … **running max divergence** … **running mean
+  divergence**, **divergence trend** … **first-divergence time**". The latch "persists across visits".
+  `principia_temporal_architecture_note.md` (:75): "split if spatial_incoherence(now) > θ_s OR running_max_divergence > θ_max OR
+  divergence_trend(now) > θ_trend".
+- `principia_dd_refinement_policy.md` §1 and R-15: `split(quad) ⟺ any footprint f in quad is unresolved`, one knob `eps`.
+- **Needed:** whether the temporal accumulators (and the latch) survive under `Policy::Tolerance` — as a split trigger, as an
+  input to "unresolved", or not at all — and what `θ_s`, `θ_max`, `θ_trend` become.
+
+## RQ-43: Navigation — "neither key", but it edits sim-key inputs *(step 7, caching)*
+
+Nothing is chosen.
+- `principia_systems_architecture.md` "The two keys as ladder geometry" (:124–130): "SIM KEY … chart id+params · z₀/basis/warps
+  … ⇒ re-integrate" and "NAVIGATION   pan/slice/tilt/zoom/lock ⇒ NEITHER — re-addresses which quads are asked for".
+  `principia_canonical_spec.md` §8 (:99): navigation "(re-addresses which quads are asked for; neither key)".
+- `principia_canonical_spec.md` §4 (:60): "pan/slice edit `z₀`, zoom/tilt edit the basis, the lock pins the centre". R-69:
+  navigation "edits `z₀` and the basis".
+- **Needed:** which navigation edits re-address (quads keyed in a fixed chart frame) and which re-integrate (a new slice plane or
+  tilt changes every quad's ICs), and the sim key's `z₀/basis` entry stated to match.
+
+## RQ-44: The f32 predictability horizon — the cross-check gate and refinement *(step 7, validation)*
+
+Nothing is chosen.
+- `principia_dd_predictability_horizon.md` §4.1 (:135): "The cross-check should be gated on `t < t_max(f32)`". §1 gives ~16
+  crossing times; the §7 banner (:27): "`t_f64 ≈ 52`, `t_f32 ≈ 23`"; §6 item 3 (:231): "The f32 figure (~16) is derived, not
+  measured". §7.3's superseded box (:357) says §4.1's heading claim "is wrong in its reasoning", and that box is itself superseded
+  by the ✅ resolution box above it.
+- §4.2 (:150): a quad whose playhead exceeds its own `t_max` "should not be refined"; §6 item 2 (:228): "**Whether `t_max` should
+  gate refinement**, or merely annotate it" — open.
+- **Needed:** whether §4.1's gate stands (the value comes from the R-35 re-run), and whether `t_max` gates refinement or only
+  annotates it.
+
+## RQ-45: How often the engine posts the GUI snapshot *(step 7, membrane)*
+
+Nothing is chosen.
+- `principia_caching_contract.md` Part 6a (:134): the engine posts a GUI-sized snapshot "**throttled to ~10 Hz, never per-frame**".
+- `principia_systems_architecture.md` §3, the membrane table (:90): "| **State snapshot** | GUI-*sized* state … | wasm → JS | per
+  displayed frame; **never engine-sized**".
+- **Needed:** ~10 Hz or once per displayed frame (the other file is conformed).
+
+## RQ-46: Decoder labels and degenerate cases the corpus doesn't name *(step 7, decode)*
+
+The values or definitions below are missing. Each item gives the file, the section and the silence.
+- **The `M01_TINY` ε.** `principia_dd_decoder.md` §3.1 (:42): "if M₀₁ < ε  →  DEGENERATE(M01_TINY)"; `principia_chart_reference.md`
+  §0.1 (:32): "If `M01 < ε` emit `DEGENERATE(M01_TINY)`". None of `ε_μ`, `ε_z`, `ε_q`, `ε_w` is said to be it. **Needed:** its value.
+- **DEGENERATE reasons vs `decode_failed` codes.** dd_decoder §2 (:27): "a narrow, enumerated cause set", naming only `M01_TINY`;
+  chart_reference §2.2: "Emit `DEGENERATE` only if all four fail" (no reason name). payload §2 (:169) has `decode_failed` detail
+  codes 0 non-finite, 1 degenerate configuration, 2 invalid mass construction, 3 other. **Needed:** the full reason list and its
+  map onto those codes.
+- **The infeasible invariant pixel.** chart_reference §2.2 (:264): "if K* < K_min:  terminal"; `principia_chart_decoder_contract.md`
+  Part 5 (:237): "infeasible pixels are *tagged labelled outputs*". **Needed:** the label (state and detail).
+- **Skipped quads.** `principia_inverse_encode_contract.md` Chart-aware validation: "skip quads entirely outside the feasible
+  region"; chart_reference §0.7 (:123): "No pixel is ever rejected." **Needed:** what a skipped quad's pixels carry.
+- **`η_E` at `K₀ = 0`, and infeasible `E*`.** dd_decoder §3.7 (:143–145): "check feasibility $E^* \ge U$", then
+  $\eta_E = \sqrt{(E^* - U)/K_0}$. The rest start sits at the momentum origin (chart_decoder_contract :25), so `K₀ = 0` there; the
+  failed check has no outcome. R-25 keeps `η_E` with an off switch and says neither. **Needed:** both behaviours.
+- **R-27's new `system_image` value and R-26's `ValidationResult`.** R-27: "A `system_image` value for "covers each shape twice, as
+  two labelled systems" is added"; R-26 adds `validate(u, v) -> ValidationResult`. **Needed:** the value's name; the result's
+  variants.
+- **Encoding into the folded Burrau chart.** `principia_dd_encode.md` §3.1 (:35) inverts on "θ ∈ (0, π/2)"; R-27 keeps the folded
+  chart (θ ≤ π/4). **Needed:** what encode does with θ > π/4 (relabel, fall back to latent, refuse).
+- **The hypercube check's space.** inverse_encode Chart-aware validation, layer 1 (:163): "check $z_k \in [0,1]$ for every $k$",
+  but `z ∈ ℝ⁸` passes through σ/tanh. **Needed:** whether the check is on `s = σ(z)` (or the clamp space).
+
+## RQ-47: Encode, decode and chart tolerances and defaults with no number *(step 7, decode)*
+
+- **ε_phys.** `principia_inverse_encode_contract.md` Part 4 (:93): "‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys"; also dd_encode §3.5,
+  dd_decoder test 7. **Needed:** its value.
+- **κ(z).** inverse_encode Part 1 (:24): "Residual bounded by the conditioning `κ(z)` (Part 4)"; Part 7 (:211): "**A conditioning
+  number** `κ(z)`". Part 4 gives only `d logit/ds = 1/(s(1−s))`. **Needed:** its definition.
+- **Curve-projection distance.** dd_encode §3.4 (:76): "beyond tolerance → … fall back to latent z"; inverse_encode Part 5 (:118):
+  "If the distance exceeds tolerance". **Needed:** the tolerance.
+- **Decode sanity.** inverse_encode Chart-aware validation, layer 3: "CoM at the origin and total momentum zero, both within
+  tolerance." **Needed:** the tolerance.
+- **E₀.** dd_decoder §3.6 (:139): "`E₀` here must agree with the kernel's `E_0` at t=0"; `principia_dd_generation_root.md` §3.4
+  (:138): "must equal `K₀+V₀` (cross-check view)". **Needed:** the agreement tolerance.
+- **dd_decoder tests.** Test 12 (:184): "f32 eps-scaled tolerance" (no scale factor); test 11 (:183): error "shrinks `∝ h²`" (no slope
+  tolerance). **Needed:** both.
+- **Burrau at ν = 1/2.** chart_reference §5.2: reproduces "`(3,4,5)`, and the classical configuration to a stated tolerance".
+  **Needed:** the tolerance.
+- **Invariant-chart and Burrau-axis defaults.** chart_reference §2.1 (:205): "choose `K_max > 0`, exponent `γ_K ≥ 1`"; §4.5
+  (:457): "θ(u) = θ_min + (θ_max − θ_min)u"; `Φ_{θ,L_z}` "(fix $K$, sweep $L_z$)". **Needed:** `K_max`, `γ_K`, `θ_min`, `θ_max`,
+  the fixed `K` and the `L_z` range.
+- **BodyPlane.** chart_reference §5.1 (:522): "`BodyPlane` (today's slice) stays as a chart and must reproduce **bit-for-bit** —
+  it is the Python cross-check's anchor." **Needed:** its map and the reference artefact it must match.
+- **Validation imports.** dd_encode §4 (:92): Anosova region-D and Burrau rest starts "match the papers' stated values after the
+  recorded rescale". **Needed:** the values and the tolerance.
+- **The Inspector's gates.** `ic_inspector_scratchpad.md` "Status — as built" (:23) gives only measured bounds ("max `‖z−z'‖ =
+  1.2×10⁻¹³`"); "Degeneracy routing" (:27, :113): "past threshold → flip chart-encode ▸ **direct-physical-inject**" and "run both
+  paths and diff". `principia_gui_state_contract.md` §4 (:115): "the test asserting `‖n‖ = 1` to tolerance". **Needed:** the
+  round-trip gate, the conditioning threshold, the two-path agreement tolerance and the `‖n‖ = 1` tolerance.
+
+## RQ-48: Escape and termination — what the corpus doesn't give *(step 7, integrator)*
+
+- **The state after escape fires.** R-31: "Specify what `state` holds when escape has fired but the march continues." No file
+  does. `principia_integrator_contract.md` Part 1 (:23) still has `done ← detect_terminal(state, params)` for every terminal.
+  **Needed:** which fields freeze at the escape step and which keep advancing, and what `state` reads meanwhile.
+- **Time averages past escape.** `principia_01_pitfalls.md` §2.4 (:190–191): continuing past escape "is actively wrong" for
+  time-averaged fields — "`FTLE = S/T` past escape adds nothing to `S` while growing `T`, diluting the measurement". R-31 keeps
+  the march going. **Needed:** how FTLE and other time averages are treated after escape.
+- **Checks 2 and 3.** pitfalls §2.4 names "Independent ground truth — separation growing without bound" (:203) and "deep interior"
+  (:205), with no pass threshold, horizon or fixture. **Needed:** all three for each.
+- **The sampling grid for the window.** integrator_contract Part 7 (:392) and `principia_dd_integrator.md` §3.6 (:165): "`|Δn̂|` is
+  taken over 0.4 time units, sampled at sync boundaries". Sync boundaries exist only for the regularised (AZ) occupant
+  (integrator_contract :170); KDK/Yoshida have macro-steps, and escape is evaluated per `STEP`. **Needed:** the grid for
+  unregularised occupants.
+- **The re-validation fixture.** pitfalls §2.2 (:152) uses the config chart with ground truth "unbound and receding at `t = 30`".
+  **Needed:** whether R-29's re-validation keeps that ground truth or uses check 2's independent one.
+
+## RQ-49: Integrator values the corpus doesn't give *(step 7, integrator)*
+
+- **Where the re-registration count lives.** `principia_integrator_contract.md` "The profile gains a field" (:186):
+  "`re_registrations: u32` — or at minimum a per-trajectory count in the payload." **Needed:** profile field, payload field, or both
+  (and its payload placement — a ledger change, R-36).
+- **"Report which would have been better."** integrator_contract "One thing deliberately NOT decided": "expose the choice, report
+  which would have been better, never switch silently." **Needed:** how "better" is judged, when, and where it is reported.
+- **The `r_coll` / `N_max` coupling.** integrator_contract Part 7 (:385): "Either surface the coupling in the UI, or let very-small
+  `r_coll` raise `N_max` at a cost the quality controller accounts for." **Needed:** one of the two.
+- **Benettin.** `principia_dd_integrator.md` §3.8 (:234): "`x' = x₀ + δ₀` (arbitrary direction, ‖δ₀‖ small)", "every n_renorm
+  steps"; neither is in integrator_contract Part 3's parameter table. **Needed:** `‖δ₀‖`, its direction and `n_renorm`.
+- **Order → complexity proxy and FTLE confidence.** integrator_contract Part 2 (:93): "Order sets the meaning of the
+  `total_substeps_log2` complexity proxy … and FTLE confidence". **Needed:** the mapping.
+- **The `τ` tie tolerance.** `principia_dd_simstate_payload.md` §3 (:294): "fixed cut-ID priority only as a tie-break when `τ`
+  values are equal within a defined tolerance … Specify the `τ`-sort, tolerance, and sign convention in the integrator
+  contract." Not specified there. **Needed:** all three.
+
+## RQ-50: Payload and `QuadReduction` layout silences *(step 7, payload)*
+
+- **The Welford `y`.** payload §4 (:305) and dd_integrator §3.5 (:142): "Slope of spread `y` on time `t`". **Needed:** what the
+  per-sample `y` is.
+- **The closure floor.** payload (:112): "The floor is precision-dependent, and this must be reported." **Needed:** where (readout,
+  export, legend).
+- **`class_histogram[N]`.** `principia_dd_generation_root.md` §3.7 (:190): "`class_histogram[N]` | u8 × N". `N` isn't defined, and a
+  u8 bin overflows at 256 samples (a 16×16 grid, R-43's N = 16). **Needed:** `N` and the bin width.
+- **`outcome_impurity`.** Ledger (:192): "`1 − max(class fraction)`", under a heading that says all fields are at joint
+  `class ⊕ detail` grain. **Needed:** which fraction.
+- **The struct itself.** Ledger §3.7 (:176): "Size the struct from the member list, then align, then update the figure." **Needed:**
+  member order, packing of the 2-bit and 5-bit members, and the final size.
+- **`roundtrip_error`.** Ledger (:208): "time-reversal round-trip displacement". **Needed:** its horizon, when it runs, its cost.
+- **`error_ratio`.** Ledger (:207): "**Boolean flag only**" with no threshold for "departing from 1.0"; (:212):
+  "`ensemble_spread = max(spread_shape, spread_event)  -- how error_ratio enters is OPEN`". **Needed:** the threshold and its role.
+- **The gate / tolerance pair.** Ledger "Open" (:395): "gate threshold and integrator tolerance must be specified **as a pair**".
+  **Needed:** the pair.
+- **Measurement gates.** payload §8: word truncation rate "drives whether 76 symbols suffices" (:475); the crossing distribution
+  decides whether `S_word` is additive; "switch to displacement only if FTLE accuracy meaningfully improves". **Needed:** the
+  threshold each decision uses.
+
+## RQ-51: Scheduler, cache and quality values *(step 7, scheduler)*
+
+- **Baseline cover.** `principia_caching_contract.md` Part 4 (:55): "the viewport-covering quads a few levels above camera depth".
+  **Needed:** how many levels.
+- **Debounces.** caching_contract Part 5 (:81): "At-rest (debounce fired)"; `principia_scheduler_contract.md` Part 7 (:174):
+  "At-rest resumes on debounce". Only the bake's ~120 ms is given. **Needed:** the gesture debounce.
+- **Budgets and ceilings.** caching_contract Part 6 (:106): "time-budgeted per frame"; Part 7: cost-weighted LRU whose "cost model now includes `t_cached`" (:13). `principia_dd_telemetry_and_tiers.md` §6.3 (:284):
+  "small enough to return"; §6.4 (:324): "Keep the in-flight depth shallow"; CPU: leave at least one core. **Needed:** the per-frame
+  budget, the LRU cost formula, the chunk bound, the queue depth and the core reserve.
+- **The integration floor.** scheduler_contract Part 4 (:92): "a quad whose `suspect_fraction` stays high and whose samples are
+  **substep-saturated**". **Needed:** "high" and "stays" (frames or levels).
+- **Neighbour agreement.** `principia_dd_refinement_policy.md` §2.1 (:130): "land within **~11°** on the shape sphere". **Needed:**
+  the exact angle.
+- **Priority (R-44, R-55).** scheduler_contract Part 6 (:132): "Visibility dominates (never compute off-screen)" and (:134)
+  "offscreen → stop", against policy §0.1's "off screen | the criterion | decides depth". R-44 orders them reconciled and "how the
+  order in view enters" said; R-55 leaves `P_focus`'s "weight and decay are still to be written". **Needed:** the reconciled rule,
+  and `w_f`'s decay law.
+- **The frontier margin (R-45).** refinement_policy §7 (:271): "The margin must be **derived from the refill rate**". **Needed:**
+  the formula, and the widened-margin baseline's size.
+- **Quad-skip (R-26).** R-26 lists "scheduler_contract (a quad-skip rule)"; the contract has none. **Needed:** the rule, including
+  quads partly inside the chart's domain.
+- **`QualitySettings` and `eps` (R-40).** The struct (quality_device_note :12–20) has no `eps`, frame-budget or hard-cap field.
+  **Needed:** the fields, and whether `eps` varies per internal rung or per named tier.
+- **Frame cadence.** `principia_temporal_architecture_note.md` (:171): "`steps_per_frame = ⌈T / (60 × fps × dt_macro)⌉`".
+  **Needed:** whether `fps` is measured or nominal.
+- **The render key for a graph.** R-64 replaces the four slots with a node graph. `principia_lowering_contract.md` (:125)
+  `fragmentKey = hash(rc.colourSrc, rc.brightnessSrc, rc.combinerSrc, rc.postSrc)`; render_contract (:61) "hash of 4 slot-source
+  hashes". **Needed:** how the fragment / render key hashes a graph (canonical node order, post chain).
+- **Checkerboard.** `principia_checkerboard_contract.md` §7 (:63): "per-frame playhead advance exceeds ~`0.05`". **Needed:** the
+  units (the value itself is measured, §8).
+- **`sea_fraction`.** refinement_policy §5.1 names the estimator (built after the tier controller, R-48). **Needed:** its accuracy
+  target.
+- **Telemetry size.** telemetry §5 (:186): "Either downsample on write (keep every frame during motion, every Nth while idle) or roll
+  up idle stretches". **Needed:** which, and `N`.
+
+## RQ-52: Colour and render silences *(step 7, colour)*
+
+- **Tolerances.** `principia_colour_composition.md` §7 (:433): "agreement to tolerance certifies the port". `principia_dd_colouring.md`
+  §5 tests 1, 4 (:161, :164): "within tolerance", "within blend tolerance"; test 9 (:169): "a minimum OKLab hue separation".
+  `principia_render_contract.md` cross-check views (energy agreement, Welford, invariant-chart gradient): no numbers. **Needed:**
+  each tolerance and the minimum hue separation.
+- **Palette classes.** colour_composition §1.4 (:150–162): "degenerate" (white) and "collision @ t=0" (orange) aren't `state` values
+  (payload §2: escape, bounded, collision, running, sim_failed, decode_failed). **Needed:** how each is read (e.g. `decode_failed`;
+  collision with `t_end_step == 0`), and default colours for `running`, `sim_failed` and `decode_failed`.
+- **Monomorphisation.** `principia_lowering_contract.md` Part 4 (:101): "bound it to the active/plausible set, not the full
+  cross-product". **Needed:** the set.
+- **Symbolic spread.** `principia_sampling_msaa_note.md` (:123): "shared-prefix-length / edit-distance / distinct-word-count across
+  the E+1 words". **Needed:** which metric, and its split threshold.
+
+## RQ-53: Image-embedding format silences *(step 7, image embedding)*
+
+- **Header.** `principia_dd_image_embedding.md` §2 (:40): "header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2)
+  ‖ crc32(header)(4)". **Needed:** the magic, version, flag bits, byte order, bit order within a tile, the payload serialisation
+  (§7 measures "596 B JSON → 382 B deflated", :131) and the tEXt keyword.
+- **Hybrid redundancy.** §5: no default `k` (measurements used `k=9` and `k=25`, :90). **Needed:** the default.
+- **Decoder change.** §6 (:103): "build hash — REFUSE to recreate silently across a version where the decoder changed". **Needed:**
+  which hash component detects a decoder change.
+- **Resolutions.** §9: "at every supported resolution". **Needed:** the list (§7 covers 64² to 1024²).
+
+## RQ-54: GUI silences *(step 7, GUI)*
+
+- **Hover budget.** `principia_scratchpad_pointer_channels.md` §3 (:75): "Give the hover trajectory a STEP BUDGET." **Needed:** the
+  budget, and the rest time before it lifts.
+- **Sonification.** pointer_channels §4 (:97–98): "Map `1/t_c` to a fixed reference pitch." §7 leaves open "Whether `φ(t)` adds
+  anything over `θ(t)` alone, or whether two channels is better as *stereo*" and "whether the sound is the whole trajectory's
+  spectrum or a windowed spectrum tracking the playhead" (:147). R-68 calls this mapping the corpus's. **Needed:** the reference
+  pitch and both answers.
+- **The note's standing.** pointer_channels (:3): "*Working notes, not ratified.*" — yet trajectory_viewing §1, render_gui_spec §G2
+  and R-55 / R-68 rely on it. **Needed:** which parts are normative.
+- **The spectral-entropy anchor.** pointer_channels §2 (:36): "figure-eight (periodic) | **0.076**", "chaotic | **0.177**". **Needed:**
+  the chaotic IC and a tolerance.
+- **Readouts under scale-all.** `ic_inspector_scratchpad.md` (:106): "rotate or scale the whole system and none of these numbers
+  move", over separations, `R`, `|pᵢ|`, `L`, `E`, `I`, which all change under scaling. **Needed:** the frame they're shown in
+  (canonical R̃ = 1?).
+- **Deferred Inspector features.** The scratchpad designs a right-click properties popover and discs with radius ∝ ∛mass;
+  render_gui_spec §G8 lists neither, and the scratchpad says (:3) "*Not spec yet.*" **Needed:** in or out.
+- **Profiler.** `principia_render_gui_spec.md` Profiler (:171): "a **leak detector** that flags steady growth while idle"; "Leak
+  flags and hot-path summaries are precomputed". **Needed:** "idle", the growth threshold and window; what a hot-path summary holds.
+- **Keys.** §G3 (:136): "delay, then repeat (the DAS / ARR model)". **Needed:** the delay and rate.
+- **Tier 3 buffer.** §12.1 (:676): "~16 KB for a typical viewport". **Needed:** the typical visible-quad count and the per-quad record.
+- **Measure.** §G10: **Needed:** a fixture of known dimension, the tolerance on `α ± error`, and defaults for the ε range, samples
+  per ε and the classifier.
+- **Research (v2).** §G11 (:297): "Newton-refine from each; residual and period per seed; compared with the Šuvakov–Dmitrašinović
+  catalogue". **Needed:** the convergence residual and the catalogue-match tolerance.
+- **§16 open items.** §16 (:756, :761): "**Node palette contents**", "**Preview** — sphere vs illustrative-slice toggle; which is
+  default", and "**Standing composition-spec gaps**", which "This GUI spec assumes". **Needed:** each.
+- **Undo granularity.** R-69 makes every `SimConfig` / `RenderState` edit undoable; `RenderState` holds the playhead, `SimConfig`
+  "playback transport (play/pause/speed/loop)" (gui_state_contract §2, :38). **Needed:** whether playback, scrubbing and slider
+  drags coalesce into one history entry.
+- **Transport and the blast radius.** gui_state_contract §2 puts transport in `SimConfig (sim key)`;
+  `principia_export_animation_contract.md` Part 1 (:15): "pause freezes the *playhead*, not the compute". **Needed:** transport's row
+  in caching's blast-radius table (it shouldn't re-integrate).
+- **Persistence.** §G2 (:65): "**all off** and **save as default**"; §G9 (:276): "Saved views: pxpack snapshots". **Needed:** where
+  each is stored.
+- **Link ids.** gui_state_contract §2 (:37) lists "link ids" in `SimConfig`; §G11: "Side by side with a linked cursor and
+  navigation". **Needed:** what a link id holds and how linked views share navigation.
+
+## RQ-55: Validation fixtures, gates and tolerances *(step 7, validation)*
+
+- **Aggregate survey.** `principia_parity_contract.md` §5 (:158): "The exact statistic and threshold — Q3 in the working note — is
+  pinned in the validation phase". **Needed:** the statistic and threshold (or the milestone that pins them).
+- **Ground truth.** `principia_validation_ground_truth_note.md` "Open sub-questions (settle at implementation)" (:117): the analytic
+  ICs, which periodic orbits beyond the figure-eight, the Burrau feature set, the `r_coll` to pin ("Pin `r_coll` to match the
+  regularisation the reference computation assumed", :121), the Path B harness API, and the exact vs structural tolerances. "Four
+  tiers" (:20): "**Lehto et al.** specific numbers" — not named. **Needed:** each.
+- **The independent convergence reference.** `principia_canonical_spec.md` §11 (:151): "its full *treatment* (protocol, when it runs,
+  how it plugs into the harness) is the gap still to close." R-33 settles what it is. **Needed:** the protocol.
+- **Burrau smoke test.** `principia_dd_integrator.md` test 12 (:278): "outcome-class + coarse `t_end` window". **Needed:** the window,
+  given `principia_dd_validation_orbits.md` §1.5 (:135): "**The classical result sits past our horizon**".
+- **Closure.** validation_orbits §3 (:163): "`|dr|` after one period, and **that it falls at the occupant's stated order**". §0.1:
+  AZ+RK4 converges at "roughly third … Not yet RK4's fourth". **Needed:** the `|dr|` threshold, the order tolerance, and whether
+  AZ+RK4 failing it is expected.
+- **`xi`.** validation_orbits (:96): "the natural test bed for the reversibility measure `xi`". `xi` is defined nowhere. **Needed:**
+  its definition.
+- **Pitfall gates.** `principia_01_pitfalls.md` §1.6 (:100): "`stop_on_escape` on and off give near-identical images" (no tolerance,
+  nor for the patchwork golden test); §3 / philosophy §4.5a (:208): convergence under refinement (no threshold); §4.1: the
+  re-registration controls (2.5e-6, 7.5e-5, 4.4e-1 decades) with no acceptance level for the default occupant. **Needed:** each
+  threshold.
+- **Debug catalogue.** `principia_debug_tooling_plan.md` §G (:127): "`|E_0 − (K_0+V_0)|` log | ≤ tol"; §A (:31): "to Tier-N tol";
+  §F (:109): "loaded / pending / refinable / **terminal** / stale … | state transitions legal". **Needed:** the tolerances and the
+  legal-transition table.
+
+## RQ-56: Ruling follow-ups not yet folded into the docs *(step 7, cleanup)*
+
+No choice is needed for most of these; a ruling already decides them. Line numbers are current at `6002ac2`.
+
+**Missed by a ruling already applied** (the ruling's file list didn't name the line):
+- [ ] `principia_render_contract.md:26` "The graph is **not** a graph. It is a fixed four-slot pipeline"; `:61` "render key: hash of 4
+  slot-source hashes"; `:232` "One payload, four slots" — R-64 (free, typed node graph).
+- [ ] `principia_render_contract.md:37` post occupants "none, CVD preview, …"; `:77` "→ CVD → **render→display scale**" — R-67
+  (display scale → gamut clamp → CVD, outside the pipeline).
+- [ ] `principia_lowering_contract.md:12` "// four-slot render side"; `:28` "The four-slot colour side stays exactly the render doc's
+  flow"; `:125` `fragmentKey = hash(rc.colourSrc, …, rc.postSrc)` — R-64 (the graph hash itself is RQ-51).
+- [ ] `principia_lowering_contract.md:65` "there is no scrub" — R-66 ("no scrub" applies to exported animations only).
+- [ ] `principia_systems_architecture.md:25` "four slots"; `:64` "fragment pipeline (4 slots, fixed wrapper)"; `:126` "4 slot
+  sources" — R-64.
+- [ ] `principia_systems_architecture.md:65` "backdrop ▸ blur ▸ composite ▸ CVD"; `:112` "▸ CVD ▸ render→display scale ▸ SCREEN" —
+  R-67.
+- [ ] `principia_systems_architecture.md:145` seam 4 "`STEP(state, dt, params)`" — R-19 (`ADVANCE` is the occupant seam).
+- [ ] `principia_systems_architecture.md:233` "the lock is UI state" — R-69 (lock is chart construction, in `SimConfig`).
+- [ ] `principia_integrator_contract.md:32` "The occupant is `STEP(state, dt, params) → state'` and nothing else." — R-19 (:231
+  "ADVANCE … # the occupant seam"; :235 KDK/Yoshida implement `ADVANCE` as their loop).
+- [ ] `principia_integrator_contract.md:34` "the escape persistence counter `c_esc` therefore ticks per `STEP`" — R-29 / change 11
+  (:340 "The old persistence counter … is gone"); R-59 D1 listed :318, :340, :357 but not this line.
+- [ ] `principia_dd_colouring.md:15` "composite order baked base → combine → overlays → CVD → render→display scale"; `:134` "pipeline
+  order **pixel function → physics overlay → CVD → render→display scale → canvas write**" — R-67. `:15` "the four slots" — R-64.
+- [ ] `principia_dd_colouring.md:86` "Equirect mapping is **(φ, n_z)** ∈ [−π,π]×[−1,1]"; `principia_trajectory_viewing.md:79`
+  "equirect (φ, n_z)" — R-14 (θ is the azimuth on the horizontal axis, φ the polar angle).
+- [ ] `principia_dd_generation_root.md:37` "a valid IC already escaping is `escape` at step 0" (§3.1) — R-60 (no t = 0 escape).
+- [ ] `principia_canonical_spec.md:155` "the Burrau leg-swap quotient and body-index naming remain open decisions" — R-22 (applied)
+  and R-27 (recorded).
+
+**Scheduled by the ruling's own status line** (listed so nothing is lost; not due yet):
+- [ ] 136/88 B widths — R-40 / R-59 D6. Payload :448 already has "Recomputed at 144 / 96 B". Named in R-40:
+  `principia_canonical_spec.md:79`, `principia_systems_architecture.md:63`, `:163` ("512 trajectories × 136 B = 68 KB"; the §5.5
+  workgroup arithmetic rests on it). **Not named in R-40:** `principia_render_contract.md:13` ("136 B (FTLE-on) / 88 B (FTLE-off)"),
+  `principia_memory_tiers.md:90` ("`bytes` = 136/88"), `principia_dd_generation_root.md:60` ("136 B effective (FTLE-on) / 88 B").
+- [ ] `has_redundant_hemisphere` — R-59 D5 (with R-27): `principia_inverse_encode_contract.md:199` (named) and
+  `principia_chart_reference.md:345` "The chart sets `has_redundant_hemisphere = true`." (not named).
+- [ ] "scale rescale is step 0" `principia_canonical_spec.md:52`; "scale rescaled first" `principia_systems_architecture.md:149` — R-23.
+- [ ] "a separate double-double/arbitrary integrator" `principia_canonical_spec.md:151` — R-33 (double-double is a fast screen only).
+- [ ] The ledger's `alpha` row `principia_dd_generation_root.md:273` — R-42 / R-59 D4.
+
+**Overridden by the ledger's own canonical clause** (`principia_dd_generation_root.md:29`: "the consolidated doc is canonical"):
+- [ ] `:83` "**Truncation is bit-occupancy:**" (payload §3: the normative rule is the length cap).
+- [ ] `:74`, `:79` the pop doesn't decrement `length`, and decode is "while W ≥ 4" (payload §3 decrements on pop and decodes by depth).
+- [ ] `:60` "the bandwidth-bound march" (payload §0/§3: the bottleneck is unconfirmed).
+- (The ledger's descriptor bits 8–15 at `:41–43` and `saturated` at `:39` are in RQ-37, items 5 and 6, since other files
+  carry the same text.)
+
+**Doc defects, no ruling:**
+- [ ] `principia_INDEX.md:14` "Eight named patterns" — `principia_01_pitfalls.md` has nine pattern sections (§1–2, §4–10; §3 is
+  standing rules).
+- [ ] `principia_canonical_spec.md:150` "the full GUI *design* (Malachy's ideas) is unwritten" — step 6 wrote
+  `principia_render_gui_spec.md`.
