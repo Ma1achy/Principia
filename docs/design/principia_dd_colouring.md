@@ -12,7 +12,7 @@ The **Meaning rung**: `payload → colour, per pixel, at the playhead`. A free, 
 
 ## 2. Consolidated contract
 
-From the **render contract**: the stain graph's node kinds and their signatures (R-64); **L-ownership** (a bound brightness metric owns L; the colour occupant contributes hue/chroma; monotone-L LUTs × Replace-L is a semantic conflict the combiner choice resolves, surfaced in UI); **averaging** (colour-per-sample → render-side SSAA resolve, so category-averaging is structurally impossible; continuous S² occupants may consume means of current shape vectors — the reason `n` is handled Cartesian); bake tier for pure-`f(n̂)` occupants (the GUI preview canvas *is* the uploaded texture — zero drift by construction); composite order baked base → combine → overlays → CVD → render→display scale (when `render_scale ≠ 1`) → canvas.
+From the **render contract**: the stain graph's node kinds and their signatures (R-64); **L-ownership** (a bound brightness metric owns L; the colour occupant contributes hue/chroma; monotone-L LUTs × Replace-L is a semantic conflict the combiner choice resolves, surfaced in UI); **averaging** (colour-per-sample → render-side SSAA resolve, so category-averaging is structurally impossible; continuous S² occupants may consume means of current shape vectors — the reason `n` is handled Cartesian); bake tier for pure-`f(n̂)` occupants (the GUI preview canvas *is* the uploaded texture — zero drift by construction); composite order baked base → combine → overlays → `OUT`, then the display stage (R-67): style → display scale (when `render_scale ≠ 1`) → gamut clamp → colour-vision simulation → screen.
 
 From the **chart contract (Part 2.5)**: colour **compaction** is the third compactification role — render-key, free, never re-integrates; per-field scale comes from the **ledger metadata** (lin | log | cyclic | diverging | categorical | flag).
 
@@ -131,7 +131,7 @@ State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 
 
 **Cubehelix** (analytic, CB-tolerant by monotone L): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
 
-**CVD simulation** — post-process, **linear sRGB**, after all pixel computation; pipeline order **pixel function → physics overlay → CVD → render→display scale → canvas write** (the scale stage is a no-op at native; render contract Part 4). $M_{\mathrm{cvd}}$ multiplies the linear $(R_\ell, G_\ell, B_\ell)$ triplet:
+**CVD simulation** — a display-stage setting, **linear sRGB**, after all pixel computation; order **pixel function → physics overlay → `OUT` → style → display scale → gamut clamp → CVD → screen** (R-67; the simulation sees the final in-gamut colours; the scale stage is a no-op at native; render contract Part 4). $M_{\mathrm{cvd}}$ multiplies the linear $(R_\ell, G_\ell, B_\ell)$ triplet:
 
 $$M_{\mathrm{deutan}} = \begin{pmatrix} 0.625 & 0.375 & 0 \\ 0.700 & 0.300 & 0 \\ 0 & 0.300 & 0.700 \end{pmatrix}, \qquad
 M_{\mathrm{protan}} = \begin{pmatrix} 0.567 & 0.433 & 0 \\ 0.558 & 0.442 & 0 \\ 0 & 0.242 & 0.758 \end{pmatrix},$$
