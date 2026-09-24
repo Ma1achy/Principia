@@ -342,7 +342,8 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy. The chart sets `has_redundant_hemisphere = true`.
+the redundancy. The chart's `system_image` is **n-to-1** (2-to-1 over the φ hemispheres;
+`principia_chart_decoder_contract.md` Part 5, R-59 D5).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
