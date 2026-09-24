@@ -32,7 +32,7 @@ Everything left open, each with its source. Nothing is deferred silently.
   3. Folded in step 3 (inverse_encode_contract Part 5, "encode reuses decode").
   4. Moot: a LaTeX figure caption. No markdown file makes the 5-DOF claim.
   5. **Open:** audit decision B1 (body index base).
-  6. **Open:** R-10 keeps `α_min` (0 or 0.05) on the step-5 decision sheet. The register's "removed, α_min = 0" is not
+  6. **Closed: `α_min = 0` (R-21, applied in step 5).** Was: R-10 kept `α_min` (0 or 0.05) on the step-5 decision sheet. The register's "removed, α_min = 0" is not
      folded, because R-10 overrides it.
   7. Folded (detectors, payload §2). **Open:** the ionisation gate's definition, and whether the old-data consequence
      (two-pair collisions recorded as binary) applies to any stored outcome data.

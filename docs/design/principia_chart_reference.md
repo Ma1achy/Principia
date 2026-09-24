@@ -32,7 +32,7 @@ M01 = m0 + m1        M = m0 + m1 + m2 = 1
 If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
 
 **Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3).
-`α_min` is still under decision, and its value is set in `DECISIONS_TO_MAKE.md` (step 5).
+`α_min = 0` (R-21): full-sphere coverage.
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi
 
@@ -53,8 +53,8 @@ construction, so the canonicaliser is a no-op away from the seam):
 β = π·σ(z_β)
 ```
 
-`α_min` is a buffer keeping `‖ρ‖` away from zero. Its value, including whether it is zero, is under
-decision (R-5). **Note the orientation, which is easy to get
+`α_min = 0` (R-21). It is not a numerical guard; a non-zero value would only excise a polar cap, and the poles are
+fenced by the collision detector, the conditioning readout and the saturation flags. **Note the orientation, which is easy to get
 backwards:** `‖ρ̃‖ = cos α`, so **small α is a LARGE inner-pair separation**; `α → π/2` is a tight
 inner pair with a distant third body (hierarchical).
 
