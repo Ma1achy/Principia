@@ -24,10 +24,10 @@ The mixed-pixel problem is **anti-aliasing, not data semantics.** Samples ≠ pi
 
 ## Ensemble copies ARE the SSAA samples
 
-The ensemble machinery (spec §ensemble: E jittered copies per grid position, deterministic coordinate-seeded offsets in the pixel's IC-space footprint — see the sampling-pattern section) doubles as the SSAA sample pool. The **same E copies** feed two consumers:
+The ensemble machinery (E jittered copies per grid position, at deterministic offsets inside the pixel's IC-space footprint — fixed Halton (2,3) offsets, `principia_dd_integrator.md` §3.8) doubles as the SSAA sample pool. Ensemble spread answers a finite-scale question: if I take the patch of nearby ICs this pixel covers, how mixed are their outcomes? It is not the infinitesimal stretching rate (that is FTLE), and it is resolution-dependent on purpose — zoom in and the footprint shrinks, so a pixel that read as mixed may separate into clean subregions. The **same E copies** feed two consumers:
 
 1. **Render side — colour → SSAA resolve.** Each copy colours through the active graph; the resolve averages the E+1 colours → the pixel's anti-aliased colour.
-2. **Data side — outcomes → spread metric.** The copies' classified outcomes reduce to a spread/agreement scalar (spec `ensemble_outcome_agreement`).
+2. **Data side — outcomes → spread metric.** The copies' classified outcomes reduce to a spread/agreement scalar (`spread_event`, `principia_dd_generation_root.md` §3.7, "Ensemble spread").
 
 So SSAA is **free wherever ensemble is enabled**, and AA quality scales with tier exactly where it's needed (boundaries are where E goes up *and* where AA matters). Potato/Low (E=0) → one sample/pixel, no AA, fast. The two outputs never cross the waist: colours resolve on the render side (terminal, display-only, never readable as data); outcomes reduce on the data side (into a field). Same firewall as always.
 
