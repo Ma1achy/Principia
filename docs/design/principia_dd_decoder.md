@@ -20,7 +20,7 @@ From the **lowering contract**: link selection and chart type are **baked** (mon
 
 From the **deep-zoom contract**: the linearised path replaces the decode with `x₀ + J_D·δ`; `J_D` is central differences **of the full chart→IC composite** in f64 — chart-agnostic, no per-axis-kind special-casing; error `O(h²)`; `|det J_D|` doubles as the measure weight.
 
-From the **inverse-encode contract**: decoded states are **already canonical** (T2 exercises block inverses only); the block decodes must be invertible with the spec's closed forms; the invariant momentum construction *is* the canonical fibre choice (encode reuses decode).
+From the **inverse-encode contract**: decoded states are **already canonical** (T2 exercises block inverses only); the block decodes must be invertible with the closed forms of §3; the invariant momentum construction *is* the canonical fibre choice (encode reuses decode).
 
 From the **render contract**: the decode stage writes `ICDescriptor` (what the IC *is*) post-decode, pre-integration; `DECODE_PASSTHROUGH` is a kernel debug mode certifying this rung before any physics exists.
 
@@ -30,12 +30,15 @@ From **totality** (scheduler/render): invalid decodes are **tagged, never droppe
 
 ## 3. The maths
 
-Exact, from the spec (§mass_decode, §hyperspherical_jacobi, §canon_config, §jacobi_mom, §scale_gauge). The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
+Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
+
+**Chart constants.** `μ_max`, `q_max` and `α_min` are named symbols throughout this section. Their values
+are set in `DECISIONS_TO_MAKE.md` (step 5, ruling R-5), not here.
 
 ### 3.1 Mass
 
 ```
-(m₀, m₁, m₂) = softmax(0, μ₁, μ₂),      μₖ = μ_max · tanh(z_μk)        [μ_max = 5]
+(m₀, m₁, m₂) = softmax(0, μ₁, μ₂),      μₖ = μ_max · tanh(z_μk)
 M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)
 ```
 
@@ -59,6 +62,10 @@ R̃ = 1  (scale gauge = I = 1)      β ∈ [0, π]  (mirror fixed by constructio
 
 α = (π/2) · σ(z_α)          β = π · σ(z_β)
 ```
+
+**`α_min` is under decision (R-5).** The general link is $\alpha = \alpha_{\min} + \left(\tfrac{\pi}{2} - 2\alpha_{\min}\right)\sigma(z_\alpha)$,
+a buffer that keeps $\|\boldsymbol\rho\|$ bounded away from zero. The form above is its $\alpha_{\min} = 0$ case. The paragraph
+below describes that case.
 
 Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. Finite `z` never reaches the exact poles (`α = (π/2)σ(z_α) ∈ (0, π/2)` strictly); a config ingested *at* a pole is caught by those flags, and exact-pole `atan2(0,0)=0` yields a deterministic canonical value rather than a NaN.
 
@@ -91,7 +98,7 @@ With the canonical-frame decode both are no-ops away from the seam — and **tha
 **Free decode** (4 controls → physical Jacobi momenta `(p_ρ, p_λ) ∈ ℝ⁴`):
 
 ```
-qₖ = q_max · (2σ(z_qk) − 1)        [q_max = 2]
+qₖ = q_max · (2σ(z_qk) − 1)
 ```
 
 **Jacobi-to-particle** (Σpᵢ = 0 identically):
@@ -131,6 +138,20 @@ E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes, ρ_ratio
 
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
+### 3.7 Energy normalisation (optional; keep-or-drop is decision B9)
+
+A post-momentum rescale that enforces a target energy $E^*$. Compute $K_0$, check feasibility $E^* \ge U$, then
+
+$$\mathbf p_i \leftarrow \eta_E\,\mathbf p_i, \qquad \eta_E = \sqrt{\frac{E^* - U}{K_0}}.$$
+
+**Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
+free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts
+$(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction.
+There it would fight the invariant construction near the feasibility boundary, or, for $(L_z, E)$, collapse
+the energy axis entirely. Each chart declares a boolean `forbids_energy_normalisation`, and chart-aware
+validation (`principia_inverse_encode_contract.md`) refuses any view that combines such a chart with a
+non-zero $E^*$ override.
+
 ---
 
 ## 4. Seams (its side of each — the integration-test list)
@@ -167,7 +188,7 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 ## 6. Deferred / flagged
 
 - **Body-indexing mismatch (flag → pending-changes note):** the decode uses bodies **0, 1, 2** (softmax reference = body 0); `ICDescriptor` fields are named `m1, m2, m3`. Pick one convention project-wide (recommend 0-indexed internally, rename descriptor fields) — this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
-- **Energy normalisation `η_E`** (spec §energy_norm): optional post-momentum rescale to a global `E*`; flag-gated, forbidden on invariant charts; specified in the spec, not re-derived here.
+- **Energy normalisation `η_E`**: specified in §3.7. Whether to keep it (flag-gated) or drop it is audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
 - **KS-regularised state representation (v2)** — changes the decoder's output type; explicitly out of scope until then.
 

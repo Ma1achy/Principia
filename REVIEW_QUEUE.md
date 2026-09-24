@@ -91,3 +91,12 @@ or the human rules; I don't choose between them.
 - **So** the 4 appears only in `chart_reference` and in the audit. The IC Inspector notes argue *against* 4.
   I'm not choosing. Under R-5 the step-5 decision sheet should carry this evidence, and the step-3 ports use
   the named symbol.
+
+## RQ-9: The per-body momentum cap exists only in the LaTeX *(step 3, dd_decoder port)*
+
+- **LaTeX** (`sec:jacobi_mom`, `.tex` 247–255): after the Jacobi-to-particle map, "Apply same rotation/mirror as
+  positions. **Optional per-body cap with COM re-enforcement.**"
+- **Markdown** (`principia_dd_decoder.md` §3.4): the momentum decode and the full-state rotation/mirror rule are there.
+  No per-body cap is mentioned anywhere in the corpus.
+- **I can't tell** whether the cap was dropped on purpose (the `q_max` saturation already bounds the Jacobi momenta)
+  or lost in transcription. It isn't ported. Rule on it: port it as an optional step, or record it as dropped.
