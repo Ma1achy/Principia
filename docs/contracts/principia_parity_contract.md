@@ -84,7 +84,7 @@ hold by construction; it cannot be established by testing.**
 
 Distinct from the numerical tiers: certain payload fields are **integer or integer-packed** and must match **bit-for-bit** CPU↔GPU (they have no floating-point tolerance — they either match or there is a logic bug). Per the SimState payload spec:
 - **integer step indices** `t_end_step`, `t_dmin_step`; the exact `total_substeps` u32;
-- **all packed descriptor fields** (`state`, `detail`, `saturated`, `dmin_pair`) and their bit offsets;
+- **all packed descriptor fields** (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`) and their bit offsets;
 - the **free-group word arithmetic** — the mixed-radix `W` is an *integer* computed by integer multiply-add/div-mod, so the word (and `fgw_length_raw` — incl. the 127 truncation sentinel; `fgw_retained_prefix_length` derives from it) must be bit-exact **given bit-exact crossing-detection decisions** (which are Tier-L branch decisions). Note: word *content* is only as deterministic as the crossing-detection branches feeding it — the simultaneous-both-cut tie-break must be deterministic (integrator contract) or the word can diverge on FP test order.
 
 Tier B is exact **conditionally**: given the same branch decisions and the same integer inputs, the

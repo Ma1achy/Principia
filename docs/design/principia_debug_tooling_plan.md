@@ -36,17 +36,19 @@ Both modalities on both data sources — neither lens sees everything. A field t
 
 ## B. Payload field views — `sample_descriptor` (bit-packed u32)
 
-One view + one test per field. Generated from the ledger; a garbage view here = ledger ≠ kernel-write, caught day one. All accessors use the **u32** `extractBits` overload (i32 sign-extends — the trap).
+One view + one test per field. Generated from the ledger, conformed to the payload doc (`principia_dd_simstate_payload.md` §2, §6 — it governs, R-86); a garbage view here = ledger ≠ kernel-write, caught day one. All accessors use the **u32** `extractBits` overload (i32 sign-extends — the trap).
 
 | Field | Shader shows | Test asserts |
 |---|---|---|
 | `state` (0–2) | categorical palette, **6 states** (escape/bounded/collision/running/sim_failed/decode_failed) | `sd_state(w)` round-trips 0–5; union legend switches on it; `running`(3) shows in-flight; the three failure/lifecycle states render distinctly |
 | `detail` (3–4) | **legend keyed by state** (escape→body, collision→pair, sim/decode_failed→failure category — the 4-state union, payload §2; blank for running) | correct code per state; **the three-colours-bug regression test** — detail is read, not dropped; undefined-when-running handled |
-| `saturated` (5) | boolean overlay | set iff the substep exponent hit `⌈log2 N_max⌉` at some point (sticky) |
+| `saturated` (5) | boolean overlay | set iff `N_sub == N_max` occurred at some macro-step (sticky; R-86) |
 | `dmin_pair` (6–7) | categorical(3) | round-trips; matches the pair that achieved `d_min` (a latched fact, not the word) |
-| `total_substeps_log2` (derived, not a descriptor field) | scalar (log) — cumulative work / complexity | matches `⌈log2 Σ N_sub⌉`, derived at read via `countLeadingZeros` from the exact `total_substeps` u32 (payload §2); the *complexity* proxy (not peak — peak was dropped) |
-| `fgw_truncated` (the **length sentinel** `length_raw == 127` in the word buffer's `.w` — NO flag bit; bit 24 is payload, payload §3) | flag view | fires iff a mixed-radix append would exceed the 121-bit budget (76 symbols); word-derived quantities styled invalid once truncated |
-| `t_end` / `t_dmin` (in `times`) | scalar ramp (/65535 of horizon) | round-trip within quantisation; `t_dmin` absolute; **bit-identical CPU/GPU quantisation** (parity) |
+| `last_symbol` (8–9) | categorical(4) — the word's final symbol (`a=0, A=1, b=2, B=3`); invalid-styled when the word is empty or truncated | equals the last symbol of `fgw_decode(word)` whenever `sd_last_symbol_valid(fgw_length_raw(word))` — the cache stays coherent with the sidecar word (payload §3) |
+| *reserved* (10–15) | — | decode as zero (payload §2) |
+| `total_substeps_log2` (derived, not a descriptor field) | scalar (log) — cumulative work / complexity | matches `⌊log₂ Σ N_sub⌋` (0 for a total ≤ 1; R-86), derived at read via `countLeadingZeros` from the exact `total_substeps` u32 (payload §2); the *complexity* proxy (not peak — peak was dropped) |
+| `fgw_truncated` (the **length sentinel** `length_raw == 127` in the word buffer's `.w` — NO flag bit; bit 24 is payload, payload §3) | flag view | fires iff a push arrives at length 76 — the length cap is the normative trigger, not numeric overflow (payload §3); word-derived quantities styled invalid once truncated |
+| `t_end_step` / `t_dmin_step` (in `times`, exact u16) | scalar ramp (fraction via the `horizon_steps` uniform) | exact-index round-trip; `t_dmin_step` absolute; **bit-identical CPU/GPU** (parity); dispatch refuses `⌈T/dt_macro⌉ > 65535` (R-86) |
 | `d_min`, `dE_max`, `dLz_max` (f16, packed) | scalar ramp | `unpack2x16float` round-trips within f16 eps; sentinels styled, never scaled |
 | **DERIVED views (not descriptor bits):** `orbit_count`/`retrograde` (from `theta`), the **reduced crossing count** (`fgw_reduced_length`, valid iff not truncated) / `enc_XY`/`dominant_pair` (topological word read — symbolic-dynamics contract), `ftle = S_final/(step_count·dt)` (partial renorm finalised — payload §5, never plain `S/t`), current drift (`H(r,p)−E_0`) | computed in the fragment from stored state/word | each matches a reference computed the same way; the word-derived tallies use the generator→pair mapping, not a histogram |
 | **live current-substep count** *(live view, not a descriptor bit)* | **animated heatmap of substeps this macro-step** — read off the marching state | the substepper's live effort; close encounters propagate across the manifold in time (Part-5 live views) |
@@ -61,37 +63,42 @@ One view + one test per field. Generated from the ledger; a garbage view here = 
 | `t_end_step`/`t_dmin_step` (in `times`, bits 0–15/16–31) | scalar (via `horizon_steps` uniform) | exact-index round-trip; bit-identical CPU/GPU (Tier B) |
 | `total_substeps` (exact u32, separate field) | scalar (log proxy via `countLeadingZeros`) | matches Σ N_sub; the `total_substeps_log2` proxy is derived at read, not stored |
 | *(no packed `orbit_count`/`retrograde` rows — derived from `theta`, §B derived views; `dmin_pair` is descriptor bits 6–7, §B)* | | |
-| **word length** (`.w` bits 25–31, 7 bits; 127 = truncation sentinel) | scalar | `fgw_reduced_length` = **net reduced** crossings (free reduction pops cancel — NOT raw symbols appended), valid iff `!fgw_truncated` |
-| **symbol-at-k** | scrubber `u_k` → symbol colour | `fgw_symbol(word,k)` per slot (sequential decode, cold path) |
+| **word length** (`.w` bits 25–31, 7 bits; 127 = truncation sentinel) | scalar | `fgw_reduced_length` = **net reduced** crossings (free reduction pops cancel — NOT raw symbols appended), valid iff `fgw_reduced_length_valid`; `fgw_retained_prefix_length` (debug/export only) clamps 127 → 76 |
+| **symbol-at-k** | scrubber `u_k` → symbol colour | `fgw_decode(word)[k]` per slot (sequential decode, cold path) |
 | **whole-word hash** | hashed colour → **renders topological basins** (finer than outcome boundaries) | word-boundary set ≠ outcome-boundary set (the free Burrau topological-boundary diagnostic) |
 
 ---
 
-## D. Payload field views — `SimState` scalars (11 × f32)
+## D. Payload field views — `SimState` scalars (ledger §3.4)
 
-Scale per ledger metadata. **The two drift fields are signed → diverging scale, not sequential-log** (generation-root finding).
+Regenerated from the ledger's §3.4 rows (R-86); the storage column is the payload doc's (§1, §2, §5). Scale per ledger metadata. **The two drift fields are signed → diverging scale, not sequential-log** (generation-root finding).
 
-| Field | Shader (scale) | Test asserts |
-|---|---|---|
-| `t_end_step` | lin [0,T] via `horizon_steps` | completed-step count at all times, latched at termination (payload §2) |
-| `d_min` | log | > 0; = min over trajectory |
-| `ftle` | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
-| `energy_drift` | **diverging** | oscillates (symplectic) vs drifts (Euler/RK4) |
-| `diffusion` | lin, **−1 sentinel styled** | sentinel bit-exact; never scaled |
-| `delta_E_max_abs` | log | ≥ |final| (spike-that-recovered) |
-| `Lz_drift` | **diverging** | absolute-gated suspect |
-| `delta_Lz_max_abs` | log | ≥ |final| |
-| `E_0` | diverging | **= K₀+V₀** (cross-check) |
-| `Lz_0` | diverging | invariant-chart gradient input |
+| Field | Stored as | Shader (scale) | Test asserts |
+|---|---|---|---|
+| `t_end_step` | `times` low u16 (exact) | lin [0,T] via `horizon_steps` | completed-step count at all times, latched at termination (payload §2) |
+| `d_min` | f16, `packed_a` high half | log | > 0; = min over trajectory |
+| `ftle` | derived: `S_final/(step_count·dt_macro)` | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
+| `energy_drift` | derived: `H(r,p) − E_0` | **diverging** | oscillates (symplectic) vs drifts (Euler/RK4) |
+| `diffusion` | derived: `C_ty/C_tt(n)` | lin, **−1 sentinel styled** | sentinel bit-exact; never scaled |
+| `delta_E_max_abs` | f16, `packed_b` low (`dE_max`) | log | ≥ the final absolute drift (spike-that-recovered) |
+| `Lz_drift` | derived: `L_z(r,p) − Lz_0` | **diverging** | absolute-gated suspect |
+| `delta_Lz_max_abs` | f16, `packed_b` high (`dLz_max`) | log | ≥ the final absolute drift |
+| `E_0` | f32 | diverging | **= K₀+V₀** (cross-check) |
+| `Lz_0` | f32 | diverging | invariant-chart gradient input |
+| `closure_min` | f32 | log | ≥ 0; the running minimum of the shape-sphere distance from `n̂(0)`, once departed by `δ_dep` (R-37) |
+| `closure_step` | u16 (exact) | lin | the step index of the minimum (the period label); binary-parity surface, as `t_dmin_step` |
 
 ---
 
-## E. Payload field views — `ICDescriptor` (12 × f32) & the live-state block
+## E. Payload field views — `ICDescriptor` (64 B) & the live-state block
+
+`ICDescriptor` is 64 B: the twelve f32 fields of ledger §3.6 plus explicit padding. `E₀` is derived (`K_0 + V_0`), not stored (R-86).
 
 | Field | Shader | Test |
 |---|---|---|
-| masses | ternary colour | = decode masses |
-| `virial_ratio`, `rho_ratio`, `rho_angle`(cyclic), `K_0`, `V_0`(div), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
+| masses `m0 m1 m2` | ternary colour | = decode masses |
+| `q_mass`, `rho_mag`, `lambda_mag`, `virial_ratio`, `rho_ratio`(log), `rho_angle`(cyclic), `K_0`, `V_0`(div), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
+| `E₀` (derived, `K_0 + V_0`) | diverging | = `SimState.E_0` (the energy-agreement cross-check, §G) |
 | **live shape views** `u_mode` | mode 0: `½(n+1)` dir-cosines RGB of current derived `n`; mode 1: running phase `θ̃` cyclic; mode 2: `|n|−1` error | `‖n‖=1` (flat-zero — derived fresh each step); `θ̃` continuous (no 2π jumps); terminal-latched samples frozen |
 | accumulator views | FTLE-running `S/t` (live approx — the finalised read is `S_final/(step_count·dt)`, payload §5); diffusion slope `C_ty/C_tt(n)` (Welford, derived time-moments); drift max-vs-final | accumulator bookkeeping, live |
 

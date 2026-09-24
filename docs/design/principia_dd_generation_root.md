@@ -30,17 +30,18 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 
 ### 3.1 `sample_descriptor` (u32)
 
-**`sample_descriptor` (u32) — authoritative bit layout (8 bits used; `total_substeps` is a separate exact u32 in the struct, NOT a descriptor field):**
+**`sample_descriptor` (u32) — authoritative bit layout (10 bits used, 0–9; `total_substeps` is a separate exact u32 in the struct, NOT a descriptor field):**
 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0; there is no step-0 `escape`, since the window rule needs history, so an IC already escaping is classified when its window completes — R-60). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
 | `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id (0-based); collision → pair id (pair `k` is the side opposite body `k`, R-22); sim_failed/decode_failed → failure category; undefined for running |
-| `saturated` | 5 | 1 | sticky flag — the substep exponent reached `⌈log2 N_max⌉` at some point (integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag). `N_max` is a raised tunable (integrator contract), not hardcoded |
+| `saturated` | 5 | 1 | sticky flag — set iff `N_sub == N_max` occurred at some macro-step (the integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag — payload §2, R-86). `N_max` is a raised tunable (integrator contract), not hardcoded |
 | `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word); pair ids as `detail` (R-22) |
-| *reserved* | 8–15 | 8 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
+| `last_symbol` | 8–9 | 2 | final symbol of the free-group word, a redundant cache of the sidecar word for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`); meaningful iff the word's `length ≥ 1 && length ≠ 127`. A deliberate, versioned assignment (payload §2, R-86) |
+| *reserved* | 10–15 | 6 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy (⌊log₂⌋, 0 for a total ≤ 1 — payload §6, R-86) is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
 
-(The descriptor uses **8 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Only bits 0–7 are used — payload §2.)
+(The descriptor uses **10 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Bits 0–9 are used and 10–15 reserved — payload §2.)
 
 **Derived, NOT packed (removed from the descriptor — functions of stored state):** `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = θ̃<0` (from `theta`); `enc_01/02/12`, `dominant_pair` (topological read of the word — symbolic-dynamics contract); `ftle = S_final/(step_count·dt)` (finalise the partial renorm interval at read — payload §5, **not** simply `S/t`); `total_substeps_log2` (from the exact `total_substeps` u32 via `countLeadingZeros`); current substep count (live read off the march); current drifts (`H(r,p)−E_0`). The old `encounter_count`/`benettin_count`/`suspect_energy`/`suspect_lz`/`ftle_valid` descriptor fields are gone (derived, dropped, or — for suspect flags — folded into read-time predicates over the drift values).
 
@@ -50,7 +51,7 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
-| `t_end_step` | 0–15 | 16 | **EXACT** completed-macro-step count `step_count` (u16), at all times — running: advances each step; terminal: latched; initial: 0 (payload §2). Display fraction derived `/horizon_steps`. At termination it is the total macro-steps (`total_steps` redundant). **Requires `horizon_steps=⌈T/dt⌉≤65535`** — ENFORCED (single format, no Q0.16 fallback; long integrations use coarser dt/epochs) |
+| `t_end_step` | 0–15 | 16 | **EXACT** completed-macro-step count `step_count` (u16), at all times — running: advances each step; terminal: latched; initial: 0 (payload §2). Display fraction derived `/horizon_steps`. At termination it is the total macro-steps (`total_steps` redundant). **Dispatch refuses a configuration with `horizon_steps=⌈T/dt⌉ > 65535`** (R-86; single format, no Q0.16 fallback; long integrations use coarser dt/epochs) |
 | `t_dmin_step` | 16–31 | 16 | **EXACT** absolute macro-step index of closest approach (u16). The old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march under lockstep |
 
 Exact integer indices → exact CPU/GPU parity (no rounding contract) and exact Welford prefix selection.
@@ -150,7 +151,7 @@ The word lives here, not in `SimState`. Specification:
 
 | Group | Contents | Notes |
 |---|---|---|
-| **Phase state** | `r, p` — 12 × f32 (vec4-grouped for alignment) | the marching state at the playhead |
+| **Phase state** | `r, p` — 12 × f32 (vec2-grouped, `array<vec2<f32>, 3>` each; 8-byte aligned — payload §1, R-86) | the marching state at the playhead |
 | **Shadow states** (tier-gated) | 1 Benettin shadow **per sample** (base and each ensemble copy), 12 × f32 each | **resident under lockstep — they march too.** Every sample is a full, uniform `SimState` computing its own FTLE (the sampling/SSAA decision: uniformity over micro-saving), so its FTLE shadow rides with it. Tier gates existence; `contains-ensemble` / `contains-FTLE` advertise it. The shadow is an *ingredient* of the sample's `ftle` field — never itself a coloured sample (renormalisation corrupts its endpoint) |
 | **Ensemble copies** (tier-gated) | E full uniform `SimState`s per nominal sample — a footprint has **E+1 samples, `copy_index` 0..E**: copy 0 is the un-jittered centre, copies 1..E sit at **Halton (2,3) points 1..E**, centred (minus ½) and scaled to the footprint (R-80) | structurally identical to the base (colour through any render graph, no special-casing) but **scheduler-leaves** — a copy never spawns its own ensemble (`ENSEMBLE_ENABLED` applies only to nominal samples; no recursion). They double as the SSAA sample pool *and* the spread-metric pool. Per-pixel ≈ `2(E+1)` trajectories (each sample + its shadow); E is the tier's free-valued SSAA knob (0–15; High = 3, Extreme = 15 — memory-tiers) |
 | **Running accumulators** | Benettin `S` (f32); unwrapped phase `θ̃` (f32 — `orbit_count`/`retrograde` derived at read); drift running-final + running-max pairs; **diffusion via Welford streaming regression** — per-sample `mean_y, C_ty` (2 × f32); the time-only terms `n, mean_t, C_tt` are **the same for all samples** (lockstep synchronises `t`) and are **DERIVED closed-form** (from `step_count`), not stored per-sample or in a mutable global — see the invariant | ⚠ **INVARIANT (footgun 1): diffusion is accumulated as *streaming regression state*, never as `(t, y)` points collected for a later fit** — points regrow the history the reversal deleted. **Welford, not raw moments:** the old raw-moment form (`Σt, Σt², Σy, Σty, Σy²`) computes slope as `(nΣty−ΣtΣy)/(nΣt²−(Σt)²)` — a *catastrophic-cancellation* difference of large nearly-equal products, precision-risky even at f32 as the sums grow over ~10⁵ steps. Welford tracks *centered* co-moments (running means + `C_tt, C_ty`), so **slope = `C_ty / C_tt`** directly — stable, no cancellation, no unbounded sums. **Lockstep — time-moments are DERIVED, not a shared mutable global** (WGSL has no dispatch-wide barrier to publish one safely mid-dispatch). For uniform sampling: `n=step_count`, `mean_t=(n+1)h/2`, **`C_tt(n)=h²·n(n²−1)/12`** (closed form). The per-sample covariance update uses the **OLD-mean** time deviation `δ_t=0.5·n·h` (NOT `t−mean_t` post-insertion, which is wrong): `mean_y += (y−mean_y)/n; C_ty += δ_t·(y−mean_y)`. Slope `C_ty/C_tt(n)`, **invalid for `n<2`** (sentinel, no divide-by-zero). Only `mean_y, C_ty` are stored. (Non-uniform schedule → small precomputed prefix table, still read-only.) Net: **2 per-sample f32** (was 5), *and* numerically robust. Slope + R² derived from `(C_ty, C_tt, mean_y, mean_t, n)` at any playhead |
@@ -162,6 +163,9 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 ### 3.6 `ICDescriptor` (12 × f32)
 
 `m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+
+**64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
+implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
 
 ### 3.7 `QuadReduction` — completed ledger
 
@@ -442,7 +446,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 1. **Disjointness & coverage (static):** within each packed word, fields never overlap; declared bits are covered or explicitly reserved; widths fit ranges (word length ~76 fits 7 bits with mixed-radix packing; note `encounter_count`/`orbit_count`/`total_substeps_log2` are all DERIVED, not packed fields — the last from the exact `total_substeps` u32, §3.1).
 2. **Pack∘unpack = id**, per field, property-fuzzed over the full value range — in **Rust** (host + the kernel's own pack/unpack) *and* in a GPU self-test dispatch of the **WGSL fragment** unpack (which is where the `i32-extractBits` sign-extension trap lives — u32 overload only; the Rust side has no `extractBits`, so that trap is fragment-specific).
 3. **f16 pairs** round-trip via `pack2x16float`/`unpack2x16float` within f16 eps.
-4. **Fixed-point:** `t_end`/`t_dmin` (in `times`) round-trip with ≤ 1/65535 error; endpoints exact; bit-identical CPU/GPU quantisation (parity).
+4. **Exact step indices:** `t_end_step`/`t_dmin_step` (in `times`) round-trip exactly as u16 — no fixed-point, no Q0.16 (R-86); dispatch refuses a configuration with `⌈T/dt⌉ > 65535`; bit-identical CPU/GPU on identical inputs (parity).
 5. **Sentinels:** `diffusion = −1.0` survives pack/unpack bit-exact; catalogue styles it, never scales it.
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
 7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.

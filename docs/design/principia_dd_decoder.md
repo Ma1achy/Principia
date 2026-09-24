@@ -137,6 +137,9 @@ K₀ = Σᵢ ‖pᵢ‖² / 2mᵢ        V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ 
 E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀
 ```
 
+The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_root.md` §3.6: 64 B, explicit padding).
+`E₀` is **derived** from it (`K₀ + V₀`), not stored (R-86).
+
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
 ### 3.7 Energy normalisation (optional; keep-or-drop is decision B9)
