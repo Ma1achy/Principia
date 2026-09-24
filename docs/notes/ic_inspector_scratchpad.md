@@ -70,8 +70,8 @@ These four compose into the gauge transform **g** between any dragged config and
 
 - **left-drag body** → move position
 - **drag arrow tip** → edit that body's velocity/momentum vector; toggle **v ↔ p** (draw p = m·v scaled)
-- **right-click body → properties popover**: mass, position (x, y), velocity (vₓ, v_y or speed/angle), momentum, distance to COM, distance to each other body, per-body contribution to P / L / E. All fields editable — drag and numeric entry stay in sync.
-- **mass edit** → disc radius ∝ ∛mass (area/volume reads better than linear)
+- **right-click body → properties popover** (in — R-96; render_gui_spec §G8): mass, position (x, y), velocity (vₓ, v_y or speed/angle), momentum, distance to COM, distance to each other body, per-body contribution to P / L / E. All fields editable — drag and numeric entry stay in sync.
+- **mass edit** → disc radius ∝ ∛mass (area/volume reads better than linear) (in — R-96)
 - **whole-system handles** → empty-canvas drag = translate-all; a rotate ring + scale ring around the COM; a boost handle. Or a dedicated "gauge-test" mode that swaps the per-body handles for the four system handles.
 - **overlay toggles** → COM marker, Jacobi frame (ρ, λ vectors — makes the encode legible since the chart is built on them), canonical ghost, shape-sphere mini-widget.
 

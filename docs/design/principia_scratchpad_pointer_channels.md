@@ -1,6 +1,7 @@
 # SCRATCHPAD — the pointer channels: trace, sound, inspector
 
-*Working notes, not ratified. Updates `principia_trajectory_viewing.md` where the two disagree —
+*Working notes. Normative only where `principia_render_gui_spec.md`, `principia_trajectory_viewing.md` or a ruling cites
+them (R-96). Updates `principia_trajectory_viewing.md` where the two disagree —
 that doc's §1 mechanism stands; its §1 responsiveness paragraph is superseded by §3 below.*
 
 ---

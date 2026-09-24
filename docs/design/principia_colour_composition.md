@@ -168,7 +168,9 @@ escaping body** (0 → Y, 1 → M, 2 → C; 0-based, R-22). The two event *famil
 separable at a glance while the pair/body identity stays legible; the three non-generic outcomes are
 bounded (black), the t=0 collision (orange), and degenerate (white). The nine classes read from the
 `state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
-assignment lands on `detail`, not on a second field). There is **no separate `escaper` field**: the
+assignment lands on `detail`, not on a second field). **How the table reads the payload (R-96):** "degenerate" is
+`decode_failed`; "collision @ t=0" is a collision with `t_end_step == 0`. The two states the table has no row for:
+`running` shows neutral grey, and `sim_failed` shows the invalid colour (§3). There is **no separate `escaper` field**: the
 escaping body *is* `detail | state=escape`, so “which body escaped” is already carried by this map's
 escape colours. A standalone escaper view is therefore this map **filtered to the escape classes** — a
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical

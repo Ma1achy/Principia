@@ -42,8 +42,8 @@ data. The two words name one object. The **figure** is the rendered slice.
   onto the same surface (`principia_gui_state_contract.md` §1).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
-  contract** as a history of typed `SetField` edits, shared by every GUI (R-52). The top bar shows the undo depth; Ctrl+Z
-  undoes from the contract's history.
+  contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
+  The top bar shows the undo depth; Ctrl+Z undoes from the contract's history.
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit `z₀` and the basis
   (`principia_chart_decoder_contract.md`, design axiom 6; canonical_spec §9, invariant 4). No control, window or log line is named
   after a camera.
@@ -110,7 +110,8 @@ IC:
   mode by itself**: touching a slice slider shows slicing, and touching a tilt shows tilting. When locked it carries a gold
   pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
   out the tilt and rotation angles.
-- **Time:** play, step, a scrubber, speed. **Scrubbing back re-integrates** to that time, so the figure refines
+- **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
+  on the sim key (R-96). **Scrubbing back re-integrates** to that time, so the figure refines
   progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
   stored frames; the export contract's "no scrub" applies to exported animations only (R-66).
 - **Legend, generated from the stain** (§G6).
@@ -255,7 +256,9 @@ labels (R-22).
 Explore's Trajectory panel (§G2); trajectory_viewing §4 says where each lives. The standalone IC Inspector tool is absorbed;
 its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 
-- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead.
+- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead. **Right-click a
+  body** for its properties popover (mass, position, velocity, momentum, distances, per-body share of P / L / E — all
+  editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
   transform" shows what the gauge buttons did.
 - **Pane 3:** the trajectory in real space (CoM frame).
@@ -298,7 +301,8 @@ tool. The side panel shows:
   period per seed; compared with the Šuvakov–Dmitrašinović catalogue (`principia_dd_validation_orbits.md` §1.4).
 - **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes.
 - **Poincaré return map** on a chosen section, for a kept orbit.
-- **Side by side** with a linked cursor and navigation, and a difference view.
+- **Side by side** with a linked cursor and navigation, and a difference view. Link ids are specified when these v2
+  research tools are built (R-96).
 
 ## G12. Console (`12_console.png`)
 

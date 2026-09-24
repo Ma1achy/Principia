@@ -32,6 +32,7 @@ Every knob has a blast radius. Consolidated from the render, integrator, and sch
 | Integrator occupant | All sim buffers (signature) |
 | Link function selection, chart/decode version | All sim buffers (signature — the ICs themselves change) |
 | Quality tier | Sim buffers for the affected **sim-key** components only (FTLE, word, N — signature: tier flags; and `T` if preview). The tier's `E` invalidates nothing — copies are cached per `copy_index` and the nominal's key excludes `E` (R-89); nor does its `render_scale` component (row below) |
+| Transport (play / pause / speed / loop) | **Nothing.** `ViewUI` state — not on the sim key, not undoable (R-96) |
 | `MAX_REL_DEPTH`, frame budget, in-flight limit | **Nothing.** Scheduler knobs — change what gets *scheduled*, never what anything computed *to* |
 | `render_scale`, lock-to-native | **Nothing.** Not sim-key (payload purity — render resolution is not in the sim key): it moves the *refinement target* (screen floor at render-pixel size). Lowering leaves existing deep quads valid-but-deeper-than-needed; raising computes new deeper quads, masked by blur (quality/device note) |
 

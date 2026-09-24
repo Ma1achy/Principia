@@ -17,6 +17,8 @@ Time in Principia is a **live march**, not a stored dimension. The global playhe
 | **loop** | auto-restart at `t_end` (the horizon `T`, or when every visible sample has latched terminal) |
 | **speed** | a `dt`-per-wall-second setting on the frame loop — never tied to device frame rate (determinism, Part 5) |
 
+Transport is `ViewUI` state (`principia_gui_state_contract.md` §2): not undoable, not on the sim key — changing it never re-integrates (R-96).
+
 **Playback under navigation.** Pan/zoom during playback reveals quads that catch up `0 → playhead` (or resume from a cached state — caching Part 7) off-loop, shown blurred via the moving fallback (their live ancestor, animating), promoting at a barrier when synced. The screen is never mixed-time, never frozen, never lying (frame loop, three-failure-modes rule). Late-playback reveals cost more than early ones — the honest price of the moment being asked for — but the cost is background compute, never a stall.
 
 **"Pause at `t_end`" equivalence.** Playing to the horizon and pausing performs exactly the integration the old eager system performed up front for every quad — so worst case ties the old design on compute while beating it on memory; every earlier frame is strictly cheaper.
