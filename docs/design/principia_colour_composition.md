@@ -328,7 +328,8 @@ anything applied after it is meaningless and anything that lets it be misplaced 
 that can lie. It is an **accessibility/display setting** alongside `render_scale`, and it therefore
 applies uniformly to *everything* — main render, sphere preview, equirect unwrap, node thumbnails —
 which is exactly what an accessibility audit wants: check the whole instrument at once. The CVD
-matrices and linear-sRGB path are the Viénot/Brettel forms already in the reference artefacts.
+simulation is real Viénot (protan, deutan) and Brettel (tritan) through LMS from linear sRGB, with matrices and golden
+values from a published reference implementation, named with its version when the task lands (R-78; dd_colouring §3.8).
 
 ---
 
@@ -440,7 +441,7 @@ golden test. §7.1 is the checklist; the reference artefacts are the oracle for 
 ### 7.1 The complete map list (R-16)
 
 Ported from the retired shape-sphere colour-map PDF (R-3, R-16). Parameter ranges are in §8. The vMF engine (Eq. 5),
-the LUT sphere, the CVD matrices and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
+the LUT sphere, the CVD method (R-78) and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
 
 **Artefact 1 — colour maps (`ColourSphere`).**
 
@@ -496,7 +497,7 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
   mode-by-mode presentation is superseded by the preset table (§7). The `combine` L-ownership rules
   (Replace-L / Multiply) are unchanged and referenced by §4.1.
 - **The shape-sphere colour-map PDF §5–§9** (implementation) — superseded by this document. The PDF
-  is retired and archived; its Eq. 5 and CVD matrices are in `principia_dd_colouring.md` §3.2 and §3.8, and its parameter ranges
+  is retired and archived; its Eq. 5 is in `principia_dd_colouring.md` §3.2, its CVD matrices are replaced by real Viénot/Brettel (§3.8, R-78), and its parameter ranges
   (L∈[0.35,0.90], C∈[0.05,0.22], κ∈[0.5,12], f∈[2,14], N∈[12,96], ks∈[1,20], s∈[0,1]) are adopted.
 - **`principia_debug_tooling_plan.md` §B–§G** — re-expressed as the debug preset table (§6). §A is
   reduced to Appendix A.

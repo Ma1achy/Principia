@@ -133,13 +133,14 @@ The outcome `state` takes `principia_colour_composition.md` §1.4's canonical ni
 
 **Cubehelix** (analytic, CB-tolerant by monotone L): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
 
-**CVD simulation** — a display-stage setting, **linear sRGB**, after all pixel computation; order **pixel function → physics overlay → `OUT` → style → display scale → gamut clamp → CVD → screen** (R-67; the simulation sees the final in-gamut colours; the scale stage is a no-op at native; render contract Part 4). $M_{\mathrm{cvd}}$ multiplies the linear $(R_\ell, G_\ell, B_\ell)$ triplet:
+**CVD simulation** — a display-stage setting, **linear sRGB**, after all pixel computation; order **pixel function → physics overlay → `OUT` → style → display scale → gamut clamp → CVD → screen** (R-67; the simulation sees the final in-gamut colours; the scale stage is a no-op at native; render contract Part 4).
 
-$$M_{\mathrm{deutan}} = \begin{pmatrix} 0.625 & 0.375 & 0 \\ 0.700 & 0.300 & 0 \\ 0 & 0.300 & 0.700 \end{pmatrix}, \qquad
-M_{\mathrm{protan}} = \begin{pmatrix} 0.567 & 0.433 & 0 \\ 0.558 & 0.442 & 0 \\ 0 & 0.242 & 0.758 \end{pmatrix},$$
+**The method (R-78):** real **Viénot** simulation for protan and deutan, and real **Brettel** simulation for tritan, both
+through LMS space from linear sRGB. The matrices and golden values come from a published reference implementation, named
+with its version when the task lands (R-78). Achromatopsia, which is neither, multiplies the linear $(R_\ell, G_\ell, B_\ell)$
+triplet:
 
-$$M_{\mathrm{tritan}} = \begin{pmatrix} 0.950 & 0.050 & 0 \\ 0 & 0.433 & 0.567 \\ 0 & 0.475 & 0.525 \end{pmatrix}, \qquad
-M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
+$$M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
 
 Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
 orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
@@ -169,7 +170,7 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 7. **Compaction:** each form monotone on its domain; log handles the −1.0 sentinel via styling, never via the ramp; symlog symmetric (`b(x) + b(−x) = 1`) with `b(0) = ½` exactly.
 8. **Categorical discipline:** a synthetic mixed quad renders the **per-sample colour-then-SSAA-resolve blend** per §3.7 (e.g. 75% escape / 25% bounded → 75/25 blended sRGB) — **never an RGB average of class *indices*, and never the vetoed majority+desaturation**; the `detail` legend switches per `state` (the regression test the three-colours bug earns).
 9. **Golden-angle adjacency:** consecutive palette indices exceed a minimum OKLab hue separation for n up to the Fibonacci-lattice counts.
-10. **CVD stage:** achrom output has `R = G = B` exactly; applying any matrix pre-linearisation produces a detectable difference — asserting the *stage*, not just the matrix.
+10. **CVD stage:** protan, deutan and tritan match the reference implementation's golden values (R-78); achrom output has `R = G = B` exactly; applying any simulation pre-linearisation produces a detectable difference — asserting the *stage*, not just the matrix.
 11. **Bake equivalence:** for every pure-`f(n̂)` occupant, texture-sampled vs directly-evaluated colour agree within texture quantisation over a sphere lattice — the preview-is-the-texture guarantee, executable.
 12. **Render freedom at a paused playhead:** with the frame loop paused, cycling every render mode issues zero compute dispatches and leaves the sim-buffer hash unchanged (the playhead is a live clock, not a render uniform; temporal note, R-66).
 
