@@ -6,45 +6,46 @@
 
 | area | count |
 |---|---|
-| DEC | 37 |
-| ENC | 21 |
-| CHART | 40 |
-| INT | 72 |
-| EVT | 22 |
-| PAY | 72 |
+| DEC | 43 |
+| ENC | 28 |
+| CHART | 46 |
+| INT | 79 |
+| EVT | 23 |
+| PAY | 86 |
 | GEN | 23 |
-| SCHED | 73 |
-| REF | 40 |
-| RENDER | 74 |
-| COL | 48 |
-| GUI | 142 |
-| TOOL | 108 |
-| VAL | 111 |
-| PERF | 76 |
+| SCHED | 85 |
+| REF | 43 |
+| RENDER | 76 |
+| COL | 53 |
+| GUI | 154 |
+| TOOL | 118 |
+| VAL | 137 |
+| PERF | 84 |
 | SYS | 62 |
-| **total** | **1021** |
+| **total** | **1140** |
+
+Of these: 63 calibration, 55 definition, 1022 obligation. Retired (kept for their ids, not counted): 2.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 56 |
-| M1 | 70 |
-| M2 | 124 |
-| M3 | 149 |
-| M4 | 84 |
-| M5 | 131 |
-| M6 | 113 |
-| M7 | 95 |
-| M8 | 199 |
+| M0 | 57 |
+| M1 | 73 |
+| M2 | 143 |
+| M3 | 175 |
+| M4 | 92 |
+| M5 | 148 |
+| M6 | 127 |
+| M7 | 105 |
+| M8 | 220 |
 
 ## Sections
 
-758 sections in 46 files: 657 yield at least one requirement; 101 yield none and are listed below with the reason.
+785 sections in 46 files: 686 yield at least one requirement; 99 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-54) | 1 |
-| informative only | 52 |
+| informative only | 51 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
 | superseded (kept for the record) | 4 |
@@ -294,7 +295,6 @@
 | Part I — The dev GUI | parent heading (obligations are in its subsections) |  |
 | G5. Windows (`04_windows.png`) | parent heading (obligations are in its subsections) |  |
 | 14. Prototype → GUI mapping | informative only | maps HTML prototypes to GUI roles; the prototypes are prior art |
-| 16. Open / next | gap (RQ-54) | node palette contents, preview default and the standing composition-spec gaps are open; the mock build is a plan item |
 
 ### `docs/notes/ic_inspector_scratchpad.md`
 
@@ -335,7 +335,6 @@
 | 7.2 Tiled prebake | informative only | parked post-1.0 (§7); out of scope for the build |
 | 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
-| 7.5 Regularisation-method comparison as a scientific result | informative only | parked post-1.0 (§7); fairness rule echoed in the logH requirement |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
 | 9. What this is not | informative only | what the project is not |
 
