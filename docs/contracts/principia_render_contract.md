@@ -76,7 +76,7 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 
 **Composite order (constitutional):** baked base (physics blobs already in) → combine (L-override) → structural/debug overlays → CVD → **render→display scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the last step before the display-sized swap chain; all prior stages run at render resolution) → canvas. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
 
-**Sentinels, not NaN.** `diffusion = −1.0` when the two-window fit is invalid (see REVIEW_QUEUE RQ-15); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
+**Sentinels, not NaN.** `diffusion = −1.0` when the streaming slope is invalid, i.e. for `n < 2` (R-17; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
 ---
 

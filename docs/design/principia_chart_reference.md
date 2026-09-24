@@ -282,9 +282,15 @@ m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
 ```
 a = ‖ρ̃‖²    b = ‖λ̃‖²    I = a + b
 p = ρ̃ₓ λ̃ₓ + ρ̃_y λ̃_y                 (dot)
-q = ρ̃_y λ̃ₓ − ρ̃ₓ λ̃_y                 (NEGATIVE of the standard 2D cross — sign convention matters)
-n = ( (a−b)/I , 2p/I , 2q/I ) , normalised
+q = ρ̃ₓ λ̃_y − ρ̃_y λ̃ₓ                 (standard 2D cross, ρ̃ ∧ λ̃ — R-14)
+n = (u, v, w)/I = ( (a−b)/I , 2p/I , 2q/I ) , normalised
 ```
+
+This is the project's one shape-sphere convention (R-14), the IC Inspector's: `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2ρ̃·λ̃`,
+`w = 2(ρ̃ ∧ λ̃)`. `L⁺` (`w = +1`) is the equilateral triangle with bodies 0 → 1 → 2 anticlockwise, and the collision of bodies
+0 and 1 (`ρ̃ = 0`) is at `n = (−1, 0, 0)`. An earlier version of this section took `q` as the negative of the cross, which put
+`L⁺` and `L⁻` at opposite poles from `principia_dd_integrator.md` §3.7. A `shape_vec` built to that version has its third
+component negated relative to this one.
 
 ### 3.2 Inverse — closed form
 
@@ -295,11 +301,12 @@ a = I(1 + n₀)/2      b = I(1 − n₀)/2      p = I·n₁/2      q = I·n₂/2
                                           (p² + q² = ab holds identically)
 
 ρ̃ = √a·(cos φ_f, sin φ_f)
-λ̃ = √b·(cos ψ,   sin ψ)        with  ψ = φ_f + atan2(−q, p)
+λ̃ = √b·(cos ψ,   sin ψ)        with  ψ = φ_f + atan2(q, p)
 ```
 
-**The `atan2(−q, p)` sign is correct given §3.1's `q`.** With the standard cross convention it
-would be `atan2(q, p)`. Verified to machine precision.
+**The `atan2(q, p)` sign is correct given §3.1's `q`** (the standard cross). Under the earlier negative-cross `q` it
+was `atan2(−q, p)`. Verified to machine precision (round trip over 2,000 random masses and shapes, max error 3e−15).
+`φ_f` is the fibre phase, not the polar angle `φ` of §3.3.
 
 Then unweight (`ρ = ρ̃/√μ_ρ`, `λ = λ̃/√μ_λ`) and reconstruct positions per §0.2.
 
@@ -309,9 +316,13 @@ Then unweight (`ρ = ρ̃/√μ_ρ`, `λ = λ̃/√μ_λ`) and reconstruct posit
 
 Two options; state which is used.
 
-**Spherical coordinates** (simple, has poles):
+**Spherical coordinates** (simple, has poles). Chart coordinates are written `(s, t) ∈ [0,1]²` here, because `u`
+and `v` are shape components in this section. `(s, t)` is the `(u, v)` of `Φ` elsewhere in this document, with the
+bottom-left origin and Y-up (`principia_coordinate_conventions_note.md`). By R-14:
 ```
-θ = π·v        φ = 2π·u        n = (cos θ, sin θ cos φ, sin θ sin φ)
+θ = 2π·s          azimuth in the (u, v) plane, horizontal axis, 0..2π
+φ = π·(1 − t)     polar angle from +w, vertical axis, 0..π — L⁺ (φ = 0) at the top
+n = (sin φ cos θ, sin φ sin θ, cos φ)
 ```
 
 **Exponential map about a centre `n0`** (no poles in view; the trig is where curvature lives):
@@ -322,12 +333,14 @@ with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — us
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero.
 
-**No polar buffer (R-12).** An alternative map, $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$, $\varphi(v) = 2\pi v$, put θ on
-the horizontal axis and kept a buffer $\varepsilon$ off each pole "to avoid the collision singularities". It is
-rejected. Its premise is wrong: the collision points are on the equator (§3.4), and the poles are the
-Lagrange configurations. θ stays on `v`, with no buffer.
+**No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
+$\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
+"to avoid the collision singularities". It is rejected. Under this convention the poles are the Lagrange
+configurations, which are regular points of the flow, and every binary collision lies on the equator ($w = 0$, §3.4).
+So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \pi]$.
 
-**Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, 2\pi - \varphi)$
+**Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
+takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
 the redundancy. The chart sets `has_redundant_hemisphere = true`.
 

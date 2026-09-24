@@ -25,7 +25,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 - **Momentum (4 DOF).** Two planar Jacobi momentum vectors `(p_ρ, p_λ)`. The rest start sits at the origin. `L_z`, `E`, `KE`, `PE` are *derived* from this block (with masses/positions for `E`, `PE`), not independent axes.
 - **Mass (2 DOF).** The 2-simplex `Δ² = {(m₁,m₂,m₃) : Σ = 1, mᵢ > 0}`. Two controls (softmax logits) cover it. Burrau `(c,b,a)/(a+b+c)` is one point; equal mass `(⅓,⅓,⅓)` the barycentre.
 
-**Shape-sphere redundancy:** the canonical decode gauges the `λ̃_y → −λ̃_y` reflection, i.e. `(θ,φ) ∼ (θ, 2π−φ)`. The φ hemispheres are reflection-equivalent — the chart is a **2-to-1 cover**. Render one hemisphere or flag the redundancy.
+**Shape-sphere redundancy:** the canonical decode gauges the `λ̃_y → −λ̃_y` reflection, i.e. `(θ,φ) ∼ (θ, π−φ)` (θ azimuthal, φ polar from `+w`; R-14, chart reference §3.3). The φ hemispheres are reflection-equivalent — the chart is a **2-to-1 cover**. Render one hemisphere or flag the redundancy.
 
 ---
 

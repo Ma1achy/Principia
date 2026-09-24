@@ -22,3 +22,6 @@ Everything left open, each with its source. Nothing is deferred silently.
 - **`FULL_RETENTION` has no markdown owner** (step 3, port 8). The flag (bit 4, "skip reduction, keep every
   per-sample result") is in the scheduler contract's flags table. No markdown file describes the full-retention path
   it selects.
+- **Fold R-15 and R-18 into the scheduler contract** (step 4, with pending change 12). Part 6's split/keep/merge rule
+  defers to `principia_dd_refinement_policy.md` (R-15). Its split list still names `ensemble_outcome_agreement`, which
+  R-18 retires in favour of `spread_event`. Source: rulings R-15 and R-18, step 3.

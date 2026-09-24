@@ -167,7 +167,7 @@ the hypercube. Lookup and lock validate against the **active chart's** constrain
    - $(L_z, E)$: inside the parabola $|L_z| \le \sqrt{2I(E - U)}$. A pair outside it has no physical realisation at the current configuration.
    - $(L_z, K)$: $K \ge 0$ and $K \ge L_z^2/2I$.
    - Mass simplex: every $m_i > 0$ and $\sum m_i = 1$. The interior buffer $\varepsilon_m$ narrows it further.
-   - Shape sphere: $\theta \in [0, \pi]$ and $\varphi \in [0, 2\pi)$, with no polar buffer (`principia_chart_reference.md` §3.3, R-12).
+   - Shape sphere: $\theta \in [0, 2\pi)$ (azimuth) and $\varphi \in [0, \pi]$ (polar, from $+w$), with no polar buffer (`principia_chart_reference.md` §3.3, R-12 and R-14).
    - Burrau charts: $\nu \in (0,1)$. The triangle degenerates as $\nu \to 0$ or $\nu \to 1$.
    - Mixed-axis charts inherit both axes' constraints.
 3. **Decode sanity.** After decoding: all masses positive; CoM at the origin and total momentum zero, both within

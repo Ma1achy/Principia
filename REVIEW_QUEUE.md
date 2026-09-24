@@ -148,6 +148,7 @@ Nothing is chosen. The PDF convention is ported into `principia_dd_integrator.md
    therefore itself wrong as written.** I left it in place because it's your ruling, and I'm flagging it rather than editing it.
 - **Needed:** one component → axis convention for `n` (the order and the signs), used by the chart map, the
   shape readout and the overlay alike. Then a re-ruling on the polar buffer under that convention.
+- **Ruling:** R-14 (decisions.md) — applied in step 3
 
 ## RQ-13: The scheduler contract's refinement rule predates `Policy::Tolerance` *(step 3, port 8)*
 
@@ -172,6 +173,7 @@ places. Nothing is chosen. Part 6 now carries a note pointing here, and its text
 - **Needed:** which rule the scheduler contract states. If it's `Policy::Tolerance`, Parts 4 and 6 are rewritten from the
   refinement policy doc in step 4, when pending change 12 is folded. Priority weights, eviction and cancellation aren't
   affected.
+- **Ruling:** R-15 (decisions.md) — applied in step 4
 
 ## RQ-14: colour_composition's golden images are pinned to the retired colour PDF *(step 3, port 10)*
 
@@ -190,6 +192,7 @@ sentences above are left as they are. Nothing is chosen.
 Also recorded here, not chosen: colour_composition §3 gave the default invalid colour as "(spec: a fixed magenta)". I
 found no source that says so. The `.tex` and the colour PDF use magenta only as a hue in a colour scheme (the PDF's
 `−ŷ` pole). The attribution is removed, and "a fixed magenta" stays as the markdown's own default.
+- **Ruling:** R-16 (decisions.md) — applied in step 3
 
 ## RQ-15: When the diffusion sentinel fires *(step 3, port 10; found by the removed-lines audit)*
 
@@ -200,6 +203,7 @@ decision without a ruling, so the change is reverted and the conflict is flagged
   centered co-moments". `principia_dd_simstate_payload.md`: "`diffusion_slope` … **Invalid for `n < 2`** (`C_tt=0`) → sentinel
   slope". `principia_dd_generation_root.md` §3.4: "`diffusion` | lin | **sentinel −1.0** = fit invalid".
 - **Needed:** which fit the sentinel belongs to. If it's the streaming slope, the render contract's "two-window" is reworded.
+- **Ruling:** R-17 (decisions.md) — applied in step 3
 
 ## RQ-16: The ensemble agreement scalar has three accounts *(step 3, port 9; found by the removed-lines audit)*
 
@@ -213,3 +217,4 @@ without a ruling, so the change is reverted and the conflict is flagged here ins
   (not a stored field)".
 - **Needed:** whether `ensemble_outcome_agreement` is `spread_event` (same quantity, opposite sense) or a separate field, and
   whether it's stored or derived. RQ-13 may also settle the scheduler's use of it.
+- **Ruling:** R-18 (decisions.md) — applied in step 3

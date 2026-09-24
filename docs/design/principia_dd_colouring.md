@@ -87,7 +87,7 @@ Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √ma
 
 ### 3.4 Physics overlay (blob blend) and the house encoding (stability × hue)
 
-Special configurations (equal-mass conventions): `b̂₁ = (1,0,0)`, `b̂₂ = (−½, √3/2, 0)`, `b̂₃ = (−½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`.
+Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`. With unequal masses, whether the overlay uses the mass-weighted positions or fixed 120° spacing is audit decision B18.
 
 ```
 Blob blend:   c_out = c_base + Σⱼ wⱼ(cⱼ − c_base),

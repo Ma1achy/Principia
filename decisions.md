@@ -130,3 +130,50 @@ A port may add content. It may never delete or change a decision the markdown ha
 decisions in the drill-downs and contracts, without a REVIEW_QUEUE entry and a ruling. Each commit message ends with a
 "Removed lines" note. For every removed line it says either "reworded, kept at <file:line>" or "stale value, replaced by
 <ruling>". A removed decision with neither is a bug.
+
+## R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*
+*24 Sep 2026 · applied in step 3*
+
+The convention was validated by the human:
+
+```
+u = ‖ρ̃‖² − ‖λ̃‖²,   v = 2 ρ̃·λ̃,   w = 2(ρ̃ ∧ λ̃)   (standard, positive cross)
+n = (u, v, w)/I
+θ = azimuth in the (u, v) plane, on the horizontal axis, 0..2π
+φ = polar angle from +w, on the vertical axis, 0..π; L⁺ (w = +1) at the top
+n = (sin φ cos θ, sin φ sin θ, cos φ)
+```
+
+Applied as follows:
+- chart_reference §3.1: `q` takes the standard sign.
+- chart_reference §3.3: the spherical map is rewritten in θ/φ.
+- The R-12 note is rewritten. There is no polar buffer, because under this convention the poles are the Lagrange
+  points (regular) and every binary collision lies on the equator (w = 0).
+- dd_integrator §3.7: the overlay's b̂ landmarks are computed from this formula, not hard-coded. The collision of bodies 0
+  and 1 is at n = (−1, 0, 0). Audit decision B18 (mass-weighted positions or fixed 120°) stays open.
+- dd_integrator's shape-map tests check the landmarks numerically (BC₀₁ → (−1,0,0), L⁺ → (0,0,+1), all collisions at w = 0,
+  equal masses 120° apart) and cross-check `n` against the IC Inspector's JS on random ICs.
+
+## R-15 — `Policy::Tolerance` governs refinement *(closes RQ-13)*
+*24 Sep 2026 · applied in step 4*
+
+This follows the INDEX's "current design" and landed pending change 12. The scheduler contract keeps its mechanics and
+defers the split decision to `principia_dd_refinement_policy.md`. It's applied in step 4, when change 12 is folded in.
+
+## R-16 — The colour PDF's map lists are ported *(closes RQ-14)*
+*24 Sep 2026 · applied in step 3*
+
+The complete Artefact-1 and Artefact-2 map lists go from the retired colour PDF into `principia_colour_composition.md`
+(under R-3), and the golden-image tests are pinned to that list. Magenta stays the invalid colour as a plain default,
+with no source claimed.
+
+## R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*
+*24 Sep 2026 · applied in step 3*
+
+The streaming slope is the one the payload ledger and the payload doc define. `principia_render_contract.md`:79 is updated to cite it.
+
+## R-18 — The agreement value is `spread_event` *(closes RQ-16)*
+*24 Sep 2026 · applied in step 3*
+
+`spread_event` is an f16 and is stored, as `principia_dd_generation_root.md`'s ledger defines it. `ensemble_outcome_agreement` is a retired name. The
+sampling note cites `spread_event`, and any agreement value is derived from it on the fly.
