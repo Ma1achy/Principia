@@ -278,7 +278,7 @@ class, and it *lags* divergence rather than leading it), `t_end` (conditional �
 |---|---|---|
 | `alpha_area` | f16 | the stop rule's exponent, `log2(unresolved_area(coarse) / unresolved_area(children))`, judged over two levels (policy §2) — a dimension: a line reads 1, a sea 0, and the floor is below `alpha_lo`. An empty mask is told from a full one by `n_unresolved`, and the floor is refused on a negative exponent (R-42) |
 | `alpha_energy` | f16 | **sanity field.** Total energy's exponent is known analytically to be 1.0 |
-| `worst_energy_drift` | f16 | input to the per-copy classifier that sets `failed_fraction` |
+| `worst_energy_drift` | f16 | the field to threshold on for absolute conservation; pairs with `error_ratio` (R-87) |
 
 (`error_ratio` doubles as the estimator trust flag, replacing the retention-based detector of
 §7.15e: `error_ratio` departing from 1.0 is the same signal without a tuned threshold.)
@@ -326,8 +326,8 @@ Four properties of this block, all measured:
 3. **`alpha_energy` is a free per-quad correctness check** — the field excluded for having *no*
    dynamics turns out to be the ideal control. If `|alpha_energy − 1| > 0.05`, every exponent from
    that quad is untrustworthy.
-4. **`failed_fraction > 0.10` detects estimator failure** with one false alarm in six. Note there is
-   **no better-estimator fallback**: Theil–Sen *is* two-point OLS at two scales (verified to 8.7e-10),
+4. **Estimator failure is read from `error_ratio`** departing from 1.0 (R-87). Note there is **no
+   better-estimator fallback**: Theil–Sen *is* two-point OLS at two scales (verified to 8.7e-10),
    so its advantage came from consuming more scales. The fallback is *acquire a third scale*
    [RC §7.15e].
 
@@ -393,10 +393,10 @@ while a collision radius leaves them exact and only decides when to stop — rec
 (pending change 7) rather than applying a fudge. **Adopted: `r_coll` nonzero by default, `epsilon`
 default 0 and optional.**
 
-**Long-horizon behaviour is now a reporting property rather than a limit.** With `failed_fraction`
-as a contributor, a pixel whose copies cannot be integrated reads **indeterminate** — which is true —
-instead of emitting an exponent computed from the tame minority that survived. Measured, near-field
-at `t=80`: `failed_fraction = 0.56`, `ensemble_spread = 0.664`. And the refinement decision follows
+**Long-horizon behaviour is now a reporting property rather than a limit.** With nothing discarded
+and `error_ratio` read as the trust flag (R-87), a pixel whose copies cannot be integrated reads
+**indeterminate** — which is true — instead of emitting an exponent computed from the tame minority
+that survived. Measured, near-field at `t=80`: `ensemble_spread = 0.664`. And the refinement decision follows
 automatically: as failures accumulate, parent and child spreads both saturate, `alpha → 0`, and the
 quad **floors** — correct, since refining does not make a close encounter easier. Still open: gate threshold and integrator tolerance must be specified **as a pair**
 (at `eta=0.005` the gate stops mattering; at `eta=0.02` no threshold reaches the trust bar) [RC §7.14a].
