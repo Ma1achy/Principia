@@ -177,3 +177,23 @@ The streaming slope is the one the payload ledger and the payload doc define. `p
 
 `spread_event` is an f16 and is stored, as `principia_dd_generation_root.md`'s ledger defines it. `ensemble_outcome_agreement` is a retired name. The
 sampling note cites `spread_event`, and any agreement value is derived from it on the fly.
+
+## R-19 — Change 8 landed in full *(closes RQ-17)*
+*24 Sep 2026 · applied in step 4*
+
+`ADVANCE(state, t_now, t_target, params)` is the occupant seam. Part 2b extended it with regularisation as a separate
+axis; it didn't replace it. In the integrator contract:
+- Part 2a's "PROPOSED CHANGE" becomes "DECIDED (change 8, extended by Part 2b)".
+- `owns_time_mapping` is reported for the composed occupant (stepper × regularisation): true whenever the regularisation
+  is not `none`.
+- The per-substep cadence is a callback passed in.
+- Law 18's count bound is on a fixed τ-schedule.
+
+The original rationale text is kept.
+
+## R-20 — No `majority_class` field *(closes RQ-18)*
+*24 Sep 2026 · applied in step 4*
+
+The impurity mask compares each sample with `dominant_outcome` at the joint `class ⊕ detail` grain (change 1's
+resolution, `principia_dd_generation_root.md` §3.7). The impurity-mask rows in the render contract and in
+`principia_debug_tooling_plan.md` say so.

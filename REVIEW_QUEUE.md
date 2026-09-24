@@ -231,6 +231,7 @@ The register, the index and the integrator contract disagree on change 8. Nothin
 - Part 2b (DECIDED) covers the regularisation axis but doesn't mention `ADVANCE`, `owns_time_mapping` or the callback.
 - **Needed:** whether the landed form includes `ADVANCE` / `owns_time_mapping` / the cadence callback (Part 2a becomes
   current), or whether Part 2b replaced them (Part 2a is marked superseded). Either way, which AZ rows are in the table.
+- **Ruling:** R-19 (decisions.md) — applied in step 4
 
 ## RQ-18: The impurity mask's field — `majority_class`, or change 1's joint grain *(step 4, register)*
 
@@ -242,3 +243,4 @@ Change 1 is resolved, and render_contract Part 6 still asks for the field the re
   `majority_class` added to `QuadReduction`/`RenderQuad`** — one u32, do it)".
 - **Needed:** whether the mask compares at the joint grain against the existing `dominant_outcome` (no new field; the mask
   definition changes from `state` to `class ⊕ detail`), or keeps a class-only `majority_class`.
+- **Ruling:** R-20 (decisions.md) — applied in step 4

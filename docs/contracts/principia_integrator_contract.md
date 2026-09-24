@@ -6,7 +6,7 @@
 
 ## Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper
 
-Same pattern as the render pipeline's swappable colour/brightness slots. The integrator is **not** a monolith; it is one small swappable piece inside a fixed loop.
+Same pattern as the render pipeline's swappable colour/brightness slots. The integrator is **not** a monolith; it is one small swappable piece inside a fixed loop. *(The occupant seam is `ADVANCE(state, t_now, t_target, params)`, Part 2a, R-19. For a stepper with no regularisation, `ADVANCE` is the loop below.)*
 
 ```
 integrate(ic, params):
@@ -212,7 +212,7 @@ better, never switch silently.** Revisit only with a measurement showing the bou
 
 ### Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature
 
-**PROPOSED CHANGE, driven by measurement.** The wrapper's model — `STEP(state, dt)` called `N_sub`
+**DECIDED (change 8, extended by Part 2b; R-19), driven by measurement.** The wrapper's model — `STEP(state, dt)` called `N_sub`
 times at `dt_macro/N_sub`, with adaptive substepping owned by the wrapper — was measured **failing on
 the regime this instrument exists to explore.** Unregularised adaptive stepping on `deep interior`
 did not hang; it returned `|dE/E| = 2.8e+02` in 35k steps against a 2e6 budget. **A wrong number
@@ -227,8 +227,8 @@ at `d_min = 1.35e-11` with energy drift **6.2e-15**, where every unregularised a
 **The change is one signature and one flag:**
 
 ```
-STEP(state, dt, params)                   -> state'    # current
-ADVANCE(state, t_now, t_target, params)   -> state'    # proposed
+STEP(state, dt, params)                   -> state'    # the earlier seam
+ADVANCE(state, t_now, t_target, params)   -> state'    # the occupant seam (R-19)
 ```
 
 The seam moves from *"advance by `dt`"* to *"advance to `t`"*. **The wrapper owns the target; the
@@ -236,7 +236,8 @@ occupant owns how it gets there.** KDK/Yoshida implement `ADVANCE` as the loop t
 rename, no behaviour change. AZ implements it by stepping in `tau` until it lands on `t_target`.
 
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
-regularised" but **"does the wrapper still know how far a step goes"**.
+regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**
+(stepper × regularisation, Part 2b): `true` whenever the regularisation is not `none` (R-19).
 
 **Why widen rather than hold AZ outside the occupant system** (as RK45 is held outside): RK45 sits
 outside because it is a *reference* — rare, inspector-only, validation. **AZ is the opposite: it is
@@ -261,7 +262,7 @@ guarantee; the occupant declares its own schedule.
 **Preserved — the refinement machinery**, which compares reductions at a shared playhead. The
 playhead is exactly what the new signature makes explicit.
 
-**Cost 1 — the per-substep cadence must become a callback.** Projection, invariant accumulation and
+**Cost 1 — the per-substep cadence is a callback passed in (R-19).** Projection, invariant accumulation and
 terminal detection currently run in the wrapper *after* every `STEP`. Under `ADVANCE` the occupant
 must invoke them, so **pass them in rather than doing them after** — otherwise an occupant can
 silently skip them and nothing catches it. That cadence is load-bearing: it is what catches

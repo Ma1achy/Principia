@@ -195,7 +195,7 @@ Field views are unit tests; these are the integration tests. Each compares a val
 | Diffusion (Welford) | slope `C_ty/C_tt` in the fragment vs a reference computed the same way | the moment bookkeeping — an independent *fit* needs history (gone under lockstep); the algebraic re-derivation certifies the accumulators instead. Full fit-vs-fit lives in the CPU parity suite via `computeIC` |
 | Word bookkeeping | `fgw_reduced_length` vs the derived reduced-crossing count (topological word read) vs `fgw_truncated` | the symbol-append rule vs crossing derivation (word buffer) |
 | t_dmin round-trip | `tm_t_dmin` absolute macro-step (no longer needs t_end) | the 16-bit timing quantisation |
-| Impurity mask | per-sample `state` ≠ quad majority `state` (**requires `majority_class` added to `QuadReduction`/`RenderQuad`** — one u32, do it) | sample↔quad reduction agreement; the mask's spatial mean must equal `outcome_impurity` |
+| Impurity mask | per-sample `class ⊕ detail` ≠ the quad's `dominant_outcome`, at the joint grain (`principia_dd_generation_root.md` §3.7; **no `majority_class` field** — R-20; `RenderQuad` exposes `dominant_outcome`) | sample↔quad reduction agreement; the mask's spatial mean must equal `outcome_impurity` |
 | Drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max); same pair for L_z | secular loss vs a transient spike that recovered — the *reason* both are stored |
 | Round-trip residual | `z → D → E → D`, physical-space `‖x − x′‖` log-scaled | the **encode path** (inverse-encode contract): block inverses, numerics, encode-reuses-decode on invariant charts — the encode-side sibling of the invariant-chart gradient. Bright at clamps/feasibility edges/mirror tie = *expected*, tagged |
 

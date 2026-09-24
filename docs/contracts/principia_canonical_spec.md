@@ -125,7 +125,7 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 17. **NaN-sentinel read-side + descriptor-predicate validity** — fixed read-side type; tier-absent = NaN (loud, not load-bearing); validity via `has_<feature>` + descriptor predicates, never `isnan()`. *[render, lowering, payload]*
 18. **Deterministic fixed-dt** *(amended — see `principia_integrator_contract.md` §2a: the
     count-bound relocates to a fixed **`tau`-schedule** for occupants that own their own time
-    mapping. Same guarantee, occupant-declared.)* — fixed `dt`, deterministic schedule, count-bound never wall-clock; the same spec re-renders the same result up to cross-backend f32 tolerance (branches exact). *[temporal, integrator, parity, export]*
+    mapping. Same guarantee, occupant-declared. R-19: the count bound is on a fixed `tau`-schedule.)* — fixed `dt`, deterministic schedule, count-bound never wall-clock; the same spec re-renders the same result up to cross-backend f32 tolerance (branches exact). *[temporal, integrator, parity, export]*
 
 ---
 
