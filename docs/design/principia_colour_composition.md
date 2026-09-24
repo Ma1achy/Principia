@@ -2,12 +2,12 @@
 
 *Status: canonical. Single source of truth for the **colour occupant** — the internally-compositional
 system that produces the `colour` and `brightness` values consumed by the render pipeline's
-`combine` stage. Supersedes the implementation sections (§5–§9) of the shape-sphere colour-map
+`combine` stage. Supersedes the implementation sections (§5–§9) of the retired shape-sphere colour-map
 PDF and the mode-enumeration in `principia_debug_tooling_plan.md` §B–§G. The outer 4-slot pipeline
 framing in `principia_gui_state_contract.md` §4 and the colour drill-down `principia_dd_colouring.md`
 are amended to defer here (§8).*
 
-*Design thesis: the PDF enumerates **products** where the system has a few **factors**. Nearly every
+*Design thesis: the retired PDF enumerated **products** where the system has a few **factors**. Nearly every
 named colour map is one primitive family under different parameters; the LUT-spheres, the vMF map,
 Voronoi, soft-Voronoi, basin-blend, the physics overlay, and custom N-pole are **the same primitive**.
 Enumerating them is a maintenance liability and a second colouring path that does a strict subset of
@@ -230,7 +230,7 @@ render-key.
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
 has an explicit **invalid colour/value**. Without this, debug views silently lie at exactly the
 pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). The default
-invalid colour is a conspicuous out-of-gamut-adjacent tone (spec: a fixed magenta), overridable per
+invalid colour is a conspicuous out-of-gamut-adjacent tone (a fixed magenta), overridable per
 node.
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are portable
@@ -444,7 +444,7 @@ two implementations of the same maps, and agreement to tolerance certifies the p
   mode-by-mode presentation is superseded by the preset table (§7). The `combine` L-ownership rules
   (Replace-L / Multiply) are unchanged and referenced by §4.1.
 - **The shape-sphere colour-map PDF §5–§9** (implementation) — superseded by this document. The PDF
-  remains the design rationale and the perceptual/CVD reference; its parameter ranges
+  is retired and archived; its Eq. 5 and CVD matrices are in `principia_dd_colouring.md` §3.2 and §3.8, and its parameter ranges
   (L∈[0.35,0.90], C∈[0.05,0.22], κ∈[0.5,12], f∈[2,14], N∈[12,96], ks∈[1,20], s∈[0,1]) are adopted.
 - **`principia_debug_tooling_plan.md` §B–§G** — re-expressed as the debug preset table (§6). §A is
   reduced to Appendix A.

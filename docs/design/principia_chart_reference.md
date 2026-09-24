@@ -1,8 +1,7 @@
 # Chart reference — the maths, for implementation
 
 **Scope:** the shared decoder, the chart views and the Burrau family, written for implementation.
-**Where this and the LaTeX disagree, the LaTeX wins** — this is a
-transcription for implementation, not a new derivation.
+This is a transcription for implementation, not a new derivation.
 
 **One-line summary of the architecture.** A chart is a map `Φ : [0,1]² → Y` into some intermediate
 space, followed by a **shared decoder** `D` and a **canonicaliser** `C`. Every chart feeds the same

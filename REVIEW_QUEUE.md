@@ -172,3 +172,21 @@ places. Nothing is chosen. Part 6 now carries a note pointing here, and its text
 - **Needed:** which rule the scheduler contract states. If it's `Policy::Tolerance`, Parts 4 and 6 are rewritten from the
   refinement policy doc in step 4, when pending change 12 is folded. Priority weights, eviction and cancellation aren't
   affected.
+
+## RQ-14: colour_composition's golden images are pinned to the retired colour PDF *(step 3, port 10)*
+
+R-3 retires `sphere_colour_map_spec.pdf`. `principia_colour_composition.md` still uses it as a test reference, and that
+can't be ported as text:
+- §1.1: "Fidelity to the PDF is pinned by golden-image tests (§7), not by a special type."
+- §7: "Every currently-specified map (the PDF's Artefact-1 colour maps, Artefact-2 patterns, special modes, the physics
+  overlay) and every debug view is **recreated as a composition preset**."
+
+The PDF is the only full list of the Artefact-1 maps and Artefact-2 patterns. It is also the only source of the images a golden test would
+compare against. I've marked the PDF as retired in colour_composition's header and in its supersession list (§8). The two
+sentences above are left as they are. Nothing is chosen.
+- **Needed:** where the golden images come from once the PDF is archived. For example, the archived PDF stays the test reference, or the
+  first reviewed renders of the preset library become the goldens and the map list moves into §7's preset table.
+
+Also recorded here, not chosen: colour_composition §3 gave the default invalid colour as "(spec: a fixed magenta)". I
+found no source that says so. The `.tex` and the colour PDF use magenta only as a hue in a colour scheme (the PDF's
+`−ŷ` pole). The attribution is removed, and "a fixed magenta" stays as the markdown's own default.

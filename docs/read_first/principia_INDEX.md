@@ -77,7 +77,7 @@ and **`Policy::Tolerance`**.
 
 **Also in `docs/design/`**
 
-- `docs/design/principia_core_design.md` — the seams and the CPU/GPU contract; "the thing to hand a code agent — not the big spec"
+- `docs/design/principia_core_design.md` — the seams and the CPU/GPU contract; "the thing to hand a code agent first"
 - `docs/design/principia_dd_generation_root.md` — the Generation Root: layout table + link registry; the roots of the build DAG. "This document **is** the ledger"
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
@@ -158,7 +158,7 @@ and **`Policy::Tolerance`**.
 ## Known open items
 
 > **Resolved since the vertical slice:** the camera now reaches the scheduler. Display adequacy
-> landed at prin-rs `52caf14` — a quad may stop only if its texel is at or below one screen pixel,
+> landed (`principia_dd_refinement_policy.md` §0.1) — a quad may stop only if its texel is at or below one screen pixel,
 > which subsumed the missing `target_depth` driver. Mean texel size is flat within ±5% across the last
 > two octaves in the converged arm (was a 4.63× climb, with `max_depth` going *backwards* as zoom
 > increased). `docs/design/principia_dd_refinement_policy.md` §0.1.
