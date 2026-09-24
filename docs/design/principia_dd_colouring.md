@@ -83,7 +83,7 @@ Six poles at `{±x̂, ±ŷ, ±ẑ}`, opposing poles complementary. Hue tables: *
 
 ### 3.3 Sphere sampling conventions
 
-Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(φ, n_z)** ∈ [−π,π]×[−1,1] — `v` **linear in `n_z`**, not in latitude angle (a subtle mismatch source if assumed spherical-uniform). `sph_uv` input is always the **config-space** normal (two-rotations rule).
+Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(θ, φ)** ∈ [0, 2π]×[0, π] (R-14): θ the azimuth in the (u, v) plane on the horizontal axis, φ the polar angle from +w on the vertical axis, L⁺ (w = +1) at the top. `sph_uv` input is always the **config-space** normal (two-rotations rule).
 
 ### 3.4 Physics overlay (blob blend) and the house encoding (stability × hue)
 
@@ -176,7 +176,7 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 ## 6. Deferred / flagged
 
 - **Symlog pin (§3.6)** — ratified (standard for signed wide-range data). **Entropy-desaturation (§3.7) — VETOED**: replaced by colour-per-sample SSAA resolve; uncertainty marking, if wanted, is an optional independent slot binding on the exposed spread/entropy field.
-- **Equirect v-linear-in-`n_z`** — the convention is recorded because "obviously it's latitude" is the natural wrong assumption.
+- **Equirect axes** — θ horizontal (azimuth), φ vertical (polar angle from +w), per R-14's one shape-sphere convention.
 - **OKLab coefficients** — transcription-check against Ottosson's reference implementation before entering the shared source (same discipline as the Yoshida-6 w's).
 - **Custom-occupant safety rails** — schema-driven uniforms, async compile, last-valid fallback: already fully specified in the render/lowering contracts; owned there, not re-stated here.
 
