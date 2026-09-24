@@ -35,7 +35,7 @@ and **`Policy::Tolerance`**.
 | file | subject |
 |---|---|
 | `docs/contracts/principia_canonical_spec.md` | the laws, and the index to which doc owns each |
-| `docs/contracts/principia_integrator_contract.md` | the `STEP` occupant slot; **Part 2a** the `advance` signature; **Part 2b** regularisation as a second axis; **Part 2c** the GPU kernel — what ports, what is rewritten, and the five rules |
+| `docs/contracts/principia_integrator_contract.md` | the occupant seam: **Part 2a** the `ADVANCE` signature (change 8, R-19); **Part 2b** regularisation as a second axis; **Part 2c** the GPU kernel — what ports, what is rewritten, and the five rules |
 | `docs/contracts/principia_scheduler_contract.md` | descent, veto, decision variants |
 | `docs/contracts/principia_render_contract.md` | colour is a pure function of payload |
 | `docs/contracts/principia_caching_contract.md` | payload purity; tilt re-addresses, never invalidates |

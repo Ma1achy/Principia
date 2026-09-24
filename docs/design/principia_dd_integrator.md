@@ -35,7 +35,7 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `STEP(state, dt, params) → state'`, nothing else; wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical, `dt_macro = 10⁻³` fixed, schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not**.
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical, `dt_macro = 10⁻³` fixed, schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not**.
 
 From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical (comparison-only rule, §3.3); match-integrator mode for honest inspector comparison.
 

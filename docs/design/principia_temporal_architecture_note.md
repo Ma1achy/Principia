@@ -187,7 +187,7 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 **The firewall did its job:** the change is contained to *one side of the struct*. Physics (above the waist) doesn't change; render/colour/GUI (below) only renames. Mostly *subtractive* (delete checkpoint array, scrub, history buffer) + *one additive piece* (continuous refinement + frame loop) + *one rewrite* (export).
 
 - **Category 1 — pure rename, zero semantics** (`SimResult`→`SimState`, 11 docs): find-and-replace, one pass.
-- **Category 2 — physics does NOT change**: integrator wrapper still marches `STEP` identically; only `maybe_write_checkpoint` → expose-current-state-and-discard. Shape-map math, winding, FTLE/spread/diffusion accumulators all already per-step. Decoder/encode/colouring-math untouched.
+- **Category 2 — physics does NOT change**: integrator wrapper still marches the occupant (`ADVANCE`, R-19) identically; only `maybe_write_checkpoint` → expose-current-state-and-discard. Shape-map math, winding, FTLE/spread/diffusion accumulators all already per-step. Decoder/encode/colouring-math untouched.
 - **Category 3 — genuinely changing (3 docs)**: render (delete-heavy, simplifies), scheduler (additive — the new design + frame loop), export (the one rewrite).
 - **Category 4 — simplified, small**: caching, ledger, lowering/systems-arch/gui incidental.
 
