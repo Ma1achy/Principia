@@ -35,7 +35,7 @@ Everything customisable = every knob is a typed field on the state, already spli
 ```
 SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values · link ids ·
                           integrator occupant · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home) · playback transport (play/pause/speed/loop)
-RenderState (render key)  four slot occupant refs · slot uniforms · overlay set ·
+RenderState (render key)  the stain graph (nodes · wires · per-node params, §5) · overlay set ·
                           palette/compaction params · playhead t
 ViewUI       (pure UI)    lock flag · z_locked anchor · δ excursion · backdrop ref · debug category visibility ·
                           keyboard focus scope · kept orbits · inspector t_cursor · open windows
@@ -115,17 +115,29 @@ Legibility guidance (5 hues usually beat 5 brightness levels for classes) is **a
 
 ---
 
-## 5. The colour graph editor — three modes, one object
+## 5. The stain editor — a free, typed node graph (R-64)
 
-*Under review, RQ-20: `principia_render_gui_spec.md` Part II and the step-6 design notes describe the stain as a free node graph (source nodes, fan-out, a post chain) over a fixed OUT + combiner backbone; this section describes a four-slot object with fixed wiring. Unchanged until ruled.*
+**The stain is a graph object** (`principia_render_gui_spec.md` Part II §3–§4): typed `source` / `colour` / `brightness` /
+`post` nodes wired freely, subject only to port types and acyclicity, over a fixed `combiner` + `OUT` backbone; fan-out
+from one source; multi-input nodes; a variable-length post chain `… → combiner → (post)* → OUT`. Node ids, wires and
+per-node params are the stain's data, and they serialise with `RenderState`. *(Was, before R-64: a four-slot object
+`{colour_id, brightness_id, combiner_id, post_id, uniforms}` edited by a fixed-wiring four-slot inspector. The graph
+supersedes it; a four-slot pipeline is one graph among many.)*
 
-The four-slot pipeline's occupants are **data**: `{colour_id, brightness_id, combiner_id, post_id, uniforms}`. The editor is a **four-slot inspector** (fixed wiring — stage order is constitutional, so there is no free-form topology to build or mis-wire), and your three modes are three edit-actions on that one object:
+The three edit modes are three edit-actions on that one object:
 
-1. **Pick a node per slot.** Each slot is a dropdown over the scanned registry (filtered by slot; debug category shown/hidden per `ViewUI`). Selecting writes an id. One field edit.
-2. **Custom code per slot.** The slot's occupant becomes `custom`; the editor exposes a WGSL text field for that slot's source — the render contract's custom-occupant path verbatim: schema-driven uniforms, async compile, **last-valid-pipeline fallback on error**, per-slot failure isolation. The editor adds a compile-status indicator and an error surface; the mechanism is already specified.
-3. **Preset graphs.** A preset is `{four ids + uniform values}` — pure data (lowering contract). Selecting one overwrites the whole four-field object at once. The preset picker is a dropdown over saved `RenderState` blobs; "swap the entire pipeline" is one assignment.
+1. **Pick a node.** A node's occupant is chosen from the scanned registry (§3; filtered by slot, debug category
+   shown/hidden per `ViewUI`). Selecting writes an id. One field edit.
+2. **Custom code per node.** The node's occupant becomes `custom`; the editor exposes a WGSL text field for that node's
+   source — the render contract's custom-occupant path verbatim: schema-driven uniforms, async compile,
+   **last-valid-pipeline fallback on error**, per-node failure isolation. The editor adds a compile-status indicator and an
+   error surface (render_gui_spec Part II §9, §10).
+3. **Presets.** A preset is a whole serialised graph — pure data (lowering contract; render_gui_spec Part II §11).
+   Selecting one replaces the stain wholesale; "swap the entire pipeline" is one assignment.
 
-All three edit the same four-field object; they differ only in whether a slot holds a built-in id, a custom source string, or is set en masse from a preset. This is *why* custom is "an occupant, not a node kind" — it collapses the three modes into one uniform mechanism.
+All three edit the same graph; they differ only in whether a node holds a built-in id or a custom source string, or the
+whole graph is set from a preset. This is *why* custom is "an occupant, not a node kind" — it collapses the three modes into
+one uniform mechanism.
 
 **Custom compute occupants are NOT runtime-authored (substrate change, lowering Part 2).** A user integrator or experimental Φ is a **build-time Rust variant** — you cannot compile user Rust in the browser, so there is no compute-side text-box occupant with compile/fallback rails. This is the accepted loss of the Rust-kernel move (niche — few users write their own symplectic integrator; the parity-critical side is single-sourced in exchange). The colour-side custom path (WGSL text field, §5 mode 2) is the one that stays runtime-authored, because colour has no parity stakes. So the three-mode editor of §5 is a *fragment-side* affordance; the compute side offers a *choice among compiled variants*, not free authoring.
 
@@ -161,7 +173,7 @@ The polished GUI, whenever it arrives, must satisfy exactly and only:
 
 - read state via the subscribe interface; emit edits via `setField` — never touch engine internals (§1).
 - treat the scanned registry as its source of selectable occupants; respect the `category` tag for filtering (§3).
-- edit the four-slot object for colour; the three modes are optional UI affordances, not requirements (§5).
+- edit the stain graph object for colour (§5); the three modes are optional UI affordances, not requirements.
 - expose the quality preset selector (auto/named/custom) editing `SimConfig.quality`; the arbiter is engine-side and independent of the GUI (§6), so a replacement GUI inherits adaptive quality for free — it need only offer the preset choice and the custom fields.
 - define its own `ViewUI`; the engine reads none of it (§2).
 - use the contract's undo/redo history (§2, R-52); keep none of its own.

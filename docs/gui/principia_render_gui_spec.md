@@ -332,8 +332,7 @@ authority:
 # Part II — The stain editor
 
 *The Stain mode (`02_stain.png`): the plain node-graph editor over the composition algebra. Sections §0–§16 keep their
-numbers. Whether the stain is a free graph or `principia_gui_state_contract.md` §5's four-slot object is **RQ-20**; this
-part is written as the graph, as before.*
+numbers. The stain is a free, typed node graph (R-64); `principia_gui_state_contract.md` §5 describes the same object.*
 
 *Related prototypes map directly onto slots defined here: `principia_colour_explorer.html` is the
 **colour-node inspector** (its site-blend/field-ramp faces become the type-driven editors of §9);

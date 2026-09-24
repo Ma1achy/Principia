@@ -272,6 +272,7 @@ graph (its existing §3–§11), and gui_state_contract §5 is left as it is, ma
 - GUI_DESIGN_NOTES 02: "Stain — the plain node-graph editor … Graph with typed pins (field / colour / brightness) and wires."
 - **Needed:** whether the stain is a graph (and gui_state_contract §5/§7 are rewritten to a graph object, with post as a
   chain rather than one `post_id`), or the four-slot object (and the graph editor is a view over it).
+- **Ruling:** R-64 (decisions.md): the free, typed node graph. Closed in step 6.
 
 ## RQ-21: One inspector window, or the click inspector plus a separate IC Inspector *(step 6, GUI)*
 
