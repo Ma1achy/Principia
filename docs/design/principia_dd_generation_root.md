@@ -159,7 +159,7 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 
 ### 3.6 `ICDescriptor` (12 × f32)
 
-`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho0_mag`, `rho1_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
 
 ### 3.7 `QuadReduction` — completed ledger
 

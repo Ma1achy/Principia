@@ -49,7 +49,7 @@ Everything left open, each with its source. Nothing is deferred silently.
       window length for `|Δn̂|`; which energy `E_rel` is; how the escaping body's id is determined.
       **Still open, from R-29:** (i) re-validate precision and recall with the corrected `E_rel`, and re-measure the `tau`
       gap; (ii) where `n̂` from one window earlier is held (a lagged register at sync boundaries, not yet in `SimState`,
-      so the widths in payload §1 don't include it); (iii) RQ-19, no t = 0 escape outcome.
+      so the widths in payload §1 don't include it); ~~(iii) RQ-19, no t = 0 escape outcome~~ closed by R-60.
   12. Folded (R-15, R-18; scheduler contract Parts 3, 4, 6). **Open, recorded in the policy doc:** the two `alpha_area`
       defects (§2.2), and the camera not wired into priority.
 

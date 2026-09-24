@@ -163,7 +163,8 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
 - **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
-- **The escaper** is the body with `E_rel > 0` and the largest separation from the other two.
+- **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
+  centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
   this `E_rel`.
 

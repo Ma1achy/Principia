@@ -258,3 +258,4 @@ Applying R-29, both now say escape has no t = 0 case, and an IC that is already 
 completes. That follows from the rule as written; it is not a separate choice. The t = 0 collision outcome is unchanged.
 - **Needed:** confirm, or rule a t = 0 escape test (for example `E_rel > 0` alone at t = 0, which is the "energy alone
   flickers" failure the criterion exists to avoid).
+- **Ruling:** R-60 (decisions.md): confirmed, no t = 0 escape; the only valid t = 0 terminal is a collision. Closed in step 5.

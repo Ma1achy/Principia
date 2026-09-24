@@ -457,3 +457,26 @@ Files: canonical_spec §2, §11; gpu_determinism_note and parity_contract if bra
 - D4: the ledger's `alpha` row.
 - D5: `has_redundant_hemisphere` at inverse_encode_contract :199.
 - D6: the 136/88 B widths.
+
+## R-60 — No t = 0 escape outcome *(closes RQ-19)*
+*24 Sep 2026 · applied in step 5*
+
+The windowed escape rule (R-29) can't fire at t = 0. The only valid t = 0 terminal is a collision (within `r_coll`). The
+wording applied with R-29 in integrator_contract Part 5 and payload §2 stands.
+
+## R-61 — The escaper's separation is its distance to the other two's centre of mass *(amends R-29)*
+*24 Sep 2026 · applied in step 5*
+
+"Largest separation from the other two" means the largest distance `d` to the centre of mass of the other two, the same
+`d` as in `E_rel`. Files: integrator_contract Part 7; dd_integrator §3.6; pitfalls §2.2.
+
+## R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*
+*24 Sep 2026 · applied in step 5*
+
+The `ICDescriptor` fields for the Jacobi vectors `ρ` and `λ` are `rho_mag` and `lambda_mag`, not `rho0_mag` / `rho1_mag`: a
+trailing digit reads as a body index. Files: dd_generation_root §3.6; render_contract :14, :174.
+
+## R-63 — The continuation table is hashed with the ledger *(confirms R-36's application)*
+*24 Sep 2026 · applied in step 5*
+
+As written in payload §3: any change to the continuation table changes the schema version automatically.
