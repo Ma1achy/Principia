@@ -54,7 +54,7 @@ Internally, built-ins may work in OKLab/OKLCH; the public slot contract stays RG
 
 ## Part 3 — Cache tiers and the recompute rule
 
-**The headline contract: changing a render mode never recomputes sim data.** Render changes only reinterpret the current `SimState`. Two clocks, cleanly split: **advancing the playhead is sim work** (the frame loop marches the live set — scheduler contract); **changing how the state is coloured is render work** (free). There is no scrub — the playhead is a live clock, not a render uniform.
+**The headline contract: changing a render mode never recomputes sim data.** Render changes only reinterpret the current `SimState`. Two clocks, cleanly split: **advancing the playhead is sim work** (the frame loop marches the live set — scheduler contract); **changing how the state is coloured is render work** (free). The playhead is a live clock, not a render uniform: the dev GUI's time scrubber sets the display time and re-integrates progressively, never replaying stored frames; "no scrub" applies to exported animations only (R-66).
 
 | Tier | Contents | Invalidated by (its key) | Cost |
 |---|---|---|---|

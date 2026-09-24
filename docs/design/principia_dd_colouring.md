@@ -169,7 +169,7 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 9. **Golden-angle adjacency:** consecutive palette indices exceed a minimum OKLab hue separation for n up to the Fibonacci-lattice counts.
 10. **CVD stage:** achrom output has `R = G = B` exactly; applying any matrix pre-linearisation produces a detectable difference — asserting the *stage*, not just the matrix.
 11. **Bake equivalence:** for every pure-`f(n̂)` occupant, texture-sampled vs directly-evaluated colour agree within texture quantisation over a sphere lattice — the preview-is-the-texture guarantee, executable.
-12. **Render freedom at a paused playhead:** with the frame loop paused, cycling every render mode issues zero compute dispatches and leaves the sim-buffer hash unchanged (there is no scrub — the playhead is a live clock; temporal note).
+12. **Render freedom at a paused playhead:** with the frame loop paused, cycling every render mode issues zero compute dispatches and leaves the sim-buffer hash unchanged (the playhead is a live clock, not a render uniform; temporal note, R-66).
 
 ---
 

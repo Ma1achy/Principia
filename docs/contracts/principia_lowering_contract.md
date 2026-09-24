@@ -62,7 +62,7 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 | **Stain graph** (node occupants + wiring) | **BAKED** = the fragment key; changing a node or a wire = async recompile with last-valid fallback (imperceptible; render switching is not on the gesture path) |
 | Debug field views | **BAKED, generated, on demand** | one tiny source per field from the catalogue generator; compiling a mega-switch over heterogeneous field types would be the interpreter anti-pattern |
 | Slot uniforms (κ, C, swatches, L-range, invert) | **UNIFORM** | schema-driven, already specced |
-| View-only display state | **UNIFORM** | render key; free to animate (the playhead is the frame loop's clock — sim-side march, not a render uniform; there is no scrub) |
+| View-only display state | **UNIFORM** | render key; free to animate (the playhead is the frame loop's clock — sim-side march, not a render uniform; the time scrubber sets the display time and re-integrates, R-66) |
 | Compositor (backdrop render target, separable blur ×2, composite) | **FIXED SHADERS** | above the stain graph; precompiled always; never varies |
 
 ---
