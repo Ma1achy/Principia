@@ -11,7 +11,7 @@ defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for 
 | | |
 |---|---|
 | **`docs/read_first/principia_00_philosophy.md`** | What the instrument is *for*: atlas → inspector → prebake, the six commitments, what is parked, what was considered and rejected. Return here when a decision feels arbitrary. |
-| **`docs/read_first/principia_01_pitfalls.md`** | The failures that earned those commitments, in enough detail to be recognised again. Eight named patterns, each with the measurement that produced it. |
+| **`docs/read_first/principia_01_pitfalls.md`** | The failures that earned those commitments, in enough detail to be recognised again. Nine named patterns (§1–2, §4–10; §3 is standing rules), each with the measurement that produced it. |
 | **`docs/read_first/principia_INDEX.md`** | this file |
 
 ---
