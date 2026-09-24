@@ -114,7 +114,7 @@ The per-quad dispatch request carries a bit-packed `flags` word:
 
 | Bit(s) | Name | Meaning |
 |---|---|---|
-| 0 | `DECODE_MODE` | full (0) or linearised (1) decoder (deep-zoom note §2) |
+| 0 | `DECODE_MODE` | full (0) or linearised (1) decoder (deep-zoom note §2). Linearised once `quad.collapsed` — the per-quad flag set when the full decoder's adjacent samples give bitwise-identical ICs — or past `ℓ_switch`, whichever first (R-90) |
 | 1 | `ENSEMBLE_ENABLED` | dispatch `E` jittered copies per grid position |
 | 2 | `FTLE_ENABLED` | compute the full Benettin FTLE (tier-gated) |
 | 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |

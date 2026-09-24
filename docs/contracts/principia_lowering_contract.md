@@ -138,6 +138,8 @@ function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
                     T: quad.T, decodeMode: (quad.collapsed || quad.depth > SWITCH) ? LIN : FULL },
                     // R-90: LIN once the full decoder's adjacent samples give bitwise-identical ICs
                     //   (quad.collapsed), or past SWITCH = ℓ_switch = 20, an upper bound — whichever first
+                    // quad.collapsed: the per-quad flag set when the full decoder's adjacent samples give
+                    //   bitwise-identical ICs (R-90; scheduler Part 5, DECODE_MODE)
     workgroups: samplesPerQuad(sk.tier),           // N×N per quad (memory-tiers §1)
   }));
 
