@@ -8,7 +8,7 @@
 
 A quad has an address `QuadID (z, tx, ty)` (the old name `TileID` is retired — 'tile' now means a sample's screen footprint, memory-tiers §1) and, separately, every cached payload carries a compact compatibility signature that is stricter than the quad key, because it governs whether a payload can be reused without recomputation. The relationship between the two needs nailing down. The model:
 
-- **Identity — *which region of which chart*.** `QuadID` alone is incomplete: `(z, tx, ty)` doesn't say which chart or which plane. Full identity is `(chart id + params, z₀, q₁, q₂) + QuadID`. Two quads with different bases are different identities even at the same `(z,tx,ty)` — an agent that keys on `QuadID` alone will cache-collide across charts and across tilt positions.
+- **Identity — *which region of which chart*.** `QuadID` alone is incomplete: `(z, tx, ty)` doesn't say which chart or which plane. Full identity is `(chart id + params, slice plane) + QuadID`, the slice plane being `z₀`'s out-of-plane part, span{q₁, q₂} and the in-plane orientation — the sim key's navigation part (R-92). Two quads on different slice planes are different identities even at the same `(z,tx,ty)` — an agent that keys on `QuadID` alone will cache-collide across charts and across tilt positions.
 - **Validity — *computed under which physics config*.** The payload compatibility signature: chart/decode version, link ids, integrator occupant + config, horizon `T`, enabled metrics (tier flags), event thresholds, `copy_index` for an ensemble copy (the nominal's signature excludes `E`, R-89), payload schema version (a content hash of the ledger, R-36). Same identity, different signature → different payload (e.g. recomputed after a threshold change; preview vs refined).
 - **Time — *the state's clock*.** Under lockstep a cached `SimState` additionally carries the `t` it had reached. It is directly presentable only at that `t`; for any later playhead it is a **resume point** — march `t_cached → playhead`, which is strictly cheaper than a `0 → playhead` re-boot. (Fixed-`dt` determinism makes resuming exact: the resumed state equals the never-evicted state.)
 
@@ -26,7 +26,8 @@ Every knob has a blast radius. Consolidated from the render, integrator, and sch
 |---|---|
 | Render mode, palette, brightness binding, combiner, post, overlays | **Nothing.** Render key only — recolour existing buffers |
 | Colour occupant params (κ, C, swatches…) | Re-bake the equirect texture (~ms). Sim buffers intact |
-| Pan, slice, tilt, zoom, lock, chart-mode switch | **Nothing invalidated.** These change *which identities you're requesting*, not the validity of anything computed. Old-identity quads stay cached and valid — navigate back and they're still there |
+| In-plane pan, zoom, lock | **Nothing.** Pan and zoom re-address which quads are asked for on the same slice plane; the lock changes neither key (R-92) |
+| Slice out of the plane, tilt, rotate, chart-mode switch | **Nothing invalidated** — but the slice plane (and chart) is on the sim key (R-92), so these request *new identities*, whose quads integrate fresh. Old-identity quads stay cached and valid — navigate back and they're still there |
 | `T`, `dt_macro`, thresholds, `eps` floors | **All sim buffers** (signature change; the march re-boots from `t = 0`) |
 | Integrator occupant | All sim buffers (signature) |
 | Link function selection, chart/decode version | All sim buffers (signature — the ICs themselves change) |
@@ -34,7 +35,7 @@ Every knob has a blast radius. Consolidated from the render, integrator, and sch
 | `MAX_REL_DEPTH`, frame budget, in-flight limit | **Nothing.** Scheduler knobs — change what gets *scheduled*, never what anything computed *to* |
 | `render_scale`, lock-to-native | **Nothing.** Not sim-key (payload purity — render resolution is not in the sim key): it moves the *refinement target* (screen floor at render-pixel size). Lowering leaves existing deep quads valid-but-deeper-than-needed; raising computes new deeper quads, masked by blur (quality/device note) |
 
-The navigation row is the subtle one and follows directly from Part 4 of the chart contract: **tilting doesn't invalidate — it re-addresses.** A tilt gesture is a stream of new identities; the cache grows, nothing in it becomes wrong.
+The navigation rows are the subtle ones and follow from Part 4 of the chart contract and R-92: **in-plane pan and zoom re-address; slicing out of the plane, tilting and rotating re-integrate — and neither invalidates.** A tilt gesture is a stream of new slice planes, each a new identity integrated fresh; the cache grows, nothing in it becomes wrong.
 
 **The bake cache is a different animal entirely.** The equirect texture keys on `(colour occupant + params)` only — chart-independent, IC-independent, quad-independent. One texture serves every quad of every chart. It does not participate in the quad cache or its eviction; it has its own trivial lifecycle (rebake on param change, debounced).
 
@@ -59,7 +60,7 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
 
 ## Part 5 — The stale backdrop: blur means loading
 
-When navigation changes identity (tilt, slice, chart switch), the previously displayed content is not *wrong* — it is correct data for an epsilon-nearby plane, and for a continuous gesture consecutive identities are close enough that the stale image is a genuinely good visual approximation. It should therefore **stay on screen, blurred**, until new-identity quads replace it.
+When navigation changes identity (tilt, rotation, slicing out of the plane, chart switch), the previously displayed content is not *wrong* — it is correct data for an epsilon-nearby plane, and for a continuous gesture consecutive identities are close enough that the stale image is a genuinely good visual approximation. It should therefore **stay on screen, blurred**, until new-identity quads replace it.
 
 **Mechanism: a two-tier backdrop — live stale layer first, snapshot as fallback.**
 
@@ -85,7 +86,7 @@ Supporting mechanics:
 - **Identity sampling, not tracking.** The in-motion regime samples the identity stream — coarse cover for the identity as of *now*; when that lands, for the identity as of *then* — while the blurred backdrop carries continuity between samples. The user sees: blurred old detail → coarse live glimpses updating every few frames → sharp refinement blooming on stop. That staircase *is* the "get the gist" experience.
 - **Preview flotsam evicts first.** Intermediate coarse covers for identities the gesture sailed past go straight to the bottom of the LRU — below even smooth interior quads. Valid but preview-quality and for abandoned identities; without this rule the cache fills with drag debris.
 - **Epochs do the cancellation.** Coarse-cover jobs for identity-at-frame-N that complete after the gesture has moved on are dropped (or filed as flotsam), never painted. Already in the scheduler contract; no mid-flight cancellation needed.
-- **Zoom is the gentle case.** Zoom doesn't change identity (same `z₀`, same basis — scaled `q`), so ancestor fallback already shows the right content upscaled and the coarse cover mostly *exists in cache*. The regime applies uniformly, but zoom usually satisfies it for free; tilt and slice, which change identity per frame, are what genuinely need it.
+- **Zoom is the gentle case.** Zoom doesn't change identity (same slice plane — it scales `q` within it, R-92), so ancestor fallback already shows the right content upscaled and the coarse cover mostly *exists in cache*. The regime applies uniformly, but zoom usually satisfies it for free; tilt and slice, which change identity per frame, are what genuinely need it.
 
 **No contamination path — and nothing can create one.** The backdrop must never be readable as data, and structurally nothing reads it: the lock computes `z` from `(s,t)` via the *current* chart on the CPU (never from the screen), exports read payloads, the inspector integrates fresh. The backdrop — live layer reference or snapshot — is pure display state, cleanly on the "what we look at" side of the firewall. The hover trace obeys the same rule from the other side: it draws only from current-identity payloads — no payload under the cursor (backdrop showing through) means no trace.
 
@@ -163,4 +164,4 @@ Net: **the canvas is never blank, never lies, and never freezes.** Blur is the s
 
 ---
 
-*Identity says which quad; validity says computed how. Navigation re-addresses, never invalidates. Baseline is a tier, not a weight; the visible fallback chain is pinned. Stale content stays up, blurred — blur means loading, and it is the only thing blur means. Sharp means true.*
+*Identity says which quad; validity says computed how. In-plane navigation re-addresses; a new slice plane re-integrates; neither invalidates. Baseline is a tier, not a weight; the visible fallback chain is pinned. Stale content stays up, blurred — blur means loading, and it is the only thing blur means. Sharp means true.*

@@ -252,7 +252,7 @@ chart's name. This change does not come near it.
 **Preserved — payload purity, and it gets *cleaner*.** The guarantee is *"`SimState` is a pure
 function of `(IC, sim key, playhead t)` — identical whether reached by continuous marching, catch-up,
 or re-boot after eviction"*. That is a statement about **targets**, not steps. An `advance-to-t`
-signature says the same thing in its own types. Caching, tilting-as-re-addressing and live-to-live
+signature says the same thing in its own types. Caching, re-addressing under in-plane pan and zoom (R-92) and live-to-live
 handoff are unaffected.
 
 **Preserved — determinism**, with the count-bound relocated: *"fixed `dt`, deterministic schedule,

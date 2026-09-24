@@ -46,6 +46,7 @@ ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard 
 The GUI requirement adds **no new state** — it says *expose all of it*. Consequences that come free from the key split:
 
 - The GUI knows, per control, whether editing it re-integrates (sim key) or is live (render key), and greys/warns accordingly.
+- **Navigation and the sim key (R-92).** `SimConfig` holds `z₀`, `q₁`, `q₂` and the lock, but the sim key holds only the slice plane (`z₀`'s out-of-plane part, span{q₁, q₂}, the in-plane orientation): in-plane pan and zoom re-address; slicing out of the plane, tilting and rotating re-integrate; lock changes neither key.
 - Provenance already serialises `SimConfig + RenderState`; the GUI is an editor of that serialisable object, so **two GUIs are two editors of one schema** and can coexist during the transition.
 - `ViewUI` is the firewall line: it is the GUI's own scratch state (blur, which debug category is visible, focus, open panels; lock is `SimConfig` since R-69) and the engine never reads it — so the polished GUI can define its own `ViewUI` entirely.
 

@@ -41,7 +41,7 @@ Three facts of the ladder's geometry:
 
 | Ring | Contents | Wraps | Service | Must guarantee |
 |---|---|---|---|---|
-| **Allocation** | scheduler · cache · quad pyramid · the two regimes · `MAX_REL_DEPTH` | Question → Memory | *which points on the manifold get evaluated, and when* — the chart defines the set; allocation chooses the sampling | **the firewall**: a payload is `f(IC, sim key)` regardless of when/whether/how-often scheduled; baseline-first is a hard tier; refinement density is never read as probability; navigation re-addresses, never invalidates |
+| **Allocation** | scheduler · cache · quad pyramid · the two regimes · `MAX_REL_DEPTH` | Question → Memory | *which points on the manifold get evaluated, and when* — the chart defines the set; allocation chooses the sampling | **the firewall**: a payload is `f(IC, sim key)` regardless of when/whether/how-often scheduled; baseline-first is a hard tier; refinement density is never read as probability; in-plane navigation re-addresses; a new slice plane re-integrates (R-92); navigation never invalidates what is already computed |
 | **Precision** | the CPU-f64 inspector/hover witness (the shared kernel at f64, in its dedicated CPU worker) · f32 GPU survey · linearised decode (`x₀ + J_D·δ`) · **the independent high-precision convergence reference** (a *separate* integrator, not the shared kernel — CPU arbitrary precision with convergence gating, double-double only as a fast screen (R-33), for the integration-floor falsifiability probe and Burrau ground truth; its independence is the point — fuller treatment in validation / the gap-hunt) | Matter → Memory | *how faithfully* the Matter and Physics rungs run — the inspector witness is the *same shared kernel* at higher precision (f64 or double-double), so its logic equality with the survey is **structural** (one source); the convergence reference is *deliberately independent* so it can catch shared-source bugs the parity path cannot. Numerics is the sole independent variable **for continuous values**; **branch decisions are held bit-identical across backends on identical inputs, per step (R-84), by the comparison-only rule** (`principia_gpu_determinism_note.md`) — a forked branch is a *different computation*, not honest divergence. **Divergence is exposed, never reconciled**; match-integrator mode for honest comparison |
 | **Time & motion** | the frame loop (playhead) · keyframe interpolator · export job · spotlight reel | Question → Image | **the playhead is a live clock**: the frame loop marches the Physics rung by fixed `dt` and presents the barrier-synced live set (lockstep — temporal note; scheduler Part 7); **keyframes/export re-run the ladder per frame where the sim key moves** | no stored history — state is O(1) in time; exported frames fully caught-up and refined (blocking barrier, no fallback); the shareable object is the spec, the video its shadow; the job never blocks the UI |
 | **Observation** | debug catalogue (field + cross-check views, passthrough modes) · hover trace · **sonification** · **telemetry / profiling** | every rung | a tap on each rung's output — *the display is the assertion*; each view certifies one producer or one seam | generated from the layout table, exhaustive by construction; observation never perturbs (taps read payloads and uniforms only). **Telemetry is FIRST-CLASS, not a debug mode** — the frame record and `stage_ms` are part of the render loop's contract, always present, with only the *reporting* toggleable. Instrumentation that can be compiled out will be, and then it measures the debug build (`principia_dd_telemetry_and_tiers.md` §5.5). **Hover trace and sonification are two projections of ONE integration**, not two subsystems (`principia_scratchpad_pointer_channels.md`) |
@@ -121,14 +121,16 @@ Intent ──constructs──▶ Chart ──validate──▶ resolve() [Deploy
 ### The two keys as ladder geometry
 
 ```
-SIM KEY      (above the waist)  chart id+params · z₀/basis/warps · link ids ·
+SIM KEY      (above the waist)  chart id+params · slice plane (z₀'s out-of-plane part, span{q₁,q₂}, in-plane orientation — R-92) · warps · link ids ·
              occupant · T/dt/thresholds · tier (sim-key components: N/FTLE/word; E is live, cached per copy_index — R-89) · schema   ⇒ re-integrate (march re-boots; a tier's render_scale component invalidates nothing — caching Part 2)
 RENDER KEY   (below the waist)  stain graph (nodes, wires, sources) · node params · overlays ·
              palette/compaction                               ⇒ recolour only
 THE PLAYHEAD  is neither key — it is the live clock (frame loop): advancing it
              is sim work (the march); it never invalidates, it only progresses
-NAVIGATION   pan/slice/tilt/zoom/lock ⇒ NEITHER — re-addresses which quads are asked for
-             (revealed quads catch up to the playhead off-loop)
+NAVIGATION   in-plane pan/zoom ⇒ re-address which quads are asked for
+             (revealed quads catch up to the playhead off-loop);
+             slice out of the plane / tilt / rotate ⇒ a new slice plane (sim key) ⇒ re-integrate;
+             lock ⇒ neither (R-92)
 ```
 
 ---
