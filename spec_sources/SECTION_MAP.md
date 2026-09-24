@@ -9,14 +9,16 @@ refer to the files as committed at step 0.*
 | source | where | status |
 |---|---|---|
 | LaTeX spec | `spec_sources/principia_spec_revised.tex` (8 Jul, 3,056 lines) | **retired** (handoff ruling). Port what still holds, then remove it. |
-| COM-projection mini spec | `spec_sources/com_projection_mini_spec.pdf` (Mar 2026) | the detail behind `sec:com_projection` |
-| Sphere colour-map spec | `spec_sources/sphere_colour_map_spec.pdf` | **status unruled.** `dd_colouring` and `dd_integrator` depend on it (see REVIEW_QUEUE RQ-3) |
+| COM-projection mini spec | `spec_sources/com_projection_mini_spec.pdf` (Mar 2026) | **retired (R-3).** The detail behind `sec:com_projection`, ported with it into the integrator contract. |
+| Sphere colour-map spec | `spec_sources/sphere_colour_map_spec.pdf` | **retired (R-3).** Port Eq. 5 and §8 into the files that rely on them (see the work order below). |
 | Measured evidence | **prin-rs**: `github.com/Ma1achy/prin-rs`, `FINDINGS.md` and `results/` on `main` @ `8600d45` (8 Sep). Local clone: `~/src/principia-rs-test` | canonical. `spec_sources/findings.md` is an older 17 Jul copy and is **not** canonical. |
 | Display adequacy | prin-rs `52caf14` (15 Sep), cited by the index | **local only.** It is on the unpushed `lowering-spike` branch of `~/src/principia-rs-test` (9 commits ahead of its remote). See RQ-1. |
 
-`FINDINGS.md` on `main` is the check for step 3. The regularisation default (Heggie) is in §2, step control
-and the predictive limit in §3, termination (closure + energy escape) in §4, and refinement
-(`Policy::Tolerance`) in §5.
+**The check for step 3 (R-1, `decisions.md`):** each LaTeX passage is checked against the **current
+markdown**, not against prin-rs `FINDINGS.md`. Where they genuinely conflict, add a `REVIEW_QUEUE.md` entry and don't
+choose. FINDINGS citations can stay as notes. For reference, FINDINGS covers the regularisation default
+(Heggie) in §2, step control and the predictive limit in §3, termination (closure + energy escape) in §4,
+and refinement (`Policy::Tolerance`) in §5.
 
 ## `.tex` section index (labels → line ranges)
 
@@ -44,7 +46,7 @@ and the predictive limit in §3, termination (closure + energy escape) in §4, a
 - **S**: a statement *about* the LaTeX (its authority, or its history). Rewritten under the retirement ruling. Nothing to port.
 - **M**: a cross-reference inside the markdown that *resolves*. No action.
 - **D**: dangling. The target is neither a markdown heading nor a `.tex` label. Repoint it in step 3.
-- **X**: depends on a non-LaTeX external source (a PDF).
+- **X**: *(retired class)* depended on a PDF. Since R-3 the PDFs are retired like the LaTeX, so these are now **T**.
 - **F**: false positive. "spec" here means something else (an animation spec object, the canonical spec, the payload spec).
 - **R**: the pending-changes register. Closed in step 4, not step 3.
 
@@ -74,12 +76,13 @@ resolved without the LaTeX. Four dangle and five are markdown-internal:
 
 Two cross-checks the drill-downs expect **can't be done against the `.tex`**:
 - **Event priority order** (dd_integrator §3.6 / audit B4). `sec:events` lists Collision and then Escape. It has no priority rule to check against.
-- **Shape-sphere axis order** (dd_integrator §3.7 / audit B5). The component → axis convention is in the **colour-map PDF §8**, not in the `.tex`.
+- **Shape-sphere axis order** (dd_integrator §3.7 / audit B5). The component → axis convention is in the **colour-map PDF §8**, not in the `.tex`. Under R-3 it's ported from the PDF.
 
 ## Every reference
 
 Totals: **51 T references (on 43 lines) · 7 S · 5 M · 7 D · 11 F · 22 R**, which is 103 references on 95 lines
-across 19 files. Two of the T lines also depend on the colour PDF (X). The audit counts 85.
+across 19 files. Two T lines (dd_integrator 185 and 246) also need the colour PDF ported, which were X before R-3. The audit counts 85.
+What's left of step 3 after the rulings: 50 T references to port, plus telemetry:398 to repoint only (R-4).
 
 ### principia_dd_decoder.md
 | line | class | reference | `.tex` target |
@@ -155,10 +158,10 @@ across 19 files. Two of the T lines also depend on the colour PDF (X). The audit
 ### principia_dd_integrator.md
 | line | class | reference | target |
 |---|---|---|---|
-| 185 | T + X | "transcribe the exact component→axis order from the spec's shape-sphere section" · "colour spec §8.1" | 333–383, 1030–1051 · colour PDF §8 |
+| 185 | T | "transcribe the exact component→axis order from the spec's shape-sphere section" · "colour spec §8.1" | 333–383, 1030–1051 · colour PDF §8 (R-3) |
 | 216 | M | "§generation-root ledger" | principia_dd_generation_root.md |
 | 244 | T | "confirm against the spec's event-detection section" | 987–993. **It has no priority order.** |
-| 246 | T + X | "against the spec's shape-sphere section + colour-spec §8.1" | as line 185 |
+| 246 | T | "against the spec's shape-sphere section + colour-spec §8.1" | as line 185 |
 
 ### principia_dd_generation_root.md
 | line | class | reference | target |
@@ -178,7 +181,7 @@ across 19 files. Two of the T lines also depend on the colour PDF (X). The audit
 |---|---|---|---|
 | lowering:51 | T | "matches the spec's `QuadRequest.flags` design" | `TileRequest` 2749–2784 |
 | render_contract:85 | S | "The bit layouts exist in several places — LaTeX spec, …" | wording only. The payload drill-down owns layouts. |
-| telemetry:398 | T | "the spec-keyed defaults are placeholders" | 1959–1980 (unsure; see RQ-5) |
+| telemetry:398 | T | "the spec-keyed defaults are placeholders" | **Resolved by R-4: repoint to telemetry §3.5, no port.** Don't port `sec:quality_tiers`. |
 
 ### principia_canonical_spec.md · principia_dd_predictability_horizon.md
 | file:line | class | reference | target |
@@ -210,3 +213,18 @@ This whole file is the LaTeX edit queue. It is closed in step 4 (fold each chang
 The audit counts 85. This map counts 103, and of those **51 are real LaTeX dependencies (T)**. The
 difference is mostly the 22 register lines, 11 false positives, and lines that name several sections at
 once. Every T has a target above. Nothing was left unresolved.
+
+## Step-3 work order: the PDF port items (R-3)
+
+Besides the T references above, step 3 ports these from the retired PDFs:
+
+| from | into | also repoint |
+|---|---|---|
+| colour PDF **Eq. 5** (the vMF engine) | `principia_dd_colouring.md` §3.2 | dd_colouring:3 ("the colour-spec PDF is already publication-grade"), §3.2's heading ("colour-spec Eq. 5, verbatim") |
+| colour PDF **§8** (the shape-sphere physics overlay: the component → axis convention) | `principia_dd_integrator.md` §3.7 | dd_integrator:185, 246 |
+| **COM-projection mini spec** | the integrator contract, together with `sec:com_projection` | integrator_contract:21, 34 |
+
+## When step 3 finishes
+
+This map has done its job at that point. `SECTION_MAP.md` moves to `archive/`, together with the `.tex` and the
+two retired PDFs.

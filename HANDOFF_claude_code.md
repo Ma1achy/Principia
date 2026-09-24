@@ -16,6 +16,9 @@ Read **`principia_AUDIT_2026-09-24.md`** first — it is the evidence for everyt
 
 ## Rulings already made
 
+- **R-1: the markdown corpus is the only authority** (`decisions.md`). Step 3 checks each LaTeX passage
+  against the current markdown, not against prin-rs `FINDINGS.md`. Where they genuinely conflict, add a
+  `REVIEW_QUEUE.md` entry and don't choose. FINDINGS citations can stay as notes. Later rulings are in `decisions.md`.
 - **The LaTeX is retired.** The markdown is the only source of truth. Delete the clause in
   `principia_chart_reference.md` saying the LaTeX wins. Write the ruling into `principia_canonical_spec.md`.
 - **`principia_render_gui_spec.md` is rewritten** from the dev-GUI design canvas (step 6), not patched.
@@ -42,7 +45,12 @@ Read **`principia_AUDIT_2026-09-24.md`** first — it is the evidence for everyt
    3. write what's still correct into the drill-down that relies on it;
    4. repoint the reference.
 
-   Done when `grep -ri "latex\|spec\.tex\|the spec'" docs/` returns only the retirement ruling.
+   Done when
+   ```
+   grep -rniE "latex|spec\.tex|the spec'" --exclude-dir=spec_sources \
+     --exclude-dir=archive .
+   ```
+   returns only the retirement ruling in `principia_canonical_spec.md`.
 4. **Close the pending-changes register.** Fold each landed change's substance into its owning file.
    Mark the rest in `open-questions.md`. Archive the register.
 5. **Decision sheet.** Write `DECISIONS_TO_MAKE.md`: audit section B's 25 items, each with its options,
