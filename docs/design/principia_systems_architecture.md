@@ -87,7 +87,7 @@ The Deployment ring's machinery — `resolve()`, monomorphised compute pipelines
 | Crossing | Type | Direction | Nature |
 |---|---|---|---|
 | **Field edit** | `set_field(path, value)` — serialised data | JS → wasm | the GUI's only write; navigation, quality, transport all arrive as one of these |
-| **State snapshot** | GUI-*sized* state (view state, tier, scalars the panels show) — serialised data | wasm → JS | per displayed frame; **never engine-sized** (payload / quad tree / reductions stay wasm-side, summarised only) |
+| **State snapshot** | GUI-*sized* state (view state, tier, scalars the panels show) — serialised data | wasm → JS | throttled to **~10 Hz**, never per-frame (caching Part 6a); the GUI (egui) redraws at frame rate from the latest snapshot (R-94); **never engine-sized** (payload / quad tree / reductions stay wasm-side, summarised only) |
 | **Canvas transfer** | `OffscreenCanvas` handle | JS → wasm | **once, at startup**; the engine then drives `wgpu` against it directly. The sole handle that crosses; no state crosses with it |
 
 **The shared law on both membranes: big data never crosses.** The CPU/GPU membrane returns only the ~80 B `QuadReduction` automatically and sanctioned tiny pulls otherwise; the wasm/JS membrane carries only GUI-sized snapshots and single field edits. The payload, the tree, and the reductions are summarised across each boundary, never shipped whole — the *same* discipline stated twice, once per membrane. And the boundary must stay a **data** boundary, not an **object** one: the GUI holds no wasm handles, only the last snapshot (GUI contract §1 — wasm-bindgen makes handing JS a live Rust struct easy, and that would make the firewall decorative).
