@@ -22,7 +22,7 @@ PHYSICS     SIMULATE — wrapper(occupant) · detect · classify
                 └─ ↓
 MEMORY      PAYLOAD — the recorded answer (SimState + ICDescriptor)
                 └─ ↓
-MEANING     COLOUR — four slots; colour *is* the data
+MEANING     COLOUR — the stain graph; colour *is* the data
                 └─ ↓
 IMAGE       COMPOSITE → SCREEN
 ```
@@ -61,8 +61,8 @@ Note the classification insight: **lowering belongs to the Deployment ring, not 
 | **Matter** | link functions (generated Rust) · factorised decoder · canonicaliser | `z → mass × config × momentum → canonicalise → (m, r, p)` | the decoder factorises; no latent coordinate on a gauge direction; canonicalise is the one seam every input converges through |
 | **Physics** | wrapper (loop, substep, project, monitor, detect, state readout) · occupant `STEP` slot · detectors | integrate to horizon; classify; pack | **one input type forever**; the integrator never learns the chart's name; occupants carry a capability profile; **wrapper *branch decisions* (`N_sub`, collision, terminal) are bit-identical across all backends via the comparison-only rule** (frozen threshold table, integer horizon, `d²`-comparisons — not runtime transcendentals; `principia_gpu_determinism_note.md` / integrator dd §3.3), and the wrapper loop uses the flag-in-condition/zero-break shape (integrator contract Part 1) that survives SPIR-V→WGSL; continuous values diverge freely; every pixel gets a labelled output (totality) |
 | **Memory** | `SimState` (live, tier-sized, 8-aligned, 136/88 B eff — hot per-step state) + a parallel **word buffer** (~16 B/copy, the cold per-crossing/resolve symbolic word (append on branch-cut crossing), indexed identically) + `ICDescriptor` (64 B), GPU-resident; `QuadReduction` as its ~80 B summary | the marching answer — the live state at the playhead, O(1) in time (lockstep; temporal note). Hot state and cold word split by access pattern (word touched per branch-cut crossing + at resolve, never per-step) | pure: `f(IC, sim key, t)` under the fixed-`dt` march; the compute pipeline (monomorphised Rust → SPIR-V) and the fragment pipeline (hand-WGSL) meet **only** here — the payload is the sole interface between the two, and the split-mechanism boundary (lowering Part 2); leaves the GPU only via the sole automatic reduction or sanctioned pulls |
-| **Meaning** | fragment pipeline (4 slots, fixed wrapper) · baked-texture tier | payload → colour at the current playhead | fixed topology `post(combine(colour, brightness))`; occupants are data, never structure; L-ownership; categorical values never averaged |
-| **Image** | compositor passes (backdrop ▸ blur ▸ composite ▸ CVD) · screen | layers → final frame | sits **above** the slots; blur means exactly "not current" — nearby identity, behind the playhead, or still arriving (one grammar: sharp is real, fuzzy is arriving — temporal note); **never blank, never lies, never freezes** |
+| **Meaning** | fragment pipeline (the stain — a free, typed node graph over a fixed `combiner` + `OUT` backbone, R-64) · baked-texture tier | payload → colour at the current playhead | the graph is data — nodes, wires and per-node params serialise with `RenderState` (gui_state_contract §5); wires are type-checked and acyclic; L-ownership; categorical values never averaged |
+| **Image** | compositor passes (backdrop ▸ blur ▸ composite ▸ CVD) · screen | layers → final frame | sits **above** the stain graph; blur means exactly "not current" — nearby identity, behind the playhead, or still arriving (one grammar: sharp is real, fuzzy is arriving — temporal note); **never blank, never lies, never freezes** |
 
 ---
 
@@ -75,7 +75,7 @@ The membrane is thin, typed, and enumerable — exactly five crossings:
 | Crossing | Type | Direction | Nature |
 |---|---|---|---|
 | **Dispatch** | uniforms (`SimUniforms`, chart params, per-quad `c,h,x₀,J_D,T`, flags) | CPU → GPU | per frame / per quad; the only thing navigation touches |
-| **Render config** | slot uniforms · playhead `t` | CPU → GPU | the render key's path; never touches sim buffers |
+| **Render config** | stain-node params · playhead `t` | CPU → GPU | the render key's path; never touches sim buffers |
 | **Bake** | equirect texture | wasm engine → GPU | colour cache tier; chart- and IC-independent |
 | **Reduction** | `QuadReduction` (~80 B/quad) | GPU → CPU | the **sole automatic** return; feeds the Allocation ring only |
 | **Sanctioned pulls** | single-IC f32 GPU trace (click inspector's divergence overlay) · columnar decode (export) | GPU → CPU | user-initiated, tiny, async, latest-wins. (The hover trace is NOT a pull — it re-integrates on the CPU via `computeIC` in the inspector worker and reads no payload; render Part 7) |
@@ -107,7 +107,7 @@ Intent ──constructs──▶ Chart ──validate──▶ resolve() [Deploy
                                                 ▼
                           PAYLOAD  [the waist — GPU-resident]
                                                 │  @ playhead t
-                    post( combine( colour(ctx), brightness(ctx) ) )
+                    stain graph: sources ─▶ colour / brightness ─▶ combiner ─▶ (post)* ─▶ OUT
                                                 ▼
                 blurred backdrop ▸ fresh cover ▸ trace/overlays ▸ CVD ▸ render→display scale ▸ SCREEN
 ```
@@ -123,7 +123,7 @@ Intent ──constructs──▶ Chart ──validate──▶ resolve() [Deploy
 ```
 SIM KEY      (above the waist)  chart id+params · z₀/basis/warps · link ids ·
              occupant · T/dt/thresholds · tier (sim-key components: N/E/FTLE/word) · schema   ⇒ re-integrate (march re-boots; a tier's render_scale component invalidates nothing — caching Part 2)
-RENDER KEY   (below the waist)  4 slot sources · slot uniforms · overlays ·
+RENDER KEY   (below the waist)  stain graph (nodes, wires, sources) · node params · overlays ·
              palette/compaction                               ⇒ recolour only
 THE PLAYHEAD  is neither key — it is the live clock (frame loop): advancing it
              is sim work (the march); it never invalidates, it only progresses
@@ -145,7 +145,7 @@ Each seam: the two parties, what crosses, and the single invariant that holds it
 | 4 | occupant ↔ wrapper | `STEP(state, dt, params)` | the occupant is the only swappable line; wrapper owns substep/project/monitor/detect; wrapper **branch decisions bit-identical across backends** (comparison-only rule; loop is flag-in-condition/zero-break — integrator contract Part 1) |
 | 5 | integrate → render *(the waist, above)* | typed payload | integrate/colour split: render changes never recompute; debug views are free |
 | 6 | compute pipeline ↔ fragment pipeline | the payload buffer | the two meet **only** here — compute is monomorphised shared-Rust (parity-critical, single-sourced), fragment is hand-WGSL (parity-free, runtime devkit); different mechanisms by design (lowering Part 2) |
-| 7 | slot pipeline ↔ compositor | layer textures | compositor above the slots; blur is a compositor pass; blur means exactly "not current" (spatially stale / temporally behind / arriving — one grammar) |
+| 7 | stain pipeline ↔ compositor | layer textures | compositor above the stain graph; blur is a compositor pass; blur means exactly "not current" (spatially stale / temporally behind / arriving — one grammar) |
 | 8 | physical world → manifold | `encode = inverses ∘ C` | quotient onto the section: rigid ops act on the **full state**; scale rescaled first; everything discarded is reported |
 | 9 | Allocation ring ↔ the ladder *(ring law)* | dispatch decisions | the **firewall**: payloads are pure of all scheduling state; two users, different quadtrees, same answers |
 | 10 | scheduler ↔ cache *(within Allocation)* | (identity, validity) keys | identity says which quad; validity says computed how; preview ≠ refined |
@@ -259,7 +259,7 @@ Arrows read "requires". The *can't-exist-before* graph, not the milestone plan.
                                                        ▼
                                             payload (SimState/ICDescriptor)
                                                        │
-                        fragment assembly (WGSL slots) ──▶ compositor ──▶ screen
+                        fragment assembly (WGSL, per graph) ──▶ compositor ──▶ screen
                                                        │
                                     QuadReduction ──▶ scheduler ◀──▶ cache
                                                        │

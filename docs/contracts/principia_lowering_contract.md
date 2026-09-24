@@ -9,13 +9,13 @@
 ```
 resolve(ViewState, SimKey, RenderConfig) →
     { compute_key,  compute_uniforms,        // chart+decode+integrator side
-      fragment_key, fragment_uniforms,       // four-slot render side
+      fragment_key, fragment_uniforms,       // stain-graph render side
       dispatch_plan }                        // quad list, per-quad bindings, workgroups
 ```
 
 This is axiom 4 ("charts lower; they do not interpret") made literal: the resolution function selects and parameterises *specialised* pipelines. There is no runtime interpreter of axis kinds, links, occupants, or slots anywhere on the GPU.
 
-**The factoring that keeps the space finite:** the configuration tuple does *not* lower into one shader. Chart map + decode + canonicalise + wrapper + occupant lower into the **compute pipeline**; the four slots + compositor lower into the **fragment pipeline**; the two meet *only* through `SimState`/`ICDescriptor`. Two small keyed sets that compose, never one product.
+**The factoring that keeps the space finite:** the configuration tuple does *not* lower into one shader. Chart map + decode + canonicalise + wrapper + occupant lower into the **compute pipeline**; the stain graph + compositor lower into the **fragment pipeline**; the two meet *only* through `SimState`/`ICDescriptor`. Two small keyed sets that compose, never one product.
 
 ---
 
@@ -25,11 +25,11 @@ This is axiom 4 ("charts lower; they do not interpret") made literal: the resolu
 
 **Compute pipeline — monomorphised Rust, not string assembly.** The chart map Φ, decode, canonicalise, wrapper, and occupant `STEP` are one Rust kernel generic over the float type and over chart/occupant (Rust generics + `#[cfg]`/trait selection), compiled by rust-gpu to SPIR-V and — the *same source* — to the CPU-f64 reference. "Charts lower, they do not interpret" (axiom 4) is served *better* by monomorphisation than by string-splicing: a chart is a type parameter the compiler specialises, not a snippet concatenated. Generated pack/unpack (from the layout table) and link maps (from the registry) remain generated, now as Rust the kernel calls rather than WGSL prelude. **Consequence — no runtime-authored custom compute occupants:** you cannot compile user Rust in the browser, so a user's experimental integrator/Φ is a build-time variant, not a text-box occupant. This is an accepted loss (niche — few users write their own symplectic integrator; the custom-*colour* devkit, which is the centrepiece, is preserved below).
 
-**Fragment pipeline — unchanged: hand-WGSL keyed-snippet assembly.** The four-slot colour side stays exactly the render doc's flow — concatenation of keyed WGSL snippets into a fixed template, hashed, compiled async, cached, last-valid-on-failure — because colour has **no f64/f32 parity stakes** (parity contract §6) and *needs* its runtime path: this is what keeps the custom-shader devkit (GUI §3–5, lowering Part 3a) alive, where built-ins dogfood the custom path as one mechanism.
+**Fragment pipeline — unchanged: hand-WGSL keyed-snippet assembly.** The colour side stays the render doc's flow — the stain graph's keyed WGSL snippets (one function per node) concatenated with the shared prelude and a generated `shade()` that walks the graph (R-64; render_gui_spec Part II §10.1), hashed, compiled async, cached, last-valid-on-failure — because colour has **no f64/f32 parity stakes** (parity contract §6) and *needs* its runtime path: this is what keeps the custom-shader devkit (GUI §3–5, lowering Part 3a) alive, where built-ins dogfood the custom path as one mechanism.
 ```
 [prelude]            context, colour spaces, vMF, unpack helpers (generated WGSL)
-[colour][brightness][combiner][post]                       ← slot occupants (built-in | debug | custom, runtime-authored)
-[wrapper main]       FIXED — post(combine(colour(ctx), brightness(ctx)))
+[node functions]     one per stain-graph node: source / colour / brightness / combiner / post  ← occupants (built-in | debug | custom, runtime-authored)
+[shade()]            GENERATED — walks the graph: sources → colour? / brightness? → combiner → (post)* → OUT
 ```
 
 So provenance now splits by *side*: the **compute** side is generated + shared-Rust, monomorphised at build time; the **fragment** side is generated + authored + user WGSL, assembled and hot-reloaded at runtime. A compute change recompiles the Rust kernel (re-integrates anyway — sim key); a fragment change re-assembles a WGSL pipeline (render key, imperceptible). Part 3a's uniform read-side interface applies to the fragment side, where custom and built-in occupants read `SimState`; the compute side, being one Rust source, has no read-side-drift hazard to resolve.
@@ -59,11 +59,11 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 
 | Degree of freedom | Baked / uniform | Why |
 |---|---|---|
-| **Slot occupants** (4 sources) | **BAKED** = the fragment key; changing a slot = async recompile with last-valid fallback (imperceptible; render switching is not on the gesture path) |
+| **Stain graph** (node occupants + wiring) | **BAKED** = the fragment key; changing a node or a wire = async recompile with last-valid fallback (imperceptible; render switching is not on the gesture path) |
 | Debug field views | **BAKED, generated, on demand** | one tiny source per field from the catalogue generator; compiling a mega-switch over heterogeneous field types would be the interpreter anti-pattern |
 | Slot uniforms (κ, C, swatches, L-range, invert) | **UNIFORM** | schema-driven, already specced |
 | View-only display state | **UNIFORM** | render key; free to animate (the playhead is the frame loop's clock — sim-side march, not a render uniform; there is no scrub) |
-| Compositor (backdrop render target, separable blur ×2, composite) | **FIXED SHADERS** | above the slot pipeline; precompiled always; never varies |
+| Compositor (backdrop render target, separable blur ×2, composite) | **FIXED SHADERS** | above the stain graph; precompiled always; never varies |
 
 ---
 
@@ -122,7 +122,7 @@ Tilt, pan, slice, zoom, lock, playhead: **uniform writes only, by construction o
 ```
 function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
   const computeKey = hash(vs.chart.type, sk.links, sk.occupant, sk.tierBits);
-  const fragmentKey = hash(rc.colourSrc, rc.brightnessSrc, rc.combinerSrc, rc.postSrc);
+  const fragmentKey = hash(canonical(rc.stainGraph));   // canonical graph form: defined by the task that needs it (R-72)
 
   const computeUniforms = {
     sim:   simUniformsFrom(sk),                    // T, dt, N_max, thresholds, eps, n_renorm

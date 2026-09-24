@@ -1,6 +1,6 @@
 # Principia — render pipeline contract
 
-*Fifth doc. Sits beside the chart & decoder contract; consumes its output. Covers: the render payload, the fixed pipeline with swappable slots, cache tiers and the recompute rule, semantic rules, the struct-inspection SDK, and the debug catalogue — which is the first thing built.*
+*Fifth doc. Sits beside the chart & decoder contract; consumes its output. Covers: the render payload, the stain graph (a fixed backbone with a free, typed interior), cache tiers and the recompute rule, semantic rules, the struct-inspection SDK, and the debug catalogue — which is the first thing built.*
 
 ---
 
@@ -23,20 +23,22 @@ Physical structs (the generation-root ledger is the single source of truth):
 
 ## Part 2 — Fixed pipeline, swappable slots
 
-The graph is **not** a graph. It is a fixed four-slot pipeline whose wrapper `main()` is immutable:
+The stain is a **free, typed node graph** (R-64; `principia_render_gui_spec.md` Part II §3–§4, `principia_gui_state_contract.md` §5) over a fixed backbone. `combiner` and `OUT` are fixed singletons; any number of `source`, `colour`, `brightness` and `post` nodes are wired freely, subject only to port types and acyclicity; the tail is a variable-length post chain:
 
 ```
-final = post( combine( colour(ctx), brightness(ctx) ) )
+source(s) → colour?     ┐
+                        ├→ combiner → (post)* → OUT
+source(s) → brightness? ┘
 ```
 
-| Slot | Signature | Occupants |
+| Node kind | Signature | Occupants |
 |---|---|---|
 | colour | `colour(ctx) → vec3` (linear RGB) | event classification, shape-sphere maps, diagnostic palettes, **debug views**, **custom source** |
 | brightness | `brightness(ctx) → f32` (nominal [0,1]) | fixed, event time, diffusion, FTLE, ensemble spread, BC proximity, debug, custom |
 | combiner | `combine(rgb, b) → vec3` | Principia default (OKLab replace-L), multiply, custom |
-| post | `post(rgb) → vec3` | none, CVD preview, invert, structural overlays, custom |
+| post | `post(rgb) → vec3` (a chain of zero or more) | CVD preview, invert, structural overlays, custom |
 
-**Custom is not a node kind — it is an occupant.** Swapping a slot's shader source is the *only* extension mechanism. Built-in, debug, and custom occupants share one compile path: full fragment source regenerated from shared prelude + the four selected sources + fixed wrapper; schema-driven uniforms; hot reload with per-slot failure isolation (a broken custom keeps the last valid source in that slot; the other three are untouched). **Stage order is constitutional** — nobody runs brightness before colour or feeds post back into colour. A wilder composite is a wilder colour function, not a wilder topology. **The built-in occupants are themselves customs through this path** — they are the proof it works, which is *why* the read-side interface below is identical for both.
+**Custom is not a node kind — it is an occupant.** Swapping a node's shader source is the *only* extension mechanism. Built-in, debug, and custom occupants share one compile path: full fragment source regenerated from the shared prelude + one function per node + the generated `shade()` that walks the graph (render_gui_spec Part II §10.1); schema-driven uniforms; hot reload with per-node failure isolation (a broken custom keeps the last valid source in that node; the other nodes are untouched). **Backbone order is constitutional** — sources feed colour and brightness, they meet only at the combiner, and the post chain runs after it; nobody feeds post back into colour (the graph is acyclic). **The built-in occupants are themselves customs through this path** — they are the proof it works, which is *why* the read-side interface below is identical for both.
 
 **Reading `SimState` at any tier (the author contract).** The read-side `SimState` type is **fixed across all tiers** — every field is always present, read by plain member access (`sample.ftle`, `sample.ensemble_spread`), never a getter (lowering contract Part 3a). A tier that bakes a feature out does **not** remove the field; it makes the field read **NaN**. So:
 - **You may read any field at any tier.** No guards are required to *compile* or *run* — a custom written against FTLE works at every tier.
@@ -46,7 +48,7 @@ final = post( combine( colour(ctx), brightness(ctx) ) )
 
 Internally, built-ins may work in OKLab/OKLCH; the public slot contract stays RGB + scalar.
 
-**Presets are pure data:** `{colour_id, brightness_id, combiner_id, post_id, uniform values, overlay toggles}`. No topology to serialise. The GUI mock's preset chips are rows of this table.
+**Presets are pure data:** a preset is a whole serialised graph — nodes, wires, per-node params and overlay toggles (render_gui_spec Part II §11). Selecting one replaces the stain wholesale. The GUI mock's preset chips are rows of this table.
 
 ---
 
@@ -57,8 +59,8 @@ Internally, built-ins may work in OKLab/OKLCH; the public slot contract stays RG
 | Tier | Contents | Invalidated by (its key) | Cost |
 |---|---|---|---|
 | **Sim buffers** | `SimState[]` (live, at the playhead), `ICDescriptor[]` per quad | **sim key**: chart id+params, z₀, basis, warps, link ids, integrator config, T, event thresholds, quality tier, payload schema version (a content hash of the ledger, R-36) (= the payload compatibility signature). A sim-key change resets the march (state re-boots from `t = 0`) | expensive — integration |
-| **Baked texture** | equirect `GPUTexture` for colour occupants that are pure `f(n̂)` (vMF, LUTs, patterns, physics blobs) | **bake key**: colour-slot source + its uniforms | ~ms, JS, debounced (~120 ms); preview canvas *is* the uploaded texture — zero preview/render drift by construction |
-| **Frame** | composited output | **render key**: hash of 4 slot-source hashes + uniform values + overlay set + brightness binding | per-frame: one `textureSample` (or direct `colour(ctx)`) + L-override + post |
+| **Baked texture** | equirect `GPUTexture` for colour occupants that are pure `f(n̂)` (vMF, LUTs, patterns, physics blobs) | **bake key**: colour-node source + its uniforms | ~ms, JS, debounced (~120 ms); preview canvas *is* the uploaded texture — zero preview/render drift by construction |
+| **Frame** | composited output | **render key**: hash of the stain graph (nodes, their sources, wires, per-node params — the canonical graph form is defined by the task that needs it, R-72) + uniform values + overlay set | per-frame: one `textureSample` (or direct `colour(ctx)`) + L-override + post |
 
 The bake is an *implementation strategy* for the f(n̂) subset, not a contract change — publicly the occupant is still `colour(ctx)`. Occupants that read dynamical fields (event class, diffusion) skip the bake tier and evaluate per-fragment.
 
@@ -180,7 +182,7 @@ fn dbg_sentinel(x: f32) -> vec3f                // −1.0 sentinel → magenta; 
 | Ensemble views (tier-gated): outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples (not a stored field), consumed live & aggregated to the quad | the ensemble/SSAA machinery (E Halton-(2,3)-offset copies per nominal sample) |
 | Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
 | Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
-| Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post slot + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
+| Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
 | **Uniform echo** — flat swatches of `quality_tier`, `M`, thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
 
 ### Cross-check views (the seams)
@@ -217,7 +219,7 @@ Field views are unit tests; these are the integration tests. Each compares a val
 
 **Discipline.** One integration per settled hover, in a **dedicated inspector worker** (separate from the render-loop worker so its heavy f64 integration cannot stall the frame loop), **debounced + cancel-on-move** (generation counter, latest-wins), never awaited — it never blocks the main thread or the GPU survey. This is a *user-initiated* action outside the automatic refinement loop (it does not even read the payload — it re-integrates from the decoded IC).
 
-**Compositor placement (render-side fact).** The trace is an overlay layer above the four-slot pipeline, pure display state. **No trace over the backdrop:** if there is no current-identity payload under the cursor (a stale/blurred region), there is no IC to stand behind the cursor, so no trace — consistent with blur meaning not-current.
+**Compositor placement (render-side fact).** The trace is an overlay layer above the stain graph, pure display state. **No trace over the backdrop:** if there is no current-identity payload under the cursor (a stale/blurred region), there is no IC to stand behind the cursor, so no trace — consistent with blur meaning not-current.
 
 ---
 
@@ -225,8 +227,8 @@ Field views are unit tests; these are the integration tests. Each compares a val
 
 1. **`TileUniforms { cu: f64, … }`** in the render/quadtree design doc (the old name — now the per-QUAD uniforms, lowering Part 5): **WGSL has no f64.** Correct form (already in the deep-zoom note): CPU computes centre/half-width in f64, uploads **f32** uniforms; shader arithmetic is quad-local.
 2. **`ftle` in the payload vs "Lyapunov = separate kernel"** in core design: reconciled — forward-pass co-computations (each sample's own Benettin shadow; the E ensemble copies) are gated by tier flags; "separate kernels" means separate *protocols* (reversibility's forward+reverse). Core-design doc amended.
-3. **"Custom nodes"** phrasing anywhere: the graph is fixed; custom is a slot occupant (Part 2).
+3. **"Custom nodes"** phrasing anywhere: custom is not a node kind; it is an occupant of a node (Part 2). The stain graph is free inside a fixed backbone (R-64).
 
 ---
 
-*One payload, four slots, immutable wrapper. Render changes never touch sim buffers. One layout table generates pack, unpack, export, and the catalogue. The debug views are the assertions — built first, against synthetic data, before any physics exists.*
+*One payload, one typed stain graph on a fixed backbone. Render changes never touch sim buffers. One layout table generates pack, unpack, export, and the catalogue. The debug views are the assertions — built first, against synthetic data, before any physics exists.*

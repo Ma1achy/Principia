@@ -6,13 +6,13 @@
 
 ## 1. What it is
 
-The **Meaning rung**: `payload → colour, per pixel, at the playhead`. Fixed topology `post(combine(colour(ctx), brightness(ctx)))`; occupants are data (built-in / debug / custom); everything below the waist, governed by the render key — **no equation in this document can ever trigger a re-integration**.
+The **Meaning rung**: `payload → colour, per pixel, at the playhead`. A free, typed stain graph on a fixed backbone `… → combine → (post)* → OUT` (R-64); occupants are data (built-in / debug / custom); everything below the waist, governed by the render key — **no equation in this document can ever trigger a re-integration**.
 
 ---
 
 ## 2. Consolidated contract
 
-From the **render contract**: the four slots and their signatures; **L-ownership** (a bound brightness metric owns L; the colour occupant contributes hue/chroma; monotone-L LUTs × Replace-L is a semantic conflict the combiner choice resolves, surfaced in UI); **averaging** (colour-per-sample → render-side SSAA resolve, so category-averaging is structurally impossible; continuous S² occupants may consume means of current shape vectors — the reason `n` is handled Cartesian); bake tier for pure-`f(n̂)` occupants (the GUI preview canvas *is* the uploaded texture — zero drift by construction); composite order baked base → combine → overlays → CVD → render→display scale (when `render_scale ≠ 1`) → canvas.
+From the **render contract**: the stain graph's node kinds and their signatures (R-64); **L-ownership** (a bound brightness metric owns L; the colour occupant contributes hue/chroma; monotone-L LUTs × Replace-L is a semantic conflict the combiner choice resolves, surfaced in UI); **averaging** (colour-per-sample → render-side SSAA resolve, so category-averaging is structurally impossible; continuous S² occupants may consume means of current shape vectors — the reason `n` is handled Cartesian); bake tier for pure-`f(n̂)` occupants (the GUI preview canvas *is* the uploaded texture — zero drift by construction); composite order baked base → combine → overlays → CVD → render→display scale (when `render_scale ≠ 1`) → canvas.
 
 From the **chart contract (Part 2.5)**: colour **compaction** is the third compactification role — render-key, free, never re-integrates; per-field scale comes from the **ledger metadata** (lin | log | cyclic | diverging | categorical | flag).
 
