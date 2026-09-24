@@ -1,7 +1,7 @@
 # Chart reference — the maths, for implementation
 
-**Source:** `principia_spec_revised.tex` §§ decoder, views, Burrau family. Equation numbers below
-are that document's. **Where this and the LaTeX disagree, the LaTeX wins** — this is a
+**Scope:** the shared decoder, the chart views and the Burrau family, written for implementation.
+**Where this and the LaTeX disagree, the LaTeX wins** — this is a
 transcription for implementation, not a new derivation.
 
 **One-line summary of the architecture.** A chart is a map `Φ : [0,1]² → Y` into some intermediate
@@ -13,8 +13,10 @@ chart produced them. So adding a chart means adding a `Φ`, nothing else.
 (u,v) ∈ [0,1]²  --Φ-->  chart space  --D-->  (m, r, p)  --C-->  canonical IC  --> integrator
 ```
 
-**Indexing note.** The LaTeX uses 1-based body indices in the Burrau section and 0-based in the
-decoder. This document is **0-based throughout**. Inner pair is `(0,1)`, outer body is `2`.
+**Indexing note.** This document is **0-based throughout**: inner pair `(0,1)`, outer body `2`. The
+Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2), and §4.2 translates it.
+The project-wide convention (0-indexed decode vs `m1 m2 m3` in `ICDescriptor`) is **decision B1**. This
+note doesn't settle it.
 
 ---
 
@@ -28,8 +30,10 @@ decoder. This document is **0-based throughout**. Inner pair is `(0,1)`, outer b
 M01 = m0 + m1        M = m0 + m1 + m2 = 1
 ```
 
-If `M01 < ε` emit `DEGENERATE(M01_TINY)`. `μ_max = 4` is the recorded default (an open
-verification item — check before relying on it).
+If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
+
+**Chart constants.** `μ_max`, `q_max` and `α_min` are named symbols throughout this document. Their
+values are set in `DECISIONS_TO_MAKE.md` (step 5, ruling R-5).
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi
 
@@ -50,7 +54,8 @@ construction, so the canonicaliser is a no-op away from the seam):
 β = π·σ(z_β)
 ```
 
-`α_min` is a buffer keeping `‖ρ‖` away from zero. **Note the orientation, which is easy to get
+`α_min` is a buffer keeping `‖ρ‖` away from zero. Its value, including whether it is zero, is under
+decision (R-5). **Note the orientation, which is easy to get
 backwards:** `‖ρ̃‖ = cos α`, so **small α is a LARGE inner-pair separation**; `α → π/2` is a tight
 inner pair with a distant third body (hierarchical).
 
@@ -79,8 +84,8 @@ p2 =  p_λ
 ```
 
 > **Transcription hazard.** The `m0` and `m1` factors are **crossed** relative to the position
-> reconstruction (positions take `−m1/M01` on `r0`; momenta take `−m0/M01` on `p0`). This is as
-> written in the spec. Transcribe it, then verify by asserting `Σpᵢ = 0` to machine precision — the
+> reconstruction (positions take `−m1/M01` on `r0`; momenta take `−m0/M01` on `p0`). It matches
+> `principia_dd_decoder.md` §3.4. Transcribe it, then verify by asserting `Σpᵢ = 0` to machine precision — the
 > test that catches a swap.
 
 ### 0.4 Canonicalisation `C`
@@ -155,6 +160,32 @@ Gaussian vectors and Gram–Schmidt. **Report the pair used**, or the slice is n
 > **A tilt is a rotation of the 2-plane, not a re-centering.** A 2-plane in 8D has 12 tilt
 > axes (6 hidden dimensions × 2 basis vectors). Raw tilts **replace** rather than compose — the
 > chart constructor is the commit mechanism.
+
+### 1.2 Geometry + momentum in a fundamental domain
+
+Pin $\boldsymbol\rho = (\rho_0, 0)$, sweep $\beta(s) = \pi s$, and fix $\boldsymbol\lambda = \lambda_0(\cos\beta, \sin\beta)$. For
+the momentum, vary the direction of $\mathbf p_\lambda$ and fix $\mathbf p_\rho$.
+
+### 1.3 Mixed-axis charts
+
+The two axes need not come from the same block. Any pair of coordinates can be the horizontal and vertical
+axes, with the other six frozen at stated values.
+
+| horizontal | vertical | what it shows |
+|---|---|---|
+| shape $\theta$ | $L_z$ | how basin structure varies with shape and angular momentum |
+| shape $\varphi$ | $K$ | azimuthal orientation vs kinetic energy |
+| $\nu$ (Burrau) | $K$ | triangle shape vs energy (the bifurcation strip, §4.5) |
+| mass $m_1$ | shape $\theta$ | mass–shape coupling at fixed momentum |
+| $L_z$ | shape $\theta$ | angular momentum vs triangle elongation |
+| $\alpha$ (Jacobi) | $p_\rho$ | the classical phase-space portrait |
+
+**Implementation.** Each axis states which latent coordinate or derived quantity it maps and the warp from
+$[0,1]$ to its physical range. The chart convention fixes the other six (for example "Burrau masses, rest
+start"). Then $\Phi_{\mathrm{mixed}}(u,v) = D(\mathbf z(u,v))$, where $\mathbf z(u,v)$ takes coordinate $i$ from $u$,
+coordinate $j$ from $v$, and the rest from the frozen values. It composes with the shared decoder and needs
+no new GPU logic. When one axis is a configuration coordinate and the other its conjugate momentum, the
+render is a Poincaré section.
 
 ---
 
@@ -292,6 +323,23 @@ with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — us
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero.
 
+**Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, 2\pi - \varphi)$
+(`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
+the redundancy. The chart sets `has_redundant_hemisphere = true`.
+
+**Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
+distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
+equal-area alternative (Mollweide or Hammer–Aitoff). This matters because the Lagrange configurations sit
+at the poles and can be compressed to invisibility in equirectangular.
+
+**The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
+same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
+crosses the very surface being rendered. The collision points are singular points of the flow, the Euler
+configurations are equilibria on the equator, and the Lagrange configurations are the poles. The full
+reduced phase space is $T^*S^2$, so different momenta at the same shape give crossing trajectories on the
+map. A mixed-axis chart (§1.3) pairing a shape coordinate with a momentum lifts that degeneracy. Drawing a
+trajectory on this chart is the hover trace and inspector of `principia_trajectory_viewing.md`.
+
 ### 3.4 Landmarks at known fixed coordinates
 
 Useful as overlays and as tests. **Collision singularities** (two bodies coincident) are three
@@ -311,7 +359,8 @@ For coprime `m > n > 0` with `m − n` odd:
 a = m² − n²          b = 2mn          c = m² + n²
 ```
 
-Every primitive Pythagorean triple arises exactly once, up to leg swap.
+Every primitive Pythagorean triple arises exactly once, up to leg swap. Non-primitive triples $(ka, kb, kc)$ are
+dynamically equivalent under the similarity symmetry, so only primitive ones give new shapes.
 
 | (m,n) | triple | angles | a/b |
 |---|---|---|---|
@@ -355,7 +404,7 @@ Everything — positions, Jacobi vectors, masses — varies **smoothly** with `�
 sit at a countable set of `ν` values; the chart sweeps between them.
 
 **The `(ν, K)` chart:** `ν` on one axis (triangle shape, Burrau masses following it), kinetic
-energy `K` on the other via §2's construction. The spec calls this the *bifurcation strip* — the
+energy `K` on the other via §2's construction. This is the *bifurcation strip* (§4.5) — the
 right-triangle Burrau configurations are a **1D curve** inside a 2D map, which answers directly
 whether the right-angle constraint is dynamically special or merely convenient.
 
@@ -366,6 +415,57 @@ whether the right-angle constraint is dynamically special or merely convenient.
   straight onto `[0,1]²` with a shear.
 - **Rest start relaxed.** Replace zero momenta with §0.3 or §2.2.
 - **Right angle relaxed.** Sweep the apex angle away from `π/2` at fixed side ratio.
+
+### 4.5 The Burrau-family chart maps
+
+Every Burrau view is an ordinary chart map $\Phi : [0,1]^2 \to Y_{\mathrm{Burrau}}$ into the shared
+decoder, with $Y_{\mathrm{Burrau}} \cong Y_{\mathrm{shape}} \times Y_{\mathrm{mass}} \times Y_{\mathrm{mom}}$. The shape
+coordinate is $\nu = n/m \in (0,1)$, with the normalised Euclid formulae
+$a(\nu) = 1 - \nu^2$, $b(\nu) = 2\nu$, $c(\nu) = 1 + \nu^2$. There is no Burrau-specific integrator or
+renderer: $(\nu, \mathbf m, \mathrm{mom}) \mapsto (\boldsymbol\rho, \boldsymbol\lambda, \mathbf m, \mathrm{mom}) \mapsto (\mathbf r_i, \mathbf p_i, m_i)$
+through the shared canonicaliser.
+
+**The Euclid plane.** With $m \in [m_{\min}, m_{\max}]$ (default $[1, 32]$) and $\nu \in [\nu_{\min}, \nu_{\max}]$
+(default $[1/32, 31/32]$):
+
+$$m(u) = m_{\min}\left(\frac{m_{\max}}{m_{\min}}\right)^{u}, \qquad \nu(v) = \nu_{\min} + (\nu_{\max} - \nu_{\min})\,v,
+\qquad \Phi_{\mathrm{Euclid}}(u,v) = \big(\nu(v),\ \mathbf m_{\mathrm{Burrau}}(\nu(v)),\ \mathrm{rest}\big).$$
+
+The decoder uses only $\nu$. $m$ is an **annotation axis**, a display and landmark coordinate for the
+integer lattice and primitive-triple overlays (`principia_chart_decoder_contract.md` Part 5). Primitive
+triples sit where $m, n \in \mathbb Z$, $m > n$, $\gcd(m,n) = 1$, $m - n$ odd.
+
+**The acute-angle axis.** The acute angle $\theta \in (0, \pi/4]$ parameterises right-triangle shape
+directly, and $\nu(\theta) = \sec\theta - \tan\theta$. For $(\theta, K)$, with
+$\theta(u) = \theta_{\min} + (\theta_{\max} - \theta_{\min})u$ and $K(v) = K_{\max} v^{\gamma_K}$:
+
+$$\Phi_{\theta,K}(u,v) = \big(\nu(\theta(u)),\ \mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))),\ (L_z = 0,\ K(v))\big).$$
+
+The variants are $\Phi_{\theta,L_z}$ (fix $K$, sweep $L_z$) and $\Phi_{\theta,\delta m}$ (below).
+
+**Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
+$m_1 = 1 - x - y$, $m_2 = x$, $m_3 = y$ (1-based, as the Burrau family is written). Shrink toward the
+barycentre by an interior buffer $\varepsilon_m$ (default $10^{-4}$):
+$\mathbf m \leftarrow (1 - 3\varepsilon_m)\mathbf m + \varepsilon_m(1,1,1)$. Then
+$\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_1, m_2, m_3),\ \mathrm{rest})$, with the Burrau point
+$(c, b, a)/(a+b+c)$ as an overlay marker.
+
+**Bifurcation strips.** Shape on the horizontal axis, one parameter on the vertical. For $(\theta, K)$,
+$\Phi_{\mathrm{strip},K} = \Phi_{\theta,K}$ above. For $(\theta, \delta m)$, blend the masses toward a target
+(default equal masses):
+
+$$\mathbf m(u,v) = (1 - v)\,\mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))) + v\,\mathbf m_{\mathrm{target}}, \qquad
+\Phi_{\mathrm{strip},\delta m}(u,v) = \big(\nu(\theta(u)),\ \mathbf m(u,v),\ \mathrm{rest}\big).$$
+
+### 4.6 The central hypothesis
+
+**Hypothesis.** The fractal basin structures seen in the Burrau–Pythagorean family are cross-sections of
+codimension-$k$ structures ($k < 6$) in the full 8D IC manifold, not artefacts of the constrained
+submanifold.
+
+**Test.** Lock onto a basin boundary in a Burrau slice. Rotate the slice basis continuously into the
+unconstrained dimensions (the Burrau-to-unconstrained morph, `principia_chart_decoder_contract.md` Part 4).
+Watch whether the boundary persists, deforms or dissolves.
 
 ---
 

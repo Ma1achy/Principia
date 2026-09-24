@@ -100,3 +100,13 @@ or the human rules; I don't choose between them.
   No per-body cap is mentioned anywhere in the corpus.
 - **I can't tell** whether the cap was dropped on purpose (the `q_max` saturation already bounds the Jacobi momenta)
   or lost in transcription. It isn't ported. Rule on it: port it as an optional step, or record it as dropped.
+
+## RQ-10: The shape-sphere chart map: axis assignment and polar buffer *(step 3, chart_reference port)*
+
+- **Markdown** (`principia_chart_reference.md` §3.3, spherical option): $\theta = \pi v$, $\varphi = 2\pi u$. θ is on the
+  **vertical** axis and there's **no buffer**.
+- **LaTeX** (`sec:shape_sphere_view`, `.tex` 333–383): $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$, $\varphi(v) = 2\pi v$.
+  θ is on the **horizontal** axis, with a buffer $\varepsilon > 0$ "to avoid the collision-singularity poles".
+- **Also:** the LaTeX's reason for the buffer is itself doubtful. Under the markdown's own §3.4 the collision points
+  sit **on the equator**, not at the poles (the poles are the Lagrange configurations).
+- **Not ported. The markdown is unchanged.** Rule on the axis assignment and on whether θ gets a buffer.
