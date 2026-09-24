@@ -65,9 +65,9 @@ Refinement now runs *during* playback against evolving state, not once against f
 **Spatial coherence (kept, instantaneous):** at the playhead, do the quad's pixels disagree (different classes / far apart in state)? The classic "boundary through this quad → split." Live, two-way (can un-flag).
 
 **Temporal behaviour (new, fixed-size running accumulators — NOT stored history):**
-- **running max divergence** — largest intra-quad bundle spread seen so far (catches mid-flight divergence that reconverges — invisible to end-state impurity). One float, `max`-updated.
-- **running mean divergence** — time-averaged spread (distinguishes mild-constant from explosive-occasional). One float.
-- **first-divergence time** — `t` at which spread first crossed `eps`; write-once; proxy for how fast chaos manifests here.
+- **running max divergence** — the latch: the largest bundle spread a **footprint** has shown so far (catches mid-flight divergence that reconverges — invisible to end-state impurity). One float per footprint, `max`-updated (R-99).
+- **running mean divergence** — time-averaged spread (distinguishes mild-constant from explosive-occasional). One float. A diagnostic, not a split input (R-99).
+- **first-divergence time** — `t` at which spread first crossed `eps`; write-once; proxy for how fast chaos manifests here. A diagnostic, not a split input (R-99).
 
 ```
 unresolved(f)  ⟺  spread(f, now)          > eps     // boundary now
@@ -75,9 +75,9 @@ unresolved(f)  ⟺  spread(f, now)          > eps     // boundary now
 split(quad)    ⟺  any footprint f in quad is unresolved          // R-91; θ_s, θ_max, θ_trend dropped
 ```
 
-Costs a few floats per quad, O(1) in-place, folded into the existing ~80 B `QuadReduction` (same reduce-before-evaporate pattern — GPU distills history to a scalar in-thread; CPU sees the scalar, never the history).
+Costs one float per footprint for the latch, held with the resident quad (R-99), plus the diagnostics; O(1) in-place, same reduce-before-evaporate pattern — GPU distills history to a scalar in-thread; CPU sees the scalar, never the history.
 
-**The temporal signal latches (one-way):** running-max only grows, first-divergence is write-once — so a quad proven interesting *stays* refined even if it currently looks calm. This is *correct* for the crystallisation movie: boundary structure **accumulates and sharpens** as time reveals it, rather than flickering. Distinct from the spatial signal, which is instantaneous and two-way.
+**The temporal signal latches (one-way):** running-max only grows (and first-divergence, a diagnostic, is write-once) — so a footprint proven interesting keeps its quad refined even if it currently looks calm (R-99). This is *correct* for the crystallisation movie: boundary structure **accumulates and sharpens** as time reveals it, rather than flickering. Distinct from the spatial signal, which is instantaneous and two-way.
 
 ---
 
@@ -168,7 +168,7 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 
 - **The reversal + `SimState` rename** — ratified, and the contract edits below **executed** (render, scheduler Parts 7–8, caching Part 7, export rewrite, ledger, integrator §3.7). ✓
 - **Frame-loop cadence** — **adjustable playback speed; default = 1 minute to `t_end`** (so `steps_per_frame = ⌈T / (60 × fps × dt_macro)⌉` at 1×, speed multiplier ~0.1×–10× on top). Invariant locked: fixed `dt` per sim-step, decoupled from wall-clock frame time (determinism). The *number* is derived from the 60s default; the *feel* is tuned live. ✓
-- **Latch persistence** — the refinement latch **lives with the quadtree node and dies when the node is merged/pruned** under quadtree pressure. Bounded by quadtree size (already bounded), not by session length. A revisited region *remembers* it was interesting (state re-boots via catch-up; the decision persists); a genuinely-pruned region correctly re-discovers. ✓
+- **Latch persistence** — the refinement latch is **per footprint, lives with the resident quad, and goes when the cache evicts or merges the quad** (R-99), so it never pins memory. Bounded by the resident set, not by session length. An evicted or merged region correctly re-discovers. ✓
 - **Checkpoints — deleted, confirmed.** No surviving consumer: survey animation (lockstep), replay scrub (removed — the GUI scrubber re-integrates, R-66), hover/inspector trace (CPU `computeIC`), divergence overlay (on-demand single-IC f32 GPU trace), static outcome map (never needed them). The concept is obsolete; the ledger reflects it. ✓
 - **Viewport-cache budget** — policy locked (hard cap, current-state-only, cost-weighted LRU incl. `t_cached`); the *number* is set by the **device-characterisation phase** (`principia_quality_device_note.md`; caching Part 7) — a fraction of a detected VRAM budget, never a fixed constant, scaling down on weak devices alongside the compute knobs. One characterisation sets compute *and* memory settings together. ✓
 
@@ -200,7 +200,7 @@ Cluster in two themes: **(A) the memory problem sneaking back** (guard with hard
 2. **Children chasing a moving playhead** (B) — *dissolved by promotion-at-barrier*: promote only when `quad.t == live_set.t` at a barrier where the playhead is stationary. Time-sync gate, not completion gate.
 3. **Frame-rate-dependent marching breaks determinism** (B) — *dissolved by fixed-timestep loop*: fixed `dt`/sim-step, decoupled from render frames. Correctness issue, not just UX.
 4. **Viewport cache regrowing into a history buffer** (A) — hard budget cap; current-state-only; the "cache a bit of history for smoothness" temptation is the V2 siren. Guard with a ceiling.
-5. **Refinement thrash / latch** (A+B) — *off-loop via frame loop, so never visible*; latch is persistent CPU metadata, state re-boots. Confirm persistence (item 6).
+5. **Refinement thrash / latch** (A+B) — *off-loop via frame loop, so never visible*; the latch lives with the resident quad and goes with it (R-99), state re-boots.
 6. **Pan-while-paused** (B) — *clarified by frame loop*: pause freezes the playhead, not the compute; reveals still catch up to frozen `t`. Honest, not a bug — state it.
 7. **Export determinism** (B) — *handled by blocking barrier mode*: export runs the frame loop with a hard barrier (fully caught up before capture), interactive runs progressive. Same loop, two policies.
 

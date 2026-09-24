@@ -150,7 +150,7 @@ What is cached under lockstep is **current state only — one timestep per quad,
 - **Hard budget cap, not a smoothness dial.** The cache has a fixed memory ceiling, **sized by the device-characterisation phase** (`principia_quality_device_note.md`): a fraction of a detected VRAM budget (from `adapter.limits` + the boot probe), never a fixed constant — so it scales down on weak devices along with the compute settings. One characterisation sets the compute knobs *and* this cap together. The temptation to "cache a bit of history for smoothness" is exactly the eager-in-time siren that produced the V2 memory problem — the invariant is *one state per entry, bounded entry count*, and any growth pressure is answered by eviction, never by relaxing either.
 - **Eviction stays cost-weighted LRU** and stays *safe* (fixed-`dt` purity: re-booting reproduces the state exactly) — but the cost model now includes `t_cached` (a deep-`t` resume point saves more recompute than a shallow one, so it resists eviction more).
 - **The pinned classes survive unchanged**: baseline cover + visible ancestor chain + backdrop identity's leaf cover (Part 4/5) — pinned as *frozen states*, which is all the backdrop needs.
-- **Refinement latches are not cache entries.** The "this quad proved interesting" decision is tiny CPU quad metadata that persists independently of state eviction (scheduler Part 8) — evicting a quad's state never forgets its refinement status.
+- **Refinement latches never pin memory.** The per-footprint latch (scheduler Part 8) lives with the resident quad: when the cache evicts or merges the quad, the latch goes too (R-99). It adds nothing to the pinned classes above.
 
 ## Part 8 — The composed guarantee
 

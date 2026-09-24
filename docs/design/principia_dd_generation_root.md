@@ -335,13 +335,15 @@ Four properties of this block, all measured:
 
 | member | type | note |
 |---|---|---|
-| `running_max_divergence` | f32 | max-updated, **latching**; feeds "unresolved" under the same `eps` (R-91) |
-| `running_mean_divergence` | f32 | |
-| `first_divergence_t` | f32 | write-once; sentinel until crossed |
+| `running_mean_divergence` | f32 | diagnostic, not a split input (R-99) |
+| `first_divergence_t` | f32 | write-once; sentinel until crossed; diagnostic, not a split input (R-99) |
 
-**They feed "unresolved", not a second split trigger (R-91).** Under the one `eps`, a footprint is unresolved if its
-spread exceeds `eps` now, or its latched running maximum ever did. `θ_s`, `θ_max`, `θ_trend` and the trend signal are
-dropped, so there is no `divergence_trend` member.
+**The latch is per footprint, not a `QuadReduction` member (R-99).** `running_max_divergence` (f32, max-updated,
+**latching**) is held per footprint with the resident quad, and goes when the cache evicts or merges the quad, so it
+never pins memory; its storage layout is defined by the task that builds it (R-72). It feeds "unresolved", not a second
+split trigger (R-91): under the one `eps`, a footprint is unresolved if its spread exceeds `eps` now, or its latched
+running maximum ever did, and a quad is unresolved if any of its footprints is. `θ_s`, `θ_max`, `θ_trend` and the trend
+signal are dropped, so there is no `divergence_trend` member.
 
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.

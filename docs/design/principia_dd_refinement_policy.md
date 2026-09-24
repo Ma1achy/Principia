@@ -88,7 +88,7 @@ split(quad)  ⟺  any footprint f in quad is unresolved
 unresolved(f)  ⟺  spread_shape(f) > eps          the payload has not settled
                 ∨  the copies disagree on event class
                 ∨  the footprint is undetermined  (non-finite spread, or an unusable copy)
-                ∨  its latched running maximum of spread_shape ever exceeded eps   (R-91)
+                ∨  its latched running maximum of spread_shape ever exceeded eps   (R-91; per footprint, R-99)
 ```
 
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous
@@ -156,7 +156,8 @@ Under a live playhead the field changes as `t` advances, so the tree must **coar
 > A parent whose four children are all leaves that did not split this boundary is **merged back** when
 > the parent has become resolved (`Keep`) or its split shows no gain (`Floor`).
 
-Children become `Decision::Merged`. **`QuadTree::resident` — what a live design actually holds — is
+Children become `Decision::Merged`, and their footprints' latches go with them: the latch lives with the resident
+quad and never pins memory (R-99). **`QuadTree::resident` — what a live design actually holds — is
 tracked separately from `quads_computed`.** On a moving-pulse fixture, resident runs 37 → 85 → 37 → 69
 while 181 quads are computed, and the final tree is **bitwise the static tree at the horizon.**
 
