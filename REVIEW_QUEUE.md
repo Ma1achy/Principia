@@ -110,3 +110,15 @@ or the human rules; I don't choose between them.
 - **Also:** the LaTeX's reason for the buffer is itself doubtful. Under the markdown's own §3.4 the collision points
   sit **on the equator**, not at the poles (the poles are the Lagrange configurations).
 - **Not ported. The markdown is unchanged.** Rule on the axis assignment and on whether θ gets a buffer.
+
+## RQ-11: Lookup's decode-sanity check vs "a t = 0 collision is a real outcome" *(step 3, inverse_encode port)*
+
+- **Ported, as the LaTeX wrote it** (`sec:chart_validation`, `.tex` 771–815 → `principia_inverse_encode_contract.md`,
+  Chart-aware validation, layer 3): decode sanity requires "no two bodies coincident ($r_{ij} > r_{\mathrm{coll}}$)".
+  A failure means project, clamp or reject.
+- **The markdown elsewhere:** `principia_chart_reference.md` §0.7 and the LaTeX's own `sec:no_holes_impl` say
+  "`COLLISION_T0(pair)` with `t_event = 0` if `r_min(0) < r_coll`. **No pixel is ever rejected.**"
+  `principia_integrator_contract.md` 348 calls a t = 0 terminal "a real outcome".
+- **The tension:** for a *rendered pixel* $r < r_{\mathrm{coll}}$ at t = 0 is a labelled outcome. For a *typed-in lookup*
+  the ported rule refuses or moves it. That may be intended (lookup is user entry, not rendering), or it may be stale.
+  I'm not choosing. Rule on whether lookup should accept and label a t = 0 collision.
