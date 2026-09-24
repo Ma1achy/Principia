@@ -239,7 +239,7 @@ every n_renorm steps:  δ⃗ = x' − x ;  δ = ‖δ⃗‖ ;  S += log(δ/δ₀
 ```
 Renormalisation is what makes λ an intrinsic flow quantity; it is also exactly why the Benettin endpoint is not a valid neighbourhood sample.
 
-**Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets, no intervention):
+**Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets — copy 0 the un-jittered centre, copies 1..E at Halton points 1..E centred and scaled to the footprint, R-80 — no intervention):
 ```
 outcome entropy   H = −Σᵢ pᵢ log pᵢ            (categorical final diagnostics)
 spread            σ²_T = (1/(E+1)) Σₖ ‖Φ_T(x₀⁽ᵏ⁾) − x̄(T)‖²     (over the footprint's E+1 samples, at resolve)
