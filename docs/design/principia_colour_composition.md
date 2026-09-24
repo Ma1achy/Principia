@@ -452,32 +452,31 @@ Global controls on every Artefact-1 map: **Invert** ($v \mapsto 255 - v$), **Ble
 **Auto-rotate**.
 
 **Artefact 2 — patterns and special modes (`PatternSphere`).** Every pattern has the signature
-$(\hat{\mathbf n}, 	ext{params}, 	ext{palette}) \mapsto [R, G, B]$.
+$(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 
 | group | map | definition |
 |---|---|---|
 | Voronoi-type | Octant | partition by sign: index $= 4[n_x \ge 0] + 2[n_y \ge 0] + [n_z \ge 0]$ |
-| | Voronoi 6 | nearest axis pole, $i^* = rg\max_i \hat{\mathbf n}\cdot\hat{\mathbf p}_i$ |
+| | Voronoi 6 | nearest axis pole, $i^* = \arg\max_i \hat{\mathbf n}\cdot\hat{\mathbf p}_i$ |
 | | Hemispheres | the dominant axis sets the colour, two shades per axis for the sign |
-| | Icosahedral | 12 Voronoi cells about the icosahedron vertices $\{(0, \pm1, \pm\phi), (\pm1, \pm\phi, 0), (\pm\phi, 0, \pm1)\}/\lVert(0, 1, \phi)Vert$, $\phi = (1+\sqrt5)/2$ |
+| | Icosahedral | 12 Voronoi cells about the icosahedron vertices $\{(0, \pm1, \pm\phi), (\pm1, \pm\phi, 0), (\pm\phi, 0, \pm1)\}/\lVert(0, 1, \phi)\rVert$, $\phi = (1+\sqrt5)/2$ |
 | | Soft Voronoi | sigmoid blend between the two nearest poles, $t = \sigma(k_s(d_1 - d_2))$ |
 | Lattices | Fibonacci lattice | $N$ golden-angle points, $n_{z,i} = 1 - 2i/(N-1)$, $r_i = \sqrt{1 - n_{z,i}^2}$, $\phi_i = \pi(\sqrt5 - 1)\,i$; golden-angle hue spacing so adjacent cells contrast |
-| | Dot lattice | the Fibonacci points drawn as coloured dots of angular radius $ho = \cos(1.4/\sqrt N)$ on a dark background |
-| Stripes | Checkerboard | with $	heta = rccos n_z$, $arphi = \operatorname{atan2}(n_y, n_x) + \pi$: even $= (\lfloor f	heta/\pifloor + \lfloor farphi/2\pifloor) mod 2$; seam-free for integer $f$ |
-| | Latitude stripes | $\cos(f rccos n_z) > 0$ (no atan2) |
+| | Dot lattice | the Fibonacci points drawn as coloured dots of angular radius $\rho = \cos(1.4/\sqrt N)$ on a dark background |
+| Stripes | Checkerboard | with $\theta = \arccos n_z$, $\varphi = \operatorname{atan2}(n_y, n_x) + \pi$: even $= (\lfloor f\theta/\pi\rfloor + \lfloor f\varphi/2\pi\rfloor) \bmod 2$; seam-free for integer $f$ |
+| | Latitude stripes | $\cos(f \arccos n_z) > 0$ (no atan2) |
 | | Longitude stripes | $\sin(f\,\operatorname{atan2}(n_y, n_x)) > 0$ (seamless for integer $f$) |
 | | Truchet mosaic | each patch cell $(c_i, c_j)$ gets a deterministic diagonal split from $h = \operatorname{frac}(\sin(127.1c_i + 311.7c_j)\cdot 43758.5)$; colour by the side of the diagonal |
 | Overlays | Grid overlay | pixels within $\epsilon = 0.04$ of a grid line take the line colour; the base map is unchanged elsewhere |
 | | Iso-hue contours | lines of constant vMF hue $\psi = \operatorname{atan2}(b_{\mathrm{vmf}}, a_{\mathrm{vmf}})$, uniformly spaced in hue |
-| | Gradient magnitude | $\lvert
-abla cvert pprox 	frac12\sqrt{\lVert c(\hat{\mathbf n} + arepsilon\hat x) - c(\hat{\mathbf n})Vert^2 + \lVert c(\hat{\mathbf n} + arepsilon\hat y) - c(\hat{\mathbf n})Vert^2}$ |
-| | Perlin noise | 4-octave 3-D value noise in Cartesian coordinates (no seam), $v = \sum_{k=0}^{3} 2^{-k}\omega(2^k s\,\hat{\mathbf n}) ig/ \sum_{k=0}^{3} 2^{-k}$ |
+| | Gradient magnitude | $\lvert\nabla c\rvert \approx \tfrac12\sqrt{\lVert c(\hat{\mathbf n} + \varepsilon\hat x) - c(\hat{\mathbf n})\rVert^2 + \lVert c(\hat{\mathbf n} + \varepsilon\hat y) - c(\hat{\mathbf n})\rVert^2}$ |
+| | Perlin noise | 4-octave 3-D value noise in Cartesian coordinates (no seam), $v = \sum_{k=0}^{3} 2^{-k}\omega(2^k s\,\hat{\mathbf n}) \big/ \sum_{k=0}^{3} 2^{-k}$ |
 | | Checker + VMF | the checkerboard over the vMF map |
-| Special | Real spherical harmonics | $v = Y_{\ell m}/\max\lvert Y_{\ell m}vert$, blended between the positive- and negative-lobe colours in proportion to $\lvert vvert$, grey on the nodal lines. Forms for $\ell \in \{1,2,3\}$ include $Y_{10} = \sqrt{3/4\pi}\,n_z$, $Y_{11} = \sqrt{3/4\pi}\,n_x$, $Y_{20} = \sqrt{5/16\pi}\,(2n_z^2 - n_x^2 - n_y^2)$, $Y_{22} = \sqrt{15/16\pi}\,(n_x^2 - n_y^2)$, $Y_{33} = \sqrt{35/32\pi}\,n_x(n_x^2 - 3n_y^2)$ |
-| | Turing-like standing waves | $v = 	frac13\left[\sin(f n_x) + \sin\!\left(f(	frac12 n_x + 	frac{\sqrt3}{2} n_y)ight) + \sin\!\left(f(	frac12 n_x - 	frac{\sqrt3}{2} n_y)ight)ight]$ |
-| | Stability × Hue | the house encoding, dd_colouring §3.4: $L = 0.25 + 0.55\cdot	frac12(1 - \max_j \hat{\mathbf n}\cdot\hat{\mathbf b}_j)$, with $\hat{\mathbf b}_j$ computed per R-14 |
-| | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(arphi_0 + 2\pi i/N)\cos\psi, \sin(arphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = 	ext{tilt}\cdot\pi/2$ |
-| | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,	ext{pal}[i_1] + (1-t)\,	ext{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
+| Special | Real spherical harmonics | $v = Y_{\ell m}/\max\lvert Y_{\ell m}\rvert$, blended between the positive- and negative-lobe colours in proportion to $\lvert v\rvert$, grey on the nodal lines. Forms for $\ell \in \{1,2,3\}$ include $Y_{10} = \sqrt{3/4\pi}\,n_z$, $Y_{11} = \sqrt{3/4\pi}\,n_x$, $Y_{20} = \sqrt{5/16\pi}\,(2n_z^2 - n_x^2 - n_y^2)$, $Y_{22} = \sqrt{15/16\pi}\,(n_x^2 - n_y^2)$, $Y_{33} = \sqrt{35/32\pi}\,n_x(n_x^2 - 3n_y^2)$ |
+| | Turing-like standing waves | $v = \tfrac13\left[\sin(f n_x) + \sin\!\left(f(\tfrac12 n_x + \tfrac{\sqrt3}{2} n_y)\right) + \sin\!\left(f(\tfrac12 n_x - \tfrac{\sqrt3}{2} n_y)\right)\right]$ |
+| | Stability × Hue | the house encoding, dd_colouring §3.4: $L = 0.25 + 0.55\cdot\tfrac12(1 - \max_j \hat{\mathbf n}\cdot\hat{\mathbf b}_j)$, with $\hat{\mathbf b}_j$ computed per R-14 |
+| | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(\varphi_0 + 2\pi i/N)\cos\psi, \sin(\varphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = \text{tilt}\cdot\pi/2$ |
+| | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,\text{pal}[i_1] + (1-t)\,\text{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
 | Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14 and decision B18 |
 
 ---
