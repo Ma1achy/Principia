@@ -47,3 +47,27 @@ the LaTeX and B25, and 0 in the markdown corpus and the tool.
 
 List it with audit B4. It has no LaTeX cross-check. Until it's decided, the markdown's pin in
 `principia_dd_integrator.md` §3.6 (collision beats escape) stands.
+
+## R-7 — Step 3's done-check *(closes RQ-6)*
+*24 Sep 2026 · applied in step 3*
+
+Step 3 is done when both of these hold:
+
+**(a)** Run over the corpus markdown only, after step 2's move:
+
+```
+grep -rniwE --include='*.md' "latex|spec\.tex" docs/ --exclude-dir=archive
+```
+
+It returns only:
+- the retirement ruling in `principia_canonical_spec.md`;
+- `principia_spec_pending_changes.md`, which is exempt by name until step 4 archives it.
+
+The root working docs (HANDOFF, REVIEW_QUEUE, decisions, open-questions), `spec_sources/`, `workbench/`
+and `.git` are out of scope by construction.
+
+**(b)** `spec_sources/SECTION_MAP.md` is the ledger for everything the grep can't judge ("the spec's …"
+phrases). Every T, S and D row carries `done: <commit>` or a REVIEW_QUEUE reference. F and M rows need no
+action. R rows are closed in step 4.
+
+**After step 4:** rerun (a) with no exemptions. It returns only the retirement ruling.

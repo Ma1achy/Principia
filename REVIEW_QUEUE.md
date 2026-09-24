@@ -64,3 +64,4 @@ or the human rules; I don't choose between them.
 - **Options:** scope the check to `docs/` (the plan's original form), or add `--exclude-dir={workbench,.git}`
   and `--include='*.md'`, and exclude the root working docs. Either way, run it after the register is
   archived, or exempt the register by name. **Applied verbatim in the handoff until you rule.**
+- **Ruling:** R-7 — applied in step 3
