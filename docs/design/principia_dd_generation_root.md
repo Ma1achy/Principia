@@ -194,7 +194,7 @@ only, never a history. Size the struct from the member list, then align, then up
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining
 every event-derived field at the joint grain dissolves the question** — one grain, no companion field,
 no commuting problem [RC §6.5]. This also covers triple collision / triple ejection at
-`detail = 11` (spec pending change 7).
+`detail = 11` (pending change 7, landed; payload §2).
 
 #### Ensemble spread — the two bounded contributors
 

@@ -148,8 +148,19 @@ Final *and* max are both stored because the *shape* of drift is the diagnostic: 
 ### 3.6 Detectors (per `STEP`, on the projected state)
 
 **Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` → `COLLISION(pair)` — the **squared** comparison (no runtime `sqrt` in the branch, per §3.3's comparison-only rule). Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three consumers.
+**Count before classifying (pending change 7, landed):** count the pairs with `‖rᵢ − rⱼ‖² < r_coll²`. Exactly 1 → `COLLISION(pair)`; 2 or more → `COLLISION`, `detail = 3` (triple collision, terminal and non-continuable). Testing "any pair" first steals genuine triples into the binary arm. `d_min` is the primary stored quantity and `r_coll` a recorded parameter (integrator contract Part 7).
 
-**Escape** — for each candidate body `k` (outer of the Jacobi split against the remaining pair), three gates and a persistence counter:
+**Escape (pending change 11, landed):**
+
+```
+ESCAPE  ⟺  |Δn̂| over a window < tau    AND    E_rel > 0
+```
+
+The shape vector has settled and the escaper is unbound. `tau` sits in a 383× gap and is not tuned (integrator contract
+Part 7; `principia_01_pitfalls.md` §2). The window length, the energy `E_rel` is taken over, and how the escaping body is
+identified are not yet written down (open-questions). Triple ejection is `ESCAPE` with `detail = 3`; its gate is open.
+
+*Superseded by change 11, kept for the record* — for each candidate body `k` (outer of the Jacobi split against the remaining pair), three gates and a persistence counter:
 
 ```
 G1  ‖λ‖   > R_esc                    (far)
@@ -160,7 +171,7 @@ counter:  all three pass → c_k += 1 ;  any fails → c_k = max(0, c_k − 1)
 terminal: c_k ≥ k_esc (= 8)  →  ESCAPE(body k)
 ```
 
-The ±1 counter with floor is what absorbs single-step gate flicker near thresholds — the sanctioned honest divergence of the integrator contract.
+The ±1 counter with floor is what absorbs single-step gate flicker near thresholds — the sanctioned honest divergence of the integrator contract. *(This detector fired on transients: 0 of 895 escapes were still unbound eight sync boundaries later.)*
 
 **Terminal taxonomy & priority (pinned here — confirm/veto):** labels are mutually exclusive; when multiple could fire in one `STEP`, the deterministic order is
 ```
@@ -247,8 +258,8 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 2. **Symplectic vs not:** long bounded orbit — KDK/Yoshida energy error *oscillates* about E₀ with no secular trend; RK4 and Euler drift secularly; **Euler's violent drift lighting up `SUSPECT_ENERGY` is the pass condition** (the debug-occupant test).
 3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks.
 4. **Substep determinism:** over fuzzed states straddling **bucket edges** (§3.3 threshold table), **all backends** — CPU-f64, CPU-f32, native-GPU, browser-GPU-via-WGSL — produce the identical `N_sub` integer, always (0 forks; the CPU-fround approach this replaced forked 5/272).
-5. **Detector — escape:** a synthetic hyperbolic ejection passes G1–G3 and terminates at exactly `c = k_esc` steps after gates hold; a grazing near-escape that turns back exercises the −1 decrement and never terminates.
-6. **Detector — collision & priority:** head-on pair crosses `r_coll` → `COLLISION(pair)` with the correct pair id; a contrived same-step collision+escape resolves per §3.6 priority, identically on both precisions.
+5. **Detector — escape:** a synthetic hyperbolic ejection fires `ESCAPE` once `|Δn̂|` over the window falls below `tau` with `E_rel > 0`; a grazing near-escape that turns back never fires; a settled bound hierarchy (closure small, `E_rel < 0`) never fires. *(Superseded form, change 11: passes G1–G3 and terminates at exactly `c = k_esc` steps after gates hold; the grazing case exercises the −1 decrement.)*
+6. **Detector — collision & priority:** head-on pair crosses `r_coll` → `COLLISION(pair)` with the correct pair id; two pairs below `r_coll` in the same step → `COLLISION` with `detail = 3`, never a binary label (change 7); a contrived same-step collision+escape resolves per §3.6 priority, identically on both precisions.
 7. **Drift shape:** a close-encounter IC shows `max|ΔE| ≫ |ΔE_final|` (spike that recovered) — validates storing both and the cross-check view's premise.
 8. **Winding & terminal latch:** on a circulating bounded orbit, `θ̃` is continuous (no 2π jumps), `orbit_count` matches a hand-counted winding, `retrograde` matches the L_z sign; post-event slots are frozen at the terminal state (finalisation).
 9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
