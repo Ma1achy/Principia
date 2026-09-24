@@ -924,3 +924,136 @@ No choice is needed for most of these; a ruling already decides them. Line numbe
 - [ ] `principia_canonical_spec.md:150` "the full GUI *design* (Malachy's ideas) is unwritten" — step 6 wrote
   `principia_render_gui_spec.md`.
 - **Ruling:** R-73 (decisions.md). Closed in step 7.
+
+---
+
+*Found while applying R-70 to R-96 (step 7). Each is a place where applying a ruling literally met text the ruling
+doesn't settle. The text was left as it was; nothing is chosen.*
+
+## RQ-57: R-92 — in what frame are quads addressed? *(step 7, scheduler)*
+
+- `principia_deep_zoom.md` §1 (:21): "This is what `(depth, tx, ty)`, the hash seed, and the quadtree key on — an *index into
+  the current view*."
+- R-92: "In-plane pan and zoom re-address" without re-integrating. For a cached quad to survive an in-plane pan, its address must
+  be fixed in the slice plane, not in the current view.
+- **Needed:** the frame `(depth, tx, ty)` is taken in (e.g. slice-plane coordinates at a fixed origin and scale), and whether
+  deep_zoom §1's "index into the current view" is reworded.
+
+## RQ-58: R-88 — does `MAX_REL_DEPTH` cap off-screen policy splits? *(step 7, scheduler)*
+
+- R-88: "`MAX_REL_DEPTH` caps **only** that supersampling depth" (in view, below the screen floor).
+- `principia_scheduler_contract.md` Part 3 (:66): `∨ policy_splits(C) ∧ ℓ < camera_depth + MAX_REL_DEPTH` — applied to every
+  policy split, including quads off screen (the frontier).
+- **Needed:** whether off-screen policy splits are also capped by `MAX_REL_DEPTH` (Part 3 stands) or by something else.
+
+## RQ-59: R-91 — four points it leaves open *(step 7, refinement)*
+
+- **(a) Granularity.** R-91: "a **footprint** is unresolved if … its latched running maximum ever did". scheduler Part 8
+  (:184): the running max is "per quad, in `QuadReduction`". refinement_policy §1 (:91) now tests it per footprint. Is the
+  latch per footprint (a new per-footprint member) or per quad?
+- **(b) The other accumulators.** scheduler Part 8 (:184) keeps "**running mean divergence**, **first-divergence time**
+  (write-once)"; temporal note :70, :80. R-91 drops θ_s, θ_max, θ_trend and the trend, and says nothing of these two. Kept
+  as telemetry, or dropped?
+- **(c) `S_word`.** scheduler Part 8 (:183): spatial coherence "**Includes symbolic spread** (`S_word`)". refinement_policy §1's
+  `unresolved(f)` (:86–91) has no word term. Does `S_word` feed "unresolved"?
+- **(d) The latch and merging.** A latched maximum keeps a footprint unresolved for ever, so its parent can never merge
+  (refinement_policy §3, :156: merged "when the parent has become resolved"), and the measured result "the final tree is
+  **bitwise the static tree at the horizon**" (:161) can no longer hold under a live playhead. Is that intended?
+
+## RQ-60: R-80 — the optional per-cell Halton rotation *(step 7, sampling)*
+
+- R-80: copies 1..E are "Halton points 1..E, centred (minus ½) and scaled to the footprint"; R-81: "the footprint fixes the
+  offsets".
+- `principia_sampling_msaa_note.md` :89–90 still offers an "optional decorrelation per cell (Cranley–Patterson rotation,
+  deterministic)", now limited to copies 1…E; :110 hashes it.
+- **Needed:** whether the rotation is dropped (offsets fully fixed) or kept as an option (and then how it composes with the
+  centring).
+
+## RQ-61: R-96 — transport in `ViewUI`, which is "never read by the engine" *(step 7, GUI)*
+
+- R-96: "Transport (play / pause / speed / loop) moves from `SimConfig` to `ViewUI`: not undoable, not on the sim key."
+- `principia_gui_state_contract.md` §2 (:43–44): the `ViewUI` block now lists "playback transport (play/pause/speed/loop …)"
+  and ends "— never read by the engine". The frame loop reads play/pause and speed.
+- **Needed:** whether transport is a `ViewUI` field the engine reads (the "never read by the engine" line is reworded), or a
+  third category (engine-read, not undoable, not on either key).
+
+## RQ-62: R-89 — "ensemble on/off" as a baked variant *(step 7, integrator)*
+
+- R-89: "E changes live: copies are cached per `copy_index`, and the nominal's key excludes E."
+- `principia_integrator_contract.md` Part 3, item 3 (:323): "the co-computation selections (`FTLE_ENABLED`, ensemble on/off …).
+  These select **baked variants**" — a variant change re-dispatches.
+- **Needed:** whether turning the ensemble on or off is still a baked variant (only E's value changes live), or the variant is
+  dropped.
+
+## RQ-63: R-95 — the loop's `done` flag after escape fires *(step 7, integrator)*
+
+- R-95: "Any further march exists only to run the pitfall §2.4 checks and writes nothing else."
+- `principia_integrator_contract.md` Part 1 (:23): `done ← detect_terminal(state, params)   # WRAPPER — per STEP; sets the flag`.
+  The prose now states R-95; the pseudocode is unchanged.
+- **Needed:** whether `detect_terminal` sets `done` on escape (and a separate "checks pending" state carries the march), or
+  `done` is set only when the §2.4 checks pass.
+
+## RQ-64: R-27 — the shape-sphere chart's `system_image` *(step 7, charts)*
+
+- `principia_lowering_contract.md` chart table (:158): shape sphere (α, β) — "`system_image: 2-to-1`".
+- R-27 adds "a `system_image` value for 'covers each shape twice, as two labelled systems'" and lists lowering :160–162, but
+  gives the value no name. D5 (R-59) replaced `has_redundant_hemisphere` with `system_image`.
+- **Needed:** the name of R-27's new value, and whether the shape sphere's `2-to-1` is that value or a different one.
+
+## RQ-65: R-93 — which re-run gives `t_max(f32)`? *(step 7, validation)*
+
+- R-93: "with the value from the **R-84** re-run". R-84 (branch decisions across precisions) has no re-run; R-35 is "The
+  change-10 cross-checks are re-run and the NumPy reference patched", and its file list includes dd_predictability_horizon.
+- `principia_dd_predictability_horizon.md` §4.1 now reads "the value of `t_max(f32)` comes from the re-run of the change-10
+  cross-checks (R-35)". decisions.md records R-93 as given.
+- **Needed:** confirm R-35 (or correct the doc).
+
+## RQ-66: R-96 — which "link ids"? *(step 7, GUI)*
+
+- R-96: "Link ids are specified when the v2 research tools are built" — the linked views of `principia_render_gui_spec.md` §G11
+  (:304), where it is now applied.
+- `principia_gui_state_contract.md` §2 (:37) lists "link ids" in `SimConfig`, and `principia_render_contract.md` :61 puts link ids
+  on the sim key. These read as the chart's link functions (lowering's `sk.links`), not linked views.
+- **Needed:** confirm the two are different things (and the contract's "link ids" means the chart links), or say otherwise.
+
+## RQ-67: Further follow-ups the step-7 rulings leave in the text *(step 7, cleanup)*
+
+Like RQ-56: each has a ruling behind it, and none is applied yet.
+- [ ] `principia_canonical_spec.md` :174 (escape banner): "`tau` sits in a **383× gap** and is not tuned" — R-29 marks the gap "to
+  re-measure"; canonical isn't in R-29's file list.
+- [ ] `principia_dd_refinement_policy.md` :136, heading "2.2 TWO KNOWN DEFECTS IN `alpha_area` — both open": the body now gives
+  R-42's fixes. (A heading change: requirements citing it are re-pointed in the same commit.)
+- [ ] `principia_INDEX.md` "Known open items" (:166–171 and near): items ruled before step 7 still listed as open — N = 16 vs 8
+  (R-43), frontier scoping (R-45), relevance arithmetic (R-46), `Decision::Undetermined` (R-47), SimState widths "pending
+  redefinition" (R-40).
+- [ ] `principia_colour_composition.md` §7.1: the checkerboard formula names θ = arccos n_z and φ = atan2, the reverse of R-14's
+  names (internal to the pattern).
+- [ ] `docs/gui/design/GUI_DESIGN_NOTES.md` :72: display order "stain → style → colour-vision simulation → screen" omits display
+  scale and gamut clamp (R-67). The notes are the reviewer's source material, so they are not edited without your say.
+
+## RQ-68: R-88 — does "must split above the screen floor" hold during a gesture? *(step 7, scheduler)*
+
+- R-88: "Above the screen floor, in-view quads must split (policy §0.1)."
+- `principia_memory_tiers.md` §5 (:181): the **refinement floor** lever — "stop subdividing coarser than pixel-size (tiles 2×
+  pixels etc.) … *under motion only*; snaps back to the pixel floor at rest". `principia_caching_contract.md` Part 6 (:82): in
+  motion "the only thing dispatched is the **full-canvas coarse cover**".
+- **Needed:** whether R-88's must-split applies at rest only (the motion lever and the in-motion regime stand), or also in
+  motion.
+
+## RQ-69: R-95 — where the post-escape march keeps its state *(step 7, integrator)*
+
+- R-95: "Any further march exists only to run the pitfall §2.4 checks and writes nothing else." The same words are now in
+  `principia_integrator_contract.md` (:400), `principia_01_pitfalls.md` §2.4 (:202) and `principia_dd_simstate_payload.md` (:505).
+- The march advances a phase state. If that state is `SimState`'s own `r`/`p` (the live-state block), the march writes it; if
+  not, the corpus names no other place for it. The requirements that every stored field is bit-identical after escape fires
+  depend on the answer.
+- **Needed:** whether the live-state block keeps advancing after escape (and "writes nothing else" means no other field), or
+  the check march runs on a copy outside `SimState` (and where that lives).
+
+## RQ-70: R-96 — how much of pointer_channels is normative? *(step 7, GUI)*
+
+- R-96: "pointer_channels is normative only where render_gui_spec, trajectory_viewing or a ruling cites it."
+- `principia_render_gui_spec.md` :103 cites the whole file for **listen**: "sonification (`principia_scratchpad_pointer_channels.md`;
+  `θ(t), φ(t)` → spectrum)". Its §1 (the three channels independently toggleable), §5 (the sonification predictions) and §6
+  (the FFT's reuse) are cited by nothing more specific.
+- **Needed:** whether the "listen" citation makes all of the sonification part normative, or only the mapping named there.
