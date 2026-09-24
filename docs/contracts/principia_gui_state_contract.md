@@ -37,7 +37,8 @@ SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values �
                           integrator occupant · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home) · playback transport (play/pause/speed/loop)
 RenderState (render key)  four slot occupant refs · slot uniforms · overlay set ·
                           palette/compaction params · playhead t
-ViewUI       (pure UI)    lock flag · δ excursion · backdrop ref · debug category visibility
+ViewUI       (pure UI)    lock flag · z_locked anchor · δ excursion · backdrop ref · debug category visibility ·
+                          keyboard focus scope · kept orbits · inspector t_cursor · open windows
                           — never read by the engine
 ```
 
@@ -48,6 +49,10 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 - `ViewUI` is the firewall line: it is the GUI's own scratch state (lock, blur, which debug category is visible) and the engine never reads it — so the polished GUI can define its own `ViewUI` entirely.
 
 **The interface is subscribe/emit:** the GUI subscribes to state (re-renders on change) and emits typed edits (`setField(path, value)`). It never mutates engine internals directly. That is the whole contract between the two — small, and the only thing a replacement GUI must honour.
+
+**Undo and redo live in the contract (R-52).** The contract keeps one undo/redo history of the typed `setField` edits it has applied, shared by every GUI: a GUI shows the depth (the dev GUI's top bar, `principia_render_gui_spec.md` §G2) and sends undo / redo as requests, and keeps no history of its own. A replacement GUI inherits the history for free. Whether `ViewUI` edits (lock, focus, kept orbits) enter the history is not yet specified (open-questions).
+
+**The snapshot carries the events the GUI reports (R-54).** The precision warning is raised by events, not fixed depths: the snapshot carries, GUI-sized, whether `DECODE_SWITCHOVER` has fired on visible quads and whether `AT_F32_FLOOR` has been hit (`principia_deep_zoom.md` §2; scheduler contract Part 4). The console (render_gui_spec §G12) reads the same telemetry stream the profiler does.
 
 ---
 
@@ -74,7 +79,7 @@ kernel/  (Φ maps · decode · canonicalise · wrapper · occupants KDK/Yoshida/
          — chart & occupant are type parameters; the "registry" is the set of compiled variants
 ```
 
-The scanner produces registry entries `{id, slot, source, category, uniformSchema}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
+The scanner produces registry entries `{id, slot, source, category, uniformSchema, inputDomains}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). **`inputDomains` (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares its own. The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
 
 **`debug/` is a peer directory, but a filter tag — not a different mechanism.** Debug occupants satisfy the same signatures as their slot; they just read `ctx.sample`/`ctx.quad` raw fields. The scanner tags anything under `debug/` `category: debug`. The polished GUI hides that category by **filtering the list** (`ViewUI.debugVisible = false`); the dev GUI shows it. "Hide debug in the nice GUI" is a filter predicate over a tagged registry, never a structural change.
 
@@ -112,6 +117,8 @@ Legibility guidance (5 hues usually beat 5 brightness levels for classes) is **a
 
 ## 5. The colour graph editor — three modes, one object
 
+*Under review, RQ-20: `principia_render_gui_spec.md` Part II and the step-6 design notes describe the stain as a free node graph (source nodes, fan-out, a post chain) over a fixed OUT + combiner backbone; this section describes a four-slot object with fixed wiring. Unchanged until ruled.*
+
 The four-slot pipeline's occupants are **data**: `{colour_id, brightness_id, combiner_id, post_id, uniforms}`. The editor is a **four-slot inspector** (fixed wiring — stage order is constitutional, so there is no free-form topology to build or mis-wire), and your three modes are three edit-actions on that one object:
 
 1. **Pick a node per slot.** Each slot is a dropdown over the scanned registry (filtered by slot; debug category shown/hidden per `ViewUI`). Selecting writes an id. One field edit.
@@ -146,7 +153,7 @@ QualitySettings = { N (samples per quad axis), max_rel_depth, render_scale, lock
 
 **Persistence:** the resolved model persists (`{throughput, resting rung, motion-offset curve, failed-rung memory, provenance signature}`) — reload with matching provenance (adapter info + limits + probe version) starts correct instantly; mismatch re-probes; the live controller + explicit re-detect keep it from ever being a stale trap. The user's *intent* (preset/custom values) is remembered verbatim; the auto *measurement* is a signature-validated cache.
 
-**GUI/state placement:** the preset selector and custom fields are GUI surfaces editing `SimConfig.quality`; the arbiter is engine-side (it writes `SimConfig.quality` knobs during settled periods). `ViewUI` carries the arbiter's debug overlay visibility (estimated throughput, current rung, recent decisions — magic you can inspect).
+**GUI/state placement:** the preset selector and custom fields are GUI surfaces editing `SimConfig.quality` (in the dev GUI, the Run window — render_gui_spec §G5); the arbiter is engine-side (it writes `SimConfig.quality` knobs during settled periods). `ViewUI` carries the arbiter's debug overlay visibility (estimated throughput, current rung, recent decisions — magic you can inspect).
 
 ## 7. What a replacement GUI must honour (the teardown contract)
 
@@ -157,6 +164,7 @@ The polished GUI, whenever it arrives, must satisfy exactly and only:
 - edit the four-slot object for colour; the three modes are optional UI affordances, not requirements (§5).
 - expose the quality preset selector (auto/named/custom) editing `SimConfig.quality`; the arbiter is engine-side and independent of the GUI (§6), so a replacement GUI inherits adaptive quality for free — it need only offer the preset choice and the custom fields.
 - define its own `ViewUI`; the engine reads none of it (§2).
+- use the contract's undo/redo history (§2, R-52); keep none of its own.
 
 Nothing else about the dev GUI is contractual. It can be Tweakpane, a hand-rolled panel, or thrown away entirely — the engine cannot tell, because it only ever sees state edits arriving through one typed door.
 
