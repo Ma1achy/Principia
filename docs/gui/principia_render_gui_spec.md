@@ -69,8 +69,8 @@ many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb
 - Stain: class edges, `t_end` contours.
 
 Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived from the address), a sim shader (Tier 2,
-already resident) or a tile debug shader (Tier 3, a scheduler verdict). Where the toggles live relative to the corpus's
-"global display bar" is RQ-23.
+already resident) or a tile debug shader (Tier 3, a scheduler verdict). The Overlays menu and the Display window (§G5)
+replace the corpus's global display bar (R-67).
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.
@@ -192,16 +192,16 @@ Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headle
 
 ### Display — the last stages
 
-**Order is fixed:** SimResult → stain → style → colour-vision simulation → screen. The stain colours the data, the style
-draws it, and colour-vision simulation shows how the finished picture is seen.
+**Order is fixed (R-67):** SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen. The stain colours the data, the style draws it,
+the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
+simulation sees the final in-gamut colours.
 - **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
   & pencil, print · Poster78, more; with paper grain and press misregistration.
 - **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia.
 - **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
 
-The display stage stays global and outside the pipeline (Part II §12). Part II §12's **gamut clamp** and
-**render→display scale** stay; where they sit in this order, and whether this window replaces the corpus's top display bar,
-is **RQ-23**.
+The display stage stays global and outside the pipeline (Part II §12). This window and the Overlays menu (§G2) replace the
+corpus's top display bar (R-67).
 
 ### Run — from the top bar
 
@@ -360,10 +360,11 @@ one GUI over one piece of state (the composition graph + display settings), diff
 
 *The artboard (`02_stain.png`) shows the same four surfaces: library left, graph canvas centre with
 `Graph · Pipeline WGSL · Node WGSL`, preview and node inspector right; the assembled code and a **Problems** pane (compile
-status, notes, auto-recompile) sit under the canvas. The global display bar's placement is RQ-23.*
+status, notes, auto-recompile) sit under the canvas. The global display bar is replaced by the Display window and the
+Overlays menu (R-67).*
 
 ```
-┌───────────────── global display bar ─────────────────┐
+┌──────────── top bar (Overlays ▾ · Display…) ─────────┐
 ├──────────┬─────────────────────────────┬─────────────┤
 │ library  │        graph canvas         │    node     │
 │ drawer   │   (Graph | Code toggle)     │  inspector  │
@@ -380,7 +381,7 @@ status, notes, auto-recompile) sit under the canvas. The global display bar's pl
   (§10).
 - **Node inspector** (right) — the editor for the selected node; morphs to the node/source type;
   Advanced-WGSL at the bottom (§9).
-- **Global display bar** (top) — gamut / CVD / render-scale / boundary-overlay; applied to `OUT`,
+- **Display window + Overlays menu** (R-67; was the global display bar, top) — style / render-scale / gamut / CVD; applied to `OUT`,
   *outside* the pipeline (§12).
 
 A live **preview** (shape-sphere or illustrative slice, toggle) renders the current `OUT`.
@@ -622,13 +623,12 @@ failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked 
 
 ## 12. Display stage — global, outside the pipeline
 
-*The notes add a **style** stage and fix the order SimResult → stain → style → colour-vision simulation → screen (§G5,
-Display). Where the gamut clamp and render→display scale below sit in that order is RQ-23.*
+*Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.*
 
 Applied to `OUT` after the graph, as **settings, never nodes** (no OUT-downstream graph):
 
-- **gamut clamp**, **CVD simulation** (models the viewer, not the visualisation), **render→display
-  scale**.
+- **style** (optional, figure only), **render→display scale**, **gamut clamp**, **CVD simulation** (models the viewer,
+  not the visualisation) — in that order (R-67). *(Was: gamut clamp, CVD simulation, render→display scale.)*
 
 ### 12.1 Structural overlays and tile debug shaders
 
@@ -690,8 +690,8 @@ Per-quad detail too fine to earn a slot in the ~16 KB budget goes to **inspector
 a quad → its metadata as text). That budget is the real design constraint on this catalogue: it
 bounds the payload to a few scalars per visible quad.
 
-Display-stage settings live in the top display bar and apply uniformly to the main render and the
-preview; tile debug shaders are toggles in the same bar but are *shaders*, not settings.
+Display-stage settings live in the Display window and apply uniformly to the main render and the
+preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, not settings (R-67).
 
 ---
 
@@ -737,7 +737,8 @@ preview; tile debug shaders are toggles in the same bar but are *shaders*, not s
    can't be reconstructed from dissolved code.
 10. **Presets are whole graphs**; catalogue default-composition = preset payload; debug locked →
     fork-on-edit.
-11. **Display stage (gamut / CVD / scale / boundary overlay) is global**, outside the pipeline.
+11. **Display stage (style / scale / gamut / CVD, in that order — R-67) is global**, outside the pipeline; its controls are
+    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)*
 
 ---
 

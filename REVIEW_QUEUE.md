@@ -313,6 +313,8 @@ Nothing is chosen.
 - **Needed:** (a) where gamut clamp and render→display scale sit in the notes' order (before or after style; the notes
   don't list them); (b) whether the "global display bar" placement is replaced by the Display window and Overlays menu.
   The spec keeps both corpus settings, and keeps the display stage global and outside the pipeline.
+- **Ruling:** R-67 (decisions.md): stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
+  Display window and Overlays menu replace the top display bar. Closed in step 6.
 
 ## RQ-24: Artboard details that differ from the corpus *(step 6, GUI)*
 
