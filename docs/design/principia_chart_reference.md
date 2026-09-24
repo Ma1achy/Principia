@@ -94,7 +94,8 @@ charts that bypass it:
 
 ```
 φ = atan2(ρ_y, ρ_x)     rotate all rᵢ, pᵢ by R(−φ)
-if λ_y < −δ_λ:          mirror (δ_λ = 1e−12 deadband)
+if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
+|λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)
 ```
 
 ### 0.5 Scale gauge
@@ -228,8 +229,8 @@ velocities `vᵢ = pᵢ/mᵢ`; let `J(x,y) = (−y, x)` and `⟨a,b⟩_m = Σ m�
 ω = Lz / I              vᵢ^(L) = ω·J rᵢ              K_min = Lz²/(2I)
 ```
 
-**(ii) A direction field that adds energy without changing `Lz`.** Deterministic seed family, tried
-in order:
+**(ii) A direction field that adds energy without changing `Lz`.** Deterministic seed family, in
+this order (the tie-break order):
 
 ```
 primary:    (ρ̇, λ̇) = (ρ, 0)
@@ -253,9 +254,9 @@ c = Σ mᵢ w⁽⁰⁾ᵢ                    w⁽¹⁾ᵢ = w⁽⁰⁾ᵢ − c/
 wᵢ = w⁽²⁾ᵢ / √(‖w⁽²⁾‖²_m)
 ```
 
-**Seed selection:** take the first seed with `‖w⁽²⁾‖²_m > ε_w` (default `1e−10`); if several
-qualify, **choose the largest `‖w⁽²⁾‖_m` for conditioning**. Emit `DEGENERATE` only if all four
-fail.
+**Seed selection (R-82):** among the seeds with `‖w⁽²⁾‖²_m > ε_w` (default `1e−10`), **take the
+largest `‖w⁽²⁾‖_m`**, for conditioning; break ties by seed order. Emit `DEGENERATE` only if no seed
+qualifies.
 
 **(iii) Mix to the target kinetic energy:**
 

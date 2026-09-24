@@ -87,8 +87,8 @@ Only needed when the input did **not** come through the canonical frame (physica
 
 ```
 rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x)
-mirror (full state: every rᵢ AND every pᵢ, y → −y)  if λ_y < 0,
-   with deadband |λ_y| < δ_λ = 10⁻¹² → fixed no-mirror choice
+mirror (full state: every rᵢ AND every pᵢ, y → −y)  iff λ̃_y < −δ_λ   (λ̃ = √μ_λ·λ, δ_λ = 10⁻¹²)
+   |λ̃_y| ≤ δ_λ → no mirror   (the one mirror test, in encode's frame — R-82)
 ```
 
 With the canonical-frame decode both are no-ops away from the seam — and **that no-op property is a test** (5.5).
@@ -118,7 +118,8 @@ v = v⁽ᴸ⁾ + a·w
 v⁽ᴸ⁾ = L_z · J r        (rigid rotation — the minimal-KE realisation of L_z)
 a    = √( 2(K* − L_z²/2) )        feasible iff K* ≥ L_z²/2
 w    = deterministic unit direction (mass-weighted norm 1, zero CoM drift, zero L_z),
-       from the seeded fallback family; all seeds < ε_w → DEGENERATE
+       from the seeded fallback family: among seeds with ‖w⁽²⁾‖²_m > ε_w take the largest
+       norm, ties by seed order; no seed qualifies → DEGENERATE   (R-82)
 ```
 
 ### 3.5 Scale gauge
@@ -174,10 +175,10 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 2. **Factorisation independence:** perturbing `z_μ` leaves `(α, β)` and `(p_ρ, p_λ)` bit-identical (and each block likewise) — the blocks genuinely do not couple except through the join.
 3. **Range respect:** `α ∈ (0, π/2)`, `β ∈ [0, π]`, `|qₖ| ≤ q_max`, for all finite z including ±∞-ish saturation.
 4. **Degenerate tagging:** `DEGENERATE(M01_TINY)` fires iff `M₀₁ < ε` and nothing else in the mass block does; degenerate outputs are tagged, never NaN, never dropped.
-5. **Canonical no-op:** for canonical-frame decodes, applying §3.3 changes nothing (rotation angle ≈ 0, mirror not taken) away from the `λ_y = 0` seam; at the seam, the deadband makes the choice deterministic (same result twice).
+5. **Canonical no-op:** for canonical-frame decodes, applying §3.3 changes nothing (rotation angle ≈ 0, mirror not taken) away from the `λ̃_y = 0` seam; at the seam, the deadband makes the choice deterministic (same result twice).
 6. **Reconstruction inverse:** from the emitted `(m, rᵢ)`, recompute `ρ̃, λ̃` via §3.2's definitions and recover `(α, β, R̃=1)` to tolerance — the decode and its own definitional inverse agree.
 7. **Round-trip (T2, physical units):** `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` over interior z; clamp-adjacent samples assert the flag, not the residual.
-8. **Invariant construction:** for a grid of feasible `(L_z, K*)` at fixed config: `L_z(v) = L_z` and `K(v) = K*` to tolerance; infeasible pairs refused/tagged exactly on `K* < L_z²/2`; degenerate-seed path fires only where all seeds `< ε_w`.
+8. **Invariant construction:** for a grid of feasible `(L_z, K*)` at fixed config: `L_z(v) = L_z` and `K(v) = K*` to tolerance; infeasible pairs refused/tagged exactly on `K* < L_z²/2`; the largest-norm qualifying seed is taken (ties by seed order), and the degenerate-seed path fires only where no seed has `‖w⁽²⁾‖²_m > ε_w` (R-82).
 9. **α-orientation:** `α → 0 ⇒ ‖r₁ − r₀‖` is *maximal* (and `‖λ‖` minimal); monotone crossover at `π/4`. Pins the gotcha.
 10. **Scale-gauge idempotence:** §3.5 applied to canonical output is identity; applied to a deliberately scaled input yields `I = 1` and transforms `E, L_z` per the encode contract's table.
 11. **Linearised decode:** at quad centre, `x₀ + J_D·0 = x₀ =` full decode exactly; at half-width, error vs full decode shrinks `∝ h²` across depths; identical behaviour for an affine chart and a curve chart (chart-agnosticity).

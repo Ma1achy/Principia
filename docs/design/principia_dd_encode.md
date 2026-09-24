@@ -46,8 +46,8 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 1b BOOST      p ← p − mᵢ·P_tot/M                       (boosts gauged)
 2  ROTATE     φ = atan2(ρ_y, ρ_x) ;  apply R(−φ) to every rᵢ AND every pᵢ ;  ρ̃ lands on +x
               ρ = 0 → reject (coincident inner pair)
-3  MIRROR     if λ_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored
-              |λ_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break)
+3  MIRROR     if λ̃_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored   (λ̃ = √μ_λ·λ)
+              |λ̃_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break; R-82)
 4  INVERT     per §3.1, into the active chart where possible, else latent z (always possible)
 5  FIBRE      chart's own construction first ; smallest-latent-norm only where none exists
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
@@ -64,7 +64,7 @@ rᵢ' = s · R(θ) · Π · rᵢ + a
 pᵢ' = s^{−1/2} · R(θ) · Π · pᵢ + mᵢ · u
 ```
 
-**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ_y` inside the mirror deadband (the tie-break sweep). The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
+**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep). The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
 
 ### 3.4 Curve projection (off-curve input) — metric pinned
 
