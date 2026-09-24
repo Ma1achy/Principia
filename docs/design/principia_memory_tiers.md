@@ -188,7 +188,7 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 
 > **Memory is the hard clamp; compute is soft.** Available memory / `adapter.limits` sets the ceiling (exceed → allocation failure, crash). Within it, compute sets frame rate (exceed the budget → slower, graceful). Auto-mode picks the highest tier whose **total** (payload + render targets) fits with margin, then pulls **render_scale / E / refinement-floor** under *motion* to hold interactivity, restoring at rest.
 
-**Internal rungs are finer than the six names.** The controller subdivides each named tier into ~8–12 unnamed internal steps (moving render_scale, E, and the refinement floor semi-independently) for smooth adaptation — the names are user-facing presets; the fine steps are numbers. **Custom mode** exposes `render_scale` (0.25–2.0; <1 performance, >1 supersampling), `N`, `MAX_REL_DEPTH`, E, and FTLE directly (arbiter off), plus the lock-to-native toggle.
+**Internal rungs are finer than the six names.** The ladder has ~8–12 rungs in total (R-89; quality/device note §3): the six named tiers are pinned rungs on it, and the rungs between them are unnamed internal steps (moving render_scale, E, and the refinement floor semi-independently) for smooth adaptation — the names are user-facing presets; the fine steps are numbers. **Custom mode** exposes `render_scale` (0.25–2.0; <1 performance, >1 supersampling), `N`, `MAX_REL_DEPTH`, E, and FTLE directly (arbiter off), plus the lock-to-native toggle.
 
 ---
 

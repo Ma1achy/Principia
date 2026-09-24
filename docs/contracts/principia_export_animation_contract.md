@@ -51,7 +51,7 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 
 - **Blocking is acceptable because the consumer is a file.** Latency doesn't matter; correctness does. The stall a hard barrier would inflict on a user is simply the export job taking its time.
 - **The job is non-blocking to the *UI*** (unchanged from the old contract): it runs as a background job with progress %, ETA, and a live thumbnail of the last captured frame; cancellable; **streamed encode** (frames handed to the encoder as produced — never accumulate raw frames in memory; the no-history discipline applies to the exporter too).
-- **Export quality tier** may exceed the interactive tier (more samples/quad, deeper refinement, full E — motion gating does not apply, scheduler Part 9) — a sim-key difference, priced into the estimate.
+- **Export quality tier** may exceed the interactive tier (more samples/quad, deeper refinement, full E — motion gating does not apply, scheduler Part 9) — priced into the estimate. Samples/quad is a sim-key difference; depth and `E` are not on the sim key (R-89).
 - **Checkerboard is force-off in export, regardless of the user setting** (`principia_checkerboard_contract.md` §3/§6): every captured frame computes all visible pixels at one `t` — the strict single-playhead invariant holds unconditionally here. (The motion-time levers in general — checkerboard, E-reduction, coarse refinement floor — are interactive concessions; export takes none of them.)
 - **Resolution/fps/duration** are job parameters; the exporter renders offscreen at target resolution, independent of the window.
 

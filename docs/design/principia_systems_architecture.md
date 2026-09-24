@@ -122,7 +122,7 @@ Intent ──constructs──▶ Chart ──validate──▶ resolve() [Deploy
 
 ```
 SIM KEY      (above the waist)  chart id+params · z₀/basis/warps · link ids ·
-             occupant · T/dt/thresholds · tier (sim-key components: N/E/FTLE/word) · schema   ⇒ re-integrate (march re-boots; a tier's render_scale component invalidates nothing — caching Part 2)
+             occupant · T/dt/thresholds · tier (sim-key components: N/FTLE/word; E is live, cached per copy_index — R-89) · schema   ⇒ re-integrate (march re-boots; a tier's render_scale component invalidates nothing — caching Part 2)
 RENDER KEY   (below the waist)  stain graph (nodes, wires, sources) · node params · overlays ·
              palette/compaction                               ⇒ recolour only
 THE PLAYHEAD  is neither key — it is the live clock (frame loop): advancing it
