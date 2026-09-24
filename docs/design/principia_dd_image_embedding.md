@@ -103,14 +103,21 @@ recoverable but leaves ~8% bit error, which whole-record repetition cannot absor
 build hash          REFUSE to recreate silently across a version where the decoder changed.
                     A slice config is only meaningful relative to a decoder, and this project
                     has changed its decoder more than once.
-slice               z0[10], dimH, dimV, mag, zoom, pan, tilt, gamma
-sim                 horizon, dtMacro, maxSteps, rColl, rEsc, eta, nSync,
-                    integrator, REGULARISATION
-ensemble            E, N, jitter_frac
+slice               chart id + params, z₀ (the 8-D latent), q₁, q₂ (the basis; zoom is their
+                    common scale, R-83), slice values, lock flag, z_locked, δ
+sim                 T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close,
+                    eps_E, eps_L, tau and the escape window,
+                    the integrator occupant (stepper × REGULARISATION)
+ensemble            E, N
 colour              mode + every parameter: kernel, temperature, blend space, site set,
                     brightness field AND ITS POLARITY, and THE RAMP WINDOW
 tier                the quality settings actually used
 ```
+
+**Contract names, not the prototype's (R-81).** Every field is named as the contracts name it
+(`principia_gui_state_contract.md` §2, integrator_contract Part 3), over the 8-D latent. There is
+no jitter field: the footprint fixes the copies' offsets (R-80). This record layout bumps the
+embedding `version`; the byte value is set with the rest of the header (R-71).
 
 **The ramp window is not optional.** An auto-ranged ramp manufactures or hides the difference it
 is meant to show — measured, not hypothesised — so a recreated image without it is a different
