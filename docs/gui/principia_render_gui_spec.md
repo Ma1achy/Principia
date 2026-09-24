@@ -111,8 +111,8 @@ IC:
   pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
   out the tilt and rotation angles.
 - **Time:** play, step, a scrubber, speed. **Scrubbing back re-integrates** to that time, so the figure refines
-  progressively. It is not instant, and it says so ("refining · 72%"). Whether a scrubber exists at all is **RQ-22**:
-  export_animation Part 1 says "There is no scrub".
+  progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
+  stored frames; the export contract's "no scrub" applies to exported animations only (R-66).
 - **Legend, generated from the stain** (§G6).
 
 **Footer.** Warning and error counts, the latest message, memory (GPU, heap), and "? keys". Clicking it opens the console

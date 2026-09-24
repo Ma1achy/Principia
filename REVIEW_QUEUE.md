@@ -299,6 +299,7 @@ Nothing is chosen.
   seek control and says there is no scrub.
 - **Needed:** whether a seek-by-re-march transport control joins export_animation Part 1 (and its catch-up rules), or the
   Time panel has no scrubber.
+- **Ruling:** R-66 (decisions.md): the scrubber stays; "no scrub" applies to exported animations only. Closed in step 6.
 
 ## RQ-23: The display stage — the style stage, and where gamut clamp, display scale and the controls sit *(step 6, GUI)*
 

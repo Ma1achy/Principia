@@ -6,7 +6,7 @@
 
 ## Part 1 — Playback is the temporal mechanism
 
-Time in Principia is a **live march**, not a stored dimension. The global playhead advances by fixed `dt` (frame loop); every visible pixel's `SimState` marches with it; the fragment stage colours the current state. There is no scrub — the playhead is a clock, not a slider over stored data.
+Time in Principia is a **live march**, not a stored dimension. The global playhead advances by fixed `dt` (frame loop); every visible pixel's `SimState` marches with it; the fragment stage colours the current state. There is no scrub — the playhead is a clock, not a slider over stored data. That applies to exported animations only: the dev GUI's time scrubber sets the display time and re-integrates progressively, and never replays stored frames (R-66).
 
 **Transport controls (free from statelessness):**
 
