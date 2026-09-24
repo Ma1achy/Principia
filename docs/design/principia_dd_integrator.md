@@ -121,7 +121,7 @@ Two further branch-path rules the spike earned by real failure:
 
 Verified: with the table rule, `N_sub`, `state`, `total_substeps`, and terminal labels are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on every golden input — 0 forks. Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
 
-### 3.4 COM projection (per `STEP`, mini-spec verbatim)
+### 3.4 COM projection (per `STEP`; the policy is integrator contract Part 1)
 
 ```
 R_com = Σ mᵢrᵢ / M ;   P_com = Σ pᵢ
@@ -182,7 +182,22 @@ Shape map (Montgomery), from mass-weighted Jacobi (ρ̃, λ̃), I = ‖ρ̃‖²
    n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles
 ```
 
-Axis assignment follows the physics-overlay convention (colour spec §8.1: BCs equatorial at 120°, `b̂₁ = (1,0,0)`, Lagrange at poles) — **transcribe the exact component→axis order from the spec's shape-sphere section**; the form above is fixed, the axis naming is a transcription item.
+**The physics-overlay convention** (Montgomery's shape sphere, equal masses). Three classes of special
+configuration sit at fixed points:
+
+| symbol | configuration | location | count |
+|---|---|---|---|
+| $BC_{12}, BC_{23}, BC_{31}$ | binary collisions | equator, 120° apart | 3 |
+| $E_1, E_2, E_3$ | Euler collinear | equator, between the collisions | 3 |
+| $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
+
+$$\hat{\mathbf b}_1 = (1, 0, 0), \quad \hat{\mathbf b}_2 = \left(-\tfrac12, \tfrac{\sqrt3}{2}, 0\right), \quad \hat{\mathbf b}_3 = \left(-\tfrac12, -\tfrac{\sqrt3}{2}, 0\right), \qquad
+\hat{\mathbf e}_j = -\hat{\mathbf b}_j, \qquad \hat{\mathbf l}^{\pm} = (0, 0, \pm 1).$$
+
+The labels are the 1-based body pairs of the overlay (`BC₁₂` is bodies 1–2); the project-wide index base is
+decision B1. **The form of `n` above is fixed. Its match to this convention is not settled.** The Lagrange
+poles agree (`w = ±1`), but the collision on the first axis and the sign of the third don't line up as written.
+See REVIEW_QUEUE RQ-12.
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
 
@@ -241,9 +256,9 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ## 6. Deferred / flagged
 
-- **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm against the spec's event-detection section or veto and re-pin. Must land in the shared physics source either way.
+- **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
-- **Shape-map axis assignment** — form pinned (§3.7); component→axis order is a transcription item against the spec's shape-sphere section + colour-spec §8.1 conventions.
+- **Shape-map axis assignment** — form pinned (§3.7); the overlay convention is in §3.7. Its match to the `(u, v, w)` components is REVIEW_QUEUE RQ-12.
 - **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
 - **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
 

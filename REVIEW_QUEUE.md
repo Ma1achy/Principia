@@ -126,3 +126,25 @@ or the human rules; I don't choose between them.
   the ported rule refuses or moves it. That may be intended (lookup is user entry, not rendering), or it may be stale.
   I'm not choosing. Rule on whether lookup should accept and label a t = 0 collision.
 - **Ruling:** R-13 (decisions.md) — applied in step 3
+
+## RQ-12: The shape-sphere axis convention doesn't line up, and it undercuts R-12 *(step 3, port 6)*
+
+R-12 asked me to check the colour PDF §8 axis convention against the chart map and flag any mismatch. Three turn up.
+Nothing is chosen. The PDF convention is ported into `principia_dd_integrator.md` §3.7 as it stands.
+
+1. **The first axis is reversed against the overlay.** The overlay (colour PDF §8, now dd_integrator §3.7) puts
+   `b̂₁ = (1,0,0)`. dd_integrator's shape map has $u = \|\tilde\rho\|^2 - \|\tilde\lambda\|^2$, so the inner-pair collision
+   ($\tilde\rho = 0$) sits at **$u = -1$** and $u = +1$ is $\tilde\lambda = 0$ (body 2 at the inner CoM, an Euler point for equal
+   masses). Either the first axis is $x = -u$, or `b̂₁` is a different pair than the inner one.
+2. **Two markdown files disagree on the third axis's sign.** dd_integrator §3.7 has $w = +2(\tilde\rho \wedge \tilde\lambda)$.
+   chart_reference §3.1 has $q = \tilde\rho_y\tilde\lambda_x - \tilde\rho_x\tilde\lambda_y$ ("NEGATIVE of the standard 2D cross") as its
+   third component. So the two files put $L^+$ and $L^-$ at opposite poles.
+3. **R-12's premise is false for the markdown's own chart map.** chart_reference §3.3's spherical map is
+   $n = (\cos\theta, \sin\theta\cos\varphi, \sin\theta\sin\varphi)$ with $\theta = \pi v$, so θ's poles are on the **first** component,
+   $n_0 = (a-b)/I$. Verified numerically: $\theta = \pi$ gives $\|\tilde\rho\|^2 = 0$, **the binary collision of bodies 0 and 1**.
+   $\theta = 0$ gives $\tilde\lambda = 0$. So in this chart map a collision point *is* at a pole, and the LaTeX's reason for a polar
+   buffer holds here. R-12 assumed the overlay convention (Lagrange at the poles), and in that convention
+   the premise is indeed false. **The R-12 note now in chart_reference §3.3 ("Its premise is wrong …") is
+   therefore itself wrong as written.** I left it in place because it's your ruling, and I'm flagging it rather than editing it.
+- **Needed:** one component → axis convention for `n` (the order and the signs), used by the chart map, the
+  shape readout and the overlay alike. Then a re-ruling on the polar buffer under that convention.
