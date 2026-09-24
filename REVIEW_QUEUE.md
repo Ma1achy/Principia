@@ -1136,3 +1136,12 @@ Like RQ-56 and RQ-67.
   or hash remains after R-100. (A heading change: requirements citing it are re-pointed in the same commit.)
 - [ ] `principia_chart_reference.md` :468 "(pending change 2, open)" and "Until one quotient is chosen" — R-27 ruled both
   charts kept; R-27's status line defers its application to "before any Burrau statistic".
+
+## RQ-78: R-103 — where the `stop_on_escape` "off" image comes from *(step 7, validation)*
+
+- `principia_01_pitfalls.md` §1.6 (:100): under the escape criterion "`stop_on_escape` on and off give near-identical images"
+  — the control that settled the patchwork, carried as a regression requirement (REQ-EVT-014; its tolerance REQ-EVT-023).
+- R-103: "In production, `done` is set when escape fires and the loop ends. The post-escape march … runs only in the
+  validation harness." Production has no "off" setting any more.
+- **Needed:** whether the "off" image is rendered by the validation harness (its own march, continued past escape), and the
+  regression stands there; or the regression is retired.
