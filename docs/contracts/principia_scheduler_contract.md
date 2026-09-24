@@ -1,6 +1,6 @@
 # Principia — scheduler contract
 
-*Seventh doc. The CPU brain: which quads exist, in what order they refine, what's cached, what's evicted. The *policy* — priority formula, split/keep/merge, eviction, the frame loop — is recorded in Part 6 (the refinement criterion itself is `principia_dd_refinement_policy.md`; see the note at the head of Part 6) and Part 7. This doc contracts the seams that make that policy safe against everything else: the non-determinism firewall, the density-is-not-probability rule, preview/refine caching, the depth model for infinite zoom, and terminal-vs-refinable tied to the two floors.*
+*Seventh doc. The CPU brain: which quads exist, in what order they refine, what's cached, what's evicted. The *policy* — priority formula, split/keep/merge, eviction, the frame loop — is recorded in Part 6 and Part 7 and treated as settled (the refinement criterion itself is `principia_dd_refinement_policy.md`; see the note at the head of Part 6). This doc contracts the seams that make that policy safe against everything else: the non-determinism firewall, the density-is-not-probability rule, preview/refine caching, the depth model for infinite zoom, and terminal-vs-refinable tied to the two floors.*
 
 ---
 
@@ -125,7 +125,7 @@ When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel
 
 ---
 
-## Part 6 — The scheduling policy
+## Part 6 — The settled policy
 
 Recorded so the contract is self-contained. **The split/keep/merge rule below predates `Policy::Tolerance` (`principia_dd_refinement_policy.md`), which splits iff any footprint is unresolved against the single tolerance `eps`. The two have not been reconciled; see REVIEW_QUEUE RQ-13.**
 

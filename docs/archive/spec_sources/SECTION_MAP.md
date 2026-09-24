@@ -229,8 +229,8 @@ action and aren't listed.
 | inverse_encode_contract:54 | T | "Block inverses (spec formulae, confirmed …)" | 737–770 · **done: c31f770** |
 | ic_inspector_scratchpad:19 | T | "The literal §2.6 port is right" (the earlier `.tex`'s momentum decode) | 247–255 · **done: 3b1c76e** |
 | ic_inspector_scratchpad:20 | S | "the matching `.tex` edit is queued in `spec_pending_changes`" | wording · **done: 3b1c76e** |
-| render_contract:79 | T | "Per spec: `diffusion = −1.0` when …" | ~1076 (`sec:freq_diffusion` 1052–1089) · Group B · done: 75d6261 |
-| sampling_msaa_note:30 | T | "(spec `ensemble_outcome_agreement`)" | ~2659 (`sec:tile_summary`) · Group B (port 9) · done: b298be1 |
+| render_contract:79 | T | "Per spec: `diffusion = −1.0` when …" | ~1076 (`sec:freq_diffusion` 1052–1089) · Group B · done: 75d6261 · RQ-15 |
+| sampling_msaa_note:30 | T | "(spec `ensemble_outcome_agreement`)" | ~2659 (`sec:tile_summary`) · Group B (port 9) · done: b298be1 · RQ-16 |
 | dd_integrator:124 | T | "COM projection (per `STEP`, mini-spec verbatim)" | COM mini-spec PDF (R-3) · Group B (port 6) · done: 677e119 |
 | scheduler_contract:100 | T | "`PREVIEW_MODE` (spec `QuadRequest.flags` bit 3)" | 2749–2784 · Group B (port 8) · done: c53705d |
 | colour_composition:233 | T | "invalid colour is … (spec: a fixed magenta)" | **source not located.** The `.tex` magenta (1600, 1638) is a hue in a colour scheme, not an invalid-colour marker. It may be the colour PDF. Group B · done: 75d6261 (attribution removed; source not located, see RQ-14) |

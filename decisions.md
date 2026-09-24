@@ -122,3 +122,11 @@ PDF §8 axis convention against this and flag any mismatch.
 A looked-up IC takes the same path as any pixel. Bodies within `r_coll` give a t = 0 collision outcome, which is
 a real outcome. Exactly coincident bodies can't be represented, and the lookup ladder's range check catches them with
 `lookup_clamped`. `principia_inverse_encode_contract.md`'s validation is updated to match.
+
+## Porting rule — a port adds, it never removes a decision
+*24 Sep 2026 · applies from step 3 Group B onward*
+
+A port may add content. It may never delete or change a decision the markdown has made, including the prototype-kernel
+decisions in the drill-downs and contracts, without a REVIEW_QUEUE entry and a ruling. Each commit message ends with a
+"Removed lines" note. For every removed line it says either "reworded, kept at <file:line>" or "stale value, replaced by
+<ruling>". A removed decision with neither is a bug.

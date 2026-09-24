@@ -190,3 +190,26 @@ sentences above are left as they are. Nothing is chosen.
 Also recorded here, not chosen: colour_composition §3 gave the default invalid colour as "(spec: a fixed magenta)". I
 found no source that says so. The `.tex` and the colour PDF use magenta only as a hue in a colour scheme (the PDF's
 `−ŷ` pole). The attribution is removed, and "a fixed magenta" stays as the markdown's own default.
+
+## RQ-15: When the diffusion sentinel fires *(step 3, port 10; found by the removed-lines audit)*
+
+Two markdown accounts of `diffusion` disagree. B10 had changed the render contract to match the second one. That changed a
+decision without a ruling, so the change is reverted and the conflict is flagged here instead. Nothing is chosen.
+- `principia_render_contract.md` Part 4, "Sentinels, not NaN": "`diffusion = −1.0` when the **two-window fit** is invalid".
+- `principia_dd_integrator.md` §3.5: "**Diffusion (Welford streaming, per macro-step).** Slope of spread `y` on time `t` via
+  centered co-moments". `principia_dd_simstate_payload.md`: "`diffusion_slope` … **Invalid for `n < 2`** (`C_tt=0`) → sentinel
+  slope". `principia_dd_generation_root.md` §3.4: "`diffusion` | lin | **sentinel −1.0** = fit invalid".
+- **Needed:** which fit the sentinel belongs to. If it's the streaming slope, the render contract's "two-window" is reworded.
+
+## RQ-16: The ensemble agreement scalar has three accounts *(step 3, port 9; found by the removed-lines audit)*
+
+B9 had renamed the sampling note's `ensemble_outcome_agreement` to the ledger's `spread_event`. That changed a decision
+without a ruling, so the change is reverted and the conflict is flagged here instead. Nothing is chosen.
+- `principia_sampling_msaa_note.md` ("Ensemble copies ARE the SSAA samples") and `principia_scheduler_contract.md` Part 6
+  (split on "low `ensemble_outcome_agreement`") name a tile-level **agreement** scalar.
+- `principia_dd_generation_root.md` §3.7 stores `spread_event` = "`disagreement(class⊕detail) / (1 − 1/(E+1))`", a
+  normalised **disagreement**, in `QuadReduction`.
+- `principia_render_contract.md` Part 6: "outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples
+  (not a stored field)".
+- **Needed:** whether `ensemble_outcome_agreement` is `spread_event` (same quantity, opposite sense) or a separate field, and
+  whether it's stored or derived. RQ-13 may also settle the scheduler's use of it.
