@@ -23,7 +23,7 @@ Both modalities on both data sources — neither lens sees everything. A field t
 
 ## A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)
 
-`DEBUG_MODE ∈ {NORMAL, UV_PASSTHROUGH, DECODE_PASSTHROUGH, ROUNDTRIP}` — alongside `DECODE_MODE` in dispatch flags. No new buffers; intermediates written into existing slots, reinterpreted on the render side.
+`DEBUG_MODE ∈ {NORMAL, UV_PASSTHROUGH, DECODE_PASSTHROUGH, ROUNDTRIP}` — selected as a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). No new buffers; intermediates written into existing slots, reinterpreted on the render side.
 
 | Mode | Shader shows | Test asserts | Certifies |
 |---|---|---|---|
