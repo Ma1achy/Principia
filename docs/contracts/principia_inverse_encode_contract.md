@@ -20,7 +20,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 **The three theorems (the contract):**
 
-- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror tie `|λ̃_y| < δ_λ = 10⁻¹²` resolves to a fixed choice; `ρ̃ = 0` is excluded — coincident bodies, caught by decode sanity).
+- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror tie `|λ̃_y| < δ_λ = 10⁻¹²` resolves to a fixed choice; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13).
 - **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
@@ -72,8 +72,8 @@ s_α = 2α/π,   s_β = β/π,   z = logit(s)
 ```
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
-$s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. The value of $\alpha_{\min}$, like `μ_max` and `q_max`,
-is set in `DECISIONS_TO_MAKE.md` (step 5, R-5).
+$s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. The value of $\alpha_{\min}$ is set in
+`DECISIONS_TO_MAKE.md` (step 5). `μ_max = 5` and `q_max = 2` are settled (R-10).
 `s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
 
 **Free momentum** (forward: `q_k = q_max·(2σ(z)−1)`): invert Jacobi, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`, then
@@ -147,7 +147,7 @@ Completed, with two additions (step 0; step 5's resolution) and the full-state r
 
 0. **Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
 1. **Translate to CoM** — positions and the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
-2. **Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` → reject (coincident inner pair).
+2. **Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
 3. **Mirror if `λ̃_y < 0`** — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| < δ_λ = 10⁻¹²` → fixed deterministic choice (no-mirror), documented; T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
 4. **Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
 5. **Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
@@ -167,12 +167,14 @@ the hypercube. Lookup and lock validate against the **active chart's** constrain
    - $(L_z, E)$: inside the parabola $|L_z| \le \sqrt{2I(E - U)}$. A pair outside it has no physical realisation at the current configuration.
    - $(L_z, K)$: $K \ge 0$ and $K \ge L_z^2/2I$.
    - Mass simplex: every $m_i > 0$ and $\sum m_i = 1$. The interior buffer $\varepsilon_m$ narrows it further.
-   - Shape sphere: $\varphi \in [0, 2\pi)$, and $\theta$ within the chart's range (whether $\theta$ has a polar buffer is REVIEW_QUEUE RQ-10).
+   - Shape sphere: $\theta \in [0, \pi]$ and $\varphi \in [0, 2\pi)$, with no polar buffer (`principia_chart_reference.md` §3.3, R-12).
    - Burrau charts: $\nu \in (0,1)$. The triangle degenerates as $\nu \to 0$ or $\nu \to 1$.
    - Mixed-axis charts inherit both axes' constraints.
-3. **Decode sanity.** After decoding: all masses positive; no two bodies coincident ($r_{ij} > r_{\mathrm{coll}}$); CoM at
-   the origin and total momentum zero, both within tolerance. This catches individually valid coordinates that
-   combine into a degenerate configuration. (How this sits with $t = 0$ collisions being a real outcome is REVIEW_QUEUE RQ-11.)
+3. **Decode sanity.** After decoding: all masses positive; CoM at the origin and total momentum zero, both within
+   tolerance. This catches individually valid coordinates that combine into a degenerate configuration.
+   **There is no coincident-bodies rejection (R-13).** A looked-up IC takes the same path as any pixel: bodies
+   within $r_{\mathrm{coll}}$ give a $t = 0$ collision outcome, which is a real outcome. Exactly coincident bodies
+   can't be represented, and layer 1's range check catches them with `lookup_clamped`.
 
 **On failure**, in order of preference:
 

@@ -95,3 +95,30 @@ grep -rniE --include='*.md' "\blatex\b|spec(_revised)?\.tex" docs/ --exclude-dir
 ```
 
 The rest of R-7 is unchanged.
+
+## R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*
+*24 Sep 2026 · applied in step 3*
+
+`μ_max = 5` and `q_max = 2`. The "4" was the IC Inspector's value before its correction. The values are written
+where the constants are defined (`principia_dd_decoder.md` §3, `principia_chart_decoder_contract.md`), and the
+formulae keep the symbols. Only `α_min` (0 or 0.05) stays on the step-5 decision sheet.
+
+## R-11 — The per-body momentum cap is rejected *(closes RQ-9)*
+*24 Sep 2026 · applied in step 3*
+
+The LaTeX's optional per-body cap isn't invertible: capping each body, then re-imposing CoM, breaks the T2 round
+trip. And `q_max` already bounds the Jacobi momenta. It's recorded under rejected ideas in `principia_00_philosophy.md` §8.
+
+## R-12 — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*
+*24 Sep 2026 · applied in step 3*
+
+θ on `v`, no polar buffer. The LaTeX's buffer rests on a wrong premise: the collision points are on the equator,
+not at the poles. It's recorded as rejected in `principia_chart_reference.md` §3.3. In Group B, check the colour
+PDF §8 axis convention against this and flag any mismatch.
+
+## R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*
+*24 Sep 2026 · applied in step 3*
+
+A looked-up IC takes the same path as any pixel. Bodies within `r_coll` give a t = 0 collision outcome, which is
+a real outcome. Exactly coincident bodies can't be represented, and the lookup ladder's range check catches them with
+`lookup_clamped`. `principia_inverse_encode_contract.md`'s validation is updated to match.

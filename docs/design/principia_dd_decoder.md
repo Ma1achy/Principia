@@ -32,8 +32,8 @@ From **totality** (scheduler/render): invalid decodes are **tagged, never droppe
 
 Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
 
-**Chart constants.** `μ_max`, `q_max` and `α_min` are named symbols throughout this section. Their values
-are set in `DECISIONS_TO_MAKE.md` (step 5, ruling R-5), not here.
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols.
+`α_min` is still under decision. Its value is set in `DECISIONS_TO_MAKE.md` (step 5).
 
 ### 3.1 Mass
 

@@ -524,6 +524,21 @@ to wonder. **The answer is no, and the reason is the dynamics rather than the re
   scientific question: *which latent directions generate the variation*, and *does a boundary survive
   motion along the hidden ones*. That is a **Paper 2 tool**, not a scheduler one.
 
+### 8.2 A per-body momentum cap with CoM re-enforcement
+
+**The idea:** after decoding the momenta, cap each body's momentum individually, then re-impose zero total
+momentum, as an optional guard against extreme velocities.
+
+**Why it fails: it isn't invertible.** Capping bodies one at a time and then re-imposing the CoM is a
+many-to-one map. Different decoded momenta land on the same capped state, so encode can't recover the `z`
+that produced it, and the T2 round trip (`principia_inverse_encode_contract.md` Part 1) breaks.
+
+**And it buys nothing.** `q_max` already bounds the Jacobi momenta at the link (`principia_dd_decoder.md`
+§3.4). That is a bound encode *can* invert, and it's clamped and flagged at the boundary.
+
+**The cost of keeping it** would be a decode step with no inverse, sitting in the one component whose
+invertibility the lock, lookup and validation ingestion all rely on.
+
 ---
 
 ## 9. What this is not

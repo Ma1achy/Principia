@@ -32,8 +32,8 @@ M01 = m0 + m1        M = m0 + m1 + m2 = 1
 
 If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
 
-**Chart constants.** `μ_max`, `q_max` and `α_min` are named symbols throughout this document. Their
-values are set in `DECISIONS_TO_MAKE.md` (step 5, ruling R-5).
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3).
+`α_min` is still under decision, and its value is set in `DECISIONS_TO_MAKE.md` (step 5).
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi
 
@@ -322,6 +322,11 @@ n(u,v) = cos(r)·n0 + sin(r)·(d/‖d‖)      d = (2u−1)·s·e1 + (2v−1)·s
 with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — use it wherever a
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero.
+
+**No polar buffer (R-12).** An alternative map, $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$, $\varphi(v) = 2\pi v$, put θ on
+the horizontal axis and kept a buffer $\varepsilon$ off each pole "to avoid the collision singularities". It is
+rejected. Its premise is wrong: the collision points are on the equator (§3.4), and the poles are the
+Lagrange configurations. θ stays on `v`, with no buffer.
 
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, 2\pi - \varphi)$
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag

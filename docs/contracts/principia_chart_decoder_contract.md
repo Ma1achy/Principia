@@ -84,7 +84,7 @@ The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (ma
 ### Three hard requirements on any registered link
 
 1. **Constraint-preserving.** Output satisfies the block's constraint for *all* inputs — a simplex link lands in Δ², a bounded link stays in range. This is what "compactification" buys; a link that can escape the constraint is not admissible.
-2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max`, `q_max`, whose values are set in `DECISIONS_TO_MAKE.md` (step 5, R-5). A link without a stable inverse cannot support the encode path.
+2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10). A link without a stable inverse cannot support the encode path.
 3. **Smooth (C¹).** The deep-zoom **linearised decoder** replaces the nonlinear decode with a local Jacobian; a non-differentiable link breaks that path.
 
 ### Links carry a measure
@@ -93,7 +93,7 @@ A link is **not measure-neutral**. Softmax with saturated logits is smooth but *
 
 ### Integrity: the link is part of the experiment
 
-The reason to expose the link is not flexibility — it's that a fixed, hidden link **launders an arbitrary choice into apparent fact**. "The Burrau point is a local maximum of ejection prevalence in the mass simplex" is really "…under softmax with this particular `μ_max`"; if the link is invisible, so is the qualifier — to a reader, and to you six months later. Three requirements make the choice honest:
+The reason to expose the link is not flexibility — it's that a fixed, hidden link **launders an arbitrary choice into apparent fact**. "The Burrau point is a local maximum of ejection prevalence in the mass simplex" is really "…under softmax with `μ_max = 5`"; if the link is invisible, so is the qualifier — to a reader, and to you six months later. Three requirements make the choice honest:
 
 1. **Swappable within the compatible set.** Any constraint-preserving link for that block (the rows above). Already stated.
 2. **Recorded in provenance.** The link id per block lives in the exported ViewState, beside `z₀`, the basis, and the axis warps. A figure whose provenance doesn't pin its links is *not reproducible* — a re-run under a different default samples a different measure and can return a different answer. The link is part of the experiment, so it lives in the record.

@@ -91,6 +91,7 @@ or the human rules; I don't choose between them.
 - **So** the 4 appears only in `chart_reference` and in the audit. The IC Inspector notes argue *against* 4.
   I'm not choosing. Under R-5 the step-5 decision sheet should carry this evidence, and the step-3 ports use
   the named symbol.
+- **Ruling:** R-10 (decisions.md) — applied in step 3
 
 ## RQ-9: The per-body momentum cap exists only in the LaTeX *(step 3, dd_decoder port)*
 
@@ -100,6 +101,7 @@ or the human rules; I don't choose between them.
   No per-body cap is mentioned anywhere in the corpus.
 - **I can't tell** whether the cap was dropped on purpose (the `q_max` saturation already bounds the Jacobi momenta)
   or lost in transcription. It isn't ported. Rule on it: port it as an optional step, or record it as dropped.
+- **Ruling:** R-11 (decisions.md) — applied in step 3
 
 ## RQ-10: The shape-sphere chart map: axis assignment and polar buffer *(step 3, chart_reference port)*
 
@@ -110,6 +112,7 @@ or the human rules; I don't choose between them.
 - **Also:** the LaTeX's reason for the buffer is itself doubtful. Under the markdown's own §3.4 the collision points
   sit **on the equator**, not at the poles (the poles are the Lagrange configurations).
 - **Not ported. The markdown is unchanged.** Rule on the axis assignment and on whether θ gets a buffer.
+- **Ruling:** R-12 (decisions.md) — applied in step 3
 
 ## RQ-11: Lookup's decode-sanity check vs "a t = 0 collision is a real outcome" *(step 3, inverse_encode port)*
 
@@ -122,3 +125,4 @@ or the human rules; I don't choose between them.
 - **The tension:** for a *rendered pixel* $r < r_{\mathrm{coll}}$ at t = 0 is a labelled outcome. For a *typed-in lookup*
   the ported rule refuses or moves it. That may be intended (lookup is user entry, not rendering), or it may be stale.
   I'm not choosing. Rule on whether lookup should accept and label a t = 0 collision.
+- **Ruling:** R-13 (decisions.md) — applied in step 3
