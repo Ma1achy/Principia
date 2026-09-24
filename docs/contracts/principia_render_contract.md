@@ -56,7 +56,7 @@ Internally, built-ins may work in OKLab/OKLCH; the public slot contract stays RG
 
 | Tier | Contents | Invalidated by (its key) | Cost |
 |---|---|---|---|
-| **Sim buffers** | `SimState[]` (live, at the playhead), `ICDescriptor[]` per quad | **sim key**: chart id+params, z₀, basis, warps, link ids, integrator config, T, event thresholds, quality tier, payload schema version (= the payload compatibility signature). A sim-key change resets the march (state re-boots from `t = 0`) | expensive — integration |
+| **Sim buffers** | `SimState[]` (live, at the playhead), `ICDescriptor[]` per quad | **sim key**: chart id+params, z₀, basis, warps, link ids, integrator config, T, event thresholds, quality tier, payload schema version (a content hash of the ledger, R-36) (= the payload compatibility signature). A sim-key change resets the march (state re-boots from `t = 0`) | expensive — integration |
 | **Baked texture** | equirect `GPUTexture` for colour occupants that are pure `f(n̂)` (vMF, LUTs, patterns, physics blobs) | **bake key**: colour-slot source + its uniforms | ~ms, JS, debounced (~120 ms); preview canvas *is* the uploaded texture — zero preview/render drift by construction |
 | **Frame** | composited output | **render key**: hash of 4 slot-source hashes + uniform values + overlay set + brightness binding | per-frame: one `textureSample` (or direct `colour(ctx)`) + L-override + post |
 
