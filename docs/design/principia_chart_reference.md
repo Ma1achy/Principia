@@ -140,8 +140,11 @@ decode, which is why the chart is 8D and not 10D.
 Slice centre `z0` and two direction vectors `q_a`:
 
 ```
-z(u, v) = z0 + (2u − 1)·s_u·q_1 + (2v − 1)·s_v·q_2
+z(u, v) = z0 + (2u − 1)·q_1 + (2v − 1)·q_2
 ```
+
+The slice scale lives in `q`: zoom is a common scale on `q_1, q_2` (`principia_chart_decoder_contract.md` Part 4;
+R-83). There are no per-axis factors.
 
 **Axis-aligned (no tilt):** `q_1 = ê_i`, `q_2 = ê_j` for basis vectors of ℝ⁸. There are `C(8,2) =
 28` such planes. The interesting named ones:
