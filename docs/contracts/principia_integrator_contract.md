@@ -105,7 +105,7 @@ prin-rs.**
 |---|---|---|
 | **step / deriv / Hamiltonians / `physics/`** | **PORTS AS-IS** | measured **0 `Vec`/`Box`/`dyn`/`std`** across both RK4s, both Hamiltonians and `physics/`. Already shader-shaped. Porting is transcription. |
 | **the driver layer** | **REWRITTEN to the rules below** | every blocker found is here, and every one is a *rule violation* rather than a bug |
-| **the dispatch shape** | **DESIGNED FRESH** | 68 KB per quad fits no backend; see `principia_systems_architecture.md` §5.5 |
+| **the dispatch shape** | **DESIGNED FRESH** | 72 KB per quad (512 × 144 B, D6) fits no backend; see `principia_systems_architecture.md` §5.5 |
 
 **The good news is real and worth stating: no blocker is a physics problem.** No wrong equations, no
 bad numerics. It is all driver-layer plumbing — the cheapest kind of bad news, and what a spike is

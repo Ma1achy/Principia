@@ -25,7 +25,7 @@
 
 *Grounded memory estimates and the six named quality tiers the auto-quality controller ladders between. This supersedes an earlier version that mistakenly keyed quality on viewport resolution and included per-quad pixel interpolation — both removed (see the taxonomy and the "no fabricated detail" rule below).*
 
-*Memory model verified against the payload spec: **payload = `bytes × (E+1) × render_px`** (the shadow is inside `SimState`, so `(E+1)`, not `2(E+1)` — that's the compute/trajectory count). Hot `SimState` = **136 B** (FTLE-on) / **88 B** (FTLE-off); word = **16 B × (E+1) × render_px** (symbolic features on). **The §4 totals add the render-target term** (the rasterised image buffers: ~3 full RGBA at **display** resolution — the swap chain / final composite are necessarily display-sized — plus ~3 at **render** resolution for backdrop/intermediates); they still exclude bake texture, staging, and driver/browser/OS overhead. `render_px = display_px × render_scale²` — see §2's two-resolution model (sample density is not a separate knob — the screen floor pins one sample per render pixel).*
+*Memory model verified against the payload spec: **payload = `bytes × (E+1) × render_px`** (the shadow is inside `SimState`, so `(E+1)`, not `2(E+1)` — that's the compute/trajectory count). Hot `SimState` = **144 B** (FTLE-on) / **96 B** (FTLE-off) (recomputed, R-40 / D6); word = **16 B × (E+1) × render_px** (symbolic features on). **The §4 totals add the render-target term** (the rasterised image buffers: ~3 full RGBA at **display** resolution — the swap chain / final composite are necessarily display-sized — plus ~3 at **render** resolution for backdrop/intermediates); they still exclude bake texture, staging, and driver/browser/OS overhead. `render_px = display_px × render_scale²` — see §2's two-resolution model (sample density is not a separate knob — the screen floor pins one sample per render pixel).*
 
 ---
 
@@ -87,12 +87,12 @@ total          ≈ payload_mem + render_targets + fixed            (fixed = bake
 
 > **Why the split matters:** the swap chain / final composite are *necessarily display-sized* (that's what is presented), so they do **not** shrink with `render_scale` — only the render-res intermediates do. An all-at-render-resolution model undercounts targets exactly where the term matters (low `render_scale` on big displays). Corrected here; only the sub-native tiers' totals move.
 
-- **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 136/88, `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).
+- **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 144/96, `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).
 - **`render_targets`** — the **rasterised image itself uses VRAM**: ~3 buffers at **display** resolution (swap chain + final composite — fixed regardless of tier) + ~3 at **render** resolution (backdrop + intermediates — scale with `render_scale²`). At native (`render_scale = 1`) the six together ≈ 0.05 GB @1080p / 0.09 @1440p / 0.20 @4K; below native only the render-res half shrinks.
 - **`render_scale` is the quadratic lever** — it changes `render_px`, so it cuts payload, render targets, *and* per-frame compute **all at once**. The single most effective performance knob (this is why games lean on dynamic resolution).
 
 
-**Render targets dominate at the low end.** At Potato@4K, render targets (0.11 GB — mostly the display-sized swap chain, which `render_scale` cannot shrink) are **~70%** of the 0.15 GB total — the image buffers *exceed* the payload. At Extreme@4K they're ~1% (rounding error under 20 GB). So the render-target term matters *exactly* where the payload is smallest: weak devices on big displays, the memory-constrained case the low tiers serve. This is why it can't be dropped from the model — and why the display-vs-render split above can't be either.
+**Render targets dominate at the low end.** At Potato@4K, render targets (0.11 GB — mostly the display-sized swap chain, which `render_scale` cannot shrink) are **~68%** of the 0.16 GB total — the image buffers *exceed* the payload. At Extreme@4K they're ~1% (rounding error under 21 GB). So the render-target term matters *exactly* where the payload is smallest: weak devices on big displays, the memory-constrained case the low tiers serve. This is why it can't be dropped from the model — and why the display-vs-render split above can't be either.
 
 ---
 
@@ -111,7 +111,7 @@ Quality is `render_scale / E / FTLE / word`. The bottom two tiers (Potato/Low) r
 
 **FTLE is on from Medium up, off for Potato/Low — a *compute* + *fidelity* boundary, not memory.** (render_scale already shrank the sample count so much that FTLE's memory cost is trivial — +6 MB at Potato, +0.1 GB at Medium@1080p — so memory is no longer the reason.) The reasons it stays gated at the bottom two tiers: (1) **compute** — FTLE is a *second full trajectory per sample* (the Benettin shadow), ~2× the integration work, and Potato/Low serve genuinely weak, *compute-bound* GPUs (a phone won't OOM at 0.02 GB — it'll chug on 2× the trajectories); (2) **fidelity match** — FTLE is a quantitative chaos measurement, and Potato/Low render at 0.25×/0.5× and upscale, so the measurement would be computed on a blurry quarter-res canvas where its fine structure can't be read. Medium at 0.75× is close enough to native *and* a laptop-dGPU tier (not a phone tier), so FTLE is both affordable and legible there. (Custom can force FTLE on at *any* render_scale — a curious weak-GPU user can enable it and accept the framerate hit; it's just off by default at the bottom.)
 
-**Extreme is `1.0×` native, not supersampled.** 16× ensemble SSAA already handles the classification-edge aliasing that matters here; supersampling (`render_scale > 1`) on top would only clean second-order raster-grid aliasing at 2.25×+ the memory — not worth it, and it would make the tier's cost display-dependent (46 GB at 4K). So Extreme stays a fixed, predictable native 16×-SSAA preset that allocates cleanly on a 24 GB card even at 4K. Supersampling remains available as a **Custom-only** option for anyone who specifically wants raster-edge AA and has the VRAM (§5 / Custom slider).
+**Extreme is `1.0×` native, not supersampled.** 16× ensemble SSAA already handles the classification-edge aliasing that matters here; supersampling (`render_scale > 1`) on top would only clean second-order raster-grid aliasing at 2.25×+ the memory — not worth it, and it would make the tier's cost display-dependent (48 GB at 4K). So Extreme stays a fixed, predictable native 16×-SSAA preset that allocates cleanly on a 24 GB card even at 4K. Supersampling remains available as a **Custom-only** option for anyone who specifically wants raster-edge AA and has the VRAM (§5 / Custom slider).
 
 **The `SSAA` column is a *label*, not a constraint — E is free-valued.** Hardware MSAA is locked to powers of two (2×/4×/8×/16×) because GPU coverage masks are; *our* SSAA has no such limit — each sample is an independent simulation resolved in a shader, not a fixed-function coverage sample, and the Halton offset sequence (sampling note) gives good sub-pixel coverage at **any** E, not just powers of two. So the controller's fine internal rungs can step E through 2, 3, 4, 5, 6… smoothly; only the six *named tiers* snap E to 1/3/7/15 so the labels read as the familiar "2×/4×/8×/16×". `samples = E + 1`; the "N×" label is just `samples`.
 
@@ -157,16 +157,16 @@ being right.
 
 | Tier | 1080p display | 1440p display | 4K display |
 |---|---|---|---|
-| Potato | 0.04 | 0.07 | 0.15 |
-| Low | 0.09 | 0.15 | 0.34 |
-| Medium | 0.39 | 0.70 | 1.57 |
-| **High** | **1.31** | 2.33 | 5.24 |
-| Ultra | 2.57 | 4.57 | 10.29 |
-| Extreme | 5.09 | 9.05 | **20.37** |
+| Potato | 0.04 | 0.07 | 0.16 |
+| Low | 0.09 | 0.16 | 0.36 |
+| Medium | 0.41 | 0.73 | 1.65 |
+| **High** | **1.38** | 2.45 | 5.51 |
+| Ultra | 2.70 | 4.81 | 10.82 |
+| Extreme | 5.36 | 9.53 | **21.43** |
 
-*(Figures include the render-target term (3 display-res + 3 render-res buffers). Split at 4K: Potato 0.05 payload + 0.11 targets — the display-sized buffers dominate the low tiers; High 5.04 + 0.20; Extreme 20.17 + 0.20.)*
+*(Figures include the render-target term (3 display-res + 3 render-res buffers), at the 144 / 96 B widths plus the 16 B word where the tier has it (R-40 / D6). Split at 4K: Potato 0.05 payload + 0.11 targets — the display-sized buffers dominate the low tiers; High 5.31 + 0.20; Extreme 21.23 + 0.20.)*
 
-**Reading it:** *High @ 1080p ≈ 1.3 GB* is the sweet spot. *Extreme @ 4K ≈ 20 GB* is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
+**Reading it:** *High @ 1080p ≈ 1.4 GB* is the sweet spot. *Extreme @ 4K ≈ 21 GB* is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
 
 ---
 
@@ -180,8 +180,8 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 | **E (SSAA)** | `(E+1)` linear on payload + compute `2(E+1)` | 16×→1× is 16× |
 | **refinement floor** | stop subdividing coarser than pixel-size (tiles 2× pixels etc.) — fewer live samples + less compute, *under motion only*; snaps back to the pixel floor at rest | view-relative; a motion lever, not a tier setting |
 | **checkerboard** | compute half the render pixels per frame while the playhead advances, reconstruct the rest from `t−dt` (SSAA-resolved) — **~2× per-frame compute, saves NO memory**; self-erases at rest (`principia_checkerboard_contract.md`) | throughput-only motion lever; three-state user setting (permanent default / motion-only / off); orthogonal to and stacks with render_scale |
-| **FTLE** | ×1.55 (drops the shadow + its compute) | on/off |
-| **word** | +12–18% | on/off |
+| **FTLE** | ×1.5 (drops the shadow + its compute) | on/off |
+| **word** | +11–17% | on/off |
 | **display resolution** | *scale, not quality* — a given (the window); not a lever, but sets the baseline everything multiplies against | linear in area |
 
 `render_scale` is the heaviest hammer (quadratic, touches all three costs) — but it's the *uniformly-soft* one, so for a research view the controller may prefer E and the refinement floor first, reaching for render_scale under harder pressure. The **refinement floor** is the motion lever: during an active pan/zoom, let quads stop one or two levels above pixel-size (coarser, fewer samples, cheaper) and snap to the true pixel floor at rest — this is the "get the gist while moving, sharpen on stop" behaviour, and it is *not* a persistent quality setting (it lives in the scheduler's motion adaptation, not the tier). When **locked to native**, render_scale is off the table and adaptation runs on E → refinement-floor → FTLE → word — with the timescale caveat that **E and the refinement floor move live under motion** (copies drop/respawn without invalidating the nominal; the floor is view-relative), while **FTLE and word are sim-key rung components** that change only at natural invalidation moments (chart change, restart, re-detect — quality/device note §6), never mid-march.
@@ -203,9 +203,9 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 **Live:** pull **render_scale / E / refinement-floor** down the sub-rungs under motion; restore at rest. If **locked to native**, render_scale is held at 1.0 and adaptation runs on E and the refinement floor only. Never exceed the memory ceiling (the hard clamp) — live adjustment operates *within* the boot-selected memory tier.
 
 **Examples** (totals at the stated display; memory is rarely the binding constraint above the low end — compute usually is):
-- **16 GB M-series Pro, 1440p:** boots **High** (~2.3 GB) comfortably, reaches **Ultra** (~4.6 GB); compute-bound not memory-bound — drops E under motion.
-- **8 GB discrete, 1080p:** **High** (~1.3 GB) or **Ultra** (~2.6 GB) with wide memory margin; frame budget decides.
-- **2 GB integrated laptop, 4K panel:** memory-tight — **Low** (0.34 GB, renders at 0.5×→1920×1080) is the safe boot; **Medium** (1.57 GB with FTLE) may fit memory but likely fails the compute probe (FTLE's 2× trajectories on a weak iGPU), so auto holds Low.
+- **16 GB M-series Pro, 1440p:** boots **High** (~2.4 GB) comfortably, reaches **Ultra** (~4.8 GB); compute-bound not memory-bound — drops E under motion.
+- **8 GB discrete, 1080p:** **High** (~1.4 GB) or **Ultra** (~2.7 GB) with wide memory margin; frame budget decides.
+- **2 GB integrated laptop, 4K panel:** memory-tight — **Low** (0.36 GB, renders at 0.5×→1920×1080) is the safe boot; **Medium** (1.65 GB with FTLE) may fit memory but likely fails the compute probe (FTLE's 2× trajectories on a weak iGPU), so auto holds Low.
 - **Phone (~1 GB), 1080p:** **Potato** (0.04 GB, 480×270 upscaled) or **Low** (0.09 GB) — both FTLE-off, which is what keeps them affordable on a phone GPU (the gating is doing compute work here, not memory).
 
 ---
