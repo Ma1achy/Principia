@@ -9,7 +9,7 @@
 **Reverse the temporal model from eager-in-time to lazy-in-time (lockstep-live-march).**
 
 - **Was (V2):** integrate every pixel 0→`t_end` up front, store the trajectory as an M-knot checkpoint array per pixel, animate by replaying the stored knots. Enables random-access scrub.
-- **Now:** a global playhead marches all in-view pixels forward one `dt_macro` at a time; render the **live state** at each step; **store no history** — discard each step's state after rendering. No scrub; playback only.
+- **Now:** a global playhead marches all in-view pixels forward one `dt_macro` at a time; render the **live state** at each step; **store no history** — discard each step's state after rendering. No scrub; playback only. (Scrubbing in the GUI re-integrates; see R-66.)
 
 **Why (the load-bearing reason): Principia is memory-bound, and only because eager-in-time forced it to be.** The three-body integration is compute-light (a few flops/substep/pixel). The large thing was the checkpoint storage — pixels × M × float4, resident, plus the write/read bandwidth to fill and replay it. That footprint existed *solely* to service scrub. Remove scrub → remove eager → remove stored history → footprint collapses to the **visible working set** (one live state per on-screen pixel, constant, viewport-bounded, does not grow with `t`).
 
