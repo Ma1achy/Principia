@@ -131,9 +131,10 @@ horizons differ by **2.3×**: ~16 crossing times against ~37.
 
 **The CPU↔GPU cross-check is only meaningful below the f32 horizon.** Past `t ≈ 16` the two paths are
 propagating different amplifications of different round-off; a disagreement there is **not** evidence
-of a bug, and an agreement is **not** evidence of correctness. The cross-check should be gated on
-`t < t_max(f32)` and reported as *not applicable* beyond it, rather than silently producing
-divergences that look like defects.
+of a bug, and an agreement is **not** evidence of correctness. **The cross-check is gated on
+`t < t_max(f32)`** and reported as *not applicable* beyond it, rather than silently producing
+divergences that look like defects. The gate stands (R-93); the value of `t_max(f32)` comes from the
+re-run of the change-10 cross-checks (R-35), not from the figures here (§7).
 
 ### 4.2 The horizon is a field, not a constant
 
@@ -146,8 +147,8 @@ t_max(IC) = ln(1/eps) / ftle(IC)
 ```
 
 Two uses follow. As a **display**: a horizon map over IC space, showing where the instrument can see
-far and where it goes blind early. As a **scheduler input**: a quad whose playhead exceeds its own
-`t_max` should not be refined — no resolution recovers information that no longer exists.
+far and where it goes blind early. As a **refinement annotation**: a quad whose playhead exceeds its
+own `t_max` is marked as past its horizon. `t_max` annotates refinement; it doesn't gate it (R-93).
 
 ### 4.3 It bounds what the renderer may claim
 
@@ -225,9 +226,9 @@ and the trade is explicit: **each factor of 4 in samples (halving spacing in 2D)
 
 1. **Which horizon binds at `t≈40`** — measurement or representability (§3). Distinguishing test:
    vary the jitter `delta` and see whether the failure point moves.
-2. **Whether `t_max` should gate refinement**, or merely annotate it. Refusing to refine past a quad's
-   own horizon is defensible, but `lambda` is itself uncertain there, so the gate would rest on a
-   quantity measured in the regime where it is least reliable.
+2. **`t_max` annotates refinement; it doesn't gate it** (settled, R-93). Refusing to refine past a
+   quad's own horizon was defensible, but `lambda` is itself uncertain there, so the gate would rest on
+   a quantity measured in the regime where it is least reliable.
 3. **f32 horizon verification.** The f32 figure (~16) is derived, not measured — all experiments here
    were f64. It should be confirmed against the GPU kernel directly, since it is the tighter of the
    two constraints and the one users will meet first.
