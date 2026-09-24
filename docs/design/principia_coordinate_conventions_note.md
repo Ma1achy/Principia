@@ -6,7 +6,7 @@
 
 ## The one-line rule
 
-**There is exactly one internal orientation — bottom-left origin, Y-up — and exactly one flip, at the framebuffer↔UV boundary (`v = 1 − frag_coord.y / H`), mirrored once at image export. Mouse picking, quad addressing, the hash seed, and the CPU/GPU quad uniforms all read the *post-flip* Y-up coordinate, so they agree by construction. A mirrored image is *always* a wrong-number-of-flips bug at that one seam — never a reason to add a compensating flip elsewhere.**
+**There is exactly one internal orientation — bottom-left origin, Y-up — and exactly one flip, at the framebuffer↔UV boundary (`v = 1 − frag_coord.y / H`), mirrored once at image export. Mouse picking, quad addressing, and the CPU/GPU quad uniforms all read the *post-flip* Y-up coordinate, so they agree by construction. A mirrored image is *always* a wrong-number-of-flips bug at that one seam — never a reason to add a compensating flip elsewhere.**
 
 ---
 
@@ -63,7 +63,7 @@ The point of naming *one* boundary is that every coordinate consumer reads from 
 
 1. **Render sample coordinate** (frag_coord → UV → decoder) — the primary flip site: `v = 1 − frag_coord.y/H`, commented as *the* convention flip.
 2. **Mouse / pointer picking** (lock, hover, click-inspect) — canvas events are Y-down top-left; flip them **the same way** before computing the picked quad / `z`. **Most likely to be forgotten**; symptom (clicking the top inspects the bottom) is the classic wrong-subsystem bug.
-3. **Quad address `(tx, ty)`** — if `ty` derives from screen rows it inherits the flip; the hash seed `(depth, tx, ty, …)` must be computed against the **Y-up** address so a manifold cell has stable identity regardless of the flip (else CPU- and GPU-computed addresses could disagree on Y, and the "sample pattern is a property of the cell" property breaks).
+3. **Quad address `(tx, ty)`** — if `ty` derives from screen rows it inherits the flip; the address `(depth, tx, ty)` must be computed against the **Y-up** frame so a manifold cell has stable identity regardless of the flip (else CPU- and GPU-computed addresses could disagree on Y, and the "sample pattern is a property of the cell" property breaks).
 4. **CPU quadtree ↔ GPU uniforms** — the CPU (f64) computes quad centres/half-widths; if CPU thinks Y-up and GPU samples Y-down (or vice versa) the quad-local coordinate is mirrored **within each quad**, and the linearised decoder's `x₀ + J_D·δ` produces mirror-image ICs. A CPU/GPU seam where a silent Y disagreement corrupts the decode — the convention must be shared explicitly.
 5. **Exported image** — if internal is Y-up and the output format is Y-down, the encode step flips back **once** (the mirror of the input flip), equally single-and-named.
 
@@ -83,4 +83,4 @@ Turn the invisible bug visible. A debug mode that renders the raw post-flip `(u,
 
 ---
 
-*One orientation (Y-up), one flip (framebuffer↔UV, mirrored at export) — everything reads the post-flip coordinate, so a mirrored image is always a wrong-flip-count bug at that seam. Three spaces, not one: screen (Y-down pixels) → flip → UV (`[0,1]` unsigned, Y-up — addressing & hash) → placement `z₀ + 2(uv−½)·q` → IC-space (signed, Y-up, graph-like — decoder input & axis display). "Bottom-left, allow negatives" = Y-up orientation (the flip) + signed values in IC-space (the placement) — two facts, two layers. Per-axis signedness varies; the decoder mediates. A UV-gradient debug view makes the whole thing self-checking.*
+*One orientation (Y-up), one flip (framebuffer↔UV, mirrored at export) — everything reads the post-flip coordinate, so a mirrored image is always a wrong-flip-count bug at that seam. Three spaces, not one: screen (Y-down pixels) → flip → UV (`[0,1]` unsigned, Y-up — addressing) → placement `z₀ + 2(uv−½)·q` → IC-space (signed, Y-up, graph-like — decoder input & axis display). "Bottom-left, allow negatives" = Y-up orientation (the flip) + signed values in IC-space (the placement) — two facts, two layers. Per-axis signedness varies; the decoder mediates. A UV-gradient debug view makes the whole thing self-checking.*
