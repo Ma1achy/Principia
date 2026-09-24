@@ -139,9 +139,9 @@ The rule in one line: *tight and elementwise up to and including a single step; 
 Tier-N tolerance absorbs **two** sources of difference, not one:
 
 1. **f32 vs f64** — the intended comparison.
-2. **cross-backend f32 variance** — WGSL compiled through Dawn (CI) vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation and driver math differ across backends.
+2. **cross-backend f32 variance** — the kernel run through native `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation and driver math differ across backends.
 
-Therefore Tier-N tolerances are **pinned empirically, not guessed**: run the same kernel on the CI Dawn backend and on a real browser, measure the spread on the decode/step quantities, set the tolerance to comfortably cover it. A tolerance validated only against f64 will flake across drivers. (For a solo web artefact the matrix is small — CI Dawn + one or two real browsers — but it is not zero.)
+Therefore Tier-N tolerances are **pinned empirically, not guessed**: **native in-process `wgpu` sets them** (R-85) — run the kernel there, measure the spread on the decode/step quantities, set the tolerance to comfortably cover it. Dawn CI is dropped. Real browsers are checked against those tolerances with the browser build (M8). A tolerance validated only against f64 will flake across drivers. (For a solo web artefact the browser matrix is small — one or two real browsers — but it is not zero.)
 
 Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0 ~1e-6. These are starting points to be replaced by measured values.
 
