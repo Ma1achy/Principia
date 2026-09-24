@@ -218,3 +218,27 @@ without a ruling, so the change is reverted and the conflict is flagged here ins
 - **Needed:** whether `ensemble_outcome_agreement` is `spread_event` (same quantity, opposite sense) or a separate field, and
   whether it's stored or derived. RQ-13 may also settle the scheduler's use of it.
 - **Ruling:** R-18 (decisions.md) — applied in step 3
+
+## RQ-17: Did change 8's `ADVANCE` signature land? *(step 4, register)*
+
+The register, the index and the integrator contract disagree on change 8. Nothing is chosen, and Part 2a is left as it is.
+- Register banner above change 8: "**LANDED, and went further than proposed.** Regularisation is now a **second swappable
+  axis**, independent of the stepper — `principia_integrator_contract.md` Part 2b." The index lists 8 as landed.
+- Register change 8 status: "Open — **decided in principle**, not yet written into the LaTeX."
+- Integrator contract Part 2a: "**PROPOSED CHANGE** … `STEP(state, dt, params) -> state' # current` /
+  `ADVANCE(state, t_now, t_target, params) -> state' # proposed`", with `owns_time_mapping`, the per-substep cadence as a
+  callback, and two AZ rows ("AZ + RK4", "AZ + time-transformed leapfrog").
+- Part 2b (DECIDED) covers the regularisation axis but doesn't mention `ADVANCE`, `owns_time_mapping` or the callback.
+- **Needed:** whether the landed form includes `ADVANCE` / `owns_time_mapping` / the cadence callback (Part 2a becomes
+  current), or whether Part 2b replaced them (Part 2a is marked superseded). Either way, which AZ rows are in the table.
+
+## RQ-18: The impurity mask's field — `majority_class`, or change 1's joint grain *(step 4, register)*
+
+Change 1 is resolved, and render_contract Part 6 still asks for the field the resolution says isn't needed. Nothing is chosen.
+- Register change 1 (RESOLVED, landed in `principia_dd_generation_root.md` §3.7): "Defining *every* event-derived reduction
+  field at the joint `class ⊕ detail` grain removes the question: one grain, so no commuting problem and **no companion
+  field**. Storing the class histogram and deriving both dominant and impurity from it makes disagreement impossible."
+- `principia_render_contract.md` Part 6, impurity mask: "per-sample `state` ≠ quad majority `state` (**requires
+  `majority_class` added to `QuadReduction`/`RenderQuad`** — one u32, do it)".
+- **Needed:** whether the mask compares at the joint grain against the existing `dominant_outcome` (no new field; the mask
+  definition changes from `state` to `class ⊕ detail`), or keeps a class-only `majority_class`.

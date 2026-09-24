@@ -441,25 +441,23 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **No double-buffering.** The march updates state **in place** each step (temporal note) — samples are independent (no stencil/neighbour hazard: each sample's force loop couples only its own 3 bodies), so read-modify-write of a sample's own slot is safe, no ping-pong copy.
 
-> **⚠ THE TIER TABLE BELOW IS STALE — recompute at 144 / 96 B.** The closure field (§1) moved
-> `SimStateFTLE` 136 → 144 (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte
-> aligned so nothing repacks, and no tier is expected to cross a budget boundary on 5.9% unless it
-> was already sitting on one — but the figures below were computed at the old widths and every one of
-> them is now low. Recompute before quoting.
+> **Recomputed at 144 / 96 B (pending change 9).** The closure field (§1) moved `SimStateFTLE` 136 → 144
+> (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte aligned, so nothing repacks. The
+> figures below are at the new widths; at the old widths they were 1.261 / 0.863 / 0.431 / 5.043 / 1.725 GB.
 
 Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|
-| 1080p E=3 FTLE-on (High-like) | 1.128 GB | 0.133 | **1.261 GB** |
-| 1080p E=3 FTLE-off | 0.730 GB | 0.133 | **0.863 GB** |
-| 1080p E=1 FTLE-off | 0.365 GB | 0.066 | **0.431 GB** |
-| 4K E=3 FTLE-on (High-like) | 4.512 GB | 0.531 | **5.043 GB** |
-| 4K E=1 FTLE-off | 1.460 GB | 0.265 | **1.725 GB** |
+| 1080p E=3 FTLE-on (High-like) | 1.194 GB | 0.133 | **1.327 GB** |
+| 1080p E=3 FTLE-off | 0.796 GB | 0.133 | **0.929 GB** |
+| 1080p E=1 FTLE-off | 0.398 GB | 0.066 | **0.464 GB** |
+| 4K E=3 FTLE-on (High-like) | 4.778 GB | 0.531 | **5.308 GB** |
+| 4K E=1 FTLE-off | 1.593 GB | 0.265 | **1.858 GB** |
 
-Span ~80 MB (phone: FTLE-off E=0 720p) to ~5.0 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split, 5.04 GB, matches the E=3 row here). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
+Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split, 5.04 GB, was computed at the old 136 B width and now matches the old E=3 figure, not the 5.31 GB here — open-questions). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
 
-> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.6 GB" means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
+> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.7 GB" (1.6 GB at the old width) means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
 
 **WebGPU allocation — logical buffers are SHARDED.** WebGPU guaranteed defaults: **`maxStorageBufferBindingSize` = 128 MiB, `maxBufferSize` = 256 MiB** (adapters may expose larger, but the baseline must be assumed for reach). So "the `SimState` buffer" and "the word buffer" are **logical** entities implemented as *many* physical quad/chunk buffers — a multi-GB payload cannot be one `GPUBuffer` and cannot be bound in one binding, regardless of available memory. Sharding is per-quad (natural — quads are the compute/eviction unit already); the allocator hands out chunk buffers and the scheduler tracks which quad lives in which chunk. Hard constraint, not an optimisation.
 
