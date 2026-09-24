@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Console — the footer, opened</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.eg b{font-weight:500;color:#dcdcdc}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 6px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:92px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:120px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:4px 0 6px}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.wb{padding:8px 12px}
+.k{color:#c586c0}.t{color:#4ec9b0}.n{color:#b5cea8}.c{color:#6a9955}.f{color:#dcdcaa}
+</style>
+</helmet>
+<div class="eg" style="width: 1440px; height: 420px; position: relative; background: #0a0a0a; overflow: hidden"><div style="position: absolute; left: 0; right: 0; bottom: 0; height: 330px; background: #141414; border-top: 1px solid #2a2a2a; display: flex; flex-direction: column"><div class="row" style="padding: 4px 10px; border-bottom: 1px solid #2a2a2a; gap: 8px"><span style="color: #dcdcdc; font-weight: 400">Console</span><button class="btn on">all</button><button class="btn">⚠ warnings 1</button><button class="btn">✕ errors 0</button><button class="btn">info</button><span class="val" style="flex: 1; max-width: 300px; text-align: left; color: #6f6f6f">filter…</span><span style="flex: 1"></span><button class="btn">copy</button><button class="btn">clear</button><button class="btn">console ▾</button></div><div class="mono" style="flex: 1; padding: 6px 10px; line-height: 1.7"><div style="display: flex; gap: 14px"><span style="width: 44px; color: #e0c070">warn</span><span class="weak" style="width: 100px">12:04:11.251</span><span style="width: 90px; color: #a8a8a8">stain</span><span style="color: #e0c070">brightness range fixed [0, 50] clips 3% of t_end</span></div><div style="display: flex; gap: 14px"><span style="width: 44px; color: #8c8c8c">info</span><span class="weak" style="width: 100px">12:04:11.240</span><span style="width: 90px; color: #a8a8a8">integrator</span><span style="color: #cfcfcf">substep cap hit · 3 pixels · tile (412, 90, d9)</span></div><div style="display: flex; gap: 14px"><span style="width: 44px; color: #8c8c8c">info</span><span class="weak" style="width: 100px">12:04:10.902</span><span style="width: 90px; color: #a8a8a8">quadtree</span><span style="color: #cfcfcf">refine depth 8 → 9 · tiles +64</span></div><div style="display: flex; gap: 14px"><span style="width: 44px; color: #8c8c8c">info</span><span class="weak" style="width: 100px">12:04:08.117</span><span style="width: 90px; color: #a8a8a8">contract</span><span style="color: #cfcfcf">SetField CameraZoom 1.00 → 3.20</span></div><div style="display: flex; gap: 14px"><span style="width: 44px; color: #8c8c8c">info</span><span class="weak" style="width: 100px">12:04:08.004</span><span style="width: 90px; color: #a8a8a8">contract</span><span style="color: #cfcfcf">SetField Tilt(q₁) 0.0° → 23.4° into z_q3</span></div><div style="display: flex; gap: 14px"><span style="width: 44px; color: #8c8c8c">info</span><span class="weak" style="width: 100px">12:03:59.410</span><span style="width: 90px; color: #a8a8a8">app</span><span style="color: #cfcfcf">ready · adapter NVIDIA RTX 4070 · wgpu 26</span></div></div><div class="weak" style="padding: 4px 10px; border-top: 1px solid #2a2a2a">the same stream the profiler’s telemetry reads · errors also open it automatically</div></div><div style="position: absolute; left: 0; right: 0; top: 0; bottom: 330px"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="" style="width: 100%; height: 100%; object-fit: cover; opacity: .35"></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":420}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Principia — Render-Mode Catalogue</title>
+<style>
+  :root{--bg:#191b1e;--panel:#212429;--panel2:#282c31;--ink:#e6e8ea;--muted:#9aa0a6;--faint:#666c72;--rule:#33383e;--accent:#46b8a6;--accent2:#d9a441;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Roboto,system-ui,sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 70px}
+  h1{font-size:19px;font-weight:600}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.6;max-width:880px}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:var(--accent);background:var(--panel);padding:1px 4px;border-radius:3px}
+  .sech{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:26px 0 12px;padding-bottom:5px;border-bottom:1px solid var(--rule)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:12px 13px;cursor:pointer;transition:border-color .12s,transform .12s;position:relative}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .card .nm{font-size:13px;font-weight:600}
+  .card .kv{font-family:var(--mono);font-size:9.5px;margin-top:7px;line-height:1.7}
+  .card .kv .k{color:var(--faint)}.card .kv .v{color:var(--ink)}
+  .card .src{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:6px}
+  .bvtag{position:absolute;top:11px;right:11px;font-family:var(--mono);font-size:8px;background:rgba(217,164,65,.16);color:var(--accent2);border:1px solid rgba(217,164,65,.4);border-radius:4px;padding:1px 5px}
+  /* mapping visuals */
+  .mapwrap{margin:9px 0 3px}
+  .gbar{height:20px;border-radius:4px;border:1px solid var(--rule)}
+  .glbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;color:var(--muted);margin-top:3px}
+  .pchips{display:flex;flex-wrap:wrap;gap:4px}
+  .pchip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;color:var(--muted)}
+  .pchip i{width:13px;height:13px;border-radius:3px;border:1px solid var(--rule);display:inline-block}
+  .msphere{display:block;border-radius:50%;background:#0e0f11}
+  /* detail */
+  #detail{position:fixed;inset:0;z-index:30;background:rgba(10,11,12,.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:24px}
+  #detail.on{display:flex}
+  .dbox{background:var(--panel);border:1px solid var(--rule);border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:20px}
+  .dhead{display:flex;align-items:baseline;gap:10px}.dhead h2{font-size:17px;font-weight:600}.dhead .x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:18px}
+  .dmap{margin:14px 0}
+  .drow{display:flex;gap:20px;margin:12px 0;flex-wrap:wrap;align-items:flex-start}
+  .drow canvas{border-radius:6px;background:#0e0f11}
+  .dmeta{flex:1;min-width:250px}.dmeta table{border-collapse:collapse;width:100%}
+  .dmeta td{padding:4px 8px 4px 0;vertical-align:top;line-height:1.5}
+  .dmeta td.k{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap;text-transform:uppercase;letter-spacing:.05em}
+  .dmeta td.v{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .dnote{font-size:12px;color:var(--muted);line-height:1.65;margin-top:12px;border-top:1px solid var(--rule);padding-top:10px}
+  .dapp{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:4px;text-align:center}
+  footer{margin-top:34px;font-size:11px;color:var(--faint);line-height:1.7;border-top:1px solid var(--rule);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Principia — Render-Mode Catalogue</h1>
+  <div class="sub">A render mode = <b>a field out of <code>ctx</code></b> + a <b>type</b> and its <b>default mapping</b>. This catalogue foregrounds the <i>mapping</i> — the gradient / palette and its polarity — since that is the design decision; the shape-sphere colour-map editor is <b>one mode</b> (<code>n̂ → SiteBlend</code>). Every default is customisable. (Click a mode for the mapping enlarged + an applied example on an illustrative slice.)</div>
+  <div id="sections"></div>
+  <footer>Polarity is chosen per field so the <b>salient end is bright</b>: FTLE / diffusion → white = high (chaos, spreading pop); ensemble spread → white = low (a confidence measure — high dispersion is untrustworthy, recedes to black); time-to-event → white = early (quick-resolving pops, late / bounded darken → consistent with bounded = black). Greyscale is deliberate: a magnitude field <i>is</i> a lightness, so it drops straight into the <code>brightness</code> slot — <code>colour = n̂ × brightness = ⟨field⟩</code> falls out for free. Signed fields (energy, L_z) use diverging-through-neutral so the zero-crossing is legible; angles use cyclic; enums use palettes. <b>Addressing views use a channel convention</b> so they read apart at a glance: <b>UV → red+green</b>, <b>top-left → red+blue</b>, <b>centre → blue+green</b>, <b>index → greyscale</b>. <b>Quad &amp; tile boundaries</b> are NOT a fragment colour map — they are a separate <b>overlay / line pass</b> (a post-chain band-mask on distance-to-edge) drawn over whatever mode is active, so any mode above can be shown with the mesh on top.</footer>
+</div>
+
+<div id="detail"><div class="dbox">
+  <div class="dhead"><h2 id="d-name"></h2><span class="x" id="d-close">✕</span></div>
+  <div class="dmap" id="d-map"></div>
+  <div class="drow">
+    <div><canvas id="d-app" width="220" height="220"></canvas><div class="dapp">applied to an illustrative IC slice</div></div>
+    <div class="dmeta"><table id="d-meta"></table><div class="dnote" id="d-note"></div></div>
+  </div>
+</div></div>
+
+<script>
+"use strict";
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+/* ---- OKLab + LUTs ---- */
+const s2l=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
+const l2s=c=>{c=clamp(c,0,1);return(c<=0.0031308?12.92*c:1.055*Math.pow(c,1/2.4)-0.055)*255;};
+function rgb2oklab(r0){const r=s2l(r0[0]),g=s2l(r0[1]),b=s2l(r0[2]);const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b),m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b),s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);return[0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s];}
+function oklab2rgb(L,a,b){const l_=L+0.3963377774*a+0.2158037573*b,m_=L-0.1055613458*a-0.0638541728*b,s_=L-0.0894841775*a-1.2914855480*b,l=l_**3,m=m_**3,s=s_**3;return[l2s(4.0767416621*l-3.3077115913*m+0.2309699292*s),l2s(-1.2684380046*l+2.6097574011*m-0.3413193965*s),l2s(-0.0041960863*l-0.7034186147*m+1.7076147010*s)];}
+const LUT={viridis:[[68,1,84],[72,26,108],[64,50,130],[53,73,145],[40,97,150],[31,121,150],[39,145,141],[86,168,114],[163,187,62],[253,231,37]],cividis:[[0,32,76],[0,52,110],[20,71,122],[78,98,120],[114,116,115],[152,134,107],[212,164,79],[253,187,43],[253,218,36]],magma:[[0,0,4],[28,16,68],[79,18,123],[129,37,129],[181,54,122],[229,80,100],[251,135,97],[254,195,149],[252,253,191]],inferno:[[0,0,4],[50,10,95],[120,28,109],[180,55,88],[220,90,44],[245,160,30],[252,225,100],[252,255,164]],twilight:[[18,12,66],[60,45,130],[115,85,165],[185,165,205],[232,218,228],[238,188,158],[198,115,80],[132,48,52],[18,12,66]],coolwarm:[[59,76,192],[120,160,232],[195,215,248],[240,240,240],[248,200,175],[225,120,88],[180,28,40]]};
+function sampleLut(name,t){const lu=LUT[name],q=clamp(t,0,1),i=Math.min(lu.length-2,Math.floor(q*(lu.length-1))),f=q*(lu.length-1)-i;return lu[i].map((v,j)=>v+(lu[i+1][j]-v)*f);}
+/* ---- ramps + colour helpers ---- */
+const DIV=t=>sampleLut('coolwarm',t), SEQ=(n,t)=>sampleLut(n,t);
+const GREY=t=>{const v=clamp(t,0,1)*255;return[v,v,v];};
+const gDIV=t=>DIV(t), gHI=t=>GREY(t), gLO=t=>GREY(1-t), gSEQ=n=>(t=>SEQ(n,t));
+const CYC=a=>{const h=(((a/(2*Math.PI))%1)+1)%1;return oklab2rgb(0.72,0.15*Math.cos(h*2*Math.PI),0.15*Math.sin(h*2*Math.PI));};
+const gCYC=t=>CYC(t*2*Math.PI);
+const INVALID=[224,42,196];
+const symnorm=(v,s)=>clamp(0.5+0.5*Math.sign(v)*Math.log(1+Math.abs(v)/s*4)/Math.log(5),0,1);
+const lognorm=v=>clamp(Math.log(1+Math.max(0,v)*9)/Math.log(10),0,1);
+/* event palette */
+const EV={C12:0,C13:1,C23:2,E1:3,E2:4,E3:5,BND:6,CT0:7,DEG:8};
+const EVENT_PAL=[[222,45,45],[46,188,78],[52,98,224],[240,222,50],[224,52,198],[48,200,220],[20,20,24],[242,150,32],[236,236,240]];
+const EVENT_LABELS=['coll 1–2','coll 1–3','coll 2–3','esc 1','esc 2','esc 3','bounded','coll @ t=0','degenerate'];
+const EVENT_CLASSES=EVENT_LABELS.map((l,i)=>[l,EVENT_PAL[i]]);
+/* debug palettes */
+const F2_PAL=[[40,90,190],[90,175,225],[210,110,30],[240,190,70]];
+const F2_CLASSES=[['a  (branch 1, +)',F2_PAL[0]],['A  (branch 1, −)',F2_PAL[1]],['b  (branch 2, +)',F2_PAL[2]],['B  (branch 2, −)',F2_PAL[3]]];
+const LIFE_PAL=[[56,178,92],[232,190,54],[72,132,222],[96,102,110],[224,108,48]];
+const LIFE_CLASSES=[['loaded',LIFE_PAL[0]],['pending',LIFE_PAL[1]],['refinable',LIFE_PAL[2]],['terminal',LIFE_PAL[3]],['stale',LIFE_PAL[4]]];
+const MC=[[222,64,64],[58,188,96],[72,116,222]];
+const ternaryBlend=(m1,m2,m3)=>{const s=m1+m2+m3||1;return[(m1*MC[0][0]+m2*MC[1][0]+m3*MC[2][0])/s,(m1*MC[0][1]+m2*MC[1][1]+m3*MC[2][1])/s,(m1*MC[0][2]+m2*MC[1][2]+m3*MC[2][2])/s];};
+const VALID_PAL=[[44,48,54],[214,72,72],[224,42,196],[242,150,32]];
+const VALID_CLASSES=[['valid',VALID_PAL[0]],['sim_failed',VALID_PAL[1]],['decode_failed',VALID_PAL[2]],['sentinel',VALID_PAL[3]]];
+const SAT_CLASSES=[['saturated (cap hit)',[240,190,60]],['ok',[40,44,50]]];
+const TIER_CLASSES=[['preview',[100,104,112]],['standard',[72,132,222]],['fine',[60,180,120]],['FTLE / full',[230,160,50]]];
+/* shape map */
+const AX=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]], HV=[0,180,120,300,240,60].map(h=>[Math.cos(h*Math.PI/180),Math.sin(h*Math.PI/180)]);
+function shapeMap(n){let sw=0,sa=0,sb=0;for(let i=0;i<6;i++){const w=Math.exp(3*(n[0]*AX[i][0]+n[1]*AX[i][1]+n[2]*AX[i][2]));sw+=w;sa+=w*HV[i][0];sb+=w*HV[i][1];}return oklab2rgb(0.7,0.16*sa/sw,0.16*sb/sw);}
+const shapeN=(root,iter)=>{const a=root*2.0944+iter*0.13,z=Math.cos(iter*0.19),s=Math.sqrt(Math.max(0,1-z*z));return[s*Math.cos(a),s*Math.sin(a),z];};
+const bivarShape=(n,L)=>{const lab=rgb2oklab(shapeMap(n));return oklab2rgb(0.18+0.64*clamp(L,0,1),lab[1],lab[2]);};
+const bivarCat=(ci,L)=>{const lab=rgb2oklab(EVENT_PAL[ci]);return oklab2rgb(0.18+0.64*clamp(L,0,1),lab[1],lab[2]);};
+const goldenPal=n=>Array.from({length:n},(_,i)=>{const h=((i*0.6180339887)%1)*2*Math.PI;return oklab2rgb(0.68,0.13*Math.cos(h),0.13*Math.sin(h));});
+
+/* ---- illustrative field model (for the applied example only) ---- */
+function newton(cx,cy){let x=cx,y=cy;const MAX=42;for(let i=0;i<MAX;i++){const x2=x*x,y2=y*y,r2=x2+y2;if(r2<1e-9)return{root:0,iter:i};
+  const zx3=x*(x2-3*y2),zy3=y*(3*x2-y2),dx=3*(x2-y2),dy=6*x*y,nx=zx3-1,ny=zy3,dd=(dx*dx+dy*dy)||1e-9;x-=(nx*dx+ny*dy)/dd;y-=(ny*dx-nx*dy)/dd;
+  if((x-1)*(x-1)+y*y<1e-4)return{root:0,iter:i};if((x+0.5)*(x+0.5)+(y-0.8660254)*(y-0.8660254)<1e-4)return{root:1,iter:i};if((x+0.5)*(x+0.5)+(y+0.8660254)*(y+0.8660254)<1e-4)return{root:2,iter:i};}
+  return{root:0,iter:MAX};}
+let GR={W:0,H:0};
+function ensureGrid(W,H){if(GR.W===W&&GR.H===H)return;GR.W=W;GR.H=H;GR.root=new Int8Array(W*H);GR.iter=new Uint8Array(W*H);
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){const u=(px/W-0.5)*3,v=(py/H-0.5)*3,r=newton(u,v);GR.root[py*W+px]=r.root;GR.iter[py*W+px]=r.iter;}}
+function fieldsAt(px,py,W,H){const i=py*W+px,root=GR.root[i],iter=GR.iter[i],u=(px/W-0.5)*3,v=(py/H-0.5)*3,ch=iter/42;
+  return{u,v,root,iter,chaos:ch,E:Math.sin(u*1.5)*0.4+(0.35-(u*u+v*v)*0.16),Lz:(u*0.4-v*0.32)+Math.sin(u*v*1.4)*0.28,KE:clamp(0.12+0.5*(u*u+v*v)/4.5,0,1),V:-clamp(0.22+0.5*(1-(u*u+v*v)/4.5),0,1),virial:1+Math.sin(u*1.7+v*1.3)*0.6,edrift:(0.15+ch*0.85)*Math.sin(u*23+v*20)*0.5,ftle:ch,dmin:clamp(0.03+0.55*(1-ch),0,1),tend:ch,diffusion:ch>0.9?-1:ch*0.7,mu12:1+Math.sin(v*1.6)*0.6,rhoAngle:Math.atan2(v,u),spread:clamp(ch*0.9+0.05,0,1),valid:!(ch>0.965),ftleValid:ch<0.95};}
+const QN=4,TM=4;
+function addrF(f){const pu=clamp(f.u/3+0.5,0,0.9999),pv=clamp(f.v/3+0.5,0,0.9999);
+  const qi=Math.floor(pu*QN),qj=Math.floor(pv*QN),qu=pu*QN-qi,qv=pv*QN-qj;
+  const ti=Math.floor(qu*TM),tj=Math.floor(qv*TM),tu=qu*TM-ti,tv=qv*TM-tj;
+  return {pu,pv,qi,qj,qu,qv,ti,tj,tu,tv,quadIdx:qj*QN+qi,tileIdx:(qj*QN+qi)*TM*TM+tj*TM+ti,quadCU:(qi+0.5)/QN,quadCV:(qj+0.5)/QN,tileCU:(qi+(ti+0.5)/TM)/QN,tileCV:(qj+(tj+0.5)/TM)/QN,quadTLU:qi/QN,quadTLV:qj/QN,tileTLU:(qi+ti/TM)/QN,tileTLV:(qj+tj/TM)/QN};}
+function stateClass(f){const r=Math.hypot(f.u,f.v),ch=f.chaos,root=f.root%3,ang=((f.rhoAngle+Math.PI)%(2*Math.PI));
+  if(r<0.12)return EV.DEG;if(Math.abs(ang-0.45)<0.14&&ch<0.55)return EV.CT0;if(r<0.55&&ch<0.32)return EV.BND;if(ch>0.55)return EV.C12+root;return EV.E1+root;}
+function renderApplied(cv,mode){const g=cv.getContext('2d'),W=cv.width,H=cv.height;ensureGrid(W,H);const im=g.createImageData(W,H),d=im.data;
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){const c=mode.applied(fieldsAt(px,py,W,H)),p=(py*W+px)*4;d[p]=c[0];d[p+1]=c[1];d[p+2]=c[2];d[p+3]=255;}
+  g.putImageData(im,0,0);if(mode.overlay){g.strokeStyle='rgba(255,255,255,0.28)';g.lineWidth=0.6;for(let k=1;k<8;k++){g.beginPath();g.moveTo(k/8*W,0);g.lineTo(k/8*W,H);g.moveTo(0,k/8*H);g.lineTo(W,k/8*H);g.stroke();}}}
+
+/* ============================ MODE TABLE (mapping-first) ============================
+   map: {kind:'gradient', ramp, lo, hi} | {kind:'palette', classes} | {kind:'cyclic'} | {kind:'sphere'} | {kind:'bivar', sub}
+   ================================================================================= */
+const G1='Scalar · energy & dynamics',G2='Scalar · mass & geometry',G3='Directional / vector',G4='Categorical',G5='Debug · quad structure',G6='Bivariate',G7='Debug · diagnostic & cross-check';
+const G_ADDR='Debug · addressing & coordinates',G_PROF='Debug · profiling',G_VALID='Debug · validity & confidence',G_DECODE='Debug · decoded IC';
+const M=[
+ {g:G1,name:'Total energy E₀',src:'payload · E₀',type:'scalar → gradient',def:'diverging · symlog · centred at E=0',map:{kind:'gradient',ramp:gDIV,lo:'bound  E<0',hi:'E>0  unbound'},applied:f=>DIV(symnorm(f.E,0.6)),val:'—',bv:0,note:'The zero-crossing is the bound/unbound frontier; a diverging map through a neutral makes it a visible contour a sequential ramp would hide.'},
+ {g:G1,name:'Angular momentum L_z',src:'payload · L_z',type:'scalar → gradient',def:'diverging · symlog · centred at 0',map:{kind:'gradient',ramp:gDIV,lo:'retrograde',hi:'prograde'},applied:f=>DIV(symnorm(f.Lz,0.7)),val:'—',bv:0,note:'Sign is physical (rotation direction); the neutral band marks L_z≈0.'},
+ {g:G1,name:'Kinetic energy K₀',src:'payload · K₀',type:'scalar → gradient',def:'sequential (Viridis)',map:{kind:'gradient',ramp:gSEQ('viridis'),lo:'low',hi:'high'},applied:f=>SEQ('viridis',f.KE),val:'—',bv:0},
+ {g:G1,name:'Potential energy V₀',src:'payload · V₀',type:'scalar → gradient',def:'sequential (Magma)',map:{kind:'gradient',ramp:gSEQ('magma'),lo:'deep',hi:'shallow'},applied:f=>SEQ('magma',clamp(1+f.V,0,1)),val:'—',bv:0},
+ {g:G1,name:'Virial ratio',src:'payload · 2K/|V|',type:'scalar → gradient',def:'diverging · centred at 1',map:{kind:'gradient',ramp:gDIV,lo:'< 1  bound',hi:'> 1  dispersing'},applied:f=>DIV(clamp((f.virial-1)*1.3+0.5,0,1)),val:'—',bv:0},
+ {g:G1,name:'Energy error',src:'payload · energy_drift + valid',type:'scalar → gradient',def:'diverging · symlog · invalid → magenta',map:{kind:'gradient',ramp:gDIV,lo:'−drift',hi:'+drift'},applied:f=>f.valid?DIV(symnorm(f.edrift,0.4)):INVALID,val:'sd_is_failed',bv:0,note:'Conservation diagnostic; failed integrations render magenta via the validity lane, never a drift value.'},
+ {g:G1,name:'FTLE (Lyapunov)',src:'payload · ftle + ftle_valid',type:'scalar → gradient',def:'greyscale · low = dark, high = bright · invalid → magenta',map:{kind:'gradient',ramp:gHI,lo:'stable (dark)',hi:'unstable (bright)'},applied:f=>f.ftleValid?GREY(f.ftle):INVALID,val:'ftle_valid',bv:0,note:'The real chaos metric (local divergence rate). White = chaotic → doubles as a brightness occupant that brightens unstable regions of a composed map.'},
+ {g:G1,name:'Closest approach d_min',src:'payload · d_min',type:'scalar → gradient',def:'sequential (Magma) · log',map:{kind:'gradient',ramp:gSEQ('magma'),lo:'near-collision',hi:'far'},applied:f=>SEQ('magma',lognorm(f.dmin)),val:'—',bv:0,note:'Spans orders of magnitude → log compaction.'},
+ {g:G1,name:'Time to event t_end',src:'payload · t_end',type:'scalar → gradient',def:'greyscale · low = bright, high = dark · bounded → black',map:{kind:'gradient',ramp:gLO,lo:'early (bright)',hi:'late (dark)'},applied:f=>f.chaos>0.965?[16,16,20]:GREY(1-f.tend),val:'bounded (no event)',bv:0,note:'Time to the terminal event — escape OR collision OR any class-ending event, not just escape. Inverted polarity: early bright, late/bounded dark (bounded reaches no event → black, consistent with the event palette).'},
+ {g:G1,name:'Diffusion',src:'payload · diffusion (−1 sentinel)',type:'scalar → gradient',def:'greyscale · low = dark, high = bright · −1 → invalid',map:{kind:'gradient',ramp:gHI,lo:'low (dark)',hi:'high (bright)'},applied:f=>f.diffusion<0?INVALID:GREY(f.diffusion),val:'−1 sentinel',bv:0,note:'White = high diffusion → a brightness modulator. The −1 sentinel maps to invalid, never to the ramp\u2019s low end.'},
+ {g:G2,name:'Mass ratio μ₁₂',src:'chart.z → μ₁₂',type:'scalar → gradient',def:'diverging · centred at 1',map:{kind:'gradient',ramp:gDIV,lo:'m₁ < m₂',hi:'m₁ > m₂'},applied:f=>DIV(clamp((f.mu12-1)*1.1+0.5,0,1)),val:'—',bv:0,note:'An IC parameter recomputed per-pixel from the decoded IC — colour by a starting condition, not an outcome.'},
+ {g:G2,name:'Jacobi ρ-angle',src:'chart.z → ρ angle',type:'scalar → cyclic',def:'cyclic (hue wheel) · wraps at 2π',map:{kind:'cyclic'},applied:f=>CYC(f.rhoAngle),val:'—',bv:0,note:'An angle wraps — a cyclic palette closes seamlessly where a linear one tears.'},
+ {g:G3,name:'Shape n̂  (the editor)',src:'payload · shape n̂ (S²)',type:'vector → SiteBlend',def:'SiteBlend(axes6, vmf, swatches, oklab)',map:{kind:'sphere'},applied:f=>shapeMap(shapeN(f.root,f.iter)),val:'—',bv:0,note:'Mode one — the shape-sphere colour-map editor. A unit vector per pixel, coloured by the S² map.'},
+ {g:G3,name:'Escape direction',src:'payload · escape direction',type:'vector → cyclic',def:'cyclic hue wheel · bound → grey',map:{kind:'cyclic'},applied:f=>f.chaos>0.965?[70,70,78]:CYC(f.rhoAngle+f.root*2.0944),val:'bound',bv:0,note:'Direction fields (escape bearing, velocity) are angles → cyclic; the bound region has no direction → neutral.'},
+ {g:G4,name:'Outcome class',src:'payload · state ⊕ detail',type:'enum → palette',def:'event palette — collisions R/G/B (pair), escapes Y/M/C (body), bounded black, t=0 orange, degenerate white',map:{kind:'palette',classes:EVENT_CLASSES},applied:f=>EVENT_PAL[stateClass(f)],val:'—',bv:0,note:'Read from the state enum ⊕ detail union (collision→pair, escape→body). Mnemonic: collisions = additive primaries by pair, escapes = subtractive primaries by body. Customisable. (The escaping body IS detail|escape, so a separate escaper mode is redundant — it is this map filtered to escapes, a categorical filter.)'},
+ {g:G4,name:'Encounter word / basin',src:'payload · word-hash',type:'enum → palette',def:'golden-angle palette (many classes)',map:{kind:'palette',classes:goldenPal(12).map((c,i)=>['b'+i,c])},applied:f=>{const h=(((f.root*2654435761)^(Math.floor(f.iter/3)*40503))>>>0)%9973/9973;return oklab2rgb(0.68,0.13*Math.cos(h*2*Math.PI),0.13*Math.sin(h*2*Math.PI));},val:'—',bv:0,note:'The symbolic encounter sequence hashes to many classes; golden-angle keeps adjacent basins hue-separated. Where the topological basin structure becomes visible.'},
+ {g:G4,name:'F₂ conjugacy class',src:'payload · word → F₂ class',type:'enum → palette',def:'palette on the periodic locus (else muted)',map:{kind:'palette',classes:[['class a',EVENT_PAL[0]],['class b',EVENT_PAL[2]],['class c',EVENT_PAL[3]],['generic',[52,54,60]]]},applied:f=>f.chaos<0.22?[40,42,48]:EVENT_PAL[(((f.root*7+f.iter)>>>0)%6)],val:'periodic-only',bv:0,note:'Defined only on closed loops (periodic orbits); generic open arcs have no F₂ class, so the bulk is muted.'},
+ {g:G5,name:'Quad depth',src:'quad · depth',type:'scalar → gradient',def:'sequential (Viridis)',map:{kind:'gradient',ramp:gSEQ('viridis'),lo:'coarse',hi:'deep'},applied:f=>SEQ('viridis',clamp(f.chaos*0.9,0,1)),val:'—',bv:0,note:'Adaptive refinement depth — the survey subdivides toward boundaries, so depth maps the fractal.'},
+ {g:G5,name:'Quad impurity',src:'quad · impurity',type:'scalar → gradient',def:'sequential (Magma)',map:{kind:'gradient',ramp:gSEQ('magma'),lo:'coherent',hi:'mixed'},applied:f=>SEQ('magma',clamp(f.chaos*1.1,0,1)),val:'—',bv:0,note:'How mixed a quad is; high where a leaf straddles multiple outcomes.'},
+ {g:G1,name:'Ensemble spread',src:'resolve · footprint (E+1 samples)',type:'scalar → gradient',def:'greyscale · low = dark, high = bright',map:{kind:'gradient',ramp:gHI,lo:'certain (dark)',hi:'uncertain (bright)'},applied:f=>GREY(f.spread),val:'contains-ensemble',bv:0,note:'NOT a structural / quad field: a per-FOOTPRINT quantity (one value per nominal sample) derived at the RESOLVE stage from the footprint\'s E+1 ensemble samples — the data-side twin of the SSAA colour resolve. Consumed live for display and separately aggregated into QuadReduction for the scheduler, but it carries no per-sample field. Available only when contains-ensemble (else sentinel/0, suspect styling). White = high spread (low certainty), black = high certainty — the same white = high convention as FTLE / diffusion.'},
+ {g:G5,name:'Priority score',src:'quad · priority',type:'scalar → gradient',def:'sequential (Inferno)',map:{kind:'gradient',ramp:gSEQ('inferno'),lo:'low',hi:'high'},applied:f=>SEQ('inferno',clamp(f.chaos*0.9+0.05,0,1)),val:'—',bv:0,note:'The scheduler\u2019s refinement priority — where compute is going.'},
+ {g:G5,name:'Cache age',src:'quad · cache_age',type:'scalar → gradient',def:'sequential (Cividis) · distinct fresh/stale ends',map:{kind:'gradient',ramp:gSEQ('cividis'),lo:'fresh',hi:'stale'},applied:f=>SEQ('cividis',clamp((f.u+1.5)/3,0,1)),val:'—',bv:0,note:'Sequential with clearly distinct endpoints (dark navy → bright yellow); a cyclic map like Twilight returns to its start colour, so fresh and stale would look alike.'},
+ {g:G6,name:'n̂ × FTLE',src:'shape n̂ (hue) + ftle (L)',type:'bivariate · vec × scalar',def:'hue = shape · lightness = FTLE (chaotic → bright)',map:{kind:'bivar',sub:'shapeL',lo:'stable → dim',hi:'chaotic → bright'},applied:f=>bivarShape(shapeN(f.root,f.iter),f.ftleValid?f.ftle:0),val:'ftle_valid',bv:1,note:'The canonical bivariate: shape in the hue, chaos in the lightness — colour = n̂ · brightness = FTLE · Replace-L. Built from the backbone; the honest replacement for “Stability × Hue”.'},
+ {g:G6,name:'n̂ × time to event',src:'shape n̂ (hue) + t_end (L)',type:'bivariate · vec × scalar',def:'hue = shape · lightness = t_end (early → bright)',map:{kind:'bivar',sub:'shapeL',lo:'late / bounded → dim',hi:'early → bright'},applied:f=>bivarShape(shapeN(f.root,f.iter),f.chaos>0.965?0:1-f.tend),val:'bounded → dim',bv:1,note:'Shape in the hue, resolution speed in the lightness — quick-resolving ICs bright, long-lived / bounded dark (inverted t_end polarity).'},
+ {g:G6,name:'n̂ × diffusion',src:'shape n̂ (hue) + diffusion (L)',type:'bivariate · vec × scalar',def:'hue = shape · lightness = diffusion (high → bright)',map:{kind:'bivar',sub:'shapeL',lo:'low → dim',hi:'high → bright'},applied:f=>bivarShape(shapeN(f.root,f.iter),f.diffusion<0?0:f.diffusion),val:'−1 → dim',bv:1,note:'Shape in the hue, phase-space diffusion in the lightness.'},
+ {g:G6,name:'n̂ × ensemble spread',src:'shape n̂ (hue) + spread (L)',type:'bivariate · vec × scalar',def:'hue = shape · lightness = spread (uncertain → bright)',map:{kind:'bivar',sub:'shapeL',lo:'certain → dim',hi:'uncertain → bright'},applied:f=>bivarShape(shapeN(f.root,f.iter),f.spread),val:'—',bv:1,note:'Shape in the hue, ensemble spread in the lightness — uncertain regions (high spread) brighten, certain regions sink to black (white = high convention, matching the standalone map).'},
+ {g:G6,name:'Outcome class × FTLE',src:'state ⊕ detail (hue) + ftle (L)',type:'bivariate · cat × scalar',def:'hue = class · lightness = FTLE (chaotic → bright)',map:{kind:'bivar',sub:'catL',lo:'stable → dim',hi:'chaotic → bright'},applied:f=>bivarCat(stateClass(f),f.ftleValid?f.ftle:0),val:'ftle_valid',bv:1,note:'Which basin (hue) AND how chaotic within it (lightness), one image.'},
+ {g:G6,name:'Outcome class × time to event',src:'state ⊕ detail (hue) + t_end (L)',type:'bivariate · cat × scalar',def:'hue = class · lightness = t_end (early → bright)',map:{kind:'bivar',sub:'catL',lo:'late / bounded → dim',hi:'early → bright'},applied:f=>bivarCat(stateClass(f),f.chaos>0.965?0:1-f.tend),val:'bounded → dim',bv:1,note:'Outcome in the hue, resolution speed in the lightness.'},
+ {g:G6,name:'Outcome class × diffusion',src:'state ⊕ detail (hue) + diffusion (L)',type:'bivariate · cat × scalar',def:'hue = class · lightness = diffusion (high → bright)',map:{kind:'bivar',sub:'catL',lo:'low → dim',hi:'high → bright'},applied:f=>bivarCat(stateClass(f),f.diffusion<0?0:f.diffusion),val:'−1 → dim',bv:1,note:'Outcome in the hue, diffusion in the lightness.'},
+ {g:G6,name:'Outcome class × ensemble spread',src:'state ⊕ detail (hue) + spread (L)',type:'bivariate · cat × scalar',def:'hue = class · lightness = spread (uncertain → bright)',map:{kind:'bivar',sub:'catL',lo:'certain → dim',hi:'uncertain → bright'},applied:f=>bivarCat(stateClass(f),f.spread),val:'—',bv:1,note:'Outcome in the hue, ensemble spread in the lightness — uncertain classes (high spread) brighten (white = high convention).'},
+ {g:G_ADDR,name:'Pixel UV',src:'ctx.screen.uv',type:'coordinate → R,G',def:'u → red, v → green (Y-up)',map:{kind:'coord',chan:'rg'},applied:f=>chanColour('rg',f.u/3+0.5,f.v/3+0.5),val:'—',bv:0,note:'Screenspace UV across the viewport — the outermost addressing check and EARLIEST debug shader. A wrong Y-convention shows instantly as an inverted gradient (green must increase upward).'},
+ {g:G_ADDR,name:'Quad UV',src:'ctx.quad.uv',type:'coordinate → R,G',def:'per-quad u → red, v → green (resets each quad)',map:{kind:'coord',chan:'rg'},applied:f=>{const a=addrF(f);return chanColour('rg',a.qu,a.qv);},val:'—',bv:0,note:'Continuous UV within each quad — a full 0→1 gradient per quad. Banding across a quad = f32 precision loss in the quad-local reconstruction, made visible.'},
+ {g:G_ADDR,name:'Tile UV',src:'ctx.tile.uv',type:'coordinate → R,G',def:'per-tile u → red, v → green',map:{kind:'coord',chan:'rg'},applied:f=>{const a=addrF(f);return chanColour('rg',a.tu,a.tv);},val:'—',bv:0,note:'Continuous UV within each tile — the finest local coordinate. Distinct from the tile INDEX (below), which is the discrete tile id, not a position.'},
+ {g:G_ADDR,name:'Quad top-left',src:'ctx.quad.tl',type:'position → R,B',def:'flat per quad = TL corner · u → red, v → blue',map:{kind:'coord',chan:'rb'},applied:f=>{const a=addrF(f);return chanColour('rb',a.quadTLU,a.quadTLV);},val:'—',bv:0,note:'The quad TOP-LEFT anchor, flat per quad. Distinct from the centre (differs by half a quad); R,B channels distinguish it from UV at a glance.'},
+ {g:G_ADDR,name:'Quad centre',src:'ctx.quad.centre',type:'position → B,G',def:'flat per quad = centre · u → blue, v → green',map:{kind:'coord',chan:'bg'},applied:f=>{const a=addrF(f);return chanColour('bg',a.quadCU,a.quadCV);},val:'—',bv:0,note:'The quad CENTRE anchor, flat per quad. B,G channels mark it as centre (vs TL\'s R,B, vs UV\'s R,G) — a misplaced anchor is a colour block at the wrong spot.'},
+ {g:G_ADDR,name:'Tile top-left',src:'ctx.tile.tl',type:'position → R,B',def:'flat per tile = TL corner · u → red, v → blue',map:{kind:'coord',chan:'rb'},applied:f=>{const a=addrF(f);return chanColour('rb',a.tileTLU,a.tileTLV);},val:'—',bv:0,note:'The tile TOP-LEFT anchor, flat per tile, nested inside the quad grid.'},
+ {g:G_ADDR,name:'Tile centre',src:'ctx.tile.centre',type:'position → B,G',def:'flat per tile = centre · u → blue, v → green',map:{kind:'coord',chan:'bg'},applied:f=>{const a=addrF(f);return chanColour('bg',a.tileCU,a.tileCV);},val:'—',bv:0,note:'The tile CENTRE anchor, flat per tile — the finest-grained placement check.'},
+ {g:G_ADDR,name:'Quad index',src:'ctx.quad.index',type:'index → greyscale',def:'greyscale · quad number → brightness',map:{kind:'gradient',ramp:gHI,lo:'0',hi:'N_quads'},applied:f=>{const v=addrF(f).quadIdx/(QN*QN-1)*255;return[v,v,v];},val:'—',bv:0,note:'The discrete quad IDENTIFIER (not a coordinate) → greyscale, so it reads distinctly from the R,G/R,B/B,G position views. A dispatch scramble shows as greyscale noise instead of a monotone ramp.'},
+ {g:G_ADDR,name:'Tile index',src:'ctx.tile.tile_index',type:'index → greyscale',def:'greyscale · tile number → brightness',map:{kind:'gradient',ramp:gHI,lo:'0',hi:'N_tiles'},applied:f=>{const v=addrF(f).tileIdx/(QN*QN*TM*TM-1)*255;return[v,v,v];},val:'—',bv:0,note:'The discrete tile IDENTIFIER → greyscale. Different quantity from Tile UV: UV is the continuous position within the tile, index is which tile it is.'},
+ {g:G7,name:'Roundtrip residual',src:'z → D → E → D residual',type:'scalar → gradient',def:'log error (Inferno) · ≤ ε_phys → black',map:{kind:'gradient',ramp:gSEQ('inferno'),lo:'≤ ε  (black)',hi:'high error'},applied:f=>f.chaos<0.5?[4,2,10]:SEQ('inferno',clamp((f.chaos-0.5)*2,0,1)),val:'clamp / mirror-tie tagged',bv:0,note:'Encode-path residual, log-scaled. Below ε_phys clamps to black (correct); bright filaments mark where encode∘decode disagrees — f32 precision loss made visible. Inferno reads as a heat/error map: black = no error, bright = high.'},
+ {g:G7,name:'Agreement |A−B|',src:'|fragment-decode − payload|, …',type:'scalar → gradient',def:'log |A−B| (Inferno) · agree → black',map:{kind:'gradient',ramp:gSEQ('inferno'),lo:'agree  (black)',hi:'disagree'},applied:f=>f.chaos<0.55?[4,2,10]:SEQ('inferno',clamp((f.chaos-0.55)*2.2,0,1)),val:'cross-impl check',bv:0,note:'The shared error ramp for every cross-check (energy |E₀−(K₀+V₀)|, WGSL-decode vs Rust-decode, invariant-chart agreement). Black = agreement, hot = disagreement; a spatial disagreement pattern exposes a dispatch / write-addressing scramble.'},
+ {g:G7,name:'F₂ symbol  (a/A/b/B)',src:'word buffer · symbol-at-k',type:'enum (4) → palette',def:'4 generators · branch = hue, direction = lightness',map:{kind:'palette',classes:F2_CLASSES},applied:f=>F2_PAL[((f.root*2+Math.floor(f.iter/4))%4+4)%4],val:'—',bv:0,note:'The individual free-group generator crossed at step k (which branch cut, which winding direction) — distinct from the whole-word hash. Branch by hue (blue a/A vs warm b/B), direction by lightness (deep + vs light −).'},
+ {g:G_DECODE,name:'Decoded z-component',src:'ctx.chart.z → z_i',type:'scalar → gradient',def:'z_i (8-D latent component) → diverging',map:{kind:'gradient',ramp:gDIV,lo:'−',hi:'+'},applied:f=>DIV(symnorm(Math.sin(f.u*2.2)*Math.cos(f.v*1.8),0.6)),val:'—',bv:0,note:'A single component of the 8-D symmetry-reduced latent z = (z_α, z_β, z_q0–q3, z_μ1, z_μ2), decoded per-pixel and shown diverging (component selectable). The raw-IC-colouring rung of DECODE_PASSTHROUGH — lands before any integrator exists.'},
+ {g:G_DECODE,name:'Ternary mass  (m₁m₂m₃)',src:'decoded IC · masses',type:'3-simplex → barycentric',def:'barycentric · m₁ red, m₂ green, m₃ blue (equal → grey)',map:{kind:'palette',classes:[['m₁',MC[0]],['m₂',MC[1]],['m₃',MC[2]]]},applied:f=>{const a=clamp(0.5+f.u*0.3,0,1),b=clamp(0.5+f.v*0.3,0,1),c=clamp(0.5-(f.u+f.v)*0.15,0,1);return ternaryBlend(a,b,c);},val:'Σm = 1',bv:0,note:'The mass ratio as a barycentric colour — each body pulls toward its corner; equal masses land near neutral grey. Literally a 3-site blend on the mass simplex (a SiteBlend with 3 sites weighted by mass).'},
+ {g:G_DECODE,name:'Decode identity residual',src:'Σm=1, ΣCoM=0, I=1 residual',type:'scalar → gradient',def:'log identity residual (Inferno) · ≤ ε → black',map:{kind:'gradient',ramp:gSEQ('inferno'),lo:'≤ ε  (black)',hi:'violation'},applied:f=>{const r=Math.hypot(f.u,f.v);return r<0.12?SEQ('inferno',0.85):(r<0.3&&f.chaos>0.6?SEQ('inferno',0.4):[4,2,10]);},val:'—',bv:0,note:'The decode INVARIANTS (Σmᵢ=1, Σ CoM=0, moment of inertia I=1) must hold to tolerance; bright pixels are where the decoder produced a non-physical IC (feasibility / clamp region). Uses the shared error ramp — black = identities hold.'},
+ {g:G7,name:'Quad lifecycle state',src:'quad · lifecycle enum',type:'enum (5) → palette',def:'loaded / pending / refinable / terminal / stale',map:{kind:'palette',classes:LIFE_CLASSES},applied:f=>LIFE_PAL[((Math.floor(f.u*5)+Math.floor(f.v*4)+Math.floor(f.chaos*3))%5+5)%5],val:'—',bv:0,note:'The quad NODE lifecycle (a scheduler diagnostic) — distinct from the physical outcome class. loaded = ready, pending = computing, refinable = can subdivide, terminal = won\'t refine (a true floor hit), stale = needs refresh.'},
+ {g:G_VALID,name:'Validity / failure',src:'state (failure enum) + sentinels',type:'enum → palette',def:'valid dark · sim_failed red · decode_failed magenta · sentinel orange',map:{kind:'palette',classes:VALID_CLASSES},applied:f=>{if(f.chaos>0.965)return VALID_PAL[1];const r=Math.hypot(f.u,f.v);if(r<0.1)return VALID_PAL[2];if(f.diffusion<0&&f.chaos>0.82)return VALID_PAL[3];return VALID_PAL[0];},val:'—',bv:0,note:'Where the payload is UNTRUSTWORTHY — sim_failed (NaN/Inf during integration), decode_failed (no valid IC), and per-field sentinels. Valid pixels recede to dark so failures POP; the direct diagnostic for the black-screen class of bug and the NaN-sentinel split.'},
+ {g:G_VALID,name:'Saturated flag',src:'sample_descriptor · saturated bit',type:'enum (2) → palette',def:'substep-cap hit → amber, else dark',map:{kind:'palette',classes:SAT_CLASSES},applied:f=>f.chaos>0.75?[240,190,60]:[40,44,50],val:'—',bv:0,note:'The sticky saturated bit — this sample hit MAX_SUBSTEPS (a NON-terminal confidence flag, not a terminal state). Marks where the outcome may be under-resolved even though the march continued to its real outcome.'},
+ {g:G_VALID,name:'Numerically suspect',src:'two-floor suspect predicate',type:'scalar → gradient',def:'confident dark → suspect bright',map:{kind:'gradient',ramp:t=>mix([40,44,50],[230,120,50],clamp(t,0,1)),lo:'confident',hi:'suspect'},applied:f=>mix([40,44,50],[230,120,50],clamp((f.chaos-0.5)*2,0,1)),val:'—',bv:0,note:'The two-floor \"numerically suspect\" map — pixels near a boundary where the two precision floors (linear-decoder + integration) disagree, so the fate is genuinely uncertain. PRECISION-derived; distinct from ensemble spread, which is SAMPLING-derived.'},
+ {g:G_VALID,name:'Quality tier',src:'quad · tier',type:'enum → palette',def:'which tier computed the pixel (implies field availability)',map:{kind:'palette',classes:TIER_CLASSES},applied:f=>TIER_CLASSES[Math.min(3,Math.floor(f.chaos*3.99))][1],val:'—',bv:0,note:'The quality TIER that produced this pixel — determines which fields are populated (e.g. FTLE only on the FTLE tier, spread only when contains-ensemble). Binding a mode to an unavailable field greys out rather than recomputing; this shows where each tier is in effect.'},
+ {g:G_PROF,name:'Quad generation time',src:'profiler · per-quad wall time',type:'scalar → gradient',def:'sequential (Inferno) · per-quad integration time',map:{kind:'gradient',ramp:gSEQ('inferno'),lo:'fast',hi:'slow'},applied:f=>SEQ('inferno',clamp(0.15+0.85*f.chaos,0,1)),val:'profiling build',bv:0,note:'Per-quad generation cost (integration wall time) — boundary quads with long-lived / near-collision trajectories cost the most. A PROFILING overlay, not a data field, and distinct from quad depth (subdivision, not time).'},
+ {g:G_PROF,name:'Compute cost (substeps)',src:'payload · total_substeps',type:'scalar → gradient',def:'sequential (Magma) · log substep count',map:{kind:'gradient',ramp:gSEQ('magma'),lo:'few',hi:'many'},applied:f=>SEQ('magma',lognorm(f.chaos*3)),val:'—',bv:0,note:'The exact cumulative substep count per sample (total_substeps — the honest cost proxy). Adaptive substepping spends most of its budget near close encounters; log-scaled.'},
+ {g:G_PROF,name:'Cache hit / miss',src:'profiler · cache state',type:'enum (2) → palette',def:'hit → green · miss / recompute → red',map:{kind:'palette',classes:[['cache hit',[60,180,90]],['miss / recompute',[214,90,60]]]},applied:f=>{const a=addrF(f);return ((a.qi+a.qj)%2===0)?[60,180,90]:[214,90,60];},val:'—',bv:0,note:'Which quads were served from the survey cache vs recomputed this frame — a cache-efficiency / scheduling diagnostic.'},
+];
+
+/* ---- mapping visual renderers ---- */
+const el=(t,cls,html)=>{const e=document.createElement(t);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;};
+const rgbCss=c=>'rgb('+c.map(Math.round).join(',')+')';
+function gradientCSS(ramp){const st=[];for(let i=0;i<=12;i++)st.push(rgbCss(ramp(i/12))+' '+(i/12*100).toFixed(1)+'%');return 'linear-gradient(90deg,'+st.join(',')+')';}
+function renderSphereMini(cv){const g=cv.getContext('2d'),W=cv.width,H=cv.height,R=W/2-1,cx=W/2,cy=H/2,im=g.createImageData(W,H),d=im.data;
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){const sx=(px-cx)/R,sy=-(py-cy)/R,r2=sx*sx+sy*sy,p=(py*W+px)*4;if(r2>1){d[p+3]=0;continue;}
+    const sz=Math.sqrt(1-r2),c=shapeMap([sx,sy,sz]);d[p]=c[0];d[p+1]=c[1];d[p+2]=c[2];d[p+3]=255;}g.putImageData(im,0,0);}
+function chanColour(chan,x,y){x=clamp(x,0,1)*255;y=clamp(y,0,1)*255;return chan==='rg'?[x,y,0]:chan==='rb'?[x,0,y]:chan==='bg'?[0,y,x]:[x,x,x];}
+function renderCoordKey(cv,chan){const g=cv.getContext('2d'),W=cv.width,H=cv.height,im=g.createImageData(W,H),d=im.data;
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){const c=chanColour(chan,px/W,1-py/H),p=(py*W+px)*4;d[p]=c[0];d[p+1]=c[1];d[p+2]=c[2];d[p+3]=255;}g.putImageData(im,0,0);}
+function renderBivarKey(cv,mode){const g=cv.getContext('2d'),W=cv.width,H=cv.height,im=g.createImageData(W,H),d=im.data,sub=mode.map.sub;
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){const L=1-py/H, tx=px/W;let c;
+    if(sub==='shapeL'){const lab=rgb2oklab(shapeMap([Math.cos(tx*2*Math.PI),Math.sin(tx*2*Math.PI),0]));c=oklab2rgb(0.15+0.72*L,lab[1],lab[2]);}
+    else if(sub==='catL'){const lab=rgb2oklab(EVENT_PAL[Math.floor(tx*6)]);c=oklab2rgb(0.15+0.72*L,lab[1],lab[2]);}
+    else if(sub==='validity'){c=DIV(tx);if(px>W*0.62){const gy=(c[0]+c[1]+c[2])/3;c=mix(c,[gy,gy,gy],0.85).map(v=>v*0.5);}}
+    else {c=DIV(tx);}
+    const p=(py*W+px)*4;d[p]=c[0];d[p+1]=c[1];d[p+2]=c[2];d[p+3]=255;}
+  g.putImageData(im,0,0);
+  if(sub==='overlay'){g.strokeStyle='rgba(255,255,255,0.4)';g.lineWidth=0.7;for(let k=1;k<7;k++){g.beginPath();g.moveTo(k/7*W,0);g.lineTo(k/7*W,H);g.stroke();}}}
+function mappingEl(mode,big){const w=el('div','mapwrap'),m=mode.map;
+  if(m.kind==='gradient'||m.kind==='cyclic'){const bar=el('div','gbar');if(big)bar.style.height='30px';bar.style.background=gradientCSS(m.kind==='cyclic'?gCYC:m.ramp);w.appendChild(bar);
+    const lbl=el('div','glbl');lbl.innerHTML=m.kind==='cyclic'?'<span>0</span><span>2π (wraps)</span>':'<span>'+m.lo+'</span><span>'+m.hi+'</span>';w.appendChild(lbl);}
+  else if(m.kind==='palette'){const c=el('div','pchips');m.classes.forEach(([lab,col])=>{const p=el('div','pchip');p.innerHTML='<i style="background:'+rgbCss(col)+'"></i>'+lab;c.appendChild(p);});w.appendChild(c);}
+  else if(m.kind==='sphere'){const cv=document.createElement('canvas');cv.width=cv.height=big?120:64;cv.className='msphere';cv.style.margin='0 auto';renderSphereMini(cv);w.appendChild(cv);}
+  else if(m.kind==='coord'){const cv=document.createElement('canvas');cv.width=big?120:88;cv.height=big?90:52;cv.style.cssText='border-radius:4px;border:1px solid var(--rule);display:block';renderCoordKey(cv,m.chan||'rg');w.appendChild(cv);const L={rg:'<span>u → red →</span><span>↑ v → green</span>',rb:'<span>u → red →</span><span>↑ v → blue</span>',bg:'<span>u → blue →</span><span>↑ v → green</span>'}[m.chan||'rg'];const lbl=el('div','glbl');lbl.innerHTML=L;w.appendChild(lbl);}
+  else if(m.kind==='bivar'){const cv=document.createElement('canvas');cv.width=big?300:190;cv.height=big?90:52;cv.style.cssText='border-radius:4px;border:1px solid var(--rule);display:block';renderBivarKey(cv,mode);w.appendChild(cv);
+    const lbl=el('div','glbl');lbl.innerHTML='<span>'+m.lo+'</span><span>'+m.hi+'</span>';w.appendChild(lbl);}
+  return w;}
+
+/* ---- gallery ---- */
+const GROUPS=[G1,G2,G3,G4,G6,G_ADDR,G5,G_DECODE,G_VALID,G7,G_PROF];
+function build(){const root=document.getElementById('sections');root.innerHTML='';
+  GROUPS.forEach(g=>{const list=M.filter(m=>m.g===g);
+    root.appendChild(el('div','sech',g+' · '+list.length));
+    const grid=el('div','grid');root.appendChild(grid);
+    list.forEach(mode=>{const card=el('div','card');
+      card.appendChild(el('div',null,(mode.bv?'<span class="bvtag">bivariate</span>':'')));
+      card.appendChild(el('div','nm',mode.name));
+      card.appendChild(mappingEl(mode,false));
+      card.appendChild(el('div','kv','<span class="k">type: </span><span class="v">'+mode.type+'</span><br><span class="k">default: </span><span class="v">'+mode.def+'</span>'));
+      card.appendChild(el('div','src','ctx: '+mode.src+(mode.val!=='—'?'  ·  validity: '+mode.val:'')));
+      card.onclick=()=>openDetail(mode);grid.appendChild(card);});});
+}
+function openDetail(m){document.getElementById('detail').classList.add('on');document.getElementById('d-name').textContent=m.name;
+  const dm=document.getElementById('d-map');dm.innerHTML='';dm.appendChild(mappingEl(m,true));
+  renderApplied(document.getElementById('d-app'),m);
+  const rows=[['ctx source',m.src],['type',m.type],['default mapping',m.def],['validity',m.val],['channels',m.bv?'bivariate (2 fields)':'univariate']];
+  document.getElementById('d-meta').innerHTML=rows.map(([k,v])=>'<tr><td class="k">'+k+'</td><td class="v">'+v+'</td></tr>').join('');
+  document.getElementById('d-note').textContent=m.note||'';}
+document.getElementById('d-close').onclick=()=>document.getElementById('detail').classList.remove('on');
+document.getElementById('detail').onclick=e=>{if(e.target.id==='detail')document.getElementById('detail').classList.remove('on');};
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lock — on the figure and in the compass</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.eg b{font-weight:500;color:#dcdcdc}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 6px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:92px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:120px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:4px 0 6px}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.wb{padding:8px 12px}
+.k{color:#c586c0}.t{color:#4ec9b0}.n{color:#b5cea8}.c{color:#6a9955}.f{color:#dcdcaa}
+</style>
+</helmet>
+<div class="eg" style="width: 1440px; height: 560px; position: relative; background: #0a0a0a; overflow: hidden"><div style="position: absolute; left: 20px; top: 20px"><div style="position: relative; width: 640px; height: 520px; border: 1px solid #2a2a2a; overflow: hidden"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="The figure while locked" style="width: 100%; height: 100%; object-fit: cover"><svg width="640" height="520" style="position: absolute; inset: 0" aria-label="The lock reticle at the centre of the view"><circle cx="320" cy="260" r="22" fill="none" stroke="#e0c070" stroke-width="2"/><circle cx="320" cy="260" r="3" fill="#e0c070"/><line x1="320" y1="222" x2="320" y2="236" stroke="#e0c070" stroke-width="2"/><line x1="320" y1="284" x2="320" y2="298" stroke="#e0c070" stroke-width="2"/><line x1="282" y1="260" x2="296" y2="260" stroke="#e0c070" stroke-width="2"/><line x1="344" y1="260" x2="358" y2="260" stroke="#e0c070" stroke-width="2"/></svg><div class="mono" style="position: absolute; left: 344px; top: 226px; padding: 1px 6px; background: rgba(10,10,10,.8); color: #e0c070">z_locked · the view turns about this point</div><div class="mono" style="position: absolute; left: 10px; top: 10px; padding: 1px 8px; border-radius: 9px; background: #3a2e12; color: #e0c070">● locked</div></div></div><div style="position: absolute; left: 690px; top: 20px"><div class="pt">Compass, locked</div><svg width="300" height="300" viewBox="0 0 160 176" style="background: #1b1b1b; border: 1px solid #2a2a2a" aria-label="The compass while locked: a gold pin at the plane’s pivot"><g stroke="#8c8c8c" stroke-width="1" fill="none"><path d="M36 60 L76 40 L124 60 L84 80 Z"/><path d="M36 60 L36 118 L84 138 L84 80"/><path d="M124 60 L124 118 L84 138"/></g><path d="M36 92 L76 70 L124 88 L84 110 Z" fill="rgba(90,180,255,.12)" stroke="#5ab4ff" stroke-width="1" stroke-dasharray="3 2"/><path d="M44 108 L72 60 L118 76 L90 124 Z" fill="rgba(90,180,255,.28)" stroke="#5ab4ff" stroke-width="1.5"/><line x1="80" y1="92" x2="80" y2="74" stroke="#e0c070" stroke-width="1.4"/><circle cx="80" cy="72" r="4" fill="#e0c070"/><circle cx="80" cy="92" r="2" fill="#e0c070"/><text x="86" y="70" fill="#e0c070" font-size="8" font-family="Ubuntu Mono">pinned</text><text x="30" y="162" fill="#a8a8a8" font-size="8" font-family="Ubuntu Mono">dashed: before the tilt · solid: now</text></svg></div><div style="position: absolute; left: 1010px; top: 20px; width: 410px"><div class="pt">Lock</div><div class="row" style="align-items: flex-start; min-height: 40px"><span class="mono" style="width: 96px; color: #e0c070">frozen</span><span style="flex: 1">the eight z₀ sliders and the slice step, greyed with a lock mark</span></div><div class="row" style="align-items: flex-start; min-height: 40px"><span class="mono" style="width: 96px; color: #7fcf8a">still works</span><span style="flex: 1">tilt, rotation, zoom and chart changes — all turn about the pin</span></div><div class="row" style="align-items: flex-start; min-height: 40px"><span class="mono" style="width: 96px; color: #dcdcdc">locking</span><span style="flex: 1">K, or right-click › lock here · the view recentres on that pixel</span></div><div class="row" style="align-items: flex-start; min-height: 40px"><span class="mono" style="width: 96px; color: #dcdcdc">unlocking</span><span style="flex: 1">the view as it stands becomes the new free start</span></div><div class="row" style="align-items: flex-start; min-height: 40px"><span class="mono" style="width: 96px; color: #dcdcdc">the point</span><span style="flex: 1">affine: z₀ + (2s−1)q₁ + (2t−1)q₂ · nonlinear: Φ and D replayed on the CPU</span></div><div class="row" style="gap: 6px; margin-top: 8px"><span class="mono" style="padding: 1px 8px; border-radius: 9px; background: #3a2e12; color: #e0c070">● locked at z_locked</span><button class="btn">unlock</button><button class="btn">open in Inspector</button></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

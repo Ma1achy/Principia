@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principia — landscape poster, inspecting a point</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Mono',ui-monospace,monospace;background:#f5f4f0;color:#141414}
+a{color:#141414}a:hover{color:#000000}
+button{font-family:inherit;color:inherit}
+input{font-family:inherit}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:44px;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:#a9a79f}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:10px;height:22px;background:#141414;border:0;border-radius:0;margin-top:-10.5px}
+input[type=range]::-moz-range-track{height:1px;background:#a9a79f}
+input[type=range]::-moz-range-progress{height:2px;background:#141414}
+input[type=range]::-moz-range-thumb{width:10px;height:22px;background:#141414;border:0;border-radius:0}
+.paper{background-color:#f5f4f0;background-image:url(/_blob/345ff55529d8ce3ec7a811f27ff5c43e);background-size:512px 512px}
+</style>
+</helmet>
+<div class="paper" style="width: 1440px; height: 900px; box-sizing: border-box; padding: 48px 56px 40px 56px; display: flex; flex-direction: column; gap: 18px; background-color: #f5f4f0; color: #141414; font-family: 'IBM Plex Mono', ui-monospace, monospace;">
+<div style="flex-grow: 1; min-height: 0; display: flex; justify-content: space-between; align-items: stretch;">
+<div style="width: 460px; display: flex; flex-direction: column;">
+<h1 style="margin: 0; line-height: 0;"><img src="/_blob/c8aa2535a657e3f58b891bb531418e1a" alt="Principia" style="width: 410px; height: 100px; display: block;"></h1>
+<p style="margin: 14px 0 0 2px; font-size: 12px; letter-spacing: 0.32em; display: flex; align-items: center;">STAY BECAUSE YOU CAN'T LOOK AWAY<span style="display: inline-block; width: 7px; height: 13px; background: #141414; margin-left: 8px;"></span></p>
+<section aria-label="Point inspector" style="margin-top: 24px; border-top: 1px solid #141414; padding-top: 4px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<span style="font-size: 11px; letter-spacing: 0.16em;">POINT  (0.612, 0.391)</span>
+<button aria-label="Close inspector" style="width: 44px; height: 44px; margin-right: -14px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#141414" stroke-width="1.4"><path d="M2 2 L10 10"></path><path d="M10 2 L2 10"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px;"><span style="width: 12px; height: 12px; background: #F545A6;"></span>esc 2 · t_end 8.31</div>
+<div style="display: flex; gap: 20px;">
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+<figcaption style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">INITIAL CONDITION</figcaption>
+<svg width="210" height="140" viewBox="0 0 210 140" fill="none" role="img" aria-label="The three bodies at t = 0: a tight pair of bodies 1 and 3, with body 2 far away">
+<rect x="0.5" y="0.5" width="209" height="139" stroke="#d6d4ce"></rect>
+<path d="M44 104 L66 92 L170 34 Z" stroke="#a9a79f" stroke-width="1"></path>
+<path d="M44 104 L36 114" stroke="#141414" stroke-width="1.2"></path>
+<path d="M66 92 L76 86" stroke="#141414" stroke-width="1.2"></path>
+<path d="M170 34 L184 42" stroke="#141414" stroke-width="1.2"></path>
+<circle cx="44" cy="104" r="6.5" fill="#141414"></circle>
+<circle cx="66" cy="92" r="6.8" fill="#141414"></circle>
+<circle cx="170" cy="34" r="5.5" fill="#141414"></circle>
+<path d="M99 66 L105 66 M102 63 L102 69" stroke="#141414" stroke-width="1"></path>
+<text x="26" y="104" font-size="10" fill="#141414" font-family="IBM Plex Mono, monospace">1</text>
+<text x="160" y="24" font-size="10" fill="#141414" font-family="IBM Plex Mono, monospace">2</text>
+<text x="68" y="110" font-size="10" fill="#141414" font-family="IBM Plex Mono, monospace">3</text>
+<text x="108" y="72" font-size="9" fill="#66655f" font-family="IBM Plex Mono, monospace">com</text>
+</svg>
+</figure>
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+<figcaption style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">SHAPE SPHERE · PATH</figcaption>
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" role="img" aria-label="The trajectory's path over the shape sphere, ending in an escape">
+<circle cx="70" cy="70" r="60" stroke="#141414" stroke-width="1"></circle>
+<ellipse cx="70" cy="70" rx="60" ry="15" stroke="#a9a79f" stroke-width="1" stroke-dasharray="2 3"></ellipse>
+<rect x="16" y="72" width="4" height="4" fill="#141414"></rect>
+<rect x="120" y="72" width="4" height="4" fill="#141414"></rect>
+<rect x="68" y="83" width="4" height="4" fill="#141414"></rect>
+<path d="M92 38 C118 48 52 58 78 72 S126 84 100 98 S48 104 60 88 S96 70 112 80" stroke="#141414" stroke-width="1.2"></path>
+<circle cx="92" cy="38" r="3" fill="#141414"></circle>
+<circle cx="112" cy="80" r="3.5" stroke="#F545A6" stroke-width="1.5"></circle>
+<text x="64" y="7" font-size="8" fill="#66655f" font-family="IBM Plex Mono, monospace">L+</text>
+<text x="64" y="139" font-size="8" fill="#66655f" font-family="IBM Plex Mono, monospace">L−</text>
+</svg>
+</figure>
+</div>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px;">
+<div style="grid-column: span 2; display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">MASSES</dt><dd style="margin: 0; font-size: 13px;">0.353 · 0.275 · 0.371</dd></div>
+<div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">ENERGY</dt><dd style="margin: 0; font-size: 13px;">−0.392</dd></div>
+<div style="grid-column: span 2; display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">PAIR SEPARATIONS</dt><dd style="margin: 0; font-size: 13px;">2.120 · 0.379 · 2.307</dd></div>
+<div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">FTLE</dt><dd style="margin: 0; font-size: 13px;">0.84</dd></div>
+<div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">DRIFT</dt><dd style="margin: 0; font-size: 13px;">2.1e−9</dd></div>
+<div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">SPREAD</dt><dd style="margin: 0; font-size: 13px;">3.2e−3</dd></div>
+<div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">CLOSURE</dt><dd style="margin: 0; font-size: 13px;">4.2e−2</dd></div>
+</dl>
+<div style="display: flex; gap: 8px; align-items: center;">
+<button aria-pressed="true" style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: #141414; color: #f5f4f0; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">TRACE</button>
+<button aria-pressed="false" style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">SOUND</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">FULL INSPECTOR ↗</button>
+</div>
+<p style="margin: 0; font-size: 10px; letter-spacing: 0.12em; color: #66655f;">CPU · f64 · 4 311 steps · 1.6 ms</p>
+</section>
+</div>
+<div style="align-self: flex-start; margin: 0 auto; display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: stretch; gap: 8px;">
+<div style="width: 16px; display: flex; align-items: center; justify-content: center;">
+<span style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; white-space: nowrap;">0.70·z₅ (pλ.y) + 0.01·z₄ (pλ.x)</span>
+</div>
+<div style="width: 38px; height: 520px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #66655f;">
+<span>0.37</span><span>0.26</span><span>0.16</span><span>0.05</span><span>−0.06</span>
+</div>
+<div style="position: relative; width: 520px; height: 520px;">
+<img src="/_blob/dfb853f104adcac7080637335ad2f6a1" alt="Event-classification render of the slice: escape and collision basins spiralling across the plane" style="width: 520px; height: 520px; display: block;">
+<svg style="position: absolute; left: 0px; top: 0px;" width="520" height="520" viewBox="0 0 520 520" fill="none" aria-hidden="true">
+<path d="M318 205 C340 180 362 222 334 242 S298 262 340 282 S402 300 440 336 L500 380" stroke="#141414" stroke-width="3.5"></path>
+<path d="M318 205 C340 180 362 222 334 242 S298 262 340 282 S402 300 440 336 L500 380" stroke="#ffffff" stroke-width="1.5"></path>
+</svg>
+<span style="position: absolute; left: 307px; top: 194px; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px #141414;"></span>
+</div>
+</div>
+<div style="margin-left: 70px; width: 520px; display: flex; justify-content: space-between; font-size: 10px; color: #66655f;">
+<span>0.05</span><span>0.16</span><span>0.26</span><span>0.37</span><span>0.48</span>
+</div>
+<div style="margin-left: 70px; width: 520px; text-align: center; font-size: 12px;">0.81·z₄ (pλ.x) − 0.42·z₅ (pλ.y)</div>
+<div style="margin-left: 70px; width: 520px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 11px;">
+<span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">EVENT</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #F53F00;"></span>coll 12</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #006800;"></span>coll 13</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #0073B4;"></span>coll 23</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #F5DE00;"></span>esc 1</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #F545A6;"></span>esc 2</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #7AB3D2;"></span>esc 3</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #191918;"></span>bounded</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; background: #F59600;"></span>coll t₀</span>
+<span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; box-sizing: border-box; background: #F5F4F0; border: 1px solid #a9a79f;"></span>degenerate</span>
+</div>
+<div style="margin-left: 70px; width: 520px; display: flex; align-items: center; gap: 6px;">
+<button aria-label="Step back" style="flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid #141414; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#141414" stroke-width="1.4"><path d="M10 3 L5 7 L10 11"></path><path d="M4 3 L4 11"></path></svg></button>
+<button aria-label="Play" style="flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid #141414; background: #141414; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#f5f4f0" stroke-width="1.4"><path d="M4.5 2.5 L11 7 L4.5 11.5 Z"></path></svg></button>
+<button aria-label="Step forward" style="flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid #141414; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#141414" stroke-width="1.4"><path d="M4 3 L9 7 L4 11"></path><path d="M10 3 L10 11"></path></svg></button>
+<input type="range" aria-label="Playhead time" min="0" max="50" step="0.01" value="12.4" style="flex-grow: 1; min-width: 0; margin: 0 10px;">
+<span style="flex-shrink: 0; font-size: 12px; background: #141414; color: #f5f4f0; padding: 6px 8px;">t 12.40</span>
+<span style="flex-shrink: 0; font-size: 12px; color: #66655f;">/ 50</span>
+</div>
+</div>
+</div>
+<div style="border-top: 1px solid #141414; padding-top: 4px; display: flex; justify-content: space-between; align-items: flex-start;">
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">CHART</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">outer pλ ▾</span></button>
+<div style="flex-shrink: 0; padding: 10px 0 0 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+<label for="gamma-scrub" style="font-size: 10px; letter-spacing: 0.16em; color: #141414;">γ — DRAG OR TYPE</label>
+<div style="display: flex; align-items: center; gap: 8px;">
+<input id="gamma-scrub" type="range" min="0" max="360" step="0.1" value="30.3" style="width: 110px;">
+<input type="text" value="30.3°" aria-label="γ, degrees" style="width: 60px; height: 28px; box-sizing: border-box; background: #141414; color: #f5f4f0; border: 0; font-size: 13px; text-align: right; padding: 0 8px;">
+</div>
+</div>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">TILT</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">q₁ → z₂ · 0.41</span></button>
+<button aria-label="Slice offset z₀, eight components" style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">z₀ OFFSET</span><span style="display: flex; gap: 4px; height: 30px;"><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 11px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 0px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 0px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 3px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 2px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 0px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 0px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 2px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 0px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 2px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 2px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 0px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 0px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 2px; background: #141414;"></span></span></span><span style="display: flex; flex-direction: column; width: 8px;"><span style="height: 15px; display: flex; align-items: flex-end;"><span style="width: 8px; height: 2px; background: #141414;"></span></span><span style="height: 15px; box-sizing: border-box; border-top: 1px solid #a9a79f; display: flex; align-items: flex-start;"><span style="width: 8px; height: 0px; background: #141414;"></span></span></span></span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">HORIZON</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">50</span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">EPS</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">1e-2</span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">ZOOM</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">0.213</span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">PAN</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">0.558, 0.428</span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">STAIN</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">event class ↗</span></button>
+<button style="flex-shrink: 0; background: transparent; border: 0; padding: 10px 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left; cursor: pointer;"><span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f;">QUALITY</span><span style="font-size: 14px; border-bottom: 1px dotted #141414; padding-bottom: 1px; white-space: nowrap;">high · converged</span></button>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<div style="display: flex; gap: 8px;">
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">INFO</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">SETTINGS</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px;">
+<span style="font-size: 10px; letter-spacing: 0.16em; color: #66655f; margin-right: 6px;">EXPORT</span>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">PNG</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">JSON</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">URL</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: transparent; font-size: 11px; letter-spacing: 0.16em; cursor: pointer;">SHARE</button>
+<button style="height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #141414; background: #141414; color: #f5f4f0; font-size: 11px; letter-spacing: 0.16em; cursor: pointer; margin-left: 12px;">PRESENT</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

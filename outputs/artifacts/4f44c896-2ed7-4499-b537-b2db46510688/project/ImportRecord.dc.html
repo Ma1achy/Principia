@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import, saved views and recording</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.eg b{font-weight:500;color:#dcdcdc}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 6px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:92px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:120px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:4px 0 6px}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.wb{padding:8px 12px}
+.k{color:#c586c0}.t{color:#4ec9b0}.n{color:#b5cea8}.c{color:#6a9955}.f{color:#dcdcaa}
+</style>
+</helmet>
+<div class="eg" style="width: 1440px; height: 900px; position: relative; background: #0a0a0a; overflow: hidden"><div class="win" style="position: absolute; left: 20px; top: 20px; width: 700px; height: 420px"><div class="wint"><span>Import picture</span><span class="weak">✕</span></div><div class="wb" style="overflow: hidden"><div style="display: flex; gap: 14px"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="The dropped picture" style="width: 180px; height: 180px; object-fit: contain; border: 1px solid #2a2a2a; background: #0a0a0a"><div style="flex: 1"><div class="row mono" style="color: #7fcf8a">✓ pxpack found · view + stain WGSL · survived a 2× nearest upscale</div><div class="row mono"><span class="lab">chart</span><span style="color: #dcdcdc">z_α × z_β</span></div><div class="row mono"><span class="lab">centre</span><span style="color: #dcdcdc">0.500, 0.590 · zoom × 3.2</span></div><div class="row mono"><span class="lab">tilt</span><span style="color: #dcdcdc">τ₁ 23.4° into z_q3</span></div><div class="row mono"><span class="lab">stain</span><span style="color: #dcdcdc">Outcome class × late fade</span></div><div class="row mono"><span class="lab">time</span><span style="color: #dcdcdc">t 20 of 50</span></div><div class="row mono"><span class="lab">made</span><span style="color: #dcdcdc">24 Sep 26 · -M</span></div><div class="weak" style="margin-top: 4px">differs from now in: zoom, time, stain</div></div></div><div class="row" style="margin-top: 10px"><button class="btn on">Restore this view</button><button class="btn">Only its stain</button><button class="btn">Open side by side</button><button class="btn">Cancel</button></div><div class="weak" style="margin-top: 6px">drop any PNG made by Principia onto the window — or File › Import picture…</div></div></div><div class="win" style="position: absolute; left: 20px; top: 460px; width: 700px; height: 420px"><div class="wint"><span>Saved views</span><span class="weak">✕</span></div><div class="wb" style="overflow: hidden"><div class="row" style="gap: 10px; min-height: 58px"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #2a2a2a"><div style="flex: 1"><div style="color: #dcdcdc">spiral core near (0.41, 0.33)</div><div class="weak mono">z_α × z_β · × 48 · t 50</div></div><button class="btn">go</button></div><div class="row" style="gap: 10px; min-height: 58px"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #2a2a2a"><div style="flex: 1"><div style="color: #dcdcdc">Burrau neighbourhood</div><div class="weak mono">Burrau (m, n) = (3, 2)</div></div><button class="btn">go</button></div><div class="row" style="gap: 10px; min-height: 58px"><img src="/_blob/715129b4c492a1bfd55d21d95670ba84" alt="" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #2a2a2a"><div style="flex: 1"><div style="color: #dcdcdc">the Swell, ahead of the Break</div><div class="weak mono">z_α × z_β · × 6 · t 30</div></div><button class="btn">go</button></div><div class="row" style="margin-top: 8px"><button class="btn">Save this view</button><span class="weak">each is a pxpack snapshot</span></div></div></div><div class="win" style="position: absolute; left: 740px; top: 20px; width: 680px; height: 420px"><div class="wint"><span>Record a time sweep</span><span class="weak">✕</span></div><div class="wb" style="overflow: hidden"><div class="row"><span class="lab">time</span><span class="val mono">t 0</span><span class="weak">to</span><span class="val mono">t 50</span></div><div class="row"><span class="lab">frames</span><span class="val mono">120</span><span class="weak">each refined to</span><span class="combo">High</span></div><div class="row"><span class="lab">size</span><span class="combo">1024 × 1024</span><span class="weak">the view’s aspect</span></div><div class="row"><span class="lab">format</span><button class="btn on">GIF</button><button class="btn">PNG frames</button><button class="btn">MP4</button></div><div class="row"><span class="lab">include</span><span class="cb"><i>✓</i>overlays on</span><span class="cb"><i>✓</i>pxpack in every frame</span></div><div class="row" style="margin-top: 8px"><button class="btn on">Record</button><div class="sl" style="height: 8px"><s style="width: 0%"></s></div><span class="mono weak">est. 4 min</span></div><div class="weak" style="margin-top: 4px">each frame integrates to its own t — not a scrub — so the sweep is exact</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
