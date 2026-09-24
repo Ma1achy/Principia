@@ -134,7 +134,9 @@ function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
   const dispatch = quadsFor(vs).map(quad => ({
     pipeline: pipelines.get(computeKey),           // pre-built monomorphised SPIR-V variant (Part 4)
     quadUniforms: { c: quad.c, h: quad.h, x0: quad.x0, J: quad.J,
-                    T: quad.T, decodeMode: quad.depth > SWITCH ? LIN : FULL },
+                    T: quad.T, decodeMode: (quad.collapsed || quad.depth > SWITCH) ? LIN : FULL },
+                    // R-90: LIN once the full decoder's adjacent samples give bitwise-identical ICs
+                    //   (quad.collapsed), or past SWITCH = ℓ_switch = 20, an upper bound — whichever first
     workgroups: samplesPerQuad(sk.tier),           // N×N per quad (memory-tiers §1)
   }));
 
