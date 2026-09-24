@@ -148,3 +148,27 @@ Nothing is chosen. The PDF convention is ported into `principia_dd_integrator.md
    therefore itself wrong as written.** I left it in place because it's your ruling, and I'm flagging it rather than editing it.
 - **Needed:** one component → axis convention for `n` (the order and the signs), used by the chart map, the
   shape readout and the overlay alike. Then a re-ruling on the polar buffer under that convention.
+
+## RQ-13: The scheduler contract's refinement rule predates `Policy::Tolerance` *(step 3, port 8)*
+
+`principia_scheduler_contract.md` Parts 4 and 6 describe the refinement rule the LaTeX had (Part 6 was headed "The settled
+policy (from the spec…)"). `principia_dd_refinement_policy.md` (landed, pending change 12) replaces it. They disagree in three
+places. Nothing is chosen. Part 6 now carries a note pointing here, and its text is otherwise unchanged.
+
+1. **What triggers a split.**
+   - Scheduler Part 6: "Split if any spread/impurity threshold is exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when
+     `FTLE_VALID`, `S_D`, low `ensemble_outcome_agreement`, persistent parent-child disagreement …) **and**
+     `ℓ < camera_depth + MAX_REL_DEPTH`." Part 4: "Refinement happens iff `S_quad > τ(ℓ)` **AND** no veto has fired."
+   - Refinement policy §1: "`split(quad) ⟺ any footprint f in quad is unresolved`", where unresolved is `spread_shape(f) > eps`,
+     or the copies disagree on event class, or the footprint is undetermined. One knob, `eps`, replaces the per-metric thresholds.
+2. **In view, above the screen floor.**
+   - Scheduler Part 4: complexity is the sole trigger, so a smooth in-view quad above pixel size may stay coarse. Part 6: "Keep
+     coarse if dominant purity high, all spreads low … **Default is keep.**"
+   - Refinement policy §0.1: "`Keep ⟺ n_unresolved == 0 AND tile_size_px ≤ 1`" — "every in-view quad above the screen floor must
+     split"; there, "the camera decides depth and the criterion decides ORDER".
+3. **Below the screen floor.**
+   - Scheduler Part 4: the screen floor is a veto: "`tile_size(quad, zoom) ≤ pixel_size` → stop refining".
+   - Refinement policy §0.1 table: "in view, below screen floor | the **criterion** — supersampling where unresolved | decides depth".
+- **Needed:** which rule the scheduler contract states. If it's `Policy::Tolerance`, Parts 4 and 6 are rewritten from the
+  refinement policy doc in step 4, when pending change 12 is folded. Priority weights, eviction and cancellation aren't
+  affected.

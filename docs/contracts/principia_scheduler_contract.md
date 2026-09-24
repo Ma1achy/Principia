@@ -1,6 +1,6 @@
 # Principia — scheduler contract
 
-*Seventh doc. The CPU brain: which quads exist, in what order they refine, what's cached, what's evicted. The *policy* — priority formula, split/keep/merge, eviction, the frame loop — is fully specified in the LaTeX spec and treated as settled. This doc contracts the seams that make that policy safe against everything else: the non-determinism firewall, the density-is-not-probability rule, preview/refine caching, the depth model for infinite zoom, and terminal-vs-refinable tied to the two floors.*
+*Seventh doc. The CPU brain: which quads exist, in what order they refine, what's cached, what's evicted. The *policy* — priority formula, split/keep/merge, eviction, the frame loop — is recorded in Part 6 (the refinement criterion itself is `principia_dd_refinement_policy.md`; see the note at the head of Part 6) and Part 7. This doc contracts the seams that make that policy safe against everything else: the non-determinism firewall, the density-is-not-probability rule, preview/refine caching, the depth model for infinite zoom, and terminal-vs-refinable tied to the two floors.*
 
 ---
 
@@ -24,9 +24,11 @@ If a payload's contents could differ between two sessions that scheduled differe
 
 ## Part 2 — Refinement density is not probability density (enforced here, because this is where it would break)
 
-The spec states it (§measure); the render contract echoes it. **The scheduler is where the violation would actually happen**, because the entire priority system *deliberately* over-samples boundaries.
+The chart-decoder contract states it ("Links carry a measure"); the render contract echoes it. **The scheduler is where the violation would actually happen**, because the entire priority system *deliberately* over-samples boundaries.
 
 > The quadtree is a rendering / compute-allocation structure. Its leaf density is `1 − coherence`-driven — high where boundaries are filamentary, low in smooth basins. This is **not** physical probability density, and it must never feed a quantitative claim.
+
+There are three distinct notions of density, and they are not the same thing. *Exploration density* is what makes interaction smooth and useful. *Refinement density* is where the renderer spends compute because the image or the dynamics are complicated. *Physical/statistical density* is what a statement like "fraction of IC space showing X" needs. The quadtree concentrates compute at basin boundaries because they are visually and dynamically interesting, not because those ICs are more probable. Unless stated otherwise, the default goal is smooth, controllable exploration, not uniform sampling.
 
 Two instruments, kept separate:
 
@@ -39,7 +41,7 @@ This is the scheduler-side member of the same family as the link-measure honesty
 
 ## Part 3 — Depth: infinite zoom by default
 
-**Mandelbrot-style infinite zoom is the default.** Absolute reachable depth is **emergent from physics and precision, not imposed by a constant.** Three orthogonal concerns the spec's single `MAX_DEPTH` was conflating:
+**Mandelbrot-style infinite zoom is the default.** Absolute reachable depth is **emergent from physics and precision, not imposed by a constant.** Three orthogonal concerns that an earlier single `MAX_DEPTH` constant conflated:
 
 | Concern | Governed by | Nature |
 |---|---|---|
@@ -49,9 +51,9 @@ This is the scheduler-side member of the same family as the link-measure honesty
 
 ### `MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)
 
-A **view-relative performance/quality window**: refine at most N levels below the current camera depth. It *follows the camera down*, so infinite zoom works — descend, the window slides with you, always a bounded amount of work below the view. Sensible relative budget is small (≈ 4–8 below the view; the spec's 8–14 were written as *absolute* and conflated "how deep total" with "how much detail below the view").
+A **view-relative performance/quality window**: refine at most N levels below the current camera depth. It *follows the camera down*, so infinite zoom works — descend, the window slides with you, always a bounded amount of work below the view. Sensible relative budget is small (≈ 4–8 below the view; the earlier defaults of 8 / 10 / 12–14 were written as *absolute* and conflated "how deep total" with "how much detail below the view").
 
-**This rewrites the split predicate — the critical correctness point.** The spec has:
+**This rewrites the split predicate — the critical correctness point.** The earlier absolute form was:
 
 ```
 split(C) ⟺ S_quad > τ(ℓ)  ∧  ℓ < MAX_DEPTH        # absolute — caps infinite zoom at ~14
@@ -63,7 +65,7 @@ Under the sliding interpretation it becomes:
 split(C) ⟺ S_quad > τ(ℓ)  ∧  ℓ < camera_depth + MAX_REL_DEPTH
 ```
 
-These are **different gates**. An agent reading the un-renamed spec will implement the absolute one and silently cap the zoom. The rename forces the predicate to be rewritten.
+These are **different gates**. An agent working from the old absolute form will silently cap the zoom. The rename forces the predicate to be rewritten.
 
 **`MAX_REL_DEPTH` is not on the sim key.** It is view-relative scheduler state, exactly like `frame_budget` and the in-flight-job limit. Lowering it while zoomed invalidates *no payload* — it just stops *scheduling* deeper quads; already-computed quads stay valid and cached. It sits cleanly on the "what we look at" side of the Part 1 firewall, never the "what we compute" side. It belongs with the scheduler knobs, never with `T` / `dt_macro` / thresholds.
 
@@ -85,7 +87,7 @@ The `ReadyRefinable` lifecycle state is the whole slippy-map trick: it distingui
 
 The **true terminal floors** (done forever — genuinely no more information extractable, cached as quad facts) apply only when someone zooms *past* pixel-matching into extreme zoom:
 
-- **Decode switchover, NOT a stop — `DECODE_SWITCHOVER`.** When the *full nonlinear decoder's* adjacent samples collapse to bitwise-identical ICs (~depth 20–23, or shallower with tiny `q₁,q₂`), that is **not** the floor — it is the trigger to **switch to the linearised decoder** (deep-zoom note §switchover), which anchors the precision-critical part in f64 on the CPU and restores the distinction. Refinement **continues** on the linear path (depth ~23 → ~50). The sample-collapse symptom on the *full* decoder means *switch decoders*, never *stop*. (This is the fix that the old single "AT_F32_FLOOR = stop" reading would have strangled — it fired the stop exactly where the linear decoder should engage.)
+- **Decode switchover, NOT a stop — `DECODE_SWITCHOVER`.** When the *full nonlinear decoder's* adjacent samples collapse to bitwise-identical ICs (~depth 20–23, or shallower with tiny `q₁,q₂`), that is **not** the floor — it is the trigger to **switch to the linearised decoder** (deep-zoom note §2, "Switchover"), which anchors the precision-critical part in f64 on the CPU and restores the distinction. Refinement **continues** on the linear path (depth ~23 → ~50). The sample-collapse symptom on the *full* decoder means *switch decoders*, never *stop*. (This is the fix that the old single "AT_F32_FLOOR = stop" reading would have strangled — it fired the stop exactly where the linear decoder should engage.)
 - **Decode floor proper — `AT_F32_FLOOR` (linear-decoder only).** Only when the *linearised* decoder's samples collapse to bitwise-identical ICs (~depth 50+) is f32 genuinely exhausted — the quad-local offsets `δ` are too small for f32 to represent distinct neighbours, and no fix exists short of higher precision (deferred KS/arbitrary-precision route). **This** is the true decode floor: stop, terminal. It is a deep-zoom *backstop*, not an everyday mechanism — most sessions never reach it (the screen floor stopped them long before). The same visible symptom (sample collapse) means *switch* on the full decoder and *stop* on the linear decoder — the response keys off **which decoder is active**.
 - **Integration floor:** substep-saturation-dominated — the samples are *distinct* but their outcomes are f32-integration-limited, under-resolved (integrator doc Part 6). Orthogonal to decode precision: a quad whose `suspect_fraction` stays high and whose samples are **substep-saturated** (the confidence flag, not a sample-terminal — the trajectories *did* reach outcomes, just under-resolved) is at the integration floor — **stop refining** (further splitting won't resolve what the integrator can't), flag it floor-limited, don't re-queue as refinable. A *refinement-stop*, not a *sample-terminal*: samples have real outcomes with low confidence, the quad is done subdividing.
 
@@ -97,7 +99,7 @@ Everything else that is `Ready` but below the complexity threshold, or screen-fl
 
 ## Part 5 — Preview vs refine is a second sim key
 
-`PREVIEW_MODE` (spec `QuadRequest.flags` bit 3) = reduced horizon + coarse integration during interaction; full quality on idle. Reduced horizon is a **different `T`**, and `T` is **on the sim key** (integrator doc). Therefore:
+`PREVIEW_MODE` (`QuadRequest.flags` bit 3, table below) = reduced horizon + coarse integration during interaction; full quality on idle. Reduced horizon is a **different `T`**, and `T` is **on the sim key** (integrator doc). Therefore:
 
 - **A preview payload and its refined payload are different payloads of the same quad.** The payload compatibility signature already covers horizon, so the cache distinguishes them correctly — but the contract must state it: **preview and refined are distinct cache entries.**
 - **"Sharpen on idle" is a recompute, not an in-place upgrade.** The refined quad is a fresh integration at full `T`; it *replaces* the preview in what's displayed, it does not edit it.
@@ -105,15 +107,31 @@ Everything else that is `Ready` but below the complexity threshold, or screen-fl
 
 This is preview/refine living correctly on the *compute* side of the firewall: they are genuinely different computations (different `T`), so they are different payloads — not two views of one payload.
 
+### `QuadRequest.flags`
+
+The per-quad dispatch request carries a bit-packed `flags` word:
+
+| Bit(s) | Name | Meaning |
+|---|---|---|
+| 0 | `DECODE_MODE` | full (0) or linearised (1) decoder (deep-zoom note §2) |
+| 1 | `ENSEMBLE_ENABLED` | dispatch `E` jittered copies per grid position |
+| 2 | `FTLE_ENABLED` | compute the full Benettin FTLE (tier-gated) |
+| 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |
+| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result |
+| 5 | `COMPUTE_IC_DESCRIPTOR` | write the `ICDescriptor` buffer alongside the results (dd_decoder §3.6) |
+| 6–7 | reserved | |
+
+When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel in a **separate uniform buffer**, bound only for linear-path quads, not inside the request. They are about 45 floats and unused at shallow zoom. The request also carries the quad's centre and half-width, computed on the CPU in f64 and passed as f32. The GPU computes sample positions from them as `u = centre + half·(2t − 1)` (deep-zoom note §1), never from the min/max bounds, which are kept for CPU-side scheduling, culling and debugging.
+
 ---
 
-## Part 6 — The settled policy (from the spec, for completeness)
+## Part 6 — The scheduling policy
 
-Recorded so the contract is self-contained; unchanged from the spec except the `MAX_REL_DEPTH` rename.
+Recorded so the contract is self-contained. **The split/keep/merge rule below predates `Policy::Tolerance` (`principia_dd_refinement_policy.md`), which splits iff any footprint is unresolved against the single tolerance `eps`. The two have not been reconciled; see REVIEW_QUEUE RQ-13.**
 
 **Priority.** `P_tile = w_v·P_visible + w_z·P_zoom + w_c·P_complexity + w_f·P_focus`, defaults `w_v=10, w_z=2, w_c=3, w_f=1`. Visibility dominates (never compute off-screen); complexity (`1 − coherence`) drives adaptive refinement; zoom-match is a tiebreaker; focus (inverse distance to viewport centre) is subtle. Weights exposed in research mode.
 
-**Split/keep/merge.** Split if any spread/impurity threshold is exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low `ensemble_outcome_agreement`, persistent parent-child disagreement — *the spec's old "below-screen-resolution" trigger is struck: per Part 4 the tile-to-pixel ratio is never itself a reason to refine; the screen floor is a veto, complexity the sole trigger*) **and** `ℓ < camera_depth + MAX_REL_DEPTH`. Tiebreakers: `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel. Keep coarse if dominant purity high, all spreads low, representative summary visually stable, already finer than screen demand. Merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure. **Default is keep.** Guards checked first: terminal (Part 4) or offscreen → stop.
+**Split/keep/merge.** Split if any spread/impurity threshold is exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low `ensemble_outcome_agreement`, persistent parent-child disagreement — *the earlier "below-screen-resolution" trigger is struck: per Part 4 the tile-to-pixel ratio is never itself a reason to refine; the screen floor is a veto, complexity the sole trigger*) **and** `ℓ < camera_depth + MAX_REL_DEPTH`. Tiebreakers: `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel. Keep coarse if dominant purity high, all spreads low, representative summary visually stable, already finer than screen demand. Merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure. **Default is keep.** Guards checked first: terminal (Part 4) or offscreen → stop.
 
 **Eviction.** Cost-weighted LRU: eviction resistance ∝ `computeCostMs`. Expensive (deep, close-encounter, high-substep) quads resist eviction; high-coherence smooth quads are cheap to recompute and evicted first. This directly serves the firewall — evicting and recomputing is *safe* precisely because the payload is pure (Part 1), so LRU can be aggressive without scientific consequence.
 

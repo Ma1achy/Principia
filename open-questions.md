@@ -14,3 +14,11 @@ Everything left open, each with its source. Nothing is deferred silently.
   `principia_integrator_contract.md` Part 7 and `principia_dd_integrator.md` §3.6 still specify the older
   three-gate detector (distance, outward, outer energy, persistence to `k_esc`). Step 3 didn't port the LaTeX's
   escape section (it's superseded) and didn't touch the markdown detectors. Source: step 3, port 5.
+- **`DEBUG_MODE` has no bits in `QuadRequest.flags`** (step 3, port 8). The render contract ("Kernel debug dispatch
+  modes") and `principia_debug_tooling_plan.md` put a four-value `DEBUG_MODE` enum in the dispatch flags beside
+  `DECODE_MODE`. The flags table now in scheduler contract Part 5 assigns bits 0–5 and leaves 6–7 reserved. Two bits
+  are enough for `DEBUG_MODE`, but nothing assigns them. The lowering contract bakes the debug modes as variants,
+  so they may not need a flag at all.
+- **`FULL_RETENTION` has no markdown owner** (step 3, port 8). The flag (bit 4, "skip reduction, keep every
+  per-sample result") is in the scheduler contract's flags table. No markdown file describes the full-retention path
+  it selects.
