@@ -43,8 +43,9 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     is not instant, and says so.
   - **Legend, generated from the stain** (see 06).
 - **Footer:** warning and error counts, the latest message, memory. Click to open the console (12).
-- **Run settings are NOT on the page** (rarely changed): horizon, tolerance, integrator, escape settings, quality, budget,
-  recompute/cancel live in the Run window (04).
+- **Run settings are NOT on the page** (rarely changed): horizon, integrator, escape settings, quality, budget,
+  recompute/cancel live in the Run window (04), under their contract names — there is no integrator "tolerance" field
+  *(conformed to R-68)*.
 
 ## 02 Stain — the plain node-graph editor
 
@@ -69,7 +70,8 @@ inspector holds every setting the old dev GUI had.
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
-- **Display:** fixed order — SimResult → stain → style → colour-vision simulation → screen. Style is optional and applies to the
+- **Display:** fixed order — SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
+  simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the
   figure only; scientific checks run with plain.
 - **Run:** as listed under Explore.
 
