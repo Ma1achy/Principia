@@ -47,7 +47,7 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 
 - The GUI knows, per control, whether editing it re-integrates (sim key) or is live (render key), and greys/warns accordingly.
 - Provenance already serialises `SimConfig + RenderState`; the GUI is an editor of that serialisable object, so **two GUIs are two editors of one schema** and can coexist during the transition.
-- `ViewUI` is the firewall line: it is the GUI's own scratch state (lock, blur, which debug category is visible) and the engine never reads it — so the polished GUI can define its own `ViewUI` entirely.
+- `ViewUI` is the firewall line: it is the GUI's own scratch state (blur, which debug category is visible, focus, open panels; lock is `SimConfig` since R-69) and the engine never reads it — so the polished GUI can define its own `ViewUI` entirely.
 
 **The interface is subscribe/emit:** the GUI subscribes to state (re-renders on change) and emits typed edits (`setField(path, value)`). It never mutates engine internals directly. That is the whole contract between the two — small, and the only thing a replacement GUI must honour.
 
