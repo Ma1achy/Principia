@@ -66,7 +66,7 @@ struct SimStateFTLE {
                                   //   NOT stored in the descriptor (descriptor uses bits 0–9; 10–15 reserved).
 
     // ── CLOSURE (return-map) ────────────────────────────────  8 B
-    closure_min  : f32,           // running min over t > t_min of |n̂(t) − n̂(0)| — the SHAPE-sphere
+    closure_min  : f32,           // running min, once departed (R-37), of |n̂(t) − n̂(0)| — the SHAPE-sphere
                                   //   closure, so rotation is quotiented out and RELATIVE periodic
                                   //   orbits count, not only inertially-periodic ones. Latched in a
                                   //   local f32 during the march (the `d_min` rule); this is a
@@ -115,9 +115,11 @@ reads as 1e-7 on the GPU. **That is saturation, not a lost orbit**, and it is th
 reportable limit as `t_max = ln(1/eps)/lambda`. Note the contrast is still ~7 decades against a
 random IC's O(1) closure, so orbits remain unmissable at f32.
 
-**One semantic that must be pinned:** closure is trivially 0 at `t = 0`, so the minimum is taken over
-`t > t_min`. Define `t_min` **gauge-covariantly** — after the state has moved by more than a stated
-fraction of the system size — not as an absolute time, or the field inherits a scale.
+**One semantic that must be pinned (R-37):** closure is trivially 0 at `t = 0`, so the minimum starts only once the shape
+has **departed**: once `|n̂(t) − n̂(0)|` has first exceeded a stated threshold `δ_dep` on the shape sphere. The shape
+sphere is scale-free, so the rule is gauge-covariant by construction and the field inherits no scale; it is not an
+absolute time. **`δ_dep` is set by measurement** (open). Departure is a latched fact, so it needs one bit per sample;
+where that bit lives is not yet specified (open-questions).
 
 **Coordinate pipeline (resolves the "Jacobi" naming):** Jacobi coordinates (2 position + 2 momentum vectors, the minimal 8D symmetry-reduced set) are the **chart / IC** representation — where configurations are *defined*. The **integrator** works in **CoM-frame particle coordinates** (3 bodies) — where the force loop is direct (no per-substep Jacobi↔particle conversion; the potential depends on pairwise particle separations, which are ugly in Jacobi). Conversion happens **once at IC decode** (Jacobi → 3 particles). **After each step the state is re-projected to the CoM** so numerical error doesn't let the centre of mass drift. This re-projection is **part of the deterministic fixed-`dt` step** (integrate → project). Re-projection manages CoM position / total linear momentum; it **does not explicitly restore energy or `L_z`** — but note that subtracting the spurious CoM *velocity* removes bulk kinetic energy, so the projection **does numerically affect the evaluated energy** (and, in principle, `L_z`). The correct framing: the projection does not explicitly restore E or `L_z`; any change from removing accumulated CoM position/momentum drift **remains visible in the post-projection invariant diagnostics** (which is what those diagnostics are for).
 

@@ -137,6 +137,8 @@ The word lives here, not in `SimState`. Specification:
 | `delta_Lz_max_abs` | log | ≥ 0 |
 | `E_0` | diverging | must equal `K₀+V₀` (cross-check view) |
 | `Lz_0` | diverging | invariant-chart gradient view input |
+| `closure_min` | log | ≥ 0, f32; the running minimum of `|n̂(t) − n̂(0)|` once the shape has departed by `δ_dep` (R-37, payload §1) |
+| `closure_step` | lin | exact u16 step index of the minimum (the period label); binary-parity surface, same convention as `t_dmin_step` |
 
 > Metadata nuance the catalogue generator needs: **the two drift fields are signed** → *diverging* colour scale, not sequential-log. (Finding, §6.)
 

@@ -38,7 +38,9 @@ Everything left open, each with its source. Nothing is deferred silently.
      (two-pair collisions recorded as binary) applies to any stored outcome data.
   8. Folded: landed in full, ruled by R-19 (RQ-17).
   9. Folded: payload memory table recomputed, closure and period in the debug catalogue; the caching signature already
-     carries the payload schema version. **Open:** the stated fraction that defines `t_min` (payload §1, "Define `t_min`
+     carries the payload schema version. **Ruled (R-37, applied in step 5):** `t_min` is replaced by a departure threshold `δ_dep` on the
+     shape sphere, and the closure fields are in the ledger. **Still open:** the value of `δ_dep` (by measurement), and where
+     the per-sample "departed" bit lives. Was open: the stated fraction that defines `t_min` (payload §1, "Define `t_min`
      gauge-covariantly"); and `principia_memory_tiers.md` §4's tier totals, still at the old 136 B width (with audit B10).
   10. Folded (validation_orbits §5 item 1). **Open:** its consequences — re-run the Python cross-check and the
       divergence-vs-horizon table, and fix the NumPy reference's matching defect. Whether these were done isn't recorded.
