@@ -93,7 +93,7 @@ Two extra modes:
 
 ## Measurement readouts (gauge-invariant → hold under all four handles)
 
-- pairwise separations r₁₂, r₁₃, r₂₃
+- pairwise separations r₀₁, r₀₂, r₁₂ (0-based, R-22)
 - distance from COM per body
 - internal triangle angles / angles subtended at the COM
 - hyperradius R, shape angles (α, β) — the actual chart config coords

@@ -156,9 +156,9 @@ its nine terminal classes carry structure worth encoding in the colours themselv
 
 | class | colour | sRGB | | class | colour | sRGB |
 |-------|--------|------|-|-------|--------|------|
-| collision 1–2 | red     | `#DE2D2D` | | body 1 escape   | yellow  | `#F0DE32` |
-| collision 1–3 | green   | `#2EBC4E` | | body 2 escape   | magenta | `#E034C6` |
-| collision 2–3 | blue    | `#3462E0` | | body 3 escape   | cyan    | `#30C8DC` |
+| collision 0–1 (pair 2) | red     | `#DE2D2D` | | body 0 escape   | yellow  | `#F0DE32` |
+| collision 0–2 (pair 1) | green   | `#2EBC4E` | | body 1 escape   | magenta | `#E034C6` |
+| collision 1–2 (pair 0) | blue    | `#3462E0` | | body 2 escape   | cyan    | `#30C8DC` |
 | bounded        | black   | `#141418` | | collision @ t=0 | orange  | `#F29620` |
 | degenerate     | white   | `#ECECF0` | |                 |         |           |
 
@@ -195,7 +195,7 @@ a uniform array):
 **Physics generators** — functions of the **decoded IC** (the mass point), evaluated per pixel from
 `ctx.payload` masses; **not bakeable**:
 - `BC(m)` — binary-collision loci.  `Euler(m)` — collinear configs.  `Lagrange(m)` — equilateral
-  poles. On the mass-weighted shape sphere every one of these **moves with (m₁,m₂,m₃)**, and when a
+  poles. On the mass-weighted shape sphere every one of these **moves with (m₀,m₁,m₂)**, and when a
   slice axis (or a tilt) touches a `z_μ` dimension the masses are **per-pixel state**, so there is no
   per-slice constant to bake even in principle.
 

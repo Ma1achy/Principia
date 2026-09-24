@@ -147,7 +147,7 @@ Final *and* max are both stored because the *shape* of drift is the diagnostic: 
 
 ### 3.6 Detectors (per `STEP`, on the projected state)
 
-**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` → `COLLISION(pair)` — the **squared** comparison (no runtime `sqrt` in the branch, per §3.3's comparison-only rule). Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three consumers.
+**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` → `COLLISION(pair)` (pair id per payload §2, R-22) — the **squared** comparison (no runtime `sqrt` in the branch, per §3.3's comparison-only rule). Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three consumers.
 **Count before classifying (pending change 7, landed):** count the pairs with `‖rᵢ − rⱼ‖² < r_coll²`. Exactly 1 → `COLLISION(pair)`; 2 or more → `COLLISION`, `detail = 3` (triple collision, terminal and non-continuable). Testing "any pair" first steals genuine triples into the binary arm. `d_min` is the primary stored quantity and `r_coll` a recorded parameter (integrator contract Part 7).
 
 **Escape (pending change 11, landed):**
@@ -198,8 +198,8 @@ configuration sit at fixed points:
 
 | symbol | configuration | location | count |
 |---|---|---|---|
-| $BC_{12}, BC_{23}, BC_{31}$ | binary collisions | equator, 120° apart | 3 |
-| $E_1, E_2, E_3$ | Euler collinear | equator, between the collisions | 3 |
+| $BC_{01}, BC_{12}, BC_{20}$ | binary collisions | equator, 120° apart | 3 |
+| $E_0, E_1, E_2$ | Euler collinear | equator, between the collisions | 3 |
 | $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
 
 **The landmarks are computed from the shape map above, not hard-coded (R-14).** A binary collision's $\hat{\mathbf b}$ is
@@ -211,8 +211,8 @@ where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 ant
 the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart. Whether the overlay
 marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open.
 
-The table's labels are the 1-based body pairs of the overlay (`BC₁₂` is bodies 1–2, i.e. $\hat{\mathbf b}_{01}$ in 0-based
-terms); the project-wide index base is decision B1. Axis assignment follows this convention: the form of `n` above is
+The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
+pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
 fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).

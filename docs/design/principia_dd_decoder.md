@@ -187,7 +187,7 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 
 ## 6. Deferred / flagged
 
-- **Body-indexing mismatch (flag → pending-changes note):** the decode uses bodies **0, 1, 2** (softmax reference = body 0); `ICDescriptor` fields are named `m1, m2, m3`. Pick one convention project-wide (recommend 0-indexed internally, rename descriptor fields) — this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
+- **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
 - **Energy normalisation `η_E`**: specified in §3.7. Whether to keep it (flag-gated) or drop it is audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
 - **KS-regularised state representation (v2)** — changes the decoder's output type; explicitly out of scope until then.

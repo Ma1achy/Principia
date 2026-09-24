@@ -31,7 +31,7 @@ Everything left open, each with its source. Nothing is deferred silently.
      chart_reference §4.5. It is not in audit section B, so it is a candidate for the step-5 decision sheet.
   3. Folded in step 3 (inverse_encode_contract Part 5, "encode reuses decode").
   4. Moot: a LaTeX figure caption. No markdown file makes the 5-DOF claim.
-  5. **Open:** audit decision B1 (body index base).
+  5. **Closed: 0-based throughout; pair `k` is the side opposite body `k` (R-22, applied in step 5).** Was: open, audit decision B1 (body index base).
   6. **Closed: `α_min = 0` (R-21, applied in step 5).** Was: R-10 kept `α_min` (0 or 0.05) on the step-5 decision sheet. The register's "removed, α_min = 0" is not
      folded, because R-10 overrides it.
   7. Folded (detectors, payload §2). **Open:** the ionisation gate's definition, and whether the old-data consequence

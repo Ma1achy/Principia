@@ -33,8 +33,8 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 struct SimStateFTLE {
     // ── PHASE STATE (f32) — CoM-frame PARTICLE coordinates ──  48 B
-    r  : array<vec2<f32>, 3>,     // body 1,2,3 positions (CoM frame), re-projected to CoM each step
-    p  : array<vec2<f32>, 3>,     // body 1,2,3 momenta   (CoM frame)
+    r  : array<vec2<f32>, 3>,     // body 0,1,2 positions (CoM frame), re-projected to CoM each step
+    p  : array<vec2<f32>, 3>,     // body 0,1,2 momenta   (CoM frame)
     //   NOT Jacobi. Jacobi (2 vectors, 8D) is the CHART/IC representation; the integrator
     //   works in particle coordinates (clean force loop — no per-step Jacobi↔particle conversion).
     //   Conversion Jacobi→particle happens ONCE at IC decode. The CoM constraint makes one of the
@@ -154,7 +154,7 @@ fraction of the system size — not as an absolute time, or the field inherits a
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed · 5 decode_failed. **Codes 6–7 reserved** — a binary decoder treats **unknown non-running states as conservatively finished and untrusted** (forward-compat). `detail` meaningful when state ∈ {escape, collision, sim_failed, decode_failed} (enum below) |
 | `detail` | 3–4 | 2 | **union keyed by state** — 4 codes per state. escape → body id (0–2), `3` = **triple ejection**; collision → pair id (0–2), `3` = **triple collision** — one rule, *3 means all three* (pending change 7); sim_failed / decode_failed → failure category |
 | `saturated` | 5 | 1 | sticky — **`N_sub == N_max` occurred** at some macro-step (substep cap hit; advance-and-flag, never terminates) |
-| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (0–2, `3`=unset/invalid; latched, NOT from the word) |
+| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (pair id 0–2 per the map below, `3`=unset/invalid; latched, NOT from the word) |
 | `last_symbol` | 8–9 | 2 | **final symbol of the free-group word**, cached from the append loop for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`). Redundant with the sidecar word `W` (recoverable there only in O(length)); kept coherent by the march (§3). **No in-band "none" code** — validity gates on the sidecar `length`: meaningful iff `length ≥ 1 && length ≠ 127` (empty word → no last symbol; truncated → invalid, like every word-derived read). Written by `set_last_symbol` wherever the loop mutates `prev` (§3, §6) |
 | *reserved* | 10–15 | 6 | `total_substeps_log2` derived at read from the exact `total_substeps` u32 (§1), not stored (a log accumulator is not resumable). Reserved, decode as zero, never opportunistically reused |
 
@@ -165,6 +165,8 @@ fraction of the system size — not as an absolute time, or the field inherits a
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
+- **Body and pair ids (R-22).** Bodies are 0-based (`0, 1, 2`), as the decode is. **Pair id `k` names the side opposite body `k`:**
+  pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
 - **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)
 
 > **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Likewise an IC that at t=0 genuinely satisfies the complete escape detector (outward *and* positive outer-energy gates, not merely beyond `R_esc`) is an **escape at step 0** (`state=escape`, `detail=body`, `t_end_step=0`). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC. (Whether beyond-`R_esc`-alone counts as t=0 escape is deferred to the decoder contract's escape-gate definition.)

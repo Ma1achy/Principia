@@ -99,7 +99,7 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₁ = 0.4" under the hold-`m₂:m₃` convention and under the hold-`m₂=m₃` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
 
 **Kind 3 — invariant.** Two directions, sharply different:
 

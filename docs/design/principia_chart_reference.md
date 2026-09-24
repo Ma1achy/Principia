@@ -14,8 +14,8 @@ chart produced them. So adding a chart means adding a `Φ`, nothing else.
 
 **Indexing note.** This document is **0-based throughout**: inner pair `(0,1)`, outer body `2`. The
 Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2), and §4.2 translates it.
-The project-wide convention (0-indexed decode vs `m1 m2 m3` in `ICDescriptor`) is **decision B1**. This
-note doesn't settle it.
+The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
+opposite body `k` (payload §2).
 
 ---
 
@@ -469,10 +469,10 @@ disagree silently. Until one quotient is chosen, label each chart with the quoti
 `system_image` descriptor), and don't take shape fractions from the full-range chart, which double-counts.
 
 **Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
-$m_1 = 1 - x - y$, $m_2 = x$, $m_3 = y$ (1-based, as the Burrau family is written). Shrink toward the
+$m_0 = 1 - x - y$, $m_1 = x$, $m_2 = y$ (0-based, R-22). Shrink toward the
 barycentre by an interior buffer $\varepsilon_m$ (default $10^{-4}$):
 $\mathbf m \leftarrow (1 - 3\varepsilon_m)\mathbf m + \varepsilon_m(1,1,1)$. Then
-$\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_1, m_2, m_3),\ \mathrm{rest})$, with the Burrau point
+$\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_0, m_1, m_2),\ \mathrm{rest})$, with the Burrau point
 $(c, b, a)/(a+b+c)$ as an overlay marker.
 
 **Bifurcation strips.** Shape on the horizontal axis, one parameter on the vertical. For $(\theta, K)$,

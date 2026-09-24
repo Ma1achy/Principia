@@ -35,9 +35,9 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0, a valid IC already escaping is `escape` at step 0). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
-| `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id; collision → pair id; sim_failed/decode_failed → failure category; undefined for running |
+| `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id (0-based); collision → pair id (pair `k` is the side opposite body `k`, R-22); sim_failed/decode_failed → failure category; undefined for running |
 | `saturated` | 5 | 1 | sticky flag — the substep exponent reached `⌈log2 N_max⌉` at some point (integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag). `N_max` is a raised tunable (integrator contract), not hardcoded |
-| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word) |
+| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word); pair ids as `detail` (R-22) |
 | *reserved* | 8–15 | 8 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
 
 (The descriptor uses **8 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Only bits 0–7 are used — payload §2.)
@@ -157,7 +157,7 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 
 ### 3.6 `ICDescriptor` (12 × f32)
 
-`m1 m2 m3` (⚠ naming vs 0-indexed bodies — decoder-dd flag, pending-changes), `q_mass`, `rho1_mag`, `rho2_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho0_mag`, `rho1_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
 
 ### 3.7 `QuadReduction` — completed ledger
 
