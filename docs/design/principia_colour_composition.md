@@ -395,7 +395,9 @@ same thing every time. Editing a debug preset **forks it to custom** via the sam
 never mutates the named preset.
 
 **Discipline 2 — validity first (see §3).** Every debug field carries its validity lane and every
-ramp an explicit invalid-pixel colour, or the views lie at the pixels they exist to expose.
+ramp an explicit invalid-pixel colour, or the views lie at the pixels they exist to expose. Debug fields are the
+stated exception to masking (R-79): they show literal stored values (a failed-state `0.0` reads as `0.0`, cross-checked
+against `state`), and NaN still goes to the invalid colour.
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table

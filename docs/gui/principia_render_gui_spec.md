@@ -597,9 +597,9 @@ shaders share them:
 Each numeric debug field therefore generates a two-line `colour()` — `if (raw != raw) { return
 DEBUG_NAN; }` then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
-code (§9, §10). **Debug fields are raw:** apart from the NaN guard there is no validity masking — a
-failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked against the raw
-`state` field, not silently recoloured.
+code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN
+guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
+against the raw `state` field, not silently recoloured. NaN still goes to the invalid colour.
 
 ---
 
@@ -713,7 +713,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   composition.md` §4.1.)
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
   invalid-pixel colour — a NaN / sentinel must read as "no data", not as a value (composition spec
-  §3, §6).
+  §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
+  invalid colour (§10.1).
 
 ---
 
