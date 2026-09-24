@@ -209,6 +209,30 @@
   section: "SCRATCHPAD — the pointer channels: trace, sound, inspector"
   reason: informative only
   note: "status: working notes, not ratified"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 1. There is ONE mechanism, and it now has THREE consumers
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 2. Why the trace and the sound are the SAME measurement
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109); its supersession of trajectory_viewing §1's responsiveness paragraph is RQ-74"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: "5. The prediction worth testing early, because it is the demo"
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 6. What this reuses rather than adds
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 7. Open
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
 - file: docs/design/principia_systems_architecture.md
   section: Principia — systems architecture
   reason: informative only
@@ -383,6 +407,6 @@
   reason: informative only
   note: process ruling
 - file: decisions.md
-  section: 'Rulings on the decision sheet (step 5, PR #6)'
+  section: "Rulings on the decision sheet (step 5, PR #6)"
   reason: informative only
   note: application schedule for R-21..R-59

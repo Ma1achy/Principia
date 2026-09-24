@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 43 |
 | ENC | 28 |
-| CHART | 46 |
+| CHART | 45 |
 | INT | 79 |
 | EVT | 23 |
 | PAY | 86 |
 | GEN | 23 |
-| SCHED | 85 |
-| REF | 43 |
+| SCHED | 84 |
+| REF | 44 |
 | RENDER | 76 |
 | COL | 53 |
-| GUI | 154 |
-| TOOL | 118 |
-| VAL | 137 |
+| GUI | 153 |
+| TOOL | 117 |
+| VAL | 136 |
 | PERF | 84 |
 | SYS | 62 |
-| **total** | **1140** |
+| **total** | **1136** |
 
-Of these: 63 calibration, 55 definition, 1022 obligation. Retired (kept for their ids, not counted): 2.
+Of these: 62 calibration, 56 definition, 1018 obligation. Retired (kept for their ids, not counted): 9.
 
 ## Requirements per milestone
 
@@ -32,20 +32,20 @@ Of these: 63 calibration, 55 definition, 1022 obligation. Retired (kept for thei
 |---|---|
 | M0 | 57 |
 | M1 | 73 |
-| M2 | 143 |
+| M2 | 142 |
 | M3 | 175 |
 | M4 | 92 |
-| M5 | 148 |
-| M6 | 127 |
+| M5 | 147 |
+| M6 | 128 |
 | M7 | 105 |
-| M8 | 220 |
+| M8 | 217 |
 
 ## Sections
 
-785 sections in 46 files: 686 yield at least one requirement; 99 yield none and are listed below with the reason.
+798 sections in 46 files: 693 yield at least one requirement; 105 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 51 |
+| informative only | 57 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
 | superseded (kept for the record) | 4 |
@@ -265,6 +265,12 @@ Of these: 63 calibration, 55 definition, 1022 obligation. Retired (kept for thei
 | section | reason | note |
 |---|---|---|
 | SCRATCHPAD — the pointer channels: trace, sound, inspector | informative only | status: working notes, not ratified |
+| 1. There is ONE mechanism, and it now has THREE consumers | informative only | working notes: only §4 is normative (R-109) |
+| 2. Why the trace and the sound are the SAME measurement | informative only | working notes: only §4 is normative (R-109) |
+| 3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong | informative only | working notes: only §4 is normative (R-109); its supersession of trajectory_viewing §1's responsiveness paragraph is RQ-74 |
+| 5. The prediction worth testing early, because it is the demo | informative only | working notes: only §4 is normative (R-109) |
+| 6. What this reuses rather than adds | informative only | working notes: only §4 is normative (R-109) |
+| 7. Open | informative only | working notes: only §4 is normative (R-109) |
 
 ### `docs/design/principia_systems_architecture.md`
 

@@ -650,7 +650,7 @@
   milestone: M6
 - id: REQ-DEC-037
   area: DEC
-  statement: "The switch to the linearised decoder must be signalled by QuadRequest DECODE_MODE and must fire when the full decoder's adjacent samples give bitwise-identical ICs or when depth exceeds ℓ_switch = 20 (an upper bound; lowering's SWITCH = ℓ_switch), whichever comes first, with the same SimState, reduction and render on either side."
+  statement: "The switch to the linearised decoder must be signalled by QuadRequest DECODE_MODE and must fire once `quad.collapsed` is set (the per-quad flag set when the full decoder's adjacent samples give bitwise-identical ICs) or when depth exceeds ℓ_switch = 20 (an upper bound; lowering's SWITCH = ℓ_switch), whichever comes first, with the same SimState, reduction and render on either side."
   source:
   - file: docs/design/principia_deep_zoom.md
     section: 2. Linearised decoder — IC precision
@@ -658,6 +658,8 @@
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
   - file: docs/contracts/principia_lowering_contract.md
     section: Part 5 — The resolution function (the "switch", concretely)
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: "`QuadRequest.flags`"
   verify:
     method: unit test
     detail: "quads at depth 20/21 with distinct adjacent ICs carry FULL/LIN; a shallow tiny-q quad whose adjacent ICs are bitwise identical switches early; collapse is detected by bitwise IC comparison, not by the energy-drift diagnostic; lowering's SWITCH constant equals ℓ_switch"
@@ -1296,7 +1298,7 @@
   milestone: M2
 - id: REQ-CHART-002
   area: CHART
-  statement: "Shape-sphere hemisphere redundancy ((θ, φ) ∼ (θ, π − φ)) must be expressed through system_image = n-to-1 carrying its fold, and the chart must render one hemisphere and say so, or render both and flag the redundancy."
+  statement: "Shape-sphere hemisphere redundancy ((θ, φ) ∼ (θ, π − φ)) must be expressed through system_image = DoubleCover (2-to-1 over the φ hemispheres) carrying its fold, and the chart must render one hemisphere and say so, or render both and flag the redundancy."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: "Part 1 — The physics: what the 8D actually is"
@@ -1310,16 +1312,19 @@
     section: R-59 — Fix D1 to D6 as listed *(sheet §8)*
   - file: decisions.md
     section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+  - file: decisions.md
+    section: "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
   verify:
     method: GUI screenshot
-    detail: "shape-sphere chart shows either one labelled hemisphere or both with a redundancy flag; descriptor reports 2-to-1"
+    detail: "shape-sphere chart shows either one labelled hemisphere or both with a redundancy flag; descriptor reports DoubleCover"
   rulings:
   - R-14
   - R-59
+  - R-104
   milestone: M2
   rq:
-  - RQ-64
-  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so)."
+  - RQ-71
+  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover."
 - id: REQ-CHART-003
   area: CHART
   statement: "A chart must be a map Φ : [0,1]² → Y followed by the shared decoder D and canonicaliser C, with the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ as one implementation of Φ — its scale living in q (zoom a common scale on q₁, q₂, no per-axis factors) — and nonlinear charts using the general Φ."
@@ -1488,7 +1493,7 @@
   milestone: M2
 - id: REQ-CHART-014
   area: CHART
-  statement: "Every chart must declare the per-chart descriptors system_image (bijective, n-to-1 with its fold, ray-degenerate, or the added value for 'covers each shape twice, as two labelled systems'), has_feasibility_boundary, coupling (flagging same-block axis collisions for kind-4 charts) and annotation."
+  statement: "Every chart must declare the per-chart descriptors system_image (bijective, n-to-1 with its fold, DoubleCover — covers each shape twice, as two labelled systems — or ray-degenerate), has_feasibility_boundary, coupling (flagging same-block axis collisions for kind-4 charts) and annotation."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Part 5 — Well-posedness and the validation contract
@@ -1498,16 +1503,19 @@
     section: 2. Component inventory, by rung
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
   verify:
     method: unit test
-    detail: "each registered chart returns the descriptors; shape sphere is n-to-1 (2-to-1); int (m,n) lattice is bijective; Burrau full-range chart uses the two-labelled-systems value"
+    detail: "each registered chart returns the descriptors; the shape sphere and the full-range Burrau (Euclid) chart are DoubleCover; the int (m,n) lattice is bijective"
   rulings:
   - R-27
   - R-72
+  - R-104
   milestone: M2
   rq:
-  - RQ-64
-  note: "R-27 adds a system_image value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; the value's name: REQ-CHART-042 (definition)."
+  - RQ-71
+  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values)."
 - id: REQ-CHART-015
   area: CHART
   statement: "D and C must be shared and written once, so adding a chart means adding only a Φ, and no chart may carry its own decoder, integrator or renderer."
@@ -1667,7 +1675,7 @@
   note: "θ_min and θ_max: REQ-CHART-045 (calibration); Φ_θ,L_z's fixed K and L_z range: REQ-CHART-046 (calibration)."
 - id: REQ-CHART-025
   area: CHART
-  statement: "Both Burrau shape charts — the folded acute-angle chart (shape only) and the full-range Euclid chart (shape × labelling) — must be kept, each labelled via system_image with the quotient it covers (a system_image value for 'covers each shape twice, as two labelled systems' replacing has_redundant_hemisphere), and shape fractions must not be taken from the full-range chart."
+  statement: "Both Burrau shape charts — the folded acute-angle chart (shape only) and the full-range Euclid chart (shape × labelling) — must be kept, each labelled via system_image with the quotient it covers (the full-range chart DoubleCover, replacing has_redundant_hemisphere), and shape fractions must not be taken from the full-range chart."
   source:
   - file: docs/design/principia_chart_reference.md
     section: 4.5 The Burrau-family chart maps
@@ -1679,6 +1687,8 @@
     section: R-59 — Fix D1 to D6 as listed *(sheet §8)*
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
   verify:
     method: review checklist
     detail: "both charts registered; system_image values differ and are shown in the chart label; fraction statistics refuse the full-range chart"
@@ -1686,10 +1696,11 @@
   - R-27
   - R-59
   - R-72
+  - R-104
   milestone: M2
   rq:
-  - RQ-64
-  note: "R-27 settles 'pending change 2, open' (canonical_spec §11 now records it as ruled; chart_reference §4.5's paragraph still calls it open). Recorded; applied before any Burrau statistic. The added system_image value's name: REQ-CHART-042 (definition)."
+  - RQ-71
+  note: "R-27 settles 'pending change 2, open' (canonical_spec §11 records it as ruled; chart_reference §4.5's paragraph still calls it open). Applied before any Burrau statistic. R-104 names the value DoubleCover (chart_reference §4.5 now says so)."
 - id: REQ-CHART-026
   area: CHART
   statement: "The ternary mass plot must fix geometry at ν₀ and map x = u, y = (1−u)v, m₀ = 1−x−y, m₁ = x, m₂ = y, shrunk toward the barycentre by ε_m (default 10⁻⁴) as m ← (1 − 3ε_m)m + ε_m(1,1,1), with rest momenta and the Burrau point (c,b,a)/(a+b+c) as an overlay marker."
@@ -1873,7 +1884,7 @@
   note: "R-14 corrects R-12's premise; R-12's 'no polar buffer' stands."
 - id: REQ-CHART-037
   area: CHART
-  statement: "Each chart in the lowering appendix must lower to its stated Φ map, extra uniforms and flags (latent affine slice with its scale in q, shape sphere with system_image 2-to-1, (L_z,E)/(L_z,K) invariant charts writing tagged payloads for infeasible pixels in-kernel, ternary mass, Euclid ν plane annotation axis, θ×K strip requiring lock for curve tilt, Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise), all ending in canonicalise → (m,r,p) → wrapper(occupant)."
+  statement: "Each chart in the lowering appendix must lower to its stated Φ map, extra uniforms and flags (latent affine slice with its scale in q, shape sphere with system_image DoubleCover, (L_z,E)/(L_z,K) invariant charts writing tagged payloads for infeasible pixels in-kernel, ternary mass, Euclid ν plane annotation axis, θ×K strip requiring lock for curve tilt, Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise), all ending in canonicalise → (m,r,p) → wrapper(occupant)."
   source:
   - file: docs/contracts/principia_lowering_contract.md
     section: Appendix — worked enumeration of the current chart set
@@ -1883,6 +1894,8 @@
     section: "R-27 — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*"
   - file: decisions.md
     section: R-83 — The slice scale lives in q *(closes RQ-34)*
+  - file: decisions.md
+    section: "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
   verify:
     method: review checklist
     detail: "one row per chart checked against the chart registry and kernel variants"
@@ -1890,10 +1903,11 @@
   - R-26
   - R-27
   - R-83
+  - R-104
   milestone: M4
   rq:
-  - RQ-64
-  note: "R-27 (recorded) adds a system_image value for the two-labelled-systems Burrau chart; not yet reflected in the appendix — its name: REQ-CHART-042 (definition)."
+  - RQ-71
+  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres)."
 - id: REQ-CHART-038
   area: CHART
   statement: "Every navigation gesture must be a CPU-side edit of the one chart uniform (z₀, q₁, q₂) — pan/slice edit z₀, zoom/tilt edit the basis, the lock pins the centre — with non-raw slice/tilt directions taken as tangents at the centre, and the GPU must have no locked mode, view mode, camera object or second code path."
@@ -1994,8 +2008,7 @@
   - R-27
   - R-72
   milestone: M2
-  rq:
-  - RQ-64
+  retired: "R-104: the value is named DoubleCover, and chart_decoder_contract Part 5 and lowering's shape-sphere row now say so; carried by REQ-CHART-014."
 - id: REQ-CHART-043
   area: CHART
   kind: definition
@@ -2578,15 +2591,18 @@
     section: 3.4 `SimState` scalars — with presentation metadata
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
     method: unit test
-    detail: "march a synthetic sample past termination; every SimState word is bit-identical on all subsequent steps; state == its terminal value"
+    detail: "run synthetic samples to collision and to escape: the loop ends with done set at the terminating step; every SimState word is bit-identical on all subsequent dispatches; state == its terminal value"
   rulings:
   - R-95
+  - R-103
   milestone: M3
-  rq:
-  - RQ-69
-  note: "For escape, R-95: state and t_end latch at the firing step and time averages freeze at t_esc; any further march exists only to run pitfalls §2.4's checks and writes nothing else."
+  note: "For escape (R-95, R-103): state and t_end latch at the firing step, time averages freeze at t_esc, and in production done is set and the loop ends. The post-escape march for pitfalls §2.4's checks runs only in the validation harness, on its own state; the payload never sees it."
 - id: REQ-INT-035
   area: INT
   statement: "Every sample must be a full SimState with its own Benettin shadow, and a Benettin shadow must never be included in the colour/spread sample pool."
@@ -2980,19 +2996,21 @@
   milestone: M4
 - id: REQ-INT-059
   area: INT
-  statement: "Terminal exit from the integration loops must be via a `done` flag tested in each `while` loop condition, with zero `break` statements and no counted `for` loop with a mid-body exit."
+  statement: "Terminal exit from the integration loops must be via a `done` flag, set by detect_terminal on collision or escape, tested in each `while` loop condition, with zero `break` statements and no counted `for` loop with a mid-body exit."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   - file: docs/notes/principia_gpu_determinism_note.md
     section: The discipline (each rule = one measured failure)
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: review checklist
     detail: "grep the kernel: no `break` in march loops, no `for s in 0..N_sub`; plus a GPU dispatch of 100 macro-steps in one dispatch through SPIR-V->MSL and SPIR-V->WGSL->Tint matches the CPU branch words"
-  rulings: []
+  rulings:
+  - R-103
   milestone: M4
-  rq:
-  - RQ-63
+  note: "R-103: in production, done is set when escape fires and the loop ends (integrator_contract Part 1's pseudocode now says so); the §2.4 post-escape march lives in the validation harness."
 - id: REQ-INT-060
   area: INT
   statement: "No precision-dependent constant (a value that differs between the f32 and f64 instantiations) may appear in a control-flow decision; a tolerance that must scale with precision must be applied where the value is used, never where the branch is taken."
@@ -3076,17 +3094,21 @@
   note: "R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend."
 - id: REQ-INT-065
   area: INT
-  statement: "Occupant selection and co-computation selections (`FTLE_ENABLED`, ensemble on/off) must select baked kernel variants, never runtime uniforms, and be on the sim key."
+  statement: "Occupant selection and the `FTLE_ENABLED` co-computation selection must select baked kernel variants, never runtime uniforms, and be on the sim key, while the ensemble must not be a baked variant: `copy_index` must be a uniform and each copy the same kernel dispatched again."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
+  - file: decisions.md
+    section: R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
+  - file: docs/contracts/principia_lowering_contract.md
+    section: Compute side
   verify:
     method: review checklist
-    detail: "no runtime uniform branches on occupant or co-computation; each combination is a distinct compiled variant"
-  rulings: []
+    detail: "no runtime uniform branches on occupant or FTLE; each (occupant, FTLE) combination is a distinct compiled variant; E = 0 and E = 3 use the same pipeline, the copies differing only in the copy_index uniform"
+  rulings:
+  - R-89
+  - R-102
   milestone: M4
-  rq:
-  - RQ-62
 - id: REQ-INT-066
   area: INT
   statement: "The `d²` fed to the substep bucket must be position-quantised: positions cast to f32, then a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx*dx)`."
@@ -3130,16 +3152,23 @@
   milestone: M4
 - id: REQ-INT-069
   area: INT
-  statement: "Forward-pass co-computations (each sample's Benettin shadow, the E ensemble copies) must be gated by tier flags within the one forward kernel."
+  statement: "The Benettin shadow co-computation must be gated by a baked tier flag within the one forward kernel, and each ensemble copy must be the same kernel dispatched again with copy_index as a uniform (at E = 0, simply not dispatched)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Part 8 — Errata against the older design docs
   - file: docs/contracts/principia_lowering_contract.md
     section: Compute side
+  - file: decisions.md
+    section: R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
+  - file: docs/contracts/principia_lowering_contract.md
+    section: "Part 3a — The uniform read-side interface (tier features degrade by NaN, not by struct shape)"
+  - file: docs/design/principia_dd_integrator.md
+    section: 2. Consolidated contract
   verify:
     method: review checklist
-    detail: "FTLE-off variant contains no shadow state; ensemble-off contains no copies"
-  rulings: []
+    detail: "FTLE-off variant contains no shadow state; no ensemble kernel variant exists; E = 0 dispatches no copies"
+  rulings:
+  - R-102
   milestone: M4
 - id: REQ-INT-070
   area: INT
@@ -3450,7 +3479,7 @@
   milestone: M3
 - id: REQ-EVT-010
   area: EVT
-  statement: "Escape must not end the march until pitfalls §2.4's three checks pass, but once escape fires `state` must read escape and `t_end` must be fixed, and collision must stay terminal."
+  statement: "Once escape fires, `state` must read escape, `t_end` must be fixed and, in production, `done` must be set so the loop ends, with pitfalls §2.4's three checks run only in the validation harness on its own state; collision must stay terminal."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 8. Build-time settles (measure / specify once running)
@@ -3464,17 +3493,19 @@
     section: 2.4 Should it terminate?
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
     method: unit test
-    detail: "escape-fired fixture: state reads escape and t_end_step is latched at the firing step while the march continues until the checks pass; a collision stops the march"
+    detail: "escape-fired fixture: state reads escape, t_end_step is latched at the firing step and the production loop ends there (done set); a collision stops the march; the harness's §2.4 march leaves the payload byte-identical"
   rulings:
   - R-31
   - R-95
+  - R-103
   milestone: M3
-  rq:
-  - RQ-63
-  - RQ-69
-  note: "R-31 settles the doc's 'whether escape terminates integration is open'; R-95 says what state holds after escape fires (integrator_contract Part 7, pitfalls §2.4 now say so). The Part 1 pseudocode's done ← detect_terminal must not include escape. pitfall: \"2.4 Should it terminate?\" — collision is a singularity, not a heuristic."
+  note: "R-31 settles the doc's 'whether escape terminates integration is open'; R-95 says what state holds after escape fires; R-103 ends the production loop at escape and moves the §2.4 checks to the validation harness (integrator_contract Parts 1 and 7, pitfalls §2.4 now say so). pitfall: \"2.4 Should it terminate?\" — collision is a singularity, not a heuristic."
 - id: REQ-EVT-011
   area: EVT
   statement: "The escape settling test must use the windowed `|Δn̂|` (needing `n̂` from one window earlier), kept distinct from `closure_min` (distance to the initial shape)."
@@ -3520,14 +3551,17 @@
     section: 1.5 The root cause underneath the root cause
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.4 Should it terminate?
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: numerical gate
     detail: "The 0-of-895 test: take every trajectory that fires escape on a fixture slice, integrate +1, +2, +3, +4 and +8 sync boundaries (2–3x the firing time) past firing with the original discretisation, and assert none re-bind; plus a unit fixture of a close encounter where E_rel goes briefly positive while receding and closure has not settled: escape must not fire."
   rulings:
   - R-29
   - R-31
+  - R-103
   milestone: M3
-  note: "pitfall: \"1.5 The root cause underneath the root cause\"; pitfall: \"2.4 Should it terminate?\" — 1.5 The root cause underneath the root cause (no distance gate; 0 of 895 still unbound; escape fraction overstated 5.8x). R-31 records prin-rs's check 1 as passed; the regression test still guards this build."
+  note: "pitfall: \"1.5 The root cause underneath the root cause\"; pitfall: \"2.4 Should it terminate?\" — 1.5 The root cause underneath the root cause (no distance gate; 0 of 895 still unbound; escape fraction overstated 5.8x). R-31 records prin-rs's check 1 as passed; the regression test still guards this build. The integration past firing runs in the validation harness on its own state (R-103)."
 - id: REQ-EVT-014
   area: EVT
   statement: "Under the escape criterion, toggling stop_on_escape must give near-identical images, because only converged trajectories may be frozen."
@@ -3547,6 +3581,8 @@
   - R-71
   - R-95
   milestone: M3
+  rq:
+  - RQ-78
   note: "pitfall: \"1.6 The fix — see §2 for the criterion\" — 1.6 The fix — see §2 for the criterion. Lesson: the patchwork was caused by stopping while the displayed quantity was still moving. The golden tolerance: REQ-EVT-023 (calibration); after escape fires, time averages freeze at t_esc (R-95; REQ-PAY-058)."
 - id: REQ-EVT-015
   area: EVT
@@ -3701,6 +3737,8 @@
   rulings:
   - R-71
   milestone: M3
+  rq:
+  - RQ-78
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), QuadReduction must be sized from its member list (about 80 B), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -4506,7 +4544,7 @@
   milestone: M3
 - id: REQ-PAY-051
   area: PAY
-  statement: "`t_end_step` must be the exact count of completed macro-steps at all times (0 initially, advancing while running, latched at termination — for escape, at the step it fires, even while the march continues for the pitfalls §2.4 checks), and `t_dmin_step` the exact absolute macro-step index of closest approach."
+  statement: "`t_end_step` must be the exact count of completed macro-steps at all times (0 initially, advancing while running, latched at termination — for escape, at the step it fires, where the production loop ends), and `t_dmin_step` the exact absolute macro-step index of closest approach."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: "`times` (u32)"
@@ -4516,12 +4554,16 @@
     section: 3.4 `SimState` scalars — with presentation metadata
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: property test
     detail: "sample running and terminal states: t_end_step equals the step counter; t_dmin_step equals the argmin step"
   rulings:
   - R-95
+  - R-103
   milestone: M3
+  note: "R-103: the pitfalls §2.4 checks march on in the validation harness only, on their own state (payload `times` now says so)."
 - id: REQ-PAY-052
   area: PAY
   statement: "The word must be the Horner mixed-radix integer `W₁ = d₀`, `W_{k+1} = 3·W_k + e_k` over 121 payload bits (low bits in `x`, then `y`, `z`, then `.w` bits 0–24), with `length` in `.w` bits 25–31 holding 0–76 for valid words and 127 meaning truncated, for a capacity of 76 symbols."
@@ -4617,7 +4659,7 @@
   milestone: M3
 - id: REQ-PAY-058
   area: PAY
-  statement: "Once escape fires, `state` must read escape and `t_end_step` must be fixed at the firing step, time averages (FTLE's S/T and the like) must freeze at t_esc, and any further march must exist only to run the pitfalls §2.4 checks and must write nothing else."
+  statement: "Once escape fires, `state` must read escape and `t_end_step` must be fixed at the firing step, time averages (FTLE's S/T and the like) must freeze at t_esc and the production loop must end, and the post-escape march for the pitfalls §2.4 checks must run only in the validation harness on its own state, never writing the payload."
   source:
   - file: decisions.md
     section: "R-31 — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*"
@@ -4633,16 +4675,18 @@
     section: Part 7 — Detectors as the `SimState` producer
   - file: docs/design/principia_dd_integrator.md
     section: 3.6 Detectors (per `STEP`, on the projected state)
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
     method: unit test
-    detail: "on a fixture escaper, state, t_end_step, S and the other stored accumulators and latches are unchanged from the firing step to the end of the march while the §2.4 checks run; the derived FTLE equals S/T at t_esc"
+    detail: "on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc; running the harness's §2.4 march leaves the payload buffer byte-identical"
   rulings:
   - R-31
   - R-95
+  - R-103
   milestone: M3
-  rq:
-  - RQ-63
-  - RQ-69
 - id: REQ-PAY-059
   area: PAY
   statement: "The n̂ from one window earlier must be held in a lagged register updated at the window's sampling points — macro-step boundaries for unregularised occupants, sync boundaries for regularised ones — and the payload/SimState widths must include it."
@@ -4751,7 +4795,7 @@
   milestone: M5
 - id: REQ-PAY-065
   area: PAY
-  statement: "QuadReduction must carry fixed-size temporal accumulators — a latching running max divergence (which feeds \"unresolved\" under the same eps), a running mean divergence and a write-once first-divergence time, with no divergence-trend member — updated in place on the GPU each step, so the CPU sees scalars and never a time-series."
+  statement: "The temporal accumulators must be fixed-size and updated in place on the GPU each step, so the CPU sees scalars and never a time-series: the latching running max divergence held per footprint with the resident quad (not a QuadReduction member), feeding \"unresolved\" under the same eps, and the running mean divergence and write-once first-divergence time as diagnostics that are not split inputs, with no divergence-trend member."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 8 — Continuous refinement & the live-to-live handoff
@@ -4759,14 +4803,18 @@
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
   - file: docs/design/principia_dd_generation_root.md
     section: Temporal accumulators (scheduler Part 8)
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
-    detail: "QuadReduction size is constant in t and has no divergence_trend member; running max is monotone; first-divergence time never changes after first write; a footprint whose running max once exceeded eps still reads unresolved after its spread falls back below eps"
+    detail: "accumulator size is constant in t; QuadReduction has no running_max_divergence or divergence_trend member; running max is monotone per footprint; first-divergence time never changes after first write; a footprint whose running max once exceeded eps still reads unresolved after its spread falls back below eps; the split's output ignores the diagnostics"
   rulings:
   - R-91
+  - R-99
   milestone: M5
   rq:
-  - RQ-59
+  - RQ-72
+  note: "The latch's storage layout: see the definition requirement for the per-footprint latch's layout."
 - id: REQ-PAY-066
   area: PAY
   statement: "`QuadReduction` identity must be the `level` (u8) only, with readback indexed positionally by the requested quad (no `id`)."
@@ -4795,20 +4843,23 @@
   milestone: M5
 - id: REQ-PAY-068
   area: PAY
-  statement: "There must be no per-sample 'is ensemble' tag: grouping must be structural (E+1 samples per footprint, copy_index 0..E), with copy_index 0 marking the un-jittered nominal and 1..E the copies, and ensemble on/off a quad/tier flag."
+  statement: "There must be no per-sample 'is ensemble' tag: grouping must be structural (E+1 samples per footprint, copy_index 0..E), with copy_index 0 marking the un-jittered nominal and 1..E the copies, and ensemble on/off the `ENSEMBLE_ENABLED` quad dispatch flag, never a baked variant."
   source:
   - file: docs/notes/principia_sampling_msaa_note.md
     section: "Stability metrics: FTLE and diffusion are SimState fields; spread is a resolve-stage reduction"
   - file: decisions.md
     section: R-80 — Samples per footprint *(closes RQ-31)*
+  - file: decisions.md
+    section: R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: "`QuadRequest.flags`"
   verify:
     method: review checklist
     detail: SimState has no ensemble tag field
   rulings:
   - R-80
+  - R-102
   milestone: M5
-  rq:
-  - RQ-62
 - id: REQ-PAY-069
   area: PAY
   statement: "When DECODE_MODE is set, the reference IC x₀ and the Jacobian J_D must travel in a separate uniform buffer bound only for linear-path quads, not inside the QuadRequest."
@@ -5709,7 +5760,7 @@
   milestone: M5
 - id: REQ-SCHED-017
   area: SCHED
-  statement: "Each knob change must invalidate exactly its blast radius in caching Part 2's table (render/palette: nothing; colour params: bake only; in-plane pan, zoom and lock: nothing, re-addressing; slicing out of the plane, tilt, rotate and chart-mode switch: nothing invalidated, new identities integrating fresh; `T`, `dt_macro`, thresholds, eps floors, occupant, links, chart/decode version: all sim buffers; quality tier: only the affected sim-key components (N, FTLE, word), E invalidating nothing; transport: nothing; scheduler knobs, `render_scale`, lock-to-native: nothing)."
+  statement: "Each knob change must invalidate exactly its blast radius in caching Part 2's table (render/palette: nothing; colour params: bake only; in-plane pan, zoom and lock: nothing — they change which quad addresses are requested, never the addresses; slicing out of the plane, tilt, rotate and chart-mode switch: nothing invalidated, new identities integrating fresh; `T`, `dt_macro`, thresholds, eps floors, occupant, links, chart/decode version: all sim buffers; quality tier: only the affected sim-key components (N, FTLE, word), E invalidating nothing; transport: nothing; scheduler knobs, `render_scale`, lock-to-native: nothing)."
   source:
   - file: docs/contracts/principia_caching_contract.md
     section: Part 2 — What invalidates what (the dependency graph)
@@ -5719,6 +5770,8 @@
     section: R-92 — What the sim key holds of navigation *(closes RQ-43)*
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
   verify:
     method: property test
     detail: "per knob, assert which cache entries survive; a tilt adds new-identity entries and leaves the old ones valid; an E or transport change invalidates nothing"
@@ -5727,9 +5780,8 @@
   - R-89
   - R-92
   - R-96
+  - R-97
   milestone: M5
-  rq:
-  - RQ-57
   note: "R-69 makes lock a SimConfig (undoable) edit; that does not change its blast radius (it changes neither key, R-92)."
 - id: REQ-SCHED-018
   area: SCHED
@@ -5760,20 +5812,21 @@
   note: "The baseline cover's depth: REQ-SCHED-074 (calibration). The cost formula: REQ-SCHED-079 (definition)."
 - id: REQ-SCHED-020
   area: SCHED
-  statement: "While a gesture is active the scheduler must dispatch only the full-canvas coarse cover of the current identity in `PREVIEW_MODE` with complexity scoring suspended, and resume full machinery when the debounce fires."
+  statement: "While a gesture is active the scheduler must dispatch only the full-canvas coarse cover of the current identity in `PREVIEW_MODE` with complexity scoring suspended — the frame budget governing, ancestors showing so there are never blanks — and resume full machinery, including must-split above the screen floor, when the debounce fires."
   source:
   - file: docs/contracts/principia_caching_contract.md
     section: "Part 5 — The stale backdrop: blur means loading"
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 7 — The frame loop (lockstep presentation)
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: property test
     detail: "during a synthetic drag, only preview coarse-cover jobs are dispatched"
-  rulings: []
+  rulings:
+  - R-108
   milestone: M5
-  rq:
-  - RQ-68
-  note: "The debounce interval: REQ-SCHED-075 (calibration)."
+  note: "Must-split above the floor is the at-rest target (R-108). The debounce interval: REQ-SCHED-075 (calibration)."
 - id: REQ-SCHED-021
   area: SCHED
   statement: "Preview covers for abandoned identities must evict first, and jobs completing for a superseded epoch must be dropped or filed as flotsam, never painted."
@@ -5829,7 +5882,7 @@
   milestone: M5
 - id: REQ-SCHED-025
   area: SCHED
-  statement: "In-plane pan and zoom must only re-address which quads are asked for, slicing out of the plane, tilting and rotating must request new identities whose quads integrate fresh, the lock must change neither key, and no navigation may invalidate a cached payload; revealed quads catch up to the playhead off-loop."
+  statement: "In-plane pan and zoom must only change which quad addresses are asked for — the addresses themselves are fixed in the slice plane's own frame, relative to the plane anchor — slicing out of the plane, tilting and rotating must request new identities whose quads integrate fresh, the lock must change neither key, and no navigation may invalidate a cached payload; revealed quads catch up to the playhead off-loop."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 8. Locked vocabulary
@@ -5841,14 +5894,17 @@
     section: R-92 — What the sim key holds of navigation *(closes RQ-43)*
   - file: docs/contracts/principia_caching_contract.md
     section: Part 2 — What invalidates what (the dependency graph)
+  - file: decisions.md
+    section: "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
+  - file: docs/design/principia_deep_zoom.md
+    section: The precision split (the CPU/GPU seam, decode side)
   verify:
     method: property test
     detail: "pan away and back: cached entries are still valid and no integration is dispatched for them; tilt away and back: the original plane's entries are still present and valid; no invalidation event fires"
   rulings:
   - R-92
+  - R-97
   milestone: M5
-  rq:
-  - RQ-57
 - id: REQ-SCHED-026
   area: SCHED
   statement: "Changes to a link or an axis warp must trigger re-integration, while a change to colour compactification must only recolour the payload without re-running the integrator."
@@ -5977,7 +6033,7 @@
   milestone: M5
 - id: REQ-SCHED-036
   area: SCHED
-  statement: "Transport controls must behave as specified: pause freezes the playhead but not compute (reveals still catch up and promote), restart sets playhead→0 and discards state, loop auto-restarts at t_end, and changing transport must invalidate nothing (ViewUI state, not on the sim key)."
+  statement: "Transport controls must behave as specified: pause freezes the playhead but not compute (reveals still catch up and promote), restart sets playhead→0 and discards state, loop auto-restarts at t_end, the GUI's clock must advance RenderState's playhead each frame through a SetField marked \"no history\", and changing transport must invalidate nothing (ViewUI state, not on the sim key)."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 7 — The frame loop (lockstep presentation)
@@ -5993,14 +6049,15 @@
     section: Part 2 — What invalidates what (the dependency graph)
   - file: docs/contracts/principia_export_animation_contract.md
     section: Part 1 — Playback is the temporal mechanism
+  - file: decisions.md
+    section: "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
   verify:
     method: unit test
-    detail: "pause then pan: new quads promote at the frozen t; restart zeroes t and clears live state; loop wraps at t_end; play/pause/speed/loop leave the sim key and every cache entry unchanged"
+    detail: "pause then pan: new quads promote at the frozen t; restart zeroes t and clears live state; loop wraps at t_end; play/pause/speed/loop leave the sim key and every cache entry unchanged; playback adds no undo entry"
   rulings:
   - R-96
+  - R-101
   milestone: M5
-  rq:
-  - RQ-61
 - id: REQ-SCHED-037
   area: SCHED
   statement: "Refinement must hand off live-to-live: the parent keeps marching and rendering while children catch up off-loop, and the parent→children swap happens atomically at a barrier with both at the same t."
@@ -6035,7 +6092,7 @@
   milestone: M5
 - id: REQ-SCHED-039
   area: SCHED
-  statement: "A footprint's E+1 sample offsets must be copy 0 at the un-jittered centre and copies 1..E at Halton (2,3) points 1..E, centred (minus ½) and scaled to the footprint, indexed by copy_index 0..E, deterministic with time/frame and chart_id excluded from the seed and identical on CPU and GPU; any per-cell rotation must be an integer hash of (depth, tx, ty, pixel_index) applied to copies 1..E only."
+  statement: "A footprint's E+1 sample offsets must be copy 0 at the un-jittered centre and copies 1..E at Halton (2,3) points 1..E, centred (minus ½) and scaled to the footprint, indexed by copy_index 0..E, deterministic with time/frame and chart_id excluded and identical on CPU and GPU, with no per-cell rotation, so copy positions are fixed by the pixel alone."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 9 — Ensemble / SSAA sampling (dispatch rules)
@@ -6049,30 +6106,37 @@
     section: Part 4 — Semantic rules
   - file: decisions.md
     section: R-80 — Samples per footprint *(closes RQ-31)*
+  - file: decisions.md
+    section: R-100 — No per-cell Halton rotation *(closes RQ-60)*
   verify:
     method: unit test
-    detail: "copy 0's offset is (0, 0); copies 1..E equal the reference Halton (2,3) points 1..E minus ½, scaled to the footprint; identical across frames and CPU/GPU; with rotation on, copy 0 stays at the centre"
+    detail: "copy 0's offset is (0, 0); copies 1..E equal the reference Halton (2,3) points 1..E minus ½, scaled to the footprint, in every footprint; identical across frames and CPU/GPU"
   rulings:
   - R-80
+  - R-100
   milestone: M5
-  rq:
-  - RQ-60
-  note: "How the rotation composes with the centring: REQ-SCHED-085 (definition)."
 - id: REQ-SCHED-040
   area: SCHED
-  statement: "Quad addresses (depth, tx, ty) and the hash seed must be computed against the post-flip Y-up address, and the CPU quadtree (f64 centres and half-widths) and the GPU quad uniforms must share the convention explicitly."
+  statement: "Quad addresses (depth, tx, ty) — (level, i, j) in the slice plane's own frame, relative to the plane anchor (z₀'s value at the last re-integrating event) — must be computed against the post-flip Y-up frame, and the CPU quadtree (f64 centres and half-widths) and the GPU quad uniforms must share the convention explicitly."
   source:
   - file: docs/design/principia_coordinate_conventions_note.md
     section: "Code paths that must honour the single convention (each is a separate path)"
   - file: docs/design/principia_coordinate_conventions_note.md
     section: "The three coordinate spaces (they nest; each is right for its job)"
+  - file: decisions.md
+    section: "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
+  - file: decisions.md
+    section: R-100 — No per-cell Halton rotation *(closes RQ-60)*
+  - file: docs/design/principia_deep_zoom.md
+    section: The precision split (the CPU/GPU seam, decode side)
   verify:
     method: unit test
-    detail: "CPU- and GPU-computed addresses/seeds agree for every quad; linearised decode within a quad is not mirrored relative to the full decode"
-  rulings: []
+    detail: "CPU- and GPU-computed addresses agree for every quad; an in-plane pan or zoom leaves every resident quad's address unchanged; linearised decode within a quad is not mirrored relative to the full decode"
+  rulings:
+  - R-97
+  - R-100
   milestone: M5
-  rq:
-  - RQ-57
+  note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale."
 - id: REQ-SCHED-041
   area: SCHED
   statement: "Ensemble copies must be full uniform `SimState`s at copy_index 1..E, offset to Halton (2,3) points 1..E centred and scaled to the footprint (copy_index 0 = the un-jittered nominal), must be scheduler leaves that never spawn their own ensemble, and must carry no per-sample ensemble tag."
@@ -6257,8 +6321,7 @@
     detail: "rotation value bit-identical CPU/GPU; unchanged under pan; changes when a quad splits"
   rulings: []
   milestone: M5
-  rq:
-  - RQ-60
+  retired: "R-100: there is no per-cell Cranley–Patterson rotation; copy positions are fixed by the pixel alone."
 - id: REQ-SCHED-054
   area: SCHED
   statement: "Tilting the 2-plane must request new identities that integrate fresh and must never invalidate the cache."
@@ -6318,7 +6381,7 @@
   milestone: M6
 - id: REQ-SCHED-058
   area: SCHED
-  statement: "The split gate must be split(C) ⟺ (in_view(C) ∧ tile_size(C) > pixel_size) ∨ (policy_splits(C) ∧ ℓ < camera_depth + MAX_REL_DEPTH), a window sliding with the camera, never the absolute form ℓ < MAX_DEPTH."
+  statement: "The split gate must be split(C) ⟺ (in_view(C) ∧ tile_size(C) > pixel_size) ∨ (policy_splits(C) ∧ ℓ < camera_depth + MAX_REL_DEPTH), a window sliding with the camera that caps every split beyond the screen floor (in view below it and off screen alike), never the absolute form ℓ < MAX_DEPTH."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: "`MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)"
@@ -6328,15 +6391,16 @@
     section: "R-15 — `Policy::Tolerance` governs refinement *(closes RQ-13)*"
   - file: decisions.md
     section: R-88 — What stops in-view refinement *(closes RQ-39)*
+  - file: decisions.md
+    section: "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
   verify:
     method: unit test
-    detail: "for camera depths 0, 10, 30 and MAX_REL_DEPTH = 4: an in-view quad above the screen floor splits whatever the policy says; below the floor a policy-splitting quad at ℓ = camera_depth + 3 splits and at ℓ = camera_depth + 4 does not"
+    detail: "for camera depths 0, 10, 30 and MAX_REL_DEPTH = 4: an in-view quad above the screen floor splits whatever the policy says; below the floor a policy-splitting quad at ℓ = camera_depth + 3 splits and at ℓ = camera_depth + 4 does not; an off-screen policy-splitting quad at ℓ = camera_depth + 4 does not split"
   rulings:
   - R-15
   - R-88
+  - R-98
   milestone: M6
-  rq:
-  - RQ-58
 - id: REQ-SCHED-059
   area: SCHED
   statement: "MAX_REL_DEPTH must not be on the sim key: lowering it must invalidate no payload, only stop scheduling deeper quads, leaving already-computed quads valid and cached."
@@ -6369,7 +6433,7 @@
   milestone: M6
 - id: REQ-SCHED-061
   area: SCHED
-  statement: "In view, a quad above the screen-space floor must split; otherwise refinement must happen iff the policy splits and no cap or terminal floor has fired, with the boundaries in the order screen-space floor → MAX_REL_DEPTH (capping only the supersampling depth below the screen floor, MAX_REL_DEPTH ≥ the screen floor) → DECODE_SWITCHOVER (a switch, not a stop) → AT_F32_FLOOR on the linear path and the integration floor."
+  statement: "In view, a quad above the screen-space floor must split at rest (during a gesture the frame budget governs and ancestors show); otherwise refinement must happen iff the policy splits and no cap or terminal floor has fired, with the boundaries in the order screen-space floor → MAX_REL_DEPTH (capping every split beyond the screen floor, off-screen policy splits included, MAX_REL_DEPTH ≥ the screen floor) → DECODE_SWITCHOVER (a switch, not a stop) → AT_F32_FLOOR on the linear path and the integration floor."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 4 — Terminal vs refinable, tied to the two floors
@@ -6377,19 +6441,22 @@
     section: 4. Sliding depth bound
   - file: decisions.md
     section: R-88 — What stops in-view refinement *(closes RQ-39)*
+  - file: decisions.md
+    section: "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: unit test
-    detail: "table-driven test over quads in each state asserts the split/stop/switch outcome per the hierarchy; an in-view quad above the screen floor splits even when the policy keeps it; a MAX_REL_DEPTH below the screen floor is rejected"
+    detail: "table-driven test over quads in each state asserts the split/stop/switch outcome per the hierarchy; at rest an in-view quad above the screen floor splits even when the policy keeps it; an off-screen quad is capped by MAX_REL_DEPTH; a MAX_REL_DEPTH below the screen floor is rejected"
   rulings:
   - R-15
   - R-88
+  - R-98
+  - R-108
   milestone: M6
-  rq:
-  - RQ-58
-  - RQ-68
 - id: REQ-SCHED-062
   area: SCHED
-  statement: "The full decoder must switch to the linearised decoder when its adjacent samples give bitwise-identical ICs or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active."
+  statement: "The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 4 — Terminal vs refinable, tied to the two floors
@@ -6399,6 +6466,8 @@
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
   - file: docs/contracts/principia_lowering_contract.md
     section: Part 5 — The resolution function (the "switch", concretely)
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: "`QuadRequest.flags`"
   verify:
     method: unit test
     detail: "force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full"
@@ -6461,8 +6530,6 @@
     section: Part 6 — The settled policy
   - file: decisions.md
     section: "R-55 — Cursor bias is `P_focus` centred on the pointer *(GU-4 (a))*"
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 6. What this reuses rather than adds
   verify:
     method: unit test
     detail: "with pointer in view, the quad under the pointer gets maximal P_focus; with pointer out of view, the centre quad does"
@@ -6510,7 +6577,7 @@
   note: "The derivation: REQ-SCHED-082 (definition); the baseline's size: REQ-SCHED-078 (calibration)."
 - id: REQ-SCHED-069
   area: SCHED
-  statement: "Quad depth must satisfy ℓ < camera_depth + MAX_REL_DEPTH (the sliding cap on supersampling depth, MAX_REL_DEPTH ≥ the screen floor), every in-view quad above the screen floor must be split, and quad-state transitions must be legal."
+  statement: "Quad depth must satisfy ℓ < camera_depth + MAX_REL_DEPTH (the sliding cap on every split beyond the screen floor, off-screen policy splits included, MAX_REL_DEPTH ≥ the screen floor), at rest every in-view quad above the screen floor must be split, and quad-state transitions must be legal."
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
@@ -6518,15 +6585,18 @@
     section: 1. The rings — cross-cutting services
   - file: decisions.md
     section: R-88 — What stops in-view refinement *(closes RQ-39)*
+  - file: decisions.md
+    section: "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: property test
     detail: "fuzzed navigation never produces a quad beyond the sliding cap, an unsplit in-view quad above the screen floor at rest, or an illegal transition"
   rulings:
   - R-88
+  - R-98
+  - R-108
   milestone: M6
-  rq:
-  - RQ-58
-  - RQ-68
   note: "The legal transitions: REQ-TOOL-116 (definition)."
 - id: REQ-SCHED-070
   area: SCHED
@@ -6534,13 +6604,15 @@
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 5. Controller levers, ranked by impact
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: unit test
     detail: "during a gesture leaves stop at tile ≈ 2–4 px; after rest they refine to ≤ 1 px"
-  rulings: []
+  rulings:
+  - R-108
   milestone: M6
-  rq:
-  - RQ-68
+  note: "R-108: must-split above the screen floor is the at-rest target, so this motion lever does not contradict it (memory_tiers §5 now says so)."
 - id: REQ-SCHED-071
   area: SCHED
   statement: "The camera must be wired into scheduler priority, and scheduler Part 6 (P_complexity = 1 − coherence, never compute off-screen, offscreen → stop) must be reconciled with refinement policy §0.1, stating how order in view enters."
@@ -6793,9 +6865,29 @@
   - R-72
   - R-80
   milestone: M5
-  rq:
-  - RQ-60
   note: "Written by R-80's conforming edit to the sampling note, which names R-72 for it; not an RQ-51 item."
+  retired: "R-100: there is no per-cell rotation, so there is no composition with the centring to define."
+- id: REQ-SCHED-086
+  area: SCHED
+  kind: definition
+  statement: "The scale of the slice plane's own frame — the level-0 cell size of the quad addresses (level, i, j), relative to the plane anchor — must be defined in deep_zoom §1 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_deep_zoom.md
+    section: The precision split (the CPU/GPU seam, decode side)
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: decisions.md
+    section: "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "deep_zoom §1 states the level-0 cell size in the slice plane's frame and how the per-quad centre and half-width follow from it; the address unit test uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-97
+  milestone: M5
+  note: "R-97 fixes the frame's origin (the plane anchor) but gives no scale; §1 still states a quad's span as ~2^−ℓ of the view's [0,1]² UV domain."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -6915,7 +7007,7 @@
   milestone: M5
 - id: REQ-REF-011
   area: REF
-  statement: "The screen-space floor must be a view-relative refinement boundary, never terminal (in view, quads above it must split; below it the criterion may supersample, capped by MAX_REL_DEPTH); the only terminal floors are the linear-decoder AT_F32_FLOOR and the integration floor, and the per-sample saturated flag must be non-terminal."
+  statement: "The screen-space floor must be a view-relative refinement boundary, never terminal (in view, quads above it must split at rest — during a gesture the frame budget governs; below it the criterion may supersample; MAX_REL_DEPTH caps every split beyond it, off-screen policy splits included); the only terminal floors are the linear-decoder AT_F32_FLOOR and the integration floor, and the per-sample saturated flag must be non-terminal."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: "6. Memory & deployment model *(authoritative: `memory_tiers`, `caching_contract`, `deep_zoom`, `systems_architecture`)*"
@@ -6923,18 +7015,21 @@
     section: "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
   - file: decisions.md
     section: R-88 — What stops in-view refinement *(closes RQ-39)*
+  - file: decisions.md
+    section: "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: unit test
     detail: "quad-state is terminal iff AT_F32_FLOOR or the integration floor is hit; zooming out un-stops screen-floored quads"
   rulings:
   - R-88
+  - R-98
+  - R-108
   milestone: M6
-  rq:
-  - RQ-58
-  - RQ-68
 - id: REQ-REF-012
   area: REF
-  statement: "The split/keep/merge decision must be Policy::Tolerance's, applied together with the MAX_REL_DEPTH gate, with an in-view quad above the screen floor splitting regardless and the terminal guard checked before the policy."
+  statement: "The split/keep/merge decision must be Policy::Tolerance's, applied together with the MAX_REL_DEPTH gate, with an in-view quad above the screen floor splitting regardless at rest (during a gesture the frame budget governs) and the terminal guard checked before the policy."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 6 — The settled policy
@@ -6946,6 +7041,8 @@
     section: The evidence base — where settled defaults were measured
   - file: decisions.md
     section: R-88 — What stops in-view refinement *(closes RQ-39)*
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
   verify:
     method: unit test
     detail: "a terminal quad is never passed to the policy; a non-terminal in-view quad above the screen floor splits; otherwise a non-terminal quad splits iff policy_splits and the depth gate holds"
@@ -6953,28 +7050,28 @@
   - R-15
   - R-44
   - R-88
+  - R-108
   milestone: M6
-  rq:
-  - RQ-68
   note: "Part 6's 'offscreen → stop' guard against policy §0.1 (off screen the criterion decides depth): REQ-SCHED-080 (definition)."
 - id: REQ-REF-013
   area: REF
-  statement: "The split predicate must be evaluated live at the playhead during playback as Policy::Tolerance's one test under eps, counting disagreement in class (including RUNNING vs terminal), spread_shape > eps, a latched running maximum that ever exceeded eps, and the symbolic spread S_word reduced from the separate word buffer (never from SimState)."
+  statement: "The split predicate must be evaluated live at the playhead during playback as Policy::Tolerance's one test under eps, counting disagreement in class (including RUNNING vs terminal), spread_shape > eps and a per-footprint latched running maximum that ever exceeded eps, a quad being unresolved if any of its footprints is, and symbolic spread S_word must not enter it."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 8 — Continuous refinement & the live-to-live handoff
   - file: decisions.md
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
-    detail: "a quad whose samples diverge mid-flight and reconverge splits at the divergence time and stays split; S_word is read from the word buffer binding"
+    detail: "a quad whose samples diverge mid-flight and reconverge splits at the divergence time and stays split while resident; changing S_word alone never changes the split decision"
   rulings:
   - R-15
   - R-91
+  - R-99
   milestone: M6
-  rq:
-  - RQ-59
-  note: "How S_word enters the test (its metric and threshold): REQ-REF-042 (definition); REQ-REF-041 (calibration)."
+  note: "S_word is a diagnostic, not a split input (R-99; scheduler Part 8 now says so). Its metric: REQ-REF-042 (definition)."
 - id: REQ-REF-014
   area: REF
   statement: "Symbolic spread `S_word` must operate on whole raw reduced words and must not depend on pair attribution."
@@ -7045,20 +7142,24 @@
   note: "The departure threshold: REQ-PAY-080 (calibration)."
 - id: REQ-REF-019
   area: REF
-  statement: "The temporal accumulators `running_max_divergence` (latching max, feeding \"unresolved\" under eps), `running_mean_divergence` and `first_divergence_t` (write-once, sentinel until crossed) must be f32, and there must be no `divergence_trend` member."
+  statement: "`running_max_divergence` (f32, max-updated, latching, feeding \"unresolved\" under eps) must be held per footprint with the resident quad, not as a QuadReduction member, `running_mean_divergence` and `first_divergence_t` (write-once, sentinel until crossed) must be f32 diagnostics that are not split inputs, and there must be no `divergence_trend` member."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: Temporal accumulators (scheduler Part 8)
   - file: decisions.md
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
-    detail: "diverge-then-reconverge fixture: running max stays; first_divergence_t written once; the generated layout has no divergence_trend"
+    detail: "diverge-then-reconverge fixture: the footprint's running max stays; first_divergence_t written once; the generated layout has no divergence_trend and QuadReduction has no running_max_divergence"
   rulings:
   - R-91
+  - R-99
   milestone: M6
   rq:
-  - RQ-59
+  - RQ-72
+  note: "The latch's storage layout: see the definition requirement for the per-footprint latch's layout."
 - id: REQ-REF-020
   area: REF
   statement: "In view, a quad must stop only when its texel is at or below one screen pixel: Keep ⟺ n_unresolved == 0 ∧ tile_size_px ≤ 1 and Floor ⟺ area floor fired ∧ tile_size_px ≤ 1, so the in-view tree is complete at screen resolution."
@@ -7072,21 +7173,24 @@
   milestone: M6
 - id: REQ-REF-021
   area: REF
-  statement: "Off-screen quads must read as adequate at query time (adequacy met, stored nowhere), so off screen the criterion alone decides depth."
+  statement: "Off-screen quads must read as adequate at query time (adequacy met, stored nowhere), so off screen the criterion alone decides depth, capped by MAX_REL_DEPTH."
   source:
   - file: docs/design/principia_dd_refinement_policy.md
     section: "0.1 In view, the camera decides depth and the criterion decides ORDER"
+  - file: decisions.md
+    section: "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: "`MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)"
   verify:
     method: unit test
-    detail: "an off-screen quad with tile_size_px ≫ 1 and n_unresolved = 0 keeps; no adequacy field is persisted on the quad"
-  rulings: []
+    detail: "an off-screen quad with tile_size_px ≫ 1 and n_unresolved = 0 keeps; an unresolved off-screen quad at ℓ = camera_depth + MAX_REL_DEPTH does not split; no adequacy field is persisted on the quad"
+  rulings:
+  - R-98
   milestone: M6
-  rq:
-  - RQ-58
   note: "How this reconciles with scheduler Part 6's 'never compute off-screen': REQ-SCHED-080 (definition)."
 - id: REQ-REF-022
   area: REF
-  statement: "A quad must split iff any footprint is unresolved, where unresolved(f) ⟺ spread_shape(f) > eps ∨ its latched running maximum of spread_shape ever exceeded eps ∨ the copies disagree on event class ∨ the footprint is undetermined (non-finite spread or an unusable copy), with no exponent in the split test."
+  statement: "A quad must split iff any footprint is unresolved, where unresolved(f) ⟺ spread_shape(f) > eps ∨ its own latched running maximum of spread_shape ever exceeded eps ∨ the copies disagree on event class ∨ the footprint is undetermined (non-finite spread or an unusable copy), with no exponent in the split test."
   source:
   - file: docs/design/principia_dd_refinement_policy.md
     section: 1. The split rule — no exponent in the split test
@@ -7096,15 +7200,18 @@
     section: "R-15 — `Policy::Tolerance` governs refinement *(closes RQ-13)*"
   - file: decisions.md
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
     detail: "table test over footprints hitting each disjunct individually and none; a footprint whose spread fell back below eps after exceeding it stays unresolved"
   rulings:
   - R-15
   - R-91
+  - R-99
   milestone: M6
   rq:
-  - RQ-59
+  - RQ-72
 - id: REQ-REF-023
   area: REF
   statement: "The stop rule must be alpha_area = log2(unresolved_area(coarse) / unresolved_area(children)) compared against alpha_lo, with shipped default alpha_lo = 0.005."
@@ -7144,17 +7251,20 @@
   note: "The angle: REQ-REF-043 (calibration)."
 - id: REQ-REF-026
   area: REF
-  statement: "Under a live playhead the tree must coarsen: a parent whose four children are all leaves that did not split this boundary must be merged back (children Decision::Merged) when the parent is Keep or Floor, and the static result at the horizon must be bitwise the static tree."
+  statement: "Under a live playhead the tree must coarsen: a parent whose four children are all leaves that did not split this boundary must be merged back (children Decision::Merged, their footprints' latches going with them) when the parent is Keep or Floor, and the static result at the horizon must be bitwise the static tree."
   source:
   - file: docs/design/principia_dd_refinement_policy.md
     section: 3. Merging — the split rule read backwards
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: golden image
-    detail: "moving-pulse fixture: resident count rises and falls (≈37 → 85 → 37 → 69) and the final tree is bitwise the static tree at the horizon"
-  rulings: []
+    detail: "moving-pulse fixture: resident count rises and falls (≈37 → 85 → 37 → 69), merged children hold no latch, and the final tree is bitwise the static tree at the horizon"
+  rulings:
+  - R-99
   milestone: M6
   rq:
-  - RQ-59
+  - RQ-73
 - id: REQ-REF-027
   area: REF
   statement: "QuadTree::resident (what a live design holds) must be tracked separately from quads_computed."
@@ -7272,7 +7382,7 @@
   note: "Doc §6 frames Undetermined as a second refinement axis; R-47 settles it as report-terminal-flag for now."
 - id: REQ-REF-035
   area: REF
-  statement: "The refinement latch must be CPU scheduler metadata that lives with the quadtree node, persists across visits (state re-boots via catch-up, the decision persists), is one-way while the node lives, and dies when the node is merged or pruned."
+  statement: "The refinement latch must be per footprint and live with the resident quad, one-way while the quad is resident, and must go when the cache evicts or merges the quad, so it never pins memory and an evicted or merged region re-discovers its structure."
   source:
   - file: docs/design/principia_temporal_architecture_note.md
     section: "Continuous refinement — temporal accumulators + spatial coherence"
@@ -7286,17 +7396,23 @@
     section: Part 8 — Continuous refinement & the live-to-live handoff
   - file: decisions.md
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
-    detail: "leave and revisit a latched quad: it is still split; prune it: the latch is gone"
+    detail: "a latched footprint keeps its quad split while resident; evict or merge the quad: its latches are gone and no latch memory remains; revisiting the region re-discovers the split from fresh state"
   rulings:
   - R-15
   - R-91
+  - R-99
   milestone: M6
-  note: "R-91: the latched running maximum feeds Policy::Tolerance's \"unresolved\" under the same eps; there is no separate latch threshold."
+  rq:
+  - RQ-72
+  - RQ-73
+  note: "R-91: the latched running maximum feeds Policy::Tolerance's \"unresolved\" under the same eps; there is no separate latch threshold. R-99 replaces the old 'persists across visits' (scheduler Part 8, caching Part 7 and the temporal note now say so)."
 - id: REQ-REF-036
   area: REF
-  statement: "The split decision must be made by Policy::Tolerance under the one knob eps, and the temporal refinement accumulators (running max and mean divergence, first-divergence time) must be fixed-size O(1) fields folded into the ~80 B QuadReduction, never stored history, with no divergence trend and no separate θ_s / θ_max / θ_trend thresholds."
+  statement: "The split decision must be made by Policy::Tolerance under the one knob eps, and the temporal refinement accumulators must be fixed-size O(1) fields, never stored history — one float per footprint for the latch, held with the resident quad, plus the running mean and first-divergence diagnostics — with no divergence trend and no separate θ_s / θ_max / θ_trend thresholds."
   source:
   - file: docs/design/principia_temporal_architecture_note.md
     section: "Continuous refinement — temporal accumulators + spatial coherence"
@@ -7304,29 +7420,31 @@
     section: "R-15 — `Policy::Tolerance` governs refinement *(closes RQ-13)*"
   - file: decisions.md
     section: "R-91 — The temporal accumulators feed \"unresolved\" *(closes RQ-42)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: review checklist
-    detail: "the scheduler calls the refinement policy for splits; QuadReduction's size is fixed; no trend accumulator or θ threshold exists in code or config"
+    detail: "the scheduler calls the refinement policy for splits; the accumulators' size is fixed in t; no trend accumulator or θ threshold exists in code or config"
   rulings:
   - R-15
   - R-91
+  - R-99
   milestone: M6
-  rq:
-  - RQ-59
 - id: REQ-REF-037
   area: REF
-  statement: "The free-group word must be stored per copy, and a symbolic-spread reduction over the E+1 words must produce an S_word channel aggregated into QuadReduction that drives an additional refinement trigger."
+  statement: "The free-group word must be stored per copy, and a symbolic-spread reduction over the E+1 words must produce an S_word channel that is shown and measured as a diagnostic and never read by the split."
   source:
   - file: docs/notes/principia_sampling_msaa_note.md
     section: "Symbolic spread — the free-group word as a third resolve-stage reduction"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: unit test
-    detail: "a footprint whose copies share an outcome but differ in word yields nonzero S_word; the refinement policy splits on high S_word"
-  rulings: []
+    detail: "a footprint whose copies share an outcome but differ in word yields nonzero S_word; the split decision is identical with S_word forced to any value"
+  rulings:
+  - R-99
   milestone: M6
-  rq:
-  - RQ-59
-  note: "The reduction metric and its split threshold: REQ-REF-042 (definition); REQ-REF-041 (calibration)."
+  note: "The reduction metric: REQ-REF-042 (definition)."
 - id: REQ-REF-038
   area: REF
   statement: "The refinement mechanism must be re-measured from scratch on uncontaminated fields; conclusions measured on the wedge-contaminated field (frac_hot_between saturation, α distributions, tree statistics, error(B) curves, 'nothing beats breadth-first') must not be carried forward."
@@ -7365,10 +7483,12 @@
     section: Known open items
   - file: docs/read_first/principia_01_pitfalls.md
     section: 9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN
-  - file: docs/design/principia_dd_refinement_policy.md
-    section: 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both open
   - file: decisions.md
     section: "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
+  - file: docs/design/principia_dd_refinement_policy.md
+    section: 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both ruled (R-42)
+  - file: decisions.md
+    section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   verify:
     method: unit test
     detail: "Empty-mask and full-mask fixtures give different results (not both 0.0000); a negative-exponent fixture is refused (no d > 2); alpha_lo = 0.005."
@@ -7376,10 +7496,9 @@
   - R-42
   - R-59
   - R-73
+  - R-107
   milestone: M6
-  rq:
-  - RQ-67
-  note: "pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\". Policy §2.2 records R-42's fixes, which land with the refinement task; the ledger's alpha row is corrected (R-73)."
+  note: "pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\". Policy §2.2 records R-42's fixes (its heading now reads 'both ruled', R-107), which land with the refinement task; the ledger's alpha row is corrected (R-73)."
 - id: REQ-REF-041
   area: REF
   kind: calibration
@@ -7395,6 +7514,7 @@
   rulings:
   - R-71
   milestone: M6
+  retired: "R-99: S_word is a diagnostic, not a split input, so it has no split threshold."
 - id: REQ-REF-042
   area: REF
   kind: definition
@@ -7404,12 +7524,16 @@
     section: "Symbolic spread — the free-group word as a third resolve-stage reduction"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
     method: review checklist
-    detail: "the sampling note names one metric, its range and its QuadReduction encoding; the reviewer checks it depends only on whole raw reduced words"
+    detail: "the sampling note names one metric and its range; the reviewer checks it depends only on whole raw reduced words"
   rulings:
   - R-72
+  - R-99
   milestone: M6
+  note: S_word is a diagnostic, not a split input (R-99).
 - id: REQ-REF-043
   area: REF
   kind: calibration
@@ -7442,6 +7566,46 @@
   rulings:
   - R-48
   - R-71
+  milestone: M6
+- id: REQ-REF-045
+  area: REF
+  kind: definition
+  statement: "The storage layout of the per-footprint latch (`running_max_divergence`, f32, held with the resident quad) must be defined in dd_generation_root's temporal-accumulators section by the task that builds it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Temporal accumulators (scheduler Part 8)
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 8 — Continuous refinement & the live-to-live handoff
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the latch's layout per footprint with the resident quad, and shows it is dropped on evict and merge; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-99
+  milestone: M6
+  rq:
+  - RQ-72
+- id: REQ-REF-046
+  area: REF
+  kind: definition
+  statement: "Where the diagnostics `running_mean_divergence` and `first_divergence_t` are held (they are no longer split inputs or QuadReduction members, R-99) must be defined in dd_generation_root's temporal-accumulators section by the task that needs them and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Temporal accumulators (scheduler Part 8)
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the doc states where both diagnostics live and how the GPU→CPU crossing carries them, if at all; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-99
   milestone: M6
 - id: REQ-RENDER-001
   area: RENDER
@@ -7673,6 +7837,8 @@
     detail: "generated prelude contains the three consts with values matching the variant's tier bits"
   rulings: []
   milestone: M1
+  rq:
+  - RQ-75
 - id: REQ-RENDER-015
   area: RENDER
   statement: "No correctness logic in any built-in occupant may rely on NaN propagation or isnan(); per-sample validity must be tested with the descriptor/validity predicates (sd_is_failed, ftle_valid, diffusion slope-valid), tier presence with has_<feature>, and any runtime absence test with an exact bitcast comparison against the canonical quiet-NaN bits."
@@ -7691,6 +7857,8 @@
   rulings:
   - R-79
   milestone: M1
+  rq:
+  - RQ-75
 - id: REQ-RENDER-016
   area: RENDER
   statement: "The public slot contract must stay linear RGB plus scalar even where built-ins work internally in OKLab/OKLCH."
@@ -9224,13 +9392,16 @@
     section: 04 Windows
   - file: decisions.md
     section: R-67 — The display chain *(closes RQ-23)*
+  - file: decisions.md
+    section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   verify:
     method: unit test
     detail: "with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(style(stain)))"
   rulings:
   - R-67
+  - R-107
   milestone: M7
-  note: "The notes' 04 Windows list omits display scale and gamut clamp; the ruling's order wins."
+  note: "GUI_DESIGN_NOTES now lists display scale and gamut clamp in this order (conformed to R-67, R-107)."
 - id: REQ-COL-044
   area: COL
   statement: "The style stage must be optional and apply to the figure only, offering at least plain, watercolour & pencil and print · Poster78, with paper grain and press misregistration."
@@ -9897,7 +10068,7 @@
   milestone: M8
 - id: REQ-GUI-035
   area: GUI
-  statement: "Every SimConfig and RenderState edit — including navigation (z₀ and basis edits) and lock / unlock — must be undoable, and ViewUI-only state (open panels, focus, selection, the kept-orbit list, playback transport) must not enter the undo history."
+  statement: "Every SimConfig and RenderState edit — including navigation (z₀ and basis edits) and lock / unlock — must be undoable, ViewUI-only state (open panels, focus, selection, the kept-orbit list, playback transport) must not enter the undo history, and the GUI clock's per-frame playhead writes (a SetField marked \"no history\") must never enter it, a manual scrub being one coalesced entry."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 2. The editable state is the entire coupling surface
@@ -9907,32 +10078,39 @@
     section: R-69 — What is undoable *(closes the step-6 open question)*
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
   verify:
     method: unit test
-    detail: "pan, lock, unlock and a stain edit each add one history entry and undo restores the prior state; opening a window, moving focus, selecting, keeping an orbit and play / pause / speed / loop add none"
+    detail: "pan, lock, unlock and a stain edit each add one history entry and undo restores the prior state; opening a window, moving focus, selecting, keeping an orbit, play / pause / speed / loop and ten seconds of playback add none; a scrub adds exactly one"
   rulings:
   - R-52
   - R-69
   - R-96
+  - R-101
   milestone: M8
 - id: REQ-GUI-036
   area: GUI
-  statement: "The state must be split into SimConfig (sim key: chart id and params, z₀, q₁, q₂, slice values, lock flag, z_locked, δ, link ids, integrator occupant, T / dt / thresholds / eps, r_coll, quality settings), RenderState (render key: the stain graph, overlay set, palette / compaction params, playhead t) and ViewUI (backdrop ref, debug category visibility, keyboard focus scope, selection, kept orbits, inspector t_cursor, open windows, playback transport play / pause / speed / loop)."
+  statement: "The state must be split into SimConfig (sim key: chart id and params, z₀, q₁, q₂, slice values, lock flag, z_locked, δ, link ids — the chart's per-block link functions — integrator occupant, T / dt / thresholds / eps, r_coll, quality settings), RenderState (render key: the stain graph, overlay set, palette / compaction params, playhead t) and ViewUI (backdrop ref, debug category visibility, keyboard focus scope, selection, kept orbits, inspector t_cursor, open windows, linked views for side by side (v2), playback transport play / pause / speed / loop)."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 2. The editable state is the entire coupling surface
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
+  - file: decisions.md
+    section: "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
   verify:
     method: unit test
-    detail: "schema test: each listed field lives in the named struct; playback transport is a ViewUI field and is absent from SimConfig"
+    detail: "schema test: each listed field lives in the named struct; playback transport and the linked views are ViewUI fields and are absent from SimConfig; SimConfig's link ids are the chart registry's link-function ids"
   rulings:
   - R-69
   - R-96
+  - R-101
+  - R-106
   milestone: M8
-  rq:
-  - RQ-61
-  - RQ-66
+  note: "The GUI's clock reads the transport and advances RenderState's playhead each frame through a SetField marked \"no history\" (R-101)."
 - id: REQ-GUI-037
   area: GUI
   statement: "The engine must never read ViewUI, so a replacement GUI can define its own ViewUI entirely."
@@ -9943,13 +10121,15 @@
     section: "7. What a replacement GUI must honour (the teardown contract)"
   - file: docs/design/principia_trajectory_viewing.md
     section: 6. Placement
+  - file: decisions.md
+    section: "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
   verify:
     method: review checklist
     detail: no engine-crate code references ViewUI fields
-  rulings: []
+  rulings:
+  - R-101
   milestone: M8
-  rq:
-  - RQ-61
+  note: "Transport is read by the GUI's clock, not the engine: the clock writes RenderState's playhead through a SetField marked \"no history\" (R-101)."
 - id: REQ-GUI-038
   area: GUI
   statement: "The GUI must expose every SimConfig and RenderState field and add no state of its own to them."
@@ -10073,8 +10253,7 @@
     detail: each of the 2³ toggle combinations works
   rulings: []
   milestone: M8
-  rq:
-  - RQ-70
+  retired: "R-109: only pointer_channels §4 is normative; §1's independent toggles have no normative source."
 - id: REQ-GUI-049
   area: GUI
   statement: "Sonification must scale to the audible range by mapping 1/t_c (the crossing time) to a fixed reference pitch, so frequency ratios are preserved across ICs."
@@ -10085,24 +10264,30 @@
     section: 1. The single mechanism
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: unit test
     detail: "two ICs with the same dynamical frequency ratio produce the same pitch interval"
   rulings:
   - R-71
   - R-96
+  - R-109
   milestone: M8
-  note: "The reference pitch: REQ-GUI-143 (calibration). Normative because trajectory_viewing §1 cites pointer_channels §4 (R-96)."
+  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109)."
 - id: REQ-GUI-050
   area: GUI
   statement: "Sonification must cross-fade between hovered ICs and never retrigger per pixel."
   source:
   - file: docs/design/principia_scratchpad_pointer_channels.md
     section: "4. Audio-specific constraints, which are NOT the frame budget"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: unit test
     detail: "the audio buffer across an IC change has no discontinuity (no click)"
-  rulings: []
+  rulings:
+  - R-109
   milestone: M8
 - id: REQ-GUI-051
   area: GUI
@@ -10110,8 +10295,6 @@
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 1. There is ONE mechanism, and it now has THREE consumers
   verify:
     method: unit test
     detail: "pointer at the top edge decodes v ≈ 1 (top of the manifold); the trajectory holds r and p at every step"
@@ -10694,22 +10877,23 @@
     section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
   - file: docs/gui/principia_render_gui_spec.md
     section: G13. Where the artboards are overridden
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 1. There is ONE mechanism, and it now has THREE consumers
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 2. Why the trace and the sound are the SAME measurement
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: docs/design/principia_scratchpad_pointer_channels.md
+    section: "4. Audio-specific constraints, which are NOT the frame budget"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: unit test
     detail: "the audio path's input is the θ(t), φ(t) series of the hovered IC's computeIC trajectory; no separations-based mapping exists"
   rulings:
   - R-68
   - R-96
+  - R-109
   milestone: M8
-  note: "The artboard's selector is illustrative (R-68). pointer_channels is normative here because render_gui_spec §G2 cites it for listen (R-96). Its open choices: REQ-GUI-144 (definition)."
+  note: "The artboard's selector is illustrative (R-68). Only pointer_channels §4 is normative, through render_gui_spec's listen (R-109). Its open choices: REQ-GUI-144 (definition); the reference pitch: REQ-GUI-143 (calibration)."
 - id: REQ-GUI-091
   area: GUI
   statement: "The compass (nav cube) must sit bottom left under the view controls, show the slice plane inside the chart, switch mode by itself (slicing when a slice slider is touched, tilting when a tilt is touched), carry a gold pin at the pivot when locked with the plane turning about it, tilt when the plane is dragged and orbit when the cube is dragged, and read out the tilt and rotation angles."
@@ -10771,13 +10955,16 @@
     section: G14. Settled by the notes (record)
   - file: docs/gui/principia_render_gui_spec.md
     section: Run — from the top bar
+  - file: decisions.md
+    section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png shows none of these fields; all are in the Run window (04_windows.png)"
   rulings:
   - R-68
+  - R-107
   milestone: M8
-  note: "The notes' list includes 'tolerance', which has no contract counterpart (R-68)."
+  note: "GUI_DESIGN_NOTES no longer lists an integrator 'tolerance' (conformed to R-68, R-107)."
 - id: REQ-GUI-095
   area: GUI
   statement: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend, with Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) reached with Enter."
@@ -10886,13 +11073,16 @@
     section: 01 Explore — the everyday view
   - file: decisions.md
     section: "R-68 — Artboard values are illustrative; corpus values win *(closes RQ-24)*"
+  - file: decisions.md
+    section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   verify:
     method: unit test
     detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×KDK; T_horizon is clamped to [50, 200]; no field named tolerance"
   rulings:
   - R-68
+  - R-107
   milestone: M8
-  note: "Overrides the artboard's integrator 'tolerance' field and the notes' 'tolerance' (R-68)."
+  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107)."
 - id: REQ-GUI-103
   area: GUI
   statement: "The Run window's escape settings must be tau and the escape window (0.4 time units, provisional), with no persistence count."
@@ -11233,16 +11423,17 @@
     section: 11 Research — first pass (v2)
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 11_research.png; a pan in one side pans the other"
   rulings:
   - R-72
   - R-96
+  - R-106
   milestone: M8
-  rq:
-  - RQ-66
-  note: "v2; 'linked camera' is renamed (§G13). Link ids are specified when the v2 research tools are built (R-96): REQ-GUI-154 (definition)."
+  note: "v2; 'linked camera' is renamed (§G13). The linked views are a separate ViewUI item, specified with the v2 research tools — not the chart's link ids in SimConfig (R-106): REQ-GUI-154 (definition)."
 - id: REQ-GUI-126
   area: GUI
   statement: "The console must be the footer opened, with severity, time, source and message columns, filters (all, warnings, errors, info, text), copy and clear, and must open automatically on an error."
@@ -11469,20 +11660,21 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: review checklist
     detail: "the proposal shows the resulting pitch range for the figure-eight and a set of chaotic ICs stays within the audible range"
   rulings:
   - R-71
   - R-96
+  - R-109
   milestone: M8
 - id: REQ-GUI-144
   area: GUI
   kind: definition
-  statement: "The sonification mapping's open choices — whether φ(t) is used beside θ(t) (and whether as a stereo channel), and whether the sound is the whole trajectory's spectrum or a windowed spectrum tracking the playhead must be defined in pointer_channels §4 (cited by trajectory_viewing §1 and render_gui_spec §G2) by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The sonification mapping's open choices — θ(t) alone or stereo θ(t)/φ(t), and the whole trajectory's spectrum or a windowed spectrum tracking the playhead — must be defined in pointer_channels §4 by the task that builds listen and reviewed by the physics reviewer before merge."
   source:
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 7. Open
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: docs/design/principia_trajectory_viewing.md
@@ -11491,12 +11683,17 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: docs/design/principia_scratchpad_pointer_channels.md
+    section: "4. Audio-specific constraints, which are NOT the frame budget"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: review checklist
     detail: "pointer_channels §4 states both choices; the reviewer checks they keep the trace and the sound one measurement (§2)"
   rulings:
   - R-72
   - R-96
+  - R-109
   milestone: M8
 - id: REQ-GUI-145
   area: GUI
@@ -11648,7 +11845,7 @@
 - id: REQ-GUI-154
   area: GUI
   kind: definition
-  statement: "Link ids — what a link id holds and how linked side-by-side views share cursor and navigation must be defined in render_gui_spec §G11 and gui_state_contract §2 by the task that builds the v2 research tools and reviewed by the physics reviewer before merge."
+  statement: "The linked views for side by side — a ViewUI item, distinct from the chart's link ids in SimConfig — must be defined (what a linked view holds and how the views share cursor and navigation) in render_gui_spec §G11 and gui_state_contract §2 by the task that builds the v2 research tools and reviewed by the physics reviewer before merge."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G11. Research — first pass (v2) (`11_research.png`)
@@ -11657,16 +11854,15 @@
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
-    section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+    section: "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
   verify:
     method: review checklist
-    detail: "§G11 and gui_state §2 define link ids; the reviewer checks their place on the sim key"
+    detail: "§G11 and gui_state §2 define the linked views as ViewUI state, none of it on the sim key; the chart's link ids are unchanged"
   rulings:
   - R-72
-  - R-96
+  - R-106
   milestone: M8
-  rq:
-  - RQ-66
+  note: "R-106 withdraws R-96's last bullet: the link ids in SimConfig and on the sim key are the chart's link functions, already specified."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -12893,9 +13089,8 @@
   rulings:
   - R-96
   milestone: M8
-  rq:
-  - RQ-70
   note: "pointer_channels binds here because render_gui_spec §G2 cites it for sonification (R-96)."
+  retired: "R-109: only pointer_channels §4 is normative; §6's FFT reuse has no normative source."
 - id: REQ-TOOL-094
   area: TOOL
   statement: "The hover trace must re-integrate the IC on the CPU via computeIC in the inspector worker and read no payload, and hover trace and sonification must be two projections of one integration."
@@ -14132,7 +14327,7 @@
   note: "pitfall: \"4.4 The remedy, and its own falsification test\" — same RK4, same step control, or the comparison scores the integrator. The falsification check itself is the R-74 M3 validation requirement, REQ-VAL-115."
 - id: REQ-VAL-054
   area: VAL
-  statement: "Pitfalls §2.4's escape checks 2 (independent ground truth: separation growing without bound) and 3 (the `deep interior` chart) must be run, with check 1 recorded as passed from prin-rs."
+  statement: "Pitfalls §2.4's escape checks 2 (independent ground truth: separation growing without bound) and 3 (the `deep interior` chart) must be run in the validation harness, which marches past escape on its own state, with check 1 recorded as passed from prin-rs."
   source:
   - file: decisions.md
     section: "R-31 — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*"
@@ -14144,6 +14339,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: numerical gate
     detail: "recorded results of check 2 and check 3 on the corrected detector"
@@ -14151,8 +14348,9 @@
   - R-31
   - R-71
   - R-95
+  - R-103
   milestone: M3
-  note: "pitfall: \"2.4 Should it terminate?\" — the current ground truth shares a term with the criterion; the config chart's base rates are too high to discriminate. Each check's pass threshold, horizon and fixture: REQ-VAL-123 and REQ-VAL-124 (calibration)."
+  note: "pitfall: \"2.4 Should it terminate?\" — the current ground truth shares a term with the criterion; the config chart's base rates are too high to discriminate. R-103: the checks belong to the harness; production ends the loop at escape. Each check's pass threshold, horizon and fixture: REQ-VAL-123 and REQ-VAL-124 (calibration)."
 - id: REQ-VAL-055
   area: VAL
   statement: "δ_dep must be set by a recorded measurement, and the placement of the per-sample 'departed' bit must be decided and written into the ledger."
@@ -14393,16 +14591,17 @@
     section: "R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*"
   - file: decisions.md
     section: "R-35 — The change-10 cross-checks are re-run and the NumPy reference patched *(IE-7)*"
+  - file: decisions.md
+    section: R-105 — R-93's re-run is R-35's *(closes RQ-65)*
   verify:
     method: unit test
     detail: "the gate reads the recorded re-run value of t_max(f32); inspector/cross-check past it reports 'not applicable' rather than a divergence"
   rulings:
   - R-35
   - R-93
+  - R-105
   milestone: M4
-  rq:
-  - RQ-65
-  note: "R-93's text says 'the value from the R-84 re-run'; the conformed predictability-horizon doc (§4.1) reads this as R-35's change-10 re-run, pending the reviewer's confirmation. This requirement follows the doc. R-93 also says t_max annotates refinement and does not gate it."
+  note: "R-105 confirms R-93's re-run is R-35's change-10 re-run (predictability-horizon §4.1 says so). R-93 also says t_max annotates refinement and does not gate it."
 - id: REQ-VAL-071
   area: VAL
   statement: "The f32 predictability horizon must be measured against the GPU kernel directly rather than derived."
@@ -14413,15 +14612,16 @@
     section: 7.2 `lambda` is 0.6–0.8, not 1 — and `t` is not e-foldings
   - file: decisions.md
     section: "R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*"
+  - file: decisions.md
+    section: R-105 — R-93's re-run is R-35's *(closes RQ-65)*
   verify:
     method: numerical gate
     detail: measured f32 horizon recorded from GPU-kernel runs
   rulings:
   - R-93
+  - R-105
   milestone: M4
-  rq:
-  - RQ-65
-  note: "R-93: the value the cross-check gate uses comes from the change-10 re-run (R-35, per the conformed predictability-horizon doc; see the cross-check gate requirement, REQ-VAL-070)."
+  note: "R-93: the value the cross-check gate uses comes from R-35's change-10 re-run (R-105; see the cross-check gate requirement, REQ-VAL-070)."
 - id: REQ-VAL-072
   area: VAL
   statement: "The packed descriptor, `t_end_step`, `t_dmin_step`, `closure_step`, `total_substeps`, the `state` enum values and the word's integer mixed-radix arithmetic must match bit-for-bit between CPU and GPU."
@@ -14629,14 +14829,17 @@
   milestone: M6
 - id: REQ-VAL-087
   area: VAL
-  statement: "Whether S_word is marginally useful as a split signal must be measured once it is built."
+  statement: "Whether S_word adds signal as a diagnostic must be measured once it is built, with S_word kept out of the split."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 8 — Continuous refinement & the live-to-live handoff
+  - file: decisions.md
+    section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   verify:
-    method: benchmark
-    detail: "compare refinement quality/cost with and without S_word on the tolerance-study fixtures; record the result"
-  rulings: []
+    method: numerical gate
+    detail: "record where S_word fires relative to outcome impurity on the tolerance-study fixtures; the split's output is unchanged with S_word present or absent"
+  rulings:
+  - R-99
   milestone: M6
 - id: REQ-VAL-088
   area: VAL
@@ -14849,34 +15052,36 @@
   area: VAL
   statement: "The sonification spectrum of θ(t) must separate periodic from chaotic orbits: spectral entropy 0.076 for the figure-eight against 0.177 for the scratchpad's chaotic IC."
   source:
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 2. Why the trace and the sound are the SAME measurement
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: numerical gate
     detail: "spectral entropy for the figure-eight ≈ 0.076 and for the chaotic reference ≈ 0.177; periodic < chaotic"
   rulings:
   - R-71
   - R-96
+  - R-109
   milestone: M8
-  note: "Measured values used as an anchor; pointer_channels is normative only where render_gui_spec, trajectory_viewing or a ruling cites it (R-96). The chaotic IC and the tolerance: REQ-VAL-113 (definition); REQ-VAL-114 (calibration)."
+  note: "Measured values used as an anchor, stated in trajectory_viewing §1 (pointer_channels §2 is working notes, R-109). The chaotic IC and the tolerance: REQ-VAL-113 (definition); REQ-VAL-114 (calibration)."
 - id: REQ-VAL-103
   area: VAL
   statement: "The minimum trajectory length t for a usable spectrum (about 20+ oscillation periods) must be set by a recorded measurement, not guessed."
   source:
   - file: docs/design/principia_scratchpad_pointer_channels.md
     section: "4. Audio-specific constraints, which are NOT the frame budget"
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 7. Open
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: numerical gate
     detail: "a recorded measurement of spectral line resolution vs t gives the minimum t used by listen"
-  rulings: []
+  rulings:
+  - R-109
   milestone: M8
 - id: REQ-VAL-104
   area: VAL
@@ -14892,9 +15097,8 @@
   rulings:
   - R-96
   milestone: M8
-  rq:
-  - RQ-70
   note: "Scratchpad: 'worth testing early'. pointer_channels is normative only where render_gui_spec, trajectory_viewing or a ruling cites it (R-96); render_gui_spec §G2 cites it for listen."
+  retired: "R-109: only pointer_channels §4 is normative; §5's predictions have no normative source."
 - id: REQ-VAL-105
   area: VAL
   statement: "Every row of the seam catalogue must have at least one integration test."
@@ -15016,39 +15220,42 @@
 - id: REQ-VAL-113
   area: VAL
   kind: definition
-  statement: "The chaotic IC of the spectral-entropy anchor (0.177 against the figure-eight's 0.076) must be defined in pointer_channels §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The chaotic IC of the spectral-entropy anchor (0.177 against the figure-eight's 0.076) must be defined in trajectory_viewing §1 by the task that needs it and reviewed by the physics reviewer before merge."
   source:
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 2. Why the trace and the sound are the SAME measurement
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: review checklist
-    detail: "pointer_channels §2 gives the chaotic IC (as z or physical state) and the horizon of the measurement"
+    detail: "trajectory_viewing §1 gives the chaotic IC (as z or physical state) and the horizon of the measurement"
   rulings:
   - R-72
   - R-96
+  - R-109
   milestone: M8
+  note: "Only pointer_channels §4 is normative (R-109), so the definition goes beside the anchor values in trajectory_viewing §1."
 - id: REQ-VAL-114
   area: VAL
   kind: calibration
   statement: "The tolerance on the spectral-entropy anchor values (0.076 figure-eight, 0.177 chaotic) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
   source:
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: 2. Why the trace and the sound are the SAME measurement
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   verify:
     method: numerical gate
     detail: "the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits"
   rulings:
   - R-71
+  - R-109
   milestone: M8
 - id: REQ-VAL-115
   area: VAL
@@ -15194,13 +15401,17 @@
     section: "R-31 — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: numerical gate
     detail: "the proposal gives the separation-growth test, its horizon and the fixture set, with the check's result on the corrected detector; recorded in decisions.md"
   rulings:
   - R-31
   - R-71
+  - R-103
   milestone: M3
+  note: "R-103: check 2 runs in the validation harness, on its own state; the production loop ends at escape."
 - id: REQ-VAL-124
   area: VAL
   kind: calibration
@@ -15212,13 +15423,17 @@
     section: "R-31 — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   verify:
     method: numerical gate
     detail: "the proposal names the deep-interior chart region, the horizon and the pass threshold, with the check's result on the corrected detector; recorded in decisions.md"
   rulings:
   - R-31
   - R-71
+  - R-103
   milestone: M3
+  note: "R-103: check 3 runs in the validation harness, on its own state; the production loop ends at escape."
 - id: REQ-VAL-125
   area: VAL
   kind: calibration
@@ -15319,6 +15534,7 @@
   rulings:
   - R-71
   milestone: M3
+  note: "The figure-eight closure's |dr| threshold is the one REQ-VAL-133 calibrates (with the fitted-order tolerance per occupant); one recorded value serves both."
 - id: REQ-VAL-131
   area: VAL
   kind: definition
@@ -15477,8 +15693,6 @@
   area: PERF
   statement: "One hover trajectory must fit inside a 60 fps frame on a single CPU core at production horizons, so it can run every frame during motion."
   source:
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
   verify:
@@ -15486,6 +15700,8 @@
     detail: "computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-74
 - id: REQ-PERF-005
   area: PERF
   statement: "Checkerboard must allocate no extra or half-size buffer, keep every stale SimState resident, and the memory estimator must credit it with no memory saving."
@@ -16427,13 +16643,13 @@
     section: Part 7 — The hover trace (per-IC trajectory overlay)
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
   verify:
     method: review checklist
     detail: "rapid hover moves issue at most one completed integration per settle; frame time unaffected by an in-flight trace"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-74
 - id: REQ-PERF-073
   area: PERF
   statement: "Potato must run acceptably on a phone (the v0.5 acceptance criterion)."
@@ -16462,13 +16678,13 @@
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
   verify:
     method: unit test
     detail: "a near-collision IC under motion returns a partial trajectory flagged incomplete; after dwell the full trajectory arrives"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-74
   note: "The budget and the rest time before it lifts: REQ-PERF-078 (calibration)."
 - id: REQ-PERF-076
   area: PERF
@@ -16504,8 +16720,6 @@
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
-  - file: docs/design/principia_scratchpad_pointer_channels.md
-    section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
@@ -16517,6 +16731,8 @@
   - R-71
   - R-96
   milestone: M8
+  rq:
+  - RQ-74
 - id: REQ-PERF-079
   area: PERF
   kind: definition
@@ -16959,19 +17175,20 @@
   milestone: M4
 - id: REQ-SYS-024
   area: SYS
-  statement: "Compute-side lowering must bake chart type, link selection, integrator occupant and tier co-computations (FTLE shadow, ensemble) as monomorphised variants, and must pass wrapper config (T, dt, N_max, r_*, eps_*, n_renorm) as SimUniforms and chart params (z0, q1, q2, slice values, curve tangent, invariant targets) as uniforms."
+  statement: "Compute-side lowering must bake chart type, link selection, integrator occupant and the FTLE shadow co-computation as monomorphised variants, and must pass wrapper config (T, dt, N_max, r_*, eps_*, n_renorm) as SimUniforms, chart params (z0, q1, q2, slice values, curve tangent, invariant targets) as uniforms and the ensemble's copy_index as a uniform."
   source:
   - file: docs/contracts/principia_lowering_contract.md
     section: Compute side
   - file: docs/contracts/principia_lowering_contract.md
     section: Part 5 — The resolution function (the "switch", concretely)
+  - file: decisions.md
+    section: R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
   verify:
     method: review checklist
-    detail: "a navigation edit changes only uniform buffers; a tier change selects a different pre-built variant"
-  rulings: []
+    detail: "a navigation edit changes only uniform buffers; a tier change of N or FTLE selects a different pre-built variant; a change of E selects none"
+  rulings:
+  - R-102
   milestone: M4
-  rq:
-  - RQ-62
 - id: REQ-SYS-025
   area: SYS
   statement: "The physics kernel must be one Rust source, generic over `Real` and monomorphised, compiled to both the CPU-f64 build and the GPU-f32 build, with no second implementation of any physics or wrapper logic."

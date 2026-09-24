@@ -120,11 +120,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 143 requirements** (and every earlier gate still green):
+**Exit gate — 142 requirements** (and every earlier gate still green):
 
 - DEC (35): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043
 - ENC (26): REQ-ENC-001…020, REQ-ENC-022…027
-- CHART (41): REQ-CHART-001…036, REQ-CHART-042…046
+- CHART (40): REQ-CHART-001…036, REQ-CHART-043…046
 - INT (2): REQ-INT-002…003
 - PAY (2): REQ-PAY-034…035
 - GEN (3): REQ-GEN-013…015
@@ -210,7 +210,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 148 requirements** (and every earlier gate still green):
+**Exit gate — 147 requirements** (and every earlier gate still green):
 
 - DEC (2): REQ-DEC-031…032
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -218,7 +218,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - EVT (1): REQ-EVT-022
 - PAY (14): REQ-PAY-060…068, REQ-PAY-075…079
 - GEN (1): REQ-GEN-017
-- SCHED (48): REQ-SCHED-014…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-085
+- SCHED (47): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086
 - REF (10): REQ-REF-001…010
 - RENDER (21): REQ-RENDER-037…056, REQ-RENDER-076
 - COL (1): REQ-COL-007
@@ -243,13 +243,13 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The refinement policy's open measurements.
 
 <!-- gate:M6 -->
-**Exit gate — 127 requirements** (and every earlier gate still green):
+**Exit gate — 128 requirements** (and every earlier gate still green):
 
 - DEC (6): REQ-DEC-033…037, REQ-DEC-042
 - PAY (8): REQ-PAY-069…072, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (21): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082
-- REF (33): REQ-REF-011…037, REQ-REF-039…044
+- REF (34): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…046
 - GUI (6): REQ-GUI-010…015
 - TOOL (4): REQ-TOOL-055…058
 - VAL (12): REQ-VAL-084…095
@@ -297,7 +297,7 @@ canonical_spec §11: "build the browser product on top".
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 
 <!-- gate:M8 -->
-**Exit gate — 220 requirements** (and every earlier gate still green):
+**Exit gate — 217 requirements** (and every earlier gate still green):
 
 - ENC (2): REQ-ENC-021, REQ-ENC-028
 - CHART (1): REQ-CHART-040
@@ -305,9 +305,9 @@ canonical_spec §11: "build the browser product on top".
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (123): REQ-GUI-032…154
-- TOOL (38): REQ-TOOL-073…108, REQ-TOOL-114…115
-- VAL (16): REQ-VAL-099…111, REQ-VAL-113…114, REQ-VAL-116
+- GUI (122): REQ-GUI-032…047, REQ-GUI-049…154
+- TOOL (37): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115
+- VAL (15): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116
 - PERF (10): REQ-PERF-070…076, REQ-PERF-078…080
 - SYS (24): REQ-SYS-039…062
 <!-- /gate:M8 -->
