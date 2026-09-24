@@ -938,6 +938,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
   be fixed in the slice plane, not in the current view.
 - **Needed:** the frame `(depth, tx, ty)` is taken in (e.g. slice-plane coordinates at a fixed origin and scale), and whether
   deep_zoom §1's "index into the current view" is reworded.
+- **Ruling:** R-97 (decisions.md). Closed in step 7.
 
 ## RQ-58: R-88 — does `MAX_REL_DEPTH` cap off-screen policy splits? *(step 7, scheduler)*
 
@@ -945,6 +946,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
 - `principia_scheduler_contract.md` Part 3 (:66): `∨ policy_splits(C) ∧ ℓ < camera_depth + MAX_REL_DEPTH` — applied to every
   policy split, including quads off screen (the frontier).
 - **Needed:** whether off-screen policy splits are also capped by `MAX_REL_DEPTH` (Part 3 stands) or by something else.
+- **Ruling:** R-98 (decisions.md). Closed in step 7.
 
 ## RQ-59: R-91 — four points it leaves open *(step 7, refinement)*
 
@@ -959,6 +961,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
 - **(d) The latch and merging.** A latched maximum keeps a footprint unresolved for ever, so its parent can never merge
   (refinement_policy §3, :156: merged "when the parent has become resolved"), and the measured result "the final tree is
   **bitwise the static tree at the horizon**" (:161) can no longer hold under a live playhead. Is that intended?
+- **Ruling:** R-99 (decisions.md). Closed in step 7.
 
 ## RQ-60: R-80 — the optional per-cell Halton rotation *(step 7, sampling)*
 
@@ -968,6 +971,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
   deterministic)", now limited to copies 1…E; :110 hashes it.
 - **Needed:** whether the rotation is dropped (offsets fully fixed) or kept as an option (and then how it composes with the
   centring).
+- **Ruling:** R-100 (decisions.md). Closed in step 7.
 
 ## RQ-61: R-96 — transport in `ViewUI`, which is "never read by the engine" *(step 7, GUI)*
 
@@ -976,6 +980,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
   and ends "— never read by the engine". The frame loop reads play/pause and speed.
 - **Needed:** whether transport is a `ViewUI` field the engine reads (the "never read by the engine" line is reworded), or a
   third category (engine-read, not undoable, not on either key).
+- **Ruling:** R-101 (decisions.md). Closed in step 7.
 
 ## RQ-62: R-89 — "ensemble on/off" as a baked variant *(step 7, integrator)*
 
@@ -984,6 +989,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
   These select **baked variants**" — a variant change re-dispatches.
 - **Needed:** whether turning the ensemble on or off is still a baked variant (only E's value changes live), or the variant is
   dropped.
+- **Ruling:** R-102 (decisions.md). Closed in step 7.
 
 ## RQ-63: R-95 — the loop's `done` flag after escape fires *(step 7, integrator)*
 
@@ -992,6 +998,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
   The prose now states R-95; the pseudocode is unchanged.
 - **Needed:** whether `detect_terminal` sets `done` on escape (and a separate "checks pending" state carries the march), or
   `done` is set only when the §2.4 checks pass.
+- **Ruling:** R-103 (decisions.md). Closed in step 7.
 
 ## RQ-64: R-27 — the shape-sphere chart's `system_image` *(step 7, charts)*
 
@@ -999,6 +1006,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
 - R-27 adds "a `system_image` value for 'covers each shape twice, as two labelled systems'" and lists lowering :160–162, but
   gives the value no name. D5 (R-59) replaced `has_redundant_hemisphere` with `system_image`.
 - **Needed:** the name of R-27's new value, and whether the shape sphere's `2-to-1` is that value or a different one.
+- **Ruling:** R-104 (decisions.md). Closed in step 7.
 
 ## RQ-65: R-93 — which re-run gives `t_max(f32)`? *(step 7, validation)*
 
@@ -1007,6 +1015,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
 - `principia_dd_predictability_horizon.md` §4.1 now reads "the value of `t_max(f32)` comes from the re-run of the change-10
   cross-checks (R-35)". decisions.md records R-93 as given.
 - **Needed:** confirm R-35 (or correct the doc).
+- **Ruling:** R-105 (decisions.md). Closed in step 7.
 
 ## RQ-66: R-96 — which "link ids"? *(step 7, GUI)*
 
@@ -1015,6 +1024,7 @@ doesn't settle. The text was left as it was; nothing is chosen.*
 - `principia_gui_state_contract.md` §2 (:37) lists "link ids" in `SimConfig`, and `principia_render_contract.md` :61 puts link ids
   on the sim key. These read as the chart's link functions (lowering's `sk.links`), not linked views.
 - **Needed:** confirm the two are different things (and the contract's "link ids" means the chart links), or say otherwise.
+- **Ruling:** R-106 (decisions.md). Closed in step 7.
 
 ## RQ-67: Further follow-ups the step-7 rulings leave in the text *(step 7, cleanup)*
 
@@ -1030,6 +1040,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   names (internal to the pattern).
 - [ ] `docs/gui/design/GUI_DESIGN_NOTES.md` :72: display order "stain → style → colour-vision simulation → screen" omits display
   scale and gamut clamp (R-67). The notes are the reviewer's source material, so they are not edited without your say.
+- **Ruling:** R-107 (decisions.md). Closed in step 7.
 
 ## RQ-68: R-88 — does "must split above the screen floor" hold during a gesture? *(step 7, scheduler)*
 
@@ -1039,6 +1050,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   motion "the only thing dispatched is the **full-canvas coarse cover**".
 - **Needed:** whether R-88's must-split applies at rest only (the motion lever and the in-motion regime stand), or also in
   motion.
+- **Ruling:** R-108 (decisions.md). Closed in step 7.
 
 ## RQ-69: R-95 — where the post-escape march keeps its state *(step 7, integrator)*
 
@@ -1049,6 +1061,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   depend on the answer.
 - **Needed:** whether the live-state block keeps advancing after escape (and "writes nothing else" means no other field), or
   the check march runs on a copy outside `SimState` (and where that lives).
+- **Ruling:** R-103 (decisions.md). Closed in step 7.
 
 ## RQ-70: R-96 — how much of pointer_channels is normative? *(step 7, GUI)*
 
@@ -1057,3 +1070,4 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   `θ(t), φ(t)` → spectrum)". Its §1 (the three channels independently toggleable), §5 (the sonification predictions) and §6
   (the FFT's reuse) are cited by nothing more specific.
 - **Needed:** whether the "listen" citation makes all of the sonification part normative, or only the mapping named there.
+- **Ruling:** R-109 (decisions.md). Closed in step 7.

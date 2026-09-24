@@ -704,3 +704,86 @@ independent ground truth, with the legacy t = 30 set kept as a comparison.
 - Undo coalesces a drag into one entry.
 - Transport (play / pause / speed / loop) moves from `SimConfig` to `ViewUI`: not undoable, not on the sim key.
 - Link ids are specified when the v2 research tools are built.
+
+---
+
+*Revised checkpoint A of step 7 (PR #8). Rulings R-97 to R-109, 25 Sep 2026. The reviewer also accepted the
+interpretations reported with the revision: `tm_t_dmin_step` with no alias; the achromatopsia matrix stays;
+`quad.collapsed` is kept and defined where R-90 lands; `rEsc`, `eta` and `nSync` are dropped from the embedded
+record; `running`'s neutral grey is a calibration requirement; REQ-VAL-130 and REQ-VAL-133, if one obligation,
+become one (the other retired, citing it).*
+
+## R-97 — Quad addresses live in the slice plane *(closes RQ-57)*
+*25 Sep 2026 · applied in step 7*
+
+Quad addresses are `(level, i, j)` in the slice plane's own frame, relative to the plane anchor: `z₀`'s value at the
+last re-integrating event (R-92). In-plane pan and zoom change which addresses are requested, never the addresses
+themselves. Conform deep_zoom §1.
+
+## R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*
+*25 Sep 2026 · applied in step 7*
+
+Off-screen policy splits included.
+
+## R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*
+*25 Sep 2026 · applied in step 7*
+
+The latch is per footprint; a quad is unresolved if any of its footprints is. The running mean, the first-divergence
+time and `S_word` are diagnostics, not split inputs. The latch lives with the resident quad: when the cache evicts or
+merges it, the latch goes too, so it never pins memory.
+
+## R-100 — No per-cell Halton rotation *(closes RQ-60)*
+*25 Sep 2026 · applied in step 7*
+
+Copy positions are fixed by the pixel alone (R-80), which keeps recreate-from-image exact.
+
+## R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*
+*25 Sep 2026 · applied in step 7*
+
+The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no history". Playback never
+enters undo; a manual scrub is one coalesced entry (R-96).
+
+## R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
+*25 Sep 2026 · applied in step 7*
+
+`copy_index` is a uniform, and each copy is the same kernel dispatched again (R-89).
+
+## R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*
+*25 Sep 2026 · applied in step 7*
+
+In production, `done` is set when escape fires and the loop ends. The post-escape march for the pitfall §2.4 checks
+runs only in the validation harness, which keeps its own state; the payload never sees it. R-95's text is conformed.
+
+## R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*
+*25 Sep 2026 · applied in step 7*
+
+"Covers each shape twice, as two labelled systems." Lowering's shape-sphere row names it.
+
+## R-105 — R-93's re-run is R-35's *(closes RQ-65)*
+*25 Sep 2026 · applied in step 7*
+
+Confirmed: R-93's "R-84 re-run" means R-35's change-10 re-run. R-93's text is corrected.
+
+## R-106 — The link ids are the chart's link functions *(closes RQ-66)*
+*25 Sep 2026 · applied in step 7*
+
+The link ids in `SimConfig` and on the sim key are the chart's link functions (per-block registry entries), which were
+already correct. R-96's last bullet is withdrawn. Linked views for side by side are a separate `ViewUI` item, specified
+with the v2 research tools.
+
+## R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*
+*25 Sep 2026 · applied in step 7*
+
+`GUI_DESIGN_NOTES.md` may be edited where a ruling contradicts it; each edit is marked "conformed to R-n". The decisions
+override it.
+
+## R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*
+*25 Sep 2026 · applied in step 7*
+
+During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
+
+## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
+*25 Sep 2026 · applied in step 7*
+
+Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
+windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
