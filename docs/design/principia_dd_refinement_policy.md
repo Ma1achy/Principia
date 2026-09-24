@@ -112,7 +112,7 @@ alpha_area = log2( unresolved_area(coarse) / unresolved_area(children) )
 report a measured box dimension as a by-product**, which is a Paper 2 quantity falling out of the
 renderer for free.
 
-Shipped default **`alpha_lo = 0.005`**: floor only where the children resolved essentially nothing,
+Shipped default **`alpha_lo = 0.005`** (it stays, R-42): floor only where the children resolved essentially nothing,
 judged as no-gain at a noise margin rather than as a dimension cut. At `0.2` the same floor costs
 **11% of `config_stability`'s resolvable pixels** and puts its tree *above* uniform at its own error.
 
@@ -137,12 +137,14 @@ quads where the dimension floor floors 262–334**.
 **It cannot tell an empty mask from a full one.** Both return exactly `0.0000`, so any positive
 `alpha_lo` floors on either. This is a **can't-fail test inside the floor itself**, and it costs
 `near-field` its `t = 50` descent: 21 quads at error 0.103 with 93% of the frame resolvable, against
-829 quads at error 0.00000 with `alpha_lo = 0`.
+829 quads at error 0.00000 with `alpha_lo = 0`. **Fix (R-42):** tell the empty mask from the full one by
+`n_unresolved`.
 
 **The exponent goes negative on sea charts at tight `eps`** (−0.020 to −0.076 at `eps = 1e-3`): the
 children found *more* unresolved area than the parent, so `d = 2 − α` reads **above 2 — impossible in
 the plane**. The dimension interpretation has lapsed and **the floor fires anyway, hardest where
-refinement is discovering structure.** Worst possible failure direction.
+refinement is discovering structure.** Worst possible failure direction. **Fix (R-42):** refuse the floor on a
+negative exponent.
 
 ---
 
@@ -258,7 +260,8 @@ count.** This extends the standing rule (never quote a leaf count without its st
 
 ## 7. Open
 
-- **The two `alpha_area` defects** (§2.2). Both are bugs with reproductions.
+- **The two `alpha_area` defects** (§2.2). Both are bugs with reproductions; the fixes are ruled (R-42) and land
+  with the refinement task.
 - **A cheap `sea_fraction` estimator** (§5.1) — the named next step.
 - **Depth beyond level 6.** Every tree in the tolerance study is capped; nothing is known past it.
 - **A calibrated grid.** All 36 cells ran shipped defaults; a calibrated `tau` moves several by an

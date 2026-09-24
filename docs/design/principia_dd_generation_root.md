@@ -270,7 +270,7 @@ class, and it *lags* divergence rather than leading it), `t_end` (conditional �
 
 | member | type | note |
 |---|---|---|
-| `alpha` | f16 | scaling exponent of `ensemble_spread`, parent↔child. **≈1 → split, ≈0 → floor** |
+| `alpha_area` | f16 | the stop rule's exponent, `log2(unresolved_area(coarse) / unresolved_area(children))`, judged over two levels (policy §2) — a dimension: a line reads 1, a sea 0, and the floor is below `alpha_lo`. An empty mask is told from a full one by `n_unresolved`, and the floor is refused on a negative exponent (R-42) |
 | `alpha_energy` | f16 | **sanity field.** Total energy's exponent is known analytically to be 1.0 |
 | `worst_energy_drift` | f16 | input to the per-copy classifier that sets `failed_fraction` |
 

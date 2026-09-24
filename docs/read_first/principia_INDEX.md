@@ -163,7 +163,7 @@ and **`Policy::Tolerance`**.
 > increased). `docs/design/principia_dd_refinement_policy.md` §0.1.
 
 
-- **Two `alpha_area` defects** — cannot distinguish an empty mask from a full one (both `0.0000`); negative exponents give `d > 2`. `docs/design/principia_dd_refinement_policy.md` §2.2
+- **Two `alpha_area` defects** — cannot distinguish an empty mask from a full one (both `0.0000`); negative exponents give `d > 2`. Ruled (R-42): tell empty from full by `n_unresolved`, and refuse the floor on a negative exponent; `alpha_lo` stays 0.005. The fix lands with refine. `docs/design/principia_dd_refinement_policy.md` §2.2
 - **A cheap `sea_fraction` estimator** — the named next step for regime detection
 - **Tier tables** — shape settled at v0.5 (three axes: `eps` / frame budget / hard cap, binding one reported; `docs/design/principia_dd_telemetry_and_tiers.md` §3.5). **The numbers are guesses and are meant to be** — calibrate from device telemetry. `memory_tiers.md` now carries a banner pointing at the three-axis model
 - **`Decision::Undetermined` is a second budget line** the architecture has no place for
