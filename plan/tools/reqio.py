@@ -12,6 +12,7 @@ Patch format (YAML), applied in order:
       milestone: M3
       note: "…"                    # replace; "" removes it
       add_rulings: [R-82]
+      remove_rulings: [R-96]
       add_source: [{file: …, section: …}]
       remove_source: [{file: …, section: …}]
       remove_rq: [RQ-33]            # or `remove_rq: all`
@@ -102,6 +103,10 @@ def apply(reqs, patch, log):
                 r.pop("note", None)
         if ch.get("add_rulings"):
             r["rulings"] = sorted(set(r.get("rulings") or []) | set(ch["add_rulings"]), key=rnum)
+        for x in ch.get("remove_rulings") or []:
+            if x not in (r.get("rulings") or []):
+                raise SystemExit(f"{rid}: remove_rulings not found: {x}")
+            r["rulings"] = [y for y in r["rulings"] if y != x]
         for s in ch.get("remove_source") or []:
             key = (s["file"], s["section"])
             before = len(r["source"])
