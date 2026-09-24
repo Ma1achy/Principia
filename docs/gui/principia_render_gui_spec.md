@@ -150,7 +150,8 @@ Locking (K, or right-click → lock here) recentres the view on that point and m
 Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
 same point as a gold pin.
 - **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
-  the anchor. The lock flag and the excursion `δ` are `ViewUI` (gui_state_contract §2); recentring is a `SetField` on `z₀`.
+  the anchor. The lock flag, the anchor and the excursion `δ` are `SimConfig` — lock is chart construction, so locking and unlocking
+  are undoable (R-69; gui_state_contract §2); recentring is a `SetField` on `z₀`.
 - **Still works:** tilt, rotation, zoom and chart changes all turn about the pin.
 - **Unlocking:** the view as it stands becomes the new free start.
 - **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the

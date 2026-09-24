@@ -70,5 +70,5 @@ Everything left open, each with its source. Nothing is deferred silently.
   `has_redundant_hemisphere`; the 136/88 B widths in canonical_spec :79 and systems_architecture :63, :163.
 - **Every open item above and in audit section B is on `DECISIONS_TO_MAKE.md`** (step 5).
   **All of them are ruled** (R-21 to R-59, 24 Sep 2026). The rulings not yet applied are tracked in `decisions.md` by their status lines.
-- **Whether `ViewUI` edits enter the undo history** (step 6, applying R-52). The contract's history holds typed `setField`
+- ~~**Whether `ViewUI` edits enter the undo history**~~ **Closed by R-69:** `SimConfig` and `RenderState` edits are undoable (navigation and lock included); `ViewUI`-only state is not. (step 6, applying R-52). The contract's history holds typed `setField`
   edits; lock, keyboard focus and kept orbits are `ViewUI`, which the engine never reads. `principia_gui_state_contract.md` §2.
