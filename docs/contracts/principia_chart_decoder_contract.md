@@ -190,7 +190,7 @@ Free-floating curve-axis tilt is ill-defined only because the tangent changes al
 
 ### The lock (projective microscope)
 
-Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is pure CPU/UI state — nothing about the chart maths changes.
+Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is CPU-side chart construction, held in `SimConfig` (R-69) — nothing about the chart maths changes.
 
 **Setting the lock.** Select the pixel at $(s,t)$ and snap the centre to its IC. For an affine chart,
 $\mathbf z_{\mathrm{locked}} = \mathbf z_0 + (2s-1)\mathbf q_1 + (2t-1)\mathbf q_2$: CPU arithmetic, with no GPU readback.
@@ -207,7 +207,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 
 ### What the GPU knows about all of this: nothing
 
-The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock, the `δ` memory, the ghost marks, the direction library — pure UI state. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part.
+The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock (chart construction, R-69), the `δ` memory, the ghost marks, the direction library — none of it reaches the kernel. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part.
 
 ---
 

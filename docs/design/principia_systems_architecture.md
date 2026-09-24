@@ -230,7 +230,7 @@ Metal is 32768, and Dawn runs on Metal, so the cited figure was impossible).
 1. **The firewall** (seam 9): Allocation never reaches payload contents.
 2. **Payload purity**: `SimState = f(IC, sim key)`. Buys free eviction, safe recompute, device-loss recovery, cross-chart cache sharing (v2).
 3. **The sim/render key split** (seam 5): the recompute boundary — a horizontal line on the ladder.
-4. **Navigation is chart construction** (Intent rung): all gestures are uniform edits; the lock is UI state; the GPU has no modes.
+4. **Navigation is chart construction** (Intent rung): all gestures are uniform edits; the lock is chart construction too (it lives in `SimConfig` and is undoable — R-69); the GPU has no modes.
 5. **Never blank, never lies, never freezes** (Image rung + Deployment): baseline-first + blurred live backdrop + the frame loop in the **wasm-engine worker** (the main thread is a *different binary* — a TS shell owning only DOM — so it *cannot* hold sim state and the GUI cannot freeze; §3 second membrane, caching Part 6a). Blur is the single vocabulary item for "not current"; sharp means true.
 6. **Measure honesty** (seam 11 + link registry): every arbitrary choice (link, warp, refinement density) either carries its Jacobian or is barred from quantitative claims; findings must survive link swaps and tilts to count as dynamics.
 7. **Generate from one source** (seam 13): bit layouts, link inverses, debug catalogue, export decoder — never hand-duplicated; the generator now targets **Rust** (the kernel's pack/unpack + host) *and* **WGSL** (the fragment-side unpack + generated debug views), still from the one layout table.
