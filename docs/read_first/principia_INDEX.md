@@ -121,6 +121,7 @@ and **`Policy::Tolerance`**.
 - `docs/experiments/results/principia_dd_refinement_external_report2.md` — "Brief 2: is the `max` criterion well-posed?"
 - `docs/experiments/results/principia_dd_refinement_external_report3.md` — "Brief 3: validating the no-discard architecture"
 - `docs/experiments/results/principia_dd_refinement_external_report4.md` — "Brief 4 — horizons"
+- `docs/experiments/results/findings.md` — toolchain spike findings ("Verdict: rust-gpu"): the evidence for the substrate decision (R-9)
 - `docs/experiments/results/principia_ftle_shadow_precision_experiment.md` — can the Benettin FTLE shadow be stored at f16/bf16?
 - `docs/experiments/results/xp_results/` — Brief 1 raw measurements and derived tables: `exp1_raw.json`, `exp1_table.json`, `exp1_tables.md`, `exp2_raw.json`, `exp2_tables.md`, `exp2b_raw.json`, `exp3_raw.json`, `exp3_table.json`, `exp3_tables.md`, `xp1_cross.py`, `xp1_report.py`, `xp1b_supp.py`, `xp2_horizon.py`, `xp2c_t120.py`, `xp3_gate.py`, `xp_common.py`, `xp_driver.py`, `xp_probe.py`, `xp_reduce.py`
 - `docs/experiments/results/xp_results2/` — Brief 2 raw JSON: `expA_domke.json`, `expB_estimator.json`, `expC_tend.json`
@@ -151,7 +152,6 @@ and **`Policy::Tolerance`**.
 | `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
-| `docs/archive/findings.md` | toolchain spike findings ("Verdict: rust-gpu"). **Why archived: unclear — see REVIEW_QUEUE RQ-7** |
 
 ---
 

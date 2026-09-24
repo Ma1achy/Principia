@@ -78,3 +78,20 @@ action. R rows are closed in step 4.
 The `docs/` copies are canonical: `docs/gui/reference/ic_inspector.html` (19 Jul, 39.6 KB) and
 `docs/notes/ic_inspector_scratchpad.md` (the later, longer one). The `spec_sources/` copies are older
 uploads. They go to `docs/archive/` when `spec_sources/` is archived at the end of step 3.
+
+## R-9 — The toolchain spike findings go to results *(closes RQ-7)*
+*24 Sep 2026 · applied in step 3*
+
+`docs/archive/findings.md` → `docs/experiments/results/findings.md` (`git mv`). It is the toolchain spike's
+findings, the evidence for the rust-gpu decision. Its INDEX row moves with it.
+
+## R-7 amended — part (a)'s grep
+*24 Sep 2026 · applied in step 3*
+
+Part (a)'s grep becomes the following. It drops `-w`, because the filename form has an underscore before "spec":
+
+```
+grep -rniE --include='*.md' "\blatex\b|spec(_revised)?\.tex" docs/ --exclude-dir=archive
+```
+
+The rest of R-7 is unchanged.

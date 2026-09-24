@@ -80,7 +80,10 @@ Two cross-checks the drill-downs expect **can't be done against the `.tex`**:
 
 ## Every reference
 
-Totals: **51 T references (on 43 lines) · 7 S · 5 M · 7 D · 11 F · 22 R**, which is 103 references on 95 lines
+*Step-3 re-sweep (every `*.md` under `docs/`, not only `principia_*`): **2 new rows**, both T, in
+`ic_inspector_scratchpad.md`. With them: **53 T references on 45 lines.**)*
+
+Step-1 totals: **51 T references (on 43 lines) · 7 S · 5 M · 7 D · 11 F · 22 R**, which is 103 references on 95 lines
 across 19 files. Two T lines (dd_integrator 185 and 246) also need the colour PDF ported, which were X before R-3. The audit counts 85.
 What's left of step 3 after the rulings: 50 T references to port, plus telemetry:398 to repoint only (R-4).
 
@@ -201,6 +204,15 @@ What's left of step 3 after the rulings: 50 T references to port, plus telemetry
 | export_animation_contract:44, 64, 68, 70, 76, 80 | F | the animation "spec object" |
 | systems_architecture:46, 155 | F | "spec objects" |
 | render_gui_spec:240 | F | "canonical spec §8" |
+
+### docs/notes/ic_inspector_scratchpad.md (found by the step-3 re-sweep)
+It cites `principia_spec.tex`, **an earlier version** of the `.tex`, so its section numbers don't match
+`principia_spec_revised.tex`. There the decoder is §6 (195–272) and momentum decode is §6.4. Mapped by content.
+
+| line | class | reference | `.tex` target |
+|---|---|---|---|
+| 7 | T | "Ports the canonical-frame decode + its inverse from `principia_spec.tex` §2 verbatim" | 195–272 (decode); 737–770 (inverse) |
+| 122 | T | "an *independent JS re-port* of the spec §2 maths" | 195–272 |
 
 ### principia_spec_pending_changes.md: 22 lines, class R
 This whole file is the LaTeX edit queue. It is closed in step 4 (fold each change's substance in, then archive the file). The

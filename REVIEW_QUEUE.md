@@ -78,3 +78,16 @@ or the human rules; I don't choose between them.
 - **Options:** keep it archived (the spike was delivered and its findings have been absorbed), or move it to
   `docs/experiments/results/` next to the spike brief, as the evidence for a settled decision. Either way,
   the INDEX row's "why archived" is written as "unclear" until you rule.
+- **Ruling:** R-9 — applied in step 3
+
+## RQ-8: R-5's μ_max premise doesn't match the IC Inspector notes *(step 3, re-sweep)*
+
+- **R-5 says:** "`μ_max` is 5 in the LaTeX and 4 in the IC Inspector notes."
+- **The IC Inspector notes** (`docs/notes/ic_inspector_scratchpad.md` line 20) say: "**`μ_max` was 4 → corrected
+  to 5** (dd_decoder §3.1, chart_decoder §87/96, inverse_encode §63; at 4 the mass-saturation range was too
+  narrow and `MASS_SAT` fired at the wrong `z_μ`)". The same passage records "**`α_min` REMOVED** … `α = (π/2)·σ(z_α)`".
+- **The rest of the corpus:** `principia_dd_decoder.md:38` has `[μ_max = 5]`, and `principia_chart_reference.md:31` has
+  "`μ_max = 4` is the recorded default (an open …)". Audit B25 has 4.
+- **So** the 4 appears only in `chart_reference` and in the audit. The IC Inspector notes argue *against* 4.
+  I'm not choosing. Under R-5 the step-5 decision sheet should carry this evidence, and the step-3 ports use
+  the named symbol.
