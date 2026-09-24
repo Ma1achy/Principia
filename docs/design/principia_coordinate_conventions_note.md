@@ -28,7 +28,7 @@ Conflating "bottom-left origin" (orientation) with "allow negative coordinates" 
 | Space | Range / sign | Origin & orientation | Used for |
 |---|---|---|---|
 | **Screen / framebuffer** | `[0,W]×[0,H]`, pixels | top-left, **Y-down** | rasterisation, mouse events, output image |
-| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) | quad identity `(depth,tx,ty)`, the **hash seed**, the quadtree — *an index into the current view* |
+| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) the sample position *in the current view*, which chooses the quads asked for; the quad identity `(depth,tx,ty)` and the quadtree are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀` at the last re-integrating event) — pan and zoom change which addresses are requested, never the addresses (R-97) |
 | **IC / chart space** | **signed real**, physical scales | centred on `z₀`, **Y-up**, graph-like | the decoder input; any axis display / readout / scale bar — *a normal graph* |
 
 **The map between the last two is the chart placement:**
@@ -39,7 +39,7 @@ z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂        # the chart placement (ch
 ```
 UV is the unsigned `[0,1]` **address**; converting it places it as a **signed offset from the chart centre**, scaled by zoom. So:
 
-- **UV stays `[0,1]` unsigned** — because quad addresses and the low-discrepancy hash want clean non-negative integers, and "which cell of the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space. You never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index.
+- **UV stays `[0,1]` unsigned** — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). You never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index.
 - **IC-space is signed and centred** — the chart is a plane *centred on `z₀`*; a displacement from centre is naturally `±` (left/below negative, right/above positive). The golden IC is `z = 0`; ICs on either side are genuinely `±`. The plane has no natural corner-origin — it has a natural *centre*, and coordinates are signed offsets from it. This is the thing that "behaves like a normal graph."
 
 **So "origin bottom-left, allow negatives" decomposes as:** *Y-up orientation everywhere* (the single flip) **+** *signed values in IC-space specifically* (the placement layer) — set in **two different places** (the framebuffer flip; the UV→IC placement transform). They are not the same fact.
