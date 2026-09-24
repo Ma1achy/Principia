@@ -1,14 +1,339 @@
-# Principia — Render / Colour GUI (dev)
+# Principia — Dev GUI (egui / F3)
 
-*Status: canonical. Single source of truth for the **developer (egui / F3) colour-and-render GUI** —
-the surface that authors, edits, and inspects the fragment-side composition. Scope is the
-**colour-maps / render-modes / debug** part of the dev GUI only; the production (TS) GUI, the
-IC-inspector tool, and non-render dev panels are out of scope here.*
+*Status: canonical. Rewritten in step 6 (24 Sep 2026). This is the single source of truth for the **developer GUI**: the
+egui debug layer over the wgpu render, toggled with F3. It is not the final UI, but it has the same structure and every
+feature. The production (TS) GUI is out of scope; it re-skins the same operations through the same contract
+(`principia_gui_state_contract.md` §1, §7).*
 
-*Conforms to `principia_colour_composition.md` (the composition algebra — sources, occupants,
-combiner, post chain, codegen/eject, ctx contract, defaults). This document specifies the **GUI**
-over that algebra; where the two overlap, the composition spec is authoritative on semantics and
-this spec is authoritative on interaction.*
+*Sources, in order of authority: `decisions.md` rulings, then `gui/design/GUI_DESIGN_NOTES.md` (the reviewer's design
+notes), then the twelve artboards in `gui/design/`. The notes win over the pictures, and a ruling wins over both. Where the
+notes and the corpus disagree, the entry is in `REVIEW_QUEUE.md` (RQ-20 to RQ-24) and this spec marks the place instead of
+choosing. §G13 lists where a picture is overridden.*
+
+*Part I covers the GUI as a whole. Part II is the stain editor, the node-graph editor over the composition algebra; it keeps
+its section numbers (§0–§16). It conforms to `principia_colour_composition.md`: where the two overlap, the composition spec
+is authoritative on semantics and this spec on interaction.*
+
+**Vocabulary.** A **stain** is a composition in `principia_colour_composition.md`'s sense: the graph that colours the
+data. The two words name one object. The **figure** is the rendered slice.
+
+| artboard | screen | section |
+|---|---|---|
+| `01_main.png` | Explore, the everyday view | §G2 |
+| `02_stain.png` | Stain, the node-graph editor | Part II |
+| `03_chartbuilder.png` | Chart builder | §G7 |
+| `04_windows.png` | Profiler, Export & share, Display, Run | §G5 |
+| `05_inspectors.png` | Inspector: one IC, its trajectory, one timeline | §G8 |
+| `06_legend.png` | Legend, generated from the stain | §G6 |
+| `07_keyboard.png` | Keyboard (a design note, not a screen) | §G3 |
+| `08_lock.png` | Lock: the reticle and the pin | §G4 |
+| `09_importrecord.png` | Import picture, saved views, record a sweep | §G9 |
+| `10_measure.png` | Measure, a tool on the figure | §G10 |
+| `11_research.png` | Research, first pass (v2) | §G11 |
+| `12_console.png` | Console | §G12 |
+
+---
+
+# Part I — The dev GUI
+
+## G1. Rules that hold everywhere
+
+- **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
+  onto the same surface (`principia_gui_state_contract.md` §1).
+- **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
+  and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
+  contract** as a history of typed `SetField` edits, shared by every GUI (R-52). The top bar shows the undo depth; Ctrl+Z
+  undoes from the contract's history.
+- **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit `z₀` and the basis
+  (`principia_chart_decoder_contract.md`, design axiom 6; canonical_spec §9, invariant 4). No control, window or log line is named
+  after a camera.
+- **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
+- **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
+  label and the lock reticle are the figure's own marks, not notifications.
+- **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
+- **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
+  (Part II).
+- **Sim key or not.** Each control knows whether its field re-integrates (sim key) or is live (render key), and warns per
+  field from the caching blast-radius table (gui_state_contract §2).
+
+## G2. Explore — the everyday view (`01_main.png`)
+
+**Top bar.** Menus (File, View, Windows, Help); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
+many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
+`budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
+
+**Overlays ▾** holds the toggles, grouped, each with an Alt+digit shortcut, plus **all off** and **save as default**:
+- Quadtree: tile bounds, depth colouring, priority heatmap, `refine_flagged`, split / merge activity.
+- Integration: substep density, substep-cap hits, NaN / invalid pixels, energy drift.
+- Chart: forbidden region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples).
+- Stain: class edges, `t_end` contours.
+
+Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived from the address), a sim shader (Tier 2,
+already resident) or a tile debug shader (Tier 3, a scheduler verdict). Where the toggles live relative to the corpus's
+"global display bar" is RQ-23.
+
+**Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
+view the manifold.
+- **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
+  an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear).
+- **Navigate:** centre `(u, v)`; zoom (log₂); all eight `z₀` values, editable by drag or by typing.
+- **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
+  `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
+  is "f64 · 7 digits left · linearise decode".
+- **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
+- **Centre z₀:** eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`.
+- **Slice & tilt:** the slice step, the tilt angles `τ₁`, `τ₂`, and the rotation `γ`.
+
+**Figure.** Axis labels carry the short axis name and the range at each end. The orbit's path is drawn from the cursor's
+IC:
+- **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. This is
+  `principia_trajectory_viewing.md` §3's hover trace (the full CPU state, `computeIC`, projected onto the chart's actual
+  basis). It is **solid near the slice and faint where it leaves the plane.** The notes add that it is exact in the
+  shape-sphere `(θ, φ)` chart, where the chart's coordinates are the shape itself.
+- **The hover label names a fate only once it's decided.** Before that it reads "undecided · still interacting at `t` of
+  `t_max`". A decided fate is a terminal `state` (escape, collision) or `bounded` at the horizon (payload §2); its labels
+  use 0-based bodies and pairs (R-22).
+
+**Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
+- a one-line summary (fate, `t_end`, FTLE, `E₀`);
+- real space (CoM frame) and the shape sphere side by side. **The shape sphere turns slowly, with visible x, y, z axes,** and
+  switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it;
+- the F₂ word, substeps, minimum separation, `|ΔE/E|`;
+- a playhead for this orbit;
+- **listen**: sonification (`principia_scratchpad_pointer_channels.md`; `θ(t), φ(t)` → spectrum), which can follow the
+  cursor. The artboard's mapping selector ("separations → pitch") is RQ-24;
+- **Open full viewer…** and **IC Inspector…** (both open §G8);
+- **Kept orbits** below, each with its fate and time, removable.
+
+**Bottom.**
+- **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart and **switches
+  mode by itself**: touching a slice slider shows slicing, and touching a tilt shows tilting. When locked it carries a gold
+  pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
+  out the tilt and rotation angles.
+- **Time:** play, step, a scrubber, speed. **Scrubbing back re-integrates** to that time, so the figure refines
+  progressively. It is not instant, and it says so ("refining · 72%"). Whether a scrubber exists at all is **RQ-22**:
+  export_animation Part 1 says "There is no scrub".
+- **Legend, generated from the stain** (§G6).
+
+**Footer.** Warning and error counts, the latest message, memory (GPU, heap), and "? keys". Clicking it opens the console
+(§G12).
+
+**Run settings are NOT on the page** (they're rarely changed). Horizon, integrator, escape settings, quality, budget, and
+recompute / cancel live in the Run window (§G5).
+
+## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
+
+The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
+5 Compass · 6 Time · 7 Legend. Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
+
+| key | action |
+|---|---|
+| Tab / Shift+Tab | next / previous big scope, in the numbered order |
+| Enter | into the focused scope |
+| Esc | back out one level |
+| arrows | between siblings; adjust a focused value |
+| Shift · Alt | ×10 · ×0.1 steps |
+| held keys | delay, then repeat (the DAS / ARR model) |
+| Ctrl+Z | undo, from the contract's history (R-52) |
+| ? | shortcuts, over everything |
+
+In scope: Figure — arrows pan, + / − zoom, Space keeps the orbit, L listens, K locks. Trajectory — Enter reaches the
+playhead, listen and kept orbits. Compass — arrows tilt, Shift+arrows orbit. Time — Space plays, ← → step. Legend is
+read-only.
+
+What the user sees: a focus ring on the current scope and the breadcrumb in the top bar (e.g. "Manifold view › Navigate ›
+zoom"). Nothing else changes on screen.
+
+## G4. Lock — the reticle and the pin (`08_lock.png`)
+
+Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre.
+Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
+same point as a gold pin.
+- **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
+  the anchor. The lock flag and the excursion `δ` are `ViewUI` (gui_state_contract §2); recentring is a `SetField` on `z₀`.
+- **Still works:** tilt, rotation, zoom and chart changes all turn about the pin.
+- **Unlocking:** the view as it stands becomes the new free start.
+- **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the
+  affine chart); nonlinear charts replay Φ and D on the CPU.
+- The lock badge offers **unlock** and **open in Inspector** (§G8).
+
+## G5. Windows (`04_windows.png`)
+
+### Profiler
+
+Tabs: Timeline, Flame, GPU, Memory, Counters; live / pause / Capture. It shows:
+- the frame-time trace, with frame ms, p50, p95, p99 and the worst frame;
+- where the frame goes (a donut), stacked per-frame bars for the last 60 frames;
+- a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence);
+- a flame chart of nested scopes on the main thread; GPU timestamps per pass;
+- memory (heap, GPU, tile cache) over time; live allocations by type, with their change over 60 s;
+- a **leak detector** that flags steady growth while idle.
+
+**Schema v1 (R-56):** telemetry §2's frame record and its **five stages** (integrate / reduce / colour / upload / present)
+at the top level; nested scopes, GPU passes, allocations and events beneath them. JSON. Leak flags and hot-path summaries
+are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain + style,
+IC decode, readback, egui) are scopes nested under the five stages.
+
+**For agents, the same data structured:**
+```
+prin profile --scenario deep_zoom_03 --frames 600 --json out/prof.json   # a fixed scenario, headless
+prin profile diff out/base.json out/prof.json --threshold 5%            # exits non-zero on regression
+prin profile query "top 10 scopes by p95" --live                        # query while running, same schema
+```
+Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headless render….
+
+### Export & share
+
+- **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
+  picture carries its own settings, so opening it recreates the view exactly (§G9).
+- **State:** copy snapshot (JSON), save snapshot, load; a share link (`principia://view?…`). The spec is the object and the
+  picture is its shadow (`principia_export_animation_contract.md` Part 6).
+- **Present:** hide all chrome; Esc returns.
+
+### Display — the last stages
+
+**Order is fixed:** SimResult → stain → style → colour-vision simulation → screen. The stain colours the data, the style
+draws it, and colour-vision simulation shows how the finished picture is seen.
+- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
+  & pencil, print · Poster78, more; with paper grain and press misregistration.
+- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia.
+- **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
+
+The display stage stays global and outside the pipeline (Part II §12). Part II §12's **gamut clamp** and
+**render→display scale** stay; where they sit in this order, and whether this window replaces the corpus's top display bar,
+is **RQ-23**.
+
+### Run — from the top bar
+
+Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
+- **Integration:** horizon `T` (physical time, `T ∈ [50, 200]`; integrator_contract Part 5); the integrator occupant
+  (Heggie with KDK leapfrog is the general default, Aarseth–Zare is kept for benchmarks; integrator_contract Part 2b); the
+  substep cap `N_max` (default 64, integrator_contract Part 3; the artboard's 100 000 is RQ-24).
+- **Escape:** the criterion is shape closure + energy sign (R-29): its `tau` and window (0.4 time units, provisional).
+  There is no persistence count (change 11).
+- **Refinement:** quality (the preset selector — Auto, named tiers, Custom; gui_state_contract §6), frame budget (ms), max
+  depth (`MAX_REL_DEPTH`), ensemble `E` (samples per pixel).
+- **Recompute** and **Cancel**, with progress.
+
+## G6. Legend — generated by evaluating the stain (`06_legend.png`)
+
+Walk back from OUT; sample each colour and brightness node over its **declared input domain** (R-53: the node interface
+declares it, inheriting the manifest's per-field domain by default); push the samples through the real combiner. **Each
+dimension gets its own key:**
+- categorical: swatches, with their shares of the view;
+- then a separate bar for what brightness (or any second channel) encodes;
+- number ramps: ticks placed through the curve (a log curve gets log-spaced ticks);
+- direction fields: a sphere key (the node's own sphere colouring, sampled);
+- coordinate maps: their colour square (e.g. `u → red`, `v → green`);
+- post operations: line samples (quad boundaries, grid).
+
+It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §3's canonical palette and 0-based
+labels (R-22).
+
+## G7. Chart builder (`03_chartbuilder.png`)
+
+- **Each axis has a kind:** latent direction (any mix of the eight `z` components, normalised; a normalise button shows
+  `|q|`), physical quantity (energy, `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed**, e.g. "z₀ along
+  the other 7" — the kind-2 residual convention, chart_decoder_contract Part 3), or Burrau dimension (Euclid `(m, n)` → the
+  primitive triple, and the neighbourhood swept, e.g. mass × momentum).
+- **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
+- **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
+  decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
+- **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
+  as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
+  `validate(u, v)` on the `Chart` trait).
+- **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
+- The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
+
+## G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)
+
+**RQ-21:** the notes make the IC Inspector and the trajectory viewer ONE window. trajectory_viewing §4's click inspector
+shows four panels at once, and the IC Inspector is a separate tool in the corpus. This section writes the notes' window.
+
+- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead.
+- **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
+  transform" shows what the gauge buttons did.
+- **Pane 3:** the trajectory in real space (CoM frame).
+- **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
+  f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too.
+- **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
+  doesn't move.
+- **Readouts:** latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
+  and pair separations.
+- **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
+  **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.
+
+## G9. Import picture · saved views · record a sweep (`09_importrecord.png`)
+
+- **Import picture:** drop a Principia PNG (or File › Import picture…). It reads the pxpack, shows what's stored (chart,
+  centre, zoom, tilt, stain, time, when it was made) and **what differs from now**, and offers **restore this view**, **only
+  its stain**, or **open side by side**.
+- **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view".
+- **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
+  GIF / PNG frames / MP4, overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
+  it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
+  captured frame).
+
+## G10. Measure — a tool on the figure (`10_measure.png`)
+
+Drag a square region on the plot itself; the sampled pairs show on it, with the pairs that disagree marked. Esc leaves the
+tool. The side panel shows:
+- the method: **uncertainty exponent** or **box count**; samples (pairs per ε), the ε range, and what classifies a pair
+  (e.g. outcome class);
+- the log-log fit, `α ± error`, and `D = 2 − α` for this slice;
+- **the resolution hazard as two buttons:** a threshold sweep, and a matched **N / 2N** pair;
+- Export CSV, Keep region.
+
+**The measurement path owns `FULL_RETENTION`** (scheduler_contract Part 5, bit 4): a uniform grid with every sample kept
+(R-39).
+
+## G11. Research — first pass (v2) (`11_research.png`)
+
+- **Periodic-orbit seeding** from spiral cores, where the winding number diverges; Newton-refine from each; residual and
+  period per seed; compared with the Šuvakov–Dmitrašinović catalogue (`principia_dd_validation_orbits.md` §1.4).
+- **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes.
+- **Poincaré return map** on a chosen section, for a kept orbit.
+- **Side by side** with a linked cursor and navigation, and a difference view.
+
+## G12. Console (`12_console.png`)
+
+The footer, opened: severity, time, source, message; filters (all, warnings, errors, info, text); copy and clear. It is the
+same stream as the profiler's telemetry. Errors open it automatically. Sources include the stain, the integrator, the
+quadtree, the contract (each `SetField` is logged) and the app.
+
+## G13. Where the artboards are overridden
+
+The pictures are layouts. Where a detail in one differs from a ruling, the notes or the corpus, the spec follows the
+authority:
+- **Body and pair labels** are 0-based (R-22). The artboards show "body 1 escapes", "collision 1–2", "body 3 crosses".
+- **Escape has no persistence count** (R-29, change 11). The Run artboard shows "persistence 8".
+- **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
+- **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
+- **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
+- **RQ-24** lists the details that differ from the corpus with nothing in the notes: the outcome palette's hex values, the
+  substep cap, an integrator "tolerance" field, and the sonification mapping. The spec follows the corpus until it's ruled.
+
+## G14. Settled by the notes (record)
+
+1. The dev GUI is a debug layer (F3) with the final UI's structure and every feature.
+2. Explore and Stain are the two modes; everything else is a window or a tool.
+3. "Manifold view" is one group: chart, navigation, centre, slice and tilt, rotation.
+4. Run settings live in a window, not on the page.
+5. The figure is never covered; warnings go to the footer console.
+6. Every slice preview keeps the viewport's aspect.
+7. The compass switches mode by itself; lock re-bases the sliders and pins the compass.
+8. The legend is generated by evaluating the stain, with one key per dimension.
+9. Keyboard: a tree of scopes, a focus ring and a breadcrumb, nothing else on screen.
+10. The measurement path owns `FULL_RETENTION` (R-39).
+11. Users keep their own stains in the library (New, Rename, Import, Export) — Part II §11's "later question".
+
+---
+
+# Part II — The stain editor
+
+*The Stain mode (`02_stain.png`): the plain node-graph editor over the composition algebra. Sections §0–§16 keep their
+numbers. Whether the stain is a free graph or `principia_gui_state_contract.md` §5's four-slot object is **RQ-20**; this
+part is written as the graph, as before.*
 
 *Related prototypes map directly onto slots defined here: `principia_colour_explorer.html` is the
 **colour-node inspector** (its site-blend/field-ramp faces become the type-driven editors of §9);
@@ -32,6 +357,10 @@ one GUI over one piece of state (the composition graph + display settings), diff
 ---
 
 ## 1. Layout — four surfaces
+
+*The artboard (`02_stain.png`) shows the same four surfaces: library left, graph canvas centre with
+`Graph · Pipeline WGSL · Node WGSL`, preview and node inspector right; the assembled code and a **Problems** pane (compile
+status, notes, auto-recompile) sit under the canvas. The global display bar's placement is RQ-23.*
 
 ```
 ┌───────────────── global display bar ─────────────────┐
@@ -283,7 +612,8 @@ failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked 
   (`principia_colour_composition.md` §6 locked-preset discipline). Production presets load editable.
 - The relation at load is **one-way**: preset → graph. After loading you edit a graph instance; the
   preset is only where it started. (Saving a graph back as a new named preset is a later question;
-  "duplicate to custom" suffices for the dev GUI.)
+  "duplicate to custom" suffices for the dev GUI.) **Settled by the notes:** the library has a **Your stains** group,
+  with New, Rename, Import and Export (§G14 item 11).
 - **Bivariate presets** (`n̂ × FTLE`, `Outcome-class × diffusion`, …) load a graph with **both**
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
@@ -291,6 +621,9 @@ failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked 
 ---
 
 ## 12. Display stage — global, outside the pipeline
+
+*The notes add a **style** stage and fix the order SimResult → stain → style → colour-vision simulation → screen (§G5,
+Display). Where the gamut clamp and render→display scale below sit in that order is RQ-23.*
 
 Applied to `OUT` after the graph, as **settings, never nodes** (no OUT-downstream graph):
 
@@ -416,6 +749,8 @@ preview; tile debug shaders are toggles in the same bar but are *shaders*, not s
 - **Node palette contents** — the concrete list of source fields (from the ctx contract) and post
   ops surfaced in the right-click palette.
 - **Preview** — sphere vs illustrative-slice toggle; which is default.
+- **The GUI questions RQ-20 to RQ-24** (REVIEW_QUEUE): graph vs four-slot stain, one inspector window, the scrubber,
+  the display stage's order and placement, and the artboard details that differ from the corpus.
 - **Standing composition-spec gaps** (to reconcile on that doc's next pass, tracked in
   `principia_colour_composition.md`): colour-source-as-axis, overlays-as-post-chain-over-configured-
   base, physics-as-overlay-op, gradient-unifies-the-ramp, per-footprint vs quad-aggregate spread,
