@@ -174,9 +174,10 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 > `tau` sits in a **383× gap** and is not tuned. Fires at `t≈10` rather than `t≈1.5` — **late rather
 > than wrong**, which is correct for a *stored* `t_end`.
 >
-> **And escape must not terminate integration until §2.4's three checks pass.** Freezing a
+> **In production, escape ends the loop (R-103);** §2.4's three checks run in the validation harness. Freezing a
 > trajectory whose displayed quantity is still moving is what produced the patchwork artefact
-> (§1). Collision stays terminal — it is a singularity, not a heuristic. **Once escape fires** (R-95), `state`
-> reads escape and `t_end` is fixed; time averages (FTLE's `S/T` and the like) freeze at `t_esc`; the further
-> march exists only to run §2.4's checks and writes nothing else. The window is sampled at macro-step
+> (§1), and the checks are what guard against it. Collision stays terminal — it is a singularity, not a heuristic. **Once escape fires** (R-95), `state`
+> reads escape and `t_end` is fixed; time averages (FTLE's `S/T` and the like) freeze at `t_esc`; `done` is set and the
+> loop ends. The post-escape march for §2.4's checks runs only in the validation harness, on its own state; the payload
+> never sees it (R-103). The window is sampled at macro-step
 > boundaries for unregularised occupants and at sync boundaries for regularised ones.

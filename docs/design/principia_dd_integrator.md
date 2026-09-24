@@ -169,8 +169,10 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
   this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
   comparison (R-95).
-- **After escape fires (R-31, R-95):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
-  the like) freeze at `t_esc`. Any further march exists only to run the checks of pitfalls §2.4 and writes nothing else.
+- **After escape fires (R-31, R-95, R-103):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
+  the like) freeze at `t_esc`. In production `done` is set when escape fires and the loop ends. The post-escape march
+  for the checks of pitfalls §2.4 runs only in the validation harness, which keeps its own state; the payload never
+  sees it.
 
 Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
 

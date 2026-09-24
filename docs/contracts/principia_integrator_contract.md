@@ -20,7 +20,7 @@ integrate(ic, params):
             state ← STEP(state, dt_macro / N_sub, params)   # OCCUPANT — the only swappable line
             state ← project_com(state)          # WRAPPER — per STEP (Part 1, COM projection)
             update_invariants(state)            # WRAPPER — per STEP, post-projection
-            done ← detect_terminal(state, params)   # WRAPPER — per STEP; sets the flag, never breaks
+            done ← detect_terminal(state, params)   # WRAPPER — per STEP; sets the flag on collision or escape (R-103), never breaks
             s ← s + 1
         expose_state_readout(macro)                     # WRAPPER — live n(t) derived, nothing stored
         macro ← macro + 1
@@ -396,8 +396,10 @@ Escape and collision are where the categorical outcome comes from — every outc
   - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
     this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
     comparison (R-95).
-  - **After escape fires (R-31, R-95):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
-    the like) freeze at `t_esc`. Any further march exists only to run the checks of pitfalls §2.4 and writes nothing else. Collision stays terminal regardless.
+  - **After escape fires (R-31, R-95, R-103):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
+    the like) freeze at `t_esc`. In production `done` is set when escape fires and the loop ends. The post-escape march
+    for the checks of pitfalls §2.4 runs only in the validation harness, which keeps its own state; the payload never
+    sees it. Collision stays terminal regardless.
   **Triple ejection (ionisation)** is `escape` with `detail = 3` (pending change 7): all three bodies mutually unbound, which needs `E > 0`, so it is reachable on the 8D chart but not from rest. The proposed gate is all three pairwise relative energies positive and all three separations growing. Its definition pass is open.
   *Superseded (change 11): the three-gate persistent detector on the outer Jacobi pair — distance (`‖λ‖ > R_esc`), outward (`λ·v_λ > 0`), outer two-body energy (`E_out > 0`) — with a ±1 persistence counter to `k_esc = 8`. It fired on transients: 0 of 895 escapes were still unbound eight sync boundaries later, which would have overstated the escape fraction 5.8×. Under the new rule `receding` and `d > R_esc` are redundant (identical to the digit), so three tuned constants are gone.*
 - **Terminal states** are captured by the `state` enum (ledger §3.1): `escape`/`bounded`/`collision` are the physical outcomes; `sim_failed` (NaN/Inf during integration) and `decode_failed` (the decoder could not produce a valid physical IC — NEVER a valid t=0 terminal, which is a real outcome per §5) are lifecycle states, mutually exclusive with them. **`timeout` is not a separate state** — reaching horizon `T` without escape or collision IS `bounded` (it was merged; a bounded trajectory is one that stayed bounded to the horizon). `sim_failed` means the payload is untrustworthy except the state field. **`MAX_SUBSTEPS` is NOT a terminal label** — hitting the substep cap advances the trajectory with the best-available state and sets the sticky **`saturated`** confidence flag (in `sample_descriptor`, bit 5); the march continues to its real dynamical outcome. The cap bounds work-per-step (frame-loop protection) but never terminates. See Part 4 and `principia_dd_integrator.md` §3.6 for the determinism rule (count-bound, not wall-clock).

@@ -687,10 +687,11 @@ refinement; it doesn't gate it.
 Throttled (caching Part 6a). egui redraws at frame rate from the latest snapshot. Conform systems_architecture §3.
 
 ## R-95 — After escape fires *(closes RQ-48, in part)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · amended by R-103*
 
 Once escape fires, `state` reads escape and `t_end` is fixed. Time averages (FTLE's S/T and the like) freeze at t_esc. Any
-further march exists only to run the pitfall §2.4 checks and writes nothing else. The window is sampled at macro-step
+march for the pitfall §2.4 checks runs only in the validation harness, on its own state; in production `done` is set when
+escape fires and the loop ends, and the payload never sees that march. The window is sampled at macro-step
 boundaries for unregularised occupants and at sync boundaries for regularised ones. Re-validate against check 2's
 independent ground truth, with the legacy t = 30 set kept as a comparison.
 

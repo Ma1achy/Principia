@@ -197,9 +197,10 @@ known.
 escaped trajectories are the *cheap* ones), and stopping bakes a heuristic into a payload that is
 meant to outlive it.
 
-**Ruled (R-31, R-95).** Once escape fires, `state` reads escape and `t_end` is fixed. Time averages
-(FTLE's `S/T` and the like) freeze at `t_esc`, so the dilution above cannot happen. Any further march
-exists only to run the three checks below, and writes nothing else. The checks are outstanding, and
+**Ruled (R-31, R-95, R-103).** Once escape fires, `state` reads escape and `t_end` is fixed. Time averages
+(FTLE's `S/T` and the like) freeze at `t_esc`, so the dilution above cannot happen. In production `done`
+is set when escape fires and the loop ends. The post-escape march for the three checks below runs only
+in the validation harness, which keeps its own state; the payload never sees it. The checks are outstanding, and
 they are the ones that killed the previous criterion; each one's pass threshold, horizon and fixture
 are set by calibration (R-71):
 
