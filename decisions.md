@@ -696,7 +696,7 @@ boundaries for unregularised occupants and at sync boundaries for regularised on
 independent ground truth, with the legacy t = 30 set kept as a comparison.
 
 ## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · last bullet withdrawn by R-106*
 
 - Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
   neutral grey; `sim_failed` shows the invalid colour.
@@ -704,7 +704,7 @@ independent ground truth, with the legacy t = 30 set kept as a comparison.
 - The Inspector's right-click properties popover and the disc radius ∝ ∛m are in.
 - Undo coalesces a drag into one entry.
 - Transport (play / pause / speed / loop) moves from `SimConfig` to `ViewUI`: not undoable, not on the sim key.
-- Link ids are specified when the v2 research tools are built.
+- ~~Link ids are specified when the v2 research tools are built.~~ *Withdrawn by R-106.*
 
 ---
 

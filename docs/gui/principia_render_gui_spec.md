@@ -303,8 +303,8 @@ tool. The side panel shows:
   period per seed; compared with the Šuvakov–Dmitrašinović catalogue (`principia_dd_validation_orbits.md` §1.4).
 - **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes.
 - **Poincaré return map** on a chosen section, for a kept orbit.
-- **Side by side** with a linked cursor and navigation, and a difference view. Link ids are specified when these v2
-  research tools are built (R-96).
+- **Side by side** with a linked cursor and navigation, and a difference view. The linked views are a separate
+  `ViewUI` item, specified with these v2 research tools (R-106) — not the chart's link ids in `SimConfig`.
 
 ## G12. Console (`12_console.png`)
 

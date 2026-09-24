@@ -39,7 +39,7 @@ SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values �
 RenderState (render key)  the stain graph (nodes · wires · per-node params, §5) · overlay set ·
                           palette/compaction params · playhead t
 ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard focus scope · selection ·
-                          kept orbits · inspector t_cursor · open windows ·
+                          kept orbits · inspector t_cursor · open windows · linked views for side by side (v2, R-106) ·
                           playback transport (play/pause/speed/loop — not undoable, not on the sim key, R-96; the
                           GUI's clock reads it and advances RenderState's playhead t each frame through a SetField
                           marked "no history", R-101)
