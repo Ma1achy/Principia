@@ -76,7 +76,7 @@ degeneration's ~0.99. **Bounded by the screen; the hole stays closed.**
 **So the role of this document shifts.** §0 says the quadtree is for progressive display and arbitrary
 zoom. Both still hold — but **in view, "arbitrary zoom" is now delivered by the camera, and the
 criterion's contribution there is the order in which the complete tree arrives.** Its depth decisions
-govern supersampling and off-screen work.
+govern supersampling and off-screen work, both capped by `MAX_REL_DEPTH` (scheduler Part 3, R-98).
 
 ---
 
