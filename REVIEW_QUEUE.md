@@ -345,6 +345,7 @@ Nothing is chosen.
   is now a *build* plan."
 - **Needed:** whether the build plan carries the logH experiment and a refinement re-take as milestone work (and before which
   milestone), or treats both as settled by the vertical slice (and §7.8 is marked as superseded by §11).
+- **Ruling:** R-74 (decisions.md). Closed in step 7.
 
 ## RQ-26: Kernel debug modes — four baked kernel variants, or fragment presets plus one bring-up mode *(step 7, render)*
 
@@ -358,6 +359,7 @@ Nothing is chosen. R-41 settles only baked variants vs flag bits. It doesn't say
   minimal mode". Its header (:6) says it supersedes "the mode-enumeration in `principia_debug_tooling_plan.md` §B–§G".
 - **Needed:** whether the kernel keeps the four `DEBUG_MODE` variants, or only Appendix A's bring-up mode (UV / DECODE /
   ROUNDTRIP become fragment presets). If the latter, render_contract Part 6, lowering :52 and debug_tooling_plan §A are rewritten.
+- **Ruling:** R-75 (decisions.md). Closed in step 7.
 
 ## RQ-27: Stability × Hue — deleted, or the house pattern *(step 7, colour)*
 
@@ -370,6 +372,7 @@ Nothing is chosen.
   `L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)`.
 - **Needed:** whether Stability × Hue is a preset (and on the golden list), or deleted (and §7, §7.1, render_contract Part 4 and
   dd_colouring §3.4 drop it). If kept, what `stability` is as a field.
+- **Ruling:** R-76 (decisions.md). Closed in step 7.
 
 ## RQ-28: dd_colouring vs colour_composition — the Replace-L mapping and the outcome palette *(step 7, colour)*
 
@@ -383,6 +386,7 @@ unchanged and referenced by §4.1", and that dd_colouring's "mode-by-mode presen
    palette hex codes win over the artboards, but doesn't say which corpus palette.
 - **Needed:** (1) which Replace-L formula, and the default `L_min` / `L_max` if the range form stays; (2) whether §1.4's
   nine-class palette replaces dd_colouring §3.7's index rule for `state`.
+- **Ruling:** R-77 (decisions.md). Closed in step 7.
 
 ## RQ-29: The CVD matrices are not the Viénot/Brettel forms the text names *(step 7, colour)*
 
@@ -394,6 +398,7 @@ Nothing is chosen.
   are not those forms.
 - **Needed:** which is authoritative: the §3.8 matrices as written, or real Viénot/Brettel (and the reference to replace them
   with, for the golden tests).
+- **Ruling:** R-78 (decisions.md). Closed in step 7.
 
 ## RQ-30: Invalid values — NaN or sentinel, in storage and on screen *(step 7, render)*
 
@@ -408,6 +413,7 @@ Nothing is chosen. Three passages pull different ways.
    no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value".
 - **Needed:** (1) whether an absent field reads NaN or sentinel/0; (2) whether a blown-up sample may store NaN (payload §2's
   "Failed-state contents are defined" may already answer it); (3) whether debug fields are a stated exception to §13.
+- **Ruling:** R-79 (decisions.md). Closed in step 7.
 
 ## RQ-31: How many samples per footprint, and where copy 0 sits *(step 7, sampling)*
 
@@ -421,6 +427,7 @@ Nothing is chosen.
   are centred (e.g. minus ½). The note doesn't say.
 - **Needed:** whether a footprint has E or E+1 samples (and the copy_index range to match), and whether the Halton offsets are
   centred on the nominal.
+- **Ruling:** R-80 (decisions.md). Closed in step 7.
 
 ## RQ-32: The embedded "What travels" block uses the prototype's names and a 10-D latent *(step 7, image embedding)*
 
@@ -431,6 +438,7 @@ Nothing is chosen.
   contracts name `T`, `dt_macro`, `N_max`, `r_coll`, … ; `jitter_frac` has no counterpart in the fixed Halton-offset model (RQ-31).
 - **Needed:** whether the embedded record is rewritten against the contract names and the 8-D latent (and what replaces
   `jitter_frac`), or keeps the prototype's fields with a mapping table.
+- **Ruling:** R-81 (decisions.md). Closed in step 7.
 
 ## RQ-33: Two decode rules that differ between files — the mirror deadband and seed selection *(step 7, decode)*
 
@@ -446,6 +454,7 @@ Nothing is chosen. T1 (bit-determinism) depends on both.
    §3.4 (:121): "all seeds < ε_w → DEGENERATE" puts the threshold on the norm, not its square.
 - **Needed:** (1) one mirror test: the variable (λ or λ̃), and `<` vs `≤` at `−δ_λ`; (2) first-qualifying or largest seed, and
   whether `ε_w` bounds the norm or its square.
+- **Ruling:** R-82 (decisions.md). Closed in step 7.
 
 ## RQ-34: The affine slice — a common scale in `q`, or per-axis `s_u`, `s_v` *(step 7, chart)*
 
@@ -455,6 +464,7 @@ Nothing is chosen.
 - `principia_chart_reference.md` §1.1 (:142): "z(u, v) = z0 + (2u − 1)·s_u·q_1 + (2v − 1)·s_v·q_2". `s_u`, `s_v` are not defined.
 - **Needed:** whether the scale lives in `q` (chart_reference drops `s_u`, `s_v`) or in separate per-axis factors (and where they
   live in the view state and the lock formula).
+- **Ruling:** R-83 (decisions.md). Closed in step 7.
 
 ## RQ-35: Must branch decisions match across precisions along a trajectory? *(step 7, parity)*
 
@@ -472,6 +482,7 @@ Nothing is chosen.
 - **Needed:** the guarantee: branch decisions equal on identical inputs only (the integrator and determinism texts are
   reworded), or along whole golden trajectories (and on which inputs); and, following from it, whether Tier S asserts the
   outcome class.
+- **Ruling:** R-84 (decisions.md). Closed in step 7.
 
 ## RQ-36: Which backends pin the Tier-N tolerances — CI Dawn, or native `wgpu` *(step 7, parity)*
 
@@ -481,6 +492,7 @@ Nothing is chosen.
 - §6 (:173): the sim-parity runner is native, in-process via `wgpu`: "Native in-process parity is *simpler* than the old
   Dawn-in-Node harness".
 - **Needed:** whether CI still runs Dawn, and which backend pair sets the Tier-N tolerances.
+- **Ruling:** R-85 (decisions.md). Closed in step 7.
 
 ## RQ-37: Payload descriptions that disagree with the payload doc *(step 7, payload)*
 
@@ -513,6 +525,7 @@ Nothing is chosen. `principia_dd_simstate_payload.md` is the consolidated doc; t
    its unpack layer.
 - **Needed:** confirm the payload doc governs all eight (and the others are conformed), or rule each; one name per accessor;
   the `ICDescriptor` field list and size with its padding; floor or ceiling for the proxy.
+- **Ruling:** R-86 (decisions.md). Closed in step 7.
 
 ## RQ-38: `failed_fraction` vs "there is no failed category" *(step 7, payload)*
 
@@ -524,6 +537,7 @@ Nothing is chosen.
   notion of a failure count**". `failed_fraction` is in no member table.
 - **Needed:** whether `failed_fraction` is a `QuadReduction` member (with a row, type and classifier), or retired in favour of
   `error_ratio` (and the references are removed).
+- **Ruling:** R-87 (decisions.md). Closed in step 7.
 
 ## RQ-39: What stops in-view refinement — the screen-floor veto and `MAX_REL_DEPTH` vs policy §0.1 *(step 7, scheduler)*
 
@@ -539,6 +553,7 @@ Nothing is chosen. R-15 gives the split decision to `Policy::Tolerance`; the sto
   sample per render pixel.
 - **Needed:** (a) whether the screen floor is a hard veto or the criterion may supersample below it (and memory_tiers §2 with
   it); (b) whether `MAX_REL_DEPTH` may stop an in-view quad above the screen floor, against §0.1's "must split".
+- **Ruling:** R-88 (decisions.md). Closed in step 7.
 
 ## RQ-40: The quality device note vs memory_tiers — sim-key knobs and the rung count *(step 7, quality)*
 
@@ -554,6 +569,7 @@ Nothing is chosen.
    subdivides each named tier into ~8–12 unnamed internal steps" (~48–72 in all).
 - **Needed:** (1) whether depth is a sim-key knob; (2) whether `E` can change live, and if so how that squares with its sim-key
   status; (3) ~8–12 rungs in total, or per named tier.
+- **Ruling:** R-89 (decisions.md). Closed in step 7.
 
 ## RQ-41: The decoder switchover trigger *(step 7, deep zoom)*
 
@@ -566,6 +582,7 @@ Nothing is chosen.
   is not defined there).
 - **Needed:** depth threshold, adaptive trigger, or both; and, if adaptive, whether collapse is detected by the energy-drift
   diagnostic or by bitwise IC comparison.
+- **Ruling:** R-90 (decisions.md). Closed in step 7.
 
 ## RQ-42: Temporal accumulators as a second split trigger, beside `Policy::Tolerance` *(step 7, refinement)*
 
@@ -578,6 +595,7 @@ Nothing is chosen.
 - `principia_dd_refinement_policy.md` §1 and R-15: `split(quad) ⟺ any footprint f in quad is unresolved`, one knob `eps`.
 - **Needed:** whether the temporal accumulators (and the latch) survive under `Policy::Tolerance` — as a split trigger, as an
   input to "unresolved", or not at all — and what `θ_s`, `θ_max`, `θ_trend` become.
+- **Ruling:** R-91 (decisions.md). Closed in step 7.
 
 ## RQ-43: Navigation — "neither key", but it edits sim-key inputs *(step 7, caching)*
 
@@ -589,6 +607,7 @@ Nothing is chosen.
   navigation "edits `z₀` and the basis".
 - **Needed:** which navigation edits re-address (quads keyed in a fixed chart frame) and which re-integrate (a new slice plane or
   tilt changes every quad's ICs), and the sim key's `z₀/basis` entry stated to match.
+- **Ruling:** R-92 (decisions.md). Closed in step 7.
 
 ## RQ-44: The f32 predictability horizon — the cross-check gate and refinement *(step 7, validation)*
 
@@ -601,6 +620,7 @@ Nothing is chosen.
   gate refinement**, or merely annotate it" — open.
 - **Needed:** whether §4.1's gate stands (the value comes from the R-35 re-run), and whether `t_max` gates refinement or only
   annotates it.
+- **Ruling:** R-93 (decisions.md). Closed in step 7.
 
 ## RQ-45: How often the engine posts the GUI snapshot *(step 7, membrane)*
 
@@ -609,6 +629,7 @@ Nothing is chosen.
 - `principia_systems_architecture.md` §3, the membrane table (:90): "| **State snapshot** | GUI-*sized* state … | wasm → JS | per
   displayed frame; **never engine-sized**".
 - **Needed:** ~10 Hz or once per displayed frame (the other file is conformed).
+- **Ruling:** R-94 (decisions.md). Closed in step 7.
 
 ## RQ-46: Decoder labels and degenerate cases the corpus doesn't name *(step 7, decode)*
 
@@ -633,6 +654,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   chart (θ ≤ π/4). **Needed:** what encode does with θ > π/4 (relabel, fall back to latent, refuse).
 - **The hypercube check's space.** inverse_encode Chart-aware validation, layer 1 (:163): "check $z_k \in [0,1]$ for every $k$",
   but `z ∈ ℝ⁸` passes through σ/tanh. **Needed:** whether the check is on `s = σ(z)` (or the clamp space).
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-47: Encode, decode and chart tolerances and defaults with no number *(step 7, decode)*
 
@@ -661,6 +683,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   1.2×10⁻¹³`"); "Degeneracy routing" (:27, :113): "past threshold → flip chart-encode ▸ **direct-physical-inject**" and "run both
   paths and diff". `principia_gui_state_contract.md` §4 (:115): "the test asserting `‖n‖ = 1` to tolerance". **Needed:** the
   round-trip gate, the conditioning threshold, the two-path agreement tolerance and the `‖n‖ = 1` tolerance.
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-48: Escape and termination — what the corpus doesn't give *(step 7, integrator)*
 
@@ -678,6 +701,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   unregularised occupants.
 - **The re-validation fixture.** pitfalls §2.2 (:152) uses the config chart with ground truth "unbound and receding at `t = 30`".
   **Needed:** whether R-29's re-validation keeps that ground truth or uses check 2's independent one.
+- **Ruling:** R-95, with R-71 and R-72 for the rest (decisions.md). Closed in step 7.
 
 ## RQ-49: Integrator values the corpus doesn't give *(step 7, integrator)*
 
@@ -695,6 +719,7 @@ The values or definitions below are missing. Each item gives the file, the secti
 - **The `τ` tie tolerance.** `principia_dd_simstate_payload.md` §3 (:294): "fixed cut-ID priority only as a tie-break when `τ`
   values are equal within a defined tolerance … Specify the `τ`-sort, tolerance, and sign convention in the integrator
   contract." Not specified there. **Needed:** all three.
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-50: Payload and `QuadReduction` layout silences *(step 7, payload)*
 
@@ -716,6 +741,7 @@ The values or definitions below are missing. Each item gives the file, the secti
 - **Measurement gates.** payload §8: word truncation rate "drives whether 76 symbols suffices" (:475); the crossing distribution
   decides whether `S_word` is additive; "switch to displacement only if FTLE accuracy meaningfully improves". **Needed:** the
   threshold each decision uses.
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-51: Scheduler, cache and quality values *(step 7, scheduler)*
 
@@ -751,6 +777,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   target.
 - **Telemetry size.** telemetry §5 (:186): "Either downsample on write (keep every frame during motion, every Nth while idle) or roll
   up idle stretches". **Needed:** which, and `N`.
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-52: Colour and render silences *(step 7, colour)*
 
@@ -765,6 +792,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   cross-product". **Needed:** the set.
 - **Symbolic spread.** `principia_sampling_msaa_note.md` (:123): "shared-prefix-length / edit-distance / distinct-word-count across
   the E+1 words". **Needed:** which metric, and its split threshold.
+- **Ruling:** R-96 (definitions), with R-71 for the values (decisions.md). Closed in step 7.
 
 ## RQ-53: Image-embedding format silences *(step 7, image embedding)*
 
@@ -775,6 +803,7 @@ The values or definitions below are missing. Each item gives the file, the secti
 - **Decoder change.** §6 (:103): "build hash — REFUSE to recreate silently across a version where the decoder changed". **Needed:**
   which hash component detects a decoder change.
 - **Resolutions.** §9: "at every supported resolution". **Needed:** the list (§7 covers 64² to 1024²).
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-54: GUI silences *(step 7, GUI)*
 
@@ -813,6 +842,7 @@ The values or definitions below are missing. Each item gives the file, the secti
   each is stored.
 - **Link ids.** gui_state_contract §2 (:37) lists "link ids" in `SimConfig`; §G11: "Side by side with a linked cursor and
   navigation". **Needed:** what a link id holds and how linked views share navigation.
+- **Ruling:** R-96 (definitions), with R-71 for the values (decisions.md). Closed in step 7.
 
 ## RQ-55: Validation fixtures, gates and tolerances *(step 7, validation)*
 
@@ -838,6 +868,7 @@ The values or definitions below are missing. Each item gives the file, the secti
 - **Debug catalogue.** `principia_debug_tooling_plan.md` §G (:127): "`|E_0 − (K_0+V_0)|` log | ≤ tol"; §A (:31): "to Tier-N tol";
   §F (:109): "loaded / pending / refinable / **terminal** / stale … | state transitions legal". **Needed:** the tolerances and the
   legal-transition table.
+- **Ruling:** R-71 (values) and R-72 (definitions) (decisions.md). Closed in step 7.
 
 ## RQ-56: Ruling follow-ups not yet folded into the docs *(step 7, cleanup)*
 
@@ -892,3 +923,4 @@ No choice is needed for most of these; a ruling already decides them. Line numbe
   standing rules).
 - [ ] `principia_canonical_spec.md:150` "the full GUI *design* (Malachy's ideas) is unwritten" — step 6 wrote
   `principia_render_gui_spec.md`.
+- **Ruling:** R-73 (decisions.md). Closed in step 7.

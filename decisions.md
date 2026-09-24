@@ -522,3 +522,185 @@ render_gui_spec §G2, §G5, §G13.
 `SimConfig` and `RenderState` edits are undoable, including navigation (it edits `z₀` and the basis) and lock / unlock (chart
 construction). `ViewUI`-only state — open panels, focus, selection, the kept-orbit list — is not. Files: gui_state_contract
 §2.
+
+---
+
+*Checkpoint A of step 7 (PR #8). Rulings R-70 to R-96, 25 Sep 2026.*
+
+## R-70 — Where two docs conflict, the later consolidated doc wins
+*25 Sep 2026 · applied in step 7*
+
+The other doc is conformed to it. The pairs: the payload doc over scattered payload text; `colour_composition` over
+dd_colouring's per-mode sections; `parity_contract` over older determinism wording; the refinement policy over the
+scheduler's stop rules.
+
+## R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*
+*25 Sep 2026 · applied in step 7*
+
+Every value the corpus doesn't give becomes a **calibration** requirement in the milestone that needs it. The task proposes
+the value with its evidence; a reviewer checks it; the human confirms it at the milestone gate; and it is recorded in
+`decisions.md`. No value is invented silently.
+
+## R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*
+*25 Sep 2026 · applied in step 7*
+
+Missing definitions (κ(z), `xi`, the legal state transitions, the Welford `y`, the τ tie rule, …) are written as doc changes
+by the task that needs them, and reviewed by the physics reviewer before merging.
+
+## R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*
+*25 Sep 2026 · applied in step 7*
+
+All of RQ-56, including the items its rulings had scheduled for later: R-23, R-33, R-40 / D6, R-42 / D4, and D5.
+
+## R-74 — The research phases are settled by the vertical slice *(closes RQ-25)*
+*25 Sep 2026 · applied in step 7*
+
+canonical_spec §11 governs; philosophy §7.8 is marked superseded. One M3 validation requirement is added: the logH
+falsification check of the re-registration mechanism.
+
+## R-75 — The kernel keeps one debug mode *(closes RQ-26)*
+*25 Sep 2026 · applied in step 7*
+
+`colour_composition` governs. The kernel keeps only Appendix A's single bring-up mode; UV / DECODE / ROUNDTRIP become
+fragment presets. Conform render_contract Part 6, lowering :52 and debug_tooling_plan §A.
+
+## R-76 — Stability × Hue is deleted *(closes RQ-27)*
+*25 Sep 2026 · applied in step 7*
+
+As `colour_composition` §4.1 says. Remove it from §7, from §7.1 (the golden list) and from render_contract Part 4; mark
+dd_colouring §3.4 superseded.
+
+## R-77 — Replace-L, and the state palette *(closes RQ-28)*
+*25 Sep 2026 · applied in step 7*
+
+Replace-L is L = B: the range form with defaults L_min = 0, L_max = 1. The range form stays as the general case. The state
+palette is `colour_composition` §1.4's nine canonical classes. The Okabe–Ito / golden-angle rule stays for other categorical
+fields.
+
+## R-78 — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*
+*25 Sep 2026 · applied in step 7*
+
+Implement real Viénot (protan, deutan) and Brettel (tritan) through LMS, with golden values from a published reference
+implementation. dd_colouring §3.8's matrices are replaced.
+
+## R-79 — NaN and sentinels *(closes RQ-30)*
+*25 Sep 2026 · applied in step 7*
+
+Storage never holds NaN. A blown-up sample stores the defined failed-state values. A tier-absent (derived) field reads NaN
+at unpack. Every colouring maps NaN or a sentinel to its invalid colour. Debug fields are the stated exception: they show
+literal stored values, and NaN still goes to the invalid colour.
+
+## R-80 — Samples per footprint *(closes RQ-31)*
+*25 Sep 2026 · applied in step 7*
+
+A footprint has E+1 samples, `copy_index` 0..E. Copy 0 is the un-jittered centre; copies 1..E are Halton points 1..E,
+centred (minus ½) and scaled to the footprint.
+
+## R-81 — The embedded record uses the contract names *(closes RQ-32)*
+*25 Sep 2026 · applied in step 7*
+
+Rewrite the embedded record against the contract names and the 8-D latent. Drop `jitter_frac` (the footprint fixes the
+offsets, R-80). Bump the embedding version.
+
+## R-82 — One mirror test, one seed rule *(closes RQ-33)*
+*25 Sep 2026 · applied in step 7*
+
+One mirror test, in encode's frame: mirror iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ), δ_λ = 1e-12; |λ̃_y| ≤ δ_λ → no mirror. Seed:
+among seeds with ‖w⁽²⁾‖²_m > ε_w, take the largest norm; break ties by seed order. Conform all four texts.
+
+## R-83 — The slice scale lives in q *(closes RQ-34)*
+*25 Sep 2026 · applied in step 7*
+
+The scale lives in `q` (a common zoom). chart_reference drops `s_u` and `s_v`.
+
+## R-84 — Branch decisions across precisions *(closes RQ-35)*
+*25 Sep 2026 · applied in step 7*
+
+`parity_contract` governs. Branch decisions are identical on identical inputs, per step. Labels on chaotic trajectories may
+differ across precisions. Reword the integrator and determinism texts to match. Tier S asserts the outcome class only on
+non-chaotic fixtures.
+
+## R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*
+*25 Sep 2026 · applied in step 7*
+
+Native in-process `wgpu` sets the Tier-N tolerances. Dawn CI is dropped. Real browsers are checked against those tolerances
+with the browser build (M8).
+
+## R-86 — The payload doc governs the eight payload items *(closes RQ-37)*
+*25 Sep 2026 · applied in step 7*
+
+- `times` is exact u16 only; dispatch refuses a configuration with ⌈T/dt⌉ > 65535.
+- Phase state is vec2-grouped.
+- The debug plan's tables are regenerated from the ledger.
+- `ICDescriptor` is 64 B with explicit padding; E₀ is derived (K₀ + V₀), not stored.
+- Descriptor bits 8–9 are `last_symbol`; 10–15 are reserved.
+- `saturated` ⟺ N_sub == N_max.
+- The complexity proxy is ⌊log₂⌋, with 0 for a total ≤ 1.
+- One name per accessor, the payload §6 names (`fgw_retained_prefix_length`), with `tm_t_dmin` and `fgw_length_raw` in the
+  unpack layer.
+
+## R-87 — `failed_fraction` is retired *(closes RQ-38)*
+*25 Sep 2026 · applied in step 7*
+
+Retired in favour of `error_ratio`; its references are removed. "Indeterminate" is read from `error_ratio`.
+
+## R-88 — What stops in-view refinement *(closes RQ-39)*
+*25 Sep 2026 · applied in step 7*
+
+Above the screen floor, in-view quads must split (policy §0.1). The criterion may supersample below it. `MAX_REL_DEPTH` caps
+only that supersampling depth (`MAX_REL_DEPTH` ≥ the screen floor). Conform scheduler Part 4 and memory_tiers §2.
+
+## R-89 — Depth and E are not on the sim key *(closes RQ-40)*
+*25 Sep 2026 · applied in step 7*
+
+Depth is a scheduler knob, not on the sim key. E changes live: copies are cached per `copy_index`, and the nominal's key
+excludes E. The ladder has ~8–12 rungs in total.
+
+## R-90 — The decoder switchover trigger *(closes RQ-41)*
+*25 Sep 2026 · applied in step 7*
+
+Switch to the linearised decoder when the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as
+an upper bound (whichever comes first). lowering's `SWITCH` = ℓ_switch.
+
+## R-91 — The temporal accumulators feed "unresolved" *(closes RQ-42)*
+*25 Sep 2026 · applied in step 7*
+
+Under the same `eps`: a footprint is unresolved if its spread exceeds `eps` now, or its latched running maximum ever did.
+θ_s, θ_max, θ_trend and the trend signal are dropped.
+
+## R-92 — What the sim key holds of navigation *(closes RQ-43)*
+*25 Sep 2026 · applied in step 7*
+
+The sim key holds the slice plane (z₀'s out-of-plane part, span{q₁, q₂}, the in-plane orientation). In-plane pan and zoom
+re-address; slicing out of the plane, tilting and rotating re-integrate; lock changes neither. Conform canonical_spec §4 / §8
+and systems_architecture.
+
+## R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*
+*25 Sep 2026 · applied in step 7*
+
+§4.1's gate stands: the cross-check runs only for t < t_max(f32), with the value from the R-84 re-run. t_max annotates
+refinement; it doesn't gate it.
+
+## R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*
+*25 Sep 2026 · applied in step 7*
+
+Throttled (caching Part 6a). egui redraws at frame rate from the latest snapshot. Conform systems_architecture §3.
+
+## R-95 — After escape fires *(closes RQ-48, in part)*
+*25 Sep 2026 · applied in step 7*
+
+Once escape fires, `state` reads escape and `t_end` is fixed. Time averages (FTLE's S/T and the like) freeze at t_esc. Any
+further march exists only to run the pitfall §2.4 checks and writes nothing else. The window is sampled at macro-step
+boundaries for unregularised occupants and at sync boundaries for regularised ones. Re-validate against check 2's
+independent ground truth, with the legacy t = 30 set kept as a comparison.
+
+## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
+*25 Sep 2026 · applied in step 7*
+
+- Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
+  neutral grey; `sim_failed` shows the invalid colour.
+- pointer_channels is normative only where render_gui_spec, trajectory_viewing or a ruling cites it.
+- The Inspector's right-click properties popover and the disc radius ∝ ∛m are in.
+- Undo coalesces a drag into one entry.
+- Transport (play / pause / speed / loop) moves from `SimConfig` to `ViewUI`: not undoable, not on the sim key.
+- Link ids are specified when the v2 research tools are built.
