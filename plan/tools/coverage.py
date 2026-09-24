@@ -27,7 +27,9 @@ AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "REN
 
 def main():
     os.chdir(ROOT)
-    reqs = yaml.safe_load(open(REQS, encoding="utf-8"))
+    all_reqs = yaml.safe_load(open(REQS, encoding="utf-8"))
+    retired = [r for r in all_reqs if r.get("retired")]
+    reqs = [r for r in all_reqs if not r.get("retired")]
     notes = yaml.safe_load(open(NOTES, encoding="utf-8")) or []
     index = section_index(corpus_files() + [RULINGS_FILE])
     citable = citable_index()
@@ -70,6 +72,9 @@ def main():
     for a in unknown:
         errors.append(f"unknown area code {a}")
     lines += [f"| **total** | **{len(reqs)}** |", ""]
+    by_kind = collections.Counter(r.get("kind", "obligation") for r in reqs)
+    lines += ["Of these: " + ", ".join(f"{c} {k}" for k, c in sorted(by_kind.items())) +
+              f". Retired (kept for their ids, not counted): {len(retired)}.", ""]
     lines += ["## Requirements per milestone", "", "| milestone | count |", "|---|---|"]
     lines += [f"| {m} | {c} |" for m, c in sorted(by_ms.items())]
     lines += [""]
@@ -107,7 +112,8 @@ def main():
             fh.write("\n".join(lines))
     for e in errors:
         print("ERROR:", e, file=sys.stderr)
-    print(f"{len(reqs)} requirements; {covered}/{total_secs} sections cited; {len(errors)} errors")
+    print(f"{len(reqs)} requirements ({len(retired)} retired not counted); {covered}/{total_secs} sections cited; "
+          f"{len(errors)} errors")
     sys.exit(1 if errors else 0)
 
 
