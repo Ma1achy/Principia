@@ -6,7 +6,7 @@
 
 ## 1. What it is
 
-The **only upward edge on the ladder**: `physical state → z`, the quotient map onto the decode's canonical section. Consumers: the lock's re-centre, direct physical IC entry, Burrau `(m,n)` entry, invariant-pair lookup, **literature IC import** (how the validation programme's Anosova/Lehto/Burrau starts get loaded), the T-tests, and the `ROUNDTRIP` debug kernel.
+The **only upward edge on the ladder**: `physical state → z`, the quotient map onto the decode's canonical section. Consumers: the lock's re-centre, direct physical IC entry, Burrau `(m,n)` entry, invariant-pair lookup, **literature IC import** (how the validation programme's Anosova/Lehto/Burrau starts get loaded), the T-tests, and the `ROUNDTRIP` debug view (a fragment preset, `encode(decode(z))` recomputed fragment-side — `principia_colour_composition.md` §6; R-75).
 
 ---
 
@@ -89,7 +89,7 @@ Generic input is not on the Burrau embed. Projection:
 | **8** physical → manifold | quotient onto the section; full-state rigid ops; everything discarded reported | T1/T3 suites (§5); the three `lookup_*` notices fire iff their operation did |
 | **2/13** link registry | block inverses are registry inverses, never re-derived inline | swap a link → encode's inverse swaps with it; analytic vs numeric Jacobian agreement inherited from the registry tests |
 | **fibre / (L_z,E) chart** | encode reuses decode's construction — one code path | enter `(L_z, E)` numerically vs click the corresponding pixel → identical z to precision (the pending-change-3 test) |
-| **Observation** | `ROUNDTRIP` kernel = `D → E → D`, physical residual | residual view dark except clamps / feasibility edges / mirror tie — each *tagged expected* |
+| **Observation** | `ROUNDTRIP` preset = `D → E → D`, physical residual, recomputed fragment-side (R-75) | residual view dark except clamps / feasibility edges / mirror tie — each *tagged expected* |
 | **validation import** | literature ICs enter through this door | Anosova region-D and Burrau rest starts encode → decode → invariants match the papers' stated values after the recorded rescale |
 
 ---

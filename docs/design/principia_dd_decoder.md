@@ -22,7 +22,7 @@ From the **deep-zoom contract**: the linearised path replaces the decode with `x
 
 From the **inverse-encode contract**: decoded states are **already canonical** (T2 exercises block inverses only); the block decodes must be invertible with the closed forms of §3; the invariant momentum construction *is* the canonical fibre choice (encode reuses decode).
 
-From the **render contract**: the decode stage writes `ICDescriptor` (what the IC *is*) post-decode, pre-integration; `DECODE_PASSTHROUGH` is a kernel debug mode certifying this rung before any physics exists.
+From the **render contract**: the decode stage writes `ICDescriptor` (what the IC *is*) post-decode, pre-integration; the DECODE view — a fragment preset, the fragment-side decode of `ctx.chart.z` (`principia_colour_composition.md` §6; R-75), not a kernel mode — certifies this rung before any physics exists.
 
 From **totality** (scheduler/render): invalid decodes are **tagged, never dropped** — `DEGENERATE(reason)` is a decode-time terminal label with a narrow, enumerated cause set.
 
@@ -158,9 +158,9 @@ non-zero $E^*$ override.
 
 | Seam | The decoder's obligation | Integration test |
 |---|---|---|
-| **2** chart → decoder | accept any well-posed chart's `z` (or chart-map output); apply only registered links | every chart in the lowering appendix decodes without special-casing; DECODE_PASSTHROUGH view per chart |
+| **2** chart → decoder | accept any well-posed chart's `z` (or chart-map output); apply only registered links | every chart in the lowering appendix decodes without special-casing; DECODE preset view per chart |
 | **3** decoder → integrator | emit exactly `(m, r, p)`, canonical, `G=M=I=1` | identities test-suite (5.1–5.4) run on the kernel's actual input |
-| **8** encode ↔ decode | be invertible per block; the invariant construction is the fibre; decoded states are canonical | T2 round-trip in physical units; ROUNDTRIP debug view dark everywhere except clamps/feasibility/mirror-tie |
+| **8** encode ↔ decode | be invertible per block; the invariant construction is the fibre; decoded states are canonical | T2 round-trip in physical units; ROUNDTRIP preset view dark everywhere except clamps/feasibility/mirror-tie |
 | **13** generated sources | consume generated link functions (Rust, from the link registry — never inline transcendentals) | link swap recompiles and re-integrates; `|det J_D|` matches analytic link derivatives where closed forms exist |
 | **1** precision (ring law) | one definition, f64 and f32 builds | linearised-vs-full agreement at quad centres; `O(h²)` error scaling with depth |
 

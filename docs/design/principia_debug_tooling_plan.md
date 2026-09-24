@@ -23,14 +23,14 @@ Both modalities on both data sources — neither lens sees everything. A field t
 
 ## A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)
 
-`DEBUG_MODE ∈ {NORMAL, UV_PASSTHROUGH, DECODE_PASSTHROUGH, ROUNDTRIP}` — selected as a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). No new buffers; intermediates written into existing slots, reinterpreted on the render side.
+**The kernel keeps one debug mode (R-75):** `principia_colour_composition.md` Appendix A's bring-up mode — the kernel writes a known pattern instead of physics, selected as a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). No new buffers; the pattern is written into existing slots. It exists for when payload writes are too broken for the presets below to run. **UV, DECODE and ROUNDTRIP are fragment presets** (colour_composition §6), computed from `ctx` by fragment-side recompute, not kernel variants.
 
 | Mode | Shader shows | Test asserts | Certifies |
 |---|---|---|---|
-| `UV_PASSTHROUGH` | quad-local `u` (and `v`) as a gradient across each quad | reconstructed `(u,v)` for sampled quads = expected `c ± h·(2t−1)`; **no banding** = adjacent-sample deltas are smooth, not step-quantised | quad-local coordinate reconstruction; the linearised-decoder switchover. Banding = f32 precision loss made *visible* |
-| `DECODE_PASSTHROUGH` | decoded IC before physics: z components, masses (ternary), body positions | decoded `(m,r,p)` = f64 `decodeOnly()` to Tier-N tol; identities (Σm=1, ΣCoM=0, I=1) | the Matter rung, before any integrator exists (Phase-0d "raw IC colouring") |
-| `ROUNDTRIP` | `z → D → E → D` physical residual, log-scaled | residual ≤ `ε_phys` except at clamps/feasibility/mirror-tie (tagged expected) | the encode path — encode-side sibling of the invariant-chart gradient |
-| `NORMAL` | (the real pipeline) | — | — |
+| kernel bring-up (the one kernel mode) | the known pattern the kernel wrote | the unpacked payload equals the pattern | the payload write path, before any preset can be trusted |
+| UV preset | quad-local `u` (and `v`) as a gradient across each quad | reconstructed `(u,v)` for sampled quads = expected `c ± h·(2t−1)`; **no banding** = adjacent-sample deltas are smooth, not step-quantised | quad-local coordinate reconstruction. Banding = f32 precision loss made *visible* |
+| DECODE preset | fragment-side decode of `ctx.chart.z`, before physics: z components, masses (ternary), body positions | decoded `(m,r,p)` = f64 `decodeOnly()` to Tier-N tol; identities (Σm=1, ΣCoM=0, I=1) | the Matter rung, before any integrator exists (Phase-0d "raw IC colouring") |
+| ROUNDTRIP preset | fragment-side `z → D → E → D` physical residual, log-scaled | residual ≤ `ε_phys` except at clamps/feasibility/mirror-tie (tagged expected) | the encode path — encode-side sibling of the invariant-chart gradient |
 
 ---
 
@@ -148,7 +148,7 @@ These certify the **CPU brain** — a wrong view here exonerates the GPU and poi
 
 1. **0a — generation root**: ledger + generated pack/unpack (Rust + WGSL) + codegen self-test (§H). Nothing renders yet; tests green.
 2. **0b — synthetic payload harness**: CPU-fill `SimState`/`ICDescriptor`, the field-view shaders (§B–E) + their accessor tests. **Screen colours a hand-filled buffer; both surfaces green — before any physics.**
-3. **0c — kernel debug modes** (§A): `UV_PASSTHROUGH` first (needs only quad-local coords + a trivial kernel), then `DECODE_PASSTHROUGH` once the decoder lands (Phase 1), `ROUNDTRIP` once encode lands.
+3. **0c — the kernel bring-up mode** (§A): the kernel writes a known pattern, so the payload write path is trusted first. The §A presets follow on the fragment side: the UV preset first (needs only quad-local coords), then the DECODE preset once the WGSL decode port lands (Phase 1), ROUNDTRIP once encode lands (R-75).
 4. **structural views (§F)** land the moment `RenderQuad` is *defined* — before the scheduler *logic* that fills it with interesting values, so adaptive refinement is visible as it's built. **The UV-passthrough coordinate view is the earliest of all** — it needs only a rasterised quad and the flip, so it lands before decode/schedule/anything, catching a wrong Y-convention (coordinate note) at the very first pixel rather than a week later in the wrong subsystem.
 5. **cross-checks (§G)** land per the seam they certify, as those components arrive.
 
