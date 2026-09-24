@@ -228,9 +228,10 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
 **Per-chart descriptors:**
 
-- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Three values, replacing the old one-off `has_redundant_hemisphere`:
+- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Four values, replacing the old one-off `has_redundant_hemisphere`:
   - **bijective** — every pixel is a distinct system (most charts).
-  - **n-to-1** — a fixed finite number of pixels share each system (shape sphere: 2-to-1 over the φ hemispheres). Carries the fold so downstream draws/labels one representative.
+  - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative.
+  - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104): the shape sphere, 2-to-1 over the φ hemispheres. Carries the fold so downstream draws/labels one representative.
   - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.

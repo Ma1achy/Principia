@@ -346,8 +346,8 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy. The chart's `system_image` is **n-to-1** (2-to-1 over the φ hemispheres;
-`principia_chart_decoder_contract.md` Part 5, R-59 D5).
+the redundancy. The chart's `system_image` is **`DoubleCover`** — it covers each shape twice, as two labelled
+systems (2-to-1 over the φ hemispheres; `principia_chart_decoder_contract.md` Part 5, R-59 D5, R-104).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
@@ -471,7 +471,8 @@ $\nu \in [1/32, 31/32]$ maps to $\theta \in (0, \pi/2)$, both leg orderings. Und
 opposite side) swapping the legs swaps two masses, so it is a body relabelling, a distinct labelled system. Keeping
 both orderings surveys shape × labelling; folding surveys each shape once. Neither is wrong, but the two charts
 disagree silently. Until one quotient is chosen, label each chart with the quotient it covers (in its
-`system_image` descriptor), and don't take shape fractions from the full-range chart, which double-counts.
+`system_image` descriptor — the full range covers each shape twice, as two labelled systems: `DoubleCover`, R-27,
+R-104), and don't take shape fractions from the full-range chart, which double-counts.
 
 **Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
 $m_0 = 1 - x - y$, $m_1 = x$, $m_2 = y$ (0-based, R-22). Shrink toward the
