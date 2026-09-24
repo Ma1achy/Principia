@@ -117,7 +117,7 @@ The per-quad dispatch request carries a bit-packed `flags` word:
 | 1 | `ENSEMBLE_ENABLED` | dispatch `E` jittered copies per grid position |
 | 2 | `FTLE_ENABLED` | compute the full Benettin FTLE (tier-gated) |
 | 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |
-| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result |
+| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result. **Owner: the measurement path** (R-39) — the Measure tool and matched N / 2N renders, a uniform grid with every sample retained (`principia_render_gui_spec.md` §G10) |
 | 5 | `COMPUTE_IC_DESCRIPTOR` | write the `ICDescriptor` buffer alongside the results (dd_decoder §3.6) |
 | 6–7 | reserved | not `DEBUG_MODE`, which is a baked kernel variant (R-41) |
 

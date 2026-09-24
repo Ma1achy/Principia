@@ -19,7 +19,7 @@ Everything left open, each with its source. Nothing is deferred silently.
   `DECODE_MODE`. The flags table now in scheduler contract Part 5 assigns bits 0–5 and leaves 6–7 reserved. Two bits
   are enough for `DEBUG_MODE`, but nothing assigns them. The lowering contract bakes the debug modes as variants,
   so they may not need a flag at all.
-- **`FULL_RETENTION` has no markdown owner** (step 3, port 8). The flag (bit 4, "skip reduction, keep every
+- ~~**`FULL_RETENTION` has no markdown owner**~~ **Closed: owned by the measurement path (R-39, applied in step 6).** (step 3, port 8). The flag (bit 4, "skip reduction, keep every
   per-sample result") is in the scheduler contract's flags table. No markdown file describes the full-retention path
   it selects.
 - ~~**Fold R-15 and R-18 into the scheduler contract**~~ **Closed in step 4** (181858c). Part 6's split/keep/merge rule
