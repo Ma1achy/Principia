@@ -164,10 +164,10 @@ frame loop (fixed timestep):
   BARRIER over the live set only                   // coherence
   promote catching-up quads with quad.t == playhead // atomic, synced
   present                                           // one shared t
-  advance playhead
+  advance playhead                                  // written by the GUI's clock: a SetField marked "no history" (R-101)
 ```
 
-- **Fixed `dt` per sim-step, decoupled from render frames** (accumulate wall-clock, take fixed steps, render when ready). Playback speed is a `dt`-per-second setting — never device frame rate — so two runs reproduce and the parity determinism firewall holds.
+- **Fixed `dt` per sim-step, decoupled from render frames** (accumulate wall-clock, take fixed steps, render when ready). Playback speed is a `dt`-per-second setting (`ViewUI` transport, read by the GUI's clock, R-101) — never device frame rate — so two runs reproduce and the parity determinism firewall holds.
 - **Promotion is gated on time-sync (`quad.t == playhead` at a barrier), never on completion** — the playhead is momentarily stationary at the barrier, so the child-chasing-a-moving-target race cannot occur.
 - **Transport controls are free from statelessness:** pause freezes the *playhead*, not the compute (reveals still catch up to the frozen `t` and promote); restart = playhead→0 + discard state; loop = auto-restart at `t_end`. Pausing at `t_end` = the full integration = equal-or-cheaper than the old eager system, at every earlier frame strictly cheaper.
 - **Three failure modes, three owners:** *glitch* → the barrier; *stall* → off-loop catch-up; *lie* → blur. This unifies the blur grammar: spatially stale, temporally behind, and being-refined are all one honest signal — **sharp is real, fuzzy is arriving.**

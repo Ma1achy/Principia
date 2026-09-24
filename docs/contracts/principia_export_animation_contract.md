@@ -15,9 +15,9 @@ Time in Principia is a **live march**, not a stored dimension. The global playhe
 | **play / pause** | pause freezes the *playhead*, not the compute: the live set holds coherently at the frozen `t`; navigation still works (reveals catch up to the frozen `t` in the background and promote) |
 | **restart** | playhead → 0, live-set states discarded and re-decoded. Cheap — there is no history to manage |
 | **loop** | auto-restart at `t_end` (the horizon `T`, or when every visible sample has latched terminal) |
-| **speed** | a `dt`-per-wall-second setting on the frame loop — never tied to device frame rate (determinism, Part 5) |
+| **speed** | a `dt`-per-wall-second setting read by the GUI's clock — never tied to device frame rate (determinism, Part 5) |
 
-Transport is `ViewUI` state (`principia_gui_state_contract.md` §2): not undoable, not on the sim key — changing it never re-integrates (R-96).
+Transport is `ViewUI` state (`principia_gui_state_contract.md` §2): not undoable, not on the sim key — changing it never re-integrates (R-96). The GUI's clock reads it and advances `RenderState`'s playhead each frame through a `SetField` marked "no history", so playback never enters undo; a manual scrub is one coalesced entry (R-101).
 
 **Playback under navigation.** Pan/zoom during playback reveals quads that catch up `0 → playhead` (or resume from a cached state — caching Part 7) off-loop, shown blurred via the moving fallback (their live ancestor, animating), promoting at a barrier when synced. The screen is never mixed-time, never frozen, never lying (frame loop, three-failure-modes rule). Late-playback reveals cost more than early ones — the honest price of the moment being asked for — but the cost is background compute, never a stall.
 

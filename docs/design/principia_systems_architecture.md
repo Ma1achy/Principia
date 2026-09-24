@@ -86,7 +86,7 @@ The Deployment ring's machinery — `resolve()`, monomorphised compute pipelines
 
 | Crossing | Type | Direction | Nature |
 |---|---|---|---|
-| **Field edit** | `set_field(path, value)` — serialised data | JS → wasm | the GUI's only write; navigation, quality, transport all arrive as one of these |
+| **Field edit** | `set_field(path, value)` — serialised data | JS → wasm | the GUI's only write; navigation, quality and the clock's playhead writes (marked "no history" — transport itself is `ViewUI`, R-101) all arrive as one of these |
 | **State snapshot** | GUI-*sized* state (view state, tier, scalars the panels show) — serialised data | wasm → JS | throttled to **~10 Hz**, never per-frame (caching Part 6a); the GUI (egui) redraws at frame rate from the latest snapshot (R-94); **never engine-sized** (payload / quad tree / reductions stay wasm-side, summarised only) |
 | **Canvas transfer** | `OffscreenCanvas` handle | JS → wasm | **once, at startup**; the engine then drives `wgpu` against it directly. The sole handle that crosses; no state crosses with it |
 

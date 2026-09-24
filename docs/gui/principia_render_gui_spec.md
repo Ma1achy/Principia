@@ -43,6 +43,7 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
+  Playback never enters undo: the GUI's clock advances the playhead through a `SetField` marked "no history" (R-101).
   The top bar shows the undo depth; Ctrl+Z undoes from the contract's history.
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit `z₀` and the basis
   (`principia_chart_decoder_contract.md`, design axiom 6; canonical_spec §9, invariant 4). No control, window or log line is named
@@ -111,7 +112,8 @@ IC:
   pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
   out the tilt and rotation angles.
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
-  on the sim key (R-96). **Scrubbing back re-integrates** to that time, so the figure refines
+  on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
+  history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
   progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
   stored frames; the export contract's "no scrub" applies to exported animations only (R-66).
 - **Legend, generated from the stain** (§G6).
