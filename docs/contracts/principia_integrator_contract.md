@@ -315,7 +315,7 @@ Mikkola–Tanikawa form is required, not optional.
 | `N_max` | tunable (default 64) | substep cap per macro-step — **user-adjustable** (raising it resolves more close-encounter structure before the integration floor; saturation is the stored sticky `saturated` bit, set when `N_sub == N_max` occurs — payload §2; the exact cumulative work lives in the `total_substeps` u32). The substepper also exposes the **live current `N_sub`** per macro-step (an already-computed intermediate) for the animated effort view — render Part 5 | wrapper substepper |
 | `r_sub`, `gamma_sub` | 0.05, 1.5 | produce `N_sub` from `r_min` | wrapper substepper |
 | `r_coll` | — | collision threshold — **user-exposed sim-key** (Part 7, collision: definitional regularisation choice, not precision) | wrapper detector |
-| `tau`, escape window | —, 0.4 (provisional) | escape settling threshold (not tuned; to re-measure) and the window `|Δn̂|` is taken over, in time units, sampled at sync boundaries (R-29) | wrapper detector |
+| `tau`, escape window | —, 0.4 (provisional) | escape settling threshold (not tuned; to re-measure) and the window `|Δn̂|` is taken over, in time units, sampled at macro-step boundaries (unregularised occupants) or sync boundaries (regularised ones) (R-29, R-95) | wrapper detector |
 | `r_close` | 0.01 | close-encounter counting | wrapper detector |
 | `eps_E`, `eps_L` | 10⁻⁶ | relative-drift floors (rest starts) | wrapper monitor |
 | `G`, `M_total` | 1, 1 | constants | wrapper |
@@ -389,11 +389,15 @@ Escape and collision are where the categorical outcome comes from — every outc
   - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
     mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
     pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
-  - **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+  - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
+    unregularised occupants and at sync boundaries for regularised ones (R-95).
   - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
     centre of mass, the same `d` as in `E_rel` (R-61).
   - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
-    this `E_rel`. **Whether escape terminates integration is open**: the three checks of pitfalls §2.4 are outstanding. Collision stays terminal regardless.
+    this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
+    comparison (R-95).
+  - **After escape fires (R-31, R-95):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
+    the like) freeze at `t_esc`. Any further march exists only to run the checks of pitfalls §2.4 and writes nothing else. Collision stays terminal regardless.
   **Triple ejection (ionisation)** is `escape` with `detail = 3` (pending change 7): all three bodies mutually unbound, which needs `E > 0`, so it is reachable on the 8D chart but not from rest. The proposed gate is all three pairwise relative energies positive and all three separations growing. Its definition pass is open.
   *Superseded (change 11): the three-gate persistent detector on the outer Jacobi pair — distance (`‖λ‖ > R_esc`), outward (`λ·v_λ > 0`), outer two-body energy (`E_out > 0`) — with a ±1 persistence counter to `k_esc = 8`. It fired on transients: 0 of 895 escapes were still unbound eight sync boundaries later, which would have overstated the escape fraction 5.8×. Under the new rule `receding` and `d > R_esc` are redundant (identical to the digit), so three tuned constants are gone.*
 - **Terminal states** are captured by the `state` enum (ledger §3.1): `escape`/`bounded`/`collision` are the physical outcomes; `sim_failed` (NaN/Inf during integration) and `decode_failed` (the decoder could not produce a valid physical IC — NEVER a valid t=0 terminal, which is a real outcome per §5) are lifecycle states, mutually exclusive with them. **`timeout` is not a separate state** — reaching horizon `T` without escape or collision IS `bounded` (it was merged; a bounded trajectory is one that stayed bounded to the horizon). `sim_failed` means the payload is untrustworthy except the state field. **`MAX_SUBSTEPS` is NOT a terminal label** — hitting the substep cap advances the trajectory with the best-available state and sets the sticky **`saturated`** confidence flag (in `sample_descriptor`, bit 5); the march continues to its real dynamical outcome. The cap bounds work-per-step (frame-loop protection) but never terminates. See Part 4 and `principia_dd_integrator.md` §3.6 for the determinism rule (count-bound, not wall-clock).

@@ -162,11 +162,15 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
 - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
-- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
+  unregularised occupants and at sync boundaries for regularised ones (R-95).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
-  this `E_rel`.
+  this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
+  comparison (R-95).
+- **After escape fires (R-31, R-95):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
+  the like) freeze at `t_esc`. Any further march exists only to run the checks of pitfalls §2.4 and writes nothing else.
 
 Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
 

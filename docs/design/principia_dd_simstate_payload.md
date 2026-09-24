@@ -194,7 +194,7 @@ where that bit lives is not yet specified (open-questions).
 
 **`t_end_step` normative meaning = `step_count`: the number of COMPLETED macro-steps, at all times.** This resolves the running-sample ambiguity — the field is not "only meaningful at termination":
 - **running:** current completed-step count (advances each step);
-- **terminal:** the count latched at terminalisation (stops advancing);
+- **terminal:** the count latched at terminalisation (stops advancing) — for escape, at the step it fires, even while the march continues for the pitfalls §2.4 checks (R-95);
 - **initial:** 0.
 So Welford `n` (§4), current elapsed time (`step_count · dt_macro`), resume, and termination all read this one self-contained field — consistent with the `f(IC, sim key, t)` lifecycle (the payload carries its own clock, not depending on an external playhead). The bit name stays `t_end_step` for the binary format; the meaning is "completed-step count, latched at termination."
 
@@ -500,9 +500,10 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 > `E_rel`, the window and the escaper are defined by R-29 (integrator contract Part 7). The precision, recall and gap above
 > predate R-29's `E_rel` and are to re-validate.
 >
-> **And escape must not terminate integration until §2.4's three checks pass.** Freezing a
-> trajectory whose displayed quantity is still moving is what produced the patchwork artefact
-> (§1). Collision stays terminal — it is a singularity, not a heuristic.
+> **After escape fires (R-31, R-95),** `state` reads escape and `t_end_step` is fixed; time averages
+> (FTLE's `S/T` and the like) freeze at `t_esc`. Any further march exists only to run §2.4's three
+> checks and writes nothing else. Freezing a trajectory whose displayed quantity is still moving is
+> what produced the patchwork artefact (§1). Collision stays terminal — it is a singularity, not a heuristic.
 
 
 ---

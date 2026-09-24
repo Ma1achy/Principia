@@ -143,14 +143,16 @@ ESCAPE  <=>  |Δn̂| over a window < tau    AND    E_rel > 0
 - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
-- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
+  unregularised occupants and at sync boundaries for regularised ones (R-95).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
   this `E_rel`.
 
 Measured on the config chart, ground truth = unbound and receding at `t = 30`. *These numbers predate R-29's `E_rel` (prin-rs's
-implementation uses `M_pair` only). To re-validate.*
+implementation uses `M_pair` only). To re-validate against check 2's independent ground truth (§2.4), with this
+legacy `t = 30` set kept as a comparison (R-95).*
 
 | criterion | fires | **precision** | recall | median `t` |
 |---|---|---|---|---|
@@ -195,8 +197,11 @@ known.
 escaped trajectories are the *cheap* ones), and stopping bakes a heuristic into a payload that is
 meant to outlive it.
 
-**Status: design agreed, evidence not yet sufficient.** Three checks are outstanding and they are the
-ones that killed the previous criterion:
+**Ruled (R-31, R-95).** Once escape fires, `state` reads escape and `t_end` is fixed. Time averages
+(FTLE's `S/T` and the like) freeze at `t_esc`, so the dilution above cannot happen. Any further march
+exists only to run the three checks below, and writes nothing else. The checks are outstanding, and
+they are the ones that killed the previous criterion; each one's pass threshold, horizon and fixture
+are set by calibration (R-71):
 
 1. **Integrate 2–3× past firing** and confirm nothing re-binds — the direct analogue of the 0-of-895
    test.
