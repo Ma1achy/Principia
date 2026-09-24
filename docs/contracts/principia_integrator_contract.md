@@ -320,7 +320,7 @@ Mikkola–Tanikawa form is required, not optional.
 | `eps_E`, `eps_L` | 10⁻⁶ | relative-drift floors (rest starts) | wrapper monitor |
 | `G`, `M_total` | 1, 1 | constants | wrapper |
 
-**3. Occupant + tier flags.** Which `STEP` is bound, plus the co-computation selections (`FTLE_ENABLED`, ensemble on/off — the forward-pass shadows ride the wrapper). These select **baked variants** (lowering Part 3 — per-thread state costs occupancy even branched off), never runtime uniforms. Also sim key.
+**3. Occupant + tier flags.** Which `STEP` is bound, plus the co-computation selection (`FTLE_ENABLED` — the forward-pass shadow rides the wrapper). These select **baked variants** (lowering Part 3 — per-thread state costs occupancy even branched off), never runtime uniforms. Also sim key. The ensemble is **not** a baked variant: `copy_index` is a uniform, and each copy is the same kernel dispatched again (R-102, R-89).
 
 The occupant needs almost nothing — `(m,r,p)`, `dt`, `G`. Horizon, substepping, and termination are **wrapper** responsibilities, because adaptive substepping is a wrapper concern: it's what turns one fixed `dt_macro` into `N_sub` calls of `STEP`.
 
