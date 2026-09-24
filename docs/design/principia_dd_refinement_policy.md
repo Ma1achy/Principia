@@ -88,6 +88,7 @@ split(quad)  ⟺  any footprint f in quad is unresolved
 unresolved(f)  ⟺  spread_shape(f) > eps          the payload has not settled
                 ∨  the copies disagree on event class
                 ∨  the footprint is undetermined  (non-finite spread, or an unusable copy)
+                ∨  its latched running maximum of spread_shape ever exceeded eps   (R-91)
 ```
 
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous

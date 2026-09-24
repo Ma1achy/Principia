@@ -335,10 +335,13 @@ Four properties of this block, all measured:
 
 | member | type | note |
 |---|---|---|
-| `running_max_divergence` | f32 | max-updated, **latching** |
+| `running_max_divergence` | f32 | max-updated, **latching**; feeds "unresolved" under the same `eps` (R-91) |
 | `running_mean_divergence` | f32 | |
-| `divergence_trend` | f32 | EWMA |
 | `first_divergence_t` | f32 | write-once; sentinel until crossed |
+
+**They feed "unresolved", not a second split trigger (R-91).** Under the one `eps`, a footprint is unresolved if its
+spread exceeds `eps` now, or its latched running maximum ever did. `θ_s`, `θ_max`, `θ_trend` and the trend signal are
+dropped, so there is no `divergence_trend` member.
 
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.

@@ -60,20 +60,19 @@ General rule (same as the drift accumulators already use): **fixed-size, O(1), u
 
 ## Continuous refinement — temporal accumulators + spatial coherence
 
-Refinement now runs *during* playback against evolving state, not once against final outcomes. Split decision combines two orthogonal signals:
+Refinement now runs *during* playback against evolving state, not once against final outcomes. The split is `Policy::Tolerance`'s (R-15), and two orthogonal signals feed its one test, under the one knob `eps` (R-91):
 
 **Spatial coherence (kept, instantaneous):** at the playhead, do the quad's pixels disagree (different classes / far apart in state)? The classic "boundary through this quad → split." Live, two-way (can un-flag).
 
 **Temporal behaviour (new, fixed-size running accumulators — NOT stored history):**
 - **running max divergence** — largest intra-quad bundle spread seen so far (catches mid-flight divergence that reconverges — invisible to end-state impurity). One float, `max`-updated.
 - **running mean divergence** — time-averaged spread (distinguishes mild-constant from explosive-occasional). One float.
-- **divergence trend / velocity** — is spread growing *now*? Split *ahead* of separation. EWMA / current-vs-smoothed, ~two floats.
-- **first-divergence time** — `t` at which spread first crossed threshold; write-once; proxy for how fast chaos manifests here.
+- **first-divergence time** — `t` at which spread first crossed `eps`; write-once; proxy for how fast chaos manifests here.
 
 ```
-split if  spatial_incoherence(now) > θ_s        // boundary now
-     OR   running_max_divergence   > θ_max      // flew apart at some point
-     OR   divergence_trend(now)    > θ_trend     // actively separating
+unresolved(f)  ⟺  spread(f, now)          > eps     // boundary now
+               ∨  running_max_spread(f)   > eps     // flew apart at some point (latched)
+split(quad)    ⟺  any footprint f in quad is unresolved          // R-91; θ_s, θ_max, θ_trend dropped
 ```
 
 Costs a few floats per quad, O(1) in-place, folded into the existing ~80 B `QuadReduction` (same reduce-before-evaporate pattern — GPU distills history to a scalar in-thread; CPU sees the scalar, never the history).
