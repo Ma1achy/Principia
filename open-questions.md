@@ -63,3 +63,4 @@ Everything left open, each with its source. Nothing is deferred silently.
   closure fields; the ledger's `alpha` row is from the α era; `inverse_encode_contract.md:199` still uses
   `has_redundant_hemisphere`; the 136/88 B widths in canonical_spec :79 and systems_architecture :63, :163.
 - **Every open item above and in audit section B is on `DECISIONS_TO_MAKE.md`** (step 5).
+  **All of them are ruled** (R-21 to R-59, 24 Sep 2026). The rulings not yet applied are tracked in `decisions.md` by their status lines.

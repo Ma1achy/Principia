@@ -1,5 +1,7 @@
 # Decisions to make
 
+**Ruled 24 Sep 2026: every item below is ruled by R-21 to R-59 in `decisions.md`.** The six blockers are applied in step 5; the rest are applied when the build reaches them.
+
 *Step 5 of the handoff, 24 Sep 2026. Every open item in audit section B and in `open-questions.md` is here, plus the open
 items the corpus itself lists (INDEX, refinement policy §7, canonical_spec §11). Anything already ruled is in Appendix A,
 with its ruling number. §8 lists defects found while writing the sheet: corpus fixes that need no decision.*
