@@ -443,6 +443,8 @@ later** — §7.1's payload genericity is currently the only one.
 
 ## 7.8 Sequencing — what is next, and why in this order
 
+> **Superseded (R-74, 25 Sep 2026):** `principia_canonical_spec.md` §11 governs — the vertical slice settled the research phases; the logH falsification check of the re-registration mechanism is an M3 validation requirement.
+
 1. **logH experiment.** The falsification test for the re-registration mechanism, not a
    confirmation exercise. logH has *no coordinate transformation at all* — strictly stronger than
    Heggie's no-reference-body property. **If the mechanism is real, logH matches or beats Heggie.

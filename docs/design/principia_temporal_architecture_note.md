@@ -178,7 +178,7 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 1. **Contracts edit pass — DONE (both waves).** The temporal edits landed, and the **sampling/SSAA amendments subsequently landed too**: colouring dd §3.7 (colour-per-sample → SSAA resolve), render Part 4 (averaging rewrite), scheduler Part 9 (ensembles-only-on-nominal + Halton (2,3) offsets), and the ledger/render statements that ensemble spread is **derived at resolve, not a stored field** (the earlier "colourable per-sample field" phrasing here was the pre-reversal framing). ✓
 2. **Catch-up scheduling** — background, non-blocking, generation-cancelled, promote-at-barrier; reuses the existing refinement-compute path. Confirm at implementation.
 3. **Ensemble E during the live march — RESOLVED by the quality/device controller.** Ensemble copies march every frame (~`2(E+1)` trajectories/pixel; at E=4 ~10× base). The device-characterisation cost model sets `e_motion_gating`: **E reduced/off during an active march, full E at rest and in export.** The boot probe is the measurable-frame-loop-cost input this was waiting for (`principia_quality_device_note.md`; scheduler Part 9). Threshold is a controller tunable, settled on a working system.
-4. **Milestone plan** — still the one unwritten major artefact (original msg-1 request). Assembly, not design.
+4. **Milestone plan** — written in step 7 (`plan/MILESTONES.md`; canonical_spec §11, R-74). Assembly, not design. ✓
 
 ---
 
