@@ -90,40 +90,40 @@ What's left of step 3 after the rulings: 50 T references to port, plus telemetry
 ### principia_dd_decoder.md
 | line | class | reference | `.tex` target |
 |---|---|---|---|
-| 23 | T | "invertible with the spec's closed forms" | 199–260 |
-| 33 | T | "Exact, from the spec (§mass_decode, §hyperspherical_jacobi, §canon_config, §jacobi_mom, §scale_gauge)", 5 refs | 199–260 |
-| 170 | T | `η_E` "(spec §energy_norm) … specified in the spec, not re-derived here" | 261–267 |
+| 23 | T | "invertible with the spec's closed forms" | 199–260 · **done: d7efd65** |
+| 33 | T | "Exact, from the spec (§mass_decode, §hyperspherical_jacobi, §canon_config, §jacobi_mom, §scale_gauge)", 5 refs | 199–260 · **done: d7efd65** |
+| 170 | T | `η_E` "(spec §energy_norm) … specified in the spec, not re-derived here" | 261–267 · **done: d7efd65** |
 
 ### principia_chart_reference.md
 | line | class | reference | target |
 |---|---|---|---|
-| 3 | T | "Source: … §§ decoder, views, Burrau family", 3 refs | 196–267, 274–413, 431–593 |
+| 3 | T | "Source: … §§ decoder, views, Burrau family", 3 refs | 196–267, 274–413, 431–593 · **done: 3418564** |
 | 4 | S | "**Where this and the LaTeX disagree, the LaTeX wins**" | delete (ruling) |
-| 16 | T | "The LaTeX uses 1-based body indices in the Burrau section" | 469–489 |
-| 83 | T | crossed `m0/m1` momentum factors "as written in the spec" | 247–255 |
-| 358 | T | "The spec calls this the *bifurcation strip*" | 570–582 |
+| 16 | T | "The LaTeX uses 1-based body indices in the Burrau section" | 469–489 · **done: 3418564 (B1 flagged, not picked)** |
+| 83 | T | crossed `m0/m1` momentum factors "as written in the spec" | 247–255 · **done: 3418564** |
+| 358 | T | "The spec calls this the *bifurcation strip*" | 570–582 · **done: 3418564** |
 
 ### principia_chart_decoder_contract.md
 | line | class | reference | target |
 |---|---|---|---|
-| 47 | T | "Exact hyperspherical formulae live in the spec's Jacobi section" | 204–241 |
-| 76 | T | "pre-saturate logits with `μ_max·tanh` (as the spec does)" | 199–203; constant ~2991 |
-| 90 | T | "The catch the spec already flags: links carry a measure" | 414–430 |
-| 171 | T | "the spec's named compound directions" | 816–827 |
-| 194 | T | "the spec's two options" (lock re-centring) | 658–669 |
-| 209 | T | "The spec's Euclid plane" | 441–468, 490–495 |
+| 47 | T | "Exact hyperspherical formulae live in the spec's Jacobi section" | 204–241 · **done: 3418564** |
+| 76 | T | "pre-saturate logits with `μ_max·tanh` (as the spec does)" | 199–203; constant ~2991 · **done: 3418564** |
+| 90 | T | "The catch the spec already flags: links carry a measure" | 414–430 · **done: 3418564** |
+| 171 | T | "the spec's named compound directions" | 816–827 · **done: 3418564** |
+| 194 | T | "the spec's two options" (lock re-centring) | 658–669 · **done: 3418564** |
+| 209 | T | "The spec's Euclid plane" | 441–468, 490–495 · **done: 3418564** |
 
 ### principia_inverse_encode_contract.md
 | line | class | reference | target |
 |---|---|---|---|
-| 3 | T | "The spec has the block formulae and a validation…" | 737–815 |
-| 31 | T | "missing from the spec's policy" | 737–770 |
-| 33 | T | "The spec's canonical inverse policy translates, rotates, mirrors" (**the policy content**) | 737–770 |
-| 101 | T | "the spec contains two conflicting definitions" | 737–770 vs `sec:LE_view` 282–327 |
-| 106 | T | "project / clamp / reject per the spec's ladder" | 771–815 |
-| 112 | T | "the spec's case 3" | 737–770 |
-| 120 | T | "The spec's five steps" | 730–770 |
-| 128 | T | "the spec's three layers" | 771–815 |
+| 3 | T | "The spec has the block formulae and a validation…" | 737–815 · **done: c31f770** |
+| 31 | T | "missing from the spec's policy" | 737–770 · **done: c31f770** |
+| 33 | T | "The spec's canonical inverse policy translates, rotates, mirrors" (**the policy content**) | 737–770 · **done: c31f770** |
+| 101 | T | "the spec contains two conflicting definitions" | 737–770 vs `sec:LE_view` 282–327 · **done: c31f770** |
+| 106 | T | "project / clamp / reject per the spec's ladder" | 771–815 · **done: c31f770** |
+| 112 | T | "the spec's case 3" | 737–770 · **done: c31f770** |
+| 120 | T | "The spec's five steps" | 730–770 · **done: c31f770** |
+| 128 | T | "the spec's three layers" | 771–815 · **done: c31f770** |
 
 ### principia_integrator_contract.md
 | line | class | reference | target |
@@ -211,8 +211,32 @@ It cites `principia_spec.tex`, **an earlier version** of the `.tex`, so its sect
 
 | line | class | reference | `.tex` target |
 |---|---|---|---|
-| 7 | T | "Ports the canonical-frame decode + its inverse from `principia_spec.tex` §2 verbatim" | 195–272 (decode); 737–770 (inverse) |
-| 122 | T | "an *independent JS re-port* of the spec §2 maths" | 195–272 |
+| 7 | T | "Ports the canonical-frame decode + its inverse from `principia_spec.tex` §2 verbatim" | 195–272 (decode); 737–770 (inverse) · **done: 3b1c76e** |
+| 122 | T | "an *independent JS re-port* of the spec §2 maths" | 195–272 · **done: 3b1c76e** |
+
+### Rows found after step 1
+
+The step-1 patterns missed forms like "the current spec", "Spec change", "spec formulae" and "mini-spec". A broad
+case-insensitive sweep for `spec` over every `docs/*.md` (outside `archive/` and `experiments/`), run during
+Group A, found the rows below. False positives from that sweep (hardware specs, the animation "spec object",
+self-descriptions, `principia_01_pitfalls.md:85`'s variable `spec`, and quotations inside the INDEX) need no
+action and aren't listed.
+
+| file:line | class | reference | target |
+|---|---|---|---|
+| chart_decoder_contract:82 | T | "The current spec fixes one link per block" | 199–260 · **done: 3418564** |
+| chart_decoder_contract:192 | T | "Spec change this implies (supersedes 'sliders frozen')" | 658–669 · **done: 3418564** |
+| inverse_encode_contract:54 | T | "Block inverses (spec formulae, confirmed …)" | 737–770 · **done: c31f770** |
+| ic_inspector_scratchpad:19 | T | "The literal §2.6 port is right" (the earlier `.tex`'s momentum decode) | 247–255 · **done: 3b1c76e** |
+| ic_inspector_scratchpad:20 | S | "the matching `.tex` edit is queued in `spec_pending_changes`" | wording · **done: 3b1c76e** |
+| render_contract:79 | T | "Per spec: `diffusion = −1.0` when …" | ~1076 (`sec:freq_diffusion` 1052–1089) · Group B |
+| sampling_msaa_note:30 | T | "(spec `ensemble_outcome_agreement`)" | ~2659 (`sec:tile_summary`) · Group B (port 9) |
+| dd_integrator:124 | T | "COM projection (per `STEP`, mini-spec verbatim)" | COM mini-spec PDF (R-3) · Group B (port 6) |
+| scheduler_contract:100 | T | "`PREVIEW_MODE` (spec `QuadRequest.flags` bit 3)" | 2749–2784 · Group B (port 8) |
+| colour_composition:233 | T | "invalid colour is … (spec: a fixed magenta)" | **source not located.** The `.tex` magenta (1600, 1638) is a hue in a colour scheme, not an invalid-colour marker. It may be the colour PDF. Group B |
+| core_design:3 | S | "the thing to hand a code agent — not the big spec" | wording · Group B (port 10) |
+| scheduler_contract:66 | S | "An agent reading the un-renamed spec will implement the absolute one" | wording · Group B (port 10) |
+| dd_generation_root:198 | R | "`detail = 11` (spec pending change 7)" | step 4 |
 
 ### principia_spec_pending_changes.md: 22 lines, class R
 This whole file is the LaTeX edit queue. It is closed in step 4 (fold each change's substance in, then archive the file). The
