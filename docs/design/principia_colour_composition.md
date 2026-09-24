@@ -421,7 +421,6 @@ rows (schematic — full table lives with the preset library):
 | Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` |
 | Gradient magnitude | `FieldRamp{ gradient_magnitude(vmf-map), lerp }` |
 | Perlin / harmonics / Turing | `FieldRamp{ noise / Yℓm / wave-triple, lerp or diverging }` |
-| **Stability × Hue** | pipeline preset: `colour = SiteBlend{axes6,vmf,swatches}` · `brightness = FieldRamp{stability, lin}` · `combine = Replace-L` |
 | Physics overlay | post step `site_overlay(base, SiteBlend{ physics(m), vmf(κ=11 BC / 9 EL), per-site colours }, s)` |
 | `s_depth`, `f_ftle`, ROUNDTRIP, … | §6 presets over `ctx` |
 
@@ -477,7 +476,6 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 | | Checker + VMF | the checkerboard over the vMF map |
 | Special | Real spherical harmonics | $v = Y_{\ell m}/\max\lvert Y_{\ell m}\rvert$, blended between the positive- and negative-lobe colours in proportion to $\lvert v\rvert$, grey on the nodal lines. Forms for $\ell \in \{1,2,3\}$ include $Y_{10} = \sqrt{3/4\pi}\,n_z$, $Y_{11} = \sqrt{3/4\pi}\,n_x$, $Y_{20} = \sqrt{5/16\pi}\,(2n_z^2 - n_x^2 - n_y^2)$, $Y_{22} = \sqrt{15/16\pi}\,(n_x^2 - n_y^2)$, $Y_{33} = \sqrt{35/32\pi}\,n_x(n_x^2 - 3n_y^2)$ |
 | | Turing-like standing waves | $v = \tfrac13\left[\sin(f n_x) + \sin\!\left(f(\tfrac12 n_x + \tfrac{\sqrt3}{2} n_y)\right) + \sin\!\left(f(\tfrac12 n_x - \tfrac{\sqrt3}{2} n_y)\right)\right]$ |
-| | Stability × Hue | the house encoding, dd_colouring §3.4: $L = 0.25 + 0.55\cdot\tfrac12(1 - \max_j \hat{\mathbf n}\cdot\hat{\mathbf b}_j)$, with $\hat{\mathbf b}_j$ computed per R-14 |
 | | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(\varphi_0 + 2\pi i/N)\cos\psi, \sin(\varphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = \text{tilt}\cdot\pi/2$ |
 | | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,\text{pal}[i_1] + (1-t)\,\text{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
 | Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14 and decision B18 |

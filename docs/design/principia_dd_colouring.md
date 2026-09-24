@@ -87,6 +87,8 @@ Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √ma
 
 ### 3.4 Physics overlay (blob blend) and the house encoding (stability × hue)
 
+> **Superseded (R-76, 25 Sep 2026):** Stability × Hue is deleted — `principia_colour_composition.md` §4.1's n̂ × ⟨field⟩ family replaces it; the blob blend here stands.
+
 Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`. With unequal masses, whether the overlay uses the mass-weighted positions or fixed 120° spacing is audit decision B18.
 
 ```
@@ -162,7 +164,7 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 2. **Seam-free guarantee, automated:** for every mode declared continuous, sample dense pairs straddling the antimeridian and both poles → colour difference → 0. **Continuous:** all vMF modes (smooth weights, smooth weighted mean); the seamless LUT sphere (the same argument in RGB); latitude stripes, $\cos(f\arccos n_z)$; longitude stripes, $\sin(f\,\mathrm{atan2}(n_y, n_x))$, continuous at the antimeridian for integer $f$; 3-D Cartesian Perlin noise. **Intentionally discontinuous**, *excluded by name*, not by failure: Octant, Voronoi 6, Hemispheres, Icosahedral, Fibonacci (hard), Checkerboard, Truchet.
 3. **vMF properties:** opposing-pole midpoints → `a = b = 0` (grey); `κ → large` → nearest-pole colour; **rotation equivariance** — `blend(Rn̂, R·poles) = blend(n̂, poles)`.
 4. **LUT sphere:** an equator longitude sweep reproduces the 1-D LUT within blend tolerance; Twilight closes exactly at the wrap.
-5. **Physics overlay:** blob maxima exactly at `b̂/ê/l̂`; strength `s = 0` is the identity; Stability×Hue L endpoints `0.25 / 0.80` exact.
+5. **Physics overlay:** blob maxima exactly at `b̂/ê/l̂`; strength `s = 0` is the identity.
 6. **Combiner:** Replace-L leaves `(a, b_ab)` bit-stable; Multiply preserves channel ratios; the monotone-L-LUT × Replace-L pairing raises the UI conflict flag (a wiring test, not a colour test).
 7. **Compaction:** each form monotone on its domain; log handles the −1.0 sentinel via styling, never via the ramp; symlog symmetric (`b(x) + b(−x) = 1`) with `b(0) = ½` exactly.
 8. **Categorical discipline:** a synthetic mixed quad renders the **per-sample colour-then-SSAA-resolve blend** per §3.7 (e.g. 75% escape / 25% bounded → 75/25 blended sRGB) — **never an RGB average of class *indices*, and never the vetoed majority+desaturation**; the `detail` legend switches per `state` (the regression test the three-colours bug earns).
