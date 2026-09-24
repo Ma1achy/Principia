@@ -112,7 +112,7 @@ These certify the **CPU brain** — a wrong view here exonerates the GPU and poi
 
 | View | Shader shows | Test asserts |
 |---|---|---|
-| quad-depth heatmap | depth `ℓ` as colour ramp | every in-view quad above the screen floor is split (policy §0.1); below it, subdivision matches complexity + `ℓ < camera_depth + MAX_REL_DEPTH` (the sliding cap on every split beyond the screen floor, off-screen policy splits included, `MAX_REL_DEPTH` ≥ the screen floor — R-88, R-98) |
+| quad-depth heatmap | depth `ℓ` as colour ramp | at rest, every in-view quad above the screen floor is split (policy §0.1; R-108); below it, subdivision matches complexity + `ℓ < camera_depth + MAX_REL_DEPTH` (the sliding cap on every split beyond the screen floor, off-screen policy splits included, `MAX_REL_DEPTH` ≥ the screen floor — R-88, R-98) |
 | quad-state enum | loaded / pending / refinable / **terminal** / stale as discrete colours | state transitions legal; terminal iff a TRUE floor hit (linear-decoder `AT_F32_FLOOR`, or the integration floor — quad-level refinement-stops; the sample `saturated` flag is non-terminal, and the screen floor is view-relative and never terminal — the criterion may supersample below it, R-88 — scheduler Part 4) |
 | coherence / impurity | scalar heatmap | = reduction output; high where boundaries |
 | ensemble spread | scalar (tier) | present iff `contains-ensemble` |

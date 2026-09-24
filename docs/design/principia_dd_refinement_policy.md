@@ -50,7 +50,8 @@ outside its domain.**
 **The consequence, stated rather than inferred.** `adequate` is `tile ≤ 1` and the `ScreenFloor` veto
 is `tile ≤ 1` — **they meet on the same value**. So every in-view quad above the screen floor must
 split and every one at it stops. **The in-view tree is complete at screen resolution**, which is what a
-slippy map displays.
+slippy map displays. **Must-split is the at-rest target (R-108):** during a gesture the frame budget governs —
+ancestors show, so there are never blanks — and completeness resumes at rest.
 
 | region | who decides depth | what the criterion does |
 |---|---|---|

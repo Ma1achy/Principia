@@ -178,7 +178,7 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 |---|---|---|
 | **render_scale** | **quadratic** — cuts render_px, hits payload + render targets + compute together | 1.0→0.5 is 4× on everything (locked-to-native disables this) |
 | **E (SSAA)** | `(E+1)` linear on payload + compute `2(E+1)` | 16×→1× is 16× |
-| **refinement floor** | stop subdividing coarser than pixel-size (tiles 2× pixels etc.) — fewer live samples + less compute, *under motion only*; snaps back to the pixel floor at rest | view-relative; a motion lever, not a tier setting |
+| **refinement floor** | stop subdividing coarser than pixel-size (tiles 2× pixels etc.) — fewer live samples + less compute, *under motion only*; snaps back to the pixel floor at rest — must-split above the floor is the at-rest target; during a gesture the frame budget governs (R-108) | view-relative; a motion lever, not a tier setting |
 | **checkerboard** | compute half the render pixels per frame while the playhead advances, reconstruct the rest from `t−dt` (SSAA-resolved) — **~2× per-frame compute, saves NO memory**; self-erases at rest (`principia_checkerboard_contract.md`) | throughput-only motion lever; three-state user setting (permanent default / motion-only / off); orthogonal to and stacks with render_scale |
 | **FTLE** | ×1.5 (drops the shadow + its compute) | on/off |
 | **word** | +11–17% | on/off |
