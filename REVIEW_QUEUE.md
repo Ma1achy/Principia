@@ -331,3 +331,5 @@ please confirm.
 Settled by a ruling or the notes, so not questions: the 1-based labels (R-22); the escape "persistence 8" (R-29, change
 11); the profiler's top-level categories (R-56: telemetry §2's five stages); "linked camera", "CameraZoom" and "fate
 edges" (notes: no camera object; "Legend", never "Fate").
+- **Ruling:** R-68 (decisions.md): artboard values are illustrative; corpus values win; the Run window uses contract
+  names. Closed in step 6.

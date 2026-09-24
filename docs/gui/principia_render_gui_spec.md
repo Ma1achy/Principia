@@ -7,8 +7,8 @@ feature. The production (TS) GUI is out of scope; it re-skins the same operation
 
 *Sources, in order of authority: `decisions.md` rulings, then `gui/design/GUI_DESIGN_NOTES.md` (the reviewer's design
 notes), then the twelve artboards in `gui/design/`. The notes win over the pictures, and a ruling wins over both. Where the
-notes and the corpus disagree, the entry is in `REVIEW_QUEUE.md` (RQ-20 to RQ-24) and this spec marks the place instead of
-choosing. §G13 lists where a picture is overridden.*
+notes and the corpus disagreed, the entries (RQ-20 to RQ-24) are ruled by R-64 to R-68. §G13 lists where a picture is
+overridden.*
 
 *Part I covers the GUI as a whole. Part II is the stain editor, the node-graph editor over the composition algebra; it keeps
 its section numbers (§0–§16). It conforms to `principia_colour_composition.md`: where the two overlap, the composition spec
@@ -101,7 +101,7 @@ IC:
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
 - a playhead for this orbit;
 - **listen**: sonification (`principia_scratchpad_pointer_channels.md`; `θ(t), φ(t)` → spectrum), which can follow the
-  cursor. The artboard's mapping selector ("separations → pitch") is RQ-24;
+  cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative (R-68);
 - **Open full viewer…** and **IC Inspector…** (both open §G8);
 - **Kept orbits** below, each with its fate and time, removable.
 
@@ -206,10 +206,13 @@ corpus's top display bar (R-67).
 ### Run — from the top bar
 
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
-- **Integration:** horizon `T` (physical time, `T ∈ [50, 200]`; integrator_contract Part 5); the integrator occupant
-  (Heggie with KDK leapfrog is the general default, Aarseth–Zare is kept for benchmarks; integrator_contract Part 2b); the
-  substep cap `N_max` (default 64, integrator_contract Part 3; the artboard's 100 000 is RQ-24).
-- **Escape:** the criterion is shape closure + energy sign (R-29): its `tau` and window (0.4 time units, provisional).
+**The Run window exposes the parameters the contracts define, under their contract names (R-68).**
+- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, Part 5),
+  `dt_macro`, `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
+  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
+  default, Aarseth–Zare is kept for benchmarks; Part 2b).
+- **Escape:** the criterion is shape closure + energy sign (R-29): `tau` and the escape window (0.4 time units,
+  provisional).
   There is no persistence count (change 11).
 - **Refinement:** quality (the preset selector — Auto, named tiers, Custom; gui_state_contract §6), frame budget (ms), max
   depth (`MAX_REL_DEPTH`), ensemble `E` (samples per pixel).
@@ -304,15 +307,17 @@ quadtree, the contract (each `SetField` is logged) and the app.
 
 ## G13. Where the artboards are overridden
 
-The pictures are layouts. Where a detail in one differs from a ruling, the notes or the corpus, the spec follows the
-authority:
+The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
+the contracts define, under their contract names (R-68).** Where a detail in one differs from a ruling, the notes or the
+corpus, the spec follows the authority:
 - **Body and pair labels** are 0-based (R-22). The artboards show "body 1 escapes", "collision 1–2", "body 3 crosses".
 - **Escape has no persistence count** (R-29, change 11). The Run artboard shows "persistence 8".
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
-- **RQ-24** lists the details that differ from the corpus with nothing in the notes: the outcome palette's hex values, the
-  substep cap, an integrator "tolerance" field, and the sonification mapping. The spec follows the corpus until it's ruled.
+- **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
+  (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
+  contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
 
 ## G14. Settled by the notes (record)
 
@@ -750,8 +755,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
 - **Node palette contents** — the concrete list of source fields (from the ctx contract) and post
   ops surfaced in the right-click palette.
 - **Preview** — sphere vs illustrative-slice toggle; which is default.
-- **The GUI questions RQ-20 to RQ-24** (REVIEW_QUEUE): graph vs four-slot stain, one inspector window, the scrubber,
-  the display stage's order and placement, and the artboard details that differ from the corpus.
+- ~~**The GUI questions RQ-20 to RQ-24**~~ **ruled by R-64 to R-68** (step 6): the stain is a graph, one Inspector
+  window, the scrubber stays, the display chain and its controls, and artboard values are illustrative.
 - **Standing composition-spec gaps** (to reconcile on that doc's next pass, tracked in
   `principia_colour_composition.md`): colour-source-as-axis, overlays-as-post-chain-over-configured-
   base, physics-as-overlay-op, gradient-unifies-the-ramp, per-footprint vs quad-aggregate spread,
