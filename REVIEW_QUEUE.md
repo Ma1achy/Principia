@@ -285,6 +285,7 @@ Nothing is chosen; the spec writes the notes' window and marks the difference.
   panel in the F3 debug menu".
 - **Needed:** whether the merged window supersedes trajectory_viewing §4's panel set (sphere and unwrap as a toggle, and an
   auto-turning sphere), or keeps both sphere views on screen together.
+- **Ruling:** R-65 (decisions.md): one Inspector window; the panels are hosted there and in Explore's Trajectory panel. Closed in step 6.
 
 ## RQ-22: A time scrubber that re-integrates, against "there is no scrub" *(step 6, GUI)*
 

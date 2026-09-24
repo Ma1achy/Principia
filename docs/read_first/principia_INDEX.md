@@ -102,7 +102,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_render_modes.html` — Render-Mode Catalogue
 - `docs/gui/reference/principia_colour_presets.html` — Colour Composition · Preset Gallery
 - `docs/gui/reference/principia_colour_explorer.html` — Colour Composition Explorer
-- `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8)
+- `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8). Prior art: the tool is absorbed into the dev GUI's Inspector window (R-65)
 
 ---
 

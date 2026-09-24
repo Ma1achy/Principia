@@ -80,6 +80,20 @@ Opens on click; shows the **same trajectory three ways at once**, linked by one 
 | **Real space** | the three bodies in the plane, `r_i(t)` | `computeIC` trajectory | **no** — CPU-f64 sugar |
 | **Scalar readout** | `t_end_step`, `state`, escaper, `d_min`, drifts @ cursor | `SimState` + `computeIC` | classification-level (§5) |
 
+**Where each panel lives (R-65).** The click inspector's panels are hosted in the **Inspector window**
+(`principia_render_gui_spec.md` §G8), which absorbs the standalone IC Inspector, and in **Explore's Trajectory side panel**
+(§G2):
+
+| Panel | Inspector window | Explore's Trajectory panel |
+|---|---|---|
+| 3D shape sphere / 2D UV unwrap | pane 2, one pane toggled "sphere / unwrapped" (it can also show the canonical bodies) | beside real space, the same toggle |
+| Real space | pane 3 | beside the sphere |
+| Scalar readout | the readout row (latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round trip, gauge) | the summary line and the readouts (F₂ word, substeps, min separation, `\|ΔE/E\|`) |
+| *the IC itself, editable* | pane 1 (from the absorbed IC Inspector) | — |
+
+The 3D sphere and the 2D unwrap now share one pane and are toggled; they stay in the same config-space frame, so they still
+agree. The sphere turns slowly, with visible axes, and can be stopped ("turn").
+
 - **Real space is CPU-f64 intuition sugar** — "see what this IC looks like", no comparison claimed. There is no GPU real-space trajectory to compare against (the survey never produced one), and that's fine — visualisation, not parity.
 - **Config-space frame (both sphere panels).** Both feed `sph_uv` in the config-space frame (two-rotations rule). The 3D orbit control rotates the **camera, not the data** — so the 3D view and the 2D unwrap always agree. Landmarks fixed in the same frame.
 - **Linked brushing.** One `ViewUI.t_cursor` shared across panels: scrub in one → all highlight the same instant; hover a sphere point → real space jumps to that configuration. Pure `ViewUI` state, no engine involvement. This is what makes three panels one instrument. The inspector's cursor is independent of the survey's global playhead (it examines one frozen IC).
@@ -103,6 +117,7 @@ The one comparison worth drawing — and the reason it's honest — is on the sh
 
 - **No new sim machinery.** Both features compose `computeIC` (Precision ring / parity) + the chart projection (hover) or the shape-sphere widget + equirect + real-space draw (click).
 - **GUI/state:** both are `ViewUI` surfaces reading the engine only via `computeIC(chart, uv, simKey)`; the engine never knows they exist. Hover overlay + inspector panels + `t_cursor` are all `ViewUI`.
+- **Hosts (R-65):** the Inspector window (render_gui_spec §G8) and Explore's Trajectory side panel (§G2). The standalone IC Inspector tool is absorbed into the Inspector window; its HTML stays in `docs/gui/reference/` as prior art.
 - **Supersedes** render-contract Part 7's hover tiering table and the earlier inspector draft's block-span tiering — replaced by "always integrate the IC on CPU, project, draw."
 
 ---

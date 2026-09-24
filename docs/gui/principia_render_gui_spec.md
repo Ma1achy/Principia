@@ -247,8 +247,9 @@ labels (R-22).
 
 ## G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)
 
-**RQ-21:** the notes make the IC Inspector and the trajectory viewer ONE window. trajectory_viewing §4's click inspector
-shows four panels at once, and the IC Inspector is a separate tool in the corpus. This section writes the notes' window.
+**The IC Inspector and the trajectory viewer are ONE window (R-65).** trajectory_viewing §4's panels are hosted here and in
+Explore's Trajectory panel (§G2); trajectory_viewing §4 says where each lives. The standalone IC Inspector tool is absorbed;
+its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 
 - **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead.
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
