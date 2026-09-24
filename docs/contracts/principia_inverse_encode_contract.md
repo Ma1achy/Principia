@@ -30,7 +30,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 ## Part 2 — The scale gauge gap (missing from the original inverse policy)
 
-The original canonical inverse policy (Part 6, steps 1–5) translates to CoM, rotates, and mirrors — **but never rescales**. Input at `I ≠ 1` therefore breaks T1 and T3: two similarity-equivalent inputs encode to different points, and the round trip does not land on the section. The fix is the similarity transform the whole design is built on (`r → λr, t → λ^{3/2}t`), applied as **step 0 of canonicalisation**:
+The original canonical inverse policy (Part 6, steps 1–5) translates to CoM, rotates, and mirrors — **but never rescales**. Input at `I ≠ 1` therefore breaks T1 and T3: two similarity-equivalent inputs encode to different points, and the round trip does not land on the section. The fix is the similarity transform the whole design is built on (`r → λr, t → λ^{3/2}t`), applied as **step 0 of canonicalisation** — after the CoM subtraction (step 1a) that defines `I`, before the boost removal (step 1b); R-23:
 
 Given input with moment of inertia `I_in = Σ mᵢ‖rᵢ‖²` (CoM frame), set `λ = I_in^{−1/2}` and
 
@@ -143,15 +143,18 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 
 **The canonical inverse policy.** The original five steps were: translate to CoM; canonicalise; invert into the
 current chart or else latent z; among several valid inverses take the smallest latent norm; surface any clamping.
-Completed, with two additions (step 0; step 5's resolution) and the full-state rule made explicit:
+Completed, with two additions (step 0; step 5's resolution) and the full-state rule made explicit. The order is
+normative (R-23): **1a → 0 → 1b → 2 → 3**, then 4–6. CoM subtraction precedes the `I` computation, because `I` is
+CoM-frame-defined.
 
-0. **Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
-1. **Translate to CoM** — positions and the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
-2. **Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
-3. **Mirror if `λ̃_y < 0`** — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| < δ_λ = 10⁻¹²` → fixed deterministic choice (no-mirror), documented; T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
-4. **Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
-5. **Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
-6. **Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
+- **1a. Subtract the CoM** — positions to the CoM frame, so `I_in` is defined.
+- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
+- **1b. Subtract the boost** — the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
+- **2. Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
+- **3. Mirror if `λ̃_y < 0`** — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| < δ_λ = 10⁻¹²` → fixed deterministic choice (no-mirror), documented; T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
+- **4. Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
+- **5. Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
+- **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
 
 ### Chart-aware validation
 
@@ -230,4 +233,4 @@ region (for example above the parabola in $(L_z, E)$).
 
 ---
 
-*Encode is the quotient map onto the decode's section: constant on gauge orbits, right-inverse to decode, left-inverse modulo gauge. Rigid operations act on the whole phase-space state — positions and momenta together, always. Scale is canonicalised by the similarity rescale, and it is step zero. The fibre point on an invariant chart is whatever the chart's own decode constructs — encode never runs its own optimiser. Tolerances live in physical units; z-space residuals near saturation mean nothing. Everything the inverse discards, it reports.*
+*Encode is the quotient map onto the decode's section: constant on gauge orbits, right-inverse to decode, left-inverse modulo gauge. Rigid operations act on the whole phase-space state — positions and momenta together, always. Scale is canonicalised by the similarity rescale — step 0, after the CoM subtraction that defines `I` (R-23). The fibre point on an invariant chart is whatever the chart's own decode constructs — encode never runs its own optimiser. Tolerances live in physical units; z-space residuals near saturation mean nothing. Everything the inverse discards, it reports.*

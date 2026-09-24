@@ -12,7 +12,7 @@ The **only upward edge on the ladder**: `physical state → z`, the quotient map
 
 ## 2. Consolidated contract
 
-From the **inverse-encode contract** (all of it binds; headline clauses): `E = (block/chart inverses) ∘ C`; **T1** gauge-invariance (deterministic tie-breaks), **T2** right-inverse on the interior, **T3** left-inverse modulo gauge; rigid operations act on the **full phase-space state**; scale rescale is **step 0**; the invariant fibre point is the chart's own forward construction (**encode reuses decode** — pending change 3 supersedes "smallest latent norm"); tolerances asserted in **physical units**; everything discarded is **reported** (`lookup_rescaled`, `lookup_mirrored`, `lookup_clamped`).
+From the **inverse-encode contract** (all of it binds; headline clauses): `E = (block/chart inverses) ∘ C`; **T1** gauge-invariance (deterministic tie-breaks), **T2** right-inverse on the interior, **T3** left-inverse modulo gauge; rigid operations act on the **full phase-space state**; the canonicalisation order is **1a CoM → 0 scale → 1b boost → 2 rotate → 3 mirror** (R-23); the invariant fibre point is the chart's own forward construction (**encode reuses decode** — pending change 3 supersedes "smallest latent norm"); tolerances asserted in **physical units**; everything discarded is **reported** (`lookup_rescaled`, `lookup_mirrored`, `lookup_clamped`).
 
 From the **chart contract / generation root**: block inverses come from the **link registry** (never inlined); ε clamps are registry data (`ε_μ = ε_z = ε_q = 10⁻⁶`, `μ_max = 5`, `q_max = 2`).
 
@@ -39,10 +39,11 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
 
 ```
+1a COM        r ← r − R_com                            (translations gauged; I is CoM-frame-defined)
 0  SCALE      I_in = Σ mᵢ‖rᵢ‖²  (CoM frame)          → r ← r/√I_in ;  p ← I_in^{1/4}·p
               record λ = I_in^{−1/2} ; notice lookup_rescaled
               (E_canon = √I_in·E_in ;  L_canon = L_in/I_in^{1/4} ;  t_canon = t_in/I_in^{3/4})
-1  FRAME      r ← r − R_com ;  p ← p − mᵢ·P_tot/M      (translations and boosts gauged)
+1b BOOST      p ← p − mᵢ·P_tot/M                       (boosts gauged)
 2  ROTATE     φ = atan2(ρ_y, ρ_x) ;  apply R(−φ) to every rᵢ AND every pᵢ ;  ρ̃ lands on +x
               ρ = 0 → reject (coincident inner pair)
 3  MIRROR     if λ_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored
@@ -52,7 +53,7 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
 ```
 
-Steps 0–3 commute with nothing — 0 before 1 (CoM of the *scaled* state is the scaled CoM, but I is CoM-frame-defined, so compute `R_com` first in practice: operationally **1a** subtract CoM, **0** rescale, **1b** subtract boost, **2**, **3**; the contract's numbering compresses this — the pin is: *CoM subtraction precedes the I computation*, then scale, then boost removal, then rotate, then mirror).
+The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
 ### 3.3 The gauge group action, explicit (this is what T1 sweeps)
 
@@ -112,7 +113,7 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 ## 6. Deferred / flagged
 
 - **Projection metric pin (§3.4)** — chordal-⊕-Euclidean, unit weights: confirm or veto; whatever wins goes in the shared source with the curve embeds.
-- **Operational order of steps 0/1 (§3.2)** — CoM-before-I is the practical pin inside the contract's compressed numbering; pinned in the **shared source** so both instantiations (CPU-f64, GPU-f32) inherit the identical sequence.
+- ~~**Operational order of steps 0/1 (§3.2)**~~ — **settled by R-23:** 1a → 0 → 1b → 2 → 3 is normative, in the contract's numbering as here; pinned in the **shared source** so both instantiations (CPU-f64, GPU-f32) inherit the identical sequence.
 - **Batch import ergonomics** (CSV of literature ICs → encode → tagged report per row) — a validation-phase tool, not contract; noted so the import seam test has a harness to live in.
 
 ---

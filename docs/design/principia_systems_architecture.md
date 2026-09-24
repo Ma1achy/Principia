@@ -146,7 +146,7 @@ Each seam: the two parties, what crosses, and the single invariant that holds it
 | 5 | integrate → render *(the waist, above)* | typed payload | integrate/colour split: render changes never recompute; debug views are free |
 | 6 | compute pipeline ↔ fragment pipeline | the payload buffer | the two meet **only** here — compute is monomorphised shared-Rust (parity-critical, single-sourced), fragment is hand-WGSL (parity-free, runtime devkit); different mechanisms by design (lowering Part 2) |
 | 7 | stain pipeline ↔ compositor | layer textures | compositor above the stain graph; blur is a compositor pass; blur means exactly "not current" (spatially stale / temporally behind / arriving — one grammar) |
-| 8 | physical world → manifold | `encode = inverses ∘ C` | quotient onto the section: rigid ops act on the **full state**; scale rescaled first; everything discarded is reported |
+| 8 | physical world → manifold | `encode = inverses ∘ C` | quotient onto the section: rigid ops act on the **full state**; CoM subtracted, then scale rescaled (R-23); everything discarded is reported |
 | 9 | Allocation ring ↔ the ladder *(ring law)* | dispatch decisions | the **firewall**: payloads are pure of all scheduling state; two users, different quadtrees, same answers |
 | 10 | scheduler ↔ cache *(within Allocation)* | (identity, validity) keys | identity says which quad; validity says computed how; preview ≠ refined |
 | 11 | adaptive structure ↔ quantitative claims *(ring law)* | — (deliberately no crossing) | adaptive is for **looking**; uniform grids + `|det J_D|` are for **measuring** |

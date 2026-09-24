@@ -49,7 +49,7 @@ A browser-based **WebGPU research instrument** for the planar three-body problem
 - **Canonicalise is the one seam to `(m, r, p)`**: the quotient onto the section (CoM, ρ̃ on +x, λ̃_y ≥ 0, I = 1). Everything converges through it; **the integrator has one input type `(m, r, p)`, forever**, and never learns the chart's name.
 - **Dimensionless units** `G = M = I = 1` throughout — a single global horizon `T` is legitimate because scale is gauged.
 - **Links carry a measure.** Compactification functions (softmax, sigmoid, warps) are registry entries — constraint-preserving, invertible (conditioned), C¹, each carrying its log-det Jacobian; quantitative claims either correct by the Jacobian or are barred (measure honesty).
-- **Encode is the one upward door** (`inverse_encode_contract`, `dd_encode`): `E = (block inverses) ∘ C`; rigid ops act on the **full state** (positions *and* momenta); scale rescale is step 0; the invariant fibre point is the chart's own forward construction (**encode reuses decode**); tolerances in physical units.
+- **Encode is the one upward door** (`inverse_encode_contract`, `dd_encode`): `E = (block inverses) ∘ C`; rigid ops act on the **full state** (positions *and* momenta); the order is subtract CoM → rescale → subtract boost → rotate → mirror, so CoM subtraction precedes `I` (R-23); the invariant fibre point is the chart's own forward construction (**encode reuses decode**); tolerances in physical units.
 
 ---
 
