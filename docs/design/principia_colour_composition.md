@@ -472,7 +472,7 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 | | Soft Voronoi | sigmoid blend between the two nearest poles, $t = \sigma(k_s(d_1 - d_2))$ |
 | Lattices | Fibonacci lattice | $N$ golden-angle points, $n_{z,i} = 1 - 2i/(N-1)$, $r_i = \sqrt{1 - n_{z,i}^2}$, $\phi_i = \pi(\sqrt5 - 1)\,i$; golden-angle hue spacing so adjacent cells contrast |
 | | Dot lattice | the Fibonacci points drawn as coloured dots of angular radius $\rho = \cos(1.4/\sqrt N)$ on a dark background |
-| Stripes | Checkerboard | with $\theta = \arccos n_z$, $\varphi = \operatorname{atan2}(n_y, n_x) + \pi$: even $= (\lfloor f\theta/\pi\rfloor + \lfloor f\varphi/2\pi\rfloor) \bmod 2$; seam-free for integer $f$ |
+| Stripes | Checkerboard | with $\varphi = \arccos n_z$ (polar), $\theta = \operatorname{atan2}(n_y, n_x) + \pi$ (azimuth; R-14's names): even $= (\lfloor f\varphi/\pi\rfloor + \lfloor f\theta/2\pi\rfloor) \bmod 2$; seam-free for integer $f$ |
 | | Latitude stripes | $\cos(f \arccos n_z) > 0$ (no atan2) |
 | | Longitude stripes | $\sin(f\,\operatorname{atan2}(n_y, n_x)) > 0$ (seamless for integer $f$) |
 | | Truchet mosaic | each patch cell $(c_i, c_j)$ gets a deterministic diagonal split from $h = \operatorname{frac}(\sin(127.1c_i + 311.7c_j)\cdot 43758.5)$; colour by the side of the diagonal |

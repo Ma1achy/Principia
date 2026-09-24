@@ -133,7 +133,7 @@ independent draws, so two agreeing by chance is a few in ten thousand. Calibrate
 nearly inert on real charts, where seas are coherent sponges rather than white: it floors **2–37
 quads where the dimension floor floors 262–334**.
 
-### 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both open
+### 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both ruled (R-42)
 
 **It cannot tell an empty mask from a full one.** Both return exactly `0.0000`, so any positive
 `alpha_lo` floors on either. This is a **can't-fail test inside the floor itself**, and it costs

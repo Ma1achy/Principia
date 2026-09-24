@@ -72,7 +72,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_dd_telemetry_and_tiers.md` — Observation. Frame record, deriving tiers, graceful failure
 - `docs/design/principia_scratchpad_pointer_channels.md` — Observation. Trace / sound / inspector
 - `docs/design/principia_dd_image_embedding.md` — Provenance. LSB payload
-- `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **pending redefinition to key off `eps`**
+- `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **ruled (R-40): they key off `eps`** — the eps / frame-budget / hard-cap axes fold into `QualitySettings` and the ladder, and the widths are recomputed (D6)
 - `docs/design/principia_temporal_architecture_note.md`, `docs/contracts/principia_export_animation_contract.md`
 
 **Also in `docs/design/`**
@@ -166,8 +166,8 @@ and **`Policy::Tolerance`**.
 - **Two `alpha_area` defects** — cannot distinguish an empty mask from a full one (both `0.0000`); negative exponents give `d > 2`. Ruled (R-42): tell empty from full by `n_unresolved`, and refuse the floor on a negative exponent; `alpha_lo` stays 0.005. The fix lands with refine. `docs/design/principia_dd_refinement_policy.md` §2.2
 - **A cheap `sea_fraction` estimator** — the named next step for regime detection
 - **Tier tables** — shape settled at v0.5 (three axes: `eps` / frame budget / hard cap, binding one reported; `docs/design/principia_dd_telemetry_and_tiers.md` §3.5). **The numbers are guesses and are meant to be** — calibrate from device telemetry. `memory_tiers.md` now carries a banner pointing at the three-axis model
-- **`Decision::Undetermined` is a second budget line** the architecture has no place for
-- **`N = 16` may be forced down to 8 on WebGPU** — a quad would want 256 threads, exactly the invocation ceiling. Measure, do not assume (`docs/design/principia_systems_architecture.md` §5.5)
-- **Frontier scoping** — the frontier is unbounded (29 → 585 quads while in-view work stays ~130), so the camera is a tie-break rather than a filter. Held pending a margin *derived* from the refill rate; a naive cull evicts faster than the descent refills and stalls
-- **Relevance arithmetic in global UV** — latent defect past ~depth 40 (coordinate magnitude, not depth: `@origin` reads exactly `0.000e0`). Take before any deep-zoom demo
+- **`Decision::Undetermined` is a second budget line** the architecture has no place for. Ruled (R-47): it is reported, terminal and flagged, until a chart shows it non-zero
+- **`N = 16` may be forced down to 8 on WebGPU** — a quad would want 256 threads, exactly the invocation ceiling. Ruled (R-43): measured, not assumed, and the thread-count inconsistencies are fixed now (`docs/design/principia_systems_architecture.md` §5.5)
+- **Frontier scoping** — the frontier is unbounded (29 → 585 quads while in-view work stays ~130), so the camera is a tie-break rather than a filter. Ruled (R-45): the margin is *derived* from the refill rate, and a widened margin is the baseline to beat; a naive cull evicts faster than the descent refills and stalls
+- **Relevance arithmetic in global UV** — latent defect past ~depth 40 (coordinate magnitude, not depth: `@origin` reads exactly `0.000e0`). Ruled (R-46): relevance is computed relative to the camera or quad centre, with deep_zoom §1's centre-plus-half-width pattern, before any deep-zoom demo
 - **FMA contraction control per backend** — unchecked, and it can move a branch input (`docs/contracts/principia_integrator_contract.md` Part 2c)

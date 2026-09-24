@@ -171,7 +171,7 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 > **100% precision, 96.3% recall**, against 97.9% for the old test (on the legacy `t = 30` ground truth; the
 > re-validation runs against check 2's independent ground truth, with the legacy set kept as a comparison — R-95). `receding` and `d > r_esc` are
 > **redundant** once both hold (identical to the digit), so three tuned constants are eliminated.
-> `tau` sits in a **383× gap** and is not tuned. Fires at `t≈10` rather than `t≈1.5` — **late rather
+> `tau` sits in a **383× gap** *(to re-measure, R-29)* and is not tuned. Fires at `t≈10` rather than `t≈1.5` — **late rather
 > than wrong**, which is correct for a *stored* `t_end`.
 >
 > **In production, escape ends the loop (R-103);** §2.4's three checks run in the validation harness. Freezing a
