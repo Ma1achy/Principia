@@ -163,8 +163,8 @@ its nine terminal classes carry structure worth encoding in the colours themselv
 | degenerate     | white   | `#ECECF0` | |                 |         |           |
 
 The assignment is a **mnemonic, not arbitrary**: **collisions are additive primaries keyed by the
-colliding pair** (1–2 → R, 1–3 → G, 2–3 → B); **escapes are subtractive primaries keyed by the
-escaping body** (1 → Y, 2 → M, 3 → C). The two event *families* (collision vs escape) are therefore
+colliding pair** (0–1 → R, 0–2 → G, 1–2 → B); **escapes are subtractive primaries keyed by the
+escaping body** (0 → Y, 1 → M, 2 → C; 0-based, R-22). The two event *families* (collision vs escape) are therefore
 separable at a glance while the pair/body identity stays legible; the three non-generic outcomes are
 bounded (black), the t=0 collision (orange), and degenerate (white). The nine classes read from the
 `state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
