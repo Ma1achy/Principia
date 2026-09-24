@@ -42,8 +42,12 @@ Everything left open, each with its source. Nothing is deferred silently.
      gauge-covariantly"); and `principia_memory_tiers.md` §4's tier totals, still at the old 136 B width (with audit B10).
   10. Folded (validation_orbits §5 item 1). **Open:** its consequences — re-run the Python cross-check and the
       divergence-vs-horizon table, and fix the NumPy reference's matching defect. Whether these were done isn't recorded.
-  11. Folded (integrator_contract Part 7, dd_integrator §3.6). **Open:** whether escape terminates (pitfalls §2.4, three
-      checks); the window length for `|Δn̂|`; which energy `E_rel` is; how the escaping body's id is determined.
+  11. Folded (integrator_contract Part 7, dd_integrator §3.6). The window, `E_rel` and the escaper id are ruled by R-29 (applied
+      in step 5); termination by R-31 (recorded). Was open: whether escape terminates (pitfalls §2.4, three checks); the
+      window length for `|Δn̂|`; which energy `E_rel` is; how the escaping body's id is determined.
+      **Still open, from R-29:** (i) re-validate precision and recall with the corrected `E_rel`, and re-measure the `tau`
+      gap; (ii) where `n̂` from one window earlier is held (a lagged register at sync boundaries, not yet in `SimState`,
+      so the widths in payload §1 don't include it); (iii) RQ-19, no t = 0 escape outcome.
   12. Folded (R-15, R-18; scheduler contract Parts 3, 4, 6). **Open, recorded in the policy doc:** the two `alpha_area`
       defects (§2.2), and the camera not wired into priority.
 

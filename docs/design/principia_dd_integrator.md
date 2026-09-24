@@ -156,9 +156,18 @@ Final *and* max are both stored because the *shape* of drift is the diagnostic: 
 ESCAPE  ⟺  |Δn̂| over a window < tau    AND    E_rel > 0
 ```
 
-The shape vector has settled and the escaper is unbound. `tau` sits in a 383× gap and is not tuned (integrator contract
-Part 7; `principia_01_pitfalls.md` §2). The window length, the energy `E_rel` is taken over, and how the escaping body is
-identified are not yet written down (open-questions). Triple ejection is `ESCAPE` with `detail = 3`; its gate is open.
+The shape vector has settled and the escaper is unbound. `tau` was measured in a 383× gap and not tuned (integrator contract
+Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E_rel`. Defined by R-29:
+
+- `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
+  mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
+  pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
+- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The escaper** is the body with `E_rel > 0` and the largest separation from the other two.
+- **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
+  this `E_rel`.
+
+Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
 
 *Superseded by change 11, kept for the record* — for each candidate body `k` (outer of the Jacobi split against the remaining pair), three gates and a persistence counter:
 
@@ -280,4 +289,4 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ---
 
-*Five occupants, one wrapper, one table-bucketed substep integer. Collision beats escape, and both precisions agree on it. The counter forgives a flickering gate; the accumulators latch at the end; a sample's Benettin shadow is never itself a sample. Euler exploding is a test passing.*
+*Five occupants, one wrapper, one table-bucketed substep integer. Collision beats escape, and both precisions agree on it. Closure and energy together decide escape; the accumulators latch at the end; a sample's Benettin shadow is never itself a sample. Euler exploding is a test passing.*

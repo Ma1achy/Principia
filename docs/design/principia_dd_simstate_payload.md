@@ -169,7 +169,7 @@ fraction of the system size — not as an absolute time, or the field inherits a
   pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
 - **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)
 
-> **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Likewise an IC that at t=0 genuinely satisfies the complete escape detector (outward *and* positive outer-energy gates, not merely beyond `R_esc`) is an **escape at step 0** (`state=escape`, `detail=body`, `t_end_step=0`). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC. (Whether beyond-`R_esc`-alone counts as t=0 escape is deferred to the decoder contract's escape-gate definition.)
+> **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Escape has no step-0 case: its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC.
 
 **Drift latches are ABSOLUTE maxima:** `dE_max = max_t |ΔE(t)|`, `dLz_max = max_t |ΔL_z(t)|` (in `packed_b`, f16 — §1, held in f32 during the march). `d_min = min_t |separation|` (in `packed_a` high half). All monotone latches over the whole trajectory.
 
@@ -491,8 +491,11 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 >
 > **100% precision, 96.3% recall**, against 97.9% for the old test. `receding` and `d > r_esc` are
 > **redundant** once both hold (identical to the digit), so three tuned constants are eliminated.
-> `tau` sits in a **383× gap** and is not tuned. Fires at `t≈10` rather than `t≈1.5` — **late rather
+> `tau` sits in a **383× gap** and is not tuned *(to re-measure, R-29)*. Fires at `t≈10` rather than `t≈1.5` — **late rather
 > than wrong**, which is correct for a *stored* `t_end`.
+>
+> `E_rel`, the window and the escaper are defined by R-29 (integrator contract Part 7). The precision, recall and gap above
+> predate R-29's `E_rel` and are to re-validate.
 >
 > **And escape must not terminate integration until §2.4's three checks pass.** Freezing a
 > trajectory whose displayed quantity is still moving is what produced the patchwork artefact
@@ -525,6 +528,8 @@ spread is undetermined — 11 such footprints in `deep interior` under the old k
 `d_min` discriminator poisoned by its own subject: **the measurement was correct and the column chosen
 could not see it.**
 
-**Closure** (`closure_min: f32`, `closure_step: u16`) is specified above and is the same quantity as
-the escape criterion's settling test — closure → 0 and spectral entropy → 0 are one statement. It is
+**Closure** (`closure_min: f32`, `closure_step: u16`) is specified above. It is related to the escape criterion's settling
+test but is not the same quantity: `closure_min` is the running minimum of `|n̂(t) − n̂(0)|` against the *initial* shape,
+while the settling test is `|Δn̂|` over a 0.4-time-unit window (R-29), which needs `n̂` from one window earlier. Closure → 0
+and spectral entropy → 0 are one statement. It is
 also the input to the **sonification** channel (`principia_scratchpad_pointer_channels.md`).

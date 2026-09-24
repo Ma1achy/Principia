@@ -138,7 +138,18 @@ escapers are still decelerating, so `lambda` is not yet perfectly linear).
 ESCAPE  <=>  |Δn̂| over a window < tau    AND    E_rel > 0
 ```
 
-Measured on the config chart, ground truth = unbound and receding at `t = 30`:
+**Defined (R-29, 24 Sep 2026):**
+
+- `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
+  mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
+  pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
+- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The escaper** is the body with `E_rel > 0` and the largest separation from the other two.
+- **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
+  this `E_rel`.
+
+Measured on the config chart, ground truth = unbound and receding at `t = 30`. *These numbers predate R-29's `E_rel` (prin-rs's
+implementation uses `M_pair` only). To re-validate.*
 
 | criterion | fires | **precision** | recall | median `t` |
 |---|---|---|---|---|
@@ -157,7 +168,7 @@ construction. **Three tuned constants eliminated.**
 82.8% because *settling* also happens for bound hierarchies; energy alone is 97.9% because it
 **flickers** during encounters.
 
-**`tau` is not a tuned constant.** Closure separates escapers from bound trajectories by **383×**
+**`tau` is not a tuned constant** *(to re-measure, R-29: prin-rs reports the gap at best 6.8× in its build)*. Closure separates escapers from bound trajectories by **383×**
 (7.04e-05 against 2.70e-02), stable across `t = 25–30`. Any value in the middle two orders gives the
 same answer.
 
