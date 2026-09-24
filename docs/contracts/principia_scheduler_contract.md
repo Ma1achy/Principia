@@ -47,7 +47,7 @@ This is the scheduler-side member of the same family as the link-measure honesty
 |---|---|---|
 | How much detail *below the current view* | `MAX_REL_DEPTH` | performance toggle, slides with the camera |
 | How deep you *can* zoom | decode floor + integration floor | physics/precision, emergent |
-| Whether to split *this* quad | `S_quad > τ(ℓ)` (complexity) | scientific — the adaptive part |
+| Whether to split *this* quad | `Policy::Tolerance` (`principia_dd_refinement_policy.md`, R-15) | scientific — the adaptive part |
 
 ### `MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)
 
@@ -62,7 +62,7 @@ split(C) ⟺ S_quad > τ(ℓ)  ∧  ℓ < MAX_DEPTH        # absolute — caps i
 Under the sliding interpretation it becomes:
 
 ```
-split(C) ⟺ S_quad > τ(ℓ)  ∧  ℓ < camera_depth + MAX_REL_DEPTH
+split(C) ⟺ policy_splits(C)  ∧  ℓ < camera_depth + MAX_REL_DEPTH       # policy_splits: Policy::Tolerance (R-15)
 ```
 
 These are **different gates**. An agent working from the old absolute form will silently cap the zoom. The rename forces the predicate to be rewritten.
@@ -79,11 +79,11 @@ How deep you *can* go is answered by the two floors (integrator + deep-zoom docs
 
 The `ReadyRefinable` lifecycle state is the whole slippy-map trick: it distinguishes **"done enough to display"** from **"done forever."** The scheduler revisits refinable quads when budget allows; it never revisits terminal ones. So "done forever" needs a precise definition — but first, the thing that governs refinement in *normal* use is not a floor at all:
 
-**Refinement is driven by manifold complexity, NOT by the tile-to-pixel ratio.** A quad refines iff **`S_quad > τ(ℓ)`** — the patch of IC-space has structure (disagreeing samples, a boundary) that finer sampling would resolve. This is a question about the *manifold*, not the screen. **A large smooth basin stays a coarse quad even when its tiles are much bigger than pixels** — there is nothing there to resolve, and subdividing would compute more samples that all agree (wasted compute). The ratio being non-1:1 is **never itself a reason to refine** — treating "tiles bigger than pixels" as "under-resolved" conflates screen resolution with manifold smoothness. Complexity is the sole *trigger*; the floors below are only *vetoes* on how far that trigger can take you.
+**Whether a quad splits is `Policy::Tolerance`'s decision (R-15; `principia_dd_refinement_policy.md` §0.1, §1).** Split iff any footprint in the quad is unresolved against the single tolerance `eps`. In view, the camera decides depth (a quad may stop only once its texel is at or below one screen pixel) and the criterion decides the *order* the complete tree arrives in. Off screen, the criterion decides depth. This Part defines the floors that decision runs inside.
 
 **The everyday stop is the screen-space floor (a view-relative veto, not a terminal):**
 
-- **Screen-space floor — `tile_size(quad, zoom) ≤ pixel_size` → stop refining.** Once a quad's tiles have shrunk to pixel size, splitting further produces *sub-pixel* samples that cannot be displayed distinctly — wasted compute by definition, regardless of remaining manifold structure. This is the **everyday** refinement stop: in normal exploration you hit it far shallower than any precision floor. **It is view-relative, evaluated live against the current zoom — NOT cached as a quad fact and NOT terminal:** zoom in and the same IC-space patch covers more screen, its tiles regrow above pixel size, and refinement *resumes* (real new samples). So a screen-floored quad is "done *at this zoom*," not "done forever." (`MAX_REL_DEPTH` is a *voluntary* tighter cap on top of this — a performance early-out that may stop refinement *before* the screen floor; it is not the refinement mechanism, just a budget lever. `MAX_REL_DEPTH ≤ screen floor` always.)
+- **Screen-space floor — `tile_size(quad, zoom) ≤ pixel_size` → stop refining.** Once a quad's tiles have shrunk to pixel size, splitting further produces *sub-pixel* samples that cannot be displayed distinctly. Whether the criterion supersamples below it is the refinement policy's call (§0.1, `ScreenFloor`). This is the **everyday** refinement stop: in normal exploration you hit it far shallower than any precision floor. **It is view-relative, evaluated live against the current zoom — NOT cached as a quad fact and NOT terminal:** zoom in and the same IC-space patch covers more screen, its tiles regrow above pixel size, and refinement *resumes* (real new samples). So a screen-floored quad is "done *at this zoom*," not "done forever." (`MAX_REL_DEPTH` is a *voluntary* tighter cap on top of this — a performance early-out that may stop refinement *before* the screen floor; it is not the refinement mechanism, just a budget lever. `MAX_REL_DEPTH ≤ screen floor` always.)
 
 The **true terminal floors** (done forever — genuinely no more information extractable, cached as quad facts) apply only when someone zooms *past* pixel-matching into extreme zoom:
 
@@ -91,9 +91,9 @@ The **true terminal floors** (done forever — genuinely no more information ext
 - **Decode floor proper — `AT_F32_FLOOR` (linear-decoder only).** Only when the *linearised* decoder's samples collapse to bitwise-identical ICs (~depth 50+) is f32 genuinely exhausted — the quad-local offsets `δ` are too small for f32 to represent distinct neighbours, and no fix exists short of higher precision (deferred KS/arbitrary-precision route). **This** is the true decode floor: stop, terminal. It is a deep-zoom *backstop*, not an everyday mechanism — most sessions never reach it (the screen floor stopped them long before). The same visible symptom (sample collapse) means *switch* on the full decoder and *stop* on the linear decoder — the response keys off **which decoder is active**.
 - **Integration floor:** substep-saturation-dominated — the samples are *distinct* but their outcomes are f32-integration-limited, under-resolved (integrator doc Part 6). Orthogonal to decode precision: a quad whose `suspect_fraction` stays high and whose samples are **substep-saturated** (the confidence flag, not a sample-terminal — the trajectories *did* reach outcomes, just under-resolved) is at the integration floor — **stop refining** (further splitting won't resolve what the integrator can't), flag it floor-limited, don't re-queue as refinable. A *refinement-stop*, not a *sample-terminal*: samples have real outcomes with low confidence, the quad is done subdividing.
 
-So the stop hierarchy, by how often it fires: **screen-space floor** (everyday, view-relative veto) → **`MAX_REL_DEPTH`** (voluntary performance cap) → **`DECODE_SWITCHOVER`** (extreme zoom — switches decoders, not a stop) → **`AT_F32_FLOOR`** on the linear path + **integration floor** (extreme/deep — true terminals). Refinement happens iff `S_quad > τ(ℓ)` **AND** no veto has fired.
+So the stop hierarchy, by how often it fires: **screen-space floor** (everyday, view-relative veto) → **`MAX_REL_DEPTH`** (voluntary performance cap) → **`DECODE_SWITCHOVER`** (extreme zoom — switches decoders, not a stop) → **`AT_F32_FLOOR`** on the linear path + **integration floor** (extreme/deep — true terminals). Refinement happens iff the policy splits **AND** no veto has fired.
 
-Everything else that is `Ready` but below the complexity threshold, or screen-floored at the current zoom, is **refinable**: displayable now, revisited if budget frees up (or on zoom-in, for screen-floored quads). Only the true precision/integration floors are **terminal** (done forever); refinable quads are paused.
+Everything else that is `Ready` but kept by the policy, or screen-floored at the current zoom, is **refinable**: displayable now, revisited if budget frees up (or on zoom-in, for screen-floored quads). Only the true precision/integration floors are **terminal** (done forever); refinable quads are paused.
 
 ---
 
@@ -127,11 +127,12 @@ When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel
 
 ## Part 6 — The settled policy
 
-Recorded so the contract is self-contained. **The split/keep/merge rule below predates `Policy::Tolerance` (`principia_dd_refinement_policy.md`), which splits iff any footprint is unresolved against the single tolerance `eps`. The two have not been reconciled; see REVIEW_QUEUE RQ-13.**
+Recorded so the contract is self-contained. **The split decision is `Policy::Tolerance`'s** (R-15, `principia_dd_refinement_policy.md`); this Part keeps the scheduling mechanics around it.
 
 **Priority.** `P_tile = w_v·P_visible + w_z·P_zoom + w_c·P_complexity + w_f·P_focus`, defaults `w_v=10, w_z=2, w_c=3, w_f=1`. Visibility dominates (never compute off-screen); complexity (`1 − coherence`) drives adaptive refinement; zoom-match is a tiebreaker; focus (inverse distance to viewport centre) is subtle. Weights exposed in research mode.
 
-**Split/keep/merge.** Split if any spread/impurity threshold is exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low `ensemble_outcome_agreement`, persistent parent-child disagreement — *the earlier "below-screen-resolution" trigger is struck: per Part 4 the tile-to-pixel ratio is never itself a reason to refine; the screen floor is a veto, complexity the sole trigger*) **and** `ℓ < camera_depth + MAX_REL_DEPTH`. Tiebreakers: `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel. Keep coarse if dominant purity high, all spreads low, representative summary visually stable, already finer than screen demand. Merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure. **Default is keep.** Guards checked first: terminal (Part 4) or offscreen → stop.
+**Split/keep/merge.** Decided by `Policy::Tolerance` (R-15): split iff any footprint is unresolved (`spread_shape > eps`, the copies disagree on event class, or the footprint is undetermined — policy §1); the stop rule is `alpha_area` (§2); merging is the split rule read backwards (§3); the decision variants are in §6. The scheduler applies it **and** `ℓ < camera_depth + MAX_REL_DEPTH`. Guards checked first: terminal (Part 4) or offscreen → stop.
+*Superseded (R-15), kept for the record: split if any spread/impurity threshold was exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low ensemble agreement — now `spread_event`, R-18 — persistent parent-child disagreement); tiebreakers `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel; keep coarse if dominant purity high, all spreads low, summary visually stable, already finer than screen demand; merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure; default keep.*
 
 **Eviction.** Cost-weighted LRU: eviction resistance ∝ `computeCostMs`. Expensive (deep, close-encounter, high-substep) quads resist eviction; high-coherence smooth quads are cheap to recompute and evicted first. This directly serves the firewall — evicting and recomputing is *safe* precisely because the payload is pure (Part 1), so LRU can be aggressive without scientific consequence.
 
