@@ -1071,3 +1071,68 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   (the FFT's reuse) are cited by nothing more specific.
 - **Needed:** whether the "listen" citation makes all of the sonification part normative, or only the mapping named there.
 - **Ruling:** R-109 (decisions.md). Closed in step 7.
+
+---
+
+*Found while applying R-97 to R-109 (step 7), and for checkpoint B. Nothing is chosen.*
+
+## RQ-71: R-104 — is the shape sphere a double cover or a 2-to-1 fold? *(step 7, charts)*
+
+- R-104: `DoubleCover` "covers each shape twice, as two **labelled systems**"; the docs now name the shape sphere
+  `DoubleCover` (`principia_chart_decoder_contract.md` Part 5 :234, lowering :159, chart_reference :349, inverse_encode :202).
+- `principia_chart_decoder_contract.md` :28: "the canonical decode gauges the `λ̃_y → −λ̃_y` reflection … The φ hemispheres
+  are **reflection-equivalent** — the chart is a 2-to-1 cover"; chart_reference :346 the same. Two pixels giving the *same*
+  system is n-to-1 (:233: "a fixed finite number of pixels share each system"), not two labelled systems.
+- **Needed:** whether the shape sphere is `DoubleCover` (and the two hemispheres are distinct labelled systems, so the
+  reflection is not gauged for this chart), or n-to-1 (and R-104 applies only to the full-range Burrau chart).
+
+## RQ-72: R-99 — how the per-footprint latch reaches the split decision *(step 7, refinement)*
+
+- R-99: the latch is per footprint and lives with the resident quad. The ledger no longer lists `running_max_divergence` in
+  `QuadReduction` (§3.7, its layout "defined by the task that builds it").
+- `principia_systems_architecture.md` :80: `QuadReduction` is "the **sole automatic** return" GPU → CPU. The split decision
+  is made on the CPU (refinement_policy §1).
+- **Needed:** whether a per-footprint "latched" bit (or count) travels in `QuadReduction`, or the latch is evaluated on the
+  GPU and only its verdict returns.
+
+## RQ-73: R-99 — does the merge still reproduce the static tree? *(step 7, refinement)*
+
+- RQ-59 (d) asked it; R-99 answers where the latch lives but not this. `principia_dd_refinement_policy.md` :161: under a live
+  playhead "the final tree is **bitwise the static tree at the horizon**" — measured before the latch existed. With a
+  latch, a footprint that ever exceeded `eps` stays unresolved, so its parent never merges while resident.
+- **Needed:** whether the measured claim is withdrawn (and the latch's cost recorded), or a merge may drop a latch.
+
+## RQ-74: R-109 — pointer_channels §3 supersedes a trajectory_viewing paragraph *(step 7, GUI)*
+
+- R-109: only pointer_channels §4 is normative; "the rest of the file stays working notes".
+- `principia_scratchpad_pointer_channels.md` :4–5: "Updates `principia_trajectory_viewing.md` … its §1 responsiveness
+  paragraph is superseded by §3 below." `principia_trajectory_viewing.md` :23 carries "**SUPERSEDED — see
+  `principia_scratchpad_pointer_channels.md` §3.**"
+- **Needed:** whether trajectory_viewing §1's responsiveness paragraph stands again (the banner goes), or pointer_channels
+  §3 is normative too.
+
+## RQ-75: R-102 — the fragment side's baked `has_ensemble` *(step 7, render)*
+
+- R-102: "The ensemble isn't a baked variant. `copy_index` is a uniform" — the compute kernel.
+- `principia_render_contract.md` :46 and `principia_lowering_contract.md` :82, :90: the fragment assembler bakes `const bool
+  has_ensemble`; E = 0 → `ensemble_spread` is NaN.
+- **Needed:** whether the fragment side keeps a baked `has_ensemble` (so E = 0 ↔ E > 0 re-bakes the fragment, a render-key
+  change), or reads it as a uniform too.
+
+## RQ-76: The crate layout the tasks use *(step 7, checkpoint B)*
+
+- The corpus names two crates: the engine crate and the gui crate (`principia_canonical_spec.md` §1, item 5). The tasks need
+  names for the rest, to state acceptance commands.
+- Proposed in `plan/WORKFLOW.md` and used by every task: `crates/kernel` (the physics source compiled twice),
+  `crates/ledger` (the generation root), `crates/contract`, `crates/engine`, `crates/render` (the fragment side),
+  `crates/gui`, `crates/validation` (the harness, R-103), `crates/prin` (the CLI, `prin profile`), `xtask` (the runners:
+  `cargo xtask golden | gate | bench | screenshot | plan-check`), `web/` (the browser product), `fixtures/`.
+- **Needed:** confirm the layout, or give the one to use (the tasks' commands are renamed mechanically).
+
+## RQ-77: Follow-ups the R-97 to R-109 pass left *(step 7, cleanup)*
+
+Like RQ-56 and RQ-67.
+- [ ] `principia_sampling_msaa_note.md` :81, heading "The sampling pattern: coordinate-seeded deterministic offsets" — no seed
+  or hash remains after R-100. (A heading change: requirements citing it are re-pointed in the same commit.)
+- [ ] `principia_chart_reference.md` :468 "(pending change 2, open)" and "Until one quotient is chosen" — R-27 ruled both
+  charts kept; R-27's status line defers its application to "before any Burrau statistic".
