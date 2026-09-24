@@ -1,6 +1,6 @@
 # Principia — document index and reading order
 
-**62 files, several supersession relationships, and a vertical slice that changed a number of
+**110 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
 defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for the record and
 **should not be implemented from**.
 
@@ -75,9 +75,58 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **pending redefinition to key off `eps`**
 - `docs/design/principia_temporal_architecture_note.md`, `docs/contracts/principia_export_animation_contract.md`
 
+**Also in `docs/design/`**
+
+- `docs/design/principia_core_design.md` — the seams and the CPU/GPU contract; "the thing to hand a code agent — not the big spec"
+- `docs/design/principia_dd_generation_root.md` — the Generation Root: layout table + link registry; the roots of the build DAG. "This document **is** the ledger"
+- `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
+- `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
+
 **Register**
 
 - `docs/principia_spec_pending_changes.md` — twelve changes; 7, 8, 10, 11, 12 have **landed**
+
+---
+
+## Notes — working notes
+
+- `docs/notes/principia_sampling_msaa_note.md` — sampling, ensemble & SSAA model: colour per sample, average last
+- `docs/notes/principia_gpu_determinism_note.md` — GPU determinism & backend-compilation discipline; every rule earned by a measured failure in the toolchain spike
+- `docs/notes/principia_validation_ground_truth_note.md` — ground-truth physics validation: self-consistency ≠ correctness
+- `docs/notes/ic_inspector_scratchpad.md` — IC Inspector design scratchpad; "Not spec yet". Its "as built" status block supersedes the stale details below it
+
+---
+
+## GUI
+
+- `docs/gui/principia_render_gui_spec.md` — Render / Colour GUI (dev): the developer colour-and-render GUI. **Rewritten from the dev-GUI canvas in step 6**
+- `docs/gui/reference/principia_dev_gui.html` — Render / Colour Dev GUI (interactive reference)
+- `docs/gui/reference/principia_gui_mock.html` — GUI mock
+- `docs/gui/reference/principia_render_modes.html` — Render-Mode Catalogue
+- `docs/gui/reference/principia_colour_presets.html` — Colour Composition · Preset Gallery
+- `docs/gui/reference/principia_colour_explorer.html` — Colour Composition Explorer
+- `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8)
+
+---
+
+## Experiments — briefs and results
+
+**Briefs** (`docs/experiments/briefs/`; the `ARCHIVE_brief*` files are listed under Archived)
+
+- `docs/experiments/briefs/principia_spike_brief.md` — toolchain spike brief (shared-source Rust engine). The spike ran and chose rust-gpu; the brief is kept as the plan of record
+
+**Results** (`docs/experiments/results/`)
+
+- `docs/experiments/results/principia_dd_refinement_external_report.md` — "Results: three refinement experiments" (Brief 1)
+- `docs/experiments/results/principia_dd_refinement_external_report2.md` — "Brief 2: is the `max` criterion well-posed?"
+- `docs/experiments/results/principia_dd_refinement_external_report3.md` — "Brief 3: validating the no-discard architecture"
+- `docs/experiments/results/principia_dd_refinement_external_report4.md` — "Brief 4 — horizons"
+- `docs/experiments/results/principia_ftle_shadow_precision_experiment.md` — can the Benettin FTLE shadow be stored at f16/bf16?
+- `docs/experiments/results/xp_results/` — Brief 1 raw measurements and derived tables: `exp1_raw.json`, `exp1_table.json`, `exp1_tables.md`, `exp2_raw.json`, `exp2_tables.md`, `exp2b_raw.json`, `exp3_raw.json`, `exp3_table.json`, `exp3_tables.md`, `xp1_cross.py`, `xp1_report.py`, `xp1b_supp.py`, `xp2_horizon.py`, `xp2c_t120.py`, `xp3_gate.py`, `xp_common.py`, `xp_driver.py`, `xp_probe.py`, `xp_reduce.py`
+- `docs/experiments/results/xp_results2/` — Brief 2 raw JSON: `expA_domke.json`, `expB_estimator.json`, `expC_tend.json`
+- `docs/experiments/results/xp_results3/` — Brief 3 raw JSON: `expA_nogate.json`, `expB_meters.json`, `expB_roundtrip.json`, `expC_scale.json`
+- `docs/experiments/results/xp_results4/` — Brief 4 raw tables and JSON: `exp1_jitter.json`, `exp2_f32.json`, `exp3_escape.json`, `exp4_spacing.json`, `tables.md`
+- `docs/experiments/results/refinement_probe/` — refinement criterion probe, Burrau/Pythagorean slice: can a local uncertainty exponent serve as the refinement criterion? `RESULTS.md`, `ana.py`, `run.py`, `tb.py`
 
 ---
 
@@ -96,6 +145,13 @@ and **`Policy::Tolerance`**.
 | `docs/experiments/briefs/principia_ARCHIVE_brief_vertical_slice.md` | delivered |
 | `docs/experiments/briefs/principia_ARCHIVE_brief2_dom_ke.md` | `dom_KE` rejected |
 | `docs/experiments/briefs/principia_ARCHIVE_brief3_no_discard.md` | validated, and since extended |
+| `docs/archive/principia_parity_testing_note.md` | **SUPERSEDED**: "became `principia_parity_contract.md`; read that instead" |
+| `docs/archive/principia_validation_scratchpad.md` | **SUPERSEDED / ABSORBED**: the current authorities are `validation_ground_truth_note` and `parity_contract` |
+| `docs/archive/principia_dd_generation_root.md.bak` | an older backup of the Generation Root drill-down (it still targets "TypeScript constants"). The live file is in `docs/design/` |
+| `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
+| `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
+| `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
+| `docs/archive/findings.md` | toolchain spike findings ("Verdict: rust-gpu"). **Why archived: unclear — see REVIEW_QUEUE RQ-7** |
 
 ---
 

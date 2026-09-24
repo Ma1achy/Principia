@@ -71,3 +71,10 @@ phrases). Every T, S and D row carries `done: <commit>` or a REVIEW_QUEUE refere
 action. R rows are closed in step 4.
 
 **After step 4:** rerun (a) with no exemptions. It returns only the retirement ruling.
+
+## R-8 — The IC Inspector copies
+*24 Sep 2026 · applied in step 3*
+
+The `docs/` copies are canonical: `docs/gui/reference/ic_inspector.html` (19 Jul, 39.6 KB) and
+`docs/notes/ic_inspector_scratchpad.md` (the later, longer one). The `spec_sources/` copies are older
+uploads. They go to `docs/archive/` when `spec_sources/` is archived at the end of step 3.

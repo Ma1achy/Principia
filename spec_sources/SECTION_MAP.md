@@ -11,7 +11,7 @@ refer to the files as committed at step 0.*
 | LaTeX spec | `spec_sources/principia_spec_revised.tex` (8 Jul, 3,056 lines) | **retired** (handoff ruling). Port what still holds, then remove it. |
 | COM-projection mini spec | `spec_sources/com_projection_mini_spec.pdf` (Mar 2026) | **retired (R-3).** The detail behind `sec:com_projection`, ported with it into the integrator contract. |
 | Sphere colour-map spec | `spec_sources/sphere_colour_map_spec.pdf` | **retired (R-3).** Port Eq. 5 and §8 into the files that rely on them (see the work order below). |
-| Measured evidence | **prin-rs**: `github.com/Ma1achy/prin-rs`, `FINDINGS.md` and `results/` on `main` @ `8600d45` (8 Sep). Local clone: `~/src/principia-rs-test` | canonical. `spec_sources/findings.md` is an older 17 Jul copy and is **not** canonical. |
+| Measured evidence | **prin-rs**: `github.com/Ma1achy/prin-rs`, `FINDINGS.md` and `results/` on `main` @ `8600d45` (8 Sep). Local clone: `~/src/principia-rs-test` | canonical. *(Corrected in step 2: `spec_sources/findings.md` is **not** a prin-rs copy. It is the toolchain spike's findings. See RQ-7.)* |
 | Display adequacy | prin-rs `52caf14` (15 Sep), cited by the index | **local only.** It is on the unpushed `lowering-spike` branch of `~/src/principia-rs-test` (9 commits ahead of its remote). See RQ-1. |
 
 **The check for step 3 (R-1, `decisions.md`):** each LaTeX passage is checked against the **current
