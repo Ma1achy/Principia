@@ -59,7 +59,7 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 
 ## Part 5 — Determinism & reproducibility
 
-Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against frozen f32 constants, not runtime-computed) ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions, terminal labels, and outcome classes may not). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
+Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against frozen f32 constants, not runtime-computed) ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions are identical on identical inputs, per step; terminal labels and outcome classes on chaotic trajectories may differ across precisions — `principia_parity_contract.md` governs, R-84). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
 
 Frame-loop speed settings do not affect exported content — export ignores wall-clock pacing entirely and steps `dt` exactly per the spec object.
 

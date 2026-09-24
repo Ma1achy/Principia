@@ -117,7 +117,7 @@ first is the design working; only the second is excluded.
 A chaotic trajectory integrated to `t_end` **cannot** match pointwise across precisions, and it is not a bug — positive Lyapunov exponent means a 1-ulp difference is uncorrelated by `t_end`. So:
 
 - **never** assert `‖state_cpu − state_gpu‖ < ε` at `t_end` on a chaotic pixel.
-- **do** assert: same **outcome class** (Tier L, exact); `t_end` within a window; **divergence-onset time** consistent between the two runs; and the **aggregate survey** agrees (§5).
+- **do** assert: same **outcome class** (Tier L, exact) **on non-chaotic fixtures only** — on a chaotic trajectory the label may differ across precisions (Tier B table, R-84); `t_end` within a window; **divergence-onset time** consistent between the two runs; and the **aggregate survey** agrees (§5).
 
 The pointwise gap here *is* the reversibility/chaos signal the whole instrument exists to show. Tier S is the divergence principle stated as a test strategy.
 
@@ -198,4 +198,4 @@ The seam catalogue (architecture §5) remains the **integration**-test index; th
 
 ---
 
-*Identical logic, precision the only variable, checkable error only where nothing amplifies. Branches are exact; steps are tight; trajectories are structural; the survey agrees within sampling noise. Compare before you accumulate. The gap under chaos is the signal, not the bug — and the second pipeline was always a feature.*
+*Identical logic, precision the only variable, checkable error only where nothing amplifies. Branches are exact on identical inputs; steps are tight; trajectories are structural; the survey agrees within sampling noise. Compare before you accumulate. The gap under chaos is the signal, not the bug — and the second pipeline was always a feature.*

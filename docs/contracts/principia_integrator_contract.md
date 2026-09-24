@@ -296,7 +296,7 @@ Mikkola–Tanikawa form is required, not optional.
 
 ---
 
-**Which occupant is bound is on the sim key** (Part 3). Switching integrator **re-integrates** — unlike switching a render mode, which never does. This is the one-line rule that keeps the CPU/GPU divergence honest: same occupant both sides, precision the only difference **in continuous values** (branch decisions still match, by the comparison-only rule — Part 4).
+**Which occupant is bound is on the sim key** (Part 3). Switching integrator **re-integrates** — unlike switching a render mode, which never does. This is the one-line rule that keeps the CPU/GPU divergence honest: same occupant both sides, precision the only difference **in continuous values** (branch decisions still match on identical inputs, per step, by the comparison-only rule — Part 4; labels on chaotic trajectories may differ across precisions, R-84).
 
 ---
 
@@ -328,7 +328,7 @@ The occupant needs almost nothing — `(m,r,p)`, `dt`, `G`. Horizon, substepping
 
 ## Part 4 — Determinism, and the substep as the subtle seam
 
-Core-design axiom 1: physics defined once, compiled twice — *structurally*, one Rust source — so the f32/f64 gap is *only* precision **for continuous values** (branch decisions must match, below) and the CPU/GPU divergence is honest. Making the occupant swappable splits the determinism contract cleanly:
+Core-design axiom 1: physics defined once, compiled twice — *structurally*, one Rust source — so the f32/f64 gap is *only* precision **for continuous values** (branch decisions must match on identical inputs, below) and the CPU/GPU divergence is honest. Making the occupant swappable splits the determinism contract cleanly:
 
 - **The `STEP` is the occupant's business** — its arithmetic differs by precision across CPU/GPU, and that difference is the honest divergence the inspector witnesses.
 - **The wrapper must be bitwise-consistent across CPU/GPU regardless of occupant** — because it decides *control flow*, not just values.
@@ -340,7 +340,7 @@ The trap, and it is the single highest-value thing in this doc: **`N_sub = min(N
 - Escape comparisons (`|Δn̂| < tau`, `E_rel > 0`; R-29) — shared branches whose inputs are multi-op arithmetic. The old persistence counter that absorbed single-step flips is gone (change 11), so nothing forgives a rounding flip near threshold; these inputs take rule 6's treatment (R-34).
 - `SIM_FAILED` raising, the horizon-reached branch (`t ≥ T` ⇒ `bounded` — there is no separate timeout state, payload §2), and the **substep-cap decision** (`N_sub == N_max`) — shared branches. The cap decision leads to *advance with the best-available (under-resolved) step*, not a terminal; the sticky **`saturated`** bit (descriptor bit 5 — a STORED flag set at the point the cap fires, payload §2; the old peak-`substep_log2`-then-derive mechanism is gone) records that it happened. The capped step is computed identically both sides (count-bound, deterministic — never wall-clock), so parity holds through the saturation, not just up to it. **`N_max` is a sim-key tunable** — both pipelines must use the same value (as with `r_coll`), so the shared-branch decision stays bit-identical.
 
-State the boundary explicitly in code: values may diverge by precision; **branch decisions in the wrapper may not**.
+State the boundary explicitly in code: values may diverge by precision; **branch decisions in the wrapper may not, on identical inputs** — each step's decision is identical given that step's inputs (`principia_parity_contract.md` Tier L, R-84). Along a chaotic trajectory the inputs themselves diverge by precision, so its labels may differ across precisions; that is reported, not suppressed.
 
 ---
 
@@ -402,4 +402,4 @@ The detectors are wrapper machinery (shared, determinism-critical per §4), not 
 
 ---
 
-*One swappable `STEP`, one shared wrapper. The occupant advertises a capability profile; the wrapper owns the loop, the substepping, the projection, the monitoring, and the detectors. Values diverge by precision; wrapper branches do not. Time is dimensionless and global because scale is gauged. Euler is a debug tool. Reversibility, regularisation, and the integration floor are named, bounded, and deferred.*
+*One swappable `STEP`, one shared wrapper. The occupant advertises a capability profile; the wrapper owns the loop, the substepping, the projection, the monitoring, and the detectors. Values diverge by precision; wrapper branches do not, on identical inputs. Time is dimensionless and global because scale is gauged. Euler is a debug tool. Reversibility, regularisation, and the integration floor are named, bounded, and deferred.*

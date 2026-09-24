@@ -23,7 +23,7 @@
 >
 > **Evidence:** `prin-rs` `FINDINGS.md` §5, `results/integrator_gallery_1024/`.
 
-*Third drill-down. Occupant coefficients, the substep law, detector state machines, the live shape readout, and the co-computation algorithms — the exact maths the one shared kernel must produce at either precision (under the substrate there is one Rust source, not two implementations; the maths still has to be pinned, and its branch decisions held bit-identical by the comparison-only rule — §3.3). The wrapper/occupant architecture, capability profiles, cadence, units, and determinism rules are the integrator contract's; consolidated in §2, not re-argued.*
+*Third drill-down. Occupant coefficients, the substep law, detector state machines, the live shape readout, and the co-computation algorithms — the exact maths the one shared kernel must produce at either precision (under the substrate there is one Rust source, not two implementations; the maths still has to be pinned, and its branch decisions held bit-identical on identical inputs, per step, by the comparison-only rule — §3.3). The wrapper/occupant architecture, capability profiles, cadence, units, and determinism rules are the integrator contract's; consolidated in §2, not re-argued.*
 
 ---
 
@@ -35,9 +35,9 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical, `dt_macro = 10⁻³` fixed, schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not**.
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical, `dt_macro = 10⁻³` fixed, schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
 
-From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical (comparison-only rule, §3.3); match-integrator mode for honest inspector comparison.
+From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical on identical inputs, per step (comparison-only rule, §3.3; labels on chaotic trajectories may differ across precisions — `principia_parity_contract.md` Tier L, R-84); match-integrator mode for honest inspector comparison.
 
 From the **scheduler (firewall)**: every IC integrates from its own decoded state — **no warm starts, ever**; payload pure of scheduling.
 
@@ -119,7 +119,7 @@ Two further branch-path rules the spike earned by real failure:
 - **Clamp in f32 *before* the float→int cast.** Out-of-range `OpConvertFToU` is UB on the GPU (Rust's `as` saturates instead) — a fork source independent of rounding. Clamp `d²`/the bucket index into range in f32 first.
 - **Horizon is an integer step counter**, never accumulated float time (`t += dt` drifts and can fork the `t ≥ T` test); **collision is `d² < r_coll²`** against a constant, not `r_min < r_coll` via a runtime `sqrt`.
 
-Verified: with the table rule, `N_sub`, `state`, `total_substeps`, and terminal labels are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on every golden input — 0 forks. Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
+Verified: with the table rule, the branch decisions (`N_sub`, collision, horizon) are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on identical inputs, per step — 0 forks. That is the guarantee (R-84): a decision is identical given its step's inputs. Over a chaotic trajectory the inputs diverge by precision, so `state`, `total_substeps` and terminal labels may differ across precisions (parity contract Tier L/B). Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
 
 ### 3.4 COM projection (per `STEP`; the policy is integrator contract Part 1)
 
@@ -255,7 +255,7 @@ Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprin
 | **3** decoder → integrator | consume `(m,r,p)` only; never learn the chart | every chart in the lowering appendix drives the same kernel unmodified |
 | **4** occupant ↔ wrapper | occupant is pure `STEP`; wrapper identical across occupants | swap occupants → only §3.2 numbers change; wrapper branch trace identical |
 | **5** producer of the payload | every field of §generation-root ledger written, per its metadata | the field debug views live and sane; sentinel/suspect conventions honoured |
-| **1** precision ring | f32/f64 same branches, values differ by precision only | branch-trace equality over fuzzed ICs; divergence view shows smooth growth, no branch cliffs |
+| **1** precision ring | f32/f64 same branches on identical inputs, values differ by precision only | branch equality on identical per-step inputs over fuzzed states (R-84); divergence view shows smooth growth, no branch cliffs |
 | **9** firewall | no warm starts; no scheduling state in outputs | schedule the same quad twice (different orders/frames) → byte-identical payloads |
 
 ---
