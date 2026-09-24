@@ -1,0 +1,6 @@
+# Fallback archives — kept on disk, out of history
+/principia_outputs_full.zip
+/principia_spec_sources.zip
+
+.DS_Store
+__MACOSX/
