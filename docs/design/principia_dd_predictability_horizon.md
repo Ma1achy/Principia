@@ -134,7 +134,7 @@ propagating different amplifications of different round-off; a disagreement ther
 of a bug, and an agreement is **not** evidence of correctness. **The cross-check is gated on
 `t < t_max(f32)`** and reported as *not applicable* beyond it, rather than silently producing
 divergences that look like defects. The gate stands (R-93); the value of `t_max(f32)` comes from the
-re-run of the change-10 cross-checks (R-35), not from the figures here (§7).
+re-run of the change-10 cross-checks (R-35, confirmed by R-105), not from the figures here (§7).
 
 ### 4.2 The horizon is a field, not a constant
 
