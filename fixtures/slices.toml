@@ -1,0 +1,129 @@
+# The named slices (R-166 (a)).
+# Transcribed from docs/reference/prin-rs/src/grid.rs (prin-rs 8600d45). The values are copied, not chosen.
+#
+# Latent coordinates are in the spec's order: index 0 = z_alpha, 1 = z_beta, 2..5 = z_q, 6..7 = z_mu.
+# The reference UI's ten-slot z0 ("z_glsl") is in the GLSL order: slot 0 = beta, 1 = alpha, 2 and 3 are
+# unused by the decode, 4..7 = z_q, 8..9 = z_mu (grid.rs:449-468). The fields ending in "_derived" are
+# arithmetic on the transcribed inputs, following the rule stated beside them.
+
+# ---- The user's two saved Config-chart slices (grid.rs:393-468) --------------------------------------------
+# Window rule for config_slice (grid.rs:395-401): centre = 2*pan - 1 + zoom, half = zoom; the basis carries mag.
+# Basis (grid.rs:460-461): q1 (horizontal) = mag * e_beta (spec index 1); q2 (vertical) = mag * e_alpha (index 0).
+
+[config_stability]
+source = "grid.rs:428-437"
+chart = "latent"
+z_glsl = [-0.098, 0.11, -0.034, 0.067, -0.093, -0.066, 0.027, -0.114, 0.107, -0.116]
+zoom = 0.63763
+pan = [0.17512, 0.17727]
+mag = 1.0
+centre_derived = [-0.01213, -0.00783]
+half_derived = 0.63763
+horizon = 50.0
+r_coll = 0.005
+r_esc = 12.0
+
+[config_basin]
+source = "grid.rs:408-426"
+chart = "latent"
+z_glsl = [0.006, -0.052, -0.063, 0.095, -0.024, -0.088, 0.036, -0.123, -0.029, -0.044]
+zoom = 0.009095268722082687
+pan = [0.31543969636940733, 0.8314215017661146]
+mag = 4.0
+centre_derived = [-0.3600253385391027, 0.6719382722543119]
+half_derived = 0.009095268722082687
+horizon = 50.0
+r_coll = 0.02
+r_esc = 5.0
+
+# ---- The five Burrau regions (grid.rs:872-884; integrator_gallery.rs:150-165) -----------------------------
+# Chart BodyPlane: one body's position varies over a box centred at (cx, cy); the other two stay at the Burrau
+# configuration (src/physics/burrau.rs:9-12): masses [3, 4, 5], positions [[1, 3], [-2, -1], [1, -1]], at rest.
+# half, t_max and r_coll are the 32-case matrix's settings for these regions (integrator_gallery.rs:151-162).
+# grid.rs:873-884 lists three more regions (body2 mid, body1 slice, body1 far) that R-166 does not name.
+
+[burrau]
+source = "src/physics/burrau.rs:9-12"
+masses = [3.0, 4.0, 5.0]
+positions = [[1.0, 3.0], [-2.0, -1.0], [1.0, -1.0]]
+
+[regions.near_field]
+name = "near-field"
+chart = "body_plane"
+centre = [1.0, 3.0]
+body = 0
+half = 0.05
+t_max = 13.0
+r_coll = 0.001
+
+[regions.mid_field]
+name = "mid-field"
+chart = "body_plane"
+centre = [1.0, 6.0]
+body = 0
+half = 0.05
+t_max = 13.0
+r_coll = 0.001
+
+[regions.far]
+name = "far"
+chart = "body_plane"
+centre = [1.0, 13.0]
+body = 0
+half = 0.05
+t_max = 13.0
+r_coll = 0.001
+
+[regions.body2_core]
+name = "body2 core"
+chart = "body_plane"
+centre = [1.0, -1.0]
+body = 2
+half = 0.05
+t_max = 13.0
+r_coll = 0.001
+
+[regions.deep_interior]
+# grid.rs:881-882: drives all three bodies together; expected to reach the triple-collision outcome.
+name = "deep interior"
+chart = "body_plane"
+centre = [0.0, 0.0]
+body = 0
+half = 0.05
+t_max = 13.0
+r_coll = 0.001
+
+# ---- tilt_plambda (grid.rs:624-666, via latent_ui_slice at grid.rs:534-621) --------------------------------
+# Window rule here differs from config_slice: pan is the window centre, so centre = 2*pan - 1, half = zoom
+# (grid.rs:606-621). Basis: q1 = e(live-8D dim 4), q2 = e(dim 5), live-8D dims 0 and 1 swapped into spec order
+# (grid.rs:492-499); tilt basis 0 toward dim 5 by -1.04 rad; Gram-Schmidt, then rotate the orthonormal pair by
+# gamma about the normal through z0 (grid.rs:568-621).
+# Guard (grid.rs:639-641): z0 decodes to unequal masses (0.35333, 0.27523, 0.37144).
+
+[tilt_plambda]
+source = "grid.rs:651-666"
+chart = "latent"
+z_glsl = [2.23, -0.56, -0.05, 0.0, 0.05, -0.04, -0.02, 0.12, -0.1, 0.02]
+dim_h = 4
+dim_v = 5
+tilts = [[0, 5, -1.04]]
+gamma_deg = 2.0
+gamma_deg_supplied = 4.5
+zoom = 0.16779844723178242
+pan = [0.5169659939566047, 0.5383226703503323]
+centre_derived = [0.033931987913209394, 0.07664534070066464]
+half_derived = 0.16779844723178242
+masses_guard = [0.35333, 0.27523, 0.37144]
+
+# ---- preset_shape (grid.rs:352-354; window grid.rs:199-207, 1018) ------------------------------------------
+# The reference UI's `shape` preset: latent axes 0 and 1 through z0 = 0, which decodes to the equilateral Lagrange
+# configuration (grid.rs:345-347).
+
+[preset_shape]
+source = "grid.rs:352-354"
+chart = "latent"
+z0 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+q1 = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+q2 = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+centre = [0.0, 0.0]
+half = 3.0

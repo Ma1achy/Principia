@@ -18,6 +18,8 @@ where a file here disagrees with a contract or a ruling, the contract or ruling 
 | `src/grid.rs` | the slice definitions (R-166 (a)); transcribed into `fixtures/slices.toml` |
 | `src/ensemble/stats.rs` | `error_ratio`, the err>10 metric (R-166 (b)) |
 | `src/testing.rs` | the moving pulse, a synthetic field (R-166 (e)) |
+| `tests/live_decision.rs` | the pulse's parameters, `pulse(0.123, 0.35, 8, T)` with `T = 13` (lines 92, 401, 598, 664) (R-166 (e)) |
+| `src/physics/burrau.rs` | the Burrau masses and positions the five named regions vary one body of (R-166 (a)) |
 | `src/outcome.rs` | the legacy classifier, which regenerates the legacy t = 30 set (R-166 (c)) |
 | `examples/integrator_gallery.rs` | the 32-case matrix, lines 138–176 (R-165, R-166 (b)) |
 | `examples/wedge_census.rs` | the wedge ablation's three switches and its density metric (R-163) |
