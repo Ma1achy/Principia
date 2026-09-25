@@ -153,7 +153,7 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
-fn dbg_sentinel(x: f32) -> vec3f                // −1.0 sentinel and absence-NaN (exact bitcast test) → the hatched invalid pattern (R-132); suspect-flag styling hook
+fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as −1.0 shows as its literal value on the ramp (R-79); suspect-flag styling hook
 ```
 
 ### Live-state & array inspection

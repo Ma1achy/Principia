@@ -617,12 +617,13 @@ shaders share them:
   know the range and **clamps out-of-range**; auto is **always full-contrast** with no prior knowledge
   but is **relative** (the mapping shifts with the data — absolute values are not readable, renders are
   not comparable). `range_norm` is a general helper, not debug-specific.
-- **`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first invariant, §13): the hatched
-  pattern that collides with no palette entry, its exact pattern a calibration (REQ-COL-055, R-71; R-132);
-  a NaN reads as "no data", never as a value.
+- **`debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first
+  invariant, §13): it draws the hatch from the pixel position (R-136), a pattern that collides with no palette entry, its
+  exact pattern a calibration (REQ-COL-055, R-71; R-132). Only NaN gets it: a stored sentinel such as −1.0 shows as its
+  literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value.
 
 Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
-`raw` against the canonical quiet-NaN bits that returns `DEBUG_NAN` (`principia_render_contract.md` Part 2's rule; never a
+`raw` against the canonical quiet-NaN bits that returns `debug_invalid(frag_xy)` (`principia_render_contract.md` Part 2's rule; never a
 self-comparison or `isnan()`, which fast-math may fold away — R-114), then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
 code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN

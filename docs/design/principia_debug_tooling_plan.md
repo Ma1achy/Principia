@@ -49,7 +49,7 @@ One view + one test per field. Generated from the ledger, conformed to the paylo
 | `total_substeps_log2` (derived, not a descriptor field) | scalar (log) — cumulative work / complexity | matches `⌊log₂ Σ N_sub⌋` (0 for a total ≤ 1; R-86), derived at read via `countLeadingZeros` from the exact `total_substeps` u32 (payload §2); the *complexity* proxy (not peak — peak was dropped) |
 | `fgw_truncated` (the **length sentinel** `length_raw == 127` in the word buffer's `.w` — NO flag bit; bit 24 is payload, payload §3) | flag view | fires iff a push arrives at length 76 — the length cap is the normative trigger, not numeric overflow (payload §3); word-derived quantities styled invalid once truncated |
 | `t_end_step` / `t_dmin_step` (in `times`, exact u16) | scalar ramp (fraction via the `horizon_steps` uniform) | exact-index round-trip; `t_dmin_step` absolute; **bit-identical CPU/GPU** (parity); dispatch refuses `⌈T/dt_macro⌉ > 65535` (R-86) |
-| `d_min`, `dE_max`, `dLz_max` (f16, packed) | scalar ramp | `unpack2x16float` round-trips within f16 eps; sentinels styled, never scaled |
+| `d_min`, `dE_max`, `dLz_max` (f16, packed) | scalar ramp | `unpack2x16float` round-trips within f16 eps; sentinels shown as their literal values on the ramp, never scaled (R-136) |
 | **DERIVED views (not descriptor bits):** `orbit_count`/`retrograde` (from `theta`), the **reduced crossing count** (`fgw_reduced_length`, valid iff not truncated) / `enc_XY`/`dominant_pair` (topological word read — symbolic-dynamics contract; v2, since per-pair views are out of v1 — R-125), `ftle = S_final/(step_count·dt)` (partial renorm finalised — payload §5, never plain `S/t`), current drift (`H(r,p)−E_0`) | computed in the fragment from stored state/word | each matches a reference computed the same way; the word-derived tallies use the generator→pair mapping, not a histogram |
 | **live current-substep count** *(live view, not a descriptor bit)* | **animated heatmap of substeps this macro-step** — read off the marching state | the substepper's live effort; close encounters propagate across the manifold in time (Part-5 live views) |
 | **whole-word hash** | `dbg_hash(w)` — "is it changing at all" | distinct words → distinct colours | 
@@ -79,7 +79,7 @@ Regenerated from the ledger's §3.4 rows (R-86); the storage column is the paylo
 | `d_min` | f16, `packed_a` high half | log | > 0; = min over trajectory |
 | `ftle` | derived: `S_final/(step_count·dt_macro)` | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
 | `energy_drift` | derived: `H(r,p) − E_0` | **diverging** | oscillates (symplectic) vs drifts (Euler/RK4) |
-| `diffusion` | derived: `C_ty/C_tt(n)` | lin, **−1 sentinel styled** | sentinel bit-exact; never scaled |
+| `diffusion` | derived: `C_ty/C_tt(n)` | lin, **−1 sentinel shown as its literal value** (R-136) | sentinel bit-exact; never scaled |
 | `delta_E_max_abs` | f16, `packed_b` low (`dE_max`) | log | ≥ the final absolute drift (spike-that-recovered) |
 | `Lz_drift` | derived: `L_z(r,p) − Lz_0` | **diverging** | absolute-gated suspect |
 | `delta_Lz_max_abs` | f16, `packed_b` high (`dLz_max`) | log | ≥ the final absolute drift |
