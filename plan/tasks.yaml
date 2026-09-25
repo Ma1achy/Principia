@@ -23,7 +23,7 @@
 - id: TASK-M0-02
   milestone: M0
   title: "`cargo xtask plan-check` in CI, and the plan-order checks"
-  depends_on: [TASK-M0-01]
+  depends_on: [TASK-M0-01, TASK-M0-04]
   needs: []
   requirements: [REQ-SYS-007, REQ-SYS-008, REQ-SCHED-001, REQ-TOOL-004]
   reviewers: [code, qa]
@@ -31,7 +31,7 @@
 - id: TASK-M0-03
   milestone: M0
   title: Process templates and `cargo xtask pr-check`
-  depends_on: [TASK-M0-01]
+  depends_on: [TASK-M0-01, TASK-M0-04]
   needs: []
   requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008, REQ-SYS-066]
   reviewers: [code, qa, physics]

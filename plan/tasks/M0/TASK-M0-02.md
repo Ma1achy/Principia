@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-SYS-007, REQ-SYS-008, REQ-SCHED-001, REQ-TOOL-004
-- **Depends on:** TASK-M0-01
+- **Depends on:** TASK-M0-01, TASK-M0-04
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** none
@@ -24,10 +24,12 @@
 - `decisions.md` § "R-112 — The archived briefs' standing parts are superseded *(closes RQ-81)*"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
+- `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
 
 ## Deliverables
 - `xtask/src/plan_check.rs` — `cargo xtask plan-check`: runs `python3 plan/check_plan.py` from the repo root, streams its output, exits with its status; a clear error if `python3` or PyYAML is missing.
 - `.github/workflows/ci.yml` — Python and PyYAML set up; `plan-check` registered in `cargo xtask ci`.
+- Negative controls for this task's xtask tests, registered with `negative_control!` through `xtask`'s dev-dependency on `crates/validation` (R-176).
 - `xtask/tests/plan_check.rs` — runs the check on a temporary copy of `plan/` + the corpus with (a) one task removed from `tasks.yaml`, (b) a requirement source pointing at `docs/archive/principia_ARCHIVE_dd_refinement_criterion_v0.md`, (c) a task reference to an `ARCHIVE_` brief, and asserts a non-zero exit naming the fault each time.
 - The R-112 check-and-port record, in the PR description: each standing obligation of the structure-criterion brief's §4–4.6 (the slippy map: breadth-first, frame budget) and the kernel-build brief's §5 (verification gates), with the consolidated-doc section that holds it (deep_zoom §3, scheduler, parity); any obligation no consolidated doc holds is ported into the fitting one in the same PR, as a doc change for review (the INDEX's Archived rows were conformed in step 7).
 

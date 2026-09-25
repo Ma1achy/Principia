@@ -15232,10 +15232,13 @@
     section: 4.4 A test that cannot fail is not a test
   - file: docs/read_first/principia_01_pitfalls.md
     section: 9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN
+  - file: decisions.md
+    section: "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
   verify:
     method: review checklist
     detail: "Each test in the suite has a recorded negative control that makes it fail (mutation or contaminated input); arithmetically impossible tests (e.g. expecting thousands of distinct values from a fraction over N² = 64 footprints) and tests true by construction (n_hot < N² under a quantile rule) are rejected."
-  rulings: []
+  rulings:
+  - R-176
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\"; pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\" — 3. — CHECK THE MEASUREMENT CAN FIRE BEFORE READING IT; 9. general form: a check whose reachable output set does not include the failure."
 - id: REQ-VAL-008

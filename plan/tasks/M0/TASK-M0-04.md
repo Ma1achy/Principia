@@ -20,12 +20,14 @@
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
 - `decisions.md` § "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
+- `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
 
 ## Deliverables
 - `crates/validation/src/gpu.rs` — `GpuHarness::new()` (headless, no surface, no optional features; the backend is read from `PRIN_GPU_BACKEND=metal|vulkan`, and an unset or unknown value is an error naming the variable, R-169), `run_wgsl(module, entry, inputs) -> Vec<u32>`, and the adapter info (name, backend, driver) exposed for TASK-M0-19's session header.
-- `crates/validation/src/control.rs` — the negative-control registry (`negative_control!(test, description, control)`) and a `controls` feature under which each control runs its test against the control input.
+- `crates/validation/src/control.rs` — the negative-control registry (`negative_control!(test, description, control)`) and a `controls` feature under which each control runs its test against the control input. A test and its control are matched by a shared test-name attribute (`#[control_for = "<test name>"]`); crates reach the macro through a dev-dependency on `crates/validation` (R-176).
 - `crates/validation/src/prop.rs` — the shared proptest config (case count, seed printed on failure).
-- `xtask/src/controls.rs` — `cargo xtask controls`: lists the workspace's tests, runs `cargo test --workspace --features controls`, and fails when a control passes or a test has no control; registered in `cargo xtask ci`.
+- `xtask/src/controls.rs` — `cargo xtask controls`: lists the workspace's tests, runs `cargo test --features controls` in each crate that declares the feature (a crate without it is skipped and reported, not failed, R-176), and fails when a control passes or a test in a controls crate has no control; registered in `cargo xtask ci`.
+- Controls for TASK-M0-01's `deps` tests, the only tests merged before this task (TASK-M0-02 and TASK-M0-03 now depend on this one and register their own, R-176).
 - `.github/workflows/ci.yml` — two GPU jobs (R-169): `gpu-metal` on `runs-on: [self-hosted, macOS, ARM64]` with `PRIN_GPU_BACKEND=metal`, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`. The self-hosted job runs only for pushes and for PRs from this repository: `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`; fork PRs get the CPU and lavapipe jobs only (R-174).
 - Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads.
 

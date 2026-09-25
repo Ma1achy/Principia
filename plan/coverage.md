@@ -42,7 +42,7 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 761 yield at least one requirement; 114 yield none and are listed below with the reason.
+875 sections in 46 files: 762 yield at least one requirement; 113 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,7 +67,6 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-176 — Controls come before the tests that need them *(closes G3, S2)* | **MISSING REASON** | |
 | R-177 — Cadence *(closes G4, C6)* | **MISSING REASON** | |
 | R-178 — The shape-sphere round trip composes Φ alone *(closes A3)* | **MISSING REASON** | |
 | R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)* | **MISSING REASON** | |
@@ -373,7 +372,6 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-176 — Controls come before the tests that need them *(closes G3, S2)*
 - uncovered section with no reason: decisions.md § R-177 — Cadence *(closes G4, C6)*
 - uncovered section with no reason: decisions.md § R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*
 - uncovered section with no reason: decisions.md § R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
