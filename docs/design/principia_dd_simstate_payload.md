@@ -125,7 +125,7 @@ where that bit lives is not yet specified (open-questions).
 
 > **Parity: the float trajectory is NOT bit-identical CPU↔GPU** (see the parity contract's Tier B/N/S model — this summarises).
 > WGSL permits operation-specific floating-point error, FMA/fused ops, and binary16 subnormal flushing; JS uses f64; GPU backends differ. So promising bit-identical *particle state* across CPU and GPU is impossible. Split it:
-> - **Binary parity (exact):** packed descriptors, the integer step counts (`t_end_step`, `t_dmin_step`), `total_substeps`, enum/`state` values, and the **word arithmetic** (integer mixed-radix) must match bit-for-bit CPU↔GPU. These are the fields the cache/export/parity machinery compares exactly.
+> - **Binary parity (exact):** packed descriptors, the integer step counts (`t_end_step`, `t_dmin_step`), `total_substeps`, enum/`state` values, and the **word arithmetic** (integer mixed-radix) must match bit-for-bit CPU↔GPU **given identical inputs** — exact given the same branch decisions (parity contract Tier B); along a chaotic trajectory the branch decisions, and so these fields, may differ across precisions (R-84). These are the fields the cache/export/parity machinery compares exactly.
 > - **Numerical parity (within declared tolerance):** particle state `r,p`, energy, `L_z`, and any trajectory-derived quantity must match within stated tolerances, **not** bit-for-bit.
 > The high-precision locked inspector (f64 CPU) is a **higher-precision validation path** — its purpose is to *check* the GPU trajectory to tolerance, **not** to reproduce it bit-for-bit. (It is the *shared kernel* at f64: its value is **precision**, not independence — it shares source with the survey; the shared-bug-immune reference is the *separate* convergence integrator, `principia_validation_ground_truth_note.md` / Precision ring.) The re-projection being "on the parity surface" means it must be applied **identically in structure** (same operation, same order) on both sides so the *numerical* comparison is apples-to-apples — it does **not** mean the float results are bit-identical.
 
@@ -136,6 +136,7 @@ where that bit lives is not yet specified (open-questions).
 - **f16, safe — but they are MONOTONE LATCHES, not "written once":** `d_min = min(d_min, d)`, `dE_max = max(dE_max, |ΔE|)`, `dLz_max = max(dLz_max, |ΔLz|)` — updated repeatedly during the march (absolute maxima / running min over the whole trajectory). Two precise semantics, pick one: **(a)** hold the latch in a **local f32** during the march and pack to f16 only when writing persistent state (one requantisation per persist boundary — preferred); or **(b)** accept repeated f16 requantisation at every resume/write. Either way, **threshold/suspect decisions must use the live f32 measurement, never the unpacked f16 latch** (the f16 latch is for display, not for control flow).
 - **f16 packing does NOT require the `shader-f16` feature.** `pack2x16float`/`unpack2x16float` take/return `vec2<f32>` and are core WGSL — available everywhere. The `shader-f16` extension is only needed for *native f16 types* (`f16` scalars/vectors), which this design does not use. So the f16-packed scalars are **not tier-gated** — no f32 fallback needed.
 - **Pack requires clamp/canonicalise first:** `pack2x16float` gives an **indeterminate** result when an input is outside binary16's finite range (±65504). The packer must clamp or canonicalise before packing. **Failed-state contents are defined:** for `sim_failed`/`decode_failed` samples, `d_min`/`dE_max`/`dLz_max` halves hold **0.0** (a canonical sentinel — the `state` field already marks the sample untrusted, so the scalar values are not read for those states; 0.0 is chosen over clamped-65504 or NaN so a stray read is visibly-null rather than plausibly-real or `isNan`-unreliable). Valid-state values are clamped to ±65504 before packing (a drift exceeding 65504 in normalised units is already pathological and the sample would be flagged).
+- **Storage never holds NaN (R-79).** A blown-up sample stores the defined failed-state values, never the non-finite values that failed it; the failed-state contents of its f32 fields (phase state, shadow, accumulators, drift refs) are defined by the task that writes the failure path (R-72). A tier-absent (derived) field reads NaN at unpack (§5). Every colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still goes to the invalid colour.
 - **bf16:** nowhere — wrong precision/range trade for bounded normalised quantities (bf16 buys exponent range you don't need at the cost of mantissa you do), and not in web WGSL anyway.
 
 ---
@@ -193,13 +194,13 @@ where that bit lives is not yet specified (open-questions).
 
 **`t_end_step` normative meaning = `step_count`: the number of COMPLETED macro-steps, at all times.** This resolves the running-sample ambiguity — the field is not "only meaningful at termination":
 - **running:** current completed-step count (advances each step);
-- **terminal:** the count latched at terminalisation (stops advancing);
+- **terminal:** the count latched at terminalisation (stops advancing) — for escape, at the step it fires, where the production loop ends (R-103; the pitfalls §2.4 checks march on in the validation harness only, on their own state);
 - **initial:** 0.
 So Welford `n` (§4), current elapsed time (`step_count · dt_macro`), resume, and termination all read this one self-contained field — consistent with the `f(IC, sim key, t)` lifecycle (the payload carries its own clock, not depending on an external playhead). The bit name stays `t_end_step` for the binary format; the meaning is "completed-step count, latched at termination."
 
 `t_dmin_step` = absolute macro-step index of closest approach (the old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march). Display fraction derived with the `horizon_steps` uniform: `f32(t_end_step)/f32(horizon_steps)`. Exact indices → exact CPU/GPU **binary** parity (no rounding contract). `total_steps` redundant (`step_count` at termination *is* it).
 
-> **Enforced dispatch invariant: `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`.** Hard-asserted at dispatch — **not** a soft fallback. Long integrations that would exceed it must use a **coarser `dt_macro`**, **multiple march epochs**, or a future widened layout — the binary format stays single-meaning. (Schedules can reach ~2×10⁵ macro-steps, so this genuinely constrains `(T, dt_macro)` and the assertion must fire on violation.)
+> **Enforced dispatch invariant: `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`.** Dispatch **refuses** a configuration with `⌈T/dt_macro⌉ > 65535` (R-86) — **not** a soft fallback. Long integrations that would exceed it must use a **coarser `dt_macro`**, **multiple march epochs**, or a future widened layout — the binary format stays single-meaning. (Schedules can reach ~2×10⁵ macro-steps, so this genuinely constrains `(T, dt_macro)` and the refusal must fire on violation.)
 
 ---
 
@@ -283,7 +284,7 @@ cont_symbol[2]= [3,2,1,0]   // digit 2
 ```
 fn fgw_length_raw(w:vec4u)->u32     { return extractBits(w.w, 25u, 7u); }        // 0…76 valid; 127 = truncated
 fn fgw_truncated(w:vec4u)->bool     { return fgw_length_raw(w) == 127u; }
-fn fgw_prefix_length(w:vec4u)->u32  { return select(fgw_length_raw(w), 76u, fgw_truncated(w)); } // clamps sentinel
+fn fgw_retained_prefix_length(w:vec4u)->u32 { return select(fgw_length_raw(w), 76u, fgw_truncated(w)); } // clamps sentinel
 ```
 
 > **Terminology (physical precision).** The word is generated by **branch-cut crossing** events (the shape trajectory crossing a cut on the shape sphere), detected by sign-checking during the march — *not* by physical close-encounter events (though the two often coincide). So: "append on branch-cut crossing," and **`fgw_length` = reduced topological crossing count / reduced word length**, NOT "encounter count." Free reduction means it counts *net* crossings (a cross-and-immediately-recross cancels). The loose term "encounter count" is convenient but physically imprecise — use the topological name.
@@ -339,7 +340,7 @@ Per-sample state: **`mean_y, C_ty`** (2 × f32, in `SimState`). No shared mutabl
 
 Everything that is a function of stored state is a shader helper, zero storage:
 
-> **This derive-at-read design also gives the shader interface tier-uniformity for free (lowering Part 3a).** Because `ftle`, `ensemble_spread`, and the like are *computed* from stored state rather than stored, their "presence" is just whether the accessor computes a value or returns a **NaN sentinel** — which costs zero bytes. So the read-side `SimState` type is **fixed across all tiers** (built-in and custom shaders read `sample.ftle` by plain field access at every tier); a tier that bakes the *expensive state* out (the shadow trajectory, the ensemble copies, the word buffer) makes the corresponding read-side field return NaN, with a baked `has_<feature>` const for authors who want to branch. No struct-shape change, no memory inflation, no getter pattern. The memory-motivated stored-vs-derived split is what makes the interface uniform.
+> **This derive-at-read design also gives the shader interface tier-uniformity for free (lowering Part 3a).** Because `ftle`, `ensemble_spread`, and the like are *computed* from stored state rather than stored, their "presence" is just whether the accessor computes a value or returns a **NaN sentinel** — which costs zero bytes. So the read-side `SimState` type is **fixed across all tiers** (built-in and custom shaders read `sample.ftle` by plain field access at every tier); a tier that bakes the *expensive state* out (the shadow trajectory, the word buffer — the ensemble copies are not baked, just not dispatched, R-102) makes the corresponding read-side field return NaN, with a baked `has_<feature>` const for authors who want to branch. No struct-shape change, no memory inflation, no getter pattern. The memory-motivated stored-vs-derived split is what makes the interface uniform.
 
 | Derived quantity | From | Note |
 |---|---|---|
@@ -459,7 +460,7 @@ Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective + wor
 | 4K E=3 FTLE-on (High-like) | 4.778 GB | 0.531 | **5.308 GB** |
 | 4K E=1 FTLE-off | 1.593 GB | 0.265 | **1.858 GB** |
 
-Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split, 5.04 GB, was computed at the old 136 B width and now matches the old E=3 figure, not the 5.31 GB here — open-questions). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
+Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split is 5.31 GB at the 144 B width, matching the row here — R-40 / D6). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
 
 > **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.7 GB" (1.6 GB at the old width) means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
 
@@ -469,8 +470,8 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 
 ## 8. Build-time settles (measure / specify once running)
 
-- **`enc_XY`/`dominant_pair` attribution algorithm (BLOCKING for those quantities)** — specify the generator↔cut convention, punctured-sphere relation, and third-pair attribution before per-pair tallies or `dominant_pair` are deterministic (§5).
-- **`horizon_steps ≤ 65535` — ENFORCED** (single time format, no fallback; §2). Assert at dispatch; long integrations use coarser `dt_macro`/epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the `total_substeps` counter.
+- **`enc_XY`/`dominant_pair` attribution algorithm (BLOCKING for those quantities)** — specify the generator↔cut convention, punctured-sphere relation, and third-pair attribution before per-pair tallies or `dominant_pair` are deterministic (§5). The convention is transcribed at M3; the rest is v2, since per-pair views are out of v1 (R-125).
+- **`horizon_steps ≤ 65535` — ENFORCED** (single time format, no fallback; §2). Dispatch refuses a configuration over it (R-86); long integrations use coarser `dt_macro`/epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the `total_substeps` counter.
 - **Bottleneck confirmation** — the march may be bandwidth-bound *or* arithmetic/occupancy/register-pressure-bound depending on dispatch granularity (per-substep vs per-dispatch storage traffic). Confirm by measurement, and check for register spilling; the mixed-radix "free compute" argument is contingent on this (§3).
 - Word truncation rate (drives whether 76 symbols suffices; mixed-radix is the alternative to widening).
 - Crossing distribution (whether symbolic-spread `S_word` is additive to outcome-impurity).
@@ -499,9 +500,11 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 > `E_rel`, the window and the escaper are defined by R-29 (integrator contract Part 7). The precision, recall and gap above
 > predate R-29's `E_rel` and are to re-validate.
 >
-> **And escape must not terminate integration until §2.4's three checks pass.** Freezing a
-> trajectory whose displayed quantity is still moving is what produced the patchwork artefact
-> (§1). Collision stays terminal — it is a singularity, not a heuristic.
+> **After escape fires (R-31, R-95, R-103),** `state` reads escape and `t_end_step` is fixed; time averages
+> (FTLE's `S/T` and the like) freeze at `t_esc`. In production `done` is set and the loop ends. The
+> post-escape march for §2.4's three checks runs only in the validation harness, which keeps its own
+> state; the payload never sees it. Freezing a trajectory whose displayed quantity is still moving is
+> what produced the patchwork artefact (§1). Collision stays terminal — it is a singularity, not a heuristic.
 
 
 ---

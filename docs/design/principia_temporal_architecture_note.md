@@ -23,7 +23,9 @@
 
 ## The rename
 
+<!-- retired-terms -->
 **`SimResult` → `SimState`.** The struct is no longer a completed *result* of a full trajectory; it is the *current state* of a marching simulation at the playhead. `SimState` names it correctly. (11 docs reference it — render 7, systems-arch 6, integrator/debug/parity 4/4/3, deep-zoom 3, others 1–2 — a mechanical global rename once this note is ratified. `ICDescriptor`, `QuadReduction` unchanged.)
+<!-- /retired-terms -->
 
 ---
 
@@ -60,25 +62,24 @@ General rule (same as the drift accumulators already use): **fixed-size, O(1), u
 
 ## Continuous refinement — temporal accumulators + spatial coherence
 
-Refinement now runs *during* playback against evolving state, not once against final outcomes. Split decision combines two orthogonal signals:
+Refinement now runs *during* playback against evolving state, not once against final outcomes. The split is `Policy::Tolerance`'s (R-15), and two orthogonal signals feed its one test, under the one knob `eps` (R-91):
 
 **Spatial coherence (kept, instantaneous):** at the playhead, do the quad's pixels disagree (different classes / far apart in state)? The classic "boundary through this quad → split." Live, two-way (can un-flag).
 
 **Temporal behaviour (new, fixed-size running accumulators — NOT stored history):**
-- **running max divergence** — largest intra-quad bundle spread seen so far (catches mid-flight divergence that reconverges — invisible to end-state impurity). One float, `max`-updated.
-- **running mean divergence** — time-averaged spread (distinguishes mild-constant from explosive-occasional). One float.
-- **divergence trend / velocity** — is spread growing *now*? Split *ahead* of separation. EWMA / current-vs-smoothed, ~two floats.
-- **first-divergence time** — `t` at which spread first crossed threshold; write-once; proxy for how fast chaos manifests here.
+- **running max divergence** — the latch: the largest bundle spread a **footprint** has shown so far (catches mid-flight divergence that reconverges — invisible to end-state impurity). One float per footprint, `max`-updated (R-99).
+- **running mean divergence** — time-averaged spread (distinguishes mild-constant from explosive-occasional). One float. A diagnostic, not a split input (R-99).
+- **first-divergence time** — `t` at which spread first crossed `eps`; write-once; proxy for how fast chaos manifests here. A diagnostic, not a split input (R-99).
 
 ```
-split if  spatial_incoherence(now) > θ_s        // boundary now
-     OR   running_max_divergence   > θ_max      // flew apart at some point
-     OR   divergence_trend(now)    > θ_trend     // actively separating
+unresolved(f)  ⟺  spread(f, now)          > eps     // boundary now
+               ∨  running_max_spread(f)   > eps     // flew apart at some point (latched)
+split(quad)    ⟺  any footprint f in quad is unresolved          // R-91; θ_s, θ_max, θ_trend dropped
 ```
 
-Costs a few floats per quad, O(1) in-place, folded into the existing ~80 B `QuadReduction` (same reduce-before-evaporate pattern — GPU distills history to a scalar in-thread; CPU sees the scalar, never the history).
+Costs one float per footprint for the latch, held with the resident quad (R-99), plus the diagnostics; O(1) in-place, same reduce-before-evaporate pattern — GPU distills history to a scalar in-thread; CPU sees the scalar, never the history.
 
-**The temporal signal latches (one-way):** running-max only grows, first-divergence is write-once — so a quad proven interesting *stays* refined even if it currently looks calm. This is *correct* for the crystallisation movie: boundary structure **accumulates and sharpens** as time reveals it, rather than flickering. Distinct from the spatial signal, which is instantaneous and two-way.
+**The temporal signal latches (one-way):** running-max only grows (and first-divergence, a diagnostic, is write-once) — so a footprint proven interesting keeps its quad refined even if it currently looks calm (R-99). This is *correct* for the crystallisation movie: boundary structure **accumulates and sharpens** as time reveals it, rather than flickering. Distinct from the spatial signal, which is instantaneous and two-way.
 
 ---
 
@@ -105,7 +106,7 @@ Blur previously meant "spatially stale (wrong zoom/position)." Under lockstep it
 
 **The render pipeline reads a `SimState` struct with known fields. That contract is unchanged, so render swapping is unaffected, full stop.** Colour occupants bind to *fields of the struct* and don't know *how* the field was filled — checkpoint replay (old) or running accumulator at the playhead (new) is invisible to them. The change is entirely on the **production** side (upstream of the struct); the render side only consumes the finished struct.
 
-This is the payload-as-waist firewall doing its designed job: the struct separates "how state is computed" from "how state is coloured." Lockstep changes the former; render swapping lives in the latter; the struct between them doesn't move. Because occupants were *never* allowed to reach around the struct and read raw trajectory/checkpoints directly (the struct is the sole interface), changing what fills the struct **cannot** break them. The **read-side** struct type always has its fixed field set — at every tier, by the uniform read-side interface (lowering Part 3a: a tier that bakes a producer out makes the field read the NaN sentinel; the *stored* struct is tier-sized, 136/88 B). Render always reads the full known type; swapping among render modes is free and causes **no recomputation**, during playback included. (The "colour only by what you accumulate" idea from discussion dissolves twice over: layout is decided once, and Part 3a makes availability a *value* question, never a *type* question.)
+This is the payload-as-waist firewall doing its designed job: the struct separates "how state is computed" from "how state is coloured." Lockstep changes the former; render swapping lives in the latter; the struct between them doesn't move. Because occupants were *never* allowed to reach around the struct and read raw trajectory/checkpoints directly (the struct is the sole interface), changing what fills the struct **cannot** break them. The **read-side** struct type always has its fixed field set — at every tier, by the uniform read-side interface (lowering Part 3a: a tier that bakes a producer out makes the field read the NaN sentinel; the *stored* struct is tier-sized, 144/96 B). Render always reads the full known type; swapping among render modes is free and causes **no recomputation**, during playback included. (The "colour only by what you accumulate" idea from discussion dissolves twice over: layout is decided once, and Part 3a makes availability a *value* question, never a *type* question.)
 
 ---
 
@@ -169,8 +170,8 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 
 - **The reversal + `SimState` rename** — ratified, and the contract edits below **executed** (render, scheduler Parts 7–8, caching Part 7, export rewrite, ledger, integrator §3.7). ✓
 - **Frame-loop cadence** — **adjustable playback speed; default = 1 minute to `t_end`** (so `steps_per_frame = ⌈T / (60 × fps × dt_macro)⌉` at 1×, speed multiplier ~0.1×–10× on top). Invariant locked: fixed `dt` per sim-step, decoupled from wall-clock frame time (determinism). The *number* is derived from the 60s default; the *feel* is tuned live. ✓
-- **Latch persistence** — the refinement latch **lives with the quadtree node and dies when the node is merged/pruned** under quadtree pressure. Bounded by quadtree size (already bounded), not by session length. A revisited region *remembers* it was interesting (state re-boots via catch-up; the decision persists); a genuinely-pruned region correctly re-discovers. ✓
-- **Checkpoints — deleted, confirmed.** No surviving consumer: survey animation (lockstep), scrub (removed), hover/inspector trace (CPU `computeIC`), divergence overlay (on-demand single-IC f32 GPU trace), static outcome map (never needed them). The concept is obsolete; the ledger reflects it. ✓
+- **Latch persistence** — the refinement latch is **per footprint, lives with the resident quad, and goes when the cache evicts or merges the quad** (R-99), so it never pins memory. Bounded by the resident set, not by session length. An evicted or merged region correctly re-discovers. ✓
+- **Checkpoints — deleted, confirmed.** No surviving consumer: survey animation (lockstep), replay scrub (removed — the GUI scrubber re-integrates, R-66), hover/inspector trace (CPU `computeIC`), divergence overlay (on-demand single-IC f32 GPU trace), static outcome map (never needed them). The concept is obsolete; the ledger reflects it. ✓
 - **Viewport-cache budget** — policy locked (hard cap, current-state-only, cost-weighted LRU incl. `t_cached`); the *number* is set by the **device-characterisation phase** (`principia_quality_device_note.md`; caching Part 7) — a fraction of a detected VRAM budget, never a fixed constant, scaling down on weak devices alongside the compute knobs. One characterisation sets compute *and* memory settings together. ✓
 
 ## Still open (settle at implementation, or next edit pass)
@@ -178,7 +179,7 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 1. **Contracts edit pass — DONE (both waves).** The temporal edits landed, and the **sampling/SSAA amendments subsequently landed too**: colouring dd §3.7 (colour-per-sample → SSAA resolve), render Part 4 (averaging rewrite), scheduler Part 9 (ensembles-only-on-nominal + Halton (2,3) offsets), and the ledger/render statements that ensemble spread is **derived at resolve, not a stored field** (the earlier "colourable per-sample field" phrasing here was the pre-reversal framing). ✓
 2. **Catch-up scheduling** — background, non-blocking, generation-cancelled, promote-at-barrier; reuses the existing refinement-compute path. Confirm at implementation.
 3. **Ensemble E during the live march — RESOLVED by the quality/device controller.** Ensemble copies march every frame (~`2(E+1)` trajectories/pixel; at E=4 ~10× base). The device-characterisation cost model sets `e_motion_gating`: **E reduced/off during an active march, full E at rest and in export.** The boot probe is the measurable-frame-loop-cost input this was waiting for (`principia_quality_device_note.md`; scheduler Part 9). Threshold is a controller tunable, settled on a working system.
-4. **Milestone plan** — still the one unwritten major artefact (original msg-1 request). Assembly, not design.
+4. **Milestone plan** — written in step 7 (`plan/MILESTONES.md`; canonical_spec §11, R-74). Assembly, not design. ✓
 
 ---
 
@@ -186,10 +187,12 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 
 **The firewall did its job:** the change is contained to *one side of the struct*. Physics (above the waist) doesn't change; render/colour/GUI (below) only renames. Mostly *subtractive* (delete checkpoint array, scrub, history buffer) + *one additive piece* (continuous refinement + frame loop) + *one rewrite* (export).
 
+<!-- retired-terms -->
 - **Category 1 — pure rename, zero semantics** (`SimResult`→`SimState`, 11 docs): find-and-replace, one pass.
-- **Category 2 — physics does NOT change**: integrator wrapper still marches `STEP` identically; only `maybe_write_checkpoint` → expose-current-state-and-discard. Shape-map math, winding, FTLE/spread/diffusion accumulators all already per-step. Decoder/encode/colouring-math untouched.
+- **Category 2 — physics does NOT change**: integrator wrapper still marches the occupant (`ADVANCE`, R-19) identically; only `maybe_write_checkpoint` → expose-current-state-and-discard. Shape-map math, winding, FTLE/spread/diffusion accumulators all already per-step. Decoder/encode/colouring-math untouched.
 - **Category 3 — genuinely changing (3 docs)**: render (delete-heavy, simplifies), scheduler (additive — the new design + frame loop), export (the one rewrite).
 - **Category 4 — simplified, small**: caching, ledger, lowering/systems-arch/gui incidental.
+<!-- /retired-terms -->
 
 **Verdict: fairly clean, mostly subtractive.** Four docs with real edits, one rewrite, rest rename-or-trivial. A weekend of careful doc surgery, not a month. The change *deletes a concept and simplifies the data model* — the good kind of re-architecture.
 
@@ -201,7 +204,7 @@ Cluster in two themes: **(A) the memory problem sneaking back** (guard with hard
 2. **Children chasing a moving playhead** (B) — *dissolved by promotion-at-barrier*: promote only when `quad.t == live_set.t` at a barrier where the playhead is stationary. Time-sync gate, not completion gate.
 3. **Frame-rate-dependent marching breaks determinism** (B) — *dissolved by fixed-timestep loop*: fixed `dt`/sim-step, decoupled from render frames. Correctness issue, not just UX.
 4. **Viewport cache regrowing into a history buffer** (A) — hard budget cap; current-state-only; the "cache a bit of history for smoothness" temptation is the V2 siren. Guard with a ceiling.
-5. **Refinement thrash / latch** (A+B) — *off-loop via frame loop, so never visible*; latch is persistent CPU metadata, state re-boots. Confirm persistence (item 6).
+5. **Refinement thrash / latch** (A+B) — *off-loop via frame loop, so never visible*; the latch lives with the resident quad and goes with it (R-99), state re-boots.
 6. **Pan-while-paused** (B) — *clarified by frame loop*: pause freezes the playhead, not the compute; reveals still catch up to frozen `t`. Honest, not a bug — state it.
 7. **Export determinism** (B) — *handled by blocking barrier mode*: export runs the frame loop with a hard barrier (fully caught up before capture), interactive runs progressive. Same loop, two policies.
 

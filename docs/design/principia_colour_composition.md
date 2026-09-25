@@ -106,7 +106,8 @@ FieldRamp {
 band, base colour elsewhere — this is `grid`, `contours`, and the lattice classifiers `checker`,
 `lat/lon-stripes`, `truchet` on (θ,φ)). **Compaction** (scalar → lightness, for the `brightness`
 slot or before a ramp): `lin`, `log`, `symlog` (signed, through the midpoint), `cyclic` (phase),
-`flag`. Every ramp/compaction carries an explicit **invalid-pixel colour/value** (§3, §6).
+`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default the hatched invalid
+pattern (§3, §6; R-132).
 
 **Default ramps by field role.** Signed fields (energy, L_z, drifts) default to
 diverging-through-neutral so the zero-crossing is a legible contour; positive fields to sequential;
@@ -135,7 +136,8 @@ Compose sub-results. All are `vec3(+ctx) → vec3`.
 - `bandmask(base, field, band, line)` — overlay lines/tiles where a field is in-band (grid/contours
   over a base map; **quad-boundary overlay** on the normal render is this with
   `field = distance-to-quad-edge`).
-- `site_overlay(base, SiteBlend*)` — additive site blobs over a base. **The physics overlay is
+- `site_overlay(base, SiteBlend*)` — site blobs over a base, blended as a sequential clamped mix (the oracle's form,
+  `principia_dd_colouring.md` §3.4, R-122). **The physics overlay is
   exactly this**: `site_overlay(base, SiteBlend{ sites = physics(m), kernel = vmf(κ), colours =
   per-site })`. It was never a distinct node; it is Family A used as a combinator, with a physics
   site generator (§2) and per-blob strength `s`.
@@ -168,7 +170,9 @@ escaping body** (0 → Y, 1 → M, 2 → C; 0-based, R-22). The two event *famil
 separable at a glance while the pair/body identity stays legible; the three non-generic outcomes are
 bounded (black), the t=0 collision (orange), and degenerate (white). The nine classes read from the
 `state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
-assignment lands on `detail`, not on a second field). There is **no separate `escaper` field**: the
+assignment lands on `detail`, not on a second field). **How the table reads the payload (R-96):** "degenerate" is
+`decode_failed`; "collision @ t=0" is a collision with `t_end_step == 0`. The two states the table has no row for:
+`running` shows neutral grey, and `sim_failed` shows the invalid pattern (§3). There is **no separate `escaper` field**: the
 escaping body *is* `detail | state=escape`, so “which body escaped” is already carried by this map's
 escape colours. A standalone escaper view is therefore this map **filtered to the escape classes** — a
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
@@ -177,7 +181,8 @@ mode admits (“just collisions”, “just body-2 escape”), not a distinct re
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
 outcome-state row inherits (that catalogue is out of scope here; this palette is the one piece of it
-that is settled).
+that is settled). It governs the outcome palette (`state ⊕ detail`) only: the raw `state` debug view keeps a six-colour
+`dbg_cat` palette (`principia_debug_tooling_plan.md` §B, R-115).
 
 ---
 
@@ -194,8 +199,9 @@ a uniform array):
 
 **Physics generators** — functions of the **decoded IC** (the mass point), evaluated per pixel from
 `ctx.payload` masses; **not bakeable**:
-- `BC(m)` — binary-collision loci.  `Euler(m)` — collinear configs.  `Lagrange(m)` — equilateral
-  poles. On the mass-weighted shape sphere every one of these **moves with (m₀,m₁,m₂)**, and when a
+- `BC(m)` — binary-collision loci.  `Euler(m)` — the Euler central configurations (the collinear relative
+  equilibria: roots of Euler's quintic in the mass ratios, mapped through the shape map; equal masses reduce to the
+  antipodes of b̂; R-126).  `Lagrange(m)` — equilateral poles. On the mass-weighted shape sphere every one of these **moves with (m₀,m₁,m₂)**, and when a
   slice axis (or a tilt) touches a `z_μ` dimension the masses are **per-pixel state**, so there is no
   per-slice constant to bake even in principle.
 
@@ -228,15 +234,15 @@ render-key.
 | **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion `−1` sentinel, `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
 
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
-has an explicit **invalid colour/value**. Without this, debug views silently lie at exactly the
-pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). The default
-invalid colour is a conspicuous out-of-gamut-adjacent tone (a fixed magenta, a plain default, R-16), overridable per
-node.
+has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
+pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). Invalid pixels
+render in a **hatched pattern** that collides with no palette entry; its exact pattern is a calibration (REQ-COL-055,
+R-71; R-132). Overridable per node.
 
-**Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are portable
-WGSL, the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
+**Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
+WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
 (z))` residual). This is what dissolves most of the §A kernel modes (§6) and enables **agreement
-presets** (fragment-decode vs kernel-payload) as live cross-implementation checks.
+presets** (fragment-decode vs kernel-payload) as live checks of that translation.
 
 ---
 
@@ -273,6 +279,8 @@ gain.
 | C      | **None**   | `C` (colour's own L kept) | `C · 1` | "just the colour map" (default) |
 | **None** | B        | `OKLab(L=B, 0, 0)` | `white · B` | **greyscale of the brightness field** (also the most CVD-robust encoding possible) |
 | **None** | **None** | flat mid-grey `OKLab(0.6,0,0)` | flat mid-grey | well-defined, harmless, instantly visible |
+
+Replace-L here is `L = B`: the range form `L_min + (L_max − L_min)·B` (`principia_dd_colouring.md` §3.5) at its defaults `L_min = 0`, `L_max = 1` (R-77).
 
 This gives, for free, exactly the "use anything as colour, anything as brightness, or neither"
 requirement: any field can occupy either slot (channel is independent of source — the *only*
@@ -326,7 +334,8 @@ anything applied after it is meaningless and anything that lets it be misplaced 
 that can lie. It is an **accessibility/display setting** alongside `render_scale`, and it therefore
 applies uniformly to *everything* — main render, sphere preview, equirect unwrap, node thumbnails —
 which is exactly what an accessibility audit wants: check the whole instrument at once. The CVD
-matrices and linear-sRGB path are the Viénot/Brettel forms already in the reference artefacts.
+simulation is real Viénot (protan, deutan) and Brettel (tritan) through LMS from linear sRGB, with matrices and golden
+values from a published reference implementation, named with its version when the task lands (R-78; dd_colouring §3.8).
 
 ---
 
@@ -337,7 +346,8 @@ matrices and linear-sRGB path are the Viénot/Brettel forms already in the refer
 - comments carrying the node name and its parameter values;
 - parameters bound as **uniforms**, so slider tweaks rebind rather than recompile;
 - a small shared WGSL library the codegen calls into: `vmf_weight`, `nearest`, `topk`, `oklab↔srgb`,
-  `lut_sample`, the static site arrays, the field functions, the decode/encode port. (This library
+  `lut_sample`, the static site arrays, the field functions, the decode/encode (translated from the one Rust source,
+  never hand-written — R-116). (This library
   is what replaces the 33 bespoke pixel functions.)
 
 **View code.** Every pipeline stage exposes its generated WGSL snippet for reading. The graph *is* a
@@ -377,22 +387,25 @@ become a **post-chain `bandmask` step** on `distance-to-quad-edge` — strictly 
 because you can now overlay quad boundaries on the *normal* render.
 
 **§A kernel modes → mostly presets, via fragment-side recompute (§3).** With `ctx.chart.z` present
-and the decode/encode ported to WGSL:
+and the decode/encode translated to WGSL from the one Rust source (R-116):
 - **UV view** = `colour = ctx.screen.uv → RG` (fragment addressing) or `ctx.quad.uv → RG` (structural
   addressing).
 - **DECODE view** = fragment-side decode of `ctx.chart.z`, coloured.
 - **ROUNDTRIP** = fragment-side `encode(decode(z))` residual, ramped.
 - **Agreement presets** (new, and better than the originals) = `|E(fragment-decode) − ctx.payload.E₀|`
   and friends: WGSL-decode vs Rust-decode. These simultaneously test **write-addressing** (a dispatch
-  scramble shows as spatial disagreement) and are a **live cross-implementation check** between the
-  two decode ports — the project's two-references discipline, running on every debugged frame.
+  scramble shows as spatial disagreement) and are a **live check between two compilation paths of one
+  source** — the kernel's rust-gpu build and its SPIR-V → WGSL translation — so they check the translation, not a
+  transcription (R-116), running on every debugged frame.
 
 **Discipline 1 — debug presets ship locked.** Their diagnostic value is that ROUNDTRIP-red means the
 same thing every time. Editing a debug preset **forks it to custom** via the same one-way eject; it
 never mutates the named preset.
 
 **Discipline 2 — validity first (see §3).** Every debug field carries its validity lane and every
-ramp an explicit invalid-pixel colour, or the views lie at the pixels they exist to expose.
+ramp an explicit invalid-pixel treatment (the hatched invalid pattern, R-132), or the views lie at the pixels they exist to expose. Debug fields are the
+stated exception to masking (R-79): they show literal stored values (a failed-state `0.0` reads as `0.0`, cross-checked
+against `state`), and NaN still goes to the invalid pattern.
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table
@@ -402,7 +415,7 @@ recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-ex
 
 ## 7. Preset table & golden-image obligation
 
-Every currently-specified map (the Artefact-1 colour maps, Artefact-2 patterns, special modes,
+Every currently-specified map (the colour maps, the patterns, special modes,
 the physics overlay, listed in full in §7.1) and every debug view is **recreated as a composition preset**. Representative
 rows (schematic — full table lives with the preset library):
 
@@ -421,12 +434,12 @@ rows (schematic — full table lives with the preset library):
 | Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` |
 | Gradient magnitude | `FieldRamp{ gradient_magnitude(vmf-map), lerp }` |
 | Perlin / harmonics / Turing | `FieldRamp{ noise / Yℓm / wave-triple, lerp or diverging }` |
-| **Stability × Hue** | pipeline preset: `colour = SiteBlend{axes6,vmf,swatches}` · `brightness = FieldRamp{stability, lin}` · `combine = Replace-L` |
 | Physics overlay | post step `site_overlay(base, SiteBlend{ physics(m), vmf(κ=11 BC / 9 EL), per-site colours }, s)` |
 | `s_depth`, `f_ftle`, ROUNDTRIP, … | §6 presets over `ctx` |
 
-**Verification obligation.** The **two React reference artefacts are the oracle** (`ColourSphere` =
-Artefact 1, `PatternSphere` = Artefact 2, with `physicsOverlay`/`stability_hue`). Every recreated
+**Verification obligation.** The **two reference HTML files are the golden oracle**
+(`docs/gui/reference/principia_colour_explorer.html` and `docs/gui/reference/principia_colour_presets.html`; R-122),
+and formulas follow the oracle. Every recreated
 preset ships with a **golden-image test** against the corresponding reference output. This is a
 **cross-implementation check in the project's established style** (like the shared-kernel-vs-
 independent-integrator convergence reference): the composition engine and the reference artefact are
@@ -434,27 +447,27 @@ two implementations of the same maps, and agreement to tolerance certifies the p
 "done" until its golden image matches.
 
 **Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
-golden test. §7.1 is the checklist; the reference artefacts are the oracle for each entry.
+golden test. §7.1 is the checklist; the two reference HTML files are the oracle for each entry (R-122).
 
 ### 7.1 The complete map list (R-16)
 
 Ported from the retired shape-sphere colour-map PDF (R-3, R-16). Parameter ranges are in §8. The vMF engine (Eq. 5),
-the LUT sphere, the CVD matrices and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
+the LUT sphere, the CVD method (R-78) and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
 
-**Artefact 1 — colour maps (`ColourSphere`).**
+**Colour maps — `principia_colour_explorer.html`** (R-139; Direction cosines is in `principia_colour_presets.html`).
 
 | map | definition |
 |---|---|
 | VMF OKLAB | six vMF poles at $\{\pm\hat x, \pm\hat y, \pm\hat z\}$, full-OKLab hue table (dd_colouring §3.2) |
 | VMF Okabe–Ito | the same engine with the Okabe–Ito CB-safe hue table |
-| LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). |
-| Turbo | a 1-D colour LUT, shown among the additional colour map modes |
+| LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). **LUT data (R-122):** the published matplotlib tables for Viridis, Cividis, Plasma, Magma, Inferno and Twilight; Cubehelix's reference is the analytic form with dd_colouring §3.8's parameters (s = 0.5, λ = 1.5, h = 1), and matplotlib's cubehelix function, called with the same parameters, is a cross-check only (R-151); Moreland's table for Cool-warm; the Principia palette's stops are the explorer's (`principia_colour_explorer.html` :108, `LUT.principia`, eight stops). |
+| Turbo | a 1-D colour LUT from Google's published Turbo table (Mikhailov 2019, Apache-2.0; R-139), shown among the additional colour map modes |
 | Direction cosines | each Cartesian component of $\hat{\mathbf n}$ to its own RGB channel (lightness is not uniform) |
 
-Global controls on every Artefact-1 map: **Invert** ($v \mapsto 255 - v$), **Blend** (a linear mix of any two modes),
+Global controls on every colour map: **Invert** ($v \mapsto 255 - v$), **Blend** (a linear mix of any two modes),
 **Auto-rotate**.
 
-**Artefact 2 — patterns and special modes (`PatternSphere`).** Every pattern has the signature
+**Patterns and special modes — `principia_colour_presets.html`** (R-139). Every pattern has the signature
 $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 
 | group | map | definition |
@@ -466,7 +479,7 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 | | Soft Voronoi | sigmoid blend between the two nearest poles, $t = \sigma(k_s(d_1 - d_2))$ |
 | Lattices | Fibonacci lattice | $N$ golden-angle points, $n_{z,i} = 1 - 2i/(N-1)$, $r_i = \sqrt{1 - n_{z,i}^2}$, $\phi_i = \pi(\sqrt5 - 1)\,i$; golden-angle hue spacing so adjacent cells contrast |
 | | Dot lattice | the Fibonacci points drawn as coloured dots of angular radius $\rho = \cos(1.4/\sqrt N)$ on a dark background |
-| Stripes | Checkerboard | with $\theta = \arccos n_z$, $\varphi = \operatorname{atan2}(n_y, n_x) + \pi$: even $= (\lfloor f\theta/\pi\rfloor + \lfloor f\varphi/2\pi\rfloor) \bmod 2$; seam-free for integer $f$ |
+| Stripes | Checkerboard | with $\varphi = \arccos n_z$ (polar), $\theta = \operatorname{atan2}(n_y, n_x) + \pi$ (azimuth; R-14's names): even $= (\lfloor f\varphi/\pi\rfloor + \lfloor f\theta/2\pi\rfloor) \bmod 2$; seam-free for integer $f$ |
 | | Latitude stripes | $\cos(f \arccos n_z) > 0$ (no atan2) |
 | | Longitude stripes | $\sin(f\,\operatorname{atan2}(n_y, n_x)) > 0$ (seamless for integer $f$) |
 | | Truchet mosaic | each patch cell $(c_i, c_j)$ gets a deterministic diagonal split from $h = \operatorname{frac}(\sin(127.1c_i + 311.7c_j)\cdot 43758.5)$; colour by the side of the diagonal |
@@ -477,10 +490,9 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 | | Checker + VMF | the checkerboard over the vMF map |
 | Special | Real spherical harmonics | $v = Y_{\ell m}/\max\lvert Y_{\ell m}\rvert$, blended between the positive- and negative-lobe colours in proportion to $\lvert v\rvert$, grey on the nodal lines. Forms for $\ell \in \{1,2,3\}$ include $Y_{10} = \sqrt{3/4\pi}\,n_z$, $Y_{11} = \sqrt{3/4\pi}\,n_x$, $Y_{20} = \sqrt{5/16\pi}\,(2n_z^2 - n_x^2 - n_y^2)$, $Y_{22} = \sqrt{15/16\pi}\,(n_x^2 - n_y^2)$, $Y_{33} = \sqrt{35/32\pi}\,n_x(n_x^2 - 3n_y^2)$ |
 | | Turing-like standing waves | $v = \tfrac13\left[\sin(f n_x) + \sin\!\left(f(\tfrac12 n_x + \tfrac{\sqrt3}{2} n_y)\right) + \sin\!\left(f(\tfrac12 n_x - \tfrac{\sqrt3}{2} n_y)\right)\right]$ |
-| | Stability × Hue | the house encoding, dd_colouring §3.4: $L = 0.25 + 0.55\cdot\tfrac12(1 - \max_j \hat{\mathbf n}\cdot\hat{\mathbf b}_j)$, with $\hat{\mathbf b}_j$ computed per R-14 |
 | | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(\varphi_0 + 2\pi i/N)\cos\psi, \sin(\varphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = \text{tilt}\cdot\pi/2$ |
 | | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,\text{pal}[i_1] + (1-t)\,\text{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
-| Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14 and decision B18 |
+| Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14, mass-weighted (R-50) |
 
 ---
 
@@ -496,7 +508,7 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
   mode-by-mode presentation is superseded by the preset table (§7). The `combine` L-ownership rules
   (Replace-L / Multiply) are unchanged and referenced by §4.1.
 - **The shape-sphere colour-map PDF §5–§9** (implementation) — superseded by this document. The PDF
-  is retired and archived; its Eq. 5 and CVD matrices are in `principia_dd_colouring.md` §3.2 and §3.8, and its parameter ranges
+  is retired and archived; its Eq. 5 is in `principia_dd_colouring.md` §3.2, its CVD matrices are replaced by real Viénot/Brettel (§3.8, R-78), and its parameter ranges
   (L∈[0.35,0.90], C∈[0.05,0.22], κ∈[0.5,12], f∈[2,14], N∈[12,96], ks∈[1,20], s∈[0,1]) are adopted.
 - **`principia_debug_tooling_plan.md` §B–§G** — re-expressed as the debug preset table (§6). §A is
   reduced to Appendix A.

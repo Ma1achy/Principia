@@ -8,7 +8,7 @@
 > regularisation** (`principia_integrator_contract.md` Part 2b, `principia_spec_pending_changes.md`
 > change 8).
 >
-> **Measured:** 31 of 32 cases, `err>10` **3916 → 73**, AZ's worst decile fixed on 100% of pixels. AZ
+> **Measured:** 31 of 32 cases, `err>10` **3915 → 74** at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), AZ's worst decile fixed on 100% of pixels. AZ
 > retains exactly one win — **`far`**, where sustained hierarchy means it **never re-registers**.
 >
 > **The mechanism:** doubling the sync-boundary **re-registration count** at fixed step size moves the
@@ -23,7 +23,7 @@
 >
 > **Evidence:** `prin-rs` `FINDINGS.md` §5, `results/integrator_gallery_1024/`.
 
-*Third drill-down. Occupant coefficients, the substep law, detector state machines, the live shape readout, and the co-computation algorithms — the exact maths the one shared kernel must produce at either precision (under the substrate there is one Rust source, not two implementations; the maths still has to be pinned, and its branch decisions held bit-identical by the comparison-only rule — §3.3). The wrapper/occupant architecture, capability profiles, cadence, units, and determinism rules are the integrator contract's; consolidated in §2, not re-argued.*
+*Third drill-down. Occupant coefficients, the substep law, detector state machines, the live shape readout, and the co-computation algorithms — the exact maths the one shared kernel must produce at either precision (under the substrate there is one Rust source, not two implementations; the maths still has to be pinned, and its branch decisions held bit-identical on identical inputs, per step, by the comparison-only rule — §3.3). The wrapper/occupant architecture, capability profiles, cadence, units, and determinism rules are the integrator contract's; consolidated in §2, not re-argued.*
 
 ---
 
@@ -35,13 +35,13 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `STEP(state, dt, params) → state'`, nothing else; wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical, `dt_macro = 10⁻³` fixed, schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not**.
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical (default 50), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
 
-From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical (comparison-only rule, §3.3); match-integrator mode for honest inspector comparison.
+From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical on identical inputs, per step (comparison-only rule, §3.3; labels on chaotic trajectories may differ across precisions — `principia_parity_contract.md` Tier L, R-84); match-integrator mode for honest inspector comparison.
 
 From the **scheduler (firewall)**: every IC integrates from its own decoded state — **no warm starts, ever**; payload pure of scheduling.
 
-From the **render contract**: tier co-computations (Benettin, ensemble) ride the forward pass gated by baked tier bits; sentinels, never NaN, in storage; the kernel-set `state` enum and sticky `saturated` bit are the point-of-computation invalid-signals, while the drift suspect gates are read-time predicates over the stored latches (payload §5).
+From the **render contract**: the Benettin co-computation rides the forward pass gated by a baked tier bit, and each ensemble copy is the same kernel dispatched again with `copy_index` as a uniform, not a baked variant (R-102); sentinels, never NaN, in storage; the kernel-set `state` enum and sticky `saturated` bit are the point-of-computation invalid-signals, while the drift suspect gates are read-time predicates over the stored latches (payload §5).
 
 From **stability-metrics.md**, reconciled to the uniform-sample / ensemble-as-SSAA model (sampling/SSAA note, ratified): **every sample is a full `SimState` carrying its own Benettin shadow**, and a nominal grid sample has **E ensemble copies** (each also a full sample with its own shadow). So per nominal sample: `(E+1)` samples × (1 trajectory + 1 Benettin shadow) ≈ **`2(E+1)` trajectories**. **A Benettin shadow can never double as an SSAA sample** — renormalisation makes its endpoint an algorithmic artefact, not a physical trajectory — so the shadows are never in the colour/spread pool; the `E+1` *samples* are. (The older "N free shadows + 1 Benettin = N+2" framing is superseded: the ensemble copies are full samples, not shadows-of-the-base, and FTLE is per-sample not base-only.)
 
@@ -101,7 +101,9 @@ y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [r_sub = 0.05, γ_sub = 1.5, N_max = 64]
 ```
 
+<!-- retired-terms -->
 This formula *specifies* `N_sub`; it does **not** compute it at runtime. `N_sub` is a **branch decision**, and the determinism rule for branch decisions is stronger and different from what an earlier draft assumed (which had `N_sub` computed as the f32 evaluation with `Math.fround`-per-stage on the CPU to match the GPU). **The spike (`principia_spike_brief.md` findings, 2026-07) measured that rule forking** — 5/272 boundary states — and a **controlled test overturned the cause**: it is **not** fast-math and **not** FMA contraction, but *inherent cross-implementation transcendental latitude*. A GPU's `pow` and libm's `powf` legitimately disagree by 1–3 ulp (e.g. `pow(4.000000477, 1.5)` → exactly `8.0` on Metal vs `8.000001907` in libm), **in both fast and safe math modes** — so *any* runtime transcendental feeding a `ceil` at an integer boundary can fork, and no amount of matched rounding fixes it because the two libraries are each entitled to their own result.
+<!-- /retired-terms -->
 
 **The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants** and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
 
@@ -119,7 +121,7 @@ Two further branch-path rules the spike earned by real failure:
 - **Clamp in f32 *before* the float→int cast.** Out-of-range `OpConvertFToU` is UB on the GPU (Rust's `as` saturates instead) — a fork source independent of rounding. Clamp `d²`/the bucket index into range in f32 first.
 - **Horizon is an integer step counter**, never accumulated float time (`t += dt` drifts and can fork the `t ≥ T` test); **collision is `d² < r_coll²`** against a constant, not `r_min < r_coll` via a runtime `sqrt`.
 
-Verified: with the table rule, `N_sub`, `state`, `total_substeps`, and terminal labels are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on every golden input — 0 forks. Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
+Verified: with the table rule, the branch decisions (`N_sub`, collision, horizon) are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on identical inputs, per step — 0 forks. That is the guarantee (R-84): a decision is identical given its step's inputs. Over a chaotic trajectory the inputs diverge by precision, so `state`, `total_substeps` and terminal labels may differ across precisions (parity contract Tier L/B). Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
 
 ### 3.4 COM projection (per `STEP`; the policy is integrator contract Part 1)
 
@@ -162,11 +164,17 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
 - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
-- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
+  unregularised occupants and at sync boundaries for regularised ones (R-95).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
-  this `E_rel`.
+  this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
+  comparison (R-95).
+- **After escape fires (R-31, R-95, R-103):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
+  the like) freeze at `t_esc`. In production `done` is set when escape fires and the loop ends. The post-escape march
+  for the checks of pitfalls §2.4 runs only in the validation harness, which keeps its own state; the payload never
+  sees it.
 
 Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
 
@@ -218,8 +226,11 @@ configuration sit at fixed points:
 $\hat{\mathbf b}_{12} = \left(\tfrac12, \tfrac{\sqrt3}{2}, 0\right)$ and $\hat{\mathbf b}_{20} = \left(\tfrac12, -\tfrac{\sqrt3}{2}, 0\right)$, 120° apart, and
 $$\hat{\mathbf e}_j = -\hat{\mathbf b}_j \ \text{(equal masses)}, \qquad \hat{\mathbf l}^{\pm} = (0, 0, \pm 1),$$
 where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 anticlockwise. Every binary collision lies on
-the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart. Whether the overlay
-marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open.
+the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart, and the overlay
+marks them at their mass-weighted positions (R-50). The Euler landmarks $\hat{\mathbf e}_j$ are the **Euler central
+configurations** — the collinear relative equilibria, roots of Euler's quintic in the mass ratios — mapped through the
+shape map; equal masses reduce to the antipodes $-\hat{\mathbf b}_j$ above. The quintic is transcribed with citation by the
+task that builds the landmarks, physics-reviewed and confirmed at the gate (R-126).
 
 The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
@@ -239,7 +250,7 @@ every n_renorm steps:  δ⃗ = x' − x ;  δ = ‖δ⃗‖ ;  S += log(δ/δ₀
 ```
 Renormalisation is what makes λ an intrinsic flow quantity; it is also exactly why the Benettin endpoint is not a valid neighbourhood sample.
 
-**Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets, no intervention):
+**Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets — copy 0 the un-jittered centre, copies 1..E at Halton points 1..E centred and scaled to the footprint, R-80 — no intervention):
 ```
 outcome entropy   H = −Σᵢ pᵢ log pᵢ            (categorical final diagnostics)
 spread            σ²_T = (1/(E+1)) Σₖ ‖Φ_T(x₀⁽ᵏ⁾) − x̄(T)‖²     (over the footprint's E+1 samples, at resolve)
@@ -255,7 +266,7 @@ Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprin
 | **3** decoder → integrator | consume `(m,r,p)` only; never learn the chart | every chart in the lowering appendix drives the same kernel unmodified |
 | **4** occupant ↔ wrapper | occupant is pure `STEP`; wrapper identical across occupants | swap occupants → only §3.2 numbers change; wrapper branch trace identical |
 | **5** producer of the payload | every field of §generation-root ledger written, per its metadata | the field debug views live and sane; sentinel/suspect conventions honoured |
-| **1** precision ring | f32/f64 same branches, values differ by precision only | branch-trace equality over fuzzed ICs; divergence view shows smooth growth, no branch cliffs |
+| **1** precision ring | f32/f64 same branches on identical inputs, values differ by precision only | branch equality on identical per-step inputs over fuzzed states (R-84); divergence view shows smooth growth, no branch cliffs |
 | **9** firewall | no warm starts; no scheduling state in outputs | schedule the same quad twice (different orders/frames) → byte-identical payloads |
 
 ---
@@ -282,11 +293,13 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ## 6. Deferred / flagged
 
+<!-- retired-terms -->
 - **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
 - **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
+<!-- /retired-terms -->
 
 ---
 

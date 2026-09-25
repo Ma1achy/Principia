@@ -115,7 +115,7 @@ z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂        (s,t) ∈ [0,1]²
 
 `z₀` = slice centre (8D); `q₁, q₂` = basis vectors spanning the 2D plane. Nonlinear charts (curve, derived, physical-frame) need the general `Φ` and cannot be written affinely.
 
-**Coordinate layers (coordinate note).** The `(s,t) ∈ [0,1]²` here is the **unsigned addressing space** (Y-up after the single framebuffer flip) — what quad identity and the hash seed key on. The `(2s−1), (2t−1)` factors are exactly the **placement into signed IC-space**: they map `[0,1] → [−1,1]`, centred on `z₀`, so the *navigable plane is signed and centred* (pan either way from centre; the golden IC sits at the `z=0` centre). So `[0,1]` addressing and signed-centred IC values are one formula apart, by design — the `[0,1]` for indexing/hashing, the signed offset for the physical coordinate. Per-axis: the *plane offset* is always signed, but whether a given decoded quantity admits negatives varies (config/momentum signed; mass simplex / bounded params constrained) — the decoder maps signed plane coordinates to each axis's actual domain.
+**Coordinate layers (coordinate note).** The `(s,t) ∈ [0,1]²` here is the **unsigned addressing space** of the current view (Y-up after the single framebuffer flip) — it chooses which quads are asked for; quad identity itself is taken in the slice plane's own frame (R-97), and no hash seed exists (R-100). The `(2s−1), (2t−1)` factors are exactly the **placement into signed IC-space**: they map `[0,1] → [−1,1]`, centred on `z₀`, so the *navigable plane is signed and centred* (pan either way from centre; the golden IC sits at the `z=0` centre). So `[0,1]` addressing and signed-centred IC values are one formula apart, by design — the `[0,1]` for indexing, the signed offset for the physical coordinate. Per-axis: the *plane offset* is always signed, but whether a given decoded quantity admits negatives varies (config/momentum signed; mass simplex / bounded params constrained) — the decoder maps signed plane coordinates to each axis's actual domain.
 
 ### The four axis kinds — a closed set
 
@@ -148,6 +148,8 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 | **Tilt** | `q₁` or `q₂` | rotate toward a hidden direction (below) | the plane itself rotates through the 8D |
 
 Pan and slice are the **same operation** — move `z₀` — decomposed by the plane. A free-mode slider sets one component of `z₀`, which is in general a pan+slice *mixture* (its basis vector is rarely exactly in or exactly orthogonal to the plane). Tilt and zoom are the **same kind** of operation — edit the basis. Because every tilted position is a full first-class chart, tilted charts serialise, save, and restore for free: ViewState already stores `(z₀, q₁, q₂)`.
+
+**What each gesture does to the keys (R-92).** The sim key holds the **slice plane**: `z₀`'s out-of-plane part, `span{q₁, q₂}`, and the in-plane orientation. **In-plane pan and zoom re-address** (the same plane, different quads asked for); **slicing out of the plane, tilting and rotating re-integrate** (a new plane changes every quad's ICs); **the lock changes neither**.
 
 ### Tilt (basis edit)
 
@@ -190,7 +192,7 @@ Free-floating curve-axis tilt is ill-defined only because the tangent changes al
 
 ### The lock (projective microscope)
 
-Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is pure CPU/UI state — nothing about the chart maths changes.
+Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is CPU-side chart construction, held in `SimConfig` (R-69) — nothing about the chart maths changes.
 
 **Setting the lock.** Select the pixel at $(s,t)$ and snap the centre to its IC. For an affine chart,
 $\mathbf z_{\mathrm{locked}} = \mathbf z_0 + (2s-1)\mathbf q_1 + (2t-1)\mathbf q_2$: CPU arithmetic, with no GPU readback.
@@ -207,7 +209,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 
 ### What the GPU knows about all of this: nothing
 
-The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock, the `δ` memory, the ghost marks, the direction library — pure UI state. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part.
+The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock (chart construction, R-69), the `δ` memory, the ghost marks, the direction library — none of it reaches the kernel. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part.
 
 ---
 
@@ -226,14 +228,15 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
 **Per-chart descriptors:**
 
-- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Three values, replacing the old one-off `has_redundant_hemisphere`:
+- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Four values, replacing the old one-off `has_redundant_hemisphere`:
   - **bijective** — every pixel is a distinct system (most charts).
-  - **n-to-1** — a fixed finite number of pixels share each system (shape sphere: 2-to-1 over the φ hemispheres). Carries the fold so downstream draws/labels one representative.
+  - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
+  - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
   - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.
 
-- `forbids_energy_normalisation` — set on invariant charts where `E` is itself a coordinate (`(L_z,E)`, `(L_z,K)`); the validation pass refuses any config combining such a chart with a non-zero `E*` override.
+- `forbids_energy_normalisation` — set on invariant charts where `E` is itself a coordinate (`(L_z,E)`, `(L_z,K)`); the validation pass refuses any config combining such a chart with an `E*` override — every `Some(E*)`, including `Some(0)` (R-25).
 - `has_feasibility_boundary` — invariant charts; infeasible pixels are *tagged labelled outputs*, never dropped.
 - `coupling` — kind-4 charts tie multiple blocks; flag same-block axis collisions.
 

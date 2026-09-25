@@ -1,6 +1,8 @@
 # SCRATCHPAD — the pointer channels: trace, sound, inspector
 
-*Working notes, not ratified. Updates `principia_trajectory_viewing.md` where the two disagree —
+*Working notes. §3 (responsiveness) and §4 (sonification) are normative (R-109, amended by R-144): §4 through
+`principia_render_gui_spec.md`'s "listen", §3 because it supersedes `principia_trajectory_viewing.md` §1's responsiveness
+paragraph. The rest of the file stays working notes. Updates `principia_trajectory_viewing.md` where the two disagree —
 that doc's §1 mechanism stands; its §1 responsiveness paragraph is superseded by §3 below.*
 
 ---
@@ -103,6 +105,10 @@ which is the standing rule for constants.
 available — you would *hear* one basin become another — but only if the sound is continuous.
 Retriggering per pixel turns the best part into clicking.
 
+**Open points, as requirements (R-109).** The reference pitch is set by calibration (R-71). Whether the sound
+uses `θ(t)` alone or stereo `θ(t)`/`φ(t)`, and whether it plays the whole trajectory's spectrum or a windowed
+spectrum tracking the playhead, are defined by the task that builds "listen" (R-72).
+
 ---
 
 ## 5. The prediction worth testing early, because it is the demo
@@ -139,9 +145,9 @@ If that holds you can *hear* which resonance you are near.
 ## 7. Open
 
 - The minimum `t` for a usable spectrum (§4) — measure.
-- Whether `φ(t)` adds anything over `θ(t)` alone, or whether two channels is better as *stereo*.
+- Whether `φ(t)` adds anything over `θ(t)` alone, or whether two channels is better as *stereo* — defined by the task (R-72; §4, R-109).
 - Whether the whole-slice version is anything but a meme. Averaging is mush; **sweeping a path and
   hearing it change** is the version worth trying, and it is the same code as hover with a scripted
   pointer.
 - Whether the hover trace should show the *time cursor* position audibly — i.e. whether the sound is
-  the whole trajectory's spectrum or a windowed spectrum tracking the playhead.
+  the whole trajectory's spectrum or a windowed spectrum tracking the playhead — defined by the task (R-72; §4, R-109).

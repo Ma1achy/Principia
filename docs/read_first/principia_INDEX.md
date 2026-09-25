@@ -11,7 +11,7 @@ defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for 
 | | |
 |---|---|
 | **`docs/read_first/principia_00_philosophy.md`** | What the instrument is *for*: atlas → inspector → prebake, the six commitments, what is parked, what was considered and rejected. Return here when a decision feels arbitrary. |
-| **`docs/read_first/principia_01_pitfalls.md`** | The failures that earned those commitments, in enough detail to be recognised again. Eight named patterns, each with the measurement that produced it. |
+| **`docs/read_first/principia_01_pitfalls.md`** | The failures that earned those commitments, in enough detail to be recognised again. Nine named patterns (§1–2, §4–10; §3 is standing rules), each with the measurement that produced it. |
 | **`docs/read_first/principia_INDEX.md`** | this file |
 
 ---
@@ -19,6 +19,10 @@ defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for 
 ## The evidence base — where settled defaults were measured
 
 **`prin-rs` (the vertical slice repository):** `FINDINGS.md`, `README.md`, `results/`.
+
+The minimal text and code set the contracts transcribe from is imported at `docs/reference/prin-rs/`, pinned to commit
+`8600d45` (R-159). It is reference, not authority (R-1): transcribe into the contracts and cite; never cite those files as
+normative. `results/` and the images are cited by commit (`8600d45`; `70cfbc4` for the original 256² data).
 
 > Every settled default should be traceable to where it was measured. **A default without a citation
 > becomes folklore** — this project lost four days to exactly that when a re-registration finding
@@ -35,7 +39,7 @@ and **`Policy::Tolerance`**.
 | file | subject |
 |---|---|
 | `docs/contracts/principia_canonical_spec.md` | the laws, and the index to which doc owns each |
-| `docs/contracts/principia_integrator_contract.md` | the `STEP` occupant slot; **Part 2a** the `advance` signature; **Part 2b** regularisation as a second axis; **Part 2c** the GPU kernel — what ports, what is rewritten, and the five rules |
+| `docs/contracts/principia_integrator_contract.md` | the occupant seam: **Part 2a** the `ADVANCE` signature (change 8, R-19); **Part 2b** regularisation as a second axis; **Part 2c** the GPU kernel — what ports, what is rewritten, and the five rules |
 | `docs/contracts/principia_scheduler_contract.md` | descent, veto, decision variants |
 | `docs/contracts/principia_render_contract.md` | colour is a pure function of payload |
 | `docs/contracts/principia_caching_contract.md` | payload purity; tilt re-addresses, never invalidates |
@@ -72,7 +76,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_dd_telemetry_and_tiers.md` — Observation. Frame record, deriving tiers, graceful failure
 - `docs/design/principia_scratchpad_pointer_channels.md` — Observation. Trace / sound / inspector
 - `docs/design/principia_dd_image_embedding.md` — Provenance. LSB payload
-- `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **pending redefinition to key off `eps`**
+- `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **ruled (R-40): they key off `eps`** — the eps / frame-budget / hard-cap axes fold into `QualitySettings` and the ladder, and the widths are recomputed (D6)
 - `docs/design/principia_temporal_architecture_note.md`, `docs/contracts/principia_export_animation_contract.md`
 
 **Also in `docs/design/`**
@@ -130,16 +134,20 @@ and **`Policy::Tolerance`**.
 
 ## Archived — record only, do not implement
 
+Archives are never cited. Where an archived brief once had standing parts, they are superseded by the consolidated
+docs (`principia_deep_zoom.md` §3, the scheduler contract, the parity contract); TASK-M0-02 checks that each
+standing obligation exists there and ports any that doesn't (R-112).
+
 | file | why |
 |---|---|
 | `docs/archive/principia_ARCHIVE_dd_refinement_criterion_v0.md` | the α-exponent era; its metric is void |
 | `docs/archive/principia_ARCHIVE_dd_tree_dump_analysis_v0.md` | numbers computed on the contaminated field |
-| `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` | **§4–4.6, the slippy map, still stands** — the rest does not |
+| `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` | superseded: §4–4.6 (the slippy map) by the consolidated docs (deep_zoom §3, scheduler, parity); the rest does not stand (R-112) |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_signal_audit.md` | premise void: scored in render space |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_criterion_improvement.md` | superseded |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_scheduler_build.md` | built; split/stop rules replaced |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_refinement_experiments.md` | run; most conclusions overturned |
-| `docs/experiments/briefs/principia_ARCHIVE_brief_kernel_build.md` | built; **defaults changed** — §5 gates still stand |
+| `docs/experiments/briefs/principia_ARCHIVE_brief_kernel_build.md` | built; **defaults changed** — §5 gates superseded by the consolidated docs (deep_zoom §3, scheduler, parity) (R-112) |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_vertical_slice.md` | delivered |
 | `docs/experiments/briefs/principia_ARCHIVE_brief2_dom_ke.md` | `dom_KE` rejected |
 | `docs/experiments/briefs/principia_ARCHIVE_brief3_no_discard.md` | validated, and since extended |
@@ -147,7 +155,7 @@ and **`Policy::Tolerance`**.
 | `docs/archive/principia_validation_scratchpad.md` | **SUPERSEDED / ABSORBED**: the current authorities are `validation_ground_truth_note` and `parity_contract` |
 | `docs/archive/principia_dd_generation_root.md.bak` | an older backup of the Generation Root drill-down (it still targets "TypeScript constants"). The live file is in `docs/design/` |
 | `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
-| `docs/archive/principia_spec_pending_changes.md` | the pending-changes register, closed: twelve changes; 1, 7, 8, 9, 10, 11, 12 are folded into their owning files, 3 was folded earlier, 4 is moot; 2, 5 and 6 are open decisions |
+| `docs/archive/principia_spec_pending_changes.md` | the pending-changes register, closed: twelve changes; 1, 7, 8, 9, 10, 11, 12 are folded into their owning files, 3 was folded earlier, 4 is moot; 2, 5 and 6 are ruled — 2 (the Burrau leg-swap quotient) by R-27, 5 (body-index naming) by R-22, 6 (`α_min`) by R-21 |
 | `docs/archive/spec_sources/` | the retired implementation spec (`principia_spec_revised`, see canonical_spec §11), the retired colour-map and COM-projection PDFs, the Burrau and render-quadtree PDFs, older IC Inspector copies, and `SECTION_MAP.md` (the ledger of the port into markdown). Record only; the markdown is the authority |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
@@ -163,11 +171,11 @@ and **`Policy::Tolerance`**.
 > increased). `docs/design/principia_dd_refinement_policy.md` §0.1.
 
 
-- **Two `alpha_area` defects** — cannot distinguish an empty mask from a full one (both `0.0000`); negative exponents give `d > 2`. `docs/design/principia_dd_refinement_policy.md` §2.2
+- **Two `alpha_area` defects** — cannot distinguish an empty mask from a full one (both `0.0000`); negative exponents give `d > 2`. Ruled (R-42): tell empty from full by `n_unresolved`, and refuse the floor on a negative exponent; `alpha_lo` stays 0.005. The fix lands with refine. `docs/design/principia_dd_refinement_policy.md` §2.2
 - **A cheap `sea_fraction` estimator** — the named next step for regime detection
 - **Tier tables** — shape settled at v0.5 (three axes: `eps` / frame budget / hard cap, binding one reported; `docs/design/principia_dd_telemetry_and_tiers.md` §3.5). **The numbers are guesses and are meant to be** — calibrate from device telemetry. `memory_tiers.md` now carries a banner pointing at the three-axis model
-- **`Decision::Undetermined` is a second budget line** the architecture has no place for
-- **`N = 16` may be forced down to 8 on WebGPU** — a quad would want 256 threads, exactly the invocation ceiling. Measure, do not assume (`docs/design/principia_systems_architecture.md` §5.5)
-- **Frontier scoping** — the frontier is unbounded (29 → 585 quads while in-view work stays ~130), so the camera is a tie-break rather than a filter. Held pending a margin *derived* from the refill rate; a naive cull evicts faster than the descent refills and stalls
-- **Relevance arithmetic in global UV** — latent defect past ~depth 40 (coordinate magnitude, not depth: `@origin` reads exactly `0.000e0`). Take before any deep-zoom demo
+- **`Decision::Undetermined` is a second budget line** the architecture has no place for. Ruled (R-47): it is reported, terminal and flagged, until a chart shows it non-zero
+- **`N = 16` may be forced down to 8 on WebGPU** — a quad would want 256 threads, exactly the invocation ceiling. Ruled (R-43): measured, not assumed, and the thread-count inconsistencies are fixed now (`docs/design/principia_systems_architecture.md` §5.5)
+- **Frontier scoping** — the frontier is unbounded (29 → 585 quads while in-view work stays ~130), so the camera is a tie-break rather than a filter. Ruled (R-45): the margin is *derived* from the refill rate, and a widened margin is the baseline to beat; a naive cull evicts faster than the descent refills and stalls
+- **Relevance arithmetic in global UV** — latent defect past ~depth 40 (coordinate magnitude, not depth: `@origin` reads exactly `0.000e0`). Ruled (R-46): relevance is computed relative to the camera or quad centre, with deep_zoom §1's centre-plus-half-width pattern, before any deep-zoom demo
 - **FMA contraction control per backend** — unchecked, and it can move a branch input (`docs/contracts/principia_integrator_contract.md` Part 2c)

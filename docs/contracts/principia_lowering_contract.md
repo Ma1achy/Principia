@@ -9,13 +9,13 @@
 ```
 resolve(ViewState, SimKey, RenderConfig) →
     { compute_key,  compute_uniforms,        // chart+decode+integrator side
-      fragment_key, fragment_uniforms,       // four-slot render side
+      fragment_key, fragment_uniforms,       // stain-graph render side
       dispatch_plan }                        // quad list, per-quad bindings, workgroups
 ```
 
 This is axiom 4 ("charts lower; they do not interpret") made literal: the resolution function selects and parameterises *specialised* pipelines. There is no runtime interpreter of axis kinds, links, occupants, or slots anywhere on the GPU.
 
-**The factoring that keeps the space finite:** the configuration tuple does *not* lower into one shader. Chart map + decode + canonicalise + wrapper + occupant lower into the **compute pipeline**; the four slots + compositor lower into the **fragment pipeline**; the two meet *only* through `SimState`/`ICDescriptor`. Two small keyed sets that compose, never one product.
+**The factoring that keeps the space finite:** the configuration tuple does *not* lower into one shader. Chart map + decode + canonicalise + wrapper + occupant lower into the **compute pipeline**; the stain graph + compositor lower into the **fragment pipeline**; the two meet *only* through `SimState`/`ICDescriptor`. Two small keyed sets that compose, never one product.
 
 ---
 
@@ -23,13 +23,13 @@ This is axiom 4 ("charts lower; they do not interpret") made literal: the resolu
 
 > **Superseded by the substrate decision (`principia_spike_brief.md`: whole engine in Rust → wasm, physics kernel shared CPU/GPU via rust-gpu).** The two pipelines no longer share an *assembly mechanism*. They never shared *code* — the compute side is physics, the fragment side is colour — only the string-assembler; and the shared-source Rust kernel means the compute side is **not** assembled from WGSL strings at all. This is a real cost booked honestly (the previous elegance of one hot-reload path for both), bought back by something worth more: the physics kernel is single-sourced, so CPU/GPU logic *cannot drift* (parity contract §6). The split is chosen precisely so the parity-critical side gets shared source while the parity-free side keeps its runtime devkit.
 
-**Compute pipeline — monomorphised Rust, not string assembly.** The chart map Φ, decode, canonicalise, wrapper, and occupant `STEP` are one Rust kernel generic over the float type and over chart/occupant (Rust generics + `#[cfg]`/trait selection), compiled by rust-gpu to SPIR-V and — the *same source* — to the CPU-f64 reference. "Charts lower, they do not interpret" (axiom 4) is served *better* by monomorphisation than by string-splicing: a chart is a type parameter the compiler specialises, not a snippet concatenated. Generated pack/unpack (from the layout table) and link maps (from the registry) remain generated, now as Rust the kernel calls rather than WGSL prelude. **Consequence — no runtime-authored custom compute occupants:** you cannot compile user Rust in the browser, so a user's experimental integrator/Φ is a build-time variant, not a text-box occupant. This is an accepted loss (niche — few users write their own symplectic integrator; the custom-*colour* devkit, which is the centrepiece, is preserved below).
+**Compute pipeline — monomorphised Rust, not string assembly.** The chart map Φ, decode, canonicalise, wrapper, and occupant (its seam is `ADVANCE`, integrator contract Part 2a, R-19) are one Rust kernel generic over the float type and over chart/occupant (Rust generics + `#[cfg]`/trait selection), compiled by rust-gpu to SPIR-V and — the *same source* — to the CPU-f64 reference. "Charts lower, they do not interpret" (axiom 4) is served *better* by monomorphisation than by string-splicing: a chart is a type parameter the compiler specialises, not a snippet concatenated. Generated pack/unpack (from the layout table) and link maps (from the registry) remain generated, now as Rust the kernel calls rather than WGSL prelude. **Consequence — no runtime-authored custom compute occupants:** you cannot compile user Rust in the browser, so a user's experimental integrator/Φ is a build-time variant, not a text-box occupant. This is an accepted loss (niche — few users write their own symplectic integrator; the custom-*colour* devkit, which is the centrepiece, is preserved below).
 
-**Fragment pipeline — unchanged: hand-WGSL keyed-snippet assembly.** The four-slot colour side stays exactly the render doc's flow — concatenation of keyed WGSL snippets into a fixed template, hashed, compiled async, cached, last-valid-on-failure — because colour has **no f64/f32 parity stakes** (parity contract §6) and *needs* its runtime path: this is what keeps the custom-shader devkit (GUI §3–5, lowering Part 3a) alive, where built-ins dogfood the custom path as one mechanism.
+**Fragment pipeline — unchanged: hand-WGSL keyed-snippet assembly.** The colour side stays the render doc's flow — the stain graph's keyed WGSL snippets (one function per node) concatenated with the shared prelude and a generated `shade()` that walks the graph (R-64; render_gui_spec Part II §10.1), hashed, compiled async, cached, last-valid-on-failure — because colour has **no f64/f32 parity stakes** (parity contract §6) and *needs* its runtime path: this is what keeps the custom-shader devkit (GUI §3–5, lowering Part 3a) alive, where built-ins dogfood the custom path as one mechanism. The one exception to hand-written WGSL on this side is the decode/encode the fragment recomputes with: it is generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written, and the agreement presets check that translation (R-116).
 ```
 [prelude]            context, colour spaces, vMF, unpack helpers (generated WGSL)
-[colour][brightness][combiner][post]                       ← slot occupants (built-in | debug | custom, runtime-authored)
-[wrapper main]       FIXED — post(combine(colour(ctx), brightness(ctx)))
+[node functions]     one per stain-graph node: source / colour / brightness / combiner / post  ← occupants (built-in | debug | custom, runtime-authored)
+[shade()]            GENERATED — walks the graph: sources → colour? / brightness? → combiner → (post)* → OUT
 ```
 
 So provenance now splits by *side*: the **compute** side is generated + shared-Rust, monomorphised at build time; the **fragment** side is generated + authored + user WGSL, assembled and hot-reloaded at runtime. A compute change recompiles the Rust kernel (re-integrates anyway — sim key); a fragment change re-assembles a WGSL pipeline (render key, imperceptible). Part 3a's uniform read-side interface applies to the fragment side, where custom and built-in occupants read `SimState`; the compute side, being one Rust source, has no read-side-drift hazard to resolve.
@@ -42,28 +42,31 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 
 ### Compute side
 
+<!-- retired-terms -->
 | Degree of freedom | Baked / uniform | Why |
 |---|---|---|
 | **Chart type** (axis kinds, Φ structure) | **BAKED** | genuinely different code (raw assignment vs invariant solve vs curve embed vs physical-frame entry). Axiom 4 |
 | **Link selection** per block | **BAKED** (monomorphised) | different transcendentals; registry is small; the link *function* comes from the registry (generated Rust) |
 | **Integrator occupant** | **BAKED** | never branch per-step on occupant; profiles differ structurally |
-| **Tier co-computations** (FTLE shadow, ensemble) | **BAKED** | they add per-thread *state* (each sample's tangent vector; the E ensemble copies) — present-but-unused state costs registers/occupancy even when branched off |
+| **Tier co-computations** (FTLE shadow) | **BAKED** | it adds per-thread *state* (each sample's tangent vector) — present-but-unused state costs registers/occupancy even when branched off |
+| **Ensemble copy** (`copy_index`) | **UNIFORM** | not a baked variant: each copy is the same kernel dispatched again, with `copy_index` as a uniform (R-102, R-89) — no per-thread state added |
 | **Decode mode** (full vs linearised) | **UNIFORM** (per-quad flag) | the branch is workgroup-uniform (whole quad shares the mode) → free on GPU; halves the variant set; matches the `QuadRequest.flags` design (scheduler contract Part 5). *Promotion path documented:* if the dead full-decode path measurably hurts deep-quad occupancy via register pressure, it becomes a baked variant — a one-line key change under the assembler. (Note: a workgroup-uniform two-path branch is **not** a runtime axis-kind interpreter; axiom 4 is untouched) |
-| Kernel debug modes (UV / DECODE / ROUNDTRIP) | **BAKED** (pre-built SPIR-V; pipeline created on demand — no runtime source compile, Part 4) | different code entirely (skip integration), but debugging is not gesture-critical → async pipeline creation on first use. `UV_PASSTHROUGH` is chart-independent — one shared variant; `DECODE`/`ROUNDTRIP` key on the chart |
+| Kernel bring-up mode (the one kernel debug mode — `principia_colour_composition.md` Appendix A; R-75) | **BAKED** (pre-built SPIR-V; pipeline created on demand — no runtime source compile, Part 4) | different code entirely (writes a known pattern instead of physics), but debugging is not gesture-critical → async pipeline creation on first use. UV / DECODE / ROUNDTRIP are fragment presets (colour_composition §6), not kernel variants |
 | Wrapper config (`T, dt, N_max, r_*, eps_*, n_renorm`) | **UNIFORM** (`SimUniforms`) | sim-key *values*, not code. (`n_renorm` is the Benettin renorm interval — the old checkpoint count `M` no longer exists; integrator dd §6) |
 | Chart params (`z₀, q₁, q₂`, slice values, curve tangent `γ'(ν₀)`, invariant targets) | **UNIFORM** | **navigation is uniform edits** — the entire Part-4 navigation contract depends on this; no gesture ever compiles |
 | Per-quad (`c, h, x₀, J_D`, quad `T`, decode flag) | **PER-QUAD UNIFORM** | deep-zoom doc |
 | Mass source | *(simplified away)* | mass is **always produced by the decode** (in the Rust kernel) — from per-pixel axis values or from uniform z-slice components; one code path. `requires_per_pixel_mass` survives only as CPU-side metadata saying whether `SimUniforms.m[3]` is trustworthy for CPU consumers |
+<!-- /retired-terms -->
 
 ### Fragment side
 
 | Degree of freedom | Baked / uniform | Why |
 |---|---|---|
-| **Slot occupants** (4 sources) | **BAKED** = the fragment key; changing a slot = async recompile with last-valid fallback (imperceptible; render switching is not on the gesture path) |
+| **Stain graph** (node occupants + wiring) | **BAKED** = the fragment key; changing a node or a wire = async recompile with last-valid fallback (imperceptible; render switching is not on the gesture path) |
 | Debug field views | **BAKED, generated, on demand** | one tiny source per field from the catalogue generator; compiling a mega-switch over heterogeneous field types would be the interpreter anti-pattern |
 | Slot uniforms (κ, C, swatches, L-range, invert) | **UNIFORM** | schema-driven, already specced |
-| View-only display state | **UNIFORM** | render key; free to animate (the playhead is the frame loop's clock — sim-side march, not a render uniform; there is no scrub) |
-| Compositor (backdrop render target, separable blur ×2, composite) | **FIXED SHADERS** | above the slot pipeline; precompiled always; never varies |
+| View-only display state | **UNIFORM** | render key; free to animate (the playhead is the frame loop's clock — sim-side march, not a render uniform; the time scrubber sets the display time and re-integrates, R-66) |
+| Compositor (backdrop render target, separable blur ×2, composite) | **FIXED SHADERS** | above the stain graph; precompiled always; never varies |
 
 ---
 
@@ -81,14 +84,14 @@ The resolution has two halves, and it rests on a property the payload already ha
 | `sample.ensemble_spread` | resolve-stage value from the E+1 samples | E=0 → **NaN** (absent; `has_ensemble` false — a *computed* zero spread is a real value only when E ≥ 1) | **zero** — derived at resolve, never a stored field |
 | `sample.word` | reads the bound word buffer | buffer unbound → returns the **empty/sentinel word** | **zero** — the binding varies, not the struct; unbound = unallocated |
 
-The expensive *state* is still baked out exactly as Part 3 says — the Benettin **shadow trajectory** (48 B, marched every step), the **ensemble copies**, the **word buffer binding** are all absent in the feature-off variant, preserving the occupancy/memory win. What Part 3a keeps uniform is only the cheap *read-side result* — a computed expression or a naming convention, never resurrected state. **Fixing the read-side interface inflates nothing**, because the always-present fields were never stored bytes to begin with.
+The expensive *state* is still baked out exactly as Part 3 says — the Benettin **shadow trajectory** (48 B, marched every step) and the **word buffer binding** are absent in the feature-off variant, preserving the occupancy/memory win; the **ensemble copies** are not a variant — at E = 0 they are simply not dispatched (R-102). What Part 3a keeps uniform is only the cheap *read-side result* — a computed expression or a naming convention, never resurrected state. **Fixing the read-side interface inflates nothing**, because the always-present fields were never stored bytes to begin with.
 
-**2. NaN is the sentinel, and it makes graceful degradation the default.** An invalid/absent scalar reads as **NaN**, documented, for two reasons that fall out of IEEE arithmetic for free:
+**2. NaN is the sentinel, and it makes graceful degradation the default.** A tier-absent (derived) scalar reads as **NaN** at unpack, documented — storage never holds NaN (R-79) — for two reasons that fall out of IEEE arithmetic for free:
 
 - **Unguarded use degrades loudly, not silently — as best-effort behaviour, not a guarantee.** `mix(a, b, sample.ftle)` with `ftle = NaN` propagates → the pixel renders visibly wrong (black/garbage) on real hardware, so the author *sees* the feature is off rather than shipping plausible-but-fake output. This is why NaN beats `-1.0`: a negative FTLE is a *plausible number* a shader might quietly use — the fake-looking-real hazard a research instrument must avoid. **The sentinel's job is to make absence undeniable, and NaN is the only value that can't be mistaken for a measurement.** The honest WGSL caveat (render contract Part 4): fast-math may legally assume no-NaN, so **propagation is loud-by-default, never load-bearing** — no correctness logic may depend on it or on `isnan()`. The reliable mechanisms are the consts and predicates below; the NaN is the default for authors who use neither.
-- **Guarded fallback is clean, free, and reliable.** Alongside each feature the assembler bakes a **`const bool has_<feature>`** (`has_ftle`, `has_ensemble`, `has_word`) — compile-time, dead-code-eliminated, zero runtime cost, and *not* subject to the fast-math caveat. An author who wants a graceful visual writes `if (has_ftle) { … } else { …fallback… }`; an author who does nothing gets the loud NaN. (If the absence sentinel itself must ever be tested at runtime, it is an exact **bitcast comparison** against the canonical quiet-NaN bit pattern — reliable where `isnan()` is not.)
+- **Guarded fallback is clean, free, and reliable.** Alongside each feature the assembler bakes a **`const bool has_<feature>`** (`has_ftle`, `has_word`) — compile-time, dead-code-eliminated, zero runtime cost, and *not* subject to the fast-math caveat. **`has_ensemble` is the exception: the fragment side reads it as a uniform, like the compute side's `copy_index` (R-102), so toggling E never re-bakes; E = 0 still reads `ensemble_spread` as NaN (R-145).** An author who wants a graceful visual writes `if (has_ftle) { … } else { …fallback… }`; an author who does nothing gets the loud NaN. (If the absence sentinel itself must ever be tested at runtime, it is an exact **bitcast comparison** against the canonical quiet-NaN bit pattern — reliable where `isnan()` is not.)
 
-**Two orthogonal questions, two reliable mechanisms — no sentinel collision.** Tier-absence and per-sample failure both surface as NaN in the *value* (both mean "don't use this"), but each has its own reliable, non-NaN answer: **`has_<feature>`** answers "is this feature computed at this tier?" (compile-time const), and the **descriptor/validity predicates** answer "did *this sample* produce a usable value?" (`sd_is_failed` for sim/decode failure (canonical name, payload §6); the generated read-time predicates `ftle_valid`, slope-valid, etc. — kernel-set flags at the point of computation are the primary invalid-signal, per the render contract's storage rule). Full correctness is `has_ftle && ftle_valid(sample)` — **never `isnan()`**. An author doing nothing degrades loudly in both cases, which is correct; an author doing it properly never touches NaN at all.
+**Two orthogonal questions, two reliable mechanisms — no sentinel collision.** Tier-absence surfaces as NaN in the *value*; per-sample failure surfaces as the defined failed-state values, never NaN (R-79). Both mean "don't use this", and each has its own reliable, non-NaN answer: **`has_<feature>`** answers "is this feature computed at this tier?" (compile-time const), and the **descriptor/validity predicates** answer "did *this sample* produce a usable value?" (`sd_is_failed` for sim/decode failure (canonical name, payload §6); the generated read-time predicates `ftle_valid`, slope-valid, etc. — kernel-set flags at the point of computation are the primary invalid-signal, per the render contract's storage rule). Full correctness is `has_ftle && ftle_valid(sample)` — **never `isnan()`**. An author doing nothing degrades loudly in both cases, which is correct; an author doing it properly never touches NaN at all.
 
 **Net effect on the "should low tiers disable features at all?" question:** yes, and it carries no downstream cost. No shader forks (one read-side type), no getter ugliness (plain field syntax), no memory inflation (derived fields), and graceful degradation is the *default* (NaN is loud; `has_<feature>` is there for the careful). The built-ins use the identical interface, so they genuinely prove the custom-shader path. Feature-gating by tier is free at the interface exactly because it was already free at the payload — the derive-at-read design serves interface uniformity as a second dividend.
 
@@ -122,7 +125,7 @@ Tilt, pan, slice, zoom, lock, playhead: **uniform writes only, by construction o
 ```
 function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
   const computeKey = hash(vs.chart.type, sk.links, sk.occupant, sk.tierBits);
-  const fragmentKey = hash(rc.colourSrc, rc.brightnessSrc, rc.combinerSrc, rc.postSrc);
+  const fragmentKey = hash(canonical(rc.stainGraph));   // canonical graph form: defined by the task that needs it (R-72)
 
   const computeUniforms = {
     sim:   simUniformsFrom(sk),                    // T, dt, N_max, thresholds, eps, n_renorm
@@ -134,7 +137,11 @@ function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
   const dispatch = quadsFor(vs).map(quad => ({
     pipeline: pipelines.get(computeKey),           // pre-built monomorphised SPIR-V variant (Part 4)
     quadUniforms: { c: quad.c, h: quad.h, x0: quad.x0, J: quad.J,
-                    T: quad.T, decodeMode: quad.depth > SWITCH ? LIN : FULL },
+                    T: quad.T, decodeMode: (quad.collapsed || quad.depth > SWITCH) ? LIN : FULL },
+                    // R-90: LIN once the full decoder's adjacent samples give bitwise-identical ICs
+                    //   (quad.collapsed), or past SWITCH = ℓ_switch = 20, an upper bound — whichever first
+                    // quad.collapsed: the per-quad flag set when the full decoder's adjacent samples give
+                    //   bitwise-identical ICs (R-90; scheduler Part 5, DECODE_MODE)
     workgroups: samplesPerQuad(sk.tier),           // N×N per quad (memory-tiers §1)
   }));
 
@@ -153,7 +160,7 @@ The rules above, applied. Columns: axis kinds → which Φ map the chart monomor
 | Chart | Axis kinds | Φ map lowers to | Extra uniforms | Flags / lowering notes |
 |---|---|---|---|---|
 | **Latent affine slice** | raw × raw | affine map `z₀ + (2s−1)q₁ + (2t−1)q₂` | — | the base case; every navigation gesture is its uniforms |
-| **Shape sphere (α, β)** | derived-in-block × derived-in-block (config) | block inverse-free direct: (s,t)→(α,β) ranges | — | `system_image: 2-to-1`; residual none (both config DOF swept) |
+| **Shape sphere (θ, φ)** | derived-in-block × derived-in-block (config) | block inverse-free direct: (s,t)→(θ,φ) by R-14's map (`principia_chart_reference.md` §3.3: θ = 2π·s, φ = π·(1 − t)) → n → (ρ̃, λ̃) by §3.2 (R-117) | — | `system_image: n-to-1`, n = 2 (2-to-1 over the φ hemispheres, which decode to the same system, R-141); residual none (both config DOF swept) |
 | **(L_z, E)** | invariant × invariant | domain warp → invariant construction (rigid `v^(L)` + seeded `a·w`) | frozen config, feasibility consts | `forbids_energy_normalisation`, `has_feasibility_boundary` — infeasible pixels **write tagged payloads** in-kernel |
 | **(L_z, K)** | ditto | ditto with `K(t)=K_max t^{γ_K}` warp | `γ_K` | ditto |
 | **Ternary mass** | raw × raw (mass block) | triangle warp → mass controls | frozen config/momentum slice | standard; no Burrau-specific code (lock supplies ν₀) |

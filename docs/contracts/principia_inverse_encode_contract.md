@@ -20,7 +20,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 **The three theorems (the contract):**
 
-- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror tie `|λ̃_y| < δ_λ = 10⁻¹²` resolves to a fixed choice; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13).
+- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13).
 - **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
@@ -30,7 +30,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 ## Part 2 — The scale gauge gap (missing from the original inverse policy)
 
-The original canonical inverse policy (Part 6, steps 1–5) translates to CoM, rotates, and mirrors — **but never rescales**. Input at `I ≠ 1` therefore breaks T1 and T3: two similarity-equivalent inputs encode to different points, and the round trip does not land on the section. The fix is the similarity transform the whole design is built on (`r → λr, t → λ^{3/2}t`), applied as **step 0 of canonicalisation**:
+The original canonical inverse policy (Part 6, steps 1–5) translates to CoM, rotates, and mirrors — **but never rescales**. Input at `I ≠ 1` therefore breaks T1 and T3: two similarity-equivalent inputs encode to different points, and the round trip does not land on the section. The fix is the similarity transform the whole design is built on (`r → λr, t → λ^{3/2}t`), applied as **step 0 of canonicalisation** — after the CoM subtraction (step 1a) that defines `I`, before the boost removal (step 1b); R-23:
 
 Given input with moment of inertia `I_in = Σ mᵢ‖rᵢ‖²` (CoM frame), set `λ = I_in^{−1/2}` and
 
@@ -110,7 +110,7 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
   
   These are **not the same functional** (kinetic-energy-minimal ≠ latent-norm-minimal after the logit pullback), and if encode ran an independent argmin the round trip would not close. **Resolution — the single-source-of-truth rule: encode reuses decode.** Entering an `(L_z, E)` pair means running the chart's own forward construction (i)–(iii) at the current frozen configuration, exactly as a pixel would, then recovering `z_mom` via the free-momentum inverse of the constructed `p`. The "smallest latent norm" phrasing survives only as the general fallback for case-3 charts with no canonical construction. This supersedes the smallest-latent-norm rule for invariant charts (pending change 3).
   - Feasibility applies before construction: `|L_z| ≤ √(2I(E−U))`, `K ≥ L_z²/2I`; infeasible pairs → project / clamp / reject per the validation ladder (Part 6). Note at the canonical scale `I = 1`, so `ω = L_z` and `K_min = L_z²/2` — the constants simplify because encode already normalised scale (Part 2).
-  - The seeded direction family can degenerate at special configurations (all seeds `< ε_w`); encode then fails with the same `DEGENERATE` label the pixel path would emit — consistent by construction, since it *is* the pixel path.
+  - The seeded direction family can degenerate at special configurations (no seed has `‖w⁽²⁾‖²_m > ε_w`; otherwise the largest-norm qualifying seed is taken, ties by seed order — R-82); encode then fails with the same `DEGENERATE` label the pixel path would emit — consistent by construction, since it *is* the pixel path.
 
 **Kind 4 — coupled curve.** Two directions:
 
@@ -143,15 +143,18 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 
 **The canonical inverse policy.** The original five steps were: translate to CoM; canonicalise; invert into the
 current chart or else latent z; among several valid inverses take the smallest latent norm; surface any clamping.
-Completed, with two additions (step 0; step 5's resolution) and the full-state rule made explicit:
+Completed, with two additions (step 0; step 5's resolution) and the full-state rule made explicit. The order is
+normative (R-23): **1a → 0 → 1b → 2 → 3**, then 4–6. CoM subtraction precedes the `I` computation, because `I` is
+CoM-frame-defined.
 
-0. **Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
-1. **Translate to CoM** — positions and the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
-2. **Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
-3. **Mirror if `λ̃_y < 0`** — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| < δ_λ = 10⁻¹²` → fixed deterministic choice (no-mirror), documented; T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
-4. **Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
-5. **Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
-6. **Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
+- **1a. Subtract the CoM** — positions to the CoM frame, so `I_in` is defined.
+- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
+- **1b. Subtract the boost** — the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
+- **2. Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
+- **3. Mirror iff `λ̃_y < −δ_λ`** (`λ̃ = √μ_λ·λ`, `δ_λ = 10⁻¹²`) — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| ≤ δ_λ` → no mirror, deterministic (R-82); T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
+- **4. Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
+- **5. Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
+- **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
 
 ### Chart-aware validation
 
@@ -195,8 +198,8 @@ region (for example above the parabola in $(L_z, E)$).
 
 | flag | meaning |
 |---|---|
-| `forbids_energy_normalisation` | the chart fixes energy itself; a non-zero $E^*$ override is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
-| `has_redundant_hemisphere` | the chart is a 2-to-1 cover (the shape sphere's β-fold). Show the canonical half, or label the redundant one. |
+| `forbids_energy_normalisation` | the chart fixes energy itself; any $E^*$ override — every `Some(E*)`, including `Some(0)` (R-25) — is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
+| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141) or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. |
 | `requires_per_pixel_mass` | mass varies per pixel, so the integrator must not use `SimUniforms.m[3]`. True for the ternary mass plot, the Burrau family, and mixed-axis charts with a mass axis. |
 
 ## Part 7 — Ground-truth ingestion (the validation programme's demand)
@@ -226,8 +229,8 @@ region (for example above the parabola in $(L_z, E)$).
 - **T3 test:** random physical x (random scale, orientation, offset, parity) → `E` → `D` → assert the result equals `C(x)`: shape angles match, `|L_z|` matches with sign consistent with the mirror flag, `E` matches after the recorded rescale, masses match. This is the test that catches a half-applied rigid transform — the Part 1 bug — because a config-only mirror preserves shape but breaks the `L_z` consistency check.
 - **T1 test:** `E(g·x) = E(x)` over random `g ∈ G` — the gauge-invariance sweep. Cheap, brutal, and the only test that exercises the tie-breaks.
 
-**New kernel debug mode: `ROUNDTRIP`** (joining `NORMAL / UV_PASSTHROUGH / DECODE_PASSTHROUGH` in the render contract's dispatch enum). Per pixel: `z → D → E → D → physical residual`, log-scaled. One glance certifies the block inverses, the numerics, and (on invariant charts) the encode-reuses-decode rule across the whole visible chart — the encode-side sibling of the invariant-chart-gradient view. Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged expected*, not bugs.
+**New debug view: `ROUNDTRIP`** — a fragment preset, recomputed fragment-side from `ctx.chart.z`, not a kernel mode (`principia_colour_composition.md` §6; R-75). Per pixel: `z → D → E → D → physical residual`, log-scaled. One glance certifies the block inverses, the numerics, and (on invariant charts) the encode-reuses-decode rule across the whole visible chart — the encode-side sibling of the invariant-chart-gradient view. Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged expected*, not bugs.
 
 ---
 
-*Encode is the quotient map onto the decode's section: constant on gauge orbits, right-inverse to decode, left-inverse modulo gauge. Rigid operations act on the whole phase-space state — positions and momenta together, always. Scale is canonicalised by the similarity rescale, and it is step zero. The fibre point on an invariant chart is whatever the chart's own decode constructs — encode never runs its own optimiser. Tolerances live in physical units; z-space residuals near saturation mean nothing. Everything the inverse discards, it reports.*
+*Encode is the quotient map onto the decode's section: constant on gauge orbits, right-inverse to decode, left-inverse modulo gauge. Rigid operations act on the whole phase-space state — positions and momenta together, always. Scale is canonicalised by the similarity rescale — step 0, after the CoM subtraction that defines `I` (R-23). The fibre point on an invariant chart is whatever the chart's own decode constructs — encode never runs its own optimiser. Tolerances live in physical units; z-space residuals near saturation mean nothing. Everything the inverse discards, it reports.*

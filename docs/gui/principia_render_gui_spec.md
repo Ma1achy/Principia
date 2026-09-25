@@ -42,8 +42,9 @@ data. The two words name one object. The **figure** is the rendered slice.
   onto the same surface (`principia_gui_state_contract.md` §1).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
-  contract** as a history of typed `SetField` edits, shared by every GUI (R-52). The top bar shows the undo depth; Ctrl+Z
-  undoes from the contract's history.
+  contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
+  Playback never enters undo: the GUI's clock advances the playhead through a `SetField` marked "no history" (R-101).
+  The top bar shows the undo depth; Ctrl+Z undoes from the contract's history.
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit `z₀` and the basis
   (`principia_chart_decoder_contract.md`, design axiom 6; canonical_spec §9, invariant 4). No control, window or log line is named
   after a camera.
@@ -75,7 +76,9 @@ replace the corpus's global display bar (R-67).
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
-  an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear).
+  an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
+  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
+  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113).
 - **Navigate:** centre `(u, v)`; zoom (log₂); all eight `z₀` values, editable by drag or by typing.
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
@@ -100,7 +103,7 @@ IC:
   switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it;
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
 - a playhead for this orbit;
-- **listen**: sonification (`principia_scratchpad_pointer_channels.md`; `θ(t), φ(t)` → spectrum), which can follow the
+- **listen**: sonification (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can follow the
   cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative (R-68);
 - **Open full viewer…** and **IC Inspector…** (both open §G8);
 - **Kept orbits** below, each with its fate and time, removable.
@@ -110,12 +113,15 @@ IC:
   mode by itself**: touching a slice slider shows slicing, and touching a tilt shows tilting. When locked it carries a gold
   pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
   out the tilt and rotation angles.
-- **Time:** play, step, a scrubber, speed. **Scrubbing back re-integrates** to that time, so the figure refines
+- **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
+  on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
+  history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
   progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
   stored frames; the export contract's "no scrub" applies to exported animations only (R-66).
 - **Legend, generated from the stain** (§G6).
 
-**Footer.** Warning and error counts, the latest message, memory (GPU, heap), and "? keys". Clicking it opens the console
+**Footer.** Warning and error counts, the latest message, memory (GPU, heap), "? keys", and the passive-logging
+indicator while logging is on (R-129). Clicking it opens the console
 (§G12).
 
 **Run settings are NOT on the page** (they're rarely changed). Horizon, integrator, escape settings, quality, budget, and
@@ -162,7 +168,9 @@ same point as a gold pin.
 
 ### Profiler
 
-Tabs: Timeline, Flame, GPU, Memory, Counters; live / pause / Capture. It shows:
+Tabs: Timeline, Flame, GPU, Memory, Counters, **Arbiter** (the arbiter's debug overlay — estimated throughput, current
+rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-129); live / pause / Capture; a
+**passive logging** switch (telemetry §1.2), with its indicator in the footer (R-129). It shows:
 - the frame-time trace, with frame ms, p50, p95, p99 and the worst frame;
 - where the frame goes (a donut), stacked per-frame bars for the last 60 frames;
 - a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence);
@@ -193,12 +201,18 @@ Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headle
 
 ### Display — the last stages
 
-**Order is fixed (R-67):** SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen. The stain colours the data, the style draws it,
+**Order is fixed (R-67):** SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
 simulation sees the final in-gamut colours.
-- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
-  & pencil, print · Poster78, more; with paper grain and press misregistration.
-- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia.
+- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
+  (`workbench/principia_poster_both_sides.html` and its press module; ✱ R-130). **Watercolour & pencil** is its painted
+  treatment (`window.stainPaint`, :2375–2388: a slight blur and desaturation, a soft graphite line where the colour
+  changes, and the paper grain when Paper is on). **Print** is paper.design's CMYK halftone shader (Paper Shaders,
+  Apache-2.0; :2872) with the poster's patches (:2876–2892): each plate slips as a whole (per-plate misregistration,
+  :2881–2888), the finest screen is a cell ceiling (`u_maxCells`, :2879, :2892), and the base dot is controllable (:2878).
+  v1 offers plain, watercolour & pencil, and the seven print presets, named as the file names them (:2875): Default,
+  Drops, Newspaper, Vintage, Poster78, Riso, Duotone.
+- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
 - **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
 
 The display stage stays global and outside the pipeline (Part II §12). This window and the Overlays menu (§G2) replace the
@@ -208,16 +222,20 @@ corpus's top display bar (R-67).
 
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
-- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, Part 5),
-  `dt_macro`, `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
+- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
+  `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
   default, Aarseth–Zare is kept for benchmarks; Part 2b).
 - **Escape:** the criterion is shape closure + energy sign (R-29): `tau` and the escape window (0.4 time units,
   provisional).
   There is no persistence count (change 11).
-- **Refinement:** quality (the preset selector — Auto, named tiers, Custom; gui_state_contract §6), frame budget (ms), max
-  depth (`MAX_REL_DEPTH`), ensemble `E` (samples per pixel).
+- **Refinement:** quality (the preset selector — Auto, named tiers, Custom; gui_state_contract §6), with the **Custom
+  quality fields** under "quality: Custom" (R-129); frame budget (ms), max depth (`MAX_REL_DEPTH`), ensemble `E` (samples
+  per pixel); the **target-utilisation ceiling** (telemetry §6.4, "A deliberate ceiling, user-visible"; R-129).
 - **Recompute** and **Cancel**, with progress.
+
+The surfaces with no artboard (the Custom quality fields, the utilisation ceiling, the Profiler's Arbiter tab, the
+passive-logging switch and indicator) are checked by presence only, not layout, until the M8 dev GUI (R-129).
 
 ## G6. Legend — generated by evaluating the stain (`06_legend.png`)
 
@@ -231,7 +249,7 @@ dimension gets its own key:**
 - coordinate maps: their colour square (e.g. `u → red`, `v → green`);
 - post operations: line samples (quad boundaries, grid).
 
-It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §3's canonical palette and 0-based
+It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
 labels (R-22).
 
 ## G7. Chart builder (`03_chartbuilder.png`)
@@ -255,7 +273,9 @@ labels (R-22).
 Explore's Trajectory panel (§G2); trajectory_viewing §4 says where each lives. The standalone IC Inspector tool is absorbed;
 its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 
-- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead.
+- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead. **Right-click a
+  body** for its properties popover (mass, position, velocity, momentum, distances, per-body share of P / L / E — all
+  editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
   transform" shows what the gauge buttons did.
 - **Pane 3:** the trajectory in real space (CoM frame).
@@ -275,7 +295,8 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   its stain**, or **open side by side**.
 - **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view".
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
-  GIF / PNG frames / MP4, overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
+  GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
+  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
   it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
   captured frame).
 
@@ -296,9 +317,14 @@ tool. The side panel shows:
 
 - **Periodic-orbit seeding** from spiral cores, where the winding number diverges; Newton-refine from each; residual and
   period per seed; compared with the Šuvakov–Dmitrašinović catalogue (`principia_dd_validation_orbits.md` §1.4).
-- **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes.
-- **Poincaré return map** on a chosen section, for a kept orbit.
-- **Side by side** with a linked cursor and navigation, and a difference view.
+- **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes. Stability
+  is read from the monodromy matrix's **Floquet multipliers**: a **fold** is where a multiplier crosses +1;
+  **period-doubling**, where one crosses −1 (R-127).
+- **Poincaré return map** on a chosen section, for a kept orbit. The sections offered: **syzygy crossings** (w = 0), a
+  chosen **shape-sphere great circle**, and a **Jacobi-coordinate hyperplane** (R-127). Transcribed with citations,
+  physics-reviewed, confirmed at the gate.
+- **Side by side** with a linked cursor and navigation, and a difference view. The linked views are a separate
+  `ViewUI` item, specified with these v2 research tools (R-106) — not the chart's link ids in `SimConfig`.
 
 ## G12. Console (`12_console.png`)
 
@@ -591,15 +617,18 @@ shaders share them:
   know the range and **clamps out-of-range**; auto is **always full-contrast** with no prior knowledge
   but is **relative** (the mapping shifts with the data — absolute values are not readable, renders are
   not comparable). `range_norm` is a general helper, not debug-specific.
-- **`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel colour (the validity-first invariant, §13):
-  a NaN reads as "no data", never as a value.
+- **`debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first
+  invariant, §13): it draws the hatch from the pixel position (R-136), a pattern that collides with no palette entry, its
+  exact pattern a calibration (REQ-COL-055, R-71; R-132). Only NaN gets it: a stored sentinel such as −1.0 shows as its
+  literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value.
 
-Each numeric debug field therefore generates a two-line `colour()` — `if (raw != raw) { return
-DEBUG_NAN; }` then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
+Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
+`raw` against the canonical quiet-NaN bits that returns `debug_invalid(frag_xy)` (`principia_render_contract.md` Part 2's rule; never a
+self-comparison or `isnan()`, which fast-math may fold away — R-114), then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
-code (§9, §10). **Debug fields are raw:** apart from the NaN guard there is no validity masking — a
-failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked against the raw
-`state` field, not silently recoloured.
+code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN
+guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
+against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern.
 
 ---
 
@@ -712,8 +741,9 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   **colour's own L** (pass-through); **both**-None → flat mid-grey. (Matches `principia_colour_
   composition.md` §4.1.)
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
-  invalid-pixel colour — a NaN / sentinel must read as "no data", not as a value (composition spec
-  §3, §6).
+  invalid-pixel treatment, by default the hatched invalid pattern (R-132) — a NaN / sentinel must read as "no data", not as a value (composition spec
+  §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
+  invalid pattern (§10.1).
 
 ---
 

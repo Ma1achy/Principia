@@ -98,6 +98,8 @@ because distance is monotone on a real escape whereas a time window is a heurist
 
 Escape is now `|Δn̂| < tau ∧ E_rel > 0` (§2). Under it the toggle **barely matters**: freezing a
 *converged* trajectory is nearly a no-op, so `stop_on_escape` on and off give near-identical images.
+Production has no "off" setting (R-103): the "off" image is rendered by the validation harness, whose own march
+continues past escape, and this regression stands there (R-148).
 
 **The lesson generalises past this bug: the patchwork was never caused by stopping. It was caused by
 stopping while the displayed quantity was still moving.**
@@ -143,14 +145,16 @@ ESCAPE  <=>  |Δn̂| over a window < tau    AND    E_rel > 0
 - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
-- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
+  unregularised occupants and at sync boundaries for regularised ones (R-95).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
   this `E_rel`.
 
 Measured on the config chart, ground truth = unbound and receding at `t = 30`. *These numbers predate R-29's `E_rel` (prin-rs's
-implementation uses `M_pair` only). To re-validate.*
+implementation uses `M_pair` only). To re-validate against check 2's independent ground truth (§2.4), with this
+legacy `t = 30` set kept as a comparison (R-95).*
 
 | criterion | fires | **precision** | recall | median `t` |
 |---|---|---|---|---|
@@ -195,8 +199,12 @@ known.
 escaped trajectories are the *cheap* ones), and stopping bakes a heuristic into a payload that is
 meant to outlive it.
 
-**Status: design agreed, evidence not yet sufficient.** Three checks are outstanding and they are the
-ones that killed the previous criterion:
+**Ruled (R-31, R-95, R-103).** Once escape fires, `state` reads escape and `t_end` is fixed. Time averages
+(FTLE's `S/T` and the like) freeze at `t_esc`, so the dilution above cannot happen. In production `done`
+is set when escape fires and the loop ends. The post-escape march for the three checks below runs only
+in the validation harness, which keeps its own state; the payload never sees it. The checks are outstanding, and
+they are the ones that killed the previous criterion; each one's pass threshold, horizon and fixture
+are set by calibration (R-71):
 
 1. **Integrate 2–3× past firing** and confirm nothing re-binds — the direct analogue of the 0-of-895
    test.
@@ -273,6 +281,8 @@ across **eleven hypotheses of which nine were refuted.**
 **An independent integrator on the same initial conditions produces an unrelated drift field.**
 Leapfrog drift tracks FTLE at **+0.305** — what physics looks like. AZ drift tracks FTLE at
 **−0.082** and leapfrog drift at **−0.096**.
+These are FTLE–drift Spearman correlations, prior findings rather than control ICs, and AZ's is a null against its shifted
+control (−0.102; prin-rs `NOTES.md:2077`). No gate rests on them (R-164).
 
 **Keep a regularisation-free occupant permanently for this reason.** It shares no coordinate
 machinery with the others, so it is the only arm that can adjudicate when they disagree.
@@ -281,7 +291,7 @@ machinery with the others, so it is the only arm that can adjudicate when they d
 
 Heggie 1974 global regularisation: three relative vectors on equal footing, **no reference body to
 re-choose and therefore no re-registration at all.** Measured **31 of 32 cases**, `err>10`
-**3916 → 73**, AZ's worst decile fixed on 100% of pixels.
+**3915 → 74** at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), AZ's worst decile fixed on 100% of pixels.
 
 **And the loss is the strongest evidence.** `far` is AZ's only win and it is total — all 65,536
 pixels — because there one body stays distant, AZ's reference choice is ideal, and **it never
@@ -372,6 +382,12 @@ all three            0         0.0001
 **The unchanged column — `0.0026 → 0.0026` — is the finding.** Hunting a single cause for two
 co-located symptoms cost most of a week. **When a fix removes one symptom and leaves another
 numerically identical, that is two defects, and the identical column is the evidence.**
+
+The table was measured on Aarseth–Zare, at 512², on `config_stability` to t = 50. The switches and the density metric are
+prin-rs `examples/wedge_census.rs`'s: "dtau" is the per-step-interval dτ mode, "clamp" the landing clamp on the final step,
+"limit" the predictive step limit; wedge density is the fraction of pixels in a dense region, at least 25% pale pixels in
+a 9×9 window at 1024². M3 re-runs this ablation on Heggie, the shipping default, with Aarseth–Zare kept for comparison
+(R-163).
 
 ---
 

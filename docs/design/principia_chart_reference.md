@@ -94,7 +94,8 @@ charts that bypass it:
 
 ```
 φ = atan2(ρ_y, ρ_x)     rotate all rᵢ, pᵢ by R(−φ)
-if λ_y < −δ_λ:          mirror (δ_λ = 1e−12 deadband)
+if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
+|λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)
 ```
 
 ### 0.5 Scale gauge
@@ -115,7 +116,8 @@ momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 **Each chart carries a `forbids_energy_normalisation` flag.** It must be `true` for `(Lz,E)` and
 `(Lz,K)`, where energy is a chart coordinate or is enforced by the momentum construction — applying
 it there would collapse the energy axis. **Enforce in code, not prose:** the validation pass
-refuses a chart with the flag set combined with a non-zero `E*`.
+refuses a chart with the flag set combined with any `E*` override — every `Some(E*)`, including
+`Some(0)` (R-25).
 
 ### 0.7 Degeneracy — every pixel gets a label
 
@@ -139,8 +141,11 @@ decode, which is why the chart is 8D and not 10D.
 Slice centre `z0` and two direction vectors `q_a`:
 
 ```
-z(u, v) = z0 + (2u − 1)·s_u·q_1 + (2v − 1)·s_v·q_2
+z(u, v) = z0 + (2u − 1)·q_1 + (2v − 1)·q_2
 ```
+
+The slice scale lives in `q`: zoom is a common scale on `q_1, q_2` (`principia_chart_decoder_contract.md` Part 4;
+R-83). There are no per-axis factors.
 
 **Axis-aligned (no tilt):** `q_1 = ê_i`, `q_2 = ê_j` for basis vectors of ℝ⁸. There are `C(8,2) =
 28` such planes. The interesting named ones:
@@ -228,8 +233,8 @@ velocities `vᵢ = pᵢ/mᵢ`; let `J(x,y) = (−y, x)` and `⟨a,b⟩_m = Σ m�
 ω = Lz / I              vᵢ^(L) = ω·J rᵢ              K_min = Lz²/(2I)
 ```
 
-**(ii) A direction field that adds energy without changing `Lz`.** Deterministic seed family, tried
-in order:
+**(ii) A direction field that adds energy without changing `Lz`.** Deterministic seed family, in
+this order (the tie-break order):
 
 ```
 primary:    (ρ̇, λ̇) = (ρ, 0)
@@ -253,9 +258,9 @@ c = Σ mᵢ w⁽⁰⁾ᵢ                    w⁽¹⁾ᵢ = w⁽⁰⁾ᵢ − c/
 wᵢ = w⁽²⁾ᵢ / √(‖w⁽²⁾‖²_m)
 ```
 
-**Seed selection:** take the first seed with `‖w⁽²⁾‖²_m > ε_w` (default `1e−10`); if several
-qualify, **choose the largest `‖w⁽²⁾‖_m` for conditioning**. Emit `DEGENERATE` only if all four
-fail.
+**Seed selection (R-82):** among the seeds with `‖w⁽²⁾‖²_m > ε_w` (default `1e−10`), **take the
+largest `‖w⁽²⁾‖_m`**, for conditioning; break ties by seed order. Emit `DEGENERATE` only if no seed
+qualifies.
 
 **(iii) Mix to the target kinetic energy:**
 
@@ -342,11 +347,13 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy. The chart sets `has_redundant_hemisphere = true`.
+the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
+hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
-equal-area alternative (Mollweide or Hammer–Aitoff). This matters because the Lagrange configurations sit
+equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
+section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
 at the poles and can be compressed to invisibility in equirectangular.
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
@@ -362,7 +369,8 @@ trajectory on this chart is the hover trace and inspector of `principia_trajecto
 Useful as overlays and as tests. **Collision singularities** (two bodies coincident) are three
 points on the equator; **Euler configurations** (collinear) lie on the equator between them;
 **Lagrange configurations** (equilateral) are the two poles. Their exact coordinates depend on the
-mass ratios — compute them from §3.1 rather than hard-coding.
+mass ratios — compute them from §3.1 rather than hard-coding. The Euler configurations are the Euler central
+configurations: roots of Euler's quintic in the mass ratios, mapped through §3.1 (R-126).
 
 ---
 
@@ -460,13 +468,14 @@ $$\Phi_{\theta,K}(u,v) = \big(\nu(\theta(u)),\ \mathbf m_{\mathrm{Burrau}}(\nu(\
 
 The variants are $\Phi_{\theta,L_z}$ (fix $K$, sweep $L_z$) and $\Phi_{\theta,\delta m}$ (below).
 
-**The two shape axes survey different sets (pending change 2, open).** The acute-angle axis $\theta \in (0, \pi/4]$ folds out
+**The two shape axes survey different sets (R-27: both charts kept, applied before any Burrau statistic).** The acute-angle axis $\theta \in (0, \pi/4]$ folds out
 the leg swap ($\theta$ and $\pi/2 - \theta$ are the same triangle with the legs swapped). The Euclid plane's default
 $\nu \in [1/32, 31/32]$ maps to $\theta \in (0, \pi/2)$, both leg orderings. Under the Burrau mass convention ($m_i$ =
 opposite side) swapping the legs swaps two masses, so it is a body relabelling, a distinct labelled system. Keeping
 both orderings surveys shape × labelling; folding surveys each shape once. Neither is wrong, but the two charts
-disagree silently. Until one quotient is chosen, label each chart with the quotient it covers (in its
-`system_image` descriptor), and don't take shape fractions from the full-range chart, which double-counts.
+disagree silently. Both are kept (R-27): label each chart with the quotient it covers (in its
+`system_image` descriptor — the full range covers each shape twice, as two labelled systems: `DoubleCover`, R-27,
+R-104), and don't take shape fractions from the full-range chart, which double-counts.
 
 **Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
 $m_0 = 1 - x - y$, $m_1 = x$, $m_2 = y$ (0-based, R-22). Shrink toward the
@@ -500,11 +509,15 @@ Watch whether the boundary persists, deforms or dissolves.
 
 ```rust
 pub trait Chart {
-    fn map(&self, u: f64, v: f64) -> ChartOut;      // Φ : [0,1]² → chart space
+    fn map<F: Float>(&self, u: F, v: F) -> ChartOut<F>; // Φ : [0,1]² → chart space, generic over the float type
     fn forbids_energy_normalisation(&self) -> bool { false }
     fn name(&self) -> &str;                          // goes in every dump header
 }
 ```
+
+Φ is generic over the float type (lowering Part 2, R-118): the one source is monomorphised as the f32 kernel and the
+f64 CPU reference. `validate(u, v)` stays a CPU-side f64 check (`principia_inverse_encode_contract.md`, chart-aware
+validation).
 
 `ChartOut` is whatever `D` consumes — masses, `(α,β)` or an explicit `(ρ,λ)`, and momenta or a
 `(Lz,K)` request. **`D` and `C` are shared and written once.** The integrator never sees a chart.
@@ -536,8 +549,8 @@ Python cross-check's anchor.
   selected rather than `DEGENERATE`
 - **Burrau at `ν = 1/2`** reproduces `(3,4,5)`, and the classical configuration to a stated
   tolerance
-- **`forbids_energy_normalisation`** is enforced — a config combining `(Lz,E)` with `E* ≠ 0` is
-  **refused**, and a test asserts the refusal
+- **`forbids_energy_normalisation`** is enforced — a config combining `(Lz,E)` with any
+  `Some(E*)`, including `Some(0)`, is **refused** (R-25), and a test asserts the refusal
 - **Axis-aligned latent slice with `q1 = ê_α, q2 = ê_β`** equals a direct `(α,β)` sweep
 - **`BodyPlane` bitwise unchanged**, and the Python cross-check green
 

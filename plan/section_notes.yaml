@@ -1,0 +1,420 @@
+# Corpus sections that yield no requirement, each with its reason. Read by plan/tools/coverage.py.
+# reason: informative only | rationale | superseded (kept for the record) |
+#         parent heading (obligations are in its subsections) | gap (RQ-n) | out of v1 (R-n)
+
+- file: docs/contracts/principia_canonical_spec.md
+  section: 10. Document map — reading order & authority
+  reason: informative only
+  note: document map and authority order; no obligation on the build
+- file: docs/contracts/principia_chart_decoder_contract.md
+  section: Principia — chart & decoder contract
+  reason: informative only
+  note: reading-order note
+- file: docs/contracts/principia_checkerboard_contract.md
+  section: Principia — checkerboard motion acceleration (contract)
+  reason: informative only
+  note: preamble; obligations in §1–§8
+- file: docs/contracts/principia_export_animation_contract.md
+  section: Principia — playback, export & sharing contract
+  reason: informative only
+  note: summary of what was removed
+- file: docs/contracts/principia_gui_state_contract.md
+  section: Principia — GUI & state-interface contract
+  reason: informative only
+  note: summary of §1–§8
+- file: docs/contracts/principia_integrator_contract.md
+  section: Principia — integrator contract
+  reason: parent heading (obligations are in its subsections)
+  note: title and intro only
+- file: docs/contracts/principia_integrator_contract.md
+  section: "Part 2c — THE GPU KERNEL: what ports, what is rewritten, and the rules it must hold"
+  reason: parent heading (obligations are in its subsections)
+  note: "intro says it is a decision about the shipped kernel; content is in The split / Rules / FMA"
+- file: docs/contracts/principia_inverse_encode_contract.md
+  section: "Principia — inverse encode contract (encode: physical → z)"
+  reason: informative only
+  note: document preamble
+- file: docs/contracts/principia_lowering_contract.md
+  section: Principia — lowering contract
+  reason: parent heading (obligations are in its subsections)
+  note: document title
+- file: docs/contracts/principia_lowering_contract.md
+  section: Part 3 — The baking rules (compile-time vs uniform)
+  reason: parent heading (obligations are in its subsections)
+  note: compute and fragment side tables
+- file: docs/contracts/principia_parity_contract.md
+  section: Principia — parity & determinism test contract
+  reason: parent heading (obligations are in its subsections)
+- file: docs/contracts/principia_parity_contract.md
+  section: 2. The three tiers
+  reason: parent heading (obligations are in its subsections)
+  note: tier summary table; obligations are in Tier L/B/N/S
+- file: docs/contracts/principia_render_contract.md
+  section: Principia — render pipeline contract
+  reason: parent heading (obligations are in its subsections)
+  note: document title
+- file: docs/contracts/principia_scheduler_contract.md
+  section: Principia — scheduler contract
+  reason: informative only
+  note: doc preamble; obligations are in Parts 1–9
+- file: docs/contracts/principia_symbolic_dynamics_contract.md
+  section: "Principia — symbolic-dynamics contract (free-group word interpretation)"
+  reason: informative only
+  note: "preamble: the word's storage is in payload §3"
+- file: docs/design/principia_chart_reference.md
+  section: 0. The shared decoder `D` — every chart ends here
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_chart_reference.md
+  section: 1.2 Geometry + momentum in a fundamental domain
+  reason: informative only
+  note: "describes a chart option not in the §5.1 implementation list; too underspecified to test (ρ₀, λ₀, the p_λ sweep range unstated)"
+- file: docs/design/principia_chart_reference.md
+  section: 4. The Burrau family chart `(ν, K)` and friends
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_chart_reference.md
+  section: 5. Implementation plan
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_colour_composition.md
+  section: Principia — Colour Composition
+  reason: parent heading (obligations are in its subsections)
+  note: document title; status/thesis preamble
+- file: docs/design/principia_coordinate_conventions_note.md
+  section: "Why this is a footgun: WebGPU has multiple disagreeing Y-conventions"
+  reason: rationale
+  note: why Y-conventions are a footgun
+- file: docs/design/principia_coordinate_conventions_note.md
+  section: Where this lands in the contracts
+  reason: informative only
+  note: where the conventions land in other docs
+- file: docs/design/principia_core_design.md
+  section: Principia — core design decisions
+  reason: informative only
+  note: document preface
+- file: docs/design/principia_core_design.md
+  section: "Seams — draw these hard. Each subsystem: one job, one input type."
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_colouring.md
+  section: Drill-down — Colouring (Meaning rung)
+  reason: parent heading (obligations are in its subsections)
+  note: document title
+- file: docs/design/principia_dd_colouring.md
+  section: 3. The maths
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_encode.md
+  section: 3. The maths
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_image_embedding.md
+  section: Embedding a slice's provenance in the pixels of its own PNG
+  reason: parent heading (obligations are in its subsections)
+  note: document title
+- file: docs/design/principia_dd_image_embedding.md
+  section: 1. Why this exists — provenance first, sharing second
+  reason: rationale
+  note: provenance motivation; obligations are in §9
+- file: docs/design/principia_dd_image_embedding.md
+  section: 8. Rejected, with the measurement
+  reason: rationale
+  note: "block-mean modulation rejected; measurements kept as rationale"
+- file: docs/design/principia_dd_integrator.md
+  section: 3. The maths
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 1. The result
+  reason: superseded (kept for the record)
+  note: "lambda and the horizon values are corrected by §7.2; the formula is used in §4.2"
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: Units, so the numbers mean something
+  reason: superseded (kept for the record)
+  note: "§7.2: t reads as crossing times, not e-foldings"
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 2. Why it cannot be engineered away
+  reason: rationale
+  note: "why the horizon cannot be engineered away; caveated by the §7.3 box"
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 3. Two horizons, and they are not the same
+  reason: informative only
+  note: two horizons; the open ordering question is answered by §7.1
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 4. Architectural consequences
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 4.4 It explains a result that looked like a defect
+  reason: informative only
+  note: explains the t = 40 criterion result
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 5.2 The refinement treadmill is the same relationship
+  reason: superseded (kept for the record)
+  note: the treadmill identity is shown false in §7.5
+- file: docs/design/principia_dd_predictability_horizon.md
+  section: 7.5 §5.2's treadmill identity is wrong
+  reason: informative only
+  note: correction of §5.2; 'not worth further spend'
+- file: docs/design/principia_dd_refinement_policy.md
+  section: Refinement policy — `Policy::Tolerance`
+  reason: informative only
+  note: status, evidence base and supersession notes
+- file: docs/design/principia_dd_simstate_payload.md
+  section: 2. Bit layouts (the packed u32s)
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_telemetry_and_tiers.md
+  section: "Telemetry, profiling, and deriving the quality tiers from real hardware"
+  reason: rationale
+  note: motivation for deriving tiers
+- file: docs/design/principia_dd_telemetry_and_tiers.md
+  section: 1. The two modes, and why both are needed
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_telemetry_and_tiers.md
+  section: "6.4 Compute pressure — being a good citizen, not just a fast one"
+  reason: parent heading (obligations are in its subsections)
+  note: intro is rationale; obligations in CPU/GPU/Thermal/ceiling
+- file: docs/design/principia_dd_validation_orbits.md
+  section: Known-solution validation orbits
+  reason: rationale
+  note: why periodic orbits are self-referencing tests
+- file: docs/design/principia_dd_validation_orbits.md
+  section: "0. The headline: the figure-eight already found a first-order error"
+  reason: informative only
+  note: "measurement narrative of the pre-fix AZ+RK4 closure error; the fix and gates are in §0.1, §3, §5"
+- file: docs/design/principia_dd_validation_orbits.md
+  section: 1. The families, and what each is good for
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_dd_validation_orbits.md
+  section: 2. What the suite tests that the current gates do not
+  reason: rationale
+  note: why closure catches phase error that energy gates miss
+- file: docs/design/principia_dd_validation_orbits.md
+  section: 6.2 Stability is in the gradient, not the value
+  reason: informative only
+  note: "research proposals (alpha on the closure field, well-width Lyapunov reading), not obligations"
+- file: docs/design/principia_dd_validation_orbits.md
+  section: 6.3 The Burrau connection
+  reason: informative only
+  note: "research question (is Burrau on an unstable manifold of a nearby periodic orbit)"
+- file: docs/design/principia_debug_tooling_plan.md
+  section: Principia — debug tooling plan
+  reason: informative only
+  note: document preface
+- file: docs/design/principia_deep_zoom.md
+  section: Principia — deep zoom & adaptive sampling
+  reason: informative only
+  note: preamble
+- file: docs/design/principia_quality_device_note.md
+  section: Principia — quality presets & device characterisation
+  reason: informative only
+  note: preamble; obligations in subsections
+- file: docs/design/principia_quality_device_note.md
+  section: "Auto is a continuous controller — the adaptive control architecture"
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: "SCRATCHPAD — the pointer channels: trace, sound, inspector"
+  reason: informative only
+  note: "status: working notes, not ratified"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 1. There is ONE mechanism, and it now has THREE consumers
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 2. Why the trace and the sound are the SAME measurement
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the earlier caution was wrong"
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109); its supersession of trajectory_viewing §1's responsiveness paragraph is RQ-74"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: "5. The prediction worth testing early, because it is the demo"
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 6. What this reuses rather than adds
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_scratchpad_pointer_channels.md
+  section: 7. Open
+  reason: informative only
+  note: "working notes: only §4 is normative (R-109)"
+- file: docs/design/principia_systems_architecture.md
+  section: Principia — systems architecture
+  reason: informative only
+  note: document preface
+- file: docs/design/principia_systems_architecture.md
+  section: 4. Dataflow
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_systems_architecture.md
+  section: Why parallelism is not lost
+  reason: rationale
+  note: why 64 threads per quad keeps throughput
+- file: docs/design/principia_systems_architecture.md
+  section: And serial copies probably IMPROVE load balance
+  reason: rationale
+  note: load-balance argument for serial copies
+- file: docs/design/principia_temporal_architecture_note.md
+  section: Principia — temporal architecture reversal
+  reason: informative only
+  note: ratification status note
+- file: docs/design/principia_temporal_architecture_note.md
+  section: "Blast radius, sorted by kind of change (is this a nightmare? — no)"
+  reason: informative only
+  note: blast-radius narrative of the doc edit pass
+- file: docs/design/principia_trajectory_viewing.md
+  section: "Principia — trajectory viewing (hover trace + click inspector)"
+  reason: informative only
+  note: summary; supersession note
+- file: docs/notes/ic_inspector_scratchpad.md
+  section: IC Inspector — design scratchpad
+  reason: informative only
+  note: status line
+- file: docs/notes/ic_inspector_scratchpad.md
+  section: Purpose
+  reason: rationale
+- file: docs/notes/ic_inspector_scratchpad.md
+  section: Open questions
+  reason: informative only
+  note: "remaining item (the name) is not an obligation; the others are resolved in the status block"
+- file: docs/notes/principia_gpu_determinism_note.md
+  section: Principia — GPU determinism & backend-compilation discipline
+  reason: parent heading (obligations are in its subsections)
+  note: "intro; states the note is authoritative for principia-gpu / principia-numerics"
+- file: docs/notes/principia_gpu_determinism_note.md
+  section: "The mechanism (measured, not inferred — the attribution was overturned by a controlled test)"
+  reason: rationale
+  note: "spike measurement narrative (5/272 forks; fast-math not the cause); the resulting rules are in The discipline"
+- file: docs/notes/principia_sampling_msaa_note.md
+  section: Principia — sampling, ensemble & SSAA model
+  reason: parent heading (obligations are in its subsections)
+  note: document title
+- file: docs/notes/principia_validation_ground_truth_note.md
+  section: Principia — ground-truth physics validation
+  reason: parent heading (obligations are in its subsections)
+- file: docs/notes/principia_validation_ground_truth_note.md
+  section: "The ingestion problem: known ICs are physical; the pipeline is latent"
+  reason: parent heading (obligations are in its subsections)
+  note: "the demand is stated as obligations under the BUG-signal subsection and New demands"
+- file: docs/read_first/principia_00_philosophy.md
+  section: Principia — what it is for
+  reason: informative only
+  note: preamble
+- file: docs/read_first/principia_00_philosophy.md
+  section: 2. The two paths, and why the split is the whole design
+  reason: parent heading (obligations are in its subsections)
+- file: docs/read_first/principia_00_philosophy.md
+  section: 4. Six commitments, each earned by a measured failure
+  reason: parent heading (obligations are in its subsections)
+- file: docs/read_first/principia_00_philosophy.md
+  section: 5. What the instrument is actually looking for
+  reason: informative only
+  note: scientific goals; no build obligation stated
+- file: docs/read_first/principia_00_philosophy.md
+  section: 7.2 Tiled prebake
+  reason: informative only
+  note: parked post-1.0 (§7); out of scope for the build
+- file: docs/read_first/principia_00_philosophy.md
+  section: 7.3 Dump tiers — and the default is not an image
+  reason: informative only
+  note: "parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW"
+- file: docs/read_first/principia_00_philosophy.md
+  section: 7.4 Headless dataset generation
+  reason: informative only
+  note: parked post-1.0 (§7); out of scope
+- file: docs/read_first/principia_00_philosophy.md
+  section: 7.5 Regularisation-method comparison as a scientific result
+  reason: informative only
+  note: "parked post-1.0 (§7); fairness rule echoed in the logH requirement"
+- file: docs/read_first/principia_00_philosophy.md
+  section: 7.6 GPU port — the only lever that changes the category
+  reason: informative only
+  note: parked post-1.0 (§7); the driver.rs note concerns prin-rs
+- file: docs/read_first/principia_00_philosophy.md
+  section: 9. What this is not
+  reason: informative only
+  note: what the project is not
+- file: docs/read_first/principia_01_pitfalls.md
+  section: Pitfalls — failures that looked like results
+  reason: parent heading (obligations are in its subsections)
+  note: intro describes the entry shape
+- file: docs/read_first/principia_INDEX.md
+  section: Read first
+  reason: informative only
+  note: reading order
+- file: docs/read_first/principia_INDEX.md
+  section: Contracts — the interfaces
+  reason: informative only
+  note: file map
+- file: docs/read_first/principia_INDEX.md
+  section: Design documents — the reasoning
+  reason: informative only
+  note: file map
+- file: docs/read_first/principia_INDEX.md
+  section: Notes — working notes
+  reason: informative only
+  note: file map
+- file: docs/read_first/principia_INDEX.md
+  section: GUI
+  reason: informative only
+  note: "file map; precedence (notes over pictures, rulings over both) is carried by R-68"
+- file: docs/read_first/principia_INDEX.md
+  section: Experiments — briefs and results
+  reason: informative only
+  note: file map; not sources
+- file: docs/gui/principia_render_gui_spec.md
+  section: Part I — The dev GUI
+  reason: parent heading (obligations are in its subsections)
+- file: docs/gui/principia_render_gui_spec.md
+  section: G5. Windows (`04_windows.png`)
+  reason: parent heading (obligations are in its subsections)
+- file: docs/gui/principia_render_gui_spec.md
+  section: 14. Prototype → GUI mapping
+  reason: informative only
+  note: "maps HTML prototypes to GUI roles; the prototypes are prior art"
+- file: docs/gui/principia_render_gui_spec.md
+  section: 16. Open / next
+  reason: gap (RQ-54)
+  note: "node palette contents, preview default and the standing composition-spec gaps are open; the mock build is a plan item"
+- file: decisions.md
+  section: Decisions
+  reason: informative only
+  note: file preamble
+- file: decisions.md
+  section: R-1 — The markdown corpus is the only authority
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: "R-2 — The index doesn't cite the unpushed commit `52caf14` *(closes RQ-1)*"
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: "R-3 — The two PDFs are retired on the same terms as the LaTeX *(closes RQ-3)*"
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: "R-5 — The chart constants go to the decision sheet *(closes RQ-2)*"
+  reason: superseded (kept for the record)
+  note: amended by R-10 (μ_max, q_max) and R-21 (α_min)
+- file: decisions.md
+  section: R-7 — Step 3's done-check *(closes RQ-6)*
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: "R-9 — The toolchain spike findings go to results *(closes RQ-7)*"
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: R-7 amended — part (a)'s grep
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: Porting rule — a port adds, it never removes a decision
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: "Rulings on the decision sheet (step 5, PR #6)"
+  reason: informative only
+  note: application schedule for R-21..R-59
+- file: docs/contracts/principia_symbolic_dynamics_contract.md
+  section: 2. The punctured-sphere relation (third pair)
+  reason: out of v1 (R-125)
+  note: "per-pair views are v2 (PL-3, R-38); REQ-PAY-071, which cited it, is retired"
+- file: decisions.md
+  section: R-167 — The prin-rs licence is not blocking
+  reason: informative only
+  note: no requirement; recorded in docs/reference/prin-rs/README.md § "Licence"

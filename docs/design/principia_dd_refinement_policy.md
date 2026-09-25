@@ -50,7 +50,8 @@ outside its domain.**
 **The consequence, stated rather than inferred.** `adequate` is `tile ≤ 1` and the `ScreenFloor` veto
 is `tile ≤ 1` — **they meet on the same value**. So every in-view quad above the screen floor must
 split and every one at it stops. **The in-view tree is complete at screen resolution**, which is what a
-slippy map displays.
+slippy map displays. **Must-split is the at-rest target (R-108):** during a gesture the frame budget governs —
+ancestors show, so there are never blanks — and completeness resumes at rest.
 
 | region | who decides depth | what the criterion does |
 |---|---|---|
@@ -76,7 +77,7 @@ degeneration's ~0.99. **Bounded by the screen; the hole stays closed.**
 **So the role of this document shifts.** §0 says the quadtree is for progressive display and arbitrary
 zoom. Both still hold — but **in view, "arbitrary zoom" is now delivered by the camera, and the
 criterion's contribution there is the order in which the complete tree arrives.** Its depth decisions
-govern supersampling and off-screen work.
+govern supersampling and off-screen work, both capped by `MAX_REL_DEPTH` (scheduler Part 3, R-98).
 
 ---
 
@@ -88,6 +89,7 @@ split(quad)  ⟺  any footprint f in quad is unresolved
 unresolved(f)  ⟺  spread_shape(f) > eps          the payload has not settled
                 ∨  the copies disagree on event class
                 ∨  the footprint is undetermined  (non-finite spread, or an unusable copy)
+                ∨  its latched running maximum of spread_shape ever exceeded eps   (R-91; per footprint, R-99)
 ```
 
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous
@@ -112,7 +114,7 @@ alpha_area = log2( unresolved_area(coarse) / unresolved_area(children) )
 report a measured box dimension as a by-product**, which is a Paper 2 quantity falling out of the
 renderer for free.
 
-Shipped default **`alpha_lo = 0.005`**: floor only where the children resolved essentially nothing,
+Shipped default **`alpha_lo = 0.005`** (it stays, R-42): floor only where the children resolved essentially nothing,
 judged as no-gain at a noise margin rather than as a dimension cut. At `0.2` the same floor costs
 **11% of `config_stability`'s resolvable pixels** and puts its tree *above* uniform at its own error.
 
@@ -132,17 +134,19 @@ independent draws, so two agreeing by chance is a few in ten thousand. Calibrate
 nearly inert on real charts, where seas are coherent sponges rather than white: it floors **2–37
 quads where the dimension floor floors 262–334**.
 
-### 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both open
+### 2.2 TWO KNOWN DEFECTS IN `alpha_area` — both ruled (R-42)
 
 **It cannot tell an empty mask from a full one.** Both return exactly `0.0000`, so any positive
 `alpha_lo` floors on either. This is a **can't-fail test inside the floor itself**, and it costs
 `near-field` its `t = 50` descent: 21 quads at error 0.103 with 93% of the frame resolvable, against
-829 quads at error 0.00000 with `alpha_lo = 0`.
+829 quads at error 0.00000 with `alpha_lo = 0`. **Fix (R-42):** tell the empty mask from the full one by
+`n_unresolved`.
 
 **The exponent goes negative on sea charts at tight `eps`** (−0.020 to −0.076 at `eps = 1e-3`): the
 children found *more* unresolved area than the parent, so `d = 2 − α` reads **above 2 — impossible in
 the plane**. The dimension interpretation has lapsed and **the floor fires anyway, hardest where
-refinement is discovering structure.** Worst possible failure direction.
+refinement is discovering structure.** Worst possible failure direction. **Fix (R-42):** refuse the floor on a
+negative exponent.
 
 ---
 
@@ -153,9 +157,16 @@ Under a live playhead the field changes as `t` advances, so the tree must **coar
 > A parent whose four children are all leaves that did not split this boundary is **merged back** when
 > the parent has become resolved (`Keep`) or its split shows no gain (`Floor`).
 
-Children become `Decision::Merged`. **`QuadTree::resident` — what a live design actually holds — is
-tracked separately from `quads_computed`.** On a moving-pulse fixture, resident runs 37 → 85 → 37 → 69
-while 181 quads are computed, and the final tree is **bitwise the static tree at the horizon.**
+Children become `Decision::Merged`, and their footprints' latches go with them: the latch lives with the resident
+quad and never pins memory (R-99). **`QuadTree::resident` — what a live design actually holds — is
+tracked separately from `quads_computed`.** On the moving pulse, resident runs 37 → 85 → 37 → 69
+while 181 quads are computed. **The moving pulse is a synthetic field, not a chart slice (R-166):** a step with an
+unresolved band around it whose half-width is `w(t) = w_max sin(πt/t_max)` (prin-rs `src/testing.rs:162`), defined in
+`fixtures/moving_pulse.toml`. *Was: "the final tree is **bitwise the static tree at the horizon**", measured before the
+latch existed (R-99); withdrawn by R-143.* **The live tree contains the static tree at the horizon, and they are equal
+when footprint spreads are monotone in time (R-143).** A merge doesn't drop a latch while the quad is resident (R-99): a
+footprint that ever exceeded `eps` stays unresolved. The latch's cost, the extra resident quads, is measured on the named
+slices, §5's `near-field`, `deep interior`, `config_stability` and `tilt_plambda` (a calibration, R-71, R-143).
 
 A merged parent remembers its exponents so it is not re-split into the same four children every
 boundary; the memory expires when the quad's structured weight leaves a factor of two of where the
@@ -258,7 +269,8 @@ count.** This extends the standing rule (never quote a leaf count without its st
 
 ## 7. Open
 
-- **The two `alpha_area` defects** (§2.2). Both are bugs with reproductions.
+- **The two `alpha_area` defects** (§2.2). Both are bugs with reproductions; the fixes are ruled (R-42) and land
+  with the refinement task.
 - **A cheap `sea_fraction` estimator** (§5.1) — the named next step.
 - **Depth beyond level 6.** Every tree in the tolerance study is capped; nothing is known past it.
 - **A calibrated grid.** All 36 cells ran shipped defaults; a calibrated `tau` moves several by an

@@ -26,6 +26,8 @@ you *where the device's boundary is*, which is what a tier needs.
 Log while someone uses it normally. **The benchmark tells you what the device can do; this tells you
 what people ask of it**, and those are usually nothing alike. If the suite spends its time on smooth
 zooms and real users hammer the playhead, the tier tuned on the suite is tuned for the wrong thing.
+In the dev GUI, passive logging is a Profiler switch, with its indicator in the footer (`principia_render_gui_spec.md`
+§G5, R-129).
 
 ---
 
@@ -242,7 +244,7 @@ Expect pressure; do not treat it as exceptional.
 comfortable   below the cap, refining freely
 pressured     approaching it -- STOP GROWING THE TREE, keep serving what is cached,
               report cap-bound (§3.5). The image STOPS IMPROVING; it does not degrade.
-reclaiming    over it -- evict, deepest quads first
+reclaiming    over it -- evict, lowest cost-weighted resistance first (R-120)
 ```
 
 **The middle state is the one that matters and the one most likely to be missed.** A design with only
@@ -250,7 +252,8 @@ reclaiming    over it -- evict, deepest quads first
 
 #### Eviction order, and the trap in it
 
-Drop the **deepest** cached quads first — cheapest to lose, easiest to recompute.
+Drop the cached quads with the **lowest cost-weighted resistance** first — eviction resistance ∝ `computeCostMs`
+(scheduler Part 6, caching Part 7), so the cheapest to recompute go first; expensive quads resist (R-120).
 
 > **Never drop the coarse ancestors.** They are what the fill draws during motion, so losing them
 > turns a memory problem into **a blank screen**. That is the difference between degrading and
@@ -271,8 +274,8 @@ size is known in advance: `quads x N^2 x (E+1) x sizeof(SimState)`. So:
 - **Budget before allocating.** Query the adapter's reported limits, compute the requirement, and if
   it does not fit, **reduce the tier and report it** rather than attempting the allocation.
 - **On an allocation failure mid-session** — eviction pressure, another application taking memory —
-  drop the deepest cached quads first, since they are the cheapest to lose and the easiest to
-  recompute. Never drop the coarse ancestors: those are what the fill uses during motion, and
+  drop the cached quads with the lowest cost-weighted resistance first (R-120), since they are the
+  cheapest to recompute. Never drop the coarse ancestors: those are what the fill uses during motion, and
   losing them turns a memory problem into a blank screen.
 - **Unified memory has no separate budget.** On Apple silicon the GPU allocation competes with
   everything else on the machine, so the "reported limit" is not a promise. Treat OOM as
@@ -345,7 +348,8 @@ fps"* are legitimate things to want — on battery, in a lecture, while compilin
 application must not assume it is the only thing running.**
 
 **Default to leaving headroom.** Full utilisation is opt-in, and the telemetry records which was in
-force so the calibration is not polluted by mixing the two.
+force so the calibration is not polluted by mixing the two. In the dev GUI the target-utilisation ceiling is set in the
+Run window (`principia_render_gui_spec.md` §G5, R-129).
 
 ---
 

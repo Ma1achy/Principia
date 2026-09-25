@@ -76,7 +76,7 @@ Opens on click; shows the **same trajectory three ways at once**, linked by one 
 | Panel | Shows | Source | Comparison? |
 |---|---|---|---|
 | **3D shape sphere** (rotatable) | `n(t)` polyline on S², landmarks (3 BC equatorial, Lagrange poles) | `computeIC` trajectory → shape | **yes** (§5) |
-| **2D UV unwrap** | same `n(t)`, equirect (φ, n_z) | same | **yes** (§5) |
+| **2D UV unwrap** | same `n(t)`, equirect (θ, φ): θ azimuth horizontal, φ polar vertical (R-14) | same | **yes** (§5) |
 | **Real space** | the three bodies in the plane, `r_i(t)` | `computeIC` trajectory | **no** — CPU-f64 sugar |
 | **Scalar readout** | `t_end_step`, `state`, escaper, `d_min`, drifts @ cursor | `SimState` + `computeIC` | classification-level (§5) |
 

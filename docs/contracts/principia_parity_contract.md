@@ -10,14 +10,16 @@ The two instantiations are **identical in logic and algorithm — one shared Rus
 
 Chaos is not an exception to this — it is the case where the identical logic *correctly* amplifies a tiny arithmetic difference into a large one. Same code, same decisions, precision as the only input variable; whether outputs stay close is physics, not correctness. A parity suite that ignores this either misses real bugs (tolerance too loose to catch a logic error) or cries wolf (tolerance applied where chaos guarantees divergence). The three-tier rule below is what keeps it a rock.
 
-**The dual instantiation is a feature, not test scaffolding.** The CPU-f64 build ships — it is the Precision ring: the hover dwell-tier, the click inspector, the offline uniform-survey certifier. (The *same* kernel run at f64 is the **precision** reference — f64 removes the numerical ambiguity that would muddy a ground-truth check — but it shares source, so it is *not* independent; the deliberately-**independent** convergence reference, shared-bug-immune, is a *separate* double-double/arbitrary-precision integrator — validation-ground-truth §correctness-factoring, systems-architecture §1 — spike criterion 4.) Its public surface:
+**The dual instantiation is a feature, not test scaffolding.** The CPU-f64 build ships — it is the Precision ring: the hover dwell-tier, the click inspector, the offline uniform-survey certifier. (The *same* kernel run at f64 is the **precision** reference — f64 removes the numerical ambiguity that would muddy a ground-truth check — but it shares source, so it is *not* independent; the deliberately-**independent** convergence reference, shared-bug-immune, is a *separate* Brutus-style CPU arbitrary-precision integrator with convergence gating — raise the precision and tighten the tolerance until the result stops changing; double-double is a fast screen only (R-33) — validation-ground-truth §correctness-factoring, systems-architecture §1 — spike criterion 4.) Its public surface:
 
+<!-- retired-terms -->
 ```
 computeIC(chart, uv, simKey)      → SimState              // one IC, full f64
 computeQuad(chart, quadID, simKey) → SimState[]           // a quad's samples, full f64  (was computeTile — 'tile' is retired for quadtree nodes, memory-tiers §1)
 stepOnce(state, dt, params)        → state'                // one STEP, either occupant  (parity workhorse)
 decodeOnly(chart, uv, simKey)      → (m, r, p, ICDescriptor)
 ```
+<!-- /retired-terms -->
 
 The parity suite is this subsystem diffed against the headless WGSL kernel. It was going to exist regardless; the tests are therefore nearly free.
 
@@ -84,7 +86,7 @@ hold by construction; it cannot be established by testing.**
 
 Distinct from the numerical tiers: certain payload fields are **integer or integer-packed** and must match **bit-for-bit** CPU↔GPU (they have no floating-point tolerance — they either match or there is a logic bug). Per the SimState payload spec:
 - **integer step indices** `t_end_step`, `t_dmin_step`; the exact `total_substeps` u32;
-- **all packed descriptor fields** (`state`, `detail`, `saturated`, `dmin_pair`) and their bit offsets;
+- **all packed descriptor fields** (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`) and their bit offsets;
 - the **free-group word arithmetic** — the mixed-radix `W` is an *integer* computed by integer multiply-add/div-mod, so the word (and `fgw_length_raw` — incl. the 127 truncation sentinel; `fgw_retained_prefix_length` derives from it) must be bit-exact **given bit-exact crossing-detection decisions** (which are Tier-L branch decisions). Note: word *content* is only as deterministic as the crossing-detection branches feeding it — the simultaneous-both-cut tie-break must be deterministic (integrator contract) or the word can diverge on FP test order.
 
 Tier B is exact **conditionally**: given the same branch decisions and the same integer inputs, the
@@ -117,7 +119,7 @@ first is the design working; only the second is excluded.
 A chaotic trajectory integrated to `t_end` **cannot** match pointwise across precisions, and it is not a bug — positive Lyapunov exponent means a 1-ulp difference is uncorrelated by `t_end`. So:
 
 - **never** assert `‖state_cpu − state_gpu‖ < ε` at `t_end` on a chaotic pixel.
-- **do** assert: same **outcome class** (Tier L, exact); `t_end` within a window; **divergence-onset time** consistent between the two runs; and the **aggregate survey** agrees (§5).
+- **do** assert: same **outcome class** (Tier L, exact) **on non-chaotic fixtures only** — on a chaotic trajectory the label may differ across precisions (Tier B table, R-84); `t_end` within a window; **divergence-onset time** consistent between the two runs; and the **aggregate survey** agrees (§5).
 
 The pointwise gap here *is* the reversibility/chaos signal the whole instrument exists to show. Tier S is the divergence principle stated as a test strategy.
 
@@ -139,9 +141,9 @@ The rule in one line: *tight and elementwise up to and including a single step; 
 Tier-N tolerance absorbs **two** sources of difference, not one:
 
 1. **f32 vs f64** — the intended comparison.
-2. **cross-backend f32 variance** — WGSL compiled through Dawn (CI) vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation and driver math differ across backends.
+2. **cross-backend f32 variance** — the kernel run through native `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation and driver math differ across backends.
 
-Therefore Tier-N tolerances are **pinned empirically, not guessed**: run the same kernel on the CI Dawn backend and on a real browser, measure the spread on the decode/step quantities, set the tolerance to comfortably cover it. A tolerance validated only against f64 will flake across drivers. (For a solo web artefact the matrix is small — CI Dawn + one or two real browsers — but it is not zero.)
+Therefore Tier-N tolerances are **pinned empirically, not guessed**: **native in-process `wgpu` sets them** (R-85) — run the kernel there, measure the spread on the decode/step quantities, set the tolerance to comfortably cover it. Dawn CI is dropped. Real browsers are checked against those tolerances with the browser build (M8). A tolerance validated only against f64 will flake across drivers. (For a solo web artefact the browser matrix is small — Chrome stable and Safari (R-110) — but it is not zero.)
 
 Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0 ~1e-6. These are starting points to be replaced by measured values.
 
@@ -167,10 +169,12 @@ This is the validation-scratchpad's "CPU proves the method" reframed as "CPU and
 |---|---|---|---|
 | Sim parity (Tier B branch words; Tier N/S continuous) | **native `#[test]`, in-process** | instantiate the one kernel CPU-f64 and dispatch the GPU build via `wgpu` (native), read the `SimState` buffer back, diff in the same process — Tier B bit-exact, Tier N/S within envelope | every commit / CI |
 | Codegen (pack/unpack/catalogue) | native `#[test]` + a **GPU self-test dispatch** | pack∘unpack round-trip on host and on-device — generation-root dd §5 | every commit |
-| Aggregate survey (§5) | native, headless (no canvas) | uniform-grid region on both instantiations, statistic compared | nightly / pre-release (heavier) |
-| Colour / visual | **Playwright + headless Chrome** | golden-image diff of the fragment output (colour side stays hand-WGSL — no parity stakes) | pre-release (out of parity scope — Q2) |
+| Aggregate survey (§5) | native, headless (no canvas) | uniform-grid region on both instantiations, statistic compared | nightly and before release (heavier; R-134) |
+| Colour / visual | **native `wgpu` offscreen** from M1; at M8 the **Playwright** browser suite, on Chromium and WebKit (Playwright's Safari engine; R-149), checks against the same baselines within tolerance (R-110) | golden-image diff of the fragment output (colour side stays hand-WGSL — no parity stakes); no re-baselining without a gate decision | every commit (native goldens, R-110); from M8 the Playwright suite nightly, on GUI and colour PRs, and at each gate (R-134) (out of parity scope — Q2) |
 
-Native in-process parity is *simpler* than the old Dawn-in-Node harness (one process, one language, no buffer marshalling across a runtime boundary) and *more* necessary (it is the only thing that catches a silent shader miscompile). **Run the gate on more than one GPU backend once available** — the spike's evidence is Metal-only (both the native and browser legs funnelled to the same MSL compiler, which is *why* even continuous words matched); branch-word bit-identity across a *different* naga backend + driver (Vulkan/D3D12) is the one thing the spike could not witness on an M-series machine, and it is the standing pre-Paper-2 action item. Parity never touches the canvas; the canvas-bound colour path is the only thing needing a real browser, and it is not a parity test.
+**The other suites, and the CI hardware (R-110).** Unit, property, numerical-gate and native golden suites run on every commit; benchmarks run nightly and at each milestone gate; GUI screenshots run on GUI PRs and at the gates. GPU CI is a self-hosted Apple-silicon runner (Metal), plus **lavapipe** as the second backend on every commit.
+
+Native in-process parity is *simpler* than the old Dawn-in-Node harness (one process, one language, no buffer marshalling across a runtime boundary) and *more* necessary (it is the only thing that catches a silent shader miscompile). **Run the gate on more than one GPU backend once available** — the spike's evidence is Metal-only (both the native and browser legs funnelled to the same MSL compiler, which is *why* even continuous words matched); branch-word bit-identity across a *different* naga backend + driver (Vulkan/D3D12) is the one thing the spike could not witness on an M-series machine. lavapipe on every commit is the second backend and satisfies M4's two-backend check; a run on a **real non-Metal GPU** is the standing pre-Paper-2 action item and gates Paper 2 (R-58, R-110). Parity never touches the canvas; the canvas-bound colour path is the only thing needing a real browser, and it is not a parity test.
 
 ---
 
@@ -198,4 +202,4 @@ The seam catalogue (architecture §5) remains the **integration**-test index; th
 
 ---
 
-*Identical logic, precision the only variable, checkable error only where nothing amplifies. Branches are exact; steps are tight; trajectories are structural; the survey agrees within sampling noise. Compare before you accumulate. The gap under chaos is the signal, not the bug — and the second pipeline was always a feature.*
+*Identical logic, precision the only variable, checkable error only where nothing amplifies. Branches are exact on identical inputs; steps are tight; trajectories are structural; the survey agrees within sampling noise. Compare before you accumulate. The gap under chaos is the signal, not the bug — and the second pipeline was always a feature.*

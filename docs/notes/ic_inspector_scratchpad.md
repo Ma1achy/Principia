@@ -18,7 +18,7 @@ Built and verified: `ic_inspector.html`, single file, hand-rolled HTML/canvas/JS
 **Verification flags — RESOLVED (checked against the `.md` decode/encode corpus; fixes applied to the HTML):**
 - **Momentum decode convention — CONFIRMED correct.** dd_decoder §3.4 maps the 4 controls → **physical** Jacobi momenta `(p_ρ, p_λ)` directly (`qₖ = q_max·(2σ(z_qk)−1)`), *no* `√μ` unweighting. The asymmetry with the position path is intended: config detours through mass-weighted Jacobi `ρ̃` only because the shape sphere and `I = |ρ̃|²+|λ̃|²` live there, then unweights to physical `ρ`; momentum is conjugate to that physical `ρ`, so it stays physical Jacobi momentum. The literal port of the momentum decode (`principia_dd_decoder.md` §3.4) is right.
 - **Chart constants — one was wrong, now fixed.** `q_max = 2` ✓. **`μ_max` was 4 → corrected to 5** (dd_decoder §3.1, chart_decoder §87/96, inverse_encode §63; at 4 the mass-saturation range was too narrow and `MASS_SAT` fired at the wrong `z_μ`). The block-inverse **ε clamps were hardcoded `1e-9` → corrected to `ε = 1e-6`** (`ε_z=ε_μ=ε_q`, chart_decoder §87 / inverse_encode §63) so the SAT flags fire at the chart's true boundary. **`α_min` REMOVED** (chart-definition change, propagated). It was never a numerical guard — nothing divides by α; it only excised a ~3° polar cap off each pole. Dropped for full-sphere coverage: `α = (π/2)·σ(z_α) ∈ (0, π/2)`, inverse `s_α = 2α/π`. The two poles (`λ̃=0` / `ρ̃=0`) are now represented; their degeneracies (β/φ undefined, inner-pair collision) are fenced by the conditioning readout, SAT flags, and COLLISION detection — **verified**: exact-pole configs give finite, SAT-flagged `z` (`a = ±13.816`), no NaN. Propagated to decode/encode docs (dd_decoder §3.2, dd_encode, inverse_encode); pending change 6 is its register entry.
-- **Mirror deadband — added.** dd_decoder §3.3 specifies `|λ_y| < δ_λ = 10⁻¹²` → fixed no-mirror; the code had a bare `λ̃_y < 0` that flaps sign at the collinear seam. Now `λ̃_y < −δ_λ`.
+- **Mirror deadband — added.** The one mirror test (R-82, in encode's frame): mirror iff `λ̃_y < −δ_λ`, `δ_λ = 10⁻¹²`, and `|λ̃_y| ≤ δ_λ` → no mirror; the code had a bare `λ̃_y < 0` that flaps sign at the collinear seam. Now `λ̃_y < −δ_λ`.
 
 *Fixes re-verified in node after patching: round-trip `decode→canonicalise→z` max `‖z−z'‖ = 1.2×10⁻¹³` over 2×10⁴ random `z` (|z|<4; residual boundary-conditioning-dominated, as expected), and all four gauge handles hold `z` to `1.6×10⁻¹⁴`. μ_max=5 + ε=1e-6 regressed neither.*
 
@@ -70,8 +70,8 @@ These four compose into the gauge transform **g** between any dragged config and
 
 - **left-drag body** → move position
 - **drag arrow tip** → edit that body's velocity/momentum vector; toggle **v ↔ p** (draw p = m·v scaled)
-- **right-click body → properties popover**: mass, position (x, y), velocity (vₓ, v_y or speed/angle), momentum, distance to COM, distance to each other body, per-body contribution to P / L / E. All fields editable — drag and numeric entry stay in sync.
-- **mass edit** → disc radius ∝ ∛mass (area/volume reads better than linear)
+- **right-click body → properties popover** (in — R-96; render_gui_spec §G8): mass, position (x, y), velocity (vₓ, v_y or speed/angle), momentum, distance to COM, distance to each other body, per-body contribution to P / L / E. All fields editable — drag and numeric entry stay in sync.
+- **mass edit** → disc radius ∝ ∛mass (area/volume reads better than linear) (in — R-96)
 - **whole-system handles** → empty-canvas drag = translate-all; a rotate ring + scale ring around the COM; a boost handle. Or a dedicated "gauge-test" mode that swaps the per-body handles for the four system handles.
 - **overlay toggles** → COM marker, Jacobi frame (ρ, λ vectors — makes the encode legible since the chart is built on them), canonical ghost, shape-sphere mini-widget.
 

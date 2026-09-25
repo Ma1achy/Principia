@@ -6,7 +6,7 @@
 
 ## The one-line rule
 
-**There is exactly one internal orientation — bottom-left origin, Y-up — and exactly one flip, at the framebuffer↔UV boundary (`v = 1 − frag_coord.y / H`), mirrored once at image export. Mouse picking, quad addressing, the hash seed, and the CPU/GPU quad uniforms all read the *post-flip* Y-up coordinate, so they agree by construction. A mirrored image is *always* a wrong-number-of-flips bug at that one seam — never a reason to add a compensating flip elsewhere.**
+**There is exactly one internal orientation — bottom-left origin, Y-up — and exactly one flip, at the framebuffer↔UV boundary (`v = 1 − frag_coord.y / H`), mirrored once at image export. Mouse picking, quad addressing, and the CPU/GPU quad uniforms all read the *post-flip* Y-up coordinate, so they agree by construction. A mirrored image is *always* a wrong-number-of-flips bug at that one seam — never a reason to add a compensating flip elsewhere.**
 
 ---
 
@@ -28,7 +28,7 @@ Conflating "bottom-left origin" (orientation) with "allow negative coordinates" 
 | Space | Range / sign | Origin & orientation | Used for |
 |---|---|---|---|
 | **Screen / framebuffer** | `[0,W]×[0,H]`, pixels | top-left, **Y-down** | rasterisation, mouse events, output image |
-| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) | quad identity `(depth,tx,ty)`, the **hash seed**, the quadtree — *an index into the current view* |
+| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) the sample position *in the current view*, which chooses the quads asked for; the quad identity `(depth,tx,ty)` and the quadtree are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀` at the last re-integrating event) — pan and zoom change which addresses are requested, never the addresses (R-97) |
 | **IC / chart space** | **signed real**, physical scales | centred on `z₀`, **Y-up**, graph-like | the decoder input; any axis display / readout / scale bar — *a normal graph* |
 
 **The map between the last two is the chart placement:**
@@ -39,7 +39,7 @@ z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂        # the chart placement (ch
 ```
 UV is the unsigned `[0,1]` **address**; converting it places it as a **signed offset from the chart centre**, scaled by zoom. So:
 
-- **UV stays `[0,1]` unsigned** — because quad addresses and the low-discrepancy hash want clean non-negative integers, and "which cell of the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space. You never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index.
+- **UV stays `[0,1]` unsigned** — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). You never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index.
 - **IC-space is signed and centred** — the chart is a plane *centred on `z₀`*; a displacement from centre is naturally `±` (left/below negative, right/above positive). The golden IC is `z = 0`; ICs on either side are genuinely `±`. The plane has no natural corner-origin — it has a natural *centre*, and coordinates are signed offsets from it. This is the thing that "behaves like a normal graph."
 
 **So "origin bottom-left, allow negatives" decomposes as:** *Y-up orientation everywhere* (the single flip) **+** *signed values in IC-space specifically* (the placement layer) — set in **two different places** (the framebuffer flip; the UV→IC placement transform). They are not the same fact.
@@ -63,7 +63,7 @@ The point of naming *one* boundary is that every coordinate consumer reads from 
 
 1. **Render sample coordinate** (frag_coord → UV → decoder) — the primary flip site: `v = 1 − frag_coord.y/H`, commented as *the* convention flip.
 2. **Mouse / pointer picking** (lock, hover, click-inspect) — canvas events are Y-down top-left; flip them **the same way** before computing the picked quad / `z`. **Most likely to be forgotten**; symptom (clicking the top inspects the bottom) is the classic wrong-subsystem bug.
-3. **Quad address `(tx, ty)`** — if `ty` derives from screen rows it inherits the flip; the hash seed `(depth, tx, ty, …)` must be computed against the **Y-up** address so a manifold cell has stable identity regardless of the flip (else CPU- and GPU-computed addresses could disagree on Y, and the "sample pattern is a property of the cell" property breaks).
+3. **Quad address `(tx, ty)`** — if `ty` derives from screen rows it inherits the flip; the address `(depth, tx, ty)` must be computed against the **Y-up** frame so a manifold cell has stable identity regardless of the flip (else CPU- and GPU-computed addresses could disagree on Y, and the "sample pattern is a property of the cell" property breaks).
 4. **CPU quadtree ↔ GPU uniforms** — the CPU (f64) computes quad centres/half-widths; if CPU thinks Y-up and GPU samples Y-down (or vice versa) the quad-local coordinate is mirrored **within each quad**, and the linearised decoder's `x₀ + J_D·δ` produces mirror-image ICs. A CPU/GPU seam where a silent Y disagreement corrupts the decode — the convention must be shared explicitly.
 5. **Exported image** — if internal is Y-up and the output format is Y-down, the encode step flips back **once** (the mirror of the input flip), equally single-and-named.
 
@@ -83,4 +83,4 @@ Turn the invisible bug visible. A debug mode that renders the raw post-flip `(u,
 
 ---
 
-*One orientation (Y-up), one flip (framebuffer↔UV, mirrored at export) — everything reads the post-flip coordinate, so a mirrored image is always a wrong-flip-count bug at that seam. Three spaces, not one: screen (Y-down pixels) → flip → UV (`[0,1]` unsigned, Y-up — addressing & hash) → placement `z₀ + 2(uv−½)·q` → IC-space (signed, Y-up, graph-like — decoder input & axis display). "Bottom-left, allow negatives" = Y-up orientation (the flip) + signed values in IC-space (the placement) — two facts, two layers. Per-axis signedness varies; the decoder mediates. A UV-gradient debug view makes the whole thing self-checking.*
+*One orientation (Y-up), one flip (framebuffer↔UV, mirrored at export) — everything reads the post-flip coordinate, so a mirrored image is always a wrong-flip-count bug at that seam. Three spaces, not one: screen (Y-down pixels) → flip → UV (`[0,1]` unsigned, Y-up — addressing) → placement `z₀ + 2(uv−½)·q` → IC-space (signed, Y-up, graph-like — decoder input & axis display). "Bottom-left, allow negatives" = Y-up orientation (the flip) + signed values in IC-space (the placement) — two facts, two layers. Per-axis signedness varies; the decoder mediates. A UV-gradient debug view makes the whole thing self-checking.*

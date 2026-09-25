@@ -30,17 +30,18 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 
 ### 3.1 `sample_descriptor` (u32)
 
-**`sample_descriptor` (u32) — authoritative bit layout (8 bits used; `total_substeps` is a separate exact u32 in the struct, NOT a descriptor field):**
+**`sample_descriptor` (u32) — authoritative bit layout (10 bits used, 0–9; `total_substeps` is a separate exact u32 in the struct, NOT a descriptor field):**
 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
-| `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0, a valid IC already escaping is `escape` at step 0). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
+| `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0; there is no step-0 `escape`, since the window rule needs history, so an IC already escaping is classified when its window completes — R-60). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
 | `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id (0-based); collision → pair id (pair `k` is the side opposite body `k`, R-22); sim_failed/decode_failed → failure category; undefined for running |
-| `saturated` | 5 | 1 | sticky flag — the substep exponent reached `⌈log2 N_max⌉` at some point (integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag). `N_max` is a raised tunable (integrator contract), not hardcoded |
+| `saturated` | 5 | 1 | sticky flag — set iff `N_sub == N_max` occurred at some macro-step (the integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag — payload §2, R-86). `N_max` is a raised tunable (integrator contract), not hardcoded |
 | `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word); pair ids as `detail` (R-22) |
-| *reserved* | 8–15 | 8 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
+| `last_symbol` | 8–9 | 2 | final symbol of the free-group word, a redundant cache of the sidecar word for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`); meaningful iff the word's `length ≥ 1 && length ≠ 127`. A deliberate, versioned assignment (payload §2, R-86) |
+| *reserved* | 10–15 | 6 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy (⌊log₂⌋, 0 for a total ≤ 1 — payload §6, R-86) is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
 
-(The descriptor uses **8 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Only bits 0–7 are used — payload §2.)
+(The descriptor uses **10 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Bits 0–9 are used and 10–15 reserved — payload §2.)
 
 **Derived, NOT packed (removed from the descriptor — functions of stored state):** `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = θ̃<0` (from `theta`); `enc_01/02/12`, `dominant_pair` (topological read of the word — symbolic-dynamics contract); `ftle = S_final/(step_count·dt)` (finalise the partial renorm interval at read — payload §5, **not** simply `S/t`); `total_substeps_log2` (from the exact `total_substeps` u32 via `countLeadingZeros`); current substep count (live read off the march); current drifts (`H(r,p)−E_0`). The old `encounter_count`/`benettin_count`/`suspect_energy`/`suspect_lz`/`ftle_valid` descriptor fields are gone (derived, dropped, or — for suspect flags — folded into read-time predicates over the drift values).
 
@@ -50,14 +51,14 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
-| `t_end_step` | 0–15 | 16 | **EXACT** macro-step index at termination (u16). Display fraction derived `/horizon_steps`. Also = total macro-steps (`total_steps` redundant). **Requires `horizon_steps=⌈T/dt⌉≤65535`** — ENFORCED (single format, no Q0.16 fallback; long integrations use coarser dt/epochs) |
+| `t_end_step` | 0–15 | 16 | **EXACT** completed-macro-step count `step_count` (u16), at all times — running: advances each step; terminal: latched; initial: 0 (payload §2). Display fraction derived `/horizon_steps`. At termination it is the total macro-steps (`total_steps` redundant). **Dispatch refuses a configuration with `horizon_steps=⌈T/dt⌉ > 65535`** (R-86; single format, no Q0.16 fallback; long integrations use coarser dt/epochs) |
 | `t_dmin_step` | 16–31 | 16 | **EXACT** absolute macro-step index of closest approach (u16). The old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march under lockstep |
 
 Exact integer indices → exact CPU/GPU parity (no rounding contract) and exact Welford prefix selection.
 
 ### 3.3 `free_group_word` (uint4) — mixed-radix packing, **in a separate buffer**
 
-> **Architecture: the word lives in its own storage buffer, NOT inline in `SimState`.** Split by *access pattern*, not data type. Every other `SimState` field is **hot** — read/updated by the march kernel *every substep* (`r,p`; the shadow, which marches in lockstep; `S,θ̃`; Welford `mean_y,C_ty`; `E_0,Lz_0` read for the drift-max latch; `dE_max,dLz_max`; `times`; `d_min`; the descriptor). The word alone is **cold**: appended only on encounter *events* (a few dozen times over a ~200k-step march) and read only at resolve (symbolic-spread) and inspect (display) — *never* in the per-step march. Co-locating it inline wasted bandwidth two ways: (1) it made `SimState` 16-byte-aligned (the `vec4` is the sole 16-align driver), padding the struct tail with **12 dead bytes**; (2) every hot cache line the integrator loaded dragged 16 B of word it didn't need that step. **Pulling the word into a parallel buffer** (indexed identically to samples — per-copy, same sample→index map, 16 B/entry) drops `SimState` to **8-byte alignment** (largest remaining member `array<vec2>`), kills the 12 B padding (→ only 4 B residual), shrinks the **hot** per-sample footprint 160→136 B effective (FTLE-on) / 112→88 B (FTLE-off) — a ~15% hot-path bandwidth cut on the bandwidth-bound march — and lets the word buffer be sized/tiered independently (drop word features → free the whole buffer without touching integration state). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths (resolve/inspect) only. Strictly good for a bandwidth-bound kernel: trade rare-path fetches for hot-path bandwidth. **Only the word moves** — the physics/accumulators/refs are all hot and co-accessed every step, so splitting them further would fragment co-accessed data and hurt the prefetcher; two buffers (hot `SimState` + cold word) is the sweet spot.
+> **Architecture: the word lives in its own storage buffer, NOT inline in `SimState`.** Split by *access pattern*, not data type. Every other `SimState` field is **hot** — read/updated by the march kernel *every substep* (`r,p`; the shadow, which marches in lockstep; `S,θ̃`; Welford `mean_y,C_ty`; `E_0,Lz_0` read for the drift-max latch; `dE_max,dLz_max`; `times`; `d_min`; the descriptor). The word alone is **cold**: appended only on encounter *events* (a few dozen times over a ~200k-step march) and read only at resolve (symbolic-spread) and inspect (display) — *never* in the per-step march. Co-locating it inline wasted bandwidth two ways: (1) it made `SimState` 16-byte-aligned (the `vec4` is the sole 16-align driver), padding the struct tail with **12 dead bytes**; (2) every hot cache line the integrator loaded dragged 16 B of word it didn't need that step. **Pulling the word into a parallel buffer** (indexed identically to samples — per-copy, same sample→index map, 16 B/entry) drops `SimState` to **8-byte alignment** (largest remaining member `array<vec2>`), kills the 12 B padding (→ only 4 B residual), shrinks the **hot** per-sample footprint 160→136 B effective (FTLE-on) / 112→88 B (FTLE-off) — **144 / 96 B** since the 8 B closure field (payload §1, §7) — a ~15% cut in the persistent hot-state footprint, expected to reduce storage traffic and working-set pressure (the bottleneck is unconfirmed — payload §3, §8) — and lets the word buffer be sized/tiered independently (drop word features → free the whole buffer without touching integration state). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths (resolve/inspect) only. If the march is bandwidth-bound, that trades rare-path fetches for hot-path bandwidth; whether it is depends on dispatch granularity and is to be measured (payload §3). **Only the word moves** — the physics/accumulators/refs are all hot and co-accessed every step, so splitting them further would fragment co-accessed data and hurt the prefetcher; two buffers (hot `SimState` + cold word) is the sweet spot.
 
 **76 symbols in 121 bits** (vs 58 flat), by exploiting free reduction. Truncation is encoded as a **length sentinel** (`length=127`), not a flag bit, reclaiming the bit for the full 121-bit payload (all of x,y,z + `.w[0:24]`). Per-copy (each of the **(E+1)** samples carries its own word). Lives in the **word buffer** (§3.3a), not `SimState`. **Cancellation requires a reversible-permutation continuation table** (`predecessor_symbol(next,e)`) so a pop recovers the new prev in O(1) — else it replays the whole word.
 
@@ -71,16 +72,18 @@ W₁ = d₀ ;  W_{k+1} = 3·W_k + e_k    (Horner recurrence — compatible with 
 
 **Append (per-encounter — a rare *event* op, NOT per-step):**
 ```
-if s == inverse(prev):  W = (W - last_digit)/3 ; prev = new-last-symbol   // free reduction: pop
-else:                   W = W*3 + continuation_index(prev, s) ; prev = s ; length += 1  // push
+if s == inverse(prev):  e = W mod 3 ; W = W div 3 ; prev = predecessor_symbol(prev, e) ; length -= 1   // free reduction: pop
+else if length == 76:   length_raw = 127                                                          // at capacity: truncate
+else:                   W = W*3 + continuation_index(prev, s) ; prev = s ; length += 1            // push
 ```
+The full rule, with the empty-word, pop-to-empty and already-truncated cases, is payload §3's.
 A **multiply-add** (`W*3+e`) replaces the flat **shift-or** — 2–3 extra ALU ops, on a path that fires a few dozen times over a ~200k-step march, never per-step. Carry a live 2-bit `prev` symbol during the march (needed for the constraint + cancellation recovery; cheap).
 
-**Decode (at resolve / inspect — a *cold* path):** O(length) sequential — pop the base-3 tail (`while W ≥ 4: digit = W%3; W/=3`), the residue is `d₀`, then replay forward through the continuation table. **Not random-access** — but the consumers (symbolic-spread reduction comparing whole words, inspection display) read the *entire* word anyway, so O(length) sequential *is* their access pattern. No practical loss.
+**Decode (at resolve / inspect — a *cold* path):** O(length) sequential — pop the base-3 tail by depth, not by magnitude (`while depth: e = W mod 3; W = W div 3`, `length − 1` times — payload §3), the residue is `d₀`, then replay forward through the continuation table. **Not random-access** — but the consumers (symbolic-spread reduction comparing whole words, inspection display) read the *entire* word anyway, so O(length) sequential *is* their access pattern. No practical loss.
 
-**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}` and reverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order).
+**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}` and its inverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order); and the reverse `predecessor_symbol(next,e)→prev`, mandatory for the O(1) pop (payload §3's frozen table).
 
-**Layout in `.w`:** payload high bits in `.w[0:24]` (25 bits — part of the 121-bit budget); `length` **7 bits** at `.w[25:31]`, values 0…76, with **`length = 127` = the truncation sentinel** (NO separate flag bit — the sentinel reclaims it; payload §3). **Truncation is bit-occupancy:** before appending, if `W·3+e` would exceed the 121-bit budget, set `length_raw = 127` and stop growing.
+**Layout in `.w`:** payload high bits in `.w[0:24]` (25 bits — part of the 121-bit budget); `length` **7 bits** at `.w[25:31]`, values 0…76, with **`length = 127` = the truncation sentinel** (NO separate flag bit — the sentinel reclaims it; payload §3). **Truncation is the length cap:** a push onto a word already at 76 symbols sets `length_raw = 127` and stops growing (payload §3 — a 77-symbol word can have a small numeric `W`, so bit occupancy cannot define capacity).
 
 > **Why the extra compute is plausibly cheap (a hypothesis, not settled).** The split reduces persistent memory and avoids loading unused symbolic data on the hot path — true regardless of the bottleneck. The stronger "free compute" claim rests on the march being **bandwidth-bound**, which **depends on dispatch granularity and is unconfirmed**: if one invocation runs many substeps with state in registers and writes once, storage traffic is per-*dispatch* not per-substep, and integration may be arithmetic-/occupancy-/register-pressure-bound instead. Either way the mixed-radix cost is off the hot path — **append per branch-cut crossing (rare), decode at resolve/inspect (cold)** — no per-step cost, no new divergence (the cancellation branch already exists), no hot-kernel register pressure (decode runs in the resolve/inspect kernel). **Phrase as: expected to reduce storage traffic and working-set pressure; confirm the actual bottleneck and register spilling by measurement.** (Storage traffic per sample is `(E+1)`× struct, not `2(E+1)` — the shadow is *inside* the struct, §consolidated payload.)
 
@@ -98,7 +101,7 @@ The word lives here, not in `SimState`. Specification:
 - **Read:** at resolve (symbolic-spread reduction `S_word` over a footprint's E+1 words) and at inspect (decode + display for a clicked trajectory). Never read per-step.
 - **Residency & tiering:** sized `16 B × (E+1) × live_pixels` (storage multiplier `(E+1)`, NOT `2(E+1)` — the word has no shadow and is per-*sample*), sharded per-quad (WebGPU 128 MiB/binding, 256 MiB/buffer baseline forces logical buffers into physical quad-chunks), independent of the hot `SimState` allocation. Because it is only consumed at resolve/inspect, it can be tiered separately — e.g. dropped entirely when symbolic features are off (freeing the whole buffer without touching integration state), or given a different residency policy than the hot state. The quality/device controller treats it as a separable line item.
 - **Lifecycle parity with `SimState`:** the word is part of the payload `f(IC, sim key, t)` — it must be **allocated, evicted, and recomputed in lockstep with its `SimState`** (caching contract). A sample and its word are one logical payload split across two physical buffers; eviction frees both, recompute rebuilds both, device-loss recovery restores both. Never let the two buffers desynchronise (a `SimState` at index `i` and a word at index `i` must always describe the same trajectory at the same playhead).
-- **Alignment payoff:** removing the `vec4` from `SimState` drops the struct from 16-byte to 8-byte alignment (largest remaining member `array<vec2>`), eliminating 12 B of vec4-forced tail padding and shrinking the hot per-sample footprint to **136 B effective (FTLE-on) / 88 B (FTLE-off)** — a ~15% hot-path bandwidth reduction on the bandwidth-bound march.
+- **Alignment payoff:** removing the `vec4` from `SimState` drops the struct from 16-byte to 8-byte alignment (largest remaining member `array<vec2>`), eliminating 12 B of vec4-forced tail padding and shrinking the hot per-sample footprint 160→136 B (FTLE-on) / 112→88 B (FTLE-off); with the 8 B closure field it is **144 B effective (FTLE-on) / 96 B (FTLE-off)** (payload §1, §7) — a ~15% cut in the persistent hot-state footprint (the bottleneck is unconfirmed — payload §3).
 
 
 ### 3.4 `SimState` scalars — with presentation metadata
@@ -148,9 +151,9 @@ The word lives here, not in `SimState`. Specification:
 
 | Group | Contents | Notes |
 |---|---|---|
-| **Phase state** | `r, p` — 12 × f32 (vec4-grouped for alignment) | the marching state at the playhead |
+| **Phase state** | `r, p` — 12 × f32 (vec2-grouped, `array<vec2<f32>, 3>` each; 8-byte aligned — payload §1, R-86) | the marching state at the playhead |
 | **Shadow states** (tier-gated) | 1 Benettin shadow **per sample** (base and each ensemble copy), 12 × f32 each | **resident under lockstep — they march too.** Every sample is a full, uniform `SimState` computing its own FTLE (the sampling/SSAA decision: uniformity over micro-saving), so its FTLE shadow rides with it. Tier gates existence; `contains-ensemble` / `contains-FTLE` advertise it. The shadow is an *ingredient* of the sample's `ftle` field — never itself a coloured sample (renormalisation corrupts its endpoint) |
-| **Ensemble copies** (tier-gated) | E full uniform `SimState`s per nominal sample, offsets = **fixed low-discrepancy Halton (2,3) prefix** indexed by `copy_index` | structurally identical to the base (colour through any render graph, no special-casing) but **scheduler-leaves** — a copy never spawns its own ensemble (`ENSEMBLE_ENABLED` applies only to nominal samples; no recursion). They double as the SSAA sample pool *and* the spread-metric pool. Per-pixel ≈ `2(E+1)` trajectories (each sample + its shadow); E is the tier's free-valued SSAA knob (0–15; High = 3, Extreme = 15 — memory-tiers) |
+| **Ensemble copies** (tier-gated) | E full uniform `SimState`s per nominal sample — a footprint has **E+1 samples, `copy_index` 0..E**: copy 0 is the un-jittered centre, copies 1..E sit at **Halton (2,3) points 1..E**, centred (minus ½) and scaled to the footprint (R-80) | structurally identical to the base (colour through any render graph, no special-casing) but **scheduler-leaves** — a copy never spawns its own ensemble (`ENSEMBLE_ENABLED` applies only to nominal samples; no recursion). They double as the SSAA sample pool *and* the spread-metric pool. Per-pixel ≈ `2(E+1)` trajectories (each sample + its shadow); E is the tier's free-valued SSAA knob (0–15; High = 3, Extreme = 15 — memory-tiers) |
 | **Running accumulators** | Benettin `S` (f32); unwrapped phase `θ̃` (f32 — `orbit_count`/`retrograde` derived at read); drift running-final + running-max pairs; **diffusion via Welford streaming regression** — per-sample `mean_y, C_ty` (2 × f32); the time-only terms `n, mean_t, C_tt` are **the same for all samples** (lockstep synchronises `t`) and are **DERIVED closed-form** (from `step_count`), not stored per-sample or in a mutable global — see the invariant | ⚠ **INVARIANT (footgun 1): diffusion is accumulated as *streaming regression state*, never as `(t, y)` points collected for a later fit** — points regrow the history the reversal deleted. **Welford, not raw moments:** the old raw-moment form (`Σt, Σt², Σy, Σty, Σy²`) computes slope as `(nΣty−ΣtΣy)/(nΣt²−(Σt)²)` — a *catastrophic-cancellation* difference of large nearly-equal products, precision-risky even at f32 as the sums grow over ~10⁵ steps. Welford tracks *centered* co-moments (running means + `C_tt, C_ty`), so **slope = `C_ty / C_tt`** directly — stable, no cancellation, no unbounded sums. **Lockstep — time-moments are DERIVED, not a shared mutable global** (WGSL has no dispatch-wide barrier to publish one safely mid-dispatch). For uniform sampling: `n=step_count`, `mean_t=(n+1)h/2`, **`C_tt(n)=h²·n(n²−1)/12`** (closed form). The per-sample covariance update uses the **OLD-mean** time deviation `δ_t=0.5·n·h` (NOT `t−mean_t` post-insertion, which is wrong): `mean_y += (y−mean_y)/n; C_ty += δ_t·(y−mean_y)`. Slope `C_ty/C_tt(n)`, **invalid for `n<2`** (sentinel, no divide-by-zero). Only `mean_y, C_ty` are stored. (Non-uniform schedule → small precomputed prefix table, still read-only.) Net: **2 per-sample f32** (was 5), *and* numerically robust. Slope + R² derived from `(C_ty, C_tt, mean_y, mean_t, n)` at any playhead |
 
 Terminal latch: on termination the whole block freezes (state stops advancing, accumulators stop updating).
@@ -160,6 +163,9 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 ### 3.6 `ICDescriptor` (12 × f32)
 
 `m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+
+**64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
+implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
 
 ### 3.7 `QuadReduction` — completed ledger
 
@@ -270,9 +276,9 @@ class, and it *lags* divergence rather than leading it), `t_end` (conditional �
 
 | member | type | note |
 |---|---|---|
-| `alpha` | f16 | scaling exponent of `ensemble_spread`, parent↔child. **≈1 → split, ≈0 → floor** |
+| `alpha_area` | f16 | the stop rule's exponent, `log2(unresolved_area(coarse) / unresolved_area(children))`, judged over two levels (policy §2) — a dimension: a line reads 1, a sea 0, and the floor is below `alpha_lo`. An empty mask is told from a full one by `n_unresolved`, and the floor is refused on a negative exponent (R-42) |
 | `alpha_energy` | f16 | **sanity field.** Total energy's exponent is known analytically to be 1.0 |
-| `worst_energy_drift` | f16 | input to the per-copy classifier that sets `failed_fraction` |
+| `worst_energy_drift` | f16 | the field to threshold on for absolute conservation; pairs with `error_ratio` (R-87) |
 
 (`error_ratio` doubles as the estimator trust flag, replacing the retention-based detector of
 §7.15e: `error_ratio` departing from 1.0 is the same signal without a tuned threshold.)
@@ -320,8 +326,8 @@ Four properties of this block, all measured:
 3. **`alpha_energy` is a free per-quad correctness check** — the field excluded for having *no*
    dynamics turns out to be the ideal control. If `|alpha_energy − 1| > 0.05`, every exponent from
    that quad is untrustworthy.
-4. **`failed_fraction > 0.10` detects estimator failure** with one false alarm in six. Note there is
-   **no better-estimator fallback**: Theil–Sen *is* two-point OLS at two scales (verified to 8.7e-10),
+4. **Estimator failure is read from `error_ratio`** departing from 1.0 (R-87). Note there is **no
+   better-estimator fallback**: Theil–Sen *is* two-point OLS at two scales (verified to 8.7e-10),
    so its advantage came from consuming more scales. The fallback is *acquire a third scale*
    [RC §7.15e].
 
@@ -329,10 +335,20 @@ Four properties of this block, all measured:
 
 | member | type | note |
 |---|---|---|
-| `running_max_divergence` | f32 | max-updated, **latching** |
-| `running_mean_divergence` | f32 | |
-| `divergence_trend` | f32 | EWMA |
-| `first_divergence_t` | f32 | write-once; sentinel until crossed |
+| `running_mean_divergence` | f32 | diagnostic, not a split input (R-99) |
+| `first_divergence_t` | f32 | write-once; sentinel until crossed; diagnostic, not a split input (R-99) |
+
+**The latch is per footprint, not a `QuadReduction` member (R-99).** `running_max_divergence` (f32, max-updated,
+**latching**) is held per footprint with the resident quad, and goes when the cache evicts or merges the quad, so it
+never pins memory; its storage layout is defined by the task that builds it (R-72). It feeds "unresolved", not a second
+split trigger (R-91): under the one `eps`, a footprint is unresolved if its spread exceeds `eps` now, or its latched
+running maximum ever did, and a quad is unresolved if any of its footprints is. `θ_s`, `θ_max`, `θ_trend` and the trend
+signal are dropped, so there is no `divergence_trend` member.
+
+**The latch is evaluated on the GPU; only its verdict returns (R-142).** The latch is evaluated in the resolve pass
+(R-135), and its state stays in GPU-resident per-quad memory. `QuadReduction` carries only the verdict: the count of
+the quad's unresolved footprints, latched ones included (policy §1's `n_unresolved`). `QuadReduction` stays the sole
+automatic return.
 
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.
@@ -387,10 +403,10 @@ while a collision radius leaves them exact and only decides when to stop — rec
 (pending change 7) rather than applying a fudge. **Adopted: `r_coll` nonzero by default, `epsilon`
 default 0 and optional.**
 
-**Long-horizon behaviour is now a reporting property rather than a limit.** With `failed_fraction`
-as a contributor, a pixel whose copies cannot be integrated reads **indeterminate** — which is true —
-instead of emitting an exponent computed from the tame minority that survived. Measured, near-field
-at `t=80`: `failed_fraction = 0.56`, `ensemble_spread = 0.664`. And the refinement decision follows
+**Long-horizon behaviour is now a reporting property rather than a limit.** With nothing discarded
+and `error_ratio` read as the trust flag (R-87), a pixel whose copies cannot be integrated reads
+**indeterminate** — which is true — instead of emitting an exponent computed from the tame minority
+that survived. Measured, near-field at `t=80`: `ensemble_spread = 0.664`. And the refinement decision follows
 automatically: as failures accumulate, parent and child spreads both saturate, `alpha → 0`, and the
 quad **floors** — correct, since refining does not make a close encounter easier. Still open: gate threshold and integrator tolerance must be specified **as a pair**
 (at `eta=0.005` the gate stops mattering; at `eta=0.02` no threshold reaches the trust bar) [RC §7.14a].
@@ -440,7 +456,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 1. **Disjointness & coverage (static):** within each packed word, fields never overlap; declared bits are covered or explicitly reserved; widths fit ranges (word length ~76 fits 7 bits with mixed-radix packing; note `encounter_count`/`orbit_count`/`total_substeps_log2` are all DERIVED, not packed fields — the last from the exact `total_substeps` u32, §3.1).
 2. **Pack∘unpack = id**, per field, property-fuzzed over the full value range — in **Rust** (host + the kernel's own pack/unpack) *and* in a GPU self-test dispatch of the **WGSL fragment** unpack (which is where the `i32-extractBits` sign-extension trap lives — u32 overload only; the Rust side has no `extractBits`, so that trap is fragment-specific).
 3. **f16 pairs** round-trip via `pack2x16float`/`unpack2x16float` within f16 eps.
-4. **Fixed-point:** `t_end`/`t_dmin` (in `times`) round-trip with ≤ 1/65535 error; endpoints exact; bit-identical CPU/GPU quantisation (parity).
+4. **Exact step indices:** `t_end_step`/`t_dmin_step` (in `times`) round-trip exactly as u16 — no fixed-point, no Q0.16 (R-86); dispatch refuses a configuration with `⌈T/dt⌉ > 65535`; bit-identical CPU/GPU on identical inputs (parity).
 5. **Sentinels:** `diffusion = −1.0` survives pack/unpack bit-exact; catalogue styles it, never scales it.
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
 7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.

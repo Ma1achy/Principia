@@ -6,13 +6,13 @@
 
 ## 1. What it is
 
-The **only upward edge on the ladder**: `physical state → z`, the quotient map onto the decode's canonical section. Consumers: the lock's re-centre, direct physical IC entry, Burrau `(m,n)` entry, invariant-pair lookup, **literature IC import** (how the validation programme's Anosova/Lehto/Burrau starts get loaded), the T-tests, and the `ROUNDTRIP` debug kernel.
+The **only upward edge on the ladder**: `physical state → z`, the quotient map onto the decode's canonical section. Consumers: the lock's re-centre, direct physical IC entry, Burrau `(m,n)` entry, invariant-pair lookup, **literature IC import** (how the validation programme's Anosova/Lehto/Burrau starts get loaded), the T-tests, and the `ROUNDTRIP` debug view (a fragment preset, `encode(decode(z))` recomputed fragment-side — `principia_colour_composition.md` §6; R-75).
 
 ---
 
 ## 2. Consolidated contract
 
-From the **inverse-encode contract** (all of it binds; headline clauses): `E = (block/chart inverses) ∘ C`; **T1** gauge-invariance (deterministic tie-breaks), **T2** right-inverse on the interior, **T3** left-inverse modulo gauge; rigid operations act on the **full phase-space state**; scale rescale is **step 0**; the invariant fibre point is the chart's own forward construction (**encode reuses decode** — pending change 3 supersedes "smallest latent norm"); tolerances asserted in **physical units**; everything discarded is **reported** (`lookup_rescaled`, `lookup_mirrored`, `lookup_clamped`).
+From the **inverse-encode contract** (all of it binds; headline clauses): `E = (block/chart inverses) ∘ C`; **T1** gauge-invariance (deterministic tie-breaks), **T2** right-inverse on the interior, **T3** left-inverse modulo gauge; rigid operations act on the **full phase-space state**; the canonicalisation order is **1a CoM → 0 scale → 1b boost → 2 rotate → 3 mirror** (R-23); the invariant fibre point is the chart's own forward construction (**encode reuses decode** — pending change 3 supersedes "smallest latent norm"); tolerances asserted in **physical units**; everything discarded is **reported** (`lookup_rescaled`, `lookup_mirrored`, `lookup_clamped`).
 
 From the **chart contract / generation root**: block inverses come from the **link registry** (never inlined); ε clamps are registry data (`ε_μ = ε_z = ε_q = 10⁻⁶`, `μ_max = 5`, `q_max = 2`).
 
@@ -39,20 +39,21 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
 
 ```
+1a COM        r ← r − R_com                            (translations gauged; I is CoM-frame-defined)
 0  SCALE      I_in = Σ mᵢ‖rᵢ‖²  (CoM frame)          → r ← r/√I_in ;  p ← I_in^{1/4}·p
               record λ = I_in^{−1/2} ; notice lookup_rescaled
               (E_canon = √I_in·E_in ;  L_canon = L_in/I_in^{1/4} ;  t_canon = t_in/I_in^{3/4})
-1  FRAME      r ← r − R_com ;  p ← p − mᵢ·P_tot/M      (translations and boosts gauged)
+1b BOOST      p ← p − mᵢ·P_tot/M                       (boosts gauged)
 2  ROTATE     φ = atan2(ρ_y, ρ_x) ;  apply R(−φ) to every rᵢ AND every pᵢ ;  ρ̃ lands on +x
               ρ = 0 → reject (coincident inner pair)
-3  MIRROR     if λ_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored
-              |λ_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break)
+3  MIRROR     if λ̃_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored   (λ̃ = √μ_λ·λ)
+              |λ̃_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break; R-82)
 4  INVERT     per §3.1, into the active chart where possible, else latent z (always possible)
 5  FIBRE      chart's own construction first ; smallest-latent-norm only where none exists
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
 ```
 
-Steps 0–3 commute with nothing — 0 before 1 (CoM of the *scaled* state is the scaled CoM, but I is CoM-frame-defined, so compute `R_com` first in practice: operationally **1a** subtract CoM, **0** rescale, **1b** subtract boost, **2**, **3**; the contract's numbering compresses this — the pin is: *CoM subtraction precedes the I computation*, then scale, then boost removal, then rotate, then mirror).
+The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
 ### 3.3 The gauge group action, explicit (this is what T1 sweeps)
 
@@ -63,7 +64,7 @@ rᵢ' = s · R(θ) · Π · rᵢ + a
 pᵢ' = s^{−1/2} · R(θ) · Π · pᵢ + mᵢ · u
 ```
 
-**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ_y` inside the mirror deadband (the tie-break sweep). The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
+**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep). The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
 
 ### 3.4 Curve projection (off-curve input) — metric pinned
 
@@ -88,7 +89,7 @@ Generic input is not on the Burrau embed. Projection:
 | **8** physical → manifold | quotient onto the section; full-state rigid ops; everything discarded reported | T1/T3 suites (§5); the three `lookup_*` notices fire iff their operation did |
 | **2/13** link registry | block inverses are registry inverses, never re-derived inline | swap a link → encode's inverse swaps with it; analytic vs numeric Jacobian agreement inherited from the registry tests |
 | **fibre / (L_z,E) chart** | encode reuses decode's construction — one code path | enter `(L_z, E)` numerically vs click the corresponding pixel → identical z to precision (the pending-change-3 test) |
-| **Observation** | `ROUNDTRIP` kernel = `D → E → D`, physical residual | residual view dark except clamps / feasibility edges / mirror tie — each *tagged expected* |
+| **Observation** | `ROUNDTRIP` preset = `D → E → D`, physical residual, recomputed fragment-side (R-75) | residual view dark except clamps / feasibility edges / mirror tie — each *tagged expected* |
 | **validation import** | literature ICs enter through this door | Anosova region-D and Burrau rest starts encode → decode → invariants match the papers' stated values after the recorded rescale |
 
 ---
@@ -112,7 +113,7 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 ## 6. Deferred / flagged
 
 - **Projection metric pin (§3.4)** — chordal-⊕-Euclidean, unit weights: confirm or veto; whatever wins goes in the shared source with the curve embeds.
-- **Operational order of steps 0/1 (§3.2)** — CoM-before-I is the practical pin inside the contract's compressed numbering; pinned in the **shared source** so both instantiations (CPU-f64, GPU-f32) inherit the identical sequence.
+- ~~**Operational order of steps 0/1 (§3.2)**~~ — **settled by R-23:** 1a → 0 → 1b → 2 → 3 is normative, in the contract's numbering as here; pinned in the **shared source** so both instantiations (CPU-f64, GPU-f32) inherit the identical sequence.
 - **Batch import ergonomics** (CSV of literature ICs → encode → tagged report per row) — a validation-phase tool, not contract; noted so the import seam test has a harness to live in.
 
 ---

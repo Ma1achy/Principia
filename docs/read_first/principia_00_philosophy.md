@@ -385,7 +385,7 @@ rendering fields when these methods were compared.
 
 **Measured here:** doubling the sync-boundary re-registration count at fixed step size moves the
 drift field by **0.444 decades**, against 2.5e-6 for the LC branch choice and 7.5e-5 for the
-reference-body selection rule. Heggie beats AZ on **31 of 32** cases (`err>10` 3916 → 73), and
+reference-body selection rule. Heggie beats AZ on **31 of 32** cases (`err>10` 3915 → 74 at prin-rs `8600d45`; the original run at `70cfbc4` gave 3916 → 73; R-165), and
 **loses precisely on `far`** — where sustained hierarchy means AZ never re-registers.
 
 **Prior art that narrows the claim, and must be cited:** Trani et al. 2024 (arXiv 2403.03247,
@@ -442,6 +442,8 @@ later** — §7.1's payload genericity is currently the only one.
 ---
 
 ## 7.8 Sequencing — what is next, and why in this order
+
+> **Superseded (R-74, 25 Sep 2026):** `principia_canonical_spec.md` §11 governs — the vertical slice settled the research phases; the logH falsification check of the re-registration mechanism is an M3 validation requirement.
 
 1. **logH experiment.** The falsification test for the re-registration mechanism, not a
    confirmation exercise. logH has *no coordinate transformation at all* — strictly stronger than
