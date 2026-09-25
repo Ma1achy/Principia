@@ -135,7 +135,8 @@ Compose sub-results. All are `vec3(+ctx) → vec3`.
 - `bandmask(base, field, band, line)` — overlay lines/tiles where a field is in-band (grid/contours
   over a base map; **quad-boundary overlay** on the normal render is this with
   `field = distance-to-quad-edge`).
-- `site_overlay(base, SiteBlend*)` — additive site blobs over a base. **The physics overlay is
+- `site_overlay(base, SiteBlend*)` — site blobs over a base, blended as a sequential clamped mix (the oracle's form,
+  `principia_dd_colouring.md` §3.4, R-122). **The physics overlay is
   exactly this**: `site_overlay(base, SiteBlend{ sites = physics(m), kernel = vmf(κ), colours =
   per-site })`. It was never a distinct node; it is Family A used as a combinator, with a physics
   site generator (§2) and per-blob strength `s`.
@@ -434,8 +435,9 @@ rows (schematic — full table lives with the preset library):
 | Physics overlay | post step `site_overlay(base, SiteBlend{ physics(m), vmf(κ=11 BC / 9 EL), per-site colours }, s)` |
 | `s_depth`, `f_ftle`, ROUNDTRIP, … | §6 presets over `ctx` |
 
-**Verification obligation.** The **two React reference artefacts are the oracle** (`ColourSphere` =
-Artefact 1, `PatternSphere` = Artefact 2, with `physicsOverlay`/`stability_hue`). Every recreated
+**Verification obligation.** The **two reference HTML files are the golden oracle**
+(`docs/gui/reference/principia_colour_explorer.html` and `docs/gui/reference/principia_colour_presets.html`; R-122),
+and formulas follow the oracle. Every recreated
 preset ships with a **golden-image test** against the corresponding reference output. This is a
 **cross-implementation check in the project's established style** (like the shared-kernel-vs-
 independent-integrator convergence reference): the composition engine and the reference artefact are
@@ -443,7 +445,7 @@ two implementations of the same maps, and agreement to tolerance certifies the p
 "done" until its golden image matches.
 
 **Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
-golden test. §7.1 is the checklist; the reference artefacts are the oracle for each entry.
+golden test. §7.1 is the checklist; the two reference HTML files are the oracle for each entry (R-122).
 
 ### 7.1 The complete map list (R-16)
 
@@ -456,7 +458,7 @@ the LUT sphere, the CVD method (R-78) and the physics overlay's blob blend are i
 |---|---|
 | VMF OKLAB | six vMF poles at $\{\pm\hat x, \pm\hat y, \pm\hat z\}$, full-OKLab hue table (dd_colouring §3.2) |
 | VMF Okabe–Ito | the same engine with the Okabe–Ito CB-safe hue table |
-| LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). |
+| LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). **LUT data (R-122):** the published matplotlib tables for Viridis, Cividis, Plasma, Magma, Inferno, Twilight and Cubehelix; Moreland's table for Cool-warm; the Principia palette's stops are the explorer's (`principia_colour_explorer.html` :108, `LUT.principia`, eight stops). |
 | Turbo | a 1-D colour LUT, shown among the additional colour map modes |
 | Direction cosines | each Cartesian component of $\hat{\mathbf n}$ to its own RGB channel (lightness is not uniform) |
 

@@ -91,9 +91,15 @@ Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √ma
 
 Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`. With unequal masses, whether the overlay uses the mass-weighted positions or fixed 120° spacing is audit decision B18.
 
+The blob weight and the blend follow the golden oracle (R-122): `principia_colour_explorer.html` :188–189 — a
+sequential clamped mix over the sites in order (the three BC, the three Euler, the two Lagrange), with `mix` the linear
+interpolation at :100.
+
 ```
-Blob blend:   c_out = c_base + Σⱼ wⱼ(cⱼ − c_base),
-              wⱼ = s · 4 · max(0, exp(κⱼ(n̂·p̂ⱼ − 1)) + 0.01)      κ = 11 (BC), 9 (Euler/Lagrange)
+Blob blend:   c ← c_base;  for each site j in order:
+                wⱼ = max(0, exp(κⱼ(n̂·p̂ⱼ − 1)) + 0.005) · s · 4      κ = 11 (BC), 9 (Euler/Lagrange)
+                c  ← mix(c, cⱼ, min(1, wⱼ))                        mix(a, b, t) = a + (b − a)·t
+              c_out = c
 
 Stability×Hue:  L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)
 ```
