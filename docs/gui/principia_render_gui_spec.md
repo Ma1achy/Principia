@@ -303,8 +303,12 @@ tool. The side panel shows:
 
 - **Periodic-orbit seeding** from spiral cores, where the winding number diverges; Newton-refine from each; residual and
   period per seed; compared with the Šuvakov–Dmitrašinović catalogue (`principia_dd_validation_orbits.md` §1.4).
-- **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes.
-- **Poincaré return map** on a chosen section, for a kept orbit.
+- **Continuation** along a parameter (e.g. a mass ratio), with a step, marking folds where stability changes. Stability
+  is read from the monodromy matrix's **Floquet multipliers**: a **fold** is where a multiplier crosses +1;
+  **period-doubling**, where one crosses −1 (R-127).
+- **Poincaré return map** on a chosen section, for a kept orbit. The sections offered: **syzygy crossings** (w = 0), a
+  chosen **shape-sphere great circle**, and a **Jacobi-coordinate hyperplane** (R-127). Transcribed with citations,
+  physics-reviewed, confirmed at the gate.
 - **Side by side** with a linked cursor and navigation, and a difference view. The linked views are a separate
   `ViewUI` item, specified with these v2 research tools (R-106) — not the chart's link ids in `SimConfig`.
 

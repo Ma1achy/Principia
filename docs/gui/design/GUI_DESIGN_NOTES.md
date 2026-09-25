@@ -115,8 +115,10 @@ measurement path owns `FULL_RETENTION`** (uniform grid, every sample kept) — r
 
 ## 11 Research — first pass (v2)
 
-Periodic-orbit seeding from spiral cores (checked against the Šuvakov–Dmitrašinović catalogue); continuation along a parameter;
-Poincaré return map; side by side with a linked cursor and navigation.
+Periodic-orbit seeding from spiral cores (checked against the Šuvakov–Dmitrašinović catalogue); continuation along a parameter,
+with stability from the monodromy matrix's Floquet multipliers (fold: a multiplier crosses +1; period-doubling: −1);
+Poincaré return map on syzygy crossings (w = 0), a chosen shape-sphere great circle, or a Jacobi-coordinate hyperplane
+*(conformed to R-127)*; side by side with a linked cursor and navigation.
 
 ## 12 Console
 
