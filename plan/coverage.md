@@ -18,19 +18,19 @@
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 160 |
-| TOOL | 132 |
+| TOOL | 133 |
 | VAL | 145 |
 | PERF | 93 |
 | SYS | 66 |
-| **total** | **1225** |
+| **total** | **1226** |
 
-Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 93 calibration, 101 definition, 1032 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 65 |
+| M0 | 66 |
 | M1 | 81 |
 | M2 | 155 |
 | M3 | 190 |
@@ -42,7 +42,7 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 762 yield at least one requirement; 113 yield none and are listed below with the reason.
+875 sections in 46 files: 763 yield at least one requirement; 112 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -72,7 +72,6 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 | R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)* | **MISSING REASON** | |
 | R-180 — pr-check is item-level *(closes A5)* | **MISSING REASON** | |
 | R-181 — The shape-sphere round-trip bound *(closes T1)* | **MISSING REASON** | |
-| R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)* | **MISSING REASON** | |
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
@@ -377,5 +376,4 @@ Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for the
 - uncovered section with no reason: decisions.md § R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
 - uncovered section with no reason: decisions.md § R-180 — pr-check is item-level *(closes A5)*
 - uncovered section with no reason: decisions.md § R-181 — The shape-sphere round-trip bound *(closes T1)*
-- uncovered section with no reason: decisions.md § R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*
 - uncovered section with no reason: decisions.md § R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*

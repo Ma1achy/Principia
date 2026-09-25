@@ -2,7 +2,7 @@
 
 - **Milestone:** M6
 - **Closes:** REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058
-- **Depends on:** TASK-M6-15, TASK-M6-17, TASK-M6-18
+- **Depends on:** TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20
 - **Needs (earlier milestones):** REQ-GUI-001
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none

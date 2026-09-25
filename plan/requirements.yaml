@@ -15136,6 +15136,25 @@
   - R-113
   milestone: M5
   note: Split from REQ-TOOL-011 (R-113, RQ-94).
+- id: REQ-TOOL-134
+  area: TOOL
+  statement: "The GUI screenshot runner (`cargo xtask screenshot <suite>`) must exist before the first GUI screenshot requirement: it captures a GUI surface headless beside the artboard it names for layout comparison only (R-68), or asserts a presence-only case's named controls where no artboard exists (R-129)."
+  source:
+  - file: decisions.md
+    section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+  - file: decisions.md
+    section: "R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*"
+  verify:
+    method: unit test
+    detail: "cargo xtask screenshot selftest: the layout case writes its capture; the presence-only case passes, and fails naming the control when one is removed"
+  rulings:
+  - R-68
+  - R-113
+  - R-129
+  - R-183
+  milestone: M0
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

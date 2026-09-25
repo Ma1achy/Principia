@@ -54,7 +54,7 @@
   pitfalls: [PIT-3]
 - id: TASK-M0-06
   milestone: M0
-  title: The golden-image runner, with one-variable reproduction, and the screenshot runner
+  title: "The golden-image runner, with one-variable reproduction"
   depends_on: [TASK-M0-01, TASK-M0-04]
   needs: []
   requirements: [REQ-VAL-003, REQ-VAL-009, REQ-VAL-138]
@@ -164,6 +164,14 @@
   requirements: [REQ-TOOL-001, REQ-TOOL-121]
   reviewers: [code, qa, perf]
   pitfalls: []
+- id: TASK-M0-20
+  milestone: M0
+  title: The screenshot runner
+  depends_on: [TASK-M0-01, TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-134]
+  reviewers: [code, qa, gui]
+  pitfalls: [PIT-3]
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
@@ -1351,7 +1359,7 @@
 - id: TASK-M6-22
   milestone: M6
   title: "Quality in the GUI: the Run window selector, the Custom fields and the arbiter overlay"
-  depends_on: [TASK-M6-15, TASK-M6-17, TASK-M6-18]
+  depends_on: [TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20]
   needs: [REQ-GUI-001]
   requirements: [REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058]
   reviewers: [code, qa, gui]
@@ -1535,7 +1543,7 @@
 - id: TASK-M7-22
   milestone: M7
   title: "The stain editor canvas (egui): library, graph canvas, preview and ghosted None"
-  depends_on: [TASK-M7-12, TASK-M7-17]
+  depends_on: [TASK-M7-12, TASK-M7-17, TASK-M0-20]
   needs: [REQ-RENDER-009]
   requirements: [REQ-GUI-031, REQ-COL-022, REQ-GUI-151, REQ-GUI-152]
   reviewers: [code, qa, gui, physics]
