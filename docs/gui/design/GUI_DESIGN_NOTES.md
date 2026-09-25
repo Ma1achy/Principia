@@ -74,7 +74,9 @@ inspector holds every setting the old dev GUI had.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
 - **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
   simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the
-  figure only; scientific checks run with plain.
+  figure only; scientific checks run with plain. The styles are the poster's (`workbench/principia_poster_both_sides.html`
+  and its press module): plain, watercolour & pencil (its painted treatment), and the seven print presets — Default,
+  Drops, Newspaper, Vintage, Poster78, Riso, Duotone (:2875) *(conformed to R-130)*.
 - **Run:** as listed under Explore; the Custom quality fields under "quality: Custom", and the target-utilisation ceiling
   *(conformed to R-129)*.
 

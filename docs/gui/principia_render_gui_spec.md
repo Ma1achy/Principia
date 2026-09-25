@@ -204,8 +204,14 @@ Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headle
 **Order is fixed (R-67):** SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
 simulation sees the final in-gamut colours.
-- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
-  & pencil, print · Poster78, more; with paper grain and press misregistration.
+- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
+  (`workbench/principia_poster_both_sides.html` and its press module; ✱ R-130). **Watercolour & pencil** is its painted
+  treatment (`window.stainPaint`, :2375–2388: a slight blur and desaturation, a soft graphite line where the colour
+  changes, and the paper grain when Paper is on). **Print** is paper.design's CMYK halftone shader (Paper Shaders,
+  Apache-2.0; :2872) with the poster's patches (:2876–2892): each plate slips as a whole (per-plate misregistration,
+  :2881–2888), the finest screen is a cell ceiling (`u_maxCells`, :2879, :2892), and the base dot is controllable (:2878).
+  v1 offers plain, watercolour & pencil, and the seven print presets, named as the file names them (:2875): Default,
+  Drops, Newspaper, Vintage, Poster78, Riso, Duotone.
 - **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
 - **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
 
