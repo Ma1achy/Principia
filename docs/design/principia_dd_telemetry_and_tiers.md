@@ -26,6 +26,8 @@ you *where the device's boundary is*, which is what a tier needs.
 Log while someone uses it normally. **The benchmark tells you what the device can do; this tells you
 what people ask of it**, and those are usually nothing alike. If the suite spends its time on smooth
 zooms and real users hammer the playhead, the tier tuned on the suite is tuned for the wrong thing.
+In the dev GUI, passive logging is a Profiler switch, with its indicator in the footer (`principia_render_gui_spec.md`
+§G5, R-129).
 
 ---
 
@@ -346,7 +348,8 @@ fps"* are legitimate things to want — on battery, in a lecture, while compilin
 application must not assume it is the only thing running.**
 
 **Default to leaving headroom.** Full utilisation is opt-in, and the telemetry records which was in
-force so the calibration is not polluted by mixing the two.
+force so the calibration is not polluted by mixing the two. In the dev GUI the target-utilisation ceiling is set in the
+Run window (`principia_render_gui_spec.md` §G5, R-129).
 
 ---
 

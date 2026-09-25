@@ -42,7 +42,8 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
     is not instant, and says so.
   - **Legend, generated from the stain** (see 06).
-- **Footer:** warning and error counts, the latest message, memory. Click to open the console (12).
+- **Footer:** warning and error counts, the latest message, memory, and the passive-logging indicator while logging is on
+  *(conformed to R-129)*. Click to open the console (12).
 - **Run settings are NOT on the page** (rarely changed): horizon, integrator, escape settings, quality, budget,
   recompute/cancel live in the Run window (04), under their contract names — there is no integrator "tolerance" field
   *(conformed to R-68)*.
@@ -65,7 +66,8 @@ inspector holds every setting the old dev GUI had.
 
 - **Profiler:** frame-time trace; where the frame goes (donut); stacked per-frame bars; substeps-per-pixel histogram; flame
   chart of nested scopes; GPU timestamps per pass; memory (heap, GPU, tile cache) over time; live allocations by type with
-  their change over 60 s; a leak detector that flags steady growth while idle.
+  their change over 60 s; a leak detector that flags steady growth while idle. An Arbiter tab (the arbiter's debug overlay),
+  and a passive-logging switch with its indicator in the footer *(conformed to R-129)*.
   - **For agents, the same data structured:** `prin profile --scenario … --json`, `prin profile diff base new --threshold`,
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
@@ -73,7 +75,8 @@ inspector holds every setting the old dev GUI had.
 - **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
   simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the
   figure only; scientific checks run with plain.
-- **Run:** as listed under Explore.
+- **Run:** as listed under Explore; the Custom quality fields under "quality: Custom", and the target-utilisation ceiling
+  *(conformed to R-129)*.
 
 ## 05 Inspector — one IC, its trajectory, one timeline
 
