@@ -116,7 +116,8 @@ momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 **Each chart carries a `forbids_energy_normalisation` flag.** It must be `true` for `(Lz,E)` and
 `(Lz,K)`, where energy is a chart coordinate or is enforced by the momentum construction — applying
 it there would collapse the energy axis. **Enforce in code, not prose:** the validation pass
-refuses a chart with the flag set combined with a non-zero `E*`.
+refuses a chart with the flag set combined with any `E*` override — every `Some(E*)`, including
+`Some(0)` (R-25).
 
 ### 0.7 Degeneracy — every pixel gets a label
 
@@ -547,8 +548,8 @@ Python cross-check's anchor.
   selected rather than `DEGENERATE`
 - **Burrau at `ν = 1/2`** reproduces `(3,4,5)`, and the classical configuration to a stated
   tolerance
-- **`forbids_energy_normalisation`** is enforced — a config combining `(Lz,E)` with `E* ≠ 0` is
-  **refused**, and a test asserts the refusal
+- **`forbids_energy_normalisation`** is enforced — a config combining `(Lz,E)` with any
+  `Some(E*)`, including `Some(0)`, is **refused** (R-25), and a test asserts the refusal
 - **Axis-aligned latent slice with `q1 = ê_α, q2 = ê_β`** equals a direct `(α,β)` sweep
 - **`BodyPlane` bitwise unchanged**, and the Python cross-check green
 

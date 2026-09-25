@@ -153,8 +153,8 @@ free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the 
 $(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction.
 There it would fight the invariant construction near the feasibility boundary, or, for $(L_z, E)$, collapse
 the energy axis entirely. Each chart declares a boolean `forbids_energy_normalisation`, and chart-aware
-validation (`principia_inverse_encode_contract.md`) refuses any view that combines such a chart with a
-non-zero $E^*$ override.
+validation (`principia_inverse_encode_contract.md`) refuses any view that combines such a chart with an
+$E^*$ override — every `Some(E*)`, including `Some(0)`, since $E^* = 0$ is a real target and "off" is `None` (R-25).
 
 ---
 

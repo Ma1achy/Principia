@@ -490,7 +490,7 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 | | Turing-like standing waves | $v = \tfrac13\left[\sin(f n_x) + \sin\!\left(f(\tfrac12 n_x + \tfrac{\sqrt3}{2} n_y)\right) + \sin\!\left(f(\tfrac12 n_x - \tfrac{\sqrt3}{2} n_y)\right)\right]$ |
 | | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(\varphi_0 + 2\pi i/N)\cos\psi, \sin(\varphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = \text{tilt}\cdot\pi/2$ |
 | | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,\text{pal}[i_1] + (1-t)\,\text{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
-| Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14 and decision B18 |
+| Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14, mass-weighted (R-50) |
 
 ---
 

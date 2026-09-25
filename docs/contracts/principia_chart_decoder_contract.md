@@ -236,7 +236,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.
 
-- `forbids_energy_normalisation` — set on invariant charts where `E` is itself a coordinate (`(L_z,E)`, `(L_z,K)`); the validation pass refuses any config combining such a chart with a non-zero `E*` override.
+- `forbids_energy_normalisation` — set on invariant charts where `E` is itself a coordinate (`(L_z,E)`, `(L_z,K)`); the validation pass refuses any config combining such a chart with an `E*` override — every `Some(E*)`, including `Some(0)` (R-25).
 - `has_feasibility_boundary` — invariant charts; infeasible pixels are *tagged labelled outputs*, never dropped.
 - `coupling` — kind-4 charts tie multiple blocks; flag same-block axis collisions.
 

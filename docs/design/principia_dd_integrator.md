@@ -226,8 +226,8 @@ configuration sit at fixed points:
 $\hat{\mathbf b}_{12} = \left(\tfrac12, \tfrac{\sqrt3}{2}, 0\right)$ and $\hat{\mathbf b}_{20} = \left(\tfrac12, -\tfrac{\sqrt3}{2}, 0\right)$, 120° apart, and
 $$\hat{\mathbf e}_j = -\hat{\mathbf b}_j \ \text{(equal masses)}, \qquad \hat{\mathbf l}^{\pm} = (0, 0, \pm 1),$$
 where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 anticlockwise. Every binary collision lies on
-the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart. Whether the overlay
-marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open.
+the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart, and the overlay
+marks them at their mass-weighted positions (R-50).
 
 The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is

@@ -158,7 +158,7 @@ Each seam: the two parties, what crosses, and the single invariant that holds it
 
 ---
 
-## 5.5 THE DISPATCH SHAPE — one thread per texel, ensemble copies serial
+## 5.5 THE DISPATCH SHAPE — one thread per texel, one dispatch per ensemble copy
 
 **Measured by the lowering spike, and it is a design decision the CPU never forced.**
 
@@ -179,12 +179,12 @@ workgroup as an M3.
 ```
 ONE WORKGROUP PER QUAD
   64 threads, one per TEXEL (N²)
-  each thread loops over its E+1 ensemble copies SERIALLY, folding as it goes
+  each ensemble copy is the SAME KERNEL DISPATCHED AGAIN, copy_index a uniform (R-102, R-89)
   shared memory holds the REDUCTION ACCUMULATORS, not live states
 ```
 
 **This makes the working set independent of `E+1` entirely.** The ensemble becomes a **time** cost
-(8 copies takes 8× as long) rather than a **space** cost — which is what you want, since `E+1` is a
+(8 copies are 8 dispatches, 8× as long) rather than a **space** cost — which is what you want, since `E+1` is a
 quality knob and space limits are hard ceilings while time is a budget.
 
 ### Why parallelism is not lost
