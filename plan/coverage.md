@@ -21,16 +21,16 @@
 | TOOL | 132 |
 | VAL | 145 |
 | PERF | 93 |
-| SYS | 65 |
-| **total** | **1224** |
+| SYS | 66 |
+| **total** | **1225** |
 
-Of these: 93 calibration, 101 definition, 1030 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 93 calibration, 101 definition, 1031 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 64 |
+| M0 | 65 |
 | M1 | 81 |
 | M2 | 155 |
 | M3 | 190 |
@@ -42,7 +42,7 @@ Of these: 93 calibration, 101 definition, 1030 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 760 yield at least one requirement; 115 yield none and are listed below with the reason.
+875 sections in 46 files: 761 yield at least one requirement; 114 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,7 +67,6 @@ Of these: 93 calibration, 101 definition, 1030 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)* | **MISSING REASON** | |
 | R-176 — Controls come before the tests that need them *(closes G3, S2)* | **MISSING REASON** | |
 | R-177 — Cadence *(closes G4, C6)* | **MISSING REASON** | |
 | R-178 — The shape-sphere round trip composes Φ alone *(closes A3)* | **MISSING REASON** | |
@@ -374,7 +373,6 @@ Of these: 93 calibration, 101 definition, 1030 obligation. Retired (kept for the
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
 - uncovered section with no reason: decisions.md § R-176 — Controls come before the tests that need them *(closes G3, S2)*
 - uncovered section with no reason: decisions.md § R-177 — Cadence *(closes G4, C6)*
 - uncovered section with no reason: decisions.md § R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*

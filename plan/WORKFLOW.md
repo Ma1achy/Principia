@@ -90,13 +90,15 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally.
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
-   References. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
+   References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
+   `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
 5. **Every reviewer re-checks** — not only the one who raised a finding: a fix can break another reviewer's check.
-   Each reviewer approves explicitly.
-6. Merge when every named reviewer has approved and CI is green.
+   Each reviewer approves explicitly, with a new `VERDICT: APPROVE <role>` review on the latest commit.
+6. Merge when `ci` and `reviews-complete` are green: `reviews-complete` (`cargo xtask reviews-check`) passes only when
+   every role the task file names has approved on the latest commit. The human merges, or a merge bot does (R-175).
 
 ## Human checkpoints: the milestone gates
 

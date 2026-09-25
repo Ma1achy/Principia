@@ -33,7 +33,7 @@
   title: Process templates and `cargo xtask pr-check`
   depends_on: [TASK-M0-01]
   needs: []
-  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008]
+  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008, REQ-SYS-066]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-4.5]
 - id: TASK-M0-04

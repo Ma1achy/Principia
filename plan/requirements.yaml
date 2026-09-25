@@ -19884,3 +19884,15 @@
   - R-169
   - R-174
   milestone: M0
+- id: REQ-SYS-066
+  area: SYS
+  statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict."
+  source:
+  - file: decisions.md
+    section: "R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*"
+  verify:
+    method: unit test
+    detail: "reviews-check fixtures: all roles approved on head passes; an approval on an older commit, an APPROVE superseded by CHANGES, and a missing role each fail naming the role"
+  rulings:
+  - R-175
+  milestone: M0
