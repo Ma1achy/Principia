@@ -507,11 +507,15 @@ Watch whether the boundary persists, deforms or dissolves.
 
 ```rust
 pub trait Chart {
-    fn map(&self, u: f64, v: f64) -> ChartOut;      // Φ : [0,1]² → chart space
+    fn map<F: Float>(&self, u: F, v: F) -> ChartOut<F>; // Φ : [0,1]² → chart space, generic over the float type
     fn forbids_energy_normalisation(&self) -> bool { false }
     fn name(&self) -> &str;                          // goes in every dump header
 }
 ```
+
+Φ is generic over the float type (lowering Part 2, R-118): the one source is monomorphised as the f32 kernel and the
+f64 CPU reference. `validate(u, v)` stays a CPU-side f64 check (`principia_inverse_encode_contract.md`, chart-aware
+validation).
 
 `ChartOut` is whatever `D` consumes — masses, `(α,β)` or an explicit `(ρ,λ)`, and momenta or a
 `(Lz,K)` request. **`D` and `C` are shared and written once.** The integrator never sees a chart.
