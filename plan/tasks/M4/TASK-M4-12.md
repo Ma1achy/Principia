@@ -39,4 +39,4 @@ The presentation half of checkerboard. A stale pixel shows only its own value fr
 
 ## Notes
 - Gap: the spread-extrapolation `rate` is not defined, and REQ-VAL-058's "decided" needs a human ruling, not an implementer's choice.
-- Closes, for gaps the corpus leaves open: REQ-RENDER-078 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-RENDER-078 (R-72 definition) (classification accepted by R-132).

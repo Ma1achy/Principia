@@ -41,4 +41,4 @@
 - The trivial kernel is not the bring-up mode of colour_composition Appendix A (M1, R-75).
 - No extended-precision arithmetic is built (REQ-SYS-007): DoubleF64 is a stub row for the width function only.
 - See Gaps: the f64 payload layout, and the DoubleF64 stub's shape.
-- Closes, for gaps the corpus leaves open: REQ-PAY-087 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-PAY-087 (R-72 definition) (classification accepted by R-132).

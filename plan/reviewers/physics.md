@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*91 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*92 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate.
@@ -25,7 +25,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-ENC-024 — the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md
 - [ ] REQ-ENC-027 — the proposal measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and sets the tolerance above them; recorded in decisions.md
 - [ ] REQ-CHART-020 — shape_vec(decode(u,v)) == n(u,v) to ~1e−14 over random masses and shapes
-- [ ] REQ-COL-006 — agreement preset |E(fragment-decode) − ctx.payload.E0| is at f32 noise on a healthy survey; a deliberate dispatch scramble shows spatial disagreement
+- [ ] REQ-COL-006 — agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey, with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement
 - [ ] REQ-VAL-015 — on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target
 - [ ] REQ-VAL-019 — import the literature ICs; compare E, L_z after multiplying back by the recorded rescale
 - [ ] REQ-VAL-021 — 2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)
@@ -47,7 +47,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-030 — dd test 1: fitted log-log slope of energy error vs dt equals the occupant's order within tolerance
 - [ ] REQ-VAL-031 — dd test 2: no secular trend (fitted slope ≈ 0) for symplectic occupants; secular slope for RK4/Euler; Euler's energy-drift view shows SUSPECT_ENERGY (the pass condition)
 - [ ] REQ-VAL-034 — dd test 12: outcome class and escaper (lightest body) match; t_end within a stated window; compare close-encounter sequence and interaction topology structurally
-- [ ] REQ-VAL-036 — re-run outputs recorded; table regenerated or marked retired
+- [ ] REQ-VAL-036 — re-run outputs recorded; table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119)
 - [ ] REQ-VAL-037 — record the fraction of truncated words over the reference charts at production horizon
 - [ ] REQ-VAL-038 — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set
 - [ ] REQ-VAL-040 — re-run the escape validation against check 2's ground truth and against the legacy t = 30 set; record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both
@@ -75,19 +75,19 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-065 — nightly/pre-release headless run; fractions within grid sampling noise; boundary sets match within 1–2 pixels
 - [ ] REQ-VAL-071 — measured f32 horizon recorded from GPU-kernel runs
 - [ ] REQ-VAL-073 — compare GPU vs f64 CPU on the parity fixtures; assert |diff| within the parity contract's declared tolerances (tolerances are not stated in this file)
-- [ ] REQ-VAL-079 — Parity run over full trajectories on two backends; report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory).
+- [ ] REQ-VAL-079 — Parity run over full trajectories on two backends — Metal on the self-hosted Apple-silicon runner and lavapipe (R-110); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory).
 - [ ] REQ-VAL-112 — the proposal shows the measured f32 disagreement of each view on a healthy survey and a deliberately broken case each tolerance must flag
 - [ ] REQ-VAL-125 — the proposal names the statistic and sets the threshold from the measured sampling noise on uniform grids; recorded in decisions.md
 - [ ] REQ-VAL-137 — the proposal renders the plane, reads closure at the known orbit locations against the background and states the threshold; recorded in decisions.md
 
 **M5**
 - [ ] REQ-DEC-031 — at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel
+- [ ] REQ-DEC-036 — at the switchover depth, linear vs full decode agree to O(h²); the linear path distinguishes adjacent samples to depth ≥ 50
 - [ ] REQ-REF-009 — starved near-field fixture (64/64 budget, 512/512 non-finite) → Undetermined, although its spread_median reads 4.58e-4
-- [ ] REQ-VAL-081 — on the real render at E + 1 = 8, measure mean reconstruction error vs dt; ceiling set where it crosses ~2 levels; above it checkerboard is off (or ramped)
+- [ ] REQ-VAL-081 — on the M5 render at E + 1 = 8, measure mean reconstruction error vs dt; ceiling set where it crosses ~2 levels; both forms above it — the hard gate and the ramp — are captured at the ceiling for the human's choice at the M5 gate (R-128)
 
 **M6**
 - [ ] REQ-DEC-034 — decoder test 11: at quad centre x₀ + J_D·0 equals the full decode exactly; at half-width the error vs full decode shrinks ∝ h² across depths; identical behaviour for an affine chart and the exponential-map shape-sphere chart
-- [ ] REQ-DEC-036 — at the switchover depth, linear vs full decode agree to O(h²); the linear path distinguishes adjacent samples to depth ≥ 50
 - [ ] REQ-DEC-042 — the proposal fits the log-log slope across depths for an affine and a curve chart and states the tolerance about 2; recorded in decisions.md
 - [ ] REQ-PAY-080 — the threshold separates exact-dynamics footprints from integration-error footprints on the measured cases (RC §7.19c), with its false-alarm rate reported
 - [ ] REQ-PAY-082 — a sweep over the pair (the ledger's eta = 0.005 and 0.02 cases included) showing the chosen pair reaches the trust bar
@@ -107,8 +107,9 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 **M7**
 - [ ] REQ-COL-049 — the proposal shows the measured f32 round-trip error over the gamut lattice and the margin the tolerance leaves above it
 - [ ] REQ-COL-050 — the proposal shows the measured maximum deviation of the equator sweep from each shipped LUT at N_e = 16 and the margin the tolerance leaves
-- [ ] REQ-COL-052 — the proposal shows per-map pixel differences between the composition engine and the reference artefacts over the §7.1 list, and the tolerance with its margin
+- [ ] REQ-COL-052 — the proposal shows per-map pixel differences between the composition engine and the reference HTML renders over the §7.1 list, and the tolerance with its margin
 - [ ] REQ-TOOL-069 — capacity at 128² ≥ 1 tile of config + full shader
+- [ ] REQ-VAL-145 — on the real render with the VMF/OKLab mapping at E + 1 = 8, measure mean reconstruction error vs dt; where it crosses ~2 8-bit levels below the M5 ceiling, the ceiling is lowered to it
 
 **M8**
 - [ ] REQ-ENC-028 — the proposal measures κ and the chart-encode vs direct-inject difference over near-degenerate and random ICs and states both values; recorded in decisions.md
@@ -116,13 +117,13 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-GUI-149 — the proposal shows the fitted α on the fixture at the default settings and the tolerance with its margin
 - [ ] REQ-GUI-150 — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not
 - [ ] REQ-TOOL-115 — the proposal shows idle memory traces with and without an injected leak and a threshold and window that flag the leak and not the clean trace
-- [ ] REQ-VAL-099 — the parity suite passes on a Vulkan or D3D12 adapter; recorded before Paper-2 survey results
+- [ ] REQ-VAL-099 — the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results
 - [ ] REQ-VAL-102 — spectral entropy for the figure-eight ≈ 0.076 and for the chaotic reference ≈ 0.177; periodic < chaotic
 - [ ] REQ-VAL-103 — a recorded measurement of spectral line resolution vs t gives the minimum t used by listen
 - [ ] REQ-VAL-107 — on a regular-region fixture of ICs, CPU and GPU classification agree for every IC
 - [ ] REQ-VAL-110 — on a fixture region of known boundary dimension, D = 2 − α is reported with its fit error; the method, samples, ε range and classifier are shown
 - [ ] REQ-VAL-114 — the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits
-- [ ] REQ-VAL-116 — the browser build runs the Tier-N suite on one or two real browsers; every quantity falls within the native-wgpu tolerance; out-of-tolerance quantities are recorded
+- [ ] REQ-VAL-116 — the browser build runs the Tier-N suite on Chrome stable and on Safari; every quantity falls within the native-wgpu tolerance; out-of-tolerance quantities are recorded
 <!-- /list:numerical-gates -->
 
 ## 2. The load-bearing invariants (canonical_spec §9 — the walls)
@@ -235,9 +236,9 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 - [ ] Each parity test carries its tier and asserts only what that tier allows: L by inspection of the one source plus the stateless no-fork test; B integer-exact given the same branch decisions; N elementwise-tight for decode, ICs, one step and pre-divergence stretches; S structural only. `docs/contracts/principia_parity_contract.md` § "2. The three tiers"; `docs/contracts/principia_parity_contract.md` § "8. Test index (drill-down suite → tier)"
 - [ ] No test asserts `‖state_cpu − state_gpu‖ < ε` at `t_end` on a chaotic pixel; the outcome class is asserted exactly only on non-chaotic fixtures. `docs/contracts/principia_parity_contract.md` § "Tier S — structural only (asserting the pointwise gap would assert a falsehood)"; `decisions.md` § "R-84 — Branch decisions across precisions *(closes RQ-35)*"
 - [ ] Per-step and per-decode comparisons feed both pipelines the same input and compare immediately; nothing is accumulated before comparing. `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
-- [ ] Tier-N tolerances are measured on native in-process `wgpu`, not guessed; Dawn CI is not used; browsers are checked against those tolerances in M8. `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"; `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
+- [ ] Tier-N tolerances are measured on native in-process `wgpu`, not guessed; Dawn CI is not used; the second native backend on every commit is lavapipe, and Chrome stable and Safari are checked against those tolerances in M8. `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"; `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"; `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - [ ] No backend's passing run is taken to certify another backend. `docs/contracts/principia_parity_contract.md` § "Tier L — exact, no tolerance (the bulk of the suite)"
-- [ ] The CPU↔GPU cross-check runs only for `t < t_max(f32)` and reports "not applicable" beyond it, with `t_max(f32)` from R-35's change-10 re-run; `t_max` annotates refinement and does not gate it. `decisions.md` § "R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*"; `decisions.md` § "R-105 — R-93's re-run is R-35's *(closes RQ-65)*"; `docs/design/principia_dd_predictability_horizon.md` § "4.1 The two kernels have different horizons"
+- [ ] The CPU↔GPU cross-check runs only for `t < t_max(f32)` and reports "not applicable" beyond it, with `t_max(f32)` the GPU-kernel measurement (REQ-VAL-071) and R-35's change-10 re-run supplying the f64 figure and the method; `t_max` annotates refinement and does not gate it. `decisions.md` § "R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*"; `decisions.md` § "R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*"; `decisions.md` § "R-105 — R-93's re-run is R-35's *(closes RQ-65)*"; `docs/design/principia_dd_predictability_horizon.md` § "4.1 The two kernels have different horizons"
 - [ ] The non-Metal parity run gates Paper-2 numbers, not the build. `decisions.md` § "R-58 — The non-Metal parity run gates Paper 2, not the build *(TO-2)*"
 - [ ] The wrapper's capped step is count-bound and computed identically on both sides; `N_max` and `r_coll` are shared sim-key values. `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
 - [ ] Word crossings are ordered by crossing fraction `τ`, with the fixed tie-break and the half-open endpoint rule, so word content is as deterministic as its branches. `docs/contracts/principia_integrator_contract.md` § "Part 5 — Units and the horizon (inherited scale gauge)"; `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
@@ -256,7 +257,8 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 - [ ] A blown-up sample stores the defined failed-state values, not NaN; a threshold or suspect decision uses the live f32 value, not an unpacked f16 latch. `decisions.md` § "R-79 — NaN and sentinels *(closes RQ-30)*"; `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - [ ] Encode round-trip tolerances are asserted in physical units, never as a z-residual near saturation; clamp events are flagged, not failures. `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in z"; `docs/design/principia_dd_encode.md` § "3.5 Conditioning (numbers, and the tolerance rule)"
 - [ ] A failed round-trip of a known physical IC is treated as a located bug (canonicalisation, convention or conditioning), never as "not representable". `docs/notes/principia_validation_ground_truth_note.md` § "Everything is representable in principle — so a failed round-trip is a BUG signal"
-- [ ] Per-pair views do not ship until `dominant_pair`'s three open specifications are written. `decisions.md` § "R-38 — Per-pair views are out of v1 until `dominant_pair` is specified *(PL-3)*"
+- [ ] Physics the corpus takes from the literature is transcribed with its citations and checked against them before merge, and confirmed at the gate: the generator ↔ branch-cut convention (the a/b assignment and the crossing sign; Montgomery; Šuvakov–Dmitrašinović), verified by the braid-class test against the published classes (`decisions.md` § "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"); Euler's quintic for the Euler central configurations, equal masses reducing to the antipodes of b̂ (`decisions.md` § "R-126 — The Euler landmarks are the Euler central configurations *(closes RQ-106)*"); periodic-orbit stability by the monodromy matrix's Floquet multipliers (fold at +1, period-doubling at −1) and the three Poincaré sections (`decisions.md` § "R-127 — Periodic-orbit stability is Floquet; the Poincaré sections are three *(closes RQ-109)*"). `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+- [ ] Per-pair views do not ship in v1: the punctured-sphere relation and pair attribution (REQ-PAY-071/072) are retired to v2 (`decisions.md` § "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"). `decisions.md` § "R-38 — Per-pair views are out of v1 until `dominant_pair` is specified *(PL-3)*"
 
 ## 9. Calibrations (R-71) and definitions (R-72)
 

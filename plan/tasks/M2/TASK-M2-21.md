@@ -9,7 +9,7 @@
 - **Size:** ~380 lines
 
 ## Goal
-The exported ViewState records (z₀, q₁, q₂), the chart id and params, the axis warps and the link id per block, so any chart — tilted or not — saves and restores exactly and a figure's provenance pins its links (R-106: the link ids are the chart's per-block registry entries). Decode and encode consume only registry links, a link swap swaps both directions and changes provenance and the payload signature, and the link-variation diagnostic inverts a canonicalised IC under each registry link and reports residual_L and κ_L without ever changing the default link.
+The exported ViewState records (z₀, q₁, q₂), the chart id and params, the axis warps and the link id per block, so any chart — tilted or not — saves and restores exactly and a figure's provenance pins its links (R-106: the link ids are the chart's per-block registry entries). Decode and encode consume only registry links, a link swap swaps both directions and changes provenance, and the link-variation diagnostic inverts a canonicalised IC under each registry link and reports residual_L and κ_L without ever changing the default link.
 
 ## References
 - `docs/contracts/principia_chart_decoder_contract.md` § "Integrity: the link is part of the experiment"
@@ -23,6 +23,7 @@ The exported ViewState records (z₀, q₁, q₂), the chart id and params, the 
 - `docs/contracts/principia_inverse_encode_contract.md` § "Part 7 — Ground-truth ingestion (the validation programme's demand)"
 - `decisions.md` § "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - The ViewState provenance record in `crates/engine/src/contract/view_state.rs` (serialise / restore).
 - `crates/validation/src/link_variation.rs` (the diagnostic; per-IC link choice recorded in provenance).
@@ -30,9 +31,8 @@ The exported ViewState records (z₀, q₁, q₂), the chart id and params, the 
 
 ## Acceptance tests
 - `cargo test -p engine viewstate_roundtrip` — export a tilted view with a non-default link, reload, assert bitwise-identical z per pixel and identical link ids (REQ-SYS-011).
-- `cargo test -p kernel link_swap` — property: T2 round-trips via the registry inverses; swapping a link changes the provenance and the payload signature (REQ-CHART-033).
+- `cargo test -p kernel link_swap` — property: T2 round-trips via the registry inverses; swapping a link changes the provenance and swaps the decode and encode directions together (REQ-CHART-033; the sim-key change and re-integration are REQ-CHART-052, TASK-M4-08).
 - Review (physics): the diagnostic reports residual_L and κ_L per link; provenance records the link used; the default link is unchanged by validation code (REQ-VAL-024).
 
 ## Notes
-- Gap G23: the payload compatibility signature that carries link ids is the sim key, built with the cache (M5); at M2 the test can assert only the ledger schema hash and the recorded provenance.
-- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- RQ-95 ruled: R-113 — REQ-CHART-033 is split: this task asserts registry-only links, provenance and the two-direction swap; "a link swap changes the sim key, recompiles and re-integrates from t = 0" is REQ-CHART-052 (TASK-M4-08). This settles Gap G23.

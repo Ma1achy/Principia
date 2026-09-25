@@ -1,15 +1,15 @@
 # TASK-M6-03 — Policy::Tolerance's split rule and the per-footprint latch
 
 - **Milestone:** M6
-- **Closes:** REQ-REF-022, REQ-REF-013, REQ-REF-019, REQ-REF-030, REQ-REF-036, REQ-REF-045, REQ-REF-046
+- **Closes:** REQ-REF-022, REQ-REF-013, REQ-REF-019, REQ-REF-030, REQ-REF-036, REQ-REF-046
 - **Depends on:** TASK-M6-01, TASK-M5-19
-- **Needs (earlier milestones):** REQ-REF-002, REQ-REF-004, REQ-PAY-065, REQ-PAY-077, REQ-SCHED-047, REQ-SYS-033, REQ-VAL-083
+- **Needs (earlier milestones):** REQ-REF-002, REQ-REF-004, REQ-PAY-065, REQ-PAY-077, REQ-SCHED-047, REQ-SYS-033, REQ-VAL-083, REQ-REF-045
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-5, PIT-9
 - **Size:** ~450 lines
 
 ## Goal
-`Policy::Tolerance` (R-15) decides splits under the one knob `eps`: a quad splits iff any footprint is unresolved, where `unresolved(f) ⟺ spread_shape(f) > eps ∨ its latched running maximum ever exceeded eps ∨ the copies disagree on event class (incl. RUNNING vs terminal) ∨ the footprint is undetermined`, evaluated live at the playhead, with no exponent in the split test and `S_word` never read. The latch `running_max_divergence` (f32) is held per footprint with the resident quad (R-99), not in `QuadReduction`; `running_mean_divergence` and `first_divergence_t` are diagnostics. The task writes the two R-72 definitions into dd_generation_root's temporal-accumulators section: the latch's storage layout and where the diagnostics are held. Everything is scored in payload space.
+`Policy::Tolerance` (R-15) decides splits under the one knob `eps`: a quad splits iff any footprint is unresolved, where `unresolved(f) ⟺ spread_shape(f) > eps ∨ its latched running maximum ever exceeded eps ∨ the copies disagree on event class (incl. RUNNING vs terminal) ∨ the footprint is undetermined`, evaluated live at the playhead, with no exponent in the split test and `S_word` never read. The latch `running_max_divergence` (f32) is held per footprint with the resident quad (R-99), not in `QuadReduction`; `running_mean_divergence` and `first_divergence_t` are diagnostics. The task writes the R-72 definition of where the diagnostics are held into dd_generation_root's temporal-accumulators section; the latch's storage layout is TASK-M5-19's (REQ-REF-045, R-113). Everything is scored in payload space.
 
 ## References
 - `docs/design/principia_dd_refinement_policy.md` § "1. The split rule — no exponent in the split test"
@@ -24,8 +24,9 @@
 - `docs/design/principia_temporal_architecture_note.md` § "Continuous refinement — temporal accumulators + spatial coherence"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
-- Doc change: `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)" — the latch's per-footprint layout with the resident quad and its drop on evict/merge (REQ-REF-045); where the two diagnostics live and whether/how they cross GPU→CPU (REQ-REF-046). Written only after RQ-72 is ruled.
+- Doc change: `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)" — where the two diagnostics live and whether/how they cross GPU→CPU (REQ-REF-046). Written only after RQ-72 is ruled.
 - `crates/engine/src/refine/tolerance.rs`: `Policy::Tolerance { eps }`, `unresolved(footprint)`, `policy_splits(quad)` plugged into TASK-M6-02's gate.
 - `crates/engine/src/refine/latch.rs`: the per-footprint latch store keyed by the resident quad (fixed size per footprint, O(1) in t), max-updated from each reduction readback.
 - The ledger/generated layout (`crates/ledger`) has no `divergence_trend` and `QuadReduction` has no `running_max_divergence`.
@@ -37,10 +38,9 @@
 - `cargo test -p engine latch_per_footprint` + `cargo test -p ledger no_divergence_trend` — diverge-then-reconverge fixture: the footprint's running max stays; first_divergence_t written once; the generated layout has no divergence_trend and QuadReduction has no running_max_divergence (REQ-REF-019).
 - `cargo test -p engine metric_payload_space` (proptest) — changing the palette/colouring leaves the refined tree and its error score bit-identical (REQ-REF-030).
 - Review checklist (physics, code) — the scheduler calls the refinement policy for splits; the accumulators' size is fixed in t; no trend accumulator or θ threshold exists in code or config (REQ-REF-036).
-- Review checklist (physics) — the section gives the latch's layout per footprint with the resident quad, and shows it is dropped on evict and merge; physics reviewer approved; the doc change is merged with the physics reviewer's approval (REQ-REF-045).
 - Review checklist (physics) — the doc states where both diagnostics live and how the GPU→CPU crossing carries them, if at all; physics reviewer approved; the doc change is merged with the physics reviewer's approval (REQ-REF-046).
 
 ## Notes
 - Waits on **RQ-72** (how the per-footprint latch reaches the split decision: a latched bit/count in `QuadReduction`, or a GPU-side verdict) — REQ-REF-019, REQ-REF-022 and REQ-REF-045 carry it. The latch store's shape and the two doc definitions cannot be finished until it is ruled.
 - Pitfall regression: PIT-5 (a render-space metric). The recolouring proptest is the guard.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- RQ-100 ruled: R-113 — REQ-REF-045 moved to M5 (TASK-M5-19); this task reads the latch layout written there.

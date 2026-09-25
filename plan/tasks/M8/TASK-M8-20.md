@@ -1,9 +1,9 @@
 # TASK-M8-20 — Stain canvas: selection, wiring gestures, the node palette, node visuals
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-130, REQ-GUI-131, REQ-GUI-132, REQ-GUI-133, REQ-GUI-134, REQ-GUI-135, REQ-GUI-151
+- **Closes:** REQ-GUI-130, REQ-GUI-131, REQ-GUI-132, REQ-GUI-133, REQ-GUI-134, REQ-GUI-135
 - **Depends on:** TASK-M8-19
-- **Needs (earlier milestones):** REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-024, REQ-GUI-025, REQ-GUI-026, REQ-GUI-027, REQ-GEN-019
+- **Needs (earlier milestones):** REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-024, REQ-GUI-025, REQ-GUI-026, REQ-GUI-027, REQ-GEN-019, REQ-GUI-151
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~500 lines
@@ -19,9 +19,9 @@ The canvas supports §7's gestures: click-select opening the inspector, click-em
 - `docs/gui/principia_render_gui_spec.md` § "16. Open / next"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/gui/src/stain/canvas/{select,drag,wire,palette}.rs`, `crates/gui/src/stain/node_box.rs`.
-- Doc change: `docs/gui/principia_render_gui_spec.md` Part II §7 (the palette's groups and entries).
 - Tests: `canvas_gestures`, `wire_drag_filter`, `wire_remove`, `node_palette`, `subtype_morph`; screenshot case `02_stain/nodes`.
 
 ## Acceptance tests
@@ -31,9 +31,7 @@ The canvas supports §7's gestures: click-select opening the inspector, click-em
 - `cargo test -p gui wire_remove` — both gestures remove the wire and the in-port reverts to None (REQ-GUI-133).
 - `cargo test -p gui node_palette` — the palette's source group lists ctx fields by group; the library only loads whole graphs (REQ-GUI-134).
 - `cargo xtask screenshot 02_stain` (one hand-edited and one selected node) — screenshot against 02_stain.png with one hand-edited and one selected node (REQ-GUI-135).
-- Doc review of `docs/gui/principia_render_gui_spec.md` § "7. Canvas interactions" — §7 lists the palette's groups and entries; the reviewer checks every ctx field and post op is reachable; the physics reviewer approves the doc change before merge (REQ-GUI-151).
 
 ## Notes
 - The { } badge's hand-edited state comes from TASK-M8-21; this task's screenshot case sets it through the graph model directly.
-- Definitions (R-72) written here: REQ-GUI-151. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- RQ-100 ruled: R-113 — REQ-GUI-151 (the palette contents) moved to M7 (TASK-M7-22); this task implements the palette §7 now defines.

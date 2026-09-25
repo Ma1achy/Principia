@@ -28,6 +28,7 @@ After the stain, the fixed display chain runs style → render→display scale �
 - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
 ## Deliverables
 - `crates/render/src/display/chain.rs` — the fixed pass order; style is the identity (plain) until TASK-M7-26.
 - `crates/render/shaders/wgsl/compositor/display_scale.wgsl`, `gamut_clamp.wgsl`.
@@ -42,5 +43,5 @@ After the stain, the fixed display chain runs style → render→display scale �
 
 ## Notes
 - Gap: the gamut-clamp method (per-channel clip, or a chroma-reducing clamp in OKLCH) is not given.
-- Waits on RQ-80 (`REVIEW_QUEUE.md`): Retired terms still live in the docs, and the vocabulary lint's doc scope.
-- Closes, for gaps the corpus leaves open: REQ-COL-059 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-80 ruled: R-111 — the display chain names `SimState`, not `SimResult` (REQ-COL-043; render_gui_spec and GUI_DESIGN_NOTES renamed in step 7); the vocabulary lint (TASK-M0-16) covers the docs.
+- Closes, for gaps the corpus leaves open: REQ-COL-059 (R-72 definition) (classification accepted by R-132).

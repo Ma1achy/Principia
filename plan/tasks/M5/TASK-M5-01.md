@@ -1,9 +1,9 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089
 - **Depends on:** TASK-M1-08
-- **Needs (earlier milestones):** REQ-PAY-001, REQ-PAY-006, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
+- **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-9
 - **Size:** ~380 lines
@@ -25,6 +25,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `docs/design/principia_dd_generation_root.md` § "Not reduction fields"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), with
   the commit's "Removed lines" note.
@@ -41,6 +42,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077).
 - `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077).
 - `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
+- Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; the ~80 B figure is not treated as a cap (REQ-PAY-006).
+- `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
 
@@ -52,4 +55,4 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
   per-footprint latch reaches the split decision is RQ-72 (see TASK-M5-19).
-- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- RQ-93 ruled: R-113, option (b) — QuadReduction's sizing is at M5: REQ-PAY-006 moves here and REQ-PAY-089 (sized from its member list, then aligned) is split from REQ-PAY-001; the member list itself stays at M0 (TASK-M0-11).

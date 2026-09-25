@@ -7,45 +7,46 @@
 | area | count |
 |---|---|
 | DEC | 44 |
-| ENC | 32 |
-| CHART | 50 |
-| INT | 81 |
+| ENC | 33 |
+| CHART | 51 |
+| INT | 83 |
 | EVT | 24 |
-| PAY | 88 |
+| PAY | 87 |
 | GEN | 27 |
 | SCHED | 88 |
 | REF | 48 |
-| RENDER | 81 |
+| RENDER | 82 |
 | COL | 58 |
-| GUI | 159 |
-| TOOL | 128 |
-| VAL | 142 |
-| PERF | 92 |
+| GUI | 160 |
+| TOOL | 132 |
+| VAL | 144 |
+| PERF | 93 |
 | SYS | 63 |
-| **total** | **1205** |
+| **total** | **1217** |
 
-Of these: 91 calibration, 96 definition, 1018 obligation. Retired (kept for their ids, not counted): 9.
+Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 64 |
-| M1 | 80 |
+| M0 | 62 |
+| M1 | 81 |
 | M2 | 155 |
-| M3 | 181 |
-| M4 | 98 |
-| M5 | 151 |
-| M6 | 138 |
-| M7 | 109 |
+| M3 | 186 |
+| M4 | 101 |
+| M5 | 158 |
+| M6 | 133 |
+| M7 | 112 |
 | M8 | 229 |
 
 ## Sections
 
-798 sections in 46 files: 694 yield at least one requirement; 104 yield none and are listed below with the reason.
+829 sections in 46 files: 717 yield at least one requirement; 112 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 57 |
+| out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
 | superseded (kept for the record) | 3 |
@@ -65,6 +66,13 @@ Of these: 91 calibration, 96 definition, 1018 obligation. Retired (kept for thei
 | R-7 amended — part (a)'s grep | informative only | process ruling |
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
+| R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)* | **MISSING REASON** | |
+| R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)* | **MISSING REASON** | |
+| R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)* | **MISSING REASON** | |
+| R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)* | **MISSING REASON** | |
+| R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)* | **MISSING REASON** | |
+| R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)* | **MISSING REASON** | |
+| R-140 — The four readings are accepted *(closes RQ-118)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -140,6 +148,7 @@ Of these: 91 calibration, 96 definition, 1018 obligation. Retired (kept for thei
 | section | reason | note |
 |---|---|---|
 | Principia — symbolic-dynamics contract (free-group word interpretation) | informative only | preamble: the word's storage is in payload §3 |
+| 2. The punctured-sphere relation (third pair) | out of v1 (R-125) | per-pair views are v2 (PL-3, R-38); REQ-PAY-071, which cited it, is retired |
 
 ### `docs/design/principia_chart_reference.md`
 
@@ -359,3 +368,13 @@ Of these: 91 calibration, 96 definition, 1018 obligation. Retired (kept for thei
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
+
+## Errors
+
+- uncovered section with no reason: decisions.md § R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*
+- uncovered section with no reason: decisions.md § R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)*
+- uncovered section with no reason: decisions.md § R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*
+- uncovered section with no reason: decisions.md § R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*
+- uncovered section with no reason: decisions.md § R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*
+- uncovered section with no reason: decisions.md § R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*
+- uncovered section with no reason: decisions.md § R-140 — The four readings are accepted *(closes RQ-118)*

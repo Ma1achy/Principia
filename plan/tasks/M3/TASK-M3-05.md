@@ -24,20 +24,20 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - `docs/design/principia_dd_integrator.md` § "2. Consolidated contract"
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/driver/project.rs` — `project_com` (position–momentum form; velocity form for a velocity occupant), `M` cached.
 - `crates/kernel/src/driver/monitor.rs` — `E_0`/`L_{z,0}` capture, per-step accumulation, `δ_E`, `δ_L` with `eps_E`, `eps_L` floors.
 - Read side: the drift suspect predicates (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) in the generated accessor layer, reading `symplectic` from the profile; no stored suspect bits.
-- GPU self-test dispatch of `stepOnce` + `project_com` on shared f32 states.
 
 ## Acceptance tests
 - `cargo test -p kernel com_projection` — after one STEP from a state with nonzero CoM offset and momentum, R_com and P_com are zero to rounding; M is not recomputed per step (REQ-INT-010).
 - Review (physics): no code path modifies state to restore E or L_z (REQ-INT-011).
 - `cargo test -p kernel invariant_monitor` — rest start (E_0 ≠ 0, L_z0 = 0): δ_L finite; a synthetic spike-then-recover trace yields max|ΔE| ≫ |ΔE_final| (dd test 7) (REQ-INT-012).
-- `cargo xtask gate projection-parity` — property test: stepOnce on shared states, the projected state from CPU-f32 and GPU-f32 matches bit-for-bit on Metal; no Jacobi conversion inside the step (REQ-INT-030).
+- `cargo xtask gate projection-parity` — property test: stepOnce on shared states, the projected state is bit-identical across repeated CPU-f32 runs and follows the one written operation order; no Jacobi conversion inside the step (REQ-INT-030).
 - `cargo test -p kernel drift_suspect_read_time` — the payload has no suspect bits; the predicate is evaluated at read; Euler + the energy-drift view lights SUSPECT_ENERGY everywhere (REQ-INT-040).
 - `cargo test -p kernel close_encounter_drift_shape` — dd test 7: a close-encounter IC shows max|ΔE| ≫ |ΔE_final| in the stored max vs final (REQ-VAL-033).
 
 ## Notes
 - Per-trajectory projection of the Benettin shadow and ensemble copies is TASK-M3-14's (REQ-INT-039).
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-INT-030's CPU-f32 vs GPU-f32 match on Metal is dropped from M3; M4 covers it by REQ-VAL-061 (one step).

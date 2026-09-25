@@ -43,4 +43,4 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 
 ## Notes
 - Definitions written: REQ-SCHED-080, REQ-SCHED-081. A decay constant introduced by REQ-SCHED-081 is REQ-SCHED-090 (R-71), not chosen here.
-- Closes, for gaps the corpus leaves open: REQ-SCHED-090 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-SCHED-090 (R-71 calibration) (classification accepted by R-132).

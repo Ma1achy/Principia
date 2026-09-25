@@ -37,4 +37,4 @@ The Measure tool lets the user drag a square region on the plot, draws the sampl
 - What the "threshold sweep" sweeps (which threshold) is not stated in §G10.
 - Calibrations (R-71) proposed here: REQ-GUI-148, REQ-GUI-149. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-GUI-147. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
-- Closes, for gaps the corpus leaves open: REQ-VAL-143 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-VAL-143 (R-72 definition) (classification accepted by R-132).

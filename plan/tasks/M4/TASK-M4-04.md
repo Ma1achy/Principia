@@ -50,4 +50,4 @@ The two remaining per-step tiers. Tier B: given the same branch decisions and in
 ## Notes
 - The recorded Tier N tolerances are R-85's measurement, not an R-71 calibration; the PR shows the spread and the margin chosen above it, and the physics reviewer checks the margin covers it comfortably (parity §4).
 - Gaps: the width of the word's numerical-ambiguity band (REQ-VAL-075) and the form of Tier N's growing bounded envelope (REQ-VAL-061) are not given by the corpus.
-- Closes, for gaps the corpus leaves open: REQ-VAL-140 (R-72 definition), REQ-VAL-141 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-VAL-140 (R-72 definition), REQ-VAL-141 (R-71 calibration) (classification accepted by R-132).

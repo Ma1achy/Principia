@@ -38,8 +38,8 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 
 ## 4. Dispatch and workgroups
 
-- [ ] One workgroup per quad, one thread per texel (64 at N = 8); each thread loops over its E+1 copies serially, folding as it goes; shared memory holds reduction accumulators, not live states. `docs/design/principia_systems_architecture.md` § "The shape"
-- [ ] Workgroup storage and invocation use fits the spec ceilings (WebGPU 16 KB / 256; Metal 32 KB / 1024), checked against measured limits, not quoted figures. `docs/design/principia_systems_architecture.md` § "5.5 THE DISPATCH SHAPE — one thread per texel, ensemble copies serial"; `docs/design/principia_systems_architecture.md` § "Still to check"
+- [ ] One workgroup per quad, one thread per texel (64 at N = 8); each ensemble copy is the same kernel dispatched again with `copy_index` a uniform, and no kernel loops over copies; shared memory holds reduction accumulators, not live states. `decisions.md` § "R-102 — The ensemble isn't a baked variant *(closes RQ-62)*"; `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"; `docs/design/principia_systems_architecture.md` § "The shape"
+- [ ] Workgroup storage and invocation use fits the spec ceilings (WebGPU 16 KB / 256; Metal 32 KB / 1024), checked against measured limits, not quoted figures. `docs/design/principia_systems_architecture.md` § "5.5 THE DISPATCH SHAPE — one thread per texel, one dispatch per ensemble copy"; `docs/design/principia_systems_architecture.md` § "Still to check"
 - [ ] No worker-tile knob (`64/k` texels per thread) is added without a profile showing a specific need. `docs/design/principia_systems_architecture.md` § "Not doing: worker tiles"
 - [ ] Dispatches are bounded (split into chunks that return, carrying state) so no long dispatch trips a watchdog or blocks the compositor. `docs/design/principia_dd_telemetry_and_tiers.md` § "6.3 Device loss, timeouts, driver resets"; `docs/design/principia_dd_telemetry_and_tiers.md` § "GPU"
 - [ ] In-flight depth is kept shallow (the scheduler's 2–4 jobs); frames are not queued ahead. `docs/design/principia_dd_telemetry_and_tiers.md` § "GPU"; `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
@@ -102,10 +102,11 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 ## 9. Benchmarks
 
 - [ ] Every `benchmark` requirement the task closes has a `cargo xtask bench <bench>` acceptance line whose output is in the PR, run against the requirement's threshold or its calibration requirement's proposal. `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR"; `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- [ ] Benchmarks run nightly and at each milestone gate, not on every commit; the gate's run is the one the proposal or threshold is judged on. `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*33 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*34 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -122,6 +123,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-PERF-019 — record peak process memory for the tier configs on a 16 GB unified-memory machine
 - [ ] REQ-PERF-024 — measured input-to-photon latency with in-flight depth recorded in telemetry
 - [ ] REQ-PERF-028 — config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them
+- [ ] REQ-PERF-093 — the proposal records the margin with its method: estimator figures against measured process memory across tiers and resolutions; recorded in decisions.md
 - [ ] REQ-SYS-031 — under heavy scheduler load, main-thread frame/input latency shows no hitch (record max frame time)
 - [ ] REQ-SYS-032 — navigation fixture: count dispatches until first current cover; assert no blank frame
 
@@ -147,7 +149,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-VAL-101 — campaign records per device across all settings; derived boundaries recorded
 - [ ] REQ-PERF-070 — frame time of the fill-in frame on the weakest target device, recorded
 - [ ] REQ-PERF-073 — run Potato on a phone already owned; record frame rate and responsiveness
-- [ ] REQ-PERF-074 — record the measured thresholds and margin with their method
+- [ ] REQ-PERF-074 — record the measured thresholds with their method
 - [ ] REQ-PERF-078 — the proposal shows the total_substeps distribution (p1 to p99) of hover ICs and the per-frame cost of the chosen budget against the 60 fps frame
 - [ ] REQ-PERF-080 — the proposal shows visible-quad counts measured over the deep-zoom scenarios and the resulting buffer size with the defined per-quad record
 - [ ] REQ-SYS-060 — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker

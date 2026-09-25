@@ -22,19 +22,18 @@
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `docs/design/principia_debug_tooling_plan.md` § "C. Payload field views — `times` (u32), f16-packed scalars & `free_group_word` (separate buffer)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `xtask`/`build.rs` table generator: computes `THR[1..=64]` in f64 libm and emits only the f32 bit patterns as a generated Rust source (`crates/kernel/src/generated/nsub_thresholds.rs`) plus the comparison tree (no loop, no indexing).
 - `crates/kernel/src/driver/substep.rs` — `d2_quantised` (f32 positions, lone-sub, lone-mul, explicit `fma(dy, dy, dx*dx)`), the clamp-in-f32-before-cast rule, `bucket(d2) -> u32`, and `SubstepState { live_n_sub, total_substeps, saturated }`.
-- A GPU self-test dispatch (the M0 codegen self-test harness) that runs `bucket` over a buffer of `d²` inputs through native SPIR-V and through the emitted WGSL.
 - `fixtures/gates/nsub-bucket/` — fuzzed `d²` straddling every bucket edge (±1 ulp and exact).
 
 ## Acceptance tests
-- `cargo xtask gate nsub-bucket` — fuzz `d²` across and straddling every bucket edge: `N_sub` bit-identical on CPU-f64, CPU-f32, native GPU and the WGSL path (0 forks); the table is generated offline in f64 libm and only the f32 output ships; the tree equals `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` away from edges (REQ-INT-028).
+- `cargo xtask gate nsub-bucket` — fuzz `d²` across and straddling every bucket edge: `N_sub` bit-identical on CPU-f64 and CPU-f32 (0 forks); the table is generated offline in f64 libm and only the f32 output ships; the tree equals `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` away from edges (REQ-INT-028).
 - `cargo test -p kernel nsub_live_readout` — the per-macro-step `N_sub` readout equals the bucket value used for that macro-step (REQ-INT-027).
 - `cargo test -p kernel saturated_sticky` — a `d²` sequence that hits the cap once then relaxes keeps `saturated = 1`; with a non-power-of-two `N_max` the flag sets exactly when `N_sub` reaches `N_max` (REQ-TOOL-033).
 - `cargo test -p kernel total_substeps_proxy` — `total_substeps` is an exact u32 equal to Σ N_sub; the proxy ⌊log₂ Σ N_sub⌋ via countLeadingZeros equals ⌊log₂⌋ of the exact count at powers of two and their neighbours, and 0 for totals 0 and 1 (REQ-TOOL-034).
 
 ## Notes
-- Gap: REQ-INT-028's "browser-GPU-via-WGSL" arm — the browser build (`web/`) is M8; this task runs the emitted WGSL through wgpu's WGSL front end natively. Whether that satisfies the arm is RQ-97.
 - The domain of the 0-fork result is identical inputs per step (pitfalls §10); state it in the gate's output.
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-INT-028 is split: this task proves CPU-f64 and CPU-f32 only; the native-GPU leg is REQ-VAL-059's `N_sub` (M4, TASK-M4-03) and the browser WGSL leg is REQ-VAL-144 (M8, TASK-M8-40).

@@ -25,13 +25,14 @@ camera paths produce byte-identical payloads for every common quad.
 - `docs/design/principia_deep_zoom.md` § "3. Three-layer quadtree"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 ## Deliverables
 - `crates/engine/src/sched/{baseline.rs, fallback.rs}`: the baseline tier above the priority queue; ancestor lookup
   for display.
 - `crates/render`: drawing an ancestor upscaled for a missing child (quad uniforms only).
 - Tests `crates/engine/tests/baseline.rs`; the firewall property test `crates/engine/tests/firewall.rs`.
 - `cargo xtask bench first-cover` (dispatches to first current cover; slice change to first frame).
-- `cargo xtask screenshot never-blank-pan` capturing frames of a scripted fast pan and zoom.
+- `crates/engine/tests/never_blank.rs`: a property test capturing frames of a scripted fast pan and zoom (R-133).
 - The calibration proposal for the baseline depth: scripted deep-zoom navigations, completion latency and coverage.
 
 ## Acceptance tests
@@ -39,11 +40,11 @@ camera paths produce byte-identical payloads for every common quad.
 - `cargo xtask bench first-cover` — navigation fixture: count dispatches until first current cover; assert no blank frame (REQ-SYS-032).
 - `cargo xtask bench first-cover` — time from slice change to first presented frame is one root-quad dispatch; frames keep presenting while refinement is incomplete (REQ-PERF-017).
 - `cargo test -p engine fallback_display_only` — with ancestor fallback active, assert the child's payload buffer is untouched until the child's own dispatch writes it (REQ-SCHED-028).
-- `cargo xtask screenshot never-blank-pan` — capture frames during a fast pan and zoom; no blank pixels (REQ-SCHED-045).
+- `cargo test -p engine never_blank_pan` — property test: capture frames during a fast pan and zoom; no blank pixels (REQ-SCHED-045).
 - `cargo test -p engine firewall_two_sessions` — run two sessions with different camera paths/budgets over the same region; payloads of every common quad and their compatibility signatures are byte-identical (REQ-PAY-063).
 
 ## Notes
 - Calibrations (R-71) this task proposes: REQ-SCHED-074.
 - REQ-SCHED-074 is an R-71 calibration: the PR carries the proposed level count and its evidence; the human confirms
   it at the M5 gate and it is recorded in `decisions.md`.
-- REQ-SCHED-045's verify method is a GUI screenshot, but there is no artboard for it (see Gaps).
+- R-133: REQ-SCHED-045 compares no layout, so no artboard is needed; its verify method is a property test.

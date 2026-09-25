@@ -33,4 +33,4 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 
 ## Notes
 - The turning rate ("slowly") is not given. The listen button's sound is TASK-M8-12.
-- Closes, for gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (classification accepted by R-132).

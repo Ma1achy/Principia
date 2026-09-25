@@ -52,4 +52,4 @@ The encode contract's three theorems are asserted per chart, in physical units: 
 ## Notes
 - Gap G15: ‖·‖_phys (inverse_encode Part 4) isn't defined — which components of (m, r, p) and with what weighting. ε_phys's calibration presupposes it.
 - PIT-5: every round-trip tolerance is in physical space; a z-space residual near saturation is not a criterion.
-- Closes, for gaps the corpus leaves open: REQ-ENC-029 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-ENC-029 (R-72 definition) (classification accepted by R-132).

@@ -55,4 +55,4 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - Gap G10: the second link per block (REQ-GEN-014) — the corpus names "a simplex map that reaches the edges", "a heavier-tailed bounded map" and "temperature-softmax" without a formula or parameter, and §3.9's table has one simplex link. The task registers only links the corpus defines until this is ruled.
 - Gap G9: generation-root §5 test 8 (c) and (d) give no tolerance for the numeric-Jacobian and C¹ checks.
 - The ε clamps are registry data (dd_encode §2); encode (TASK-M2-15) consumes the registry inverses, never an inline `logit`/`artanh`.
-- Closes, for gaps the corpus leaves open: REQ-GEN-025 (R-71 calibration), REQ-GEN-026 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GEN-025 (R-71 calibration), REQ-GEN-026 (R-72 definition) (classification accepted by R-132).

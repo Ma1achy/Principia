@@ -3,7 +3,7 @@
 - **Milestone:** M8
 - **Closes:** REQ-GUI-122, REQ-GUI-150
 - **Depends on:** TASK-M8-11, TASK-M8-05, TASK-M3-30, TASK-M4-15
-- **Needs (earlier milestones):** REQ-VAL-043, REQ-VAL-041, REQ-TOOL-044, REQ-PAY-043, REQ-SYS-017, REQ-VAL-126
+- **Needs (earlier milestones):** REQ-VAL-043, REQ-VAL-041, REQ-TOOL-044, REQ-PAY-043, REQ-SYS-017, REQ-VAL-126, REQ-INT-001
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-3
 - **Size:** ~450 lines
@@ -17,6 +17,7 @@ The Research window's first tool seeds periodic orbits from spiral cores where t
 - `docs/design/principia_dd_validation_orbits.md` § "1.4 Šuvakov–Dmitrašinović (13 families, 2013) and Broucke–Hénon–Hadjidemetriou"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 ## Deliverables
 - `crates/validation/src/research/{seed,newton,catalogue}.rs` — the catalogue table from dd_validation_orbits §1.4.
 - `crates/gui/src/windows/research/seeding.rs`.
@@ -27,5 +28,5 @@ The Research window's first tool seeds periodic orbits from spiral cores where t
 - `cargo xtask gate research-seed-catalogue` — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-GUI-150).
 
 ## Notes
-- The winding-number field the seeds come from is not defined in the corpus.
+- R-133: the "winding number" the seeds come from is the payload's winding — the unwrapped phase θ̃ and orbit_count = ⌊|θ̃|/2π⌋ (REQ-INT-001, REQ-PAY-043); spiral cores are where it diverges.
 - Calibrations (R-71) proposed here: REQ-GUI-150. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.

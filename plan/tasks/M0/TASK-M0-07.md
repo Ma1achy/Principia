@@ -40,4 +40,4 @@
 - The generated-file guard (a hand edit to a generated file is detected) is REQ-GEN-010, M1; not built here.
 - The link registry (generation-root §3.9) is the second root; its requirements are M2 (REQ-GEN-013 onward), so it is not built here.
 - See Gaps: §3.8 has no location kind for a derived (not stored) catalogue field.
-- Closes, for gaps the corpus leaves open: REQ-GEN-024 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GEN-024 (R-72 definition) (classification accepted by R-132).

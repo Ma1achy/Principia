@@ -21,18 +21,20 @@ The shape-sphere chart shows its redundancy honestly: `system_image = DoubleCove
 - `decisions.md` § "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
-- The hemisphere label / redundancy flag and the projection option on the shape-sphere chart (`crates/kernel/src/chart/shape_sphere.rs`, `crates/gui/` canvas label and selector).
-- Screenshot tests under `cargo xtask screenshot` (reference per Gap G5).
+- The hemisphere label / redundancy flag and the projection option on the shape-sphere chart (`crates/kernel/src/chart/shape_sphere.rs`, the label carried in the render; the GUI selector and toggle are REQ-GUI-161, M8).
+- Golden images under `fixtures/golden/shape_sphere/`, rendered with native wgpu offscreen (R-110): one per projection and one per hemisphere label / redundancy flag (R-113).
 
 ## Acceptance tests
-- `cargo xtask screenshot shape-sphere` — the shape-sphere chart shows either one labelled hemisphere or both with a redundancy flag; `cargo test -p engine chart_descriptors` reports DoubleCover (REQ-CHART-002).
-- `cargo xtask screenshot shape-sphere-projection` — both projections are selectable on the shape-sphere chart (REQ-RENDER-026).
+- `cargo xtask golden shape-sphere` — the shape-sphere render carries either one labelled hemisphere or both with a redundancy flag; `cargo test -p engine chart_descriptors` reports DoubleCover (REQ-CHART-002).
+- `cargo xtask golden shape-sphere-projection` — one golden per projection (equirectangular default, the equal-area alternative) of the shape-sphere chart (REQ-RENDER-026; the M8 selector and toggle are REQ-GUI-161, TASK-M8-06).
 - Definition: the equal-area projection and its keying written into chart_reference §3.3 and approved by the physics reviewer (REQ-CHART-047).
 
 ## Notes
 - REQ-CHART-002 waits on RQ-71 (DoubleCover vs 2-to-1).
-- Gap G5: no artboard in `docs/gui/design/` shows the shape-sphere chart's hemisphere label or a projection selector, and render_gui_spec doesn't place the control; the dev GUI itself lands at M8. The screenshot's reference is unresolved.
+- R-113 settles Gap G5: at M2 the two requirements are verified by golden image (one per projection and label); the projection selector and hemisphere toggle live in the Manifold view's Chart section at M8, shown when the chart is the shape sphere (REQ-GUI-161, TASK-M8-06).
 - Gap G6: which equal-area projection (Mollweide or Hammer–Aitoff), and whether the projection is a different chart map (sim key, re-integrates) or a display remap.
-- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
-- Closes, for gaps the corpus leaves open: REQ-CHART-047 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-95 ruled: R-113 (Gap G5 above).
+- Closes, for gaps the corpus leaves open: REQ-CHART-047 (R-72 definition) (classification accepted by R-132).

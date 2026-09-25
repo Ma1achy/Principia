@@ -20,18 +20,19 @@
 - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
 - `decisions.md` § "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
 
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/chunking.rs`: chunk planner (macro-steps per dispatch) used by the GPU march and the CPU rayon path alike.
 - `crates/validation/tests/loop_shape.rs`: the 100-macro-step single-dispatch parity test.
-- `xtask` bench `dispatch-chunk`: per-chunk duration measurements on each available backend; the proposed bound with its evidence in the PR.
+- `xtask` bench `dispatch-chunk`: per-chunk duration measurements on each available backend (the self-hosted Metal runner and lavapipe, R-110); the proposed bound with its evidence in the PR.
 
 ## Acceptance tests
 - `cargo test -p engine chunked_march` — a long march run as multiple bounded dispatches gives results identical to one long dispatch; the CPU path yields through the same mechanism (REQ-PERF-010).
-- `cargo test -p kernel discipline_lint` (no `break` in march loops, no `for s in 0..N_sub`) plus `cargo test -p validation hundred_steps_one_dispatch` — a GPU dispatch of 100 macro-steps in one dispatch through SPIR-V → MSL (native `wgpu`) matches the CPU branch words (REQ-INT-059).
+- `cargo test -p kernel discipline_lint` (no `break` in march loops, no `for s in 0..N_sub`) plus `cargo test -p validation hundred_steps_one_dispatch` — a GPU dispatch of 100 macro-steps in one dispatch through SPIR-V → MSL (native `wgpu`) and the same dispatch on lavapipe (R-110) match the CPU branch words (REQ-INT-059).
 - `cargo xtask bench dispatch-chunk` — decisions.md records the bound with its evidence: measured per-chunk durations against the target backends' watchdog limits; checked by the perf reviewer and confirmed by the human at the M4 gate (REQ-PERF-081, calibrated).
 
 ## Notes
 - REQ-PERF-081 is a calibration (R-71): the PR carries the proposed value, its evidence and the reviewer's check, marked pending; the human confirms it at the M4 gate and it is then recorded in decisions.md.
 - REQ-PERF-081 is a calibration (R-71): the PR marks the bound pending until the human confirms it at the M4 gate.
-- Gap: REQ-INT-059's verify also names a SPIR-V → WGSL → Tint leg; Tint is Dawn's compiler, Dawn CI is dropped (R-85), and the browser build is M8.
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-INT-059 is the native half (Metal and lavapipe); the SPIR-V → WGSL → browser-compiler leg is REQ-VAL-144, closed with REQ-VAL-116 at M8 (TASK-M8-40). This settles the gap.

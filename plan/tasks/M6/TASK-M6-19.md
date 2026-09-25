@@ -32,4 +32,4 @@ A cheap `sea_fraction(eps)` estimator, computable before any descent, built afte
 
 ## Notes
 - Calibration proposed: REQ-REF-044. The estimator's method is not given by the corpus ("the concrete unbuilt next step") — see Gaps.
-- Closes, for gaps the corpus leaves open: REQ-REF-049 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-REF-049 (R-72 definition) (classification accepted by R-132).

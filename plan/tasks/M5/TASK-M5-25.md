@@ -39,4 +39,4 @@ The backdrop reference updates only on an at-rest, refined, non-preview baseline
 - REQ-SCHED-075 is an R-71 calibration; the human confirms it at the M5 gate.
 - The coarse cover's depth ("a few levels above camera depth", caching Part 5) is not stated to be the baseline cover's
   depth of REQ-SCHED-074 (see Gaps).
-- Closes, for gaps the corpus leaves open: REQ-SCHED-088 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-SCHED-088 (R-71 calibration) (classification accepted by R-132).

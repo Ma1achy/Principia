@@ -9,7 +9,7 @@
 - **Size:** ~460 lines
 
 ## Goal
-Encode exists in the same shared source as decode, inverted: the closed-form block inverses of inverse-encode Part 3 (μₖ = log(mₖ/m₀), z = artanh(μₖ/μ_max) clamped; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(λ̃_y, λ̃_x), z = logit(s) clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, z = logit(clamp(s, ε_q, 1−ε_q)), |q| > q_max clamped and flagged) through the registry inverses, composed as E = (block inverses) ∘ C. Every discard is reported: `lookup_rescaled`, `lookup_mirrored`, `lookup_clamped` fire iff their operation did. E is constant on gauge orbits (T1). A configuration ingested exactly at an α-pole gives a deterministic value, never NaN.
+Encode exists in the same shared source as decode, inverted: the closed-form block inverses of inverse-encode Part 3 (μₖ = log(mₖ/m₀), z = artanh(μₖ/μ_max) clamped; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(λ̃_y, λ̃_x), z = logit(s) clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, z = logit(clamp(s, ε_q, 1−ε_q)), |q| > q_max clamped and flagged) through the registry inverses, composed as E = (block inverses) ∘ C. Every discard is reported: `lookup_rescaled`, `lookup_mirrored`, `lookup_clamped` fire iff their operation did. E is constant on gauge orbits (T1). A configuration ingested exactly at an α-pole gives a deterministic value, never NaN, and sets `lookup_clamped` (R-133). The fragment WGSL decode and encode are never hand-written: they are generated from this source by the rust-gpu → SPIR-V → WGSL translation (R-116; the fragment snippets are built in TASK-M2-25).
 
 ## References
 - `docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
@@ -30,6 +30,8 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi"
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
 
+- `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
+- `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 ## Deliverables
 - `crates/kernel/src/encode/{mod.rs, blocks.rs, report.rs}` (the one encode entry, the discard report).
 - The gauge-group sampler of dd_encode §3.3 (translation, boost, rotation, scale, mirror) as a test utility.
@@ -39,10 +41,9 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `cargo test -p kernel encode_block_inverses` — forward substituted into inverse for fuzzed z: each block recovers z to tolerance; a |q| > q_max input sets `lookup_clamped` (REQ-ENC-007).
 - `cargo test -p kernel encode_t1_gauge` — encode test 2: random g per dd_encode §3.3, including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice (REQ-ENC-003).
 - `cargo test -p kernel encode_notices` — canonical inputs raise no notice; each operation forced individually raises exactly its notice (REQ-ENC-014).
-- Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan finds no second implementation of any dd_decoder §3 formula outside the shared source (REQ-SYS-015).
-- `cargo test -p engine encode_exact_poles` — configurations with ‖λ̃‖ = 0 and ‖ρ̃‖ = 0 exactly: no NaN; the output is deterministic, identical on repeat and on CPU-f64 and GPU-f32; the flag is set (REQ-DEC-014).
+- Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan (including `.wgsl` files) finds no second implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be the translation's output (REQ-SYS-015).
+- `cargo test -p engine encode_exact_poles` — configurations with ‖λ̃‖ = 0 and ‖ρ̃‖ = 0 exactly: no NaN; the output is deterministic, identical on repeat and on CPU-f64 and GPU-f32; `lookup_clamped` is set — the encode clamp flag, not the payload's `saturated` bit (R-133) (REQ-DEC-014).
 
 ## Notes
-- Gap G14: REQ-DEC-014's "saturation flag" (dd_decoder §3.2 "the saturation flags", R-21 "the SAT flags") isn't defined for encode: payload §2's `saturated` bit means the substep cap. At ‖ρ̃‖ = 0 the flag is `lookup_clamped` (R-13); at ‖λ̃‖ = 0 (s_α at the clamp) the corpus doesn't name it.
-- REQ-SYS-015's WGSL instantiation is the question in Gap G1 (TASK-M2-25).
-- Waits on RQ-84 (`REVIEW_QUEUE.md`): One decode source vs "the two decode ports".
+- R-133: REQ-DEC-014's "saturation flag" (R-21's "SAT flags") is read as the encode clamp flag `lookup_clamped` (inverse_encode Part 3–4, dd_encode §3.5), which fires at either exact α-pole.
+- RQ-84 ruled: R-116 — the fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL), never hand-written; REQ-SYS-015 stands and the agreement presets check the translation (TASK-M2-25).

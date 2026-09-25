@@ -43,4 +43,4 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 
 ## Notes
 - The URL encoding of the spec (and the `principia://view?…` link TASK-M8-32 uses) is not specified.
-- Closes, for gaps the corpus leaves open: REQ-TOOL-129 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-TOOL-129 (R-72 definition) (classification accepted by R-132).

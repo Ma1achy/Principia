@@ -23,6 +23,7 @@ The first measurements of the kernel the corpus leaves to the build. The march k
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
 ## Deliverables
 - `xtask` benches `march-bottleneck` and `quad-n` (writing profiler schema v1 records).
 - `crates/engine`: adapter-limit query and the N² check applied to every tier and Custom value.
@@ -32,8 +33,8 @@ The first measurements of the kernel the corpus leaves to the build. The march k
 - `cargo xtask bench march-bottleneck` — the march kernel profiled at production dispatch granularity; bound type and spill counts recorded (REQ-PERF-009).
 - `cargo xtask bench quad-n` — N = 8 vs N = 16 profiled on a WebGPU target and the result recorded; `cargo test -p engine workgroup_limits` asserts N² ≤ `maxComputeInvocationsPerWorkgroup` (measured) for every tier and Custom value (REQ-PERF-011).
 - `cargo test -p kernel quad_thread_constant` plus perf review — one constant for the quad thread count in the shared source; all docs/config reference it (REQ-SYS-029).
-- Proposal: N for Ultra and Extreme within N² ≤ 256, from the N = 8 vs 16 benchmark; the human confirms it at the M4 gate (REQ-PERF-086).
+- `cargo test -p engine tier_n_cap` — Ultra and Extreme have N = 16 (N² = 256) (R-132); proposal: their E and render scale with evidence (the N = 8 vs 16 benchmark, the memory estimator), reviewer-checked, confirmed by the human at the M4 gate and recorded in decisions.md (REQ-PERF-086).
 
 ## Notes
-- Gap: R-43 says to fix the tier table's N = 24 / 32 entries now but gives no replacement values; the N² check will fail on them until ruled.
-- Closes, for gaps the corpus leaves open: REQ-PERF-086 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- R-132 settles the gap R-43 left: Ultra and Extreme cap N at 16 (memory_tiers §4 conformed in step 7) and scale through E and render scale, whose values stay calibrated here.
+- Closes, for gaps the corpus leaves open: REQ-PERF-086 (R-71 calibration of E and render scale; N ruled by R-132).

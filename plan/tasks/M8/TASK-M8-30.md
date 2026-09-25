@@ -24,9 +24,10 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 - `docs/contracts/principia_export_animation_contract.md` § "Part 5 — Determinism & reproducibility"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 5 — Preview vs refine is a second sim key"
 
+- `decisions.md` § "R-131 — The video encoders *(closes RQ-108)*"
 ## Deliverables
 - `crates/engine/src/export/{job,barrier,offscreen}.rs` — blocking mode, the job, streamed encode.
-- `crates/engine/src/export/encoder.rs` — the encoder sink trait (PNG frames first; GIF / MP4 sinks for TASK-M8-33).
+- `crates/engine/src/export/encoder.rs` — the encoder sink trait and the sinks R-131 names: natively PNG frames, GIF, and MP4 through a system ffmpeg when present; in the browser PNG frames (zipped), GIF via a wasm encoder, and MP4/WebM through WebCodecs where supported.
 - Golden suites `export-barrier`, `export-checkerboard`; bench `export-memory`.
 - Tests: `export_blocking`, `export_tier_estimate`, `export_forces_levers_off`, `export_resolution`, `export_ignores_speed`, `export_no_preview`.
 
@@ -42,5 +43,5 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 - `cargo test -p engine export_no_preview` — run an export with only preview payloads cached; assert it dispatches full-T computations and reads no PREVIEW_MODE entry (REQ-TOOL-086).
 
 ## Notes
-- The video encoder for MP4 / GIF is not named by the corpus; this task's sink trait keeps the choice out of the frame loop.
-- Waits on RQ-108 (`REVIEW_QUEUE.md`): The MP4 / GIF encoders.
+- RQ-108 ruled: R-131 — the encoders are named (native: PNG frames, GIF, MP4 through a system ffmpeg when present; browser: zipped PNG frames, GIF via a wasm encoder, MP4/WebM through WebCodecs where supported); the sink trait keeps them out of the frame loop.
+- Gap: which GIF encoder the native build uses, and which wasm GIF encoder the browser uses, are not named.

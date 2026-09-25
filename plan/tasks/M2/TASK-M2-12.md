@@ -25,6 +25,8 @@
 - `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)"
 - `docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
 
+- `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+- `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 ## Deliverables
 - `crates/kernel/src/chart/invariant.rs` (both charts; frozen configuration and mass as chart params).
 - The refusal in the CPU validation pass (`crates/engine/src/chart_validate.rs`), tested.
@@ -33,12 +35,11 @@
 ## Acceptance tests
 - `cargo test -p kernel invariant_warp_feasible` — property: no (u, v) in [0,1]² produces K* < K_min under the warp, on both charts (chart_reference §5.2) (REQ-CHART-017).
 - Calibration: K_max (> 0) and γ_K (≥ 1) proposed, showing the (L_z, E) and (L_z, K) charts at the defaults covering the feasible interior with usable resolution near K_min; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-CHART-044).
-- `cargo test -p engine forbids_energy_normalisation` — a config combining (L_z, E) with an E* override is refused and the test asserts the refusal; the same for (L_z, K) (REQ-CHART-031).
+- `cargo test -p engine forbids_energy_normalisation` — a config combining (L_z, E) with an E* override is refused and the test asserts the refusal, for `Some(0)` as for any other `Some(E*)` (R-25, applied by R-124); the same for (L_z, K) (REQ-CHART-031).
 - `cargo xtask gate invariant-gradient` — on an (L_z, E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target; a control with a perturbed construction fails the gate (REQ-VAL-015).
 
 ## Notes
 - Gap G8: "fix geometry and mass" — where the frozen configuration and masses come from (z₀'s blocks, the lock, chart params) isn't stated; U is the potential at that configuration.
-- Gap G18: whether the refusal covers `Some(0)` (R-25) or only non-zero E* (the doc wording).
-- Gap G21: evidence renders before the integrator show decode-time fields only.
-- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- R-133: the evidence renders show decode-time fields (feasibility, K, L_z coverage); no integrated field is needed at M2.
+- RQ-92 ruled: R-124 — R-25 is applied in the docs: the refusal covers every `Some(E*)`, including `Some(0)`.
+- RQ-100 ruled: R-113 — TASK-M2-10 and TASK-M2-11 depend on this task for K_max and γ_K.

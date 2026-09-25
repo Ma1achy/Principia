@@ -18,6 +18,7 @@ The optional post-momentum rescale pᵢ ← η_E·pᵢ, η_E = √((E* − U)/K�
 - `decisions.md` § "R-25 — `η_E` is kept, with an explicit off switch *(CD-5)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 ## Deliverables
 - `crates/kernel/src/decode/energy_norm.rs` (`Option<Real>` target; applied only when the chart allows it).
 - The dd_decoder §3.7 doc change: the outcome for K₀ = 0 and for E* < U (label or refusal), with a "Removed lines" note in the commit.
@@ -28,5 +29,4 @@ The optional post-momentum rescale pᵢ ← η_E·pᵢ, η_E = √((E* − U)/K�
 - Doc review (physics): dd_decoder §3.7 states the outcome for K₀ = 0 and for E* < U (label or refusal); physics reviewer approved before merge (REQ-DEC-041).
 
 ## Notes
-- Gap G18: dd_decoder §3.7, chart_reference §0.6, chart_decoder_contract Part 5 and inverse_encode's flag table still say the validation refuses a "non-zero E*" override; under R-25 E* = 0 is a real target, so whether the refusal covers every `Some(E*)` is for the ruling (affects TASK-M2-12).
-- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- RQ-92 ruled: R-124 — R-25 is applied in the docs (dd_decoder §3.7, chart_reference §0.6 and §5.2, chart_decoder_contract Part 5, inverse_encode's flag table): the refusal covers every `Some(E*)`, including `Some(0)` (TASK-M2-12 tests it).

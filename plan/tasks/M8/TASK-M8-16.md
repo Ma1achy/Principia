@@ -45,4 +45,4 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 ## Notes
 - The conditioning number's formula is not given by ic_inspector_scratchpad § "Degeneracy routing"; REQ-GUI-067 and TASK-M8-17's routing both need it.
 - Definitions (R-72) written here: REQ-GUI-145. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
-- Closes, for gaps the corpus leaves open: REQ-ENC-032 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-ENC-032 (R-72 definition) (classification accepted by R-132).

@@ -40,4 +40,4 @@ Debug-tooling step 0b's harness: `SimState`, word, `ICDescriptor` and `RenderQua
 ## Notes
 - `ctx.chart.z` and `chart_id` exist as lanes but charts land in M2; the harness fills them from uniforms.
 - render_gui_spec §12.1 draws tile boundaries from `ctx.tile.uv`, which colour_composition §3's tile/sample lane does not list (milestone Gaps); this task declares the lanes §3 lists.
-- Closes, for gaps the corpus leaves open: REQ-COL-056 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-COL-056 (R-72 definition) (classification accepted by R-132).

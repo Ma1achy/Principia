@@ -30,6 +30,8 @@
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
+- `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 ## Deliverables
 - `crates/kernel/src/shape.rs` (`shape_vec`, landmarks) and `crates/kernel/src/chart/shape_sphere.rs` (spherical and exponential maps, the closed-form inverse).
 - A cross-check fixture of `n` on random ICs generated from the IC Inspector's JS (`docs/gui/reference/ic_inspector.html`, run under node) into `fixtures/ic_inspector/shape_vec.json`, with the script that produced it.
@@ -47,9 +49,8 @@
 
 ## Notes
 - Gap G8: Φ_S²(u,v) = (n(θ,φ), m_fixed, p_fixed) — the corpus doesn't say where the held masses and momenta come from (z₀'s mass and momentum blocks, or chart params), whether p_fixed is taken before or after the fibre-phase rotation that C then undoes, nor φ_f's default.
-- Gap G3: lowering's appendix row "Shape sphere (α, β) … (s,t)→(α,β)" is a different map from chart_reference §3's (θ, φ) chart built here.
-- Gap G25: dd_integrator §3.7 still calls B18 (mass-weighted vs fixed 120° landmarks) "still open"; R-50 ruled mass-weighted, which this task implements.
+- The Euler landmarks for unequal masses (R-126: the Euler central configurations) are built with the physics site generators in TASK-M7-09 (REQ-COL-021); this task builds the collision landmarks and L±.
 - Gap G9: the IC Inspector cross-check tolerance isn't stated. The DoubleCover label and the projections are TASK-M2-28 (REQ-CHART-002 waits on RQ-71).
-- Waits on RQ-85 (`REVIEW_QUEUE.md`): The shape sphere in the lowering appendix: (α, β) or (θ, φ)?.
-- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
-- Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-85 ruled: R-117 — the lowering appendix's shape-sphere row is conformed to R-14's (θ, φ) map, the one built here.
+- RQ-92 ruled: R-124 — R-50 is applied: dd_integrator §3.7 no longer calls B18 open; the landmarks are mass-weighted, as this task builds them.
+- Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (classification accepted by R-132).

@@ -22,6 +22,7 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - `decisions.md` § "R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/contract/state/{sim_config,render_state,view_ui}.rs` — the three structs with the §2 field lists as amended by R-96, R-101 and R-106: the link ids are the chart registry's link-function ids; playback transport (play / pause / speed / loop), the linked views, the kept orbits and `t_cursor` are ViewUI fields.
 - `crates/engine/src/contract/state/set_field.rs` — `SetField { path, value, history: History }` over plain serialised data (the history mark is used by TASK-M8-03).
@@ -40,5 +41,5 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 ## Notes
 - The corpus puts the surface "in the engine crate" (gui_state_contract §1); here it lives in `crates/engine` and the engine re-exports it as its only `pub` surface (RQ-76 layout). TASK-M8-04 adds the compile-fail tests.
 - The fixed small bound on the serialised snapshot size (REQ-PERF-071's verify) is not given by the corpus.
-- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
-- Closes, for gaps the corpus leaves open: REQ-PERF-091 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-93 ruled: R-113 — REQ-TOOL-002 (M0) records the M0 contract skeleton's config; the profiler file's header config being this task's REQ-GUI-039 provenance object is verified by REQ-TOOL-098 (TASK-M8-28).
+- Closes, for gaps the corpus leaves open: REQ-PERF-091 (R-71 calibration) (classification accepted by R-132).

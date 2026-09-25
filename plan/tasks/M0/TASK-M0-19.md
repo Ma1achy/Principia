@@ -33,4 +33,4 @@
 - The first benchmark requirement is M3 (REQ-PERF-004); the runner exists before it (MILESTONES M0).
 - Where the probe lives is a layout choice (engine telemetry, beside the future frame loop); the firewall requirement REQ-SYS-052 (M8) governs what the engine exposes `pub`.
 - See Gaps: the f64 rate, and display fields in a headless run.
-- Closes, for gaps the corpus leaves open: REQ-TOOL-121 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-TOOL-121 (R-72 definition) (classification accepted by R-132).

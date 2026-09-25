@@ -35,6 +35,7 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
 
+- `decisions.md` § "R-118 — Φ is generic over the float type *(closes RQ-86)*"
 ## Deliverables
 - `crates/kernel/src/stage/decode.rs`: the decode-stage entry generic over `Chart` and links; the (m, r, p) seam type as its only output to the integrator side; the per-quad DECODE_MODE flag (full path only — the linearised path lands in M6).
 - `crates/engine/src/decode_dispatch.rs`: a native wgpu decode-only dispatch over a (u, v) grid for tests and the gates, reading back (m, r, p), the DEGENERATE tag and `ICDescriptor`.
@@ -51,4 +52,4 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 ## Notes
 - The Tier-N tolerances are set later by the M4 measurement (REQ-VAL-064); REQ-DEC-043 is decoder test 12's own factor. The CPU-f64 Precision-ring surface as a whole (`computeIC` etc.) is REQ-SYS-017 (M3); this task delivers only `decodeOnly`.
 - PIT-10: the measurement holds inputs fixed; state its domain (decode only, no trajectory).
-- Waits on RQ-86 (`REVIEW_QUEUE.md`): The Chart trait's f64 `map` vs Φ generic over the float type.
+- RQ-86 ruled: R-118 — the chart map is generic over the float type, so the decode stage instantiates each chart's `map` at f32 in the kernel and at f64 in `decode_only`.

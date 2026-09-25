@@ -57,4 +57,4 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - Each unit test is shown able to fail (VAL-007 discipline, PIT-9): e.g. a mutated finalisation (plain S/t) must fail `derived_not_stored`, and a stored-NaN variant must fail `tier_absent_nan_bits`.
 - The canonical quiet-NaN bit pattern and the "empty/sentinel word" an unbound word buffer reads are not given by the corpus (see Gaps in the milestone report); the task waits on them for REQ-RENDER-013.
 - `ensemble_spread` is resolve-stage (M5); at M1 its read-side member exists and reads NaN at E = 0, which is all REQ-RENDER-013 asserts. RQ-75 (whether the fragment keeps a baked `has_ensemble`) is carried by TASK-M1-03.
-- Closes, for gaps the corpus leaves open: REQ-RENDER-077 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-RENDER-077 (R-72 definition) (classification accepted by R-132).

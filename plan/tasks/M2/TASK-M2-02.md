@@ -55,4 +55,4 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - PIT-3 "check the measurement can fire": at μ_max = 5, M₀₁ = (1 + e^{μ₁})/(1 + e^{μ₁} + e^{μ₂}) is bounded below by about 6.7×10⁻³ for every finite z, so M01_TINY cannot fire from the latent chart unless ε exceeds that. The calibration must say where the tag is reachable (chart maps that set masses directly — the ternary plot, the δm strip) and the test must drive that path, not only z.
 - Gap G9: decoder §5 tests 1 and 6 say "precision-appropriate tolerance" / "to tolerance" with no value; only the cross-backend factor (REQ-DEC-043) is a calibration requirement.
 - REQ-DEC-014 (exact-pole ingestion) is closed with encode in TASK-M2-15, because "ingest" is the encode path.
-- Closes, for gaps the corpus leaves open: REQ-DEC-044 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-DEC-044 (R-71 calibration) (classification accepted by R-132).

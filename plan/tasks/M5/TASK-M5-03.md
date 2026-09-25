@@ -26,6 +26,7 @@ resident address unchanged. No manifold-level hierarchy exists.
 - `decisions.md` § "R-100 — No per-cell Halton rotation *(closes RQ-60)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `docs/design/principia_deep_zoom.md` §1: the level-0 cell size in the slice plane's frame and how centre and
   half-width follow from it (REQ-SCHED-086), with the "Removed lines" note.
@@ -45,6 +46,6 @@ resident address unchanged. No manifold-level hierarchy exists.
 ## Notes
 - Definitions (R-72) this task writes: REQ-SCHED-086.
 - REQ-SCHED-040's third assertion (linearised decode within a quad is not mirrored relative to the full decode)
-  needs `x₀ + J_D·δ`; the linearised decoder itself lands in M6 (REQ-DEC-033…037). This task asserts it with a fixture
+  needs `x₀ + J_D·δ`; the linearised decoder's x₀/J_D computation lands in TASK-M5-04 (REQ-DEC-036) and the switchover in M6 (REQ-DEC-033/037). This task asserts it with a fixture
   `x₀`/`J_D` computed on the CPU by finite differences of the full decoder (see Gaps in the milestone report).
-- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
+- RQ-99 ruled: R-113, option (a) — REQ-DEC-036 moves to M5, closed by TASK-M5-04 (which depends on this task); this task's third assertion keeps its fixture `x₀`/`J_D`.

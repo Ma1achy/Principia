@@ -22,6 +22,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
 - `docs/contracts/principia_caching_contract.md` § "Part 6 — The responsiveness invariant: the main thread never waits"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `web/` — `package.json`, `index.html`, `coi-serviceworker.js` (vendored), `src/main.ts` (shell), `src/engine.worker.ts` (loads the wasm engine), `src/resize.ts`.
 - `crates/engine/src/wasm/entry.rs` — the worker entry, surface from the transferred OffscreenCanvas.
@@ -40,4 +41,4 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 ## Notes
 - `web/` has no test runner in the plan conventions; this task uses `npm --prefix web test`.
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
-- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
+- RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.

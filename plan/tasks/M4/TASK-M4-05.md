@@ -13,7 +13,7 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 
 ## References
 - `docs/design/principia_core_design.md` § "3. Kernel eats chart params, decodes in-kernel"
-- `docs/design/principia_systems_architecture.md` § "5.5 THE DISPATCH SHAPE — one thread per texel, ensemble copies serial"
+- `docs/design/principia_systems_architecture.md` § "5.5 THE DISPATCH SHAPE — one thread per texel, one dispatch per ensemble copy"
 - `docs/design/principia_systems_architecture.md` § "The shape"
 - `docs/design/principia_systems_architecture.md` § "Not doing: worker tiles"
 - `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
@@ -26,6 +26,8 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `docs/design/principia_dd_generation_root.md` § "3.3a The word buffer — a parallel cold buffer"
 - `docs/design/principia_deep_zoom.md` § "3. Three-layer quadtree"
 
+- `decisions.md` § "R-102 — The ensemble isn't a baked variant *(closes RQ-62)*"
+- `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 ## Deliverables
 - `crates/engine/src/flat_grid.rs`: the layer-0 grid (quad list at one depth, per-quad uniforms `c, h`), `SimState` / word buffer allocation, dispatch of one workgroup per quad.
 - `crates/kernel`: the survey entry point — workgroup size N², per-thread map → z → decode → wrapper; workgroup shared memory holds reduction accumulators only.
@@ -33,7 +35,7 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - Word buffer as its own allocation, bound only when symbolic features are on.
 
 ## Acceptance tests
-- `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E (REQ-PERF-012).
+- `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102) (REQ-PERF-012).
 - Perf reviewer: no `k` (texels-per-thread) parameter exists in the dispatch configuration (REQ-PERF-013).
 - `cargo test -p engine per_frame_uniform_write` plus code review — no IC buffer exists; per-frame CPU work is a uniform write and dispatch, independent of grid size (REQ-INT-070).
 - Code reviewer: no ping-pong `SimState` copy exists; the march writes each sample's own slot in place (REQ-SCHED-012).
@@ -43,5 +45,5 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `cargo test -p engine word_buffer_separable` — symbolic features disabled: word buffer freed, `SimState` allocation and contents unchanged (REQ-PERF-008).
 
 ## Notes
-- Gap: systems_architecture §5.5 has each thread loop over its E+1 copies serially, while R-102 makes each copy the same kernel dispatched again with `copy_index` a uniform. This task builds the workgroup shape at E = 0 and leaves the copy mechanism to TASK-M4-06, which cannot start until the conflict is ruled.
-- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- RQ-92 ruled: R-124 — systems_architecture §5.5 is conformed to R-102 (applied in step 7; the heading above is the new one): each ensemble copy is the same kernel dispatched again with `copy_index` a uniform. This task builds the per-copy dispatch shape; the copy offsets and the (E+1) dispatches are TASK-M4-06's. This settles the gap.
+- Where the across-copy reduction lives now that copies are not folded in-thread is not stated (§5.5 keeps "shared memory holds the reduction accumulators"); not settled by R-124.

@@ -40,6 +40,7 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/design/principia_dd_simstate_payload.md` § "`times` (u32)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/detect/label.rs` — the precedence function and the single write of `state` + `detail`.
 - `crates/kernel/src/driver/terminal.rs` — the latch: `done` set on collision or escape, loop exit through the loop conditions only, every SimState word frozen after termination.
@@ -52,7 +53,7 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - Review (code): detector code lives in the wrapper module and takes only state + params (REQ-EVT-008).
 - `cargo test -p kernel escape_latch` — escape-fired fixture: state reads escape, t_end_step is latched at the firing step and the production loop ends there (done set); a collision stops the march (the harness's §2.4 march leaving the payload byte-identical is asserted in TASK-M3-33) (REQ-EVT-010).
 - `cargo test -p kernel terminal_precedence` — escape before collision → escape; collision before escape → collision; same-step tie → collision; sim_failed with any other event → sim_failed; triple ejection reported as escape detail; identical at f32 and f64 (REQ-EVT-020).
-- `cargo test -p kernel nmax_cap_continues` — force a near-singular encounter: N_sub hits N_max, the march continues to a dynamical outcome, saturated set, CPU and GPU (self-test dispatch of the capped step) take the same capped step (REQ-INT-029).
+- `cargo test -p kernel nmax_cap_continues` — force a near-singular encounter: N_sub hits N_max, the march continues to a dynamical outcome, saturated set (REQ-INT-029).
 - Review (physics): no KS state representation in v1; saturated regions continue to their outcome (REQ-INT-033).
 - `cargo test -p kernel terminal_latch` — synthetic samples run to collision and to escape: the loop ends with done set at the terminating step; every SimState word is bit-identical on all subsequent dispatches; state == its terminal value (REQ-INT-034).
 - `cargo test -p kernel detail_union` — for each state, pack/unpack each detail code and assert the decoded meaning (REQ-PAY-046).
@@ -62,5 +63,4 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 
 ## Notes
 - R-103 governs: in production `done` is set when escape fires; the §2.4 checks run only in `crates/validation` on the harness's own state (TASK-M3-33).
-- The CPU/GPU arm of REQ-INT-029 uses the GPU self-test dispatch of the single capped step; a full GPU march is M4.
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-INT-029's "CPU and GPU take the same capped step" is dropped from M3; M4 covers it by REQ-VAL-059 and REQ-VAL-061.

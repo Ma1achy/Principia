@@ -1,9 +1,9 @@
 # TASK-M8-19 — Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-127, REQ-GUI-128, REQ-GUI-129, REQ-GUI-152, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023
+- **Closes:** REQ-GUI-127, REQ-GUI-128, REQ-GUI-129, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023
 - **Depends on:** TASK-M8-05, TASK-M8-18, TASK-M7-14, TASK-M7-22
-- **Needs (earlier milestones):** REQ-GUI-021, REQ-GUI-028, REQ-GUI-029, REQ-GUI-031, REQ-GEN-020, REQ-GEN-021, REQ-RENDER-006, REQ-RENDER-057
+- **Needs (earlier milestones):** REQ-GUI-021, REQ-GUI-028, REQ-GUI-029, REQ-GUI-031, REQ-GEN-020, REQ-GEN-021, REQ-RENDER-006, REQ-RENDER-057, REQ-GUI-152
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~500 lines
@@ -28,18 +28,17 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `docs/contracts/principia_gui_state_contract.md` § "5. The stain editor — a free, typed node graph (R-64)"
 - `docs/contracts/principia_gui_state_contract.md` § "7. What a replacement GUI must honour (the teardown contract)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/gui/src/stain/{mode,library,preview,problems}.rs`.
 - `crates/gui/src/stain/your_stains.rs` — user stains as serialised graphs (import / export files).
 - `crates/render/src/registry/filter.rs` — `debugVisible` filtering on the `category` tag.
-- Doc change: `docs/gui/principia_render_gui_spec.md` Part II §1 (the default preview) and §16 (the open item closed).
 - Tests: `debug_visible_filter`, `your_stains_roundtrip`; screenshot cases `02_stain/layout`, `02_stain/preview_{sphere,slice}`, `02_stain/library_filter`, `02_stain/aspect_{square,wide}`, `03_chartbuilder/aspect_{square,wide}`.
 
 ## Acceptance tests
 - Review checklist (gui reviewer) — every stain surface edits the same RenderState graph; no parallel colour or debug editor exists (REQ-GUI-127).
 - `cargo xtask screenshot 02_stain` — screenshot against 02_stain.png (REQ-GUI-128).
 - `cargo xtask screenshot 02_stain` (both preview modes; an edit updates the preview) — screenshot in both preview modes against 02_stain.png; an edit updates the preview (REQ-GUI-129).
-- Doc review of `docs/gui/principia_render_gui_spec.md` § "1. Layout — four surfaces" — §1 names the default and §16's open item is closed; the physics reviewer approves the doc change before merge (REQ-GUI-152).
 - `cargo xtask screenshot 02_stain` (library; filter narrows rows) — screenshot against 02_stain.png's library; typing in the filter narrows rows (REQ-GUI-139).
 - `cargo test -p gui your_stains_roundtrip` — create, rename, export and re-import a stain; it round-trips (REQ-GUI-140).
 - Review checklist (gui reviewer) — no Chazy subtitle or stain-desk code path exists; Stain mode opens the Part II graph editor (REQ-GUI-076).
@@ -47,6 +46,4 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `cargo test -p render debug_visible_filter` — debugVisible = false removes exactly the debug-tagged entries from the list (REQ-GEN-023).
 
 ## Notes
-- REQ-GUI-152 is a definition (R-72) that its requirement routes to the physics reviewer.
-- Definitions (R-72) written here: REQ-GUI-152. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- RQ-100 ruled: R-113 — REQ-GUI-152 (the preview default) moved to M7 (TASK-M7-22); this task lays out the preview §1 now names.

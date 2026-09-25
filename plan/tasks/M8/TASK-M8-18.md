@@ -34,4 +34,4 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 
 ## Notes
 - none
-- Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (classification accepted by R-132).

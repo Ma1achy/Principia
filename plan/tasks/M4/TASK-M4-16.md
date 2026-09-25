@@ -33,6 +33,7 @@ Divergence is the observable. Click a pixel → its trajectories in shape and re
 - `docs/contracts/principia_render_contract.md` § "Part 1 — The payload (render input)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*"
 ## Deliverables
 - `crates/engine/src/inspector.rs`: `inspect(chart, uv, sim_key, mode)` → f64 trace, f32 GPU trace, divergence time and separation growth; modes: match-integrator, adaptive RK45.
 - `crates/validation`: the cross-check gate on `t < t_max(f32)`, reading the recorded value.
@@ -42,13 +43,13 @@ Divergence is the observable. Click a pixel → its trajectories in shape and re
 - `cargo test -p engine inspector_traces` — on a Burrau IC the inspector returns both traces and a divergence time; no path nudges one trace toward the other (REQ-TOOL-040).
 - `cargo test -p engine inspector_match_integrator` — match-integrator mode binds the active GPU occupant/params on the f64 CPU build; RK45 is not a wrapper occupant (REQ-TOOL-041).
 - Code reviewer — debug views are fragment occupants; the diff calls the shared kernel twice, at two precisions (REQ-TOOL-042).
-- `cargo test -p validation crosscheck_horizon_gate` — the gate reads the recorded re-run value of t_max(f32); the inspector/cross-check past it reports "not applicable" rather than a divergence (REQ-VAL-070).
+- `cargo test -p validation crosscheck_horizon_gate` — the gate reads REQ-VAL-071's recorded GPU measurement of t_max(f32) (R-119); the inspector/cross-check past it reports "not applicable" rather than a divergence (REQ-VAL-070).
 - `cargo xtask gate f32-horizon` — the measured f32 horizon, recorded from GPU-kernel runs (REQ-VAL-071).
 - `cargo test -p validation atlas_vs_inspector` plus code review — one shared kernel crate serves atlas, inspector and prebake; one IC through the atlas path (f32) and the inspector path (f64) agrees inside the f32 horizon, within the REQ-VAL-064 Tier N tolerances (REQ-SYS-028).
 - Definition: the single-IC f32 GPU trace (dispatch form, n(t) buffer layout and sampling, shared times) and the divergence-time criterion written into trajectory_viewing §5 and approved by the physics reviewer (REQ-TOOL-127).
 
 ## Notes
 - The GUI window hosting the inspector is M8; this task delivers the engine surface and its tests.
-- Gaps: how the on-demand f32 GPU trace is produced without a stored history, the definition of "divergence time", and which t_max(f32) value governs when the R-35 re-run and the GPU measurement differ.
-- Waits on RQ-87 (`REVIEW_QUEUE.md`): Which measurement gives `t_max(f32)`?.
-- Closes, for gaps the corpus leaves open: REQ-TOOL-127 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Gaps: how the on-demand f32 GPU trace is produced without a stored history, and the definition of "divergence time" (REQ-TOOL-127 defines both).
+- RQ-87 ruled: R-119 — REQ-VAL-070's gate reads REQ-VAL-071's GPU measurement (the `f32-horizon` gate here); the R-35 re-run (REQ-VAL-036, TASK-M3-36) supplies the f64 figure and the method.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-127 (R-72 definition) (classification accepted by R-132).

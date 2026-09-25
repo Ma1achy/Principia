@@ -31,6 +31,8 @@ deliberately. The full process footprint is measured, not inferred.
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "And test it deliberately"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-120 — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*"
 ## Deliverables
 - `crates/engine/src/memory/{budget.rs, pressure.rs}`: cap from the detected budget, pre-allocation fit, tier
   fallback with its message, the three-state machine.
@@ -51,6 +53,6 @@ deliberately. The full process footprint is measured, not inferred.
 - "An OOM path that has never executed is an OOM path that does not work": the low-cap test must drive the system
   through pressured and reclaiming, and the blank-frame assertion must be able to fire (pitfalls §3, §9).
 - The cap fraction and the pressured/reclaiming thresholds are not given by the corpus (see Gaps).
-- Waits on RQ-88 (`REVIEW_QUEUE.md`): Eviction order: deepest first, or cost-weighted resistance?.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
-- Closes, for gaps the corpus leaves open: REQ-PERF-087 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-88 ruled: R-120 — pressure eviction takes the lowest cost-weighted resistance first (TASK-M5-09).
+- RQ-100 ruled: R-113 — the memory-fit margin is REQ-PERF-093, calibrated in TASK-M5-10 (a dependency of this task).
+- Closes, for gaps the corpus leaves open: REQ-PERF-087 (R-71 calibration) (classification accepted by R-132).

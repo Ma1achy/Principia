@@ -34,4 +34,4 @@ The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view
 ## Notes
 - The base step each arrow applies per field (before Shift ×10 / Alt ×0.1) is not given.
 - Calibrations (R-71) proposed here: REQ-GUI-146. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
-- Closes, for gaps the corpus leaves open: REQ-GUI-158 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GUI-158 (R-71 calibration) (classification accepted by R-132).

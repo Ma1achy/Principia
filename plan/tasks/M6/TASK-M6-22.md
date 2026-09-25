@@ -9,7 +9,7 @@
 - **Size:** ~350 lines
 
 ## Goal
-The quality selector and Custom fields edit `SimConfig.quality` in the Run window; the arbiter writes `SimConfig.quality` engine-side during settled periods; Custom exposes render_scale (0.25–2.0), N, `MAX_REL_DEPTH`, E, FTLE, motion gating and lock-to-native with the arbiter off; `ViewUI` carries the arbiter debug overlay's visibility, and the overlay shows throughput, current rung, headroom and recent decisions with their reasons.
+The quality selector and Custom fields (under "quality: Custom") edit `SimConfig.quality` in the Run window (R-129); the arbiter writes `SimConfig.quality` engine-side during settled periods; Custom exposes render_scale (0.25–2.0), N, `MAX_REL_DEPTH`, E, FTLE, motion gating and lock-to-native with the arbiter off; `ViewUI` carries the arbiter debug overlay's visibility, and the overlay, in a Profiler tab (R-129), shows throughput, current rung, headroom and recent decisions with their reasons.
 
 ## References
 - `docs/contracts/principia_gui_state_contract.md` § "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
@@ -18,16 +18,17 @@ The quality selector and Custom fields edit `SimConfig.quality` in the Run windo
 - `docs/design/principia_quality_device_note.md` § "10. Two sanctities: the user, and observability"
 - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar"
 
+- `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
 ## Deliverables
 - `crates/gui/src/windows/run_quality.rs`: selector, Custom fields (read-only display of auto's values until touched), device-ceiling maxima with tooltip.
-- `crates/gui/src/overlays/arbiter.rs`: the arbiter overlay; `ViewUI.arbiter_overlay: bool` in `crates/engine`.
-- Screenshots via `cargo xtask screenshot 04_windows` (layout only, R-68).
+- `crates/gui/src/overlays/arbiter.rs`: the arbiter overlay as a Profiler tab (R-129); `ViewUI.arbiter_overlay: bool` in `crates/engine`.
+- Screenshots via `cargo xtask screenshot 04_windows`, presence only — no layout comparison until the M8 dev GUI (R-129).
 
 ## Acceptance tests
 - `cargo test -p engine arbiter_writes_simconfig_quality` — arbiter writes arrive as SimConfig.quality changes in the snapshot; the overlay toggle is a ViewUI field (REQ-GUI-011).
-- `cargo xtask screenshot 04_windows` — the Custom quality panel shows each control (REQ-GUI-014).
-- `cargo xtask screenshot 04_windows` — overlay shows the four items (REQ-TOOL-058).
+- `cargo xtask screenshot 04_windows` — presence only (R-129): the Run window's "quality: Custom" section shows each control (REQ-GUI-014).
+- `cargo xtask screenshot 04_windows` — presence only (R-129): the Profiler tab shows the four items (REQ-TOOL-058).
 
 ## Notes
-- No artboard shows the Custom quality panel or the arbiter overlay (04_windows' Run window shows only quality, budget, max depth and ensemble) — see Gaps.
-- Waits on RQ-105 (`REVIEW_QUEUE.md`): GUI surfaces with no artboard.
+- RQ-105 ruled: R-129 — the Custom quality fields live in the Run window under "quality: Custom" and the arbiter overlay in a Profiler tab; with no artboard they are checked by presence only until the M8 dev GUI.
+- Gap: the Profiler window's other content is M8's (TASK-M8-28); which window hosts the Profiler tab at M6 is not stated.

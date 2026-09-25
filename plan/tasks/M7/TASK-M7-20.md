@@ -9,7 +9,7 @@
 - **Size:** ~300 lines
 
 ## Goal
-Colour-vision simulation as a display-stage function on linear sRGB: real Viénot simulation for protan and deutan and real Brettel simulation for tritan, through LMS space, with matrices and golden values from a published reference implementation named with its version in dd_colouring §3.8 (R-78); achromatopsia multiplies the linear triplet by §3.8's M_achrom. The modes offered are off, deuteranopia, protanopia and tritanopia.
+Colour-vision simulation as a display-stage function on linear sRGB: real Viénot simulation for protan and deutan and real Brettel simulation for tritan, through LMS space, with matrices and golden values from a published reference implementation named with its version in dd_colouring §3.8 (R-78); achromatopsia multiplies the linear triplet by §3.8's M_achrom. The modes offered in the Display window are off, deuteranopia, protanopia, tritanopia and achromatopsia (R-123).
 
 ## References
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
@@ -17,6 +17,7 @@ Colour-vision simulation as a display-stage function on linear sRGB: real Viéno
 - `decisions.md` § "R-78 — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*"
 - `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
 
+- `decisions.md` § "R-123 — Achromatopsia is a fifth Display mode *(closes RQ-91)*"
 ## Deliverables
 - `crates/render/shaders/wgsl/compositor/cvd.wgsl` (a fixed display-stage pass, not scanned) and the Rust mirror `crates/render/src/display/cvd.rs`.
 - `fixtures/cvd/` — the reference implementation's golden values.
@@ -24,9 +25,8 @@ Colour-vision simulation as a display-stage function on linear sRGB: real Viéno
 
 ## Acceptance tests
 - `cargo test -p render cvd_simulation` — dd_colouring unit test 10: protan, deutan and tritan match the named reference implementation's golden values; achrom yields R = G = B exactly; applying any simulation pre-linearisation produces a detectable difference (REQ-COL-042).
-- `cargo test -p render cvd_modes` — each of off / deuteranopia / protanopia / tritanopia transforms a test colour set by its Viénot or Brettel simulation, matching the reference golden values; off is identity (REQ-COL-045).
+- `cargo test -p render cvd_modes` — each of off / deuteranopia / protanopia / tritanopia / achromatopsia transforms a test colour set by its Viénot (protan, deutan) or Brettel (tritan) simulation, matching the reference golden values, and achromatopsia by M_achrom (R = G = B); off is identity (REQ-COL-045).
 
 ## Notes
 - Gap: R-78 leaves the reference implementation (and version) to be named when the task lands; no requirement carries that choice to the human, so it is flagged in the milestone report.
-- Gap: achromatopsia is specified (M_achrom) but is not among the four modes render_gui_spec offers; whether it is offered is not said.
-- Waits on RQ-91 (`REVIEW_QUEUE.md`): Achromatopsia: specified, but not offered in the Display window.
+- RQ-91 ruled: R-123 — achromatopsia is offered in the Display window as a fifth mode (render_gui_spec conformed in step 7).

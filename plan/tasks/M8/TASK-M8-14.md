@@ -25,6 +25,7 @@ The one Inspector window exists and absorbs the standalone IC Inspector (R-65), 
 - `docs/notes/ic_inspector_scratchpad.md` § "Bridges to the main view"
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/gui/src/windows/inspector/mod.rs` — the window, its tabs (Inspect, Create & locate), panes hosted per the §4 placement table.
 - `crates/gui/src/windows/inspector/pane_ic.rs` — the physical canvas, drag, popover, CoM decomposition, auto-fit.
@@ -41,4 +42,4 @@ The one Inspector window exists and absorbs the standalone IC Inspector (R-65), 
 
 ## Notes
 - The Jacobi frame, angles, CoM marks and auto-fit (REQ-GUI-058, REQ-GUI-059) are built in TASK-M8-15 as the body canvas shared by panes 1 and 2 and asserted there on both panes; this task's pane 1 draws the bodies, arrows and ghosts.
-- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.
+- RQ-98 ruled: R-113 — "hosted in the one Inspector window" left REQ-GUI-008 (M3) and is carried by REQ-GUI-112 here.

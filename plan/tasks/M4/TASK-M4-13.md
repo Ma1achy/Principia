@@ -35,4 +35,4 @@ The Benettin FTLE as the GPU computes it. The f32 shadow is run in both forms â€
 ## Notes
 - REQ-PAY-085 is a calibration (R-71): the PR carries the proposed value, its evidence and the reviewer's check, marked pending; the human confirms it at the M4 gate and it is then recorded in decisions.md.
 - Gap: which `eps` the horizon map uses is not stated by the corpus.
-- Closes, for gaps the corpus leaves open: REQ-TOOL-126 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-TOOL-126 (R-72 definition) (classification accepted by R-132).

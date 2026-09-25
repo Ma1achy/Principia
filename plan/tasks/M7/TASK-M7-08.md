@@ -34,4 +34,4 @@ Categorical fields other than the outcome state map through a generated palette 
 ## Notes
 - Calibration (R-71): REQ-COL-051.
 - Gap: how a muted class is drawn (grey, dimmed, desaturated) is not given (see the milestone report).
-- Closes, for gaps the corpus leaves open: REQ-COL-058 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-COL-058 (R-72 definition) (classification accepted by R-132).

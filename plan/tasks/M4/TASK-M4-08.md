@@ -1,9 +1,9 @@
 # TASK-M4-08 — The sim key, the render key and resolve()
 
 - **Milestone:** M4
-- **Closes:** REQ-SCHED-005, REQ-SCHED-007, REQ-INT-068, REQ-RENDER-030, REQ-SCHED-006, REQ-SYS-021
+- **Closes:** REQ-SCHED-005, REQ-SCHED-007, REQ-INT-068, REQ-RENDER-030, REQ-SCHED-006, REQ-SYS-021, REQ-CHART-052
 - **Depends on:** TASK-M4-06, TASK-M2-21, TASK-M3-21
-- **Needs (earlier milestones):** REQ-INT-026, REQ-GEN-008, REQ-GUI-002, REQ-GUI-007, REQ-SYS-011, REQ-SYS-013, REQ-RENDER-006, REQ-RENDER-075, REQ-SCHED-002
+- **Needs (earlier milestones):** REQ-INT-026, REQ-GEN-008, REQ-GUI-002, REQ-GUI-007, REQ-SYS-011, REQ-SYS-013, REQ-RENDER-006, REQ-RENDER-075, REQ-SCHED-002, REQ-CHART-033
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
 - **Size:** ~450 lines
@@ -36,13 +36,15 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 - `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine`: `SimKey` (hashable, every component above) and the render key.
 - `crates/engine/src/resolve.rs`: `resolve` with the five outputs of lowering Part 5 (flat-grid dispatch plan).
 - `crates/engine`: sim-key change → re-boot to t = 0; render-key change → fragment rebind only.
 
 ## Acceptance tests
-- `cargo test -p engine sim_key_components` — changing each sim-key component changes the key and re-boots the state to t = 0; changing E, `MAX_REL_DEPTH`, an in-plane pan or zoom, the lock or any render-key component does not change the sim key (REQ-SCHED-007).
+- `cargo test -p engine sim_key_components` — changing each sim-key component — the fixture including each SimUniforms field (R-113) — changes the key and re-boots the state to t = 0; changing E, `MAX_REL_DEPTH`, an in-plane pan or zoom, the lock or any render-key component does not change the sim key (REQ-SCHED-007).
+- `cargo test -p engine link_swap_sim_key` — swap one link: the sim key and the payload signature change, the kernel variant is recompiled and the march restarts at t = 0 (REQ-CHART-052).
 - `cargo test -p engine occupant_on_sim_key` — switching occupant changes the sim key, invalidates the payload and re-integrates; the parity harness asserts both sides bind the same occupant (REQ-SCHED-005).
 - `cargo test -p engine n_max_sim_key` — changing `N_max` changes the sim key; the parity harness passes `N_max` identically to both instantiations (REQ-INT-068).
 - `cargo test -p engine render_swap_no_dispatch` — swapping the colour occupant mid-march issues no compute dispatch and leaves the sim buffers byte-identical (REQ-RENDER-030).
@@ -51,5 +53,5 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 
 ## Notes
 - The frame loop (TASK-M4-10) consumes the re-boot; this task tests it with the playhead held, driving the march directly.
-- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
-- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.
+- RQ-95 ruled: R-113 — REQ-CHART-033's "a link swap changes the sim key, recompiles and re-integrates from t = 0" is REQ-CHART-052, closed here.
+- RQ-98 ruled: R-113 — REQ-INT-026's sim-key clause is REQ-SCHED-007's; its fixture includes each SimUniforms field.

@@ -26,4 +26,4 @@ dd_integrator tests 1 and 2 run as numerical gates: energy error over one Kepler
 
 ## Notes
 - Gap: neither gate's slope tolerance is given by the corpus, and no calibration requirement covers them.
-- Closes, for gaps the corpus leaves open: REQ-VAL-139 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-VAL-139 (R-71 calibration) (classification accepted by R-132).

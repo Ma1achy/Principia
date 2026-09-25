@@ -9,7 +9,7 @@
 - **Size:** ~380 lines
 
 ## Goal
-The categorical descriptor views exist: `state` (bits 0–2, six values) and the `detail` union (bits 3–4) decoded per state — escape → body, collision → pair (pair k is the side opposite body k), failure → failure category, undefined while running — with the legend and palette segment keyed by state. The outcome field's canonical default is colour_composition §1.4's nine-class palette read from state plus detail ('degenerate' = `decode_failed`, 'collision @ t=0' = a collision with `t_end_step == 0`), `running` in a neutral grey (value calibrated here) and `sim_failed` in the invalid colour; swatches are user-editable node params. A RUNNING sample is coloured like any class.
+The categorical descriptor views exist: `state` (bits 0–2, six values, in the six-colour `dbg_cat` palette, R-115) and the `detail` union (bits 3–4) decoded per state — escape → body, collision → pair (pair k is the side opposite body k), failure → failure category, undefined while running — with the legend and palette segment keyed by state. The outcome field's canonical default is colour_composition §1.4's nine-class palette read from state plus detail ('degenerate' = `decode_failed`, 'collision @ t=0' = a collision with `t_end_step == 0`), `running` in a neutral grey (value calibrated here) and `sim_failed` in the invalid colour; swatches are user-editable node params. A RUNNING sample is coloured like any class.
 
 ## References
 - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -19,6 +19,7 @@ The categorical descriptor views exist: `state` (bits 0–2, six values) and the
 - `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden"
 - `decisions.md` § "R-77 — Replace-L, and the state palette *(closes RQ-28)*"
 - `decisions.md` § "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+- `decisions.md` § "R-115 — The raw `state` view keeps six colours *(closes RQ-83)*"
 - `docs/design/principia_dd_colouring.md` § "2. Consolidated contract"
 - `docs/design/principia_dd_colouring.md` § "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
@@ -40,13 +41,12 @@ The categorical descriptor views exist: `state` (bits 0–2, six values) and the
 - `cargo xtask golden m1-outcome` — one sample per class renders exactly the §1.4 sRGB values; a running sample renders the neutral grey and a sim_failed sample the invalid colour; editing a swatch changes only that class (REQ-COL-002).
 - `cargo test -p render detail_legend_per_state` — dd_colouring unit test 8's legend half: the detail legend switches per state (the three-colours-bug regression) (REQ-COL-004).
 - Review checklist (gui, qa): the proposal shows the grey's OKLab lightness and its separation from bounded #141418, degenerate #ECECF0 and the other seven classes; the human confirms the value at the M1 gate and it is recorded in decisions.md (REQ-COL-053).
-- `cargo test -p ledger sd_state_roundtrip` — `sd_state` round-trips 0–5; `cargo xtask golden m1-outcome` shows six distinct colours for the six states (REQ-TOOL-021).
+- `cargo test -p ledger sd_state_roundtrip` — `sd_state` round-trips 0–5; `cargo xtask golden m1-outcome` shows the raw `state` view's six distinct `dbg_cat` colours for the six states (REQ-TOOL-021).
 - `cargo test -p render three_colours_regression` — escapes of different bodies render different colours (REQ-TOOL-022).
 - `cargo test -p render running_is_coloured` — a synthetic RUNNING sample renders with its palette colour, not discarded or blank (REQ-RENDER-017).
 
 ## Notes
 - REQ-COL-053 is a calibration (R-71): the value is proposed with evidence here and confirmed by the human at the M1 gate; an unconfirmed calibration blocks the gate.
-- Which palette the raw six-valued `state` field view uses is not settled: REQ-TOOL-021 wants six distinct colours, while R-77 gives `state` the nine-class palette (which needs `detail` and shows `sim_failed` in the invalid colour) and keeps Okabe–Ito for other categorical fields (milestone Gaps).
 - The categorical-discipline half of dd_colouring unit test 8 (colour-per-sample then SSAA resolve) needs ensemble copies (M5) and is not claimed here.
 - PIT-9: the state/detail round-trip tests include a contaminated-bit control that must fail.
-- Waits on RQ-83 (`REVIEW_QUEUE.md`): The raw `state` debug view's palette: six states or §1.4's nine classes?.
+- RQ-83 ruled: R-115 — the raw `state` debug view keeps a six-colour `dbg_cat` palette; R-77's nine-class palette governs the outcome palette (state ⊕ detail) only.

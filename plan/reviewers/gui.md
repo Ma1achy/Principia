@@ -94,6 +94,8 @@ The artboards set **layout only**; their values are illustrative and corpus valu
 
 - [ ] Each `cargo xtask screenshot <artboard>` run compares layout (regions, grouping, order, presence of controls) against the artboard, never pixel values, colours or numbers. `decisions.md` § "R-68 — Artboard values are illustrative; corpus values win *(closes RQ-24)*"; `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR"
 - [ ] Where the screenshot differs from the artboard on a value, label or control, the difference is one §G13 lists (0-based labels; no persistence count; profiler five stages; no camera; "Legend" not "Fate"; palette, `N_max`, sound mapping; no "tolerance" field) or one a later ruling makes — otherwise it is a finding. `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden"
+- [ ] A surface with no artboard is checked by presence only, not layout, until the M8 dev GUI: the custom quality fields in the Run window under "quality: Custom", the target-utilisation ceiling in the Run window, the arbiter overlay in a Profiler tab, and the passive-logging Profiler switch with its footer indicator. `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+- [ ] Screenshots run on GUI PRs and at the gates, rendered headless with native wgpu offscreen. `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - [ ] Where the artboard and GUI_DESIGN_NOTES disagree, the screenshot follows the notes; where either disagrees with a ruling, it follows the ruling, and any notes edit is marked "conformed to R-n". `docs/gui/principia_render_gui_spec.md` § "Principia — Dev GUI (egui / F3)"; `decisions.md` § "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
 
 Artboard → governing section:
@@ -112,26 +114,22 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*66 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*65 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M1**
-- [ ] REQ-TOOL-010 — each view selectable in the debug picker renders on a synthetic payload; the |n|−1 view is flat zero on a real march
+- [ ] REQ-TOOL-010 — each view selectable in the debug picker renders on a synthetic payload
 
-**M2**
-- [ ] REQ-CHART-002 — shape-sphere chart shows either one labelled hemisphere or both with a redundancy flag; descriptor reports DoubleCover
-- [ ] REQ-RENDER-026 — both projections selectable on the shape-sphere chart
-
-**M5**
-- [ ] REQ-SCHED-045 — capture frames during a fast pan and zoom; no blank pixels
+**M3**
+- [ ] REQ-TOOL-132 — the |n|−1 view is flat zero on a real march; the effort heatmap shows the march's per-pixel substep counts
 
 **M6**
-- [ ] REQ-GUI-014 — the Custom quality panel shows each control
-- [ ] REQ-TOOL-058 — overlay shows the four items
+- [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control
+- [ ] REQ-TOOL-058 — presence only (R-129; no layout comparison until the M8 dev GUI): the Profiler tab shows the four items
 
 **M7**
 - [ ] REQ-COL-022 — remove the brightness node: it shows ghosted; restore restores; undo covers the SetField
 - [ ] REQ-COL-026 — enable deutan: every surface including thumbnails is simulated; no preset serialises CVD
-- [ ] REQ-COL-044 — screenshots of each preset against 04_windows.png's Display window; chrome and legend are unstyled
+- [ ] REQ-COL-044 — screenshots of each v1 preset (plain, watercolour & pencil, the seven print presets) against 04_windows.png's Display window; chrome and legend are unstyled
 - [ ] REQ-GUI-019 — Node WGSL / Pipeline WGSL views show the generated code
 - [ ] REQ-GUI-020 — controls present on each Artefact-1 map
 - [ ] REQ-GUI-031 — Against the stain-editor artboard; unit test that arbitrary typed wiring is accepted and type-mismatched wiring rejected.
@@ -142,7 +140,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-034 — slider/direction labels distinguish 'one mass logit' from 'only m₀'
 - [ ] REQ-GUI-041 — dial at top detent selects nearest; support toggle switches vMF/Voronoi family
 - [ ] REQ-GUI-042 — preview label shows the mass point; inspecting a pixel changes it
-- [ ] REQ-GUI-044 — the utilisation control is visible; default leaves headroom; the record names the ceiling
+- [ ] REQ-GUI-044 — presence (R-129): the utilisation control is in the Run window; default leaves headroom; the record names the ceiling
 - [ ] REQ-GUI-045 — attempt a Yellow and a Red change; dialogs show the stated content and allow proceeding; no warning appears on current state
 - [ ] REQ-GUI-047 — select High: fields show 16² samples, depth 6, E = 3, FTLE on greyed; edit E → mode shows Custom with the other values kept
 - [ ] REQ-GUI-055 — screenshot against 05_inspectors.png's readouts
@@ -180,8 +178,8 @@ Artboard → governing section:
 - [ ] REQ-GUI-115 — screenshot against 05_inspectors.png
 - [ ] REQ-GUI-119 — screenshot against 05_inspectors.png's readout row
 - [ ] REQ-GUI-121 — screenshot against 10_measure.png; the CSV has one row per sampled pair
-- [ ] REQ-GUI-123 — screenshot against 11_research.png
-- [ ] REQ-GUI-124 — screenshot against 11_research.png
+- [ ] REQ-GUI-123 — screenshot against 11_research.png; on a continuation fixture the fold and period-doubling markers sit where a Floquet multiplier crosses +1 / −1
+- [ ] REQ-GUI-124 — screenshot against 11_research.png; the section picker offers exactly the three sections
 - [ ] REQ-GUI-125 — screenshot against 11_research.png; a pan in one side pans the other
 - [ ] REQ-GUI-126 — screenshot against 12_console.png; raising an error opens it
 - [ ] REQ-GUI-128 — screenshot against 02_stain.png
@@ -189,6 +187,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-135 — screenshot against 02_stain.png with one hand-edited and one selected node
 - [ ] REQ-GUI-139 — screenshot against 02_stain.png's library; typing in the filter narrows rows
 - [ ] REQ-GUI-142 — Run window screenshot lists contract parameter names; substep cap default reads 64; palette colours equal corpus hex codes.
-- [ ] REQ-TOOL-088 — indicator visible while passive logging is on; logging is off by default
-- [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max
+- [ ] REQ-GUI-161 — with the shape-sphere chart, the Chart section shows both controls and each changes the figure; with any other chart neither is shown
+- [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
+- [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->

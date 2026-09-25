@@ -24,6 +24,7 @@ The BodyPlane chart (today's slice) is kept and reproduces bit-for-bit against i
 - `docs/design/principia_dd_predictability_horizon.md` § "7.6 Escape statistics are shadowing-robust to `t=80`, but `t=240` is untested"
 - `docs/design/principia_dd_predictability_horizon.md` § "7.2 `lambda` is 0.6–0.8, not 1 — and `t` is not e-foldings"
 
+- `decisions.md` § "R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*"
 ## Deliverables
 - Doc change: `docs/design/principia_chart_reference.md` §5.1 — BodyPlane's Φ, the recorded reference dump and the Python cross-check (REQ-VAL-119).
 - `crates/kernel` chart `BodyPlane` (a Φ only) and `xtask golden bodyplane` against `fixtures/golden/bodyplane/`.
@@ -32,11 +33,11 @@ The BodyPlane chart (today's slice) is kept and reproduces bit-for-bit against i
 ## Acceptance tests
 - `cargo xtask golden bodyplane` — the BodyPlane render/dump is bitwise-identical to the recorded reference; the Python cross-check passes (REQ-VAL-028).
 - chart_reference §5.1 gives BodyPlane's Φ and names the recorded reference dump and Python cross-check it matches; physics reviewer approved (REQ-VAL-119).
-- `cargo xtask gate change10-rerun` — re-run outputs recorded; the divergence-vs-horizon table regenerated or marked retired (REQ-VAL-036).
+- `cargo xtask gate change10-rerun` — re-run outputs recorded; the divergence-vs-horizon table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119) (REQ-VAL-036).
 - Review (physics): each quoted long-t figure cites its precision or shadowing evidence; escape statistics at t = 240 stay labelled indicative (REQ-VAL-035).
 
 ## Notes
 - Gap: BodyPlane's map, its recorded reference dump and the Python cross-check are prin-rs artefacts not in this repository.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-119.
-- Waits on RQ-87 (`REVIEW_QUEUE.md`): Which measurement gives `t_max(f32)`?.
+- RQ-87 ruled: R-119 — the change-10 re-run supplies the f64 figure and the method; `t_max(f32)` itself is REQ-VAL-071's GPU measurement (M4), which REQ-VAL-070's gate reads.
 - Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

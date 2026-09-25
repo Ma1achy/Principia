@@ -36,4 +36,4 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 
 ## Notes
 - The scrubber's "refining · N%" needs a progress fraction in the snapshot; what it is a fraction of is not stated.
-- Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).

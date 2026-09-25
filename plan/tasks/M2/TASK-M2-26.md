@@ -31,6 +31,7 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - `docs/design/principia_core_design.md` § "5. Canonicalisation is the one seam to (m, r, p)"
 - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*"
 
+- `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 ## Deliverables
 - The ROUNDTRIP preset (`crates/render/src/presets/roundtrip.rs` + WGSL), locked, with the tagged-expected mask (clamp, feasibility edge, mirror tie).
 - Golden suite `fixtures/golden/roundtrip_preset/` (latent and (L_z, E) charts).
@@ -40,5 +41,5 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - Review (physics + code): every listed host-side consumer calls the one encode entry point; the ROUNDTRIP view is a fragment preset, not a kernel mode (R-75); clicked-pixel locks do not call encode (REQ-ENC-002).
 
 ## Notes
-- Gaps G1, G2 and G15 apply (the WGSL encode's provenance, nonlinear charts, ‖·‖_phys).
-- Waits on RQ-84 (`REVIEW_QUEUE.md`): One decode source vs "the two decode ports".
+- Gaps G2 and G15 apply (nonlinear charts, ‖·‖_phys).
+- RQ-84 ruled: R-116 — the WGSL encode the ROUNDTRIP preset calls is generated from the one Rust source (TASK-M2-25), never hand-written; this settles Gap G1 here.

@@ -20,6 +20,7 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `docs/contracts/principia_scheduler_contract.md` § "`QuadRequest.flags`"
 - `docs/contracts/principia_lowering_contract.md` § "Compute side"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/deep/switchover.rs`: bitwise IC comparison of adjacent samples (not the energy-drift diagnostic), `quad.collapsed`, the `ℓ_switch = 20` bound shared with lowering's `SWITCH` constant, the switch/stop response keyed off `DECODE_MODE`.
 - `crates/engine/src/dispatch/linear_uniform.rs`: the linear-path bind group with the `x₀`/`J_D` uniform; `QuadRequest` unchanged (no `x₀`/`J_D` fields).
@@ -37,4 +38,4 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 ## Notes
 - Which `Decision` variant records `AT_F32_FLOOR` (and which the integration floor) is not stated by refinement_policy §6 — `Collapsed` reads as the candidate but is not named for it; see Gaps.
 - If the benchmark shows the dead full-decode path hurts deep-quad occupancy, REQ-SYS-038 makes decode mode a baked variant; that is recorded in the PR, not decided by the implementer.
-- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
+- RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D) is built at M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) stays here.

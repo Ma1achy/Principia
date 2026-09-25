@@ -9,7 +9,7 @@
 - **Size:** ~350 lines
 
 ## Goal
-The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2πi/N_e, sin 2πi/N_e, 0), the LUT endpoints at the north and south poles, blended with the vMF law in RGB — for Viridis, Cividis, Plasma, Magma, Inferno, Twilight (cyclic, closing exactly at the wrap), Cool-warm, Principia and Cubehelix. Cubehelix is generated analytically (φ = 2π(s/3 − λt), a = h·t(1−t)/2, s = 0.5, λ = 1.5, h = 1, dd_colouring §3.8's R, G, B forms). The blend tolerance of dd_colouring unit test 4 is proposed with its evidence (R-71).
+The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2πi/N_e, sin 2πi/N_e, 0), the LUT endpoints at the north and south poles, blended with the vMF law in RGB — for Viridis, Cividis, Plasma, Magma, Inferno, Twilight (cyclic, closing exactly at the wrap), Cool-warm, Principia and Cubehelix. Cubehelix is generated analytically (φ = 2π(s/3 − λt), a = h·t(1−t)/2, s = 0.5, λ = 1.5, h = 1, dd_colouring §3.8's R, G, B forms). LUT data comes from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight, cubehelix) and Moreland's table for Cool-warm; the Principia palette's stops come from `docs/gui/reference/principia_colour_explorer.html` (R-122). The blend tolerance of dd_colouring unit test 4 is proposed with its evidence (R-71).
 
 ## References
 - `docs/design/principia_dd_colouring.md` § "3.2 The vMF engine"
@@ -18,18 +18,19 @@ The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2�
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
 
+- `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
 ## Deliverables
-- `crates/render/shaders/wgsl/lib/lut.wgsl` (`lut_sample` and the LUT tables) and `lib/cubehelix.wgsl`.
+- `crates/render/shaders/wgsl/lib/lut.wgsl` (`lut_sample` and the LUT tables) and `lib/cubehelix.wgsl`; the tables transcribed from the published matplotlib tables and Moreland's cool-warm table, and the Principia stops from the colour explorer, each with its source recorded beside the table (R-122).
 - `crates/render/src/colour/lut_sphere.rs` — builds `SiteBlend{ring(16) + 2 poles, vmf(κ), colours = lut(name, i/N), rgb}`.
 - `fixtures/gates/lut-sphere-blend/` and the `lut-sphere-blend` gate.
 - The R-71 proposal in the PR.
 
 ## Acceptance tests
-- `cargo test -p render lut_sphere` — dd_colouring unit test 4: an equator sweep reproduces each 1-D LUT within tolerance REQ-COL-050 (calibrated); Twilight closes exactly at the wrap (REQ-COL-035).
+- `cargo test -p render lut_sphere` — dd_colouring unit test 4: an equator sweep reproduces each 1-D LUT within tolerance REQ-COL-050 (calibrated); Twilight closes exactly at the wrap; LUT samples match the published tables (R-122) (REQ-COL-035).
 - `cargo xtask gate lut-sphere-blend` — the proposal shows the measured maximum deviation of the equator sweep from each shipped LUT at N_e = 16 and the margin the tolerance leaves; confirmed by the human at the M7 gate (REQ-COL-050).
 - `cargo test -p render cubehelix` — sampled Cubehelix matches the formula; lightness monotone increasing (REQ-COL-041).
 
 ## Notes
 - Calibration (R-71): REQ-COL-050.
-- Gap: the Principia palette is given only as "indigo → teal → gold" and Cool-warm only as "diverging" (§7.1); their stops are not in the corpus (see the milestone report).
-- Waits on RQ-101 (`REVIEW_QUEUE.md`): The colour golden oracle and the LUT data live outside the corpus.
+- RQ-101 ruled: R-122 — LUT data from the published matplotlib tables and Moreland's cool-warm table; the Principia stops from the colour explorer. This settles the Principia and Cool-warm gap.
+- Gap: R-122 lists cubehelix among the matplotlib tables, while REQ-COL-041 keeps Cubehelix analytic (dd_colouring §3.8); this task keeps the analytic form and checks it against the formula.

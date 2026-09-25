@@ -36,4 +36,4 @@
 ## Notes
 - Constants the corpus leaves open are not entered with a value: they are calibration requirements, and the register cites the requirement id until the human confirms the value (R-71).
 - See Gaps: where the register lives relative to the §3.8 schema and the R-36 hash; prin-rs citations are not resolvable from this repo.
-- Closes, for gaps the corpus leaves open: REQ-SYS-063 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-SYS-063 (R-72 definition) (classification accepted by R-132).

@@ -49,4 +49,4 @@ Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-t
 ## Notes
 - Gap: no value for `tau` is given (Part 3: '—', 'to re-measure'); REQ-VAL-051 sets it by measurement in TASK-M3-34, but this detector and everything downstream needs a value first, and no calibration requirement covers it.
 - The window of 0.4 time units is provisional (R-29).
-- Closes, for gaps the corpus leaves open: REQ-EVT-024 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-EVT-024 (R-71 calibration) (classification accepted by R-132).

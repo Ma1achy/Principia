@@ -43,4 +43,4 @@ dispatches a uniform grid with `FULL_RETENTION` set, no adaptive subdivision, an
 
 ## Notes
 - The in-flight limit is a range (2–4) in scheduler Part 6; the value within it is not given (see Gaps).
-- Closes, for gaps the corpus leaves open: REQ-SCHED-087 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-SCHED-087 (R-71 calibration) (classification accepted by R-132).

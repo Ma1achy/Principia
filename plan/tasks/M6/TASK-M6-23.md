@@ -37,4 +37,4 @@ The refinement policy's open measurements are taken and recorded at this, the fi
 ## Notes
 - REQ-REF-032's `tau` value is a measured setting; it goes to the human at the M6 gate with the other recorded values.
 - REQ-VAL-085 gives no threshold for "without over-degrading" — see Gaps.
-- Closes, for gaps the corpus leaves open: REQ-VAL-142 (R-71 calibration), REQ-REF-050 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-VAL-142 (R-71 calibration), REQ-REF-050 (R-71 calibration) (classification accepted by R-132).

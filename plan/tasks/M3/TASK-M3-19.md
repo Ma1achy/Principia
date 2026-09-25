@@ -18,6 +18,7 @@ The CPU-f64 instantiation of the shared kernel ships as the Precision ring in `c
 - `docs/read_first/principia_00_philosophy.md` § "The IC inspector — the prebake standard at a single point"
 - `decisions.md` § "R-65 — One Inspector window; the standalone IC Inspector is absorbed *(closes RQ-21)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/precision/mod.rs` — the four entry points over the kernel instantiated at f64.
 - `crates/engine/src/precision/rk45.rs` — the RK45 reference integrator (f64, adaptive), used by the inspector path only.
@@ -29,5 +30,4 @@ The CPU-f64 instantiation of the shared kernel ships as the Precision ring in `c
 - `cargo test -p engine inspector_shared_kernel` — the Inspector integrates a clicked IC via the shared kernel instantiated at f64 on CPU; the IC Inspector and trajectory viewer are one Inspector type (R-65) (REQ-GUI-008).
 
 ## Notes
-- Gap: REQ-GUI-008's 'hosted in the one Inspector window' — the window is the M8 dev GUI; M3 can only test the engine-side Inspector. The M8 GUI tasks must keep it one window.
-- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.
+- RQ-98 ruled: R-113 — "hosted in the one Inspector window" is dropped from REQ-GUI-008; REQ-GUI-112 carries it at M8 (TASK-M8-14). This settles the gap.

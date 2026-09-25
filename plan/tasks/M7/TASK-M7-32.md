@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-TOOL-070, REQ-TOOL-072, REQ-TOOL-069, REQ-TOOL-113, REQ-VAL-098
-- **Depends on:** TASK-M7-29, TASK-M7-31, TASK-M5-02
+- **Depends on:** TASK-M7-29, TASK-M7-31
 - **Needs (earlier milestones):** REQ-PERF-032
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3

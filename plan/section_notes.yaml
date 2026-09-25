@@ -1,6 +1,6 @@
 # Corpus sections that yield no requirement, each with its reason. Read by plan/tools/coverage.py.
 # reason: informative only | rationale | superseded (kept for the record) |
-#         parent heading (obligations are in its subsections) | gap (RQ-n)
+#         parent heading (obligations are in its subsections) | gap (RQ-n) | out of v1 (R-n)
 
 - file: docs/contracts/principia_canonical_spec.md
   section: 10. Document map — reading order & authority
@@ -410,3 +410,7 @@
   section: "Rulings on the decision sheet (step 5, PR #6)"
   reason: informative only
   note: application schedule for R-21..R-59
+- file: docs/contracts/principia_symbolic_dynamics_contract.md
+  section: 2. The punctured-sphere relation (third pair)
+  reason: out of v1 (R-125)
+  note: "per-pair views are v2 (PL-3, R-38); REQ-PAY-071, which cited it, is retired"

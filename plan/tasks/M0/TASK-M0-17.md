@@ -20,6 +20,7 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
 - `crates/engine/src/contract/profile.rs` — `SessionHeader`, `FrameRecord`, `Stage` (the five), `Scope`, `GpuPass`, `Allocation`, `Event`; writer and reader.
@@ -34,6 +35,6 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 ## Notes
 - The schema lives in `crates/engine` because the engine (writer, from the first frame loop), `prin` (reader/writer) and the dev GUI (reader, M8) all consume it; reviewers may place it elsewhere.
 - Leak flags and hot-path summaries (REQ-TOOL-100, M8) and `prin profile query` (REQ-TOOL-101, M8) are not here.
-- See Gaps: v1's nested key names and shape; R-56's "measurement struct lands with the first frame loop".
-- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
-- Closes, for gaps the corpus leaves open: REQ-TOOL-120 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- See Gaps: v1's nested key names and shape (REQ-TOOL-120).
+- RQ-93 ruled: R-113 — R-56's "the measurement struct lands with the first frame loop" is a separate M1 requirement (REQ-TOOL-131, TASK-M1-05); this task defines the struct and its schema.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-120 (R-72 definition) (classification accepted by R-132).

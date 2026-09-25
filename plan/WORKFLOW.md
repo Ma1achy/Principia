@@ -13,9 +13,12 @@ does what, in what order, and what stops the line.
 - A task that turns out bigger than one reviewable PR (roughly 500 lines of change) is split **in the plan first**:
   new task files and manifest entries, `plan/check_plan.py` green, then the work.
 - CI runs on every push: the build, `cargo test` and `cargo xtask plan-check` (`plan/check_plan.py`). The other
-  suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6: the sim-parity
-  and codegen suites on every commit, the aggregate survey nightly or pre-release, the colour goldens pre-release). For
-  suites the corpus doesn't schedule, see RQ-79. A red CI blocks review.
+  suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
+  `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
+  and codegen suites among them) on every commit; benchmarks nightly and at each milestone gate; GUI screenshots on GUI
+  PRs and at the gates; the aggregate survey nightly or pre-release. GPU CI is a self-hosted Apple-silicon runner (Metal)
+  plus lavapipe as the second backend, both on every commit; lavapipe satisfies M4's two-backend check, and a real
+  non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
 - Whatever its CI frequency, a task's PR shows every one of its acceptance commands run, with their output.
 
 ## Task files
@@ -73,10 +76,10 @@ This layout is pending the reviewer's ruling on RQ-76. The workspace sits under 
 |---|---|
 | `unit test` | `cargo test -p <crate>` |
 | `property test` | `cargo test -p <crate>`, using proptest |
-| `golden image` | `cargo xtask golden <suite>`, with fixtures in `fixtures/golden/`; the colour suite is Playwright + headless Chrome (parity §6) |
+| `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
 | `numerical gate` | `cargo xtask gate <gate>`, with fixtures in `fixtures/gates/` |
 | `benchmark` | `cargo xtask bench <bench>` |
-| `GUI screenshot` | `cargo xtask screenshot <artboard>`, compared against `docs/gui/design/NN_*.png` for layout only (R-68) |
+| `GUI screenshot` | `cargo xtask screenshot <artboard>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
 | `review checklist` | the named reviewer's checklist, or a CI lint that installs the check |
 
 `cargo xtask plan-check` runs `plan/check_plan.py`.

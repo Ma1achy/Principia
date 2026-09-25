@@ -42,4 +42,4 @@ The controller's cascade: `motion_rung = resting_rung − offset` with the offse
 
 ## Notes
 - REQ-PERF-066 is "set by recorded measurement" but not `kind: calibration`; the recorded values still go to the human at the M6 gate.
-- Closes, for gaps the corpus leaves open: REQ-PERF-089 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-PERF-089 (R-71 calibration) (classification accepted by R-132).

@@ -33,4 +33,4 @@ Structural views read quad metadata, not payload, over a synthetic `RenderQuad` 
 - `ctx.tile.uv` (render_gui_spec §12.1) is not in colour_composition §3's lane list (milestone Gaps; carried from TASK-M1-06).
 - The pending-hatch pattern and the fallback-tint colour are not given by the corpus (milestone Gaps).
 - The quad-state test at M1 is structural only; the "state transitions legal" assertion of debug plan §F needs the scheduler (M5).
-- Closes, for gaps the corpus leaves open: REQ-TOOL-124 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-TOOL-124 (R-72 definition) (classification accepted by R-132).

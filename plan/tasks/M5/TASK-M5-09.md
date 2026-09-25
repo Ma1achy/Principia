@@ -24,6 +24,7 @@ survive.
 - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `decisions.md` § "R-120 — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*"
 ## Deliverables
 - `docs/contracts/principia_caching_contract.md` Part 7: the eviction cost formula (REQ-SCHED-079), with the
   "Removed lines" note.
@@ -34,11 +35,8 @@ survive.
 - `cargo test -p engine evict_pinned_survive` — under memory pressure pinned entries survive; deeper-t entries outlive shallower ones (REQ-SCHED-019).
 - `cargo test -p engine evict_cheaper_first` — with two equally-old quads of different computeCostMs under cache pressure, the cheaper is evicted first (REQ-SCHED-032).
 - Review checklist (physics) — the doc states the cost formula; the eviction unit tests (cheaper-first, deeper-t outlives shallower) follow from it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-SCHED-079).
-- `cargo test -p engine evict_keeps_ancestors` — under eviction, every visible region keeps an ancestor; the pinned chain survives (REQ-PERF-022).
+- `cargo test -p engine evict_keeps_ancestors` — under eviction, every visible region keeps an ancestor; the pinned chain survives; of two unpinned quads the one with lower cost-weighted resistance goes first, whatever their depths (R-120) (REQ-PERF-022).
 
 ## Notes
 - Definitions (R-72) this task writes: REQ-SCHED-079.
-- Blocked on a corpus conflict (see Gaps): telemetry §6.2 says drop the **deepest** cached quads first, while
-  scheduler Part 6 makes deep, expensive quads **resist** eviction (∝ `computeCostMs`). The formula cannot be written
-  until the human rules on the order.
-- Waits on RQ-88 (`REVIEW_QUEUE.md`): Eviction order: deepest first, or cost-weighted resistance?.
+- RQ-88 ruled: R-120 — eviction takes the lowest cost-weighted resistance first (scheduler Part 6, caching Part 7); the pinned classes are unchanged; telemetry's "deepest first" passages were conformed in step 7. The cost formula this task writes (REQ-SCHED-079) follows that order.

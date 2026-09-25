@@ -53,4 +53,4 @@ The scheduler's split predicate becomes scheduler_contract Part 3's sliding form
 ## Notes
 - The at-rest vs gesture regime comes from caching Part 6 and the gesture debounce calibrated in M5 (REQ-SCHED-075); this task reads it, it does not set it.
 - The motion floor's offset (one or two levels) is a controller lever (memory_tiers §5); TASK-M6-17 drives it. Which of the two the scheduler uses by default is not given — see Gaps.
-- Closes, for gaps the corpus leaves open: REQ-SCHED-089 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-SCHED-089 (R-71 calibration) (classification accepted by R-132).

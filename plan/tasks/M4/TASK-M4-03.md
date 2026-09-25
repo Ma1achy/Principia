@@ -36,6 +36,8 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 - `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
 
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/branch_inputs.rs`: the enumerated list of branch inputs (name, formula, the explicit-`fma` written form, the decisions it feeds, the descriptor fields downstream of it), referenced from each use site.
 - Kernel edits: `d²` as f32 positions → lone subtract → lone multiply → `fma(dy, dy, dx*dx)`; collision as `d² < r_coll²`; `|Δn̂|` and `E_rel` in their fixed `fma` forms; no runtime `pow`/`sqrt`/`div` feeding a decision (the spike control `ceil((r_sub/√d²)^1.5)` absent from the kernel).
@@ -46,11 +48,10 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - `cargo test -p validation tier_l_d2` — `d²` computed on every backend is bit-identical for fuzzed position pairs (REQ-INT-066).
 - `cargo test -p validation tier_l_collision` — fuzzed pairs near `r_coll` on CPU and GPU: the collision decision is bit-identical (REQ-EVT-021).
 - `cargo test -p validation tier_l_branches` — identical per-step inputs (fuzzed states) dispatched on GPU-f32 and CPU-f64: `N_sub`, cap, collision, escape, horizon, `SIM_FAILED` and terminal decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory (REQ-INT-057).
-- `cargo test -p validation tier_l_boundary_states` — stateless test over boundary states: `N_sub`, terminal label and precedence, `state`, escaper identity, collision pair, feasibility and degenerate branch + reason, mirror-tie choice, coincident-pair rejection, decode-mode selection and loop iteration structure identical across CPU-f64, CPU-f32 and native GPU; spike baseline 705 states, 0 forks; the runtime-`pow` control forks on the same inputs (REQ-VAL-059).
+- `cargo test -p validation tier_l_boundary_states` — stateless test over boundary states: `N_sub`, terminal label and precedence, `state`, escaper identity, collision pair, feasibility and degenerate branch + reason, mirror-tie choice, coincident-pair rejection, decode-mode selection and loop iteration structure identical across CPU-f64, CPU-f32 and native GPU (the self-hosted Metal runner, and lavapipe as the second native backend, R-110); spike baseline 705 states, 0 forks; the runtime-`pow` control forks on the same inputs (REQ-VAL-059).
 - Physics reviewer, against `branch_inputs.rs`: an enumerated list of branch inputs exists; each multi-op input is written with explicit `fma`; nothing relies on per-backend FP-contraction settings (REQ-INT-064); every branch input is enumerated and none is fed by runtime `pow`/`sqrt`/`div`, the spike control absent (REQ-INT-061).
 - `cargo test -p validation descriptor_input_forks` — the parity audit enumerates the branch inputs feeding each descriptor field (per R-34's list) and fork-tests those; the packing-level control reads 0 forks against the input-level 83 (REQ-VAL-078).
 
 ## Notes
-- REQ-VAL-059's verify names a browser-GPU leg; the browser build is M8. See the REVIEW_QUEUE entries below — this task runs the three native legs and does not mark the fourth done.
 - Domain statement required in the test output: fixed inputs, per step (pitfalls §10).
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-VAL-059 is the native half (Metal and lavapipe); its browser-GPU leg is REQ-VAL-144, closed with REQ-VAL-116 at M8 (TASK-M8-40). This task also carries the native-GPU legs dropped from M3: REQ-INT-028's `N_sub` and REQ-INT-029's capped step.

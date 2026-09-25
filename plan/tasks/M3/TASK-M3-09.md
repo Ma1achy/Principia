@@ -1,7 +1,7 @@
 # TASK-M3-09 — Collision detection, t = 0 terminals and the d_min pair
 
 - **Milestone:** M3
-- **Closes:** REQ-EVT-002, REQ-EVT-003, REQ-EVT-004, REQ-EVT-009, REQ-PAY-047
+- **Closes:** REQ-EVT-002, REQ-EVT-003, REQ-EVT-004, REQ-EVT-009, REQ-PAY-047, REQ-ENC-033
 - **Depends on:** TASK-M3-04, TASK-M3-05
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-013, REQ-SYS-016, REQ-DEC-008, REQ-ENC-019
 - **Reviewers:** code, qa, physics
@@ -26,6 +26,7 @@ Collision is detected every STEP by counting pairs with `‖rᵢ − rⱼ‖² <
 - `docs/contracts/principia_symbolic_dynamics_contract.md` § "What is already settled (in the payload spec, not here)"
 - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/detect/collision.rs` — pair count and classification, reading the step's one `min d²`.
 - `crates/kernel/src/detect/t0.rs` — the dispatch-time detector pass.
@@ -36,8 +37,8 @@ Collision is detected every STEP by counting pairs with `‖rᵢ − rⱼ‖² <
 - `cargo test -p kernel collision_detector` — dd test 6: head-on pair → collision with correct 0-based pair id; two pairs below r_coll in one step → detail = 3, never a binary label (REQ-EVT-003).
 - Review (code, physics): one min-separation computation per step; every output/provenance record carries r_coll (REQ-EVT-004).
 - `cargo test -p kernel collision_t0_lookup` — an IC with a pair inside r_coll gives COLLISION_T0 with the opposite-side pair id and t_event = 0; the same IC entered via lookup gives the same label (REQ-EVT-009).
+- `cargo test -p kernel lookup_t0_collision_dispatch` — a lookup fixture with bodies within r_coll reaches dispatch and is labelled `collision`, `t_end_step = 0` (REQ-ENC-033).
 - `cargo test -p kernel dmin_pair_latch` — on a fixture close encounter dmin_pair equals the pair of minimum separation; initial value is 3 (REQ-PAY-047).
 
 ## Notes
-- None.
-- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- RQ-95 ruled: R-113 — REQ-ENC-019's t = 0 collision label at dispatch is split off as REQ-ENC-033 and closed here with REQ-EVT-002; lookup's no-rejection half stays in TASK-M2-19.

@@ -19,6 +19,7 @@ The payload schema version is computed at generation as a content hash of the ca
 - `docs/design/principia_dd_generation_root.md` § "5. Tests (properties any generator must satisfy)"
 - `docs/design/principia_dd_generation_root.md` § "6. Deferred / flagged"
 - `docs/design/principia_dd_generation_root.md` § "4. Seams (obligations → integration tests)"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
 - `crates/ledger/src/version.rs` — the canonical serialisation of the ledger (fixed field order, no formatting-dependent bytes) and its hash; `PAYLOAD_SCHEMA_VERSION` emitted into `crates/kernel/src/payload/generated.rs`.
@@ -29,5 +30,4 @@ The payload schema version is computed at generation as a content hash of the ca
 
 ## Notes
 - Constants-register entries (TASK-M0-08) are outside the hashed layout table unless ruled otherwise (see Gaps).
-- REQ-GEN-008's verify also says the caching signature carries the version; the compatibility signature is built in M5 and REQ-GEN-017 holds that half. See Gaps.
-- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- RQ-93 ruled: R-113 — "caching signature carries it" is dropped from REQ-GEN-008's verify; the compatibility signature carrying the version is REQ-GEN-017 (M5, TASK-M5-06).

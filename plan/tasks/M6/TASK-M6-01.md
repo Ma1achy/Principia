@@ -39,4 +39,4 @@ The engine's quadtree gets the `Decision` enum with exactly the eight variants o
 ## Notes
 - The legal state-transition table is REQ-TOOL-116's definition (M5, debug_tooling_plan §F); this task's lifecycle must follow it, not redefine it.
 - `Merged` is produced by TASK-M6-06. Which variants record `AT_F32_FLOOR` and the integration floor, and what produces `BalanceForced`, are not stated — see the REVIEW_QUEUE entries below.
-- Closes, for gaps the corpus leaves open: REQ-REF-047 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-REF-047 (R-72 definition) (classification accepted by R-132).

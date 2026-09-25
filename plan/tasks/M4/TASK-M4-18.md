@@ -27,18 +27,18 @@ The parity suite becomes permanent: a native in-process `#[test]` in CI on every
 - `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
 - `docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)"
 
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 ## Deliverables
 - `crates/validation/tests/parity_suite.rs`: the full CPU-vs-GPU `SimState` diff, per field tagged with its tier.
 - Fixture set with the non-chaotic / chaotic marking (`fixtures/gates/parity_fixtures`).
-- `xtask` gate `label-flip-report`: full-trajectory run on two GPU backends, the flip rate and, per flip, the stateless agreement of the branch operation; report header states the domain.
-- CI: the parity job on every commit; the browser build (M8) depends on it.
+- `xtask` gate `label-flip-report`: full-trajectory run on two GPU backends (Metal on the self-hosted Apple-silicon runner, and lavapipe, R-110), the flip rate and, per flip, the stateless agreement of the branch operation; report header states the domain.
+- CI: the parity job on every commit, on the self-hosted Metal runner and on lavapipe (R-110); the browser build (M8) depends on it.
 
 ## Acceptance tests
 - `cargo test -p validation parity_suite` — `cargo test` runs the CPU-vs-GPU `SimState` diff; branch decisions exact on shared per-step inputs; continuous words within the windowed tolerance; chaotic-trajectory label flips are reported, not asserted equal (REQ-VAL-057).
 - `cargo test -p validation tier_s_structural` plus QA review — no pointwise end-state assertion exists for chaotic pixels; outcome-class equality is asserted only on fixtures marked non-chaotic (REQ-VAL-062).
-- `cargo xtask gate label-flip-report` — parity run over full trajectories on two backends; the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory) (REQ-VAL-079).
+- `cargo xtask gate label-flip-report` — parity run over full trajectories on two backends — Metal on the self-hosted Apple-silicon runner and lavapipe (R-110); the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory) (REQ-VAL-079).
 - Code reviewer on the CI config — the native parity/determinism test is green and gating before browser work (REQ-VAL-056).
 
 ## Notes
-- The non-Metal parity run gates Paper 2, not the build (R-58); if only Metal is available the report says so.
-- Waits on RQ-79 (`REVIEW_QUEUE.md`): CI frequency, GPU hardware and browsers the corpus doesn't schedule.
+- RQ-79 ruled: R-110 — lavapipe is the second backend on every commit and satisfies M4's two-backend check; a real non-Metal GPU gates Paper 2, not the build (R-58; REQ-VAL-099, TASK-M8-41).

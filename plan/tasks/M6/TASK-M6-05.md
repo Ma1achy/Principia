@@ -40,4 +40,4 @@
 - Calibrations proposed: REQ-PAY-080 (error_ratio threshold), REQ-PAY-082 (gate threshold + integrator tolerance pair; REQ-VAL-088 is closed by the same recorded measurement).
 - Definition written: REQ-PAY-081, consistent with R-87 (indeterminate is read from `error_ratio`).
 - "Acquire a third scale" is named but not specified (which scale, when) — see Gaps.
-- Closes, for gaps the corpus leaves open: REQ-REF-048 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-REF-048 (R-72 definition) (classification accepted by R-132).

@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-021, REQ-CHART-022, REQ-CHART-023, REQ-CHART-013, REQ-SYS-016, REQ-VAL-016, REQ-VAL-118
-- **Depends on:** TASK-M2-07, TASK-M2-09, TASK-M1-10
+- **Depends on:** TASK-M2-07, TASK-M2-09, TASK-M2-12, TASK-M1-10
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-TOOL-022, REQ-PAY-020
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -28,6 +28,7 @@ The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/chart/burrau.rs` (the embed γ: ν → configuration and masses, the (ν, K) chart, the Euclid plane) and `crates/kernel/src/burrau.rs` (Euclid triples, the 1-based → 0-based translation).
 - The Euclid plane's annotation-axis descriptor and a statistics guard that refuses 2D density on it.
@@ -43,6 +44,5 @@ The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a
 - Calibration: the proposal compares the ν = 1/2 decode with the (2, 1) construction at f64 and states the tolerance; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-VAL-118).
 
 ## Notes
-- Gap G22: the (ν, K) chart's K warp constants — the corpus gives K(t) = K_max·t^γ_K for the invariant charts (calibrated by REQ-CHART-044, TASK-M2-12) but doesn't say the Burrau K axes share those defaults.
 - Both Burrau shape charts' `system_image` labels are closed with the folded chart (TASK-M2-11, REQ-CHART-025).
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- RQ-100 ruled: R-113 — the (ν, K) chart's K warp uses REQ-CHART-044's K_max and γ_K (chart_reference §4.5's K(v) = K_max v^{γ_K}), calibrated in TASK-M2-12, which this task now depends on.

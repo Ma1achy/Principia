@@ -52,10 +52,12 @@ requirement, the logH falsification check of the re-registration mechanism.
 
 **No physics.** The gates are built before anything they gate.
 
-- The cargo workspace and crates under `crates/`, with CI running every runner below on every push.
+- The cargo workspace and crates under `crates/`, with CI running each runner below at the cadence
+  `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*" gives it.
 - The substrate toolchain: one Rust source compiled to f32 SPIR-V → WGSL (rust-gpu) and to f64 for the CPU
   (canonical_spec §1, item 2), proven with a trivial kernel natively.
-- The test harness, the golden-image runner, the numerical-gate runner and the benchmark runner. Each
+- The test harness, the golden-image runner, the numerical-gate runner, the benchmark runner and the GUI
+  screenshot runner (`decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"). Each
   requirement's `verify.method` has a runner here, before the first requirement of that kind exists.
 - The profiler CLI skeleton, schema v1 (R-56; dd_telemetry_and_tiers §5, render_gui_spec §G5 "Profiler").
 - The contract surfaces' skeleton, in the engine crate (`principia_gui_state_contract.md` §1): the typed surfaces the
@@ -67,14 +69,14 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 64 requirements** (and every earlier gate still green):
+**Exit gate — 62 requirements** (and every earlier gate still green):
 
-- PAY (21): REQ-PAY-001…020, REQ-PAY-087
+- PAY (20): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087
 - GEN (9): REQ-GEN-001…008, REQ-GEN-024
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
 - TOOL (11): REQ-TOOL-001…008, REQ-TOOL-119…121
-- VAL (11): REQ-VAL-001…009, REQ-VAL-135, REQ-VAL-138
+- VAL (10): REQ-VAL-001…009, REQ-VAL-138
 - SYS (9): REQ-SYS-001…008, REQ-SYS-063
 <!-- /gate:M0 -->
 
@@ -95,7 +97,7 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - The baseline outcome palette that the field views need, pinned by golden images.
 
 <!-- gate:M1 -->
-**Exit gate — 80 requirements** (and every earlier gate still green):
+**Exit gate — 81 requirements** (and every earlier gate still green):
 
 - INT (1): REQ-INT-001
 - PAY (13): REQ-PAY-021…033
@@ -103,7 +105,7 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
 - COL (8): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056
 - GUI (1): REQ-GUI-001
-- TOOL (23): REQ-TOOL-009…028, REQ-TOOL-122…124
+- TOOL (24): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131
 - VAL (4): REQ-VAL-010…012, REQ-VAL-122
 - SYS (1): REQ-SYS-009
 <!-- /gate:M1 -->
@@ -157,17 +159,18 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 181 requirements** (and every earlier gate still green):
+**Exit gate — 186 requirements** (and every earlier gate still green):
 
-- INT (61): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…081
+- ENC (1): REQ-ENC-033
+- INT (62): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082
 - EVT (22): REQ-EVT-001…020, REQ-EVT-023…024
-- PAY (27): REQ-PAY-036…059, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
+- PAY (28): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
-- TOOL (10): REQ-TOOL-031…039, REQ-TOOL-125
-- VAL (47): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…134, REQ-VAL-136, REQ-VAL-139
+- TOOL (11): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132
+- VAL (48): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->
@@ -185,14 +188,14 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 98 requirements** (and every earlier gate still green):
+**Exit gate — 101 requirements** (and every earlier gate still green):
 
-- CHART (1): REQ-CHART-037
-- INT (15): REQ-INT-057…071
+- CHART (2): REQ-CHART-037, REQ-CHART-052
+- INT (16): REQ-INT-057…071, REQ-INT-083
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (11): REQ-SCHED-004…013, REQ-SCHED-084
-- RENDER (9): REQ-RENDER-029…036, REQ-RENDER-078
+- RENDER (10): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082
 - TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
 - VAL (29): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141
 - PERF (12): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086
@@ -211,22 +214,22 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 151 requirements** (and every earlier gate still green):
+**Exit gate — 158 requirements** (and every earlier gate still green):
 
-- DEC (2): REQ-DEC-031…032
+- DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
 - INT (2): REQ-INT-072, REQ-INT-075
 - EVT (1): REQ-EVT-022
-- PAY (14): REQ-PAY-060…068, REQ-PAY-075…079
+- PAY (16): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089
 - GEN (1): REQ-GEN-017
 - SCHED (49): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088
-- REF (10): REQ-REF-001…010
+- REF (11): REQ-REF-001…010, REQ-REF-045
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009
-- TOOL (11): REQ-TOOL-046…054, REQ-TOOL-116…117
+- TOOL (13): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133
 - VAL (4): REQ-VAL-080…083
-- PERF (22): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087
+- PERF (23): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093
 - SYS (8): REQ-SYS-030…037
 <!-- /gate:M5 -->
 
@@ -237,20 +240,20 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The refinement policy (`Policy::Tolerance`, R-15), its stopping conditions, and the quality
   controller.
 - The relevance terms.
-- The linearised decoder, the decode switchover and `AT_F32_FLOOR`.
+- The decode switchover and `AT_F32_FLOOR`. The linearised decoder's x₀ and J_D arrive in M5 (R-113).
 - The |det J_D| measure weight.
 - The integration-floor flags and the precision warnings.
 - The symbolic-dynamics per-quad quantities.
 - The refinement policy's open measurements.
 
 <!-- gate:M6 -->
-**Exit gate — 138 requirements** (and every earlier gate still green):
+**Exit gate — 133 requirements** (and every earlier gate still green):
 
-- DEC (6): REQ-DEC-033…037, REQ-DEC-042
-- PAY (8): REQ-PAY-069…072, REQ-PAY-080…082, REQ-PAY-084
+- DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
+- PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (23): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…090
-- REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…050
+- REF (37): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…050
 - GUI (6): REQ-GUI-010…015
 - TOOL (4): REQ-TOOL-055…058
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
@@ -271,15 +274,15 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - Image embedding.
 
 <!-- gate:M7 -->
-**Exit gate — 109 requirements** (and every earlier gate still green):
+**Exit gate — 112 requirements** (and every earlier gate still green):
 
 - GEN (4): REQ-GEN-019…022
 - SCHED (1): REQ-SCHED-072
 - RENDER (18): REQ-RENDER-057…072, REQ-RENDER-080…081
 - COL (45): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059
-- GUI (16): REQ-GUI-016…031
+- GUI (18): REQ-GUI-016…031, REQ-GUI-151…152
 - TOOL (20): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118
-- VAL (3): REQ-VAL-096…098
+- VAL (4): REQ-VAL-096…098, REQ-VAL-145
 - PERF (2): REQ-PERF-068…069
 <!-- /gate:M7 -->
 
@@ -306,9 +309,9 @@ canonical_spec §11: "build the browser product on top".
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (128): REQ-GUI-032…047, REQ-GUI-049…160
+- GUI (127): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161
 - TOOL (39): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129
-- VAL (16): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143
+- VAL (17): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092
 - SYS (24): REQ-SYS-039…062
 <!-- /gate:M8 -->

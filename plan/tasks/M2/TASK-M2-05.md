@@ -9,7 +9,7 @@
 - **Size:** ~380 lines
 
 ## Goal
-A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one trait: `map(u, v) -> ChartOut`, `forbids_energy_normalisation()`, `name()` (written in every dump header) and `validate(u, v) -> ValidationResult` (R-26), with ValidationResult's variants written into chart_reference §5.1. The first chart, `Latent { z0, q1, q2 }`, is the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ with its scale in q (R-83): no per-axis factors. D and C are written once; no chart carries decode formulae. The chart build order of chart_reference §5.1 is the order of this milestone's tasks.
+A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one trait: `map<F: Float>(u: F, v: F) -> ChartOut`, generic over the float type (R-118), `forbids_energy_normalisation()`, `name()` (written in every dump header) and `validate(u, v) -> ValidationResult` (R-26), CPU-side in f64, with ValidationResult's variants written into chart_reference §5.1. The first chart, `Latent { z0, q1, q2 }`, is the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ with its scale in q (R-83): no per-axis factors. D and C are written once; no chart carries decode formulae. The chart build order of chart_reference §5.1 is the order of this milestone's tasks.
 
 ## References
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts"
@@ -27,6 +27,7 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps"
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
 
+- `decisions.md` § "R-118 — Φ is generic over the float type *(closes RQ-86)*"
 ## Deliverables
 - `crates/kernel/src/chart/mod.rs` (the `Chart` trait, `ChartOut`, `ValidationResult`) and `crates/kernel/src/chart/latent.rs`.
 - The chart_reference §5.1 doc change listing the ValidationResult variants (project / clamp / reject and the failed constraint), with a "Removed lines" note.
@@ -34,7 +35,7 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 
 ## Acceptance tests
 - `cargo test -p kernel latent_affine` — z(½, ½) = z₀ and the corners equal z₀ ± q₁ ± q₂; zoom scales q₁ and q₂ by one common factor; the chart has no s_u, s_v parameters (REQ-CHART-003).
-- Review (code): the trait has the four methods; every chart implements `validate`; dumps carry the chart name in their header (REQ-CHART-028).
+- Review (code): the trait has the four methods; `map` is generic over the float type and is instantiated at f32 by the kernel and at f64 on the CPU; `validate` takes f64 and runs on the CPU; every chart implements `validate`; dumps carry the chart name in their header (REQ-CHART-028).
 - Doc review (physics): chart_reference §5.1 lists the ValidationResult variants, covering project / clamp / reject and the failed constraint; physics reviewer approved (REQ-CHART-043).
 - `cargo test -p kernel latent_axis_aligned_equals_alpha_beta` — the slice with q₁ = ê_α, q₂ = ê_β, compared per pixel against ICs built directly from (α, β) through chart_reference §0.2 (REQ-CHART-030).
 - Review (physics): no chart module contains mass/config/momentum decode formulae or integrator code; later charts go through the shared decoder (REQ-CHART-015).
@@ -43,6 +44,5 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 
 ## Notes
 - Gap G12: "a direct (α, β) sweep" (chart_reference §5.2) isn't defined further — whether it maps u, v to (α, β) through the links or linearly in angle; the test above compares against the link-mapped construction until ruled.
-- Gap G13: chart_reference §5.1 writes `map(&self, u: f64, v: f64)`; the kernel monomorphises Φ into the f32 SPIR-V build (lowering Part 3), so Φ must be generic over `Real`. `validate` stays CPU-side (f64).
-- Waits on RQ-86 (`REVIEW_QUEUE.md`): The Chart trait's f64 `map` vs Φ generic over the float type.
-- Closes, for gaps the corpus leaves open: REQ-CHART-050 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-86 ruled: R-118 — Φ is generic over the float type (chart_reference §5.1 reads `map<F: Float>`, conformed in step 7); `validate()` stays CPU-side f64.
+- Closes, for gaps the corpus leaves open: REQ-CHART-050 (R-72 definition) (classification accepted by R-132).

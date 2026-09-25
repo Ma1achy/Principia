@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in CI on every commit (parity_contract §6, the codegen row). pack∘unpack is the identity per field, property-fuzzed over the full value range with the top bits set, in three places: the host Rust, the kernel's own pack/unpack on the GPU (the rust-gpu build) and a GPU self-test dispatch of the generated WGSL fragment unpack using the u32 `extractBits` overload — on a device requested without `shader-f16`. f16 pairs round-trip; `t_end_step` and `t_dmin_step` round-trip exactly as u16, bit-identical CPU/GPU, with display-fraction endpoints exactly 0 and 1; `detail` decodes per `state`; and the static layout checks pass.
+The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in CI on every commit (parity_contract §6, the codegen row), on the two CI adapters R-110 names: the self-hosted Apple-silicon runner (Metal) and lavapipe. pack∘unpack is the identity per field, property-fuzzed over the full value range with the top bits set, in three places: the host Rust, the kernel's own pack/unpack on the GPU (the rust-gpu build) and a GPU self-test dispatch of the generated WGSL fragment unpack using the u32 `extractBits` overload — on a device requested without `shader-f16`. f16 pairs round-trip; `t_end_step` and `t_dmin_step` round-trip exactly as u16, bit-identical CPU/GPU, with display-fraction endpoints exactly 0 and 1; `detail` decodes per `state`; and the static layout checks pass.
 
 ## References
 - `docs/design/principia_debug_tooling_plan.md` § "H. Codegen self-test (the tooling that tests the tooling)"
@@ -21,11 +21,13 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 
 ## Deliverables
 - `crates/validation/tests/codegen_selftest.rs` — the §H suite: the three pack∘unpack paths per field, times, f16 pairs, detail-per-state, static checks; proptest strategies that include every field's top bit.
 - A WGSL self-test entry point wrapping the generated accessors (reads packed words, writes unpacked fields) and the kernel entry from TASK-M0-14.
 - The device for these tests is requested with no optional features (no `SHADER_F16`).
+- `.github/workflows/ci.yml` — the GPU job on the self-hosted Apple-silicon runner (Metal) and a lavapipe job, both on every commit, running this suite (R-110).
 
 ## Acceptance tests
 - `cargo test -p validation codegen_selftest_pack_unpack` (property) — per field, all fields including top bits set: identity in host Rust, in the kernel on the GPU and in the WGSL unpack on the GPU (REQ-GEN-004).
@@ -36,4 +38,4 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 
 ## Notes
 - Negative controls (TASK-M0-04): a WGSL accessor with a shifted offset; the i32 overload; a mask over bits a round trip compares (pitfalls §9).
-- See Gaps: the GPU CI runner.
+- R-110 (RQ-79): GPU CI is a self-hosted Apple-silicon runner (Metal) plus lavapipe on every commit; the acceptance commands above run on both.

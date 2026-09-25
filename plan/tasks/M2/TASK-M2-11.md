@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-024, REQ-CHART-045, REQ-CHART-046, REQ-CHART-027, REQ-CHART-025
-- **Depends on:** TASK-M2-10
+- **Depends on:** TASK-M2-10, TASK-M2-12
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -20,6 +20,8 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 ## Deliverables
 - `crates/kernel/src/chart/burrau_acute.rs` (Φ_θ,K, Φ_θ,L_z, Φ_θ,δm).
 - `system_image` values on both Burrau shape charts, shown in the chart label; the fraction-statistics guard.
@@ -34,7 +36,6 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 
 ## Notes
 - REQ-CHART-025 carries rq RQ-71 (is the shape sphere DoubleCover or 2-to-1?); the Euclid chart's DoubleCover is R-27/R-104's own case. The gate can't pass until RQ-71 is ruled.
-- Gap G21: the calibrations ask for renders at the defaults; before the integrator (M3/M4) only decode-time fields can be rendered.
-- Gap G22: whether Φ_θ,K's K_max, γ_K are the invariant-chart defaults (REQ-CHART-044).
+- R-133: the calibrations' evidence renders ask for coverage of the chart domain (feasibility, K, L_z), which decode-time renders show; no integrated field is needed at M2.
 - Gap G11: chart_reference §4.5 still says "pending change 2, open" and "Until one quotient is chosen" (RQ-77).
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- RQ-100 ruled: R-113 — Φ_θ,K's K_max and γ_K are REQ-CHART-044's, calibrated in TASK-M2-12, which this task now depends on.

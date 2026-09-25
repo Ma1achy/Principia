@@ -31,6 +31,7 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - `docs/contracts/principia_canonical_spec.md` § "2. The determinism law (the other defining decision)"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 1 — The firewall: the scheduler is arbitrary about *what* it looks at, never about *what* it sees"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel/src/driver/advance.rs` — the `Advance` trait with the cadence callback parameter; the blanket impl for steppers (`N_sub` STEP calls at `dt_macro/N_sub`, invoking the callback after each).
 - `crates/kernel/src/driver/wrapper.rs` — `integrate(ic, uniforms) -> SimState` in integrator contract Part 1's loop shape (done flag in both loop conditions; bounded loops; integer horizon counter; no float time accumulation).
@@ -39,7 +40,7 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - Seam-3 test: every chart in the M2 lowering appendix drives the same kernel unmodified.
 
 ## Acceptance tests
-- `cargo test -p kernel same_spec_twice` — property test: the same spec rendered twice gives bit-identical CPU output (the branch-exact GPU arm lands with M4's flat compute; fixed dt, count-bound, never wall-clock) (REQ-INT-007).
+- `cargo test -p kernel same_spec_twice` — property test: the same spec rendered twice gives bit-identical CPU output (fixed dt, count-bound, never wall-clock) (REQ-INT-007).
 - `cargo test -p kernel seam4_occupant_swap` — property test: swapping Euler, KDK, Yoshida-4, Yoshida-6 and RK4 on the same IC set changes only the §3.2 arithmetic; the wrapper code path and branch trace are shared (no occupant-specific branch in wrapper code) (REQ-INT-008).
 - `cargo test -p kernel cadence_callback_count` — property test: for every occupant, callback invocations == internal steps taken; an occupant that omits the call fails (REQ-INT-009).
 - `cargo test -p kernel advance_equals_nsub_steps` — for KDK/Yoshida, ADVANCE(t, t+dt_macro) equals N_sub STEP calls bit-for-bit (the AZ arm is TASK-M3-07's) (REQ-INT-020).
@@ -51,6 +52,5 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - Review (code): the integration entry point takes only the decoded IC and the sim-key uniforms; no path passes neighbour or parent state into the march (REQ-SCHED-003).
 
 ## Notes
-- REQ-INT-007's branch-exact GPU arm: the GPU dispatch of the full march is M4's; this task proves the CPU arm and the GPU arm of the shared branch functions via TASK-M3-03's self-test. See RQ-97.
 - REQ-INT-053's owns_time_mapping arm needs the regularisation axis; TASK-M3-07's acceptance runs it over every stepper × regularisation pair.
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — REQ-INT-007's branch-exact GPU arm is dropped from M3; M4 covers it by REQ-VAL-059 (Tier L, TASK-M4-03).

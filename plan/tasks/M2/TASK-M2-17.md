@@ -39,4 +39,4 @@ Encode into the active chart dispatches by axis kind: kind 1 reads the component
 
 ## Notes
 - Gap G16: "project … to the nearest valid point" (onto the parabola for (L_z, E)) has no metric, and "only when projecting or clamping would give a qualitatively different IC" has no criterion (inverse_encode chart-aware validation).
-- Closes, for gaps the corpus leaves open: REQ-ENC-030 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-ENC-030 (R-72 definition) (classification accepted by R-132).

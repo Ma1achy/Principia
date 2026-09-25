@@ -31,6 +31,7 @@ E) and the ledger content hash; lookup requires identity and signature match. v1
 - `decisions.md` § "R-89 — Depth and E are not on the sim key *(closes RQ-40)*"
 - `decisions.md` § "R-92 — What the sim key holds of navigation *(closes RQ-43)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/keys.rs`: `SimKey`, `RenderKey`, `CacheIdentity`, `CompatSignature` (hashing; the schema hash
   from the ledger generator).
@@ -49,4 +50,4 @@ E) and the ledger content hash; lookup requires identity and signature match. v1
 - Each per-component test must be shown to fail when that component is dropped from the hash (pitfalls §9).
 - REQ-GEN-017's "the cache test serves zero stale-schema payloads" is asserted again end to end once the cache exists
   (TASK-M5-08 reuses this test's fixture).
-- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- RQ-93 ruled: R-113 — REQ-GEN-008 (M0) verifies only the schema version; the compatibility signature carrying it is REQ-GEN-017, closed here.

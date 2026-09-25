@@ -49,4 +49,4 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 - Gap: the Mikkola–Tanikawa leapfrog's equations are not in the corpus; this task defines the slot's type only.
 - Gap: `dt_max` has no home in the new ledger; REQ-TOOL-039 is met by the occupant diagnostic above unless a ruling places it in the payload.
 - Waits on RQ-102 (`REVIEW_QUEUE.md`): The regularisation occupants and step control that live only in prin-rs.
-- Closes, for gaps the corpus leaves open: REQ-INT-080 (R-71 calibration), REQ-TOOL-125 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-INT-080 (R-71 calibration), REQ-TOOL-125 (R-72 definition) (classification accepted by R-132).

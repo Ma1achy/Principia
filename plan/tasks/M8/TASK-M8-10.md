@@ -38,4 +38,4 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 ## Notes
 - The opacity fall-off with distance from the slice has no stated function or distance measure.
 - The click inspector's persistence half of REQ-GUI-052 is asserted against the Inspector window id; the window itself is TASK-M8-14.
-- Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (classification accepted by R-132).

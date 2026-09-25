@@ -3,7 +3,7 @@
 - **Milestone:** M6
 - **Closes:** REQ-PERF-034, REQ-PERF-048, REQ-PERF-050, REQ-PERF-051, REQ-PERF-052, REQ-PERF-053, REQ-PERF-054, REQ-PERF-055, REQ-PERF-041, REQ-PERF-039, REQ-PERF-038, REQ-PERF-088, REQ-PERF-090
 - **Depends on:** TASK-M6-15
-- **Needs (earlier milestones):** REQ-PERF-023, REQ-PERF-025, REQ-PERF-029, REQ-PERF-031, REQ-PERF-032, REQ-PERF-030
+- **Needs (earlier milestones):** REQ-PERF-023, REQ-PERF-025, REQ-PERF-029, REQ-PERF-031, REQ-PERF-032, REQ-PERF-030, REQ-PERF-093
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** PIT-3
 - **Size:** ~490 lines
@@ -25,6 +25,7 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `docs/design/principia_quality_device_note.md` § "Open sub-questions (settle at implementation)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/engine/src/quality/characterise.rs`: `Limits`, `Probe` (behind a `GpuTimer` trait: timestamp queries or batched wall-clock), `InfoPrior`, `solve()`; a mockable device interface for tests.
 - `crates/engine/src/quality/derive_tier.rs`: the inversion against samples/s, bytes/s, the frame budget and `sea_fraction(eps)` (a trait until TASK-M6-19 lands), with the fallback flag.
@@ -47,6 +48,6 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - Proposal: the ladder (rung count, presets) and the unified/discrete budget heuristic with device-characterisation evidence; the human confirms them at the M6 gate (REQ-PERF-090).
 
 ## Notes
-- Values the corpus leaves approximate with no calibration requirement: thermal headroom (~60–70%), the probe's percentile and dt count, the "wildly inconsistent" test, the boot-fit margin — see Gaps.
-- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
-- Closes, for gaps the corpus leaves open: REQ-PERF-088 (R-71 calibration), REQ-PERF-090 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Values the corpus leaves approximate with no calibration requirement: thermal headroom (~60–70%), the probe's percentile and dt count, the "wildly inconsistent" test — see Gaps. The boot-fit margin is REQ-PERF-093 (calibrated at M5, TASK-M5-10).
+- RQ-100 ruled: R-113 — the memory-fit margin REQ-PERF-048's boot fit uses is REQ-PERF-093, calibrated at M5 (TASK-M5-10).
+- Closes, for gaps the corpus leaves open: REQ-PERF-088 (R-71 calibration), REQ-PERF-090 (R-71 calibration) (classification accepted by R-132).

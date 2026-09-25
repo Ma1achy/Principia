@@ -40,4 +40,4 @@ Every navigation gesture is a CPU-side edit of the one chart triple: pan as Δz�
 ## Notes
 - Gap G19: the named compound directions aren't given as vectors — the energy-at-fixed-L_z direction as a latent vector (a tangent of which curve, pulled back through which link, normalised how), the mass direction's normalisation, and the morph's target direction.
 - The zoom step factor for "log-stepped" is not needed by these tests; the GUI binding lands at M8.
-- Closes, for gaps the corpus leaves open: REQ-CHART-051 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-CHART-051 (R-72 definition) (classification accepted by R-132).

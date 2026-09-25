@@ -33,6 +33,7 @@ The whole M3 physics kernel — decode, canonicalise, the wrapper with its detec
 - `docs/notes/principia_gpu_determinism_note.md` § "The one-line law"
 - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/kernel`: the GPU build — rust-gpu compile of the kernel crate to SPIR-V entry points (build script or `xtask` step), naga SPIR-V → WGSL translation and naga validation as a build check. No `.wgsl` compute source is written by hand or checked in.
 - `crates/kernel/tests/discipline_lint.rs`: a source lint over the kernel's physics and driver layers — no `break` in march loops, no bare `loop {`, no counted `for` with a mid-body exit (`for s in 0..N_sub`), no `f32::INFINITY` / `NAN` / `T::infinity()` literal, no runtime-indexed array in the kernel (constant indices or unrolled pairs), every float→int cast preceded by an f32 clamp, and no `Real`-dependent constant in an `if`/`while` condition. Each rule has a seeded-violation fixture that makes the lint fail.
@@ -49,4 +50,4 @@ The whole M3 physics kernel — decode, canonicalise, the wrapper with its detec
 ## Notes
 - REQ-SYS-025's check is by inspection, never by agreement of results (parity contract Tier L, part 1); the reviewer records the inspection in the PR.
 - The lint is the installed check for the review-checklist requirements it covers; it stays in CI for every later task.
-- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.
+- RQ-97 ruled: R-113 — the GPU legs dropped from the M3 verifies (REQ-INT-007, 028, 029, 030, 031) are covered by M4's REQ-VAL-059, REQ-VAL-061 and REQ-VAL-072 on this build; the WGSL → browser-compiler leg is REQ-VAL-144 (M8).

@@ -17,6 +17,7 @@
 - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence"
 - `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 
 ## Deliverables
 - `crates/validation/src/gpu.rs` — `GpuHarness::new()` (headless, no surface, no optional features), `run_wgsl(module, entry, inputs) -> Vec<u32>`, and the adapter info (name, backend, driver) exposed for TASK-M0-19's session header.
@@ -26,12 +27,12 @@
 - Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads.
 
 ## Acceptance tests
-- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu.
+- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu, in CI on the self-hosted Metal runner and on lavapipe (R-110).
 - `cargo test -p validation gpu_harness_can_fire` — on words with bit 31 set, the i32 `extractBits` dispatch differs from the u32 one: the harness's reachable output includes the sign-extension failure.
 - `cargo xtask controls` — every test in the workspace has a registered negative control and every control makes its test fail; a fixture test with no control, and one whose control passes, each fail the command (REQ-VAL-007).
 - Review checklist (qa §3): no test is arithmetically impossible or true by construction (the n_hot < N² quantile case, a distinct-value count bounded below the claimed effect) (REQ-VAL-007).
 
 ## Notes
 - Every later task's tests register their controls here; the qa reviewer checks each control is discriminating (qa §3).
-- See Gaps: the GPU CI runner.
+- R-110 (RQ-79): the harness's CI adapters are a self-hosted Apple-silicon runner (Metal) and lavapipe, both on every commit; `GpuHarness` selects either by backend.
 - The harness lives in `crates/validation` ("the validation harness" in the plan layout) so that the codegen self-test and, from M4, the native parity suite share one device path.

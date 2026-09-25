@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-VAL-065, REQ-VAL-125, REQ-SYS-027
-- **Depends on:** TASK-M4-09, TASK-M4-06, TASK-M0-05
+- **Depends on:** TASK-M4-09, TASK-M4-06, TASK-M3-34
 - **Needs (earlier milestones):** REQ-VAL-004, REQ-VAL-135, REQ-SCHED-001, REQ-SYS-017, REQ-VAL-002
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-10

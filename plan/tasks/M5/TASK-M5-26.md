@@ -31,6 +31,7 @@ Nothing reads the backdrop as data.
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/render/src/compositor/{layers.rs, blur.rs, snapshot.rs}` and the WGSL blur pass.
 - Golden suites `fixtures/golden/backdrop/` (tilt fixture; palette change recolours the backdrop; chroma equality) and
@@ -48,7 +49,5 @@ Nothing reads the backdrop as data.
 
 ## Notes
 - The blur kernel's radius is not given by caching Part 5 (see Gaps).
-- The worker hosting of REQ-RENDER-045 ("the frame loop runs in the wasm-engine worker") is realised in M8; see
-  TASK-M5-24's note.
-- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
-- Closes, for gaps the corpus leaves open: REQ-RENDER-079 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- RQ-99 ruled: R-113 — REQ-RENDER-045 drops its worker clause; the wasm-engine worker is REQ-SYS-039/049 (M8, TASK-M8-37).
+- Closes, for gaps the corpus leaves open: REQ-RENDER-079 (R-71 calibration) (classification accepted by R-132).

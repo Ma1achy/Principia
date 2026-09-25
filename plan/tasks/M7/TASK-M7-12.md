@@ -28,6 +28,7 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
+- `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
 ## Deliverables
 - `crates/render/src/codegen/walk.rs` — graph → `shade()` in backbone order, the post chain in declaration order with insert and reorder, the 8-node bound.
 - `crates/render/src/codegen/fallback.rs` — identity for dangling / absent inputs, the defined fallback shader for an invalid graph.
@@ -40,8 +41,8 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - Review (code): colour occupants cannot alter the pipeline topology outside the stain graph; L is owned by the bound brightness metric (REQ-RENDER-068).
 - `cargo test -p render stain_fanout` — picking a vector field sets subtype vector; one source wired to a colour and a brightness node renders both; a margin node has two field ins (REQ-GUI-024).
 - `cargo test -p render post_chain_order` — a 9th post node is rejected; reordering two post nodes changes the output accordingly (REQ-COL-025).
-- Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable from both-None mid-grey and invalid magenta; the human confirms it at the M7 gate (REQ-RENDER-081).
+- Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable from both-None mid-grey and from the invalid-pixel pattern (REQ-COL-055's hatch, R-132); the human confirms it at the M7 gate (REQ-RENDER-081).
 
 ## Notes
 - Gap: render_gui_spec §13 gives the invalid-graph fallback as "flat grey / error tint" — which one, and its value, are not given (see the milestone report).
-- Closes, for gaps the corpus leaves open: REQ-RENDER-081 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-RENDER-081 (R-71 calibration) (classification accepted by R-132).

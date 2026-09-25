@@ -49,4 +49,4 @@ A stain is a free, typed node graph on the fixed backbone — sources → colour
 - REQ-RENDER-075 is a definition requirement (R-72): the doc change is part of this PR and the physics reviewer approves it before merge.
 - Occupant identity (render_gui_spec §13): dangling inputs fall back to None, so the assembler never produces an unrenderable graph.
 - The Replace-L combiner's colour maths is M7; M1 needs only a pass-through combiner for single-colour debug stains.
-- Closes, for gaps the corpus leaves open: REQ-GEN-027 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).
+- Closes, for gaps the corpus leaves open: REQ-GEN-027 (R-72 definition) (classification accepted by R-132).
