@@ -1,0 +1,354 @@
+# Principia — integrator contract
+
+*Sixth doc. The producer side of `SimState` — every categorical debug view, every outcome class, every stability scalar bottoms out here. The physics (KDK/Yoshida/RK4, adaptive substepping, COM projection, invariant monitoring, escape/collision detection) is fully specified in the LaTeX spec and treated as settled. This doc contracts the *seams around* the integrator so it slots into everything else: the swappable step slot, the shared wrapper, parameter ownership, units, and the determinism/reversibility/floor boundaries.*
+
+---
+
+## Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper
+
+Same pattern as the render pipeline's swappable colour/brightness slots. The integrator is **not** a monolith; it is one small swappable piece inside a fixed loop.
+
+```
+integrate(ic, params):
+    state ← ic                      # (m, r, p) from the decoder
+    done ← false                    # terminal flag — the ONLY loop-exit mechanism
+    macro ← 0
+    while macro < N_macro and not done:              # WRAPPER owns the loop
+        N_sub ← substep_bucket(d²(state), params)     # WRAPPER — table lookup, §Part 4 / integrator dd §3.3
+        s ← 0
+        while s < N_sub and not done:
+            state ← STEP(state, dt_macro / N_sub, params)   # OCCUPANT — the only swappable line
+            state ← project_com(state)          # WRAPPER — per STEP (spec §com_projection)
+            update_invariants(state)            # WRAPPER — per STEP, post-projection
+            done ← detect_terminal(state, params)   # WRAPPER — per STEP; sets the flag, never breaks
+            s ← s + 1
+        expose_state_readout(macro)                     # WRAPPER — live n(t) derived, nothing stored
+        macro ← macro + 1
+    return SimState
+```
+
+**Loop shape is load-bearing for the GPU, not a stylistic choice.** Terminal exit is via a **`done` flag tested in each loop condition — zero `break` statements**, and both loops are `while`, never `for s in 0..N_sub` (a counted loop with a mid-body exit lowers, through rust-gpu → SPIR-V → naga → WGSL, to the multi-level-exit shape that **miscompiles** — wgpu#4449). The spike validated *this exact shape* through SPIR-V→MSL and SPIR-V→WGSL→Tint at 100 macro-steps in one dispatch; `break both loops` (the earlier pseudocode) is the shape that fails. See `principia_gpu_determinism_note.md` for the full loop/indexing discipline.
+
+**The occupant is `STEP(state, dt, params) → state'` and nothing else.** A KDK occupant is literally the three-line kick-drift-kick. Everything else — the loop, adaptive substepping, COM projection, invariant monitoring, terminal detection, the state readout — is the **shared wrapper**, identical regardless of which occupant is bound.
+
+**Cadence (pinned).** Projection and invariant accumulation run **after every `STEP` invocation** — per substep, not per macro-step — exactly as the spec states (§com_projection: "after the final half-kick in KDK, or after all Yoshida stages"; the KDK figure names them post-step operations). Per-step max-accumulation is the point: it catches close-encounter drift spikes that recover before termination — the regime where Burrau is most interesting. Terminal detection is pinned per `STEP` too: collision must break mid-macro-step (integrating on through `r < r_coll` at near-singular forces for the remainder of a macro-step manufactures `SIM_FAILED` noise, and `r_min` is computed every substep anyway); the escape persistence counter `c_esc` therefore ticks per `STEP`. The shape readout stays on the macro schedule (derived live; nothing stored — lockstep).
+
+This factoring is load-bearing: it puts all the shared, determinism-critical machinery in one place, and keeps occupants trivially simple and interchangeable. Adaptive substepping lives in the **wrapper**, not the integrator — the wrapper calls `STEP` `N_sub` times at `dt_macro/N_sub`. RK4-as-validation and the inspector's f64 run are just "different occupant + different precision," no special path.
+
+---
+
+## Part 2 — Occupants and the capability profile
+
+The occupants (spec's tier table gives the *default* binding; the user overrides):
+
+| Occupant | Order | Force evals/step | Symplectic | Reversible | Default tier |
+|---|---|---|---|---|---|
+| Euler | 1 | 1× | ✗ | ✗ | — (debug only, below) |
+| KDK leapfrog | 2 | 1× | ✓ | (see §4) | Potato–Low (fast, motion) |
+| Yoshida-4 | 4 | 3× | ✓ | (see §4) | Medium–High (default) |
+| Yoshida-6 | 6 | 7× | ✓ | (see §4) | Ultra–Extreme (accuracy) |
+| RK4 | 4 | 4× | ✗ | ✗ | Validation cross-check (fixed, non-symplectic) — NB the inspector's *adaptive* high-precision reference is the separate **RK45**, §6, which is not a wrapper occupant |
+
+**Occupants are not interchangeable — each advertises a capability profile `{order, force_evals, symplectic, reversible}`, and downstream features read the profile rather than assuming.** This is the new load-bearing idea, the integrator analogue of the chart `system_image` and the link measure. Three consequences:
+
+- **`energy_drift` is only a *dynamics* diagnostic on a symplectic occupant.** On KDK/Yoshida, energy oscillates around `E_0` and drift measures the *physics* (close-encounter stress). On Euler/RK4 it measures the *integrator* — Euler drifts secularly and will light up `SUSPECT_ENERGY` everywhere. The suspect flag therefore means different things per occupant; a debug/stats layer must read `symplectic` before interpreting drift.
+- **The reversibility diagnostic needs a `reversible` occupant** (§4) — it cannot be wired to whatever happens to be bound. The profile flag is the guard.
+- **Order sets the meaning of the `total_substeps_log2` complexity proxy (derived, payload §5) and FTLE confidence** — a 6th-order step is worth more than a Euler step of the same size.
+
+**Euler is kept deliberately, as a debug occupant.** It makes energy drift blow up violently and visibly, which makes "energy-drift view + Euler" a *test that the diagnostic plumbing works* — you *want* to see it explode. It is not a production option; it is the integrator-side analogue of a debug shader. The profile (`symplectic: false`) is what stops it being mistaken for one.
+
+### Part 2c — THE GPU KERNEL: what ports, what is rewritten, and the rules it must hold
+
+**Established by the lowering spike. This is a decision about the shipped kernel, not a note about
+prin-rs.**
+
+#### The split
+
+| layer | disposition | why |
+|---|---|---|
+| **step / deriv / Hamiltonians / `physics/`** | **PORTS AS-IS** | measured **0 `Vec`/`Box`/`dyn`/`std`** across both RK4s, both Hamiltonians and `physics/`. Already shader-shaped. Porting is transcription. |
+| **the driver layer** | **REWRITTEN to the rules below** | every blocker found is here, and every one is a *rule violation* rather than a bug |
+| **the dispatch shape** | **DESIGNED FRESH** | 68 KB per quad fits no backend; see `principia_systems_architecture.md` §5.5 |
+
+**The good news is real and worth stating: no blocker is a physics problem.** No wrong equations, no
+bad numerics. It is all driver-layer plumbing — the cheapest kind of bad news, and what a spike is
+for.
+
+#### Rules the new kernel must hold by construction
+
+**1. NO PRECISION-DEPENDENT CONSTANT IN A CONTROL-FLOW DECISION.**
+
+prin-rs gives `f32` and `f64` different `SYNC_EPS` (1e-6 / 1e-15) and `LAND_EPS_REL` (1e-5 / 1e-14),
+**both sitting directly in branch conditions.** That is not a GPU problem — **the kernel fails the
+requirement between its own two builds**, before any backend is involved.
+
+> A threshold that changes with the `Real` type means the two instantiations are running *different
+> logic*, not the same logic at different precision. **That is the one thing the single-kernel design
+> exists to prevent.**
+
+If a tolerance must scale with precision, it belongs where the *value* is used, never where the
+*branch* is taken.
+
+**2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
+threshold tables, integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
+runtime `ceil((r_sub/√d²)^1.5)` — forked **105 times on Metal and 82 on lavapipe**; the
+comparison-only form forked **0 of 705** on both.
+
+**`pow` is what bites; `sqrt` is merely unguaranteed.** With the collision threshold straddled at
+0 ULP, the `sqrt`-decided branch forked **0 of 705** on both backends. So squaring the collision test
+is a *rule for the new kernel*, not an urgent fix to the old one.
+
+**3. NO BARE `loop {`.** Every march loop needs a bound, for the watchdog and for the dispatch
+chunking (`principia_dd_telemetry_and_tiers.md` §6.3–6.4). prin-rs has none.
+
+**4. NO `T::infinity()` SEEDS IN FOLDS.** Reseed min-folds from the first element. 27 sites in
+prin-rs, and the related failure — `dt_max` folding from `0.0` so an all-unusable pixel reported its
+largest step as zero — is in `principia_01_pitfalls.md` §9.
+
+**5. NO ALLOCATION IN THE HOT PATH.** Already true of the physics layer; must stay true of the
+driver.
+
+> **These are RULES, not a fix list.** Filed as *"prin-rs has 46 sqrt-decided branches"* they read as
+> a backlog for code that is about to be replaced. Filed as rules, the new kernel does not
+> reintroduce them — which is the only outcome that matters.
+
+#### And FMA contraction is a live question
+
+A backend that fuses `a*b+c` changes the result, which changes a comparison, which changes a
+decision. **Check whether contraction is controllable per backend**, and whether any branch depends
+on it not happening. In *continuous* arithmetic FMA latitude is honest divergence and fine; in a
+branch input it is not.
+
+---
+
+### Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper
+
+**DECIDED. The stepper (RK4, KDK, Yoshida-N) and the REGULARISATION are independent choices, and
+both are occupant slots.** Four regularisation occupants, each earning its place for a different
+reason:
+
+| occupant | chart | re-registers? | why it is kept |
+|---|---|---|---|
+| **none** | Cartesian | — | **the INDEPENDENT control.** Shares no coordinate machinery with the others, which is what let it catch the wedge bug: leapfrog drift tracks FTLE at **+0.305**, AZ at **−0.082**. Keep permanently. |
+| **Aarseth–Zare** | two pairs, reference body from the longest side | **yes, at every sync boundary** | wins on **sustained hierarchy** (`far`: all 65,536 pixels, 0.7–0.9 decades) — precisely because the reference never has to change |
+| **Heggie 1974 (global)** | three relative vectors, symmetric | **no reference body at all** | the general default. **31 of 32 cases**, `err>10` 3916 → 73, fixes AZ's worst decile on 100% of pixels |
+| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property |
+
+**Why this axis exists at all — the measured finding it came from.** Doubling the sync-boundary
+**re-registration count** at *fixed step size* moves the drift field by **0.444 decades**, against
+**2.5e-6** for the LC branch choice and **7.5e-5** for the reference-body selection rule. Six
+thousand and one hundred and seventy-five thousand times respectively.
+
+> **It is not which chart is chosen. It is how often the state is passed through one.**
+
+That is a property of the **regularisation**, not of the stepper — which is why it needs its own
+slot rather than being folded into `STEP`.
+
+#### The profile gains a field
+
+`re_registrations: u32` — or at minimum a per-trajectory count in the payload. **This is the
+quantity the entire wedge investigation turned on and it is currently invisible.** A method that
+re-registers is structurally different from one that does not, and downstream must be able to read
+that rather than know it as folklore.
+
+#### The comparison discipline is part of the seam, NOT a convention
+
+With four occupants shippable, someone will eventually compare two of them under different
+steppers and get a confident wrong answer. **The harness must refuse mismatched arms**, because a
+convention is exactly what failed in the `refine_flagged` propagation.
+
+- **Same stepper, same step control, across every arm.** Comparing a GBS logH against an RK4
+  Heggie scores the *integrator*, not the *regularisation*. The AZ/Heggie result is trustworthy
+  precisely *because* both ran the same RK4 under the same step control.
+- **Fixed colour-ramp constants shared across arms.** An auto-ranged ramp per panel *manufactures
+  or hides* the difference it is meant to show — measured, not hypothesised.
+- **Every arm prints its full provenance**, including the occupant and its profile.
+
+#### One thing deliberately NOT decided
+
+**Automatic selection between occupants.** If AZ wins on sustained hierarchy and Heggie otherwise,
+a selector would need a boundary — and *an imposed choice with a boundary is the exact defect class
+that produced the wedges*. The current position: **expose the choice, report which would have been
+better, never switch silently.** Revisit only with a measurement showing the boundary is stable.
+
+---
+
+### Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature
+
+**PROPOSED CHANGE, driven by measurement.** The wrapper's model — `STEP(state, dt)` called `N_sub`
+times at `dt_macro/N_sub`, with adaptive substepping owned by the wrapper — was measured **failing on
+the regime this instrument exists to explore.** Unregularised adaptive stepping on `deep interior`
+did not hang; it returned `|dE/E| = 2.8e+02` in 35k steps against a 2e6 budget. **A wrong number
+that looks like a right one**, which is worse than exhaustion.
+
+**Regularisation is the fix, and it does not fit the current slot.** Aarseth–Zare carries its own
+time transformation (`dt = |R1||R2| dtau`) and integrates in **fictitious time**, so the occupant —
+not the wrapper — controls the mapping to physical time. Validated: passage through exact collision
+at `d_min = 1.35e-11` with energy drift **6.2e-15**, where every unregularised alternative fails
+(see `principia_dd_refinement_criterion.md` §7.7–7.8).
+
+**The change is one signature and one flag:**
+
+```
+STEP(state, dt, params)                   -> state'    # current
+ADVANCE(state, t_now, t_target, params)   -> state'    # proposed
+```
+
+The seam moves from *"advance by `dt`"* to *"advance to `t`"*. **The wrapper owns the target; the
+occupant owns how it gets there.** KDK/Yoshida implement `ADVANCE` as the loop they already run — a
+rename, no behaviour change. AZ implements it by stepping in `tau` until it lands on `t_target`.
+
+The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
+regularised" but **"does the wrapper still know how far a step goes"**.
+
+**Why widen rather than hold AZ outside the occupant system** (as RK45 is held outside): RK45 sits
+outside because it is a *reference* — rare, inspector-only, validation. **AZ is the opposite: it is
+what makes the ordinary case work.** Putting the mechanism that handles close encounters outside the
+system that handles integration makes the main path the exception, and that leaks.
+
+#### What this preserves, and what it costs
+
+**Preserved — the canonicalise seam.** The integrator still takes `(m, r, p)` and never learns the
+chart's name. This change does not come near it.
+
+**Preserved — payload purity, and it gets *cleaner*.** The guarantee is *"`SimState` is a pure
+function of `(IC, sim key, playhead t)` — identical whether reached by continuous marching, catch-up,
+or re-boot after eviction"*. That is a statement about **targets**, not steps. An `advance-to-t`
+signature says the same thing in its own types. Caching, tilting-as-re-addressing and live-to-live
+handoff are unaffected.
+
+**Preserved — determinism**, with the count-bound relocated: *"fixed `dt`, deterministic schedule,
+count-bound never wall-clock"* becomes *"fixed `tau`-schedule, count-bound never wall-clock"*. Same
+guarantee; the occupant declares its own schedule.
+
+**Preserved — the refinement machinery**, which compares reductions at a shared playhead. The
+playhead is exactly what the new signature makes explicit.
+
+**Cost 1 — the per-substep cadence must become a callback.** Projection, invariant accumulation and
+terminal detection currently run in the wrapper *after* every `STEP`. Under `ADVANCE` the occupant
+must invoke them, so **pass them in rather than doing them after** — otherwise an occupant can
+silently skip them and nothing catches it. That cadence is load-bearing: it is what catches
+close-encounter drift spikes that recover before termination, which is the regime Burrau lives in.
+
+**Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
+`total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a
+100× p1→p99 range** (`principia_dd_tree_dump_analysis.md` §7), and cost-aware priority depends on it
+meaning the same thing across occupants. **Assert the occupant reports it honestly; do not assume.**
+
+**Caching:** the compatibility signature already includes *"integrator occupant + config"*, so a
+different occupant already invalidates payloads — correct as-is. Confirm `owns_time_mapping` is part
+of the config that is hashed.
+
+#### The table gains two rows
+
+| Occupant | Order | Force evals/step | Symplectic | Reversible | Owns time mapping | Default tier |
+|---|---|---|---|---|---|---|
+| **Aarseth–Zare + RK4** | 4 | 4× | ✗ | ✗ | ✓ | close-encounter regimes; **validation-grade stepper** |
+| **Aarseth–Zare + time-transformed leapfrog** | 2 | 1× | ✓ | ✓ | ✓ | **the entry the table wants** |
+
+**AZ is currently stepped with RK4, which was chosen to prove the physics rather than to ship** — it
+is neither symplectic nor reversible, so binding it makes the regularised default a *validation*
+stepper. **Time-transformed leapfrog (Mikkola–Tanikawa)** gives regularisation at leapfrog cost while
+staying symplectic and reversible, and it is what unblocks the reversibility diagnostic (§4).
+
+**Specify the slot now even if RK4 fills it initially**, so the profile advertises `symplectic:
+false` loudly and nothing downstream quietly assumes otherwise. Note `Gamma` is **not separable**
+(the `|u|^2 |p_lambda|^2` term couples position and momentum), so plain KDK does not apply — the
+Mikkola–Tanikawa form is required, not optional.
+
+---
+
+**Which occupant is bound is on the sim key** (Part 3). Switching integrator **re-integrates** — unlike switching a render mode, which never does. This is the one-line rule that keeps the CPU/GPU divergence honest: same occupant both sides, precision the only difference **in continuous values** (branch decisions still match, by the comparison-only rule — Part 4).
+
+---
+
+## Part 3 — Parameter ownership (who owns what)
+
+"What does the integrator need" is really "who owns each parameter." Three layers, three owners — an agent that passes the wrong parameter to the wrong layer breaks this.
+
+**1. Per-sample, from the decoder — the IC.** `(m, r, p)`. Different every pixel. *Not* a uniform; it comes from `x₀ + J_D·δ` (deep zoom) or the full decode. The occupant reads only this plus `dt` and `G`.
+
+**2. Wrapper config — the loop.** Constant across a dispatch, bound once per frame/tier as `SimUniforms`. **On the sim key** — change any and it re-integrates.
+
+| Parameter | Default | Role | Owner |
+|---|---|---|---|
+| `T_horizon` | ∈ [50, 200] | when to stop (physical time, §5) | wrapper loop bound |
+| `dt_macro` | 10⁻³ (**fixed**, §5) | base macro step | wrapper loop bound |
+| `N_max` | tunable (default 64) | substep cap per macro-step — **user-adjustable** (raising it resolves more close-encounter structure before the integration floor; saturation is the stored sticky `saturated` bit, set when `N_sub == N_max` occurs — payload §2; the exact cumulative work lives in the `total_substeps` u32). The substepper also exposes the **live current `N_sub`** per macro-step (an already-computed intermediate) for the animated effort view — render Part 5 | wrapper substepper |
+| `r_sub`, `gamma_sub` | 0.05, 1.5 | produce `N_sub` from `r_min` | wrapper substepper |
+| `r_coll` | — | collision threshold — **user-exposed sim-key** (§collision: definitional regularisation choice, not precision) | wrapper detector |
+| `R_esc`, `k_esc` | —, 8 | escape distance + persistence count | wrapper detector |
+| `r_close` | 0.01 | close-encounter counting | wrapper detector |
+| `eps_E`, `eps_L` | 10⁻⁶ | relative-drift floors (rest starts) | wrapper monitor |
+| `G`, `M_total` | 1, 1 | constants | wrapper |
+
+**3. Occupant + tier flags.** Which `STEP` is bound, plus the co-computation selections (`FTLE_ENABLED`, ensemble on/off — the forward-pass shadows ride the wrapper). These select **baked variants** (lowering Part 3 — per-thread state costs occupancy even branched off), never runtime uniforms. Also sim key.
+
+The occupant needs almost nothing — `(m,r,p)`, `dt`, `G`. Horizon, substepping, and termination are **wrapper** responsibilities, because adaptive substepping is a wrapper concern: it's what turns one fixed `dt_macro` into `N_sub` calls of `STEP`.
+
+---
+
+## Part 4 — Determinism, and the substep as the subtle seam
+
+Core-design axiom 1: physics defined once, compiled twice — *structurally*, one Rust source — so the f32/f64 gap is *only* precision **for continuous values** (branch decisions must match, below) and the CPU/GPU divergence is honest. Making the occupant swappable splits the determinism contract cleanly:
+
+- **The `STEP` is the occupant's business** — its arithmetic differs by precision across CPU/GPU, and that difference is the honest divergence the inspector witnesses.
+- **The wrapper must be bitwise-consistent across CPU/GPU regardless of occupant** — because it decides *control flow*, not just values.
+
+The trap, and it is the single highest-value thing in this doc: **`N_sub = min(N_max, max(1, ⌈(r_sub/r_min)^γ_sub⌉))` is a branch decision, and a branch that forks across backends is a divergence source that is neither precision nor chaos — it is two `pow` implementations disagreeing, and it makes the CPU sanity-check a *different discretisation* than the GPU ran.** The naïve reading — "compute it in f32 on both sides so the integers match" — **does not survive real compilers** (spike, `principia_spike_brief.md`): the culprit is not fast-math or FMA but *inherent cross-implementation transcendental latitude* (GPU `pow` vs libm `powf` differ 1–3 ulp at integer boundaries, in every math mode), so no runtime `pow`/`sqrt`/`div` feeding a `ceil` can be made backend-stable by matched rounding.
+
+**Rule (the determinism pin, replacing the f32-evaluation framing — full spec in integrator dd §3.3): a branch decision may depend only on comparisons against compile-time constants and single-rounded arithmetic — never a runtime transcendental.** `N_sub` is a **bucket lookup**: `d²` compared against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)` via a generated comparison tree — no runtime sqrt/div/pow/loop/index. The `pow` moves to build time (into the constants); the sole float feeding the sole branch is `d²`, built **position-quantised** (f32 positions, lone-sub, lone-mul, explicit `fma`) so it too is bit-identical everywhere. Clamp in f32 *before* the float→int cast (out-of-range `OpConvertFToU` is GPU UB). This is the *same* law as the read-side NaN/predicate rule (render Part 4, lowering Part 3a): **a control-flow decision is frozen at build time or reduced to a comparison — never left hostage to a floating-point op the backend computes its own way** (`principia_gpu_determinism_note.md`). Same discipline for the terminal comparisons whose control flow must not diverge:
+
+- Escape persistence counter `c_esc` (the three gates + the ±1 counter) — the *counter* logic is shared; gate comparisons near threshold may flip on rounding, which is acceptable honest divergence *only* because the persistence count `k_esc = 8` absorbs single-step glitches.
+- `SIM_FAILED` raising, the horizon-reached branch (`t ≥ T` ⇒ `bounded` — there is no separate timeout state, payload §2), and the **substep-cap decision** (`N_sub == N_max`) — shared branches. The cap decision leads to *advance with the best-available (under-resolved) step*, not a terminal; the sticky **`saturated`** bit (descriptor bit 5 — a STORED flag set at the point the cap fires, payload §2; the old peak-`substep_log2`-then-derive mechanism is gone) records that it happened. The capped step is computed identically both sides (count-bound, deterministic — never wall-clock), so parity holds through the saturation, not just up to it. **`N_max` is a sim-key tunable** — both pipelines must use the same value (as with `r_coll`), so the shared-branch decision stays bit-identical.
+
+State the boundary explicitly in code: values may diverge by precision; **branch decisions in the wrapper may not**.
+
+---
+
+## Part 5 — Units and the horizon (inherited scale gauge)
+
+**Everything runs in one fixed dimensionless N-body unit system: `M = Σmᵢ = 1`, `G = 1`, `I = 1`.** This is not a new choice — `I = 1` is the *same* scale gauge as the config decoder's `R̃ = 1` (chart contract Part 1). The integrator **inherits** the scale gauge; it does not impose one.
+
+Consequence, worth stating so an agent doesn't add a per-IC time rescale: because the similarity symmetry `r → λr, t → λ^{3/2}t` is gauged out (scale fixed to 1), a **single global horizon `T` is legitimate across every pixel**. Two different-scale ICs would need different physical `T` to reach the same dynamical state — but there are no different-scale ICs; scale is fixed. That is *why* one `T` works for the whole map.
+
+- **`T` is physical time in these units, not a step count.** Default `T ∈ [50, 200]` — tens to a couple hundred dynamical (crossing) times, the window in which Burrau resolves into binary + escaper.
+- **The macro-step schedule length is derived and deterministic**: `⌈T / dt_macro⌉ ≈ 5×10⁴–2×10⁵` macro-steps (× `N_sub` near encounters). With `dt_macro` fixed, this length is identical CPU/GPU — **this is the schedule the reversibility work replays** (§ below).
+- **CoM re-projection is part of the deterministic step**: each step is *integrate → re-project to CoM* (removes accumulated centre-of-mass / total-linear-momentum drift). The projection is on the parity surface — CPU and GPU must project with identical arithmetic and order. It manages CoM/linear-momentum only; energy and `L_z` remain genuine conservation diagnostics. The integrator works in **CoM-frame particle coordinates** (3 bodies); Jacobi is the chart/IC representation, converted to particles once at decode.
+- **Exact step-index timing invariant**: `t_end_step` stores `step_count` (the completed-macro-step count — running: current, terminal: latched, initial: 0; payload §2), as an exact u16. **Requires `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, ENFORCED at dispatch** (single format, no Q0.16 fallback); over-limit `(T, dt_macro)` is rejected — use coarser `dt_macro` or march epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the exact `total_substeps` counter.
+- **t=0 terminals are real outcomes, not decode failures**: at dispatch, before the first step, evaluate the terminal detectors on the decoded IC. A valid IC already inside `r_coll` → `state=collision, t_end_step=0`; a valid IC already satisfying the *complete* escape gate (outward + positive outer-energy, not merely beyond `R_esc`) → `state=escape, t_end_step=0`. `decode_failed` is reserved for the decoder failing to produce a valid physical IC (non-finite / degenerate / invalid mass), never a dynamical t=0 terminal.
+- **Branch-cut crossing detection (free-group word, payload §3)**: run detection at **every accepted adaptive substep** (not per-macro-step) — the word mutation is event-only/cold, but detection must be substep-granular to catch multiple/recrossing events. Order simultaneous crossings **chronologically by crossing fraction** `τ = d₀/(d₀−d₁)` (sort ascending); fixed cut-ID priority is a **tie-break only** when `τ` values are equal within tolerance. **Endpoint-on-cut: half-open sign convention** — count iff `negative → non-negative`; fixed and identical CPU/GPU. These branch decisions are Tier-L/Tier-B (parity contract): word content is only as deterministic as they are.
+- **FTLE partial-interval finalisation (payload §5)**: the Benettin sum `S` accumulates only at renormalisation boundaries. At read/terminalisation, **finalise the partial interval** — `S_final = S + log(δ_current/δ₀)`, then `ftle = S_final / (step_count · dt_macro)` (divide by full elapsed). Do NOT divide the boundary-only `S` by full elapsed time (systematically too small). `completed_renorms = step_count / renorm_interval_steps` (derived; uniform schedule).
+- **`t_end` (SimState termination time) is in the same units**, so it is directly comparable across pixels, quads, and charts. This is what makes the Lehto decay-time map a straight render of `t_end` — the unit system is what lets "decay time" be a chart at all.
+
+---
+
+## Part 6 — Three boundaries stated honestly (deferred work lands here)
+
+**Reversibility.** The shared Lehto/Trani diagnostic (validation doc) needs a genuinely time-symmetric integrator, and **the current stack is symplectic but not cleanly reversible**: Yoshida's `w₂ < 0` middle step, state-dependent adaptive substepping (the substep sequence isn't symmetric under reversal), and per-step COM projection (a non-symplectic nudge) all break naive "integrate → negate → integrate." Not a bug for the *survey* (symplecticity is what matters there). But the reversibility diagnostic must either (a) record the macro-step + substep schedule and replay it exactly in reverse — feasible precisely because the schedule is deterministic (§5) — or (b) bind a fixed-step reversible occupant with COM projection disabled. The `reversible` capability flag (§2) gates which occupants qualify. Stated now so the deferred work doesn't discover it late.
+
+**Regularisation and the integration floor.** The spec is explicit that KS regularisation is **v2** — it changes the state representation and ripples through decoder/canonicaliser/observables, so it is not a drop-in occupant (it would not satisfy the `STEP(state,…)` signature on the *same* state type). v1 handles close approaches by brute-force substepping capped at `N_max`. Consequence, connecting to the deep-zoom note: **substep-saturated regions are exactly where the integration floor bites** — the deepest collision-manifold structure is substep-limited, not resolved, until KS lands. This is the concrete cause of the deep-zoom note's second floor. But it is a **confidence gradient, not a terminal wall**: saturated trajectories *continue* to their real outcomes (flagged as under-resolved), so the close-encounter structure is *computed* (degraded) rather than *cut off*. KS (v2) *improves the confidence* in that region; it does not *remove a terminal condition*. The **saturation flag** is the honest v1 marker of reduced trust there.
+
+**Integrator-family mismatch in cross-checks.** Per the spec's inspector caveat: a non-symplectic inspector (RK45) vs symplectic GPU (KDK/Yoshida) will disagree on the energy trace on long bounded orbits — symplectic oscillates around `E_0`, non-symplectic drifts secularly. A non-trivial `|ΔE|` or `|Δλ_T|` between inspector and GPU is therefore **expected** on long horizons even when both are correct — it is *not* a GPU bug. The inspector must offer a **match-integrator mode** (same occupant + coefficients + step size as the active GPU pipeline) for apples-to-apples validation; reserve adaptive RK45 for chasing near-collision singularities at higher precision than the GPU can deliver. This is the divergence principle applied to integrator *choice*: divergence from precision is honest; divergence from a different occupant is a category error dressed as a bug.
+
+---
+
+## Part 7 — Detectors as the `SimState` producer
+
+Escape and collision are where the categorical outcome comes from — every outcome-class debug view bottoms out here.
+
+- **Collision:** `min_{i<j} ‖r_i − r_j‖ < r_coll`. Uses the *same* `r_min` the substepper already computes — one value, two consumers (like `d_min`). Records the pair.
+
+**`r_coll` is user-exposed (sim-key), not a fixed constant.** It is *definitional* — it sets what counts as a collision, which is a regularisation choice, not a precision. A slider from "regularise aggressively" (large) to "refuse to regularise" (→0), all valid, answering different questions; changing it is a **sim-key change → invalidate → re-boot** (masked by the staleness backdrop), and it must be the **same value on both pipelines** so the collision *branch* stays bit-identical (parity's shared-branch rule — the threshold is shared sim-key, so this holds). Honest framing of the extremes, because neither means what a naive user expects:
+  - **Large `r_coll`** — terminates at any moderately-close approach: *cheaper* (stops before the expensive close-encounter integration) and *coarser* (lumps survived-slingshots in with hits); the basin floods with what are really *close-approach events at threshold R*, not physical collisions.
+  - **`r_coll → 0` (or 0)** — refuses to regularise: near-collisions are integrated *through*, so the force `∝1/r²` blows up and the substepper drives `N_sub` toward `N_max`. Singular encounters then **saturate the substep cap** — the trajectory advances under-resolved and flagged (not terminated; saturation is non-terminal, §terminal-detection), continuing to whatever dynamical outcome it reaches. So zero is *not* "perfect integration" and it no longer *manufactures terminations* — it *degrades confidence* at the singular structure (high saturation flag) while the trajectories still run. Expensive (the substepper works hardest here), and the true coincidence still can't be integrated through — but the region is *computed-with-low-confidence*, not *cut off*.
+  - **Coupling to `N_max`:** the usable minimum `r_coll` is bounded below by what the substepper resolves before the cap — very small `r_coll` fills the field with **substep-saturated (under-resolved, flagged) samples** (the integration floor, §regularisation), not terminations. Either surface the coupling in the UI, or let very-small `r_coll` raise `N_max` at a cost the quality controller accounts for. This is the same floor KS regularisation (v2) would lift.
+  - **Benchmarks pin it:** literature comparisons (Burrau especially — it *is* a close-encounter problem) assume a specific regularisation, so the ground-truth validation suite records the `r_coll` used (`principia_validation_ground_truth_note.md`).
+- **Escape:** the three-gate persistent detector on the outer Jacobi pair — distance (`‖λ‖ > R_esc`), outward (`λ·v_λ > 0`), and outer two-body energy (`E_out > 0`) — with the ±1 persistence counter to `k_esc = 8`. Note it reads `v_λ = λ̇`, a *velocity*, so it evaluates **post-step on the projected state** (the drift step has the velocity; COM projection has run). Records which body escaped.
+- **Terminal states** are captured by the `state` enum (ledger §3.1): `escape`/`bounded`/`collision` are the physical outcomes; `sim_failed` (NaN/Inf during integration) and `decode_failed` (the decoder could not produce a valid physical IC — NEVER a valid t=0 terminal, which is a real outcome per §5) are lifecycle states, mutually exclusive with them. **`timeout` is not a separate state** — reaching horizon `T` without escape or collision IS `bounded` (it was merged; a bounded trajectory is one that stayed bounded to the horizon). `sim_failed` means the payload is untrustworthy except the state field. **`MAX_SUBSTEPS` is NOT a terminal label** — hitting the substep cap advances the trajectory with the best-available state and sets the sticky **`saturated`** confidence flag (in `sample_descriptor`, bit 5); the march continues to its real dynamical outcome. The cap bounds work-per-step (frame-loop protection) but never terminates. See §terminal-detection for the determinism rule (count-bound, not wall-clock).
+
+The detectors are wrapper machinery (shared, determinism-critical per §4), not occupant machinery — they wrap the step and read the same state regardless of which `STEP` produced it.
+
+---
+
+*One swappable `STEP`, one shared wrapper. The occupant advertises a capability profile; the wrapper owns the loop, the substepping, the projection, the monitoring, and the detectors. Values diverge by precision; wrapper branches do not. Time is dimensionless and global because scale is gauged. Euler is a debug tool. Reversibility, regularisation, and the integration floor are named, bounded, and deferred.*

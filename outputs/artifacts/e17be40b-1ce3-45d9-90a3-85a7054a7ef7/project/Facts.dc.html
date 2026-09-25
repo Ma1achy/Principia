@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principia — Facts poster</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'Heros';src:url(/_blob/a5b0f73cc4c5cfe461cbebad7e1bcfe3) format('opentype');font-weight:400;font-style:normal}
+@font-face{font-family:'Heros';src:url(/_blob/04df598a26de0a8797f6a578d28706f9) format('opentype');font-weight:700;font-style:normal}
+@font-face{font-family:'Heros';src:url(/_blob/1285984c16f1f877f4eac4207711ce2d) format('opentype');font-weight:400;font-style:italic}
+body{margin:0;font-family:'Heros','Helvetica Neue',Helvetica,sans-serif;background:#efe9dc;color:#1d1b19}
+a{color:#1d1b19}a:hover{color:#000000}
+button{font-family:inherit;color:inherit}
+.paper{background-color:#efe9dc;background-image:url(/_blob/08af2b5fd53fa7bda7fae33cdba69a3f);background-size:512px 512px;background-blend-mode:multiply}
+.field{background-color:#e2d9c6;background-image:url(/_blob/08af2b5fd53fa7bda7fae33cdba69a3f);background-size:512px 512px;background-blend-mode:multiply}
+</style>
+</helmet>
+<div class="paper" style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; background-color: #efe9dc; color: #1d1b19; font-family: 'Heros', 'Helvetica Neue', Helvetica, sans-serif; overflow: hidden;">
+<div style="height: 190px; box-sizing: border-box; padding: 40px 40px 0 40px; display: flex; gap: 40px;">
+<div style="width: 470px; flex-shrink: 0;">
+<sc-if value="{{ isPrincipia }}" hint-placeholder-val="{{ true }}">
+<h1 style="margin: 0; font-weight: 700; font-size: 104px; line-height: 0.92; letter-spacing: -0.035em;">Principia</h1>
+</sc-if>
+<sc-if value="{{ isSlice }}" hint-placeholder-val="{{ false }}">
+<h1 style="margin: 0; font-weight: 700; font-size: 62px; line-height: 0.92; letter-spacing: -0.035em;"><span style="display: block;">Outer</span><span style="display: block;">Momentum</span></h1>
+</sc-if>
+<p id="subtitle" style="margin: 14px 0 0 3px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.32em; display: flex; align-items: center;">STAY BECAUSE YOU CAN'T LOOK AWAY<span style="display: inline-block; width: 7px; height: 13px; background: #1d1b19; margin-left: 8px;"></span></p>
+</div>
+<p id="prose" style="flex-grow: 1; min-width: 0; margin: 0; column-count: 3; column-gap: 22px; font-size: 12px; line-height: 1.5; text-align: justify; hyphens: auto;">You are looking through a slice of every possible beginning of the three-body problem. Each point is a complete starting configuration — three masses, their positions and velocities — followed forward until its fate is known; the colour records that fate. The slice is a flat plane through an eight-dimensional space, and can be moved, rotated and tilted. Where two fates meet, the boundary is not a line: zoom in and it opens into finer structure without end. Point at the field to follow a single beginning, and click to keep it. Every image carries its own settings, so any view can be recreated from the picture alone.</p>
+<div style="width: 250px; flex-shrink: 0; display: flex; flex-direction: column;">
+<sc-if value="{{ isSlice }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0 0 8px 0; font-size: 26px; line-height: 1; letter-spacing: -0.02em;"><span style="font-weight: 700;">Principia</span> Facts</p>
+</sc-if>
+<p style="margin: 0; font-size: 14px; line-height: 1.2; color: #3d3a34;">Planar Three-Body<br>Problem</p>
+<p style="margin: 8px 0 0 0; font-size: 10.5px; color: #3d3a34;">PF-3A7C · Outer pλ · 23.09.26</p>
+<div style="display: flex; column-gap: 14px;">
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Export</button>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Share</button>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Present</button>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Settings</button>
+</div>
+</div>
+</div>
+<div class="field" style="flex-grow: 1; margin: 0 40px; box-sizing: border-box; padding: 20px; display: flex; gap: 32px; background-color: #e2d9c6;">
+<div style="width: 1000px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+<div style="position: relative; width: 1000px; height: 585px;">
+<img src="/_blob/5c426ec39fbff7883249e66c1893d21b" alt="Event-classification render of the slice, offset-printed: escape and collision basins spiralling across the plane" style="width: 1000px; height: 585px; display: block;">
+<svg style="position: absolute; left: 0px; top: 0px;" width="1000" height="585" viewBox="0 0 1000 585" fill="none" aria-hidden="true">
+<path d="M290 230 L234 194 M380 360 L430 330 M700 120 L766 104" stroke="#1d1b19" stroke-width="3"></path>
+<path d="M290 230 L234 194 M380 360 L430 330 M700 120 L766 104" stroke="#ffffff" stroke-width="1.2"></path>
+</svg>
+<span style="position: absolute; left: 282px; top: 222px; width: 16px; height: 16px; box-sizing: border-box; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px #1d1b19;"></span>
+<span style="position: absolute; left: 300px; top: 230px; font-size: 12px; font-weight: 700; background: #e2d9c6; padding: 1px 4px;">A</span>
+<span style="position: absolute; left: 372px; top: 352px; width: 16px; height: 16px; box-sizing: border-box; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px #1d1b19;"></span>
+<span style="position: absolute; left: 350px; top: 370px; font-size: 12px; font-weight: 700; background: #e2d9c6; padding: 1px 4px;">B</span>
+<span style="position: absolute; left: 692px; top: 112px; width: 16px; height: 16px; box-sizing: border-box; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px #1d1b19;"></span>
+<span style="position: absolute; left: 670px; top: 130px; font-size: 12px; font-weight: 700; background: #e2d9c6; padding: 1px 4px;">C</span>
+<figure style="position: absolute; left: 18px; top: 18px; margin: 0; padding: 5px 5px 2px 5px; background: #f3eee2; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);">
+<img src="/_blob/4446134b3f96e5eee1ede275c4c43d34" alt="Trajectory of point A: Burrau's problem, a long chaotic tangle before body 1 is flung out" style="width: 216px; height: 153px; display: block;">
+<figcaption style="font-family: 'Caveat', cursive; font-size: 15px; line-height: 1.2; color: #4f4a42;">A · body 1 escapes, t ≈ 59</figcaption>
+</figure>
+<figure style="position: absolute; left: 430px; top: 272px; margin: 0; padding: 5px 5px 2px 5px; background: #f3eee2; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);">
+<img src="/_blob/fedf23ba3434a0486516f07eb7110037" alt="Trajectory of point B: three equal masses on the figure-eight periodic orbit" style="width: 216px; height: 153px; display: block;">
+<figcaption style="font-family: 'Caveat', cursive; font-size: 15px; line-height: 1.2; color: #4f4a42;">B · periodic — the figure-eight</figcaption>
+</figure>
+<figure style="position: absolute; left: 766px; top: 18px; margin: 0; padding: 5px 5px 2px 5px; background: #f3eee2; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);">
+<img src="/_blob/04e838a81a029e029c511abe1eaa0af5" alt="Trajectory of point C: a tight pair looping around a distant third body on a circular orbit" style="width: 216px; height: 153px; display: block;">
+<figcaption style="font-family: 'Caveat', cursive; font-size: 15px; line-height: 1.2; color: #4f4a42;">C · bound: tight pair, far third</figcaption>
+</figure>
+</div>
+<div style="display: flex; align-items: center; gap: 4px;">
+<button aria-label="Step back" style="flex-shrink: 0; width: 44px; height: 44px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#1d1b19" stroke-width="1.4"><path d="M9 2 L4 6 L9 10"></path><path d="M3 2 L3 10"></path></svg></button>
+<button aria-label="Play" style="flex-shrink: 0; width: 44px; height: 44px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" fill="#1d1b19"><path d="M3 1.5 L10.5 6 L3 10.5 Z"></path></svg></button>
+<button aria-label="Step forward" style="flex-shrink: 0; width: 44px; height: 44px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#1d1b19" stroke-width="1.4"><path d="M3 2 L8 6 L3 10"></path><path d="M9 2 L9 10"></path></svg></button>
+<div style="position: relative; width: 852px; height: 44px; margin-left: 8px;">
+<svg width="852" height="44" viewBox="0 0 852 44" fill="none" aria-hidden="true">
+<path d="M6 22 H846" stroke="#1d1b19" stroke-width="1"></path>
+<path d="M6.0 22 V11 M22.8 22 V17 M39.6 22 V17 M56.4 22 V17 M73.2 22 V17 M90.0 22 V14 M106.8 22 V17 M123.6 22 V17 M140.4 22 V17 M157.2 22 V17 M174.0 22 V11 M190.8 22 V17 M207.6 22 V17 M224.4 22 V17 M241.2 22 V17 M258.0 22 V14 M274.8 22 V17 M291.6 22 V17 M308.4 22 V17 M325.2 22 V17 M342.0 22 V11 M358.8 22 V17 M375.6 22 V17 M392.4 22 V17 M409.2 22 V17 M426.0 22 V14 M442.8 22 V17 M459.6 22 V17 M476.4 22 V17 M493.2 22 V17 M510.0 22 V11 M526.8 22 V17 M543.6 22 V17 M560.4 22 V17 M577.2 22 V17 M594.0 22 V14 M610.8 22 V17 M627.6 22 V17 M644.4 22 V17 M661.2 22 V17 M678.0 22 V11 M694.8 22 V17 M711.6 22 V17 M728.4 22 V17 M745.2 22 V17 M762.0 22 V14 M778.8 22 V17 M795.6 22 V17 M812.4 22 V17 M829.2 22 V17 M846.0 22 V11" stroke="#1d1b19" stroke-width="0.8"></path>
+<path d="M6 22 H214.3" stroke="#1d1b19" stroke-width="2.5"></path>
+<path d="M208.3 3 L220.3 3 L214.3 12 Z" fill="#1d1b19"></path>
+<text x="6" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">0</text>
+<text x="170" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">10</text>
+<text x="338" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">20</text>
+<text x="506" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">30</text>
+<text x="674" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">40</text>
+<text x="826" y="38" font-size="10" font-style="italic" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">t 50</text>
+<text x="226" y="11" font-size="10.5" font-weight="700" fill="#1d1b19" font-family="Heros, Helvetica, sans-serif">t = 12.4</text>
+</svg>
+<input type="range" aria-label="Time" min="0" max="50" step="0.1" value="12.4" style="position: absolute; left: 0px; top: 0px; width: 852px; height: 44px; margin: 0; opacity: 0; cursor: pointer;">
+</div>
+</div>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<p style="margin: 0 0 7px 0; font-size: 12px; font-weight: 700;">Fate</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 12px; font-size: 11px; font-style: italic;">
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #0D0C0A;"></span>Bounded</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #E2C400;"></span>Body 1 escapes</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #CE0F65;"></span>Body 2 escapes</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #008CB1;"></span>Body 3 escapes</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #CE0E00;"></span>Collision 1–2</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #007E00;"></span>Collision 1–3</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #000A5A;"></span>Collision 2–3</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; background: #D86900;"></span>Collision at start</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span style="flex-shrink: 0; width: 10px; height: 10px; box-sizing: border-box; background: #E2D9C6; border: 1px solid #8f887a;"></span>Degenerate</span>
+</div>
+<p style="margin: 22px 0 7px 0; font-size: 12px; font-weight: 700;">Slice</p>
+<div style="display: grid; grid-template-columns: 78px minmax(0, 1fr); row-gap: 6px; column-gap: 12px; font-size: 11px; line-height: 1.3; align-items: start;">
+<span style="font-weight: 700;">Chart</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">Outer momentum, pλ</button>
+<span style="font-weight: 700;">Horizontal</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">0.81 z₄ − 0.42 z₅</button>
+<span style="font-weight: 700;">Vertical</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">0.70 z₅ + 0.01 z₄</button>
+<span style="font-weight: 700;">Rotation</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">γ 30.3°</button>
+<span style="font-weight: 700;">Tilt</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">q₁ toward z₂, 0.41</button>
+<span style="font-weight: 700;">Offset</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">z₀ 2.23, −0.56, 0.05, −0.04,<br>−0.02, 0.12, −0.10, 0.02</button>
+<span style="font-weight: 700;">Horizon</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">t = 50</button>
+<span style="font-weight: 700;">Tolerance</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">ε = 10⁻²</button>
+<span style="font-weight: 700;">View</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">zoom 0.213, centre 0.558, 0.428</button>
+<span style="font-weight: 700;">Stain</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">Event class, offset print</button>
+<span style="font-weight: 700;">Quality</span><button style="background: transparent; border: 0; padding: 0; text-align: left; font-size: 11px; font-style: italic; cursor: pointer;">High — converged</button>
+</div>
+<p style="margin: auto 0 0 0; font-family: 'Caveat', cursive; font-size: 24px; color: #4f4a42; text-align: right;">-M  '26</p>
+</div>
+</div>
+<div style="height: 40px; box-sizing: border-box; padding: 0 40px; display: flex; justify-content: flex-end; align-items: center; font-size: 9.5px; color: #3d3a34;">Integrated by Heggie regularisation, RK4, f64 · rendered 23.09.26</div>
+<sc-if value="{{ showFolds }}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 719px; top: 0px; width: 2px; height: 900px; background: linear-gradient(to right, rgba(0, 0, 0, 0.07) 50%, rgba(255, 255, 255, 0.35) 50%); pointer-events: none;"></div>
+<div style="position: absolute; left: 0px; top: 299px; width: 1440px; height: 2px; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 50%, rgba(255, 255, 255, 0.3) 50%); pointer-events: none;"></div>
+<div style="position: absolute; left: 0px; top: 599px; width: 1440px; height: 2px; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 50%, rgba(255, 255, 255, 0.3) 50%); pointer-events: none;"></div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"titleMode":{"editor":"enum","options":["Principia","Slice name"],"default":"Principia"},"folds":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const mode = this.props.titleMode ?? 'Principia';
+const folds = this.props.folds ?? true;
+return { isPrincipia: mode === 'Principia', isSlice: mode !== 'Principia', showFolds: folds };
+}
+}
+</script>
+</body>
+</html>

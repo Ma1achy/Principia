@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyboard — scopes, as a design note</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.eg b{font-weight:500;color:#dcdcdc}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 6px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:92px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:120px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:4px 0 6px}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.wb{padding:8px 12px}
+.k{color:#c586c0}.t{color:#4ec9b0}.n{color:#b5cea8}.c{color:#6a9955}.f{color:#dcdcaa}
+</style>
+</helmet>
+<div class="eg" style="width: 1440px; height: 720px; position: relative; background: #0e0e0e; overflow: hidden"><div class="pt" style="position: absolute; left: 30px; top: 16px; font-size: 16px">Keyboard — design note, not a screen</div><div class="weak" style="position: absolute; left: 30px; top: 40px">the Explore layout as scopes · numbers are Tab order · dashed = sub-scopes reached with Enter</div><div style="position: absolute; left: 30px; top: 90px; width: 900px; height: 600px; background: #121212; border: 1px solid #2a2a2a"><div style="position: absolute; left: 10px; top: 10px; width: 880px; height: 30px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">1</span><div style="padding: 6px 8px; color: #dcdcdc">Top bar</div><div class="weak" style="padding: 0 8px">menus · mode · overlays</div></div><div style="position: absolute; left: 10px; top: 54px; width: 230px; height: 410px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">2</span><div style="padding: 6px 8px; color: #dcdcdc">Manifold view</div><div class="weak" style="padding: 0 8px"></div></div><div style="position: absolute; left: 22px; top: 90px; width: 206px; height: 70px; border: 2px dashed #5ab4ff; border-radius: 4px; box-sizing: border-box"><div style="padding: 6px 8px; color: #dcdcdc">Chart</div><div class="weak" style="padding: 0 8px">presets · axes</div></div><div style="position: absolute; left: 22px; top: 172px; width: 206px; height: 90px; border: 2px dashed #5ab4ff; border-radius: 4px; box-sizing: border-box"><div style="padding: 6px 8px; color: #dcdcdc">Camera</div><div class="weak" style="padding: 0 8px">centre · zoom · view z</div></div><div style="position: absolute; left: 22px; top: 274px; width: 206px; height: 80px; border: 2px dashed #5ab4ff; border-radius: 4px; box-sizing: border-box"><div style="padding: 6px 8px; color: #dcdcdc">Centre z₀</div><div class="weak" style="padding: 0 8px">eight sliders</div></div><div style="position: absolute; left: 22px; top: 366px; width: 206px; height: 86px; border: 2px dashed #5ab4ff; border-radius: 4px; box-sizing: border-box"><div style="padding: 6px 8px; color: #dcdcdc">Slice &amp; tilt</div><div class="weak" style="padding: 0 8px">step · τ₁ · τ₂ · γ</div></div><div style="position: absolute; left: 252px; top: 54px; width: 400px; height: 410px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">3</span><div style="padding: 6px 8px; color: #dcdcdc">Figure</div><div class="weak" style="padding: 0 8px">arrows pan · + − zoom · Space keep · L listen · K lock</div></div><div style="position: absolute; left: 664px; top: 54px; width: 226px; height: 410px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">4</span><div style="padding: 6px 8px; color: #dcdcdc">Trajectory</div><div class="weak" style="padding: 0 8px">Enter to reach the playhead, listen, kept orbits</div></div><div style="position: absolute; left: 10px; top: 478px; width: 230px; height: 110px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">5</span><div style="padding: 6px 8px; color: #dcdcdc">Compass</div><div class="weak" style="padding: 0 8px">arrows tilt · Shift+arrows orbit</div></div><div style="position: absolute; left: 252px; top: 478px; width: 400px; height: 110px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">6</span><div style="padding: 6px 8px; color: #dcdcdc">Time</div><div class="weak" style="padding: 0 8px">Space play · ← → step</div></div><div style="position: absolute; left: 664px; top: 478px; width: 226px; height: 110px; border: 2px solid #5ab4ff; border-radius: 4px; box-sizing: border-box"><span class="mono" style="position: absolute; left: -2px; top: -22px; background: #5ab4ff; color: #0a0a0a; padding: 0 6px; border-radius: 3px">7</span><div style="padding: 6px 8px; color: #dcdcdc">Legend</div><div class="weak" style="padding: 0 8px">read-only</div></div><svg width="900" height="600" style="position: absolute; inset: 0; pointer-events: none" aria-hidden="true"><path d="M150 220 C 200 220 200 250 150 250" fill="none" stroke="#e0c070" stroke-width="1.6"/><text x="200" y="232" fill="#e0c070" font-size="11" font-family="Ubuntu Mono">Enter ↓</text><path d="M100 300 C 60 300 60 250 100 250" fill="none" stroke="#7fcf8a" stroke-width="1.6"/><text x="30" y="282" fill="#7fcf8a" font-size="11" font-family="Ubuntu Mono">Esc ↑</text></svg></div><div style="position: absolute; left: 960px; top: 90px; width: 450px"><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">Tab / Shift+Tab</span><span>next / previous big scope, in the numbered order</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">Enter</span><span>into the focused scope</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">Esc</span><span>back out one level</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">arrows</span><span>between siblings; adjust a focused value</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">Shift · Alt</span><span>×10 · ×0.1 steps</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">held keys</span><span>delay, then repeat — your DAS / ARR model</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">Ctrl+Z</span><span>undo, from the contract’s history</span></div><div class="row" style="min-height: 28px"><span class="mono" style="width: 150px; color: #dcdcdc">?</span><span>shortcuts, over everything</span></div><div class="weak" style="margin-top: 14px; line-height: 1.5">what the user sees: a focus ring on the current scope, and the breadcrumb in the top bar (Manifold view › Camera › zoom) — nothing else changes on screen</div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

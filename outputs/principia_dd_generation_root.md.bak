@@ -1,0 +1,218 @@
+# Drill-down — the Generation Root (layout table + link registry)
+
+*Second drill-down. The roots of the build DAG: the two single-sources-of-truth from which pack, unpack, export, the debug catalogue, and the link snippets are generated. This document **is** the ledger — when implementation starts, §3 transcribes directly into the TypeScript constants. No codegen mechanics here (implementation); only the authoritative content and the properties any generator must satisfy.*
+
+---
+
+## 1. What it is
+
+Not a rung and not quite a ring: the **roots**. Two tables — the **layout table** (every field of every GPU struct, with presentation metadata) and the **link registry** (every compactification function, with its inverse and measure) — from which four artefact families are generated: WGSL pack (kernel write side), WGSL unpack (accessor layer), the CPU export decoder, and the debug catalogue. Seam 13's law: **one source generates all four; hand-duplication is forbidden; a field without metadata fails generation loudly.**
+
+---
+
+## 2. Consolidated contract
+
+From the **render contract**: physical structs are bit-packed; the logical view is the accessor layer (no unpack-copy pass); the catalogue is generated and exhaustive by construction; sentinels, never NaN, in storage.
+
+From the **chart contract (Part 2.5)**: every link is constraint-preserving, invertible with a conditioned inverse, C¹, and **carries its log-det Jacobian plus an over/under-sampling note**; link ids live in provenance; findings must survive link swaps.
+
+From the **lowering contract**: link snippets and unpack helpers are *generated* snippet provenance, flowing through the same assembler as authored code; link selection is baked per block.
+
+From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout change must invalidate every cached payload.
+
+From the **inverse-encode contract**: link inverses are the encode path's block inverses; tolerances asserted in physical units; ε clamps are part of the registry entries.
+
+---
+
+## 3. The ledger (the exact content — two generators must emit identical bits)
+
+### 3.1 `sample_descriptor` (u32)
+
+| Field | Bits | Width | Values / scale |
+|---|---|---|---|
+| `class` | 0–2 | 3 | categorical(6): 0 escape · 1 bounded · 2 collision · 3 degenerate · 4 timeout · **5 running** (in-flight, pre-terminal — lockstep). **Note:** substep-cap saturation is deliberately *not* a class value — it is a non-terminal *derived* confidence predicate over `substep_log2` (peak), so every outcome here is dynamical, annotated by trustworthiness rather than replaced by a numerical-limit label |
+| `detail` | 3–4 | 2 | **union keyed by class**: escape → body id; collision → pair id; undefined while `running` |
+| `suspect_energy` | 5 | 1 | flag |
+| `suspect_lz` | 6 | 1 | flag (gated on **absolute** ΔL_z — rest starts) |
+| `ftle_valid` | 7 | 1 | flag (tier gate) |
+| `word_truncated` | 8 | 1 | flag |
+| `encounter_count` | 9–15 | 7 | lin [0,127], clamped |
+| `substep_log2` | 16–22 | 7 | log₂ of *peak* substep count over the trajectory (latched terminal summary). Width restored to 7 (holds `log2` to 127 ⇒ `N_max` up to any practical cap); **`N_max` is a raised tunable, not hardcoded 64** (like `r_coll` — integrator contract). **Saturation is a *derived* predicate, not a stored bit:** `substep_saturated := substep_log2 ≥ ⌈log2 N_max⌉`, computed at read time. This is the *terminal-summary* substep quantity; the *live* current-substep count (below) is separate. |
+
+**Live current-substep count — NOT a stored descriptor field.** How many substeps the *current* macro-step took, read live off the marching state each frame (the substepper already computes `N_sub` to do the integration — this exposes an already-computed intermediate, like the live shape readout `n(t)`). It is a **live-derived quantity** (not latched, not stored, no time-series), colourable and **animating over time** as the playhead marches — a live heatmap of integrator effort, showing close encounters propagate across the manifold in time. Belongs with the live-state readouts (render contract Part 5 live views), not the `sample_descriptor` bit table.
+
+> **Pattern (eager-era ledger vs lockstep-era animation).** `substep_log2`-as-peak is a fossil of the terminal-summary worldview (the struct set predates lockstep): "run to completion, store the worst moment." Under lockstep the *instantaneous* value is often the more interesting thing to *show*. Several fields have this shape — latched extremum/total (terminal summary, stored) vs instantaneous value (live-animated, read off the march): `substep_log2`(peak)↔live substeps; `encounter_count`(total)↔encounters-so-far; drift maxes↔instantaneous drift; `d_min`(min)↔current separation. **Rule: keep the cheap latched summary where a terminal read wants it; bind animated views to the live instantaneous intermediate (free — already computed by the march).** A full field-by-field audit is a build-time task (do it when building the live views, where it's clear which instantaneous quantities earn a view); this note records that it is a *class* of reconciliation, not a one-off.
+| `benettin_count` | 23–29 | 7 | log₂/count (tier-gated) |
+| `dominant_pair` | 30–31 | 2 | categorical(3) |
+
+### 3.2 `trajectory_stats` (u32)
+
+| Field | Bits | Width | Values / scale |
+|---|---|---|---|
+| `t_dmin_frac` | 0–15 | 16 | fixed-point /65535 → lin [0,1] |
+| `total_steps_log2` | 16–22 | 7 | log₂-count |
+| `orbit_count` | 23–28 | 6 | lin [0,63] |
+| `dmin_pair` | 29–30 | 2 | categorical(3) |
+| `retrograde` | 31 | 1 | flag |
+
+### 3.3 `free_group_word` (uint4) — mixed-radix constraint packing
+
+**~76 symbols in 128 bits** (vs 58 flat), by exploiting free reduction. Per-copy (each of the E+1 samples carries its own word — symbolic label *and* symbolic-spread input, sampling/MSAA note).
+
+**Why denser than 2 bits/symbol.** A symbol is one of the four F₂ generators `a/A/b/B` — 2 bits *if all four are always legal*. But a **freely-reduced** word can never have a symbol immediately followed by its inverse (`aA/Aa/bB/Bb` cancel on append). So given the previous symbol, only **3** of the 4 continuations are legal → `log₂3 ≈ 1.585` bits/symbol, not 2. The "can't be the inverse of the previous" is redundant information; a flat 2-bit code wastes ~0.4 bits/symbol.
+
+**The packing — a mixed-radix integer:**
+```
+W = d₀ + 4·(e₁ + 3·(e₂ + 3·(e₃ + …)))
+```
+`d₀ ∈ {0,1,2,3}` = first symbol (base-4, no prior constraint); each `eₖ ∈ {0,1,2}` = *which of the 3 legal continuations* given the previous symbol (base-3). Density = log₂3 ⇒ **~76 symbols** in the 121 usable bits (128 − 7-bit length − 1 truncated). Capacity vs the old flat 2-bit/58-symbol layout: **+31%, same bytes** — directly reduces truncation on the long-lived chaotic trajectories where the word matters most.
+
+**Append (per-encounter — a rare *event* op, NOT per-step):**
+```
+if s == inverse(prev):  W = (W - last_digit)/3 ; prev = new-last-symbol   // free reduction: pop
+else:                   W = W*3 + continuation_index(prev, s) ; prev = s ; length += 1  // push
+```
+A **multiply-add** (`W*3+e`) replaces the flat **shift-or** — 2–3 extra ALU ops, on a path that fires a few dozen times over a ~200k-step march, never per-step. Carry a live 2-bit `prev` symbol during the march (needed for the constraint + cancellation recovery; cheap).
+
+**Decode (at resolve / inspect — a *cold* path):** O(length) sequential — pop the base-3 tail (`while W ≥ 4: digit = W%3; W/=3`), the residue is `d₀`, then replay forward through the continuation table. **Not random-access** — but the consumers (symbolic-spread reduction comparing whole words, inspection display) read the *entire* word anyway, so O(length) sequential *is* their access pattern. No practical loss.
+
+**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}` and reverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order).
+
+**Layout in `.w`:** `length` now **7 bits** (~76 needs `⌈log₂76⌉=7`); `word_truncated` 1 bit (word-metadata, lives with the word — §3.1). **Truncation is now bit-occupancy**, not a fixed count: before appending, if `W*3+e` would exceed the 121-bit budget, set `word_truncated` and stop growing.
+
+> **Why the extra compute is free (the regime argument).** Principia's march is **bandwidth-bound**, not compute-bound: the inner loop moves ~156 B × 2(E+1) of `SimState` per substep against only a few force evals + updates — low arithmetic intensity (FLOPs/byte), so ALUs stall on memory and *spare compute is free* (roofline: below the ridge point, non-memory arithmetic fills idle cycles). The mixed-radix cost lands entirely off the hot path — **append is per-encounter (rare), decode is at resolve/inspect (cold)** — so no per-step cost, no new warp divergence (the cancellation branch already exists in the flat version), no hot-kernel register pressure (decode's loop runs in the resolve/inspect kernel, not the integrator). Correct trade for a bandwidth-bound workload: **spend the abundant resource (ALU cycles) to conserve the scarce one (per-sample bytes).** The kernel is far simpler than a ray tracer's shading paths — ample headroom. *(Measure-later: confirm bandwidth-bound once running — the byte:FLOP ratio strongly implies it, but "measure don't assume" applies here too.)*
+
+> **Deriving encounter counts from the word — a subtlety.** `encounter_count` and the per-pair tallies (`enc_01/02/12`, `dominant_pair`) are **derived from the word, not stored** (the word is the single source of encounter truth; storing separate tallies would be redundant — dropped). But the derivation is **not a raw symbol histogram**: a word symbol is one of the four **F₂ generators** `a/A/b/B`, which records *which branch cut was crossed and in which direction* (winding around collision points), **not** directly "which body-pair had an encounter." So:
+> - `encounter_count` ≈ word length is a fair first-order proxy (each crossing is a close-approach event), but note **free reduction** removes `aA`/`Aa`/`bB`/`Bb` cancelling pairs live, so the stored length is the *reduced* word — a wind-out-and-back-immediately pass cancels and is *not* counted. That's arguably correct (no net topological encounter) but means length counts *net* topological encounters, not raw close approaches.
+> - **per-pair tallies need the generator→pair geometric correspondence** — mapping branch-cut crossings (`a/b` and the implicit third via the punctured-sphere relation) to the three body-pairs, then counting. A topological reading of the word, not `count symbols == value k`. The helper must encode that mapping; it is more involved than a histogram. (`dmin_pair` is unaffected — it is a separate latched fact, not derived from the word.)
+> Flagged so the derivation helpers are written correctly; "derive the tallies from the word" is right but is a *topological* derivation, not a trivial count.
+
+### 3.4 `SimState` scalars — with presentation metadata
+
+**Lockstep semantics (temporal note, ratified): these are *evolving values at the playhead*, not completed-trajectory summaries.** On termination the sample latches and they freeze at their terminal values.
+
+> **Dropped: `arc_length_n`** (shape-sphere cumulative path length). A weak, redundant quantity: its "trajectory richness" role is dominated by FTLE / the free-group word / winding (all more interpretable), and its only real historical use — the `arc ≥ chord` sanity bound — moved to the f64 parity/validation suite where history exists. Un-interpretable as a colour mode ("total wiggle"), no downstream computation depends on it, and it costs an accumulator ×`2(E+1)`×viewport for near-zero value. **Speculative future use:** the quantitative (fractal-dimension) work *might* want shape-space path length on the manifold — if so, re-add trivially as `Σ|Δn|`. Not now — that's over-engineering an unmeasured need.
+
+> **Welford diffusion — the streaming update (mini-spec).** Regression of spread `y` on time `t`, slope = diffusion rate. Stable (no catastrophic cancellation) and split into shared-vs-per-sample under lockstep:
+> ```
+> // SHARED (one global, updated ONCE per macro-step — t is common to all samples):
+> n      += 1
+> dt      = t - mean_t              // deviation from OLD mean_t
+> mean_t += dt / n
+> C_tt   += dt * (t - mean_t)       // old-dev × new-dev (the stable cross-term)
+>
+> // PER-SAMPLE (in the march; consumes shared dt, n as read-only broadcasts):
+> dy      = y - mean_y
+> mean_y += dy / n
+> C_ty   += dt * (y - mean_y)       // shared time-dev × per-sample new-dev
+>
+> // READ-TIME (any playhead):
+> slope = C_ty / C_tt               // = Cov(t,y)/Var(t); diffusion coefficient
+> ```
+> Per-sample state: **`mean_y, C_ty`** (2 × f32). Shared global: `n, mean_t, C_tt` (`n` may be derived from the playhead rather than stored). Must stay f32 (means/co-moments are precision-sensitive; f16 is out — the running quantities lose the small per-step contributions). The shared time-moments are a **global buffer the kernel updates once per macro-step**, read by every sample's per-sample update — the diffusion analogue of the shared playhead (lockstep makes time-only quantities shared, not per-sample).
+
+| Field | Scale | Range / notes |
+|---|---|---|
+| `t_end` | lin | [0, T] — **sentinel until termination**; set once at the terminal latch |
+| `d_min` | log | > 0 |
+| `ftle` | lin | tier-gated (`ftle_valid`). **A *point* quantity — every sample (base and each ensemble copy) computes its own** from its Benettin shadow, so it anti-aliases under the MSAA resolve (sampling/MSAA note) |
+| `energy_drift` | **diverging** (signed) | log-magnitude styling; floor `eps_E` |
+| `diffusion` | lin | **sentinel −1.0** = fit invalid |
+| `delta_E_max_abs` | log | ≥ 0 |
+| `Lz_drift` | **diverging** (signed) | floor `eps_L` |
+| `delta_Lz_max_abs` | log | ≥ 0 |
+| `E_0` | diverging | must equal `K₀+V₀` (cross-check view) |
+| `Lz_0` | diverging | invariant-chart gradient view input |
+
+> Metadata nuance the catalogue generator needs: **the two drift fields are signed** → *diverging* colour scale, not sequential-log. (Finding, §6.)
+
+### 3.5 The live-state block (replaces the checkpoint array — lockstep, ratified)
+
+**There is no stored trajectory.** The shape vector `n` is *derived from the current state each step* (Montgomery map, integrator dd §3.7) — never stored. What persists per sample is fixed-size, O(1) in `t`:
+
+| Group | Contents | Notes |
+|---|---|---|
+| **Phase state** | `r, p` — 12 × f32 (vec4-grouped for alignment) | the marching state at the playhead |
+| **Shadow states** (tier-gated) | 1 Benettin shadow **per sample** (base and each ensemble copy), 12 × f32 each | **resident under lockstep — they march too.** Every sample is a full, uniform `SimState` computing its own FTLE (the sampling/MSAA decision: uniformity over micro-saving), so its FTLE shadow rides with it. Tier gates existence; `contains-ensemble` / `contains-FTLE` advertise it. The shadow is an *ingredient* of the sample's `ftle` field — never itself a coloured sample (renormalisation corrupts its endpoint) |
+| **Ensemble copies** (tier-gated) | E full uniform `SimState`s per nominal sample, offsets = **fixed low-discrepancy (Halton/Sobol) prefix** indexed by `copy_index` | structurally identical to the base (colour through any render graph, no special-casing) but **scheduler-leaves** — a copy never spawns its own ensemble (`ENSEMBLE_ENABLED` applies only to nominal samples; no recursion). They double as the MSAA sample pool *and* the spread-metric pool. Per-pixel ≈ `2(E+1)` trajectories (each sample + its shadow); E kept modest (~4) |
+| **Running accumulators** | Benettin `S` (f32); unwrapped phase `θ̃` (f32 — `orbit_count`/`retrograde` derived at read); drift running-final + running-max pairs; **diffusion via Welford streaming regression** — per-sample `mean_y, C_ty` (2 × f32); the time-only terms `n, mean_t, C_tt` are **shared across all samples** (lockstep synchronises `t`) and live in one global, not per-sample | ⚠ **INVARIANT (footgun 1): diffusion is accumulated as *streaming regression state*, never as `(t, y)` points collected for a later fit** — points regrow the history the reversal deleted. **Welford, not raw moments:** the old raw-moment form (`Σt, Σt², Σy, Σty, Σy²`) computes slope as `(nΣty−ΣtΣy)/(nΣt²−(Σt)²)` — a *catastrophic-cancellation* difference of large nearly-equal products, precision-risky even at f32 as the sums grow over ~10⁵ steps. Welford tracks *centered* co-moments (running means + `C_tt, C_ty`), so **slope = `C_ty / C_tt`** directly — stable, no cancellation, no unbounded sums. **Lockstep split:** `n, mean_t, C_tt` depend only on `t` → identical for every sample at a given playhead → **one shared global** (updated once per macro-step); only `mean_y, C_ty` are per-sample. Net: **2 per-sample f32** (was 5), *and* numerically robust. Slope + R² derived from `(C_ty, C_tt, mean_y, mean_t, n)` at any playhead |
+
+Terminal latch: on termination the whole block freezes (state stops advancing, accumulators stop updating).
+
+**Ensemble spread is NOT a stored field — it is derived at the resolve stage.** Spread is a *footprint* quantity (one value per nominal sample), computed in the shader at the resolve stage from the E+1 samples of a footprint — the data-side twin of the MSAA colour resolve (colours→pixel colour on the render side; outcomes→spread scalar on the data side). It is consumed *live* for display (colour-by-spread) and aggregated into `TileReduction` for the scheduler's refinement signal. It carries no per-sample `SimState` field: storing a group property on each sample is wrong-shaped and costs an f32 ×`2(E+1)`×viewport for nothing. **No per-sample "is ensemble" tag either** — grouping is structural (E+1 samples per footprint in the dispatch layout), `copy_index` marks nominal (0) vs copies (1..E), and ensemble-on/off is a tile/tier flag (`contains-ensemble`).
+
+### 3.6 `ICDescriptor` (12 × f32)
+
+`m1 m2 m3` (⚠ naming vs 0-indexed bodies — decoder-dd flag, pending-changes), `q_mass`, `rho1_mag`, `rho2_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+
+### 3.7 `TileReduction` (~80 B) — ledger to be completed
+
+Known members: `id`, `level`, `dominant_outcome` (class|detail — **grain question is pending change 1**; a class-only companion or masked accessor required for the impurity mask), `outcome_impurity`, coherence score, the spread family (`S_n, S_t, S_L, S_f, S_D`), ensemble agreement, suspect fraction. **Task, not invention:** transcribe the remaining members verbatim from spec §tile_reduction when building the TS constant — this ledger mandates completeness; it does not guess.
+
+**Lockstep additions — the temporal refinement accumulators (scheduler Part 8):** `running_max_divergence` (f32, max-updated), `running_mean_divergence` (f32), `divergence_trend` (f32 EWMA), `first_divergence_t` (f32, write-once, sentinel until crossed). Fixed-size, GPU-accumulated in place each step, reduce-before-evaporate — the CPU sees these scalars, never the history behind them. The *refinement latch* they feed is CPU tile metadata, not a reduction field.
+
+### 3.8 Metadata schema (what every entry must carry)
+
+```
+{ name, location: (word, offset, width) | scalar-index,
+  type: u-bits | f32 | f16-pair | fixed16,
+  scale: lin | log | cyclic | diverging | categorical(n) | flag,
+  range, sentinel?, tier_gate?,
+  provenance: kernel | decode | reduction | cpu,
+  consumers: [render, export, debug, scheduler] }
+```
+
+**A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
+
+### 3.9 The link registry (consolidated from chart contract Part 2.5)
+
+| Constraint | Link (forward) | Inverse | log-det | Sampling note |
+|---|---|---|---|---|
+| Simplex Δ² | softmax ∘ `μ_max·tanh` | log-ratio → `artanh`, clamp `(1−ε_μ)μ_max` | softmax Jacobian × sech² factors | under-samples simplex edges/corners |
+| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `(b−a)·σ'` | centre-heavy vs uniform |
+| Bounded alt | scaled `tanh` | `artanh` | `c·sech²` | interchangeable with σ up to reparam (`tanh x = 2σ(2x)−1`) — differs in slope profile only |
+| Positive (0,∞) | softplus / exp | inverse-softplus / log | `σ(x)` / `eˣ` | exp is heavy-tailed |
+| Symmetric (−c,c) | `c·tanh` | `artanh` | `c·sech²` | as bounded |
+| Unbounded ℝ | identity | identity | 1 | neutral |
+
+Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note** — the robustness-sweep picker uses the last to choose alternatives that *disagree where it matters*.
+
+---
+
+## 4. Seams (obligations → integration tests)
+
+| Seam | Obligation | Test |
+|---|---|---|
+| **13** one-source generation | pack, unpack, export decoder, catalogue emitted from §3 only | mutate one ledger entry → all four artefacts change together; a hand-edit to any generated file is detected (generated-file guard) |
+| **5 / Memory** | the payload's physical truth is this ledger | the sub-field debug views (visual bit-layout unit test) show live, sane values per field |
+| **2 / 8** links | decode consumes registry snippets; encode consumes registry inverses | link swap ⇒ recompile + re-integrate; T2 round-trips through registry inverses only |
+| **sim key** | schema version ∈ payload compatibility signature | any ledger change invalidates every cached payload (cache serves nothing stale-schema'd) |
+| **Observation ring** | catalogue exhaustive by construction | new field appears in the picker automatically or generation fails |
+
+---
+
+## 5. Tests (properties any generator must satisfy)
+
+1. **Disjointness & coverage (static):** within each packed word, fields never overlap; declared bits are covered or explicitly reserved; widths fit ranges (word length ~76 fits 7 bits with mixed-radix packing; `total_substeps_log2` 6 bits; note `encounter_count`/`orbit_count` are now DERIVED, not packed fields).
+2. **Pack∘unpack = id**, per field, property-fuzzed over the full value range — in TS *and* in a GPU self-test dispatch (catches the WGSL i32-`extractBits` sign-extension trap; u32 overload only).
+3. **f16 pairs** round-trip via `pack2x16float`/`unpack2x16float` within f16 eps.
+4. **Fixed-point:** `t_dmin_frac` round-trips with ≤ 1/65535 error; endpoints exact.
+5. **Sentinels:** `diffusion = −1.0` survives pack/unpack bit-exact; catalogue styles it, never scales it.
+6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
+7. **Schema-version discipline:** flipping one bit-offset changes the signature; the cache test then proves zero stale-schema payloads are ever served.
+8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in range); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
+9. **Union-field semantics:** `detail` renders/decodes per `class` — an escape's detail is a body id, a collision's a pair id; the catalogue's detail view switches legend accordingly.
+
+---
+
+## 6. Deferred / flagged
+
+- **Schema version should be a content hash of the ledger, not a hand-bumped integer.** A layout edit without a version bump is the drift catastrophe seam 13 exists to prevent — deriving the version (hash of the canonicalised table) makes the failure impossible rather than merely forbidden. *Recommendation to adopt.*
+- **`free_group_word` length field is 7 bits (mixed-radix ~76-symbol capacity)** — reserved means reserved; any future use is a ledger edit (⇒ version change) not an opportunistic squat.
+- **`TileReduction` completion** (§3.7) — transcription task against the spec; plus the `dominant_outcome` grain decision (pending change 1) lands here when made.
+- **Drift-sign presentation** — the diverging-scale metadata for `energy_drift`/`Lz_drift` is a generator requirement, recorded here so the catalogue doesn't ship them as broken sequential-log views.
+- **Body-index naming** — cross-referenced from the decoder drill-down; whichever convention wins, this ledger's `ICDescriptor` names change with it (⇒ schema version change, correctly).
+
+---
+
+*Two tables, four artefacts, one law: nothing about a bit exists twice. The version is the hash. Reserved means reserved. And a field without metadata does not ship.*

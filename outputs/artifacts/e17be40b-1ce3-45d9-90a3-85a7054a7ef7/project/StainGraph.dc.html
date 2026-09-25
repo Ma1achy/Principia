@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principia — Stain, graph, watercolour & pencil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'Heros';src:url(/_blob/a5b0f73cc4c5cfe461cbebad7e1bcfe3) format('opentype');font-weight:400;font-style:normal}
+@font-face{font-family:'Heros';src:url(/_blob/04df598a26de0a8797f6a578d28706f9) format('opentype');font-weight:700;font-style:normal}
+@font-face{font-family:'Heros';src:url(/_blob/1285984c16f1f877f4eac4207711ce2d) format('opentype');font-weight:400;font-style:italic}
+body{margin:0;font-family:'Heros','Helvetica Neue',Helvetica,sans-serif;background:#efe9dc;color:#1d1b19}
+a{color:#1d1b19}a:hover{color:#000000}
+button{font-family:inherit;color:inherit}
+input{font-family:inherit;color:inherit}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:30px;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:#1d1b19}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:16px;background:#1d1b19;border:0;border-radius:0;margin-top:-7.5px}
+input[type=range]::-moz-range-track{height:1px;background:#1d1b19}
+input[type=range]::-moz-range-thumb{width:7px;height:16px;background:#1d1b19;border:0;border-radius:0}
+.paper{background-color:#efe9dc;background-image:url(/_blob/08af2b5fd53fa7bda7fae33cdba69a3f);background-size:512px 512px;background-blend-mode:multiply}
+.field{background-color:#e2d9c6;background-image:url(/_blob/08af2b5fd53fa7bda7fae33cdba69a3f);background-size:512px 512px;background-blend-mode:multiply}
+.backside{background-color:#f1ede4;background-image:url(/_blob/cfebd232d26789044b873d8766ffd596);background-size:1440px 900px}
+.sp{display:inline-block;background-image:url(/_blob/5876b89852daa170600fd96d2ca0d084);background-repeat:no-repeat;background-size:210.0px 68.0px}
+</style>
+</helmet>
+<div class="backside" style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background-color: #f1ede4; color: #1d1b19; font-family: 'Heros', 'Helvetica Neue', Helvetica, sans-serif; overflow: hidden;">
+<div style="position: absolute; left: 40px; top: 32px; width: 460px;">
+<h1 style="margin: 0; font-weight: 700; font-size: 92px; line-height: 0.92; letter-spacing: -0.035em;">Stain</h1>
+<p style="margin: 14px 0 0 3px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.32em; display: flex; align-items: center;">THE DATA DOESN'T CHANGE. ONLY THE INK.<span style="display: inline-block; width: 7px; height: 13px; background: #1d1b19; margin-left: 8px;"></span></p>
+</div>
+<p style="position: absolute; left: 520px; top: 32px; width: 460px; margin: 0; column-count: 3; column-gap: 22px; font-size: 12px; line-height: 1.35; text-align: justify; hyphens: auto;">This is the back of the print. A stain decides what colour each point is printed in: it reads what was measured at that point and returns a colour. It can never change what was measured, only how it looks. Pick a stain from the library, rewire it as a graph, or open its code; the preview follows every change. How it is laid down — watercolour, pencil, print — is chosen in the bar above: the stain picks the colours, the style picks the hand.</p>
+<div style="position: absolute; left: 1204px; top: 32px; width: 196px;">
+<p style="margin: 0; font-size: 14px; line-height: 1.2; color: #3d3a34;">Reverse of<br>PF-3A7C</p>
+<p style="margin: 8px 0 0 0; font-size: 10.5px; color: #3d3a34;">Stain: Event class, edited</p>
+<div style="display: flex; column-gap: 14px;"><button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; font-weight: 700; cursor: pointer;">Flip to front</button><button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Revert</button><button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;">Save stain…</button></div>
+</div>
+<div style="position: absolute; left: 40px; top: 164px; width: 1360px; height: 44px; box-sizing: border-box; border-top: 1px solid #1d1b19; border-bottom: 1px solid #c9c2b2; display: flex; align-items: center; gap: 22px;">
+<span style="font-size: 10.5px; letter-spacing: 0.14em; color: #4a463f;">DISPLAY</span>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;"><span style="font-weight: 700;">Style</span> <span style="font-style: italic;">Watercolour & pencil ▾</span></button>
+<button role="switch" aria-checked="true" style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><span aria-hidden="true" style="width: 22px; height: 12px; box-sizing: border-box; border: 1px solid #1d1b19; border-radius: 6px; display: flex; align-items: center; padding: 0 1px; justify-content: flex-end;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1d1b19;"></span></span><span style="font-weight: 700;">Paper</span> <span style="font-style: italic;">cold-press</span></button>
+<button role="switch" aria-checked="true" style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><span aria-hidden="true" style="width: 22px; height: 12px; box-sizing: border-box; border: 1px solid #1d1b19; border-radius: 6px; display: flex; align-items: center; padding: 0 1px; justify-content: flex-end;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1d1b19;"></span></span><span style="font-weight: 700;">Press</span> <span style="font-style: italic;">0.6 px slip</span></button>
+<button role="switch" aria-checked="true" style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><span aria-hidden="true" style="width: 22px; height: 12px; box-sizing: border-box; border: 1px solid #1d1b19; border-radius: 6px; display: flex; align-items: center; padding: 0 1px; justify-content: flex-end;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1d1b19;"></span></span><span style="font-weight: 700;">Tape</span> <span style="font-style: italic;">16 seeps</span></button>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;"><span style="font-weight: 700;">Gamut</span> <span style="font-style: italic;">sRGB</span></button>
+<button style="min-height: 44px; background: transparent; border: 0; padding: 0; font-size: 11px; cursor: pointer;"><span style="font-weight: 700;">Colour vision</span> <span style="font-style: italic;">as seen</span></button>
+<span style="margin-left: auto; font-size: 10.5px; font-style: italic; color: #4a463f;">all optional · never part of the stain</span>
+</div>
+<div style="position: absolute; left: 40px; top: 222px; width: 220px; height: 646px; display: flex; flex-direction: column; gap: 2px;">
+<p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700;">Library</p>
+<input type="text" placeholder="Filter 54 stains" aria-label="Filter stains" style="height: 32px; box-sizing: border-box; border: 0; border-bottom: 1px solid #1d1b19; background: transparent; font-size: 11px; font-style: italic; padding: 0 2px; margin-bottom: 10px;">
+<p style="margin: 0; font-size: 10px; letter-spacing: 0.14em; color: #4a463f;">PRODUCTION</p>
+<button aria-pressed="true" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 45.5px; height: 14px; background-position: -0px -0px;"></span></span>Event class</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -37px -16px;"></span></span>Time to escape</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -75px -16px;"></span></span>Lyapunov (FTLE)</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 18px; height: 18px; background-position: -114px -32px;"></span></span>Shape n̂</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 35px; height: 14px; background-position: -125.5px -0px;"></span></span>Chazy families</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -113px -16px;"></span></span>Energy</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 18px; height: 18px; background-position: -114px -32px;"></span><span style="margin-left: 3px;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -76px -32px;"></span></span></span>n̂ × FTLE</button>
+<p style="margin: 14px 0 0 0; font-size: 10px; letter-spacing: 0.14em; color: #4a463f;">DEBUG — OPEN LOCKED</p>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  color: #6b665c; font-style: italic; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -151px -16px;"></span></span>Addressing</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  color: #6b665c; font-style: italic; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 35px; height: 14px; background-position: -0px -16px;"></span></span>Quad structure</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  color: #6b665c; font-style: italic; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 35px; height: 14px; background-position: -162.5px -0px;"></span></span>Validity</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  color: #6b665c; font-style: italic; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -0px -32px;"></span></span>Diagnostic</button>
+<button aria-pressed="false" style="width: 100%; min-height: 34px; background: transparent; border: 0; padding: 0; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 11.5px;  color: #6b665c; font-style: italic; cursor: pointer;"><span style="width: 50px; flex-shrink: 0; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -38px -32px;"></span></span>Profiling</button>
+</div>
+<div style="position: absolute; left: 284px; top: 222px; width: 692px; height: 646px; box-sizing: border-box; border: 1px solid #c9c2b2; background-image: radial-gradient(rgba(29, 27, 25, 0.16) 0.8px, transparent 1px); background-size: 16px 16px;">
+<div role="tablist" style="position: absolute; right: 12px; top: 8px; display: flex; gap: 16px;">
+<button role="tab" aria-selected="true" style="min-height: 32px; background: transparent; border: 0; padding: 0; font-size: 11.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;">Graph</button>
+<button role="tab" aria-selected="false" style="min-height: 32px; background: transparent; border: 0; padding: 0; font-size: 11.5px; color: #4a463f; cursor: pointer;">Code</button>
+</div>
+<svg aria-hidden="true" style="position: absolute; left: 0px; top: 0px;" width="690" height="644" viewBox="0 0 690 644" fill="none">
+<path d="M170 112 C230 112 170 98 230 98" stroke="#1d1b19" stroke-width="1.7" stroke-linecap="round"></path>
+<path d="M170 318 C230 318 170 304 230 304" stroke="#1d1b19" stroke-width="1.7" stroke-linecap="round"></path>
+<path d="M400 98 C460 98 390 198 450 198" stroke="#CE0F65" stroke-width="1.7" stroke-linecap="round"></path>
+<path d="M400 304 C460 304 390 216 450 216" stroke="#008CB1" stroke-width="1.7" stroke-linecap="round"></path>
+<path d="M610 198 C690 198 370 398 450 398" stroke="#CE0F65" stroke-width="1.7" stroke-linecap="round"></path>
+<path d="M610 398 C675 398 415 568 480 568" stroke="#CE0F65" stroke-width="1.7" stroke-linecap="round"></path>
+</svg>
+<div style="position: absolute; left: 20px; top: 44px; width: 150px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">SOURCE</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Outcome state</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span style="font-size: 10.5px; font-style: italic;">ctx.state ▾</span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span></span><span>categorical</span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #1d1b19;"></span>
+</div>
+<div style="position: absolute; left: 230px; top: 30px; width: 170px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 2px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">COLOUR</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Event palette</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 76px; height: 13px; background-position: -47.5px -0px;"></span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>field</span><span>vec3</span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 61px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #1d1b19;"></span>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 61px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+</div>
+<div style="position: absolute; left: 20px; top: 250px; width: 150px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">SOURCE</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Time of fate</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span style="font-size: 10.5px; font-style: italic;">ctx.t_end ▾</span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span></span><span>scalar</span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #1d1b19;"></span>
+</div>
+<div style="position: absolute; left: 230px; top: 236px; width: 170px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">BRIGHTNESS</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Late fade</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span class="sp" aria-hidden="true" style="width: 36px; height: 12.5px; background-position: -76px -32px;"></span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>field</span><span>f32</span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #1d1b19;"></span>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #008CB1;"></span>
+<span title="edited by hand" style="position: absolute; right: 8px; top: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; border: 1px solid #1d1b19; padding: 0 3px;">{ }</span>
+</div>
+<div style="position: absolute; left: 450px; top: 130px; width: 160px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">COMBINER · FIXED</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Multiply</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span style="font-size: 10.5px; font-style: italic;">Replace-L · <span style="font-weight: 700; font-style: normal;">Multiply</span></span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>colour</span><span>vec3</span></div>
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>brightness</span><span></span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 80px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #008CB1;"></span>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+</div>
+<div style="position: absolute; left: 450px; top: 330px; width: 160px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">POST</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">Tone</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><svg width="30" height="12" viewBox="0 0 30 12" fill="none" stroke="#1d1b19" stroke-width="1.3"><path d="M1 11 C10 11 12 1 29 1"></path></svg></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>vec3</span><span>vec3</span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+<span aria-hidden="true" style="position: absolute; right: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+</div>
+<div style="position: absolute; left: 480px; top: 500px; width: 130px; box-sizing: border-box; padding: 7px 10px 9px 10px; background: #f6f3ec; border: 1px solid #1d1b19; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);">
+<p style="margin: 0; height: 12px; font-size: 9.5px; letter-spacing: 0.12em; color: #4a463f;">OUT · FIXED</p>
+<p style="margin: 1px 0 0 0; height: 16px; font-size: 12px; font-weight: 700;">To the style</p>
+<div style="margin-top: 6px; height: 12px; display: flex; align-items: center;"><span style="font-size: 10.5px; font-style: italic;">watercolour &amp; pencil ↑</span></div>
+<div style="margin-top: 6px;">
+<div style="height: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-style: italic; color: #4a463f;"><span>vec3</span><span></span></div>
+</div>
+<span aria-hidden="true" style="position: absolute; left: -7px; top: 62px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #f6f3ec; background: #CE0F65;"></span>
+</div>
+<div style="position: absolute; left: 20px; bottom: 14px; display: flex; gap: 16px; align-items: center; font-size: 10px; font-style: italic; color: #3d3a34;"><span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: #1d1b19;"></span>field</span><span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: #CE0F65;"></span>colour</span><span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: #008CB1;"></span>lightness</span><span style="font-family: 'Caveat', cursive; font-size: 15px; font-style: normal; margin-left: 10px;">drag off a pin to add a node</span></div>
+</div>
+<div style="position: absolute; left: 1000px; top: 222px; width: 400px; height: 646px; display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; gap: 16px; align-items: flex-start;">
+<img src="/_blob/dcc3a2a451da916f5d5618ef624e7efe" alt="Live preview of the slice in this stain" style="width: 210px; height: 210px; display: block; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+<p style="margin: 0; font-size: 12px; font-weight: 700;">Preview</p>
+<div role="radiogroup" aria-label="Preview" style="display: flex; gap: 14px;">
+<button role="radio" aria-checked="true" style="min-height: 32px; background: transparent; border: 0; padding: 0; font-size: 11.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;">Slice</button>
+<button role="radio" aria-checked="false" style="min-height: 32px; background: transparent; border: 0; padding: 0; font-size: 11.5px; color: #4a463f; cursor: pointer;">Sphere</button>
+</div>
+<p style="margin: 0; font-size: 10.5px; line-height: 1.4; font-style: italic; color: #3d3a34;">The view on the front, painted in watercolour and pencil. Nothing is recomputed — a stain only reads.</p>
+<p style="margin: 0; font-size: 10.5px; line-height: 1.4; font-style: italic; color: #3d3a34;">Sphere shows the shape sphere at the slice-centre masses, z₀.</p>
+</div>
+</div>
+<div style="border-top: 1px solid #1d1b19; padding-top: 10px;">
+<p style="margin: 0; font-size: 13px; font-weight: 700;">Event palette</p>
+<p style="margin: 2px 0 10px 0; font-size: 10.5px; font-style: italic; color: #3d3a34;">colour ← categorical · one pigment per fate</p>
+<div style="display: grid; grid-template-columns: 18px 130px minmax(0, 1fr); gap: 5px 10px; font-size: 10.5px; align-items: center;">
+<button aria-label="Pigment for Bounded" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -134px -32px;"></span></button><span>Bounded</span><span style="font-style: italic; color: #3d3a34;">Payne's grey</span>
+<button aria-label="Pigment for Body 1 escapes" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -152px -32px;"></span></button><span>Body 1 escapes</span><span style="font-style: italic; color: #3d3a34;">Yellow ochre</span>
+<button aria-label="Pigment for Body 2 escapes" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -170px -32px;"></span></button><span>Body 2 escapes</span><span style="font-style: italic; color: #3d3a34;">Quinacridone rose</span>
+<button aria-label="Pigment for Body 3 escapes" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -188px -32px;"></span></button><span>Body 3 escapes</span><span style="font-style: italic; color: #3d3a34;">Cerulean</span>
+<button aria-label="Pigment for Collision 1–2" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -0px -52px;"></span></button><span>Collision 1–2</span><span style="font-style: italic; color: #3d3a34;">Burnt sienna</span>
+<button aria-label="Pigment for Collision 1–3" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -18px -52px;"></span></button><span>Collision 1–3</span><span style="font-style: italic; color: #3d3a34;">Sap green</span>
+<button aria-label="Pigment for Collision 2–3" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -36px -52px;"></span></button><span>Collision 2–3</span><span style="font-style: italic; color: #3d3a34;">Ultramarine</span>
+<button aria-label="Pigment for Collision at start" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -54px -52px;"></span></button><span>Collision at start</span><span style="font-style: italic; color: #3d3a34;">Cadmium orange</span>
+<button aria-label="Pigment for Degenerate" style="width: 16px; height: 16px; padding: 0; border: 0; background: transparent; cursor: pointer;"><span class="sp" aria-hidden="true" style="width: 16px; height: 16px; background-position: -72px -52px;"></span></button><span>Degenerate</span><span style="font-style: italic; color: #3d3a34;">Bare paper</span>
+</div>
+<p style="margin: 8px 0 0 0; font-size: 10px; font-style: italic; color: #4a463f;">The stain picks the pigment; the style in the bar above decides how it is laid down.</p>
+<button style="margin-top: 10px; min-height: 36px; background: transparent; border: 1px solid #1d1b19; padding: 0 14px; font-size: 11px; cursor: pointer;">Advanced ▸ edit shader</button>
+</div>
+</div>
+<sc-if value="{{ showFolds }}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 719px; top: 0px; width: 2px; height: 900px; background: linear-gradient(to right, rgba(0, 0, 0, 0.07) 50%, rgba(255, 255, 255, 0.35) 50%); pointer-events: none;"></div>
+<div style="position: absolute; left: 0px; top: 299px; width: 1440px; height: 2px; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 50%, rgba(255, 255, 255, 0.3) 50%); pointer-events: none;"></div>
+<div style="position: absolute; left: 0px; top: 599px; width: 1440px; height: 2px; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 50%, rgba(255, 255, 255, 0.3) 50%); pointer-events: none;"></div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"folds":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { showFolds: this.props.folds ?? true };
+}
+}
+</script>
+</body>
+</html>

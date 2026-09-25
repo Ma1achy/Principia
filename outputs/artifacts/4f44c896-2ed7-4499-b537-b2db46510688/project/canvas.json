@@ -1,0 +1,114 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-24T11:29:13Z"
+ },
+ "title": "Principia dev GUI (egui) — sketch",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Explore — the everyday view"
+  },
+  "Stain.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Stain — the plain node-graph editor"
+  },
+  "ChartBuilder.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1400,
+   "h": 640,
+   "title": "Chart builder — custom axes"
+  },
+  "Windows.dc.html": {
+   "x": 1480,
+   "y": 1020,
+   "w": 1440,
+   "h": 1320,
+   "title": "Profiler · Export & share · Display · Run"
+  },
+  "Inspectors.dc.html": {
+   "x": 0,
+   "y": 2460,
+   "w": 1440,
+   "h": 900,
+   "title": "Inspector — one IC, its trajectory, one timeline"
+  },
+  "Legend.dc.html": {
+   "x": 1520,
+   "y": 2460,
+   "w": 1440,
+   "h": 520,
+   "title": "Legend — generated from the stain"
+  },
+  "Keyboard.dc.html": {
+   "x": 0,
+   "y": 3480,
+   "w": 1440,
+   "h": 720,
+   "title": "Keyboard — scopes (design note)"
+  },
+  "Lock.dc.html": {
+   "x": 1520,
+   "y": 3480,
+   "w": 1440,
+   "h": 560,
+   "title": "Lock — the reticle on the figure, the pin in the compass"
+  },
+  "ImportRecord.dc.html": {
+   "x": 0,
+   "y": 4640,
+   "w": 1440,
+   "h": 900,
+   "title": "Import by picture · saved views · record a sweep"
+  },
+  "Measure.dc.html": {
+   "x": 1520,
+   "y": 4640,
+   "w": 1440,
+   "h": 700,
+   "title": "Measure — a tool on the figure"
+  },
+  "Research.dc.html": {
+   "x": 0,
+   "y": 5500,
+   "w": 1440,
+   "h": 810,
+   "title": "Research — first pass at the v2 tools"
+  },
+  "Console.dc.html": {
+   "x": 1520,
+   "y": 4100,
+   "w": 1440,
+   "h": 420,
+   "title": "Console — the footer, opened"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Stain.dc.html",
+  "ChartBuilder.dc.html",
+  "Windows.dc.html",
+  "Inspectors.dc.html",
+  "Legend.dc.html",
+  "Keyboard.dc.html",
+  "Lock.dc.html",
+  "ImportRecord.dc.html",
+  "Measure.dc.html",
+  "Research.dc.html",
+  "Console.dc.html"
+ ],
+ "notes": {},
+ "designSystems": []
+}
