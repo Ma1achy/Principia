@@ -10,7 +10,7 @@
 | ENC | 33 |
 | CHART | 51 |
 | INT | 84 |
-| EVT | 24 |
+| EVT | 26 |
 | PAY | 87 |
 | GEN | 27 |
 | SCHED | 88 |
@@ -22,9 +22,9 @@
 | VAL | 145 |
 | PERF | 93 |
 | SYS | 65 |
-| **total** | **1222** |
+| **total** | **1224** |
 
-Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 93 calibration, 101 definition, 1030 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -33,7 +33,7 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 | M0 | 64 |
 | M1 | 81 |
 | M2 | 155 |
-| M3 | 188 |
+| M3 | 190 |
 | M4 | 101 |
 | M5 | 158 |
 | M6 | 134 |
@@ -42,7 +42,7 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 758 yield at least one requirement; 117 yield none and are listed below with the reason.
+875 sections in 46 files: 760 yield at least one requirement; 115 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,7 +67,6 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)* | **MISSING REASON** | |
 | R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)* | **MISSING REASON** | |
 | R-176 — Controls come before the tests that need them *(closes G3, S2)* | **MISSING REASON** | |
 | R-177 — Cadence *(closes G4, C6)* | **MISSING REASON** | |
@@ -75,7 +74,6 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 | R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)* | **MISSING REASON** | |
 | R-180 — pr-check is item-level *(closes A5)* | **MISSING REASON** | |
 | R-181 — The shape-sphere round-trip bound *(closes T1)* | **MISSING REASON** | |
-| R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)* | **MISSING REASON** | |
 | R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)* | **MISSING REASON** | |
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | **MISSING REASON** | |
 
@@ -376,7 +374,6 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*
 - uncovered section with no reason: decisions.md § R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
 - uncovered section with no reason: decisions.md § R-176 — Controls come before the tests that need them *(closes G3, S2)*
 - uncovered section with no reason: decisions.md § R-177 — Cadence *(closes G4, C6)*
@@ -384,6 +381,5 @@ Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for the
 - uncovered section with no reason: decisions.md § R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
 - uncovered section with no reason: decisions.md § R-180 — pr-check is item-level *(closes A5)*
 - uncovered section with no reason: decisions.md § R-181 — The shape-sphere round-trip bound *(closes T1)*
-- uncovered section with no reason: decisions.md § R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*
 - uncovered section with no reason: decisions.md § R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*
 - uncovered section with no reason: decisions.md § R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*

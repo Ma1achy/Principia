@@ -4201,8 +4201,7 @@
   milestone: M3
 - id: REQ-EVT-024
   area: EVT
-  kind: calibration
-  statement: "The escape settling threshold tau (the |Δn̂| closure bound over the escape window) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  statement: "The escape detector must use a provisional settling threshold tau = 1e-3 (prin-rs CLOSURE_TAU, src/outcome.rs:263 at 8600d45), stated in TASK-M3-12 and inside the recorded range 7.04e-05 … 2.70e-02, until the confirmed tau (REQ-EVT-025) replaces it."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
@@ -4212,12 +4211,54 @@
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
   verify:
-    method: review checklist
-    detail: "a provisional tau inside the recorded 7.04e-05 … 2.70e-02 gap is used by the detector until REQ-VAL-051's re-measurement with R-29's E_rel; the proposal places tau inside the re-measured gap and shows outcomes unchanged across its middle; recorded in decisions.md"
+    method: unit test
+    detail: "the detector's tau is 1e-3, lies inside 7.04e-05 … 2.70e-02, and its definition cites its source and marks it provisional"
   rulings:
   - R-29
   - R-71
+  - R-173
+  milestone: M3
+- id: REQ-EVT-025
+  area: EVT
+  kind: calibration
+  statement: "The confirmed escape settling threshold tau (the |Δn̂| closure bound over the escape window) must be calibrated inside REQ-VAL-051's re-measured gap: proposed with its evidence by the task that measures the gap, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it replaces the provisional 1e-3."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 2.2 The criterion
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
+  verify:
+    method: review checklist
+    detail: "the proposal places tau inside the re-measured gap and shows outcomes unchanged across its middle; recorded in decisions.md"
+  rulings:
+  - R-29
+  - R-71
+  - R-173
+  milestone: M3
+- id: REQ-EVT-026
+  area: EVT
+  kind: definition
+  statement: "The escape detector's seven synthetic fixtures (hyperbolic ejection, grazing near-escape, settled bound hierarchy, mid-encounter flicker, unequal-mass E_rel, two-candidate escaper, three-way unbound with its one-bound-pair control) must be defined with every parameter and expected outcome, and reviewed by the physics reviewer."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.6 Detectors (per `STEP`, on the projected state)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+  verify:
+    method: review checklist
+    detail: "TASK-M3-12's fixture definitions give masses, positions, velocities, t_end and the expected outcome for each; the physics reviewer checks each E_rel and energy claim"
+  rulings:
+  - R-72
+  - R-182
   milestone: M3
 - id: REQ-PAY-001
   area: PAY

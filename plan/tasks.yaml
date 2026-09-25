@@ -601,7 +601,7 @@
   title: "The escape detector: closure and E_rel, the window, the escaper and ionisation"
   depends_on: [TASK-M3-08, TASK-M3-11]
   needs: [REQ-SYS-016, REQ-PAY-004]
-  requirements: [REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018, REQ-EVT-024]
+  requirements: [REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018, REQ-EVT-024, REQ-EVT-026]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.5, PIT-2, PIT-2.1, PIT-2.2]
 - id: TASK-M3-13
@@ -777,7 +777,7 @@
   title: "Escape re-validation: precision, recall and the tau gap"
   depends_on: [TASK-M3-33]
   needs: [REQ-VAL-004, REQ-VAL-006]
-  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135]
+  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2.2, PIT-2.3, PIT-3]
 - id: TASK-M3-35
