@@ -1124,10 +1124,14 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
 - The corpus names two crates: the engine crate and the gui crate (`principia_canonical_spec.md` §1, item 5). The tasks need
   names for the rest, to state acceptance commands.
 - Proposed in `plan/WORKFLOW.md` and used by every task: `crates/kernel` (the physics source compiled twice),
-  `crates/ledger` (the generation root), `crates/contract`, `crates/engine`, `crates/render` (the fragment side),
+  `crates/ledger` (the generation root), `crates/engine` (also holding the typed contract surfaces, "defined once, in Rust,
+  in the engine crate": `principia_gui_state_contract.md` §1), `crates/render` (the fragment side),
   `crates/gui`, `crates/validation` (the harness, R-103), `crates/prin` (the CLI, `prin profile`), `xtask` (the runners:
   `cargo xtask golden | gate | bench | screenshot | plan-check`), `web/` (the browser product), `fixtures/`.
-- **Needed:** confirm the layout, or give the one to use (the tasks' commands are renamed mechanically).
+- Not named by the corpus either: the test runner for `web/` (the M8 tasks use `npm --prefix web test -- <filter>` as a
+  placeholder).
+- **Needed:** confirm the layout and the `web/` runner, or give the ones to use (the tasks' commands are renamed
+  mechanically).
 
 ## RQ-77: Follow-ups the R-97 to R-109 pass left *(step 7, cleanup)*
 

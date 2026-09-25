@@ -58,7 +58,8 @@ requirement, the logH falsification check of the re-registration mechanism.
 - The test harness, the golden-image runner, the numerical-gate runner and the benchmark runner. Each
   requirement's `verify.method` has a runner here, before the first requirement of that kind exists.
 - The profiler CLI skeleton, schema v1 (R-56; dd_telemetry_and_tiers §5, render_gui_spec §G5 "Profiler").
-- The contract crate skeleton: the typed surfaces the contracts name, with no behaviour.
+- The contract surfaces' skeleton, in the engine crate (`principia_gui_state_contract.md` §1): the typed surfaces the
+  contracts name, with no behaviour.
 - The ledger generator. This is the generation root (debug_tooling_plan step 0a): ledger → generated
   pack/unpack for Rust and WGSL, plus the codegen self-test. Nothing renders yet, and the tests are green.
   Every payload type later is generated from it, so it is the root of the build DAG.
