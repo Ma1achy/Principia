@@ -121,7 +121,7 @@ Two further branch-path rules the spike earned by real failure:
 
 Verified: with the table rule, `N_sub`, `state`, `total_substeps`, and terminal labels are **bit-identical across CPU-f64, CPU-f32, native-GPU-f32, browser-GPU-via-WGSL, and CPU-double-double** on every golden input — 0 forks. Continuous values (positions, momenta, energy, the trajectory) diverge freely and honestly; only the branch words are pinned. See `principia_gpu_determinism_note.md` for the general law this instances.
 
-### 3.4 COM projection (per `STEP`, mini-spec verbatim)
+### 3.4 COM projection (per `STEP`; the policy is integrator contract Part 1)
 
 ```
 R_com = Σ mᵢrᵢ / M ;   P_com = Σ pᵢ
@@ -182,7 +182,27 @@ Shape map (Montgomery), from mass-weighted Jacobi (ρ̃, λ̃), I = ‖ρ̃‖²
    n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles
 ```
 
-Axis assignment follows the physics-overlay convention (colour spec §8.1: BCs equatorial at 120°, `b̂₁ = (1,0,0)`, Lagrange at poles) — **transcribe the exact component→axis order from the spec's shape-sphere section**; the form above is fixed, the axis naming is a transcription item.
+**The physics-overlay convention** (Montgomery's shape sphere, equal masses). Three classes of special
+configuration sit at fixed points:
+
+| symbol | configuration | location | count |
+|---|---|---|---|
+| $BC_{12}, BC_{23}, BC_{31}$ | binary collisions | equator, 120° apart | 3 |
+| $E_1, E_2, E_3$ | Euler collinear | equator, between the collisions | 3 |
+| $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
+
+**The landmarks are computed from the shape map above, not hard-coded (R-14).** A binary collision's $\hat{\mathbf b}$ is
+`n` evaluated at a configuration with that pair coincident, using the current masses. The collision of bodies 0 and 1
+($\tilde\rho = 0$) is always at $\hat{\mathbf b}_{01} = (-1, 0, 0)$. With equal masses the other two land at
+$\hat{\mathbf b}_{12} = \left(\tfrac12, \tfrac{\sqrt3}{2}, 0\right)$ and $\hat{\mathbf b}_{20} = \left(\tfrac12, -\tfrac{\sqrt3}{2}, 0\right)$, 120° apart, and
+$$\hat{\mathbf e}_j = -\hat{\mathbf b}_j \ \text{(equal masses)}, \qquad \hat{\mathbf l}^{\pm} = (0, 0, \pm 1),$$
+where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 anticlockwise. Every binary collision lies on
+the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart. Whether the overlay
+marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open.
+
+The table's labels are the 1-based body pairs of the overlay (`BC₁₂` is bodies 1–2, i.e. $\hat{\mathbf b}_{01}$ in 0-based
+terms); the project-wide index base is decision B1. Axis assignment follows this convention: the form of `n` above is
+fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
 
@@ -231,7 +251,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 6. **Detector — collision & priority:** head-on pair crosses `r_coll` → `COLLISION(pair)` with the correct pair id; a contrived same-step collision+escape resolves per §3.6 priority, identically on both precisions.
 7. **Drift shape:** a close-encounter IC shows `max|ΔE| ≫ |ΔE_final|` (spike that recovered) — validates storing both and the cross-check view's premise.
 8. **Winding & terminal latch:** on a circulating bounded orbit, `θ̃` is continuous (no 2π jumps), `orbit_count` matches a hand-counted winding, `retrograde` matches the L_z sign; post-event slots are frozen at the terminal state (finalisation).
-9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points.
+9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
 10. **Benettin invariance:** halving `δ₀` and doubling `n_renorm` (within the linear regime) leaves λ_T unchanged within tolerance; λ_T ≈ 0 on the quasi-regular Kepler-embedded orbit, large on Burrau.
 11. **Ensemble sanity:** deep basin-interior pixel → `H = 0`, tiny σ²; a straddling boundary pixel → `H > 0`; and each sample's **Benettin shadow is excluded from the colour/spread pool** (asserting the shadow-is-not-a-sample separation structurally).
 12. **Burrau smoke (literature-anchored):** the classical rest start resolves to binary + escaper within the default horizon, qualitatively matching Szebehely & Peters (1967); asserted as outcome-class + coarse `t_end` window, not trajectories.
@@ -241,9 +261,9 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ## 6. Deferred / flagged
 
-- **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm against the spec's event-detection section or veto and re-pin. Must land in the shared physics source either way.
+- **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
-- **Shape-map axis assignment** — form pinned (§3.7); component→axis order is a transcription item against the spec's shape-sphere section + colour-spec §8.1 conventions.
+- ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
 - **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
 

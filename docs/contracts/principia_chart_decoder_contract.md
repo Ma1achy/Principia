@@ -25,7 +25,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 - **Momentum (4 DOF).** Two planar Jacobi momentum vectors `(p_ρ, p_λ)`. The rest start sits at the origin. `L_z`, `E`, `KE`, `PE` are *derived* from this block (with masses/positions for `E`, `PE`), not independent axes.
 - **Mass (2 DOF).** The 2-simplex `Δ² = {(m₁,m₂,m₃) : Σ = 1, mᵢ > 0}`. Two controls (softmax logits) cover it. Burrau `(c,b,a)/(a+b+c)` is one point; equal mass `(⅓,⅓,⅓)` the barycentre.
 
-**Shape-sphere redundancy:** the canonical decode gauges the `λ̃_y → −λ̃_y` reflection, i.e. `(θ,φ) ∼ (θ, 2π−φ)`. The φ hemispheres are reflection-equivalent — the chart is a **2-to-1 cover**. Render one hemisphere or flag the redundancy.
+**Shape-sphere redundancy:** the canonical decode gauges the `λ̃_y → −λ̃_y` reflection, i.e. `(θ,φ) ∼ (θ, π−φ)` (θ azimuthal, φ polar from `+w`; R-14, chart reference §3.3). The φ hemispheres are reflection-equivalent — the chart is a **2-to-1 cover**. Render one hemisphere or flag the redundancy.
 
 ---
 
@@ -44,7 +44,7 @@ z[6:8]  → mass controls (2)       → softmax → (m₁,m₂,m₃) [mass block
 **Factorised decode** `D = D_mass × D_cfg × D_mom`, i.e. `Y ≅ Y_mass × Y_cfg × Y_mom` with `2 × 2 × 4 = 8`:
 
 - `D_mass`: 2 controls → softmax → simplex point.
-- `D_cfg`: 2 controls → `(α, β)` → hyperspherical Jacobi → COM-frame shape (canonical gauge: ρ̃ on +x, R̃ = 1). *(Exact hyperspherical formulae live in the spec's Jacobi section; the contract only fixes the interface.)*
+- `D_cfg`: 2 controls → `(α, β)` → hyperspherical Jacobi → COM-frame shape (canonical gauge: ρ̃ on +x, R̃ = 1). *(Exact hyperspherical formulae: `principia_dd_decoder.md` §3.2. The contract only fixes the interface.)*
 - `D_mom`: 4 controls → Jacobi momenta, either free (4 DOF) or produced under an invariant construction.
 
 **Decode order is load-bearing:** `mass → config → momentum → derived invariants`. Derived quantities (`E`, `L_z`, `K`) are computed *after* the blocks they depend on. This is what makes invariant chart axes well-posed (Part 3, kind 3).
@@ -73,21 +73,21 @@ A decoder stage reaches a *constrained* physical quantity from an unbounded cont
 
 | Block constraint | Physical target | Natural links | Inverse (encode/lookup) |
 |---|---|---|---|
-| Simplex Δ² | masses `(m₁,m₂,m₃)`, Σ=1 | softmax; temperature-softmax; pre-saturate logits with `μ_max·tanh` (as the spec does) | log-ratios → `artanh` |
+| Simplex Δ² | masses `(m₁,m₂,m₃)`, Σ=1 | softmax; temperature-softmax; pre-saturate logits with `μ_max·tanh` (the current default, `principia_dd_decoder.md` §3.1) | log-ratios → `artanh` |
 | Bounded interval `(a,b)` | config angles `α, β`; capped momenta | scaled/shifted **sigmoid**; scaled **tanh** | `logit` / `artanh` |
 | Positive half-line `(0,∞)` | any positive unbounded param | **softplus**, **exp** | `log` / inverse-softplus |
 | Symmetric cap `(−c,c)` | signed capped param | `c·tanh`, `c·(2σ−1)` | `artanh` |
 | Unbounded `ℝ` | free param | identity | identity |
 
-The current spec fixes one link per block (mass = softmax ∘ `μ_max·tanh` saturation; config = sigmoid; free momentum = sigmoid). The generalisation you want: make the link a **registry entry selected per block/control**, constrained to be type-compatible with that block's codomain. `sigmoid ↔ tanh` are interchangeable on a bounded interval up to reparametrisation (`tanh x = 2σ(2x) − 1`); they differ only in slope profile, so the choice is a *sampling* preference there, not a constraint one.
+The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (mass = softmax ∘ `μ_max·tanh` saturation; config = sigmoid; free momentum = sigmoid). The generalisation you want: make the link a **registry entry selected per block/control**, constrained to be type-compatible with that block's codomain. `sigmoid ↔ tanh` are interchangeable on a bounded interval up to reparametrisation (`tanh x = 2σ(2x) − 1`); they differ only in slope profile, so the choice is a *sampling* preference there, not a constraint one.
 
 ### Three hard requirements on any registered link
 
 1. **Constraint-preserving.** Output satisfies the block's constraint for *all* inputs — a simplex link lands in Δ², a bounded link stays in range. This is what "compactification" buys; a link that can escape the constraint is not admissible.
-2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`, `μ_max = 5`, `q_max = 2`). A link without a stable inverse cannot support the encode path.
+2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10). A link without a stable inverse cannot support the encode path.
 3. **Smooth (C¹).** The deep-zoom **linearised decoder** replaces the nonlinear decode with a local Jacobian; a non-differentiable link breaks that path.
 
-### The catch the spec already flags: links carry a measure
+### Links carry a measure
 
 A link is **not measure-neutral**. Softmax with saturated logits is smooth but *not uniform* over the simplex; uniform-in-angle ≠ uniform-over-shapes (S² has its own area element); a power-law axis warp `K(t)=K_max·t^{γ_K}` deliberately biases density toward low `K`. Fine for exploration. But for any **quantitative** claim (basin fractions, island prevalence) you must either correct by the link's Jacobian or sample in a known measure. So **each registry entry should carry its log-det Jacobian**, so a quantitative pass can reweight. This is the one place a customisable link can silently corrupt a result — the freedom is real, but it moves the sampling measure, and the measure has to travel with the link.
 
@@ -168,9 +168,17 @@ Fixing the six non-displayed coordinates to constants; changing the slice = step
 **A slice direction or tilt target is the same object as a chart axis: one of the four kinds of Part 3, evaluated at a point.**
 
 - **Raw latent** directions (`e_k`) are constant vectors — the same everywhere, no anchor needed.
-- **Derived, invariant, and coupled** directions are *tangent vectors to constrained curves* — they depend on where you are, so they must be **evaluated at the chart centre**. "Increase E at fixed L_z" is a different vector at every point (it's a tangent *field*); the spec's named compound directions are exactly these, and this is why they must be recomputed when the centre changes. "Vary m₁ holding m₂:m₃" is a tangent to a curve through the centre, carrying the same **residual convention** as the corresponding axis kind.
+- **Derived, invariant, and coupled** directions are *tangent vectors to constrained curves* — they depend on where you are, so they must be **evaluated at the chart centre**. "Increase E at fixed L_z" is a different vector at every point (it's a tangent *field*); the named compound directions (below) are exactly these, and this is why they must be recomputed when the centre changes. "Vary m₁ holding m₂:m₃" is a tangent to a curve through the centre, carrying the same **residual convention** as the corresponding axis kind.
 
 Consequence, stated once and inherited everywhere: **the caveat "identical ICs except the one that varies" is true in *controls*, not automatically in *physical quantities*.** Slicing along raw `z₆` moves **all three masses** (the softmax couples them) — the line is "identical except one mass logit." Physical one-quantity lines (only `m₁`, only `E`) are derived/invariant *directions* with conventions, i.e. curves, not raw latent lines. The UI must label which it is showing.
+
+**Named compound directions.** Predefined $\mathbf q$ vectors for physically meaningful orientations, used
+as slice directions or tilt targets:
+
+- **Mass perturbation away from Burrau:** the direction in the mass block from the Burrau logits toward equal masses.
+- **Energy increase at fixed $L_z$:** a configuration-dependent direction in the momentum block.
+- **Burrau-to-unconstrained morph:** tilt one basis vector from a configuration direction into a mass or
+  momentum direction. This is the direct test of the Burrau hypothesis (`principia_chart_reference.md` §4.6).
 
 This rule retro-explains the curve-axis result: a curve axis has no single basis vector — `γ(ν)` bends — so tilting it means rotating its **tangent at the centre**:
 
@@ -184,14 +192,18 @@ Free-floating curve-axis tilt is ill-defined only because the tangent changes al
 
 Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is pure CPU/UI state — nothing about the chart maths changes.
 
+**Setting the lock.** Select the pixel at $(s,t)$ and snap the centre to its IC. For an affine chart,
+$\mathbf z_{\mathrm{locked}} = \mathbf z_0 + (2s-1)\mathbf q_1 + (2t-1)\mathbf q_2$: CPU arithmetic, with no GPU readback.
+For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer back.
+
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
 
 - **Anchor-preserving (basis edits): tilt, zoom, chart-mode switch.** The locked IC is the *fixed point* of the operation — the centre pixel's IC never changes; surrounding pixels are `z_locked + offset·q'(τ)`, same in-plane offsets, rotating directions. You watch the neighbourhood deform around an IC that is exactly constant. This is the persistence test, mechanically. Chart-mode switching keeps the anchor at centre while changing which degrees of freedom the surroundings explore ("this IC's neighbourhood under energy variation vs. under geometry variation").
 - **Anchor-excursion (centre edits): slice, and slider moves in locked mode.** There is no way to change a hidden coordinate while keeping the point — slicing *necessarily* moves the centre IC. Locked slicing is therefore an **excursion along a line through the anchor**: `z_centre = z_anchor + δ`, with `δ` accumulating slice steps. The centre pixel is always "the anchor's IC except along the excursion direction(s)." The excursion has **memory and a way home**: `δ` is tracked explicitly, the anchor value is ghost-marked on each control, and a snap-back gesture returns `δ → 0` exactly (not approximately — the anchor is stored, not re-derived).
 
-**Spec change this implies (supersedes "sliders frozen"):** in locked mode, sliders are **re-based to the anchor, not frozen**. Each slider shows `z_anchor + δ` live, with the anchor value marked; moving one is an anchor-excursion along that control's direction. Frozen sliders give only the microscope; re-based sliders additionally give slice-through-the-lock — strictly more capability, same GPU interface. Unlock preserves the current `(z₀, q₁, q₂)` as the new free-mode state.
+**Sliders are re-based, not frozen.** An earlier design froze the sliders in locked mode. Here, in locked mode, sliders are **re-based to the anchor, not frozen**. Each slider shows `z_anchor + δ` live, with the anchor value marked; moving one is an anchor-excursion along that control's direction. Frozen sliders give only the microscope; re-based sliders additionally give slice-through-the-lock — strictly more capability, same GPU interface. Unlock preserves the current `(z₀, q₁, q₂)` as the new free-mode state.
 
-**Nonlinear charts:** the anchor is preserved by re-centring `Φ` on `z_locked` via the inverse-encode path (the spec's two options: CPU replicate-and-evaluate, or per-pixel readback). Feasibility applies: an excursion or tilt can carry the neighbourhood outside the feasible region of an invariant chart — those pixels are tagged, never dropped, exactly as for any chart.
+**Nonlinear charts:** the anchor is preserved by re-centring `Φ` on `z_locked` via the inverse-encode path (two options: CPU replicate-and-evaluate, or per-pixel readback). Feasibility applies: an excursion or tilt can carry the neighbourhood outside the feasible region of an invariant chart — those pixels are tagged, never dropped, exactly as for any chart.
 
 ### What the GPU knows about all of this: nothing
 
@@ -206,7 +218,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 **Per-axis metadata the validator needs:**
 
 - **block-touch set** — which of {config, momentum, mass} the axis writes into. May be *empty* for an annotation axis.
-- **annotation-only?** — if set, the axis drives *no* IC degree of freedom; it exists purely as a display/landmark coordinate (tick marks, lattice highlighting). The decoder ignores it. The spec's Euclid plane is the canonical case: `Φ_Euclid` sweeps `ν` on one axis; the `m` axis is annotation (integer-lattice / primitive-triple landmarks only, "the decoder uses only ν"). A chart with an annotation axis is a **1-swept family rendered in 2D**, well-posed as 1 + 7, and must be *labelled as such* — it supports per-value statistics along the swept axis only, never 2D density claims across the annotation axis.
+- **annotation-only?** — if set, the axis drives *no* IC degree of freedom; it exists purely as a display/landmark coordinate (tick marks, lattice highlighting). The decoder ignores it. The Euclid plane (`principia_chart_reference.md` §4.5) is the canonical case: `Φ_Euclid` sweeps `ν` on one axis; the `m` axis is annotation (integer-lattice / primitive-triple landmarks only, "the decoder uses only ν"). A chart with an annotation axis is a **1-swept family rendered in 2D**, well-posed as 1 + 7, and must be *labelled as such* — it supports per-value statistics along the swept axis only, never 2D density claims across the annotation axis.
 
 - **invariant?** — if so, which sector it solves into, its dependency set (must be downstream), **and whether it is `conserved_along_flow`**: `E` and `L_z` are constants of motion (a hover trace pins to a labelled dot); `K` is invariant-*constructed* but not conserved (a trace oscillates as KE↔PE exchanges). Consumers: the hover trace and any along-trajectory rendering.
 - **residual convention** — for derived-in-block axes, how the leftover within-block DOF is pinned

@@ -6,7 +6,7 @@
 
 ## Part 1 — Two-level keying: identity vs validity
 
-The spec has a quad address `QuadID (z, tx, ty)` (the spec's old name `TileID` is retired — 'tile' now means a sample's screen footprint, memory-tiers §1) and, separately, a payload compatibility signature described as "stricter than the quad cache key" — but the relationship was never nailed. The model:
+A quad has an address `QuadID (z, tx, ty)` (the old name `TileID` is retired — 'tile' now means a sample's screen footprint, memory-tiers §1) and, separately, every cached payload carries a compact compatibility signature that is stricter than the quad key, because it governs whether a payload can be reused without recomputation. The relationship between the two needs nailing down. The model:
 
 - **Identity — *which region of which chart*.** `QuadID` alone is incomplete: `(z, tx, ty)` doesn't say which chart or which plane. Full identity is `(chart id + params, z₀, q₁, q₂) + QuadID`. Two quads with different bases are different identities even at the same `(z,tx,ty)` — an agent that keys on `QuadID` alone will cache-collide across charts and across tilt positions.
 - **Validity — *computed under which physics config*.** The payload compatibility signature: chart/decode version, link ids, integrator occupant + config, horizon `T`, enabled metrics (tier flags), event thresholds, ensemble mode, payload schema version. Same identity, different signature → different payload (e.g. recomputed after a threshold change; preview vs refined).
@@ -48,7 +48,7 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
 
 ## Part 4 — Baseline-first: an absolute tier, not a priority weight
 
-**Refinement starts from the coarsest cover of the current viewport and works down. Always.** The spec has this as emergent behaviour (`ensure_baseline_tiles`, ancestor fallback, priority weights) — this contract hardens it into an invariant, because a weight can be starved:
+**Refinement starts from the coarsest cover of the current viewport and works down. Always.** The earlier scheduling loop had this as emergent behaviour (an `ensure_baseline_tiles` pass before candidate selection, ancestor fallback, priority weights) — this contract hardens it into an invariant, because a weight can be starved:
 
 > **Never dispatch a refinement job while the current view's baseline cover is missing.** Baseline dispatch is a hard tier above the priority queue, not a large weight inside it.
 

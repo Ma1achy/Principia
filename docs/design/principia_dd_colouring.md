@@ -1,6 +1,6 @@
 # Drill-down — Colouring (Meaning rung)
 
-*Fifth drill-down. The colour-spec PDF is already publication-grade; this drill-down consolidates it with the render contract's slot rules and pins the few remaining exact forms (colour-space matrices, compaction functions, the mixed-pixel colour-per-sample → SSAA resolve). Colour is data: every equation here is a measurement display, not decoration.*
+*Fifth drill-down. This drill-down holds the spherical colour-map maths, consolidated with the render contract's slot rules, and pins the exact forms (colour-space matrices, compaction functions, the mixed-pixel colour-per-sample → SSAA resolve). Colour is data: every equation here is a measurement display, not decoration.*
 
 ---
 
@@ -50,7 +50,27 @@ M₁⁻¹ = [ 4.0767416621 −3.3077115913  0.2309699292
 
 OKLCH is the polar form: `C = √(a²+b²)`, `h = atan2(b, a)`.
 
-### 3.2 The vMF engine (colour-spec Eq. 5, verbatim)
+### 3.2 The vMF engine
+
+The von Mises–Fisher density on $S^2$ is the spherical analogue of a Gaussian,
+$f(\hat{\mathbf n}; \hat{\mathbf p}, \kappa) \propto \exp(\kappa\, \hat{\mathbf n}\cdot\hat{\mathbf p})$: largest at $\hat{\mathbf n} = \hat{\mathbf p}$, decaying with geodesic
+distance, with spread set by the concentration $\kappa$. The colour at $\hat{\mathbf n}$ is a vMF-weighted mean of the pole
+hues in OKLab:
+
+$$a(\hat{\mathbf n}) = C\,\frac{\sum_{i=1}^{6} w_i\cos\theta_i}{\sum_{i=1}^{6} w_i}, \qquad
+b(\hat{\mathbf n}) = C\,\frac{\sum_{i=1}^{6} w_i\sin\theta_i}{\sum_{i=1}^{6} w_i}, \qquad
+w_i = \exp(\kappa\,\hat{\mathbf n}\cdot\hat{\mathbf p}_i).$$
+
+| pole | direction | full OKLab | $\theta_i$ | Okabe–Ito $\theta_i$ |
+|---|---|---|---|---|
+| $\hat{\mathbf p}_1$ | $+\hat x$ | red | 0° | 250° (blue) |
+| $\hat{\mathbf p}_2$ | $-\hat x$ | cyan | 180° | 70° (orange) |
+| $\hat{\mathbf p}_3$ | $+\hat y$ | green | 120° | 30° (vermillion) |
+| $\hat{\mathbf p}_4$ | $-\hat y$ | magenta | 300° | 210° (sky blue) |
+| $\hat{\mathbf p}_5$ | $+\hat z$ | blue | 240° | 170° (bluish green) |
+| $\hat{\mathbf p}_6$ | $-\hat z$ | yellow | 60° | 350° (reddish purple) |
+
+The same, in the code form:
 
 ```
 wᵢ = exp( κ · n̂ · p̂ᵢ )
@@ -63,11 +83,11 @@ Six poles at `{±x̂, ±ŷ, ±ẑ}`, opposing poles complementary. Hue tables: *
 
 ### 3.3 Sphere sampling conventions
 
-Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(φ, n_z)** ∈ [−π,π]×[−1,1] — `v` **linear in `n_z`**, not in latitude angle (PDF convention; a subtle mismatch source if assumed spherical-uniform). `sph_uv` input is always the **config-space** normal (two-rotations rule).
+Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(φ, n_z)** ∈ [−π,π]×[−1,1] — `v` **linear in `n_z`**, not in latitude angle (a subtle mismatch source if assumed spherical-uniform). `sph_uv` input is always the **config-space** normal (two-rotations rule).
 
-### 3.4 Physics overlay (Eq. 11) and the house encoding (Eq. 8)
+### 3.4 Physics overlay (blob blend) and the house encoding (stability × hue)
 
-Special configurations (equal-mass conventions): `b̂₁ = (1,0,0)`, `b̂₂ = (−½, √3/2, 0)`, `b̂₃ = (−½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`.
+Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`. With unequal masses, whether the overlay uses the mass-weighted positions or fixed 120° spacing is audit decision B18.
 
 ```
 Blob blend:   c_out = c_base + Σⱼ wⱼ(cⱼ − c_base),
@@ -107,11 +127,20 @@ State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 
 
 **Deleted (was a pin, now vetoed):** the `C' = C·(1 − H/ln k)` majority-class-plus-entropy-desaturation. It baked a display choice into a data occupant and solved a problem the SSAA resolve doesn't have. If a user *wants* an explicit uncertainty marker, that's an **optional independent slot binding** reading the exposed `ensemble_spread`/entropy field (a post occupant, the fuzziness overlay) — swappable and off-able, never welded into the class colour.
 
-### 3.8 Palettes and CVD (verbatim where the PDF specifies)
+### 3.8 Palettes and CVD
 
 **Cubehelix** (analytic, CB-tolerant by monotone L): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
 
-**CVD simulation** — post-process, **linear sRGB**, after all pixel computation; pipeline order **pixel function → physics overlay → CVD → render→display scale → canvas write** (the scale stage is a no-op at native; render contract Part 4). Matrices verbatim (deutan/protan/tritan/achrom per the PDF; achrom rows all `(0.299, 0.587, 0.114)`).
+**CVD simulation** — post-process, **linear sRGB**, after all pixel computation; pipeline order **pixel function → physics overlay → CVD → render→display scale → canvas write** (the scale stage is a no-op at native; render contract Part 4). $M_{\mathrm{cvd}}$ multiplies the linear $(R_\ell, G_\ell, B_\ell)$ triplet:
+
+$$M_{\mathrm{deutan}} = \begin{pmatrix} 0.625 & 0.375 & 0 \\ 0.700 & 0.300 & 0 \\ 0 & 0.300 & 0.700 \end{pmatrix}, \qquad
+M_{\mathrm{protan}} = \begin{pmatrix} 0.567 & 0.433 & 0 \\ 0.558 & 0.442 & 0 \\ 0 & 0.242 & 0.758 \end{pmatrix},$$
+
+$$M_{\mathrm{tritan}} = \begin{pmatrix} 0.950 & 0.050 & 0 \\ 0 & 0.433 & 0.567 \\ 0 & 0.475 & 0.525 \end{pmatrix}, \qquad
+M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
+
+Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
+orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
 
 ---
 
@@ -130,7 +159,7 @@ State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 
 ## 5. Unit tests
 
 1. **Transform round trips:** sRGB↔linear↔OKLab↔back within tolerance across a gamut lattice; anchors — white → `(L,a,b) = (1,0,0)`, primaries against Ottosson's published test values.
-2. **Seam-free guarantee, automated:** for every mode the PDF declares continuous, sample dense pairs straddling the antimeridian and both poles → colour difference → 0; the intentionally-discontinuous list (Octant, Voronoi, checker…) is *excluded by name*, not by failure.
+2. **Seam-free guarantee, automated:** for every mode declared continuous, sample dense pairs straddling the antimeridian and both poles → colour difference → 0. **Continuous:** all vMF modes (smooth weights, smooth weighted mean); the seamless LUT sphere (the same argument in RGB); latitude stripes, $\cos(f\arccos n_z)$; longitude stripes, $\sin(f\,\mathrm{atan2}(n_y, n_x))$, continuous at the antimeridian for integer $f$; 3-D Cartesian Perlin noise. **Intentionally discontinuous**, *excluded by name*, not by failure: Octant, Voronoi 6, Hemispheres, Icosahedral, Fibonacci (hard), Checkerboard, Truchet.
 3. **vMF properties:** opposing-pole midpoints → `a = b = 0` (grey); `κ → large` → nearest-pole colour; **rotation equivariance** — `blend(Rn̂, R·poles) = blend(n̂, poles)`.
 4. **LUT sphere:** an equator longitude sweep reproduces the 1-D LUT within blend tolerance; Twilight closes exactly at the wrap.
 5. **Physics overlay:** blob maxima exactly at `b̂/ê/l̂`; strength `s = 0` is the identity; Stability×Hue L endpoints `0.25 / 0.80` exact.
@@ -147,7 +176,7 @@ State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 
 ## 6. Deferred / flagged
 
 - **Symlog pin (§3.6)** — ratified (standard for signed wide-range data). **Entropy-desaturation (§3.7) — VETOED**: replaced by colour-per-sample SSAA resolve; uncertainty marking, if wanted, is an optional independent slot binding on the exposed spread/entropy field.
-- **Equirect v-linear-in-`n_z`** — PDF convention recorded because "obviously it's latitude" is the natural wrong assumption.
+- **Equirect v-linear-in-`n_z`** — the convention is recorded because "obviously it's latitude" is the natural wrong assumption.
 - **OKLab coefficients** — transcription-check against Ottosson's reference implementation before entering the shared source (same discipline as the Yoshida-6 w's).
 - **Custom-occupant safety rails** — schema-driven uniforms, async compile, last-valid fallback: already fully specified in the render/lowering contracts; owned there, not re-stated here.
 

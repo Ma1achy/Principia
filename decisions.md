@@ -78,3 +78,102 @@ action. R rows are closed in step 4.
 The `docs/` copies are canonical: `docs/gui/reference/ic_inspector.html` (19 Jul, 39.6 KB) and
 `docs/notes/ic_inspector_scratchpad.md` (the later, longer one). The `spec_sources/` copies are older
 uploads. They go to `docs/archive/` when `spec_sources/` is archived at the end of step 3.
+
+## R-9 — The toolchain spike findings go to results *(closes RQ-7)*
+*24 Sep 2026 · applied in step 3*
+
+`docs/archive/findings.md` → `docs/experiments/results/findings.md` (`git mv`). It is the toolchain spike's
+findings, the evidence for the rust-gpu decision. Its INDEX row moves with it.
+
+## R-7 amended — part (a)'s grep
+*24 Sep 2026 · applied in step 3*
+
+Part (a)'s grep becomes the following. It drops `-w`, because the filename form has an underscore before "spec":
+
+```
+grep -rniE --include='*.md' "\blatex\b|spec(_revised)?\.tex" docs/ --exclude-dir=archive
+```
+
+The rest of R-7 is unchanged.
+
+## R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*
+*24 Sep 2026 · applied in step 3*
+
+`μ_max = 5` and `q_max = 2`. The "4" was the IC Inspector's value before its correction. The values are written
+where the constants are defined (`principia_dd_decoder.md` §3, `principia_chart_decoder_contract.md`), and the
+formulae keep the symbols. Only `α_min` (0 or 0.05) stays on the step-5 decision sheet.
+
+## R-11 — The per-body momentum cap is rejected *(closes RQ-9)*
+*24 Sep 2026 · applied in step 3*
+
+The LaTeX's optional per-body cap isn't invertible: capping each body, then re-imposing CoM, breaks the T2 round
+trip. And `q_max` already bounds the Jacobi momenta. It's recorded under rejected ideas in `principia_00_philosophy.md` §8.
+
+## R-12 — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*
+*24 Sep 2026 · applied in step 3*
+
+θ on `v`, no polar buffer. The LaTeX's buffer rests on a wrong premise: the collision points are on the equator,
+not at the poles. It's recorded as rejected in `principia_chart_reference.md` §3.3. In Group B, check the colour
+PDF §8 axis convention against this and flag any mismatch.
+
+## R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*
+*24 Sep 2026 · applied in step 3*
+
+A looked-up IC takes the same path as any pixel. Bodies within `r_coll` give a t = 0 collision outcome, which is
+a real outcome. Exactly coincident bodies can't be represented, and the lookup ladder's range check catches them with
+`lookup_clamped`. `principia_inverse_encode_contract.md`'s validation is updated to match.
+
+## Porting rule — a port adds, it never removes a decision
+*24 Sep 2026 · applies from step 3 Group B onward*
+
+A port may add content. It may never delete or change a decision the markdown has made, including the prototype-kernel
+decisions in the drill-downs and contracts, without a REVIEW_QUEUE entry and a ruling. Each commit message ends with a
+"Removed lines" note. For every removed line it says either "reworded, kept at <file:line>" or "stale value, replaced by
+<ruling>". A removed decision with neither is a bug.
+
+## R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*
+*24 Sep 2026 · applied in step 3*
+
+The convention was validated by the human:
+
+```
+u = ‖ρ̃‖² − ‖λ̃‖²,   v = 2 ρ̃·λ̃,   w = 2(ρ̃ ∧ λ̃)   (standard, positive cross)
+n = (u, v, w)/I
+θ = azimuth in the (u, v) plane, on the horizontal axis, 0..2π
+φ = polar angle from +w, on the vertical axis, 0..π; L⁺ (w = +1) at the top
+n = (sin φ cos θ, sin φ sin θ, cos φ)
+```
+
+Applied as follows:
+- chart_reference §3.1: `q` takes the standard sign.
+- chart_reference §3.3: the spherical map is rewritten in θ/φ.
+- The R-12 note is rewritten. There is no polar buffer, because under this convention the poles are the Lagrange
+  points (regular) and every binary collision lies on the equator (w = 0).
+- dd_integrator §3.7: the overlay's b̂ landmarks are computed from this formula, not hard-coded. The collision of bodies 0
+  and 1 is at n = (−1, 0, 0). Audit decision B18 (mass-weighted positions or fixed 120°) stays open.
+- dd_integrator's shape-map tests check the landmarks numerically (BC₀₁ → (−1,0,0), L⁺ → (0,0,+1), all collisions at w = 0,
+  equal masses 120° apart) and cross-check `n` against the IC Inspector's JS on random ICs.
+
+## R-15 — `Policy::Tolerance` governs refinement *(closes RQ-13)*
+*24 Sep 2026 · applied in step 4*
+
+This follows the INDEX's "current design" and landed pending change 12. The scheduler contract keeps its mechanics and
+defers the split decision to `principia_dd_refinement_policy.md`. It's applied in step 4, when change 12 is folded in.
+
+## R-16 — The colour PDF's map lists are ported *(closes RQ-14)*
+*24 Sep 2026 · applied in step 3*
+
+The complete Artefact-1 and Artefact-2 map lists go from the retired colour PDF into `principia_colour_composition.md`
+(under R-3), and the golden-image tests are pinned to that list. Magenta stays the invalid colour as a plain default,
+with no source claimed.
+
+## R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*
+*24 Sep 2026 · applied in step 3*
+
+The streaming slope is the one the payload ledger and the payload doc define. `principia_render_contract.md`:79 is updated to cite it.
+
+## R-18 — The agreement value is `spread_event` *(closes RQ-16)*
+*24 Sep 2026 · applied in step 3*
+
+`spread_event` is an f16 and is stored, as `principia_dd_generation_root.md`'s ledger defines it. `ensemble_outcome_agreement` is a retired name. The
+sampling note cites `spread_event`, and any agreement value is derived from it on the fly.

@@ -77,7 +77,7 @@ and **`Policy::Tolerance`**.
 
 **Also in `docs/design/`**
 
-- `docs/design/principia_core_design.md` — the seams and the CPU/GPU contract; "the thing to hand a code agent — not the big spec"
+- `docs/design/principia_core_design.md` — the seams and the CPU/GPU contract; "the thing to hand a code agent first"
 - `docs/design/principia_dd_generation_root.md` — the Generation Root: layout table + link registry; the roots of the build DAG. "This document **is** the ledger"
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
@@ -121,6 +121,7 @@ and **`Policy::Tolerance`**.
 - `docs/experiments/results/principia_dd_refinement_external_report2.md` — "Brief 2: is the `max` criterion well-posed?"
 - `docs/experiments/results/principia_dd_refinement_external_report3.md` — "Brief 3: validating the no-discard architecture"
 - `docs/experiments/results/principia_dd_refinement_external_report4.md` — "Brief 4 — horizons"
+- `docs/experiments/results/findings.md` — toolchain spike findings ("Verdict: rust-gpu"): the evidence for the substrate decision (R-9)
 - `docs/experiments/results/principia_ftle_shadow_precision_experiment.md` — can the Benettin FTLE shadow be stored at f16/bf16?
 - `docs/experiments/results/xp_results/` — Brief 1 raw measurements and derived tables: `exp1_raw.json`, `exp1_table.json`, `exp1_tables.md`, `exp2_raw.json`, `exp2_tables.md`, `exp2b_raw.json`, `exp3_raw.json`, `exp3_table.json`, `exp3_tables.md`, `xp1_cross.py`, `xp1_report.py`, `xp1b_supp.py`, `xp2_horizon.py`, `xp2c_t120.py`, `xp3_gate.py`, `xp_common.py`, `xp_driver.py`, `xp_probe.py`, `xp_reduce.py`
 - `docs/experiments/results/xp_results2/` — Brief 2 raw JSON: `expA_domke.json`, `expB_estimator.json`, `expC_tend.json`
@@ -151,14 +152,13 @@ and **`Policy::Tolerance`**.
 | `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
-| `docs/archive/findings.md` | toolchain spike findings ("Verdict: rust-gpu"). **Why archived: unclear — see REVIEW_QUEUE RQ-7** |
 
 ---
 
 ## Known open items
 
 > **Resolved since the vertical slice:** the camera now reaches the scheduler. Display adequacy
-> landed at prin-rs `52caf14` — a quad may stop only if its texel is at or below one screen pixel,
+> landed (`principia_dd_refinement_policy.md` §0.1) — a quad may stop only if its texel is at or below one screen pixel,
 > which subsumed the missing `target_depth` driver. Mean texel size is flat within ±5% across the last
 > two octaves in the converged arm (was a 4.63× climb, with `max_depth` going *backwards* as zoom
 > increased). `docs/design/principia_dd_refinement_policy.md` §0.1.

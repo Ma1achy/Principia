@@ -1,6 +1,6 @@
 # Principia — core design decisions
 
-*The seams and the CPU/GPU contract. This is the thing to hand a code agent — not the big spec.*
+*The seams and the CPU/GPU contract. This is the thing to hand a code agent first.*
 
 ## Principle: divergence is the observable
 

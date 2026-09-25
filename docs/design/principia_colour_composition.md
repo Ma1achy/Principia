@@ -2,12 +2,12 @@
 
 *Status: canonical. Single source of truth for the **colour occupant** — the internally-compositional
 system that produces the `colour` and `brightness` values consumed by the render pipeline's
-`combine` stage. Supersedes the implementation sections (§5–§9) of the shape-sphere colour-map
+`combine` stage. Supersedes the implementation sections (§5–§9) of the retired shape-sphere colour-map
 PDF and the mode-enumeration in `principia_debug_tooling_plan.md` §B–§G. The outer 4-slot pipeline
 framing in `principia_gui_state_contract.md` §4 and the colour drill-down `principia_dd_colouring.md`
 are amended to defer here (§8).*
 
-*Design thesis: the PDF enumerates **products** where the system has a few **factors**. Nearly every
+*Design thesis: the retired PDF enumerated **products** where the system has a few **factors**. Nearly every
 named colour map is one primitive family under different parameters; the LUT-spheres, the vMF map,
 Voronoi, soft-Voronoi, basin-blend, the physics overlay, and custom N-pole are **the same primitive**.
 Enumerating them is a maintenance liability and a second colouring path that does a strict subset of
@@ -77,7 +77,7 @@ for numerical stability (shifts weights, not their ratios).
 Okabe–Ito "hue tables" become **preset swatch-sets** (six swatches at fixed L, C, and the tabulated
 hues). Colours may be authored directly, drawn from a palette generator (golden-angle, OI-cycle,
 gradient A→B), or **sampled from a LUT at `i/N`** — the last of which is precisely how a LUT-sphere
-is built (§7). Fidelity to the PDF is pinned by golden-image tests (§7), not by a special type.
+is built (§7). Fidelity to the map list (§7.1) is pinned by golden-image tests (§7), not by a special type.
 
 ### 1.2 Family B — field-ramp  →  `vec3` or `f32`
 
@@ -230,7 +230,7 @@ render-key.
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
 has an explicit **invalid colour/value**. Without this, debug views silently lie at exactly the
 pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). The default
-invalid colour is a conspicuous out-of-gamut-adjacent tone (spec: a fixed magenta), overridable per
+invalid colour is a conspicuous out-of-gamut-adjacent tone (a fixed magenta, a plain default, R-16), overridable per
 node.
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are portable
@@ -399,8 +399,8 @@ recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-ex
 
 ## 7. Preset table & golden-image obligation
 
-Every currently-specified map (the PDF's Artefact-1 colour maps, Artefact-2 patterns, special modes,
-the physics overlay) and every debug view is **recreated as a composition preset**. Representative
+Every currently-specified map (the Artefact-1 colour maps, Artefact-2 patterns, special modes,
+the physics overlay, listed in full in §7.1) and every debug view is **recreated as a composition preset**. Representative
 rows (schematic — full table lives with the preset library):
 
 | preset | family / expression |
@@ -430,6 +430,56 @@ independent-integrator convergence reference): the composition engine and the re
 two implementations of the same maps, and agreement to tolerance certifies the port. A preset is not
 "done" until its golden image matches.
 
+**Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
+golden test. §7.1 is the checklist; the reference artefacts are the oracle for each entry.
+
+### 7.1 The complete map list (R-16)
+
+Ported from the retired shape-sphere colour-map PDF (R-3, R-16). Parameter ranges are in §8. The vMF engine (Eq. 5),
+the LUT sphere, the CVD matrices and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
+
+**Artefact 1 — colour maps (`ColourSphere`).**
+
+| map | definition |
+|---|---|
+| VMF OKLAB | six vMF poles at $\{\pm\hat x, \pm\hat y, \pm\hat z\}$, full-OKLab hue table (dd_colouring §3.2) |
+| VMF Okabe–Ito | the same engine with the Okabe–Ito CB-safe hue table |
+| LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). |
+| Turbo | a 1-D colour LUT, shown among the additional colour map modes |
+| Direction cosines | each Cartesian component of $\hat{\mathbf n}$ to its own RGB channel (lightness is not uniform) |
+
+Global controls on every Artefact-1 map: **Invert** ($v \mapsto 255 - v$), **Blend** (a linear mix of any two modes),
+**Auto-rotate**.
+
+**Artefact 2 — patterns and special modes (`PatternSphere`).** Every pattern has the signature
+$(\hat{\mathbf n}, 	ext{params}, 	ext{palette}) \mapsto [R, G, B]$.
+
+| group | map | definition |
+|---|---|---|
+| Voronoi-type | Octant | partition by sign: index $= 4[n_x \ge 0] + 2[n_y \ge 0] + [n_z \ge 0]$ |
+| | Voronoi 6 | nearest axis pole, $i^* = rg\max_i \hat{\mathbf n}\cdot\hat{\mathbf p}_i$ |
+| | Hemispheres | the dominant axis sets the colour, two shades per axis for the sign |
+| | Icosahedral | 12 Voronoi cells about the icosahedron vertices $\{(0, \pm1, \pm\phi), (\pm1, \pm\phi, 0), (\pm\phi, 0, \pm1)\}/\lVert(0, 1, \phi)Vert$, $\phi = (1+\sqrt5)/2$ |
+| | Soft Voronoi | sigmoid blend between the two nearest poles, $t = \sigma(k_s(d_1 - d_2))$ |
+| Lattices | Fibonacci lattice | $N$ golden-angle points, $n_{z,i} = 1 - 2i/(N-1)$, $r_i = \sqrt{1 - n_{z,i}^2}$, $\phi_i = \pi(\sqrt5 - 1)\,i$; golden-angle hue spacing so adjacent cells contrast |
+| | Dot lattice | the Fibonacci points drawn as coloured dots of angular radius $ho = \cos(1.4/\sqrt N)$ on a dark background |
+| Stripes | Checkerboard | with $	heta = rccos n_z$, $arphi = \operatorname{atan2}(n_y, n_x) + \pi$: even $= (\lfloor f	heta/\pifloor + \lfloor farphi/2\pifloor) mod 2$; seam-free for integer $f$ |
+| | Latitude stripes | $\cos(f rccos n_z) > 0$ (no atan2) |
+| | Longitude stripes | $\sin(f\,\operatorname{atan2}(n_y, n_x)) > 0$ (seamless for integer $f$) |
+| | Truchet mosaic | each patch cell $(c_i, c_j)$ gets a deterministic diagonal split from $h = \operatorname{frac}(\sin(127.1c_i + 311.7c_j)\cdot 43758.5)$; colour by the side of the diagonal |
+| Overlays | Grid overlay | pixels within $\epsilon = 0.04$ of a grid line take the line colour; the base map is unchanged elsewhere |
+| | Iso-hue contours | lines of constant vMF hue $\psi = \operatorname{atan2}(b_{\mathrm{vmf}}, a_{\mathrm{vmf}})$, uniformly spaced in hue |
+| | Gradient magnitude | $\lvert
+abla cvert pprox 	frac12\sqrt{\lVert c(\hat{\mathbf n} + arepsilon\hat x) - c(\hat{\mathbf n})Vert^2 + \lVert c(\hat{\mathbf n} + arepsilon\hat y) - c(\hat{\mathbf n})Vert^2}$ |
+| | Perlin noise | 4-octave 3-D value noise in Cartesian coordinates (no seam), $v = \sum_{k=0}^{3} 2^{-k}\omega(2^k s\,\hat{\mathbf n}) ig/ \sum_{k=0}^{3} 2^{-k}$ |
+| | Checker + VMF | the checkerboard over the vMF map |
+| Special | Real spherical harmonics | $v = Y_{\ell m}/\max\lvert Y_{\ell m}vert$, blended between the positive- and negative-lobe colours in proportion to $\lvert vvert$, grey on the nodal lines. Forms for $\ell \in \{1,2,3\}$ include $Y_{10} = \sqrt{3/4\pi}\,n_z$, $Y_{11} = \sqrt{3/4\pi}\,n_x$, $Y_{20} = \sqrt{5/16\pi}\,(2n_z^2 - n_x^2 - n_y^2)$, $Y_{22} = \sqrt{15/16\pi}\,(n_x^2 - n_y^2)$, $Y_{33} = \sqrt{35/32\pi}\,n_x(n_x^2 - 3n_y^2)$ |
+| | Turing-like standing waves | $v = 	frac13\left[\sin(f n_x) + \sin\!\left(f(	frac12 n_x + 	frac{\sqrt3}{2} n_y)ight) + \sin\!\left(f(	frac12 n_x - 	frac{\sqrt3}{2} n_y)ight)ight]$ |
+| | Stability × Hue | the house encoding, dd_colouring §3.4: $L = 0.25 + 0.55\cdot	frac12(1 - \max_j \hat{\mathbf n}\cdot\hat{\mathbf b}_j)$, with $\hat{\mathbf b}_j$ computed per R-14 |
+| | Custom N-pole VMF | $N$ poles on a tilted great circle, $\hat{\mathbf p}_i = (\cos(arphi_0 + 2\pi i/N)\cos\psi, \sin(arphi_0 + 2\pi i/N)\cos\psi, \sin\psi)$, $\psi = 	ext{tilt}\cdot\pi/2$ |
+| | Basin blend | soft interpolation between the two nearest Fibonacci cells, $c = t\,	ext{pal}[i_1] + (1-t)\,	ext{pal}[i_2]$, $t = \sigma(k_s(d_1 - d_2 - 0.04))$ |
+| Physics | Physics overlay | vMF blobs at the binary collisions, Euler and Lagrange points (dd_colouring §3.4, blob blend; $\kappa = 11$ BC, 9 Euler/Lagrange), strength $s$; landmark positions per R-14 and decision B18 |
+
 ---
 
 ## 8. Amendments to other docs
@@ -444,7 +494,7 @@ two implementations of the same maps, and agreement to tolerance certifies the p
   mode-by-mode presentation is superseded by the preset table (§7). The `combine` L-ownership rules
   (Replace-L / Multiply) are unchanged and referenced by §4.1.
 - **The shape-sphere colour-map PDF §5–§9** (implementation) — superseded by this document. The PDF
-  remains the design rationale and the perceptual/CVD reference; its parameter ranges
+  is retired and archived; its Eq. 5 and CVD matrices are in `principia_dd_colouring.md` §3.2 and §3.8, and its parameter ranges
   (L∈[0.35,0.90], C∈[0.05,0.22], κ∈[0.5,12], f∈[2,14], N∈[12,96], ks∈[1,20], s∈[0,1]) are adopted.
 - **`principia_debug_tooling_plan.md` §B–§G** — re-expressed as the debug preset table (§6). §A is
   reduced to Appendix A.

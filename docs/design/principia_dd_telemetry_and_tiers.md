@@ -395,7 +395,7 @@ burst benchmark measures a device that does not exist after two minutes.
 ### Then invert
 
 With that corpus: for each device, **the highest `eps` and budget that held 16.7 ms** — and where it
-fell back toward 41.7. **That is the tier boundary, measured.** Until then the spec-keyed defaults are
+fell back toward 41.7. **That is the tier boundary, measured.** Until then the defaults in the tier tables (§3.5) are
 placeholders and should be labelled as such in the config.
 
 **A device nobody tested still gets a sensible answer** by running the fixed suite once on first

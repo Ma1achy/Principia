@@ -349,7 +349,7 @@ ill-conditioned in single precision, independent of any horizon argument.**
 > i.e. `sigma_E` scale, which is roughly where the control was seen to fail.
 >
 > **Standing position: the f32 *diagnostic* failing early is probably real; the f32 *integration*
-> being unusable is not established. Do not put "f32 must not run AZ" in the spec until §7.7 resolves
+> being unusable is not established. Do not put "f32 must not run AZ" in the corpus until §7.7 resolves
 > it.**
 
 > **Superseded claim: a float32 GPU path must not run Aarseth–Zare.** The choice costs an

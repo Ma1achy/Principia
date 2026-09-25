@@ -161,9 +161,8 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 
 ### 3.7 `QuadReduction` — completed ledger
 
-**Status: complete.** The earlier instruction ("transcribe the remaining members verbatim from spec
-§tile_reduction") was stale — the LaTeX is the document being replaced and contains only a prose
-sentence, not an enumeration. The member list below is instead **derived from consumers** (scheduler
+**Status: complete.** The earlier instruction (to transcribe the remaining members verbatim from an older source) was
+stale — that source held only a prose sentence, not an enumeration. The member list below is instead **derived from consumers** (scheduler
 contract Part 6 names every field its predicates read) and **from measurement**: every inclusion and
 exclusion traces to `principia_dd_refinement_criterion.md`. Sections cited as `[RC §n]`.
 
@@ -452,7 +451,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 
 - **Schema version should be a content hash of the ledger, not a hand-bumped integer.** A layout edit without a version bump is the drift catastrophe seam 13 exists to prevent — deriving the version (hash of the canonicalised table) makes the failure impossible rather than merely forbidden. *Recommendation to adopt.*
 - **`free_group_word` length field is 7 bits (mixed-radix ~76-symbol capacity)** — reserved means reserved; any future use is a ledger edit (⇒ version change) not an opportunistic squat.
-- ~~**`QuadReduction` completion** (§3.7)~~ — **done.** Not a transcription task after all: the LaTeX target held only prose, so the member list was derived from consumers (scheduler Part 6) and from measurement (`principia_dd_refinement_criterion.md`). **Pending change 1 (the `dominant_outcome` grain) is dissolved rather than decided** — defining every event-derived field at the joint `class ⊕ detail` grain removes the two-grain problem entirely, so no class-only companion field is needed.
+- ~~**`QuadReduction` completion** (§3.7)~~ — **done.** Not a transcription task after all: the older source held only prose, so the member list was derived from consumers (scheduler Part 6) and from measurement (`principia_dd_refinement_criterion.md`). **Pending change 1 (the `dominant_outcome` grain) is dissolved rather than decided** — defining every event-derived field at the joint `class ⊕ detail` grain removes the two-grain problem entirely, so no class-only companion field is needed.
 - **Drift-sign presentation** — the diverging-scale metadata for `energy_drift`/`Lz_drift` is a generator requirement, recorded here so the catalogue doesn't ship them as broken sequential-log views.
 - **Body-index naming** — cross-referenced from the decoder drill-down; whichever convention wins, this ledger's `ICDescriptor` names change with it (⇒ schema version change, correctly).
 

@@ -118,7 +118,7 @@ Written for self-round-trip (`decode(encode(x))=x` for x's the decode produces);
 
 - Exact analytic ICs to encode: Lagrange (equal-mass equilateral, known ω), Euler (collinear, via Path B), plus a couple of central configurations.
 - Which periodic orbits: figure-eight first (the canonical, visually striking one), then a handful from the Hudomal catalogue spanning free-group classes.
-- Burrau feature-set: the specific outcome-scale features to assert (escaper identity, close-encounter sequence, approximate ejection time) — read them from Szebehely / the recomputations. **Pin `r_coll`** to match the regularisation the reference computation assumed (collision radius is user-exposed and definitional — integrator contract §collision — so a benchmark comparison must record and fix it).
+- Burrau feature-set: the specific outcome-scale features to assert (escaper identity, close-encounter sequence, approximate ejection time) — read them from Szebehely / the recomputations. **Pin `r_coll`** to match the regularisation the reference computation assumed (collision radius is user-exposed and definitional — integrator contract Part 7, collision — so a benchmark comparison must record and fix it).
 - The lower harness entry point (physical `(m,r,p)` → integrator+shape) — a validation-only API, parallel to `computeIC`.
 - Tolerances: exact-case tolerances (tight, f64) vs structural-case feature-matching (outcome-class exact, timing windowed).
 
