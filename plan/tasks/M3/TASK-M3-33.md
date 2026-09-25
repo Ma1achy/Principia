@@ -19,6 +19,7 @@ R-103 is built: `crates/validation` marches past escape on its own copy of the s
 - `decisions.md` § "R-95 — After escape fires *(closes RQ-48, in part)*"
 - `decisions.md` § "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
 - `docs/read_first/principia_01_pitfalls.md` § "1.5 The root cause underneath the root cause"
+- `decisions.md` § "R-166 — The fixtures"
 
 ## Deliverables
 - `crates/validation/src/escape_checks/march.rs` — the harness march: clones the state at the firing step, integrates with the same discretisation (TOOL-038's guard), never writes the payload buffer.
@@ -36,4 +37,4 @@ R-103 is built: `crates/validation` marches past escape on its own copy of the s
 - This task also carries the harness byte-identity arm that REQ-EVT-010 and REQ-PAY-058 (TASK-M3-17) name.
 - A discriminator must not come from a quantity the early stop alters (pitfalls §3; REQ-VAL-005).
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-123, REQ-VAL-124.
-- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.
+- RQ-103 ruled: R-166 — the named slices, `deep interior` among them, are in `fixtures/slices.toml`.

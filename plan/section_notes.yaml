@@ -414,3 +414,7 @@
   section: 2. The punctured-sphere relation (third pair)
   reason: out of v1 (R-125)
   note: "per-pair views are v2 (PL-3, R-38); REQ-PAY-071, which cited it, is retired"
+- file: decisions.md
+  section: R-167 — The prin-rs licence is not blocking
+  reason: informative only
+  note: no requirement; recorded in docs/reference/prin-rs/README.md § "Licence"

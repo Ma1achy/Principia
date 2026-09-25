@@ -2426,11 +2426,14 @@
     section: 8. Locked vocabulary
   - file: docs/design/principia_dd_predictability_horizon.md
     section: The predictability horizon
+  - file: decisions.md
+    section: "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
   verify:
     method: unit test
-    detail: "each stepper composes with each regularisation; the default config selects Heggie"
+    detail: "each stepper composes with each regularisation; the default config selects Heggie, with Eq. 22 at n = 3/2 as its time transformation and Eq. 20 selectable (R-161)"
   rulings:
   - R-19
+  - R-161
   milestone: M3
 - id: REQ-INT-007
   area: INT
@@ -2552,16 +2555,19 @@
   note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
 - id: REQ-INT-014
   area: INT
-  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check), Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping) and Aarseth–Zare + time-transformed leapfrog (2, 1, symplectic, reversible, owns time mapping)."
+  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check), Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping) and Aarseth–Zare + time-transformed leapfrog (2, 1, symplectic, reversible, owns time mapping), the last specified in Part 2a but not required to be built (R-162)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
   - file: docs/contracts/principia_integrator_contract.md
     section: The table gains two rows
+  - file: decisions.md
+    section: R-162 — The reversible occupant is logH's TTL time mode
   verify:
     method: unit test
-    detail: "assert each occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables"
-  rulings: []
+    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is not required to be built (R-162)"
+  rulings:
+  - R-162
   milestone: M3
 - id: REQ-INT-015
   area: INT
@@ -2580,13 +2586,19 @@
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: The split
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The equations and the step control (R-160, R-161)
+  - file: decisions.md
+    section: "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+  - file: decisions.md
+    section: "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
   verify:
     method: review checklist
-    detail: "driver code has no prin-rs lineage violating rules 1-5; physics layer is a transcription with 0 Vec/Box/dyn/std"
-  rulings: []
+    detail: "driver code has no prin-rs lineage violating rules 1-5; physics layer is a transcription with 0 Vec/Box/dyn/std, of integrator_contract Part 2b's equations (R-160), with docs/reference/prin-rs as reference, not authority (R-159)"
+  rulings:
+  - R-159
+  - R-160
   milestone: M3
-  rq:
-  - RQ-102
 - id: REQ-INT-017
   area: INT
   statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only)."
@@ -2606,14 +2618,15 @@
     section: The profile gains a field
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
   verify:
     method: review checklist
     detail: "a consumer can read, per method or per trajectory, how many sync-boundary re-registrations occurred"
   rulings:
   - R-72
+  - R-160
   milestone: M3
-  rq:
-  - RQ-102
   note: "Profile field, payload count or both (and the payload placement, a ledger change): REQ-INT-073 (definition)."
 - id: REQ-INT-019
   area: INT
@@ -2693,11 +2706,15 @@
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: The table gains two rows
+  - file: decisions.md
+    section: R-162 — The reversible occupant is logH's TTL time mode
   verify:
     method: review checklist
     detail: "AZ+RK4 profile has symplectic=false and reversible=false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant"
-  rulings: []
+  rulings:
+  - R-162
   milestone: M3
+  note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044)."
 - id: REQ-INT-025
   area: INT
   statement: "The occupant must read only the per-sample IC `(m, r, p)`, `dt` and `G`; the IC must come per sample from the decoder (never a uniform) and the integrator must never learn the chart's name."
@@ -3139,13 +3156,14 @@
   source:
   - file: docs/read_first/principia_01_pitfalls.md
     section: 4.3 The control that found it
+  - file: decisions.md
+    section: R-164 — +0.305 and −0.082 are correlations, not controls
   verify:
     method: unit test
-    detail: "Occupant registry includes an unregularised (leapfrog) occupant; control test on fixture ICs: its drift field correlates with FTLE positively (measured +0.305), while a re-registering occupant's does not (AZ −0.082)."
-  rulings: []
+    detail: "the occupant registry includes an unregularised (leapfrog) occupant sharing no coordinate machinery with the others; no gate rests on the FTLE–drift Spearman correlations (+0.305 leapfrog, −0.082 AZ, a null against its shifted control), which are prior findings, not controls (R-164)"
+  rulings:
+  - R-164
   milestone: M3
-  rq:
-  - RQ-103
   note: "pitfall: \"4.3 The control that found it\" — 4.3 The control that found it."
 - id: REQ-INT-051
   area: INT
@@ -3161,14 +3179,20 @@
     section: Drill-down — the Integrator (Physics rung)
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  - file: decisions.md
+    section: "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
+  - file: decisions.md
+    section: R-165 — The 32-case figure is 3915 → 74
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: numerical gate
-    detail: "Re-run the Heggie vs AZ comparison: Heggie must win on the recorded cases (31 of 32; err>10 3916 → 73) with AZ winning only on 'far'; the default occupant config names Heggie."
-  rulings: []
+    detail: "Re-run the Heggie vs AZ comparison on the 32-case matrix (fixtures/case_matrix.toml): Heggie must win on the recorded cases (31 of 32; err>10, error_ratio > 10, 3915 → 74 at prin-rs 8600d45, the original run at 70cfbc4 giving 3916 → 73, R-165) with AZ winning only on 'far'; the default occupant config names Heggie, and the re-run confirms its default time transformation, Eq. 22 at n = 3/2 (R-161)."
+  rulings:
+  - R-161
+  - R-165
+  - R-166
   milestone: M3
-  rq:
-  - RQ-102
-  - RQ-103
   note: "pitfall: \"4.4 The remedy, and its own falsification test\"; pitfall: \"4.1 The finding\" — 4. RE-REGISTRATION COUNT — the mechanism that had to be found twice."
 - id: REQ-INT-052
   area: INT
@@ -3178,14 +3202,17 @@
     section: 8. TWO ARTEFACTS ARE NOT ONE DEFECT
   - file: docs/read_first/principia_INDEX.md
     section: The evidence base — where settled defaults were measured
+  - file: decisions.md
+    section: R-163 — The wedge ablation is re-run on Heggie
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: numerical gate
-    detail: "Ablation on config_stability (none / dtau only / clamp only / limit only / all three): the shipping config must give non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately."
-  rulings: []
+    detail: "Ablation on config_stability (fixtures/slices.toml) with prin-rs wedge_census.rs's three switches (none / dtau only / clamp only / limit only / all three), re-run on Heggie with Aarseth–Zare kept for comparison (R-163), wedge density being at least 25% pale pixels in a 9×9 window at 1024²: the shipping config must give non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately."
+  rulings:
+  - R-163
+  - R-166
   milestone: M3
-  rq:
-  - RQ-102
-  - RQ-103
   note: "pitfall: \"8. TWO ARTEFACTS ARE NOT ONE DEFECT\" — 8. TWO ARTEFACTS ARE NOT ONE DEFECT. INDEX: the predictive step limit, not the dtau fix, removed the wedges."
 - id: REQ-INT-053
   area: INT
@@ -3712,6 +3739,31 @@
   - R-113
   milestone: M4
   note: Split from REQ-INT-072 (R-113, RQ-98).
+- id: REQ-INT-084
+  area: INT
+  kind: definition
+  statement: "integrator_contract Part 2b must carry the Heggie, logH and TTL equations of motion, their time transformations and their step control, and the predictive step limit (dτ ≤ f·d_min / (|v_rel|_max·A·B), f = 0.02), transcribed from the prin-rs reference set with citations (Heggie 1974; Mikkola & Tanikawa 1999; Preto & Tremaine 1999), with Heggie's default time transformation Eq. 22 at n = 3/2 and Eq. 20 selectable; physics-reviewed and confirmed at the M3 gate."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The equations and the step control (R-160, R-161)
+  - file: decisions.md
+    section: "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
+  - file: decisions.md
+    section: "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
+  - file: decisions.md
+    section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: decisions.md
+    section: "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+  verify:
+    method: review checklist
+    detail: "Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate"
+  rulings:
+  - R-159
+  - R-160
+  - R-161
+  - R-162
+  milestone: M3
+  note: "Transcribed from docs/reference/prin-rs (reference, not authority, R-159); the TTL verdict (built, validated, loses on accuracy) is recorded as a prior finding (R-162)."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -3932,12 +3984,15 @@
     section: "1.3 What settled it — a controlled experiment, not an argument"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: golden image
-    detail: "Controlled experiment of §1.3 on the config slice: render once integrating every pixel to t_max and once with the shipping termination behaviour, one variable changed; the two images must show the same continuous ribbons, with no domes, tents, wedges or clean seams (per-pixel diff within the golden tolerance); also histogram t_end of escape-terminated pixels to confirm the field is not ~32 discrete strata."
+    detail: "Controlled experiment of §1.3 on the config slice, config_stability (fixtures/slices.toml; R-166): render once integrating every pixel to t_max and once with the shipping termination behaviour, one variable changed; the two images must show the same continuous ribbons, with no domes, tents, wedges or clean seams (per-pixel diff within the golden tolerance); also histogram t_end of escape-terminated pixels to confirm the field is not ~32 discrete strata."
   rulings:
   - R-31
   - R-71
+  - R-166
   milestone: M3
   note: "pitfall: \"1. THE PATCHWORK — the longest-running one, and the most instructive\"; pitfall: \"1.4 The actual bug\"; pitfall: \"1.3 What settled it — a controlled experiment, not an argument\" — 1. §1.4 records stop_on_event freezing shape_vec at ~32 sync-boundary t_end values (99.4% of pixels frozen vs 0.15% in the reference). The golden tolerance: REQ-EVT-023 (calibration)."
 - id: REQ-EVT-013
@@ -4131,12 +4186,15 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-148 — The validation harness renders the \"off\" image *(closes RQ-78)*"
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: numerical gate
-    detail: "the proposal measures per-pixel differences on the config slice for both experiments and states the tolerance, with a seam-structure check; recorded in decisions.md"
+    detail: "the proposal measures per-pixel differences on the config slice, config_stability (fixtures/slices.toml; R-166), for both experiments and states the tolerance, with a seam-structure check; recorded in decisions.md"
   rulings:
   - R-71
   - R-148
+  - R-166
   milestone: M3
 - id: REQ-EVT-024
   area: EVT
@@ -7924,12 +7982,15 @@
     section: "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
   - file: decisions.md
     section: "R-143 — The live tree contains the static tree *(closes RQ-73)*"
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: golden image
-    detail: "moving-pulse fixture: resident count rises and falls (≈37 → 85 → 37 → 69), merged children hold no latch, and the final tree contains the static tree at the horizon, equal to it on a fixture whose footprint spreads are monotone in time (R-143); no latch is dropped while its quad is resident"
+    detail: "the moving pulse (fixtures/moving_pulse.toml, a synthetic field, not a chart slice; R-166): resident count rises and falls (≈37 → 85 → 37 → 69), merged children hold no latch, and the final tree contains the static tree at the horizon, equal to it on a fixture whose footprint spreads are monotone in time (R-143); no latch is dropped while its quad is resident"
   rulings:
   - R-99
   - R-143
+  - R-166
   milestone: M6
 - id: REQ-REF-027
   area: REF
@@ -7959,10 +8020,13 @@
   source:
   - file: docs/design/principia_dd_refinement_policy.md
     section: 3. Merging — the split rule read backwards
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: unit test
-    detail: "pulse fixture: the tree coarsens to the static 69 quads rather than 149"
-  rulings: []
+    detail: "the moving pulse (fixtures/moving_pulse.toml; R-166): the tree coarsens to the static 69 quads rather than 149"
+  rulings:
+  - R-166
   milestone: M6
 - id: REQ-REF-030
   area: REF
@@ -15450,7 +15514,7 @@
   note: "Tolerance: REQ-VAL-117 (calibration)."
 - id: REQ-VAL-028
   area: VAL
-  statement: "The BodyPlane chart (today's slice) must be kept and reproduce bit-for-bit, with the Python cross-check green."
+  statement: "The BodyPlane chart (today's slice) must be kept and reproduce the recorded reference, the Python reference's output: bit-exact where the operation order is identical (parity_contract), otherwise within a calibrated tolerance (R-71), with the Python cross-check green (R-166)."
   source:
   - file: docs/design/principia_chart_reference.md
     section: 5.1 One trait, one dispatch
@@ -15458,15 +15522,21 @@
     section: 5.2 Tests that can fail
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: "3. The load-bearing discipline: never accumulate before comparing"
+  - file: decisions.md
+    section: R-166 — The fixtures
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: golden image
-    detail: "BodyPlane render/dump bitwise-identical to the recorded reference; the Python cross-check passes"
+    detail: "BodyPlane render/dump against the fixture M3 records from the Python reference (docs/reference/prin-rs/tools/xcheck, reference/*.py): bit-exact where the operation order is identical, otherwise within the calibrated tolerance; the Python cross-check passes"
   rulings:
+  - R-71
   - R-72
+  - R-166
   milestone: M3
-  rq:
-  - RQ-103
-  note: "BodyPlane's map and the reference artefact it must match: REQ-VAL-119 (definition)."
+  note: "BodyPlane's map and the reference artefact it must match: REQ-VAL-119 (definition). The tolerance where the operation order differs: REQ-VAL-146 (calibration)."
 - id: REQ-VAL-029
   area: VAL
   statement: "The integrator unit suite must use the golden anchors `z = 0` (equal-mass, α = π/4, β = π/2, rest) and the Burrau IC encoded from the (3,4,5) construction."
@@ -15656,15 +15726,16 @@
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.4 Should it terminate?
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: numerical gate
-    detail: "re-run the escape validation against check 2's ground truth and against the legacy t = 30 set; record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both"
+    detail: "re-run the escape validation against check 2's ground truth and against the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; fixtures/slices.toml) at t = 30 under the legacy classifier (docs/reference/prin-rs/src/outcome.rs) and checks in as a fixture (R-166); record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both"
   rulings:
   - R-29
   - R-95
+  - R-166
   milestone: M3
-  rq:
-  - RQ-103
   note: "pitfall: \"2.2 The criterion\" — doc numbers predate R-29 and are measured on the legacy t = 30 ground truth; R-95 moves the re-validation to check 2's independent ground truth."
 - id: REQ-VAL-041
   area: VAL
@@ -15725,7 +15796,7 @@
   milestone: M3
 - id: REQ-VAL-044
   area: VAL
-  statement: "The reversibility test on free-fall brake orbits must be implemented once a reversible occupant exists."
+  statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162)."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 3. Proposed suite
@@ -15733,14 +15804,17 @@
     section: "1.1 Free-fall periodic orbits — the best fit for this project"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
   verify:
     method: numerical gate
-    detail: "blocked on a reversible occupant; asserts time symmetry via the reversibility measure `xi`"
+    detail: "runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`"
   rulings:
   - R-72
+  - R-162
   milestone: M3
-  rq:
-  - RQ-102
   note: "xi: REQ-VAL-134 (definition)."
 - id: REQ-VAL-045
   area: VAL
@@ -16946,14 +17020,15 @@
     section: 5.2 Tests that can fail
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: R-166 — The fixtures
   verify:
     method: review checklist
-    detail: "chart_reference §5.1 gives BodyPlane's Φ and names the recorded reference dump and Python cross-check it matches; physics reviewer approved"
+    detail: "chart_reference §5.1 gives BodyPlane's Φ and names the reference it matches: the Python reference's output (docs/reference/prin-rs/tools/xcheck, reference/*.py), recorded at M3 as a fixture (R-166); physics reviewer approved"
   rulings:
   - R-72
+  - R-166
   milestone: M3
-  rq:
-  - RQ-103
 - id: REQ-VAL-120
   area: VAL
   kind: calibration
@@ -17402,6 +17477,24 @@
   - R-113
   milestone: M7
   note: Split from REQ-VAL-081 (R-113, RQ-99 M5-3).
+- id: REQ-VAL-146
+  area: VAL
+  kind: calibration
+  statement: "The tolerance within which BodyPlane must reproduce the Python reference's output where the operation order differs must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: R-166 — The fixtures
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  verify:
+    method: numerical gate
+    detail: "the proposal lists the operations whose order differs from the Python reference, measures BodyPlane's difference against the recorded fixture and states the tolerance; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-166
+  milestone: M3
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

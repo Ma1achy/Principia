@@ -25,6 +25,8 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+- `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
 
 ## Deliverables
 - `crates/kernel/src/regularisation/mod.rs` — the `Regularisation` slot, composition `Composed<S, R>` implementing `Advance`, `owns_time_mapping = (R != none)`.
@@ -46,7 +48,7 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 
 ## Notes
 - Gap: the sync schedule (`n_sync`, `eta`) that defines AZ's sync boundaries and tau-schedule has no default or owner in integrator contract Part 3.
-- Gap: the Mikkola–Tanikawa leapfrog's equations are not in the corpus; this task defines the slot's type only.
+- Gap: the Mikkola–Tanikawa leapfrog's equations are not in the corpus; this task defines the slot's type only. R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the reversible occupant is logH's TTL time mode (TASK-M3-08).
 - Gap: `dt_max` has no home in the new ledger; REQ-TOOL-039 is met by the occupant diagnostic above unless a ruling places it in the payload.
-- Waits on RQ-102 (`REVIEW_QUEUE.md`): The regularisation occupants and step control that live only in prin-rs.
+- RQ-102 ruled: R-159 to R-163. AZ's reference code, including the predictive step limit (`predictive_dtau`) and the landing clamp, is `docs/reference/prin-rs/src/integrate/az/driver.rs` (reference, not authority, R-159); the equations are integrator_contract Part 2b's (R-160, REQ-INT-084).
 - Closes, for gaps the corpus leaves open: REQ-INT-080 (R-71 calibration), REQ-TOOL-125 (R-72 definition) (classification accepted by R-132).

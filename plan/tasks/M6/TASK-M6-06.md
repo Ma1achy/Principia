@@ -23,18 +23,19 @@ The tree coarsens under a live playhead: a parent whose four children are leaves
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 - `decisions.md` § "R-143 — The live tree contains the static tree *(closes RQ-73)*"
 - `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
+- `decisions.md` § "R-166 — The fixtures"
 
 ## Deliverables
 - `crates/engine/src/refine/merge.rs`: the boundary pass (merge test, `Merged` marking, latch drop via TASK-M6-03's store), merge memory with `expired: bool`.
 - `QuadTree::resident` and `quads_computed` counters, both reported in the frame record.
 - Cache eviction path drops the latches of evicted quads.
-- Golden suite `fixtures/golden/merge_pulse/` (moving-pulse fixture) run by `cargo xtask golden merge-pulse`.
+- Golden suite `fixtures/golden/merge_pulse/` (the moving pulse, `fixtures/moving_pulse.toml`) run by `cargo xtask golden merge-pulse`.
 
 ## Acceptance tests
-- `cargo xtask golden merge-pulse` — moving-pulse fixture: resident count rises and falls (≈37 → 85 → 37 → 69), merged children hold no latch, and the final tree contains the static tree at the horizon, equal to it on a fixture whose footprint spreads are monotone in time; no latch is dropped while its quad is resident (R-143) (REQ-REF-026).
+- `cargo xtask golden merge-pulse` — the moving pulse (`fixtures/moving_pulse.toml`, a synthetic field, not a chart slice; R-166): resident count rises and falls (≈37 → 85 → 37 → 69), merged children hold no latch, and the final tree contains the static tree at the horizon, equal to it on a fixture whose footprint spreads are monotone in time; no latch is dropped while its quad is resident (R-143) (REQ-REF-026).
 - `cargo test -p engine resident_vs_computed` — after merges, resident < quads_computed and both are reported (REQ-REF-027).
 - `cargo test -p engine merge_memory_expiry` — expired memory is distinguishable from absent memory (not an assert_ne!); expiry does not revert to first-time flooring (421 vs 645 quads regression) (REQ-REF-028).
-- `cargo test -p engine capped_leaf_redecidable` — pulse fixture: the tree coarsens to the static 69 quads rather than 149 (REQ-REF-029).
+- `cargo test -p engine capped_leaf_redecidable` — the moving pulse (`fixtures/moving_pulse.toml`; R-166): the tree coarsens to the static 69 quads rather than 149 (REQ-REF-029).
 - `cargo test -p engine latch_dropped_on_evict_merge` — a latched footprint keeps its quad split while resident; evict or merge the quad: its latches are gone and no latch memory remains; revisiting the region re-discovers the split from fresh state (REQ-REF-035).
 - `cargo xtask gate latch-cost` — per named slice (dd_refinement_policy §5's near-field, deep interior, config_stability, tilt_plambda), resident quads with and without the latch over a live playhead to the horizon, the difference and its share of the resident count; proposal with that evidence, confirmed by the human at the M6 gate and recorded in `decisions.md` (R-143) (REQ-REF-051).
 

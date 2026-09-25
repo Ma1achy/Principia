@@ -561,7 +561,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -727,7 +727,7 @@
 - id: TASK-M3-29
   milestone: M3
   title: Free-fall brake orbits and the reversibility diagnostic
-  depends_on: [TASK-M3-24, TASK-M3-28]
+  depends_on: [TASK-M3-24, TASK-M3-28, TASK-M3-08]
   needs: [REQ-ENC-002]
   requirements: [REQ-VAL-042, REQ-VAL-044, REQ-VAL-134, REQ-INT-032]
   reviewers: [code, qa, physics]
@@ -785,7 +785,7 @@
   title: "Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run"
   depends_on: [TASK-M3-24, TASK-M3-07]
   needs: [REQ-CHART-015, REQ-CHART-028, REQ-CHART-029]
-  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035]
+  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M4-01

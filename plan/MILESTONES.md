@@ -159,10 +159,10 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 186 requirements** (and every earlier gate still green):
+**Exit gate — 188 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
-- INT (62): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082
+- INT (63): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084
 - EVT (22): REQ-EVT-001…020, REQ-EVT-023…024
 - PAY (28): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
 - GEN (1): REQ-GEN-016
@@ -170,7 +170,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
 - TOOL (11): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132
-- VAL (48): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139
+- VAL (49): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->

@@ -9,7 +9,7 @@
 | DEC | 44 |
 | ENC | 33 |
 | CHART | 51 |
-| INT | 83 |
+| INT | 84 |
 | EVT | 24 |
 | PAY | 87 |
 | GEN | 27 |
@@ -19,12 +19,12 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 132 |
-| VAL | 144 |
+| VAL | 145 |
 | PERF | 93 |
 | SYS | 63 |
-| **total** | **1218** |
+| **total** | **1220** |
 
-Of these: 92 calibration, 98 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -33,7 +33,7 @@ Of these: 92 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | M0 | 62 |
 | M1 | 81 |
 | M2 | 155 |
-| M3 | 186 |
+| M3 | 188 |
 | M4 | 101 |
 | M5 | 158 |
 | M6 | 134 |
@@ -42,10 +42,10 @@ Of these: 92 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 
 ## Sections
 
-847 sections in 46 files: 742 yield at least one requirement; 105 yield none and are listed below with the reason.
+857 sections in 46 files: 751 yield at least one requirement; 106 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 57 |
+| informative only | 58 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -66,6 +66,7 @@ Of these: 92 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | R-7 amended — part (a)'s grep | informative only | process ruling |
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
+| R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -19,6 +19,9 @@ The physics layer of the shared kernel exists in `crates/kernel`: one source gen
 - `docs/design/principia_dd_integrator.md` § "3.1 Force (G = 1)"
 - `docs/contracts/principia_integrator_contract.md` § "COM projection and invariant monitoring"
 - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
+- `decisions.md` § "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+- `decisions.md` § "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
+- `docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)"
 
 ## Deliverables
 - `crates/kernel/src/real.rs` — the `Real` trait (the arithmetic, `fma`, comparisons the kernel may use) with impls for `f32`, `f64` and a double-double type `Dd`; no precision-dependent constant is reachable from a branch (Part 2c rule 1).
@@ -33,8 +36,8 @@ The physics layer of the shared kernel exists in `crates/kernel`: one source gen
 - `cargo test -p kernel force_known_state` — the force on a hand-computed three-body state matches to f64 rounding, and Σ mᵢaᵢ = 0 (REQ-INT-036).
 - `cargo test -p kernel pair_geometry_shared` — instrumented build: one pairwise-distance computation per force evaluation; the energy's potential term and `r_min` read the same `PairGeom` (REQ-PERF-001; review checklist: `‖·‖³` shared with `r_min`).
 - `cargo xtask lint no-alloc` — zero `Vec`/`Box`/`dyn`/`std`/`alloc` hits in `physics/` and the driver; a planted `Vec` in a scratch branch makes it fail (REQ-PERF-002).
-- Review (code, physics): the physics layer (step/deriv/Hamiltonians) is a transcription with 0 Vec/Box/dyn/std, and the driver layer carries no prin-rs lineage that violates Part 2c rules 1–5 (REQ-INT-016).
+- Review (code, physics): the physics layer (step/deriv/Hamiltonians) is a transcription with 0 Vec/Box/dyn/std, of integrator_contract Part 2b's equations (R-160) with `docs/reference/prin-rs` as reference, not authority (R-159), and the driver layer carries no prin-rs lineage that violates Part 2c rules 1–5 (REQ-INT-016).
 
 ## Notes
 - Part 2c rule 4 (no `T::infinity()` seeds in folds; reseed min-folds from the first element) applies to every fold introduced here and in the driver — the §9 pitfall family.
-- Gap: the regularised occupants' physics (Heggie, logH, the Mikkola–Tanikawa leapfrog) is to be transcribed from prin-rs (REQ-INT-016), which is not in this repository; see TASK-M3-07/08.
+- *Was: "Gap: the regularised occupants' physics (Heggie, logH, the Mikkola–Tanikawa leapfrog) is to be transcribed from prin-rs (REQ-INT-016), which is not in this repository; see TASK-M3-07/08."* RQ-102 ruled: R-159 imports the prin-rs reference set into `docs/reference/prin-rs` (reference, not authority); R-160 has the Heggie, logH and TTL equations transcribed into integrator_contract Part 2b (REQ-INT-084, TASK-M3-08); R-162 makes logH's TTL mode the reversible occupant, so Aarseth–Zare with Mikkola–Tanikawa isn't required.

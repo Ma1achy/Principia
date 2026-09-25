@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*93 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*94 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate.
@@ -35,12 +35,12 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 **M3**
 - [ ] REQ-INT-044 — at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form
 - [ ] REQ-INT-049 — figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order
-- [ ] REQ-INT-051 — Re-run the Heggie vs AZ comparison: Heggie must win on the recorded cases (31 of 32; err>10 3916 → 73) with AZ winning only on 'far'; the default occupant config names Heggie.
-- [ ] REQ-INT-052 — Ablation on config_stability (none / dtau only / clamp only / limit only / all three): the shipping config must give non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately.
+- [ ] REQ-INT-051 — Re-run the Heggie vs AZ comparison on the 32-case matrix (fixtures/case_matrix.toml): Heggie must win on the recorded cases (31 of 32; err>10, error_ratio > 10, 3915 → 74 at prin-rs 8600d45, the original run at 70cfbc4 giving 3916 → 73, R-165) with AZ winning only on 'far'; the default occupant config names Heggie, and the re-run confirms its default time transformation, Eq. 22 at n = 3/2 (R-161).
+- [ ] REQ-INT-052 — Ablation on config_stability (fixtures/slices.toml) with prin-rs wedge_census.rs's three switches (none / dtau only / clamp only / limit only / all three), re-run on Heggie with Aarseth–Zare kept for comparison (R-163), wedge density being at least 25% pale pixels in a 9×9 window at 1024²: the shipping config must give non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately.
 - [ ] REQ-INT-076 — the proposal shows dd test 10 (halving δ₀ and doubling n_renorm leaves λ_T unchanged) at the proposed values at f32 and f64; recorded in decisions.md
 - [ ] REQ-EVT-013 — The 0-of-895 test: take every trajectory that fires escape on a fixture slice, integrate +1, +2, +3, +4 and +8 sync boundaries (2–3x the firing time) past firing with the original discretisation, and assert none re-bind; plus a unit fixture of a close encounter where E_rel goes briefly positive while receding and closure has not settled: escape must not fire.
 - [ ] REQ-EVT-019 — On the re-validation set, count escape fires whose ground truth is bound (false positives writing wrong t_end); gate at the measured precision (pre-R-29: 100.0%); a criterion variant that fires earlier with any false positives fails.
-- [ ] REQ-EVT-023 — the proposal measures per-pixel differences on the config slice for both experiments and states the tolerance, with a seam-structure check; recorded in decisions.md
+- [ ] REQ-EVT-023 — the proposal measures per-pixel differences on the config slice, config_stability (fixtures/slices.toml; R-166), for both experiments and states the tolerance, with a seam-structure check; recorded in decisions.md
 - [ ] REQ-PAY-083 — measured truncation rates over the validation fixtures and a representative survey against the proposed threshold
 - [ ] REQ-VAL-025 — reference output unchanged between successive precision/tolerance steps before it is accepted
 - [ ] REQ-VAL-027 — on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field
@@ -50,10 +50,10 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-036 — re-run outputs recorded; table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119)
 - [ ] REQ-VAL-037 — record the fraction of truncated words over the reference charts at production horizon
 - [ ] REQ-VAL-038 — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set
-- [ ] REQ-VAL-040 — re-run the escape validation against check 2's ground truth and against the legacy t = 30 set; record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both
+- [ ] REQ-VAL-040 — re-run the escape validation against check 2's ground truth and against the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; fixtures/slices.toml) at t = 30 under the legacy classifier (docs/reference/prin-rs/src/outcome.rs) and checks in as a fixture (R-166); record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both
 - [ ] REQ-VAL-041 — closure |dr| per eta and fitted order; fail if the order is below the occupant's (the check that exposed §0's first-order error)
 - [ ] REQ-VAL-042 — each orbit returns to rest in the same configuration after one period; order reported
-- [ ] REQ-VAL-044 — blocked on a reversible occupant; asserts time symmetry via the reversibility measure `xi`
+- [ ] REQ-VAL-044 — runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`
 - [ ] REQ-VAL-045 — radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11)
 - [ ] REQ-VAL-047 — Lagrange circular: equilateral residual at every sampled t within a tight f64 tolerance; figure-eight shape-sphere curve matches the published one
 - [ ] REQ-VAL-051 — Measure the |Δn̂| distributions of escapers and bound trajectories across t = 25–30; record the gap ratio (claimed 383x, 7.04e-05 vs 2.70e-02; prin-rs reports at best 6.8x) and assert the chosen tau lies within the gap and that outcomes are unchanged across the middle of the gap.
@@ -67,6 +67,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-130 — the proposal measures each exact case at f64 and states its tolerance, and states each structural window; recorded in decisions.md
 - [ ] REQ-VAL-133 — the proposal gives |dr| and fitted order per occupant across the eta/step ladder and states the threshold and tolerance; recorded in decisions.md
 - [ ] REQ-VAL-136 — the proposal measures the default occupant (Heggie) under the doubling protocol and states the acceptance level relative to the controls; recorded in decisions.md
+- [ ] REQ-VAL-146 — the proposal lists the operations whose order differs from the Python reference, measures BodyPlane's difference against the recorded fixture and states the tolerance; recorded in decisions.md
 
 **M4**
 - [ ] REQ-PAY-085 — FTLE of both shadow forms against known-Lyapunov periodic orbits, and the improvement the switch requires

@@ -24,6 +24,10 @@ The re-registration mechanism's measurements run through the comparison harness:
 - `decisions.md` § "R-74 — The research phases are settled by the vertical slice *(closes RQ-25)*"
 - `docs/read_first/principia_00_philosophy.md` § "7.8 Sequencing — what is next, and why in this order"
 - `docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)"
+- `decisions.md` § "R-164 — +0.305 and −0.082 are correlations, not controls"
+- `decisions.md` § "R-165 — The 32-case figure is 3915 → 74"
+- `decisions.md` § "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
+- `decisions.md` § "R-166 — The fixtures"
 
 ## Deliverables
 - `crates/validation/src/gates/reregistration.rs` — control correlation, Heggie-vs-AZ matrix, doubling protocol, logH-vs-Heggie matrix, each through `compare()`.
@@ -31,14 +35,13 @@ The re-registration mechanism's measurements run through the comparison harness:
 - Calibration proposal for the default occupant's acceptance level under doubled re-registration.
 
 ## Acceptance tests
-- `cargo test -p validation unregularised_control` — the occupant registry includes an unregularised (leapfrog) occupant; on the fixture ICs its drift field correlates with FTLE positively (measured +0.305) while a re-registering occupant's does not (AZ −0.082) (REQ-INT-050).
-- `cargo xtask gate heggie-vs-az` — Heggie wins on the recorded cases (31 of 32; err>10 3916 → 73) with AZ winning only on 'far'; the default occupant config names Heggie (REQ-INT-051).
+- `cargo test -p validation unregularised_control` — the occupant registry includes an unregularised (leapfrog) occupant sharing no coordinate machinery with the others; no gate rests on the FTLE–drift Spearman correlations (+0.305 leapfrog, −0.082 AZ, a null against its shifted control), which are prior findings, not controls (R-164) (REQ-INT-050).
+- `cargo xtask gate heggie-vs-az` — on the 32-case matrix (`fixtures/case_matrix.toml`), Heggie wins on the recorded cases (31 of 32; err>10, `error_ratio > 10`, 3915 → 74 at prin-rs `8600d45`, the original run at `70cfbc4` giving 3916 → 73, R-165) with AZ winning only on 'far'; the default occupant config names Heggie, and the re-run confirms its default time transformation, Eq. 22 at n = 3/2 (R-161) (REQ-INT-051).
 - `cargo xtask gate reregistration-doubling` — double the sync-boundary re-registration count with eta adjusted so steps p50 stays flat within 6%; record the drift-field change in decades against the controls (LC branch 2.5e-6, hysteresis 7.5e-5, AZ ×2 4.4e-1); render config_stability and assert no pale straight-edged wedges (acceptance level: REQ-VAL-136, calibrated) (REQ-VAL-052).
 - `cargo xtask gate logh-falsification` — logH and Heggie on the same case matrix with the same RK4 and step control; per-case err and whether logH matches or beats Heggie recorded; the verdict written to pitfalls §4.4 (REQ-VAL-115).
 - `cargo xtask gate reregistration-doubling --propose` — the default occupant (Heggie) measured under the doubling protocol, the acceptance level stated relative to the controls; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-136).
 
 ## Notes
-- Gap: the 32-case Heggie-vs-AZ matrix, the 'err' metric behind 'err>10', the control's fixture ICs and the named slices ('far', `config_stability`) are prin-rs artefacts not defined in the corpus.
+- *Was: "Gap: the 32-case Heggie-vs-AZ matrix, the 'err' metric behind 'err>10', the control's fixture ICs and the named slices ('far', `config_stability`) are prin-rs artefacts not defined in the corpus."* RQ-103 ruled: the matrix and `err>10` (`error_ratio > 10`, prin-rs `stats.rs:71-88`) are `fixtures/case_matrix.toml`, the slices `fixtures/slices.toml` (R-166); there are no control ICs — +0.305 and −0.082 are correlations, recorded as prior findings with no gate (R-164).
 - Heggie has no re-registration; the doubling protocol's meaning for the default occupant is itself something the proposal must state.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-136.
-- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.
