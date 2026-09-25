@@ -1149,3 +1149,649 @@ Like RQ-56 and RQ-67.
   validation harness." Production has no "off" setting any more.
 - **Needed:** whether the "off" image is rendered by the validation harness (its own march, continued past escape), and the
   regression stands there; or the regression is retired.
+
+## RQ-79: CI frequency, GPU hardware and browsers the corpus doesn't schedule *(step 7, checkpoint B, CI)*
+
+
+- `principia_parity_contract.md` § "6. The harness" (:166–171) gives four frequencies: sim parity "every commit / CI";
+  codegen "every commit"; aggregate survey "nightly / pre-release (heavier)"; colour / visual (Playwright + headless
+  Chrome) "pre-release (out of parity scope — Q2)".
+- No frequency is given for the other suites the plan runs: the numerical gates (`cargo xtask gate`), the benchmarks
+  (`cargo xtask bench`), the GUI screenshots (`cargo xtask screenshot`), and the golden images other than the colour
+  suite (the M1 debug views, the fragment and bake goldens).
+- GPU in CI (M0-15): the GPU self-tests (REQ-GEN-004/006, REQ-PAY-011, REQ-TOOL-003), parity and the rust-gpu build need
+  an adapter; parity §6 (:173) "Run the gate on more than one GPU backend once available … (Vulkan/D3D12) … the standing
+  pre-Paper-2 action item"; R-58 "The non-Metal parity run gates Paper 2, not the build"; R-85 "Dawn CI is dropped".
+  Nothing names the CI hardware or backend (a software adapter such as lavapipe, or a self-hosted Metal / non-Metal GPU).
+- Second backend and browsers (M4-13c, M8-14): REQ-VAL-079 (M4, TASK-M4-18) verifies "on two backends" without naming the
+  second (the spike used lavapipe); § "4. Tolerance — and the cross-backend reality" (:144) "one or two real browsers";
+  REQ-VAL-116 (M8, TASK-M8-40) names none.
+- Goldens before the browser (M0-14a): the colour/visual suite runs under Playwright + headless Chrome, but the browser
+  build is M8 (R-85), and goldens are asserted from M1 (TASK-M0-06 builds `cargo xtask golden`, native wgpu). Nothing says
+  which backend renders the goldens from M1 to M8, or whether they are re-baselined when the browser runner arrives.
+- *Gaps:* M0-14a, M0-15, M4-13c, M8-14. *Tasks:* TASK-M4-18, TASK-M8-40.
+- **Needed:** (a) the frequency of each unscheduled suite (every commit / nightly / pre-release / at the milestone gate);
+  (b) the CI GPU (software adapter, self-hosted machine) and whether a second backend gates M4 or only Paper 2; (c) the
+  browsers for REQ-VAL-116; (d) the golden renderer before M8 (native wgpu offscreen, then Playwright at M8, or both).
+
+## RQ-80: Retired terms still live in the docs, and the vocabulary lint's doc scope *(step 7, vocabulary)*
+
+- `principia_canonical_spec.md` §8 (:101) retires `TileID`/`computeTile`/`samples_per_tile`, the `M` checkpoint count
+  (→ `n_renorm`), …; `principia_temporal_architecture_note.md` § "The rename" (:26): "`SimResult` → `SimState` … a
+  mechanical global rename once this note is ratified".
+- Still live: `principia_render_gui_spec.md` :199 "Order is fixed (R-67): SimResult → stain → style → …";
+  `GUI_DESIGN_NOTES.md` :73 (§ "04 Windows") the same; REQ-COL-043's statement copies it. `principia_render_contract.md`
+  :192 (§ "Field views (one per field, every struct)"): "Uniform echo — flat swatches of `quality_tier`, `M`,
+  thresholds" (REQ-TOOL-011 ticks this row at M1).
+- REQ-SYS-002 verify: "a grep over code and docs (excluding archive) finds none of the retired identifiers" — but the
+  passages that retire them name them (canonical_spec :101, temporal note :26 and :188, parity :17 "was computeTile",
+  dd_integrator :104 on the `N_sub` rule, memory_tiers §1).
+- **Needed:** (a) whether `SimResult` in the display chain is renamed `SimState` (render_gui_spec :199, GUI_DESIGN_NOTES
+  :73, REQ-COL-043) and `M` in the uniform echo becomes `n_renorm`; (b) the lint's doc scope — code only, or docs with an
+  exclusion for the retirement passages (named, or marked in the text).
+- *Gaps:* M0-2, M1-10b. *Tasks:* TASK-M0-16, TASK-M1-14, TASK-M7-21.
+
+## RQ-81: The archived briefs' standing parts aren't citable *(step 7, plan)*
+
+- `principia_INDEX.md` § "Archived — record only, do not implement" (:137, :142): the structure-criterion brief's
+  "§4–4.6, the slippy map, still stands"; the kernel-build brief's "§5 gates still stand". REQ-SYS-008 carries both
+  exceptions.
+- `plan/tools/sections.py` (CORPUS_GLOBS) does not index `docs/experiments/`, so neither part is citable: no requirement
+  is sourced from them, and TASK-M0-02's plan-check (test (c)) fails any task reference to an `ARCHIVE_` brief.
+- **Needed:** whether the two standing parts are admitted to the citable index (and their obligations extracted into
+  requirements — slippy map: breadth-first, frame budget; kernel build §5: verification gates), or are taken as
+  superseded by the consolidated docs (deep_zoom §3, scheduler, parity), with the INDEX rows and REQ-SYS-008 conformed.
+- *Gaps:* M0-3. *Tasks:* TASK-M0-02.
+
+## RQ-82: The generated debug NaN guard vs the bitcast rule *(step 7, render)*
+
+- `principia_render_gui_spec.md` §10.1 (:603–604): each numeric debug field generates `if (raw != raw) { return
+  DEBUG_NAN; }` then the ramp (REQ-RENDER-022's two-line template).
+- `principia_render_contract.md` Part 2 (:45, :47): fast-math may assume no-NaN, so no correctness logic may rely on NaN
+  or `isnan()`; the absence test "is an exact **bitcast comparison** against the canonical quiet-NaN bits — reliable where
+  `isnan()` is not". Lowering Part 3a (:90) the same; render_contract Part 4 (:81) "`isNan` is unreliable under fast-math".
+  `raw != raw` is the same self-comparison `isnan` makes (REQ-RENDER-015: no correctness logic on NaN).
+- **Needed:** whether the generated guard becomes the bitcast test (any NaN pattern, or the canonical one only — a stored
+  value is never NaN, R-79), or `raw != raw` stands as best-effort debug garnish (render_contract :81 "bitcast pattern
+  tests in debug views are best-effort garnish").
+- *Gaps:* M1-6. *Tasks:* TASK-M1-09, TASK-M1-15.
+
+## RQ-83: The raw `state` debug view's palette: six states or §1.4's nine classes? *(step 7, debug views)*
+
+- `principia_debug_tooling_plan.md` §B (:43): the `state` field view is a "categorical palette, **6 states**
+  (escape/bounded/collision/running/sim_failed/decode_failed)" with the failure/lifecycle states rendered distinctly
+  (REQ-TOOL-021, M1).
+- R-77 (:576–577): "The state palette is `colour_composition` §1.4's nine canonical classes. The Okabe–Ito / golden-angle
+  rule stays for other categorical fields." §1.4's classes are at `state ⊕ detail` grain (escape by body, collision by
+  pair), `running` is neutral grey and `sim_failed` the invalid colour (:173).
+- A raw 3-bit `state` view has no body or pair, so it can't show §1.4's escape and collision colours.
+- **Needed:** whether the raw `state` field view uses §1.4's palette (and which colour stands for escape and collision
+  without `detail`), or R-77 governs the outcome palette only and the raw debug view keeps a six-colour categorical palette
+  (dbg_cat).
+- *Gaps:* M1-11. *Tasks:* TASK-M1-10.
+
+## RQ-84: One decode source vs "the two decode ports" *(step 7, decoder)*
+
+- `principia_dd_decoder.md` §1 (:9): the decoder "runs from **one Rust source** in three roles" (f32 kernel, f64 CPU path, encode) — "not three transcriptions of one definition but one source monomorphised/instantiated three ways, so decode-logic drift between them is *structurally impossible*." REQ-SYS-015: "there must be no separate transcriptions of the decode logic." No fragment (WGSL) role is named.
+- `principia_colour_composition.md` §6 (:384–393): "With `ctx.chart.z` present and the decode/encode ported to WGSL … Agreement presets … WGSL-decode vs Rust-decode … a **live cross-implementation check** between the two decode ports — the project's two-references discipline"; §3 (:238) "the decode/encode are portable WGSL"; `principia_debug_tooling_plan.md` :158 "once the WGSL decode port lands".
+- The one-source generator emits WGSL only for layouts, accessors and the debug catalogue (`principia_dd_generation_root.md` :9; `principia_render_contract.md` :87); lowering Part 2 (:26) compiles Φ/decode to SPIR-V and the CPU only.
+- **Needed:** whether the fragment WGSL decode/encode is generated from the one Rust source (a generator target, or a translation of the rust-gpu output), so REQ-SYS-015 stands and the agreement presets check translation rather than transcription; or a hand-written second port, kept deliberately as a second reference (REQ-SYS-015 and dd_decoder §1 then name it as the exception).
+- *Gaps:* M2-G1. *Tasks:* TASK-M2-15, TASK-M2-25, TASK-M2-26.
+
+## RQ-85: The shape sphere in the lowering appendix: (α, β) or (θ, φ)? *(step 7, charts)*
+
+- `principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set" (:161): "**Shape sphere (α, β)** | derived-in-block × derived-in-block (config) | block inverse-free direct: (s,t)→(α,β) ranges | … `system_image: DoubleCover` (2-to-1 over the φ hemispheres, R-104)".
+- `principia_chart_reference.md` § "3.3 The chart map" (:325–329), by R-14: "θ = 2π·s — azimuth in the (u, v) plane … φ = π·(1 − t) — polar angle from +w … n = (sin φ cos θ, sin φ sin θ, cos φ)".
+- These are different maps. By §0.2 (:49–50) `‖ρ̃‖ = cos α`, `λ̃ = sin α (cos β, sin β)`, so `n = (cos 2α, sin 2α cos β, sin 2α sin β)`: α is a polar angle from +u, not from +w, and `β ∈ [0, π]` keeps `w ≥ 0` (§3.3 :347 "the canonical decode's β ∈ [0, π] keeps w ≥ 0") — one hemisphere, while (θ, φ) covers both (the `DoubleCover` the same row declares).
+- R-14 calls §3.1/§3.3's convention "the project's one shape-sphere convention"; the corpus leans to conforming the appendix row.
+- **Needed:** whether the appendix row becomes "(θ, φ) … (s,t)→(θ,φ) → n → (ρ̃, λ̃) by §3.2" (conformed to chart_reference §3.3), or the shape sphere lowers as (α, β) ranges (and §3.3 and REQ-CHART-019 change).
+- *Gaps:* M2-G3b. *Tasks:* TASK-M2-08, TASK-M2-14, TASK-M2-25, TASK-M4-06.
+
+## RQ-86: The Chart trait's f64 `map` vs Φ generic over the float type *(step 7, charts)*
+
+- `principia_chart_reference.md` § "5.1 One trait, one dispatch" (:509): `fn map(&self, u: f64, v: f64) -> ChartOut;`.
+- `principia_lowering_contract.md` Part 2 (:26): "The chart map Φ, decode, canonicalise, wrapper, and occupant … are one Rust kernel **generic over the float type** and over chart/occupant … compiled by rust-gpu to SPIR-V and — the *same source* — to the CPU-f64 reference."
+- An f64-only `map` can't be the Φ the f32 kernel monomorphises. The corpus leans to lowering (the later consolidated contract, R-70's rule); chart_reference §5.1 would then read `map<F: Float>(&self, u: F, v: F)`, with `validate(u, v)` staying CPU-side f64 (inverse_encode "Chart-aware validation").
+- **Needed:** confirm that chart_reference §5.1 is conformed to lowering Part 2 (Φ generic over the float type), or say where the f64 trait sits.
+- *Gaps:* M2-G13. *Tasks:* TASK-M2-05, TASK-M2-06.
+
+## RQ-87: Which measurement gives `t_max(f32)`? *(step 7, validation)*
+
+- `principia_dd_predictability_horizon.md` § "4.1 The two kernels have different horizons" (:136–137): "The gate stands
+  (R-93); the value of `t_max(f32)` comes from the re-run of the change-10 cross-checks (R-35, confirmed by R-105)".
+  R-93 (decisions.md :681): "the cross-check runs only for t < t_max(f32), with the value from R-35's change-10
+  re-run". REQ-VAL-070 (M4, TASK-M4-16) reads "the recorded re-run value".
+- R-35's re-run (REQ-VAL-036, M3, TASK-M3-36) is of the change-10 cross-checks with "the NumPy reference patched"
+  (files: dd_validation_orbits §0.1, §5; `workbench/tb_az.py`) — f64 CPU runs. The same doc's § "6. Open" (:232–234):
+  "The f32 figure (~16) is derived, not measured — all experiments here were f64. It should be confirmed against the
+  GPU kernel directly". REQ-VAL-071 (M4, TASK-M4-16) measures it against the GPU kernel.
+- Two values can result, and nothing says whether the M3 re-run has an f32 or GPU leg.
+- **Needed:** which value REQ-VAL-070's gate reads — the change-10 re-run's (then say how an f64 re-run yields an f32
+  horizon), or REQ-VAL-071's GPU measurement (then R-93's "from R-35's re-run" and §4.1 are conformed).
+- *Gaps:* M4-5. *Tasks:* TASK-M3-36, TASK-M4-16.
+
+## RQ-88: Eviction order: deepest first, or cost-weighted resistance? *(step 7, scheduler)*
+
+- `principia_dd_telemetry_and_tiers.md` § "Eviction order, and the trap in it" (:253): "Drop the **deepest** cached quads
+  first — cheapest to lose, easiest to recompute." The same in § "6.2a Budgeting before allocating" (:274) and in the
+  pressure states of § "Three states, not two" (:245): "reclaiming — over it -- evict, deepest quads first".
+  Carried as REQ-PERF-022.
+- `principia_scheduler_contract.md` § "Part 6 — The settled policy" (:138): "Cost-weighted LRU: eviction resistance ∝
+  `computeCostMs`. Expensive (deep, close-encounter, high-substep) quads resist eviction; high-coherence smooth quads are
+  cheap to recompute and evicted first." `principia_caching_contract.md` § "Part 7 — The current-state cache (resume
+  points, hard-capped)" (:151) keeps cost-weighted LRU and adds `t_cached`. Carried as REQ-SCHED-032 and REQ-SCHED-079.
+- All three are closed by TASK-M5-09; REQ-PERF-022 and REQ-SCHED-032 cannot both hold for a deep, expensive quad.
+  R-70's named pairs do not include this one.
+- **Needed:** which order governs reclaiming (deepest first, or lowest cost-weighted resistance first), and whether the
+  other text is conformed; the pinned classes (coarse ancestors, baseline cover, backdrop leaf cover) are common to both.
+- *Gaps:* M5-1. *Tasks:* TASK-M5-09, TASK-M5-11.
+
+## RQ-89: Is the physics overlay baked? *(step 7, render)*
+
+- `principia_render_contract.md` Part 3 (:62): the baked-texture tier holds "colour occupants that are pure `f(n̂)` (vMF, LUTs, patterns, **physics blobs**)", bake key "colour-node source + its uniforms"; Part 4 (:79): "baked base (physics blobs already in) → combine (L-override) → …".
+- `principia_colour_composition.md` §2 (:197–202): physics generators are "functions of the **decoded IC** (the mass point), evaluated per pixel from `ctx.payload` masses; **not bakeable** … there is no per-slice constant to bake even in principle"; the hoist optimisation (:204–206) moves them to uniforms only when no axis or tilt touches a mass dimension. REQ-RENDER-070 (M7): the bake texture "must be chart- and IC-independent".
+- R-70 names colour_composition over dd_colouring, not over render_contract.
+- **Needed:** whether the physics overlay leaves the bake tier (render_contract Part 3 and Part 4 conformed: a post occupant evaluated per fragment), or is baked when hoisted (masses constant across the slice, a bake keyed on the mass point).
+- *Gaps:* M7-2. *Tasks:* TASK-M7-10, TASK-M7-16.
+
+## RQ-90: The blob-blend weight and blend: markdown vs reference artefacts *(step 7, colour)*
+
+- `principia_dd_colouring.md` §3.4 (:95–96): `wⱼ = s · 4 · max(0, exp(κⱼ(n̂·p̂ⱼ − 1)) + 0.01)`. exp(·) > 0, so the max never clips and every blob adds a weight of at least 0.04·s at every point of the sphere; with 8 sites and s = 1 that is a 0.32 pull towards the site colours everywhere.
+- The reference HTML differs: `principia_gui_mock.html` :299 has `exp(k(n·p − 1) + 0.01)` (the constant inside the exponent); `principia_colour_explorer.html` :189 has `max(0, exp(…) + 0.005)·s·4` and blends sequentially with `mix(c, colᵢ, min(1, w))`, not the additive sum. colour_composition §7 makes the reference artefacts the golden oracle; R-1 makes the markdown the authority.
+- dd_colouring test 5 (:168): "blob maxima exactly at b̂/ê/l̂; strength s = 0 is the identity" — holds for all three forms.
+- **Needed:** the weight as intended (as written; `− 0.01`, which makes the max clip; or the constant inside the exponent) and the blend (additive sum or sequential clamped mix), so the golden image and the formula agree.
+- *Gaps:* M7-6. *Tasks:* TASK-M7-10.
+
+## RQ-91: Achromatopsia: specified, but not offered in the Display window *(step 7, colour)*
+
+- `principia_dd_colouring.md` §3.8 (:140–143) specifies achromatopsia (`M_achrom`, luma rows) and test 10 (:173) asserts "achrom output has `R = G = B` exactly"; the checkpoint-A reviewer accepted "the achromatopsia matrix stays" (decisions.md :712).
+- `principia_render_gui_spec.md` § "Display — the last stages" (:204): "**Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia." — no achromatopsia. REQ-COL-045 carries the four; REQ-COL-042 carries M_achrom.
+- **Needed:** whether achromatopsia is offered in the Display window (render_gui_spec and REQ-COL-045 gain a fifth mode), or kept as a test-only stage.
+- *Gaps:* M7-10b. *Tasks:* TASK-M7-20.
+
+## RQ-92: Rulings not yet applied to some passages *(step 7, cleanup)*
+
+Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied yet.
+- [ ] R-25: "Energy normalisation stays, gated by `forbids_energy_normalisation`. 'Off' is an explicit `Option`/flag, never `E* = 0`, which is a real physical target" (status "applied during the build"). Still reading "non-zero E*" (so E* = 0 would pass as "off"): `principia_dd_decoder.md` §3.7 (:156–157) "refuses any view that combines such a chart with a non-zero $E^*$ override"; `principia_chart_reference.md` §0.6 (:118–119) "refuses a chart with the flag set combined with a non-zero `E*`" and §5.2 (:545) "a config combining `(Lz,E)` with `E* ≠ 0` is **refused**"; `principia_chart_decoder_contract.md` Part 5 (:239) "a non-zero `E*` override"; `principia_inverse_encode_contract.md` flag table (:201) "a non-zero $E^*$ override is refused". Conform to: the refusal covers every `Some(E*)`, including `Some(0)`.
+- [ ] R-50: "The shape-sphere collision landmarks are mass-weighted" (status "applied before the physics-overlay occupant"; files dd_integrator §3.7, test 9; dd_colouring :90; colour_composition :197–209, :481; trajectory_viewing :78, :84; `principia_gui_mock.html` :784, :937; `principia_colour_presets.html` :131–139). Still open in the text: `principia_dd_integrator.md` §3.7 (:228) "Whether the overlay marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open."; `principia_dd_colouring.md` §3.4 (:92) "With unequal masses, whether the overlay uses the mass-weighted positions or fixed 120° spacing is audit decision B18."; `principia_colour_composition.md` §7 (:488) "landmark positions per R-14 and decision B18". Conform to R-50. TASK-M2-08 builds the landmarks (REQ-INT-003) and TASK-M7-09 the overlay.
+- [ ] `principia_systems_architecture.md` :161 heading "5.5 THE DISPATCH SHAPE — one thread per texel, ensemble copies
+  serial" and :182 ("each thread loops over its E+1 ensemble copies SERIALLY, folding as it goes"), with :185–187
+  ("The ensemble becomes a time cost (8 copies takes 8× as long)") — R-102: "`copy_index` is a uniform, and each copy is
+  the same kernel dispatched again (R-89)". REQ-PERF-012 (M4, TASK-M4-05) copies the old text and contradicts
+  REQ-INT-065 / REQ-INT-069 (TASK-M4-06); it is conformed in the same commit. (A heading change: requirements citing
+  it are re-pointed.) Blocks TASK-M4-05 and TASK-M4-06.
+- *Gaps:* M2-G18, M2-G25, M7-R50, M4-1. *Tasks:* TASK-M2-04, TASK-M2-08, TASK-M2-12, TASK-M4-05, TASK-M4-06, TASK-M7-09.
+
+## RQ-93: M0 requirements that need things M0 doesn't have *(step 7, plan)*
+
+**The screenshot runner.** (M0-1)
+
+- `plan/MILESTONES.md` M0 (:58–59): "the golden-image runner, the numerical-gate runner and the benchmark runner. Each
+  requirement's `verify.method` has a runner here, before the first requirement of that kind exists." `GUI screenshot`
+  is a verify method (`plan/requirements.yaml` header) with no runner in the list and no M0 task building one.
+- The first `GUI screenshot` requirement is REQ-TOOL-010 (M1; TASK-M1-12 runs `cargo xtask screenshot debug-views`).
+- **Proposed fix:** add the screenshot runner to TASK-M0-06's deliverables (beside the golden-image runner) and to the
+  MILESTONES M0 list; no new requirement (the runners carry none today).
+- **Needed:** confirm, or place the runner in M1 with TASK-M1-12.
+
+**`deep_zoom_03` and the first frame loop.** (M0-4)
+
+- render_gui_spec § "Profiler" (:183): `prin profile --scenario deep_zoom_03 --frames 600` — "a fixed scenario,
+  headless"; nothing in the corpus says what `deep_zoom_03` runs. R-56 (:436): "the measurement struct lands with the
+  first frame loop"; M0 has no physics and no frame loop.
+- REQ-TOOL-006 (M0, TASK-M0-18) verify runs `deep_zoom_03` for 600 frames; REQ-TOOL-008 (M0, TASK-M0-17) carries R-56's
+  "lands with the first frame loop".
+- **Proposed fix:** split REQ-TOOL-006 — M0: `prin profile --scenario NAME` runs a registered deterministic scenario
+  headless (a synthetic scenario that emits frame records) and writes v1 JSON; M5 (the quadtree and deep zoom exist): the
+  `deep_zoom_03` scenario is defined (R-72, render_gui_spec § "Profiler") and runs for 600 frames with a stable scope and
+  event sequence. Move REQ-TOOL-008's "lands with the first frame loop" clause to the milestone of the first frame loop
+  (M1's fragment pipeline).
+- **Needed:** confirm, or move REQ-TOOL-006 whole.
+
+**The profiler file's readers and config.** (M0-6)
+
+- REQ-TOOL-002 (M0, TASK-M0-18) verify: "the dev GUI profiler and prin profile both read it"; telemetry §5 (:180) "It must
+  carry the build hash and the full config". The Profiler window is REQ-TOOL-098 (M8); `SimConfig + RenderState`
+  serialising as the provenance object is REQ-GUI-039 (M8).
+- **Proposed fix:** split REQ-TOOL-002's verify — M0: the file parses against schema v1, the header holds the build hash
+  and the config as the M0 contract skeleton (TASK-M0-16) serialises it, and `prin profile` reads it; M8: the dev GUI
+  profiler reads the same file and the header's config is REQ-GUI-039's provenance object (added to REQ-TOOL-098's verify).
+- **Needed:** confirm the split, or move REQ-TOOL-002 to M8.
+
+**QuadReduction's size.** (M0-9)
+
+- `principia_dd_generation_root.md` §3.7 (:182): "Size the struct from the member list, then align"; the list has
+  `class_histogram[N]` (u8 × N, N not given), `dominant_outcome` (5 bits, packed) and `spread_winner` (2 bits).
+- REQ-PAY-001 and REQ-PAY-006 (M0, TASK-M0-11) record the size from the member list; the member order, packing and aligned
+  size (REQ-PAY-077) and N and the bin width (REQ-PAY-075) are definitions placed in M5 (TASK-M5-01).
+- **Proposed fix (one of):** (a) move REQ-PAY-075 and REQ-PAY-077 to M0, closed by TASK-M0-11; or (b) split REQ-PAY-001 —
+  M0: ICDescriptor 64 B and the descriptor bits; M5 (new requirement, closed by TASK-M5-01): QuadReduction sized from its
+  member list and aligned — and move REQ-PAY-006 to M5.
+- **Needed:** which.
+
+**The caching signature.** (M0-12)
+
+- REQ-GEN-008 (M0, TASK-M0-12) verify ends "caching signature carries it"; the compatibility signature is REQ-GEN-017
+  (M5, TASK-M5-06), which already asserts the schema version is part of it.
+- **Proposed fix:** drop "caching signature carries it" from REQ-GEN-008's verify (REQ-GEN-017 holds it at M5).
+- **Needed:** confirm.
+
+**REQ-VAL-135's evidence.** (M0-16)
+
+- REQ-VAL-135 (M0, TASK-M0-05) is a calibration: the convergence-under-refinement threshold. The corpus's only evidence is
+  the failing sequence 0.0947 → 0.2153 → 0.4423 → 0.5494 (philosophy §4.5a; pitfalls §3). A threshold also has to pass a
+  quantity that does converge, and M0 runs no physics.
+- **Proposed fix (one of):** keep it at M0, with the proposal evidenced by the recorded failing sequence and a synthetic
+  converging series, and re-checked on the first real survey; or move REQ-VAL-135 to M3, where the march gives a real
+  converging aggregate (the runner and the gate stay in M0 with a placeholder threshold).
+- **Needed:** which.
+- *Gaps:* M0-1, M0-4, M0-6, M0-9, M0-12, M0-16. *Tasks:* TASK-M0-05, TASK-M0-06, TASK-M0-11, TASK-M0-12, TASK-M0-17, TASK-M0-18, TASK-M1-12, TASK-M5-01, TASK-M5-06, TASK-M8-01, TASK-M8-28.
+
+## RQ-94: M1 requirements that need M2, M3, M5 or M8 *(step 7, plan)*
+
+- REQ-INT-001 (M1, TASK-M1-11) verify is dd_integrator test 8 "on a circulating bounded orbit" — a real march (M3). M1 can
+  test the accumulator on a synthetic `n(t)` path only.
+- REQ-TOOL-010 (M1, TASK-M1-12) verify: "the |n|−1 view is flat zero on a real march" (M3); the live current-substep
+  heatmap reads the live march (render_contract :186).
+- REQ-TOOL-011 (M1, TASK-M1-14) ticks every row of render_contract § "Field views": the DECODE preset (:181) needs the M2
+  WGSL decode (REQ-RENDER-027, REQ-TOOL-029); the ensemble views (:188) are "derived at resolve from the footprint's E+1
+  samples" (M5: REQ-RENDER-051, REQ-INT-072); the live effort heatmap (:186) needs M3.
+- REQ-RENDER-022 (M1, TASK-M1-09): RANGE_AUTO "editable identically in the node inspector, on the graph node and in the
+  code" — the node inspector is M8 (REQ-GUI-136/137).
+- **Proposed fix:** split each — REQ-INT-001: M1 keeps the accumulator on a synthetic path; a new M3 requirement holds dd
+  test 8 on a real orbit. REQ-TOOL-010: M1 renders every view on a synthetic payload; the real-march |n|−1 check and the
+  live effort heatmap go to a new M3 requirement. REQ-TOOL-011: M1 ticks the rows a synthetic payload can show; the DECODE
+  row is held by REQ-RENDER-027 (M2), the ensemble rows move to a new M5 requirement, the live effort row to the M3 one.
+  REQ-RENDER-022: M1 keeps the template and RANGE_AUTO as node parameter ↔ code; the node-inspector leg goes into
+  REQ-GUI-136's verify (M8).
+- **Needed:** confirm the splits, or move the four requirements whole (INT-001 → M3, TOOL-010 → M3, TOOL-011 → M5,
+  RENDER-022 → M8).
+- *Gaps:* M1-8, M1-9, M1-10a, M1-13, M2-Plan. *Tasks:* TASK-M1-09, TASK-M1-11, TASK-M1-12, TASK-M1-14, TASK-M2-25.
+
+## RQ-95: M2 requirements that need M3, M4, M5 or an artboard *(step 7, plan)*
+
+**The appendix charts built in M4.** (M2-G3a)
+
+- REQ-RENDER-027 (M2, TASK-M2-25): "every chart in the lowering appendix must decode through [the DECODE preset] without special-casing". REQ-CHART-014 (M2, TASK-M2-14) verify: "the int (m,n) lattice is bijective".
+- `principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set" (:167–168) includes the **Burrau int lattice** (per-cell dispatch) and the **Anosova physical-frame** chart. Both are built only by REQ-CHART-037 (M4, TASK-M4-06); no M2 requirement builds them.
+- **Proposed fix:** split REQ-RENDER-027 — M2: "every chart of the lowering appendix built by M2 (latent affine slice, shape sphere, (L_z, E), (L_z, K), ternary mass, Euclid ν plane, θ × K strip) must decode through the DECODE preset without special-casing"; new M4 requirement (closed by TASK-M4-06 beside REQ-CHART-037): "the Burrau int lattice and the Anosova physical-frame chart must decode through the DECODE preset without special-casing". Move REQ-CHART-014's lattice clause ("the int (m,n) lattice is bijective") into REQ-CHART-037's verify.
+- **Needed:** confirm the split, or move REQ-RENDER-027 and REQ-CHART-014 whole to M4.
+
+**The shape-sphere controls with no artboard.** (M2-G5)
+
+- REQ-CHART-002 (M2, TASK-M2-28), verify GUI screenshot: "shape-sphere chart shows either one labelled hemisphere or both with a redundancy flag". REQ-RENDER-026 (M2, TASK-M2-28), verify GUI screenshot: "both projections selectable on the shape-sphere chart".
+- `principia_chart_reference.md` § "3.3 The chart map": "Draw one hemisphere and say so, or draw both and flag the redundancy"; "offer an equal-area alternative". Neither `principia_render_gui_spec.md` nor any artboard in `docs/gui/design/` shows the hemisphere label or a projection control; the dev GUI is M8 (REQ-TOOL-098).
+- **Proposed fix:** at M2 verify both by golden image (the render carries the hemisphere label or redundancy flag; one golden per projection) plus the descriptor unit test; add an M8 GUI requirement for the projection selector and hemisphere toggle, whose placement the human decides (no artboard).
+- **Needed:** confirm, or name where the control lives.
+
+**The link swap and the sim key.** (M2-G23)
+
+- REQ-CHART-033 (M2, TASK-M2-21): "link ids must be recorded in provenance, and a link swap must swap both directions, recompile and re-integrate"; verify "swapping a link changes provenance and the payload signature".
+- The payload compatibility signature carrying link ids (`principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity" :12) is the sim key: REQ-SCHED-007 (M4, TASK-M4-08), REQ-SCHED-048 and REQ-GEN-017 (M5). There is no integrator at M2 (M3) to re-integrate.
+- **Proposed fix:** split REQ-CHART-033 — M2: "decode and encode must consume only registry links and inverses; link ids must be recorded in provenance; a link swap must swap both directions"; M4 (closed by TASK-M4-08 beside REQ-SCHED-007): "a link swap must change the sim key, recompile and re-integrate from t = 0".
+- **Needed:** confirm the split.
+
+**The t = 0 collision label.** (M2-G24)
+
+- REQ-ENC-019 (M2, TASK-M2-19): "bodies within r_coll give a t = 0 collision outcome"; verify "bodies within r_coll → t = 0 collision; exactly coincident → lookup_clamped; no separate rejection branch".
+- `principia_integrator_contract.md` (:357): "at dispatch, before the first step, evaluate the terminal detectors on the decoded IC. A valid IC already inside `r_coll` → `state=collision, t_end_step=0`" — REQ-EVT-002 (M3, TASK-M3-09). The label is written by the integrator dispatch, which M2 doesn't have.
+- **Proposed fix:** split REQ-ENC-019 — M2: "lookup must have no coincident-bodies rejection branch; exactly coincident bodies are caught by the range check as `lookup_clamped`"; M3 (closed by TASK-M3-09 beside REQ-EVT-002): "a looked-up IC with bodies within r_coll must reach dispatch and be labelled `collision`, `t_end_step = 0`".
+- **Needed:** confirm the split.
+- *Gaps:* M2-G3a, M2-G5, M2-G23, M2-G24. *Tasks:* TASK-M2-14, TASK-M2-19, TASK-M2-21, TASK-M2-25, TASK-M2-28, TASK-M3-09, TASK-M4-06, TASK-M4-08.
+
+## RQ-96: The branch-cut convention is needed in M3, required in M6, and has no author *(step 7, integrator)*
+
+- `principia_symbolic_dynamics_contract.md` § "1. Generator ↔ branch-cut convention" (:12–14): "Fix, normatively: which
+  two branch cuts correspond to generators `a` and `b` … the crossing-direction sign convention (which crossing
+  direction is the generator vs its inverse)". The contract's status (:7) is "OPEN — specification required before
+  per-pair quantities are trusted".
+- REQ-PAY-070 (M6, TASK-M6-13) requires §1 "before any per-pair view ships"; REQ-PAY-071 and REQ-PAY-072 require §2
+  (the punctured-sphere relation) and §3 (the attribution algorithm). None is `kind: definition`, so no requirement
+  says whether a task writes them (R-72, physics reviewer) or the human supplies them.
+- But M3 already writes the word: REQ-INT-031 and REQ-INT-046…048 (TASK-M3-16) append `a/A/b/B` per crossing, and
+  REQ-VAL-043 (TASK-M3-30) asserts "the encoder reproduces the published braid class" of Šuvakov–Dmitrašinović orbits —
+  impossible without §1's a/b assignment and direction sign.
+- Proposed fix: move REQ-PAY-070 to M3, closed by TASK-M3-16 (REQ-VAL-043 then checks it against the published
+  classes); REQ-PAY-071 and REQ-PAY-072 stay in M6 (per-pair views, R-38).
+- **Needed:** whether REQ-PAY-070 moves to M3; and whether §1–§3 are written by the tasks under R-72 (making
+  REQ-PAY-070…072 `kind: definition`, physics reviewer) or supplied by the human (§2–§3 are topology, which R-72 must
+  not be used to invent).
+- *Gaps:* M3-7, M6-4. *Tasks:* TASK-M3-16, TASK-M3-30, TASK-M6-13.
+
+## RQ-97: GPU and browser legs before the GPU kernel or the browser exists *(step 7, parity)*
+
+- M3 is "CPU, native" (MILESTONES M3); the shared kernel is first compiled to f32 SPIR-V / WGSL in M4 (TASK-M4-01).
+  The M0 GPU self-test dispatch (REQ-GEN-007) runs the codegen unpack, not the kernel. Yet:
+  - REQ-INT-028 (M3, TASK-M3-03) verify: "`N_sub` bit-identical on CPU-f64, CPU-f32, native GPU and
+    browser-GPU-via-WGSL" (from dd_integrator § "5. Unit tests" test 4, :276).
+  - REQ-INT-029 (TASK-M3-17) "CPU and GPU take the same capped step"; REQ-INT-030 (TASK-M3-05) "CPU-f32 and GPU-f32
+    matches bit-for-bit on Metal"; REQ-INT-031 (TASK-M3-16) "word identical CPU/GPU"; REQ-INT-007 (TASK-M3-04)
+    "branch-exact GPU output".
+- M4 has native wgpu only; the browser is M8 (R-85: "Real browsers are checked against those tolerances with the
+  browser build (M8)"; `principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality", :144). Yet:
+  - REQ-VAL-059 (M4, TASK-M4-03) verify: "identical across CPU-f64, CPU-f32, native GPU, browser GPU".
+  - REQ-INT-059 (M4, TASK-M4-09) verify: "SPIR-V->MSL and SPIR-V->WGSL->Tint" (`principia_gpu_determinism_note.md`
+    § "The discipline (each rule = one measured failure)", :50). Tint is Dawn's compiler; Dawn CI is dropped (R-85),
+    so the WGSL→Tint leg exists only in a browser.
+- Proposed fix:
+  - REQ-INT-028: M3 half = CPU-f64 and CPU-f32 identical; the native-GPU leg is REQ-VAL-059's `N_sub` (M4); the
+    browser leg joins the M8 browser check (below).
+  - REQ-INT-007, 029, 030, 031: drop the GPU arm from the M3 verify; it is covered in M4 by REQ-VAL-059 (Tier L),
+    REQ-VAL-061 (one step) and REQ-VAL-072 (integer fields and the word's arithmetic).
+  - REQ-VAL-059 and REQ-INT-059: M4 half = native GPU (Metal, and a second native backend per RQ-79); new M8
+    requirement: "Parity Tier L's branch decisions and the 100-macro-step `done`-flag dispatch must match the CPU
+    branch words through the browser build's WGSL path (SPIR-V → WGSL → the browser's compiler)", closed with
+    REQ-VAL-116.
+- **Needed:** confirm the splits (or give the milestone each leg belongs to).
+- *Gaps:* M3-8, M4-3, M4-4. *Tasks:* TASK-M3-03, TASK-M3-04, TASK-M3-05, TASK-M3-16, TASK-M3-17, TASK-M4-03, TASK-M4-09.
+
+## RQ-98: M3 and M4 requirements that name later surfaces *(step 7, plan)*
+
+**M3 → M4 / M8.** (M3-12, M3-14)
+
+- REQ-GUI-008 (M3, TASK-M3-19): "The IC inspector must be the shared kernel at f64 on CPU for a single IC (not a
+  separate viewer), hosted in the one Inspector window." The one Inspector window is REQ-GUI-112 (M8, TASK-M8-14, R-65).
+- REQ-INT-026 (M3, TASK-M3-06) verify: "default SimUniforms match the table; changing any one changes the sim key". The
+  sim key is built by REQ-SCHED-007 (M4, TASK-M4-08), which lists "integrator config, T, event thresholds" and verifies
+  "changing each sim-key component changes the key".
+- Proposed fix: drop "hosted in the one Inspector window" from REQ-GUI-008 (REQ-GUI-112 carries it in M8); drop "be on
+  the sim key" and its verify half from REQ-INT-026 (REQ-SCHED-007 carries it in M4, and its fixture includes each
+  SimUniforms field).
+- **Needed:** confirm (the clauses are removed from the M3 requirements, not from the docs).
+
+**M4 → M5.** (M4-2, M4-11, M4-13a)
+
+- REQ-INT-072 (M5, TASK-M5-18): "copy 0 the un-jittered centre, copies 1..E at Halton (2,3) points 1..E centred …
+  scaled to the footprint — and compute outcome entropy H … and spread σ²_T … at resolve". But M4 already dispatches
+  E ≥ 1 copies: REQ-RENDER-031 ("(E+1) full uniform samples", TASK-M4-06), REQ-RENDER-033 / REQ-RENDER-035
+  (TASK-M4-11), REQ-INT-065 / REQ-INT-069 ("each copy the same kernel dispatched again", TASK-M4-06). Un-jittered M4
+  copies would be E+1 identical trajectories.
+- REQ-PERF-005 (M4, TASK-M4-11) verify: "GPU allocation is identical with checkerboard on and off; the estimator's
+  figure is unchanged" — the memory estimator is REQ-PERF-018 (M5, TASK-M5-10).
+- REQ-RENDER-031 verify "(E+1) below Medium and 2(E+1) from Medium up" and REQ-RENDER-035 "Potato (E = 0)" name tiers
+  whose table is REQ-PERF-014 (M5, TASK-M5-02).
+- Proposed fix:
+  - split REQ-INT-072: the copy offsets (copy 0 at the centre, copies 1..E at the centred, footprint-scaled Halton
+    points) move to M4, closed by TASK-M4-06; H and σ²_T at resolve stay in M5 (TASK-M5-18).
+  - REQ-PERF-005: M4 keeps "no extra or half-size buffer, every stale SimState resident" (allocation identical);
+    "the estimator must credit it with no memory saving" moves to M5, joined to REQ-PERF-018.
+  - REQ-RENDER-031 / REQ-RENDER-035: the M4 verify is parameterised by (E, FTLE on/off) — "(E+1) with FTLE off, 2(E+1)
+    with FTLE on"; "E = 0 with checkerboard on" — and the tier names are checked by REQ-PERF-014 in M5.
+- **Needed:** confirm the splits.
+- *Gaps:* M3-12, M3-14, M4-2, M4-11, M4-13a. *Tasks:* TASK-M3-06, TASK-M3-19, TASK-M4-06, TASK-M4-08, TASK-M4-11, TASK-M5-02, TASK-M5-10, TASK-M5-18, TASK-M8-14.
+
+## RQ-99: M5 requirements that need M6, M7 or M8 *(step 7, plan)*
+
+**The linearised decoder (M6).** (M5-2)
+
+- REQ-SCHED-024 (M5, TASK-M5-04): per-quad uniforms carry "c, h, x₀, J_D; kernel computes only x₀ + J_D·δ".
+  REQ-SCHED-040 (M5, TASK-M5-03), third assertion: "linearised decode within a quad is not mirrored relative to the full
+  decode". REQ-SCHED-023 (M5, TASK-M5-24): "deep-zoom gesture landing with dozens of Jacobian quads".
+- x₀ = D(c_u, c_v) and J_D by central differences in f64 are REQ-DEC-036 (M6, TASK-M6-07); the switchover is REQ-DEC-033/037
+  (M6, TASK-M6-08). `principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)".
+- The M5 tasks use fixture x₀/J_D computed by finite differences of the full decoder — which is REQ-DEC-036's computation.
+- **Needed:** one of: (a) move REQ-DEC-036 (x₀ and J_D by central differences, CPU f64) to M5, closed by TASK-M5-04, leaving
+  the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) in M6; or (b) split REQ-SCHED-040 —
+  M5: addresses and the shared Y-up convention; M6: "linearised decode within a quad is not mirrored relative to the full
+  decode" (closed by TASK-M6-07) — and state that REQ-SCHED-023/024 are met at M5 with fixture Jacobians.
+
+**The real colour mapping (M7).** (M5-3)
+
+- `principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)" (:119): "§7's ~0.05 is from
+  the proxy; the real VMF/OKLAB colour mapping could amplify small state differences into more levels (a more sensitive
+  mapping → lower ceiling) … Confirm where the mean crosses ~2 levels on the real render."
+- REQ-VAL-081 (M5, TASK-M5-23) asks for the ceiling "confirmed on the real colour mapping and integrator"; the VMF/OKLab
+  colour mapping is built in M7 (dd_colouring, colour_composition).
+- **Needed:** split REQ-VAL-081 — M5: the gate exists and the ceiling is measured on the M5 render (integrator real, colour
+  mapping the M1 debug/ramp views) where mean reconstruction error crosses ~2 8-bit levels; M7 (new requirement): the
+  ceiling re-confirmed on the real VMF/OKLab mapping, lowered if the mapping is more sensitive. Or move REQ-VAL-081 to M7
+  whole (checkerboard then ships in M5 at the proxy 0.05).
+
+**The wasm worker (M8).** (M5-5)
+
+- `principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker (and that worker is
+  the wasm engine)" (:116): "the entire frame loop — WebGPU device, scheduler, cache, quadtree, all compute and render — is
+  the wasm engine, running in a Web Worker via `OffscreenCanvas`."
+- REQ-SYS-034 (M5, TASK-M5-24): "must run in the render-loop worker"; REQ-RENDER-045 (M5, TASK-M5-26): "the frame loop runs
+  in the wasm-engine worker". The worker itself is REQ-SYS-039 and REQ-SYS-049 (M8, TASK-M8-37); M5 has only the native
+  build, whose loop host the corpus does not state.
+- **Needed:** split both — M5 halves: "the frame loop must never await GPU work and must run on a dedicated render-loop
+  thread, off the input/GUI thread" (SYS-034) and REQ-RENDER-045 without its worker clause; the worker clause is already
+  REQ-SYS-039/049 (M8), so no new M8 requirement is needed.
+- *Gaps:* M5-2, M5-3, M5-5. *Tasks:* TASK-M5-03, TASK-M5-04, TASK-M5-23, TASK-M5-24, TASK-M5-26, TASK-M6-07, TASK-M8-37.
+
+## RQ-100: Existing requirements closed after the task that needs them *(step 7, plan)*
+
+The gaps are covered by existing requirements, but those requirements are closed in a later milestone (or by a task
+not on the needing task's `depends_on` path).
+- REQ-PERF-074 (M8, TASK-M8-25; not `kind: calibration`): the memory-fit margin, `principia_memory_tiers.md` § "8. Caveats"
+  (:236) "Budget the process estimate with margin" and § "6. Auto-mode tier selection" (:200) "fits with margin". Needed by
+  TASK-M5-10 (REQ-PERF-031), TASK-M5-11 and TASK-M6-16 (REQ-PERF-048). (M5-8a, M6-5b)
+- REQ-REF-045 (M6, TASK-M6-03, definition, waits on RQ-72): the per-footprint latch's layout. TASK-M5-19 builds the latch in
+  M5 under REQ-PAY-065. (M5-11)
+- REQ-GUI-151 and REQ-GUI-152 (M8, TASK-M8-20 / TASK-M8-19, definitions): the node palette and the Stain preview default.
+  TASK-M7-22 (REQ-GUI-031) builds the canvas and preview in M7. (M7-13)
+- REQ-CHART-044 (M2, TASK-M2-12): K_max, γ_K, which the Burrau (θ, K) and (ν, K) charts use (chart_reference § "4.5 The
+  Burrau-family chart maps" `K(v) = K_max v^{γ_K}`); TASK-M2-10 and TASK-M2-11 don't depend on TASK-M2-12. (M2-G22)
+- **Proposed fix:** REQ-PERF-074's margin half becomes an M5 calibration requirement closed by TASK-M5-10 (the rest stays
+  M8); REQ-REF-045 moves to M5, closed by TASK-M5-19 (or REQ-PAY-065's latch half moves to M6); REQ-GUI-151/152 move to M7,
+  closed by TASK-M7-22; TASK-M2-10 and TASK-M2-11 gain `depends_on: TASK-M2-12`.
+- **Needed:** confirm each, or give the milestone.
+
+## RQ-101: The colour golden oracle and the LUT data live outside the corpus *(step 7, colour)*
+
+- `principia_colour_composition.md` §7 (:434–436): "The **two React reference artefacts are the oracle** (`ColourSphere`
+  = Artefact 1, `PatternSphere` = Artefact 2 …). Every recreated preset ships with a **golden-image test** against the
+  corresponding reference output" (REQ-COL-030, REQ-COL-046, REQ-VAL-096, tolerance REQ-COL-052; M7). Neither artefact is
+  in this repo.
+- §7.1 (:456) names the LUTs (Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix) without
+  their data; the M1 debug views already need Viridis (`dbg_lin`, render_contract :152) and Twilight (REQ-TOOL-010).
+- `docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html` carry similar maps and LUT
+  tables, but no corpus passage names them as the oracle or as the LUT source.
+- The same holds for the Principia palette ("indigo → teal → gold") and Cool-warm ("diverging"): §7.1 (:456) gives no
+  stops; they exist only in `principia_colour_explorer.html` :108 and `principia_colour_presets.html` :110–111 (M7-5).
+- **Needed:** where the oracle comes from — the React artefacts added to the repo, or the two reference HTML files named
+  as the oracle (a doc change to §7) — and the LUT data source (those files, or the published matplotlib tables for the
+  matplotlib maps).
+- *Gaps:* M1-16, M7-4, M7-5. *Tasks:* TASK-M1-03, TASK-M1-12, TASK-M7-07, TASK-M7-18.
+
+## RQ-102: The regularisation occupants and step control that live only in prin-rs *(step 7, integrator)*
+
+- `principia_integrator_contract.md` § "The split" (:106): the step / deriv / Hamiltonian layer "PORTS AS-IS … Porting is
+  transcription" (REQ-INT-016) — from prin-rs, which is not in this repo.
+- § "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper" (:168–172) names four occupants;
+  only Aarseth–Zare has an in-repo reference (`workbench/tb_az.py`, `tb_az_overshoot_fix.py`, outside the corpus). Heggie
+  1974 (the default, REQ-INT-051) and logH (REQ-INT-018, the R-74 falsification check) have no equations of motion,
+  time transformation or step control anywhere in `docs/`.
+- § "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature" (:289–295): "Time-transformed
+  leapfrog (Mikkola–Tanikawa) … is required, not optional" — no equations. REQ-VAL-044 (TASK-M3-29) is "blocked on a
+  reversible occupant"; nothing says whether AZ + Mikkola–Tanikawa is built in M3 or the slot is only specified
+  (":292: Specify the slot now even if RK4 fills it initially").
+- `principia_INDEX.md` § "The evidence base — where settled defaults were measured" (:27): the **predictive step
+  limit** "lives there" (prin-rs) and "is what removed the wedges"; REQ-INT-052 requires it on by default. pitfalls §8
+  (:371–375) names its ablation arms (`dtau only`, `clamp only`, `limit only`) and "wedge density" without defining
+  the clamp, the limit or the metric.
+- R-72 must not be used to write physics equations.
+- **Needed:** the source for the Heggie, logH and Mikkola–Tanikawa equations and their step control, and for the
+  predictive step limit, the clamp arm and the wedge-density metric (import the prin-rs text into the corpus, or
+  name the papers and let the task transcribe them for physics review); and whether the reversible AZ +
+  Mikkola–Tanikawa occupant is built in M3 (else REQ-VAL-044 moves to the milestone that builds it).
+- *Gaps:* M3-1, M3-5, M3-9. *Tasks:* TASK-M3-07, TASK-M3-08, TASK-M3-29, TASK-M3-31.
+
+## RQ-103: The prin-rs fixtures and slices the M3 re-runs need *(step 7, validation)*
+
+- The M3 numerical gates re-run measurements made in prin-rs, on inputs defined only there:
+  - REQ-INT-051 (TASK-M3-32): "31 of 32 cases, `err>10` 3916 → 73" (`principia_integrator_contract.md` § "Part 2b —
+    Regularisation is a SECOND swappable axis, not a property of the stepper", :171) — the 32 cases and the `err>10`
+    metric are not defined in `docs/`.
+  - REQ-INT-050: "+0.305" / "−0.082" (:169) — the control's fixture ICs.
+  - REQ-INT-052 (TASK-M3-31): the ablation "on config_stability" (pitfalls § "8. TWO ARTEFACTS ARE NOT ONE DEFECT");
+    the slices `config_stability`, `near-field`, `far`, `deep interior`, "the config slice" are named
+    (dd_refinement_policy :70, :141, :205–206) but their chart, z₀, q₁, q₂ and extent are not given.
+  - REQ-VAL-040 (TASK-M3-34): "the legacy `t = 30` set kept as a comparison" (pitfalls § "2.2 The criterion", :153).
+  - REQ-VAL-028 (TASK-M3-36): BodyPlane "must reproduce bit-for-bit … and the Python cross-check green"
+    (`principia_chart_reference.md` § "5.2 Tests that can fail", :548). REQ-VAL-119 has the task define the map, but the
+    reference dump and the Python cross-check are prin-rs artefacts.
+- **Needed:** whether the prin-rs slice definitions, case matrix, control ICs, legacy set and BodyPlane dump are
+  imported into the repo (and where: `fixtures/`), or the tasks define new fixtures and the gates compare against the
+  recorded numbers only (then "bit-for-bit" in REQ-VAL-028 has no reference to match).
+- *Gaps:* M3-6, M3-10. *Tasks:* TASK-M3-31, TASK-M3-32, TASK-M3-33, TASK-M3-34, TASK-M3-35, TASK-M3-36.
+
+## RQ-104: Checkerboard at the dt ceiling: ramp or hard gate ("a feel call") *(step 7, checkerboard)*
+
+- `principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)" (:120): "optionally *ramp*
+  the stale fraction down as `dt` approaches the ceiling … Whether a ramp is worth the complexity over a hard gate is a
+  feel call." REQ-VAL-081 (TASK-M5-23) leaves it open: "above it checkerboard is off (or ramped)".
+- A feel call is a product decision, not a value R-71 can calibrate or a definition R-72 can write.
+- **Needed:** hard gate or ramp (the task can supply captures of both at the ceiling as evidence).
+- *Gaps:* M5-3b. *Tasks:* TASK-M5-23.
+
+## RQ-105: GUI surfaces with no artboard *(step 7, GUI)*
+
+- REQ-GUI-014 (M6, TASK-M6-22): Custom mode exposes render_scale (0.25–2.0), N, MAX_REL_DEPTH, E, FTLE, motion gating and
+  lock-to-native (`principia_memory_tiers.md` § "5. Controller levers, ranked by impact"); verify: GUI screenshot, "the
+  Custom quality panel shows each control". REQ-TOOL-058 (TASK-M6-22): the arbiter debug overlay shows throughput, rung,
+  headroom and recent decisions (`principia_quality_device_note.md` § "10. Two sanctities: the user, and observability");
+  verify: GUI screenshot.
+- `docs/gui/design/04_windows.png` (render_gui_spec § "G5. Windows (`04_windows.png`)" :164; GUI_DESIGN_NOTES § "04 Windows" :64): the Run window shows
+  quality, budget, max depth and ensemble only; no artboard shows the Custom fields or the arbiter overlay.
+  `plan/WORKFLOW.md`:79: a GUI screenshot is compared against `docs/gui/design/NN_*.png` for layout.
+- **Needed:** an artboard (or a sketch) for the Custom panel and the arbiter overlay; or a ruling that these two are checked
+  by presence of their controls/items only (no layout comparison) until the M8 dev GUI.
+- `principia_dd_telemetry_and_tiers.md` § "A deliberate ceiling, user-visible" (:343–348): "Offer a **target utilisation** … 'Use up to N cores' and 'cap at 30 fps'" (REQ-GUI-044, TASK-M8-25). No window in `principia_render_gui_spec.md` and no artboard (`04_windows.png` Run window: quality, budget, max depth, ensemble) carries it.
+- § "8. What this is not" (:414–415): "passive logging is a mode with a **visible indicator**" (REQ-TOOL-088, TASK-M8-26). Neither the spec nor `GUI_DESIGN_NOTES.md` places the mode's switch or its indicator.
+- R-68: artboard values are illustrative, but the artboards are the approved layout; placing a new control is a design decision.
+- **Needed:** where each lives (e.g. the Run window, the footer, the top bar) — or leave it to the GUI reviewer at the M8 gate.
+- *Gaps:* M6-7, M8-7b, M8-17. *Tasks:* TASK-M6-22, TASK-M8-25, TASK-M8-26.
+
+## RQ-106: The Euler landmarks for unequal masses *(step 7, colour)*
+
+- `principia_dd_integrator.md` §3.7 (:218): the Euler landmarks are the "Euler collinear" configurations, "equator, between the collisions"; the only formula is "ê_j = −b̂_j (equal masses)" (:225). `principia_colour_composition.md` §2 (:197): "`Euler(m)` — collinear configs", which "move with (m₀,m₁,m₂)".
+- R-50 makes the **collision** landmarks mass-weighted; it says nothing of the Euler points. With unequal masses the antipode of b̂_j and the Euler central configuration (the collinear relative equilibrium, a root of Euler's quintic in the mass ratios) are different points on the equator.
+- `principia_colour_explorer.html` :126 places Euler blobs at the antipodes of its (heuristically skewed) BC points; REQ-COL-021's verify gives only the equal-mass values.
+- **Needed:** which points the Euler landmarks are for unequal masses (antipodes of the mass-weighted b̂, or the Euler central configurations mapped through the shape map) — a physics definition the corpus doesn't give.
+- *Gaps:* M7-7. *Tasks:* TASK-M7-09.
+
+## RQ-107: The style presets are named, not defined *(step 7, colour)*
+
+- `principia_render_gui_spec.md` § "Display — the last stages" (:202–203): "**Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour & pencil, print · Poster78, more; with paper grain and press misregistration." REQ-COL-044 (M7, TASK-M7-26) requires them.
+- `GUI_DESIGN_NOTES.md` § "04 Windows" (:73–75) and `04_windows.png` show the Display window; no doc, artboard or reference HTML defines what any style computes, its parameters, or what "Poster78" is.
+- A product/design decision (the look), not a definition R-72 can supply.
+- **Needed:** each style's look (a reference image or description and its parameters: paper grain, misregistration), or REQ-COL-044 reduced to plain for v1 with the styles deferred.
+- *Gaps:* M7-12. *Tasks:* TASK-M7-26.
+
+## RQ-108: The MP4 / GIF encoders *(step 7, export)*
+
+- `principia_render_gui_spec.md` §G9 (:283): Record a time sweep offers "GIF / PNG frames / MP4"; `principia_export_animation_contract.md` Part 4 gives the blocking frame loop but no encoder.
+- The browser build (R-85, M8) has no built-in MP4 or GIF encoder: the choice (WebCodecs, a wasm encoder, or PNG frames only in the browser) sets browser support, bundle size and codec licensing.
+- **Needed:** the encoders for native and browser, or which formats the browser offers in v1.
+- *Gaps:* M8-10. *Tasks:* TASK-M8-30, TASK-M8-33.
+
+## RQ-109: Research v2: the fold stability measure and the Poincaré sections *(step 7, research)*
+
+- `principia_render_gui_spec.md` §G11 (:304): continuation "marking folds where stability changes" (REQ-GUI-123) — the corpus defines no stability measure for a periodic orbit (monodromy / Floquet multipliers or another) and no fold test.
+- §G11 (:305): "Poincaré return map on a chosen section" (REQ-GUI-124) — which sections are offered (a coordinate hyperplane in phase space, a shape-sphere great circle, a syzygy crossing) is not given.
+- Physics the corpus doesn't hold; R-72 must not invent it.
+- **Needed:** the stability measure and fold criterion, and the section family offered — or a source (prin-rs, literature) the task transcribes.
+- *Gaps:* M8-13a, M8-13b. *Tasks:* TASK-M8-36.
+
+## RQ-110: Silences classified under R-71 and R-72 at checkpoint B *(step 7, checkpoint B)*
+
+Each item is a new requirement in , closed by the task named. Tick any you want reclassified —
+a value that is really a design decision, or a definition that is really physics the corpus must supply (R-72 must not invent it).
+
+- [ ] REQ-TOOL-119 · definition (M0) · TASK-M0-18 · `prin profile diff … --threshold P%`: which statistic and which scopes the P% regression compares. (M0-5)
+- [ ] REQ-TOOL-120 · definition (M0) · TASK-M0-17 · Profiler schema v1's concrete JSON: key names, the nesting of scopes, GPU passes, allocations and events, and the session header's layout. (M0-7)
+- [ ] REQ-TOOL-121 · definition (M0) · TASK-M0-19 · Session header: 'reported f64 rate' has no source (the graphics API reports f64 support, not rate), and the display fields have no value in a headless run. (M0-8)
+- [ ] REQ-GEN-024 · definition (M0) · TASK-M0-07 · The §3.8 metadata schema has no `location` kind for fields derived at read (ftle, energy_drift, Lz_drift, diffusion, n) and no type for a vector field, though 'the ledger knows n is a vector'. (M0-10, M1-14)
+- [ ] REQ-SYS-063 · definition (M0) · TASK-M0-08 · The constants register: §3.8 has no citation or admissibility-class field, and nothing says whether the register is inside the R-36 hashed ledger. (M0-11)
+- [ ] REQ-PAY-087 · definition (M0) · TASK-M0-14 · The f64 (and DoubleF64 stub) instantiation of the payload layout: which fields widen with Real (f16 latches, packed u32 words, u16 steps) is unspecified. (M0-13)
+- [ ] REQ-VAL-138 · calibration (M0) · TASK-M0-06 · The golden-image runner's diff metric and tolerance: none is given, and goldens are asserted from M1; REQ-COL-052 covers only the M7 preset-vs-reference tolerance. (M0-14b)
+- [ ] REQ-COL-055 · calibration (M1) · TASK-M1-03 · The invalid colour's value: the corpus says 'a fixed magenta, a plain default, no source claimed'; the outcome palette already uses magenta #E034C6 for body-1 escape. (M1-1)
+- [ ] REQ-TOOL-122 · definition (M1) · TASK-M1-03 · The debug presentation helpers are signatures only: dbg_sentinel's hatch, dbg_cat's golden-angle lightness/chroma, dbg_log's form, dbg_hash_u32's hash, dbg_flag's green/red. (M1-2, M1-3)
+- [ ] REQ-RENDER-077 · definition (M1) · TASK-M1-01 · The tier-absent sentinels' exact values: the canonical quiet-NaN bit pattern the bitcast test compares against, and the 'empty/sentinel word' an unbound word buffer returns (length 0 or the 127 truncation sentinel?). (M1-4, M1-5)
+- [ ] REQ-TOOL-123 · definition (M1) · TASK-M1-11 · The kernel bring-up mode's known pattern ('e.g. ctx-derived UV or a fixed ramp') and which payload slots it writes are not given. (M1-7)
+- [ ] REQ-COL-056 · definition (M1) · TASK-M1-06 · `ctx.tile.uv` (within-tile coordinate) is used by render_gui_spec §12.1's boundary overlay but is missing from colour_composition §3's tile/sample lane. (M1-12)
+- [ ] REQ-TOOL-124 · definition (M1) · TASK-M1-13 · Structural overlay styling: the pending-hatch pattern and the fallback-tint colour are not given. (M1-15)
+- [ ] REQ-COL-057 · definition (M2) · TASK-M2-25 · ctx.chart.z ('the full 8-D latent at this pixel') is undefined on charts whose Φ does not pass through z (shape sphere, invariant, Burrau, Anosova) (M2-G2)
+- [ ] REQ-CHART-047 · definition (M2) · TASK-M2-28 · Which equal-area projection (Mollweide or Hammer–Aitoff), and is the projection a chart map (sim key) or a display remap? (M2-G6)
+- [ ] REQ-PAY-088 · definition (M2) · TASK-M2-03 · ICDescriptor derived fields q_mass, rho_mag, lambda_mag, rho_ratio, rho_angle, r_min_pair_0 have no formulas (M2-G7)
+- [ ] REQ-CHART-048 · definition (M2) · TASK-M2-08 · Frozen values of the nonlinear charts: shape sphere's m_fixed/p_fixed (source, frame relative to the fibre-phase rotation) and φ_f; invariant charts' fixed geometry and masses (M2-G8)
+- [ ] REQ-DEC-044 · calibration (M2) · TASK-M2-02 · dd_decoder unit tests 1, 6 and 8 give no tolerance ('precision-appropriate', 'to tolerance') (M2-G9a)
+- [ ] REQ-GEN-025 · calibration (M2) · TASK-M2-01 · Generation-root test 8 (c) log-det vs numeric Jacobian and (d) C¹ check give no tolerance (M2-G9b)
+- [ ] REQ-CHART-049 · calibration (M2) · TASK-M2-08 · Tolerance of the shape_vec cross-check against the IC Inspector's JS is not given (M2-G9c)
+- [ ] REQ-GEN-026 · definition (M2) · TASK-M2-01 · REQ-GEN-014 needs ≥2 links per block; the alternative links (edge-reaching simplex map, heavier-tailed bounded map, temperature-softmax) have no formulas and §3.9 has one simplex link (M2-G10)
+- [ ] REQ-CHART-050 · definition (M2) · TASK-M2-05 · chart_reference §5.2's 'a direct (α, β) sweep' is undefined (through the links, or linear in angle?) (M2-G12)
+- [ ] REQ-ENC-029 · definition (M2) · TASK-M2-16 · ‖·‖_phys (the physical-units norm of the T2 round trip) is undefined; REQ-ENC-024's ε_phys presupposes it (M2-G15)
+- [ ] REQ-ENC-030 · definition (M2) · TASK-M2-17 · Chart-aware validation: the metric of 'the nearest valid point' / 'nearest feasible point' and the 'qualitatively different IC' criterion are undefined (M2-G16)
+- [ ] REQ-ENC-031 · definition (M2) · TASK-M2-19 · Partial-specification lookup: when more than two DOF are unspecified, which two the slice basis spans (M2-G17)
+- [ ] REQ-CHART-051 · definition (M2) · TASK-M2-22 · The named compound directions (energy at fixed L_z, mass away from Burrau, the morph) are not given as latent vectors (M2-G19)
+- [ ] REQ-INT-080 · calibration (M3) · TASK-M3-07 · The regularised occupants' sync schedule (the number of sync boundaries n_sync, AZ's eta in dtau = eta·dt_left/(A·B)) has no default (M3-2)
+- [ ] REQ-EVT-024 · calibration (M3) · TASK-M3-12 · The escape settling threshold tau has no value ('—', 'to re-measure'); the detector (TASK-M3-12) needs one before TASK-M3-34 measures the gap (M3-3)
+- [ ] REQ-INT-081 · calibration (M3) · TASK-M3-06 · T_horizon has a range [50, 200], no default — and with dt_macro fixed at 10⁻³ the enforced ⌈T/dt_macro⌉ ≤ 65535 admits only T ≤ 65.535 (M3-4)
+- [ ] REQ-TOOL-125 · definition (M3) · TASK-M3-07 · dt_max (REQ-TOOL-039) is carried by no ledger or kernel field: where it lives is undefined (M3-11)
+- [ ] REQ-VAL-139 · calibration (M3) · TASK-M3-26 · No tolerance on the fitted order-scaling slope (dd_integrator test 1) or on 'no secular trend' (test 2) (M3-13a)
+- [ ] REQ-PERF-085 · calibration (M3) · TASK-M3-20 · REQ-PERF-004's benchmark 'typical IC' is undefined (and the tail is what the budget exists for) (M3-13b)
+- [ ] REQ-TOOL-126 · definition (M4) · TASK-M4-13 · The horizon map's eps in t_max(IC) = ln(1/eps)/ftle(IC) is not said (f32's, f64's, or the measurement horizon's jitter δ) (M4-6)
+- [ ] REQ-TOOL-127 · definition (M4) · TASK-M4-16 · The on-demand single-IC f32 GPU trace: its output buffer (dense n(t) layout), how the survey kernel writes it, the 'shared times' sampling, and the divergence-time criterion are undefined (M4-7, M8-15)
+- [ ] REQ-VAL-140 · definition (M4) · TASK-M4-04 · Tier N's 'growing-but-bounded envelope' for short pre-divergence trajectories: its form and the divergence-onset time are not given (M4-8)
+- [ ] REQ-VAL-141 · calibration (M4) · TASK-M4-04 · The numerical-ambiguity band outside which CPU↔GPU word parity is tested has no width (M4-9)
+- [ ] REQ-RENDER-078 · definition (M4) · TASK-M4-12 · Spread-extrapolation's `rate` — the local rate of change of what, from which integration by-product — is undefined (M4-10)
+- [ ] REQ-PERF-086 · calibration (M4) · TASK-M4-19 · The tier table's N = 24 / 32 (Ultra, Extreme) break N² ≤ 256; R-43 says fix them but gives no replacement values (M4-12)
+- [ ] REQ-SCHED-087 · calibration (M5) · TASK-M5-14 · The in-flight job limit: scheduler Part 6 gives the range 2–4, not the value (M5-6)
+- [ ] REQ-SCHED-088 · calibration (M5) · TASK-M5-25 · Depth of the in-motion coarse cover ("a few levels above camera depth"), and whether it is the baseline cover's depth (M5-7)
+- [ ] REQ-PERF-087 · calibration (M5) · TASK-M5-11 · Where 'pressured' begins: telemetry's three memory states give 'approaching the cap' with no threshold (M5-8c)
+- [ ] REQ-RENDER-079 · calibration (M5) · TASK-M5-26 · The stale backdrop's blur radius (M5-9)
+- [ ] REQ-REF-047 · definition (M6) · TASK-M6-01 · Which Decision variant each stop records (AT_F32_FLOOR, the integration floor) and what produces BalanceForced (M6-1)
+- [ ] REQ-SCHED-089 · calibration (M6) · TASK-M6-02 · The motion refinement floor's offset: 'one or two levels above pixel-size' (M6-2)
+- [ ] REQ-REF-048 · definition (M6) · TASK-M6-05 · 'Acquire a third scale' — which scale, and when (M6-3)
+- [ ] REQ-PERF-088 · calibration (M6) · TASK-M6-16 · Device-characterisation probe values: quad set, duration, percentile, thermal headroom, the info-leg inconsistency test (M6-5a)
+- [ ] REQ-REF-049 · definition (M6) · TASK-M6-19 · The sea_fraction(eps) estimator's method (M6-6)
+- [ ] REQ-VAL-142 · calibration (M6) · TASK-M6-23 · REQ-VAL-085's 'without over-degrading' has no threshold (M6-8)
+- [ ] REQ-REF-050 · calibration (M6) · TASK-M6-23 · tau's value: REQ-REF-032 says 'set by a calibrated grid measurement' but is not kind: calibration (M6-9a)
+- [ ] REQ-PERF-089 · calibration (M6) · TASK-M6-18 · The arbiter's tunables (REQ-PERF-066) are 'set by recorded measurement' but not kind: calibration (M6-9b)
+- [ ] REQ-PERF-090 · calibration (M6) · TASK-M6-16 · Quality-controller thresholds/ladder and the device budget heuristics (REQ-PERF-038) are 'set by measurement' but not kind: calibration (M6-9c)
+- [ ] REQ-SCHED-090 · calibration (M6) · TASK-M6-11 · P_focus decay constant(s) (M6-10)
+- [ ] REQ-RENDER-080 · calibration (M7) · TASK-M7-16 · Equirect bake texture resolution and texel format (sets REQ-RENDER-067's 'one texel quantisation step') (M7-3)
+- [ ] REQ-RENDER-081 · calibration (M7) · TASK-M7-12 · Invalid-graph fallback: 'flat grey / error tint' — which one and its colour (M7-8)
+- [ ] REQ-COL-058 · definition (M7) · TASK-M7-08 · Categorical filter: how the muted (filtered-out) classes are drawn (M7-9)
+- [ ] REQ-COL-059 · definition (M7) · TASK-M7-21 · Gamut-clamp method (per-channel clip vs chroma-reducing clamp) (M7-11)
+- [ ] REQ-GEN-027 · definition (M1) · TASK-M1-04 · How a fragment .wgsl file declares its uniformSchema and inputDomains (registry declaration format) (M7-14)
+- [ ] REQ-PERF-091 · calibration (M8) · TASK-M8-01 · Fixed bound on the GUI snapshot's serialised size ('GUI-sized') (M8-1)
+- [ ] REQ-GUI-155 · definition (M8) · TASK-M8-07 · What the scrubber's 'refining · 72%' percentage measures (M8-2)
+- [ ] REQ-GUI-156 · definition (M8) · TASK-M8-10 · Hover path fade: the distance measure from the slice and the opacity fall-off (M8-3)
+- [ ] REQ-GUI-157 · calibration (M8) · TASK-M8-11 · Rotation rate of the turning shape sphere (M8-4)
+- [ ] REQ-GUI-158 · calibration (M8) · TASK-M8-13 · Keyboard base step per adjustable field/scope before Shift ×10 / Alt ×0.1 (M8-5)
+- [ ] REQ-ENC-032 · definition (M8) · TASK-M8-16 · Formula of the Inspector's canonicalisation conditioning number (ρ → 0, R → 0) (M8-6)
+- [ ] REQ-PERF-092 · calibration (M8) · TASK-M8-25 · Default headroom of the target-utilisation ceiling (M8-7a)
+- [ ] REQ-TOOL-128 · definition (M8) · TASK-M8-28 · Transport for `prin profile query --live` to a running app (M8-8)
+- [ ] REQ-TOOL-129 · definition (M8) · TASK-M8-31 · URL encoding of the spec object and the principia://view?… query format (M8-9)
+- [ ] REQ-VAL-143 · definition (M8) · TASK-M8-34 · Measure's 'threshold sweep': which threshold is swept (M8-11)
+- [ ] REQ-GUI-159 · definition (M8) · TASK-M8-36 · Research side-by-side 'difference view': what is differenced and how it is shown (M8-13c)
+- [ ] REQ-GUI-160 · definition (M8) · TASK-M8-18 · Storage of user-side stores: chart-builder presets, 'Your stains', per-choice warning suppressions (M8-16)
+- **Needed:** confirm the classification, or name the items to move to an RQ of their own.
+
+## RQ-111: Interpretations taken at checkpoint B *(step 7, checkpoint B)*
+
+Gaps the task agents raised that the corpus answers, as read here. Nothing in `plan/` or `docs/` was changed for them.
+Tick any you don't accept.
+- [ ] SimConfig's full field list (M0 gap 17): `principia_gui_state_contract.md` §2 lists the groups and says "the GUI
+  requirement adds **no new state**"; each group's fields come from the contract that owns them (e.g. integrator
+  Part 3). TASK-M0-16 declares surfaces and groups only.
+- [ ] M0 scaffolding with no requirement id (M1 gap 17): `depends_on` names earlier-milestone tasks directly; a task
+  with no other dependency depends on TASK-M0-01.
+- [ ] REQ-DEC-014's "saturation flag" (M2 gap G14): at an exact α-pole the encode clamp fires
+  (`principia_inverse_encode_contract.md` Part 3–4, `principia_dd_encode.md` §3.5 `lookup_clamped`); R-21's "SAT flags"
+  is read as that clamp flag, not the payload's `saturated` bit (the substep cap). TASK-M2-15 tests `lookup_clamped`.
+- [ ] REQ-CHART-044/045/046's evidence renders (M2 gap G21): their verify details ask for coverage of the chart domain
+  (feasibility, K, L_z), which decode-time renders show; no integrated field is needed at M2.
+- [ ] REQ-SCHED-045 (M5 gap 4): its check ("no blank pixels" during a fast pan and zoom) compares no layout, so no
+  artboard is needed; its verify method reads better as `property test` than `GUI screenshot` (not changed).
+- [ ] The Research "winding number" (M8 gap 12, `principia_render_gui_spec.md` § G11): read as the payload's winding —
+  the unwrapped phase θ̃ and `orbit_count = ⌊|θ̃|/2π⌋` (`principia_dd_integrator.md` §3.7,
+  `principia_dd_simstate_payload.md`). If another winding is meant (about the collision points, symbolic), it needs a
+  definition.
+- [ ] The M2 decode agreement tolerance (M2 gaps G4, G20): before REQ-VAL-064 (M4) sets Tier N, "Tier-N tolerance" in
+  REQ-TOOL-029 and "f32 noise" in REQ-COL-006 are read as REQ-DEC-043's calibrated f32 decode factor (TASK-M2-06);
+  the preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0.
+- **Needed:** accept, or rule otherwise on any item.
