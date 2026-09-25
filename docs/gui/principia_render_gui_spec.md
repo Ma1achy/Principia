@@ -103,7 +103,7 @@ IC:
   switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it;
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
 - a playhead for this orbit;
-- **listen**: sonification (`principia_scratchpad_pointer_channels.md` §4, its one normative part — R-109; `θ(t), φ(t)` → spectrum), which can follow the
+- **listen**: sonification (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can follow the
   cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative (R-68);
 - **Open full viewer…** and **IC Inspector…** (both open §G8);
 - **Kept orbits** below, each with its fate and time, removable.
