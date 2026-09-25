@@ -6662,8 +6662,6 @@
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 9 — Ensemble / SSAA sampling (dispatch rules)
   - file: docs/notes/principia_sampling_msaa_note.md
-    section: "The sampling pattern: coordinate-seeded deterministic offsets"
-  - file: docs/notes/principia_sampling_msaa_note.md
     section: Ensemble copies ARE the SSAA samples
   - file: docs/design/principia_dd_colouring.md
     section: "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)"
@@ -6673,6 +6671,8 @@
     section: R-80 — Samples per footprint *(closes RQ-31)*
   - file: decisions.md
     section: R-100 — No per-cell Halton rotation *(closes RQ-60)*
+  - file: docs/notes/principia_sampling_msaa_note.md
+    section: "The sampling pattern: deterministic Halton offsets"
   verify:
     method: unit test
     detail: "copy 0's offset is (0, 0); copies 1..E equal the reference Halton (2,3) points 1..E minus ½, scaled to the footprint, in every footprint; identical across frames and CPU/GPU"
@@ -6884,7 +6884,7 @@
   statement: "If the optional Cranley–Patterson rotation is used, it must hash the integer quad address (depth, tx, ty) and pixel index with an integer bit-mixing hash and convert to a fractional rotation only at the end, never hashing floats or screen position."
   source:
   - file: docs/notes/principia_sampling_msaa_note.md
-    section: "The sampling pattern: coordinate-seeded deterministic offsets"
+    section: "The sampling pattern: deterministic Halton offsets"
   verify:
     method: property test
     detail: "rotation value bit-identical CPU/GPU; unchanged under pan; changes when a quad splits"
@@ -7421,12 +7421,12 @@
   kind: definition
   statement: "How the optional Cranley–Patterson rotation composes with the centred Halton offsets (copies 1..E only; copy 0 stays at the centre) must be defined in the sampling/MSAA note's sampling-pattern section by the task that needs it and reviewed by the physics reviewer before merge."
   source:
-  - file: docs/notes/principia_sampling_msaa_note.md
-    section: "The sampling pattern: coordinate-seeded deterministic offsets"
   - file: decisions.md
     section: R-80 — Samples per footprint *(closes RQ-31)*
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/notes/principia_sampling_msaa_note.md
+    section: "The sampling pattern: deterministic Halton offsets"
   verify:
     method: review checklist
     detail: "the doc states the composition (order of rotate, wrap and centre, and the scale to the footprint); the offset unit test uses it"

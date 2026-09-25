@@ -20,7 +20,7 @@ Spread is not stored and shadows never enter the SSAA or spread pools.
 - `docs/contracts/principia_scheduler_contract.md` § "Part 9 — Ensemble / SSAA sampling (dispatch rules)"
 - `docs/notes/principia_sampling_msaa_note.md` § "No recursion: structural uniformity ≠ role uniformity"
 - `docs/notes/principia_sampling_msaa_note.md` § "Amendments this makes"
-- `docs/notes/principia_sampling_msaa_note.md` § "The sampling pattern: coordinate-seeded deterministic offsets"
+- `docs/notes/principia_sampling_msaa_note.md` § "The sampling pattern: deterministic Halton offsets"
 - `docs/notes/principia_sampling_msaa_note.md` § "Ensemble copies ARE the SSAA samples"
 - `docs/design/principia_dd_colouring.md` § "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)"
 - `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules"

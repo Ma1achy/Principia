@@ -468,12 +468,12 @@ $$\Phi_{\theta,K}(u,v) = \big(\nu(\theta(u)),\ \mathbf m_{\mathrm{Burrau}}(\nu(\
 
 The variants are $\Phi_{\theta,L_z}$ (fix $K$, sweep $L_z$) and $\Phi_{\theta,\delta m}$ (below).
 
-**The two shape axes survey different sets (pending change 2, open).** The acute-angle axis $\theta \in (0, \pi/4]$ folds out
+**The two shape axes survey different sets (R-27: both charts kept, applied before any Burrau statistic).** The acute-angle axis $\theta \in (0, \pi/4]$ folds out
 the leg swap ($\theta$ and $\pi/2 - \theta$ are the same triangle with the legs swapped). The Euclid plane's default
 $\nu \in [1/32, 31/32]$ maps to $\theta \in (0, \pi/2)$, both leg orderings. Under the Burrau mass convention ($m_i$ =
 opposite side) swapping the legs swaps two masses, so it is a body relabelling, a distinct labelled system. Keeping
 both orderings surveys shape × labelling; folding surveys each shape once. Neither is wrong, but the two charts
-disagree silently. Until one quotient is chosen, label each chart with the quotient it covers (in its
+disagree silently. Both are kept (R-27): label each chart with the quotient it covers (in its
 `system_image` descriptor — the full range covers each shape twice, as two labelled systems: `DoubleCover`, R-27,
 R-104), and don't take shape fractions from the full-range chart, which double-counts.
 

@@ -78,7 +78,7 @@ So "ensemble spread can't have SSAA" is not a limitation — it's what the quant
 
 ---
 
-## The sampling pattern: coordinate-seeded deterministic offsets
+## The sampling pattern: deterministic Halton offsets
 
 **Not stochastic (live RNG), not a naive regular grid — a fixed low-discrepancy pattern.** The ensemble/SSAA offsets within a pixel's IC-space footprint are the **2-D Halton sequence in bases (2, 3)** — one base per sub-pixel axis:
 
