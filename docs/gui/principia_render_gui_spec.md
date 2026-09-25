@@ -295,7 +295,8 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   its stain**, or **open side by side**.
 - **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view".
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
-  GIF / PNG frames / MP4, overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
+  GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
+  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
   it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
   captured frame).
 
