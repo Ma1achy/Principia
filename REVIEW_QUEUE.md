@@ -1826,3 +1826,88 @@ Tick any you don't accept.
   the preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0.
 - **Needed:** accept, or rule otherwise on any item.
 - **Ruling:** R-133 (decisions.md). Closed in step 7.
+
+---
+
+*Found while applying R-110 to R-133 (step 7, checkpoint B rulings). Nothing is chosen.*
+
+## RQ-112: R-110 — the Playwright suite's and the aggregate survey's frequency *(step 7, CI)*
+
+- `principia_parity_contract.md` §6 (:173): the colour row now reads "native `wgpu` offscreen from M1; at M8 the
+  **Playwright** browser suite checks against the same baselines within tolerance (R-110)", scheduled "every commit
+  (native goldens, R-110)". R-110 gives no frequency for the M8 Playwright suite.
+- The same table (:172): "Aggregate survey (§5) … nightly / pre-release (heavier)". R-110 names the unit, property,
+  numerical-gate, native golden, benchmark and screenshot cadences, not this one; "pre-release" has no other meaning in
+  the plan now (the gates are the milestone gates).
+- **Needed:** the Playwright suite's cadence (every commit once `web/` exists, nightly, or at the gates), and whether the
+  aggregate survey stays "nightly / pre-release" or becomes "nightly and at each gate".
+- **Ruling:** R-134 (decisions.md). Closed in step 7.
+
+## RQ-113: R-102 — what's left of systems_architecture §5.5's in-thread copies *(step 7, dispatch)*
+
+- `principia_systems_architecture.md` §5.5, now "5.5 THE DISPATCH SHAPE — one thread per texel, one dispatch per ensemble
+  copy" (R-124): the code block keeps "shared memory holds the REDUCTION ACCUMULATORS, not live states" (:183). With one
+  copy per dispatch, the copies are no longer folded in-thread; where the across-copy fold happens (a later dispatch, the
+  resolve stage, atomics) isn't stated.
+- :201–209, "### And serial copies probably IMPROVE load balance": "With copies **serial within a thread**, each thread's
+  cost is a **sum of 8 draws** … The serial arrangement is likely better balanced". Its premise is gone under R-102.
+- **Needed:** where the across-copy reduction lives; and whether the load-balance subsection is marked superseded (R-102)
+  or rewritten for per-dispatch copies (and if rewritten, with what argument — none is measured).
+- **Ruling:** R-135 (decisions.md). Closed in step 7.
+
+## RQ-114: R-132 — the hatched invalid pattern in the fragment code *(step 7, render)*
+
+- `principia_render_gui_spec.md` §10.1 (:620): "**`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel treatment …
+  the hatched pattern". A hatch depends on the pixel position; a `vec3<f32>` constant can't carry it.
+- `principia_render_contract.md` (:156): `fn dbg_sentinel(x: f32) -> vec3f // −1.0 sentinel and absence-NaN … → the
+  hatched invalid pattern (R-132)`. Before R-132 the view told the two apart ("−1.0 sentinel → magenta", "absence-NaN →
+  hatched"); now both render the same.
+- **Needed:** `DEBUG_NAN`'s type (a function of the fragment position, e.g. `fn debug_nan(p: vec2f) -> vec3f`, or a
+  pattern the calibration REQ-COL-055 defines); and whether `dbg_sentinel` keeps a distinct treatment for the −1.0
+  sentinel (a second pattern, or a tint of the hatch) or both are "no data".
+- **Ruling:** R-136 (decisions.md). Closed in step 7.
+
+## RQ-115: R-132 — the tier table's Ultra and Extreme rows *(step 7, quality)*
+
+- `principia_memory_tiers.md` §4 (:111–115): N is 16 for Ultra and Extreme, and "their `E` and `render_scale` values are
+  calibrated (REQ-PERF-086, R-132)"; the table still shows the old E = 7 / 15 and 1.0×, and the paragraph "**Extreme is
+  `1.0×` native, not supersampled.** 16× ensemble SSAA already handles …" and the Total-GB table assume those values.
+- **Needed:** whether the table keeps the old E / render_scale as placeholders (marked "calibrated, REQ-PERF-086") and the
+  Extreme paragraph and Total-GB rows are marked provisional, or the cells are emptied until the calibration lands.
+- **Ruling:** R-137 (decisions.md). Closed in step 7.
+
+## RQ-116: R-132 — is `dt_macro` still a Run-window parameter? *(step 7, GUI)*
+
+- `principia_render_gui_spec.md` (:226): the Run window lists `dt_macro` among integrator_contract Part 3's parameters.
+- R-132: "`dt_macro = max(1e-3, T/65535)`" — derived from T.
+- **Needed:** whether `dt_macro` leaves the Run window (shown read-only as derived), or stays editable as an override
+  (and then how the u16 bound of R-86 is kept).
+- **Ruling:** R-138 (decisions.md). Closed in step 7.
+
+## RQ-117: R-122 — Turbo's data, and the §7.1 artefact labels *(step 7, colour)*
+
+- `principia_colour_composition.md` §7.1 (:462): "| Turbo | a 1-D colour LUT, shown among the additional colour map
+  modes |". R-122 names the source for viridis, cividis, plasma, magma, inferno, twilight, cubehelix (matplotlib),
+  cool-warm (Moreland) and the Principia stops (the explorer); not Turbo. The explorer carries a Turbo table
+  (`principia_colour_explorer.html` :108).
+- The same section's group labels, "**Artefact 1 — colour maps (`ColourSphere`).**" (:456) and "Artefact 2 … (`PatternSphere`)"
+  (:467), still name the React artefacts R-122 replaced as the oracle.
+- **Needed:** Turbo's source (Google's published Turbo table, or the explorer's); and whether the labels drop the React
+  names (they are only group names now).
+- **Ruling:** R-139 (decisions.md). Closed in step 7.
+
+## RQ-118: Readings taken while applying R-110 to R-133 *(step 7, checkpoint B rulings)*
+
+Tick any you don't accept.
+- [ ] R-118: `principia_chart_reference.md` §5.1 (:510) reads `fn map<F: Float>(&self, u: F, v: F) -> ChartOut<F>`; the
+  ruling gives the parameters, the generic return type is inferred.
+- [ ] R-116: "hand-WGSL" still describes the colour side (parity §6 :173 "colour side stays hand-WGSL";
+  `principia_systems_architecture.md` :49, :83, :149). Read as: the colour occupants stay hand-written; only the decode
+  and encode are generated (the exception is stated in lowering Part 2 and canonical_spec §2 item 4).
+- [ ] R-111: the retired term `TIMEOUT` is the case-sensitive identifier; the prose "no separate timeout state"
+  (canonical_spec :117, systems_architecture :239, dd_integrator :194, integrator_contract :341) is not wrapped, and the
+  lint matches identifiers case-sensitively.
+- [ ] R-113: caching_contract Part 6a keeps its heading ("the render loop lives in a worker"), true for the browser; the
+  native build's dedicated render thread is a paragraph under it.
+- **Needed:** accept, or rule otherwise on any item.
+- **Ruling:** R-140 (decisions.md). Closed in step 7.

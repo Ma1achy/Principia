@@ -958,3 +958,49 @@ encoder, and MP4/WebM through WebCodecs where supported.
 *25 Sep 2026 · applied in step 7*
 
 All seven interpretations in RQ-111 are accepted.
+
+---
+
+*Rulings on RQ-112 to RQ-118 (found while applying R-110 to R-133), 25 Sep 2026.*
+
+## R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*
+*25 Sep 2026 · applied in step 7*
+
+From M8, the Playwright browser suite runs nightly, on GUI and colour PRs, and at each gate. The aggregate survey runs
+nightly and before release (parity §6).
+
+## R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)*
+*25 Sep 2026 · applied in step 7*
+
+The across-copy reduction is its own resolve pass. It runs after all E+1 copy dispatches for a quad complete, reads
+their SimState slices, and writes the footprint resolve and the QuadReduction fields. The "serial copies improve load
+balance" subsection keeps its text as a "Was" note (R-102), not deleted.
+
+## R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*
+*25 Sep 2026 · applied in step 7*
+
+`DEBUG_NAN` becomes a function, `debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`, which draws the hatch from the pixel
+position. The two stay distinct: debug views show a stored sentinel such as −1.0 as its literal value on the ramp
+(R-79's exception), and only NaN gets the hatch.
+
+## R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*
+*25 Sep 2026 · applied in step 7*
+
+Mark the Ultra and Extreme rows, and the memory totals that depend on them, as provisional pending R-132's calibration.
+Recompute the totals when the values land.
+
+## R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*
+*25 Sep 2026 · applied in step 7*
+
+`dt_macro` is derived, not editable. The Run window shows it read-only, with its rule: `max(1e-3, T/65535)`.
+
+## R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*
+*25 Sep 2026 · applied in step 7*
+
+Turbo uses Google's published Turbo table (Mikhailov 2019, Apache-2.0). Rename the §7.1 group labels to the two oracle
+HTML files (R-122).
+
+## R-140 — The four readings are accepted *(closes RQ-118)*
+*25 Sep 2026 · applied in step 7*
+
+All four readings in RQ-118 are accepted.
