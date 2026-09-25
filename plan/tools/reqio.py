@@ -10,6 +10,7 @@ Patch format (YAML), applied in order:
       statement: "…"               # replace
       verify: {method: …, detail: …}
       milestone: M3
+      kind: calibration              # or null to clear it
       note: "…"                    # replace; "" removes it
       add_rulings: [R-82]
       remove_rulings: [R-96]
@@ -94,7 +95,9 @@ def apply(reqs, patch, log):
         if r is None:
             raise SystemExit(f"modify: unknown id {rid}")
         for k in ("statement", "verify", "milestone", "kind"):
-            if k in ch:
+            if k in ch and ch[k] is None and k == "kind":
+                r.pop("kind", None)  # kind: null clears the kind (the requirement is ordinary again)
+            elif k in ch:
                 r[k] = ch[k]
         if "note" in ch:
             if ch["note"]:
