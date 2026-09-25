@@ -415,7 +415,7 @@ recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-ex
 
 ## 7. Preset table & golden-image obligation
 
-Every currently-specified map (the Artefact-1 colour maps, Artefact-2 patterns, special modes,
+Every currently-specified map (the colour maps, the patterns, special modes,
 the physics overlay, listed in full in §7.1) and every debug view is **recreated as a composition preset**. Representative
 rows (schematic — full table lives with the preset library):
 
@@ -454,20 +454,20 @@ golden test. §7.1 is the checklist; the two reference HTML files are the oracle
 Ported from the retired shape-sphere colour-map PDF (R-3, R-16). Parameter ranges are in §8. The vMF engine (Eq. 5),
 the LUT sphere, the CVD method (R-78) and the physics overlay's blob blend are in `principia_dd_colouring.md` §3.
 
-**Artefact 1 — colour maps (`ColourSphere`).**
+**Colour maps — `principia_colour_explorer.html`** (R-139; Direction cosines is in `principia_colour_presets.html`).
 
 | map | definition |
 |---|---|
 | VMF OKLAB | six vMF poles at $\{\pm\hat x, \pm\hat y, \pm\hat z\}$, full-OKLab hue table (dd_colouring §3.2) |
 | VMF Okabe–Ito | the same engine with the Okabe–Ito CB-safe hue table |
 | LUT spheres: Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix | the seamless LUT sphere: 16 LUT samples as equatorial poles, the LUT endpoints at the north and south poles, blended as Eq. 5 in RGB. Twilight is cyclic. Cool-warm is diverging. The Principia palette is indigo → teal → gold. Cubehelix is generated analytically (hue spirals, lightness monotone increasing). **LUT data (R-122):** the published matplotlib tables for Viridis, Cividis, Plasma, Magma, Inferno, Twilight and Cubehelix; Moreland's table for Cool-warm; the Principia palette's stops are the explorer's (`principia_colour_explorer.html` :108, `LUT.principia`, eight stops). |
-| Turbo | a 1-D colour LUT, shown among the additional colour map modes |
+| Turbo | a 1-D colour LUT from Google's published Turbo table (Mikhailov 2019, Apache-2.0; R-139), shown among the additional colour map modes |
 | Direction cosines | each Cartesian component of $\hat{\mathbf n}$ to its own RGB channel (lightness is not uniform) |
 
-Global controls on every Artefact-1 map: **Invert** ($v \mapsto 255 - v$), **Blend** (a linear mix of any two modes),
+Global controls on every colour map: **Invert** ($v \mapsto 255 - v$), **Blend** (a linear mix of any two modes),
 **Auto-rotate**.
 
-**Artefact 2 — patterns and special modes (`PatternSphere`).** Every pattern has the signature
+**Patterns and special modes — `principia_colour_presets.html`** (R-139). Every pattern has the signature
 $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 
 | group | map | definition |
