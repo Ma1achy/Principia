@@ -98,6 +98,8 @@ because distance is monotone on a real escape whereas a time window is a heurist
 
 Escape is now `|Δn̂| < tau ∧ E_rel > 0` (§2). Under it the toggle **barely matters**: freezing a
 *converged* trajectory is nearly a no-op, so `stop_on_escape` on and off give near-identical images.
+Production has no "off" setting (R-103): the "off" image is rendered by the validation harness, whose own march
+continues past escape, and this regression stands there (R-148).
 
 **The lesson generalises past this bug: the patchwork was never caused by stopping. It was caused by
 stopping while the displayed quantity was still moving.**
