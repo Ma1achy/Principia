@@ -160,7 +160,11 @@ Under a live playhead the field changes as `t` advances, so the tree must **coar
 Children become `Decision::Merged`, and their footprints' latches go with them: the latch lives with the resident
 quad and never pins memory (R-99). **`QuadTree::resident` — what a live design actually holds — is
 tracked separately from `quads_computed`.** On a moving-pulse fixture, resident runs 37 → 85 → 37 → 69
-while 181 quads are computed, and the final tree is **bitwise the static tree at the horizon.**
+while 181 quads are computed. *Was: "the final tree is **bitwise the static tree at the horizon**", measured before the
+latch existed (R-99); withdrawn by R-143.* **The live tree contains the static tree at the horizon, and they are equal
+when footprint spreads are monotone in time (R-143).** A merge doesn't drop a latch while the quad is resident (R-99): a
+footprint that ever exceeded `eps` stays unresolved. The latch's cost, the extra resident quads, is measured on the named
+slices, §5's `near-field`, `deep interior`, `config_stability` and `tilt_plambda` (a calibration, R-71, R-143).
 
 A merged parent remembers its exponents so it is not re-split into the same four children every
 boundary; the memory expires when the quad's structured weight leaves a factor of two of where the
