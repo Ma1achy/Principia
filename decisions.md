@@ -1011,11 +1011,11 @@ All four readings in RQ-118 are accepted.
 25 Sep 2026.*
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · amended by R-157*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
-hemispheres"). `DoubleCover` is retired: no current chart has two labelled systems. Conform chart_decoder Part 5,
+hemispheres"). `DoubleCover` is retired for the shape sphere; it stays the full-range Burrau chart's value (corrected by R-157). Conform chart_decoder Part 5,
 lowering :159, chart_reference :349 and inverse_encode :202.
 
 ## R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*
@@ -1105,3 +1105,21 @@ wasm for the browser.
 
 All readings in RQ-126 are accepted, including removing TASK-M6-13 and letting TASK-M0-06 run slightly over the size
 guideline.
+
+---
+
+*Rulings on RQ-127 and RQ-128 (found while applying R-141 to R-156), 25 Sep 2026.*
+
+## R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*
+*25 Sep 2026 · applied in step 7*
+
+`DoubleCover` stays. It is the `system_image` of the full-range Burrau chart (R-27): there the leg swap relabels the
+bodies, so each shape is covered twice, as two labelled systems. R-141 applies to the shape sphere only, which is n-to-1
+with n = 2, its hemispheres reflection-equivalent. R-141's text is corrected ("no current chart has two labelled
+systems" is wrong), and `DoubleCover`'s definition is restored where R-141 marked it "Was", naming the Burrau chart as
+its site. chart_reference §4.5 :477 stands. REQ-CHART-014 and REQ-CHART-025 are unblocked.
+
+## R-158 — The six readings are accepted *(closes RQ-128)*
+*25 Sep 2026 · applied in step 7*
+
+All six readings in RQ-128 are accepted.

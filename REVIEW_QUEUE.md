@@ -2039,6 +2039,7 @@ Tick any you don't accept.
 - REQ-CHART-014 (M2, TASK-M2-14) verify and REQ-CHART-025 (M2, TASK-M2-11) carry the full-range chart as `DoubleCover`.
 - **Needed:** whether the full-range Burrau chart keeps a two-labelled-systems value (`DoubleCover` kept for it alone,
   or renamed), or becomes n-to-1 with n = 2 like the shape sphere, with the labelling recorded some other way.
+- **Ruling:** R-157 (decisions.md). Closed in step 7.
 
 ## RQ-128: Readings taken while applying R-141 to R-156 *(step 7)*
 
@@ -2059,3 +2060,4 @@ Tick any you don't accept.
 - [ ] Rulings that change no requirement text are attached for coverage: R-144 to REQ-PERF-004, 072, 075 and 078; R-146 to
   REQ-SYS-052; R-147 to REQ-SCHED-039, 053 and 085; R-156 to REQ-INT-081, REQ-PAY-070 and REQ-PERF-012.
 - **Needed:** accept, or rule otherwise on any item.
+- **Ruling:** R-158 (decisions.md). Closed in step 7.
