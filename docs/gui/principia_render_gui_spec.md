@@ -203,7 +203,7 @@ the display scale and gamut clamp finish it, and colour-vision simulation shows 
 simulation sees the final in-gamut colours.
 - **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
   & pencil, print · Poster78, more; with paper grain and press misregistration.
-- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia.
+- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
 - **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
 
 The display stage stays global and outside the pipeline (Part II §12). This window and the Overlays menu (§G2) replace the

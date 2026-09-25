@@ -143,7 +143,7 @@ The outcome `state` takes `principia_colour_composition.md` §1.4's canonical ni
 
 **The method (R-78):** real **Viénot** simulation for protan and deutan, and real **Brettel** simulation for tritan, both
 through LMS space from linear sRGB. The matrices and golden values come from a published reference implementation, named
-with its version when the task lands (R-78). Achromatopsia, which is neither, multiplies the linear $(R_\ell, G_\ell, B_\ell)$
+with its version when the task lands (R-78). Achromatopsia — offered in the Display window as a fifth mode (R-123) — is neither, and multiplies the linear $(R_\ell, G_\ell, B_\ell)$
 triplet:
 
 $$M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
