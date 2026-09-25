@@ -1,0 +1,1041 @@
+//! The initial-condition slice: a 2D box of chart coordinates, decoded to full states.
+//!
+//! Row order matches `tb.burrau_grid`: `meshgrid(indexing='xy')` then C-order `ravel()`,
+//! i.e. **`index = jy*nx + jx`, x fastest**. The cross-check compares row by row, so this
+//! ordering is load-bearing and is asserted in a test against a hardcoded case.
+//!
+//! Initial conditions are always built in `f64` and cast down. Generating them separately
+//! per precision would make an IC difference indistinguishable from a genuine f32
+//! arithmetic effect — the decomposition that made the earlier f32 investigation
+//! interpretable at all.
+//!
+//! **The chart is a parameter.** Every experiment before the vertical slice varied one
+//! body's position in the plane, which is an *affine* decode: `J_D` is constant, so the
+//! linearised path `x = x0 + J_D.delta` is exact rather than approximate and "where does
+//! the linearisation start to matter" answers "never" at every depth. [`Chart::Shape`]
+//! exists so that question has something to measure. [`Chart::BodyPlane`] is the old
+//! behaviour, preserved **bitwise** and asserted so in `tests/vertical_slice.rs`.
+
+use crate::physics::{burrau, decoder, shape, Cart, Ic};
+use crate::{Real, Vec2};
+
+/// How a chart coordinate `(u, v)` becomes a three-body state.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Chart {
+    /// One body's position over a 2D box; the other two fixed at their Burrau values.
+    /// **Affine** — this is every result before the vertical slice.
+    BodyPlane,
+    /// An oblique 2-plane in the 6D position space: `origin + u*U + v*V`, where `U` and `V`
+    /// may move more than one body. Still affine, but no longer axis-aligned, which is what
+    /// §3.5 asks about. [`Chart::BodyPlane`] is the special case
+    /// `U = e(body, x)`, `V = e(body, y)`.
+    Plane {
+        origin: Cart<f64>,
+        u: [Vec2<f64>; 3],
+        v: [Vec2<f64>; 3],
+    },
+    /// The shape sphere: `(u, v)` is a tangent step from `n0`, mapped by the exponential
+    /// map and inverted through the Hopf map at fixed scale and fibre phase.
+    ///
+    /// **Nonlinear.** The exp map's `cos|t|`, `sin|t|/|t|` is where the curvature lives, and
+    /// it is the only chart here on which the linearised decoder is an approximation at all.
+    Shape {
+        n0: [f64; 3],
+        e1: [f64; 3],
+        e2: [f64; 3],
+        inertia: f64,
+        phase: f64,
+        /// The masses the Hopf inverse is taken with. Was hard-wired to `burrau::MASSES`
+        /// inside the decode; it is a parameter now because the mass-varying charts made a
+        /// global mass wrong in general, and because the Hopf inverse is mass-dependent.
+        m: [f64; 3],
+    },
+
+    /// **The 8D latent chart** — the reference coordinate system, of which the axis-aligned
+    /// planes and the oblique ones are both instances.
+    ///
+    /// `z(u, v) = z0 + u*q1 + v*q2`. The reference writes `(2u-1)*s_u*q1` over `[0,1]^2`;
+    /// here the slice already supplies a signed box in chart coordinates, so `(u, v)` are the
+    /// offsets directly and the box's half-width plays the part of `s_u`. Same family, one
+    /// fewer place for a factor of two to hide.
+    ///
+    /// **Report the basis pair, or the slice is not reproducible** — [`Chart::params`] writes
+    /// it into every dump header.
+    Latent {
+        z0: decoder::Latent,
+        q1: [f64; 8],
+        q2: [f64; 8],
+    },
+
+    /// **The Burrau family `(nu, K)`** — the bifurcation strip.
+    ///
+    /// `u` sweeps Euclid's `nu = n/m` continued to the reals, so the primitive Pythagorean
+    /// triples sit at a countable set of points on a continuous curve; `v` sweeps kinetic
+    /// energy through the warp `K = k_max * v^gamma_k`, at `Lz = 0`. At `v = 0` this is the
+    /// classical rest start.
+    ///
+    /// Answers directly whether the right-angle constraint is dynamically special or merely
+    /// convenient: the Burrau configurations are a **1D curve inside a 2D map**.
+    BurrauFamily {
+        nu_lo: f64,
+        nu_hi: f64,
+        k_max: f64,
+        gamma_k: f64,
+    },
+
+    /// **The invariant-momentum chart `(Lz, K)`** — geometry and mass fixed, both axes
+    /// conserved quantities, with the feasibility warp that makes every pixel valid.
+    ///
+    /// `K(t) = k_max * t^gamma_k`, `L_max(t) = sqrt(2 I K(t))`, `Lz(s,t) = (2s-1) L_max(t)`.
+    /// The warp maps the unit square onto the interior of the feasible parabola, which is why
+    /// it exists rather than clamping.
+    ///
+    /// **`(Lz, E)` is not a second chart.** The reference lists the two separately, but its own
+    /// construction parameterises both by `K(t) = K_max t^gamma`: for `(Lz,E)` it then sets
+    /// `E = U + K(t)`, which is a *relabelling of the axis*, not a different sweep. The two
+    /// produce bitwise identical initial conditions at equal `gamma_k`, and `tests/charts.rs`
+    /// asserts it. `report_e` carries the label so a dump says which axis was intended;
+    /// the only thing that makes the two genuinely differ is `gamma_k`.
+    ///
+    /// `forbids_energy_normalisation` is **true** here: energy is a chart coordinate, and
+    /// normalising it would collapse the axis. Enforced by [`Chart::validate`], not by prose.
+    Invariant {
+        base: decoder::Latent,
+        k_max: f64,
+        gamma_k: f64,
+        report_e: bool,
+    },
+
+    /// **The mass simplex** at fixed geometry and fixed momentum coordinates.
+    ///
+    /// Barycentric coordinates onto `[0,1]^2` with a shear, then blended `margin` of the way
+    /// toward the centroid so no mass reaches zero — a zero mass is not a three-body system and
+    /// would be a degenerate label on every edge pixel rather than a measurement.
+    MassSimplex {
+        z_alpha: f64,
+        z_beta: f64,
+        z_q: [f64; 4],
+        margin: f64,
+    },
+}
+
+/// What region of the plane a chart's coordinates are defined on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Domain {
+    /// Any `(u, v)`.
+    Free,
+    /// `[0,1]^2`. The feasibility warps and the simplex map are only onto inside it, so a slice
+    /// that strays outside is not sampling what it claims to.
+    Unit,
+}
+
+impl Default for Chart {
+    fn default() -> Self {
+        Chart::BodyPlane
+    }
+}
+
+impl Chart {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Chart::BodyPlane => "body_plane",
+            Chart::Plane { .. } => "plane",
+            Chart::Shape { .. } => "shape",
+            Chart::Latent { .. } => "latent",
+            Chart::BurrauFamily { .. } => "burrau",
+            Chart::Invariant { report_e, .. } => {
+                if *report_e {
+                    "invariant_lz_e"
+                } else {
+                    "invariant_lz_k"
+                }
+            }
+            Chart::MassSimplex { .. } => "mass_simplex",
+        }
+    }
+
+    /// Every parameter of this chart, for the dump header.
+    ///
+    /// `Chart::name()` alone is not enough: a `Plane`'s basis, a `Shape`'s `(n0, I, phase)` and
+    /// a `Latent`'s `(z0, q1, q2)` are all free, so two dumps with the same name can be
+    /// different configurations. The reference's rule is *report the pair used, or the slice is
+    /// not reproducible*, and an oblique latent chart makes that binding.
+    pub fn params(&self) -> String {
+        match self {
+            Chart::BodyPlane => "-".into(),
+            Chart::Plane { origin, u, v } => format!(
+                "origin_r={:?} u={:?} v={:?}",
+                origin.r.map(|p| (p.x, p.y)),
+                u.map(|p| (p.x, p.y)),
+                v.map(|p| (p.x, p.y))
+            ),
+            Chart::Shape { n0, e1, e2, inertia, phase, m } => {
+                format!("n0={n0:?} e1={e1:?} e2={e2:?} I={inertia:?} phase={phase:?} m={m:?}")
+            }
+            Chart::Latent { z0, q1, q2 } => format!("z0={z0:?} q1={q1:?} q2={q2:?}"),
+            Chart::BurrauFamily { nu_lo, nu_hi, k_max, gamma_k } => {
+                format!("nu=[{nu_lo:?},{nu_hi:?}] k_max={k_max:?} gamma_k={gamma_k:?}")
+            }
+            Chart::Invariant { base, k_max, gamma_k, report_e } => {
+                format!("base={base:?} k_max={k_max:?} gamma_k={gamma_k:?} report_e={report_e}")
+            }
+            Chart::MassSimplex { z_alpha, z_beta, z_q, margin } => {
+                format!("z_alpha={z_alpha:?} z_beta={z_beta:?} z_q={z_q:?} margin={margin:?}")
+            }
+        }
+    }
+
+    /// The natural box half-width for this chart family.
+    ///
+    /// **Not one number.** A `BodyPlane` coordinate is a body position in Burrau units; a
+    /// `Latent` coordinate is a sigmoid pre-image. `0.05` of one is nothing like `0.05` of the
+    /// other, and a single shared default therefore *silently means two different things*. That
+    /// is exactly how the four GLSL presets shipped at a 3x crop: the reference UI reads
+    /// `Slice +/- 3.0e+0` and the port rendered `half = 1.0`, which spans 46% of the azimuth
+    /// against 90%.
+    ///
+    /// `0.45` for the `Domain::Unit` charts is the value already in use at centre `(0.5, 0.5)`;
+    /// it is recorded here rather than changed.
+    pub fn default_half(&self) -> f64 {
+        match self {
+            Chart::BodyPlane | Chart::Plane { .. } | Chart::Shape { .. } => 0.05,
+            Chart::Latent { .. } => 3.0,
+            Chart::BurrauFamily { .. } | Chart::Invariant { .. } | Chart::MassSimplex { .. } => {
+                0.45
+            }
+        }
+    }
+
+    /// The coordinate region this chart is defined on.
+    pub fn domain(&self) -> Domain {
+        match self {
+            Chart::BurrauFamily { .. } | Chart::Invariant { .. } | Chart::MassSimplex { .. } => {
+                Domain::Unit
+            }
+            _ => Domain::Free,
+        }
+    }
+
+    /// Whether applying `D`'s energy normalisation to this chart would destroy its own axis.
+    ///
+    /// True for the invariant-momentum chart, where energy is a coordinate. **Enforced**, not
+    /// documented: [`Chart::validate`] refuses the combination and a test asserts the refusal.
+    pub fn forbids_energy_normalisation(&self) -> bool {
+        matches!(self, Chart::Invariant { .. })
+    }
+
+    /// Refuse a configuration that cannot mean what it says.
+    ///
+    /// Two things it catches: a non-zero `E*` on a chart whose axis *is* energy, and a slice box
+    /// that leaves a `Unit`-domain chart's square, where the feasibility warp's guarantee does
+    /// not hold and the chart is sampling something it does not describe.
+    pub fn validate(&self, e_star: f64, cx: f64, cy: f64, half: f64) -> Result<(), String> {
+        if self.forbids_energy_normalisation() && e_star != 0.0 {
+            return Err(format!(
+                "chart `{}` carries energy as a coordinate; energy normalisation to E* = {e_star} \
+                 would collapse that axis",
+                self.name()
+            ));
+        }
+        if self.domain() == Domain::Unit {
+            // Copies span the whole cell edge to edge at `jitter_frac = 0.5`, so the box has to
+            // sit inside the square with room for them; the jitter itself reflects at the
+            // boundary rather than clamping (see `jitter::reflect_into_unit`).
+            for (name, c) in [("u", cx), ("v", cy)] {
+                if c - half < 0.0 || c + half > 1.0 {
+                    return Err(format!(
+                        "chart `{}` has domain [0,1]^2 but the slice spans {name} in \
+                         [{}, {}]",
+                        self.name(),
+                        c - half,
+                        c + half
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Is the decode affine? If so the linearised path is exact and its curvature term is
+    /// **structurally zero** — a fact to report as structural, never as a measurement.
+    pub fn is_affine(&self) -> bool {
+        matches!(self, Chart::BodyPlane | Chart::Plane { .. })
+    }
+
+    /// The `Plane` that reproduces `BodyPlane` for `body`, used to assert the two agree.
+    pub fn plane_for_body(body: usize) -> Chart {
+        let mut u = [Vec2::zero(); 3];
+        let mut v = [Vec2::zero(); 3];
+        u[body] = Vec2::new(1.0, 0.0);
+        v[body] = Vec2::new(0.0, 1.0);
+        // The origin's varying body sits at zero; `u`, `v` carry the whole position.
+        let mut origin = burrau::state::<f64>();
+        origin.r[body] = Vec2::zero();
+        Chart::Plane { origin, u, v }
+    }
+
+    /// The shape chart through Burrau's own configuration: same point on the sphere, same
+    /// scale, deterministic tangent frame. A slice of it is a slice of the shape sphere
+    /// around the reference triangle.
+    pub fn shape_at_burrau(phase: f64) -> Chart {
+        let m = burrau::MASSES;
+        let r: [Vec2<f64>; 3] = [
+            Vec2::new(burrau::R0[0][0], burrau::R0[0][1]),
+            Vec2::new(burrau::R0[1][0], burrau::R0[1][1]),
+            Vec2::new(burrau::R0[2][0], burrau::R0[2][1]),
+        ];
+        let n0 = shape::shape_vec(&r, &m);
+        let (e1, e2) = shape::tangent_frame(n0);
+        Chart::Shape { n0, e1, e2, inertia: shape::inertia(&r, &m), phase, m }
+    }
+
+    /// An axis-aligned latent plane: the two named coordinates of the reference's table.
+    ///
+    /// `shape` is `(z_alpha, z_beta)`, `inner momentum` is `(z_q0, z_q1)`, `outer momentum` is
+    /// `(z_q2, z_q3)`, `mass` is `(z_mu1, z_mu2)`, `mixed` is `(z_alpha, z_q2)`. There are
+    /// `C(8,2) = 28` such planes and every one is an instance of [`Chart::Latent`].
+    pub fn latent_axes(z0: decoder::Latent, i: usize, j: usize) -> Chart {
+        assert!(i < 8 && j < 8 && i != j, "latent axes must be two distinct coordinates");
+        let mut q1 = [0.0; 8];
+        let mut q2 = [0.0; 8];
+        q1[i] = 1.0;
+        q2[j] = 1.0;
+        Chart::Latent { z0, q1, q2 }
+    }
+
+    /// An oblique latent plane from two seed vectors, orthonormalised by Gram-Schmidt.
+    ///
+    /// Deterministic in the seeds so the plane is reproducible, and [`Chart::params`] writes the
+    /// resulting pair into the header — a plane whose basis is not recorded is not a slice
+    /// anyone can repeat.
+    pub fn latent_oblique(z0: decoder::Latent, a: [f64; 8], b: [f64; 8]) -> Chart {
+        let dot = |x: &[f64; 8], y: &[f64; 8]| (0..8).map(|k| x[k] * y[k]).sum::<f64>();
+        // A zero seed, or a `b` parallel to `a`, divides by zero and hands back a NaN basis. A
+        // NaN basis decodes every pixel identically, `ensemble_spread` reads exactly zero, and
+        // the criterion reports the quad perfectly resolved — a collapsed decode wearing the
+        // face of a tidy answer. Refuse it here instead.
+        const SEED_EPS: f64 = 1e-12;
+        let mut q1 = a;
+        let n1 = dot(&q1, &q1).sqrt();
+        assert!(n1 > SEED_EPS, "latent_oblique: first seed has norm {n1:e}, cannot be normalised");
+        for x in q1.iter_mut() {
+            *x /= n1;
+        }
+        let mut q2 = b;
+        let p = dot(&q2, &q1);
+        for k in 0..8 {
+            q2[k] -= p * q1[k];
+        }
+        let n2 = dot(&q2, &q2).sqrt();
+        assert!(
+            n2 > SEED_EPS,
+            "latent_oblique: second seed is parallel to the first (residual norm {n2:e}); \
+             the two seeds span a line, not a plane"
+        );
+        for x in q2.iter_mut() {
+            *x /= n2;
+        }
+        Chart::Latent { z0, q1, q2 }
+    }
+
+    // ---- The GLSL reference's four default slices ---------------------------------------
+    //
+    // `Ma1achy/principia-ii`, `src/state.ts:71-76`. Constructed here rather than at each call
+    // site because the basis was wrong in one of them and the literal appeared three times: the
+    // gallery and two tests. A correction has to land once.
+    //
+    // All four sit at `z0 = 0`, which decodes to the equilateral Lagrange configuration -- a
+    // named physical state at the centre of every one of these images. Their natural extent is
+    // [`Chart::default_half`], `3.0`, from the reference UI's `Slice +/- 3.0e+0`.
+
+    /// `shape`: the two configuration coordinates.
+    pub fn preset_shape() -> Chart {
+        Chart::latent_axes(decoder::Latent::default(), 0, 1)
+    }
+
+    /// `prho`: the inner momentum pair. A constant-**configuration** slice -- positions in this
+    /// decode do not depend on the momentum coordinates at all, so every pixel is the same
+    /// triangle released with a different initial velocity, and `spread_shape` at `t = 0` is
+    /// identically zero across the whole slice. Any structure in it is purely momentum-driven,
+    /// which makes it the control that separates configuration effects from momentum effects.
+    pub fn preset_prho() -> Chart {
+        Chart::latent_axes(decoder::Latent::default(), 2, 3)
+    }
+
+    /// `plambda`: the outer momentum pair. Constant-configuration, exactly as [`Self::preset_prho`].
+    pub fn preset_plambda() -> Chart {
+        Chart::latent_axes(decoder::Latent::default(), 4, 5)
+    }
+
+    /// `shape_pl`: **the only preset with a cross-coupling**, and the only one that can be got
+    /// wrong in this particular way.
+    ///
+    /// Constructed directly and **not** through [`Chart::latent_oblique`]: the reference's basis
+    /// is un-normalised (each direction has norm `sqrt 2`) and Gram-Schmidt would quietly render
+    /// a different slice while looking like a tidy-up. `tests/charts.rs` pins the norm.
+    ///
+    /// **The pairing is by GLSL SLOT.** The reference is `q1 = e0 + e6`, `q2 = e1 + e7`, and in
+    /// *its* indexing (`z0 = beta`, `z1 = alpha`, `z6/z7 = pLambda.x/y`) that pairs beta with
+    /// `pLambda.x` and alpha with `pLambda.y`. This module renumbers alpha and beta into the
+    /// spec's order, and **must carry their momentum partners with them** -- so the *pair
+    /// assignment* transposes and each pair stays intact:
+    ///
+    /// ```text
+    ///   q1 (horizontal) = e_alpha + e_pLambda_y = e0 + e5      // the GLSL's q2
+    ///   q2 (vertical)   = e_beta  + e_pLambda_x = e1 + e4      // the GLSL's q1
+    /// ```
+    ///
+    /// Pairing alpha with `pLambda.x` instead is a **genuinely different 2-plane** through the 8D
+    /// space, not a reorientation of the same one, and transposing `q1`/`q2` does not recover it
+    /// -- that gives `e_beta + e_pLy`, `e_alpha + e_pLx`, still crossed. It renders as *twisted*
+    /// rather than tilted, because the coupling sets how momentum co-varies with configuration
+    /// across the slice and the two pairings give different shears.
+    // ---- The user's two saved Config-chart slices ----------------------------------------
+    //
+    // Both are the reference UI's **Config chart**: GLSL `dimH = 0`, `dimV = 1`, which in the
+    // GLSL's indexing is beta horizontal and alpha vertical. Its window is
+    // `uv = pan + vUV*zoom`, then `z = z0 + (2u-1)*q1 + (2v-1)*q2` with `q_k = mag*e_dim`, so
+    // the chart-coordinate box is
+    //
+    // ```text
+    //   centre = 2*pan - 1 + zoom       half = zoom          (basis carries `mag`)
+    // ```
+    //
+    // The arithmetic is checked against the ranges the configs were quoted with, in
+    // `tests/charts.rs`, because a window that is *nearly* right reads as a physics
+    // disagreement — that is how the presets shipped at a 3x crop.
+
+    /// Saved config 1: the **basin-mode** slice. `horizon = 50`, `r_coll = 0.02`, `r_esc = 5`.
+    ///
+    /// **This is the control, and the more valuable of the two.** In basin mode the colour *is*
+    /// the terminal outcome, so freezing a trajectory's state at its own `t_end` cannot corrupt
+    /// it — the patchwork mechanism has no exposure here. The two implementations should
+    /// therefore agree *exactly*, and a disagreement is a second, independent bug in the physics
+    /// or the event detection rather than a rendering artefact.
+    ///
+    /// Its horizon is also past the f64 measurement horizon (~52 at `lambda = 0.7`), so the
+    /// deepest structure is expected to be unresolvable. That is a horizon statement, not a
+    /// disagreement, and must be said rather than read as one.
+    pub fn config_basin() -> (Chart, f64, f64, f64) {
+        Chart::config_slice(
+            [0.006, -0.052, -0.063, 0.095, -0.024, -0.088, 0.036, -0.123, -0.029, -0.044],
+            0.009_095_268_722_082_687,
+            (0.315_439_696_369_407_33, 0.831_421_501_766_114_6),
+            4.0,
+        )
+    }
+
+    /// Saved config 2: the stability/greyscale slice. `horizon = 50`, `r_coll = 0.005`,
+    /// `r_esc = 12`.
+    pub fn config_stability() -> (Chart, f64, f64, f64) {
+        Chart::config_slice(
+            [-0.098, 0.11, -0.034, 0.067, -0.093, -0.066, 0.027, -0.114, 0.107, -0.116],
+            0.637_63,
+            (0.175_12, 0.177_27),
+            1.0,
+        )
+    }
+
+    /// A Config-chart slice from the reference UI's own ten-slot `z0`, `zoom`, `pan` and `mag`.
+    ///
+    /// Returns `(chart, cx, cy, half)` — the window is part of the slice, not a default, for the
+    /// reason [`Chart::default_half`] exists.
+    ///
+    /// `z2` and `z3` are dropped, as `decodeIC` never reads them, and the two angle slots are
+    /// renumbered into the spec's order. **The basis pair is renumbered with them**: GLSL
+    /// `dimH = 0` is beta, which is spec index 1, and `dimV = 1` is alpha, spec index 0. Getting
+    /// that backwards renders a transposed slice that looks plausible — the `shape_pl` lesson at
+    /// a second site.
+    pub fn config_slice(z_glsl: [f64; 10], zoom: f64, pan: (f64, f64), mag: f64)
+        -> (Chart, f64, f64, f64)
+    {
+        let z0 = decoder::Latent {
+            z_alpha: z_glsl[1],
+            z_beta: z_glsl[0],
+            z_q: [z_glsl[4], z_glsl[5], z_glsl[6], z_glsl[7]],
+            z_mu: [z_glsl[8], z_glsl[9]],
+        };
+        let mut q1 = [0.0; 8];
+        let mut q2 = [0.0; 8];
+        q1[1] = mag; // horizontal: GLSL dim 0 = beta = spec index 1
+        q2[0] = mag; // vertical:   GLSL dim 1 = alpha = spec index 0
+        (
+            Chart::Latent { z0, q1, q2 },
+            2.0 * pan.0 - 1.0 + zoom,
+            2.0 * pan.1 - 1.0 + zoom,
+            zoom,
+        )
+    }
+
+    pub fn preset_shape_pl() -> Chart {
+        Chart::Latent {
+            z0: decoder::Latent::default(),
+            q1: [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            q2: [0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+        }
+    }
+
+    /// **Live-8D index -> spec index.** The reference UI numbers its dimensions over the ten
+    /// GLSL slots with the two dead ones (`z2`, `z3`, consumed by the canonical frame) deleted
+    /// *positionally*, giving
+    ///
+    /// ```text
+    ///   live-8D:  0 beta   1 alpha   2 pRho.x  3 pRho.y  4 pLam.x  5 pLam.y  6 mu1  7 mu2
+    ///   spec:     0 alpha  1 beta    2 z_q0    3 z_q1    4 z_q2    5 z_q3    6 mu1  7 mu2
+    /// ```
+    ///
+    /// so the two differ **only at 0 and 1**, where the GLSL puts beta first and the spec puts
+    /// alpha first. Indices 2..7 are identical, which is why `plambda = (e4, e5)` reads the same
+    /// in both and why the swap is easy to miss: it is invisible on every slice that does not
+    /// touch a configuration coordinate. `config_slice` open-codes the same renumber; this is
+    /// the named form, and it is a function so a dim can be converted wherever one appears.
+    fn live8_to_spec(i: usize) -> usize {
+        assert!(i < 8, "live-8D dim {i} out of range; the dead slots are already deleted");
+        match i {
+            0 => 1,
+            1 => 0,
+            k => k,
+        }
+    }
+
+    /// A latent slice from the reference UI's own controls: ten-slot `z0`, basis dims, tilts,
+    /// an in-plane rotation, `zoom` and `pan`.
+    ///
+    /// Returns `(chart, cx, cy, half)` — the window is part of the slice, exactly as in
+    /// [`Chart::config_slice`], whose `cx = 2*pan - 1 + zoom`, `half = zoom` convention this
+    /// reuses rather than re-deriving.
+    ///
+    /// # The tilt, transcribed and not derived
+    ///
+    /// The chart reference §1.1: *"A tilt is a rotation of the 2-plane, not a re-centering. A
+    /// 2-plane in 8D has 12 tilt axes (6 hidden dimensions x 2 basis vectors)."* So a tilt is
+    /// `(which basis vector, which dim, how far)` and it **rotates** rather than adds:
+    ///
+    /// ```text
+    ///   q_k <- cos(amt)*q_k + sin(amt)*e_dim
+    /// ```
+    ///
+    /// The amounts are **radians**, which is fixed by the reference framing of the tilt this
+    /// slice DROPPED: an `amt = 1.00` into a dead dimension leaves the basis vector only
+    /// `cos(1.00) = 0.5403` of its live component. That is a 46% shrink of an axis wearing the
+    /// name of a tilt, and it is not reintroduced here — a rotation toward a coordinate the
+    /// decoder never reads is an extent change in disguise, and the two want different spellings.
+    ///
+    /// `tilts` entries are `(basis, dim, amt)` with `basis` 0 for the horizontal vector and 1 for
+    /// the vertical, and `dim` in **live-8D** indexing ([`Chart::live8_to_spec`]).
+    ///
+    /// # No `mag`
+    ///
+    /// [`Chart::config_slice`] takes one because it does **not** orthonormalise, so a scale on
+    /// the basis survives into the window. Here the basis is always orthonormalised and any scale
+    /// is divided straight back out, so a `mag` argument would be a knob that cannot move —
+    /// *an argument hardcoded past is worse than an argument missing*, and one that is silently
+    /// normalised away is worse than either. Scale the window through `zoom`.
+    pub fn latent_ui_slice(
+        z_glsl: [f64; 10],
+        dim_h: usize,
+        dim_v: usize,
+        tilts: &[(usize, usize, f64)],
+        gamma_deg: f64,
+        zoom: f64,
+        pan: (f64, f64),
+    ) -> (Chart, f64, f64, f64) {
+        // `z2`/`z3` dropped and the angle pair renumbered, identically to `config_slice`.
+        let z0 = decoder::Latent {
+            z_alpha: z_glsl[1],
+            z_beta: z_glsl[0],
+            z_q: [z_glsl[4], z_glsl[5], z_glsl[6], z_glsl[7]],
+            z_mu: [z_glsl[8], z_glsl[9]],
+        };
+
+        let (hh, vv) = (Chart::live8_to_spec(dim_h), Chart::live8_to_spec(dim_v));
+        assert_ne!(hh, vv, "the two basis dims coincide; that is a line, not a plane");
+        let mut q1 = [0.0f64; 8];
+        let mut q2 = [0.0f64; 8];
+        q1[hh] = 1.0;
+        q2[vv] = 1.0;
+
+        for &(basis, dim, amt) in tilts {
+            assert!(basis < 2, "tilt basis {basis} must be 0 (horizontal) or 1 (vertical)");
+            let d = Chart::live8_to_spec(dim);
+            let q = if basis == 0 { &mut q1 } else { &mut q2 };
+            let (c, sn) = (amt.cos(), amt.sin());
+            for k in 0..8 {
+                q[k] *= c;
+            }
+            q[d] += sn;
+        }
+
+        // **Gamma is a rotation about the NORMAL through `z0`** — an axis perpendicular to the
+        // slice, through the slice origin — so the plane spins in place about a pin through its
+        // own centre. It never changes *which* slice is seen, only which direction is "right" on
+        // screen. That is a different operation from a tilt, which rotates a basis vector *out*
+        // of the plane and does change the slice.
+        //
+        // It pivots about `z0`, **not** about the camera: `decode_state` is
+        // `z = z0 + u*q1 + v*q2` with `u, v` the absolute window coordinates, so `z0` sits at
+        // signed `(0,0)` and rotating the basis while holding the window sweeps an off-centre
+        // camera. For this slice the camera is `0.0419` uv from `z0` and 4.5 deg moves the image
+        // by 20 px at 1024 — small enough to look correct and wrong enough not to match. The two
+        // conventions coincide only for a perfectly centred camera, which is presumably why this
+        // has not bitten before.
+        //
+        // Orthonormalise FIRST, then rotate by gamma. The same Gram-Schmidt as
+        // `latent_oblique`, including its refusal: a degenerate pair decodes every pixel
+        // identically, `ensemble_spread` reads exactly zero, and the criterion calls the quad
+        // perfectly resolved.
+        //
+        // **The order is load-bearing and was measured, not assumed.** Mixing a *non*-orthonormal
+        // pair by a rotation matrix is not a rotation: applied before Gram-Schmidt, this slice's
+        // `gamma = 4.5 deg` turns the frame by **2.45 deg** (basis angle -57.140 deg against the
+        // -55.088 deg that `amt + gamma` predicts), because after the tilt `q1` and `q2` are no
+        // longer orthogonal and the normalisation absorbs part of the mix. A parameter named
+        // `gammaDeg` that produces a different number of degrees is a parameter that does not
+        // mean what it says. Rotating the orthonormal pair is exact — an orthogonal combination
+        // of two orthonormal vectors stays orthonormal, so no second Gram-Schmidt is needed and
+        // none is done.
+        let chart = Chart::latent_oblique(z0, q1, q2);
+        let Chart::Latent { z0, q1: o1, q2: o2 } = chart else { unreachable!() };
+        let g = gamma_deg.to_radians();
+        let (cg, sg) = (g.cos(), g.sin());
+        let (mut r1, mut r2) = ([0.0f64; 8], [0.0f64; 8]);
+        for k in 0..8 {
+            r1[k] = cg * o1[k] + sg * o2[k];
+            r2[k] = -sg * o1[k] + cg * o2[k];
+        }
+        // **`pan` is the window CENTRE here, and that is not what `config_slice` does.**
+        //
+        // This constructor first carried `config_slice`'s `2*pan - 1 + zoom`, which places the
+        // window's lower-left *corner* at `pan`. The supplier's own arithmetic refuses it: with
+        // `pan` as the centre the camera sits `0.0419` uv from `z0` and a `gamma` of 4.5 deg
+        // sweeps the image by **20.1 px** at 1024; with the `+ zoom` it sits at `0.1585` and
+        // sweeps **75.9 px**. Two independently quoted figures — the offset and the pixel count —
+        // both land on the centre reading, and the corner reading misses both. The error is half
+        // a window in each axis, which is large and does not look like an error.
+        //
+        // **`config_slice` is deliberately NOT changed.** `config_stability` and `config_basin`
+        // are measured across a large committed corpus under it, and whether that `+ zoom` is a
+        // second UI convention or the same defect at an older site is a question that wants its
+        // own measurement, not a silent edit made while transcribing a different slice. Recorded
+        // in `results/README.md` rather than resolved here.
+        (Chart::Latent { z0, q1: r1, q2: r2 }, 2.0 * pan.0 - 1.0, 2.0 * pan.1 - 1.0, zoom)
+    }
+
+    /// **`tilt_plambda` — the first slice in the project with a non-zero tilt.**
+    ///
+    /// Supplied as a ten-slot UI config; two of those dims are dead (`z2`, `z3`, consumed by the
+    /// canonical frame), verified by perturbation at exactly `0.000e+00` — `tests/charts.rs`
+    /// holds that as a committed test rather than a remembered check.
+    ///
+    /// ```text
+    ///   preset    plambda      q1 = e4, q2 = e5   (live-8D)
+    ///   z0        [2.23, -0.56, 0.05, -0.04, -0.02, 0.12, -0.1, 0.02]   (live-8D)
+    ///   gammaDeg  2.0    (supplied at 4.5; reduced on request, 2026-09-06)
+    ///   tilt      basis 0 -> dim 5, amt -1.04 rad
+    ///   zoom      0.16779844723178242
+    ///   pan       (0.5169659939566047, 0.5383226703503323)
+    /// ```
+    ///
+    /// **`z0` decodes to unequal masses `(0.35333, 0.27523, 0.37144)`**, against `1/3` each for
+    /// every `z0 = 0` preset. That is the guard the supplier asked for: a run reporting equal
+    /// masses here is not decoding this chart. `tests/charts.rs` asserts the triple.
+    ///
+    /// **And the tilt is in-plane, which is measured rather than assumed.** `dim 5` is `q2`
+    /// itself, so the rotation stays inside `span{e4, e5}` and this slice spans the **same
+    /// 2-plane** as [`Chart::preset_plambda`] — the frame within it is rotated, not the plane
+    /// through 8-space. The consequence is real and not a null: the sampling square is rotated,
+    /// so pixel `(u,v)` maps to a different IC and the rendered field is a rotated resampling.
+    /// It is a different *slice* and not a different *plane*, and saying which is the whole
+    /// point — `shape_pl` is on record as a case where a basis that looked like a reorientation
+    /// was a genuinely different 2-plane, and the two are told apart by measurement.
+    pub fn tilt_plambda() -> (Chart, f64, f64, f64) {
+        Chart::latent_ui_slice(
+            [2.23, -0.56, -0.05, 0.0, 0.05, -0.04, -0.02, 0.12, -0.1, 0.02],
+            4,
+            5,
+            &[(0, 5, -1.04)],
+            // **The supplied value was 4.5; the shipped slice is 2.0.** `gamma` is a rotation
+            // about the normal through `z0` and the camera is `0.0419` uv off-centre, so it
+            // sweeps the image as well as turning the frame -- 20 px at 4.5 deg over a 1024
+            // raster, about 9 px at 2.0. The supplied figure is kept as the negative control in
+            // `tests/tilt_slice.rs`, which is where the 20 px number is pinned, so reducing the
+            // shipped value does not retire the arithmetic it was checked by.
+            2.0,
+            0.167_798_447_231_782_42,
+            (0.516_965_993_956_604_7, 0.538_322_670_350_332_3),
+        )
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Slice {
+    pub nx: usize,
+    pub ny: usize,
+    pub cx: f64,
+    pub cy: f64,
+    pub half: f64,
+    /// Which body's position varies under [`Chart::BodyPlane`]: 0, 1 or 2. Retained on every
+    /// chart because it names the slice family in dumps and headers.
+    pub body: usize,
+    pub chart: Chart,
+}
+
+impl Slice {
+    /// The pre-vertical-slice constructor. Every existing result is a `BodyPlane` slice and
+    /// this is the only way one is built, so nothing can acquire a different chart silently.
+    pub fn body_plane(nx: usize, ny: usize, cx: f64, cy: f64, half: f64, body: usize) -> Self {
+        Slice { nx, ny, cx, cy, half, body, chart: Chart::BodyPlane }
+    }
+
+    pub fn with_chart(mut self, chart: Chart) -> Self {
+        self.chart = chart;
+        self
+    }
+
+    pub fn npix(&self) -> usize {
+        self.nx * self.ny
+    }
+
+    /// Cell widths, **per axis**.
+    ///
+    /// The reference computes only `hx = 2*half/max(nx-1,1)` and uses it for *both* axes.
+    /// Every experiment run against it used a square grid, so it never bit; on any
+    /// non-square grid the y-jitter is silently mis-scaled. Fixed here.
+    pub fn cell_widths(&self) -> (f64, f64) {
+        let hx = 2.0 * self.half / (self.nx.max(2) - 1) as f64;
+        let hy = 2.0 * self.half / (self.ny.max(2) - 1) as f64;
+        (hx, hy)
+    }
+
+    /// One axis of the grid, matching `numpy.linspace` including its exact endpoint.
+    fn axis(c: f64, half: f64, n: usize, i: usize) -> f64 {
+        let (a, b) = (c - half, c + half);
+        if n <= 1 {
+            return a;
+        }
+        if i == n - 1 {
+            return b; // numpy sets the last sample exactly, rather than accumulating
+        }
+        a + (i as f64) * ((b - a) / (n - 1) as f64)
+    }
+
+    /// **Quad-local position of pixel `idx`: `du, dv ∈ [-1, 1]`, formed DIRECTLY.**
+    ///
+    /// §12's defect is not that this codebase lacks local coordinates — [`crate::decode::sample`]
+    /// has taken them since it was written — it is that `ensemble::jitter` **recovered** `du` as
+    /// `(u - cx) / half` from a `u` [`Self::decode_pos`] had just formed globally. Precision is
+    /// spent building the offset and then the offset is subtracted back off: free at f64 on an
+    /// O(1) chart coordinate, and total at f32 or at depth 40, where `cx + du*half` has already
+    /// absorbed `du*half` into `cx` before anything reads it.
+    ///
+    /// **Not bitwise `(decode_pos(idx).0 - cx) / half`**, and it does not claim to be — the two
+    /// orders of operation round differently, which is exactly why one of them still carries
+    /// information the other has thrown away. `examples/sample_space.rs` measures the gap and its
+    /// growth with zoom depth rather than asserting either.
+    pub fn local_pos(&self, idx: usize) -> (f64, f64) {
+        (
+            crate::uv::axis_local(self.nx, idx % self.nx),
+            crate::uv::axis_local(self.ny, idx / self.nx),
+        )
+    }
+
+    /// Chart position of pixel `idx`, with `idx = jy*nx + jx`.
+    pub fn decode_pos(&self, idx: usize) -> (f64, f64) {
+        let jx = idx % self.nx;
+        let jy = idx / self.nx;
+        (
+            Self::axis(self.cx, self.half, self.nx, jx),
+            Self::axis(self.cy, self.half, self.ny, jy),
+        )
+    }
+
+    /// **The decode**: chart coordinate `(u, v)` to a full state, in `f64`.
+    ///
+    /// Public because the deep-zoom ladder decodes directly, without a grid.
+    pub fn decode_state(&self, u: f64, v: f64) -> Ic<f64> {
+        decode_state(&self.chart, self.body, u, v)
+    }
+
+    /// Nominal (un-jittered) initial condition for pixel `idx`.
+    ///
+    /// This is copy 0 of the reference's ensemble — `mask[::reps] = False` leaves it
+    /// un-jittered and therefore completely seed-independent. That is what makes a
+    /// nominal-only cross-check possible with no RNG on either side.
+    pub fn nominal<T: Real>(&self, idx: usize) -> Cart<T> {
+        let (x, y) = self.decode_pos(idx);
+        self.decode_state(x, y).s.cast::<T>()
+    }
+
+    /// Nominal initial condition **with its masses**.
+    ///
+    /// [`Self::nominal`] drops them, which is correct at the many call sites that predate the
+    /// chart families and are all Burrau. Anything that decodes a chart which can vary mass must
+    /// use this instead, or it integrates the right configuration with the wrong bodies.
+    pub fn nominal_ic<T: Real>(&self, idx: usize) -> Ic<T> {
+        let (x, y) = self.decode_pos(idx);
+        self.decode_state(x, y).cast::<T>()
+    }
+}
+
+/// The decode, free of any grid. `body` is read only by [`Chart::BodyPlane`].
+pub fn decode_state(chart: &Chart, body: usize, u: f64, v: f64) -> Ic<f64> {
+    match *chart {
+        // Bitwise what this function did before the chart existed. Asserted in a test.
+        Chart::BodyPlane => {
+            let mut s = burrau::state::<f64>();
+            s.r[body] = Vec2::new(u, v);
+            Ic { m: burrau::MASSES, s }
+        }
+        Chart::Plane { origin, u: uu, v: vv } => {
+            let mut s = origin;
+            for k in 0..3 {
+                s.r[k] = s.r[k] + uu[k] * u + vv[k] * v;
+            }
+            Ic { m: burrau::MASSES, s }
+        }
+        Chart::Shape { n0, e1, e2, inertia, phase, m } => {
+            let t = [
+                u * e1[0] + v * e2[0],
+                u * e1[1] + v * e2[1],
+                u * e1[2] + v * e2[2],
+            ];
+            let n = shape::exp_map(n0, t);
+            let r = shape::from_shape(n, inertia, phase, &m);
+            // Released from rest. That is a property of THIS chart, not of the project: the
+            // latent decode carries four free Jacobi momentum coordinates, and the `(Lz, K)`
+            // charts construct momenta to realise both axes.
+            Ic { m, s: Cart { r, v: [Vec2::zero(); 3] } }
+        }
+
+        // ---- the reference's five families, all through the shared decoder ----
+        Chart::Latent { z0, q1, q2 } => {
+            let mut z = z0;
+            for k in 0..8 {
+                z.set(k, z0.get(k) + u * q1[k] + v * q2[k]);
+            }
+            decoder::decode(&z).ic
+        }
+
+        Chart::BurrauFamily { nu_lo, nu_hi, k_max, gamma_k } => {
+            let nu = (nu_lo + (nu_hi - nu_lo) * u.clamp(0.0, 1.0)).clamp(1e-9, 1.0 - 1e-9);
+            let (m, mut r) = decoder::burrau_family(nu);
+            // Lz = 0: the family is defined by its geometry, and the second axis is energy
+            // alone. At v = 0 the momenta vanish and this is the classical rest start.
+            let k = k_max * v.clamp(0.0, 1.0).powf(gamma_k);
+            let mut p = decoder::momenta_for(0.0, k, &r, &m).unwrap_or([Vec2::zero(); 3]);
+            decoder::canonicalise(&mut r, &mut p, &m);
+            let _ = decoder::scale_gauge(&mut r, &mut p, &m);
+            decoder::to_ic(&r, &p, &m)
+        }
+
+        Chart::Invariant { base, k_max, gamma_k, .. } => {
+            let (m, _) = decoder::masses(base.z_mu);
+            let (alpha, beta) = decoder::angles(base.z_alpha, base.z_beta);
+            let r = decoder::config(alpha, beta, &m);
+            // The feasibility warp. `K >= 0` and `|Lz| <= sqrt(2 I K)` bound the feasible set
+            // to the interior of a parabola with its apex at the rest start; this maps the unit
+            // square onto that interior, so **no pixel is infeasible by construction** -- which
+            // is why the warp exists rather than a clamp.
+            let i: f64 = (0..3).map(|k| m[k] * r[k].norm_sq()).sum();
+            let t = v.clamp(0.0, 1.0);
+            let k = k_max * t.powf(gamma_k);
+            let l_max = (2.0 * i * k).max(0.0).sqrt();
+            let lz = (2.0 * u.clamp(0.0, 1.0) - 1.0) * l_max;
+            let mut p = decoder::momenta_for(lz, k, &r, &m).unwrap_or([Vec2::zero(); 3]);
+            let mut r = r;
+            decoder::canonicalise(&mut r, &mut p, &m);
+            decoder::to_ic(&r, &p, &m)
+        }
+
+        Chart::MassSimplex { z_alpha, z_beta, z_q, margin } => {
+            // Square to triangle with a shear, then blended toward the centroid so no mass
+            // reaches zero. A zero mass is not a three-body system, and without the margin every
+            // edge pixel would carry a degenerate label rather than a measurement.
+            let (uu, vv) = (u.clamp(0.0, 1.0), v.clamp(0.0, 1.0));
+            let raw = [uu * (1.0 - vv), (1.0 - uu) * (1.0 - vv), vv];
+            let g = margin.clamp(0.0, 1.0 / 3.0);
+            let m = [
+                (1.0 - 3.0 * g) * raw[0] + g,
+                (1.0 - 3.0 * g) * raw[1] + g,
+                (1.0 - 3.0 * g) * raw[2] + g,
+            ];
+            let (alpha, beta) = decoder::angles(z_alpha, z_beta);
+            let mut r = decoder::config(alpha, beta, &m);
+            let mut p = decoder::momenta(z_q, &m);
+            decoder::canonicalise(&mut r, &mut p, &m);
+            let _ = decoder::scale_gauge(&mut r, &mut p, &m);
+            decoder::to_ic(&r, &p, &m)
+        }
+    }
+}
+
+/// BRIEF §2.2's named regions, all Burrau: `(name, cx, cy, body)`.
+pub const REGIONS: [(&str, f64, f64, usize); 8] = [
+    ("near-field", 1.0, 3.0, 0),
+    ("mid-field", 1.0, 6.0, 0),
+    ("far", 1.0, 13.0, 0),
+    ("body2 core", 1.0, -1.0, 2),
+    ("body2 mid", 1.0, -5.0, 2),
+    ("body1 slice", -2.0, -1.0, 1),
+    ("body1 far", -2.0, -7.0, 1),
+    // Pathological: drives all three bodies together. Not regularisable; expected to hit
+    // the triple-collision outcome. That is correct behaviour, not a bug (BRIEF §2.6).
+    ("deep interior", 0.0, 0.0, 0),
+];
+
+pub fn region(name: &str, nx: usize, ny: usize, half: f64) -> Option<Slice> {
+    REGIONS
+        .iter()
+        .find(|r| r.0 == name)
+        .map(|&(_, cx, cy, body)| Slice::body_plane(nx, ny, cx, cy, half, body))
+}
+
+/// **Named slices that carry their own window and are NOT part of the 26-chart gallery.**
+///
+/// `gallery_cases` is the corpus that `results/charts` is measured over; adding to it changes
+/// what a gallery run produces and silently makes the committed set incomplete. These are named
+/// slices with their own `zoom`/`pan` window, resolved by name wherever a harness takes a chart.
+///
+/// **This is the table.** Seven harnesses each open-coded `if name == "config_stability"` before
+/// falling through to `gallery_cases`, so a new named slice needed seven edits and was reachable
+/// from whichever of them had been remembered. *The fix for that class is never the instance; it
+/// is the table.* (The 52 harnesses that call `Chart::config_stability()` directly are untouched
+/// — they name one slice on purpose and do not resolve by string.)
+pub fn named_slice(name: &str) -> Option<(Chart, f64, f64, f64)> {
+    match name {
+        "config_stability" => Some(Chart::config_stability()),
+        "config_basin" => Some(Chart::config_basin()),
+        "tilt_plambda" => Some(Chart::tilt_plambda()),
+        _ => None,
+    }
+}
+
+/// **The gallery's 26 chart instances**, as `(name, chart, cx, cy, half)`.
+///
+/// Lives here rather than in `examples/chart_gallery.rs` because two examples now walk the same
+/// set, and a list that appears in two places is a list that will disagree in two places. The
+/// `shape_pl` basis literal already appeared three times on this project and was wrong in all
+/// three; a correction has to land once.
+pub fn gallery_cases() -> Vec<(&'static str, Chart, f64, f64, f64)> {
+    let z0 = decoder::Latent {
+        z_alpha: 0.35,
+        z_beta: -0.45,
+        z_q: [0.25, -0.15, 0.40, 0.05],
+        z_mu: [0.20, -0.30],
+    };
+
+    // Twelve instances across all five families, **each carrying its own centre**.
+    //
+    // The centre is a property of the chart INSTANCE, not of its variant, and inferring it from
+    // the variant is how this example first failed: `Chart::plane_for_body` zeroes the varying
+    // body in `origin` and carries the whole position in `(u,v)`, so it is centred like
+    // `BodyPlane` at (1,3) -- while `slice_gallery`'s oblique planes carry the configuration in
+    // `origin` and are centred at zero. Centring the first at (0,0) sampled a box three units
+    // away and gave 29 quads against 549. The control caught it; the fix is to stop inferring.
+    // The latent chart's own natural half-width -- the reference UI's `Slice +/- 3.0e+0`, and
+    // the one number that was wrong in every committed preset image.
+    let ph = Chart::preset_shape().default_half();
+    vec![
+        ("body_plane", Chart::BodyPlane, 1.0, 3.0, 0.05),
+        ("plane_00deg", Chart::plane_for_body(0), 1.0, 3.0, 0.05),
+        ("shape_sphere", Chart::shape_at_burrau(0.0), 0.0, 0.0, 0.05),
+        // The five named axis-aligned latent planes from the reference's table.
+        ("latent_shape", Chart::latent_axes(z0, 0, 1), 0.0, 0.0, 1.5),
+        ("latent_inner_p", Chart::latent_axes(z0, 2, 3), 0.0, 0.0, 1.5),
+        ("latent_outer_p", Chart::latent_axes(z0, 4, 5), 0.0, 0.0, 1.5),
+        ("latent_mass", Chart::latent_axes(z0, 6, 7), 0.0, 0.0, 1.5),
+        ("latent_mixed", Chart::latent_axes(z0, 0, 4), 0.0, 0.0, 1.5),
+        // Two oblique planes. The bases are recorded by `Chart::params` in every dump.
+        (
+            "latent_oblique_a",
+            Chart::latent_oblique(
+                z0,
+                [0.3, -1.2, 0.5, 0.9, -0.4, 0.1, 0.7, -0.6],
+                [1.1, 0.2, -0.8, 0.3, 0.6, -0.9, 0.15, 0.4],
+            ),
+            0.0,
+            0.0,
+            1.5,
+        ),
+        (
+            "latent_oblique_b",
+            Chart::latent_oblique(
+                z0,
+                [-0.7, 0.4, 1.0, -0.2, 0.55, 0.8, -0.35, 0.6],
+                [0.25, 1.3, -0.15, 0.7, -0.9, 0.3, 0.85, -0.4],
+            ),
+            0.0,
+            0.0,
+            1.5,
+        ),
+        ("burrau_nu_k", Chart::BurrauFamily { nu_lo: 0.05, nu_hi: 0.95, k_max: 4.0, gamma_k: 1.5 }, 0.5, 0.5, 0.45),
+        (
+            "invariant_lz_k",
+            Chart::Invariant { base: z0, k_max: 4.0, gamma_k: 1.5, report_e: false },
+            0.5,
+            0.5,
+            0.45,
+        ),
+        (
+            "mass_simplex",
+            Chart::MassSimplex { z_alpha: 0.35, z_beta: -0.45, z_q: [0.25, -0.15, 0.40, 0.05], margin: 0.02 },
+            0.5,
+            0.5,
+            0.45,
+        ),
+        // ---- The GLSL reference's four default presets ----------------------------------
+        //
+        // `Ma1achy/principia-ii`, `src/state.ts:71-76`, with the bases built by
+        // `Chart::preset_*` rather than written out here -- the `shape_pl` literal appeared in
+        // three places and was wrong in all three, so a correction has to land once.
+        //
+        // These are **new cases beside** the `latent_*` rows above rather than replacements:
+        // those sit at an off-origin `z0` deliberately, so no sigmoid rests at its symmetry
+        // point. These sit at `z0 = 0` for the opposite reason -- that point decodes to the
+        // **equilateral Lagrange configuration**, which is what makes the picture something a
+        // person can recognise rather than a field to be tabulated.
+        //
+        // **The window is 3.0, from the reference UI's `Slice +/- 3.0e+0`.** It shipped at 1.0,
+        // which is a 3x crop on the middle of the picture:
+        //
+        //     half = 1.0  ->  alpha in [0.446, 1.125], beta in [0.845, 2.297]  =  46% of azimuth
+        //     half = 3.0  ->  alpha in [0.120, 1.451], beta in [0.149, 2.993]  =  90% of azimuth
+        //
+        // In the GLSL the fractal core is a small disk inside large smooth regions; at half = 1.0
+        // it fills the frame. Same structure, wrong crop -- which is exactly why the port read as
+        // "similar but not the same". The number comes from `Chart::default_half()` and not from
+        // a literal here, because one shared default silently meant two different things and that
+        // is how this got through.
+        //
+        // Centre `(0,0)` with that half reproduces the reference's `z0 + (2u-1)*q1 + (2v-1)*q2`
+        // over `(u,v) in [0,1]^2` exactly: `decode_state` is `z0 + u*q1 + v*q2` and the slice
+        // already supplies the signed box, so the factor of two lives in the camera and not in a
+        // second place where it could hide.
+        //
+        // The images are **transposed relative to the GLSL** -- it puts `beta` at index 0 and
+        // this module uses the spec's `(z_alpha, z_beta)` order. See `decoder.rs`'s module
+        // header. That is faithfulness, not a bug.
+        ("preset_shape", Chart::preset_shape(), 0.0, 0.0, ph),
+        ("preset_prho", Chart::preset_prho(), 0.0, 0.0, ph),
+        ("preset_plambda", Chart::preset_plambda(), 0.0, 0.0, ph),
+        ("preset_shape_pl", Chart::preset_shape_pl(), 0.0, 0.0, ph),
+        // **The crop control.** The same four charts, the same bases, one number changed. A
+        // plausible explanation for why the port looked wrong becomes a demonstrated one only
+        // if the narrow window reproduces the old picture and the wide one does not -- and
+        // these are the rows that say so.
+        ("preset_shape_h1", Chart::preset_shape(), 0.0, 0.0, 1.0),
+        ("preset_prho_h1", Chart::preset_prho(), 0.0, 0.0, 1.0),
+        ("preset_plambda_h1", Chart::preset_plambda(), 0.0, 0.0, 1.0),
+        ("preset_shape_pl_h1", Chart::preset_shape_pl(), 0.0, 0.0, 1.0),
+        // **The extent control on the pre-existing latent rows.** §12.4's standing result is
+        // that a chart's tameness is set by WHICH COORDINATES it varies, not by where it is
+        // centred. Those rows were all measured at `half = 1.5`, so the claim has never been
+        // tested against extent. These twins give it a second axis to survive; if it turns out
+        // to be extent-conditional that is a more interesting result than the original.
+        ("latent_shape_h3", Chart::latent_axes(z0, 0, 1), 0.0, 0.0, ph),
+        ("latent_inner_p_h3", Chart::latent_axes(z0, 2, 3), 0.0, 0.0, ph),
+        ("latent_outer_p_h3", Chart::latent_axes(z0, 4, 5), 0.0, 0.0, ph),
+        ("latent_mass_h3", Chart::latent_axes(z0, 6, 7), 0.0, 0.0, ph),
+        ("latent_mixed_h3", Chart::latent_axes(z0, 0, 4), 0.0, 0.0, ph),
+    ]
+}

@@ -20,6 +20,10 @@ defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for 
 
 **`prin-rs` (the vertical slice repository):** `FINDINGS.md`, `README.md`, `results/`.
 
+The minimal text and code set the contracts transcribe from is imported at `docs/reference/prin-rs/`, pinned to commit
+`8600d45` (R-159). It is reference, not authority (R-1): transcribe into the contracts and cite; never cite those files as
+normative. `results/` and the images are cited by commit (`8600d45`; `70cfbc4` for the original 256² data).
+
 > Every settled default should be traceable to where it was measured. **A default without a citation
 > becomes folklore** — this project lost four days to exactly that when a re-registration finding
 > written down months earlier had to be rediscovered.
