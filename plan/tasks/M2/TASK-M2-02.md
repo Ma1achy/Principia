@@ -1,7 +1,7 @@
 # TASK-M2-02 — Decoder: the latent type, the mass block and the configuration block
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002
+- **Closes:** REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044
 - **Depends on:** TASK-M2-01
 - **Needs (earlier milestones):** REQ-PAY-017, REQ-SYS-004, REQ-PAY-014
 - **Reviewers:** code, qa, physics
@@ -30,6 +30,7 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - `docs/contracts/principia_canonical_spec.md` § "3. The physics & manifold model *(authoritative: `chart_decoder_contract`, `dd_decoder`)*"
 - `docs/design/principia_systems_architecture.md` § "2. Component inventory, by rung"
 - `docs/design/principia_systems_architecture.md` § "5. The seam catalogue"
+- `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
 
 ## Deliverables
 - `crates/kernel/src/decode/latent.rs` (the `Latent<R>` type, exactly 8 components, block accessors).
@@ -48,8 +49,10 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - Review (physics): the decoder has no endpoint-landing or exclusion guard; degenerate configurations are only approached as limits (REQ-DEC-028).
 - Review (physics): no global mass/physics parameter exists outside z and the chart; rotation and scale are fixed by the canonical-frame decode (ρ̃ on +x, R̃ = 1), not by latent coordinates; the latent type has exactly 8 components (REQ-SYS-010).
 - `cargo test -p kernel units_dimensionless` — decoded ICs have total mass 1 and I = 1; G is the constant 1 (REQ-INT-002).
+- Proposal: the f64 and f32 tolerances of dd_decoder tests 1, 6 and 8, with the measured residuals over fuzzed z as evidence; the human confirms them at the M2 gate (REQ-DEC-044).
 
 ## Notes
 - PIT-3 "check the measurement can fire": at μ_max = 5, M₀₁ = (1 + e^{μ₁})/(1 + e^{μ₁} + e^{μ₂}) is bounded below by about 6.7×10⁻³ for every finite z, so M01_TINY cannot fire from the latent chart unless ε exceeds that. The calibration must say where the tag is reachable (chart maps that set masses directly — the ternary plot, the δm strip) and the test must drive that path, not only z.
 - Gap G9: decoder §5 tests 1 and 6 say "precision-appropriate tolerance" / "to tolerance" with no value; only the cross-backend factor (REQ-DEC-043) is a calibration requirement.
 - REQ-DEC-014 (exact-pole ingestion) is closed with encode in TASK-M2-15, because "ingest" is the encode path.
+- Closes, for gaps the corpus leaves open: REQ-DEC-044 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

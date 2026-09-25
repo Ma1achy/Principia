@@ -34,3 +34,4 @@ The rules the fragment side must keep from now on are checked in CI rather than 
 - Each lint is shown able to fire (PIT-3): a fixture WGSL file with an `isnan`, a raw payload read and an `r_sh` read must fail the lint.
 - Open RQ-75 (REQ-RENDER-015): whether `has_ensemble` is a baked const or a uniform changes what the lint accepts as the ensemble guard.
 - Whether render_gui_spec §10.1's `raw != raw` guard counts as a NaN test under this rule is not ruled (milestone Gaps; see TASK-M1-09).
+- Waits on RQ-82 (`REVIEW_QUEUE.md`): The generated debug NaN guard vs the bitcast rule.

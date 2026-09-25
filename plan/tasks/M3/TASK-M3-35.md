@@ -37,5 +37,6 @@ Pitfalls §1 stays fixed: the controlled experiment renders the config slice onc
 ## Notes
 - Open RQs: RQ-78 (REQ-EVT-014, REQ-EVT-023).
 - REQ-EVT-014 and REQ-EVT-023 wait on RQ-78 (whether the 'off' image comes from the harness march, or the regression is retired). This task is written for the first reading and stays blocked until the ruling.
-- Gap reported: 'the config slice' / `config_stability` are not defined as chart + parameters in the corpus.
+- Gap: 'the config slice' / `config_stability` are not defined as chart + parameters in the corpus.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-EVT-023.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

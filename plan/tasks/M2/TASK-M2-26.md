@@ -41,3 +41,4 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 
 ## Notes
 - Gaps G1, G2 and G15 apply (the WGSL encode's provenance, nonlinear charts, ‖·‖_phys).
+- Waits on RQ-84 (`REVIEW_QUEUE.md`): One decode source vs "the two decode ports".

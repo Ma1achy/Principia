@@ -49,3 +49,4 @@ The whole M3 physics kernel — decode, canonicalise, the wrapper with its detec
 ## Notes
 - REQ-SYS-025's check is by inspection, never by agreement of results (parity contract Tier L, part 1); the reviewer records the inspection in the PR.
 - The lint is the installed check for the review-checklist requirements it covers; it stays in CI for every later task.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

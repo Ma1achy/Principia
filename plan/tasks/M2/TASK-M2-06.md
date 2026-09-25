@@ -51,3 +51,4 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 ## Notes
 - The Tier-N tolerances are set later by the M4 measurement (REQ-VAL-064); REQ-DEC-043 is decoder test 12's own factor. The CPU-f64 Precision-ring surface as a whole (`computeIC` etc.) is REQ-SYS-017 (M3); this task delivers only `decodeOnly`.
 - PIT-10: the measurement holds inputs fixed; state its domain (decode only, no trajectory).
+- Waits on RQ-86 (`REVIEW_QUEUE.md`): The Chart trait's f64 `map` vs Φ generic over the float type.

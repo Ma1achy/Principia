@@ -32,3 +32,5 @@
 - The field lists are completed by the requirements that need them (REQ-GUI-036, REQ-GUI-102, M8, and the SimConfig requirements of M2–M6); this task names the surfaces and the §2 groups.
 - The firewall (engine exposes only these surfaces `pub`) is REQ-SYS-052, M8.
 - See Gaps: the corpus's own uses of the retired terms, and `SimResult` in the GUI docs.
+- Waits on RQ-80 (`REVIEW_QUEUE.md`): Retired terms still live in the docs, and the vocabulary lint's doc scope.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.

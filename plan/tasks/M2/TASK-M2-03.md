@@ -1,7 +1,7 @@
 # TASK-M2-03 — Decoder: free momentum, the factorised join and the ICDescriptor
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020
+- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088
 - **Depends on:** TASK-M2-02
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017
 - **Reviewers:** code, qa, physics
@@ -34,6 +34,7 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `docs/design/principia_dd_validation_orbits.md` § "3. Proposed suite"
 - `docs/design/principia_dd_validation_orbits.md` § "1.3 Lagrange and Euler central configurations — the only analytic ones"
 - `docs/design/principia_dd_validation_orbits.md` § "5. Immediate action"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/kernel/src/decode/momentum.rs` and `crates/kernel/src/decode/mod.rs` (the ordered decode entry, returning the canonical (m, r, p) seam type and the DEGENERATE tag).
@@ -53,7 +54,9 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `cargo test -p ledger ic_descriptor_layout` — generated `ICDescriptor` field names, types and scales; the 16 B padding is a declared member; size is 64 B (REQ-PAY-035).
 - `cargo test -p kernel golden_ic` — z = 0 → masses (⅓, ⅓, ⅓), α = π/4, β = π/2, q = 0, I = 1, every derived value asserted in f64 and f32 (REQ-VAL-018; encode's golden pair is asserted in TASK-M2-16).
 - `cargo test -p kernel chart_landmarks_lagrange_euler` — z = 0 decodes to the Lagrange equilateral configuration; z_β → ±large decodes toward the Euler collinear configurations at β → 0 and β → π, approached as a limit (REQ-VAL-020).
+- Definition: the formulas of `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` written into dd_decoder §3.6 and approved by the physics reviewer (REQ-PAY-088).
 
 ## Notes
 - Gap G7: the ICDescriptor formulas for `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` are not in the corpus (dd_decoder §3.6 names "ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀"; ledger §3.6 lists the fields; neither gives a formula, nor whether `rho_mag` is ‖ρ‖ or ‖ρ̃‖). REQ-PAY-034's hand-computed values can't be written for those fields until this is ruled.
 - PIT-9: the Σpᵢ = 0 check cannot catch the crossed-factor swap at equal masses — the fuzz must draw unequal masses, and a swapped-factor control must fail.
+- Closes, for gaps the corpus leaves open: REQ-PAY-088 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

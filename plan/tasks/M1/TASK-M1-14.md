@@ -46,3 +46,5 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
 - REQ-TOOL-011's table includes rows M1 can't show (milestone Gaps): the DECODE preset (lands in M2, R-75), the tier-gated ensemble views (M5), the live current-substep heatmap (needs a march, M3), and the uniform echo, whose row names `M` — the retired checkpoint count (REQ-SYS-002).
 - VAL-012 is the regression of pitfalls §1.2 (c): colouring is a pure function applied after the physics. The event mode is the outcome palette (TASK-M1-10); greyscale and hue are prelude ramps over the same field.
 - Each golden is shown able to fail (VAL-007, PIT-3): the bitwise-adversarial descriptor carries a contaminated bit the unpack would mask, and the test must catch it (PIT-9).
+- Waits on RQ-80 (`REVIEW_QUEUE.md`): Retired terms still live in the docs, and the vocabulary lint's doc scope.
+- Waits on RQ-94 (`REVIEW_QUEUE.md`): M1 requirements that need M2, M3, M5 or M8.

@@ -41,3 +41,4 @@ Every map of colour_composition §7.1 — Artefact 1 (VMF OKLAB, VMF Okabe–Ito
 - PIT-8: the magenta invalid colour must stay distinguishable from any map's data colours.
 - Gap: the oracle — the React reference artefacts `ColourSphere` and `PatternSphere` — is not in the repo; `docs/gui/reference/principia_colour_presets.html` and `principia_colour_explorer.html` carry similar maps but the corpus does not name them as the oracle.
 - Gap: the Principia palette stops and the Cool-warm definition (see TASK-M7-07).
+- Waits on RQ-101 (`REVIEW_QUEUE.md`): The colour golden oracle and the LUT data live outside the corpus.

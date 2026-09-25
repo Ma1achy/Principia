@@ -33,5 +33,6 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 - Review (physics): the reversibility diagnostic refuses an occupant with reversible = false; the implementation uses one of the two named routes (REQ-INT-032).
 
 ## Notes
-- Gap reported: the only `reversible: true` occupant in the Part 2a table is AZ + time-transformed leapfrog (Mikkola–Tanikawa), whose equations the corpus doesn't give and whose build in M3 isn't decided; without it REQ-VAL-044's gate cannot run ('blocked on a reversible occupant').
+- Gap: the only `reversible: true` occupant in the Part 2a table is AZ + time-transformed leapfrog (Mikkola–Tanikawa), whose equations the corpus doesn't give and whose build in M3 isn't decided; without it REQ-VAL-044's gate cannot run ('blocked on a reversible occupant').
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-134.
+- Waits on RQ-102 (`REVIEW_QUEUE.md`): The regularisation occupants and step control that live only in prin-rs.

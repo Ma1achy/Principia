@@ -36,3 +36,4 @@ The canvas supports §7's gestures: click-select opening the inspector, click-em
 ## Notes
 - The { } badge's hand-edited state comes from TASK-M8-21; this task's screenshot case sets it through the graph model directly.
 - Definitions (R-72) written here: REQ-GUI-151. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

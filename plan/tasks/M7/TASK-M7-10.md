@@ -25,4 +25,6 @@ The combinators mix_const, mix_field, bandmask and site_overlay as `vec3(+ctx) �
 - `cargo test -p render physics_overlay` — dd_colouring unit test 5: blob maxima exactly at b̂/ê/l̂ (equal and unequal masses); s = 0 is the identity; κ = 11 BC, 9 Euler/Lagrange (REQ-COL-036).
 
 ## Notes
-- Gap: as written, max(0, exp(…) + 0.01) never clips (the argument is always > 0.01), so every blob adds a floor weight of 0.04·s everywhere; the task implements the formula as written and the report asks whether − 0.01 was meant.
+- Gap: as written, max(0, exp(…) + 0.01) never clips (the argument is always > 0.01), so every blob adds a floor weight of 0.04·s everywhere; the task implements the formula as written and RQ-90 asks whether − 0.01 was meant.
+- Waits on RQ-89 (`REVIEW_QUEUE.md`): Is the physics overlay baked?.
+- Waits on RQ-90 (`REVIEW_QUEUE.md`): The blob-blend weight and blend: markdown vs reference artefacts.

@@ -35,5 +35,6 @@
 - `cargo test -p kernel total_substeps_proxy` — `total_substeps` is an exact u32 equal to Σ N_sub; the proxy ⌊log₂ Σ N_sub⌋ via countLeadingZeros equals ⌊log₂⌋ of the exact count at powers of two and their neighbours, and 0 for totals 0 and 1 (REQ-TOOL-034).
 
 ## Notes
-- Gap reported: REQ-INT-028's "browser-GPU-via-WGSL" arm — the browser build (`web/`) is M8; this task runs the emitted WGSL through wgpu's WGSL front end natively. Whether that satisfies the arm is for the orchestrator's RQ.
+- Gap: REQ-INT-028's "browser-GPU-via-WGSL" arm — the browser build (`web/`) is M8; this task runs the emitted WGSL through wgpu's WGSL front end natively. Whether that satisfies the arm is RQ-97.
 - The domain of the 0-fork result is identical inputs per step (pitfalls §10); state it in the gate's output.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

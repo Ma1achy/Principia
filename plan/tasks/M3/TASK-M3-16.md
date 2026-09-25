@@ -32,5 +32,7 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - The integrator contract states the sort, the tie tolerance (a comparison-only branch, identical on CPU and GPU) and the sign convention; physics reviewer approved (REQ-INT-079).
 
 ## Notes
-- Gap reported: symbolic_dynamics_contract §1 (which two branch cuts are generators a and b, and the crossing-direction sign) is OPEN, with no ruling or definition requirement; crossing detection needs the cut geometry to compute `d`.
+- Gap: symbolic_dynamics_contract §1 (which two branch cuts are generators a and b, and the crossing-direction sign) is OPEN, with no ruling or definition requirement; crossing detection needs the cut geometry to compute `d`.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-079.
+- Waits on RQ-96 (`REVIEW_QUEUE.md`): The branch-cut convention is needed in M3, required in M6, and has no author.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

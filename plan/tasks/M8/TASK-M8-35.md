@@ -27,5 +27,5 @@ The Research window's first tool seeds periodic orbits from spiral cores where t
 - `cargo xtask gate research-seed-catalogue` — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-GUI-150).
 
 ## Notes
-- The winding-number field the seeds come from is not defined in the corpus (raised as a gap for a REVIEW_QUEUE entry).
+- The winding-number field the seeds come from is not defined in the corpus.
 - Calibrations (R-71) proposed here: REQ-GUI-150. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.

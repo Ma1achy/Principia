@@ -49,3 +49,4 @@ that the split ignores; no divergence-trend member.
   definition once RQ-72 is ruled.
 - REQ-PAY-078 is an R-71 calibration: proposed value and evidence in the PR; the human confirms at the M5 gate.
 - The horizon measurement must reuse the original discretisation (pitfalls §3, REQ-TOOL-038).
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

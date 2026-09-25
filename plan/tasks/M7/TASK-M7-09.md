@@ -32,3 +32,5 @@ FieldRamp's ScalarField sources, each returning (value, valid) through `ctx`: pa
 ## Notes
 - R-50 is "recorded; applied before the physics-overlay occupant": this task applies it (doc edits under the ruling). dd_integrator §3.7 still reads "audit decision B18, still open".
 - Gap: the Euler landmark for unequal masses — the corpus gives ê = −b̂ for equal masses only and does not say whether unequal-mass Euler points are the antipodes of b̂ or the collinear central configurations (see the milestone report).
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- Waits on RQ-106 (`REVIEW_QUEUE.md`): The Euler landmarks for unequal masses.

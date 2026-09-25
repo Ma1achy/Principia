@@ -1,7 +1,7 @@
 # TASK-M7-12 — Graph to fragment shader: the walk, None identity, the post chain and the always-renderable fallback
 
 - **Milestone:** M7
-- **Closes:** REQ-RENDER-071, REQ-GUI-027, REQ-RENDER-072, REQ-RENDER-068, REQ-GUI-024, REQ-COL-025
+- **Closes:** REQ-RENDER-071, REQ-GUI-027, REQ-RENDER-072, REQ-RENDER-068, REQ-GUI-024, REQ-COL-025, REQ-RENDER-081
 - **Depends on:** TASK-M7-04, TASK-M7-11
 - **Needs (earlier milestones):** REQ-RENDER-005, REQ-RENDER-009, REQ-RENDER-011, REQ-RENDER-075
 - **Reviewers:** code, qa, gui
@@ -26,6 +26,7 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - `docs/design/principia_colour_composition.md` § "4.2 Post chain"
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/render/src/codegen/walk.rs` — graph → `shade()` in backbone order, the post chain in declaration order with insert and reorder, the 8-node bound.
@@ -39,6 +40,8 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - Review (code): colour occupants cannot alter the pipeline topology outside the stain graph; L is owned by the bound brightness metric (REQ-RENDER-068).
 - `cargo test -p render stain_fanout` — picking a vector field sets subtype vector; one source wired to a colour and a brightness node renders both; a margin node has two field ins (REQ-GUI-024).
 - `cargo test -p render post_chain_order` — a 9th post node is rejected; reordering two post nodes changes the output accordingly (REQ-COL-025).
+- Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable from both-None mid-grey and invalid magenta; the human confirms it at the M7 gate (REQ-RENDER-081).
 
 ## Notes
 - Gap: render_gui_spec §13 gives the invalid-graph fallback as "flat grey / error tint" — which one, and its value, are not given (see the milestone report).
+- Closes, for gaps the corpus leaves open: REQ-RENDER-081 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

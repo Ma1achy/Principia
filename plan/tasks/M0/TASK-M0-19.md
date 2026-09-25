@@ -1,7 +1,7 @@
 # TASK-M0-19 — The benchmark runner and the session header
 
 - **Milestone:** M0
-- **Closes:** REQ-TOOL-001
+- **Closes:** REQ-TOOL-001, REQ-TOOL-121
 - **Depends on:** TASK-M0-04, TASK-M0-14, TASK-M0-18
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, perf
@@ -17,6 +17,7 @@
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5.5 Profiling is FIRST-CLASS, not a debug mode"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `xtask/src/bench.rs` — `cargo xtask bench <bench>` and `cargo xtask bench --all` (registered in `cargo xtask ci`), baselines in `fixtures/bench/<bench>/baseline.json`, compared with `prin profile diff`.
@@ -26,8 +27,10 @@
 ## Acceptance tests
 - `cargo test -p engine session_header` — the session header contains every telemetry §2 session field; on a unified-memory adapter fixture unified memory is recorded in its own field and not as VRAM; on a discrete fixture VRAM is recorded and unified memory is absent (REQ-TOOL-001).
 - `cargo xtask bench trivial-kernel` — writes a v1 file whose session header is complete, and `prin profile diff` against the checked-in baseline runs (REQ-TOOL-001).
+- Definition: the f64-rate source and the headless display fields written into dd_telemetry_and_tiers §2 and approved by the physics reviewer (REQ-TOOL-121).
 
 ## Notes
 - The first benchmark requirement is M3 (REQ-PERF-004); the runner exists before it (MILESTONES M0).
 - Where the probe lives is a layout choice (engine telemetry, beside the future frame loop); the firewall requirement REQ-SYS-052 (M8) governs what the engine exposes `pub`.
 - See Gaps: the f64 rate, and display fields in a headless run.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-121 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

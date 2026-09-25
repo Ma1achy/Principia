@@ -38,3 +38,4 @@ Deep quads get the linearised decode (deep_zoom §2): per quad the CPU evaluates
 ## Notes
 - Calibration proposed: REQ-DEC-042 (slope tolerance about 2).
 - PIT-10: the O(h²) agreement holds at fixed inputs; state the domain (decode only, not trajectory outcomes).
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.

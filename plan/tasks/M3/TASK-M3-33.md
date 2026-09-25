@@ -36,3 +36,4 @@ R-103 is built: `crates/validation` marches past escape on its own copy of the s
 - This task also carries the harness byte-identity arm that REQ-EVT-010 and REQ-PAY-058 (TASK-M3-17) name.
 - A discriminator must not come from a quantity the early stop alters (pitfalls §3; REQ-VAL-005).
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-123, REQ-VAL-124.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

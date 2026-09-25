@@ -49,3 +49,4 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 ## Notes
 - REQ-GUI-152 is a definition (R-72) that its requirement routes to the physics reviewer.
 - Definitions (R-72) written here: REQ-GUI-152. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

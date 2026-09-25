@@ -1,7 +1,7 @@
 # TASK-M8-28 — Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115
+- **Closes:** REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128
 - **Depends on:** TASK-M8-26, TASK-M8-27
 - **Needs (earlier milestones):** REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053
 - **Reviewers:** code, qa, physics, gui, perf
@@ -16,6 +16,7 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `docs/gui/principia_render_gui_spec.md` § "Profiler"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
 
 ## Deliverables
 - `crates/gui/src/windows/profiler/{timeline,flame,gpu,memory,counters}.rs`.
@@ -31,8 +32,11 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `cargo test -p prin profile_query_live` — 'top 10 scopes by p95' against a running app returns ten v1-schema scope records (REQ-TOOL-101).
 - Doc review of `docs/gui/principia_render_gui_spec.md` § "Profiler" — the Profiler section defines idle and lists the hot-path summary's fields within profiler schema v1; the physics reviewer approves the doc change before merge (REQ-TOOL-114).
 - `cargo xtask gate leak-detector` — the proposal shows idle memory traces with and without an injected leak and a threshold and window that flag the leak and not the clean trace; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-TOOL-115).
+- Definition: the `--live` transport and discovery written into render_gui_spec's Profiler section and approved by the physics reviewer (REQ-TOOL-128).
 
 ## Notes
-- How `--live` reaches a running app (the transport) is not given (raised as a gap for a REVIEW_QUEUE entry).
+- How `--live` reaches a running app (the transport) is not given.
 - Calibrations (R-71) proposed here: REQ-TOOL-115. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-TOOL-114. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-128 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

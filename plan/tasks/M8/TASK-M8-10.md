@@ -1,7 +1,7 @@
 # TASK-M8-10 — The hover trace and label on the figure
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073
+- **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156
 - **Depends on:** TASK-M8-09, TASK-M8-05
 - **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002
 - **Reviewers:** code, qa, gui
@@ -19,6 +19,7 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden"
 - `docs/notes/ic_inspector_scratchpad.md` § "Measurement readouts (gauge-invariant → hold under all four handles)"
 - `docs/contracts/principia_render_contract.md` § "Part 7 — The hover trace (per-IC trajectory overlay)"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/render/src/compositor/trace_layer.rs` — the trace as a compositor layer above the stain output; suppressed over non-current-identity regions.
@@ -32,7 +33,9 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - `cargo test -p gui hover_label_strings` — label strings for a running sample, an escape, a collision and a bounded-at-horizon sample (REQ-GUI-086).
 - `cargo test -p gui labels_zero_based` — labels for body 0 escape read 'body 0'; pair 0 is (1, 2), pair 1 (2, 0), pair 2 (0, 1); no '1–2' style collision label (REQ-GUI-087).
 - `cargo xtask screenshot 01_main` (hover over stale and current regions) — hover over a stale backdrop region: no trace; over a current region: trace drawn above the composite (REQ-RENDER-073).
+- Definition: the hover path's out-of-plane distance and opacity fall-off written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-156).
 
 ## Notes
-- The opacity fall-off with distance from the slice has no stated function or distance measure (raised as a gap for a REVIEW_QUEUE entry).
+- The opacity fall-off with distance from the slice has no stated function or distance measure.
 - The click inspector's persistence half of REQ-GUI-052 is asserted against the Inspector window id; the window itself is TASK-M8-14.
+- Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

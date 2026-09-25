@@ -49,3 +49,4 @@ The categorical descriptor views exist: `state` (bits 0–2, six values) and the
 - Which palette the raw six-valued `state` field view uses is not settled: REQ-TOOL-021 wants six distinct colours, while R-77 gives `state` the nine-class palette (which needs `detail` and shows `sim_failed` in the invalid colour) and keeps Okabe–Ito for other categorical fields (milestone Gaps).
 - The categorical-discipline half of dd_colouring unit test 8 (colour-per-sample then SSAA resolve) needs ensemble copies (M5) and is not claimed here.
 - PIT-9: the state/detail round-trip tests include a contaminated-bit control that must fail.
+- Waits on RQ-83 (`REVIEW_QUEUE.md`): The raw `state` debug view's palette: six states or §1.4's nine classes?.

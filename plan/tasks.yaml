@@ -49,7 +49,7 @@
   title: The golden-image runner, with one-variable reproduction
   depends_on: [TASK-M0-01, TASK-M0-04]
   needs: []
-  requirements: [REQ-VAL-003, REQ-VAL-009]
+  requirements: [REQ-VAL-003, REQ-VAL-009, REQ-VAL-138]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.2, PIT-1.3, PIT-3, PIT-8]
 - id: TASK-M0-07
@@ -57,7 +57,7 @@
   title: "The generation root: ledger schema, metadata gate and static layout checks"
   depends_on: [TASK-M0-01, TASK-M0-04]
   needs: []
-  requirements: [REQ-GEN-002, REQ-GEN-003]
+  requirements: [REQ-GEN-002, REQ-GEN-003, REQ-GEN-024]
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M0-08
@@ -65,7 +65,7 @@
   title: "The constants register: every settled constant carries its citation and admissibility class"
   depends_on: [TASK-M0-07]
   needs: []
-  requirements: [REQ-SYS-001, REQ-SYS-005, REQ-VAL-006]
+  requirements: [REQ-SYS-001, REQ-SYS-005, REQ-VAL-006, REQ-SYS-063]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M0-09
@@ -113,7 +113,7 @@
   title: "The substrate toolchain: one kernel source compiled twice, and the Real-generic payload"
   depends_on: [TASK-M0-04, TASK-M0-10]
   needs: []
-  requirements: [REQ-PAY-017]
+  requirements: [REQ-PAY-017, REQ-PAY-087]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M0-15
@@ -137,7 +137,7 @@
   title: "Profiler schema v1: the frame record, the five stages and the nested sections"
   depends_on: [TASK-M0-16]
   needs: []
-  requirements: [REQ-TOOL-005, REQ-TOOL-008]
+  requirements: [REQ-TOOL-005, REQ-TOOL-008, REQ-TOOL-120]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M0-18
@@ -145,7 +145,7 @@
   title: "`prin profile`: a fixed scenario headless, and the regression diff"
   depends_on: [TASK-M0-17]
   needs: []
-  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007]
+  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M0-19
@@ -153,7 +153,7 @@
   title: The benchmark runner and the session header
   depends_on: [TASK-M0-04, TASK-M0-14, TASK-M0-18]
   needs: []
-  requirements: [REQ-TOOL-001]
+  requirements: [REQ-TOOL-001, REQ-TOOL-121]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M1-01
@@ -161,7 +161,7 @@
   title: "The read-side SimState: derived accessors and validity predicates"
   depends_on: [TASK-M0-15]
   needs: [REQ-GEN-002, REQ-GEN-004, REQ-GEN-007, REQ-PAY-002, REQ-PAY-008, REQ-PAY-010, REQ-PAY-012, REQ-RENDER-001, REQ-TOOL-003]
-  requirements: [REQ-PAY-021, REQ-PAY-022, REQ-PAY-026, REQ-PAY-027, REQ-PAY-030, REQ-PAY-031, REQ-PAY-032, REQ-RENDER-013, REQ-RENDER-019]
+  requirements: [REQ-PAY-021, REQ-PAY-022, REQ-PAY-026, REQ-PAY-027, REQ-PAY-030, REQ-PAY-031, REQ-PAY-032, REQ-RENDER-013, REQ-RENDER-019, REQ-RENDER-077]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M1-02
@@ -177,7 +177,7 @@
   title: "The shared prelude: range_norm, DEBUG_NAN, has_<feature> consts and the dbg_* presentation layer"
   depends_on: [TASK-M1-01]
   needs: [REQ-GEN-001, REQ-GEN-002, REQ-RENDER-001]
-  requirements: [REQ-RENDER-014, REQ-RENDER-020, REQ-RENDER-021, REQ-TOOL-009]
+  requirements: [REQ-RENDER-014, REQ-RENDER-020, REQ-RENDER-021, REQ-TOOL-009, REQ-COL-055, REQ-TOOL-122]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M1-04
@@ -185,7 +185,7 @@
   title: "The stain graph lowered to WGSL: backbone, canonical form and generated shade()"
   depends_on: [TASK-M1-01, TASK-M1-03, TASK-M0-16]
   needs: [REQ-SYS-003, REQ-SYS-004]
-  requirements: [REQ-RENDER-009, REQ-RENDER-010, REQ-RENDER-012, REQ-RENDER-016, REQ-RENDER-075]
+  requirements: [REQ-RENDER-009, REQ-RENDER-010, REQ-RENDER-012, REQ-RENDER-016, REQ-RENDER-075, REQ-GEN-027]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M1-05
@@ -201,7 +201,7 @@
   title: "The synthetic payload harness and RenderContext: CPU-filled buffers bound to the fragment"
   depends_on: [TASK-M1-01, TASK-M1-02, TASK-M1-05, TASK-M0-02]
   needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-008, REQ-PAY-012, REQ-SYS-003, REQ-TOOL-004]
-  requirements: [REQ-RENDER-004, REQ-RENDER-007, REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014]
+  requirements: [REQ-RENDER-004, REQ-RENDER-007, REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014, REQ-COL-056]
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M1-07
@@ -241,7 +241,7 @@
   title: The kernel bring-up mode and the live unwrapped phase
   depends_on: [TASK-M1-01, TASK-M1-06]
   needs: [REQ-PAY-008, REQ-PAY-017, REQ-GEN-004, REQ-SYS-004]
-  requirements: [REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001]
+  requirements: [REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M1-12
@@ -257,7 +257,7 @@
   title: Structural views over RenderQuad and the boundary overlay
   depends_on: [TASK-M1-07, TASK-M1-08]
   needs: [REQ-PAY-002, REQ-SCHED-001, REQ-SYS-003]
-  requirements: [REQ-TOOL-026, REQ-RENDER-024]
+  requirements: [REQ-TOOL-026, REQ-RENDER-024, REQ-TOOL-124]
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M1-14
@@ -281,7 +281,7 @@
   title: "Link registry: generated links with inverses, log-det, ε clamps and the chart constants"
   depends_on: [TASK-M1-08]
   needs: [REQ-SYS-004, REQ-GEN-010, REQ-SYS-005, REQ-SYS-001]
-  requirements: [REQ-CHART-032, REQ-CHART-034, REQ-GEN-013, REQ-GEN-014, REQ-GEN-015, REQ-DEC-009]
+  requirements: [REQ-CHART-032, REQ-CHART-034, REQ-GEN-013, REQ-GEN-014, REQ-GEN-015, REQ-DEC-009, REQ-GEN-025, REQ-GEN-026]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-02
@@ -289,7 +289,7 @@
   title: "Decoder: the latent type, the mass block and the configuration block"
   depends_on: [TASK-M2-01]
   needs: [REQ-PAY-017, REQ-SYS-004, REQ-PAY-014]
-  requirements: [REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002]
+  requirements: [REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-03
@@ -297,7 +297,7 @@
   title: "Decoder: free momentum, the factorised join and the ICDescriptor"
   depends_on: [TASK-M2-02]
   needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017]
-  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020]
+  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-04
@@ -313,7 +313,7 @@
   title: The Chart trait, ValidationResult and the latent affine chart
   depends_on: [TASK-M2-03, TASK-M1-07]
   needs: [REQ-SYS-009]
-  requirements: [REQ-CHART-003, REQ-CHART-028, REQ-CHART-043, REQ-CHART-030, REQ-CHART-015, REQ-CHART-029]
+  requirements: [REQ-CHART-003, REQ-CHART-028, REQ-CHART-043, REQ-CHART-030, REQ-CHART-015, REQ-CHART-029, REQ-CHART-050]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M2-06
@@ -337,7 +337,7 @@
   title: "The shape-sphere chart: shape_vec, the chart maps, the closed-form inverse and landmarks"
   depends_on: [TASK-M2-05, TASK-M2-07]
   needs: [REQ-SYS-009]
-  requirements: [REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023]
+  requirements: [REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023, REQ-CHART-048, REQ-CHART-049]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-09
@@ -401,7 +401,7 @@
   title: "The round-trip suite: T2 per chart, T3 with the half-mirror catch, ε_phys"
   depends_on: [TASK-M2-14, TASK-M2-15]
   needs: [REQ-VAL-007, REQ-VAL-006]
-  requirements: [REQ-ENC-001, REQ-ENC-004, REQ-ENC-005, REQ-ENC-018, REQ-ENC-024, REQ-DEC-016, REQ-DEC-029, REQ-VAL-013]
+  requirements: [REQ-ENC-001, REQ-ENC-004, REQ-ENC-005, REQ-ENC-018, REQ-ENC-024, REQ-DEC-016, REQ-DEC-029, REQ-VAL-013, REQ-ENC-029]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-5, PIT-9, PIT-3]
 - id: TASK-M2-17
@@ -409,7 +409,7 @@
   title: "Encode by axis kind: the invariant fibre reuses decode, feasibility first"
   depends_on: [TASK-M2-12, TASK-M2-14, TASK-M2-15]
   needs: []
-  requirements: [REQ-ENC-008, REQ-ENC-009, REQ-ENC-010, REQ-CHART-005]
+  requirements: [REQ-ENC-008, REQ-ENC-009, REQ-ENC-010, REQ-CHART-005, REQ-ENC-030]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M2-18
@@ -425,7 +425,7 @@
   title: "Lookup: the exact and partial forms and the three-layer validation ladder"
   depends_on: [TASK-M2-17, TASK-M2-18]
   needs: []
-  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027]
+  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-20
@@ -449,7 +449,7 @@
   title: "Navigation as chart construction: pan, slice, zoom, tilt and the direction library"
   depends_on: [TASK-M2-05, TASK-M2-10, TASK-M2-12]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-GUI-002, REQ-GUI-003, REQ-CHART-009, REQ-CHART-016, REQ-SYS-014]
+  requirements: [REQ-GUI-002, REQ-GUI-003, REQ-CHART-009, REQ-CHART-016, REQ-SYS-014, REQ-CHART-051]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9]
 - id: TASK-M2-23
@@ -473,7 +473,7 @@
   title: Portable WGSL decode and encode, the DECODE preset and the agreement preset
   depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14]
   needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001]
-  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029]
+  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.7, PIT-9, PIT-5]
 - id: TASK-M2-26
@@ -497,7 +497,7 @@
   title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
   depends_on: [TASK-M2-08, TASK-M2-14]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-CHART-002, REQ-RENDER-026]
+  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M3-01
@@ -545,7 +545,7 @@
   title: "SimUniforms: the wrapper parameters, their defaults and the dispatch refusals"
   depends_on: [TASK-M3-04]
   needs: [REQ-PAY-012, REQ-GEN-006, REQ-INT-002, REQ-RENDER-019]
-  requirements: [REQ-INT-026, REQ-PAY-037, REQ-PAY-040, REQ-SYS-018]
+  requirements: [REQ-INT-026, REQ-PAY-037, REQ-PAY-040, REQ-SYS-018, REQ-INT-081]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M3-07
@@ -553,7 +553,7 @@
   title: The regularisation axis and the Aarseth–Zare occupant
   depends_on: [TASK-M3-04, TASK-M3-05]
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039]
+  requirements: [REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M3-08
@@ -593,7 +593,7 @@
   title: "The escape detector: closure and E_rel, the window, the escaper and ionisation"
   depends_on: [TASK-M3-08, TASK-M3-11]
   needs: [REQ-SYS-016, REQ-PAY-004]
-  requirements: [REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018]
+  requirements: [REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018, REQ-EVT-024]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.5, PIT-2, PIT-2.1, PIT-2.2]
 - id: TASK-M3-13
@@ -657,7 +657,7 @@
   title: The CPU worker pool and the hover-trajectory benchmark
   depends_on: [TASK-M3-19, TASK-M0-19]
   needs: [REQ-TOOL-001]
-  requirements: [REQ-PERF-003, REQ-PERF-004, REQ-PERF-083]
+  requirements: [REQ-PERF-003, REQ-PERF-004, REQ-PERF-083, REQ-PERF-085]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M3-21
@@ -705,7 +705,7 @@
   title: Order scaling and the symplectic-vs-not gates
   depends_on: [TASK-M3-24]
   needs: [REQ-VAL-007]
-  requirements: [REQ-VAL-030, REQ-VAL-031]
+  requirements: [REQ-VAL-030, REQ-VAL-031, REQ-VAL-139]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M3-27
@@ -817,7 +817,7 @@
   title: "Tier B and Tier N: integer fields exact, continuous values within measured native-wgpu tolerances"
   depends_on: [TASK-M4-02]
   needs: [REQ-PAY-013, REQ-PAY-051, REQ-PAY-052, REQ-PAY-053, REQ-PAY-027, REQ-PAY-043, REQ-GEN-006, REQ-VAL-017, REQ-DEC-043, REQ-ENC-004, REQ-ENC-024, REQ-INT-031]
-  requirements: [REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026]
+  requirements: [REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026, REQ-VAL-140, REQ-VAL-141]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10, PIT-3]
 - id: TASK-M4-05
@@ -881,7 +881,7 @@
   title: "Checkerboard self-erasing: catch-up at rest, the three-state control and export force-off"
   depends_on: [TASK-M4-11]
   needs: [REQ-RENDER-004, REQ-SCHED-002]
-  requirements: [REQ-RENDER-029, REQ-RENDER-034, REQ-RENDER-036, REQ-SCHED-008, REQ-VAL-058]
+  requirements: [REQ-RENDER-029, REQ-RENDER-034, REQ-RENDER-036, REQ-SCHED-008, REQ-VAL-058, REQ-RENDER-078]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M4-13
@@ -889,7 +889,7 @@
   title: "FTLE on the GPU: the f32 shadow form and the horizon map"
   depends_on: [TASK-M4-06, TASK-M4-04, TASK-M3-36]
   needs: [REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009]
-  requirements: [REQ-PAY-085, REQ-TOOL-043]
+  requirements: [REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M4-14
@@ -913,7 +913,7 @@
   title: "The pixel inspector's engine side: f64 trace, f32 GPU trace and the divergence overlay"
   depends_on: [TASK-M4-04, TASK-M4-06, TASK-M3-27, TASK-M3-36]
   needs: [REQ-GUI-008, REQ-INT-055, REQ-SYS-017, REQ-VAL-036, REQ-VAL-035, REQ-INT-005, REQ-VAL-034]
-  requirements: [REQ-TOOL-040, REQ-TOOL-041, REQ-TOOL-042, REQ-VAL-070, REQ-VAL-071, REQ-SYS-028]
+  requirements: [REQ-TOOL-040, REQ-TOOL-041, REQ-TOOL-042, REQ-VAL-070, REQ-VAL-071, REQ-SYS-028, REQ-TOOL-127]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-10]
 - id: TASK-M4-17
@@ -937,7 +937,7 @@
   title: "First kernel benchmarks: the march's bottleneck, N = 8 vs 16, and one quad thread-count constant"
   depends_on: [TASK-M4-06, TASK-M4-09]
   needs: [REQ-TOOL-006, REQ-TOOL-001, REQ-TOOL-002, REQ-SYS-003]
-  requirements: [REQ-PERF-009, REQ-PERF-011, REQ-SYS-029]
+  requirements: [REQ-PERF-009, REQ-PERF-011, REQ-SYS-029, REQ-PERF-086]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M5-01
@@ -1025,7 +1025,7 @@
   title: Memory budgets, the hard cap and continuous pressure
   depends_on: [TASK-M5-09, TASK-M5-10]
   needs: [REQ-TOOL-001]
-  requirements: [REQ-PERF-019, REQ-PERF-021, REQ-PERF-023, REQ-PERF-029, REQ-PERF-030, REQ-SCHED-050, REQ-VAL-082]
+  requirements: [REQ-PERF-019, REQ-PERF-021, REQ-PERF-023, REQ-PERF-029, REQ-PERF-030, REQ-SCHED-050, REQ-VAL-082, REQ-PERF-087]
   reviewers: [code, qa, perf]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-12
@@ -1049,7 +1049,7 @@
   title: "Dispatch queue: epochs, in-flight limit, positional readback and the measurement path"
   depends_on: [TASK-M5-04, TASK-M5-09]
   needs: [REQ-PERF-010, REQ-PERF-012, REQ-SYS-021, REQ-SCHED-003]
-  requirements: [REQ-SCHED-033, REQ-SCHED-021, REQ-SCHED-022, REQ-PAY-066, REQ-SCHED-031]
+  requirements: [REQ-SCHED-033, REQ-SCHED-021, REQ-SCHED-022, REQ-PAY-066, REQ-SCHED-031, REQ-SCHED-087]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M5-15
@@ -1137,7 +1137,7 @@
   title: "The two-regime scheduler: in-motion coarse cover, debounce and the backdrop reference"
   depends_on: [TASK-M5-15, TASK-M5-21]
   needs: [REQ-SCHED-001]
-  requirements: [REQ-SCHED-020, REQ-SCHED-075, REQ-RENDER-039]
+  requirements: [REQ-SCHED-020, REQ-SCHED-075, REQ-RENDER-039, REQ-SCHED-088]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M5-26
@@ -1145,7 +1145,7 @@
   title: "Compositor: the stale backdrop, blur as the one signal, never blank"
   depends_on: [TASK-M5-20, TASK-M5-25]
   needs: [REQ-RENDER-005, REQ-RENDER-009, REQ-SCHED-008]
-  requirements: [REQ-RENDER-037, REQ-RENDER-038, REQ-RENDER-041, REQ-RENDER-044, REQ-RENDER-045, REQ-SYS-030]
+  requirements: [REQ-RENDER-037, REQ-RENDER-038, REQ-RENDER-041, REQ-RENDER-044, REQ-RENDER-045, REQ-SYS-030, REQ-RENDER-079]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M5-27
@@ -1185,7 +1185,7 @@
   title: "The refinement decision and the quad lifecycle: terminal vs refinable"
   depends_on: [TASK-M5-17, TASK-M5-30]
   needs: [REQ-VAL-080, REQ-REF-009, REQ-TOOL-116, REQ-SCHED-047]
-  requirements: [REQ-REF-033, REQ-REF-034, REQ-SCHED-064, REQ-REF-011]
+  requirements: [REQ-REF-033, REQ-REF-034, REQ-SCHED-064, REQ-REF-011, REQ-REF-047]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M6-02
@@ -1193,7 +1193,7 @@
   title: "The split gate: the screen floor, the sliding MAX_REL_DEPTH and the motion refinement floor"
   depends_on: [TASK-M6-01, TASK-M5-12]
   needs: [REQ-SCHED-040, REQ-SCHED-086, REQ-SCHED-020, REQ-SCHED-075, REQ-PERF-016, REQ-SCHED-048]
-  requirements: [REQ-SCHED-057, REQ-SCHED-058, REQ-SCHED-059, REQ-SCHED-060, REQ-SCHED-061, REQ-SCHED-069, REQ-SCHED-070, REQ-REF-012, REQ-REF-020, REQ-REF-021]
+  requirements: [REQ-SCHED-057, REQ-SCHED-058, REQ-SCHED-059, REQ-SCHED-060, REQ-SCHED-061, REQ-SCHED-069, REQ-SCHED-070, REQ-REF-012, REQ-REF-020, REQ-REF-021, REQ-SCHED-089]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-3]
 - id: TASK-M6-03
@@ -1217,7 +1217,7 @@
   title: error_ratio as the trust flag, and the refinement gate / integrator tolerance pair
   depends_on: [TASK-M6-03, TASK-M6-04]
   needs: [REQ-REF-003, REQ-REF-004, REQ-INT-026, REQ-INT-028]
-  requirements: [REQ-REF-018, REQ-PAY-080, REQ-PAY-081, REQ-PAY-082, REQ-VAL-088, REQ-VAL-089]
+  requirements: [REQ-REF-018, REQ-PAY-080, REQ-PAY-081, REQ-PAY-082, REQ-VAL-088, REQ-VAL-089, REQ-REF-048]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M6-06
@@ -1265,7 +1265,7 @@
   title: "Tile priority: P_tile, the pointer-centred P_focus, quad-relative relevance and baseline-first"
   depends_on: [TASK-M6-02, TASK-M5-13, TASK-M5-24]
   needs: [REQ-SCHED-019, REQ-SCHED-023, REQ-SCHED-074, REQ-DEC-031, REQ-CHART-038]
-  requirements: [REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081]
+  requirements: [REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M6-12
@@ -1305,7 +1305,7 @@
   title: "Auto: device characterisation — limits, probe, info, solve and the tier inversion"
   depends_on: [TASK-M6-15]
   needs: [REQ-PERF-023, REQ-PERF-025, REQ-PERF-029, REQ-PERF-031, REQ-PERF-032, REQ-PERF-030]
-  requirements: [REQ-PERF-034, REQ-PERF-048, REQ-PERF-050, REQ-PERF-051, REQ-PERF-052, REQ-PERF-053, REQ-PERF-054, REQ-PERF-055, REQ-PERF-041, REQ-PERF-039, REQ-PERF-038]
+  requirements: [REQ-PERF-034, REQ-PERF-048, REQ-PERF-050, REQ-PERF-051, REQ-PERF-052, REQ-PERF-053, REQ-PERF-054, REQ-PERF-055, REQ-PERF-041, REQ-PERF-039, REQ-PERF-038, REQ-PERF-088, REQ-PERF-090]
   reviewers: [code, qa, perf]
   pitfalls: [PIT-3]
 - id: TASK-M6-17
@@ -1321,7 +1321,7 @@
   title: "The arbiter's timescales: motion offset, change under cover, hysteresis, sensors and persistence"
   depends_on: [TASK-M6-17, TASK-M5-22, TASK-M5-23, TASK-M5-28]
   needs: [REQ-SCHED-034, REQ-SCHED-036, REQ-GUI-009, REQ-TOOL-051, REQ-SCHED-046]
-  requirements: [REQ-PERF-059, REQ-PERF-060, REQ-PERF-061, REQ-PERF-062, REQ-PERF-063, REQ-PERF-064, REQ-PERF-066]
+  requirements: [REQ-PERF-059, REQ-PERF-060, REQ-PERF-061, REQ-PERF-062, REQ-PERF-063, REQ-PERF-064, REQ-PERF-066, REQ-PERF-089]
   reviewers: [code, qa, perf]
   pitfalls: [PIT-3]
 - id: TASK-M6-19
@@ -1329,7 +1329,7 @@
   title: The sea_fraction(eps) estimator
   depends_on: [TASK-M6-03, TASK-M6-17]
   needs: [REQ-REF-002]
-  requirements: [REQ-REF-031, REQ-REF-044]
+  requirements: [REQ-REF-031, REQ-REF-044, REQ-REF-049]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M6-20
@@ -1361,7 +1361,7 @@
   title: "The first refine milestone's measurements: depth past level 6, tau, merging under motion, zoom regression"
   depends_on: [TASK-M6-06, TASK-M6-12, TASK-M6-17, TASK-M6-20, TASK-M5-23]
   needs: [REQ-VAL-081, REQ-TOOL-050, REQ-RENDER-046]
-  requirements: [REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085]
+  requirements: [REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-6, PIT-10, PIT-3]
 - id: TASK-M7-01
@@ -1425,7 +1425,7 @@
   title: Categorical palettes and the categorical filter
   depends_on: [TASK-M7-02, TASK-M7-05, TASK-M1-10]
   needs: [REQ-COL-002, REQ-COL-004, REQ-TOOL-009, REQ-COL-053]
-  requirements: [REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019]
+  requirements: [REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M7-09
@@ -1457,7 +1457,7 @@
   title: "Graph to fragment shader: the walk, None identity, the post chain and the always-renderable fallback"
   depends_on: [TASK-M7-04, TASK-M7-11]
   needs: [REQ-RENDER-005, REQ-RENDER-009, REQ-RENDER-011, REQ-RENDER-075]
-  requirements: [REQ-RENDER-071, REQ-GUI-027, REQ-RENDER-072, REQ-RENDER-068, REQ-GUI-024, REQ-COL-025]
+  requirements: [REQ-RENDER-071, REQ-GUI-027, REQ-RENDER-072, REQ-RENDER-068, REQ-GUI-024, REQ-COL-025, REQ-RENDER-081]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-13
@@ -1489,7 +1489,7 @@
   title: "The bake tier: the equirect texture for pure-f(n̂) occupants, and the sphere widget"
   depends_on: [TASK-M7-06, TASK-M7-07, TASK-M7-10, TASK-M7-15, TASK-M5-24, TASK-M5-30]
   needs: [REQ-SYS-036, REQ-SCHED-043]
-  requirements: [REQ-RENDER-058, REQ-RENDER-059, REQ-RENDER-067, REQ-SCHED-072, REQ-RENDER-065, REQ-RENDER-070]
+  requirements: [REQ-RENDER-058, REQ-RENDER-059, REQ-RENDER-067, REQ-SCHED-072, REQ-RENDER-065, REQ-RENDER-070, REQ-RENDER-080]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M7-17
@@ -1529,7 +1529,7 @@
   title: "The display chain: style → display scale → gamut clamp → colour-vision simulation → screen"
   depends_on: [TASK-M7-12, TASK-M7-20, TASK-M5-12, TASK-M5-23, TASK-M5-26]
   needs: [REQ-RENDER-042, REQ-RENDER-052, REQ-RENDER-038, REQ-RENDER-006, REQ-RENDER-047]
-  requirements: [REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066]
+  requirements: [REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066, REQ-COL-059]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M7-22
@@ -1633,7 +1633,7 @@
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
   depends_on: [TASK-M6-21, TASK-M6-22, TASK-M7-11]
   needs: [REQ-SYS-011, REQ-GUI-007, REQ-GUI-011, REQ-GUI-016, REQ-SCHED-048, REQ-PERF-016, REQ-GUI-010, REQ-CHART-032, REQ-INT-026]
-  requirements: [REQ-GUI-036, REQ-GUI-037, REQ-GUI-039, REQ-PERF-071]
+  requirements: [REQ-GUI-036, REQ-GUI-037, REQ-GUI-039, REQ-PERF-071, REQ-PERF-091]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-02
@@ -1681,7 +1681,7 @@
   title: "Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)"
   depends_on: [TASK-M8-06]
   needs: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016]
-  requirements: [REQ-GUI-091, REQ-GUI-092, REQ-GUI-099]
+  requirements: [REQ-GUI-091, REQ-GUI-092, REQ-GUI-099, REQ-GUI-155]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-1.7]
 - id: TASK-M8-08
@@ -1705,7 +1705,7 @@
   title: The hover trace and label on the figure
   depends_on: [TASK-M8-09, TASK-M8-05]
   needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002]
-  requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073]
+  requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-2.4]
 - id: TASK-M8-11
@@ -1713,7 +1713,7 @@
   title: "The Trajectory panel: summary, real space, the turning shape sphere, kept orbits"
   depends_on: [TASK-M8-09, TASK-M8-05]
   needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047]
-  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054]
+  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-157]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-12
@@ -1729,7 +1729,7 @@
   title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
   depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03]
   needs: [REQ-GUI-002, REQ-GUI-003]
-  requirements: [REQ-GUI-095, REQ-GUI-096, REQ-GUI-097, REQ-GUI-098, REQ-GUI-146]
+  requirements: [REQ-GUI-095, REQ-GUI-096, REQ-GUI-097, REQ-GUI-098, REQ-GUI-146, REQ-GUI-158]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-14
@@ -1753,7 +1753,7 @@
   title: Inspector pane 3, the one timeline, and the readouts
   depends_on: [TASK-M8-14, TASK-M8-15, TASK-M4-15]
   needs: [REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074]
-  requirements: [REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108]
+  requirements: [REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9]
 - id: TASK-M8-17
@@ -1769,7 +1769,7 @@
   title: "Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)"
   depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05]
   needs: [REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027]
-  requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111]
+  requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-19
@@ -1825,7 +1825,7 @@
   title: Quality warnings (Green / Yellow / Red), per-choice suppression, and the target-utilisation ceiling
   depends_on: [TASK-M8-24]
   needs: [REQ-PERF-025, REQ-PERF-031, REQ-PERF-028, REQ-PERF-040, REQ-PERF-053, REQ-TOOL-001]
-  requirements: [REQ-GUI-045, REQ-GUI-046, REQ-PERF-074, REQ-GUI-044]
+  requirements: [REQ-GUI-045, REQ-GUI-046, REQ-PERF-074, REQ-GUI-044, REQ-PERF-092]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-26
@@ -1849,7 +1849,7 @@
   title: Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
   depends_on: [TASK-M8-26, TASK-M8-27]
   needs: [REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053]
-  requirements: [REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115]
+  requirements: [REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128]
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-3]
 - id: TASK-M8-29
@@ -1873,7 +1873,7 @@
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
   depends_on: [TASK-M8-30, TASK-M7-31]
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
-  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100]
+  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-32
@@ -1897,7 +1897,7 @@
   title: "Measure: boundary dimension on a dragged region (10_measure.png)"
   depends_on: [TASK-M8-05]
   needs: [REQ-SCHED-031, REQ-PAY-064, REQ-SCHED-048, REQ-COL-002]
-  requirements: [REQ-GUI-121, REQ-VAL-110, REQ-VAL-111, REQ-GUI-147, REQ-GUI-148, REQ-GUI-149]
+  requirements: [REQ-GUI-121, REQ-VAL-110, REQ-VAL-111, REQ-GUI-147, REQ-GUI-148, REQ-GUI-149, REQ-VAL-143]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
 - id: TASK-M8-35
@@ -1913,7 +1913,7 @@
   title: "Research (v2): continuation, Poincaré return map, side by side with linked views (11_research.png)"
   depends_on: [TASK-M8-35, TASK-M8-11]
   needs: [REQ-SYS-017, REQ-SYS-011, REQ-GUI-002, REQ-CHART-032]
-  requirements: [REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154]
+  requirements: [REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154, REQ-GUI-159]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-37

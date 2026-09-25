@@ -1,7 +1,7 @@
 # TASK-M4-19 — First kernel benchmarks: the march's bottleneck, N = 8 vs 16, and one quad thread-count constant
 
 - **Milestone:** M4
-- **Closes:** REQ-PERF-009, REQ-PERF-011, REQ-SYS-029
+- **Closes:** REQ-PERF-009, REQ-PERF-011, REQ-SYS-029, REQ-PERF-086
 - **Depends on:** TASK-M4-06, TASK-M4-09
 - **Needs (earlier milestones):** REQ-TOOL-006, REQ-TOOL-001, REQ-TOOL-002, REQ-SYS-003
 - **Reviewers:** code, qa, perf
@@ -21,6 +21,7 @@ The first measurements of the kernel the corpus leaves to the build. The march k
 - `docs/design/principia_systems_architecture.md` § "Still to check"
 - `docs/read_first/principia_INDEX.md` § "Known open items"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `xtask` benches `march-bottleneck` and `quad-n` (writing profiler schema v1 records).
@@ -31,6 +32,8 @@ The first measurements of the kernel the corpus leaves to the build. The march k
 - `cargo xtask bench march-bottleneck` — the march kernel profiled at production dispatch granularity; bound type and spill counts recorded (REQ-PERF-009).
 - `cargo xtask bench quad-n` — N = 8 vs N = 16 profiled on a WebGPU target and the result recorded; `cargo test -p engine workgroup_limits` asserts N² ≤ `maxComputeInvocationsPerWorkgroup` (measured) for every tier and Custom value (REQ-PERF-011).
 - `cargo test -p kernel quad_thread_constant` plus perf review — one constant for the quad thread count in the shared source; all docs/config reference it (REQ-SYS-029).
+- Proposal: N for Ultra and Extreme within N² ≤ 256, from the N = 8 vs 16 benchmark; the human confirms it at the M4 gate (REQ-PERF-086).
 
 ## Notes
-- Gap (see report): R-43 says to fix the tier table's N = 24 / 32 entries now but gives no replacement values; the N² check will fail on them until ruled.
+- Gap: R-43 says to fix the tier table's N = 24 / 32 entries now but gives no replacement values; the N² check will fail on them until ruled.
+- Closes, for gaps the corpus leaves open: REQ-PERF-086 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

@@ -1,7 +1,7 @@
 # TASK-M0-06 — The golden-image runner, with one-variable reproduction
 
 - **Milestone:** M0
-- **Closes:** REQ-VAL-003, REQ-VAL-009
+- **Closes:** REQ-VAL-003, REQ-VAL-009, REQ-VAL-138
 - **Depends on:** TASK-M0-01, TASK-M0-04
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -19,6 +19,7 @@
 - `docs/read_first/principia_01_pitfalls.md` § "8. TWO ARTEFACTS ARE NOT ONE DEFECT"
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `docs/design/principia_colour_composition.md` § "7. Preset table & golden-image obligation"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `xtask/src/golden.rs` — `cargo xtask golden <suite>`, `cargo xtask golden --all` (registered in `cargo xtask ci`), `cargo xtask golden repro`.
@@ -32,7 +33,11 @@
 - `cargo test -p xtask golden_repro` — a repro pair whose configurations differ in two fields is refused; a one-field pair reports the RGB profile along the line for each arm (REQ-VAL-003).
 - `cargo test -p xtask golden_repro_columns` — the report tabulates each symptom in its own column per arm; on a fixture where the change moves one symptom and leaves the other unchanged, the unchanged column is reported as unchanged, not merged (REQ-VAL-009).
 - Review checklist (physics §3): an artefact investigation record made with this mode shows the one-variable-changed reproduction and the measurement that killed or confirmed each hypothesis (REQ-VAL-003); an ablation closes a fix only against the columns it moved (REQ-VAL-009).
+- Proposal: the golden-image diff metric and default tolerance with evidence (same-backend re-render passes, a one-variable change fails); the human confirms it at the M0 gate (REQ-VAL-138).
 
 ## Notes
 - No golden-image requirement exists before M1 (REQ-RENDER-024 is the first); the runner is built before them (MILESTONES M0: every verify method has its runner first).
 - See Gaps: the golden renderer's backend, and the image-diff metric and tolerance.
+- Waits on RQ-79 (`REVIEW_QUEUE.md`): CI frequency, GPU hardware and browsers the corpus doesn't schedule.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Closes, for gaps the corpus leaves open: REQ-VAL-138 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

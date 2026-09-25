@@ -30,3 +30,4 @@ The quality selector and Custom fields edit `SimConfig.quality` in the Run windo
 
 ## Notes
 - No artboard shows the Custom quality panel or the arbiter overlay (04_windows' Run window shows only quality, budget, max depth and ensemble) — see Gaps.
+- Waits on RQ-105 (`REVIEW_QUEUE.md`): GUI surfaces with no artboard.

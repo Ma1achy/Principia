@@ -1,7 +1,7 @@
 # TASK-M0-07 — The generation root: ledger schema, metadata gate and static layout checks
 
 - **Milestone:** M0
-- **Closes:** REQ-GEN-002, REQ-GEN-003
+- **Closes:** REQ-GEN-002, REQ-GEN-003, REQ-GEN-024
 - **Depends on:** TASK-M0-01, TASK-M0-04
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
@@ -20,6 +20,9 @@
 - `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)"
 - `docs/design/principia_dd_colouring.md` § "2. Consolidated contract"
 - `docs/design/principia_systems_architecture.md` § "5. The seam catalogue"
+- `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata"
+- `docs/contracts/principia_gui_state_contract.md` § "4. The occupant model — typed by signature, free inside"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/ledger/src/schema.rs` — `Entry`, `Location`, `FieldType`, `Scale`, `Provenance`, `Consumer`, as §3.8; a builder returning `Err(IncompleteEntry { field, missing })` for an incomplete entry.
@@ -31,8 +34,10 @@
 ## Acceptance tests
 - `cargo test -p ledger metadata_gate` — deleting one entry's `scale` makes generation fail with that field's name; the same for every other required §3.8 key (REQ-GEN-002).
 - `cargo test -p ledger layout_static` — static disjointness/coverage check over the ledger: an overlapping pair, an undeclared uncovered bit and a width too narrow for its range each fail, naming the word and the bits; the fixture ledger passes (REQ-GEN-003).
+- Definition: §3.8's derived-field location kind and vector type written into dd_generation_root §3.8 and approved by the physics reviewer (REQ-GEN-024).
 
 ## Notes
 - The generated-file guard (a hand edit to a generated file is detected) is REQ-GEN-010, M1; not built here.
 - The link registry (generation-root §3.9) is the second root; its requirements are M2 (REQ-GEN-013 onward), so it is not built here.
 - See Gaps: §3.8 has no location kind for a derived (not stored) catalogue field.
+- Closes, for gaps the corpus leaves open: REQ-GEN-024 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

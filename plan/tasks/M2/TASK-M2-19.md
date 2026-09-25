@@ -1,7 +1,7 @@
 # TASK-M2-19 — Lookup: the exact and partial forms and the three-layer validation ladder
 
 - **Milestone:** M2
-- **Closes:** REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027
+- **Closes:** REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031
 - **Depends on:** TASK-M2-17, TASK-M2-18
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -31,8 +31,11 @@ Lookup exists CPU-side: the exact-IC form ((m, n), a triple, a raw z, or physica
 - `cargo test -p engine lookup_coincident` — bodies within r_coll pass through unrejected and are labelled a t = 0 collision; exactly coincident bodies → `lookup_clamped`; no separate rejection branch exists (REQ-ENC-019).
 - Doc review (physics): layer 1 names its space and bounds consistently with z ∈ ℝ⁸ passing through σ / tanh; physics reviewer approved (REQ-ENC-023).
 - `cargo xtask gate decode-sanity` — measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and proposes the layer-3 tolerance above them; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-027).
+- Definition: the slice-basis rule for more than two unspecified DOF written into inverse_encode_contract Part 6 and approved by the physics reviewer (REQ-ENC-031).
 
 ## Notes
 - Gap G16: the projection metric and the "qualitatively different IC" criterion.
 - Gap G17: a partial specification that leaves more than two DOF unspecified — which two the slice basis spans.
 - Gap G24: before the integrator (M3) the t = 0 collision label for a looked-up IC has to come from chart_reference §0.7's decode-time `COLLISION_T0` (r_min(0) < r_coll); the corpus doesn't say whether the decode stage or the integrator's first check writes it.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- Closes, for gaps the corpus leaves open: REQ-ENC-031 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

@@ -41,3 +41,4 @@ The parity suite becomes permanent: a native in-process `#[test]` in CI on every
 
 ## Notes
 - The non-Metal parity run gates Paper 2, not the build (R-58); if only Metal is available the report says so.
+- Waits on RQ-79 (`REVIEW_QUEUE.md`): CI frequency, GPU hardware and browsers the corpus doesn't schedule.

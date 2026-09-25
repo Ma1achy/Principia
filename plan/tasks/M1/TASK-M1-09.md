@@ -44,3 +44,5 @@ Every generated numeric field view takes the two-line form — the NaN guard ret
 - render_gui_spec §10.1's guard is `if (raw != raw)` — a NaN self-comparison, which render_contract Part 2 / Part 4 say fast-math may elide (use an exact bitcast test). Which form the generated guard takes is not ruled (milestone Gaps); REQ-RENDER-015's lint (TASK-M1-15) depends on it.
 - The magenta value and the NaN hatch are the prelude's (TASK-M1-03) and wait on the same gaps.
 - PIT-8: the NaN absence style and the −1 sentinel style must stay distinct — two conditions, never folded into one colour.
+- Waits on RQ-82 (`REVIEW_QUEUE.md`): The generated debug NaN guard vs the bitcast rule.
+- Waits on RQ-94 (`REVIEW_QUEUE.md`): M1 requirements that need M2, M3, M5 or M8.

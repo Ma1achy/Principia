@@ -33,4 +33,5 @@
 ## Notes
 - REQ-PERF-081 is a calibration (R-71): the PR carries the proposed value, its evidence and the reviewer's check, marked pending; the human confirms it at the M4 gate and it is then recorded in decisions.md.
 - REQ-PERF-081 is a calibration (R-71): the PR marks the bound pending until the human confirms it at the M4 gate.
-- Gap (see report): REQ-INT-059's verify also names a SPIR-V → WGSL → Tint leg; Tint is Dawn's compiler, Dawn CI is dropped (R-85), and the browser build is M8.
+- Gap: REQ-INT-059's verify also names a SPIR-V → WGSL → Tint leg; Tint is Dawn's compiler, Dawn CI is dropped (R-85), and the browser build is M8.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

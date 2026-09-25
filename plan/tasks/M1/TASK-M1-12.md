@@ -42,3 +42,6 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - REQ-VAL-122 is a calibration (R-71); REQ-VAL-010's acceptance uses the proposed value until the human confirms it.
 - Not available at M1 (milestone Gaps): REQ-TOOL-010's "|n|−1 flat zero on a real march" and the live current-substep effort heatmap both need a marching integrator (M3); the GUI-screenshot runner compares against `docs/gui/design/NN_*.png`, and no artboard shows the debug views; the ledger metadata schema (generation root §3.8) has no vector type, so "the ledger knows n is a vector" (gui_state_contract §4) has nothing to key on.
 - `dbg_hash_u32`'s hash is not specified (TASK-M1-03's gap); REQ-TOOL-025's "distinct colours" is asserted over a fixed fixture set of words.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Waits on RQ-94 (`REVIEW_QUEUE.md`): M1 requirements that need M2, M3, M5 or M8.
+- Waits on RQ-101 (`REVIEW_QUEUE.md`): The colour golden oracle and the LUT data live outside the corpus.

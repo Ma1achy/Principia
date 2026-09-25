@@ -34,4 +34,5 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `cargo xtask gate escape-precision` — on the re-validation set, escape fires whose ground truth is bound are counted; gated at the measured precision (pre-R-29: 100.0%); a criterion variant that fires earlier with any false positives fails (REQ-EVT-019).
 
 ## Notes
-- Gap reported: the legacy t = 30 set (config chart, 'unbound and receding at t = 30') is a prin-rs dataset not in the repository; its regeneration recipe is not given.
+- Gap: the legacy t = 30 set (config chart, 'unbound and receding at t = 30') is a prin-rs dataset not in the repository; its regeneration recipe is not given.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

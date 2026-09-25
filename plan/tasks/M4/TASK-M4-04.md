@@ -1,7 +1,7 @@
 # TASK-M4-04 — Tier B and Tier N: integer fields exact, continuous values within measured native-wgpu tolerances
 
 - **Milestone:** M4
-- **Closes:** REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026
+- **Closes:** REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026, REQ-VAL-140, REQ-VAL-141
 - **Depends on:** TASK-M4-02
 - **Needs (earlier milestones):** REQ-PAY-013, REQ-PAY-051, REQ-PAY-052, REQ-PAY-053, REQ-PAY-027, REQ-PAY-043, REQ-GEN-006, REQ-VAL-017, REQ-DEC-043, REQ-ENC-004, REQ-ENC-024, REQ-INT-031
 - **Reviewers:** code, qa, physics
@@ -28,6 +28,8 @@ The two remaining per-step tiers. Tier B: given the same branch decisions and in
 - `docs/design/principia_dd_integrator.md` § "2. Consolidated contract"
 - `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
 - `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/validation/tests/tier_b.rs`: integer-exact assertions fed identical branch decisions; the parity fixture set run on both sides for the trajectory-level integer fields, restricted to trajectories away from the word's crossing-ambiguity band.
@@ -42,7 +44,10 @@ The two remaining per-step tiers. Tier B: given the same branch decisions and in
 - `cargo xtask gate tier-n` — decode → `(m, r, p)`, `ICDescriptor` and `E₀`; one STEP from a shared state for every occupant; short pre-divergence trajectories against a growing bounded envelope; the encode round trip in physical units — each within its REQ-VAL-064 measured tolerance (starting points ~1e-5 relative decode, ~1e-5 one-step scaled by force magnitude, ~1e-6 `E₀`/`L_z` at t = 0, replaced by the measured values) (REQ-VAL-061).
 - `cargo xtask gate gpu-vs-f64` — GPU vs the f64 CPU path on the parity fixtures: particle state, energy, `L_z` and trajectory-derived quantities within the parity contract's declared tolerances (the REQ-VAL-064 file), not bit for bit (REQ-VAL-073).
 - `cargo test -p validation no_reconcile` plus the physics reviewer — no code path copies or snaps GPU state to CPU state; Tier N/S envelopes are not tightened below the measured spread (REQ-SYS-026).
+- Definition: the pre-divergence envelope's form and the onset-time rule written into parity_contract Tier N and approved by the physics reviewer (REQ-VAL-140).
+- Proposal: the ambiguity band's width, with the measured crossing-distance spread and the excluded fraction as evidence; the human confirms it at the M4 gate (REQ-VAL-141).
 
 ## Notes
 - The recorded Tier N tolerances are R-85's measurement, not an R-71 calibration; the PR shows the spread and the margin chosen above it, and the physics reviewer checks the margin covers it comfortably (parity §4).
-- Gaps (see report): the width of the word's numerical-ambiguity band (REQ-VAL-075) and the form of Tier N's growing bounded envelope (REQ-VAL-061) are not given by the corpus.
+- Gaps: the width of the word's numerical-ambiguity band (REQ-VAL-075) and the form of Tier N's growing bounded envelope (REQ-VAL-061) are not given by the corpus.
+- Closes, for gaps the corpus leaves open: REQ-VAL-140 (R-72 definition), REQ-VAL-141 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

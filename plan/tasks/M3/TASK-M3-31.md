@@ -23,4 +23,6 @@ The predictive step limit is on by default in the regularised occupants' step co
 - `cargo xtask gate step-limit-ablation` — ablation on config_stability (none / dtau only / clamp only / limit only / all three): the shipping config gives non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately (REQ-INT-052).
 
 ## Notes
-- Gap reported: the predictive step limit is named only in the INDEX as a prin-rs decision — its definition, the 'dtau' and 'clamp' arms, the wedge-density metric and the `config_stability` slice are not in the corpus.
+- Gap: the predictive step limit is named only in the INDEX as a prin-rs decision — its definition, the 'dtau' and 'clamp' arms, the wedge-density metric and the `config_stability` slice are not in the corpus.
+- Waits on RQ-102 (`REVIEW_QUEUE.md`): The regularisation occupants and step control that live only in prin-rs.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

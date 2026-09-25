@@ -30,3 +30,4 @@ The payload schema version is computed at generation as a content hash of the ca
 ## Notes
 - Constants-register entries (TASK-M0-08) are outside the hashed layout table unless ruled otherwise (see Gaps).
 - REQ-GEN-008's verify also says the caching signature carries the version; the compatibility signature is built in M5 and REQ-GEN-017 holds that half. See Gaps.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.

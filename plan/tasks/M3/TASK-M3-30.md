@@ -29,5 +29,6 @@ The free-group word encoder reproduces the published braid class of Šuvakov–D
 - `cargo xtask gate word-truncation --propose` — measured truncation rates over the validation fixtures and a representative survey against the proposed threshold; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-PAY-083).
 
 ## Notes
-- Depends on the branch-cut convention gap reported for TASK-M3-16: a braid class can only be compared once a↔cut and the sign are fixed.
+- Depends on the branch-cut convention gap in TASK-M3-16: a braid class can only be compared once a↔cut and the sign are fixed.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-PAY-083.
+- Waits on RQ-96 (`REVIEW_QUEUE.md`): The branch-cut convention is needed in M3, required in M6, and has no author.

@@ -44,4 +44,8 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - Open RQs: RQ-71.
 - REQ-CHART-037 waits on RQ-71 (whether the shape sphere is `DoubleCover` or a 2-to-1 fold); the row is checked against the ruling.
 - Blocked on the dispatch-shape gap (TASK-M4-05 notes) until ruled.
-- Copy placement (Halton offsets) is REQ-INT-072 in M5; see the report's Gaps for what an M4 copy integrates.
+- Copy placement (Halton offsets) is REQ-INT-072 in M5; see the REVIEW_QUEUE entries below for what an M4 copy integrates.
+- Waits on RQ-85 (`REVIEW_QUEUE.md`): The shape sphere in the lowering appendix: (α, β) or (θ, φ)?.
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

@@ -1,7 +1,7 @@
 # TASK-M8-16 — Inspector pane 3, the one timeline, and the readouts
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108
+- **Closes:** REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032
 - **Depends on:** TASK-M8-14, TASK-M8-15, TASK-M4-15
 - **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074
 - **Reviewers:** code, qa, physics, gui
@@ -22,6 +22,7 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - `docs/design/principia_trajectory_viewing.md` § "6. Placement"
 - `docs/notes/ic_inspector_scratchpad.md` § "Whole-system handles — the invariance audit"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in z"
 
 ## Deliverables
 - `crates/gui/src/windows/inspector/{pane_real,timeline,readouts,measurements}.rs`.
@@ -39,7 +40,9 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - `cargo xtask screenshot 05_inspectors` (readout row) — screenshot against 05_inspectors.png's readout row (REQ-GUI-119).
 - Doc review of `docs/notes/ic_inspector_scratchpad.md` § "Measurement readouts (gauge-invariant → hold under all four handles)" and §G8 — the docs name the frame per readout; the reviewer checks every listed readout is invariant under all four handles in that frame; the physics reviewer approves the doc change before merge (REQ-GUI-145).
 - `cargo test -p engine readout_invariance` — random ICs: translate-, boost- and rotate-all leave every readout unchanged to round-off; scale-all leaves angles, α, β and z unchanged (REQ-VAL-108).
+- Definition: the canonicalisation conditioning number written into ic_inspector_scratchpad § Degeneracy routing and approved by the physics reviewer (REQ-ENC-032).
 
 ## Notes
-- The conditioning number's formula is not given by ic_inspector_scratchpad § "Degeneracy routing" (raised as a gap for a REVIEW_QUEUE entry); REQ-GUI-067 and TASK-M8-17's routing both need it.
+- The conditioning number's formula is not given by ic_inspector_scratchpad § "Degeneracy routing"; REQ-GUI-067 and TASK-M8-17's routing both need it.
 - Definitions (R-72) written here: REQ-GUI-145. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Closes, for gaps the corpus leaves open: REQ-ENC-032 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

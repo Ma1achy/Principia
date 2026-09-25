@@ -43,3 +43,4 @@
 ## Notes
 - Waits on **RQ-72** (how the per-footprint latch reaches the split decision: a latched bit/count in `QuadReduction`, or a GPU-side verdict) — REQ-REF-019, REQ-REF-022 and REQ-REF-045 carry it. The latch store's shape and the two doc definitions cannot be finished until it is ruled.
 - Pitfall regression: PIT-5 (a render-space metric). The recolouring proptest is the guard.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

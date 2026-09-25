@@ -38,5 +38,6 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
 
 ## Notes
-- `web/` has no test runner in the plan conventions; this task uses `npm --prefix web test` (raised as a gap for a REVIEW_QUEUE entry).
+- `web/` has no test runner in the plan conventions; this task uses `npm --prefix web test`.
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.

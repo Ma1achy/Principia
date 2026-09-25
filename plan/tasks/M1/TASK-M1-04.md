@@ -1,7 +1,7 @@
 # TASK-M1-04 — The stain graph lowered to WGSL: backbone, canonical form and generated shade()
 
 - **Milestone:** M1
-- **Closes:** REQ-RENDER-009, REQ-RENDER-010, REQ-RENDER-012, REQ-RENDER-016, REQ-RENDER-075
+- **Closes:** REQ-RENDER-009, REQ-RENDER-010, REQ-RENDER-012, REQ-RENDER-016, REQ-RENDER-075, REQ-GEN-027
 - **Depends on:** TASK-M1-01, TASK-M1-03, TASK-M0-16
 - **Needs (earlier milestones):** REQ-SYS-003, REQ-SYS-004
 - **Reviewers:** code, qa, physics
@@ -28,6 +28,8 @@ A stain is a free, typed node graph on the fixed backbone — sources → colour
 - `docs/design/principia_colour_composition.md` § "4.2 Post chain"
 - `docs/contracts/principia_gui_state_contract.md` § "5. The stain editor — a free, typed node graph (R-64)"
 - `docs/gui/principia_render_gui_spec.md` § "13. Invariants"
+- `docs/contracts/principia_gui_state_contract.md` § "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
+- `decisions.md` § "R-53 — Node interfaces declare their input domains *(GU-2 (a))*"
 
 ## Deliverables
 - `crates/engine`: the stain-graph type (nodes, typed ports, wires, per-node params) and its canonical form.
@@ -41,8 +43,10 @@ A stain is a free, typed node graph on the fixed backbone — sources → colour
 - `cargo test -p render custom_reads_any_tier` — a custom occupant reading `sample.ftle`, `sample.ensemble_spread` and `sample.word` compiles and runs at every tier variant (REQ-RENDER-012).
 - Review checklist (code): the colour slot signature returns linear-RGB `vec3`; brightness returns `f32` (REQ-RENDER-016).
 - Review checklist (physics): the docs state the canonical form; `cargo test -p render canonical_hash` — two wirings of the same graph hash equal and different graphs hash differently (REQ-RENDER-075).
+- Definition: the `.wgsl` uniformSchema / inputDomains declaration format written into gui_state_contract §3 and approved by the physics reviewer (REQ-GEN-027).
 
 ## Notes
 - REQ-RENDER-075 is a definition requirement (R-72): the doc change is part of this PR and the physics reviewer approves it before merge.
 - Occupant identity (render_gui_spec §13): dangling inputs fall back to None, so the assembler never produces an unrenderable graph.
 - The Replace-L combiner's colour maths is M7; M1 needs only a pass-through combiner for single-colour debug stains.
+- Closes, for gaps the corpus leaves open: REQ-GEN-027 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

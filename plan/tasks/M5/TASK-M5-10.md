@@ -41,3 +41,5 @@ check.
 
 ## Notes
 - The margin itself is not given by memory_tiers §8 as a number (see Gaps).
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

@@ -1,7 +1,7 @@
 # TASK-M5-26 — Compositor: the stale backdrop, blur as the one signal, never blank
 
 - **Milestone:** M5
-- **Closes:** REQ-RENDER-037, REQ-RENDER-038, REQ-RENDER-041, REQ-RENDER-044, REQ-RENDER-045, REQ-SYS-030
+- **Closes:** REQ-RENDER-037, REQ-RENDER-038, REQ-RENDER-041, REQ-RENDER-044, REQ-RENDER-045, REQ-SYS-030, REQ-RENDER-079
 - **Depends on:** TASK-M5-20, TASK-M5-25
 - **Needs (earlier milestones):** REQ-RENDER-005, REQ-RENDER-009, REQ-SCHED-008
 - **Reviewers:** code, qa, perf
@@ -29,6 +29,7 @@ Nothing reads the backdrop as data.
 - `docs/design/principia_systems_architecture.md` § "6. Cross-cutting invariants (the load-bearing walls)"
 - `docs/design/principia_temporal_architecture_note.md` § "Refinement must be a live-to-live handoff (or it looks broken)"
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/render/src/compositor/{layers.rs, blur.rs, snapshot.rs}` and the WGSL blur pass.
@@ -43,8 +44,11 @@ Nothing reads the backdrop as data.
 - `cargo xtask golden blur-signal` — scene with stale, catching-up and live regions: only live regions render sharp (REQ-RENDER-044).
 - `cargo test -p engine never_blank` — during scripted pan/zoom/refine every screen pixel is covered by a layer every frame and the main thread never blocks (REQ-RENDER-045).
 - Review checklist (code) — no path reads the screen/backdrop texture into data; hover over backdrop shows no trace (REQ-SYS-030).
+- Proposal: the backdrop blur radius with captures and pass cost as evidence; the human confirms it at the M5 gate (REQ-RENDER-079).
 
 ## Notes
 - The blur kernel's radius is not given by caching Part 5 (see Gaps).
 - The worker hosting of REQ-RENDER-045 ("the frame loop runs in the wasm-engine worker") is realised in M8; see
   TASK-M5-24's note.
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
+- Closes, for gaps the corpus leaves open: REQ-RENDER-079 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

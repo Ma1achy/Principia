@@ -32,3 +32,4 @@ The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2�
 ## Notes
 - Calibration (R-71): REQ-COL-050.
 - Gap: the Principia palette is given only as "indigo → teal → gold" and Cool-warm only as "diverging" (§7.1); their stops are not in the corpus (see the milestone report).
+- Waits on RQ-101 (`REVIEW_QUEUE.md`): The colour golden oracle and the LUT data live outside the corpus.

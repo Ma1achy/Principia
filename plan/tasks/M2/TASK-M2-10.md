@@ -45,3 +45,4 @@ The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a
 ## Notes
 - Gap G22: the (ν, K) chart's K warp constants — the corpus gives K(t) = K_max·t^γ_K for the invariant charts (calibrated by REQ-CHART-044, TASK-M2-12) but doesn't say the Burrau K axes share those defaults.
 - Both Burrau shape charts' `system_image` labels are closed with the folded chart (TASK-M2-11, REQ-CHART-025).
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

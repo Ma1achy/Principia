@@ -38,6 +38,7 @@ The re-registration mechanism's measurements run through the comparison harness:
 - `cargo xtask gate reregistration-doubling --propose` — the default occupant (Heggie) measured under the doubling protocol, the acceptance level stated relative to the controls; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-136).
 
 ## Notes
-- Gap reported: the 32-case Heggie-vs-AZ matrix, the 'err' metric behind 'err>10', the control's fixture ICs and the named slices ('far', `config_stability`) are prin-rs artefacts not defined in the corpus.
+- Gap: the 32-case Heggie-vs-AZ matrix, the 'err' metric behind 'err>10', the control's fixture ICs and the named slices ('far', `config_stability`) are prin-rs artefacts not defined in the corpus.
 - Heggie has no re-registration; the doubling protocol's meaning for the default occupant is itself something the proposal must state.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-136.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

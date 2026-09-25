@@ -32,3 +32,4 @@ The Stain mode of the dev GUI: the four surfaces of render_gui_spec Part II §1 
 ## Notes
 - Gap: render_gui_spec §16's "Node palette contents" (the right-click palette's source fields and post ops) and the preview default (sphere vs illustrative slice) are still open; R-96 did not rule them.
 - R-68: the artboard sets layout; corpus values win.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

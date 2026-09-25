@@ -1,7 +1,7 @@
 # TASK-M2-05 — The Chart trait, ValidationResult and the latent affine chart
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-003, REQ-CHART-028, REQ-CHART-043, REQ-CHART-030, REQ-CHART-015, REQ-CHART-029
+- **Closes:** REQ-CHART-003, REQ-CHART-028, REQ-CHART-043, REQ-CHART-030, REQ-CHART-015, REQ-CHART-029, REQ-CHART-050
 - **Depends on:** TASK-M2-03, TASK-M1-07
 - **Needs (earlier milestones):** REQ-SYS-009
 - **Reviewers:** code, qa, physics
@@ -25,6 +25,7 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
 - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps"
+- `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
 
 ## Deliverables
 - `crates/kernel/src/chart/mod.rs` (the `Chart` trait, `ChartOut`, `ValidationResult`) and `crates/kernel/src/chart/latent.rs`.
@@ -38,7 +39,10 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 - `cargo test -p kernel latent_axis_aligned_equals_alpha_beta` — the slice with q₁ = ê_α, q₂ = ê_β, compared per pixel against ICs built directly from (α, β) through chart_reference §0.2 (REQ-CHART-030).
 - Review (physics): no chart module contains mass/config/momentum decode formulae or integrator code; later charts go through the shared decoder (REQ-CHART-015).
 - Review (code): the milestone builds the charts in chart_reference §5.1's order — Latent (this task), ShapeSphere (TASK-M2-08), Burrau (TASK-M2-10, TASK-M2-11), InvariantLE / InvariantLK (TASK-M2-12), MassSimplex (TASK-M2-13) (REQ-CHART-029).
+- Definition: the direct (α, β) sweep written into chart_reference §5.2 and approved by the physics reviewer (REQ-CHART-050).
 
 ## Notes
 - Gap G12: "a direct (α, β) sweep" (chart_reference §5.2) isn't defined further — whether it maps u, v to (α, β) through the links or linearly in angle; the test above compares against the link-mapped construction until ruled.
 - Gap G13: chart_reference §5.1 writes `map(&self, u: f64, v: f64)`; the kernel monomorphises Φ into the f32 SPIR-V build (lowering Part 3), so Φ must be generic over `Real`. `validate` stays CPU-side (f64).
+- Waits on RQ-86 (`REVIEW_QUEUE.md`): The Chart trait's f64 `map` vs Φ generic over the float type.
+- Closes, for gaps the corpus leaves open: REQ-CHART-050 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

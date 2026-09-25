@@ -1,7 +1,7 @@
 # TASK-M7-08 — Categorical palettes and the categorical filter
 
 - **Milestone:** M7
-- **Closes:** REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019
+- **Closes:** REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058
 - **Depends on:** TASK-M7-02, TASK-M7-05, TASK-M1-10
 - **Needs (earlier milestones):** REQ-COL-002, REQ-COL-004, REQ-TOOL-009, REQ-COL-053
 - **Reviewers:** code, qa
@@ -17,6 +17,7 @@ Categorical fields other than the outcome state map through a generated palette 
 - `decisions.md` § "R-77 — Replace-L, and the state palette *(closes RQ-28)*"
 - `docs/design/principia_dd_colouring.md` § "5. Unit tests"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/render/src/colour/palette.rs` and `shaders/wgsl/lib/palette.wgsl` — the generators and the state-palette resolution.
@@ -28,7 +29,9 @@ Categorical fields other than the outcome state map through a generated palette 
 - `cargo test -p render golden_angle_adjacency` — dd_colouring unit test 9 for n up to 96, against the minimum separation REQ-COL-051 (calibrated) (REQ-COL-040).
 - Review (code, qa): the proposal lists the achieved consecutive-index OKLab hue separations for n up to 96 and the minimum chosen below them; confirmed by the human at the M7 gate (REQ-COL-051).
 - `cargo test -p render categorical_filter` — filter the state map to the escape classes; non-escape pixels are muted; no `escaper` field or render mode exists in the ledger or the registry (REQ-COL-019).
+- Definition: the mute transform of the categorical filter written into colour_composition §1.4 and approved by the physics reviewer (REQ-COL-058).
 
 ## Notes
 - Calibration (R-71): REQ-COL-051.
 - Gap: how a muted class is drawn (grey, dimmed, desaturated) is not given (see the milestone report).
+- Closes, for gaps the corpus leaves open: REQ-COL-058 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

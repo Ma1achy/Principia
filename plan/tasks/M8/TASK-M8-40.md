@@ -26,4 +26,5 @@ The browser build is checked against the native wgpu Tier-N tolerances (R-85): t
 - `cargo xtask golden browser-fragment` (tolerance: REQ-COL-052, calibrated at M7) — pre-release job diffs rendered fragment output against goldens (REQ-COL-048).
 
 ## Notes
-- Which real browsers run the Tier-N check is not named ("one or two") (raised as a gap for a REVIEW_QUEUE entry).
+- Which real browsers run the Tier-N check is not named ("one or two").
+- Waits on RQ-79 (`REVIEW_QUEUE.md`): CI frequency, GPU hardware and browsers the corpus doesn't schedule.

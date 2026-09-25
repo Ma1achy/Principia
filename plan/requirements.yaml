@@ -601,6 +601,8 @@
   rulings:
   - R-90
   milestone: M6
+  rq:
+  - RQ-99
 - id: REQ-DEC-034
   area: DEC
   statement: "The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is central differences of the full chart→IC composite in f64, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight."
@@ -625,6 +627,8 @@
   rulings:
   - R-71
   milestone: M6
+  rq:
+  - RQ-99
   note: "Slope tolerance of the h² fit: REQ-DEC-042 (calibration)."
 - id: REQ-DEC-035
   area: DEC
@@ -648,6 +652,8 @@
     detail: "at the switchover depth, linear vs full decode agree to O(h²); the linear path distinguishes adjacent samples to depth ≥ 50"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-99
 - id: REQ-DEC-037
   area: DEC
   statement: "The switch to the linearised decoder must be signalled by QuadRequest DECODE_MODE and must fire once `quad.collapsed` is set (the per-quad flag set when the full decoder's adjacent samples give bitwise-identical ICs) or when depth exceeds ℓ_switch = 20 (an upper bound; lowering's SWITCH = ℓ_switch), whichever comes first, with the same SimState, reduction and render on either side."
@@ -754,6 +760,8 @@
   rulings:
   - R-71
   milestone: M6
+  rq:
+  - RQ-99
 - id: REQ-DEC-043
   area: DEC
   kind: calibration
@@ -766,6 +774,23 @@
   verify:
     method: numerical gate
     detail: "the proposal measures f64-vs-f32 decode differences on the golden IC and fuzzed interiors and states the multiple of f32 eps that covers them; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+- id: REQ-DEC-044
+  area: DEC
+  kind: calibration
+  statement: "The per-precision tolerances of dd_decoder unit tests 1 (the identities Σmᵢ = 1, CoM = 0, Σpᵢ = 0, I = 1, \"to precision-appropriate tolerance\"), 6 (the reconstruction inverse) and 8 (the invariant construction's L_z and K) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each tolerance in f64 and f32 with the measured residuals over fuzzed z that it covers; recorded in decisions.md"
   rulings:
   - R-71
   milestone: M2
@@ -1133,6 +1158,8 @@
   rulings:
   - R-13
   milestone: M2
+  rq:
+  - RQ-95
 - id: REQ-ENC-020
   area: ENC
   statement: "The encode projection metric must be shape-sphere chordal ⊕ mass-simplex Euclidean with unit weights."
@@ -1281,6 +1308,70 @@
   rulings:
   - R-71
   milestone: M8
+- id: REQ-ENC-029
+  area: ENC
+  kind: definition
+  statement: "The physical-units norm ‖·‖_phys of the round-trip residual (which of the masses, positions and momenta enter, with what weighting and whether absolute or relative) must be defined in inverse_encode_contract Part 4 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: "Part 4 — Conditioning: assert in physical units, never in z"
+  - file: docs/design/principia_dd_encode.md
+    section: 3.5 Conditioning (numbers, and the tolerance rule)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Part 4 gives ‖·‖_phys over (m, r, p) on the canonical section, used unchanged by T2, the ingestion residual and the ROUNDTRIP preset; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-ENC-030
+  area: ENC
+  kind: definition
+  statement: "The metric in which lookup projects a failed input to \"the nearest valid point in the chart's feasible region\" and the lock re-centres \"to the nearest feasible point\", and the criterion by which projecting or clamping \"would give a qualitatively different IC\" (so lookup rejects) must be defined in inverse_encode_contract's chart-aware validation by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the projection metric per feasibility constraint (the (L_z, E) parabola at least) and the reject criterion; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-ENC-031
+  area: ENC
+  kind: definition
+  statement: "Which two directions the slice basis spans after a partial-specification lookup that leaves more than two degrees of freedom unspecified must be defined in inverse_encode_contract Part 6 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 6 — The canonical inverse policy, completed
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Part 6 gives the deterministic rule choosing the two spanned directions (and what happens to the rest); physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-ENC-032
+  area: ENC
+  kind: definition
+  statement: "The canonicalisation conditioning number the Inspector shows live (the measure that grows without bound as ρ → 0 and as R → 0 and is finite elsewhere) must be defined in ic_inspector_scratchpad's degeneracy-routing section by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/notes/ic_inspector_scratchpad.md
+    section: Degeneracy routing
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: "Part 4 — Conditioning: assert in physical units, never in z"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the conditioning number as a formula of the physical configuration, shows it diverges exactly at ρ → 0 and R → 0, and states its relation to κ(z) (REQ-ENC-025); physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M8
 - id: REQ-CHART-001
   area: CHART
   statement: "Each chart must lower to a monomorphised Rust variant (the chart a type parameter the compiler specialises); there must never be a runtime axis-kind interpreter or runtime chart-type switch on the compute side, and adding a chart must mean a lowering rule plus a kernel type."
@@ -1324,6 +1415,7 @@
   milestone: M2
   rq:
   - RQ-71
+  - RQ-95
   note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover."
 - id: REQ-CHART-003
   area: CHART
@@ -1515,6 +1607,7 @@
   milestone: M2
   rq:
   - RQ-71
+  - RQ-95
   note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values)."
 - id: REQ-CHART-015
   area: CHART
@@ -1600,6 +1693,8 @@
   - R-12
   - R-14
   milestone: M2
+  rq:
+  - RQ-85
 - id: REQ-CHART-020
   area: CHART
   statement: "The shape-sphere inverse must be the closed form a = I(1+n₀)/2, b = I(1−n₀)/2, p = I·n₁/2, q = I·n₂/2, ρ̃ = √a(cos φ_f, sin φ_f), λ̃ = √b(cos ψ, sin ψ), ψ = φ_f + atan2(q, p), then unweighted and reconstructed per §0.2."
@@ -1744,6 +1839,8 @@
   rulings:
   - R-26
   milestone: M2
+  rq:
+  - RQ-86
   note: R-26 adds validate to the trait (the doc's trait lacks it)
 - id: REQ-CHART-029
   area: CHART
@@ -1832,6 +1929,8 @@
     detail: "T2 round-trips via registry inverses; swapping a link changes provenance and the payload signature"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-95
 - id: REQ-CHART-034
   area: CHART
   statement: "Each link must satisfy: constraint preservation for all inputs incl. saturation; inverse round-trip within ε-clamp tolerance in physical units; analytic log-det matching a numeric Jacobian; C¹ continuity."
@@ -1907,6 +2006,7 @@
   milestone: M4
   rq:
   - RQ-71
+  - RQ-95
   note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres)."
 - id: REQ-CHART-038
   area: CHART
@@ -2044,6 +2144,8 @@
   rulings:
   - R-71
   milestone: M2
+  rq:
+  - RQ-100
 - id: REQ-CHART-045
   area: CHART
   kind: calibration
@@ -2074,6 +2176,92 @@
   rulings:
   - R-71
   milestone: M2
+- id: REQ-CHART-047
+  area: CHART
+  kind: definition
+  statement: "The shape-sphere chart's equal-area projection (Mollweide or Hammer–Aitoff: its formula and inverse) and whether the projection is a chart map (on the sim key, re-integrating) or a display remap of the equirectangular render must be defined in chart_reference §3.3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section names the projection with its forward and inverse maps and states whether switching projection changes the sim key; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-CHART-048
+  area: CHART
+  kind: definition
+  statement: "Where the nonlinear charts' held values come from — the shape sphere's `m_fixed` and `p_fixed` (and the frame `p_fixed` is expressed in relative to the fibre-phase rotation that canonicalisation undoes) and its fibre phase `φ_f`, and the invariant charts' fixed geometry and masses must be defined in chart_reference §2 and §3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3. Shape-sphere chart `(θ, φ)`
+  - file: docs/design/principia_chart_reference.md
+    section: 3.2 Inverse — closed form
+  - file: docs/design/principia_chart_reference.md
+    section: 2. Invariant-momentum charts `(Lz, E)` and `(Lz, K)`
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "each chart's held blocks are traced to the slice pin (z₀) or a named chart parameter, with p_fixed's frame and φ_f stated; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-CHART-049
+  area: CHART
+  kind: calibration
+  statement: "The agreement tolerance of the shape-sphere normal `n` computed by `shape_vec` against the IC Inspector's reference implementation on random ICs must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.1 Forward map (already implemented as `shape_vec`)
+  - file: decisions.md
+    section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance with the measured max difference over the fixture's random ICs; recorded in decisions.md"
+  rulings:
+  - R-14
+  - R-71
+  milestone: M2
+- id: REQ-CHART-050
+  area: CHART
+  kind: definition
+  statement: "The \"direct `(α, β)` sweep\" that the axis-aligned latent slice with q₁ = ê_α, q₂ = ê_β must equal (its (u, v) → (α, β) map, and so the equality asserted) must be defined in chart_reference §5.2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: docs/design/principia_chart_reference.md
+    section: 0.2 Configuration — hyperspherical mass-weighted Jacobi
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the direct sweep's map and the equality the test asserts; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-CHART-051
+  area: CHART
+  kind: definition
+  statement: "The latent vectors of the named compound directions — the energy-increase-at-fixed-L_z tangent (the curve it is tangent to, its pull-back through the momentum links and its normalisation), the mass-perturbation-away-from-Burrau direction's normalisation, and the Burrau-to-unconstrained morph's source and target directions must be defined in chart_decoder_contract Part 4 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Directions are axis kinds — the unifying rule
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives each direction as a unit latent vector evaluated at the chart centre; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -2089,6 +2277,8 @@
     detail: "dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps, orbit_count matches a hand count, retrograde matches the L_z sign"
   rulings: []
   milestone: M1
+  rq:
+  - RQ-94
 - id: REQ-INT-002
   area: INT
   statement: "The physics must use dimensionless units G = M = I = 1 throughout, with a single global horizon T."
@@ -2120,6 +2310,8 @@
   - R-22
   - R-50
   milestone: M2
+  rq:
+  - RQ-92
   note: "dd §3.7 says B18 (mass-weighted vs fixed 120°) is still open; R-50 (recorded; applied before the physics-overlay occupant) settles it as mass-weighted. Decides audit B18 left open in R-14."
 - id: REQ-INT-004
   area: INT
@@ -2179,6 +2371,8 @@
   rulings:
   - R-19
   milestone: M3
+  rq:
+  - RQ-97
 - id: REQ-INT-008
   area: INT
   statement: "The integrator must be structured as one swappable occupant inside a fixed shared wrapper, where the wrapper alone owns the loop, adaptive substepping, COM projection, invariant monitoring, terminal detection and the state readout, identical regardless of which occupant is bound, and each occupant must carry a capability profile."
@@ -2316,6 +2510,8 @@
     detail: "driver code has no prin-rs lineage violating rules 1-5; physics layer is a transcription with 0 Vec/Box/dyn/std"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-102
 - id: REQ-INT-017
   area: INT
   statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only)."
@@ -2341,6 +2537,8 @@
   rulings:
   - R-72
   milestone: M3
+  rq:
+  - RQ-102
   note: "Profile field, payload count or both (and the payload placement, a ledger change): REQ-INT-073 (definition)."
 - id: REQ-INT-019
   area: INT
@@ -2456,6 +2654,8 @@
   rulings:
   - R-29
   milestone: M3
+  rq:
+  - RQ-98
   note: "`tau` has no default in the corpus; it is set by measurement (R-29: re-measure the gap), tracked in open-questions.md, change 11 (i)."
 - id: REQ-INT-027
   area: INT
@@ -2488,6 +2688,8 @@
   rulings:
   - R-34
   milestone: M3
+  rq:
+  - RQ-97
 - id: REQ-INT-029
   area: INT
   statement: "The substep cap N_max must bound the substep count per macro-step without terminating: on N_sub == N_max the trajectory advances with the capped (under-resolved) step, identically on both pipelines, and the sticky saturated descriptor bit (bit 5) is set at that point and is never a state value."
@@ -2513,6 +2715,8 @@
   - R-68
   - R-86
   milestone: M3
+  rq:
+  - RQ-97
   note: "R-86: saturated ⟺ N_sub == N_max (generation-root §3.1 now says so). R-68: the substep cap default is 64."
 - id: REQ-INT-030
   area: INT
@@ -2531,6 +2735,8 @@
     detail: "stepOnce on shared states: projected state from CPU-f32 and GPU-f32 matches bit-for-bit on Metal; no Jacobi conversion inside the step"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-97
 - id: REQ-INT-031
   area: INT
   statement: "Branch-cut crossing detection for the free-group word must run at every accepted substep, order simultaneous crossings by crossing fraction `τ = d₀/(d₀−d₁)` ascending with fixed cut-ID priority only as a tie-break, and count an endpoint on a cut iff it goes negative → non-negative, identically on CPU and GPU."
@@ -2547,6 +2753,9 @@
   rulings:
   - R-72
   milestone: M3
+  rq:
+  - RQ-96
+  - RQ-97
   note: "The τ-sort, the tie tolerance and the sign convention: REQ-INT-079 (definition)."
 - id: REQ-INT-032
   area: INT
@@ -2794,6 +3003,8 @@
     detail: "a fixture with a cross-and-recross inside one macro-step yields both crossings"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-96
 - id: REQ-INT-047
   area: INT
   statement: "Crossings within one segment must be ordered by increasing `τ = d₀ / (d₀ − d₁)`, with a fixed cut-ID priority used only as a tie-break when `τ` values are equal within a defined tolerance."
@@ -2848,6 +3059,8 @@
     detail: "Occupant registry includes an unregularised (leapfrog) occupant; control test on fixture ICs: its drift field correlates with FTLE positively (measured +0.305), while a re-registering occupant's does not (AZ −0.082)."
   rulings: []
   milestone: M3
+  rq:
+  - RQ-103
   note: "pitfall: \"4.3 The control that found it\" — 4.3 The control that found it."
 - id: REQ-INT-051
   area: INT
@@ -2868,6 +3081,9 @@
     detail: "Re-run the Heggie vs AZ comparison: Heggie must win on the recorded cases (31 of 32; err>10 3916 → 73) with AZ winning only on 'far'; the default occupant config names Heggie."
   rulings: []
   milestone: M3
+  rq:
+  - RQ-102
+  - RQ-103
   note: "pitfall: \"4.4 The remedy, and its own falsification test\"; pitfall: \"4.1 The finding\" — 4. RE-REGISTRATION COUNT — the mechanism that had to be found twice."
 - id: REQ-INT-052
   area: INT
@@ -2882,6 +3098,9 @@
     detail: "Ablation on config_stability (none / dtau only / clamp only / limit only / all three): the shipping config must give non-finite = 0 and wedge density ≈ 0.0001 (the limit-only / all-three rows), and both columns are reported separately."
   rulings: []
   milestone: M3
+  rq:
+  - RQ-102
+  - RQ-103
   note: "pitfall: \"8. TWO ARTEFACTS ARE NOT ONE DEFECT\" — 8. TWO ARTEFACTS ARE NOT ONE DEFECT. INDEX: the predictive step limit, not the dtau fix, removed the wedges."
 - id: REQ-INT-053
   area: INT
@@ -3010,6 +3229,8 @@
   rulings:
   - R-103
   milestone: M4
+  rq:
+  - RQ-97
   note: "R-103: in production, done is set when escape fires and the loop ends (integrator_contract Part 1's pseudocode now says so); the §2.4 post-escape march lives in the validation harness."
 - id: REQ-INT-060
   area: INT
@@ -3109,6 +3330,9 @@
   - R-89
   - R-102
   milestone: M4
+  rq:
+  - RQ-92
+  - RQ-98
 - id: REQ-INT-066
   area: INT
   statement: "The `d²` fed to the substep bucket must be position-quantised: positions cast to f32, then a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx*dx)`."
@@ -3170,6 +3394,9 @@
   rulings:
   - R-102
   milestone: M4
+  rq:
+  - RQ-92
+  - RQ-98
 - id: REQ-INT-070
   area: INT
   statement: "The kernel must take the chart description (z₀, basis vectors, chart id + params) as a uniform and per sample map → z → decode → (m, r, p) → integrate in-kernel, never from a pre-decoded IC buffer, keeping per-frame CPU cost O(1)."
@@ -3206,6 +3433,9 @@
   rulings:
   - R-80
   milestone: M5
+  rq:
+  - RQ-94
+  - RQ-98
 - id: REQ-INT-073
   area: INT
   kind: definition
@@ -3315,6 +3545,42 @@
   rulings:
   - R-72
   milestone: M3
+- id: REQ-INT-080
+  area: INT
+  kind: calibration
+  statement: "The regularised occupants' sync schedule — the number of sync boundaries n_sync over the horizon and Aarseth–Zare's step factor eta in dtau = eta·dt_left/(A·B) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 0.1 The mechanism, and the fix — measured, not proposed
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives n_sync and eta per regularised occupant (declared by the occupant, on the sim key with its config), with the figure-eight closure and drift evidence across the eta / n_sync ladder of dd_validation_orbits §0.1; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M3
+- id: REQ-INT-081
+  area: INT
+  kind: calibration
+  statement: "The default horizon T_horizon (within integrator_contract's [50, 200] and inside the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 at the fixed dt_macro) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 5 — Units and the horizon (inherited scale gauge)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives T_horizon, shows ⌈T_horizon/dt_macro⌉ ≤ 65535 at dt_macro = 10⁻³ (or states how the range's upper part is reached: coarser dt_macro or epochs), and cites the Burrau resolution window as evidence; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M3
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -3349,6 +3615,8 @@
   - R-29
   - R-60
   milestone: M3
+  rq:
+  - RQ-95
   note: "R-60: no step-0 escape; an IC already escaping is classified when its window completes (generation-root §3.1 now says so)."
 - id: REQ-EVT-003
   area: EVT
@@ -3739,6 +4007,26 @@
   milestone: M3
   rq:
   - RQ-78
+- id: REQ-EVT-024
+  area: EVT
+  kind: calibration
+  statement: "The escape settling threshold tau (the |Δn̂| closure bound over the escape window) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 2.2 The criterion
+  - file: decisions.md
+    section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "a provisional tau inside the recorded 7.04e-05 … 2.70e-02 gap is used by the detector until REQ-VAL-051's re-measurement with R-29's E_rel; the proposal places tau inside the re-measured gap and shows outcomes unchanged across its middle; recorded in decisions.md"
+  rulings:
+  - R-29
+  - R-71
+  milestone: M3
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), QuadReduction must be sized from its member list (about 80 B), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -3757,6 +4045,8 @@
   rulings:
   - R-86
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-PAY-002
   area: PAY
   statement: "The SimState, ICDescriptor and RenderQuad field sets and packing must be generated from the generation-root ledger as the single source of truth, matching the fields listed in render contract Part 1 (live r,p in CoM frame, one tier-gated Benettin shadow, Benettin S, unwrapped theta, Welford mean_y/C_ty, E_0/Lz_0 f32, d_min/dE_max/dLz_max f16 packed with the descriptor, times as exact u16 macro-step indices, exact total_substeps u32, sample_descriptor u32; ICDescriptor's 12 fields; RenderQuad's 9 fields)."
@@ -3844,6 +4134,8 @@
   rulings:
   - R-72
   milestone: M0
+  rq:
+  - RQ-93
   note: "Member order, packing and final size: REQ-PAY-077 (definition)."
 - id: REQ-PAY-007
   area: PAY
@@ -3920,6 +4212,8 @@
     detail: "run the fragment unpack self-test on an adapter without shader-f16; results match the Rust unpack"
   rulings: []
   milestone: M0
+  rq:
+  - RQ-79
 - id: REQ-PAY-012
   area: PAY
   statement: "`packed_a`, `packed_b` and `times` must follow payload §2's bit diagrams: descriptor in `packed_a` bits 0–15 and `d_min` f16 in 16–31; `dE_max` f16 low and `dLz_max` f16 high in `packed_b`; `t_end_step` u16 low and `t_dmin_step` u16 high in `times`."
@@ -4814,6 +5108,7 @@
   milestone: M5
   rq:
   - RQ-72
+  - RQ-100
   note: "The latch's storage layout: see the definition requirement for the per-footprint latch's layout."
 - id: REQ-PAY-066
   area: PAY
@@ -4887,6 +5182,8 @@
   rulings:
   - R-38
   milestone: M6
+  rq:
+  - RQ-96
 - id: REQ-PAY-071
   area: PAY
   statement: "Before any per-pair view ships, the thrice-punctured-sphere relation expressing the third collision loop via `a` and `b` must be specified explicitly."
@@ -4899,6 +5196,8 @@
   rulings:
   - R-38
   milestone: M6
+  rq:
+  - RQ-96
 - id: REQ-PAY-072
   area: PAY
   statement: "Before any per-pair view ships, a deterministic attribution algorithm must map a reduced word to `enc_01`, `enc_02`, `enc_12` and `dominant_pair = argmax`, reproducibly."
@@ -4911,6 +5210,8 @@
   rulings:
   - R-38
   milestone: M6
+  rq:
+  - RQ-96
 - id: REQ-PAY-073
   area: PAY
   kind: definition
@@ -4960,6 +5261,8 @@
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-93
   note: "Bin width is a layout value; the task records it with the definition."
 - id: REQ-PAY-076
   area: PAY
@@ -4991,6 +5294,8 @@
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-93
 - id: REQ-PAY-078
   area: PAY
   kind: calibration
@@ -5143,6 +5448,43 @@
   - R-72
   - R-79
   milestone: M3
+- id: REQ-PAY-087
+  area: PAY
+  kind: definition
+  statement: "The payload layout as a function of the Real type — which SimState fields widen with Real and which keep their fixed width (the f16-packed latches, the packed u32 words, the u16 step indices), the resulting f64 layout, and the shape of the DoubleF64 stub row — must be defined in dd_simstate_payload §1 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 1. `SimState` — the hot struct
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.1 Extended and arbitrary precision
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§1 states per field whether its width follows Real, gives the f64 layout's size and alignment and the DoubleF64 row; the generated layouts match it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M0
+- id: REQ-PAY-088
+  area: PAY
+  kind: definition
+  statement: "The formulas of the ICDescriptor fields `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` (including whether `rho_mag` and `lambda_mag` are ‖ρ‖, ‖λ‖ or the mass-weighted ‖ρ̃‖, ‖λ̃‖) must be defined in dd_decoder §3.6 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.6 `ICDescriptor` (12 × f32)
+  - file: decisions.md
+    section: R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives each field's formula from (m, r, p) at decode, consistent with the ledger's presentation metadata (log, cyclic); physics reviewer approved"
+  rulings:
+  - R-62
+  - R-72
+  milestone: M2
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -5205,6 +5547,8 @@
     detail: "fuzz all fields incl. top bits set (catches i32 sign extension)"
   rulings: []
   milestone: M0
+  rq:
+  - RQ-79
 - id: REQ-GEN-005
   area: GEN
   statement: "f16 pairs must round-trip through `pack2x16float`/`unpack2x16float` within f16 epsilon."
@@ -5246,6 +5590,8 @@
     detail: fuzz per field on host and GPU; static layout checks pass
   rulings: []
   milestone: M0
+  rq:
+  - RQ-97
 - id: REQ-GEN-008
   area: GEN
   statement: "The payload schema version must be the content hash of the ledger, including the continuation table, so any ledger or continuation-table change changes the version automatically."
@@ -5266,6 +5612,8 @@
   - R-36
   - R-63
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-GEN-009
   area: GEN
   statement: "Ledger-generated per-field debug shaders must mount into frag/debug/generated/ (or a scanned virtual directory) and surface through the same scan as hand-written debug shaders."
@@ -5410,6 +5758,9 @@
   rulings:
   - R-36
   milestone: M5
+  rq:
+  - RQ-93
+  - RQ-95
 - id: REQ-GEN-018
   area: GEN
   statement: "|det J_D| must match the analytic link derivatives wherever closed forms exist."
@@ -5490,6 +5841,79 @@
     detail: "debugVisible = false removes exactly the debug-tagged entries from the list"
   rulings: []
   milestone: M8
+- id: REQ-GEN-024
+  area: GEN
+  kind: definition
+  statement: "The §3.8 metadata entry of a field derived at read rather than stored (its `location` kind and the stored fields it derives from) and of a vector-valued field such as `n` (its type and component count, so the ledger knows it is a vector) must be defined in dd_generation_root §3.8 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.4 `SimState` scalars — with presentation metadata
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 4. The occupant model — typed by signature, free inside
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§3.8 gives a location kind for derived fields and a vector type; §3.4's derived fields and `n` have complete entries under it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M0
+- id: REQ-GEN-025
+  area: GEN
+  kind: calibration
+  statement: "The tolerances of generation-root registry test 8 (c) (analytic log-det against a numeric Jacobian) and (d) (continuity of the central-difference derivative, with its step) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 5. Tests (properties any generator must satisfy)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the finite-difference step and both tolerances, with the measured discrepancy per registered link across its domain; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+- id: REQ-GEN-026
+  area: GEN
+  kind: definition
+  statement: "The alternative registry links REQ-GEN-014 needs — an edge-reaching simplex map, a heavier-tailed bounded map and any further simplex link — each with forward, inverse, log-det, ε clamps and sampling note must be defined in dd_generation_root §3.9 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: "Integrity: the link is part of the experiment"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 2.5 — Link functions & compactification (customisable)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§3.9 has at least two links per block, each row complete (forward, inverse, log-det, ε clamps, over/under-sampling note) and meeting the three hard requirements; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-GEN-027
+  area: GEN
+  kind: definition
+  statement: "The declaration format by which a fragment occupant's `.wgsl` source declares its `uniformSchema` and `inputDomains` (read by the scanner and by the assembler's schema-driven uniforms) must be defined in gui_state_contract §3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
+  - file: decisions.md
+    section: "R-53 — Node interfaces declare their input domains *(GU-2 (a))*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the declaration syntax for uniforms (name, type, default, range) and per-input domains, with the default inheriting the manifest's [lo, hi]; one worked example; physics reviewer approved"
+  rulings:
+  - R-53
+  - R-72
+  milestone: M1
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -5625,6 +6049,9 @@
   - R-89
   - R-92
   milestone: M4
+  rq:
+  - RQ-95
+  - RQ-98
 - id: REQ-SCHED-008
   area: SCHED
   statement: "The frame loop must never present mixed time: only the barrier-synced live set, all at one playhead t, may reach the screen, with checkerboard's bounded one-dt skew during playhead advance as the only exception."
@@ -5862,6 +6289,8 @@
     detail: "deep-zoom gesture landing with dozens of Jacobian quads: frame time stays within budget"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-99
   note: "The budget: REQ-SCHED-076 (calibration)."
 - id: REQ-SCHED-024
   area: SCHED
@@ -5880,6 +6309,8 @@
     detail: "per-quad uniforms carry c, h, x₀, J_D; kernel computes only x₀ + J_D·δ"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-99
 - id: REQ-SCHED-025
   area: SCHED
   statement: "In-plane pan and zoom must only change which quad addresses are asked for — the addresses themselves are fixed in the slice plane's own frame, relative to the plane anchor — slicing out of the plane, tilting and rotating must request new identities whose quads integrate fresh, the lock must change neither key, and no navigation may invalidate a cached payload; revealed quads catch up to the playhead off-loop."
@@ -5993,6 +6424,8 @@
     detail: "with two equally-old quads of different computeCostMs under cache pressure, the cheaper is evicted first"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-88
   note: "The cost formula: REQ-SCHED-079 (definition)."
 - id: REQ-SCHED-033
   area: SCHED
@@ -6136,6 +6569,8 @@
   - R-97
   - R-100
   milestone: M5
+  rq:
+  - RQ-99
   note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale."
 - id: REQ-SCHED-041
   area: SCHED
@@ -6247,6 +6682,8 @@
   - R-89
   - R-92
   milestone: M5
+  rq:
+  - RQ-95
 - id: REQ-SCHED-049
   area: SCHED
   statement: "Cache keys must separate identity (which quad) from validity (computed how), and a preview must never satisfy a request for a refined result."
@@ -6757,6 +7194,8 @@
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-88
 - id: REQ-SCHED-080
   area: SCHED
   kind: definition
@@ -6888,6 +7327,74 @@
   - R-97
   milestone: M5
   note: "R-97 fixes the frame's origin (the plane anchor) but gives no scale; §1 still states a quad's span as ~2^−ℓ of the view's [0,1]² UV domain."
+- id: REQ-SCHED-087
+  area: SCHED
+  kind: calibration
+  statement: "The scheduler's in-flight job limit (within scheduler Part 6's 2–4 jobs) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal shows dispatch throughput and pan-away latency (stale results dropped) at 2, 3 and 4 jobs in flight; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M5
+- id: REQ-SCHED-088
+  area: SCHED
+  kind: calibration
+  statement: "The depth of the in-motion full-canvas coarse cover (how many levels above camera depth the gesture-time `PREVIEW_MODE` cover sits) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 5 — The stale backdrop: blur means loading"
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 4 — Baseline-first: an absolute tier, not a priority weight"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the level offset, whether it equals REQ-SCHED-074's baseline-cover depth, and its evidence: dispatches per gesture frame and canvas coverage on scripted tilt and slice drags; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M5
+- id: REQ-SCHED-089
+  area: SCHED
+  kind: calibration
+  statement: "The motion refinement floor's offset (one or two levels above pixel size, and whether the arbiter moves it between the two) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_memory_tiers.md
+    section: 5. Controller levers, ranked by impact
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the offset (1, 2, or arbiter-moved between them) with evidence: frame time and live-sample count during scripted pans at each offset; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-108
+  milestone: M6
+- id: REQ-SCHED-090
+  area: SCHED
+  kind: calibration
+  statement: "The constants of P_focus's decay law (REQ-SCHED-081) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-55 — Cursor bias is `P_focus` centred on the pointer *(GU-4 (a))*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each constant of the written decay law with evidence: dispatch order around the pointer on a scripted hover, and that visibility still dominates; recorded in decisions.md"
+  rulings:
+  - R-55
+  - R-71
+  milestone: M6
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -7589,6 +8096,7 @@
   milestone: M6
   rq:
   - RQ-72
+  - RQ-100
 - id: REQ-REF-046
   area: REF
   kind: definition
@@ -7606,6 +8114,79 @@
   rulings:
   - R-72
   - R-99
+  milestone: M6
+- id: REQ-REF-047
+  area: REF
+  kind: definition
+  statement: "The meaning of each Decision variant — which variant records AT_F32_FLOOR and which the integration floor, and what produces BalanceForced — must be defined in refinement_policy §6 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_refinement_policy.md
+    section: 6. Decision variants, and the second budget line
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 4 — Terminal vs refinable, tied to the two floors
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§6 gives, for each of the eight variants, the stop that produces it and whether it is terminal; the lifecycle state-machine test follows it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M6
+- id: REQ-REF-048
+  area: REF
+  kind: definition
+  statement: "The estimator fallback's third scale — which refinement level is acquired beside alpha_area's two, when it is acquired, and how the exponent is then fitted over three scales — must be defined in dd_generation_root's scaling-exponent section by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Refinement — the scaling exponent
+  - file: decisions.md
+    section: R-87 — `failed_fraction` is retired *(closes RQ-38)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section names the third level, the trigger (error_ratio departing from 1.0) and the three-point fit; REQ-REF-018's unit test follows it; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-87
+  milestone: M6
+- id: REQ-REF-049
+  area: REF
+  kind: definition
+  statement: "The cheap sea_fraction(eps) estimator's method (what it samples before any descent and how it estimates the footprint-spread CDF from it) must be defined in refinement_policy §5.1 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_refinement_policy.md
+    section: "5.1 `sea_fraction` is the regime test, and it is computable before any descent"
+  - file: decisions.md
+    section: "R-48 — The `sea_fraction` estimator is built after the tier controller *(RS-8)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§5.1 states the sampling and the estimate, computable before descent without a full cache; REQ-REF-031's comparison against the full-cache CDF uses it; physics reviewer approved"
+  rulings:
+  - R-48
+  - R-72
+  milestone: M6
+- id: REQ-REF-050
+  area: REF
+  kind: calibration
+  statement: "The value of `tau`, the stop rule's second threshold (not `eps` times a constant), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_refinement_policy.md
+    section: 5.2 The tolerance is inert exactly where the policy works
+  - file: docs/design/principia_dd_refinement_policy.md
+    section: 7. Open
+  - file: decisions.md
+    section: "R-49 — The refinement policy's open measurements are taken at the first refine milestone *(RS-9)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states tau with the tolerance-grid evidence (charts × horizons × eps) that REQ-REF-032's benchmark produces; recorded in decisions.md"
+  rulings:
+  - R-49
+  - R-71
   milestone: M6
 - id: REQ-RENDER-001
   area: RENDER
@@ -7859,6 +8440,7 @@
   milestone: M1
   rq:
   - RQ-75
+  - RQ-82
 - id: REQ-RENDER-016
   area: RENDER
   statement: "The public slot contract must stay linear RGB plus scalar even where built-ins work internally in OKLab/OKLCH."
@@ -7948,6 +8530,9 @@
   rulings:
   - R-79
   milestone: M1
+  rq:
+  - RQ-82
+  - RQ-94
 - id: REQ-RENDER-023
   area: RENDER
   statement: "Debug fields must be raw: apart from the NaN guard there must be no validity masking, a failed-state sentinel being shown as its literal value."
@@ -8013,6 +8598,8 @@
     detail: both projections selectable on the shape-sphere chart
   rulings: []
   milestone: M2
+  rq:
+  - RQ-95
 - id: REQ-RENDER-027
   area: RENDER
   statement: "A DECODE fragment preset (fragment-side decode of ctx.chart.z) must exist that certifies the decode rung before any physics, and every chart in the lowering appendix must decode through it without special-casing."
@@ -8034,6 +8621,9 @@
   - R-41
   - R-75
   milestone: M2
+  rq:
+  - RQ-94
+  - RQ-95
   note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75)."
 - id: REQ-RENDER-028
   area: RENDER
@@ -8100,6 +8690,8 @@
     detail: "trajectory count per pixel = (E+1) below Medium and 2(E+1) from Medium up"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-98
 - id: REQ-RENDER-032
   area: RENDER
   statement: "Checkerboard must march the samples of half the render pixels per frame (a per-render-pixel checkerboard mask whose parity flips each frame), with the other half holding its own value from t − dt."
@@ -8128,6 +8720,8 @@
     detail: "within any pixel all bundle members carry the same t after every frame"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-98
 - id: REQ-RENDER-034
   area: RENDER
   statement: "A checkerboard-stale pixel must be reconstructed only from its own previous value (temporal reuse), never spatially interpolated from neighbours."
@@ -8150,6 +8744,8 @@
     detail: "Potato (E = 0) with checkerboard on: the mask is applied"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-98
 - id: REQ-RENDER-036
   area: RENDER
   statement: "When the playhead stops (rest, pause, t_end / all-terminated), the stale half must be marched one dt and promoted at the next barrier so the frame is full; frames at t = 0 and every quiescent moment must be complete, and no frame may be served checkerboarded except mid-advance."
@@ -8300,6 +8896,8 @@
     detail: "during scripted pan/zoom/refine every screen pixel is covered by a layer every frame and the main thread never blocks"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-99
 - id: REQ-RENDER-046
   area: RENDER
   statement: "Checkerboard must apply to the live-set march only; catch-up marches must never be checkerboarded."
@@ -8388,6 +8986,8 @@
     detail: "SimState has no spread field; the data-side spread path reads classified outcomes, not colours; QuadReduction carries ensemble_spread"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-94
 - id: REQ-RENDER-052
   area: RENDER
   statement: "Internal render resolution must be render_px = display_px × render_scale², with render_scale a tier knob in {0.25, 0.5, 0.75, 1.0} and a Custom slider over 0.25–2.0, where values above 1.0 are Custom-only and used by no tier; there must be no separate samples-per-pixel knob."
@@ -8580,7 +9180,7 @@
   milestone: M7
 - id: REQ-RENDER-065
   area: RENDER
-  statement: "The sphere widget must project with s_x = (p_x−c_x)/R, s_y = −(p_y−c_y)/R, s_z = √max(0,1−s_x²−s_y²), R = W/2 − 4, and the equirect mapping must be (φ, n_z) ∈ [−π,π]×[−1,1] with v linear in n_z."
+  statement: "The sphere widget must project with s_x = (p_x−c_x)/R, s_y = −(p_y−c_y)/R, s_z = √max(0,1−s_x²−s_y²), R = W/2 − 4, and the equirect mapping must be (θ, φ) ∈ [0,2π]×[0,π] (R-14): θ the azimuth in the (u, v) plane on the horizontal axis, φ the polar angle from +w on the vertical axis, L⁺ (w = +1) at the top; `sph_uv` input is always the config-space normal."
   source:
   - file: docs/design/principia_dd_colouring.md
     section: 3.3 Sphere sampling conventions
@@ -8588,8 +9188,10 @@
     section: 6. Deferred / flagged
   verify:
     method: unit test
-    detail: "equirect v for n_z = 0.5 is 0.75 of the way from bottom (not the latitude-angle value)"
-  rulings: []
+    detail: "widget projection round-trips a pixel grid; equirect u is linear in θ and v linear in φ, with w = +1 on the top row and w = −1 on the bottom row; sph_uv is called with the config-space normal"
+  rulings:
+  - R-14
+  - R-73
   milestone: M7
 - id: REQ-RENDER-066
   area: RENDER
@@ -8661,6 +9263,8 @@
     detail: "render-config updates issue no writes to sim buffers; the baked texture is identical across charts"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-89
 - id: REQ-RENDER-071
   area: RENDER
   statement: "The stain pipeline must be source(s) → optional colour and optional brightness (None = identity) → a required combiner (Replace-L / Multiply) → a possibly-empty ordered chain of vec3 → vec3 post nodes → OUT, and codegen must walk the graph to produce the fragment shader."
@@ -8747,6 +9351,90 @@
   rulings:
   - R-72
   milestone: M5
+- id: REQ-RENDER-077
+  area: RENDER
+  kind: definition
+  statement: "The exact values of the tier-absent sentinels — the canonical quiet-NaN bit pattern that a derived field reads and that the bitcast absence test compares against, and the word an unbound word buffer returns (empty, length 0, or the length_raw 127 sentinel) — must be defined in lowering_contract Part 3a by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_lowering_contract.md
+    section: "Part 3a — The uniform read-side interface (tier features degrade by NaN, not by struct shape)"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 3. The word buffer — `free_group_word`
+  - file: decisions.md
+    section: R-79 — NaN and sentinels *(closes RQ-30)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Part 3a gives the quiet-NaN bits and the unbound-word value; REQ-RENDER-013's unit test asserts exactly those; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-79
+  milestone: M1
+- id: REQ-RENDER-078
+  area: RENDER
+  kind: definition
+  statement: "Spread-extrapolation's `rate` — which value is extrapolated (a payload field or the resolved colour), which integration by-product supplies its local rate of change, and where the rate is 'cheaply available' — must be defined in checkerboard_contract §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_checkerboard_contract.md
+    section: "2. The mechanism: reconstruct-from-previous, resolved through SSAA"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§2 names the extrapolated value, the rate's source and the gate; REQ-VAL-058's measured error reduction uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M4
+- id: REQ-RENDER-079
+  area: RENDER
+  kind: calibration
+  statement: "The stale backdrop's separable blur radius (kernel width, in render pixels) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 5 — The stale backdrop: blur means loading"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the radius with evidence: captures of a tilt drag showing the backdrop reads as stale beside the fresh coarse cover, and the two blur passes' cost; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M5
+- id: REQ-RENDER-080
+  area: RENDER
+  kind: calibration
+  statement: "The equirect bake texture's resolution and texel format (which set the 'one texel quantisation step' of the bake-equivalence test) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 3 — Cache tiers and the recompute rule
+  - file: docs/design/principia_dd_colouring.md
+    section: 5. Unit tests
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the texture's width × height and texel format with the measured bake-vs-direct colour difference over a sphere lattice and the bake time; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M7
+- id: REQ-RENDER-081
+  area: RENDER
+  kind: calibration
+  statement: "The invalid-graph fallback (flat grey or error tint) and its sRGB value must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 13. Invariants
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal names the fallback and its sRGB value, shows it is distinct from the both-None flat mid-grey and from the invalid-pixel magenta; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M7
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to fixed magenta and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid colour."
@@ -9045,6 +9733,8 @@
   - R-14
   - R-50
   milestone: M7
+  rq:
+  - RQ-106
   note: "R-50 settles audit decision B18 (which dd_colouring §3.4 still calls open): landmarks are mass-weighted. R-50 is recorded, applied before the physics-overlay occupant."
 - id: REQ-COL-022
   area: COL
@@ -9199,6 +9889,8 @@
   - R-50
   - R-76
   milestone: M7
+  rq:
+  - RQ-101
 - id: REQ-COL-031
   area: COL
   statement: "Map parameters must use the adopted ranges L ∈ [0.35,0.90], C ∈ [0.05,0.22], κ ∈ [0.5,12], f ∈ [2,14], N ∈ [12,96], ks ∈ [1,20], s ∈ [0,1]."
@@ -9285,6 +9977,8 @@
   rulings:
   - R-50
   milestone: M7
+  rq:
+  - RQ-90
 - id: REQ-COL-037
   area: COL
   statement: "Stability × Hue must set L = 0.25 + 0.55·½(1 − max_j n̂·b̂_j), giving L = 0.25 at a BC point and 0.80 antipodal."
@@ -9378,6 +10072,8 @@
   - R-67
   - R-78
   milestone: M7
+  rq:
+  - RQ-91
 - id: REQ-COL-043
   area: COL
   statement: "The display chain must run in the fixed order SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen, so that the colour-vision simulation sees the final in-gamut colours."
@@ -9401,6 +10097,8 @@
   - R-67
   - R-107
   milestone: M7
+  rq:
+  - RQ-80
   note: "GUI_DESIGN_NOTES now lists display scale and gamut clamp in this order (conformed to R-67, R-107)."
 - id: REQ-COL-044
   area: COL
@@ -9415,6 +10113,8 @@
     detail: "screenshots of each preset against 04_windows.png's Display window; chrome and legend are unstyled"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-107
 - id: REQ-COL-045
   area: COL
   statement: "Colour-vision simulation must offer off, deuteranopia, protanopia and tritanopia."
@@ -9429,6 +10129,8 @@
   rulings:
   - R-78
   milestone: M7
+  rq:
+  - RQ-91
 - id: REQ-COL-046
   area: COL
   statement: "The golden-image tests must be pinned to colour_composition §7.1's complete Artefact-1 and Artefact-2 map lists, with Stability × Hue deleted from them, and magenta must be the invalid colour."
@@ -9447,6 +10149,8 @@
   - R-71
   - R-76
   milestone: M7
+  rq:
+  - RQ-101
   note: "The agreement tolerance: REQ-COL-052 (calibration)."
 - id: REQ-COL-047
   area: COL
@@ -9542,6 +10246,8 @@
   rulings:
   - R-71
   milestone: M7
+  rq:
+  - RQ-101
 - id: REQ-COL-053
   area: COL
   kind: calibration
@@ -9575,6 +10281,97 @@
     method: review checklist
     detail: "colour_composition states each resolution the GUI spec assumes, and §16's item is closed"
   rulings:
+  - R-72
+  milestone: M7
+- id: REQ-COL-055
+  area: COL
+  kind: calibration
+  statement: "The value of the default invalid colour (colour_composition §3's 'fixed magenta', the prelude's DEBUG_NAN), distinguishable from the outcome palette's body-1-escape magenta #E034C6, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: 3. The `ctx` contract
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-16 — The colour PDF's map lists are ported *(closes RQ-14)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the sRGB value (citing the reference HTML's vec3(0.91, 0.17, 0.93) as prior art, not authority) and its OKLab separation from #E034C6 and the other outcome classes; recorded in decisions.md"
+  rulings:
+  - R-16
+  - R-71
+  milestone: M1
+- id: REQ-COL-056
+  area: COL
+  kind: definition
+  statement: "The tile/sample lane's within-tile coordinate `ctx.tile.uv` (its range and orientation, matching `ctx.quad.uv`) must be defined in colour_composition §3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: 3. The `ctx` contract
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 12.1 Structural overlays and tile debug shaders
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§3's tile/sample lane lists `uv` with its range and orientation; the generated ctx declares it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+- id: REQ-COL-057
+  area: COL
+  kind: definition
+  statement: "What `ctx.chart.z` (\"the full 8-D latent at this pixel, chart triple applied\") holds on a chart whose Φ does not produce a latent z (the shape sphere, the invariant charts, the Burrau family, the Anosova physical-frame chart), and so which chart maps the fragment side evaluates in WGSL, must be defined in colour_composition §3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: 3. The `ctx` contract
+  - file: docs/design/principia_chart_reference.md
+    section: 5.1 One trait, one dispatch
+  - file: docs/contracts/principia_lowering_contract.md
+    section: Appendix — worked enumeration of the current chart set
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section states, for every row of lowering's appendix, what ctx.chart.z carries and how the fragment side obtains it (and its validity lane where it has none); physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M2
+- id: REQ-COL-058
+  area: COL
+  kind: definition
+  statement: "How the categorical filter's muted classes (`show class ∈ {…}, mute the rest`) are drawn — the transform applied to a muted class's colour must be defined in colour_composition §1.4 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the mute transform as a function of the class colour, keeps muted pixels distinguishable from the invalid colour and from the shown classes, and applies to every categorical mode; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M7
+- id: REQ-COL-059
+  area: COL
+  kind: definition
+  statement: "The display stage's gamut-clamp method (per-channel clip in linear sRGB, or a chroma-reducing clamp at constant OKLab lightness and hue, or another) must be defined in colour_composition §4.3 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: 4.3 Display stage (terminal, outside the pipeline)
+  - file: decisions.md
+    section: R-67 — The display chain *(closes RQ-23)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the clamp as a function from linear RGB to in-gamut linear RGB, identity on in-gamut input; physics reviewer approved"
+  rulings:
+  - R-67
   - R-72
   milestone: M7
 - id: REQ-GUI-001
@@ -9704,6 +10501,8 @@
   rulings:
   - R-65
   milestone: M3
+  rq:
+  - RQ-98
 - id: REQ-GUI-009
   area: GUI
   statement: "Checkerboard must be a user setting with three states — On-permanent (default; checkerboard whenever the playhead advances), On-motion-only (only during camera motion; static playback renders every frame in full) and Off (never)."
@@ -9793,6 +10592,8 @@
     detail: the Custom quality panel shows each control
   rulings: []
   milestone: M6
+  rq:
+  - RQ-105
 - id: REQ-GUI-015
   area: GUI
   statement: "Quality must be a preset selector (Auto / named tier / Custom) populating one QualitySettings struct: Auto computes it by device characterisation and is re-runnable (re-selecting Auto or re-detect re-measures), a named tier looks it up and skips the probe, Custom lets the user set it."
@@ -10031,6 +10832,8 @@
   rulings:
   - R-64
   milestone: M7
+  rq:
+  - RQ-100
 - id: REQ-GUI-032
   area: GUI
   statement: "The egui dev debug menu must be F3-toggled inside the same wasm binary and walled off by the crate graph, with the engine crate exposing only its typed state surface as pub."
@@ -10152,6 +10955,8 @@
     detail: "serialise, deserialise, compare; a second client's edit is visible in the first's snapshot"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-93
 - id: REQ-GUI-040
   area: GUI
   statement: "Legibility guidance (e.g. hues over brightness levels for classes) must be surfaced as advice and never enforced."
@@ -10207,6 +11012,8 @@
     detail: "the utilisation control is visible; default leaves headroom; the record names the ceiling"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-105
 - id: REQ-GUI-045
   area: GUI
   statement: "Quality warnings must fire only on an attempted setting change, with three non-blocking severities: Green (apply silently), Yellow (runs poorly: fps estimate plus a 'use recommended instead' escape) and Red (exceeds memory: needed vs estimated GB, still not blocked)."
@@ -11226,6 +12033,8 @@
   rulings:
   - R-65
   milestone: M8
+  rq:
+  - RQ-98
 - id: REQ-GUI-113
   area: GUI
   statement: "Inspector pane 1 must show the IC with draggable bodies 0, 1, 2 and velocity arrows (velocity-only editing), with ghost markers at the playhead."
@@ -11398,6 +12207,8 @@
     detail: screenshot against 11_research.png
   rulings: []
   milestone: M8
+  rq:
+  - RQ-109
   note: v2.
 - id: REQ-GUI-124
   area: GUI
@@ -11412,6 +12223,8 @@
     detail: screenshot against 11_research.png
   rulings: []
   milestone: M8
+  rq:
+  - RQ-109
   note: v2.
 - id: REQ-GUI-125
   area: GUI
@@ -11570,6 +12383,8 @@
     detail: "for each row, select such a node and assert the editor type; rewiring the source morphs the editor"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-94
 - id: REQ-GUI-137
   area: GUI
   statement: "Every node inspector must end with Advanced ▸ edit shader, which reveals that node's generated WGSL editable in place within its function boundary, marks the node with the '{ }' badge and greys its graphical controls, and offers revert-to-generated to restore them."
@@ -11808,6 +12623,8 @@
   rulings:
   - R-72
   milestone: M8
+  rq:
+  - RQ-100
 - id: REQ-GUI-152
   area: GUI
   kind: definition
@@ -11825,6 +12642,8 @@
   rulings:
   - R-72
   milestone: M8
+  rq:
+  - RQ-100
 - id: REQ-GUI-153
   area: GUI
   kind: definition
@@ -11863,6 +12682,108 @@
   - R-106
   milestone: M8
   note: "R-106 withdraws R-96's last bullet: the link ids in SimConfig and on the sim key are the chart's link functions, already specified."
+- id: REQ-GUI-155
+  area: GUI
+  kind: definition
+  statement: "The quantity the scrubber's re-integration progress ('refining · 72%') reports must be defined in render_gui_spec §G2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: R-66 — The time scrubber stays *(closes RQ-22)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section defines the percentage from engine state the snapshot carries, monotone during a re-integration and 100% exactly when the in-view figure has reached the playhead; physics reviewer approved"
+  rulings:
+  - R-66
+  - R-72
+  milestone: M8
+- id: REQ-GUI-156
+  area: GUI
+  kind: definition
+  statement: "The hover path's opacity law — the distance of z(t) from the slice plane (the component orthogonal to q₁, q₂, in the latent metric) and the fall-off from solid to faint must be defined in render_gui_spec §G2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives opacity as a function of the out-of-plane distance, with full opacity on the plane, and names the metric; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M8
+- id: REQ-GUI-157
+  area: GUI
+  kind: calibration
+  statement: "The turning shape sphere's rotation rate (Trajectory panel and Inspector pane 2) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the rate in degrees per second (frame-rate independent) with the reason it reads as 'slowly'; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M8
+- id: REQ-GUI-158
+  area: GUI
+  kind: calibration
+  statement: "The keyboard base step of each adjustable value and in-scope arrow action (pan, tilt, orbit, time step), to which Shift ×10 and Alt ×0.1 apply must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives a table of base steps per field kind and scope (absolute or relative to the field's range or the view), with the reasoning; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M8
+- id: REQ-GUI-159
+  area: GUI
+  kind: definition
+  statement: "The side-by-side difference view — what it differences (per-pixel payload field, class disagreement, or colour) and how the difference is coloured must be defined in render_gui_spec §G11 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G11. Research — first pass (v2) (`11_research.png`)
+  - file: decisions.md
+    section: "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the difference as a function of the two views' samples at the linked cursor grid and its colouring; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-106
+  milestone: M8
+- id: REQ-GUI-160
+  area: GUI
+  kind: definition
+  statement: "Where the user-side stores are kept — the chart builder's saved presets, the stain library's 'Your stains' and the per-choice warning suppressions (native and browser), and that none is engine state must be defined in render_gui_spec §G7 and §11 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 11. Presets = whole graphs
+  - file: docs/design/principia_memory_tiers.md
+    section: "7. The \"are you sure?\" safety system (three severities, none blocking)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§G7 and §11 name each store and its location on native and in the browser, consistent with REQ-GUI-153's stores; the reviewer checks none is engine state the engine reads; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M8
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -11889,6 +12810,8 @@
   rulings:
   - R-56
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-TOOL-003
   area: TOOL
   statement: "All bit-field accessors must use the u32 extractBits overload, never the sign-extending i32 one."
@@ -11900,6 +12823,8 @@
     detail: "fields with the top bit set round-trip without sign extension on the GPU"
   rulings: []
   milestone: M0
+  rq:
+  - RQ-79
 - id: REQ-TOOL-004
   area: TOOL
   statement: "The debug tooling must be built first in Phase 0 in the order 0a generation root + codegen self-test, 0b synthetic payload harness with field views, 0c the kernel bring-up mode followed by the fragment-side UV, DECODE and ROUNDTRIP presets as their dependencies land, then structural views as soon as RenderQuad is defined (the UV-passthrough coordinate view earliest of all) and cross-checks as their seams arrive."
@@ -11948,6 +12873,8 @@
     detail: "run deep_zoom_03 for 600 frames twice: same frame count and the same scope / event sequence"
   rulings: []
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-TOOL-007
   area: TOOL
   statement: "`prin profile diff BASE NEW --threshold P%` must exit non-zero when NEW regresses on BASE by more than P%."
@@ -11973,6 +12900,8 @@
   rulings:
   - R-56
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-TOOL-009
   area: TOOL
   statement: "The debug presentation layer must provide dbg_cat (Okabe–Ito cycle ≤ 8 classes, golden-angle beyond), dbg_lin (viridis ramp), dbg_log (log-compressed), dbg_flag (green/red), dbg_hash_u32 (hashed colour of a raw word) and dbg_sentinel (−1.0 → magenta, absence-NaN via exact bitcast → hatched, suspect styling hook)."
@@ -12000,6 +12929,10 @@
     detail: "each view selectable in the debug picker renders on a synthetic payload; the |n|−1 view is flat zero on a real march"
   rulings: []
   milestone: M1
+  rq:
+  - RQ-93
+  - RQ-94
+  - RQ-101
 - id: REQ-TOOL-011
   area: TOOL
   statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table: the UV and DECODE fragment presets, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views including the live current-substep effort heatmap, word views including the whole-word hash, tier-gated ensemble views, the optional Fourier block, all 9 quad fields plus payload/status flags, structural overlays and the uniform echo."
@@ -12018,6 +12951,9 @@
   - R-75
   - R-86
   milestone: M1
+  rq:
+  - RQ-80
+  - RQ-94
 - id: REQ-TOOL-012
   area: TOOL
   statement: "Field views must style the NaN absence sentinel and the −1 sentinel distinctly so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
@@ -12169,6 +13105,8 @@
   - R-53
   - R-96
   milestone: M1
+  rq:
+  - RQ-83
   note: "R-53: the node inherits the manifest's per-field domain. The outcome legend's canonical palette (colour_composition §1.4, read per R-96) is a separate colour obligation; this debug view needs only six distinct colours."
 - id: REQ-TOOL-022
   area: TOOL
@@ -12283,6 +13221,8 @@
   - R-75
   - R-85
   milestone: M2
+  rq:
+  - RQ-94
   note: "Tier-N tolerance: the tolerances measured on native in-process wgpu (R-85): REQ-VAL-064."
 - id: REQ-TOOL-030
   area: TOOL
@@ -12663,6 +13603,8 @@
     detail: overlay shows the four items
   rulings: []
   milestone: M6
+  rq:
+  - RQ-105
 - id: REQ-TOOL-059
   area: TOOL
   statement: "Share-export PNGs must embed the provenance payload in the low bit of every RGB channel as whole records in a 2-D square tile grid, with the alpha low bit carrying a second systematic copy."
@@ -13025,6 +13967,8 @@
     detail: "indicator visible while passive logging is on; logging is off by default"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-105
 - id: REQ-TOOL-089
   area: TOOL
   statement: "Telemetry must report, per device, which resource binds: samples, bandwidth, memory or dispatch overhead."
@@ -13155,6 +14099,9 @@
   rulings:
   - R-68
   milestone: M8
+  rq:
+  - RQ-93
+  - RQ-95
 - id: REQ-TOOL-099
   area: TOOL
   statement: "The profiler's leak detector must flag steady memory growth while idle."
@@ -13268,6 +14215,8 @@
     detail: "record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; size aspect equals the view's"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-108
 - id: REQ-TOOL-107
   area: TOOL
   statement: "Recording a sweep must integrate each frame to its own t through the export contract's blocking mode, a hard barrier per captured frame, not by scrubbing."
@@ -13463,6 +14412,200 @@
   - R-81
   milestone: M7
   note: "The byte value is set with the rest of the header: REQ-TOOL-109 (calibration)."
+- id: REQ-TOOL-119
+  area: TOOL
+  kind: definition
+  statement: "The regression that `prin profile diff BASE NEW --threshold P%` tests — the statistic compared (frame-time percentile or other), the scopes it compares and how a scope present in only one file is treated — must be defined in render_gui_spec's Profiler section by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Profiler
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 3. Percentiles, not means — and the specific thresholds
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section states the compared statistic, the scope set and the missing-scope rule, and REQ-TOOL-007's test follows it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M0
+- id: REQ-TOOL-120
+  area: TOOL
+  kind: definition
+  statement: "Profiler schema v1's concrete JSON form — the session header's keys, the frame record's keys (telemetry §2's fields and five stages) and the record shape and nesting of scopes, GPU passes, allocations and events — must be defined in dd_telemetry_and_tiers §5 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Profiler
+  - file: decisions.md
+    section: "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the v1 key names and nesting for the header, frame records, scopes, GPU passes, allocations and events; the JSON schema TASK-M0-17 ships matches it; physics reviewer approved"
+  rulings:
+  - R-56
+  - R-72
+  milestone: M0
+- id: REQ-TOOL-121
+  area: TOOL
+  kind: definition
+  statement: "How the session header obtains the f64 rate (a reported value, a measured probe, or recorded as unavailable) and what its display fields (resolution, refresh rate, DPI scale) hold in a headless session must be defined in dd_telemetry_and_tiers §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section states the f64-rate source and the headless display values, and REQ-TOOL-001's session-header test covers both; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M0
+- id: REQ-TOOL-122
+  area: TOOL
+  kind: definition
+  statement: "The debug presentation helpers' renderings — dbg_sentinel's hatch pattern for absence-NaN, dbg_cat's golden-angle lightness and chroma beyond the Okabe–Ito cycle, dbg_log's compression formula and its eps, dbg_hash_u32's hash, and dbg_flag's green and red — must be defined in render_contract's presentation-layer section by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives each helper's formula or pattern and colours; the prelude's helpers and their unit tests (REQ-TOOL-009) match it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+- id: REQ-TOOL-123
+  area: TOOL
+  kind: definition
+  statement: "The bring-up mode's known pattern — the function of the sample address it writes and the existing payload slots it writes it into — must be defined in colour_composition Appendix A by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: Appendix A — kernel-side bring-up mode
+  - file: decisions.md
+    section: R-75 — The kernel keeps one debug mode *(closes RQ-26)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Appendix A names the pattern and the slots; REQ-TOOL-015's test decodes exactly that pattern through the normal unpack path; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-75
+  milestone: M1
+- id: REQ-TOOL-124
+  area: TOOL
+  kind: definition
+  statement: "The structural overlays' styling — the pending-hatch pattern and the fallback-ancestor tint (its colour and opacity) — must be defined in debug_tooling_plan §F by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§F gives the hatch pattern and the tint; REQ-TOOL-026's golden images use them; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+- id: REQ-TOOL-125
+  area: TOOL
+  kind: definition
+  statement: "Where dt_max (the largest usable step, reported distinguishably from 'no usable step') lives — an occupant diagnostic outside the payload, or a payload field added as a ledger change — must be defined in integrator_contract Part 2c by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Rules the new kernel must hold by construction
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section names dt_max's home and its 'no usable step' sentinel (a ledger change goes through the generation root); REQ-TOOL-039's fixture reads it there; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M3
+- id: REQ-TOOL-126
+  area: TOOL
+  kind: definition
+  statement: "Which eps the horizon map's t_max(IC) = ln(1/eps)/ftle(IC) uses — the f32 kernel's machine epsilon, the f64 kernel's, or the ensemble jitter of the measurement horizon — and whether the map shows one horizon or several must be defined in dd_predictability_horizon §4.2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_predictability_horizon.md
+    section: 4.2 The horizon is a field, not a constant
+  - file: docs/design/principia_dd_predictability_horizon.md
+    section: 1. The result
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§4.2 names the eps (and the precision whose FTLE feeds the map); REQ-TOOL-043's unit test uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M4
+- id: REQ-TOOL-127
+  area: TOOL
+  kind: definition
+  statement: "The on-demand single-IC f32 GPU trace — how the survey kernel writes the dense n(t) series (a baked trace variant or a per-step readback), the buffer's layout and sampling cadence, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces — must be defined in trajectory_viewing §5 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_trajectory_viewing.md
+    section: 5. What is honestly comparable (click inspector)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 1 — The payload (render input)
+  - file: docs/contracts/principia_canonical_spec.md
+    section: "7. Precision & validation model *(authoritative: `parity_contract`, `validation_ground_truth_note`, `core_design`)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§5 gives the trace's dispatch form, buffer layout, sampling and the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M4
+- id: REQ-TOOL-128
+  area: TOOL
+  kind: definition
+  statement: "How `prin profile query --live` reaches a running app — the transport, how the app is discovered, and what the browser build exposes must be defined in render_gui_spec's Profiler section by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Profiler
+  - file: decisions.md
+    section: "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section names the transport and discovery for the native app and the browser build (or states the browser is out of scope), answering in the v1 schema; physics reviewer approved"
+  rulings:
+  - R-56
+  - R-72
+  milestone: M8
+- id: REQ-TOOL-129
+  area: TOOL
+  kind: definition
+  statement: "The URL encoding of the spec object (ViewState, sim key, render state, keyframe spec) and the `principia://view?…` query format — field keys, serialisation, compression and versioning must be defined in export_animation_contract Part 6 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: Part 3 — The keyframe system (retained)
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the query grammar and the encoding with a version field and one worked example that round-trips; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M8
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -13899,6 +15042,8 @@
   rulings:
   - R-72
   milestone: M3
+  rq:
+  - RQ-103
   note: "BodyPlane's map and the reference artefact it must match: REQ-VAL-119 (definition)."
 - id: REQ-VAL-029
   area: VAL
@@ -14017,6 +15162,8 @@
   rulings:
   - R-35
   milestone: M3
+  rq:
+  - RQ-87
 - id: REQ-VAL-037
   area: VAL
   statement: "The word truncation rate must be measured to decide whether 76 symbols suffice."
@@ -14093,6 +15240,8 @@
   - R-29
   - R-95
   milestone: M3
+  rq:
+  - RQ-103
   note: "pitfall: \"2.2 The criterion\" — doc numbers predate R-29 and are measured on the legacy t = 30 ground truth; R-95 moves the re-validation to check 2's independent ground truth."
 - id: REQ-VAL-041
   area: VAL
@@ -14148,6 +15297,8 @@
     detail: "for each gallery orbit used, computed word equals the published class"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-96
 - id: REQ-VAL-044
   area: VAL
   statement: "The reversibility test on free-fall brake orbits must be implemented once a reversible occupant exists."
@@ -14164,6 +15315,8 @@
   rulings:
   - R-72
   milestone: M3
+  rq:
+  - RQ-102
   note: "xi: REQ-VAL-134 (definition)."
 - id: REQ-VAL-045
   area: VAL
@@ -14434,6 +15587,8 @@
   - R-32
   - R-84
   milestone: M4
+  rq:
+  - RQ-97
 - id: REQ-VAL-060
   area: VAL
   statement: "Parity Tier B must assert bit-exact CPU↔GPU agreement, given the same branch decisions and integer inputs, of `t_end_step`, `t_dmin_step`, `total_substeps`, every packed descriptor field (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`) and its bit offset, and the free-group word arithmetic including `fgw_length_raw`; the f16 display scalars must not be asserted at Tier B."
@@ -14465,6 +15620,8 @@
     detail: "starting tolerances: IC/decode ~1e-5 relative; one-step state ~1e-5 scaled by force magnitude; E₀/L_z at t=0 ~1e-6 — to be replaced by measured values"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-97
 - id: REQ-VAL-062
   area: VAL
   statement: "Parity on chaotic full trajectories must be structural only: never assert `‖state_cpu − state_gpu‖ < ε` at `t_end` on a chaotic pixel, assert the same outcome class only on non-chaotic fixtures, and assert `t_end` within a window, consistent divergence-onset time, and aggregate-survey agreement."
@@ -14601,6 +15758,8 @@
   - R-93
   - R-105
   milestone: M4
+  rq:
+  - RQ-87
   note: "R-105 confirms R-93's re-run is R-35's change-10 re-run (predictability-horizon §4.1 says so). R-93 also says t_max annotates refinement and does not gate it."
 - id: REQ-VAL-071
   area: VAL
@@ -14621,6 +15780,8 @@
   - R-93
   - R-105
   milestone: M4
+  rq:
+  - RQ-87
   note: "R-93: the value the cross-check gate uses comes from R-35's change-10 re-run (R-105; see the cross-check gate requirement, REQ-VAL-070)."
 - id: REQ-VAL-072
   area: VAL
@@ -14638,6 +15799,8 @@
   rulings:
   - R-34
   milestone: M4
+  rq:
+  - RQ-97
 - id: REQ-VAL-073
   area: VAL
   statement: "Particle state, energy, `L_z` and trajectory-derived quantities must match between the GPU path and the f64 CPU inspector path within declared tolerances (not bit-for-bit)."
@@ -14727,6 +15890,8 @@
   - R-34
   - R-58
   milestone: M4
+  rq:
+  - RQ-79
   note: "pitfall: \"10. GENERALISING A STATELESS RESULT TO A TRAJECTORY\" — 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY."
 - id: REQ-VAL-080
   area: VAL
@@ -14756,6 +15921,9 @@
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-99
+  - RQ-104
   note: "Whether to ramp the stale fraction rather than hard-gate is a build-time feel call (§8). The units of the ~0.05 ceiling: REQ-RENDER-076 (definition)."
 - id: REQ-VAL-082
   area: VAL
@@ -14970,6 +16138,8 @@
   - R-71
   - R-76
   milestone: M7
+  rq:
+  - RQ-101
   note: "Golden tolerance: REQ-COL-052 (calibration). Stability × Hue is not in §7.1 (R-76)."
 - id: REQ-VAL-097
   area: VAL
@@ -15290,6 +16460,9 @@
   rulings:
   - R-85
   milestone: M8
+  rq:
+  - RQ-79
+  - RQ-97
 - id: REQ-VAL-117
   area: VAL
   kind: calibration
@@ -15343,6 +16516,8 @@
   rulings:
   - R-72
   milestone: M3
+  rq:
+  - RQ-103
 - id: REQ-VAL-120
   area: VAL
   kind: calibration
@@ -15621,6 +16796,8 @@
   rulings:
   - R-71
   milestone: M0
+  rq:
+  - RQ-93
 - id: REQ-VAL-136
   area: VAL
   kind: calibration
@@ -15653,6 +16830,102 @@
   rulings:
   - R-71
   milestone: M4
+- id: REQ-VAL-138
+  area: VAL
+  kind: calibration
+  statement: "The golden-image runner's diff metric and the default tolerance a golden-image test passes within (before REQ-COL-052 sets the preset-vs-reference tolerance) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_parity_contract.md
+    section: 6. The harness
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the metric (e.g. per-channel or per-pixel difference) and the default tolerance, shown to pass a re-render on the same backend and to fail a one-variable change (REQ-VAL-003); recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M0
+- id: REQ-VAL-139
+  area: VAL
+  kind: calibration
+  statement: "dd_integrator tests 1 and 2's tolerances — on the fitted log-log slope of energy error against dt versus the occupant's order, and on the fitted secular slope that counts as 'no secular trend' — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives both tolerances with the measured slopes over the dt ladder per occupant, and shows RK4 and Euler fail the no-trend tolerance; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M3
+- id: REQ-VAL-140
+  area: VAL
+  kind: definition
+  statement: "Tier N's growing-but-bounded envelope for short pre-divergence trajectories — its functional form in time and how the divergence-onset time that ends the comparison is determined — must be defined in parity_contract Tier N by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_parity_contract.md
+    section: "Tier N — tight numerical (checkable because nothing amplifies)"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Tier N states the envelope's form and the onset rule; its constants are set by REQ-VAL-064's native-wgpu measurement; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M4
+- id: REQ-VAL-141
+  area: VAL
+  kind: calibration
+  statement: "The numerical-ambiguity band outside which CPU↔GPU binary word parity is tested — how near a branch cut a crossing's signed distance (or τ) may fall before the trajectory is excluded — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M4 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 3. The word buffer — `free_group_word`
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the band's width with the measured CPU/GPU crossing-distance spread as evidence, and the fraction of the parity fixture it excludes; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M4
+- id: REQ-VAL-142
+  area: VAL
+  kind: calibration
+  statement: "The bound that makes checkerboard, the motion refinement floor and E-reduction under motion compose \"without over-degrading\" (the allowed reconstruction error and visual-quality loss of all three together against each alone) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_checkerboard_contract.md
+    section: 8. Build-time settles (measure on the real system)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the bound with evidence: the motion trace's reconstruction error with all three levers and with each alone; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M6
+- id: REQ-VAL-143
+  area: VAL
+  kind: definition
+  statement: "The Measure tool's threshold sweep — which threshold it sweeps (the pair classifier's threshold or another), over what range, and what it reports must be defined in render_gui_spec §G10 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G10. Measure — a tool on the figure (`10_measure.png`)
+  - file: docs/read_first/principia_00_philosophy.md
+    section: "4.5a A quantity that does not converge under refinement is measuring the sampling"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section names the swept threshold and the reported result (α per threshold), and shows how it exposes the resolution hazard; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M8
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -15715,6 +16988,8 @@
     detail: "GPU allocation is identical with checkerboard on and off; the estimator's figure is unchanged"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-98
 - id: REQ-PERF-006
   area: PERF
   statement: "At runtime the compute side must never compile source; pipeline objects are created from pre-built SPIR-V, eagerly for the active (occupant, tier, links) of every chart at startup and lazily inside the re-integration cost for occupant/tier/link/threshold changes."
@@ -15816,6 +17091,8 @@
     detail: "shader reflection: workgroup size N²; shared-memory size independent of E"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-92
 - id: REQ-PERF-013
   area: PERF
   statement: "There must be no texel-tiling knob (k = 1 texel per thread) unless profiling shows a specific problem."
@@ -15839,6 +17116,8 @@
   rulings:
   - R-40
   milestone: M5
+  rq:
+  - RQ-98
   note: "R-40 folds the eps / frame-budget / hard-cap axes into the ladder"
 - id: REQ-PERF-015
   area: PERF
@@ -15898,6 +17177,8 @@
   rulings:
   - R-40
   milestone: M5
+  rq:
+  - RQ-98
 - id: REQ-PERF-019
   area: PERF
   statement: "The full process memory budget (render targets, metadata, staging, transients, driver, browser/OS) must be measured, not inferred from the payload figure."
@@ -15952,6 +17233,8 @@
     detail: "under eviction, every visible region keeps an ancestor; the pinned chain survives"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-88
 - id: REQ-PERF-023
   area: PERF
   statement: "Before allocating, the requirement quads × N² × (E+1) × sizeof(SimState) must be checked against the adapter's reported limits, and if it does not fit the tier must be reduced and reported instead of attempting the allocation, with OOM treated as expected on unified memory."
@@ -16082,6 +17365,8 @@
     detail: the fit check sums every term and applies the margin
   rulings: []
   milestone: M5
+  rq:
+  - RQ-100
 - id: REQ-PERF-032
   area: PERF
   statement: "The interactive frame budget must be 16 ms, and export must ignore the frame budget (blocking)."
@@ -16332,6 +17617,8 @@
     detail: "with mocked limits/probe: 2 GB integrated at 4K boots Low; a Medium memory fit that fails the compute probe is held at Low"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-100
 - id: REQ-PERF-049
   area: PERF
   statement: "Live adjustment must pull render_scale / E / refinement floor down sub-rungs under motion and restore at rest, never exceeding the boot-selected memory ceiling."
@@ -16672,6 +17959,8 @@
     detail: record the measured thresholds and margin with their method
   rulings: []
   milestone: M8
+  rq:
+  - RQ-100
 - id: REQ-PERF-075
   area: PERF
   statement: "A hover trajectory must run under a step budget while the pointer moves, report what it got and mark itself incomplete when the budget runs out (a shorter trace, a coarser spectrum) rather than lowering quality, and have the bound lifted on dwell so trace and spectrum converge."
@@ -16830,6 +18119,139 @@
   - R-40
   - R-72
   milestone: M6
+- id: REQ-PERF-085
+  area: PERF
+  kind: calibration
+  statement: "The IC set that stands for 'one trajectory' in the hover-trajectory benchmark (the typical IC, and the tail case given that total_substeps is bimodal) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_trajectory_viewing.md
+    section: 1. The single mechanism
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal names the benchmark ICs with their total_substeps percentile, and the recorded 6.1 ms at t = 50 is reproduced on the median one; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M3
+- id: REQ-PERF-086
+  area: PERF
+  kind: calibration
+  statement: "The tier table's N for Ultra and Extreme (replacing memory_tiers §4's 24 and 32, which exceed the one-workgroup-per-quad ceiling of 256 invocations) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M4 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_memory_tiers.md
+    section: 4. The six quality tiers
+  - file: decisions.md
+    section: "R-43 — `N = 16` vs 8 is measured; the thread-count inconsistencies are fixed now *(RS-3)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives N for Ultra and Extreme with N² ≤ 256, using REQ-PERF-011's N = 8 vs 16 measurement as evidence; memory_tiers §4 conformed; recorded in decisions.md"
+  rulings:
+  - R-43
+  - R-71
+  milestone: M4
+- id: REQ-PERF-087
+  area: PERF
+  kind: calibration
+  statement: "The memory-pressure threshold at which the comfortable state becomes pressured (how near the hard cap counts as \"approaching it\") must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: Three states, not two
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.2 Memory pressure — CONTINUOUS, not an error condition
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the pressured-onset threshold as a fraction of the hard cap, with evidence from a scripted budget-drop run (no oscillation between states, no reclaim before growth stops); recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M5
+- id: REQ-PERF-088
+  area: PERF
+  kind: calibration
+  statement: "The device-characterisation probe's values — the probe quad set (which cheap and expensive regions, how many), its length in dt, the high percentile it reports, the thermal headroom within ~60–70% of the cold measurement, and the probe-vs-device-class inconsistency that counts as \"wildly inconsistent\" — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_quality_device_note.md
+    section: "\"Auto\" = device characterisation (three legs: limits · probe · info)"
+  - file: docs/design/principia_quality_device_note.md
+    section: Open sub-questions (settle at implementation)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each value with evidence: probe repeatability and boot time on the devices at hand, the cold vs warm throughput ratio, and the inconsistency ratio against the fast-probe + mobile-iGPU fixture; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M6
+- id: REQ-PERF-089
+  area: PERF
+  kind: calibration
+  statement: "The arbiter's tunables — the dead-zone band, the settled-window length, the rise-evidence duration, the failed-rung memory decay and the motion-offset curve's parameters — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_quality_device_note.md
+    section: Open sub-questions (settle at implementation)
+  - file: docs/design/principia_quality_device_note.md
+    section: 7. Hysteresis + failed-rung memory
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each tunable with the recorded measurement REQ-PERF-066's benchmark produces (no oscillation, drop latency, rise latency on scripted load traces); recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M6
+- id: REQ-PERF-090
+  area: PERF
+  kind: calibration
+  statement: "The quality ladder (its rung count within ~8–12 and each rung's preset) and the device-characterisation budget heuristics (the unified vs discrete memory budget) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 8. Build-time settles (measure / specify once running)
+  - file: docs/design/principia_quality_device_note.md
+    section: Open sub-questions (settle at implementation)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the rung count, each rung's preset and the unified/discrete budget heuristic, with the device-characterisation runs REQ-PERF-038 records; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M6
+- id: REQ-PERF-091
+  area: PERF
+  kind: calibration
+  statement: "The fixed bound on the GUI snapshot's serialised size (the 'GUI-sized' snapshot of gui_state_contract §1) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: decisions.md
+    section: R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the byte bound with the measured snapshot size across zoom depths and tiers and its margin; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M8
+- id: REQ-PERF-092
+  area: PERF
+  kind: calibration
+  statement: "The target-utilisation ceiling's default headroom (the default core count and frame-rate cap, or utilisation fraction, in force until the user opts into full utilisation) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: A deliberate ceiling, user-visible
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the default ceiling with measured frame time and throughput under it and at full utilisation on the reference devices, and its relation to the rayon core reserve (REQ-PERF-083); recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M8
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
@@ -16857,6 +18279,8 @@
     detail: "a grep over code and docs (excluding archive) finds none of the retired identifiers"
   rulings: []
   milestone: M0
+  rq:
+  - RQ-80
 - id: REQ-SYS-003
   area: SYS
   statement: "Code must use the locked taxonomy: QUAD (quadtree node), SAMPLE (one of N×N per quad), TILE (a sample's screen footprint), PIXEL, with SAMPLES_PER_QUAD_AXIS and QuadReduction/QuadSummary, and no TILE_PIXEL_RES."
@@ -16929,6 +18353,8 @@
     detail: "Requirement/source audit shows no requirement sourced from docs/archive or ARCHIVE_ briefs beyond the two named exceptions."
   rulings: []
   milestone: M0
+  rq:
+  - RQ-81
 - id: REQ-SYS-009
   area: SYS
   statement: "There must be exactly one internal orientation (bottom-left origin, Y-up) and exactly one flip, at the framebuffer↔UV boundary (v = 1 − frag_coord.y/H, commented as the convention flip), mirrored exactly once at image export; a mirrored image must be fixed at that seam, never by a compensating flip elsewhere."
@@ -17047,6 +18473,8 @@
     detail: "one decode module is referenced by the kernel crate, the CPU crate and encode; no second implementation of any §3 formula exists (grep for the mass/config/momentum formulae outside the shared source)"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-84
 - id: REQ-SYS-016
   area: SYS
   statement: "Body indices must be 0-based throughout (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary."
@@ -17324,6 +18752,8 @@
     detail: "the loop has no blocking await on GPU completion; it is hosted on the render-loop worker thread"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-99
 - id: REQ-SYS-035
   area: SYS
   statement: "A gesture must never reach the compiler: code differences are baked, moving values are uniforms, instant things precompile and re-integrating changes compile lazily within their own cost."
@@ -17401,6 +18831,8 @@
     detail: "build produces two binaries; main-thread bundle contains no engine state"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-99
 - id: REQ-SYS-040
   area: SYS
   statement: "Input deltas must reach the engine through a SharedArrayBuffer written with `Atomics` and read at the top of every frame (pointer events coalesced), and discrete settings through `set_field(path, value)`."
@@ -17525,6 +18957,8 @@
     detail: "the main-thread bundle contains no engine state; two worker wasm instances exist (engine, inspector)"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-99
 - id: REQ-SYS-050
   area: SYS
   statement: "Field edits must reach the engine worker via SharedArrayBuffer when cross-origin-isolated and via postMessage otherwise, and snapshots back must be throttled to about 10 Hz."
@@ -17694,3 +19128,25 @@
     detail: "grep the gui crate: no engine type other than the state surface is named; no &mut engine borrow; every edit path ends in set_field"
   rulings: []
   milestone: M8
+- id: REQ-SYS-063
+  area: SYS
+  kind: definition
+  statement: "The constants register — where every settled constant is declared with its value, its citation (corpus section or prin-rs FINDINGS/results path) and its admissibility class (philosophy §4.2), and whether the register is part of the ledger hashed into the schema version (R-36) — must be defined in dd_generation_root §3.8 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/read_first/principia_INDEX.md
+    section: The evidence base — where settled defaults were measured
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.2 Every constant must be derived or absent
+  - file: decisions.md
+    section: R-36 — Schema version = content hash of the ledger *(PL-1)*
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the register's entry fields (value, citation, admissibility class) and states whether it is hashed with the ledger; physics reviewer approved"
+  rulings:
+  - R-36
+  - R-72
+  milestone: M0

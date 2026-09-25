@@ -1,7 +1,7 @@
 # TASK-M8-36 — Research (v2): continuation, Poincaré return map, side by side with linked views (11_research.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154
+- **Closes:** REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154, REQ-GUI-159
 - **Depends on:** TASK-M8-35, TASK-M8-11
 - **Needs (earlier milestones):** REQ-SYS-017, REQ-SYS-011, REQ-GUI-002, REQ-CHART-032
 - **Reviewers:** code, qa, physics, gui
@@ -30,7 +30,10 @@ The Research window adds continuation along a parameter (e.g. a mass ratio) with
 - `cargo xtask screenshot 11_research` (Poincaré map) — screenshot against 11_research.png (REQ-GUI-124).
 - `cargo xtask screenshot 11_research` (side by side) and `cargo test -p gui linked_pan` — screenshot against 11_research.png; a pan in one side pans the other (REQ-GUI-125).
 - Doc review of `docs/gui/principia_render_gui_spec.md` § "G11. Research — first pass (v2) (`11_research.png`)" and `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface" — §G11 and gui_state §2 define the linked views as ViewUI state, none of it on the sim key; the chart's link ids are unchanged; the physics reviewer approves the doc change before merge (REQ-GUI-154).
+- Definition: the difference view written into render_gui_spec §G11 and approved by the physics reviewer (REQ-GUI-159).
 
 ## Notes
-- The stability measure that marks a fold, the section choices for the return map, and what the difference view differences are not given (raised as a gap for a REVIEW_QUEUE entry).
+- The stability measure that marks a fold, the section choices for the return map, and what the difference view differences are not given.
 - Definitions (R-72) written here: REQ-GUI-154. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Waits on RQ-109 (`REVIEW_QUEUE.md`): Research v2: the fold stability measure and the Poincaré sections.
+- Closes, for gaps the corpus leaves open: REQ-GUI-159 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

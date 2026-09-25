@@ -1,7 +1,7 @@
 # TASK-M2-25 — Portable WGSL decode and encode, the DECODE preset and the agreement preset
 
 - **Milestone:** M2
-- **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029
+- **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057
 - **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14
 - **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001
 - **Reviewers:** code, qa, physics
@@ -22,6 +22,8 @@ The chart decode and encode are available as portable WGSL to the fragment stage
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
 - `docs/design/principia_dd_decoder.md` § "1. What it is"
 - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
+- `docs/design/principia_chart_reference.md` § "5.1 One trait, one dispatch"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl` as snippets for the fragment assembler (their provenance per Gap G1).
@@ -32,6 +34,7 @@ The chart decode and encode are available as portable WGSL to the fragment stage
 - `cargo xtask gate decode-agreement` — the agreement preset |E(fragment-decode) − ctx.payload.E0| is at f32 noise on a healthy survey; a deliberate dispatch scramble shows spatial disagreement (REQ-COL-006).
 - `cargo xtask golden decode-preset` — the DECODE preset rendered for each chart matches a CPU-decoded reference image (REQ-RENDER-027).
 - `cargo test -p render decode_preset_vs_decode_only` — fragment-decoded (m, r, p) against the f64 `decodeOnly()` within the Tier-N tolerance (Gap G4); Σm = 1, CoM = 0 and I = 1 hold (REQ-TOOL-029).
+- Definition: `ctx.chart.z` on charts whose Φ does not produce z, written into colour_composition §3 and approved by the physics reviewer (REQ-COL-057).
 
 ## Notes
 - Gap G1: canonical_spec §1 / dd_decoder §1 / REQ-SYS-015 allow no second transcription of the decode logic, but colour_composition §6 speaks of "the two decode ports" (WGSL-decode vs Rust-decode) and debug_tooling_plan of "the WGSL decode port". Whether the fragment WGSL is emitted from the shared Rust source (rust-gpu/naga) or hand-ported decides this task's deliverable and what the agreement preset certifies.
@@ -40,3 +43,8 @@ The chart decode and encode are available as portable WGSL to the fragment stage
 - Gap G4: the Tier-N tolerance is set by the M4 native-wgpu measurement (REQ-VAL-064).
 - Gap G20: `ctx.payload.E0` is `SimState.E_0`, written by the integrating kernel (M4); at M2 only the decode stage's E₀ = K_0 + V_0 exists; "f32 noise" and "a healthy survey" are unquantified.
 - Plan note: M1's REQ-TOOL-011 already lists the DECODE preset in the M1 catalogue, though the preset needs this task's WGSL decode.
+- Waits on RQ-84 (`REVIEW_QUEUE.md`): One decode source vs "the two decode ports".
+- Waits on RQ-85 (`REVIEW_QUEUE.md`): The shape sphere in the lowering appendix: (α, β) or (θ, φ)?.
+- Waits on RQ-94 (`REVIEW_QUEUE.md`): M1 requirements that need M2, M3, M5 or M8.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- Closes, for gaps the corpus leaves open: REQ-COL-057 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

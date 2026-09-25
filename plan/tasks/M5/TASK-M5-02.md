@@ -53,3 +53,4 @@ their knobs from this struct.
   guesses"); the calibration campaign replaces them. The bench asserts the placeholder marking and the eps order, never the
   values.
 - N and depth are "indicative" in §4; this task records them as given, no new values.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

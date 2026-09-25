@@ -1,7 +1,7 @@
 # TASK-M6-16 — Auto: device characterisation — limits, probe, info, solve and the tier inversion
 
 - **Milestone:** M6
-- **Closes:** REQ-PERF-034, REQ-PERF-048, REQ-PERF-050, REQ-PERF-051, REQ-PERF-052, REQ-PERF-053, REQ-PERF-054, REQ-PERF-055, REQ-PERF-041, REQ-PERF-039, REQ-PERF-038
+- **Closes:** REQ-PERF-034, REQ-PERF-048, REQ-PERF-050, REQ-PERF-051, REQ-PERF-052, REQ-PERF-053, REQ-PERF-054, REQ-PERF-055, REQ-PERF-041, REQ-PERF-039, REQ-PERF-038, REQ-PERF-088, REQ-PERF-090
 - **Depends on:** TASK-M6-15
 - **Needs (earlier milestones):** REQ-PERF-023, REQ-PERF-025, REQ-PERF-029, REQ-PERF-031, REQ-PERF-032, REQ-PERF-030
 - **Reviewers:** code, qa, perf
@@ -22,6 +22,8 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "3. Percentiles, not means — and the specific thresholds"
 - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)"
 - `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
+- `docs/design/principia_quality_device_note.md` § "Open sub-questions (settle at implementation)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/engine/src/quality/characterise.rs`: `Limits`, `Probe` (behind a `GpuTimer` trait: timestamp queries or batched wall-clock), `InfoPrior`, `solve()`; a mockable device interface for tests.
@@ -41,6 +43,10 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `cargo test -p engine tier_inversion_order` — given synthetic throughput numbers the solver returns the expected three axes in order (REQ-PERF-041).
 - `cargo xtask bench tier-derivation-fallback` — on a device that cannot hold 16.7 ms, the derived tier records the fallback (REQ-PERF-039).
 - `cargo xtask bench device-characterisation` — device-characterisation runs record the thresholds and budget heuristics used (REQ-PERF-038).
+- Proposal: the probe quad set, length, percentile, thermal headroom and inconsistency ratio, each with evidence; the human confirms them at the M6 gate (REQ-PERF-088).
+- Proposal: the ladder (rung count, presets) and the unified/discrete budget heuristic with device-characterisation evidence; the human confirms them at the M6 gate (REQ-PERF-090).
 
 ## Notes
 - Values the corpus leaves approximate with no calibration requirement: thermal headroom (~60–70%), the probe's percentile and dt count, the "wildly inconsistent" test, the boot-fit margin — see Gaps.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- Closes, for gaps the corpus leaves open: REQ-PERF-088 (R-71 calibration), REQ-PERF-090 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

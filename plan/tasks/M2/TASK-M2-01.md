@@ -1,7 +1,7 @@
 # TASK-M2-01 — Link registry: generated links with inverses, log-det, ε clamps and the chart constants
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-032, REQ-CHART-034, REQ-GEN-013, REQ-GEN-014, REQ-GEN-015, REQ-DEC-009
+- **Closes:** REQ-CHART-032, REQ-CHART-034, REQ-GEN-013, REQ-GEN-014, REQ-GEN-015, REQ-DEC-009, REQ-GEN-025, REQ-GEN-026
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-SYS-004, REQ-GEN-010, REQ-SYS-005, REQ-SYS-001
 - **Reviewers:** code, qa, physics
@@ -32,6 +32,8 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - `decisions.md` § "R-21 — `α_min = 0` *(CD-1)*"
 - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 2.5 — Link functions & compactification (customisable)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - The link registry entries and chart constants in the generation-root ledger source (`crates/ledger/`), each entry with forward, inverse, log-det, ε clamps and sampling note; a missing member fails generation.
@@ -46,8 +48,11 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - Review (physics): for each block the registry holds at least two links whose recorded over/under-sampling regions differ (REQ-GEN-014).
 - Review (code): generator outputs inspected per target — link functions and kernel pack/unpack are generated Rust; fragment accessors and the catalogue are generated WGSL through the fragment assembler; link selection is baked per block (REQ-GEN-015).
 - `cargo test -p kernel chart_constants` — the registry values equal μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹², ε_w = 10⁻¹⁰; a source scan of `crates/kernel/src/{decode,encode}` finds no literal of these values outside the generated constants (REQ-DEC-009).
+- Proposal: the step and tolerances of registry test 8 (c) and (d), with the measured discrepancy per link as evidence; the human confirms them at the M2 gate (REQ-GEN-025).
+- Definition: the alternative links (edge-reaching simplex, heavier-tailed bounded) written into dd_generation_root §3.9 and approved by the physics reviewer (REQ-GEN-026).
 
 ## Notes
 - Gap G10: the second link per block (REQ-GEN-014) — the corpus names "a simplex map that reaches the edges", "a heavier-tailed bounded map" and "temperature-softmax" without a formula or parameter, and §3.9's table has one simplex link. The task registers only links the corpus defines until this is ruled.
 - Gap G9: generation-root §5 test 8 (c) and (d) give no tolerance for the numeric-Jacobian and C¹ checks.
 - The ε clamps are registry data (dd_encode §2); encode (TASK-M2-15) consumes the registry inverses, never an inline `logit`/`artanh`.
+- Closes, for gaps the corpus leaves open: REQ-GEN-025 (R-71 calibration), REQ-GEN-026 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

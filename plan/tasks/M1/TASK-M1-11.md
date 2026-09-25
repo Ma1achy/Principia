@@ -1,7 +1,7 @@
 # TASK-M1-11 — The kernel bring-up mode and the live unwrapped phase
 
 - **Milestone:** M1
-- **Closes:** REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001
+- **Closes:** REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123
 - **Depends on:** TASK-M1-01, TASK-M1-06
 - **Needs (earlier milestones):** REQ-PAY-008, REQ-PAY-017, REQ-GEN-004, REQ-SYS-004
 - **Reviewers:** code, qa, physics
@@ -23,6 +23,7 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)"
 - `docs/contracts/principia_lowering_contract.md` § "Part 3 — The baking rules (compile-time vs uniform)"
 - `docs/contracts/principia_render_contract.md` § "Part 3 — Cache tiers and the recompute rule"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/kernel/src/bringup.rs`: the bring-up variant (type-selected, monomorphised; f32 SPIR-V and f64 native) writing the pattern into existing `SimState` slots; no new buffer.
@@ -34,8 +35,11 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - `cargo test -p kernel debug_variants` — the kernel's debug variants are exactly the bring-up variant; dispatch-flag bits 6–7 stay reserved (R-41); the bring-up output decodes via the normal unpack path (REQ-TOOL-013).
 - `cargo test -p engine bringup_pattern` — enabling the bring-up variant writes the known pattern into the payload (read back on the CPU through the generated unpack); it changes the sim key (REQ-TOOL-015).
 - `cargo test -p kernel theta_unwrap` — dd_integrator test 8's accumulator half: on a synthetic circulating shape path θ̃ has no 2π jumps, `orbit_count` matches a hand count, and `retrograde` matches the winding sense; the real-orbit form (retrograde vs the L_z sign on a circulating bounded orbit) re-runs when the integrator lands in M3 (REQ-INT-001).
+- Definition: the bring-up pattern and its payload slots written into colour_composition Appendix A and approved by the physics reviewer (REQ-TOOL-123).
 
 ## Notes
 - The known pattern is not fixed by the corpus — Appendix A says "e.g. `ctx`-derived UV or a fixed ramp" (milestone Gaps). The task needs it named before the golden and the readback assertion can be written.
 - REQ-INT-001's verify is a circulating bounded orbit with the L_z sign; no integrator exists at M1, so the orbit form can't run here (milestone Gaps).
 - The bring-up readback is shown able to fail: a pattern written one slot off must fail `bringup_pattern` (PIT-9).
+- Waits on RQ-94 (`REVIEW_QUEUE.md`): M1 requirements that need M2, M3, M5 or M8.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-123 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

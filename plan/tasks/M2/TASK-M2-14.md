@@ -43,3 +43,5 @@ The CPU authoring layer exists: every axis is one of the closed set of four kind
 ## Notes
 - REQ-CHART-014 carries rq RQ-71 (the shape sphere as DoubleCover vs 2-to-1).
 - Gap G3: REQ-CHART-014's acceptance names the int (m, n) lattice's descriptor, but no M2 requirement builds the Burrau int lattice chart (it is in lowering's appendix, REQ-CHART-037, M4).
+- Waits on RQ-85 (`REVIEW_QUEUE.md`): The shape sphere in the lowering appendix: (α, β) or (θ, φ)?.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.

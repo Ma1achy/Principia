@@ -29,3 +29,4 @@ Colour-vision simulation as a display-stage function on linear sRGB: real Viéno
 ## Notes
 - Gap: R-78 leaves the reference implementation (and version) to be named when the task lands; no requirement carries that choice to the human, so it is flagged in the milestone report.
 - Gap: achromatopsia is specified (M_achrom) but is not among the four modes render_gui_spec offers; whether it is offered is not said.
+- Waits on RQ-91 (`REVIEW_QUEUE.md`): Achromatopsia: specified, but not offered in the Display window.

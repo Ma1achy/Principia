@@ -35,6 +35,7 @@
 - Review checklist (code §7) on `plan/tasks.yaml`: no task builds or half-starts extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever, other than the Real-generic payload (TASK-M0-14) (REQ-SYS-007).
 
 ## Notes
-- `plan/check_plan.py` is the checker drafted at step 7; the orchestrator places it at that path.
+- `plan/check_plan.py` is the checker drafted at step 7; it is at that path.
 - REQ-SCHED-001 and REQ-TOOL-004 also say "code history shows" the order: at each later milestone gate the gate review re-reads the history against the same order; this task installs the check that holds the plan.
 - See Gaps: the two archived-file exceptions (structure-criterion brief §4–4.6, kernel-build brief §5) live in `docs/experiments/briefs/`, which the citable index does not cover.
+- Waits on RQ-81 (`REVIEW_QUEUE.md`): The archived briefs' standing parts aren't citable.

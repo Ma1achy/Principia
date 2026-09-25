@@ -1,7 +1,7 @@
 # TASK-M6-05 — error_ratio as the trust flag, and the refinement gate / integrator tolerance pair
 
 - **Milestone:** M6
-- **Closes:** REQ-REF-018, REQ-PAY-080, REQ-PAY-081, REQ-PAY-082, REQ-VAL-088, REQ-VAL-089
+- **Closes:** REQ-REF-018, REQ-PAY-080, REQ-PAY-081, REQ-PAY-082, REQ-VAL-088, REQ-VAL-089, REQ-REF-048
 - **Depends on:** TASK-M6-03, TASK-M6-04
 - **Needs (earlier milestones):** REQ-REF-003, REQ-REF-004, REQ-INT-026, REQ-INT-028
 - **Reviewers:** code, qa, physics
@@ -34,8 +34,10 @@
 - `cargo xtask gate gate-eta-pair` — a sweep over the pair (the ledger's eta = 0.005 and 0.02 cases included) showing the chosen pair reaches the trust bar; proposal with its evidence in the PR, reviewer-checked; the human confirms the value at the M6 gate and it is recorded in `decisions.md` (REQ-PAY-082).
 - `cargo xtask gate gate-eta-pair` (the recorded (threshold, eta) pair) — a recorded measurement fixes (threshold, eta) together (REQ-VAL-088).
 - Review checklist (physics) — no acceptance gate uses alpha_E; frame certification uses error_ratio_max (REQ-VAL-089).
+- Definition: the third scale (level, trigger, three-point fit) written into dd_generation_root's scaling-exponent section and approved by the physics reviewer (REQ-REF-048).
 
 ## Notes
 - Calibrations proposed: REQ-PAY-080 (error_ratio threshold), REQ-PAY-082 (gate threshold + integrator tolerance pair; REQ-VAL-088 is closed by the same recorded measurement).
 - Definition written: REQ-PAY-081, consistent with R-87 (indeterminate is read from `error_ratio`).
 - "Acquire a third scale" is named but not specified (which scale, when) — see Gaps.
+- Closes, for gaps the corpus leaves open: REQ-REF-048 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

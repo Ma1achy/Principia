@@ -1,7 +1,7 @@
 # TASK-M0-17 — Profiler schema v1: the frame record, the five stages and the nested sections
 
 - **Milestone:** M0
-- **Closes:** REQ-TOOL-005, REQ-TOOL-008
+- **Closes:** REQ-TOOL-005, REQ-TOOL-008, REQ-TOOL-120
 - **Depends on:** TASK-M0-16
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, perf
@@ -19,6 +19,7 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 - `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/engine/src/contract/profile.rs` — `SessionHeader`, `FrameRecord`, `Stage` (the five), `Scope`, `GpuPass`, `Allocation`, `Event`; writer and reader.
@@ -28,8 +29,11 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 ## Acceptance tests
 - `cargo test -p engine profile_v1_stages` — an exported trace validates against the v1 JSON Schema; the top level has exactly the five stages; every other scope has one of them as an ancestor; a trace with a top-level `quadtree` scope fails (REQ-TOOL-005).
 - `cargo test -p engine profile_v1_superset` — a profiler dump parses as telemetry §2's frame record (the five stages) and contains the nested sections: scopes, GPU passes, allocations, events (REQ-TOOL-008).
+- Definition: profiler schema v1's header and record keys and nesting written into dd_telemetry_and_tiers §5 and approved by the physics reviewer (REQ-TOOL-120).
 
 ## Notes
 - The schema lives in `crates/engine` because the engine (writer, from the first frame loop), `prin` (reader/writer) and the dev GUI (reader, M8) all consume it; reviewers may place it elsewhere.
 - Leak flags and hot-path summaries (REQ-TOOL-100, M8) and `prin profile query` (REQ-TOOL-101, M8) are not here.
 - See Gaps: v1's nested key names and shape; R-56's "measurement struct lands with the first frame loop".
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-120 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

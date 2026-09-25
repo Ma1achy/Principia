@@ -1,7 +1,7 @@
 # TASK-M2-08 — The shape-sphere chart: shape_vec, the chart maps, the closed-form inverse and landmarks
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023
+- **Closes:** REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023, REQ-CHART-048, REQ-CHART-049
 - **Depends on:** TASK-M2-05, TASK-M2-07
 - **Needs (earlier milestones):** REQ-SYS-009
 - **Reviewers:** code, qa, physics
@@ -25,6 +25,10 @@
 - `decisions.md` § "R-50 — The shape-sphere collision landmarks are mass-weighted *(CO-1 (a))*"
 - `docs/design/principia_chart_reference.md` § "3.4 Landmarks at known fixed coordinates"
 - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)"
+- `docs/design/principia_chart_reference.md` § "2. Invariant-momentum charts `(Lz, E)` and `(Lz, K)`"
+- `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/kernel/src/shape.rs` (`shape_vec`, landmarks) and `crates/kernel/src/chart/shape_sphere.rs` (spherical and exponential maps, the closed-form inverse).
@@ -38,9 +42,14 @@
 - `cargo test -p kernel shape_landmarks` — BC₀₁ → (−1, 0, 0), L⁺ → (0, 0, +1), all binary collisions at w = 0, equal masses 120° apart; n cross-checked against the IC Inspector's JS on random ICs (REQ-CHART-036).
 - `cargo test -p kernel shape_landmarks_mass_weighted` — dd_integrator test 9: BC₀₁ → (−1, 0, 0) for any masses; L⁺ → (0, 0, +1); random masses → all collisions at w = 0; equal masses → azimuths 180°, 60°, 300° (REQ-INT-003).
 - `cargo test -p kernel shape_dot_on_collision_landmark` — property: random masses, bodies i and j brought together: the dot's distance to the BC landmark opposite k → 0 and to the others stays > 0 (REQ-VAL-023).
+- Definition: the source of the shape sphere's and the invariant charts' held values (m_fixed, p_fixed and its frame, φ_f; fixed geometry and masses) written into chart_reference §2–§3 and approved by the physics reviewer (REQ-CHART-048).
+- Proposal: the tolerance of `n` against the IC Inspector's JS, with the measured max difference on the fixture as evidence; the human confirms it at the M2 gate (REQ-CHART-049).
 
 ## Notes
 - Gap G8: Φ_S²(u,v) = (n(θ,φ), m_fixed, p_fixed) — the corpus doesn't say where the held masses and momenta come from (z₀'s mass and momentum blocks, or chart params), whether p_fixed is taken before or after the fibre-phase rotation that C then undoes, nor φ_f's default.
 - Gap G3: lowering's appendix row "Shape sphere (α, β) … (s,t)→(α,β)" is a different map from chart_reference §3's (θ, φ) chart built here.
 - Gap G25: dd_integrator §3.7 still calls B18 (mass-weighted vs fixed 120° landmarks) "still open"; R-50 ruled mass-weighted, which this task implements.
 - Gap G9: the IC Inspector cross-check tolerance isn't stated. The DoubleCover label and the projections are TASK-M2-28 (REQ-CHART-002 waits on RQ-71).
+- Waits on RQ-85 (`REVIEW_QUEUE.md`): The shape sphere in the lowering appendix: (α, β) or (θ, φ)?.
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

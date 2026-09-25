@@ -1,7 +1,7 @@
 # TASK-M6-23 — The first refine milestone's measurements: depth past level 6, tau, merging under motion, zoom regression
 
 - **Milestone:** M6
-- **Closes:** REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085
+- **Closes:** REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050
 - **Depends on:** TASK-M6-06, TASK-M6-12, TASK-M6-17, TASK-M6-20, TASK-M5-23
 - **Needs (earlier milestones):** REQ-VAL-081, REQ-TOOL-050, REQ-RENDER-046
 - **Reviewers:** code, qa, physics, perf
@@ -18,6 +18,7 @@ The refinement policy's open measurements are taken and recorded at this, the fi
 - `docs/design/principia_dd_refinement_policy.md` § "5.2 The tolerance is inert exactly where the policy works"
 - `docs/design/principia_dd_refinement_policy.md` § "0.1 In view, the camera decides depth and the criterion decides ORDER"
 - `docs/contracts/principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `cargo xtask bench refine-open-measurements` (depth > 6, the charts × horizons × eps grid with `tau`, merging on scripted camera paths), results recorded under `fixtures/bench/results/`.
@@ -30,7 +31,10 @@ The refinement policy's open measurements are taken and recorded at this, the fi
 - `cargo xtask bench refine-open-measurements --tau-grid` — calibrate tau per the tolerance grid (charts × horizons × eps) at the first refine milestone and record it; config has no tau = k·eps derivation (REQ-REF-032).
 - `cargo xtask bench zoom-regression` — scripted zoom over two octaves on config_stability and preset_shape_h1: converged in-view texel size stays flat (~1.5 px) and max_depth tracks camera target depth; quad count stays far below the alpha_lo = 0 degeneration (+49% / +222%) (REQ-VAL-090).
 - `cargo xtask bench motion-composition` — motion trace with all three active: reconstruction error and visual quality recorded against each alone (REQ-VAL-085).
+- Proposal: the composed-lever degradation bound with the motion-trace evidence; the human confirms it at the M6 gate (REQ-VAL-142).
+- Proposal: tau with the calibrated-grid evidence; the human confirms it at the M6 gate (REQ-REF-050).
 
 ## Notes
 - REQ-REF-032's `tau` value is a measured setting; it goes to the human at the M6 gate with the other recorded values.
 - REQ-VAL-085 gives no threshold for "without over-degrading" — see Gaps.
+- Closes, for gaps the corpus leaves open: REQ-VAL-142 (R-71 calibration), REQ-REF-050 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

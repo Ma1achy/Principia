@@ -1,7 +1,7 @@
 # TASK-M6-18 — The arbiter's timescales: motion offset, change under cover, hysteresis, sensors and persistence
 
 - **Milestone:** M6
-- **Closes:** REQ-PERF-059, REQ-PERF-060, REQ-PERF-061, REQ-PERF-062, REQ-PERF-063, REQ-PERF-064, REQ-PERF-066
+- **Closes:** REQ-PERF-059, REQ-PERF-060, REQ-PERF-061, REQ-PERF-062, REQ-PERF-063, REQ-PERF-064, REQ-PERF-066, REQ-PERF-089
 - **Depends on:** TASK-M6-17, TASK-M5-22, TASK-M5-23, TASK-M5-28
 - **Needs (earlier milestones):** REQ-SCHED-034, REQ-SCHED-036, REQ-GUI-009, REQ-TOOL-051, REQ-SCHED-046
 - **Reviewers:** code, qa, perf
@@ -24,6 +24,7 @@ The controller's cascade: `motion_rung = resting_rung − offset` with the offse
 - `docs/design/principia_quality_device_note.md` § "8. Sense what the user feels, not what the GPU reports"
 - `docs/design/principia_quality_device_note.md` § "9. Persist the model, not just the rung"
 - `docs/contracts/principia_gui_state_contract.md` § "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/engine/src/quality/cascade.rs`, `hysteresis.rs`, `sensors.rs`, `persist.rs` (serde record with provenance: adapter info + key limits + probe/kernel version).
@@ -37,6 +38,8 @@ The controller's cascade: `motion_rung = resting_rung − offset` with the offse
 - `cargo test -p engine sensors_felt_quantities` — sensor outputs are these quantities; injected sim-time debt drops the rung (REQ-PERF-063).
 - `cargo test -p engine persist_provenance` — reload with matching provenance: no probe, same rung; changed kernel version: re-probe; stored Custom values restored unchanged (REQ-PERF-064).
 - `cargo xtask bench controller-tunables` — record each tunable's value and the measurement that set it (REQ-PERF-066).
+- Proposal: the arbiter's tunables with their recorded measurements; the human confirms them at the M6 gate (REQ-PERF-089).
 
 ## Notes
 - REQ-PERF-066 is "set by recorded measurement" but not `kind: calibration`; the recorded values still go to the human at the M6 gate.
+- Closes, for gaps the corpus leaves open: REQ-PERF-089 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

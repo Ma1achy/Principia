@@ -1,7 +1,7 @@
 # TASK-M8-18 — Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111
+- **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
 - **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
@@ -14,6 +14,9 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "03 Chart builder"
 - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)"
+- `docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs"
+- `docs/design/principia_memory_tiers.md` § "7. The "are you sure?" safety system (three severities, none blocking)"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/gui/src/windows/chart_builder/{axes,presets,domain_preview,quick_render,footer}.rs`.
@@ -27,6 +30,8 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - `cargo test -p engine forbidden_fraction` and `cargo xtask screenshot 03_chartbuilder` — N% equals the fraction of a uniform grid over the view that validate rejects; screenshot against 03_chartbuilder.png (REQ-GUI-109).
 - `cargo xtask screenshot 03_chartbuilder` (quick render) — screenshot against 03_chartbuilder.png (REQ-GUI-110).
 - `cargo test -p gui footer_orthogonality` — non-orthogonal q₁, q₂ shows the check failing; Revert restores the prior chart; Apply emits the chart SetFields (REQ-GUI-111).
+- Definition: the chart-preset, Your-stains and warning-suppression stores written into render_gui_spec §G7 and §11 and approved by the physics reviewer (REQ-GUI-160).
 
 ## Notes
 - none
+- Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

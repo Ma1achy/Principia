@@ -1,7 +1,7 @@
 # TASK-M6-02 — The split gate: the screen floor, the sliding MAX_REL_DEPTH and the motion refinement floor
 
 - **Milestone:** M6
-- **Closes:** REQ-SCHED-057, REQ-SCHED-058, REQ-SCHED-059, REQ-SCHED-060, REQ-SCHED-061, REQ-SCHED-069, REQ-SCHED-070, REQ-REF-012, REQ-REF-020, REQ-REF-021
+- **Closes:** REQ-SCHED-057, REQ-SCHED-058, REQ-SCHED-059, REQ-SCHED-060, REQ-SCHED-061, REQ-SCHED-069, REQ-SCHED-070, REQ-REF-012, REQ-REF-020, REQ-REF-021, REQ-SCHED-089
 - **Depends on:** TASK-M6-01, TASK-M5-12
 - **Needs (earlier milestones):** REQ-SCHED-040, REQ-SCHED-086, REQ-SCHED-020, REQ-SCHED-075, REQ-PERF-016, REQ-SCHED-048
 - **Reviewers:** code, qa, physics, perf
@@ -28,6 +28,7 @@ The scheduler's split predicate becomes scheduler_contract Part 3's sliding form
 - `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
 - `docs/read_first/principia_INDEX.md` § "The evidence base — where settled defaults were measured"
 - `docs/design/principia_dd_refinement_policy.md` § "0.1 In view, the camera decides depth and the criterion decides ORDER"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/engine/src/refine/gate.rs`: `split_gate(quad, camera, policy) -> Decision` in the Part 4 order (terminal guard → screen floor → `MAX_REL_DEPTH` → policy), `tile_size_px` computed live from the camera, `in_view` from the camera, `adequate` computed at query time.
@@ -47,7 +48,9 @@ The scheduler's split predicate becomes scheduler_contract Part 3's sliding form
 - `cargo test -p engine terminal_guard_before_policy` — a terminal quad is never passed to the policy; a non-terminal in-view quad above the screen floor splits; otherwise a non-terminal quad splits iff policy_splits and the depth gate holds (REQ-REF-012).
 - `cargo test -p engine in_view_stops_at_one_pixel` — an in-view quad with n_unresolved = 0 and tile_size_px = 2 splits; at tile_size_px = 1 it keeps (REQ-REF-020).
 - `cargo test -p engine offscreen_adequate_at_query` — an off-screen quad with tile_size_px ≫ 1 and n_unresolved = 0 keeps; an unresolved off-screen quad at ℓ = camera_depth + MAX_REL_DEPTH does not split; no adequacy field is persisted on the quad (REQ-REF-021).
+- Proposal: the motion refinement floor's offset with frame-time and live-sample evidence from scripted pans; the human confirms it at the M6 gate (REQ-SCHED-089).
 
 ## Notes
 - The at-rest vs gesture regime comes from caching Part 6 and the gesture debounce calibrated in M5 (REQ-SCHED-075); this task reads it, it does not set it.
 - The motion floor's offset (one or two levels) is a controller lever (memory_tiers §5); TASK-M6-17 drives it. Which of the two the scheduler uses by default is not given — see Gaps.
+- Closes, for gaps the corpus leaves open: REQ-SCHED-089 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

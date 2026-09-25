@@ -41,3 +41,4 @@ The one Inspector window exists and absorbs the standalone IC Inspector (R-65), 
 
 ## Notes
 - The Jacobi frame, angles, CoM marks and auto-fit (REQ-GUI-058, REQ-GUI-059) are built in TASK-M8-15 as the body canvas shared by panes 1 and 2 and asserted there on both panes; this task's pane 1 draws the bodies, arrows and ghosts.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

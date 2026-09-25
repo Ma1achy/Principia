@@ -36,5 +36,7 @@ The BodyPlane chart (today's slice) is kept and reproduces bit-for-bit against i
 - Review (physics): each quoted long-t figure cites its precision or shadowing evidence; escape statistics at t = 240 stay labelled indicative (REQ-VAL-035).
 
 ## Notes
-- Gap reported: BodyPlane's map, its recorded reference dump and the Python cross-check are prin-rs artefacts not in this repository.
+- Gap: BodyPlane's map, its recorded reference dump and the Python cross-check are prin-rs artefacts not in this repository.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-119.
+- Waits on RQ-87 (`REVIEW_QUEUE.md`): Which measurement gives `t_max(f32)`?.
+- Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

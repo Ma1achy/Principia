@@ -63,3 +63,4 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 ## Notes
 - R-103 governs: in production `done` is set when escape fires; the §2.4 checks run only in `crates/validation` on the harness's own state (TASK-M3-33).
 - The CPU/GPU arm of REQ-INT-029 uses the GPU self-test dispatch of the single capped step; a full GPU march is M4.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

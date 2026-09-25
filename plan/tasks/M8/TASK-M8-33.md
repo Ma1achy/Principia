@@ -29,3 +29,4 @@ Import picture (drop a Principia PNG or File › Import picture…) reads the px
 
 ## Notes
 - "Open side by side" opens the v2 side-by-side view of TASK-M8-36 once it lands; until then the action is asserted to request it.
+- Waits on RQ-108 (`REVIEW_QUEUE.md`): The MP4 / GIF encoders.

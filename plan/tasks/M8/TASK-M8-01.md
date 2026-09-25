@@ -1,7 +1,7 @@
 # TASK-M8-01 — The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-036, REQ-GUI-037, REQ-GUI-039, REQ-PERF-071
+- **Closes:** REQ-GUI-036, REQ-GUI-037, REQ-GUI-039, REQ-PERF-071, REQ-PERF-091
 - **Depends on:** TASK-M6-21, TASK-M6-22, TASK-M7-11
 - **Needs (earlier milestones):** REQ-SYS-011, REQ-GUI-007, REQ-GUI-011, REQ-GUI-016, REQ-SCHED-048, REQ-PERF-016, REQ-GUI-010, REQ-CHART-032, REQ-INT-026
 - **Reviewers:** code, qa, gui, perf
@@ -19,6 +19,8 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - `docs/contracts/principia_gui_state_contract.md` § "7. What a replacement GUI must honour (the teardown contract)"
 - `docs/design/principia_trajectory_viewing.md` § "6. Placement"
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
+- `decisions.md` § "R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/engine/src/contract/state/{sim_config,render_state,view_ui}.rs` — the three structs with the §2 field lists as amended by R-96, R-101 and R-106: the link ids are the chart registry's link-function ids; playback transport (play / pause / speed / loop), the linked views, the kept orbits and `t_cursor` are ViewUI fields.
@@ -33,7 +35,10 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - Review checklist (code reviewer), with `cargo test -p engine no_viewui_reads` (a grep test over `crates/engine/src`) — no engine-crate code references ViewUI fields (REQ-GUI-037).
 - `cargo test -p engine provenance_roundtrip` and `cargo test -p engine two_clients` — serialise, deserialise, compare; a second client's edit is visible in the first's snapshot (REQ-GUI-039).
 - `cargo test -p engine snapshot_bound` — the snapshot type contains no payload / quadtree / reduction types, and its serialised size stays below a fixed small bound at any zoom depth (REQ-PERF-071).
+- Proposal: the snapshot's serialised-size bound, with measured sizes across zoom depths and tiers; the human confirms it at the M8 gate (REQ-PERF-091).
 
 ## Notes
 - The corpus puts the surface "in the engine crate" (gui_state_contract §1); here it lives in `crates/engine` and the engine re-exports it as its only `pub` surface (RQ-76 layout). TASK-M8-04 adds the compile-fail tests.
-- The fixed small bound on the serialised snapshot size (REQ-PERF-071's verify) is not given by the corpus; it is raised as a gap for a REVIEW_QUEUE entry.
+- The fixed small bound on the serialised snapshot size (REQ-PERF-071's verify) is not given by the corpus.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Closes, for gaps the corpus leaves open: REQ-PERF-091 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

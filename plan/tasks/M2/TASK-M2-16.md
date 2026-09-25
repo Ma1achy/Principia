@@ -1,7 +1,7 @@
 # TASK-M2-16 — The round-trip suite: T2 per chart, T3 with the half-mirror catch, ε_phys
 
 - **Milestone:** M2
-- **Closes:** REQ-ENC-001, REQ-ENC-004, REQ-ENC-005, REQ-ENC-018, REQ-ENC-024, REQ-DEC-016, REQ-DEC-029, REQ-VAL-013
+- **Closes:** REQ-ENC-001, REQ-ENC-004, REQ-ENC-005, REQ-ENC-018, REQ-ENC-024, REQ-DEC-016, REQ-DEC-029, REQ-VAL-013, REQ-ENC-029
 - **Depends on:** TASK-M2-14, TASK-M2-15
 - **Needs (earlier milestones):** REQ-VAL-007, REQ-VAL-006
 - **Reviewers:** code, qa, physics
@@ -31,6 +31,7 @@ The encode contract's three theorems are asserted per chart, in physical units: 
 - `docs/read_first/principia_00_philosophy.md` § "8.2 A per-body momentum cap with CoM re-enforcement"
 - `decisions.md` § "R-11 — The per-body momentum cap is rejected *(closes RQ-9)*"
 - `docs/read_first/principia_01_pitfalls.md` § "5. MEASURING IN THE WRONG SPACE — `error(B)` in OKLab"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/kernel/tests/roundtrip.rs` (T2 per registered chart, T3, the controls), generated per chart from the chart registry so a new chart gets its T2 test automatically.
@@ -46,7 +47,9 @@ The encode contract's three theorems are asserted per chart, in physical units: 
 - `cargo xtask gate encode-eps-phys` — measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and proposes ε_phys above it; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-024).
 - `cargo test -p kernel t2_qmax_boundary` — T2 round trip encode(decode(z)) = z over random z including the q_max boundary; decode has no per-body cap; clamped samples carry the flag (REQ-DEC-029).
 - `cargo test -p kernel conditioning_physical_space` — encode test 8: a near-clamp input whose z-residual is ~10⁵× the physical residual passes the physical tolerance and would fail a naive z-tolerance (REQ-VAL-013).
+- Definition: ‖·‖_phys written into inverse_encode_contract Part 4 and approved by the physics reviewer, before ε_phys (REQ-ENC-024) is proposed (REQ-ENC-029).
 
 ## Notes
 - Gap G15: ‖·‖_phys (inverse_encode Part 4) isn't defined — which components of (m, r, p) and with what weighting. ε_phys's calibration presupposes it.
 - PIT-5: every round-trip tolerance is in physical space; a z-space residual near saturation is not a criterion.
+- Closes, for gaps the corpus leaves open: REQ-ENC-029 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

@@ -1,7 +1,7 @@
 # TASK-M2-22 — Navigation as chart construction: pan, slice, zoom, tilt and the direction library
 
 - **Milestone:** M2
-- **Closes:** REQ-GUI-002, REQ-GUI-003, REQ-CHART-009, REQ-CHART-016, REQ-SYS-014
+- **Closes:** REQ-GUI-002, REQ-GUI-003, REQ-CHART-009, REQ-CHART-016, REQ-SYS-014, REQ-CHART-051
 - **Depends on:** TASK-M2-05, TASK-M2-10, TASK-M2-12
 - **Needs (earlier milestones):** REQ-GUI-001, REQ-SYS-009
 - **Reviewers:** code, qa, physics, gui
@@ -23,6 +23,7 @@ Every navigation gesture is a CPU-side edit of the one chart triple: pan as Δz�
 - `decisions.md` § "R-83 — The slice scale lives in q *(closes RQ-34)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)"
 - `decisions.md` § "R-92 — What the sim key holds of navigation *(closes RQ-43)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/engine/src/nav/` (the operations as typed `SetField` edits of `SimConfig`'s z₀, q₁, q₂; the direction library).
@@ -34,7 +35,9 @@ Every navigation gesture is a CPU-side edit of the one chart triple: pan as Δz�
 - `cargo test -p engine named_directions` — the direction library returns the three vectors; moving the centre changes the energy-at-fixed-L_z vector; the morph supports the chart_reference §4.6 persistence test (REQ-CHART-009).
 - `cargo test -p engine oblique_slice_record` — an oblique slice's exported state contains q₁, q₂; applying two raw tilts yields the second, not the composition (REQ-CHART-016).
 - `cargo test -p kernel uv_ic_space` — UV (½, ½) → z₀; UV (0, 0) → z₀ − q₁ − q₂; addresses are non-negative at any z₀ (REQ-SYS-014).
+- Definition: the three named compound directions as latent vectors written into chart_decoder_contract Part 4 and approved by the physics reviewer (REQ-CHART-051).
 
 ## Notes
 - Gap G19: the named compound directions aren't given as vectors — the energy-at-fixed-L_z direction as a latent vector (a tangent of which curve, pulled back through which link, normalised how), the mass direction's normalisation, and the morph's target direction.
 - The zoom step factor for "log-stepped" is not needed by these tests; the GUI binding lands at M8.
+- Closes, for gaps the corpus leaves open: REQ-CHART-051 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

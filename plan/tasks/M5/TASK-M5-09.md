@@ -41,3 +41,4 @@ survive.
 - Blocked on a corpus conflict (see Gaps): telemetry §6.2 says drop the **deepest** cached quads first, while
   scheduler Part 6 makes deep, expensive quads **resist** eviction (∝ `computeCostMs`). The formula cannot be written
   until the human rules on the order.
+- Waits on RQ-88 (`REVIEW_QUEUE.md`): Eviction order: deepest first, or cost-weighted resistance?.

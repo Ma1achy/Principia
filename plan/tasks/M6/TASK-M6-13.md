@@ -31,3 +31,4 @@ The symbolic-dynamics contract stops being OPEN for per-pair quantities (R-38): 
 ## Notes
 - No per-pair view ships in M6; this task only makes the contract and the algorithm exist (R-38).
 - These three are not `kind: definition`, but the corpus does not give the convention, relation or algorithm — who writes them is a Gap.
+- Waits on RQ-96 (`REVIEW_QUEUE.md`): The branch-cut convention is needed in M3, required in M6, and has no author.

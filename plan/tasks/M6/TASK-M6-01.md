@@ -1,7 +1,7 @@
 # TASK-M6-01 — The refinement decision and the quad lifecycle: terminal vs refinable
 
 - **Milestone:** M6
-- **Closes:** REQ-REF-033, REQ-REF-034, REQ-SCHED-064, REQ-REF-011
+- **Closes:** REQ-REF-033, REQ-REF-034, REQ-SCHED-064, REQ-REF-011, REQ-REF-047
 - **Depends on:** TASK-M5-17, TASK-M5-30
 - **Needs (earlier milestones):** REQ-VAL-080, REQ-REF-009, REQ-TOOL-116, REQ-SCHED-047
 - **Reviewers:** code, qa, physics
@@ -21,6 +21,7 @@ The engine's quadtree gets the `Decision` enum with exactly the eight variants o
 - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
 - `decisions.md` § "R-98 — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*"
 - `decisions.md` § "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/engine/src/refine/decision.rs`: `enum Decision { Keep, Split, Floor, ScreenFloor, Undetermined, Collapsed, Merged, BalanceForced }` and the stop-reason record carried as CPU quad metadata (not in `QuadReduction`).
@@ -33,7 +34,9 @@ The engine's quadtree gets the `Decision` enum with exactly the eight variants o
 - `cargo test -p engine undetermined_terminal` — an undetermined footprint yields a terminal flagged quad and appears in the stop breakdown (REQ-REF-034).
 - `cargo test -p engine lifecycle_state_machine` — lifecycle state machine test: each stop reason maps to terminal/refinable as stated; scheduler never dequeues a terminal quad (REQ-SCHED-064).
 - `cargo test -p engine terminal_iff_true_floor` — quad-state is terminal iff AT_F32_FLOOR or the integration floor is hit; zooming out un-stops screen-floored quads (REQ-REF-011).
+- Definition: each Decision variant's producing stop (AT_F32_FLOOR, the integration floor, BalanceForced) written into refinement_policy §6 and approved by the physics reviewer (REQ-REF-047).
 
 ## Notes
 - The legal state-transition table is REQ-TOOL-116's definition (M5, debug_tooling_plan §F); this task's lifecycle must follow it, not redefine it.
-- `Merged` is produced by TASK-M6-06. Which variants record `AT_F32_FLOOR` and the integration floor, and what produces `BalanceForced`, are not stated — see the report's Gaps.
+- `Merged` is produced by TASK-M6-06. Which variants record `AT_F32_FLOOR` and the integration floor, and what produces `BalanceForced`, are not stated — see the REVIEW_QUEUE entries below.
+- Closes, for gaps the corpus leaves open: REQ-REF-047 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

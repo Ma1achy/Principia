@@ -30,4 +30,5 @@ Checkerboard motion acceleration's compute half: while the playhead advances, on
 - `cargo test -p engine checkerboard_memory` — GPU allocation is identical with checkerboard on and off; the estimator's figure is unchanged (REQ-PERF-005).
 
 ## Notes
-- Gap (see report): the memory estimator REQ-PERF-005 names is built in M5 (REQ-PERF-018).
+- Gap: the memory estimator REQ-PERF-005 names is built in M5 (REQ-PERF-018).
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

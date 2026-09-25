@@ -31,3 +31,4 @@ The calibration record carries every field telemetry § "Collect everything rele
 
 ## Notes
 - The artboards don't show the passive-telemetry indicator; its placement is judged against the 01_main.png layout (the figure is never covered).
+- Waits on RQ-105 (`REVIEW_QUEUE.md`): GUI surfaces with no artboard.

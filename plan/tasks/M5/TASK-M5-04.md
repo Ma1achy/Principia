@@ -44,3 +44,4 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
   (pitfalls §9: a check whose output set cannot include the failure tells nothing).
 - Filling `x₀`/`J_D` from the linearised decoder is M6; here the buffer layout, binding rule and kernel arithmetic are
   built and tested with fixture values.
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.

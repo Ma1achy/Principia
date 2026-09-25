@@ -43,4 +43,5 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `cargo test -p engine word_buffer_separable` — symbolic features disabled: word buffer freed, `SimState` allocation and contents unchanged (REQ-PERF-008).
 
 ## Notes
-- Gap (see report): systems_architecture §5.5 has each thread loop over its E+1 copies serially, while R-102 makes each copy the same kernel dispatched again with `copy_index` a uniform. This task builds the workgroup shape at E = 0 and leaves the copy mechanism to TASK-M4-06, which cannot start until the conflict is ruled.
+- Gap: systems_architecture §5.5 has each thread loop over its E+1 copies serially, while R-102 makes each copy the same kernel dispatched again with `copy_index` a uniform. This task builds the workgroup shape at E = 0 and leaves the copy mechanism to TASK-M4-06, which cannot start until the conflict is ruled.
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.

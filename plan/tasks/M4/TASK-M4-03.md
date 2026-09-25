@@ -51,5 +51,6 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - `cargo test -p validation descriptor_input_forks` — the parity audit enumerates the branch inputs feeding each descriptor field (per R-34's list) and fork-tests those; the packing-level control reads 0 forks against the input-level 83 (REQ-VAL-078).
 
 ## Notes
-- REQ-VAL-059's verify names a browser-GPU leg; the browser build is M8. See the report's Gaps — this task runs the three native legs and does not mark the fourth done.
+- REQ-VAL-059's verify names a browser-GPU leg; the browser build is M8. See the REVIEW_QUEUE entries below — this task runs the three native legs and does not mark the fourth done.
 - Domain statement required in the test output: fixed inputs, per step (pitfalls §10).
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

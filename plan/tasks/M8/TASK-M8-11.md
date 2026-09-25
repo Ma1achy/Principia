@@ -1,7 +1,7 @@
 # TASK-M8-11 — The Trajectory panel: summary, real space, the turning shape sphere, kept orbits
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054
+- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-157
 - **Depends on:** TASK-M8-09, TASK-M8-05
 - **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047
 - **Reviewers:** code, qa, physics, gui
@@ -17,6 +17,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `docs/design/principia_trajectory_viewing.md` § "4. Click inspector — the three-panel absolute surface"
 - `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "05 Inspector — one IC, its trajectory, one timeline"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/gui/src/widgets/shape_sphere.rs` — sphere / unwrapped toggle, landmarks, turn checkbox, view-only rotation.
@@ -28,6 +29,8 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `cargo xtask screenshot 01_main` (right panel) and `cargo test -p gui trajectory_buttons_open_inspector` — screenshot against 01_main.png's right panel; both buttons open the Inspector window (REQ-GUI-088).
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 05_inspectors` (sphere and unwrapped; turn cleared) — screenshots against 01_main.png and 05_inspectors.png in sphere and unwrapped modes; with 'turn' cleared two frames are identical (REQ-GUI-089).
 - `cargo test -p gui sphere_unwrap_agree` — points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged (REQ-GUI-054).
+- Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent; the human confirms it at the M8 gate (REQ-GUI-157).
 
 ## Notes
-- The turning rate ("slowly") is not given (raised as a gap for a REVIEW_QUEUE entry). The listen button's sound is TASK-M8-12.
+- The turning rate ("slowly") is not given. The listen button's sound is TASK-M8-12.
+- Closes, for gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

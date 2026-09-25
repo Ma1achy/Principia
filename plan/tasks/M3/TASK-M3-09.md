@@ -40,3 +40,4 @@ Collision is detected every STEP by counting pairs with `‖rᵢ − rⱼ‖² <
 
 ## Notes
 - None.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.

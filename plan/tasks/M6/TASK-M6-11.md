@@ -1,7 +1,7 @@
 # TASK-M6-11 — Tile priority: P_tile, the pointer-centred P_focus, quad-relative relevance and baseline-first
 
 - **Milestone:** M6
-- **Closes:** REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081
+- **Closes:** REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090
 - **Depends on:** TASK-M6-02, TASK-M5-13, TASK-M5-24
 - **Needs (earlier milestones):** REQ-SCHED-019, REQ-SCHED-023, REQ-SCHED-074, REQ-DEC-031, REQ-CHART-038
 - **Reviewers:** code, qa, physics, perf
@@ -23,6 +23,7 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - `decisions.md` § "R-44 — The camera is wired; scheduler Part 6 is reconciled with policy §0.1 *(RS-4)*"
 - `docs/design/principia_dd_refinement_policy.md` § "0.1 In view, the camera decides depth and the criterion decides ORDER"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - Doc change: `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy" — the reconciled off-screen rule and how order in view enters `P_tile` (REQ-SCHED-080); `P_focus`'s decay law (REQ-SCHED-081), any constant it introduces raised as a calibration (R-71).
@@ -38,6 +39,8 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - `cargo test -p engine pan_changes_priority` — Pan sequence regression: the quadtree/priority order changes with the camera (a byte-identical tree at every pan step fails, cf. philosophy §4.4) (REQ-SCHED-071).
 - Review checklist (physics) — Part 6 and policy §0.1 no longer disagree about off-screen quads; the doc says how order in view enters P_tile; the doc change is merged with the physics reviewer's approval (REQ-SCHED-080).
 - Review checklist (physics) — the doc states the decay law; any constant it introduces is recorded as a calibration (R-71); the doc change is merged with the physics reviewer's approval (REQ-SCHED-081).
+- Proposal: the P_focus decay constants with scripted-hover evidence; the human confirms them at the M6 gate (REQ-SCHED-090).
 
 ## Notes
-- Definitions written: REQ-SCHED-080, REQ-SCHED-081. A decay constant introduced by REQ-SCHED-081 has no calibration requirement yet — it goes to the orchestrator as a new R-71 entry, not chosen here.
+- Definitions written: REQ-SCHED-080, REQ-SCHED-081. A decay constant introduced by REQ-SCHED-081 is REQ-SCHED-090 (R-71), not chosen here.
+- Closes, for gaps the corpus leaves open: REQ-SCHED-090 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

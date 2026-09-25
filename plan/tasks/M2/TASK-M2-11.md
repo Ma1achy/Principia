@@ -37,3 +37,4 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 - Gap G21: the calibrations ask for renders at the defaults; before the integrator (M3/M4) only decode-time fields can be rendered.
 - Gap G22: whether Φ_θ,K's K_max, γ_K are the invariant-chart defaults (REQ-CHART-044).
 - Gap G11: chart_reference §4.5 still says "pending change 2, open" and "Until one quotient is chosen" (RQ-77).
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.

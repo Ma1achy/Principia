@@ -54,3 +54,4 @@ as the colour resolve.
   as a flag only and does not join it to the max (see Gaps).
 - REQ-REF-010 is a pitfalls §9 regression: `f64::max` returning the event value when the shape spread is NaN is a check
   whose output cannot show the failure.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

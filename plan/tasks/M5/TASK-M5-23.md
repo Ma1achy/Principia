@@ -43,3 +43,5 @@ E + 1 = 8 where the mean reconstruction error crosses ~2 8-bit levels (REQ-VAL-0
 - The corpus gives the ceiling's existence and proxy (~0.05), not its value on the real system: the gate measures
   it. checkerboard §8 asks for "the real VMF/OKLAB colour mapping", which is M7 work (see Gaps).
 - Whether to ramp the stale fraction instead of a hard gate is "a feel call" (§8), not decided here (see Gaps).
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.
+- Waits on RQ-104 (`REVIEW_QUEUE.md`): Checkerboard at the dt ceiling: ramp or hard gate ("a feel call").

@@ -1,7 +1,7 @@
 # TASK-M7-21 — The display chain: style → display scale → gamut clamp → colour-vision simulation → screen
 
 - **Milestone:** M7
-- **Closes:** REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066
+- **Closes:** REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066, REQ-COL-059
 - **Depends on:** TASK-M7-12, TASK-M7-20, TASK-M5-12, TASK-M5-23, TASK-M5-26
 - **Needs (earlier milestones):** REQ-RENDER-042, REQ-RENDER-052, REQ-RENDER-038, REQ-RENDER-006, REQ-RENDER-047
 - **Reviewers:** code, qa, perf
@@ -26,6 +26,7 @@ After the stain, the fixed display chain runs style → render→display scale �
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
 - `decisions.md` § "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
 - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/render/src/display/chain.rs` — the fixed pass order; style is the identity (plain) until TASK-M7-26.
@@ -37,6 +38,9 @@ After the stain, the fixed display chain runs style → render→display scale �
 - `cargo xtask golden display-chain` — CVD simulation is applied to the final in-gamut, display-scaled colours; pass order asserted (REQ-RENDER-069).
 - `cargo test -p render cvd_sees_in_gamut` — with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(style(stain))) (REQ-COL-043).
 - `cargo test -p render cvd_layer_linearity` (proptest) — seam 7 linearity check on random opaque layers: per-layer CVD equals post-composite CVD (REQ-RENDER-066).
+- Definition: the gamut-clamp method written into colour_composition §4.3 (identity on in-gamut colours) and approved by the physics reviewer (REQ-COL-059).
 
 ## Notes
 - Gap: the gamut-clamp method (per-channel clip, or a chroma-reducing clamp in OKLCH) is not given.
+- Waits on RQ-80 (`REVIEW_QUEUE.md`): Retired terms still live in the docs, and the vocabulary lint's doc scope.
+- Closes, for gaps the corpus leaves open: REQ-COL-059 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

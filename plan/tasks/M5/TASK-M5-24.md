@@ -52,3 +52,4 @@ in-flight queue depth is kept shallow, its value proposed as a calibration.
   hosts the loop on its own thread (see Gaps).
 - The deep-zoom-landing benchmark's "dozens of Jacobian quads" need the linearised decoder (M6); here it uses fixture
   Jacobians (see Gaps).
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.

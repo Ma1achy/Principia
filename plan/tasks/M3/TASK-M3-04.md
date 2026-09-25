@@ -51,5 +51,6 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - Review (code): the integration entry point takes only the decoded IC and the sim-key uniforms; no path passes neighbour or parent state into the march (REQ-SCHED-003).
 
 ## Notes
-- REQ-INT-007's branch-exact GPU arm: the GPU dispatch of the full march is M4's; this task proves the CPU arm and the GPU arm of the shared branch functions via TASK-M3-03's self-test. Flagged in the report.
+- REQ-INT-007's branch-exact GPU arm: the GPU dispatch of the full march is M4's; this task proves the CPU arm and the GPU arm of the shared branch functions via TASK-M3-03's self-test. See RQ-97.
 - REQ-INT-053's owns_time_mapping arm needs the regularisation axis; TASK-M3-07's acceptance runs it over every stepper × regularisation pair.
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

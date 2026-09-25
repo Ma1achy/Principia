@@ -6,49 +6,49 @@
 
 | area | count |
 |---|---|
-| DEC | 43 |
-| ENC | 28 |
-| CHART | 45 |
-| INT | 79 |
-| EVT | 23 |
-| PAY | 86 |
-| GEN | 23 |
-| SCHED | 84 |
-| REF | 44 |
-| RENDER | 76 |
-| COL | 53 |
-| GUI | 153 |
-| TOOL | 117 |
-| VAL | 136 |
-| PERF | 84 |
-| SYS | 62 |
-| **total** | **1136** |
+| DEC | 44 |
+| ENC | 32 |
+| CHART | 50 |
+| INT | 81 |
+| EVT | 24 |
+| PAY | 88 |
+| GEN | 27 |
+| SCHED | 88 |
+| REF | 48 |
+| RENDER | 81 |
+| COL | 58 |
+| GUI | 159 |
+| TOOL | 128 |
+| VAL | 142 |
+| PERF | 92 |
+| SYS | 63 |
+| **total** | **1205** |
 
-Of these: 62 calibration, 56 definition, 1018 obligation. Retired (kept for their ids, not counted): 9.
+Of these: 91 calibration, 96 definition, 1018 obligation. Retired (kept for their ids, not counted): 9.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 57 |
-| M1 | 73 |
-| M2 | 142 |
-| M3 | 175 |
-| M4 | 92 |
-| M5 | 147 |
-| M6 | 128 |
-| M7 | 105 |
-| M8 | 217 |
+| M0 | 64 |
+| M1 | 80 |
+| M2 | 155 |
+| M3 | 181 |
+| M4 | 98 |
+| M5 | 151 |
+| M6 | 138 |
+| M7 | 109 |
+| M8 | 229 |
 
 ## Sections
 
-798 sections in 46 files: 693 yield at least one requirement; 105 yield none and are listed below with the reason.
+798 sections in 46 files: 694 yield at least one requirement; 104 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 57 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
-| superseded (kept for the record) | 4 |
+| superseded (kept for the record) | 3 |
 
 
 ### `decisions.md`
@@ -201,7 +201,6 @@ Of these: 62 calibration, 56 definition, 1018 obligation. Retired (kept for thei
 
 | section | reason | note |
 |---|---|---|
-| 1. The result | superseded (kept for the record) | lambda and the horizon values are corrected by §7.2; the formula is used in §4.2 |
 | Units, so the numbers mean something | superseded (kept for the record) | §7.2: t reads as crossing times, not e-foldings |
 | 2. Why it cannot be engineered away | rationale | why the horizon cannot be engineered away; caveated by the §7.3 box |
 | 3. Two horizons, and they are not the same | informative only | two horizons; the open ordering question is answered by §7.1 |

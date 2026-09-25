@@ -47,3 +47,4 @@ resident address unchanged. No manifold-level hierarchy exists.
 - REQ-SCHED-040's third assertion (linearised decode within a quad is not mirrored relative to the full decode)
   needs `x₀ + J_D·δ`; the linearised decoder itself lands in M6 (REQ-DEC-033…037). This task asserts it with a fixture
   `x₀`/`J_D` computed on the CPU by finite differences of the full decoder (see Gaps in the milestone report).
+- Waits on RQ-99 (`REVIEW_QUEUE.md`): M5 requirements that need M6, M7 or M8.

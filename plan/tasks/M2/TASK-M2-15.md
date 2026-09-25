@@ -45,3 +45,4 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 ## Notes
 - Gap G14: REQ-DEC-014's "saturation flag" (dd_decoder §3.2 "the saturation flags", R-21 "the SAT flags") isn't defined for encode: payload §2's `saturated` bit means the substep cap. At ‖ρ̃‖ = 0 the flag is `lookup_clamped` (R-13); at ‖λ̃‖ = 0 (s_α at the clamp) the corpus doesn't name it.
 - REQ-SYS-015's WGSL instantiation is the question in Gap G1 (TASK-M2-25).
+- Waits on RQ-84 (`REVIEW_QUEUE.md`): One decode source vs "the two decode ports".

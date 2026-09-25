@@ -29,3 +29,4 @@ The optional post-momentum rescale pᵢ ← η_E·pᵢ, η_E = √((E* − U)/K�
 
 ## Notes
 - Gap G18: dd_decoder §3.7, chart_reference §0.6, chart_decoder_contract Part 5 and inverse_encode's flag table still say the validation refuses a "non-zero E*" override; under R-25 E* = 0 is a real target, so whether the refusal covers every `Some(E*)` is for the ruling (affects TASK-M2-12).
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.

@@ -1,7 +1,7 @@
 # TASK-M5-11 — Memory budgets, the hard cap and continuous pressure
 
 - **Milestone:** M5
-- **Closes:** REQ-PERF-019, REQ-PERF-021, REQ-PERF-023, REQ-PERF-029, REQ-PERF-030, REQ-SCHED-050, REQ-VAL-082
+- **Closes:** REQ-PERF-019, REQ-PERF-021, REQ-PERF-023, REQ-PERF-029, REQ-PERF-030, REQ-SCHED-050, REQ-VAL-082, REQ-PERF-087
 - **Depends on:** TASK-M5-09, TASK-M5-10
 - **Needs (earlier milestones):** REQ-TOOL-001
 - **Reviewers:** code, qa, perf
@@ -29,6 +29,7 @@ deliberately. The full process footprint is measured, not inferred.
 - `docs/contracts/principia_caching_contract.md` § "Part 7 — The current-state cache (resume points, hard-capped)"
 - `docs/design/principia_quality_device_note.md` § "What this subsystem resolves (two previously-open questions)"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "And test it deliberately"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/engine/src/memory/{budget.rs, pressure.rs}`: cap from the detected budget, pre-allocation fit, tier
@@ -44,8 +45,12 @@ deliberately. The full process footprint is measured, not inferred.
 - `cargo test -p engine forced_tier_fallback` — inject allocation failure at Extreme; app falls back to a lower tier and shows the fallback message (REQ-PERF-030).
 - `cargo test -p engine cache_cap_bytes` — cache bytes never exceed the cap; entries hold no past-t state; cap scales with the detected budget (REQ-SCHED-050).
 - `cargo test -p engine low_cap_never_blanks` — low-cap run: no blank frame, frame time within budget, cap-bound reported (REQ-VAL-082).
+- Proposal: the pressured-onset threshold (fraction of the hard cap) with evidence from the scripted budget-drop run; the human confirms it at the M5 gate (REQ-PERF-087).
 
 ## Notes
 - "An OOM path that has never executed is an OOM path that does not work": the low-cap test must drive the system
   through pressured and reclaiming, and the blank-frame assertion must be able to fire (pitfalls §3, §9).
 - The cap fraction and the pressured/reclaiming thresholds are not given by the corpus (see Gaps).
+- Waits on RQ-88 (`REVIEW_QUEUE.md`): Eviction order: deepest first, or cost-weighted resistance?.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
+- Closes, for gaps the corpus leaves open: REQ-PERF-087 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

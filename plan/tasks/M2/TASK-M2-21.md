@@ -35,3 +35,4 @@ The exported ViewState records (z₀, q₁, q₂), the chart id and params, the 
 
 ## Notes
 - Gap G23: the payload compatibility signature that carries link ids is the sim key, built with the cache (M5); at M2 the test can assert only the ledger schema hash and the recorded provenance.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.

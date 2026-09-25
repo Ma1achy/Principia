@@ -40,3 +40,4 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 
 ## Notes
 - Per-trajectory projection of the Benettin shadow and ensemble copies is TASK-M3-14's (REQ-INT-039).
+- Waits on RQ-97 (`REVIEW_QUEUE.md`): GPU and browser legs before the GPU kernel or the browser exists.

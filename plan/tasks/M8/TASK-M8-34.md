@@ -1,7 +1,7 @@
 # TASK-M8-34 — Measure: boundary dimension on a dragged region (10_measure.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-121, REQ-VAL-110, REQ-VAL-111, REQ-GUI-147, REQ-GUI-148, REQ-GUI-149
+- **Closes:** REQ-GUI-121, REQ-VAL-110, REQ-VAL-111, REQ-GUI-147, REQ-GUI-148, REQ-GUI-149, REQ-VAL-143
 - **Depends on:** TASK-M8-05
 - **Needs (earlier milestones):** REQ-SCHED-031, REQ-PAY-064, REQ-SCHED-048, REQ-COL-002
 - **Reviewers:** code, qa, physics, gui
@@ -16,6 +16,7 @@ The Measure tool lets the user drag a square region on the plot, draws the sampl
 - `docs/gui/principia_render_gui_spec.md` § "G10. Measure — a tool on the figure (`10_measure.png`)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `docs/read_first/principia_00_philosophy.md` § "4.5a A quantity that does not converge under refinement is measuring the sampling"
 
 ## Deliverables
 - `crates/engine/src/measure/{dimension,sweep}.rs` — uncertainty-exponent and box-count estimators, the log-log fit, N / 2N pairing.
@@ -30,8 +31,10 @@ The Measure tool lets the user drag a square region on the plot, draws the sampl
 - Doc review of `docs/gui/principia_render_gui_spec.md` § "G10. Measure — a tool on the figure (`10_measure.png`)" — §G10 names the fixture, its known dimension and the default classifier (e.g. outcome class); the physics reviewer approves the doc change before merge (REQ-GUI-147).
 - Review checklist (physics reviewer) of the ε range and sample proposal — the proposal shows the log-log fit's stability over the chosen ε range and sample count on the known-dimension fixture; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-GUI-148).
 - `cargo xtask gate measure-dimension` — the proposal shows the fitted α on the fixture at the default settings and the tolerance with its margin; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-GUI-149).
+- Definition: the Measure threshold sweep written into render_gui_spec §G10 and approved by the physics reviewer (REQ-VAL-143).
 
 ## Notes
-- What the "threshold sweep" sweeps (which threshold) is not stated in §G10 (raised as a gap for a REVIEW_QUEUE entry).
+- What the "threshold sweep" sweeps (which threshold) is not stated in §G10.
 - Calibrations (R-71) proposed here: REQ-GUI-148, REQ-GUI-149. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-GUI-147. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- Closes, for gaps the corpus leaves open: REQ-VAL-143 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

@@ -51,3 +51,5 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 
 ## Notes
 - The frame loop (TASK-M4-10) consumes the re-boot; this task tests it with the playhead held, driving the march directly.
+- Waits on RQ-95 (`REVIEW_QUEUE.md`): M2 requirements that need M3, M4, M5 or an artboard.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

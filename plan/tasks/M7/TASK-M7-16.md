@@ -1,7 +1,7 @@
 # TASK-M7-16 — The bake tier: the equirect texture for pure-f(n̂) occupants, and the sphere widget
 
 - **Milestone:** M7
-- **Closes:** REQ-RENDER-058, REQ-RENDER-059, REQ-RENDER-067, REQ-SCHED-072, REQ-RENDER-065, REQ-RENDER-070
+- **Closes:** REQ-RENDER-058, REQ-RENDER-059, REQ-RENDER-067, REQ-SCHED-072, REQ-RENDER-065, REQ-RENDER-070, REQ-RENDER-080
 - **Depends on:** TASK-M7-06, TASK-M7-07, TASK-M7-10, TASK-M7-15, TASK-M5-24, TASK-M5-30
 - **Needs (earlier milestones):** REQ-SYS-036, REQ-SCHED-043
 - **Reviewers:** code, qa, physics, perf
@@ -22,6 +22,7 @@ Colour occupants that are pure f(n̂) bake into an equirect texture keyed by the
 - `docs/design/principia_dd_colouring.md` § "6. Deferred / flagged"
 - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not diminished)"
 - `docs/design/principia_colour_composition.md` § "2. Site-set kinds"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/render/src/bake.rs` — bakeability test over the occupant tree (inputs n̂ and uniforms only), bake key, equirect rasterisation, debounced rebake as low-priority background work (REQ-SCHED-043).
@@ -36,8 +37,11 @@ Colour occupants that are pure f(n̂) bake into an equirect texture keyed by the
 - `cargo test -p engine bake_cache` — a chart switch reuses the bake; a param change triggers one debounced rebake; quad-cache eviction never touches it (REQ-SCHED-072).
 - `cargo test -p render sphere_projection` — the widget projection formulas and R = W/2 − 4; the equirect v for n_z = 0.5 per REQ-RENDER-065's verify, subject to the Gap in Notes (REQ-RENDER-065).
 - `cargo test -p engine render_config_membrane` — render-config updates (slot uniforms, playhead t) issue no writes to sim buffers; the baked texture is identical across charts (REQ-RENDER-070).
+- Proposal: the equirect bake texture's resolution and texel format, with evidence (bake-vs-direct difference over a sphere lattice, bake time); the human confirms it at the M7 gate (REQ-RENDER-080).
 
 ## Notes
 - Gap: REQ-RENDER-065 states the equirect mapping as (φ, n_z) ∈ [−π, π]×[−1, 1] with v linear in n_z, but dd_colouring §3.3 (R-14) gives (θ, φ) ∈ [0, 2π]×[0, π] with φ the polar angle on the vertical axis. The source wins over the requirement; the requirement needs correcting before this acceptance line is final.
 - Gap: render_contract Part 3 lists "physics blobs" among baked occupants, but colour_composition §2 says physics sites are "not bakeable" and REQ-RENDER-070 requires an IC-independent bake. Whether the physics overlay is baked (at the hoisted mass point) is not settled.
 - Gap: the equirect texture's resolution and format (which set "one texel quantisation step") are not given.
+- Waits on RQ-89 (`REVIEW_QUEUE.md`): Is the physics overlay baked?.
+- Closes, for gaps the corpus leaves open: REQ-RENDER-080 (R-71 calibration) (REVIEW_QUEUE RQ-110 lists them for the human).

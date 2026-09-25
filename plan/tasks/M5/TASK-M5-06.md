@@ -49,3 +49,4 @@ E) and the ledger content hash; lookup requires identity and signature match. v1
 - Each per-component test must be shown to fail when that component is dropped from the hash (pitfalls §9).
 - REQ-GEN-017's "the cache test serves zero stale-schema payloads" is asserted again end to end once the cache exists
   (TASK-M5-08 reuses this test's fixture).
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.

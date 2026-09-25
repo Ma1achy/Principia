@@ -1,7 +1,7 @@
 # TASK-M3-07 — The regularisation axis and the Aarseth–Zare occupant
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039
+- **Closes:** REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125
 - **Depends on:** TASK-M3-04, TASK-M3-05
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-INT-002
 - **Reviewers:** code, qa, physics
@@ -21,6 +21,10 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 - `docs/design/principia_dd_validation_orbits.md` § "5. Immediate action"
 - `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison checklist)"
+- `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/kernel/src/regularisation/mod.rs` — the `Regularisation` slot, composition `Composed<S, R>` implementing `Advance`, `owns_time_mapping = (R != none)`.
@@ -37,8 +41,12 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 - `cargo xtask gate az-final-step` — figure-eight closure after one period ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order (REQ-INT-049).
 - `cargo test -p kernel tau_schedule_bound` — property test over fuzzed ICs: the substep count per sync interval never exceeds the Law 18 bound computed on the fixed tau-schedule (REQ-INT-054).
 - `cargo test -p kernel no_usable_step_sentinel` — a fixture with all steps unusable reports the explicit none sentinel, not 0.0; the 2.209e128 overflow case is reported (REQ-TOOL-039).
+- Proposal: n_sync and eta for each regularised occupant, with closure/drift evidence over the eta and n_sync ladders; the human confirms them at the M3 gate (REQ-INT-080).
+- Definition: dt_max's home (occupant diagnostic or ledger field) and its 'no usable step' sentinel written into integrator_contract Part 2c and approved by the physics reviewer (REQ-TOOL-125).
 
 ## Notes
-- Gap reported: the sync schedule (`n_sync`, `eta`) that defines AZ's sync boundaries and tau-schedule has no default or owner in integrator contract Part 3.
-- Gap reported: the Mikkola–Tanikawa leapfrog's equations are not in the corpus; this task defines the slot's type only.
-- Gap reported: `dt_max` has no home in the new ledger; REQ-TOOL-039 is met by the occupant diagnostic above unless a ruling places it in the payload.
+- Gap: the sync schedule (`n_sync`, `eta`) that defines AZ's sync boundaries and tau-schedule has no default or owner in integrator contract Part 3.
+- Gap: the Mikkola–Tanikawa leapfrog's equations are not in the corpus; this task defines the slot's type only.
+- Gap: `dt_max` has no home in the new ledger; REQ-TOOL-039 is met by the occupant diagnostic above unless a ruling places it in the payload.
+- Waits on RQ-102 (`REVIEW_QUEUE.md`): The regularisation occupants and step control that live only in prin-rs.
+- Closes, for gaps the corpus leaves open: REQ-INT-080 (R-71 calibration), REQ-TOOL-125 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

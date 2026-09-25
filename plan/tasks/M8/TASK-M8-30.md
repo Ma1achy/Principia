@@ -42,4 +42,5 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 - `cargo test -p engine export_no_preview` — run an export with only preview payloads cached; assert it dispatches full-T computations and reads no PREVIEW_MODE entry (REQ-TOOL-086).
 
 ## Notes
-- The video encoder for MP4 / GIF is not named by the corpus (raised as a gap for a REVIEW_QUEUE entry); this task's sink trait keeps the choice out of the frame loop.
+- The video encoder for MP4 / GIF is not named by the corpus; this task's sink trait keeps the choice out of the frame loop.
+- Waits on RQ-108 (`REVIEW_QUEUE.md`): The MP4 / GIF encoders.

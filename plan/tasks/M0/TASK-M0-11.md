@@ -38,3 +38,4 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - REQ-PAY-019's "the agreement view computes from spread_event" is a view; field views are M1 (REQ-TOOL-009 onward). This task holds the storage half.
 - The latch `running_max_divergence` is per footprint, not a `QuadReduction` member (R-99); its layout is M6's.
 - See Gaps: `QuadReduction`'s member order and 2-/5-bit packing are defined only by REQ-PAY-077 (M5), and `class_histogram[N]`'s N is not given.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.

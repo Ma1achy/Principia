@@ -29,4 +29,5 @@ The CPU-f64 instantiation of the shared kernel ships as the Precision ring in `c
 - `cargo test -p engine inspector_shared_kernel` — the Inspector integrates a clicked IC via the shared kernel instantiated at f64 on CPU; the IC Inspector and trajectory viewer are one Inspector type (R-65) (REQ-GUI-008).
 
 ## Notes
-- Gap reported: REQ-GUI-008's 'hosted in the one Inspector window' — the window is the M8 dev GUI; M3 can only test the engine-side Inspector. The M8 GUI tasks must keep it one window.
+- Gap: REQ-GUI-008's 'hosted in the one Inspector window' — the window is the M8 dev GUI; M3 can only test the engine-side Inspector. The M8 GUI tasks must keep it one window.
+- Waits on RQ-98 (`REVIEW_QUEUE.md`): M3 and M4 requirements that name later surfaces.

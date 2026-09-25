@@ -34,3 +34,4 @@
 - Calibration (R-71): REQ-VAL-135 is proposed here and confirmed by the human at the M0 gate; an unconfirmed value blocks the gate.
 - No physics runs in M0; the gate is exercised on recorded sequences. Its first physical use is M3 (escape fraction and the other aggregate quantities).
 - See Gaps: the evidence available at M0 for the threshold.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.

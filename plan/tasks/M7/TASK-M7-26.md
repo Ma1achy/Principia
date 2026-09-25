@@ -28,3 +28,4 @@ The optional style stage at the head of the display chain, applied to the figure
 
 ## Notes
 - Gap (blocking): the corpus names the styles but defines none — what watercolour & pencil and Poster78 compute, and the paper-grain and misregistration parameters, are not given. The task cannot be built without a ruling or a definition requirement.
+- Waits on RQ-107 (`REVIEW_QUEUE.md`): The style presets are named, not defined.

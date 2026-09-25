@@ -1,7 +1,7 @@
 # TASK-M0-18 — `prin profile`: a fixed scenario headless, and the regression diff
 
 - **Milestone:** M0
-- **Closes:** REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007
+- **Closes:** REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119
 - **Depends on:** TASK-M0-17
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, perf
@@ -18,6 +18,7 @@
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5.5 Profiling is FIRST-CLASS, not a debug mode"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "3. Percentiles, not means — and the specific thresholds"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
 - `crates/prin/src/profile/{mod,run,diff}.rs` — the `profile` subcommand (clap), scenario registry, headless run, JSON write; `diff` over per-scope p95.
@@ -28,7 +29,10 @@
 - `cargo test -p prin profile_file` — the written file parses as JSON against schema v1; the header holds the build hash and the config; `prin profile` reads it back (REQ-TOOL-002; the dev GUI profiler's read is REQ-TOOL-098, M8).
 - `cargo test -p prin profile_scenario` — run `deep_zoom_03` for 600 frames twice: the same frame count and the same scope / event sequence (REQ-TOOL-006).
 - `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007).
+- Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler" and approved by the physics reviewer (REQ-TOOL-119).
 
 ## Notes
 - One format, one parser, one percentile code: `prin` and, later, the interactive path share the frame record (telemetry §5.5).
 - See Gaps: the scenario `deep_zoom_03` and what runs at M0 before any frame loop; which statistic the diff compares; the dev GUI half of REQ-TOOL-002.
+- Waits on RQ-93 (`REVIEW_QUEUE.md`): M0 requirements that need things M0 doesn't have.
+- Closes, for gaps the corpus leaves open: REQ-TOOL-119 (R-72 definition) (REVIEW_QUEUE RQ-110 lists them for the human).

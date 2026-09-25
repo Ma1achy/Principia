@@ -37,4 +37,4 @@ The physics layer of the shared kernel exists in `crates/kernel`: one source gen
 
 ## Notes
 - Part 2c rule 4 (no `T::infinity()` seeds in folds; reseed min-folds from the first element) applies to every fold introduced here and in the driver — the §9 pitfall family.
-- Gap reported: the regularised occupants' physics (Heggie, logH, the Mikkola–Tanikawa leapfrog) is to be transcribed from prin-rs (REQ-INT-016), which is not in this repository; see TASK-M3-07/08.
+- Gap: the regularised occupants' physics (Heggie, logH, the Mikkola–Tanikawa leapfrog) is to be transcribed from prin-rs (REQ-INT-016), which is not in this repository; see TASK-M3-07/08.

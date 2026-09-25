@@ -40,3 +40,5 @@
 - Gap G8: "fix geometry and mass" — where the frozen configuration and masses come from (z₀'s blocks, the lock, chart params) isn't stated; U is the potential at that configuration.
 - Gap G18: whether the refusal covers `Some(0)` (R-25) or only non-zero E* (the doc wording).
 - Gap G21: evidence renders before the integrator show decode-time fields only.
+- Waits on RQ-92 (`REVIEW_QUEUE.md`): Rulings not yet applied to some passages.
+- Waits on RQ-100 (`REVIEW_QUEUE.md`): Existing requirements closed after the task that needs them.
