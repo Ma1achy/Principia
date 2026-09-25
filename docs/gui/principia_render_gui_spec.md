@@ -602,8 +602,9 @@ shaders share them:
 - **`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel colour (the validity-first invariant, §13):
   a NaN reads as "no data", never as a value.
 
-Each numeric debug field therefore generates a two-line `colour()` — `if (raw != raw) { return
-DEBUG_NAN; }` then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
+Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
+`raw` against the canonical quiet-NaN bits that returns `DEBUG_NAN` (`principia_render_contract.md` Part 2's rule; never a
+self-comparison or `isnan()`, which fast-math may fold away — R-114), then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
 code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN
 guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
