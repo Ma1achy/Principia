@@ -56,7 +56,7 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 - **Export quality tier** may exceed the interactive tier (more samples/quad, deeper refinement, full E — motion gating does not apply, scheduler Part 9) — priced into the estimate. Samples/quad is a sim-key difference; depth and `E` are not on the sim key (R-89).
 - **Checkerboard is force-off in export, regardless of the user setting** (`principia_checkerboard_contract.md` §3/§6): every captured frame computes all visible pixels at one `t` — the strict single-playhead invariant holds unconditionally here. (The motion-time levers in general — checkerboard, E-reduction, coarse refinement floor — are interactive concessions; export takes none of them.)
 - **Resolution/fps/duration** are job parameters; the exporter renders offscreen at target resolution, independent of the window.
-- **The encoders (R-131).** Native: PNG frames, GIF, and MP4 through a system `ffmpeg` when one is present. Browser: PNG frames (zipped), GIF via a wasm encoder, and MP4/WebM through WebCodecs where supported.
+- **The encoders (R-131).** Native: PNG frames, GIF, and MP4 through a system `ffmpeg` when one is present. Browser: PNG frames (zipped), GIF via a wasm encoder, and MP4/WebM through WebCodecs where supported. GIF is one encoder in both builds: the Rust `gif` crate (MIT or Apache-2.0), with `color_quant` for palettes, compiled to wasm for the browser (R-155).
 
 ---
 
