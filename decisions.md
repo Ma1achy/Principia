@@ -1123,3 +1123,84 @@ its site. chart_reference §4.5 :477 stands. REQ-CHART-014 and REQ-CHART-025 are
 *25 Sep 2026 · applied in step 7*
 
 All six readings in RQ-128 are accepted.
+
+---
+
+*Rulings on RQ-102 and RQ-103, from the prin-rs survey (prin-rs commit `8600d45`), 25 Sep 2026. With them checkpoint B
+and PR #8 are ready for final approval. ✱ marks a design ruling the human may veto.*
+
+## R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*
+*25 Sep 2026 · applied in step 7*
+
+prin-rs is the human's own repo; importing is authorised. The minimal text and code set is copied into
+`docs/reference/prin-rs/`, pinned to `8600d45`, with a README: "reference, not authority (R-1). Transcribe into the
+contracts and cite; never cite these files as normative." The set:
+- `src/integrate/heggie/*`, `src/integrate/logh/*`, the predictive step-limit code;
+- `src/grid.rs` (slices), `src/ensemble/stats.rs`, `src/testing.rs` (the pulse);
+- `examples/integrator_gallery.rs`, `wedge_census.rs`, `logh_arms.rs`;
+- `FINDINGS.md` and the `NOTES.md` excerpts the corpus cites;
+- `tools/xcheck/` and `reference/*.py`.
+
+Images and `results/` are not imported; they are cited by commit (`8600d45`, and `70cfbc4` for the original 256² data).
+
+## R-160 — The integrator equations are transcribed into integrator_contract Part 2b
+*25 Sep 2026 · applied in step 7*
+
+The Heggie, logH and TTL equations, the step control, and the predictive step limit
+(`dτ ≤ f·d_min / (|v_rel|_max·A·B)`, f = 0.02) are written into integrator_contract Part 2b, with citations: Heggie 1974;
+Mikkola & Tanikawa 1999; Preto & Tremaine 1999. Physics-reviewed, confirmed at the M3 gate.
+
+## R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2
+*25 Sep 2026 · applied in step 7 · design; the human may veto*
+
+Heggie's default time transformation is the one measured: Eq. 22 at n = 3/2 (`dτ = S^{3/2}/(R₁R₂R₃) dt`), as prin-rs's
+code runs it. `FINDINGS.md:96`'s Eq. 20 statement is a documentation error, noted in the reference README. Eq. 20 stays
+as a selectable time mode. M3's re-run of the 32-case matrix confirms the default.
+
+## R-162 — The reversible occupant is logH's TTL time mode
+*25 Sep 2026 · applied in step 7*
+
+The reversible occupant is logH's TTL time mode (Mikkola–Tanikawa), as prin-rs built it. Aarseth–Zare with
+Mikkola–Tanikawa isn't required. integrator_contract Part 2a ("required") and REQ-VAL-044 are conformed to "a
+reversible occupant exists: logH-TTL". `NOTES.md:2573`'s verdict (it's built, validated, and loses on accuracy) is
+recorded as a prior finding.
+
+## R-163 — The wedge ablation is re-run on Heggie
+*25 Sep 2026 · applied in step 7*
+
+REQ-INT-052 stays on the shipping configuration. M3 re-runs the wedge ablation (the three switches, and
+`wedge_census.rs`'s density: at least 25% pale pixels in a 9×9 window at 1024²) on Heggie, with Aarseth–Zare kept for
+comparison.
+
+## R-164 — +0.305 and −0.082 are correlations, not controls
+*25 Sep 2026 · applied in step 7*
+
++0.305 and −0.082 are FTLE–drift Spearman correlations, not control ICs; the Aarseth–Zare value is a null result
+(`NOTES.md:2077`). Every requirement and RQ that calls them controls is rewritten to cite them as prior findings. There
+is no gate on them.
+
+## R-165 — The 32-case figure is 3915 → 74
+*25 Sep 2026 · applied in step 7*
+
+Quote 3915 → 74, the current regeneration at `8600d45`. Note the original 3916 → 73 at `70cfbc4`.
+
+## R-166 — The fixtures
+*25 Sep 2026 · applied in step 7*
+
+- (a) The slice definitions are transcribed from `src/grid.rs` into `fixtures/slices.toml`: `config_stability`,
+  `config_basin`, the five Burrau regions, `tilt_plambda`, `preset_shape`. Each corpus mention of "the config slice" is
+  resolved by context; any that stay ambiguous go to REVIEW_QUEUE.
+- (b) The 32-case matrix → `fixtures/case_matrix.toml`, from `integrator_gallery.rs:138-176`. err>10 means
+  `error_ratio > 10` (`stats.rs:71-88`).
+- (c) The legacy t = 30 set isn't stored data. M3's validation harness regenerates it: the config slices at t = 30
+  under the legacy classifier, whose code is imported as reference. The result is checked in as a fixture.
+- (d) BodyPlane: M3 records the Python reference's output (`tools/xcheck`, `reference/*.py`) as the fixture.
+  REQ-VAL-028 reads: bit-exact where the operation order is identical (parity_contract), otherwise within a calibrated
+  tolerance (R-71).
+- (e) The moving pulse is a synthetic field (`src/testing.rs:162`), not a chart slice. The corpus wording is corrected,
+  and its definition is transcribed into `fixtures/`.
+
+## R-167 — The prin-rs licence is not blocking
+*25 Sep 2026 · applied in step 7*
+
+The human may add one to prin-rs later.

@@ -1648,6 +1648,7 @@ not on the needing task's `depends_on` path).
   name the papers and let the task transcribe them for physics review); and whether the reversible AZ +
   Mikkola–Tanikawa occupant is built in M3 (else REQ-VAL-044 moves to the milestone that builds it).
 - *Gaps:* M3-1, M3-5, M3-9. *Tasks:* TASK-M3-07, TASK-M3-08, TASK-M3-29, TASK-M3-31.
+- **Ruling:** R-159, R-160, R-161, R-162, R-163 (decisions.md). Closed in step 7.
 
 ## RQ-103: The prin-rs fixtures and slices the M3 re-runs need *(step 7, validation)*
 
@@ -1655,7 +1656,8 @@ not on the needing task's `depends_on` path).
   - REQ-INT-051 (TASK-M3-32): "31 of 32 cases, `err>10` 3916 → 73" (`principia_integrator_contract.md` § "Part 2b —
     Regularisation is a SECOND swappable axis, not a property of the stepper", :171) — the 32 cases and the `err>10`
     metric are not defined in `docs/`.
-  - REQ-INT-050: "+0.305" / "−0.082" (:169) — the control's fixture ICs.
+  - REQ-INT-050: "+0.305" / "−0.082" (:169) — *corrected by R-164: these are FTLE–drift Spearman correlations, not
+    control ICs; the Aarseth–Zare value is a null result (prin-rs `NOTES.md:2077`). They are prior findings, with no gate.*
   - REQ-INT-052 (TASK-M3-31): the ablation "on config_stability" (pitfalls § "8. TWO ARTEFACTS ARE NOT ONE DEFECT");
     the slices `config_stability`, `near-field`, `far`, `deep interior`, "the config slice" are named
     (dd_refinement_policy :70, :141, :205–206) but their chart, z₀, q₁, q₂ and extent are not given.
@@ -1667,6 +1669,7 @@ not on the needing task's `depends_on` path).
   imported into the repo (and where: `fixtures/`), or the tasks define new fixtures and the gates compare against the
   recorded numbers only (then "bit-for-bit" in REQ-VAL-028 has no reference to match).
 - *Gaps:* M3-6, M3-10. *Tasks:* TASK-M3-31, TASK-M3-32, TASK-M3-33, TASK-M3-34, TASK-M3-35, TASK-M3-36.
+- **Ruling:** R-159, R-164, R-165, R-166 (decisions.md). Closed in step 7.
 
 ## RQ-104: Checkerboard at the dt ceiling: ramp or hard gate ("a feel call") *(step 7, checkerboard)*
 
