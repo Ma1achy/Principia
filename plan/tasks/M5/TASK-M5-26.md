@@ -30,8 +30,8 @@ Nothing reads the backdrop as data.
 - `docs/design/principia_temporal_architecture_note.md` § "Refinement must be a live-to-live handoff (or it looks broken)"
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/render/src/compositor/{layers.rs, blur.rs, snapshot.rs}` and the WGSL blur pass.
 - Golden suites `fixtures/golden/backdrop/` (tilt fixture; palette change recolours the backdrop; chroma equality) and

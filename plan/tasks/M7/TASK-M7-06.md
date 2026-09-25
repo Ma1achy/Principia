@@ -15,10 +15,10 @@ Family A: `SiteBlend{sites, kernel, colours, space}`. Kernels vmf(κ) with w_i =
 - `docs/design/principia_colour_composition.md` § "1.1 Family A — site-blend  →  `vec3`"
 - `docs/design/principia_colour_composition.md` § "2. Site-set kinds"
 - `docs/design/principia_dd_colouring.md` § "3.2 The vMF engine"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-128 ✱ — The checkerboard's ceiling form is chosen at the M5 gate *(closes RQ-104)*"
 - `docs/contracts/principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/vmf.wgsl` (`vmf_weight`, `nearest`, `topk`) and `lib/site_blend.wgsl`.
 - `crates/render/src/colour/sites.rs` — the static site generators (CPU, once), uploaded as uniform arrays.

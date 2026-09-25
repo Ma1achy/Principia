@@ -17,8 +17,8 @@ The calibration record carries every field telemetry § "Collect everything rele
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "Thermal is the honest budget"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "1.2 Passive telemetry — what interaction actually looks like"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "8. What this is not"
-
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+
 ## Deliverables
 - `crates/engine/src/telemetry/{record,binding,thermal}.rs` — record fields, per-run binding resource, throttling inference.
 - `crates/gui/src/telemetry_toggle.rs` — the passive-mode switch in the Profiler (off by default) and its footer indicator (R-129).

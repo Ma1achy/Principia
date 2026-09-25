@@ -21,8 +21,8 @@
 - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)"
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `docs/design/principia_debug_tooling_plan.md` § "C. Payload field views — `times` (u32), f16-packed scalars & `free_group_word` (separate buffer)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `xtask`/`build.rs` table generator: computes `THR[1..=64]` in f64 libm and emits only the f32 bit patterns as a generated Rust source (`crates/kernel/src/generated/nsub_thresholds.rs`) plus the comparison tree (no loop, no indexing).
 - `crates/kernel/src/driver/substep.rs` — `d2_quantised` (f32 positions, lone-sub, lone-mul, explicit `fma(dy, dy, dx*dx)`), the clamp-in-f32-before-cast rule, `bucket(d2) -> u32`, and `SubstepState { live_n_sub, total_substeps, saturated }`.

@@ -35,9 +35,9 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - `docs/read_first/principia_INDEX.md` § "Known open items"
 - `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 - `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/branch_inputs.rs`: the enumerated list of branch inputs (name, formula, the explicit-`fma` written form, the decisions it feeds, the descriptor fields downstream of it), referenced from each use site.
 - Kernel edits: `d²` as f32 positions → lone subtract → lone multiply → `fma(dy, dy, dx*dx)`; collision as `d² < r_coll²`; `|Δn̂|` and `E_rel` in their fixed `fma` forms; no runtime `pow`/`sqrt`/`div` feeding a decision (the spike control `ceil((r_sub/√d²)^1.5)` absent from the kernel).

@@ -22,9 +22,9 @@ E + 1 = 8 where the mean reconstruction error crosses ~2 8-bit levels (REQ-VAL-0
 - `docs/contracts/principia_checkerboard_contract.md` § "7. Measured imperceptibility (the evidence for the default)"
 - `docs/contracts/principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-128 ✱ — The checkerboard's ceiling form is chosen at the M5 gate *(closes RQ-104)*"
+
 ## Deliverables
 - `docs/contracts/principia_checkerboard_contract.md` §7: the ceiling's units (REQ-RENDER-076), with the "Removed lines"
   note.

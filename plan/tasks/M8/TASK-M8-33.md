@@ -15,8 +15,8 @@ Import picture (drop a Principia PNG or File › Import picture…) reads the px
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "09 Import picture · saved views · record a sweep"
 - `docs/gui/principia_render_gui_spec.md` § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
 - `docs/contracts/principia_export_animation_contract.md` § "Part 4 — Export: the frame loop in blocking mode"
-
 - `decisions.md` § "R-131 — The video encoders *(closes RQ-108)*"
+
 ## Deliverables
 - `crates/gui/src/windows/import_picture.rs`, `saved_views.rs`, `record_sweep.rs`.
 - Golden suite `record-sweep` (a recorded frame at t equals a fresh blocking render at t).

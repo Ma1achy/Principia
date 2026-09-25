@@ -27,8 +27,8 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+
 ## Deliverables
 - `crates/render/src/codegen/walk.rs` — graph → `shade()` in backbone order, the post chain in declaration order with insert and reorder, the 8-node bound.
 - `crates/render/src/codegen/fallback.rs` — identity for dangling / absent inputs, the defined fallback shader for an invalid graph.

@@ -17,8 +17,8 @@ The CPU-f64 instantiation of the shared kernel ships as the Precision ring in `c
 - `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism"
 - `docs/read_first/principia_00_philosophy.md` § "The IC inspector — the prebake standard at a single point"
 - `decisions.md` § "R-65 — One Inspector window; the standalone IC Inspector is absorbed *(closes RQ-21)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/precision/mod.rs` — the four entry points over the kernel instantiated at f64.
 - `crates/engine/src/precision/rk45.rs` — the RK45 reference integrator (f64, adaptive), used by the inspector path only.

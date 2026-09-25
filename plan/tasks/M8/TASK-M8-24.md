@@ -22,8 +22,8 @@ Run settings are off the Explore page and in the Run window, every field a SimCo
 - `decisions.md` § "R-68 — Artboard values are illustrative; corpus values win *(closes RQ-24)*"
 - `docs/contracts/principia_gui_state_contract.md` § "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
 - `docs/design/principia_quality_device_note.md` § "The auto → custom "show your work" flow"
-
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+
 ## Deliverables
 - `crates/gui/src/windows/run.rs` — the field list generated from the SimConfig schema paths.
 - `crates/gui/src/windows/quality.rs` — the show-your-work flow.

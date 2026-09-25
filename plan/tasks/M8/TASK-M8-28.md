@@ -18,8 +18,8 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
 - `decisions.md` § "R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/gui/src/windows/profiler/{timeline,flame,gpu,memory,counters}.rs`.
 - `crates/engine/src/telemetry/{leak,hot_path}.rs` — the detector and summaries written into the v1 export.

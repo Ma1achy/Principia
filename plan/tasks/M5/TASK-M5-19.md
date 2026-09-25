@@ -25,8 +25,8 @@ that the split ignores; no divergence-trend member.
 - `decisions.md` § "R-91 — The temporal accumulators feed "unresolved" *(closes RQ-42)*"
 - `decisions.md` § "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: when `roundtrip_error` runs and how it reaches the reduction
   (REQ-PAY-079), with the "Removed lines" note.

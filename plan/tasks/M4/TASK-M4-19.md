@@ -22,8 +22,8 @@ The first measurements of the kernel the corpus leaves to the build. The march k
 - `docs/read_first/principia_INDEX.md` § "Known open items"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+
 ## Deliverables
 - `xtask` benches `march-bottleneck` and `quad-n` (writing profiler schema v1 records).
 - `crates/engine`: adapter-limit query and the N² check applied to every tier and Custom value.

@@ -16,8 +16,8 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 - `docs/gui/principia_render_gui_spec.md` § "G14. Settled by the notes (record)"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Directions are axis kinds — the unifying rule"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/gui/src/explore/manifold_view/{chart,navigate,depth,centre,slice_tilt}.rs` — each control emits SetField on the SimConfig paths from TASK-M8-01; each shows the per-field warning from TASK-M8-03.
 - `crates/gui/src/explore/direction_label.rs` — raw-control vs physical labelling from the chart axis metadata (REQ-CHART-012).

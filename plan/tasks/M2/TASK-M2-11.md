@@ -22,9 +22,9 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-147 — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*"
 - `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/kernel/src/chart/burrau_acute.rs` (Φ_θ,K, Φ_θ,L_z, Φ_θ,δm).
 - `system_image` values on both Burrau shape charts, shown in the chart label; the fraction-statistics guard.

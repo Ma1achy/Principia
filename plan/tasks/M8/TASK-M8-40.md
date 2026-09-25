@@ -17,9 +17,9 @@ The browser build is checked against the native wgpu Tier-N tolerances (R-85): t
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `docs/contracts/principia_parity_contract.md` § "7. What this contract does *not* cover"
 - `decisions.md` § "R-149 — The colour suite runs on Chromium and WebKit *(closes RQ-119)*"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `web/tests/tier_n.spec.ts` — the Tier-N suite driven in Chrome stable and Safari (R-110), reporting per-quantity spread.
 - `web/tests/tier_l.spec.ts` — the Tier-L boundary-state set and the 100-macro-step `done`-flag dispatch through the browser build's WGSL path, in Chrome stable and Safari, diffed against the CPU branch words (REQ-VAL-144).

@@ -17,8 +17,8 @@ The optional post-momentum rescale pᵢ ← η_E·pᵢ, η_E = √((E* − U)/K�
 - `docs/design/principia_dd_decoder.md` § "6. Deferred / flagged"
 - `decisions.md` § "R-25 — `η_E` is kept, with an explicit off switch *(CD-5)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+
 ## Deliverables
 - `crates/kernel/src/decode/energy_norm.rs` (`Option<Real>` target; applied only when the chart allows it).
 - The dd_decoder §3.7 doc change: the outcome for K₀ = 0 and for E* < U (label or refusal), with a "Removed lines" note in the commit.

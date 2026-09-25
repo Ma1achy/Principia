@@ -22,9 +22,9 @@ The shape-sphere chart shows its redundancy honestly: `system_image = n-to-1` wi
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - The hemisphere label / redundancy flag and the projection option on the shape-sphere chart (`crates/kernel/src/chart/shape_sphere.rs`, the label carried in the render; the GUI selector and toggle are REQ-GUI-161, M8).
 - Golden images under `fixtures/golden/shape_sphere/`, rendered with native wgpu offscreen (R-110): one per projection and one per hemisphere label / redundancy flag (R-113).

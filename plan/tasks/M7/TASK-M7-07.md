@@ -18,8 +18,8 @@ The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2�
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
 - `decisions.md` § "R-151 — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)*"
-
 - `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/lut.wgsl` (`lut_sample` and the LUT tables) and `lib/cubehelix.wgsl`; the tables transcribed from the published matplotlib tables and Moreland's cool-warm table, and the Principia stops from the colour explorer, each with its source recorded beside the table (R-122).
 - `crates/render/src/colour/lut_sphere.rs` — builds `SiteBlend{ring(16) + 2 poles, vmf(κ), colours = lut(name, i/N), rgb}`.

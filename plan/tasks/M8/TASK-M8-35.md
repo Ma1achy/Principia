@@ -16,8 +16,8 @@ The Research window's first tool seeds periodic orbits from spiral cores where t
 - `docs/gui/principia_render_gui_spec.md` § "G11. Research — first pass (v2) (`11_research.png`)"
 - `docs/design/principia_dd_validation_orbits.md` § "1.4 Šuvakov–Dmitrašinović (13 families, 2013) and Broucke–Hénon–Hadjidemetriou"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/validation/src/research/{seed,newton,catalogue}.rs` — the catalogue table from dd_validation_orbits §1.4.
 - `crates/gui/src/windows/research/seeding.rs`.

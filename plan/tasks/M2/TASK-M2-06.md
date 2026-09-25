@@ -34,8 +34,8 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 - `docs/contracts/principia_parity_contract.md` § "1. The principle"
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
-
 - `decisions.md` § "R-118 — Φ is generic over the float type *(closes RQ-86)*"
+
 ## Deliverables
 - `crates/kernel/src/stage/decode.rs`: the decode-stage entry generic over `Chart` and links; the (m, r, p) seam type as its only output to the integrator side; the per-quad DECODE_MODE flag (full path only — the linearised path lands in M6).
 - `crates/engine/src/decode_dispatch.rs`: a native wgpu decode-only dispatch over a (u, v) grid for tests and the gates, reading back (m, r, p), the DEGENERATE tag and `ICDescriptor`.

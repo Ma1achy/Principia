@@ -23,8 +23,8 @@ Colour occupants that are pure f(n̂) bake into an equirect texture keyed by the
 - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not diminished)"
 - `docs/design/principia_colour_composition.md` § "2. Site-set kinds"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-121 — The physics overlay isn't baked *(closes RQ-89)*"
+
 ## Deliverables
 - `crates/render/src/bake.rs` — bakeability test over the occupant tree (inputs n̂ and uniforms only), bake key, equirect rasterisation, debounced rebake as low-priority background work (REQ-SCHED-043).
 - `crates/engine/src/bake_cache.rs` — the bake cache outside the quad cache; the texture upload as the membrane's bake crossing (REQ-SYS-036).

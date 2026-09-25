@@ -30,8 +30,8 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - `docs/contracts/principia_integrator_contract.md` § "Part 5 — Units and the horizon (inherited scale gauge)"
 - `docs/contracts/principia_canonical_spec.md` § "2. The determinism law (the other defining decision)"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 1 — The firewall: the scheduler is arbitrary about *what* it looks at, never about *what* it sees"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/driver/advance.rs` — the `Advance` trait with the cadence callback parameter; the blanket impl for steppers (`N_sub` STEP calls at `dt_macro/N_sub`, invoking the callback after each).
 - `crates/kernel/src/driver/wrapper.rs` — `integrate(ic, uniforms) -> SimState` in integrator contract Part 1's loop shape (done flag in both loop conditions; bounded loops; integer horizon counter; no float time accumulation).

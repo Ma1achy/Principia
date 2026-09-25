@@ -27,9 +27,9 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
 - `decisions.md` § "R-41 — `DEBUG_MODE` uses the baked variants, not flag bits *(RS-1 (b))*"
 - `decisions.md` § "R-75 — The kernel keeps one debug mode *(closes RQ-26)*"
 - `decisions.md` § "R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision"
+
 ## Deliverables
 - `crates/engine/src/contract/quad_request.rs`: `QuadRequest`, `QuadFlags` constants; the WGSL constants generated from
   the same table.

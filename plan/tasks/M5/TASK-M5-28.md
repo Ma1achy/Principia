@@ -23,10 +23,10 @@ present stage) and one parser reads both.
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 - `docs/design/principia_systems_architecture.md` § "1. The rings — cross-cutting services"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/gui/principia_render_gui_spec.md` § "Profiler"
+
 ## Deliverables
 - Doc change: `docs/gui/principia_render_gui_spec.md` § "Profiler" — the `deep_zoom_03` scenario (chart, camera path, depth and frame count) (definition, REQ-TOOL-130), with the "Removed lines" note; the scenario registered with `prin profile`.
 - `crates/engine/src/telemetry/{record.rs, writer.rs}`; `crates/prin/src/profile/report.rs` (percentiles).

@@ -19,8 +19,8 @@ Lookup exists CPU-side: the exact-IC form ((m, n), a triple, a raw z, or physica
 - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/lookup.rs` (the forms, the ladder, the outcome with its notices and moved coordinates).
 - The inverse_encode_contract chart-aware-validation doc change naming layer 1's space and bounds, with a "Removed lines" note.

@@ -19,10 +19,10 @@ The Stain mode of the dev GUI: the four surfaces of render_gui_spec Part II §1 
 - `docs/gui/principia_render_gui_spec.md` § "7. Canvas interactions"
 - `docs/gui/principia_render_gui_spec.md` § "8. Node visuals — glyph-forward"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "02 Stain — the plain node-graph editor"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/gui/principia_render_gui_spec.md` § "16. Open / next"
+
 ## Deliverables
 - `crates/gui/src/stain/{mod,canvas,library,node_visuals,preview}.rs`.
 - Doc change: `docs/gui/principia_render_gui_spec.md` Part II §7 (the node palette's groups and entries, REQ-GUI-151) and §1 (the Stain preview's default, REQ-GUI-152), closing §16's open items, with the "Removed lines" note — moved here from TASK-M8-20 / TASK-M8-19 by R-113.

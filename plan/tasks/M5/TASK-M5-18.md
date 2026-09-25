@@ -32,8 +32,8 @@ as the colour resolve.
 - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)"
 - `decisions.md` § "R-80 — Samples per footprint *(closes RQ-31)*"
 - `decisions.md` § "R-18 — The agreement value is `spread_event` *(closes RQ-16)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/reduce/spread.rs` (shared source) and the resolve-stage entropy / σ²_T co-computation.
 - Tests `crates/kernel/tests/reduce_spread.rs`: hand-computed footprints; the 2.9%-drift-among-8 case (≈ 204.8) and exact

@@ -27,8 +27,8 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `decisions.md` § "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
 - `decisions.md` § "R-95 — After escape fires *(closes RQ-48, in part)*"
 - `docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/driver/shape.rs` — `shape(r, masses)` (no momenta), per-macro-step readout.
 - Ledger edits in `crates/ledger`: the lagged `n̂` register row and the departed bit (schema-version change); payload §1 width totals recomputed in `docs/design/principia_dd_simstate_payload.md`.

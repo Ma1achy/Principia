@@ -30,9 +30,9 @@ deliberately. The full process footprint is measured, not inferred.
 - `docs/design/principia_quality_device_note.md` § "What this subsystem resolves (two previously-open questions)"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "And test it deliberately"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-120 — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*"
+
 ## Deliverables
 - `crates/engine/src/memory/{budget.rs, pressure.rs}`: cap from the detected budget, pre-allocation fit, tier
   fallback with its message, the three-state machine.

@@ -18,10 +18,10 @@ FieldRamp's ScalarField sources, each returning (value, valid) through `ctx`: pa
 - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
 - `decisions.md` § "R-50 — The shape-sphere collision landmarks are mass-weighted *(CO-1 (a))*"
 - `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
-
 - `decisions.md` § "R-121 — The physics overlay isn't baked *(closes RQ-89)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 - `decisions.md` § "R-126 — The Euler landmarks are the Euler central configurations *(closes RQ-106)*"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/fields_nhat.wgsl`, `lib/noise.wgsl`, `lib/lattice.wgsl`, `lib/physics_sites.wgsl`.
 - `crates/render/src/colour/scalar_field.rs` — the ScalarField node variants and their codegen.

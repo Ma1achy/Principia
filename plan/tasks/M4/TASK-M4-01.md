@@ -32,8 +32,8 @@ The whole M3 physics kernel — decode, canonicalise, the wrapper with its detec
 - `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
 - `docs/notes/principia_gpu_determinism_note.md` § "The one-line law"
 - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel`: the GPU build — rust-gpu compile of the kernel crate to SPIR-V entry points (build script or `xtask` step), naga SPIR-V → WGSL translation and naga validation as a build check. No `.wgsl` compute source is written by hand or checked in.
 - `crates/kernel/tests/discipline_lint.rs`: a source lint over the kernel's physics and driver layers — no `break` in march loops, no bare `loop {`, no counted `for` with a mid-body exit (`for s in 0..N_sub`), no `f32::INFINITY` / `NAN` / `T::infinity()` literal, no runtime-indexed array in the kernel (constant indices or unrolled pairs), every float→int cast preceded by an f32 clamp, and no `Real`-dependent constant in an `if`/`while` condition. Each rule has a seeded-violation fixture that makes the lint fail.

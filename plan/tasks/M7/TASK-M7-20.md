@@ -16,8 +16,8 @@ Colour-vision simulation as a display-stage function on linear sRGB: real Viéno
 - `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)"
 - `decisions.md` § "R-78 — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*"
 - `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
-
 - `decisions.md` § "R-123 — Achromatopsia is a fifth Display mode *(closes RQ-91)*"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/compositor/cvd.wgsl` (a fixed display-stage pass, not scanned) and the Rust mirror `crates/render/src/display/cvd.rs`.
 - `fixtures/cvd/` — the reference implementation's golden values.

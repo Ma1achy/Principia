@@ -15,9 +15,9 @@ The combinators mix_const, mix_field, bandmask and site_overlay as `vec3(+ctx) �
 - `docs/design/principia_colour_composition.md` § "1.3 Combinators  →  `vec3`"
 - `docs/design/principia_dd_colouring.md` § "3.4 Physics overlay (blob blend) and the house encoding (stability × hue)"
 - `docs/design/principia_colour_composition.md` § "7.1 The complete map list (R-16)"
-
 - `decisions.md` § "R-121 — The physics overlay isn't baked *(closes RQ-89)*"
 - `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/frag/post/mix_const.wgsl`, `mix_field.wgsl`, `bandmask.wgsl`, `site_overlay.wgsl`; `lib/blob_blend.wgsl`.
 - Combinator node variants and codegen in the occupant tree; the physics-overlay expansion helper used by the preset library.

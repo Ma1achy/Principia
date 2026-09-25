@@ -18,8 +18,8 @@ The quality selector and Custom fields (under "quality: Custom") edit `SimConfig
 - `docs/design/principia_quality_device_note.md` § "10. Two sanctities: the user, and observability"
 - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar"
 - `decisions.md` § "R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*"
-
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+
 ## Deliverables
 - `crates/gui/src/windows/run_quality.rs`: selector, Custom fields (read-only display of auto's values until touched), device-ceiling maxima with tooltip.
 - `crates/gui/src/overlays/arbiter.rs`: the arbiter overlay as the Arbiter tab of a minimal Profiler window shell (`crates/gui/src/windows/profiler.rs`, R-152), which TASK-M8-28 fills in; `ViewUI.arbiter_overlay: bool` in `crates/engine`.

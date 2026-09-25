@@ -29,10 +29,10 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `docs/contracts/principia_lowering_contract.md` § "Part 2 — Two assembly mechanisms (the substrate split; the old "one mechanism" claim retires)"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+
 ## Deliverables
 - `crates/kernel`: the variant axes as type parameters (chart Φ, link set, occupant, FTLE on/off); the nine appendix rows lowered; the invariant charts write tagged payloads for infeasible pixels in-kernel; the Burrau integer lattice's per-cell dispatch.
 - `crates/engine/src/variants.rs`: the variant key and pipeline table; the copy dispatch loop (copy_index 0..E as a uniform, same pipeline) and the per-copy offsets (copy 0 at the centre, copies 1..E at Halton (2,3) points 1..E minus ½, scaled to the footprint).

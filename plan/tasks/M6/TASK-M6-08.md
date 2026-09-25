@@ -20,8 +20,8 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `docs/contracts/principia_scheduler_contract.md` § "`QuadRequest.flags`"
 - `docs/contracts/principia_lowering_contract.md` § "Compute side"
 - `decisions.md` § "R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/deep/switchover.rs`: bitwise IC comparison of adjacent samples (not the energy-drift diagnostic), `quad.collapsed`, the `ℓ_switch = 20` bound shared with lowering's `SWITCH` constant, the switch/stop response keyed off `DECODE_MODE`.
 - `crates/engine/src/dispatch/linear_uniform.rs`: the linear-path bind group with the `x₀`/`J_D` uniform; `QuadRequest` unchanged (no `x₀`/`J_D` fields).

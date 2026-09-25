@@ -19,9 +19,9 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)"
 - `docs/contracts/principia_symbolic_dynamics_contract.md` § "1. Generator ↔ branch-cut convention"
 - `decisions.md` § "R-150 — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"
+
 ## Deliverables
 - Doc change: `docs/contracts/principia_symbolic_dynamics_contract.md` §1 — the a/b branch-cut assignment and the crossing-direction sign, transcribed with citations (Montgomery; Šuvakov–Dmitrašinović) and cross-checked with the half-open crossing rule (R-125, REQ-PAY-070).
 - Doc change: `docs/contracts/principia_integrator_contract.md` Part 5 — the τ-sort, tie tolerance and sign convention (definition, REQ-INT-079).

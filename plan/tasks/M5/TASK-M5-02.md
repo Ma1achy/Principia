@@ -31,9 +31,9 @@ their knobs from this struct.
 - `docs/design/principia_memory_tiers.md` § "What `render_scale` gets you (and its character)"
 - `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact"
 - `decisions.md` § "R-4 — "spec-keyed defaults" means the markdown's tier tables *(closes RQ-5)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+
 ## Deliverables
 - `crates/engine/src/contract/quality.rs`: `QualityTier` (six variants plus Custom), `QualitySettings`, the preset table
   (placeholder rows marked as such, each value traced to its memory_tiers row).

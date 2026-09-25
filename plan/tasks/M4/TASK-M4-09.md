@@ -19,9 +19,9 @@
 - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
 - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
 - `decisions.md` § "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/chunking.rs`: chunk planner (macro-steps per dispatch) used by the GPU march and the CPU rayon path alike.
 - `crates/validation/tests/loop_shape.rs`: the 100-macro-step single-dispatch parity test.

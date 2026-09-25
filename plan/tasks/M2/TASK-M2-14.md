@@ -27,9 +27,9 @@ The CPU authoring layer exists: every axis is one of the closed set of four kind
 - `decisions.md` § "R-26 — Every chart declares its domain function *(CD-6)*"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
+
 ## Deliverables
 - `crates/engine/src/chart_authoring/` (axis kinds, axis metadata, per-chart descriptors, the validator).
 - A `ValidatedChart` type only the validator constructs, taken by the resolve entry.

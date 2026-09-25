@@ -39,8 +39,8 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata"
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/design/principia_dd_simstate_payload.md` § "`times` (u32)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/detect/label.rs` — the precedence function and the single write of `state` + `detail`.
 - `crates/kernel/src/driver/terminal.rs` — the latch: `done` set on collision or escape, loop exit through the loop conditions only, every SimState word frozen after termination.

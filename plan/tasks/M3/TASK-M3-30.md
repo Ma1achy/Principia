@@ -17,8 +17,8 @@ The free-group word encoder reproduces the published braid class of Šuvakov–D
 - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/design/principia_dd_simstate_payload.md` § "3. The word buffer — `free_group_word`"
-
 - `decisions.md` § "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"
+
 ## Deliverables
 - `fixtures/ground_truth/suvakov/` — gallery ICs with their published words/classes.
 - `crates/validation/src/gates/word_calculus.rs`; `xtask gate word-truncation` over the reference charts at production horizon.

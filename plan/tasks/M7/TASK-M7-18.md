@@ -21,10 +21,9 @@ Every map of colour_composition §7.1 — the `principia_colour_explorer.html` g
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `docs/design/principia_dd_colouring.md` § "3.4 Physics overlay (blob blend) and the house encoding (stability × hue)"
-
 - `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
-- `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+
 ## Deliverables
 - `crates/render/presets/maps/` — one preset per §7.1 entry.
 - `crates/render/tests/map_formulas.rs` — formula-level tests for the closed forms (Octant index, Voronoi argmax, icosahedron vertices, Fibonacci lattice, dot radius cos(1.4/√N), checkerboard, stripes, Truchet hash, grid ε, gradient magnitude, noise normalisation, the Yℓm forms, the Turing triple, N-pole ring, basin-blend t).

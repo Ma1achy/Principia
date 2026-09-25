@@ -24,8 +24,8 @@ camera paths produce byte-identical payloads for every common quad.
 - `docs/contracts/principia_scheduler_contract.md` § "Part 1 — The firewall: the scheduler is arbitrary about *what* it looks at, never about *what* it sees"
 - `docs/design/principia_deep_zoom.md` § "3. Three-layer quadtree"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/engine/src/sched/{baseline.rs, fallback.rs}`: the baseline tier above the priority queue; ancestor lookup
   for display.

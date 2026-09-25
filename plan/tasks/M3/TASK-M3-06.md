@@ -23,9 +23,9 @@ The wrapper's loop parameters are one `SimUniforms` struct in `crates/engine`, b
 - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
 - `docs/design/principia_dd_generation_root.md` § "Open"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+
 ## Deliverables
 - `crates/engine/src/contract/sim_uniforms.rs` — `SimUniforms { t_horizon, dt_macro, n_max, r_sub, gamma_sub, r_coll, tau, escape_window, r_close, eps_e, eps_l, g, m_total, epsilon, n_renorm, delta0 }` with `Default`, and its sim-key byte contribution.
 - `crates/engine/src/dispatch/validate.rs` — the horizon refusal and the joint `total_substeps` bound, returning a typed error.

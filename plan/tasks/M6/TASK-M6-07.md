@@ -22,8 +22,8 @@ Deep quads get the linearised decode (deep_zoom §2), on the x₀ and J_D TASK-M
 - `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)"
 - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision"
 - `docs/design/principia_dd_encode.md` § "4. Seams (obligations → integration tests)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/deep/linearise.rs` (built in TASK-M5-04, REQ-DEC-036): `|det J_D|` computed once per quad.
 - `crates/kernel/src/decode/linear.rs`: the f32 linear path `x₀ + J_D·δ` in the shared source, producing the same `(m, r, p)` input type as the full decode.

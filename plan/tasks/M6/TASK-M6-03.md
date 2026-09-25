@@ -24,8 +24,8 @@
 - `docs/design/principia_temporal_architecture_note.md` § "Continuous refinement — temporal accumulators + spatial coherence"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - Doc change: `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)" — where the two diagnostics live and whether/how they cross GPU→CPU (REQ-REF-046), under R-142: the latch is evaluated on the GPU and only its verdict crosses.
 - `crates/engine/src/refine/tolerance.rs`: `Policy::Tolerance { eps }`, `unresolved(footprint)`, `policy_splits(quad)` plugged into TASK-M6-02's gate.

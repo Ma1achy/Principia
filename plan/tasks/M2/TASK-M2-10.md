@@ -27,8 +27,8 @@ The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a
 - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)"
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/chart/burrau.rs` (the embed γ: ν → configuration and masses, the (ν, K) chart, the Euclid plane) and `crates/kernel/src/burrau.rs` (Euclid triples, the 1-based → 0-based translation).
 - The Euclid plane's annotation-axis descriptor and a statistics guard that refuses 2D density on it.

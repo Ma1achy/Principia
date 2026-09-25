@@ -30,8 +30,8 @@ E) and the ledger content hash; lookup requires identity and signature match. v1
 - `docs/contracts/principia_caching_contract.md` § "Part 3 — Cross-chart sharing: permitted, deferred"
 - `decisions.md` § "R-89 — Depth and E are not on the sim key *(closes RQ-40)*"
 - `decisions.md` § "R-92 — What the sim key holds of navigation *(closes RQ-43)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/keys.rs`: `SimKey`, `RenderKey`, `CacheIdentity`, `CompatSignature` (hashing; the schema hash
   from the ledger generator).

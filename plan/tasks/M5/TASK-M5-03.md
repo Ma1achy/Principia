@@ -25,8 +25,8 @@ resident address unchanged. No manifold-level hierarchy exists.
 - `decisions.md` § "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
 - `decisions.md` § "R-100 — No per-cell Halton rotation *(closes RQ-60)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `docs/design/principia_deep_zoom.md` §1: the level-0 cell size in the slice plane's frame and how centre and
   half-width follow from it (REQ-SCHED-086), with the "Removed lines" note.

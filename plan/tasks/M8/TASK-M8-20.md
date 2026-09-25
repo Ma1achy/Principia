@@ -18,8 +18,8 @@ The canvas supports §7's gestures: click-select opening the inspector, click-em
 - `docs/gui/principia_render_gui_spec.md` § "8. Node visuals — glyph-forward"
 - `docs/gui/principia_render_gui_spec.md` § "16. Open / next"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/gui/src/stain/canvas/{select,drag,wire,palette}.rs`, `crates/gui/src/stain/node_box.rs`.
 - Tests: `canvas_gestures`, `wire_drag_filter`, `wire_remove`, `node_palette`, `subtype_morph`; screenshot case `02_stain/nodes`.

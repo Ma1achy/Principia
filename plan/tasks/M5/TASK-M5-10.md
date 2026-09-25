@@ -27,8 +27,8 @@ check.
 - `decisions.md` § "R-40 — Memory tiers and the quality device key off `eps` *(PL-5)*"
 - `decisions.md` § "R-59 — Fix D1 to D6 as listed *(sheet §8)*"
 - `decisions.md` § "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/memory/estimate.rs`: payload, word, render-target and process terms; the fit check sums every term
   and applies the margin.

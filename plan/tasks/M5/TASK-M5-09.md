@@ -23,8 +23,8 @@ survive.
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "6.2a Budgeting before allocating"
 - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-120 — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*"
+
 ## Deliverables
 - `docs/contracts/principia_caching_contract.md` Part 7: the eviction cost formula (REQ-SCHED-079), with the
   "Removed lines" note.

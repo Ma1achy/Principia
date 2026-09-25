@@ -23,8 +23,8 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability profile"
 - `docs/design/principia_dd_integrator.md` § "2. Consolidated contract"
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/driver/project.rs` — `project_com` (position–momentum form; velocity form for a velocity occupant), `M` cached.
 - `crates/kernel/src/driver/monitor.rs` — `E_0`/`L_{z,0}` capture, per-step accumulation, `δ_E`, `δ_L` with `eps_E`, `eps_L` floors.

@@ -18,8 +18,8 @@ Checkerboard motion acceleration's compute half: while the playhead advances, on
 - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison checklist)"
 - `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact"
 - `docs/contracts/principia_checkerboard_contract.md` § "3. The three-state control"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/checkerboard.rs`: the parity mask (render-pixel granularity), applied to the live-set march only (never to catch-up), per-pixel for the whole bundle.
 - Kernel/dispatch plumbing: the parity bit as a per-dispatch uniform; no new buffer.

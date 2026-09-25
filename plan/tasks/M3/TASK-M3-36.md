@@ -23,8 +23,8 @@ The BodyPlane chart (today's slice) is kept and reproduces bit-for-bit against i
 - `docs/design/principia_dd_predictability_horizon.md` § "5.1 Retrospective: which existing measurements are inside the horizon"
 - `docs/design/principia_dd_predictability_horizon.md` § "7.6 Escape statistics are shadowing-robust to `t=80`, but `t=240` is untested"
 - `docs/design/principia_dd_predictability_horizon.md` § "7.2 `lambda` is 0.6–0.8, not 1 — and `t` is not e-foldings"
-
 - `decisions.md` § "R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*"
+
 ## Deliverables
 - Doc change: `docs/design/principia_chart_reference.md` §5.1 — BodyPlane's Φ, the recorded reference dump and the Python cross-check (REQ-VAL-119).
 - `crates/kernel` chart `BodyPlane` (a Φ only) and `xtask golden bodyplane` against `fixtures/golden/bodyplane/`.

@@ -24,9 +24,9 @@
 - `decisions.md` § "R-25 — `η_E` is kept, with an explicit off switch *(CD-5)*"
 - `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)"
 - `docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
-
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/kernel/src/chart/invariant.rs` (both charts; frozen configuration and mass as chart params).
 - The refusal in the CPU validation pass (`crates/engine/src/chart_validate.rs`), tested.

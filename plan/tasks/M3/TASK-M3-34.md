@@ -23,9 +23,8 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `decisions.md` § "R-95 — After escape fires *(closes RQ-48, in part)*"
 - `docs/read_first/principia_01_pitfalls.md` § "2.4 Should it terminate?"
 - `docs/read_first/principia_01_pitfalls.md` § "2.3 The 96.3% recall is the right failure direction"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
-- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
-- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
 - `crates/validation/src/gates/escape_revalidation.rs` — precision/recall against both ground truths; `|Δn̂|` distributions for t = 25–30; the gap ratio.
 - `fixtures/gates/convergence/gate.json` — the placeholder threshold TASK-M0-05 set, replaced by the proposed REQ-VAL-135 value once the human confirms it.

@@ -25,8 +25,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `docs/design/principia_dd_generation_root.md` § "Not reduction fields"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), with
   the commit's "Removed lines" note.

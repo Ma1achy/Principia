@@ -24,11 +24,11 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
 - `docs/design/principia_chart_reference.md` § "5.1 One trait, one dispatch"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl` as snippets for the fragment assembler, emitted by the rust-gpu → SPIR-V → WGSL translation of the shared decode source (R-116); the build fails if either is edited by hand.
 - The DECODE and agreement presets in the preset library (`crates/render/src/presets/`), locked.

@@ -22,8 +22,8 @@ The exported ViewState records (z₀, q₁, q₂), the chart id and params, the 
 - `docs/notes/principia_validation_ground_truth_note.md` § "Link variation as a conditioning diagnostic (not a default change)"
 - `docs/contracts/principia_inverse_encode_contract.md` § "Part 7 — Ground-truth ingestion (the validation programme's demand)"
 - `decisions.md` § "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - The ViewState provenance record in `crates/engine/src/contract/view_state.rs` (serialise / restore).
 - `crates/validation/src/link_variation.rs` (the diagnostic; per-IC link choice recorded in provenance).

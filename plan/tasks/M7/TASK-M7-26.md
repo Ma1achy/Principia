@@ -16,8 +16,8 @@ The optional style stage at the head of the display chain, applied to the figure
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
 - `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)"
 - `decisions.md` § "R-67 — The display chain *(closes RQ-23)*"
-
 - `decisions.md` § "R-130 ✱ — The styles are the poster's *(closes RQ-107)*"
+
 ## Deliverables
 - `crates/render/shaders/wgsl/compositor/style_*.wgsl` and `crates/render/src/display/style.rs` — plain, the poster's painted treatment (watercolour & pencil), and the seven print presets ported from the poster's press module with its per-plate slip and cell ceiling (R-130).
 - The style selector in the Display window.

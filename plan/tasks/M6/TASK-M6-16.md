@@ -24,8 +24,8 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
 - `docs/design/principia_quality_device_note.md` § "Open sub-questions (settle at implementation)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/quality/characterise.rs`: `Limits`, `Probe` (behind a `GpuTimer` trait: timestamp queries or batched wall-clock), `InfoPrior`, `solve()`; a mockable device interface for tests.
 - `crates/engine/src/quality/derive_tier.rs`: the inversion against samples/s, bytes/s, the frame budget and `sea_fraction(eps)` (a trait until TASK-M6-19 lands), with the fallback flag.

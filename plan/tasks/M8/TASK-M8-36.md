@@ -18,8 +18,8 @@ The Research window adds continuation along a parameter (e.g. a mass ratio) with
 - `decisions.md` § "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-127 — Periodic-orbit stability is Floquet; the Poincaré sections are three *(closes RQ-109)*"
+
 ## Deliverables
 - `crates/validation/src/research/{continuation,poincare}.rs` — the monodromy matrix and its Floquet multipliers in f64; the three sections.
 - Doc change: `docs/gui/principia_render_gui_spec.md` §G11 — the monodromy/Floquet stability measure and the three section definitions transcribed with citations (R-127), physics-reviewed, confirmed at the M8 gate, with the "Removed lines" note.

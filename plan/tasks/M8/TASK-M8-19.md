@@ -27,8 +27,8 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `docs/contracts/principia_gui_state_contract.md` § "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
 - `docs/contracts/principia_gui_state_contract.md` § "5. The stain editor — a free, typed node graph (R-64)"
 - `docs/contracts/principia_gui_state_contract.md` § "7. What a replacement GUI must honour (the teardown contract)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/gui/src/stain/{mode,library,preview,problems}.rs`.
 - `crates/gui/src/stain/your_stains.rs` — user stains as serialised graphs (import / export files).

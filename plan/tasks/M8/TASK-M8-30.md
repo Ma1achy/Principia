@@ -24,8 +24,8 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 - `docs/contracts/principia_export_animation_contract.md` § "Part 5 — Determinism & reproducibility"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 5 — Preview vs refine is a second sim key"
 - `decisions.md` § "R-155 — One GIF encoder for both builds *(closes RQ-125)*"
-
 - `decisions.md` § "R-131 — The video encoders *(closes RQ-108)*"
+
 ## Deliverables
 - `crates/engine/src/export/{job,barrier,offscreen}.rs` — blocking mode, the job, streamed encode.
 - `crates/engine/src/export/encoder.rs` — the encoder sink trait and the sinks R-131 names: natively PNG frames, GIF, and MP4 through a system ffmpeg when present; in the browser PNG frames (zipped), GIF via a wasm encoder, and MP4/WebM through WebCodecs where supported.

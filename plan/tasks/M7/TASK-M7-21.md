@@ -27,8 +27,8 @@ After the stain, the fixed display chain runs style → render→display scale �
 - `decisions.md` § "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
 - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
+
 ## Deliverables
 - `crates/render/src/display/chain.rs` — the fixed pass order; style is the identity (plain) until TASK-M7-26.
 - `crates/render/shaders/wgsl/compositor/display_scale.wgsl`, `gamut_clamp.wgsl`.

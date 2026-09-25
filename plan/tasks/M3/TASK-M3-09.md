@@ -25,8 +25,8 @@ Collision is detected every STEP by counting pairs with `‖rᵢ − rⱼ‖² <
 - `decisions.md` § "R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*"
 - `docs/contracts/principia_symbolic_dynamics_contract.md` § "What is already settled (in the payload spec, not here)"
 - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/kernel/src/detect/collision.rs` — pair count and classification, reading the step's one `min d²`.
 - `crates/kernel/src/detect/t0.rs` — the dispatch-time detector pass.

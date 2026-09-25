@@ -26,8 +26,8 @@ The parity suite becomes permanent: a native in-process `#[test]` in CI on every
 - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)"
 - `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
 - `docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+
 ## Deliverables
 - `crates/validation/tests/parity_suite.rs`: the full CPU-vs-GPU `SimState` diff, per field tagged with its tier.
 - Fixture set with the non-chaotic / chaotic marking (`fixtures/gates/parity_fixtures`).

@@ -32,8 +32,8 @@ Divergence is the observable. Click a pixel → its trajectories in shape and re
 - `docs/design/principia_trajectory_viewing.md` § "5. What is honestly comparable (click inspector)"
 - `docs/contracts/principia_render_contract.md` § "Part 1 — The payload (render input)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
-
 - `decisions.md` § "R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*"
+
 ## Deliverables
 - `crates/engine/src/inspector.rs`: `inspect(chart, uv, sim_key, mode)` → f64 trace, f32 GPU trace, divergence time and separation growth; modes: match-integrator, adaptive RK45.
 - `crates/validation`: the cross-check gate on `t < t_max(f32)`, reading the recorded value.

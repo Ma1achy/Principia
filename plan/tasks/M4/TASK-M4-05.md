@@ -25,9 +25,9 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `docs/contracts/principia_render_contract.md` § "Unpack layer (generated, one accessor per named field)"
 - `docs/design/principia_dd_generation_root.md` § "3.3a The word buffer — a parallel cold buffer"
 - `docs/design/principia_deep_zoom.md` § "3. Three-layer quadtree"
-
 - `decisions.md` § "R-102 — The ensemble isn't a baked variant *(closes RQ-62)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+
 ## Deliverables
 - `crates/engine/src/flat_grid.rs`: the layer-0 grid (quad list at one depth, per-quad uniforms `c, h`), `SimState` / word buffer allocation, dispatch of one workgroup per quad.
 - `crates/kernel`: the survey entry point — workgroup size N², per-thread map → z → decode → wrapper; workgroup shared memory holds reduction accumulators only.

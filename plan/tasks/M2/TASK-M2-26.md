@@ -30,8 +30,8 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - `docs/design/principia_systems_architecture.md` § "5. The seam catalogue"
 - `docs/design/principia_core_design.md` § "5. Canonicalisation is the one seam to (m, r, p)"
 - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*"
-
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
+
 ## Deliverables
 - The ROUNDTRIP preset (`crates/render/src/presets/roundtrip.rs` + WGSL), locked, with the tagged-expected mask (clamp, feasibility edge, mirror tie).
 - Golden suite `fixtures/golden/roundtrip_preset/` (latent and (L_z, E) charts).

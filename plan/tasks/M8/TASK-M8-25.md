@@ -15,9 +15,9 @@ An attempted quality setting change is checked and answered with one of three no
 - `docs/design/principia_memory_tiers.md` § "7. The "are you sure?" safety system (three severities, none blocking)"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "A deliberate ceiling, user-visible"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+
 ## Deliverables
 - `crates/engine/src/quality/precheck.rs` — severity from the memory estimate (REQ-PERF-025) and the fps model.
 - `crates/gui/src/dialogs/quality_warning.rs` — the dialogs and per-choice suppression (ViewUI-side store).

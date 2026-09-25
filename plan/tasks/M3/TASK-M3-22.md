@@ -23,8 +23,8 @@ The integrator is certified as the payload's producer: every generation-root led
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
 - `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `xtask golden producer-fields` — a CPU-computed payload over a fixture slice rendered through every generated field view, with golden images in `fixtures/golden/producer-fields/`.
 - `crates/validation/src/checks/scalar_views.rs` — the TOOL-036 assertions over synthetic and golden-IC payloads.

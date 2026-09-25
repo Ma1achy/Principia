@@ -26,8 +26,8 @@ A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one t
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
 - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps"
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
-
 - `decisions.md` § "R-118 — Φ is generic over the float type *(closes RQ-86)*"
+
 ## Deliverables
 - `crates/kernel/src/chart/mod.rs` (the `Chart` trait, `ChartOut`, `ValidationResult`) and `crates/kernel/src/chart/latent.rs`.
 - The chart_reference §5.1 doc change listing the ValidationResult variants (project / clamp / reject and the failed constraint), with a "Removed lines" note.

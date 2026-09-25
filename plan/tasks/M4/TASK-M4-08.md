@@ -35,8 +35,8 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
 - `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine`: `SimKey` (hashable, every component above) and the render key.
 - `crates/engine/src/resolve.rs`: `resolve` with the five outputs of lowering Part 5 (flat-grid dispatch plan).

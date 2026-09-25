@@ -24,8 +24,8 @@ in-flight queue depth is kept shallow, its value proposed as a calibration.
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "GPU"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "Collect everything relevant, in one file"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/frame/{budget.rs, background.rs, focus.rs}`; queue-depth control in the dispatch submitter.
 - Benchmarks: `cargo xtask bench main-thread-latency`, `cargo xtask bench deep-zoom-landing`,

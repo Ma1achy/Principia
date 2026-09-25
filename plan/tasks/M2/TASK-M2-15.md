@@ -29,9 +29,9 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `docs/design/principia_dd_encode.md` § "Drill-down — Encode (the Question rung's upward door)"
 - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi"
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
-
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+
 ## Deliverables
 - `crates/kernel/src/encode/{mod.rs, blocks.rs, report.rs}` (the one encode entry, the discard report).
 - The gauge-group sampler of dd_encode §3.3 (translation, boost, rotation, scale, mirror) as a test utility.

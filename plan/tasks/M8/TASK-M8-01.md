@@ -22,8 +22,8 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - `decisions.md` § "R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/engine/src/contract/state/{sim_config,render_state,view_ui}.rs` — the three structs with the §2 field lists as amended by R-96, R-101 and R-106: the link ids are the chart registry's link-function ids; playback transport (play / pause / speed / loop), the linked views, the kept orbits and `t_cursor` are ViewUI fields.
 - `crates/engine/src/contract/state/set_field.rs` — `SetField { path, value, history: History }` over plain serialised data (the history mark is used by TASK-M8-03).

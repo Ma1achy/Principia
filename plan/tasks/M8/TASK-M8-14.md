@@ -24,8 +24,8 @@ The one Inspector window exists and absorbs the standalone IC Inspector (R-65), 
 - `decisions.md` § "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
 - `docs/notes/ic_inspector_scratchpad.md` § "Bridges to the main view"
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
-
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
 ## Deliverables
 - `crates/gui/src/windows/inspector/mod.rs` — the window, its tabs (Inspect, Create & locate), panes hosted per the §4 placement table.
 - `crates/gui/src/windows/inspector/pane_ic.rs` — the physical canvas, drag, popover, CoM decomposition, auto-fit.

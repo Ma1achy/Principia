@@ -23,8 +23,8 @@ The release gates exist: the parity suite passes on a non-Metal backend (Vulkan 
 - `docs/read_first/principia_00_philosophy.md` § "4.1 The instrument must say where it stops knowing"
 - `docs/read_first/principia_00_philosophy.md` § "3. The consequence people get wrong"
 - `docs/contracts/principia_canonical_spec.md` § "0. What Principia is"
-
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+
 ## Deliverables
 - `cargo xtask gate parity-non-metal` — runs the M4 parity suite on a real (hardware) Vulkan / D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy it (R-110) — and records the result.
 - `xtask/src/seam_index.rs` — `cargo xtask seam-index`: every seam 1–14 of systems_architecture §5 is named by at least one integration test's tag.
