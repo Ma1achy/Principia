@@ -676,10 +676,11 @@ re-address; slicing out of the plane, tilting and rotating re-integrate; lock ch
 and systems_architecture.
 
 ## R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*
-*25 Sep 2026 · applied in step 7 · corrected by R-105*
+*25 Sep 2026 · applied in step 7 · corrected by R-105 · amended by R-119*
 
-§4.1's gate stands: the cross-check runs only for t < t_max(f32), with the value from R-35's change-10 re-run. t_max annotates
-refinement; it doesn't gate it.
+§4.1's gate stands: the cross-check runs only for t < t_max(f32). REQ-VAL-070's gate reads the GPU measurement of
+t_max(f32) (REQ-VAL-071); R-35's change-10 re-run supplies the f64 figure and the method. t_max annotates refinement; it
+doesn't gate it.
 
 ## R-94 — The GUI snapshot is ~10 Hz *(closes RQ-45)*
 *25 Sep 2026 · applied in step 7*

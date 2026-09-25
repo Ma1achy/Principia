@@ -133,8 +133,9 @@ horizons differ by **2.3×**: ~16 crossing times against ~37.
 propagating different amplifications of different round-off; a disagreement there is **not** evidence
 of a bug, and an agreement is **not** evidence of correctness. **The cross-check is gated on
 `t < t_max(f32)`** and reported as *not applicable* beyond it, rather than silently producing
-divergences that look like defects. The gate stands (R-93); the value of `t_max(f32)` comes from the
-re-run of the change-10 cross-checks (R-35, confirmed by R-105), not from the figures here (§7).
+divergences that look like defects. The gate stands (R-93); the value of `t_max(f32)` is measured against
+the GPU kernel (R-119), not taken from the figures here (§7). The re-run of the change-10 cross-checks (R-35,
+confirmed by R-105) supplies the f64 figure and the method.
 
 ### 4.2 The horizon is a field, not a constant
 
@@ -230,8 +231,9 @@ and the trade is explicit: **each factor of 4 in samples (halving spacing in 2D)
    quad's own horizon was defensible, but `lambda` is itself uncertain there, so the gate would rest on
    a quantity measured in the regime where it is least reliable.
 3. **f32 horizon verification.** The f32 figure (~16) is derived, not measured — all experiments here
-   were f64. It should be confirmed against the GPU kernel directly, since it is the tighter of the
-   two constraints and the one users will meet first.
+   were f64. It is measured against the GPU kernel directly, and that measurement is the value the
+   cross-check gate reads (R-119), since it is the tighter of the two constraints and the one users will
+   meet first; the change-10 re-run (R-35) supplies the f64 figure and the method.
 
 ---
 
