@@ -23,12 +23,12 @@ The node inspector of render_gui_spec §9, morphing by node kind and wired sourc
 ## Deliverables
 - `crates/gui/src/stain/inspector/{mod,site_blend,gradient,palette,compaction,post,source}.rs`.
 - `crates/render/src/colour/conflicts.rs` — the monotone-L × Replace-L detector the inspector shows.
-- Screenshot scenario for the Artefact-1 map controls.
+- Screenshot scenario for the controls of the `principia_colour_explorer.html` group's maps (R-139).
 
 ## Acceptance tests
 - `cargo test -p gui source_availability` — at a no-FTLE tier bind brightness to ftle: the dispatch counter stays static; the source is greyed; the unpacked value is NaN and the pixel shows the invalid colour (REQ-GUI-017).
 - `cargo test -p gui l_conflict_flag` — dd_colouring unit test 6 wiring test: select a monotone-L LUT + Replace-L; the conflict flag is set; with Multiply it is not (REQ-GUI-018).
-- `cargo xtask screenshot 02_stain` (scenario artefact1-controls) — Invert, Blend and Auto-rotate present on each Artefact-1 map (REQ-GUI-020).
+- `cargo xtask screenshot 02_stain` (scenario explorer-map-controls) — Invert, Blend and Auto-rotate present on each map of colour_composition §7.1's `principia_colour_explorer.html` group (R-139) (REQ-GUI-020).
 
 ## Notes
 - PIT-8: the invalid colour for an unavailable source must not be confusable with a data colour.

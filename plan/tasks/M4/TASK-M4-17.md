@@ -20,10 +20,10 @@ The test that certifies "the picture is the same": over a uniform grid (not quad
 
 ## Deliverables
 - `crates/engine/src/prebake.rs`: the prebake entry point over uniform tiles (chunked dispatch, TASK-M4-09), asserting refinement disabled and no camera/frame budget consulted.
-- `xtask` gate `aggregate-survey` (nightly / pre-release, headless) and `survey-statistic` (the calibration measurement: sampling noise vs grid resolution).
+- `xtask` gate `aggregate-survey` (nightly and before release, headless, R-134) and `survey-statistic` (the calibration measurement: sampling noise vs grid resolution).
 
 ## Acceptance tests
-- `cargo xtask gate aggregate-survey` — nightly/pre-release headless run on a uniform grid on both instantiations: outcome-class fractions within grid sampling noise; boundary sets match within 1–2 pixels; statistic and threshold per REQ-VAL-125 (calibrated) (REQ-VAL-065).
+- `cargo xtask gate aggregate-survey` — nightly and before-release headless run (R-134) on a uniform grid on both instantiations: outcome-class fractions within grid sampling noise; boundary sets match within 1–2 pixels; statistic and threshold per REQ-VAL-125 (calibrated) (REQ-VAL-065).
 - `cargo xtask gate survey-statistic` — the proposal names the statistic and sets the threshold from the measured sampling noise on uniform grids; recorded in decisions.md after the human confirms it at the M4 gate (REQ-VAL-125, calibrated).
 - `cargo test -p engine prebake_uniform` plus code review — the prebake entry point advances every tile to t and stitches; it asserts Policy/quadtree refinement is disabled and no camera/frame budget is consulted (REQ-SYS-027).
 

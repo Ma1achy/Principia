@@ -35,7 +35,7 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - Word buffer as its own allocation, bound only when symbolic features are on.
 
 ## Acceptance tests
-- `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102) (REQ-PERF-012).
+- `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102); the resolve pass is dispatched after the E+1 copy dispatches and is the only writer of the footprint resolve and QuadReduction (R-135) (REQ-PERF-012).
 - Perf reviewer: no `k` (texels-per-thread) parameter exists in the dispatch configuration (REQ-PERF-013).
 - `cargo test -p engine per_frame_uniform_write` plus code review — no IC buffer exists; per-frame CPU work is a uniform write and dispatch, independent of grid size (REQ-INT-070).
 - Code reviewer: no ping-pong `SimState` copy exists; the march writes each sample's own slot in place (REQ-SCHED-012).
@@ -46,4 +46,4 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 
 ## Notes
 - RQ-92 ruled: R-124 — systems_architecture §5.5 is conformed to R-102 (applied in step 7; the heading above is the new one): each ensemble copy is the same kernel dispatched again with `copy_index` a uniform. This task builds the per-copy dispatch shape; the copy offsets and the (E+1) dispatches are TASK-M4-06's. This settles the gap.
-- Where the across-copy reduction lives now that copies are not folded in-thread is not stated (§5.5 keeps "shared memory holds the reduction accumulators"); not settled by R-124.
+- R-135 settles where the across-copy reduction lives: its own resolve pass, dispatched after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (REQ-PERF-012). This task dispatches that pass; the reductions it computes are M5's (TASK-M5-17, TASK-M5-18).

@@ -43,7 +43,7 @@ their knobs from this struct.
 
 ## Acceptance tests
 - `cargo test -p engine quality_tier_enum` — the tier enum has six variants; has_ftle is false for Potato/Low and true from Medium; per tier, trajectories per pixel = (E+1) below Medium and 2(E+1) from Medium up; Potato (E = 0) runs checkerboard (R-113) (REQ-PERF-014).
-- `cargo test -p engine quality_preset_rows` — each named preset's QualitySettings matches its row (REQ-PERF-026).
+- `cargo test -p engine quality_preset_rows` — each named preset's QualitySettings matches its row; the Ultra and Extreme rows are marked provisional until REQ-PERF-086 is recorded (R-137) (REQ-PERF-026).
 - `cargo test -p engine quality_ftle_flag` — tier presets' ftle flag; Custom with render_scale 0.25 accepts ftle = on (REQ-PERF-027).
 - `cargo xtask bench tier-table` — config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them (REQ-PERF-028).
 - `cargo test -p engine frame_budget_default` — default frame_budget = 16 ms; export path does not consult it (REQ-PERF-032).
@@ -54,5 +54,5 @@ their knobs from this struct.
 - §4.1's eps / frame budget / hard cap numbers are placeholders by R-4 and the telemetry doc ("the NUMBERS are
   guesses"); the calibration campaign replaces them. The bench asserts the placeholder marking and the eps order, never the
   values.
-- N and depth are "indicative" in §4; this task records them as given, no new values — except Ultra and Extreme, whose N is 16 (R-132); their E and render scale are REQ-PERF-086's calibrated values (TASK-M4-19).
+- N and depth are "indicative" in §4; this task records them as given, no new values — except Ultra and Extreme, whose N is 16 (R-132); their E and render scale are REQ-PERF-086's calibrated values (TASK-M4-19). Until those are recorded the Ultra and Extreme rows are marked provisional in the config (R-137, REQ-PERF-026).
 - RQ-98 ruled: R-113 — the tier names REQ-RENDER-031 and REQ-RENDER-035 used at M4 are checked here by REQ-PERF-014.

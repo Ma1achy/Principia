@@ -9,7 +9,7 @@
 - **Size:** ~380 lines
 
 ## Goal
-A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one trait: `map<F: Float>(u: F, v: F) -> ChartOut`, generic over the float type (R-118), `forbids_energy_normalisation()`, `name()` (written in every dump header) and `validate(u, v) -> ValidationResult` (R-26), CPU-side in f64, with ValidationResult's variants written into chart_reference §5.1. The first chart, `Latent { z0, q1, q2 }`, is the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ with its scale in q (R-83): no per-axis factors. D and C are written once; no chart carries decode formulae. The chart build order of chart_reference §5.1 is the order of this milestone's tasks.
+A chart is a map Φ : [0,1]² → Y followed by the shared D and C, behind one trait: `map<F: Float>(u: F, v: F) -> ChartOut<F>`, generic over the float type (R-118), `forbids_energy_normalisation()`, `name()` (written in every dump header) and `validate(u, v) -> ValidationResult` (R-26), CPU-side in f64, with ValidationResult's variants written into chart_reference §5.1. The first chart, `Latent { z0, q1, q2 }`, is the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ with its scale in q (R-83): no per-axis factors. D and C are written once; no chart carries decode formulae. The chart build order of chart_reference §5.1 is the order of this milestone's tasks.
 
 ## References
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts"

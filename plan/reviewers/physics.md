@@ -72,7 +72,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-PAY-085 — FTLE of both shadow forms against known-Lyapunov periodic orbits, and the improvement the switch requires
 - [ ] REQ-VAL-061 — starting tolerances: IC/decode ~1e-5 relative; one-step state ~1e-5 scaled by force magnitude; E₀/L_z at t=0 ~1e-6 — to be replaced by measured values
 - [ ] REQ-VAL-064 — run the kernel through native in-process wgpu; record the spread per quantity; set the tolerance above it; CI has no Dawn job
-- [ ] REQ-VAL-065 — nightly/pre-release headless run; fractions within grid sampling noise; boundary sets match within 1–2 pixels
+- [ ] REQ-VAL-065 — nightly and before-release headless run (R-134); fractions within grid sampling noise; boundary sets match within 1–2 pixels
 - [ ] REQ-VAL-071 — measured f32 horizon recorded from GPU-kernel runs
 - [ ] REQ-VAL-073 — compare GPU vs f64 CPU on the parity fixtures; assert |diff| within the parity contract's declared tolerances (tolerances are not stated in this file)
 - [ ] REQ-VAL-079 — Parity run over full trajectories on two backends — Metal on the self-hosted Apple-silicon runner and lavapipe (R-110); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory).

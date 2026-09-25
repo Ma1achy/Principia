@@ -131,7 +131,7 @@ Artboard → governing section:
 - [ ] REQ-COL-026 — enable deutan: every surface including thumbnails is simulated; no preset serialises CVD
 - [ ] REQ-COL-044 — screenshots of each v1 preset (plain, watercolour & pencil, the seven print presets) against 04_windows.png's Display window; chrome and legend are unstyled
 - [ ] REQ-GUI-019 — Node WGSL / Pipeline WGSL views show the generated code
-- [ ] REQ-GUI-020 — controls present on each Artefact-1 map
+- [ ] REQ-GUI-020 — controls present on each map of that group (R-139)
 - [ ] REQ-GUI-031 — Against the stain-editor artboard; unit test that arbitrary typed wiring is accepted and type-mismatched wiring rejected.
 
 **M8**

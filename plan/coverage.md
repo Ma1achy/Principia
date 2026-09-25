@@ -42,7 +42,7 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 
 ## Sections
 
-829 sections in 46 files: 717 yield at least one requirement; 112 yield none and are listed below with the reason.
+829 sections in 46 files: 724 yield at least one requirement; 105 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 57 |
@@ -66,13 +66,6 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | R-7 amended — part (a)'s grep | informative only | process ruling |
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
-| R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)* | **MISSING REASON** | |
-| R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)* | **MISSING REASON** | |
-| R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)* | **MISSING REASON** | |
-| R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)* | **MISSING REASON** | |
-| R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)* | **MISSING REASON** | |
-| R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)* | **MISSING REASON** | |
-| R-140 — The four readings are accepted *(closes RQ-118)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -368,13 +361,3 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
-
-## Errors
-
-- uncovered section with no reason: decisions.md § R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*
-- uncovered section with no reason: decisions.md § R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)*
-- uncovered section with no reason: decisions.md § R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*
-- uncovered section with no reason: decisions.md § R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*
-- uncovered section with no reason: decisions.md § R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*
-- uncovered section with no reason: decisions.md § R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*
-- uncovered section with no reason: decisions.md § R-140 — The four readings are accepted *(closes RQ-118)*

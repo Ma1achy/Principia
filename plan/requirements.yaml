@@ -1853,7 +1853,7 @@
   milestone: M2
 - id: REQ-CHART-028
   area: CHART
-  statement: "Every chart must implement the Chart trait with map<F: Float>(u: F, v: F) -> ChartOut generic over the float type (lowering Part 2), forbids_energy_normalisation(), name() (written in every dump header) and validate(u, v) -> ValidationResult, which stays CPU-side in f64."
+  statement: "Every chart must implement the Chart trait with map<F: Float>(u: F, v: F) -> ChartOut<F> generic over the float type (lowering Part 2), forbids_energy_normalisation(), name() (written in every dump header) and validate(u, v) -> ValidationResult, which stays CPU-side in f64."
   source:
   - file: docs/design/principia_chart_reference.md
     section: 5.1 One trait, one dispatch
@@ -1863,12 +1863,15 @@
     section: R-26 — Every chart declares its domain function *(CD-6)*
   - file: decisions.md
     section: R-118 — Φ is generic over the float type *(closes RQ-86)*
+  - file: decisions.md
+    section: R-140 — The four readings are accepted *(closes RQ-118)*
   verify:
     method: review checklist
     detail: "trait definition contains the four methods; map is generic over the float type and is instantiated at f32 by the kernel and at f64 on the CPU; validate takes f64 and runs on the CPU; each chart implements validate; dumps carry the chart name in their header"
   rulings:
   - R-26
   - R-118
+  - R-140
   milestone: M2
   note: "R-26 adds validate to the trait (the doc's trait lacks it). R-118: chart_reference §5.1 reads map<F: Float>."
 - id: REQ-CHART-029
@@ -5805,15 +5808,18 @@
   milestone: M1
 - id: REQ-GEN-012
   area: GEN
-  statement: "The diffusion sentinel −1.0 must survive pack/unpack bit-exact and the catalogue must style it, never scale it."
+  statement: "The diffusion sentinel −1.0 must survive pack/unpack bit-exact and the catalogue must show it as its literal value on the ramp, never scale it (R-136)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 5. Tests (properties any generator must satisfy)
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: unit test
-    detail: "sentinel round trip; catalogue render of −1.0 uses the sentinel style"
+    detail: "sentinel round trip; catalogue render of −1.0 shows the literal value −1.0 on the ramp (R-136)"
   rulings:
   - R-17
+  - R-136
   milestone: M1
 - id: REQ-GEN-013
   area: GEN
@@ -8638,7 +8644,7 @@
   milestone: M1
 - id: REQ-RENDER-022
   area: RENDER
-  statement: "Each generated numeric debug field's colour() must be the NaN guard — the bitcast test against the canonical quiet-NaN pattern, never `raw != raw` — returning DEBUG_NAN, followed by ramp(range_norm(raw, lo, hi, RANGE_AUTO, u_range)), with RANGE_AUTO editable identically as the node parameter and in the code."
+  statement: "Each generated numeric debug field's colour() must be the NaN guard — the bitcast test against the canonical quiet-NaN pattern, never `raw != raw` — returning debug_invalid(frag_xy) (R-136), followed by ramp(range_norm(raw, lo, hi, RANGE_AUTO, u_range)), with RANGE_AUTO editable identically as the node parameter and in the code."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -8648,13 +8654,16 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*"
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: unit test
-    detail: "generated source matches the two-line template with the bitcast guard and contains no self-comparison; toggling RANGE_AUTO as the node parameter updates the code and vice versa"
+    detail: "generated source matches the two-line template with the bitcast guard and contains no self-comparison; the guard's branch returns debug_invalid(frag_xy) (R-136); toggling RANGE_AUTO as the node parameter updates the code and vice versa"
   rulings:
   - R-79
   - R-113
   - R-114
+  - R-136
   milestone: M1
   note: "R-114: render_gui_spec §10.1's `raw != raw` is dropped. R-113 (RQ-94): the node-inspector leg of RANGE_AUTO is in REQ-GUI-136's verify (M8)."
 - id: REQ-RENDER-023
@@ -10038,7 +10047,7 @@
   milestone: M7
 - id: REQ-COL-030
   area: COL
-  statement: "Each §7.1 map must implement the definition given in its row (vMF, LUT spheres incl. analytic Cubehelix, Turbo, direction cosines, Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε=0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker+VMF, real spherical harmonics ℓ≤3, Turing standing waves, custom N-pole, basin blend, physics overlay κ=11 BC / 9 Euler-Lagrange), with LUT data from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight, cubehelix) and Moreland's table for cool-warm and the Principia palette's stops from the colour explorer, and Stability × Hue must not be among them."
+  statement: "Each §7.1 map must implement the definition given in its row (vMF, LUT spheres incl. analytic Cubehelix, Turbo, direction cosines, Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε=0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker+VMF, real spherical harmonics ℓ≤3, Turing standing waves, custom N-pole, basin blend, physics overlay κ=11 BC / 9 Euler-Lagrange), with LUT data from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight, cubehelix) Google's published Turbo table (Mikhailov 2019, Apache-2.0; R-139) for Turbo, and Moreland's table for cool-warm and the Principia palette's stops from the colour explorer, and Stability × Hue must not be among them."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 7.1 The complete map list (R-16)
@@ -10052,15 +10061,18 @@
     section: R-76 — Stability × Hue is deleted *(closes RQ-27)*
   - file: decisions.md
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+  - file: decisions.md
+    section: "R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*"
   verify:
     method: golden image
-    detail: "each map vs its render in the reference HTML files (principia_colour_explorer.html, principia_colour_presets.html; R-122); formula-level unit tests for the closed forms; LUT samples match the published tables; the preset library has no Stability × Hue entry"
+    detail: "each map vs its render in the reference HTML files (principia_colour_explorer.html, principia_colour_presets.html; R-122); formula-level unit tests for the closed forms; LUT samples match the published tables, Turbo's Google's (R-139); the preset library has no Stability × Hue entry"
   rulings:
   - R-14
   - R-16
   - R-50
   - R-76
   - R-122
+  - R-139
   milestone: M7
 - id: REQ-COL-031
   area: COL
@@ -10308,7 +10320,7 @@
   milestone: M7
 - id: REQ-COL-046
   area: COL
-  statement: "The golden-image tests must be pinned to colour_composition §7.1's complete Artefact-1 and Artefact-2 map lists, with Stability × Hue deleted from them, against the two reference HTML files as the oracle, and invalid samples must render the invalid pattern REQ-COL-055 sets."
+  statement: "The golden-image tests must be pinned to colour_composition §7.1's complete map lists, grouped under the two oracle files principia_colour_explorer.html and principia_colour_presets.html (R-139), with Stability × Hue deleted from them, against the two reference HTML files as the oracle, and invalid samples must render the invalid pattern REQ-COL-055 sets."
   source:
   - file: decisions.md
     section: "R-16 — The colour PDF's map lists are ported *(closes RQ-14)*"
@@ -10320,6 +10332,8 @@
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*"
   verify:
     method: golden image
     detail: "One golden image per §7.1 map against the reference HTML render (R-122); none for Stability × Hue; invalid samples render the REQ-COL-055 pattern (R-132)."
@@ -10329,6 +10343,7 @@
   - R-76
   - R-122
   - R-132
+  - R-139
   milestone: M7
   note: "The agreement tolerance: REQ-COL-052 (calibration). R-122: the oracle is docs/gui/reference/principia_colour_explorer.html and principia_colour_presets.html. R-132: the invalid colour collides with no palette entry (a hatched pattern), replacing 'magenta'."
 - id: REQ-COL-047
@@ -10344,7 +10359,7 @@
   milestone: M8
 - id: REQ-COL-048
   area: COL
-  statement: "Colour output must be verified at M8 by the Playwright browser suite (headless Chrome) diffing the fragment output against the same golden baselines the native wgpu offscreen renderer has set since M1, within tolerance, at pre-release and outside the parity suite, with no re-baselining without a gate decision."
+  statement: "Colour output must be verified at M8 by the Playwright browser suite (headless Chrome) diffing the fragment output against the same golden baselines the native wgpu offscreen renderer has set since M1, within tolerance, outside the parity suite, run nightly, on GUI and colour PRs and at each gate (R-134), with no re-baselining without a gate decision."
   source:
   - file: docs/contracts/principia_parity_contract.md
     section: 6. The harness
@@ -10352,12 +10367,15 @@
     section: 7. What this contract does *not* cover
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*"
   verify:
     method: golden image
-    detail: "pre-release job renders the fragment goldens in the browser build and diffs them against the native-wgpu baselines within tolerance; no baseline file changes without a recorded gate decision (R-110)"
+    detail: "the nightly, GUI/colour-PR and gate job (R-134) renders the fragment goldens in the browser build and diffs them against the native-wgpu baselines within tolerance; no baseline file changes without a recorded gate decision (R-110)"
   rulings:
   - R-71
   - R-110
+  - R-134
   milestone: M8
   note: "The diff tolerance: REQ-COL-052 (calibration). R-110: goldens render with native wgpu offscreen from M1; the browser suite reuses those baselines."
 - id: REQ-COL-049
@@ -10414,7 +10432,7 @@
 - id: REQ-COL-052
   area: COL
   kind: calibration
-  statement: "The golden-image agreement tolerance by which a recreated preset matches its render in the reference HTML files (colour_composition §7's oracle, R-122), also used by the pre-release fragment golden diffs, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  statement: "The golden-image agreement tolerance by which a recreated preset matches its render in the reference HTML files (colour_composition §7's oracle, R-122), also used by the M8 Playwright fragment golden diffs (R-134), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 7. Preset table & golden-image obligation
@@ -10424,12 +10442,15 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+  - file: decisions.md
+    section: "R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*"
   verify:
     method: numerical gate
     detail: "the proposal shows per-map pixel differences between the composition engine and the reference HTML renders over the §7.1 list, and the tolerance with its margin"
   rulings:
   - R-71
   - R-122
+  - R-134
   milestone: M7
 - id: REQ-COL-053
   area: COL
@@ -10469,7 +10490,7 @@
 - id: REQ-COL-055
   area: COL
   kind: calibration
-  statement: "The default invalid-pixel rendering (colour_composition §3's invalid colour, the prelude's DEBUG_NAN) must collide with no palette entry, as a hatched pattern rather than a flat colour, and its pattern and colours must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The default invalid-pixel rendering (colour_composition §3's invalid colour, the prelude's debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>, which draws the hatch from the pixel position, R-136) must collide with no palette entry, as a hatched pattern rather than a flat colour, and its pattern and colours must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -10483,6 +10504,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: review checklist
     detail: "the proposal gives the hatch pattern and its colours and shows it collides with no palette entry (the outcome palette incl. body-1 escape #E034C6, the dbg_* palettes, the LUTs); recorded in decisions.md"
@@ -10490,6 +10513,7 @@
   - R-16
   - R-71
   - R-132
+  - R-136
   milestone: M1
   note: "R-132: a hatched pattern, not a flat colour (the corpus's 'fixed magenta' collides with #E034C6)."
 - id: REQ-COL-056
@@ -10853,14 +10877,17 @@
   milestone: M7
 - id: REQ-GUI-020
   area: GUI
-  statement: "Every Artefact-1 colour map must offer the global Invert (v ↦ 255 − v), Blend (linear mix of any two modes) and Auto-rotate controls."
+  statement: "Every colour map in colour_composition §7.1's principia_colour_explorer.html group (R-139) must offer the global Invert (v ↦ 255 − v), Blend (linear mix of any two modes) and Auto-rotate controls."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 7.1 The complete map list (R-16)
+  - file: decisions.md
+    section: "R-139 — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*"
   verify:
     method: GUI screenshot
-    detail: controls present on each Artefact-1 map
-  rulings: []
+    detail: controls present on each map of that group (R-139)
+  rulings:
+  - R-139
   milestone: M7
 - id: REQ-GUI-021
   area: GUI
@@ -12057,7 +12084,7 @@
   milestone: M8
 - id: REQ-GUI-102
   area: GUI
-  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro, N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, Heggie with KDK leapfrog by default, Aarseth–Zare available), with no 'tolerance' field."
+  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, Heggie with KDK leapfrog by default, Aarseth–Zare available), with no 'tolerance' field."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Run — from the top bar
@@ -12071,13 +12098,16 @@
     section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*"
   verify:
     method: unit test
-    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×KDK; T_horizon is clamped to [50, 200]; no field named tolerance"
+    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×KDK; T_horizon is clamped to [50, 200]; no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
   rulings:
   - R-68
   - R-107
   - R-132
+  - R-138
   milestone: M8
   note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081)."
 - id: REQ-GUI-103
@@ -13122,17 +13152,20 @@
   note: "R-113 (RQ-93 M0-4): R-56's 'the measurement struct lands with the first frame loop' is a separate M1 requirement."
 - id: REQ-TOOL-009
   area: TOOL
-  statement: "The debug presentation layer must provide dbg_cat (Okabe–Ito cycle ≤ 8 classes, golden-angle beyond), dbg_lin (viridis ramp), dbg_log (log-compressed), dbg_flag (green/red), dbg_hash_u32 (hashed colour of a raw word) and dbg_sentinel (−1.0 → magenta, absence-NaN via exact bitcast → hatched, suspect styling hook)."
+  statement: "The debug presentation layer must provide dbg_cat (Okabe–Ito cycle ≤ 8 classes, golden-angle beyond), dbg_lin (viridis ramp), dbg_log (log-compressed), dbg_flag (green/red), dbg_hash_u32 (hashed colour of a raw word) and dbg_sentinel(x, frag_xy) (absence-NaN via exact bitcast → debug_invalid(frag_xy), the hatch; a stored sentinel such as −1.0 shown as its literal value on the ramp; suspect styling hook; R-136)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: "Presentation layer (hand-written, small, reused by every debug view)"
   - file: decisions.md
     section: "R-16 — The colour PDF's map lists are ported *(closes RQ-14)*"
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: unit test
-    detail: "each helper returns the stated colour for fixture inputs; dbg_sentinel(-1.0) == magenta; NaN bits → hatch pattern"
+    detail: "each helper returns the stated colour for fixture inputs; dbg_sentinel(-1.0, p) equals the ramp's colour for −1.0; NaN bits → debug_invalid(p), the hatch (R-136)"
   rulings:
   - R-16
+  - R-136
   milestone: M1
 - id: REQ-TOOL-010
   area: TOOL
@@ -13181,7 +13214,7 @@
   note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
 - id: REQ-TOOL-012
   area: TOOL
-  statement: "Field views must style the NaN absence sentinel and the −1 sentinel distinctly so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
+  statement: "Field views must keep the NaN absence sentinel and the −1 sentinel distinct — NaN hatched by debug_invalid(frag_xy), −1 shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -13193,11 +13226,14 @@
     section: R-79 — NaN and sentinels *(closes RQ-30)*
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: golden image
-    detail: "synthetic payload with NaN-absent ftle and diffusion = −1 renders the two distinct sentinel stylings; a forced-failure sample's d_min renders as its literal 0.0"
+    detail: "synthetic payload with NaN-absent ftle and diffusion = −1 renders ftle hatched and diffusion = −1 as its literal ramp value (R-136); a forced-failure sample's d_min renders as its literal 0.0"
   rulings:
   - R-79
+  - R-136
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
@@ -13353,7 +13389,7 @@
   milestone: M1
 - id: REQ-TOOL-023
   area: TOOL
-  statement: "f16-packed scalars (d_min, dE_max, dLz_max) must round-trip through unpack2x16float within f16 eps, and sentinels (including diffusion's −1) must be bit-exact and styled, never scaled."
+  statement: "f16-packed scalars (d_min, dE_max, dLz_max) must round-trip through unpack2x16float within f16 eps, and sentinels (including diffusion's −1) must be bit-exact and shown as their literal values on the ramp, never scaled (R-136)."
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
@@ -13361,11 +13397,14 @@
     section: D. Payload field views — `SimState` scalars (ledger §3.4)
   - file: docs/design/principia_debug_tooling_plan.md
     section: H. Codegen self-test (the tooling that tests the tooling)
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   verify:
     method: unit test
-    detail: "pack/unpack within f16 eps; sentinel values render in the sentinel style"
+    detail: "pack/unpack within f16 eps; sentinel values render as their literal values on the ramp (R-136)"
   rulings:
   - R-17
+  - R-136
   milestone: M1
 - id: REQ-TOOL-024
   area: TOOL
@@ -15977,11 +16016,14 @@
     section: 6. The harness
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-134 — When the Playwright suite and the aggregate survey run *(closes RQ-112)*"
   verify:
     method: numerical gate
-    detail: "nightly/pre-release headless run; fractions within grid sampling noise; boundary sets match within 1–2 pixels"
+    detail: "nightly and before-release headless run (R-134); fractions within grid sampling noise; boundary sets match within 1–2 pixels"
   rulings:
   - R-71
+  - R-134
   milestone: M4
   note: "The statistic and threshold (Q3): REQ-VAL-125 (calibration)."
 - id: REQ-VAL-066
@@ -17433,7 +17475,7 @@
   note: "R-43 is recorded (applied before WebGPU deployment); R-132 sets Ultra and Extreme to N = 16 (REQ-PERF-086). Measure, do not assume."
 - id: REQ-PERF-012
   area: PERF
-  statement: "The compute dispatch must be one workgroup per quad with one thread per texel (N² threads, 64 at N = 8), each ensemble copy being the same kernel dispatched again with copy_index a uniform (R-102), with workgroup shared memory holding only reduction accumulators, never live states."
+  statement: "The compute dispatch must be one workgroup per quad with one thread per texel (N² threads, 64 at N = 8), each ensemble copy being the same kernel dispatched again with copy_index a uniform (R-102), with workgroup shared memory holding only reduction accumulators, never live states; the across-copy reduction must be its own resolve pass, run after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (R-135)."
   source:
   - file: docs/design/principia_systems_architecture.md
     section: The shape
@@ -17443,12 +17485,15 @@
     section: "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
   - file: decisions.md
     section: R-102 — The ensemble isn't a baked variant *(closes RQ-62)*
+  - file: decisions.md
+    section: "R-135 — The across-copy reduction is its own resolve pass *(closes RQ-113)*"
   verify:
     method: unit test
-    detail: "shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies"
+    detail: "shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies; the resolve pass is dispatched after the E+1 copy dispatches and is the only writer of the footprint resolve and QuadReduction (R-135)"
   rulings:
   - R-102
   - R-124
+  - R-135
   milestone: M4
   note: "R-124: systems_architecture §5.5's 'ensemble copies serial' is conformed to R-102 (its heading changes; the source is re-pointed)."
 - id: REQ-PERF-013
@@ -17638,28 +17683,34 @@
     section: R-59 — Fix D1 to D6 as listed *(sheet §8)*
   - file: decisions.md
     section: "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
+  - file: decisions.md
+    section: "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
   verify:
     method: unit test
-    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B"
+    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137)"
   rulings:
   - R-40
   - R-59
   - R-73
+  - R-137
   milestone: M5
 - id: REQ-PERF-026
   area: PERF
-  statement: "Named tiers must populate render_scale, E, FTLE and word per the §4 table (Potato 0.25×/E 0/no FTLE/no word; Low 0.5×/0/no FTLE/word on; Medium 0.75×/1/FTLE; High 1.0×/3/FTLE; Ultra 1.0×/7/FTLE; Extreme 1.0×/15/FTLE), with N and depth indicative."
+  statement: "Named tiers must populate render_scale, E, FTLE and word per the §4 table (Potato 0.25×/E 0/no FTLE/no word; Low 0.5×/0/no FTLE/word on; Medium 0.75×/1/FTLE; High 1.0×/3/FTLE; Ultra 1.0×/7/FTLE; Extreme 1.0×/15/FTLE), with N and depth indicative, and the Ultra and Extreme rows provisional until REQ-PERF-086's calibration lands (R-137)."
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 4. The six quality tiers
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
   verify:
     method: unit test
-    detail: each named preset's QualitySettings matches its row
+    detail: "each named preset's QualitySettings matches its row; the Ultra and Extreme rows are marked provisional in the config until REQ-PERF-086 is recorded (R-137)"
   rulings:
   - R-43
   - R-132
+  - R-137
   milestone: M5
   note: "The N column's 24 and 32 are subject to R-43; R-132 caps Ultra and Extreme at N = 16, their E and render scale calibrated by REQ-PERF-086."
 - id: REQ-PERF-027
@@ -18668,11 +18719,14 @@
     section: The rename
   - file: decisions.md
     section: "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
+  - file: decisions.md
+    section: R-140 — The four readings are accepted *(closes RQ-118)*
   verify:
     method: review checklist
-    detail: "the vocabulary lint over code and docs (excluding archive and passages wrapped in <!-- retired-terms --> … <!-- /retired-terms -->, R-111) finds none of the retired identifiers"
+    detail: "the vocabulary lint over code and docs (excluding archive and passages wrapped in <!-- retired-terms --> … <!-- /retired-terms -->, R-111) finds none of the retired identifiers, matched case-sensitively as identifiers (TIMEOUT, not the prose \"timeout\"; R-140)"
   rulings:
   - R-111
+  - R-140
   milestone: M0
 - id: REQ-SYS-003
   area: SYS
@@ -19144,11 +19198,14 @@
     section: Part 7 — The frame loop (lockstep presentation)
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: R-140 — The four readings are accepted *(closes RQ-118)*
   verify:
     method: review checklist
     detail: "the loop has no blocking await on GPU completion; it is hosted on a dedicated render thread, not the input/GUI thread"
   rulings:
   - R-113
+  - R-140
   milestone: M5
   note: "R-113 (RQ-99 M5-5): the wasm-engine worker is REQ-SYS-039/049's (M8)."
 - id: REQ-SYS-035

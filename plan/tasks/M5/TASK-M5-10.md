@@ -38,7 +38,7 @@ check.
 ## Acceptance tests
 - `cargo test -p engine render_target_bytes` — the allocator's render-target bytes match the formula at several display sizes and render_scale values (REQ-PERF-015).
 - `cargo test -p engine payload_estimate_table` — estimator at 1080p E=3 FTLE-on returns 1.194 + 0.133 = 1.327 GB; 4K E=3 FTLE-on 5.308 GB; the estimator's figure is unchanged with checkerboard on and off (R-113) (REQ-PERF-018).
-- `cargo test -p engine memory_tiers_table` — estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B (REQ-PERF-025).
+- `cargo test -p engine memory_tiers_table` — estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137) (REQ-PERF-025).
 - Review checklist (perf) — the fit check sums every term and applies the margin (REQ-PERF-031).
 - `cargo xtask bench memory-fit-margin` — the proposal records the margin with its method: estimator figures against measured process memory across tiers and resolutions; reviewer-checked, confirmed by the human at the M5 gate and recorded in decisions.md (REQ-PERF-093).
 

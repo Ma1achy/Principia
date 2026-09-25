@@ -9,7 +9,7 @@
 - **Size:** ~500 lines (presets as data; images are fixtures)
 
 ## Goal
-Every map of colour_composition §7.1 — Artefact 1 (VMF OKLAB, VMF Okabe–Ito, the nine LUT spheres, Turbo, direction cosines) and Artefact 2 (Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε = 0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker + VMF, real spherical harmonics ℓ ≤ 3, Turing standing waves, custom N-pole, basin blend, physics overlay κ = 11 BC / 9 Euler-Lagrange) — and every debug view exists as a composition preset implementing its row's definition, with no Stability × Hue (R-76). Each ships with a golden-image test against its render in the two reference HTML files, `docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html`, named the oracle in colour_composition §7 (R-122); invalid samples render REQ-COL-055's hatched pattern (R-132); the agreement tolerance is proposed with per-map evidence (R-71).
+Every map of colour_composition §7.1 — the `principia_colour_explorer.html` group (VMF OKLAB, VMF Okabe–Ito, the nine LUT spheres, Turbo from Google's published table (Mikhailov 2019, Apache-2.0; R-139), direction cosines, which is in `principia_colour_presets.html`) and the `principia_colour_presets.html` group (Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε = 0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker + VMF, real spherical harmonics ℓ ≤ 3, Turing standing waves, custom N-pole, basin blend, physics overlay κ = 11 BC / 9 Euler-Lagrange) — and every debug view exists as a composition preset implementing its row's definition, with no Stability × Hue (R-76). Each ships with a golden-image test against its render in the two reference HTML files, `docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html`, named the oracle in colour_composition §7 (R-122); invalid samples render REQ-COL-055's hatched pattern (R-132); the agreement tolerance is proposed with per-map evidence (R-71).
 
 ## References
 - `docs/design/principia_colour_composition.md` § "7. Preset table & golden-image obligation"
@@ -40,7 +40,7 @@ Every map of colour_composition §7.1 — Artefact 1 (VMF OKLAB, VMF Okabe–Ito
 - `cargo xtask gate colour-golden-tolerance` — the proposal shows per-map pixel differences between the composition engine and the reference HTML renders over the §7.1 list, and the tolerance with its margin; confirmed by the human at the M7 gate (REQ-COL-052).
 
 ## Notes
-- Calibration (R-71): REQ-COL-052; the same tolerance serves the pre-release fragment golden diffs (parity §6).
+- Calibration (R-71): REQ-COL-052; the same tolerance serves the M8 Playwright fragment golden diffs (parity §6, R-134).
 - PIT-8: the invalid pattern must stay distinguishable from any map's data colours (R-132: it collides with no palette entry).
 - RQ-101 ruled: R-122 — the two reference HTML files are the oracle (colour_composition §7 conformed in step 7); LUT data from the published matplotlib tables and Moreland's cool-warm table, the Principia stops from the explorer (TASK-M7-07). This settles both gaps.
-- Gap: Turbo's table source is not named by R-122.
+- R-139 names Turbo's source: Google's published Turbo table (Mikhailov 2019, Apache-2.0), checked in with its source named; the §7.1 group labels name the two oracle files.
