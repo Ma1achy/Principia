@@ -236,10 +236,10 @@ pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look lik
 invalid colour is a conspicuous out-of-gamut-adjacent tone (a fixed magenta, a plain default, R-16), overridable per
 node.
 
-**Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are portable
-WGSL, the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
+**Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
+WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
 (z))` residual). This is what dissolves most of the §A kernel modes (§6) and enables **agreement
-presets** (fragment-decode vs kernel-payload) as live cross-implementation checks.
+presets** (fragment-decode vs kernel-payload) as live checks of that translation.
 
 ---
 
@@ -343,7 +343,8 @@ values from a published reference implementation, named with its version when th
 - comments carrying the node name and its parameter values;
 - parameters bound as **uniforms**, so slider tweaks rebind rather than recompile;
 - a small shared WGSL library the codegen calls into: `vmf_weight`, `nearest`, `topk`, `oklab↔srgb`,
-  `lut_sample`, the static site arrays, the field functions, the decode/encode port. (This library
+  `lut_sample`, the static site arrays, the field functions, the decode/encode (translated from the one Rust source,
+  never hand-written — R-116). (This library
   is what replaces the 33 bespoke pixel functions.)
 
 **View code.** Every pipeline stage exposes its generated WGSL snippet for reading. The graph *is* a
@@ -383,15 +384,16 @@ become a **post-chain `bandmask` step** on `distance-to-quad-edge` — strictly 
 because you can now overlay quad boundaries on the *normal* render.
 
 **§A kernel modes → mostly presets, via fragment-side recompute (§3).** With `ctx.chart.z` present
-and the decode/encode ported to WGSL:
+and the decode/encode translated to WGSL from the one Rust source (R-116):
 - **UV view** = `colour = ctx.screen.uv → RG` (fragment addressing) or `ctx.quad.uv → RG` (structural
   addressing).
 - **DECODE view** = fragment-side decode of `ctx.chart.z`, coloured.
 - **ROUNDTRIP** = fragment-side `encode(decode(z))` residual, ramped.
 - **Agreement presets** (new, and better than the originals) = `|E(fragment-decode) − ctx.payload.E₀|`
   and friends: WGSL-decode vs Rust-decode. These simultaneously test **write-addressing** (a dispatch
-  scramble shows as spatial disagreement) and are a **live cross-implementation check** between the
-  two decode ports — the project's two-references discipline, running on every debugged frame.
+  scramble shows as spatial disagreement) and are a **live check between two compilation paths of one
+  source** — the kernel's rust-gpu build and its SPIR-V → WGSL translation — so they check the translation, not a
+  transcription (R-116), running on every debugged frame.
 
 **Discipline 1 — debug presets ship locked.** Their diagnostic value is that ROUNDTRIP-red means the
 same thing every time. Editing a debug preset **forks it to custom** via the same one-way eject; it

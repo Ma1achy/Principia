@@ -155,7 +155,7 @@ These certify the **CPU brain** — a wrong view here exonerates the GPU and poi
 
 1. **0a — generation root**: ledger + generated pack/unpack (Rust + WGSL) + codegen self-test (§H). Nothing renders yet; tests green.
 2. **0b — synthetic payload harness**: CPU-fill `SimState`/`ICDescriptor`, the field-view shaders (§B–E) + their accessor tests. **Screen colours a hand-filled buffer; both surfaces green — before any physics.**
-3. **0c — the kernel bring-up mode** (§A): the kernel writes a known pattern, so the payload write path is trusted first. The §A presets follow on the fragment side: the UV preset first (needs only quad-local coords), then the DECODE preset once the WGSL decode port lands (Phase 1), ROUNDTRIP once encode lands (R-75).
+3. **0c — the kernel bring-up mode** (§A): the kernel writes a known pattern, so the payload write path is trusted first. The §A presets follow on the fragment side: the UV preset first (needs only quad-local coords), then the DECODE preset once the WGSL decode — translated from the one Rust source, never hand-written (R-116) — lands (Phase 1), ROUNDTRIP once encode lands (R-75).
 4. **structural views (§F)** land the moment `RenderQuad` is *defined* — before the scheduler *logic* that fills it with interesting values, so adaptive refinement is visible as it's built. **The UV-passthrough coordinate view is the earliest of all** — it needs only a rasterised quad and the flip, so it lands before decode/schedule/anything, catching a wrong Y-convention (coordinate note) at the very first pixel rather than a week later in the wrong subsystem.
 5. **cross-checks (§G)** land per the seam they certify, as those components arrive.
 
