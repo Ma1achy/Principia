@@ -42,7 +42,7 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 767 yield at least one requirement; 108 yield none and are listed below with the reason.
+875 sections in 46 files: 768 yield at least one requirement; 107 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,7 +67,6 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-180 — pr-check is item-level *(closes A5)* | **MISSING REASON** | |
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
@@ -367,5 +366,4 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-180 — pr-check is item-level *(closes A5)*
 - uncovered section with no reason: decisions.md § R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*

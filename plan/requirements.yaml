@@ -15187,10 +15187,13 @@
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.5 Verify against the formulation, not just the data
+  - file: decisions.md
+    section: R-180 — pr-check is item-level *(closes A5)*
   verify:
     method: review checklist
     detail: "Each error meter documents which quantity the occupant actually integrates; meters on non-dynamical quantities are rejected."
-  rulings: []
+  rulings:
+  - R-180
   milestone: M0
 - id: REQ-VAL-002
   area: VAL
@@ -15247,10 +15250,13 @@
   source:
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: decisions.md
+    section: R-180 — pr-check is item-level *(closes A5)*
   verify:
     method: review checklist
     detail: "Each discriminator in a validation record lists its dependency on termination; any that depends on the tested termination (d_min, t_end-truncated statistics) is rejected or recomputed on fully integrated runs."
-  rulings: []
+  rulings:
+  - R-180
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. — A DISCRIMINATOR CAN BE POISONED BY ITS OWN SUBJECT."
 - id: REQ-VAL-006
