@@ -23,7 +23,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 - **Configuration (2 DOF).** After rotation + scale are gauged away, what remains is the pure *shape* of the triangle — a point on the **shape sphere S²**, coordinates `(α, β)` (equivalently `(θ, φ)`). Scale is gauged legitimately because Newtonian gravity has the similarity symmetry `r → λr, t → λ^{3/2}t`: different-size ICs are time-rescalings of one another, dynamically equivalent. Rotation is gauged because planar orientation is physically irrelevant (only `L_z` matters, and that lives in momentum).
 - **Momentum (4 DOF).** Two planar Jacobi momentum vectors `(p_ρ, p_λ)`. The rest start sits at the origin. `L_z`, `E`, `KE`, `PE` are *derived* from this block (with masses/positions for `E`, `PE`), not independent axes.
-- **Mass (2 DOF).** The 2-simplex `Δ² = {(m₁,m₂,m₃) : Σ = 1, mᵢ > 0}`. Two controls (softmax logits) cover it. Burrau `(c,b,a)/(a+b+c)` is one point; equal mass `(⅓,⅓,⅓)` the barycentre.
+- **Mass (2 DOF).** The 2-simplex `Δ² = {(m₀,m₁,m₂) : Σ = 1, mᵢ > 0}`. Two controls (softmax logits) cover it. Burrau `(c,b,a)/(a+b+c)` is one point; equal mass `(⅓,⅓,⅓)` the barycentre.
 
 **Shape-sphere redundancy:** the canonical decode gauges the `λ̃_y → −λ̃_y` reflection, i.e. `(θ,φ) ∼ (θ, π−φ)` (θ azimuthal, φ polar from `+w`; R-14, chart reference §3.3). The φ hemispheres are reflection-equivalent — the chart is a **2-to-1 cover**. Render one hemisphere or flag the redundancy.
 
@@ -38,7 +38,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 ```
 z[0:2]  → configuration controls  → (α, β)              [config block]
 z[2:6]  → momentum controls (4)   → (p_ρ, p_λ)          [momentum block]
-z[6:8]  → mass controls (2)       → softmax → (m₁,m₂,m₃) [mass block]
+z[6:8]  → mass controls (2)       → softmax → (m₀,m₁,m₂) [mass block]
 ```
 
 **Factorised decode** `D = D_mass × D_cfg × D_mom`, i.e. `Y ≅ Y_mass × Y_cfg × Y_mom` with `2 × 2 × 4 = 8`:
@@ -73,7 +73,7 @@ A decoder stage reaches a *constrained* physical quantity from an unbounded cont
 
 | Block constraint | Physical target | Natural links | Inverse (encode/lookup) |
 |---|---|---|---|
-| Simplex Δ² | masses `(m₁,m₂,m₃)`, Σ=1 | softmax; temperature-softmax; pre-saturate logits with `μ_max·tanh` (the current default, `principia_dd_decoder.md` §3.1) | log-ratios → `artanh` |
+| Simplex Δ² | masses `(m₀,m₁,m₂)`, Σ=1 | softmax; temperature-softmax; pre-saturate logits with `μ_max·tanh` (the current default, `principia_dd_decoder.md` §3.1) | log-ratios → `artanh` |
 | Bounded interval `(a,b)` | config angles `α, β`; capped momenta | scaled/shifted **sigmoid**; scaled **tanh** | `logit` / `artanh` |
 | Positive half-line `(0,∞)` | any positive unbounded param | **softplus**, **exp** | `log` / inverse-softplus |
 | Symmetric cap `(−c,c)` | signed capped param | `c·tanh`, `c·(2σ−1)` | `artanh` |
@@ -122,13 +122,13 @@ z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂        (s,t) ∈ [0,1]²
 | Kind | What the axis is | How it pins DOF | Cost / caveat |
 |---|---|---|---|
 | **1. Raw latent** | a single `z_k` | direct assignment | trivial |
-| **2. Derived-in-block** | scalar inside one block: `m₁`, `θ`, `φ` | inverts into its block | **under-determines the 2D block** → chart must declare a *residual convention* for the leftover within-block DOF |
+| **2. Derived-in-block** | scalar inside one block: `m₀`, `θ`, `φ` | inverts into its block | **under-determines the 2D block** → chart must declare a *residual convention* for the leftover within-block DOF |
 | **3. Cross-block invariant** | `E`, `L_z`, `K`, `KE`, `PE` | *solves* into a downstream sector, upstream sectors read as fixed | must sit **downstream** of every block it depends on; brings **feasibility boundaries** (infeasible pixels tagged, not dropped); two coupled invariants → joint solve |
 | **4. Coupled curve** | one scalar `ν` slaving *several* blocks via a fixed nonlinear embed (Burrau/Euclid: `ν → (α,β,μ₁,μ₂)`) | the embed pins config + mass together | tilt is only well-posed **at a point** (Part 4); decouple the coupling → decomposes back to a plain block axis |
 
 Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop the mass coupling is the signal the taxonomy is at the right level.
 
-**Residual conventions (kind 2)** are a first-class chart property. "The `m₁` axis" is ambiguous until you declare the fate of the other mass DOF: hold `m₂ = m₃`, hold the `m₂:m₃` ratio, or pin `z₇`. Different conventions give genuinely different one-parameter families — all valid, all must be *labelled*.
+**Residual conventions (kind 2)** are a first-class chart property. "The `m₀` axis" is ambiguous until you declare the fate of the other mass DOF: hold `m₁ = m₂`, hold the `m₁:m₂` ratio, or pin `z₇`. Different conventions give genuinely different one-parameter families — all valid, all must be *labelled*.
 
 **Mixed-axis charts:** the two axes need not share a block. Any pair. When one axis is a configuration coordinate and the other its conjugate momentum, the render **is literally a Poincaré section** — it lifts the phase-space degeneracy (same shape, different momentum, different fate) that a config-only chart collapses.
 
@@ -168,9 +168,9 @@ Fixing the six non-displayed coordinates to constants; changing the slice = step
 **A slice direction or tilt target is the same object as a chart axis: one of the four kinds of Part 3, evaluated at a point.**
 
 - **Raw latent** directions (`e_k`) are constant vectors — the same everywhere, no anchor needed.
-- **Derived, invariant, and coupled** directions are *tangent vectors to constrained curves* — they depend on where you are, so they must be **evaluated at the chart centre**. "Increase E at fixed L_z" is a different vector at every point (it's a tangent *field*); the named compound directions (below) are exactly these, and this is why they must be recomputed when the centre changes. "Vary m₁ holding m₂:m₃" is a tangent to a curve through the centre, carrying the same **residual convention** as the corresponding axis kind.
+- **Derived, invariant, and coupled** directions are *tangent vectors to constrained curves* — they depend on where you are, so they must be **evaluated at the chart centre**. "Increase E at fixed L_z" is a different vector at every point (it's a tangent *field*); the named compound directions (below) are exactly these, and this is why they must be recomputed when the centre changes. "Vary m₀ holding m₁:m₂" is a tangent to a curve through the centre, carrying the same **residual convention** as the corresponding axis kind.
 
-Consequence, stated once and inherited everywhere: **the caveat "identical ICs except the one that varies" is true in *controls*, not automatically in *physical quantities*.** Slicing along raw `z₆` moves **all three masses** (the softmax couples them) — the line is "identical except one mass logit." Physical one-quantity lines (only `m₁`, only `E`) are derived/invariant *directions* with conventions, i.e. curves, not raw latent lines. The UI must label which it is showing.
+Consequence, stated once and inherited everywhere: **the caveat "identical ICs except the one that varies" is true in *controls*, not automatically in *physical quantities*.** Slicing along raw `z₆` moves **all three masses** (the softmax couples them) — the line is "identical except one mass logit." Physical one-quantity lines (only `m₀`, only `E`) are derived/invariant *directions* with conventions, i.e. curves, not raw latent lines. The UI must label which it is showing.
 
 **Named compound directions.** Predefined $\mathbf q$ vectors for physically meaningful orientations, used
 as slice directions or tilt targets:

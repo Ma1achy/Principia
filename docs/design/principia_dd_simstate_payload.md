@@ -33,8 +33,8 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 struct SimStateFTLE {
     // ── PHASE STATE (f32) — CoM-frame PARTICLE coordinates ──  48 B
-    r  : array<vec2<f32>, 3>,     // body 1,2,3 positions (CoM frame), re-projected to CoM each step
-    p  : array<vec2<f32>, 3>,     // body 1,2,3 momenta   (CoM frame)
+    r  : array<vec2<f32>, 3>,     // body 0,1,2 positions (CoM frame), re-projected to CoM each step
+    p  : array<vec2<f32>, 3>,     // body 0,1,2 momenta   (CoM frame)
     //   NOT Jacobi. Jacobi (2 vectors, 8D) is the CHART/IC representation; the integrator
     //   works in particle coordinates (clean force loop — no per-step Jacobi↔particle conversion).
     //   Conversion Jacobi→particle happens ONCE at IC decode. The CoM constraint makes one of the
@@ -66,7 +66,7 @@ struct SimStateFTLE {
                                   //   NOT stored in the descriptor (descriptor uses bits 0–9; 10–15 reserved).
 
     // ── CLOSURE (return-map) ────────────────────────────────  8 B
-    closure_min  : f32,           // running min over t > t_min of |n̂(t) − n̂(0)| — the SHAPE-sphere
+    closure_min  : f32,           // running min, once departed (R-37), of |n̂(t) − n̂(0)| — the SHAPE-sphere
                                   //   closure, so rotation is quotiented out and RELATIVE periodic
                                   //   orbits count, not only inertially-periodic ones. Latched in a
                                   //   local f32 during the march (the `d_min` rule); this is a
@@ -115,9 +115,11 @@ reads as 1e-7 on the GPU. **That is saturation, not a lost orbit**, and it is th
 reportable limit as `t_max = ln(1/eps)/lambda`. Note the contrast is still ~7 decades against a
 random IC's O(1) closure, so orbits remain unmissable at f32.
 
-**One semantic that must be pinned:** closure is trivially 0 at `t = 0`, so the minimum is taken over
-`t > t_min`. Define `t_min` **gauge-covariantly** — after the state has moved by more than a stated
-fraction of the system size — not as an absolute time, or the field inherits a scale.
+**One semantic that must be pinned (R-37):** closure is trivially 0 at `t = 0`, so the minimum starts only once the shape
+has **departed**: once `|n̂(t) − n̂(0)|` has first exceeded a stated threshold `δ_dep` on the shape sphere. The shape
+sphere is scale-free, so the rule is gauge-covariant by construction and the field inherits no scale; it is not an
+absolute time. **`δ_dep` is set by measurement** (open). Departure is a latched fact, so it needs one bit per sample;
+where that bit lives is not yet specified (open-questions).
 
 **Coordinate pipeline (resolves the "Jacobi" naming):** Jacobi coordinates (2 position + 2 momentum vectors, the minimal 8D symmetry-reduced set) are the **chart / IC** representation — where configurations are *defined*. The **integrator** works in **CoM-frame particle coordinates** (3 bodies) — where the force loop is direct (no per-substep Jacobi↔particle conversion; the potential depends on pairwise particle separations, which are ugly in Jacobi). Conversion happens **once at IC decode** (Jacobi → 3 particles). **After each step the state is re-projected to the CoM** so numerical error doesn't let the centre of mass drift. This re-projection is **part of the deterministic fixed-`dt` step** (integrate → project). Re-projection manages CoM position / total linear momentum; it **does not explicitly restore energy or `L_z`** — but note that subtracting the spurious CoM *velocity* removes bulk kinetic energy, so the projection **does numerically affect the evaluated energy** (and, in principle, `L_z`). The correct framing: the projection does not explicitly restore E or `L_z`; any change from removing accumulated CoM position/momentum drift **remains visible in the post-projection invariant diagnostics** (which is what those diagnostics are for).
 
@@ -154,20 +156,22 @@ fraction of the system size — not as an absolute time, or the field inherits a
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed · 5 decode_failed. **Codes 6–7 reserved** — a binary decoder treats **unknown non-running states as conservatively finished and untrusted** (forward-compat). `detail` meaningful when state ∈ {escape, collision, sim_failed, decode_failed} (enum below) |
 | `detail` | 3–4 | 2 | **union keyed by state** — 4 codes per state. escape → body id (0–2), `3` = **triple ejection**; collision → pair id (0–2), `3` = **triple collision** — one rule, *3 means all three* (pending change 7); sim_failed / decode_failed → failure category |
 | `saturated` | 5 | 1 | sticky — **`N_sub == N_max` occurred** at some macro-step (substep cap hit; advance-and-flag, never terminates) |
-| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (0–2, `3`=unset/invalid; latched, NOT from the word) |
+| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (pair id 0–2 per the map below, `3`=unset/invalid; latched, NOT from the word) |
 | `last_symbol` | 8–9 | 2 | **final symbol of the free-group word**, cached from the append loop for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`). Redundant with the sidecar word `W` (recoverable there only in O(length)); kept coherent by the march (§3). **No in-band "none" code** — validity gates on the sidecar `length`: meaningful iff `length ≥ 1 && length ≠ 127` (empty word → no last symbol; truncated → invalid, like every word-derived read). Written by `set_last_symbol` wherever the loop mutates `prev` (§3, §6) |
 | *reserved* | 10–15 | 6 | `total_substeps_log2` derived at read from the exact `total_substeps` u32 (§1), not stored (a log accumulator is not resumable). Reserved, decode as zero, never opportunistically reused |
 
-> **`last_symbol` (bits 8–9) is a deliberate, versioned assignment — a binary-format version bump, not an opportunistic reuse of reserved space.** Bits 8–15 were held "decode as zero, never opportunistically reused"; spending 8–9 is a format change on the same footing as changing the frozen continuation table (§3) — every reader must agree on the new layout, so it carries a format-version increment. The remaining 10–15 stay reserved under the same rule. The field is a *redundant cache* of the sidecar word's final symbol (§3): it adds no new physical information (the word `W` already determines it), only O(1) fragment access; a reader that ignores it loses only the cheap last-symbol read, never correctness.
+> **`last_symbol` (bits 8–9) is a deliberate, versioned assignment — a binary-format version bump, not an opportunistic reuse of reserved space.** Bits 8–15 were held "decode as zero, never opportunistically reused"; spending 8–9 is a format change on the same footing as changing the frozen continuation table (§3) — every reader must agree on the new layout, so it carries a format-version change (automatic: the version is the ledger's content hash, R-36). The remaining 10–15 stay reserved under the same rule. The field is a *redundant cache* of the sidecar word's final symbol (§3): it adds no new physical information (the word `W` already determines it), only O(1) fragment access; a reader that ignores it loses only the cheap last-symbol read, never correctness.
 
 > **`bounded` (state 1) is a FINITE-HORIZON classification, not a proof of permanent boundedness.** It means: neither escape nor collision occurred **within horizon `T`** (which lives in the sim key). Permanent boundedness is (in general) **not decidable** for the three-body problem — no finite integration can certify it — so `bounded` is the standard field term for "survived to `T`" and carries no claim about `t > T`. This is not a limitation being papered over: finite-horizon outcome *is* the only well-posed classification the system admits. Consequences: basin fractions, ML labels, and quad impurity are all "at horizon `T`"; cross-horizon comparison must account for `T` (the sim key carries it, so a single dataset is automatically horizon-consistent). The UI may render `bounded` as "bounded over the selected horizon." The term stays `bounded` (literature-standard — Lehto et al. etc.); it is not renamed to `survived_horizon`, which would fix nothing (the same might-escape-later caveat applies) while breaking legibility with the field.
 
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
+- **Body and pair ids (R-22).** Bodies are 0-based (`0, 1, 2`), as the decode is. **Pair id `k` names the side opposite body `k`:**
+  pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
 - **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)
 
-> **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Likewise an IC that at t=0 genuinely satisfies the complete escape detector (outward *and* positive outer-energy gates, not merely beyond `R_esc`) is an **escape at step 0** (`state=escape`, `detail=body`, `t_end_step=0`). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC. (Whether beyond-`R_esc`-alone counts as t=0 escape is deferred to the decoder contract's escape-gate definition.)
+> **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Escape has no step-0 case: its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC.
 
 **Drift latches are ABSOLUTE maxima:** `dE_max = max_t |ΔE(t)|`, `dLz_max = max_t |ΔL_z(t)|` (in `packed_b`, f16 — §1, held in f32 during the march). `d_min = min_t |separation|` (in `packed_a` high half). All monotone latches over the whole trajectory.
 
@@ -273,7 +277,7 @@ cont_symbol[0]= [0,1,2,3]   // digit 0 = identity
 cont_symbol[1]= [2,3,0,1]   // digit 1
 cont_symbol[2]= [3,2,1,0]   // digit 2
 ```
-**Each permutation is self-inverse** (an involution), so `predecessor_symbol[e] == cont_symbol[e]` — the *same* table serves both forward (`prev,digit→next`) and reverse (`next,digit→prev`), and `continuation_index` is derived by inverting `cont_symbol` (`continuation_index[prev][next]` = the digit `e` with `cont_symbol[e][prev]==next`). **The Rust kernel/host and the WGSL fragment side MUST use this identical generated table** — it is frozen in the Rust layout definition (emitted to both targets) and any change is a binary-format version bump.
+**Each permutation is self-inverse** (an involution), so `predecessor_symbol[e] == cont_symbol[e]` — the *same* table serves both forward (`prev,digit→next`) and reverse (`next,digit→prev`), and `continuation_index` is derived by inverting `cont_symbol` (`continuation_index[prev][next]` = the digit `e` with `cont_symbol[e][prev]==next`). **The Rust kernel/host and the WGSL fragment side MUST use this identical generated table** — it is frozen in the Rust layout definition (emitted to both targets) and any change is a binary-format version change: the table is hashed with the ledger (R-36), so the change is automatic.
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```
@@ -489,8 +493,11 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 >
 > **100% precision, 96.3% recall**, against 97.9% for the old test. `receding` and `d > r_esc` are
 > **redundant** once both hold (identical to the digit), so three tuned constants are eliminated.
-> `tau` sits in a **383× gap** and is not tuned. Fires at `t≈10` rather than `t≈1.5` — **late rather
+> `tau` sits in a **383× gap** and is not tuned *(to re-measure, R-29)*. Fires at `t≈10` rather than `t≈1.5` — **late rather
 > than wrong**, which is correct for a *stored* `t_end`.
+>
+> `E_rel`, the window and the escaper are defined by R-29 (integrator contract Part 7). The precision, recall and gap above
+> predate R-29's `E_rel` and are to re-validate.
 >
 > **And escape must not terminate integration until §2.4's three checks pass.** Freezing a
 > trajectory whose displayed quantity is still moving is what produced the patchwork artefact
@@ -523,6 +530,8 @@ spread is undetermined — 11 such footprints in `deep interior` under the old k
 `d_min` discriminator poisoned by its own subject: **the measurement was correct and the column chosen
 could not see it.**
 
-**Closure** (`closure_min: f32`, `closure_step: u16`) is specified above and is the same quantity as
-the escape criterion's settling test — closure → 0 and spectral entropy → 0 are one statement. It is
+**Closure** (`closure_min: f32`, `closure_step: u16`) is specified above. It is related to the escape criterion's settling
+test but is not the same quantity: `closure_min` is the running minimum of `|n̂(t) − n̂(0)|` against the *initial* shape,
+while the settling test is `|Δn̂|` over a 0.4-time-unit window (R-29), which needs `n̂` from one window earlier. Closure → 0
+and spectral entropy → 0 are one statement. It is
 also the input to the **sonification** channel (`principia_scratchpad_pointer_channels.md`).

@@ -119,7 +119,7 @@ The per-quad dispatch request carries a bit-packed `flags` word:
 | 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |
 | 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result |
 | 5 | `COMPUTE_IC_DESCRIPTOR` | write the `ICDescriptor` buffer alongside the results (dd_decoder §3.6) |
-| 6–7 | reserved | |
+| 6–7 | reserved | not `DEBUG_MODE`, which is a baked kernel variant (R-41) |
 
 When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel in a **separate uniform buffer**, bound only for linear-path quads, not inside the request. They are about 45 floats and unused at shallow zoom. The request also carries the quad's centre and half-width, computed on the CPU in f64 and passed as f32. The GPU computes sample positions from them as `u = centre + half·(2t − 1)` (deep-zoom note §1), never from the min/max bounds, which are kept for CPU-side scheduling, culling and debugging.
 

@@ -208,7 +208,8 @@ sharper test.
 The suite above validates. **The same quantity, stored per sample, turns the atlas into a search.**
 
 Specced as `closure_min: f32` + `closure_step: u16` in `SimState`
-(`principia_dd_simstate_payload.md` §1; pending change 9).
+(`principia_dd_simstate_payload.md` §1; pending change 9). The minimum starts once the shape has departed from
+`n̂(0)` by a measured threshold `δ_dep` (R-37).
 
 ### 6.1 Why rendering beats searching
 

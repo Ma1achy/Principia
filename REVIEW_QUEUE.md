@@ -244,3 +244,18 @@ Change 1 is resolved, and render_contract Part 6 still asks for the field the re
 - **Needed:** whether the mask compares at the joint grain against the existing `dominant_outcome` (no new field; the mask
   definition changes from `state` to `class ⊕ detail`), or keeps a class-only `majority_class`.
 - **Ruling:** R-20 (decisions.md) — applied in step 4
+
+## RQ-19: No t = 0 escape outcome under R-29 *(step 5, applying R-29)*
+
+R-29's settling test needs `|Δn̂|` over 0.4 time units, so it can't be evaluated on the decoded IC before the first step.
+The corpus had a t = 0 escape outcome under the old gate:
+- integrator_contract Part 5 (was): "a valid IC already satisfying the *complete* escape gate (outward + positive
+  outer-energy, not merely beyond `R_esc`) → `state=escape, t_end_step=0`."
+- dd_simstate_payload §2 (was): "an IC that at t=0 genuinely satisfies the complete escape detector … is an **escape at
+  step 0** (`state=escape`, `detail=body`, `t_end_step=0`)."
+
+Applying R-29, both now say escape has no t = 0 case, and an IC that is already escaping is classified when its window
+completes. That follows from the rule as written; it is not a separate choice. The t = 0 collision outcome is unchanged.
+- **Needed:** confirm, or rule a t = 0 escape test (for example `E_rel > 0` alone at t = 0, which is the "energy alone
+  flickers" failure the criterion exists to avoid).
+- **Ruling:** R-60 (decisions.md): confirmed, no t = 0 escape; the only valid t = 0 terminal is a collision. Closed in step 5.

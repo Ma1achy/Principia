@@ -72,8 +72,8 @@ s_α = 2α/π,   s_β = β/π,   z = logit(s)
 ```
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
-$s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. The value of $\alpha_{\min}$ is set in
-`DECISIONS_TO_MAKE.md` (step 5). `μ_max = 5` and `q_max = 2` are settled (R-10).
+$s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
+(R-21). `μ_max = 5` and `q_max = 2` are settled (R-10).
 `s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
 
 **Free momentum** (forward: `q_k = q_max·(2σ(z)−1)`): invert Jacobi, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`, then
@@ -99,7 +99,7 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₁ = 0.4" under the hold-`m₂:m₃` convention and under the hold-`m₂=m₃` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
 
 **Kind 3 — invariant.** Two directions, sharply different:
 

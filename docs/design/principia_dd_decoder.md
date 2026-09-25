@@ -33,7 +33,7 @@ From **totality** (scheduler/render): invalid decodes are **tagged, never droppe
 Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
 
 **Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols.
-`α_min` is still under decision. Its value is set in `DECISIONS_TO_MAKE.md` (step 5).
+`α_min = 0` (R-21): full-sphere coverage.
 
 ### 3.1 Mass
 
@@ -63,9 +63,9 @@ R̃ = 1  (scale gauge = I = 1)      β ∈ [0, π]  (mirror fixed by constructio
 α = (π/2) · σ(z_α)          β = π · σ(z_β)
 ```
 
-**`α_min` is under decision (R-5).** The general link is $\alpha = \alpha_{\min} + \left(\tfrac{\pi}{2} - 2\alpha_{\min}\right)\sigma(z_\alpha)$,
-a buffer that keeps $\|\boldsymbol\rho\|$ bounded away from zero. The form above is its $\alpha_{\min} = 0$ case. The paragraph
-below describes that case.
+**`α_min = 0` (R-21).** The general link is $\alpha = \alpha_{\min} + \left(\tfrac{\pi}{2} - 2\alpha_{\min}\right)\sigma(z_\alpha)$.
+It is not a numerical guard: nothing divides by α, and a non-zero value would only excise a polar cap. The form above is
+its $\alpha_{\min} = 0$ case, the one in force. The paragraph below describes it.
 
 Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. Finite `z` never reaches the exact poles (`α = (π/2)σ(z_α) ∈ (0, π/2)` strictly); a config ingested *at* a pole is caught by those flags, and exact-pole `atan2(0,0)=0` yields a deterministic canonical value rather than a NaN.
 
@@ -187,7 +187,7 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 
 ## 6. Deferred / flagged
 
-- **Body-indexing mismatch (flag → pending-changes note):** the decode uses bodies **0, 1, 2** (softmax reference = body 0); `ICDescriptor` fields are named `m1, m2, m3`. Pick one convention project-wide (recommend 0-indexed internally, rename descriptor fields) — this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
+- **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
 - **Energy normalisation `η_E`**: specified in §3.7. Whether to keep it (flag-gated) or drop it is audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
 - **KS-regularised state representation (v2)** — changes the decoder's output type; explicitly out of scope until then.

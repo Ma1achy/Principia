@@ -18,7 +18,7 @@ From the **chart contract (Part 2.5)**: every link is constraint-preserving, inv
 
 From the **lowering contract** (Part 2, the substrate split): the generated artefacts split by target — link functions and the kernel's pack/unpack are **generated Rust** (compute side, monomorphised, no assembler); the fragment unpack accessors and debug catalogue are **generated WGSL** flowing through the fragment assembler alongside authored colour code; link selection is baked per block.
 
-From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout change must invalidate every cached payload.
+From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger, not a hand-bumped integer (R-36).**
 
 From the **inverse-encode contract**: link inverses are the encode path's block inverses; tolerances asserted in physical units; ε clamps are part of the registry entries.
 
@@ -35,9 +35,9 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0, a valid IC already escaping is `escape` at step 0). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
-| `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id; collision → pair id; sim_failed/decode_failed → failure category; undefined for running |
+| `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id (0-based); collision → pair id (pair `k` is the side opposite body `k`, R-22); sim_failed/decode_failed → failure category; undefined for running |
 | `saturated` | 5 | 1 | sticky flag — the substep exponent reached `⌈log2 N_max⌉` at some point (integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag). `N_max` is a raised tunable (integrator contract), not hardcoded |
-| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word) |
+| `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word); pair ids as `detail` (R-22) |
 | *reserved* | 8–15 | 8 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
 
 (The descriptor uses **8 of its low-16 bits**; the high 16 bits of `packed_a` hold `d_min:f16`. Only bits 0–7 are used — payload §2.)
@@ -137,6 +137,8 @@ The word lives here, not in `SimState`. Specification:
 | `delta_Lz_max_abs` | log | ≥ 0 |
 | `E_0` | diverging | must equal `K₀+V₀` (cross-check view) |
 | `Lz_0` | diverging | invariant-chart gradient view input |
+| `closure_min` | log | ≥ 0, f32; the running minimum of `|n̂(t) − n̂(0)|` once the shape has departed by `δ_dep` (R-37, payload §1) |
+| `closure_step` | lin | exact u16 step index of the minimum (the period label); binary-parity surface, same convention as `t_dmin_step` |
 
 > Metadata nuance the catalogue generator needs: **the two drift fields are signed** → *diverging* colour scale, not sequential-log. (Finding, §6.)
 
@@ -157,7 +159,7 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 
 ### 3.6 `ICDescriptor` (12 × f32)
 
-`m1 m2 m3` (⚠ naming vs 0-indexed bodies — decoder-dd flag, pending-changes), `q_mass`, `rho1_mag`, `rho2_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
 
 ### 3.7 `QuadReduction` — completed ledger
 
@@ -428,7 +430,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 | **13** one-source generation | pack, unpack, export decoder, catalogue emitted from §3 only | mutate one ledger entry → all four artefacts change together; a hand-edit to any generated file is detected (generated-file guard) |
 | **5 / Memory** | the payload's physical truth is this ledger | the sub-field debug views (visual bit-layout unit test) show live, sane values per field |
 | **2 / 8** links | decode consumes registry link functions (generated Rust); encode consumes registry inverses | link swap ⇒ recompile + re-integrate; T2 round-trips through registry inverses only |
-| **sim key** | schema version ∈ payload compatibility signature | any ledger change invalidates every cached payload (cache serves nothing stale-schema'd) |
+| **sim key** | schema version (the ledger's content hash, R-36) ∈ payload compatibility signature | any ledger change invalidates every cached payload (cache serves nothing stale-schema'd) |
 | **Observation ring** | catalogue exhaustive by construction | new field appears in the picker automatically or generation fails |
 
 ---
@@ -441,7 +443,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 4. **Fixed-point:** `t_end`/`t_dmin` (in `times`) round-trip with ≤ 1/65535 error; endpoints exact; bit-identical CPU/GPU quantisation (parity).
 5. **Sentinels:** `diffusion = −1.0` survives pack/unpack bit-exact; catalogue styles it, never scales it.
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
-7. **Schema-version discipline:** flipping one bit-offset changes the signature; the cache test then proves zero stale-schema payloads are ever served.
+7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.
 8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in range); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
 9. **Union-field semantics:** `detail` renders/decodes per `state` — an escape's detail is a body id, a collision's a pair id; the catalogue's detail view switches legend accordingly.
 
@@ -449,11 +451,11 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 
 ## 6. Deferred / flagged
 
-- **Schema version should be a content hash of the ledger, not a hand-bumped integer.** A layout edit without a version bump is the drift catastrophe seam 13 exists to prevent — deriving the version (hash of the canonicalised table) makes the failure impossible rather than merely forbidden. *Recommendation to adopt.*
+- **Adopted (R-36): the schema version is a content hash of the ledger, not a hand-bumped integer.** A layout edit without a version bump is the drift catastrophe seam 13 exists to prevent — deriving the version (hash of the canonicalised table) makes the failure impossible rather than merely forbidden. *Was: recommendation to adopt.*
 - **`free_group_word` length field is 7 bits (mixed-radix ~76-symbol capacity)** — reserved means reserved; any future use is a ledger edit (⇒ version change) not an opportunistic squat.
 - ~~**`QuadReduction` completion** (§3.7)~~ — **done.** Not a transcription task after all: the older source held only prose, so the member list was derived from consumers (scheduler Part 6) and from measurement (`principia_dd_refinement_criterion.md`). **Pending change 1 (the `dominant_outcome` grain) is dissolved rather than decided** — defining every event-derived field at the joint `class ⊕ detail` grain removes the two-grain problem entirely, so no class-only companion field is needed.
 - **Drift-sign presentation** — the diverging-scale metadata for `energy_drift`/`Lz_drift` is a generator requirement, recorded here so the catalogue doesn't ship them as broken sequential-log views.
-- **Body-index naming** — cross-referenced from the decoder drill-down; whichever convention wins, this ledger's `ICDescriptor` names change with it (⇒ schema version change, correctly).
+- **Body-index naming** — settled 0-based (R-22); this ledger's `ICDescriptor` names changed with it (⇒ schema version change, correctly — automatic under R-36).
 
 ---
 

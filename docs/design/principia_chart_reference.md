@@ -14,8 +14,8 @@ chart produced them. So adding a chart means adding a `Φ`, nothing else.
 
 **Indexing note.** This document is **0-based throughout**: inner pair `(0,1)`, outer body `2`. The
 Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2), and §4.2 translates it.
-The project-wide convention (0-indexed decode vs `m1 m2 m3` in `ICDescriptor`) is **decision B1**. This
-note doesn't settle it.
+The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
+opposite body `k` (payload §2).
 
 ---
 
@@ -32,7 +32,7 @@ M01 = m0 + m1        M = m0 + m1 + m2 = 1
 If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
 
 **Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3).
-`α_min` is still under decision, and its value is set in `DECISIONS_TO_MAKE.md` (step 5).
+`α_min = 0` (R-21): full-sphere coverage.
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi
 
@@ -53,8 +53,8 @@ construction, so the canonicaliser is a no-op away from the seam):
 β = π·σ(z_β)
 ```
 
-`α_min` is a buffer keeping `‖ρ‖` away from zero. Its value, including whether it is zero, is under
-decision (R-5). **Note the orientation, which is easy to get
+`α_min = 0` (R-21). It is not a numerical guard; a non-zero value would only excise a polar cap, and the poles are
+fenced by the collision detector, the conditioning readout and the saturation flags. **Note the orientation, which is easy to get
 backwards:** `‖ρ̃‖ = cos α`, so **small α is a LARGE inner-pair separation**; `α → π/2` is a tight
 inner pair with a distant third body (hierarchical).
 
@@ -469,10 +469,10 @@ disagree silently. Until one quotient is chosen, label each chart with the quoti
 `system_image` descriptor), and don't take shape fractions from the full-range chart, which double-counts.
 
 **Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
-$m_1 = 1 - x - y$, $m_2 = x$, $m_3 = y$ (1-based, as the Burrau family is written). Shrink toward the
+$m_0 = 1 - x - y$, $m_1 = x$, $m_2 = y$ (0-based, R-22). Shrink toward the
 barycentre by an interior buffer $\varepsilon_m$ (default $10^{-4}$):
 $\mathbf m \leftarrow (1 - 3\varepsilon_m)\mathbf m + \varepsilon_m(1,1,1)$. Then
-$\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_1, m_2, m_3),\ \mathrm{rest})$, with the Burrau point
+$\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_0, m_1, m_2),\ \mathrm{rest})$, with the Burrau point
 $(c, b, a)/(a+b+c)$ as an overlay marker.
 
 **Bifurcation strips.** Shape on the horizontal axis, one parameter on the vertical. For $(\theta, K)$,

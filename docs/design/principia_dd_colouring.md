@@ -116,7 +116,7 @@ flag       b ∈ {0, 1}
 
 ### 3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)
 
-State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id).
+State → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
 
 **The mixed-pixel question is anti-aliasing, not semantics** (sampling/SSAA note, ratified). Samples ≠ pixels: at a fractal boundary several disagreeing samples fall under one display pixel. Resolution: **each sample is coloured independently through the full pipeline, then a render-side resolve pass averages the sample *colours* into the pixel colour** (`post(combine(colour, brightness))` runs per sample; only then are colours averaged). Consequences:
 

@@ -147,7 +147,7 @@ Final *and* max are both stored because the *shape* of drift is the diagnostic: 
 
 ### 3.6 Detectors (per `STEP`, on the projected state)
 
-**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` → `COLLISION(pair)` — the **squared** comparison (no runtime `sqrt` in the branch, per §3.3's comparison-only rule). Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three consumers.
+**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` → `COLLISION(pair)` (pair id per payload §2, R-22) — the **squared** comparison (no runtime `sqrt` in the branch, per §3.3's comparison-only rule). Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three consumers.
 **Count before classifying (pending change 7, landed):** count the pairs with `‖rᵢ − rⱼ‖² < r_coll²`. Exactly 1 → `COLLISION(pair)`; 2 or more → `COLLISION`, `detail = 3` (triple collision, terminal and non-continuable). Testing "any pair" first steals genuine triples into the binary arm. `d_min` is the primary stored quantity and `r_coll` a recorded parameter (integrator contract Part 7).
 
 **Escape (pending change 11, landed):**
@@ -156,9 +156,19 @@ Final *and* max are both stored because the *shape* of drift is the diagnostic: 
 ESCAPE  ⟺  |Δn̂| over a window < tau    AND    E_rel > 0
 ```
 
-The shape vector has settled and the escaper is unbound. `tau` sits in a 383× gap and is not tuned (integrator contract
-Part 7; `principia_01_pitfalls.md` §2). The window length, the energy `E_rel` is taken over, and how the escaping body is
-identified are not yet written down (open-questions). Triple ejection is `ESCAPE` with `detail = 3`; its gate is open.
+The shape vector has settled and the escaper is unbound. `tau` was measured in a 383× gap and not tuned (integrator contract
+Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E_rel`. Defined by R-29:
+
+- `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
+  mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
+  pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
+- **The window:** `|Δn̂|` is taken over 0.4 time units, sampled at sync boundaries (**provisional**).
+- **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
+  centre of mass, the same `d` as in `E_rel` (R-61).
+- **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
+  this `E_rel`.
+
+Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
 
 *Superseded by change 11, kept for the record* — for each candidate body `k` (outer of the Jacobi split against the remaining pair), three gates and a persistence counter:
 
@@ -198,8 +208,8 @@ configuration sit at fixed points:
 
 | symbol | configuration | location | count |
 |---|---|---|---|
-| $BC_{12}, BC_{23}, BC_{31}$ | binary collisions | equator, 120° apart | 3 |
-| $E_1, E_2, E_3$ | Euler collinear | equator, between the collisions | 3 |
+| $BC_{01}, BC_{12}, BC_{20}$ | binary collisions | equator, 120° apart | 3 |
+| $E_0, E_1, E_2$ | Euler collinear | equator, between the collisions | 3 |
 | $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
 
 **The landmarks are computed from the shape map above, not hard-coded (R-14).** A binary collision's $\hat{\mathbf b}$ is
@@ -211,8 +221,8 @@ where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 ant
 the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart. Whether the overlay
 marks them at their mass-weighted positions or at fixed 120° spacing is audit decision B18, still open.
 
-The table's labels are the 1-based body pairs of the overlay (`BC₁₂` is bodies 1–2, i.e. $\hat{\mathbf b}_{01}$ in 0-based
-terms); the project-wide index base is decision B1. Axis assignment follows this convention: the form of `n` above is
+The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
+pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
 fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
@@ -280,4 +290,4 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ---
 
-*Five occupants, one wrapper, one table-bucketed substep integer. Collision beats escape, and both precisions agree on it. The counter forgives a flickering gate; the accumulators latch at the end; a sample's Benettin shadow is never itself a sample. Euler exploding is a test passing.*
+*Five occupants, one wrapper, one table-bucketed substep integer. Collision beats escape, and both precisions agree on it. Closure and energy together decide escape; the accumulators latch at the end; a sample's Benettin shadow is never itself a sample. Euler exploding is a test passing.*
