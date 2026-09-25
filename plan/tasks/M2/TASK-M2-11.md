@@ -21,6 +21,7 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 - `decisions.md` § "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-147 — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*"
+- `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
@@ -37,7 +38,7 @@ The folded acute-angle Burrau charts exist: θ ∈ (0, π/4], ν(θ) = sec θ �
 - Review (physics): both charts registered; their `system_image` values differ and are shown in the chart label; fraction statistics refuse the full-range chart; `cargo test -p kernel burrau_quotients` asserts the refusal (REQ-CHART-025).
 
 ## Notes
-- RQ-71 ruled: R-141 — the shape sphere is n-to-1 (n = 2) and `DoubleCover` is retired. The full-range Euclid chart's `system_image` is R-27's own case, which R-141 doesn't name: REQ-CHART-025 waits on **RQ-127**.
+- RQ-71 ruled: R-141 — the shape sphere is n-to-1 (n = 2). RQ-127 ruled: R-157 — `DoubleCover` stays as the full-range Euclid chart's `system_image` (R-27: the leg swap relabels the bodies); REQ-CHART-025 is unblocked.
 - R-133: the calibrations' evidence renders ask for coverage of the chart domain (feasibility, K, L_z), which decode-time renders show; no integrated field is needed at M2.
 - RQ-77 ruled: R-147 — chart_reference §4.5 now records R-27 (both charts kept, applied before any Burrau statistic).
 - RQ-100 ruled: R-113 — Φ_θ,K's K_max and γ_K are REQ-CHART-044's, calibrated in TASK-M2-12, which this task now depends on.

@@ -1633,18 +1633,19 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
+  - file: decisions.md
+    section: "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
   verify:
     method: unit test
-    detail: "each registered chart returns the descriptors; the shape sphere is n-to-1 with n = 2 (R-141); the full-range Burrau (Euclid) chart's value waits on RQ-127"
+    detail: "each registered chart returns the descriptors; the shape sphere is n-to-1 with n = 2 (R-141); the full-range Burrau (Euclid) chart is DoubleCover (R-157)"
   rulings:
   - R-27
   - R-72
   - R-104
   - R-113
   - R-141
+  - R-157
   milestone: M2
-  rq:
-  - RQ-127
   note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4)."
 - id: REQ-CHART-015
   area: CHART
@@ -1822,6 +1823,8 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
+  - file: decisions.md
+    section: "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
   verify:
     method: review checklist
     detail: "both charts registered; system_image values differ and are shown in the chart label; fraction statistics refuse the full-range chart"
@@ -1830,9 +1833,8 @@
   - R-59
   - R-72
   - R-104
+  - R-157
   milestone: M2
-  rq:
-  - RQ-127
   note: "R-27 settles 'pending change 2, open' (canonical_spec §11 records it as ruled; chart_reference §4.5's paragraph still calls it open). Applied before any Burrau statistic. R-104 names the value DoubleCover (chart_reference §4.5 now says so)."
 - id: REQ-CHART-026
   area: CHART
@@ -8357,15 +8359,16 @@
     section: 3. Merging — the split rule read backwards
   - file: decisions.md
     section: "R-143 — The live tree contains the static tree *(closes RQ-73)*"
+  - file: decisions.md
+    section: R-158 — The six readings are accepted *(closes RQ-128)*
   verify:
     method: numerical gate
     detail: "per named slice, resident quads with and without the latch over a live playhead to the horizon, the difference and its share of the resident count; recorded in decisions.md"
   rulings:
   - R-71
   - R-143
+  - R-158
   milestone: M6
-  rq:
-  - RQ-128
 - id: REQ-RENDER-001
   area: RENDER
   statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing."
@@ -13246,6 +13249,8 @@
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
   - file: decisions.md
     section: "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
+  - file: decisions.md
+    section: R-158 — The six readings are accepted *(closes RQ-128)*
   verify:
     method: golden image
     detail: "each view selectable in the debug picker renders on a synthetic payload and matches its own golden image, recorded at the M1 gate (R-153)"
@@ -13253,9 +13258,8 @@
   - R-113
   - R-122
   - R-153
+  - R-158
   milestone: M1
-  rq:
-  - RQ-128
   note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122)."
 - id: REQ-TOOL-011
   area: TOOL
@@ -14998,15 +15002,16 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
+  - file: decisions.md
+    section: R-158 — The six readings are accepted *(closes RQ-128)*
   verify:
     method: golden image
     detail: "the |n|−1 view is flat zero on a real march; the effort heatmap shows the march's per-pixel substep counts; both match their own golden images, recorded at the M3 gate (R-153)"
   rulings:
   - R-113
   - R-153
+  - R-158
   milestone: M3
-  rq:
-  - RQ-128
   note: "Split from REQ-TOOL-010 and REQ-TOOL-011's live effort row (R-113, RQ-94)."
 - id: REQ-TOOL-133
   area: TOOL

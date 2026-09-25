@@ -21,6 +21,7 @@ The shape-sphere chart shows its redundancy honestly: `system_image = n-to-1` wi
 - `decisions.md` § "R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
+- `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
 
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
@@ -34,7 +35,7 @@ The shape-sphere chart shows its redundancy honestly: `system_image = n-to-1` wi
 - Definition: the equal-area projection and its keying written into chart_reference §3.3 and approved by the physics reviewer (REQ-CHART-047).
 
 ## Notes
-- RQ-71 ruled: R-141 — the φ hemispheres are reflection-equivalent, so the shape sphere is n-to-1 (n = 2); `DoubleCover` is retired.
+- RQ-71 ruled: R-141 — the φ hemispheres are reflection-equivalent, so the shape sphere is n-to-1 (n = 2); `DoubleCover` is the full-range Burrau chart's (R-157).
 - R-113 settles Gap G5: at M2 the two requirements are verified by golden image (one per projection and label); the projection selector and hemisphere toggle live in the Manifold view's Chart section at M8, shown when the chart is the shape sphere (REQ-GUI-161, TASK-M8-06).
 - Gap G6: which equal-area projection (Mollweide or Hammer–Aitoff), and whether the projection is a different chart map (sim key, re-integrates) or a display remap.
 - RQ-95 ruled: R-113 (Gap G5 above).

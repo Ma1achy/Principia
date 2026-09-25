@@ -22,6 +22,7 @@ The integrator is certified as the payload's producer: every generation-root led
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
+- `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -44,3 +45,4 @@ The integrator is certified as the payload's producer: every generation-root led
 - The fragment views run over CPU-filled buffers (M1's synthetic path), not a GPU march — the GPU march is M4.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-117.
 - RQ-123 ruled: R-153 — the live-march views are checked against golden images of their own, recorded at the M3 gate, not against artboards.
+- RQ-128 ruled: R-158 — the readings taken while applying R-141 to R-156 are accepted.

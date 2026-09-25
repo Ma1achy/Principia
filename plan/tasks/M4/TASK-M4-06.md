@@ -28,6 +28,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `docs/design/principia_core_design.md` § "4. Integrate and colour are separate passes — and now separate *mechanisms*"
 - `docs/contracts/principia_lowering_contract.md` § "Part 2 — Two assembly mechanisms (the substrate split; the old "one mechanism" claim retires)"
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
+- `decisions.md` § "R-157 — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
@@ -48,7 +49,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `cargo xtask golden decode-preset` — the DECODE preset for the Burrau int lattice and the Anosova physical-frame chart matches a CPU-decoded reference image, without special-casing (REQ-RENDER-082).
 
 ## Notes
-- RQ-71 ruled: R-141 — the shape sphere's row carries `system_image: n-to-1`, n = 2; `DoubleCover` is retired (REQ-CHART-037).
+- RQ-71 ruled: R-141 — the shape sphere's row carries `system_image: n-to-1`, n = 2; `DoubleCover` stays only for the full-range Burrau chart (R-157) (REQ-CHART-037).
 - RQ-85 ruled: R-117 — the appendix's shape-sphere row is conformed to R-14's (θ, φ) map (applied in step 7).
 - RQ-92 ruled: R-124 — the dispatch-shape conflict is settled (copies dispatched again, R-102); this task is unblocked.
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause is REQ-CHART-037's here; REQ-RENDER-027's Burrau int lattice and Anosova half is REQ-RENDER-082, closed here.

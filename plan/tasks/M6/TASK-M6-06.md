@@ -22,6 +22,7 @@ The tree coarsens under a live playhead: a parent whose four children are leaves
 - `decisions.md` § "R-91 — The temporal accumulators feed "unresolved" *(closes RQ-42)*"
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 - `decisions.md` § "R-143 — The live tree contains the static tree *(closes RQ-73)*"
+- `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
 
 ## Deliverables
 - `crates/engine/src/refine/merge.rs`: the boundary pass (merge test, `Merged` marking, latch drop via TASK-M6-03's store), merge memory with `expired: bool`.
@@ -40,3 +41,4 @@ The tree coarsens under a live playhead: a parent whose four children are leaves
 ## Notes
 - RQ-73 ruled: R-143 — the "bitwise the static tree" claim is withdrawn: the live tree contains the static tree at the horizon, equal when footprint spreads are monotone in time; a merge doesn't drop a latch while the quad is resident. RQ-72 ruled: R-142 — the latch is evaluated on the GPU and only its verdict returns (REQ-REF-035).
 - PIT-9: expired memory vs absent memory must be told apart by state, not by an `assert_ne!`.
+- RQ-128 ruled: R-158 — the readings taken while applying R-141 to R-156 are accepted.

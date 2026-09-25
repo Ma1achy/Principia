@@ -26,6 +26,7 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
 - `decisions.md` § "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
+- `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
 
 ## Deliverables
 - `crates/render/shaders/wgsl/frag/debug/` (hand-written, registry-scanned): live-shape, accumulator, derived and word-inspector views; WGSL `shape_n` / Hamiltonian helpers in the prelude library with Rust twins from the kernel.
@@ -49,3 +50,4 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - RQ-94 ruled: R-113 — REQ-TOOL-010 renders every view on a synthetic payload at M1; the real-march |n|−1 check and the live effort heatmap are a new M3 requirement (REQ-TOOL-132, TASK-M3-22).
 - RQ-101 ruled: R-122 — the Twilight data for the θ̃ view is the published matplotlib table (the prelude's, TASK-M1-03).
 - RQ-123 ruled: R-153 — the debug views are checked against golden images of their own, recorded at the M1 gate, not against artboards (REQ-TOOL-010).
+- RQ-128 ruled: R-158 — the readings taken while applying R-141 to R-156 are accepted.
