@@ -160,7 +160,7 @@ The rules above, applied. Columns: axis kinds → which Φ map the chart monomor
 | Chart | Axis kinds | Φ map lowers to | Extra uniforms | Flags / lowering notes |
 |---|---|---|---|---|
 | **Latent affine slice** | raw × raw | affine map `z₀ + (2s−1)q₁ + (2t−1)q₂` | — | the base case; every navigation gesture is its uniforms |
-| **Shape sphere (θ, φ)** | derived-in-block × derived-in-block (config) | block inverse-free direct: (s,t)→(θ,φ) by R-14's map (`principia_chart_reference.md` §3.3: θ = 2π·s, φ = π·(1 − t)) → n → (ρ̃, λ̃) by §3.2 (R-117) | — | `system_image: DoubleCover` (2-to-1 over the φ hemispheres, R-104); residual none (both config DOF swept) |
+| **Shape sphere (θ, φ)** | derived-in-block × derived-in-block (config) | block inverse-free direct: (s,t)→(θ,φ) by R-14's map (`principia_chart_reference.md` §3.3: θ = 2π·s, φ = π·(1 − t)) → n → (ρ̃, λ̃) by §3.2 (R-117) | — | `system_image: n-to-1`, n = 2 (2-to-1 over the φ hemispheres, which decode to the same system, R-141); residual none (both config DOF swept) |
 | **(L_z, E)** | invariant × invariant | domain warp → invariant construction (rigid `v^(L)` + seeded `a·w`) | frozen config, feasibility consts | `forbids_energy_normalisation`, `has_feasibility_boundary` — infeasible pixels **write tagged payloads** in-kernel |
 | **(L_z, K)** | ditto | ditto with `K(t)=K_max t^{γ_K}` warp | `γ_K` | ditto |
 | **Ternary mass** | raw × raw (mass block) | triangle warp → mass controls | frozen config/momentum slice | standard; no Burrau-specific code (lock supplies ν₀) |
