@@ -2555,7 +2555,7 @@
   note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
 - id: REQ-INT-014
   area: INT
-  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check), Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping) and Aarseth–Zare + time-transformed leapfrog (2, 1, symplectic, reversible, owns time mapping), the last specified in Part 2a but not required to be built (R-162)."
+  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -2563,11 +2563,14 @@
     section: The table gains two rows
   - file: decisions.md
     section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: decisions.md
+    section: "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
   verify:
     method: unit test
-    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is not required to be built (R-162)"
+    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables"
   rulings:
   - R-162
+  - R-168
   milestone: M3
 - id: REQ-INT-015
   area: INT

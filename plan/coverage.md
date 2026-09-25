@@ -42,7 +42,7 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 
 ## Sections
 
-857 sections in 46 files: 751 yield at least one requirement; 106 yield none and are listed below with the reason.
+874 sections in 46 files: 752 yield at least one requirement; 122 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,6 +67,22 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
+| R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)* | **MISSING REASON** | |
+| R-170 — The crate map *(closes G2)* | **MISSING REASON** | |
+| R-171 — The convergence gate, defined *(closes A1, A2, T2)* | **MISSING REASON** | |
+| R-172 — There is no contract crate *(closes C1, C4)* | **MISSING REASON** | |
+| R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)* | **MISSING REASON** | |
+| R-174 — The self-hosted runner runs only this repository's code *(closes H1)* | **MISSING REASON** | |
+| R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)* | **MISSING REASON** | |
+| R-176 — Controls come before the tests that need them *(closes G3, S2)* | **MISSING REASON** | |
+| R-177 — Cadence *(closes G4, C6)* | **MISSING REASON** | |
+| R-178 — The shape-sphere round trip composes Φ alone *(closes A3)* | **MISSING REASON** | |
+| R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)* | **MISSING REASON** | |
+| R-180 — pr-check is item-level *(closes A5)* | **MISSING REASON** | |
+| R-181 — The shape-sphere round-trip bound *(closes T1)* | **MISSING REASON** | |
+| R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)* | **MISSING REASON** | |
+| R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)* | **MISSING REASON** | |
+| R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -362,3 +378,22 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
+
+## Errors
+
+- uncovered section with no reason: decisions.md § R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
+- uncovered section with no reason: decisions.md § R-170 — The crate map *(closes G2)*
+- uncovered section with no reason: decisions.md § R-171 — The convergence gate, defined *(closes A1, A2, T2)*
+- uncovered section with no reason: decisions.md § R-172 — There is no contract crate *(closes C1, C4)*
+- uncovered section with no reason: decisions.md § R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*
+- uncovered section with no reason: decisions.md § R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
+- uncovered section with no reason: decisions.md § R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
+- uncovered section with no reason: decisions.md § R-176 — Controls come before the tests that need them *(closes G3, S2)*
+- uncovered section with no reason: decisions.md § R-177 — Cadence *(closes G4, C6)*
+- uncovered section with no reason: decisions.md § R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*
+- uncovered section with no reason: decisions.md § R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
+- uncovered section with no reason: decisions.md § R-180 — pr-check is item-level *(closes A5)*
+- uncovered section with no reason: decisions.md § R-181 — The shape-sphere round-trip bound *(closes T1)*
+- uncovered section with no reason: decisions.md § R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*
+- uncovered section with no reason: decisions.md § R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*
+- uncovered section with no reason: decisions.md § R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*
