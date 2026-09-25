@@ -353,7 +353,7 @@
   title: "The shape-sphere chart: shape_vec, the chart maps, the closed-form inverse and landmarks"
   depends_on: [TASK-M2-05, TASK-M2-07]
   needs: [REQ-SYS-009]
-  requirements: [REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023, REQ-CHART-048, REQ-CHART-049]
+  requirements: [REQ-CHART-018, REQ-CHART-019, REQ-CHART-020, REQ-CHART-036, REQ-INT-003, REQ-VAL-023, REQ-CHART-048, REQ-CHART-049, REQ-CHART-053]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-09

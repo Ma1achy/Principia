@@ -1744,11 +1744,17 @@
     section: 5.2 Tests that can fail
   - file: decisions.md
     section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+  - file: decisions.md
+    section: "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
+  - file: decisions.md
+    section: R-181 — The shape-sphere round-trip bound *(closes T1)*
   verify:
     method: numerical gate
-    detail: "shape_vec(decode(u,v)) == n(u,v) to ~1e−14 over random masses and shapes"
+    detail: "Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141)"
   rulings:
   - R-14
+  - R-178
+  - R-181
   milestone: M2
 - id: REQ-CHART-021
   area: CHART
@@ -2332,6 +2338,23 @@
   - R-113
   milestone: M4
   note: Split from REQ-CHART-033 (R-113, RQ-95).
+- id: REQ-CHART-053
+  area: CHART
+  kind: calibration
+  statement: "The shape-sphere round-trip bound (max |shape_vec(Φ(u,v)) − n(u,v)|) must be calibrated: provisionally 1e−13 absolute, proposed with the measured maximum as evidence by the task that builds the inverse, used by CI provisionally, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.2 Inverse — closed form
+  - file: decisions.md
+    section: R-181 — The shape-sphere round-trip bound *(closes T1)*
+  verify:
+    method: review checklist
+    detail: "the proposal states the bound with the measured max |Δn| and its margin; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-181
+  - R-182
+  milestone: M2
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
