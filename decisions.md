@@ -757,7 +757,7 @@ In production, `done` is set when escape fires and the loop ends. The post-escap
 runs only in the validation harness, which keeps its own state; the payload never sees it. R-95's text is conformed.
 
 ## R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · corrected by R-141*
 
 "Covers each shape twice, as two labelled systems." Lowering's shape-sphere row names it.
 
@@ -785,7 +785,7 @@ override it.
 During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · amended by R-144*
 
 Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
 windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
@@ -879,7 +879,7 @@ The physics overlay isn't baked: it's a per-fragment occupant. The hoist, when m
 an allowed optimisation, not a bake tier. Conform render_contract Parts 3 and 4.
 
 ## R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*
-*25 Sep 2026 · applied in step 7*
+*25 Sep 2026 · applied in step 7 · amended by R-151*
 
 The two reference HTML files (`docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html`)
 are named the golden oracle in colour_composition §7. Formulas follow the oracle: the explorer's blob weight and its
@@ -1004,3 +1004,104 @@ HTML files (R-122).
 *25 Sep 2026 · applied in step 7*
 
 All four readings in RQ-118 are accepted.
+
+---
+
+*Rulings on RQ-71 to RQ-78 (open since step 7's first pass) and RQ-119 to RQ-126 (checkpoint B's plan pass),
+25 Sep 2026.*
+
+## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
+*25 Sep 2026 · applied in step 7*
+
+The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
+hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
+hemispheres"). `DoubleCover` is retired: no current chart has two labelled systems. Conform chart_decoder Part 5,
+lowering :159, chart_reference :349 and inverse_encode :202.
+
+## R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*
+*25 Sep 2026 · applied in step 7*
+
+The latch is evaluated on the GPU, in the resolve pass (R-135), and its state stays in GPU-resident per-quad memory.
+`QuadReduction` carries only the verdict: the count of unresolved footprints, latched ones included. `QuadReduction` stays
+the sole automatic return.
+
+## R-143 — The live tree contains the static tree *(closes RQ-73)*
+*25 Sep 2026 · applied in step 7*
+
+The "bitwise the static tree at the horizon" claim is withdrawn. It now reads: the live tree contains the static tree at
+the horizon, and they are equal when footprint spreads are monotone in time. A merge doesn't drop a latch while the quad
+is resident (R-99). A calibration requirement measures the latch's cost (the extra resident quads) on the named slices.
+
+## R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)*
+*25 Sep 2026 · applied in step 7*
+
+pointer_channels §3 (responsiveness) is normative beside §4, since it already superseded trajectory_viewing §1. The
+banner stays. R-109 now reads §3 and §4.
+
+## R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*
+*25 Sep 2026 · applied in step 7*
+
+The fragment side reads `has_ensemble` as a uniform, not a bake, like the compute side (R-102). Toggling E never
+re-bakes. E = 0 still reads `ensemble_spread` as NaN.
+
+## R-146 — The crate layout is confirmed *(closes RQ-76)*
+*25 Sep 2026 · applied in step 7*
+
+The crate layout is confirmed as proposed. `web/` uses Vitest for unit tests and Playwright for the browser suites.
+
+## R-147 — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
+*25 Sep 2026 · applied in step 7*
+
+Apply both. The sampling note's heading becomes "The sampling pattern: deterministic Halton offsets" (its citations are
+re-pointed). chart_reference :468 records R-27 (both charts kept), with its application still "before any Burrau
+statistic".
+
+## R-148 — The validation harness renders the "off" image *(closes RQ-78)*
+*25 Sep 2026 · applied in step 7*
+
+The `stop_on_escape` "off" image is rendered by the validation harness, whose own march continues past escape. The
+regression (REQ-EVT-014, tolerance REQ-EVT-023) stands there.
+
+## R-149 — The colour suite runs on Chromium and WebKit *(closes RQ-119)*
+*25 Sep 2026 · applied in step 7*
+
+The colour suite runs on the R-110 pair: Playwright's Chromium and WebKit (Playwright's Safari engine).
+
+## R-150 — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*
+*25 Sep 2026 · applied in step 7*
+
+REQ-INT-048's GPU arm is dropped from M3, like the other four; REQ-VAL-072 covers it at M4.
+
+## R-151 — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)*
+*25 Sep 2026 · applied in step 7*
+
+Cubehelix's reference is the analytic form with dd_colouring's parameters (s = 0.5, λ = 1.5, h = 1). The matplotlib
+cubehelix function, called with the same parameters, is a cross-check only.
+
+## R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*
+*25 Sep 2026 · applied in step 7*
+
+TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; TASK-M8-28 fills in the rest.
+
+## R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*
+*25 Sep 2026 · applied in step 7*
+
+The debug views (TASK-M1-12) and live-march views (TASK-M3-22) are checked against golden images of their own, recorded
+at the gate, not against artboards.
+
+## R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*
+*25 Sep 2026 · applied in step 7*
+
+At M5, REQ-DEC-036 is verified over a depth sweep. The check at the actual switchover depth joins REQ-DEC-037 at M6.
+
+## R-155 — One GIF encoder for both builds *(closes RQ-125)*
+*25 Sep 2026 · applied in step 7*
+
+One GIF encoder for both builds: the Rust `gif` crate (MIT or Apache-2.0), with `color_quant` for palettes, compiled to
+wasm for the browser.
+
+## R-156 — The plan-pass readings are accepted *(closes RQ-126)*
+*25 Sep 2026 · applied in step 7*
+
+All readings in RQ-126 are accepted, including removing TASK-M6-13 and letting TASK-M0-06 run slightly over the size
+guideline.

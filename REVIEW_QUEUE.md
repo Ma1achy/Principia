@@ -1085,6 +1085,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   system is n-to-1 (:233: "a fixed finite number of pixels share each system"), not two labelled systems.
 - **Needed:** whether the shape sphere is `DoubleCover` (and the two hemispheres are distinct labelled systems, so the
   reflection is not gauged for this chart), or n-to-1 (and R-104 applies only to the full-range Burrau chart).
+- **Ruling:** R-141 (decisions.md). Closed in step 7.
 
 ## RQ-72: R-99 — how the per-footprint latch reaches the split decision *(step 7, refinement)*
 
@@ -1094,6 +1095,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   is made on the CPU (refinement_policy §1).
 - **Needed:** whether a per-footprint "latched" bit (or count) travels in `QuadReduction`, or the latch is evaluated on the
   GPU and only its verdict returns.
+- **Ruling:** R-142 (decisions.md). Closed in step 7.
 
 ## RQ-73: R-99 — does the merge still reproduce the static tree? *(step 7, refinement)*
 
@@ -1101,6 +1103,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   playhead "the final tree is **bitwise the static tree at the horizon**" — measured before the latch existed. With a
   latch, a footprint that ever exceeded `eps` stays unresolved, so its parent never merges while resident.
 - **Needed:** whether the measured claim is withdrawn (and the latch's cost recorded), or a merge may drop a latch.
+- **Ruling:** R-143 (decisions.md). Closed in step 7.
 
 ## RQ-74: R-109 — pointer_channels §3 supersedes a trajectory_viewing paragraph *(step 7, GUI)*
 
@@ -1110,6 +1113,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   `principia_scratchpad_pointer_channels.md` §3.**"
 - **Needed:** whether trajectory_viewing §1's responsiveness paragraph stands again (the banner goes), or pointer_channels
   §3 is normative too.
+- **Ruling:** R-144 (decisions.md). Closed in step 7.
 
 ## RQ-75: R-102 — the fragment side's baked `has_ensemble` *(step 7, render)*
 
@@ -1118,6 +1122,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   has_ensemble`; E = 0 → `ensemble_spread` is NaN.
 - **Needed:** whether the fragment side keeps a baked `has_ensemble` (so E = 0 ↔ E > 0 re-bakes the fragment, a render-key
   change), or reads it as a uniform too.
+- **Ruling:** R-145 (decisions.md). Closed in step 7.
 
 ## RQ-76: The crate layout the tasks use *(step 7, checkpoint B)*
 
@@ -1132,6 +1137,7 @@ Like RQ-56: each has a ruling behind it, and none is applied yet.
   placeholder).
 - **Needed:** confirm the layout and the `web/` runner, or give the ones to use (the tasks' commands are renamed
   mechanically).
+- **Ruling:** R-146 (decisions.md). Closed in step 7.
 
 ## RQ-77: Follow-ups the R-97 to R-109 pass left *(step 7, cleanup)*
 
@@ -1140,6 +1146,7 @@ Like RQ-56 and RQ-67.
   or hash remains after R-100. (A heading change: requirements citing it are re-pointed in the same commit.)
 - [ ] `principia_chart_reference.md` :468 "(pending change 2, open)" and "Until one quotient is chosen" — R-27 ruled both
   charts kept; R-27's status line defers its application to "before any Burrau statistic".
+- **Ruling:** R-147 (decisions.md). Closed in step 7.
 
 ## RQ-78: R-103 — where the `stop_on_escape` "off" image comes from *(step 7, validation)*
 
@@ -1149,6 +1156,7 @@ Like RQ-56 and RQ-67.
   validation harness." Production has no "off" setting any more.
 - **Needed:** whether the "off" image is rendered by the validation harness (its own march, continued past escape), and the
   regression stands there; or the regression is retired.
+- **Ruling:** R-148 (decisions.md). Closed in step 7.
 
 ## RQ-79: CI frequency, GPU hardware and browsers the corpus doesn't schedule *(step 7, checkpoint B, CI)*
 
@@ -1923,6 +1931,7 @@ Tick any you don't accept.
 - R-110: "Browsers for REQ-VAL-116: Chrome stable and Safari." It names the browsers for the Tier-N suite only, not the
   colour suite.
 - **Needed:** whether the colour suite stays headless Chrome only, or runs on the R-110 pair (Chrome stable and Safari).
+- **Ruling:** R-149 (decisions.md). Closed in step 7.
 
 ## RQ-120: R-113 — REQ-INT-048's GPU arm at M3 *(step 7, parity)*
 
@@ -1933,6 +1942,7 @@ Tick any you don't accept.
   doesn't name REQ-INT-048. M3 is "CPU, native"; the kernel first compiles to the GPU in M4 (TASK-M4-01).
 - **Needed:** whether REQ-INT-048's GPU arm is dropped from M3 as the other four were (covered by REQ-VAL-072 in M4),
   or split into an M4 requirement.
+- **Ruling:** R-150 (decisions.md). Closed in step 7.
 
 ## RQ-121: R-122 — Cubehelix: the analytic form or the matplotlib table *(step 7, colour)*
 
@@ -1944,6 +1954,7 @@ Tick any you don't accept.
   s = 0.5, λ = 1.5, h = 1.
 - **Needed:** which one is the reference — the analytic form (and the table only a cross-check), or the matplotlib table
   (and REQ-COL-041 changes).
+- **Ruling:** R-151 (decisions.md). Closed in step 7.
 
 ## RQ-122: R-129 — the arbiter overlay's Profiler tab before the Profiler window exists *(step 7, GUI)*
 
@@ -1953,6 +1964,7 @@ Tick any you don't accept.
   no Profiler window to hold a tab.
 - **Needed:** where the overlay lives at M6 — a minimal Profiler window shell built by TASK-M6-22 that TASK-M8-28 later
   fills; a standalone debug overlay moved into the Profiler at M8; or REQ-TOOL-058 moves to M8.
+- **Ruling:** R-152 (decisions.md). Closed in step 7.
 
 ## RQ-123: R-129 — screenshots of views no artboard shows *(step 7, GUI)*
 
@@ -1963,6 +1975,7 @@ Tick any you don't accept.
   `plan/WORKFLOW.md`: a GUI screenshot is compared against `docs/gui/design/NN_*.png` for layout.
 - **Needed:** whether R-129's presence-only rule extends to these two (the view renders and is selectable, no layout
   comparison), or they compare against a recorded golden image of their own.
+- **Ruling:** R-153 (decisions.md). Closed in step 7.
 
 ## RQ-124: R-113 — REQ-DEC-036's "switchover depth" at M5 *(step 7, decode)*
 
@@ -1971,6 +1984,7 @@ Tick any you don't accept.
 - The switchover depth is REQ-DEC-037's (M6, TASK-M6-07). TASK-M5-04 notes: "here the gate runs over a depth sweep".
 - **Needed:** whether the M5 verify reads "over a depth sweep" (the switchover-depth check joining REQ-DEC-037 at M6), or
   REQ-DEC-036's O(h²) half moves to M6.
+- **Ruling:** R-154 (decisions.md). Closed in step 7.
 
 ## RQ-125: R-131 — which GIF encoders *(step 7, export)*
 
@@ -1980,6 +1994,7 @@ Tick any you don't accept.
 - The corpus names no GIF encoder and doesn't lean.
 - **Needed:** the encoders (e.g. one Rust GIF crate for both builds), or a ruling that TASK-M8-30 picks them, stating the
   licence, under review.
+- **Ruling:** R-155 (decisions.md). Closed in step 7.
 
 ## RQ-126: Readings taken while applying R-110 to R-140 to the plan *(step 7, checkpoint B plan)*
 
@@ -2005,3 +2020,4 @@ Tick any you don't accept.
 - [ ] R-140 (the `ChartOut<F>` reading): REQ-CHART-028 and TASK-M2-05 now write `ChartOut<F>`. R-140 (the `TIMEOUT`
   reading): REQ-SYS-002's lint matches identifiers case-sensitively.
 - **Needed:** accept, or rule otherwise on any item.
+- **Ruling:** R-156 (decisions.md). Closed in step 7.
