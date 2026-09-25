@@ -228,10 +228,10 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
 **Per-chart descriptors:**
 
-- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Three values, replacing the old one-off `has_redundant_hemisphere` (a fourth, `DoubleCover`, is retired by R-141):
+- `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Four values, replacing the old one-off `has_redundant_hemisphere`:
   - **bijective** — every pixel is a distinct system (most charts).
   - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
-  - *Was (R-104): **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104): the shape sphere, 2-to-1 over the φ hemispheres. Retired by R-141: the shape sphere's hemispheres are one system, and no current chart has two labelled systems.*
+  - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
   - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.

@@ -199,7 +199,7 @@ region (for example above the parabola in $(L_z, E)$).
 | flag | meaning |
 |---|---|
 | `forbids_energy_normalisation` | the chart fixes energy itself; any $E^*$ override — every `Some(E*)`, including `Some(0)` (R-25) — is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
-| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1 or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141), show the canonical half, or label the redundant one. |
+| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141) or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. |
 | `requires_per_pixel_mass` | mass varies per pixel, so the integrator must not use `SimUniforms.m[3]`. True for the ternary mass plot, the Burrau family, and mixed-axis charts with a mass axis. |
 
 ## Part 7 — Ground-truth ingestion (the validation programme's demand)

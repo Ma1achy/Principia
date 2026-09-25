@@ -348,7 +348,7 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
 the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
-hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; R-104's `DoubleCover` is retired).
+hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
