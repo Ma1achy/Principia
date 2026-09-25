@@ -45,7 +45,7 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 875 sections in 46 files: 768 yield at least one requirement; 107 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 58 |
+| informative only | 59 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -67,7 +67,7 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | **MISSING REASON** | |
+| R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | informative only | plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -363,7 +363,3 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
-
-## Errors
-
-- uncovered section with no reason: decisions.md § R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*

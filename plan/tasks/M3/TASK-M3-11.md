@@ -23,7 +23,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `docs/design/principia_dd_validation_orbits.md` § "6. The closure field — from validation to discovery"
 - `decisions.md` § "R-37 — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*"
 - `decisions.md` § "R-59 — Fix D1 to D6 as listed *(sheet §8)*"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Pending-changes register"
 - `decisions.md` § "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
 - `decisions.md` § "R-95 — After escape fires *(closes RQ-48, in part)*"
 - `docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion"

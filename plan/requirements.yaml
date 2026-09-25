@@ -3285,12 +3285,12 @@
   source:
   - file: decisions.md
     section: "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
-  - file: open-questions.md
-    section: Open questions
   - file: docs/design/principia_dd_integrator.md
     section: 3.2 Occupants
   - file: docs/design/principia_dd_integrator.md
     section: 6. Deferred / flagged
+  - file: open-questions.md
+    section: Audit section C — transcription checks
   verify:
     method: unit test
     detail: "Coefficients in the shared source equal the published digits; composition order test (6th-order convergence slope on a Kepler fixture)."
@@ -4076,7 +4076,7 @@
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: open-questions.md
-    section: Open questions
+    section: Pending-changes register
   verify:
     method: unit test
     detail: "Fixtures: settled hierarchical escaper (fires); bound hierarchy with settled shape but E_rel < 0 (does not fire — closure alone is only 82.8% precise); mid-encounter flicker with E_rel > 0 but |Δn̂| ≥ tau (does not fire — energy alone flickers); assert the detector has no r_esc/receding/k_esc inputs (stale three-gate remnants, R-59 D1, absent)."
@@ -5245,14 +5245,14 @@
   area: PAY
   statement: "The n̂ from one window earlier must be held in a lagged register updated at the window's sampling points — macro-step boundaries for unregularised occupants, sync boundaries for regularised ones — and the payload/SimState widths must include it."
   source:
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.2 The criterion
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: review checklist
     detail: "SimState layout table lists the lagged n̂ register and the payload §1 width totals are recomputed to include it; unit test that the register is updated only at the occupant's sampling points (macro-step or sync boundaries)"
@@ -10307,7 +10307,7 @@
   - file: decisions.md
     section: "R-51 — The OKLab coefficients are checked against Ottosson *(CO-2)*"
   - file: open-questions.md
-    section: Open questions
+    section: Audit section C — transcription checks
   verify:
     method: unit test
     detail: "dd_colouring unit test 1: round trips across a gamut lattice within tolerance; white → (1,0,0); primaries match Ottosson's published values"
@@ -15747,10 +15747,10 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "re-run outputs recorded; table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119)"
@@ -15821,14 +15821,14 @@
     section: 11. Still open / downstream (not yet fully in the corpus)
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.2 The criterion
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.4 Should it terminate?
   - file: decisions.md
     section: R-166 — The fixtures
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "re-run the escape validation against check 2's ground truth and against the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; fixtures/slices.toml) at t = 30 under the legacy classifier (docs/reference/prin-rs/src/outcome.rs) and checks in as a fixture (R-166); record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both"
@@ -16033,7 +16033,7 @@
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: open-questions.md
-    section: Open questions
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "Measure the |Δn̂| distributions of escapers and bound trajectories across t = 25–30; record the gap ratio (claimed 383x, 7.04e-05 vs 2.70e-02; prin-rs reports at best 6.8x) and assert the chosen tau lies within the gap and that outcomes are unchanged across the middle of the gap."
@@ -16109,12 +16109,12 @@
   source:
   - file: decisions.md
     section: "R-37 — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*"
-  - file: open-questions.md
-    section: Open questions
   - file: docs/design/principia_dd_validation_orbits.md
     section: 6. The closure field — from validation to discovery
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "Measurement report of |n̂(t) − n̂(0)| distributions on periodic-orbit and generic fixtures justifying δ_dep; ledger row for the departed bit exists and schema version changes."
@@ -18026,7 +18026,7 @@
   - file: docs/read_first/principia_INDEX.md
     section: Known open items
   - file: open-questions.md
-    section: Open questions
+    section: Audit section D — deliberately parked
   verify:
     method: benchmark
     detail: "config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them"

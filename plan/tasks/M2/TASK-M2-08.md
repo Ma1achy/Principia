@@ -35,10 +35,11 @@
 - `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 - `decisions.md` § "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
 - `decisions.md` § "R-181 — The shape-sphere round-trip bound *(closes T1)*"
+- `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
 
 ## Deliverables
 - `crates/kernel/src/shape.rs` (`shape_vec`, landmarks) and `crates/kernel/src/chart/shape_sphere.rs` (spherical and exponential maps, the closed-form inverse).
-- A cross-check fixture of `n` on random ICs generated from the IC Inspector's JS (`docs/gui/reference/ic_inspector.html`, run under the Node version pinned in `.nvmrc`, added by this task, R-169) into `fixtures/ic_inspector/shape_vec.json`, with the script that produced it.
+- A cross-check fixture of `n` on random ICs generated from the IC Inspector's JS (`docs/gui/reference/ic_inspector.html`, run under the Node version pinned in `.nvmrc`, added by this task, R-169) into `fixtures/ic_inspector/shape_vec.json`. The script that produced it is `fixtures/ic_inspector/gen_shape_vec.mjs`: it extracts `ic_inspector.html`'s `<script>` block by a fixed marker and runs it under the `.nvmrc` Node version with a fixed seed. CI reads the checked-in fixture and never regenerates it (R-184).
 - Tests `crates/kernel/tests/shape_sphere.rs`; gate `cargo xtask gate shape-roundtrip`.
 
 ## Acceptance tests
@@ -57,6 +58,7 @@
 - Gap G8: Φ_S²(u,v) = (n(θ,φ), m_fixed, p_fixed) — the corpus doesn't say where the held masses and momenta come from (z₀'s mass and momentum blocks, or chart params), whether p_fixed is taken before or after the fibre-phase rotation that C then undoes, nor φ_f's default.
 - The Euler landmarks for unequal masses (R-126: the Euler central configurations) are built with the physics site generators in TASK-M7-09 (REQ-COL-021); this task builds the collision landmarks and L±.
 - Gap G9: the IC Inspector cross-check tolerance isn't stated. The n-to-1 hemisphere label (R-141) and the projections are TASK-M2-28.
+- R-14 supersedes R-12's axis wording: R-12's "θ on `v`" is the old premise, and θ is the horizontal (s) axis, as chart_reference §3.3 states (R-184).
 - RQ-85 ruled: R-117 — the lowering appendix's shape-sphere row is conformed to R-14's (θ, φ) map, the one built here.
 - RQ-92 ruled: R-124 — R-50 is applied: dd_integrator §3.7 no longer calls B18 open; the landmarks are mass-weighted, as this task builds them.
 - Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (classification accepted by R-132).

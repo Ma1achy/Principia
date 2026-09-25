@@ -15,10 +15,11 @@ The shared WGSL library and its Rust mirror carry dd_colouring §3.1's exact tra
 - `docs/design/principia_dd_colouring.md` § "3.1 Colour spaces (exact transforms — transcription-check against Ottosson before entering the shared source)"
 - `docs/design/principia_dd_colouring.md` § "6. Deferred / flagged"
 - `decisions.md` § "R-51 — The OKLab coefficients are checked against Ottosson *(CO-2)*"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Audit section C — transcription checks"
 - `docs/design/principia_dd_colouring.md` § "5. Unit tests"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+- `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
 
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/colour_space.wgsl` — `srgb_to_linear`, `linear_to_srgb`, `srgb_to_oklab`, `oklab_to_srgb`, `oklab_to_oklch`, `oklch_to_oklab` (the prelude members render_gui_spec §10.1 names); replaces or confirms the M1 prelude's colour-space maps.
@@ -35,4 +36,4 @@ The shared WGSL library and its Rust mirror carry dd_colouring §3.1's exact tra
 ## Notes
 - Calibration (R-71): REQ-COL-049's value is proposed here, checked by the physics reviewer, confirmed at the gate. Until the M7 gate confirms it, CI runs `oklab_transcription` and the gate against the proposed value, marked provisional (R-182).
 - PIT-3 ("check the measurement can fire"): the gate must show a deliberately perturbed coefficient fails it.
-- Name the Ottosson reference (URL and revision) in the test file.
+- The Ottosson reference is his published reference code in "A perceptual color space for image processing" (https://bottosson.github.io/posts/oklab/), pinned at source `bottosson/bottosson.github.io` `posts/oklab/index.html`, commit `7561fbab5c8b982020ed212aebb0b8620c44b228` (2025-05-26). The test file names this URL and commit, and the coefficients are transcribed from that revision's code listings (R-184).

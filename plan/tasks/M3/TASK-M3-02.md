@@ -23,7 +23,7 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 - `docs/contracts/principia_integrator_contract.md` § "The table gains two rows"
 - `docs/design/principia_dd_integrator.md` § "3.2 Occupants"
 - `decisions.md` § "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Audit section C — transcription checks"
 - `docs/design/principia_dd_integrator.md` § "6. Deferred / flagged"
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"

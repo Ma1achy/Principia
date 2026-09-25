@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-time-unit window `< tau` AND `E_rel > 0` — two conditions, no receding test, no `r_esc`, no `k_esc` — with `E_rel = ½|Δv|² − (M_pair + m_b)/d` about the other two's centre of mass (total mass, R-29), the window sampled on the macro-step grid for unregularised occupants and on the sync grid for regularised ones (R-95), the escaper the body with `E_rel > 0` and the largest `d` (R-61). Triple ejection is escape with `detail = 3`, gated on all pairwise energies positive, all separations growing and total `E > 0`, with the escape rule's settling (R-32). The settling test reads the lagged `n̂`, never `closure_min`. The branch inputs `|Δn̂|` and `E_rel` take rule 6's explicit-fma treatment (R-34). The provisional `tau` is **1e-3**: prin-rs's `CLOSURE_TAU` (`src/outcome.rs:263` at `8600d45`), inside the recorded range 7.04e-05 … 2.70e-02 (R-173); TASK-M3-34 replaces it with the confirmed value (REQ-EVT-025).
+Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-time-unit window `< tau` AND `E_rel > 0` — two conditions, no receding test, no `r_esc`, no `k_esc` — with `E_rel = ½|Δv|² − (M_pair + m_b)/d` about the other two's centre of mass (total mass, R-29), the window sampled on the macro-step grid for unregularised occupants and on the sync grid for regularised ones (R-95), the escaper the body with `E_rel > 0` and the largest `d` (R-61). Triple ejection is escape with `detail = 3`, gated on all pairwise energies positive, all separations growing and total `E > 0`, with the escape rule's settling (R-32). The settling test reads the lagged `n̂`, never `closure_min`. The branch inputs `|Δn̂|` and `E_rel` take rule 6's explicit-fma treatment (R-34): gpu_determinism_note rule 6, enumerated in integrator_contract Part 4 (R-184). The provisional `tau` is **1e-3**: prin-rs's `CLOSURE_TAU` (`src/outcome.rs:263` at `8600d45`), inside the recorded range 7.04e-05 … 2.70e-02 (R-173); TASK-M3-34 replaces it with the confirmed value (REQ-EVT-025).
 
 ## References
 - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer"
@@ -26,11 +26,14 @@ Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-t
 - `docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion"
 - `docs/read_first/principia_01_pitfalls.md` § "2.1 Escape is a limit, not a threshold"
 - `docs/read_first/principia_01_pitfalls.md` § "2. THE ESCAPE CRITERION — what replaced it, and why"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Pending-changes register"
 - `decisions.md` § "R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
 - `decisions.md` § "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+- `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
+- `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
+- `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
 
 ## Deliverables
 - `crates/kernel/src/detect/escape.rs` — `e_rel(b)`, `escaper()`, the window test on the lagged register, the ionisation gate.

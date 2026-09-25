@@ -84,7 +84,7 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 | `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite, on Chromium and WebKit (R-149), checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
 | `numerical gate` | `cargo xtask gate <gate>`, with fixtures in `fixtures/gates/` |
 | `benchmark` | `cargo xtask bench <bench>` |
-| `GUI screenshot` | `cargo xtask screenshot <artboard>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
+| `GUI screenshot` | `cargo xtask screenshot <suite>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
 | `review checklist` | the named reviewer's checklist, or a CI lint that installs the check |
 
 `cargo xtask plan-check` runs `plan/check_plan.py`.

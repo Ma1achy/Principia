@@ -1,6 +1,6 @@
 # Principia — document index and reading order
 
-**110 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
+**173 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
 defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for the record and
 **should not be implemented from**.
 

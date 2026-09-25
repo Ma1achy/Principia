@@ -19,7 +19,7 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `decisions.md` § "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
 - `docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)"
 - `docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Pending-changes register"
 - `decisions.md` § "R-95 — After escape fires *(closes RQ-48, in part)*"
 - `docs/read_first/principia_01_pitfalls.md` § "2.4 Should it terminate?"
 - `docs/read_first/principia_01_pitfalls.md` § "2.3 The 96.3% recall is the right failure direction"

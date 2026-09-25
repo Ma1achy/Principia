@@ -22,7 +22,7 @@ their knobs from this struct.
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "v0.5 means the NUMBERS are guesses; the SHAPE is not"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "Then invert"
 - `docs/read_first/principia_INDEX.md` § "Known open items"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Audit section D — deliberately parked"
 - `docs/design/principia_quality_device_note.md` § "Open sub-questions (settle at implementation)"
 - `docs/notes/principia_sampling_msaa_note.md` § "Uniform samples: every sample is a full, normal SimState"
 - `docs/notes/principia_sampling_msaa_note.md` § "Ensemble copies ARE the SSAA samples"
