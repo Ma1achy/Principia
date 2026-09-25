@@ -137,7 +137,7 @@ The outcome `state` takes `principia_colour_composition.md` §1.4's canonical ni
 
 ### 3.8 Palettes and CVD
 
-**Cubehelix** (analytic, CB-tolerant by monotone L): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
+**Cubehelix** (analytic, CB-tolerant by monotone L; this form is the reference, matplotlib's cubehelix function with the same parameters a cross-check only, R-151): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
 
 **CVD simulation** — a display-stage setting, **linear sRGB**, after all pixel computation; order **pixel function → physics overlay → `OUT` → style → display scale → gamut clamp → CVD → screen** (R-67; the simulation sees the final in-gamut colours; the scale stage is a no-op at native; render contract Part 4).
 
