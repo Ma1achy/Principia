@@ -180,12 +180,15 @@ workgroup as an M3.
 ONE WORKGROUP PER QUAD
   64 threads, one per TEXEL (N²)
   each ensemble copy is the SAME KERNEL DISPATCHED AGAIN, copy_index a uniform (R-102, R-89)
-  shared memory holds the REDUCTION ACCUMULATORS, not live states
+  the across-copy REDUCTION is its own RESOLVE PASS, after all E+1 dispatches (R-135)
 ```
 
 **This makes the working set independent of `E+1` entirely.** The ensemble becomes a **time** cost
 (8 copies are 8 dispatches, 8× as long) rather than a **space** cost — which is what you want, since `E+1` is a
 quality knob and space limits are hard ceilings while time is a budget.
+
+**The across-copy reduction is its own resolve pass (R-135).** It runs after all `E+1` copy dispatches for a quad
+complete, reads their `SimState` slices, and writes the footprint resolve and the `QuadReduction` fields.
 
 ### Why parallelism is not lost
 
@@ -199,6 +202,9 @@ trajectory.
 groups on Apple.
 
 ### And serial copies probably IMPROVE load balance
+
+> **Was (R-102):** kept as history, not current design. It argued for copies serial within one thread; each copy is now
+> its own dispatch (above) and the across-copy reduction its own resolve pass (R-135).
 
 Trajectory cost is bimodal with a **~100× p1→p99 spread**. With copies **parallel across threads**, a
 warp finishes when its *slowest* thread does — you pay the **max** of a heavy-tailed distribution.
