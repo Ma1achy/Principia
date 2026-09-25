@@ -65,3 +65,16 @@ or the human rules; I don't choose between them.
   and `--include='*.md'`, and exclude the root working docs. Either way, run it after the register is
   archived, or exempt the register by name. **Applied verbatim in the handoff until you rule.**
 - **Ruling:** R-7 — applied in step 3
+
+## RQ-7: `findings.md` was archived on a false premise *(step 2, INDEX)*
+
+- **Where:** `docs/archive/findings.md` (it was `spec_sources/findings.md`).
+- **The premise:** in step 1 I called it "an older 17 Jul copy of prin-rs `FINDINGS.md`". The reviewer's
+  step-2 layout sent it to `archive/` on that basis.
+- **What it actually is:** it is byte-identical to `~/src/principia-spike/FINDINGS.md`, the **toolchain spike findings**
+  ("Verdict: rust-gpu … bit-identical to native on every golden input"). It isn't a copy of prin-rs.
+  It's the evidence for the substrate decision, and `principia_spike_brief.md` says the spike's findings
+  "are propagated across the corpus".
+- **Options:** keep it archived (the spike was delivered and its findings have been absorbed), or move it to
+  `docs/experiments/results/` next to the spike brief, as the evidence for a settled decision. Either way,
+  the INDEX row's "why archived" is written as "unclear" until you rule.
