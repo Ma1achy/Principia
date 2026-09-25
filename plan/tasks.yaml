@@ -41,7 +41,7 @@
   title: "The test harness: native wgpu self-test dispatch, proptest and negative controls"
   depends_on: [TASK-M0-01]
   needs: []
-  requirements: [REQ-VAL-007]
+  requirements: [REQ-VAL-007, REQ-SYS-065]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M0-05

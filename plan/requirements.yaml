@@ -19819,3 +19819,21 @@
   - R-170
   - R-172
   milestone: M0
+- id: REQ-SYS-065
+  area: SYS
+  statement: "GPU CI must run on two backends on every commit: a self-hosted Apple-silicon job (Metal) and an ubuntu job with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan; the self-hosted job must run only for pushes and PRs from this repository, never for fork PRs."
+  source:
+  - file: decisions.md
+    section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
+  - file: decisions.md
+    section: "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
+  verify:
+    method: review checklist
+    detail: "the CI log shows gpu_harness green on both jobs with the named backends; the self-hosted job carries the same-repository if: guard; an unknown PRIN_GPU_BACKEND fails naming the variable"
+  rulings:
+  - R-110
+  - R-169
+  - R-174
+  milestone: M0

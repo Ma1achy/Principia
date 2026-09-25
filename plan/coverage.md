@@ -21,16 +21,16 @@
 | TOOL | 132 |
 | VAL | 145 |
 | PERF | 93 |
-| SYS | 64 |
-| **total** | **1221** |
+| SYS | 65 |
+| **total** | **1222** |
 
-Of these: 93 calibration, 100 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 93 calibration, 100 definition, 1029 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 63 |
+| M0 | 64 |
 | M1 | 81 |
 | M2 | 155 |
 | M3 | 188 |
@@ -42,7 +42,7 @@ Of these: 93 calibration, 100 definition, 1028 obligation. Retired (kept for the
 
 ## Sections
 
-875 sections in 46 files: 755 yield at least one requirement; 120 yield none and are listed below with the reason.
+875 sections in 46 files: 757 yield at least one requirement; 118 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -67,10 +67,8 @@ Of these: 93 calibration, 100 definition, 1028 obligation. Retired (kept for the
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
-| R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)* | **MISSING REASON** | |
 | R-171 — The convergence gate, defined *(closes A1, A2, T2)* | **MISSING REASON** | |
 | R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)* | **MISSING REASON** | |
-| R-174 — The self-hosted runner runs only this repository's code *(closes H1)* | **MISSING REASON** | |
 | R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)* | **MISSING REASON** | |
 | R-176 — Controls come before the tests that need them *(closes G3, S2)* | **MISSING REASON** | |
 | R-177 — Cadence *(closes G4, C6)* | **MISSING REASON** | |
@@ -379,10 +377,8 @@ Of these: 93 calibration, 100 definition, 1028 obligation. Retired (kept for the
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
 - uncovered section with no reason: decisions.md § R-171 — The convergence gate, defined *(closes A1, A2, T2)*
 - uncovered section with no reason: decisions.md § R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*
-- uncovered section with no reason: decisions.md § R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
 - uncovered section with no reason: decisions.md § R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
 - uncovered section with no reason: decisions.md § R-176 — Controls come before the tests that need them *(closes G3, S2)*
 - uncovered section with no reason: decisions.md § R-177 — Cadence *(closes G4, C6)*

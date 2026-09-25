@@ -31,10 +31,11 @@
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+- `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
 
 ## Deliverables
 - `crates/kernel/src/shape.rs` (`shape_vec`, landmarks) and `crates/kernel/src/chart/shape_sphere.rs` (spherical and exponential maps, the closed-form inverse).
-- A cross-check fixture of `n` on random ICs generated from the IC Inspector's JS (`docs/gui/reference/ic_inspector.html`, run under node) into `fixtures/ic_inspector/shape_vec.json`, with the script that produced it.
+- A cross-check fixture of `n` on random ICs generated from the IC Inspector's JS (`docs/gui/reference/ic_inspector.html`, run under the Node version pinned in `.nvmrc`, added by this task, R-169) into `fixtures/ic_inspector/shape_vec.json`, with the script that produced it.
 - Tests `crates/kernel/tests/shape_sphere.rs`; gate `cargo xtask gate shape-roundtrip`.
 
 ## Acceptance tests
