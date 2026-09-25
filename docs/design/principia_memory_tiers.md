@@ -42,7 +42,9 @@ The pipeline, IC-space → screen, with one word per level (the old overloaded "
 
 **Pipeline:** QUAD (IC-space) → contains N×N SAMPLES (physics) → each SAMPLE is a TILE in screen space → TILE rasterises to PIXELS.
 
+<!-- retired-terms -->
 **Renames from earlier docs:** quadtree-node `tile` → **QUAD**; `SAMPLES_PER_TILE_AXIS` → **`SAMPLES_PER_QUAD_AXIS`**; `TileReduction`/`TileSummary` → **`QuadReduction`/`QuadSummary`**; `TILE_PIXEL_RES` → **removed** (it was an interpolation knob — see below). New meaning of **`tile`** (retained): a sample's screen-space footprint, pre-rasterisation.
+<!-- /retired-terms -->
 
 ---
 

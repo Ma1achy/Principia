@@ -101,7 +101,9 @@ y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [r_sub = 0.05, γ_sub = 1.5, N_max = 64]
 ```
 
+<!-- retired-terms -->
 This formula *specifies* `N_sub`; it does **not** compute it at runtime. `N_sub` is a **branch decision**, and the determinism rule for branch decisions is stronger and different from what an earlier draft assumed (which had `N_sub` computed as the f32 evaluation with `Math.fround`-per-stage on the CPU to match the GPU). **The spike (`principia_spike_brief.md` findings, 2026-07) measured that rule forking** — 5/272 boundary states — and a **controlled test overturned the cause**: it is **not** fast-math and **not** FMA contraction, but *inherent cross-implementation transcendental latitude*. A GPU's `pow` and libm's `powf` legitimately disagree by 1–3 ulp (e.g. `pow(4.000000477, 1.5)` → exactly `8.0` on Metal vs `8.000001907` in libm), **in both fast and safe math modes** — so *any* runtime transcendental feeding a `ceil` at an integer boundary can fork, and no amount of matched rounding fixes it because the two libraries are each entitled to their own result.
+<!-- /retired-terms -->
 
 **The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants** and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
 
@@ -288,11 +290,13 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 
 ## 6. Deferred / flagged
 
+<!-- retired-terms -->
 - **Priority-order pin (§3.6)** — introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
 - **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
+<!-- /retired-terms -->
 
 ---
 

@@ -189,7 +189,7 @@ fn dbg_sentinel(x: f32) -> vec3f                // −1.0 sentinel → magenta; 
 | Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
 | Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
 | Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
-| **Uniform echo** — flat swatches of `quality_tier`, `M`, thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
+| **Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
 
 ### Cross-check views (the seams)
 

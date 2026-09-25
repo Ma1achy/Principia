@@ -12,12 +12,14 @@ Chaos is not an exception to this — it is the case where the identical logic *
 
 **The dual instantiation is a feature, not test scaffolding.** The CPU-f64 build ships — it is the Precision ring: the hover dwell-tier, the click inspector, the offline uniform-survey certifier. (The *same* kernel run at f64 is the **precision** reference — f64 removes the numerical ambiguity that would muddy a ground-truth check — but it shares source, so it is *not* independent; the deliberately-**independent** convergence reference, shared-bug-immune, is a *separate* Brutus-style CPU arbitrary-precision integrator with convergence gating — raise the precision and tighten the tolerance until the result stops changing; double-double is a fast screen only (R-33) — validation-ground-truth §correctness-factoring, systems-architecture §1 — spike criterion 4.) Its public surface:
 
+<!-- retired-terms -->
 ```
 computeIC(chart, uv, simKey)      → SimState              // one IC, full f64
 computeQuad(chart, quadID, simKey) → SimState[]           // a quad's samples, full f64  (was computeTile — 'tile' is retired for quadtree nodes, memory-tiers §1)
 stepOnce(state, dt, params)        → state'                // one STEP, either occupant  (parity workhorse)
 decodeOnly(chart, uv, simKey)      → (m, r, p, ICDescriptor)
 ```
+<!-- /retired-terms -->
 
 The parity suite is this subsystem diffed against the headless WGSL kernel. It was going to exist regardless; the tests are therefore nearly free.
 

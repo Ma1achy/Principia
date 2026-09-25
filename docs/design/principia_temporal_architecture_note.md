@@ -23,7 +23,9 @@
 
 ## The rename
 
+<!-- retired-terms -->
 **`SimResult` → `SimState`.** The struct is no longer a completed *result* of a full trajectory; it is the *current state* of a marching simulation at the playhead. `SimState` names it correctly. (11 docs reference it — render 7, systems-arch 6, integrator/debug/parity 4/4/3, deep-zoom 3, others 1–2 — a mechanical global rename once this note is ratified. `ICDescriptor`, `QuadReduction` unchanged.)
+<!-- /retired-terms -->
 
 ---
 
@@ -185,10 +187,12 @@ The barrier only ever waits on the live set (already synced, one `dt` closes it)
 
 **The firewall did its job:** the change is contained to *one side of the struct*. Physics (above the waist) doesn't change; render/colour/GUI (below) only renames. Mostly *subtractive* (delete checkpoint array, scrub, history buffer) + *one additive piece* (continuous refinement + frame loop) + *one rewrite* (export).
 
+<!-- retired-terms -->
 - **Category 1 — pure rename, zero semantics** (`SimResult`→`SimState`, 11 docs): find-and-replace, one pass.
 - **Category 2 — physics does NOT change**: integrator wrapper still marches the occupant (`ADVANCE`, R-19) identically; only `maybe_write_checkpoint` → expose-current-state-and-discard. Shape-map math, winding, FTLE/spread/diffusion accumulators all already per-step. Decoder/encode/colouring-math untouched.
 - **Category 3 — genuinely changing (3 docs)**: render (delete-heavy, simplifies), scheduler (additive — the new design + frame loop), export (the one rewrite).
 - **Category 4 — simplified, small**: caching, ledger, lowering/systems-arch/gui incidental.
+<!-- /retired-terms -->
 
 **Verdict: fairly clean, mostly subtractive.** Four docs with real edits, one rewrite, rest rename-or-trivial. A weekend of careful doc surgery, not a month. The change *deletes a concept and simplifies the data model* — the good kind of re-architecture.
 

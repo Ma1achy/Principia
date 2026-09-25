@@ -42,6 +42,7 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 
 ### Compute side
 
+<!-- retired-terms -->
 | Degree of freedom | Baked / uniform | Why |
 |---|---|---|
 | **Chart type** (axis kinds, Φ structure) | **BAKED** | genuinely different code (raw assignment vs invariant solve vs curve embed vs physical-frame entry). Axiom 4 |
@@ -55,6 +56,7 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 | Chart params (`z₀, q₁, q₂`, slice values, curve tangent `γ'(ν₀)`, invariant targets) | **UNIFORM** | **navigation is uniform edits** — the entire Part-4 navigation contract depends on this; no gesture ever compiles |
 | Per-quad (`c, h, x₀, J_D`, quad `T`, decode flag) | **PER-QUAD UNIFORM** | deep-zoom doc |
 | Mass source | *(simplified away)* | mass is **always produced by the decode** (in the Rust kernel) — from per-pixel axis values or from uniform z-slice components; one code path. `requires_per_pixel_mass` survives only as CPU-side metadata saying whether `SimUniforms.m[3]` is trustworthy for CPU consumers |
+<!-- /retired-terms -->
 
 ### Fragment side
 

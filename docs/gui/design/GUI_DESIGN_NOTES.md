@@ -70,7 +70,7 @@ inspector holds every setting the old dev GUI had.
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
-- **Display:** fixed order — SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
+- **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
   simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the
   figure only; scientific checks run with plain.
 - **Run:** as listed under Explore.

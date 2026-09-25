@@ -6,7 +6,9 @@
 
 ## Part 1 — Two-level keying: identity vs validity
 
+<!-- retired-terms -->
 A quad has an address `QuadID (z, tx, ty)` — `(level, i, j)` in the slice plane's own frame, relative to the plane anchor (`z₀`'s value at the last re-integrating event), so in-plane pan and zoom change which addresses are requested, never the addresses (R-97) — (the old name `TileID` is retired — 'tile' now means a sample's screen footprint, memory-tiers §1) and, separately, every cached payload carries a compact compatibility signature that is stricter than the quad key, because it governs whether a payload can be reused without recomputation. The relationship between the two needs nailing down. The model:
+<!-- /retired-terms -->
 
 - **Identity — *which region of which chart*.** `QuadID` alone is incomplete: `(z, tx, ty)` doesn't say which chart or which plane. Full identity is `(chart id + params, slice plane) + QuadID`, the slice plane being `z₀`'s out-of-plane part, span{q₁, q₂} and the in-plane orientation — the sim key's navigation part (R-92). Two quads on different slice planes are different identities even at the same `(z,tx,ty)` — an agent that keys on `QuadID` alone will cache-collide across charts and across tilt positions.
 - **Validity — *computed under which physics config*.** The payload compatibility signature: chart/decode version, link ids, integrator occupant + config, horizon `T`, enabled metrics (tier flags), event thresholds, `copy_index` for an ensemble copy (the nominal's signature excludes `E`, R-89), payload schema version (a content hash of the ledger, R-36). Same identity, different signature → different payload (e.g. recomputed after a threshold change; preview vs refined).

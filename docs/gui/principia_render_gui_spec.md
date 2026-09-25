@@ -196,7 +196,7 @@ Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headle
 
 ### Display — the last stages
 
-**Order is fixed (R-67):** SimResult → stain → style → display scale → gamut clamp → colour-vision simulation → screen. The stain colours the data, the style draws it,
+**Order is fixed (R-67):** SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
 simulation sees the final in-gamut colours.
 - **Style** is optional and applies to the figure only. Scientific checks run with **plain**. Presets: plain, watercolour
