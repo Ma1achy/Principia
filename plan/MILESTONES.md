@@ -8,7 +8,8 @@ gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks ar
 
 - **The implementation lives in this repo, in `crates/` next to `docs/`.** The corpus names two crates, the
   engine crate and the gui crate (canonical_spec §1, item 5: "the engine crate exposes only the typed state
-  surface `pub`"); other crate boundaries are for the build to set and are not requirements.
+  surface `pub`"). The rest of the layout is confirmed by R-146 (plan/WORKFLOW.md, "Conventions"); there is no separate
+  contract crate (R-172).
 - **The docs stay the authority.** `plan/` is derived from `docs/` and `decisions.md`. Where a requirement
   and its source disagree, the source wins and the requirement is the bug. A change of design goes into the
   docs first (with an RQ and a ruling, per the porting rule); the plan follows.

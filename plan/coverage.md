@@ -42,7 +42,7 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 
 ## Sections
 
-874 sections in 46 files: 752 yield at least one requirement; 122 yield none and are listed below with the reason.
+874 sections in 46 files: 753 yield at least one requirement; 121 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 58 |
@@ -70,7 +70,6 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 | R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)* | **MISSING REASON** | |
 | R-170 — The crate map *(closes G2)* | **MISSING REASON** | |
 | R-171 — The convergence gate, defined *(closes A1, A2, T2)* | **MISSING REASON** | |
-| R-172 — There is no contract crate *(closes C1, C4)* | **MISSING REASON** | |
 | R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)* | **MISSING REASON** | |
 | R-174 — The self-hosted runner runs only this repository's code *(closes H1)* | **MISSING REASON** | |
 | R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)* | **MISSING REASON** | |
@@ -384,7 +383,6 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 - uncovered section with no reason: decisions.md § R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
 - uncovered section with no reason: decisions.md § R-170 — The crate map *(closes G2)*
 - uncovered section with no reason: decisions.md § R-171 — The convergence gate, defined *(closes A1, A2, T2)*
-- uncovered section with no reason: decisions.md § R-172 — There is no contract crate *(closes C1, C4)*
 - uncovered section with no reason: decisions.md § R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*
 - uncovered section with no reason: decisions.md § R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
 - uncovered section with no reason: decisions.md § R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*

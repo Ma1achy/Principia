@@ -18934,10 +18934,13 @@
   source:
   - file: docs/design/principia_systems_architecture.md
     section: 7. Hierarchy and dependency (the build DAG, abstract)
+  - file: decisions.md
+    section: R-172 — There is no contract crate *(closes C1, C4)*
   verify:
     method: review checklist
     detail: the crate/module graph has no edge against the DAG
-  rulings: []
+  rulings:
+  - R-172
   milestone: M0
 - id: REQ-SYS-005
   area: SYS
