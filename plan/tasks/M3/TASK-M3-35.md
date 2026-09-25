@@ -21,6 +21,7 @@ Pitfalls §1 stays fixed: the controlled experiment renders the config slice onc
 - `docs/read_first/principia_01_pitfalls.md` § "1.7 What to recognise next time"
 - `docs/read_first/principia_01_pitfalls.md` § "1.1 What was observed"
 - `decisions.md` § "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
+- `decisions.md` § "R-148 — The validation harness renders the "off" image *(closes RQ-78)*"
 
 ## Deliverables
 - `xtask golden patchwork` and `xtask golden stop-on-escape` over CPU payloads of the config slice, the 'integrate everything' and 'off' images produced by `crates/validation`'s harness march.
@@ -35,8 +36,7 @@ Pitfalls §1 stays fixed: the controlled experiment renders the config slice onc
 - Review (qa, physics): the artefact triage checklist includes the three §1.7 signatures; for any flagged image t_end is rendered to test whether the boundaries are its level sets, and the independent occupant is run on the same ICs to compare tame vs wild regions (REQ-VAL-050).
 
 ## Notes
-- Open RQs: RQ-78 (REQ-EVT-014, REQ-EVT-023).
-- REQ-EVT-014 and REQ-EVT-023 wait on RQ-78 (whether the 'off' image comes from the harness march, or the regression is retired). This task is written for the first reading and stays blocked until the ruling.
+- RQ-78 ruled: R-148 — the "off" image is rendered by the validation harness, whose own march continues past escape, and the regression (REQ-EVT-014, tolerance REQ-EVT-023) stands there. This task was written for that reading.
 - Gap: 'the config slice' / `config_stability` are not defined as chart + parameters in the corpus.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-EVT-023.
 - Waits on RQ-103 (`REVIEW_QUEUE.md`): The prin-rs fixtures and slices the M3 re-runs need.

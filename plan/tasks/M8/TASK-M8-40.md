@@ -9,13 +9,14 @@
 - **Size:** ~350 lines
 
 ## Goal
-The browser build is checked against the native wgpu Tier-N tolerances (R-85): the Tier-N suite runs on Chrome stable and Safari (R-110), every quantity within tolerance, out-of-tolerance quantities recorded. Colour output is verified nightly, on GUI and colour PRs and at each gate (R-134) by Playwright + headless Chrome golden-image diffs of the fragment output against the same baselines native wgpu offscreen has set since M1 (R-110), outside the parity suite, to the M7 golden tolerance. Parity Tier L's branch decisions and the 100-macro-step dispatch are checked through the browser's WGSL path (REQ-VAL-144).
+The browser build is checked against the native wgpu Tier-N tolerances (R-85): the Tier-N suite runs on Chrome stable and Safari (R-110), every quantity within tolerance, out-of-tolerance quantities recorded. Colour output is verified nightly, on GUI and colour PRs and at each gate (R-134) by Playwright golden-image diffs on Chromium and WebKit (Playwright's Safari engine, the R-110 pair; R-149) of the fragment output against the same baselines native wgpu offscreen has set since M1 (R-110), outside the parity suite, to the M7 golden tolerance. Parity Tier L's branch decisions and the 100-macro-step dispatch are checked through the browser's WGSL path (REQ-VAL-144).
 
 ## References
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `docs/contracts/principia_parity_contract.md` § "7. What this contract does *not* cover"
+- `decisions.md` § "R-149 — The colour suite runs on Chromium and WebKit *(closes RQ-119)*"
 
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
@@ -30,6 +31,6 @@ The browser build is checked against the native wgpu Tier-N tolerances (R-85): t
 - `cargo xtask gate browser-tier-l` — in Chrome stable and Safari the boundary-state set's Tier-L decisions (including `N_sub`) and a 100-macro-step dispatch's branch words equal the CPU's, 0 forks (REQ-VAL-144).
 
 ## Notes
-- Waits on **RQ-119** (whether the colour suite runs headless Chrome only or the R-110 pair) — REQ-COL-048 carries it.
+- RQ-119 ruled: R-149 — the colour suite runs on the R-110 pair: Playwright's Chromium and WebKit.
 - RQ-79 ruled: R-110 — the browsers are Chrome stable and Safari; goldens render with native wgpu offscreen from M1 and the M8 Playwright suite checks against the same baselines, with no re-baselining without a gate decision.
 - RQ-97 ruled: R-113 — the browser legs of REQ-VAL-059, REQ-INT-059 and REQ-INT-028 are REQ-VAL-144, closed here with REQ-VAL-116.

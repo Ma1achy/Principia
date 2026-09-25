@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*92 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*93 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate.
@@ -82,7 +82,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 
 **M5**
 - [ ] REQ-DEC-031 — at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel
-- [ ] REQ-DEC-036 — at the switchover depth, linear vs full decode agree to O(h²); the linear path distinguishes adjacent samples to depth ≥ 50
+- [ ] REQ-DEC-036 — over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50
 - [ ] REQ-REF-009 — starved near-field fixture (64/64 budget, 512/512 non-finite) → Undetermined, although its spread_median reads 4.58e-4
 - [ ] REQ-VAL-081 — on the M5 render at E + 1 = 8, measure mean reconstruction error vs dt; ceiling set where it crosses ~2 levels; both forms above it — the hard gate and the ramp — are captured at the ceiling for the human's choice at the M5 gate (R-128)
 
@@ -99,6 +99,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-REF-039 — At the refine milestone, report the count/fraction of isotropic splits whose four children all immediately keep, on the standard charts.
 - [ ] REQ-REF-043 — decisions.md records the exact angle with its evidence: structured counts on the white-noise fixture (≈ chance) and on coherent fixtures at the chosen angle
 - [ ] REQ-REF-044 — decisions.md records the target with its evidence: estimator sea_fraction against the full-cache footprint-spread CDF on the tolerance-study fixtures, and the tier-derivation error that error costs
+- [ ] REQ-REF-051 — per named slice, resident quads with and without the latch over a live playhead to the horizon, the difference and its share of the resident count; recorded in decisions.md
 - [ ] REQ-VAL-087 — record where S_word fires relative to outcome impurity on the tolerance-study fixtures; the split's output is unchanged with S_word present or absent
 - [ ] REQ-VAL-088 — a recorded measurement fixes (threshold, eta) together
 - [ ] REQ-VAL-093 — record crossing-count distribution and its correlation with outcome impurity on reference charts

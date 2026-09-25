@@ -25,6 +25,7 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+- `decisions.md` § "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
 
 ## Deliverables
 - `crates/render/shaders/wgsl/frag/debug/` (hand-written, registry-scanned): live-shape, accumulator, derived and word-inspector views; WGSL `shape_n` / Hamiltonian helpers in the prelude library with Rust twins from the kernel.
@@ -33,7 +34,7 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - Golden/screenshot fixtures `fixtures/golden/m1-derived/`.
 
 ## Acceptance tests
-- `cargo xtask screenshot debug-views` — each view in the debug picker renders on a synthetic payload; the |n|−1 view is flat zero on the synthetic payload (REQ-TOOL-010; the real-march check and the live effort heatmap are REQ-TOOL-132, TASK-M3-22).
+- `cargo xtask golden debug-views` — each view in the debug picker renders on a synthetic payload and matches its own golden image, recorded at the M1 gate (R-153); the |n|−1 view is flat zero on the synthetic payload (REQ-TOOL-010; the real-march check and the live effort heatmap are REQ-TOOL-132, TASK-M3-22).
 - `cargo test -p render derived_views_match_cpu` — orbit_count/retrograde, reduced crossing count, finalised ftle and current drift, each computed in the fragment, equal a CPU reference on synthetic states (REQ-TOOL-024).
 - `cargo test -p render word_hash_and_symbol_at_k` — distinct synthetic words hash to distinct colours; symbol-at-k matches the appended sequence (REQ-TOOL-025).
 - `cargo test -p render norm_n_views` — the registry lists both views for n; ‖n‖ − 1 is within tolerance: REQ-VAL-122 (calibrated) over a test render (REQ-VAL-010).
@@ -42,9 +43,9 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 
 ## Notes
 - REQ-VAL-122 is a calibration (R-71); REQ-VAL-010's acceptance uses the proposed value until the human confirms it.
-- Not available at M1 (milestone Gaps): the GUI-screenshot runner (TASK-M0-06) compares against `docs/gui/design/NN_*.png`, and no artboard shows the debug views; the ledger metadata schema (generation root §3.8) has no vector type, so "the ledger knows n is a vector" (gui_state_contract §4) has nothing to key on.
+- Not available at M1 (milestone Gaps): no artboard shows the debug views, so R-153 gives them golden images of their own, recorded at the gate; the ledger metadata schema (generation root §3.8) has no vector type, so "the ledger knows n is a vector" (gui_state_contract §4) has nothing to key on.
 - `dbg_hash_u32`'s hash is not specified (TASK-M1-03's gap); REQ-TOOL-025's "distinct colours" is asserted over a fixed fixture set of words.
 - RQ-93 ruled: R-113 — the screenshot runner is TASK-M0-06's.
 - RQ-94 ruled: R-113 — REQ-TOOL-010 renders every view on a synthetic payload at M1; the real-march |n|−1 check and the live effort heatmap are a new M3 requirement (REQ-TOOL-132, TASK-M3-22).
 - RQ-101 ruled: R-122 — the Twilight data for the θ̃ view is the published matplotlib table (the prelude's, TASK-M1-03).
-- Waits on **RQ-123** (what the debug-views screenshot compares against, with no artboard) — REQ-TOOL-010 carries it.
+- RQ-123 ruled: R-153 — the debug views are checked against golden images of their own, recorded at the M1 gate, not against artboards (REQ-TOOL-010).

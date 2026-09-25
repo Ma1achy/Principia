@@ -14,7 +14,7 @@
 | PAY | 87 |
 | GEN | 27 |
 | SCHED | 88 |
-| REF | 48 |
+| REF | 49 |
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 160 |
@@ -22,9 +22,9 @@
 | VAL | 144 |
 | PERF | 93 |
 | SYS | 63 |
-| **total** | **1217** |
+| **total** | **1218** |
 
-Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 92 calibration, 98 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -36,13 +36,13 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | M3 | 186 |
 | M4 | 101 |
 | M5 | 158 |
-| M6 | 133 |
+| M6 | 134 |
 | M7 | 112 |
 | M8 | 229 |
 
 ## Sections
 
-845 sections in 46 files: 724 yield at least one requirement; 121 yield none and are listed below with the reason.
+845 sections in 46 files: 740 yield at least one requirement; 105 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 57 |
@@ -66,22 +66,6 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | R-7 amended — part (a)'s grep | informative only | process ruling |
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
-| R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)* | **MISSING REASON** | |
-| R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)* | **MISSING REASON** | |
-| R-143 — The live tree contains the static tree *(closes RQ-73)* | **MISSING REASON** | |
-| R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)* | **MISSING REASON** | |
-| R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)* | **MISSING REASON** | |
-| R-146 — The crate layout is confirmed *(closes RQ-76)* | **MISSING REASON** | |
-| R-147 — The R-97 to R-109 follow-ups are applied *(closes RQ-77)* | **MISSING REASON** | |
-| R-148 — The validation harness renders the "off" image *(closes RQ-78)* | **MISSING REASON** | |
-| R-149 — The colour suite runs on Chromium and WebKit *(closes RQ-119)* | **MISSING REASON** | |
-| R-150 — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)* | **MISSING REASON** | |
-| R-151 — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)* | **MISSING REASON** | |
-| R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)* | **MISSING REASON** | |
-| R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)* | **MISSING REASON** | |
-| R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)* | **MISSING REASON** | |
-| R-155 — One GIF encoder for both builds *(closes RQ-125)* | **MISSING REASON** | |
-| R-156 — The plan-pass readings are accepted *(closes RQ-126)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -377,22 +361,3 @@ Of these: 91 calibration, 98 definition, 1028 obligation. Retired (kept for thei
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
-
-## Errors
-
-- uncovered section with no reason: decisions.md § R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
-- uncovered section with no reason: decisions.md § R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*
-- uncovered section with no reason: decisions.md § R-143 — The live tree contains the static tree *(closes RQ-73)*
-- uncovered section with no reason: decisions.md § R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)*
-- uncovered section with no reason: decisions.md § R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*
-- uncovered section with no reason: decisions.md § R-146 — The crate layout is confirmed *(closes RQ-76)*
-- uncovered section with no reason: decisions.md § R-147 — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
-- uncovered section with no reason: decisions.md § R-148 — The validation harness renders the "off" image *(closes RQ-78)*
-- uncovered section with no reason: decisions.md § R-149 — The colour suite runs on Chromium and WebKit *(closes RQ-119)*
-- uncovered section with no reason: decisions.md § R-150 — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*
-- uncovered section with no reason: decisions.md § R-151 — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)*
-- uncovered section with no reason: decisions.md § R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*
-- uncovered section with no reason: decisions.md § R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*
-- uncovered section with no reason: decisions.md § R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*
-- uncovered section with no reason: decisions.md § R-155 — One GIF encoder for both builds *(closes RQ-125)*
-- uncovered section with no reason: decisions.md § R-156 — The plan-pass readings are accepted *(closes RQ-126)*

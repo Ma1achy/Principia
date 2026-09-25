@@ -21,6 +21,7 @@ listen (Trajectory panel and Inspector) sonifies the corpus's mapping — θ(t),
 - `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)*"
 
 ## Deliverables
 - `crates/engine/src/inspector/sonify.rs` — spectrum of θ(t), φ(t), 1/t_c scaling, spectral entropy; runs in the inspector worker.
@@ -42,6 +43,6 @@ listen (Trajectory panel and Inspector) sonifies the corpus's mapping — θ(t),
 - `cargo xtask bench hover-listen-frame` — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker (REQ-SYS-060).
 
 ## Notes
-- R-109 makes only pointer_channels §4 normative. The per-frame-during-motion budget of pointer_channels §3 is RQ-74's question (TASK-M8-09).
+- R-109, amended by R-144, makes pointer_channels §3 and §4 normative; §3's per-frame-during-motion budget is TASK-M8-09's.
 - Calibrations (R-71) proposed here: REQ-GUI-143, REQ-VAL-114. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-GUI-144, REQ-VAL-113. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.

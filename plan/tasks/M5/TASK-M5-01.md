@@ -24,6 +24,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `docs/design/principia_dd_generation_root.md` § "Conditional — not yet included"
 - `docs/design/principia_dd_generation_root.md` § "Not reduction fields"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -54,5 +55,6 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   measurement can fire").
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
-  per-footprint latch reaches the split decision is RQ-72 (see TASK-M5-19).
+  per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the
+  unresolved-footprint count in `QuadReduction` (see TASK-M5-19).
 - RQ-93 ruled: R-113, option (b) — QuadReduction's sizing is at M5: REQ-PAY-006 moves here and REQ-PAY-089 (sized from its member list, then aligned) is split from REQ-PAY-001; the member list itself stays at M0 (TASK-M0-11).

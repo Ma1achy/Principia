@@ -17,6 +17,7 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
+- `decisions.md` § "R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -41,3 +42,4 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - Definitions (R-72) written here: REQ-TOOL-114. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - RQ-93 ruled: R-113 — REQ-TOOL-002's dev-GUI half (the profiler reading the same file, its header config REQ-GUI-039's provenance object) is verified here by REQ-TOOL-098.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-128 (R-72 definition) (classification accepted by R-132).
+- R-152: TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).

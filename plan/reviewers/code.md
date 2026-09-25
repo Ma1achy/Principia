@@ -2,7 +2,7 @@
 
 Named on every task (`plan/WORKFLOW.md` § "Task files": `code` and `qa` always). This checklist holds the corpus's structural
 rules: what is compiled where, what may cross which boundary, what is generated, what is baked, and how the docs change.
-Crate names are the plan's layout (`plan/WORKFLOW.md` § "Conventions: crates and runners (proposed, RQ-76)").
+Crate names are the plan's layout (`plan/WORKFLOW.md` § "Conventions: crates and runners (R-146)").
 
 ## 1. One source, compiled twice
 

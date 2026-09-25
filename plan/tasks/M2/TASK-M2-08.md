@@ -50,7 +50,7 @@
 ## Notes
 - Gap G8: Φ_S²(u,v) = (n(θ,φ), m_fixed, p_fixed) — the corpus doesn't say where the held masses and momenta come from (z₀'s mass and momentum blocks, or chart params), whether p_fixed is taken before or after the fibre-phase rotation that C then undoes, nor φ_f's default.
 - The Euler landmarks for unequal masses (R-126: the Euler central configurations) are built with the physics site generators in TASK-M7-09 (REQ-COL-021); this task builds the collision landmarks and L±.
-- Gap G9: the IC Inspector cross-check tolerance isn't stated. The DoubleCover label and the projections are TASK-M2-28 (REQ-CHART-002 waits on RQ-71).
+- Gap G9: the IC Inspector cross-check tolerance isn't stated. The n-to-1 hemisphere label (R-141) and the projections are TASK-M2-28.
 - RQ-85 ruled: R-117 — the lowering appendix's shape-sphere row is conformed to R-14's (θ, φ) map, the one built here.
 - RQ-92 ruled: R-124 — R-50 is applied: dd_integrator §3.7 no longer calls B18 open; the landmarks are mass-weighted, as this task builds them.
 - Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (classification accepted by R-132).

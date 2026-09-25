@@ -24,6 +24,7 @@ that the split ignores; no divergence-trend member.
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-91 — The temporal accumulators feed "unresolved" *(closes RQ-42)*"
 - `decisions.md` § "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
+- `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -44,12 +45,11 @@ that the split ignores; no divergence-trend member.
 - Review checklist (physics) — the section gives the latch's layout per footprint with the resident quad, and shows it is dropped on evict and merge; the doc change is in this PR and the physics reviewer approves it before merge (REQ-REF-045).
 
 ## Notes
-- Open RQs: RQ-72 (from the closed requirements' `rq:`).
 - Calibrations (R-71) this task proposes: REQ-PAY-078.
 - Definitions (R-72) this task writes: REQ-PAY-079, REQ-REF-045.
-- **Waits on RQ-72** (REQ-PAY-065): whether a per-footprint latched bit or count travels in `QuadReduction`, or the
-  latch is evaluated on the GPU and only its verdict returns. The storage layout of the latch is this task's R-72
-  definition once RQ-72 is ruled.
+- RQ-72 ruled: R-142 — the latch is evaluated on the GPU in the resolve pass, its state in GPU-resident per-quad
+  memory; `QuadReduction` carries only the verdict, the count of unresolved footprints, latched ones included. The
+  latch's storage layout in that memory is this task's R-72 definition (REQ-REF-045).
 - REQ-PAY-078 is an R-71 calibration: proposed value and evidence in the PR; the human confirms at the M5 gate.
 - The horizon measurement must reuse the original discretisation (pitfalls §3, REQ-TOOL-038).
 - RQ-100 ruled: R-113 — REQ-REF-045 (the latch's layout) moves to M5 and is written here, where the latch is built.

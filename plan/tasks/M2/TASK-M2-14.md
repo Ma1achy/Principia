@@ -25,6 +25,7 @@ The CPU authoring layer exists: every axis is one of the closed set of four kind
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "03 Chart builder"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `decisions.md` § "R-26 — Every chart declares its domain function *(CD-6)*"
+- `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
@@ -38,11 +39,11 @@ The CPU authoring layer exists: every axis is one of the closed set of four kind
 - `cargo test -p engine validator_invariant_downstream` — the validator refuses an invariant axis whose dependency set is not upstream; (L_z, E) solves jointly (REQ-CHART-006).
 - `cargo test -p engine well_posedness` — fixtures: 2 swept + 6 frozen accepted; 1 swept + annotation + 7 frozen accepted; a double-written block and an under-determined block each refused (REQ-CHART-011).
 - Review (physics): the axis descriptor struct has every field; E and L_z set `conserved_along_flow`, K does not (REQ-CHART-012).
-- `cargo test -p engine chart_descriptors` — each registered chart returns the descriptors; the shape sphere and the full-range Burrau (Euclid) chart are DoubleCover (REQ-CHART-014; the int (m, n) lattice's "bijective" is REQ-CHART-037's, M4).
+- `cargo test -p engine chart_descriptors` — each registered chart returns the descriptors; the shape sphere is n-to-1 with n = 2 (R-141); the full-range Burrau (Euclid) chart's value follows RQ-127's ruling (REQ-CHART-014; the int (m, n) lattice's "bijective" is REQ-CHART-037's, M4).
 - `cargo test -p engine physical_axis_nonlinear` — adding a physical-quantity axis sets the chart kind to nonlinear and the decode path calls Φ (REQ-CHART-035).
 - `cargo test -p engine validate_before_resolve` — resolve on an invalid chart is unreachable: validation rejects it first (resolve takes only a `ValidatedChart`) (REQ-SYS-013).
 
 ## Notes
-- REQ-CHART-014 carries rq RQ-71 (the shape sphere as DoubleCover vs 2-to-1).
+- RQ-71 ruled: R-141 — the shape sphere is n-to-1 (n = 2) and `DoubleCover` is retired. REQ-CHART-014 waits on **RQ-127** for the full-range Burrau chart, which R-27 made the two-labelled-systems case.
 - RQ-85 ruled: R-117 — the shape sphere's descriptors are those of chart_reference §3's (θ, φ) chart; the lowering appendix row is conformed to it.
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause ("the int (m, n) lattice is bijective") moves into REQ-CHART-037's verify (TASK-M4-06).

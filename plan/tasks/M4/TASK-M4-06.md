@@ -27,6 +27,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `docs/contracts/principia_canonical_spec.md` § "5. Temporal & rendering model *(authoritative: `temporal_architecture_note`, `render_contract`, `scheduler_contract`, `checkerboard_contract`)*"
 - `docs/design/principia_core_design.md` § "4. Integrate and colour are separate passes — and now separate *mechanisms*"
 - `docs/contracts/principia_lowering_contract.md` § "Part 2 — Two assembly mechanisms (the substrate split; the old "one mechanism" claim retires)"
+- `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
@@ -38,7 +39,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - A per-chart checklist table in the PR mapping each appendix row to its registry entry and kernel variant.
 
 ## Acceptance tests
-- Physics + code reviewers: one row per chart of the lowering appendix checked against the chart registry and the kernel variants (latent slice with its scale in q; shape sphere lowering (s, t) → (θ, φ) → n → (ρ̃, λ̃) by R-14's map (R-117) with `system_image: DoubleCover`; (L_z,E)/(L_z,K) writing tagged payloads in-kernel; ternary mass; Euclid ν plane annotation axis; θ×K strip requiring lock for tilt; Burrau lattice per-cell dispatch, its `system_image` bijective (R-113); Anosova through canonicalise) (REQ-CHART-037); backed by `cargo test -p kernel chart_lowering_rows`.
+- Physics + code reviewers: one row per chart of the lowering appendix checked against the chart registry and the kernel variants (latent slice with its scale in q; shape sphere lowering (s, t) → (θ, φ) → n → (ρ̃, λ̃) by R-14's map (R-117) with `system_image: n-to-1`, n = 2 (R-141); (L_z,E)/(L_z,K) writing tagged payloads in-kernel; ternary mass; Euclid ν plane annotation axis; θ×K strip requiring lock for tilt; Burrau lattice per-cell dispatch, its `system_image` bijective (R-113); Anosova through canonicalise) (REQ-CHART-037); backed by `cargo test -p kernel chart_lowering_rows`.
 - `cargo test -p engine variant_selection` — a navigation edit changes only uniform buffers; a tier change of N or FTLE selects a different pre-built variant; a change of E selects none (REQ-SYS-024).
 - `cargo test -p engine occupant_ftle_baked` — no runtime uniform branches on occupant or FTLE; each (occupant, FTLE) combination is a distinct compiled variant; E = 0 and E = 3 use the same pipeline, the copies differing only in the `copy_index` uniform (REQ-INT-065).
 - `cargo test -p engine ftle_off_no_shadow` — the FTLE-off variant contains no shadow state; no ensemble kernel variant exists; E = 0 dispatches no copies (REQ-INT-069).
@@ -47,8 +48,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `cargo xtask golden decode-preset` — the DECODE preset for the Burrau int lattice and the Anosova physical-frame chart matches a CPU-decoded reference image, without special-casing (REQ-RENDER-082).
 
 ## Notes
-- Open RQs: RQ-71.
-- REQ-CHART-037 waits on RQ-71 (whether the shape sphere is `DoubleCover` or a 2-to-1 fold); the row is checked against the ruling.
+- RQ-71 ruled: R-141 — the shape sphere's row carries `system_image: n-to-1`, n = 2; `DoubleCover` is retired (REQ-CHART-037).
 - RQ-85 ruled: R-117 — the appendix's shape-sphere row is conformed to R-14's (θ, φ) map (applied in step 7).
 - RQ-92 ruled: R-124 — the dispatch-shape conflict is settled (copies dispatched again, R-102); this task is unblocked.
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause is REQ-CHART-037's here; REQ-RENDER-027's Burrau int lattice and Anosova half is REQ-RENDER-082, closed here.

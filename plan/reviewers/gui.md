@@ -114,13 +114,7 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*65 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
-
-**M1**
-- [ ] REQ-TOOL-010 — each view selectable in the debug picker renders on a synthetic payload
-
-**M3**
-- [ ] REQ-TOOL-132 — the |n|−1 view is flat zero on a real march; the effort heatmap shows the march's per-pixel substep counts
+*63 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M6**
 - [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control

@@ -19,6 +19,7 @@ The frame tier is keyed by a render key hashing the stain graph in its canonical
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)"
 - `docs/design/principia_dd_colouring.md` § "5. Unit tests"
+- `decisions.md` § "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
 
 ## Deliverables
 - `crates/engine/src/render_key.rs` — the render key over the canonical graph form (REQ-RENDER-075), uniforms and overlay set; the frame-tier reuse check in the frame loop.
@@ -30,4 +31,4 @@ The frame tier is keyed by a render key hashing the stain graph in its canonical
 
 ## Notes
 - PIT-5: colour stays downstream of the criterion; no colour-space quantity may reach the sim key or refinement.
-- Open RQ-75 (the fragment side's baked `has_ensemble`) decides whether E = 0 ↔ E > 0 is a render-key change; the test must follow its ruling.
+- RQ-75 ruled: R-145 — `has_ensemble` is a uniform, so E = 0 ↔ E > 0 is not a render-key change and never re-bakes.

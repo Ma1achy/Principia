@@ -34,6 +34,7 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - `docs/design/principia_dd_simstate_payload.md` § "`times` (u32)"
 - `docs/design/principia_dd_simstate_payload.md` § "3. The word buffer — `free_group_word`"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
 
 ## Deliverables
 - `crates/ledger`: derived-accessor emission for both targets — `ftle`, `ftle_valid`, `diffusion_slope`, `diffusion_slope_valid`, `total_substeps_log2`, `tm_t_end_fraction`, `tm_t_dmin_fraction`, `orbit_count`, `retrograde`, the `sd_is_resolved_outcome/_running/_failed/_finished` predicates — each with exactly the payload §6 name.
@@ -56,5 +57,5 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 ## Notes
 - Each unit test is shown able to fail (VAL-007 discipline, PIT-9): e.g. a mutated finalisation (plain S/t) must fail `derived_not_stored`, and a stored-NaN variant must fail `tier_absent_nan_bits`.
 - The canonical quiet-NaN bit pattern and the "empty/sentinel word" an unbound word buffer reads are not given by the corpus (see Gaps in the milestone report); the task waits on them for REQ-RENDER-013.
-- `ensemble_spread` is resolve-stage (M5); at M1 its read-side member exists and reads NaN at E = 0, which is all REQ-RENDER-013 asserts. RQ-75 (whether the fragment keeps a baked `has_ensemble`) is carried by TASK-M1-03.
+- `ensemble_spread` is resolve-stage (M5); at M1 its read-side member exists and reads NaN at E = 0, which is all REQ-RENDER-013 asserts. R-145: the fragment reads `has_ensemble` as a uniform (TASK-M1-03).
 - Closes, for gaps the corpus leaves open: REQ-RENDER-077 (R-72 definition) (classification accepted by R-132).

@@ -24,6 +24,7 @@ Hover and click map the pointer through the single Y-flip, decode the IC on the 
 - `docs/design/principia_systems_architecture.md` § "The return paths"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+- `decisions.md` § "R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)*"
 
 ## Deliverables
 - `crates/engine/src/inspector/worker.rs` — the inspector worker (native: a thread; browser: the second wasm context, TASK-M8-38), with a generation counter, debounce and cancel.
@@ -43,5 +44,5 @@ Hover and click map the pointer through the single Y-flip, decode the IC on the 
 - `cargo xtask bench hover-step-budget` — the proposal shows the total_substeps distribution (p1 to p99) of hover ICs and the per-frame cost of the chosen budget against the 60 fps frame; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-PERF-078).
 
 ## Notes
-- REQ-PERF-072, REQ-PERF-075 and REQ-PERF-078 wait on RQ-74 (whether pointer_channels §3's per-frame-during-motion budget or trajectory_viewing §1's "one integration per settled hover" is normative). The deliverables follow the requirements as written; the PR can't merge until RQ-74 is ruled.
+- RQ-74 ruled: R-144 — pointer_channels §3's per-frame-during-motion budget is normative beside §4; trajectory_viewing §1's responsiveness paragraph stays superseded (REQ-PERF-072, REQ-PERF-075, REQ-PERF-078).
 - Calibrations (R-71) proposed here: REQ-PERF-078. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.

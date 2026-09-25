@@ -2021,3 +2021,41 @@ Tick any you don't accept.
   reading): REQ-SYS-002's lint matches identifiers case-sensitively.
 - **Needed:** accept, or rule otherwise on any item.
 - **Ruling:** R-156 (decisions.md). Closed in step 7.
+
+---
+
+*Found while applying R-141 to R-156 (step 7). Nothing is chosen.*
+
+## RQ-127: R-141 — the full-range Burrau chart's `system_image` once `DoubleCover` is retired *(step 7, charts)*
+
+- R-141: "Retire DoubleCover: no current chart has two labelled systems."
+- R-27 (CD-7): "Shape only (the fold) and shape × labelling (the full range) are both kept. A `system_image` value for
+  'covers each shape twice, as two labelled systems' is added". R-104 named that value `DoubleCover`.
+- `principia_chart_reference.md` §4.5 (:476–478), R-27's application: "label each chart with the quotient it covers (in
+  its `system_image` descriptor — the full range covers each shape twice, as two labelled systems: `DoubleCover`, R-27,
+  R-104)". The leg swap there "swaps two masses, so it is a body relabelling, a distinct labelled system" (:474),
+  unlike the shape sphere's gauged reflection. R-141 names four sites; this one isn't among them, and it is left as it
+  stands.
+- REQ-CHART-014 (M2, TASK-M2-14) verify and REQ-CHART-025 (M2, TASK-M2-11) carry the full-range chart as `DoubleCover`.
+- **Needed:** whether the full-range Burrau chart keeps a two-labelled-systems value (`DoubleCover` kept for it alone,
+  or renamed), or becomes n-to-1 with n = 2 like the shape sphere, with the labelling recorded some other way.
+
+## RQ-128: Readings taken while applying R-141 to R-156 *(step 7)*
+
+Tick any you don't accept.
+- [ ] R-143's "the named slices" are dd_refinement_policy §5's four: `near-field`, `deep interior`, `config_stability`
+  and `tilt_plambda` (the doc and REQ-REF-051 say so).
+- [ ] R-143's calibration is REQ-REF-051 (M6, numerical gate), closed by TASK-M6-06 with `cargo xtask gate latch-cost`.
+- [ ] R-142: `QuadReduction`'s verdict is policy §1's existing `n_unresolved`; it is written into REQ-REF-035 (M6) and
+  dd_generation_root §3.7, and its width is set with the member packing (REQ-PAY-077).
+- [ ] R-141: `DoubleCover` stays in chart_decoder Part 5 as a "Was (R-104)" note, and REQ-CHART-014's statement still
+  lists it until RQ-127 is ruled.
+- [ ] R-146: `npm --prefix web test -- <filter>` stays as the M8 command, with the package's test script running
+  `vitest run`.
+- [ ] R-152: the shell lives at `crates/gui/src/windows/profiler.rs` (TASK-M6-22).
+- [ ] R-153: REQ-TOOL-010 and REQ-TOOL-132's verify method changes from GUI screenshot to golden image, run as
+  `cargo xtask golden debug-views` and `cargo xtask golden live-march-views`.
+- [ ] R-154: REQ-DEC-037 gains the switchover-depth check, run in TASK-M6-08 as `cargo xtask gate linear-decode-switchover`.
+- [ ] Rulings that change no requirement text are attached for coverage: R-144 to REQ-PERF-004, 072, 075 and 078; R-146 to
+  REQ-SYS-052; R-147 to REQ-SCHED-039, 053 and 085; R-156 to REQ-INT-081, REQ-PAY-070 and REQ-PERF-012.
+- **Needed:** accept, or rule otherwise on any item.

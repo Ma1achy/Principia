@@ -23,6 +23,7 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 - `docs/contracts/principia_checkerboard_contract.md` § "5. Self-erasing: catch-up at rest, endpoints, and pause"
 - `docs/contracts/principia_export_animation_contract.md` § "Part 5 — Determinism & reproducibility"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 5 — Preview vs refine is a second sim key"
+- `decisions.md` § "R-155 — One GIF encoder for both builds *(closes RQ-125)*"
 
 - `decisions.md` § "R-131 — The video encoders *(closes RQ-108)*"
 ## Deliverables
@@ -44,5 +45,4 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 
 ## Notes
 - RQ-108 ruled: R-131 — the encoders are named (native: PNG frames, GIF, MP4 through a system ffmpeg when present; browser: zipped PNG frames, GIF via a wasm encoder, MP4/WebM through WebCodecs where supported); the sink trait keeps them out of the frame loop.
-- Waits on **RQ-125** (which GIF encoders) — REQ-TOOL-106 carries it.
-- Gap: which GIF encoder the native build uses, and which wasm GIF encoder the browser uses, are not named.
+- RQ-125 ruled: R-155 — one GIF encoder for both builds: the Rust `gif` crate (MIT or Apache-2.0), with `color_quant` for palettes, compiled to wasm for the browser.

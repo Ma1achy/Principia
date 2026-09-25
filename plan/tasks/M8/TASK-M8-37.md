@@ -21,6 +21,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `docs/design/principia_temporal_architecture_note.md` § "The frame loop — the one genuinely new object (and what makes lockstep clean)"
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
 - `docs/contracts/principia_caching_contract.md` § "Part 6 — The responsiveness invariant: the main thread never waits"
+- `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -39,6 +40,6 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
 
 ## Notes
-- `web/` has no test runner in the plan conventions; this task uses `npm --prefix web test`.
+- R-146: `web/` unit tests run under Vitest (`npm --prefix web test` runs `vitest run`); the browser suites run under Playwright.
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
 - RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.

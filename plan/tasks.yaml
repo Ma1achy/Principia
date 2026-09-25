@@ -1225,7 +1225,7 @@
   title: "Merging under a live playhead: coarsening, resident count and merge memory"
   depends_on: [TASK-M6-02, TASK-M6-03, TASK-M6-04, TASK-M5-11, TASK-M5-28]
   needs: [REQ-SCHED-032, REQ-SCHED-037, REQ-SCHED-050, REQ-TOOL-050]
-  requirements: [REQ-REF-026, REQ-REF-027, REQ-REF-028, REQ-REF-029, REQ-REF-035]
+  requirements: [REQ-REF-026, REQ-REF-027, REQ-REF-028, REQ-REF-029, REQ-REF-035, REQ-REF-051]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M6-07

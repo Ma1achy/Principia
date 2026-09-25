@@ -15,6 +15,7 @@ The engine's rayon pool leaves at least one core free by default (more on small-
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "CPU"
 - `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-144 — pointer_channels §3 is normative too *(closes RQ-74, amends R-109)*"
 
 ## Deliverables
 - `crates/engine/src/pool.rs` — pool construction from available cores minus the reserve; override in config.
@@ -28,7 +29,7 @@ The engine's rayon pool leaves at least one core free by default (more on small-
 - Proposal: the benchmark ICs (typical and tail) with their total_substeps percentiles; the human confirms them at the M3 gate (REQ-PERF-085).
 
 ## Notes
-- Open RQs: RQ-74 (REQ-PERF-004).
-- REQ-PERF-004 waits on RQ-74 (whether trajectory_viewing §1's responsiveness paragraph stands). 'Typical IC' is not defined; the bench states the IC it uses.
+- RQ-74 ruled: R-144 — pointer_channels §3 (responsiveness) is normative beside §4.
+- 'Typical IC' is not defined; the bench states the IC it uses.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-PERF-083.
 - Closes, for gaps the corpus leaves open: REQ-PERF-085 (R-71 calibration) (classification accepted by R-132).

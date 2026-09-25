@@ -20,6 +20,7 @@ The rules the fragment side must keep from now on are checked in CI rather than 
 - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)"
 - `docs/design/principia_systems_architecture.md` § "1. The rings — cross-cutting services"
 - `decisions.md` § "R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*"
+- `decisions.md` § "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
 
 ## Deliverables
 - `xtask/src/lint_wgsl.rs` + `cargo xtask lint-wgsl` wired into CI: the isnan and self-comparison rule, the accessor-only rule (with the chart/integrator/scheduler identifier deny-list), the shadow rule.
@@ -33,5 +34,5 @@ The rules the fragment side must keep from now on are checked in CI rather than 
 
 ## Notes
 - Each lint is shown able to fire (PIT-3): a fixture WGSL file with an `isnan`, a `raw != raw`, a raw payload read and an `r_sh` read must fail the lint.
-- Open RQ-75 (REQ-RENDER-015): whether `has_ensemble` is a baked const or a uniform changes what the lint accepts as the ensemble guard.
+- RQ-75 ruled: R-145 — `has_ensemble` is a uniform, so the lint accepts a guard on the uniform as the ensemble guard (REQ-RENDER-015).
 - RQ-82 ruled: R-114 — the generated debug guard is the bitcast test; `raw != raw` is dropped (render_gui_spec §10.1 conformed in step 7), so the lint rejects it.

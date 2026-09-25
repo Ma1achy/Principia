@@ -23,6 +23,7 @@ The Jacobi frame (ρ, λ), the interior vertex angles and the labelled CoM are a
 - `docs/notes/ic_inspector_scratchpad.md` § "Whole-system handles — the invariance audit"
 - `docs/notes/ic_inspector_scratchpad.md` § "Build notes"
 - `decisions.md` § "R-8 — The IC Inspector copies"
+- `decisions.md` § "R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*"
 
 ## Deliverables
 - `crates/gui/src/widgets/body_canvas.rs` — shared by panes 1 and 2: Jacobi frame, angles, CoM, auto-fit.
@@ -43,4 +44,4 @@ The Jacobi frame (ρ, λ), the interior vertex angles and the labelled CoM are a
 - `cargo test -p validation js_oracle_n` — random ICs: Rust n and the JS tool's n agree to the round-trip bound; the Inspector links no second decode implementation (REQ-VAL-109).
 
 ## Notes
-- RQ-71 (whether the shape sphere is a double cover or a 2-to-1 fold) touches the mirror-folded shading of REQ-GUI-060; no requirement closed here carries it, but the physics reviewer checks the shading against whatever RQ-71 rules.
+- RQ-71 ruled: R-141 — the shape sphere is 2-to-1 over its φ hemispheres (one system); the physics reviewer checks REQ-GUI-060's mirror-folded shading against it.

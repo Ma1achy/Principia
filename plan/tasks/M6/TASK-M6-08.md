@@ -19,6 +19,7 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `docs/contracts/principia_scheduler_contract.md` § "`QuadRequest.flags`"
 - `docs/contracts/principia_lowering_contract.md` § "Compute side"
+- `decisions.md` § "R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*"
 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 ## Deliverables
@@ -34,8 +35,10 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `cargo test -p engine at_f32_floor_terminal` — force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full (REQ-SCHED-062).
 - `cargo test -p engine linear_uniform_binding` — the QuadRequest struct has no x₀/J_D fields; the linear-path bind group binds the uniform and the full-decoder bind group does not (REQ-PAY-069).
 - `cargo xtask bench decode-mode-occupancy` — measure deep-quad occupancy/register pressure with the two-path branch vs a baked linearised variant; record the result (REQ-SYS-038).
+- `cargo xtask gate linear-decode-switchover` — at the switchover depth, linear vs full decode agree to O(h²) (REQ-DEC-036's check, moved here by R-154) (REQ-DEC-037).
 
 ## Notes
 - Which `Decision` variant records `AT_F32_FLOOR` (and which the integration floor) is not stated by refinement_policy §6 — `Collapsed` reads as the candidate but is not named for it; see Gaps.
 - If the benchmark shows the dead full-decode path hurts deep-quad occupancy, REQ-SYS-038 makes decode mode a baked variant; that is recorded in the PR, not decided by the implementer.
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D) is built at M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) stays here.
+- R-154: REQ-DEC-036's check at the actual switchover depth joins REQ-DEC-037 here; M5 verified it over a depth sweep (TASK-M5-04).

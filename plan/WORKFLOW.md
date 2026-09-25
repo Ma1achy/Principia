@@ -51,9 +51,9 @@ Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`;
     or dispatch.
 - **Pitfalls** are `PIT-<n>` or `PIT-<n>.<m>`, the section numbers of `docs/read_first/principia_01_pitfalls.md`.
 
-## Conventions: crates and runners (proposed, RQ-76)
+## Conventions: crates and runners (R-146)
 
-This layout is pending the reviewer's ruling on RQ-76. The workspace sits under `crates/`, next to `docs/`.
+This layout is confirmed by R-146. The workspace sits under `crates/`, next to `docs/`.
 
 **Crates:**
 - `kernel`: the physics source, compiled twice: f32 SPIR-V → WGSL, and native f64.
@@ -68,7 +68,8 @@ This layout is pending the reviewer's ruling on RQ-76. The workspace sits under 
 
 **Other directories:**
 - `xtask`: the runners.
-- `web/`: the browser product.
+- `web/`: the browser product. Its unit tests run under Vitest (`npm --prefix web test -- <filter>`, the package's test
+  script running `vitest run`), and its browser suites under Playwright (R-146).
 - `fixtures/golden/` and `fixtures/gates/`: the test fixtures.
 
 **Each verify method has its runner:**
@@ -77,7 +78,7 @@ This layout is pending the reviewer's ruling on RQ-76. The workspace sits under 
 |---|---|
 | `unit test` | `cargo test -p <crate>` |
 | `property test` | `cargo test -p <crate>`, using proptest |
-| `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
+| `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite, on Chromium and WebKit (R-149), checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
 | `numerical gate` | `cargo xtask gate <gate>`, with fixtures in `fixtures/gates/` |
 | `benchmark` | `cargo xtask bench <bench>` |
 | `GUI screenshot` | `cargo xtask screenshot <artboard>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
