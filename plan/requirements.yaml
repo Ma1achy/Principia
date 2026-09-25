@@ -15145,11 +15145,14 @@
     section: "4.5a A quantity that does not converge under refinement is measuring the sampling"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: R-171 — The convergence gate, defined *(closes A1, A2, T2)*
   verify:
     method: numerical gate
-    detail: "Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate."
+    detail: "R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass."
   rulings:
   - R-71
+  - R-171
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. Standing rules — A QUANTITY THAT DOES NOT CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING. The convergence threshold: REQ-VAL-135 (calibration)."
 - id: REQ-VAL-005
@@ -17306,14 +17309,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: R-171 — The convergence gate, defined *(closes A1, A2, T2)*
   verify:
     method: review checklist
-    detail: "the proposal states the relative-step threshold, shown to fail the recorded 0.0947 → 0.2153 → 0.4423 → 0.5494 sequence and to pass a converging aggregate from the M3 march; recorded in decisions.md"
+    detail: "the proposal states the threshold on the finest r_k (R-171's definition), shown to fail the recorded 0.2153 → 0.4423 → 0.5494 → 0.0947 sequence and to pass a converging aggregate from the M3 march; replaces M0's provisional 0.1; recorded in decisions.md"
   rulings:
   - R-71
   - R-113
+  - R-171
   milestone: M3
-  note: "R-113 (RQ-93 M0-16): moved to M3; the convergence runner and gate stay in M0 with a placeholder threshold."
+  note: "R-113 (RQ-93 M0-16): moved to M3; the convergence runner and gate stay in M0 with the provisional threshold 0.1 (R-171)."
 - id: REQ-VAL-136
   area: VAL
   kind: calibration

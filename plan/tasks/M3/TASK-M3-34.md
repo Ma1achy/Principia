@@ -25,19 +25,20 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `docs/read_first/principia_01_pitfalls.md` § "2.3 The 96.3% recall is the right failure direction"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-166 — The fixtures"
+- `decisions.md` § "R-171 — The convergence gate, defined *(closes A1, A2, T2)*"
 
 ## Deliverables
 - `crates/validation/src/gates/escape_revalidation.rs` — precision/recall against both ground truths; `|Δn̂|` distributions for t = 25–30; the gap ratio.
-- `fixtures/gates/convergence/gate.json` — the placeholder threshold TASK-M0-05 set, replaced by the proposed REQ-VAL-135 value once the human confirms it.
+- `fixtures/gates/convergence/gate.json` — the provisional threshold 0.1 TASK-M0-05 set (R-171), replaced by the proposed REQ-VAL-135 value once the human confirms it.
 - The chosen tau with its gap evidence, written where integrator contract Part 3 and pitfalls §2.2 state 'to re-measure'.
 
 ## Acceptance tests
 - `cargo xtask gate escape-revalidation` — re-run against check 2's ground truth and the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; `fixtures/slices.toml`) at t = 30 under the legacy classifier (`docs/reference/prin-rs/src/outcome.rs`) and checks in as a fixture (R-166); precision, recall (previously 100% / 96.3%) and the tau gap (previously 383×) recorded for both (REQ-VAL-040).
 - `cargo xtask gate tau-gap` — |Δn̂| distributions of escapers and bound trajectories across t = 25–30; the gap ratio recorded (claimed 383×, 7.04e-05 vs 2.70e-02; prin-rs at best 6.8×); the chosen tau lies within the gap and outcomes are unchanged across the middle of the gap (REQ-VAL-051).
 - `cargo xtask gate escape-precision` — on the re-validation set, escape fires whose ground truth is bound are counted; gated at the measured precision (pre-R-29: 100.0%); a criterion variant that fires earlier with any false positives fails (REQ-EVT-019).
-- `cargo xtask gate convergence --propose` — the proposal states the relative-step threshold, shown to fail the recorded 0.0947 → 0.2153 → 0.4423 → 0.5494 sequence and to pass a converging aggregate from the M3 march; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-VAL-135).
+- `cargo xtask gate convergence --propose` — the proposal states the threshold on the finest r_k (R-171), shown to fail the recorded 0.2153 → 0.4423 → 0.5494 → 0.0947 sequence (strides 32, 4, 1, 0) and to pass a converging aggregate from the M3 march; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-VAL-135).
 
 ## Notes
 - *Was: "Gap: the legacy t = 30 set (config chart, 'unbound and receding at t = 30') is a prin-rs dataset not in the repository; its regeneration recipe is not given."* RQ-103 ruled: R-166 (c) — the set isn't stored data; this task's harness regenerates it and checks it in under `fixtures/`.
-- RQ-93 ruled: R-113 — REQ-VAL-135 moves to M3 and is proposed here; the convergence runner and gate stay in M0 (TASK-M0-05) with a placeholder threshold.
+- RQ-93 ruled: R-113 — REQ-VAL-135 moves to M3 and is proposed here; the convergence runner and gate stay in M0 (TASK-M0-05) with the provisional threshold 0.1 (R-171).
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-135.

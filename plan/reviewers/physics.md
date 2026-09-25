@@ -18,7 +18,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 *94 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
-- [ ] REQ-VAL-004 — Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate.
+- [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
 
 **M2**
 - [ ] REQ-DEC-043 — the proposal measures f64-vs-f32 decode differences on the golden IC and fuzzed interiors and states the multiple of f32 eps that covers them; recorded in decisions.md
