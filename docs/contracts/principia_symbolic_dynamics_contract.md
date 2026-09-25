@@ -6,17 +6,27 @@
 
 ## Status: OPEN — specification required before per-pair quantities are trusted
 
-The following are **not yet an authoritative derivation** and must be specified here before use:
+The following are **not yet an authoritative derivation** and must be specified here before use. **How each is settled
+(R-125):** §1 is transcribed at M3 by the task that writes the word; §2 and §3 are **v2** — per-pair views are out of v1
+(PL-3, R-38).
 
 ### 1. Generator ↔ branch-cut convention
 The word is over the free group `F₂ = ⟨a, b⟩` on the shape sphere with the three binary-collision points removed. Fix, normatively:
 - which two branch cuts correspond to generators `a` and `b` (arc from which collision point to the Lagrange reference pole);
 - the crossing-direction sign convention (which crossing direction is the generator vs its inverse) — must match the half-open sign convention in payload §3 / the integrator contract.
 
+**Settled how (R-125):** the a/b assignment and the crossing sign are **transcribed from the literature** (Montgomery;
+Šuvakov–Dmitrašinović), with citations, by the task that writes the word (M3); verified against the published braid
+classes, physics-reviewed, and confirmed at the gate.
+
 ### 2. The punctured-sphere relation (third pair)
+**v2 (R-125):** per-pair views are out of v1 (PL-3, R-38).
+
 Two generators suffice for three punctures because a loop around the third collision point is expressible via `a` and `b` through the fundamental-group relation of the thrice-punctured sphere. **Specify that relation explicitly** — it is what lets the third body-pair's encounters be attributed from a two-generator word.
 
 ### 3. Third-pair attribution algorithm
+**v2 (R-125):** per-pair views are out of v1 (PL-3, R-38).
+
 Given the reduced word (a sequence of `a/A/b/B`), specify the **deterministic algorithm** that maps branch-cut crossings to the three **body-pairs** (01/02/12) and produces:
 - `enc_01`, `enc_02`, `enc_12` — per-pair crossing tallies;
 - `dominant_pair = argmax` of those.
@@ -41,6 +51,6 @@ Per payload §3, a **truncated** word (`fgw_truncated`) has an unknown reduced f
 
 - **Symbolic-spread `S_word`** (scheduler / sampling-SSAA note) — the resolve-stage reduction over a footprint's E+1 words. It compares *whole words* and does not need pair-attribution, so it is **not** blocked by this contract (it works on the raw reduced words). Only the *per-pair* interpretation is blocked.
 - **Paper 2 / quantitative work** — any per-pair encounter statistics.
-- **`dominant_pair` colour mode** — blocked until §3 is specified.
+- **`dominant_pair` colour mode** — blocked until §3 is specified; v2 (R-125).
 
 *This contract exists so the payload/storage layer can be marked authoritative without waiting on the topological attribution algorithm. The word is stored correctly; interpreting it into pair statistics is a separable, deferred piece of work.*

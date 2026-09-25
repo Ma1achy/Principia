@@ -470,7 +470,7 @@ Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), ma
 
 ## 8. Build-time settles (measure / specify once running)
 
-- **`enc_XY`/`dominant_pair` attribution algorithm (BLOCKING for those quantities)** — specify the generator↔cut convention, punctured-sphere relation, and third-pair attribution before per-pair tallies or `dominant_pair` are deterministic (§5).
+- **`enc_XY`/`dominant_pair` attribution algorithm (BLOCKING for those quantities)** — specify the generator↔cut convention, punctured-sphere relation, and third-pair attribution before per-pair tallies or `dominant_pair` are deterministic (§5). The convention is transcribed at M3; the rest is v2, since per-pair views are out of v1 (R-125).
 - **`horizon_steps ≤ 65535` — ENFORCED** (single time format, no fallback; §2). Dispatch refuses a configuration over it (R-86); long integrations use coarser `dt_macro`/epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the `total_substeps` counter.
 - **Bottleneck confirmation** — the march may be bandwidth-bound *or* arithmetic/occupancy/register-pressure-bound depending on dispatch granularity (per-substep vs per-dispatch storage traffic). Confirm by measurement, and check for register spilling; the mixed-radix "free compute" argument is contingent on this (§3).
 - Word truncation rate (drives whether 76 symbols suffices; mixed-radix is the alternative to widening).
