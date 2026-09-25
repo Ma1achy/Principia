@@ -47,3 +47,4 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - RQ-93 ruled: R-113 — the screenshot runner is TASK-M0-06's.
 - RQ-94 ruled: R-113 — REQ-TOOL-010 renders every view on a synthetic payload at M1; the real-march |n|−1 check and the live effort heatmap are a new M3 requirement (REQ-TOOL-132, TASK-M3-22).
 - RQ-101 ruled: R-122 — the Twilight data for the θ̃ view is the published matplotlib table (the prelude's, TASK-M1-03).
+- Waits on **RQ-123** (what the debug-views screenshot compares against, with no artboard) — REQ-TOOL-010 carries it.

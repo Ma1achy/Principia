@@ -1911,3 +1911,97 @@ Tick any you don't accept.
   native build's dedicated render thread is a paragraph under it.
 - **Needed:** accept, or rule otherwise on any item.
 - **Ruling:** R-140 (decisions.md). Closed in step 7.
+
+---
+
+*Found while applying R-110 to R-140 to the plan (step 7, checkpoint B). Nothing is chosen.*
+
+## RQ-119: R-110 — which browser the M8 Playwright colour suite runs *(step 7, CI)*
+
+- REQ-COL-048 (M8, TASK-M8-40): "verified at M8 by the Playwright browser suite (headless Chrome)"; TASK-M8-40 Goal:
+  "Playwright + headless Chrome golden-image diffs of the fragment output".
+- R-110: "Browsers for REQ-VAL-116: Chrome stable and Safari." It names the browsers for the Tier-N suite only, not the
+  colour suite.
+- **Needed:** whether the colour suite stays headless Chrome only, or runs on the R-110 pair (Chrome stable and Safari).
+
+## RQ-120: R-113 — REQ-INT-048's GPU arm at M3 *(step 7, parity)*
+
+- REQ-INT-048 (M3, TASK-M3-16): "A crossing must be counted iff the signed distance goes from negative to non-negative …
+  identically on CPU and GPU"; verify: "same symbols on CPU and GPU".
+- RQ-97's fix, accepted by R-113, drops the GPU arm from the M3 verify of REQ-INT-007, 029, 030 and 031 ("covered in M4
+  by REQ-VAL-059 (Tier L), REQ-VAL-061 (one step) and REQ-VAL-072 (integer fields and the word's arithmetic)"). It
+  doesn't name REQ-INT-048. M3 is "CPU, native"; the kernel first compiles to the GPU in M4 (TASK-M4-01).
+- **Needed:** whether REQ-INT-048's GPU arm is dropped from M3 as the other four were (covered by REQ-VAL-072 in M4),
+  or split into an M4 requirement.
+
+## RQ-121: R-122 — Cubehelix: the analytic form or the matplotlib table *(step 7, colour)*
+
+- `principia_dd_colouring.md` § "3.8 Palettes and CVD" (:140): "**Cubehelix** (analytic, CB-tolerant by monotone L):
+  `φ = 2π(s/3 − λt)` …". REQ-COL-041 (M7, TASK-M7-07): "Cubehelix must be generated analytically".
+- R-122: LUT data comes "from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight,
+  cubehelix)". REQ-COL-030 carries both: "LUT spheres incl. analytic Cubehelix" and "matplotlib tables (… cubehelix)".
+- The two can differ: matplotlib's `cubehelix` colormap uses its own default parameters, which may not be dd_colouring's
+  s = 0.5, λ = 1.5, h = 1.
+- **Needed:** which one is the reference — the analytic form (and the table only a cross-check), or the matplotlib table
+  (and REQ-COL-041 changes).
+
+## RQ-122: R-129 — the arbiter overlay's Profiler tab before the Profiler window exists *(step 7, GUI)*
+
+- R-129: "Arbiter overlay: a Profiler tab." REQ-TOOL-058 (M6, TASK-M6-22): "A debug overlay for the arbiter, in a
+  Profiler tab".
+- The Profiler window (Timeline, Flame, GPU, Memory and Counters tabs) is REQ-TOOL-098, M8, TASK-M8-28. At M6 there is
+  no Profiler window to hold a tab.
+- **Needed:** where the overlay lives at M6 — a minimal Profiler window shell built by TASK-M6-22 that TASK-M8-28 later
+  fills; a standalone debug overlay moved into the Profiler at M8; or REQ-TOOL-058 moves to M8.
+
+## RQ-123: R-129 — screenshots of views no artboard shows *(step 7, GUI)*
+
+- R-129's presence-only rule names four surfaces: the Custom quality fields, the target-utilisation ceiling, the arbiter
+  overlay and passive logging.
+- Two more screenshot checks have no artboard: TASK-M1-12's `cargo xtask screenshot debug-views` (REQ-TOOL-010; the task
+  notes "no artboard shows the debug views"), and TASK-M3-22's `cargo xtask screenshot live-march-views` (REQ-TOOL-132).
+  `plan/WORKFLOW.md`: a GUI screenshot is compared against `docs/gui/design/NN_*.png` for layout.
+- **Needed:** whether R-129's presence-only rule extends to these two (the view renders and is selectable, no layout
+  comparison), or they compare against a recorded golden image of their own.
+
+## RQ-124: R-113 — REQ-DEC-036's "switchover depth" at M5 *(step 7, decode)*
+
+- REQ-DEC-036 moved whole to M5 (R-113, RQ-99 option (a)), closed by TASK-M5-04. Its verify: "at the switchover depth,
+  linear vs full decode agree to O(h²); the linear path distinguishes adjacent samples to depth ≥ 50".
+- The switchover depth is REQ-DEC-037's (M6, TASK-M6-07). TASK-M5-04 notes: "here the gate runs over a depth sweep".
+- **Needed:** whether the M5 verify reads "over a depth sweep" (the switchover-depth check joining REQ-DEC-037 at M6), or
+  REQ-DEC-036's O(h²) half moves to M6.
+
+## RQ-125: R-131 — which GIF encoders *(step 7, export)*
+
+- R-131: "Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: … GIF via a wasm encoder".
+  REQ-TOOL-106 (M8) carries the same list. TASK-M8-30 notes: "which GIF encoder the native build uses, and which wasm GIF
+  encoder the browser uses, are not named."
+- The corpus names no GIF encoder and doesn't lean.
+- **Needed:** the encoders (e.g. one Rust GIF crate for both builds), or a ruling that TASK-M8-30 picks them, stating the
+  licence, under review.
+
+## RQ-126: Readings taken while applying R-110 to R-140 to the plan *(step 7, checkpoint B plan)*
+
+Tick any you don't accept.
+- [ ] Closing tasks for split-off requirements whose ruling names no task: REQ-TOOL-130 → TASK-M5-28; REQ-TOOL-131 →
+  TASK-M1-05; REQ-PAY-089 → TASK-M5-01 (with REQ-PAY-077); REQ-INT-082 → TASK-M3-11; REQ-TOOL-132 → TASK-M3-22;
+  REQ-TOOL-133 → TASK-M5-18; REQ-GUI-161 → TASK-M8-06 (the Manifold view's Chart section); REQ-CHART-052 → TASK-M4-08;
+  REQ-VAL-145 → TASK-M7-06; REQ-VAL-135 → TASK-M3-34.
+- [ ] Kinds: REQ-INT-081 is no longer a calibration (R-132 rules all its values); REQ-PAY-070 is `kind: definition`
+  (transcribed with citations under R-125).
+- [ ] Reviewers: `physics` is added to TASK-M5-28 and TASK-M7-22 (they write definitions). R-127 is applied at
+  TASK-M8-36 only; TASK-M8-35 (seeding) gets R-133's winding reading.
+- [ ] TASK-M5-24 depends on TASK-M5-04, so the deep-zoom-landing benchmark runs on real Jacobian quads (RQ-99 (a)).
+- [ ] TASK-M5-03's third assertion (REQ-SCHED-040) keeps its fixture x₀/J_D. TASK-M5-04 depends on TASK-M5-03, so a
+  dependency the other way would make a cycle.
+- [ ] TASK-M6-13 is removed: it closed only REQ-PAY-070 (moved to TASK-M3-16, R-125) and REQ-PAY-071/072 (retired, R-125).
+- [ ] TASK-M0-06 stays one task (Size ~550 lines with the screenshot runner), over WORKFLOW's "roughly ≤ 500 lines"
+  guideline.
+- [ ] `principia_symbolic_dynamics_contract.md` § "2. The punctured-sphere relation (third pair)" is recorded in
+  `plan/section_notes.yaml` with a new reason, "out of v1 (R-125)"; its only requirement, REQ-PAY-071, is retired.
+- [ ] R-135 at M4: TASK-M4-05 (which closes REQ-PERF-012) dispatches the resolve pass after the E+1 copy dispatches; what
+  the pass computes (outcome and validity members, the spread) stays with TASK-M5-17 and TASK-M5-18.
+- [ ] R-140 (the `ChartOut<F>` reading): REQ-CHART-028 and TASK-M2-05 now write `ChartOut<F>`. R-140 (the `TIMEOUT`
+  reading): REQ-SYS-002's lint matches identifiers case-sensitively.
+- **Needed:** accept, or rule otherwise on any item.

@@ -42,3 +42,4 @@ The integrator is certified as the payload's producer: every generation-root led
 - R-113 (RQ-94): REQ-TOOL-010's real-march |n|−1 check and the live effort heatmap are split off as REQ-TOOL-132 and closed here; the synthetic-payload half stays in TASK-M1-12.
 - The fragment views run over CPU-filled buffers (M1's synthetic path), not a GPU march — the GPU march is M4.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-117.
+- Waits on **RQ-123** (what the live-march screenshot compares against, with no artboard) — REQ-TOOL-132 carries it.

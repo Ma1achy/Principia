@@ -658,6 +658,8 @@
   rulings:
   - R-113
   milestone: M5
+  rq:
+  - RQ-124
   note: "R-113 (RQ-99 M5-2, option a): moved to M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6."
 - id: REQ-DEC-037
   area: DEC
@@ -3104,6 +3106,8 @@
     detail: "endpoints exactly on a cut: no duplicate or missed crossing; same symbols on CPU and GPU"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-120
 - id: REQ-INT-049
   area: INT
   statement: "The Aarseth–Zare occupant's final fictitious-time step in each sync sub-interval must be shrunk to land exactly on the boundary: `dtau_eff = min(dtau, max(dt_left − t_so_far, 0)/(A·B))`."
@@ -3659,6 +3663,8 @@
   - R-71
   - R-132
   milestone: M3
+  rq:
+  - RQ-126
   note: "R-132 rules the values the R-71 calibration asked for; nothing here stays calibrated."
 - id: REQ-INT-082
   area: INT
@@ -5300,6 +5306,8 @@
   - R-113
   - R-125
   milestone: M3
+  rq:
+  - RQ-126
   note: "R-125: moved to M3 (TASK-M3-16), transcribed rather than defined under R-72. The punctured-sphere relation and the attribution algorithm (REQ-PAY-071/072) are v2."
 - id: REQ-PAY-071
   area: PAY
@@ -10074,6 +10082,8 @@
   - R-122
   - R-139
   milestone: M7
+  rq:
+  - RQ-121
 - id: REQ-COL-031
   area: COL
   statement: "Map parameters must use the adopted ranges L ∈ [0.35,0.90], C ∈ [0.05,0.22], κ ∈ [0.5,12], f ∈ [2,14], N ∈ [12,96], ks ∈ [1,20], s ∈ [0,1]."
@@ -10240,6 +10250,8 @@
     detail: "sampled Cubehelix matches the formula; lightness monotone increasing"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-121
 - id: REQ-COL-042
   area: COL
   statement: "CVD simulation must be real Viénot simulation for protan and deutan and real Brettel simulation for tritan, through LMS space from linear sRGB, with matrices and golden values from a published reference implementation named with its version in dd_colouring §3.8, and achromatopsia must multiply linear-sRGB triplets by dd_colouring §3.8's M_achrom."
@@ -10377,6 +10389,8 @@
   - R-110
   - R-134
   milestone: M8
+  rq:
+  - RQ-119
   note: "The diff tolerance: REQ-COL-052 (calibration). R-110: goldens render with native wgpu offscreen from M1; the browser suite reuses those baselines."
 - id: REQ-COL-049
   area: COL
@@ -13186,6 +13200,8 @@
   - R-113
   - R-122
   milestone: M1
+  rq:
+  - RQ-123
   note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122)."
 - id: REQ-TOOL-011
   area: TOOL
@@ -13872,6 +13888,8 @@
   rulings:
   - R-129
   milestone: M6
+  rq:
+  - RQ-122
 - id: REQ-TOOL-059
   area: TOOL
   statement: "Share-export PNGs must embed the provenance payload in the low bit of every RGB channel as whole records in a 2-D square tile grid, with the alpha low bit carrying a second systematic copy."
@@ -14486,6 +14504,8 @@
   rulings:
   - R-131
   milestone: M8
+  rq:
+  - RQ-125
 - id: REQ-TOOL-107
   area: TOOL
   statement: "Recording a sweep must integrate each frame to its own t through the export contract's blocking mode, a hard barrier per captured frame, not by scrubbing."
@@ -14926,6 +14946,8 @@
   rulings:
   - R-113
   milestone: M3
+  rq:
+  - RQ-123
   note: "Split from REQ-TOOL-010 and REQ-TOOL-011's live effort row (R-113, RQ-94)."
 - id: REQ-TOOL-133
   area: TOOL
@@ -17495,6 +17517,8 @@
   - R-124
   - R-135
   milestone: M4
+  rq:
+  - RQ-126
   note: "R-124: systems_architecture §5.5's 'ensemble copies serial' is conformed to R-102 (its heading changes; the source is re-pointed)."
 - id: REQ-PERF-013
   area: PERF

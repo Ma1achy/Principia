@@ -44,4 +44,5 @@ Export runs the same frame loop as interactive playback with a hard barrier over
 
 ## Notes
 - RQ-108 ruled: R-131 — the encoders are named (native: PNG frames, GIF, MP4 through a system ffmpeg when present; browser: zipped PNG frames, GIF via a wasm encoder, MP4/WebM through WebCodecs where supported); the sink trait keeps them out of the frame loop.
+- Waits on **RQ-125** (which GIF encoders) — REQ-TOOL-106 carries it.
 - Gap: which GIF encoder the native build uses, and which wasm GIF encoder the browser uses, are not named.

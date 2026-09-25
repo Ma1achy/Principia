@@ -48,4 +48,5 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
 - The flag-constant test compares the CPU and WGSL tables bit by bit and must fail on a single swapped bit
   (pitfalls §9: a check whose output set cannot include the failure tells nothing).
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D by central differences, CPU f64) moves to M5 and is closed here, so `x₀`/`J_D` are filled by the real computation, not fixture values. The switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6 (TASK-M6-07, TASK-M6-08).
+- Waits on **RQ-124** (REQ-DEC-036's switchover-depth check at M5) — REQ-DEC-036 carries it.
 - Gap: REQ-DEC-036's verify reads "at the switchover depth", which REQ-DEC-037 sets in M6; here the gate runs over a depth sweep.

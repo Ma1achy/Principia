@@ -30,5 +30,6 @@ The browser build is checked against the native wgpu Tier-N tolerances (R-85): t
 - `cargo xtask gate browser-tier-l` — in Chrome stable and Safari the boundary-state set's Tier-L decisions (including `N_sub`) and a 100-macro-step dispatch's branch words equal the CPU's, 0 forks (REQ-VAL-144).
 
 ## Notes
+- Waits on **RQ-119** (whether the colour suite runs headless Chrome only or the R-110 pair) — REQ-COL-048 carries it.
 - RQ-79 ruled: R-110 — the browsers are Chrome stable and Safari; goldens render with native wgpu offscreen from M1 and the M8 Playwright suite checks against the same baselines, with no re-baselining without a gate decision.
 - RQ-97 ruled: R-113 — the browser legs of REQ-VAL-059, REQ-INT-059 and REQ-INT-028 are REQ-VAL-144, closed here with REQ-VAL-116.

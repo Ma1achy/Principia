@@ -32,3 +32,4 @@ The quality selector and Custom fields (under "quality: Custom") edit `SimConfig
 ## Notes
 - RQ-105 ruled: R-129 — the Custom quality fields live in the Run window under "quality: Custom" and the arbiter overlay in a Profiler tab; with no artboard they are checked by presence only until the M8 dev GUI.
 - Gap: the Profiler window's other content is M8's (TASK-M8-28); which window hosts the Profiler tab at M6 is not stated.
+- Waits on **RQ-122** (where the arbiter overlay's Profiler tab lives before the M8 Profiler window) — REQ-TOOL-058 carries it.

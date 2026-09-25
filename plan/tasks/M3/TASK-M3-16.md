@@ -40,3 +40,4 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-079.
 - RQ-96 ruled: R-125 (above).
 - RQ-97 ruled: R-113 — REQ-INT-031's "word identical CPU/GPU" is dropped from M3; M4 covers it by REQ-VAL-072 (the word's integer arithmetic).
+- Waits on **RQ-120** (whether REQ-INT-048's GPU arm leaves M3, as RQ-97's fix dropped the others) — REQ-INT-048 carries it; its `same symbols on CPU and GPU` check needs the M4 kernel.
