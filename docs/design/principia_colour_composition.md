@@ -198,8 +198,9 @@ a uniform array):
 
 **Physics generators** — functions of the **decoded IC** (the mass point), evaluated per pixel from
 `ctx.payload` masses; **not bakeable**:
-- `BC(m)` — binary-collision loci.  `Euler(m)` — collinear configs.  `Lagrange(m)` — equilateral
-  poles. On the mass-weighted shape sphere every one of these **moves with (m₀,m₁,m₂)**, and when a
+- `BC(m)` — binary-collision loci.  `Euler(m)` — the Euler central configurations (the collinear relative
+  equilibria: roots of Euler's quintic in the mass ratios, mapped through the shape map; equal masses reduce to the
+  antipodes of b̂; R-126).  `Lagrange(m)` — equilateral poles. On the mass-weighted shape sphere every one of these **moves with (m₀,m₁,m₂)**, and when a
   slice axis (or a tilt) touches a `z_μ` dimension the masses are **per-pixel state**, so there is no
   per-slice constant to bake even in principle.
 

@@ -369,7 +369,8 @@ trajectory on this chart is the hover trace and inspector of `principia_trajecto
 Useful as overlays and as tests. **Collision singularities** (two bodies coincident) are three
 points on the equator; **Euler configurations** (collinear) lie on the equator between them;
 **Lagrange configurations** (equilateral) are the two poles. Their exact coordinates depend on the
-mass ratios — compute them from §3.1 rather than hard-coding.
+mass ratios — compute them from §3.1 rather than hard-coding. The Euler configurations are the Euler central
+configurations: roots of Euler's quintic in the mass ratios, mapped through §3.1 (R-126).
 
 ---
 

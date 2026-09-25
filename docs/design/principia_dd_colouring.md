@@ -89,7 +89,7 @@ Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √ma
 
 > **Superseded (R-76, 25 Sep 2026):** Stability × Hue is deleted — `principia_colour_composition.md` §4.1's n̂ × ⟨field⟩ family replaces it; the blob blend here stands.
 
-Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ`; Lagrange `l̂± = (0,0,±1)`. With unequal masses the overlay uses the mass-weighted positions (R-50).
+Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ` (the antipodes of `b̂ⱼ`); Lagrange `l̂± = (0,0,±1)`. With unequal masses the overlay uses the mass-weighted positions (R-50). The Euler landmarks are the **Euler central configurations** — the collinear relative equilibria, roots of Euler's quintic in the mass ratios — mapped through the shape map; equal masses reduce to the antipodes of `b̂ⱼ` above. The quintic is transcribed with citation by the task that builds the landmarks, physics-reviewed and confirmed at the gate (R-126).
 
 The blob weight and the blend follow the golden oracle (R-122): `principia_colour_explorer.html` :188–189 — a
 sequential clamped mix over the sites in order (the three BC, the three Euler, the two Lagrange), with `mix` the linear

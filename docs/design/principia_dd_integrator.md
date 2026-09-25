@@ -227,7 +227,10 @@ $\hat{\mathbf b}_{12} = \left(\tfrac12, \tfrac{\sqrt3}{2}, 0\right)$ and $\hat{\
 $$\hat{\mathbf e}_j = -\hat{\mathbf b}_j \ \text{(equal masses)}, \qquad \hat{\mathbf l}^{\pm} = (0, 0, \pm 1),$$
 where $L^+$ ($w = +1$) is the equilateral triangle with bodies 0 → 1 → 2 anticlockwise. Every binary collision lies on
 the equator ($w = 0$) for any masses. With unequal masses the three collisions are not 120° apart, and the overlay
-marks them at their mass-weighted positions (R-50).
+marks them at their mass-weighted positions (R-50). The Euler landmarks $\hat{\mathbf e}_j$ are the **Euler central
+configurations** — the collinear relative equilibria, roots of Euler's quintic in the mass ratios — mapped through the
+shape map; equal masses reduce to the antipodes $-\hat{\mathbf b}_j$ above. The quintic is transcribed with citation by the
+task that builds the landmarks, physics-reviewed and confirmed at the gate (R-126).
 
 The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
