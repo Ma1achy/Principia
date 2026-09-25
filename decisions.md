@@ -1300,7 +1300,7 @@ Bench is removed from the per-commit `ci`.
 TASK-M2-08's round-trip gate composes Φ alone. The canonicaliser's fold is checked separately, on the upper hemisphere
 (R-141).
 
-## R-179 — "Sim data" is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
+## R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
 *25 Sep 2026 · applied in step 8*
 
 "Sim data" means per-sample `SimState` payload. `QuadReduction` is a reduction: it is the one permitted automatic

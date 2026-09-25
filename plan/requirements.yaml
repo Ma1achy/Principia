@@ -6200,10 +6200,13 @@
   source:
   - file: docs/design/principia_deep_zoom.md
     section: 3. Three-layer quadtree
+  - file: decisions.md
+    section: "R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*"
   verify:
     method: review checklist
-    detail: "milestone plan and code history show L0 → L1 → L2, with L1 having no GPU→CPU sim data"
-  rulings: []
+    detail: "milestone plan and code history show L0 → L1 → L2, with L1 returning no per-sample SimState payload GPU→CPU; QuadReduction, a reduction, is the one permitted automatic return (R-179, R-142)"
+  rulings:
+  - R-179
   milestone: M0
 - id: REQ-SCHED-002
   area: SCHED

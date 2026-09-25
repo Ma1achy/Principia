@@ -25,6 +25,7 @@
 - `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
 - `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
+- `decisions.md` § "R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*"
 
 ## Deliverables
 - `xtask/src/plan_check.rs` — `cargo xtask plan-check`: runs `python3 plan/check_plan.py` from the repo root, streams its output, exits with its status; a clear error if `python3` or PyYAML is missing.
@@ -37,7 +38,7 @@
 - `cargo xtask plan-check` — exits 0 on the PR head; runs in CI on every push.
 - `cargo test -p xtask plan_check` — a requirement source or task reference into `docs/archive/` or an `ARCHIVE_` brief fails plan-check (REQ-SYS-008: nothing sourced from or citing an archived file).
 - Review checklist (code §7) on the R-112 record: every standing obligation of the two briefs maps to a consolidated-doc section or was ported into one (REQ-SYS-008, R-112).
-- Review checklist (code §7) on `plan/MILESTONES.md` and `plan/tasks.yaml`: deep_zoom layer 0 is in M4, layer 1 in M5 and layer 2 in M6, in that order, and no M5 task flows sim data GPU→CPU (REQ-SCHED-001).
+- Review checklist (code §7) on `plan/MILESTONES.md` and `plan/tasks.yaml`: deep_zoom layer 0 is in M4, layer 1 in M5 and layer 2 in M6, in that order, and no M5 task flows sim data GPU→CPU, where sim data is per-sample `SimState` payload and `QuadReduction`, a reduction, is the one permitted automatic return (R-179, R-142) (REQ-SCHED-001).
 - Review checklist on `plan/MILESTONES.md` and `plan/tasks.yaml`: the generation root and codegen self-test (0a) are M0; the synthetic harness, field views and the bring-up mode (0b, 0c) are M1; the UV, DECODE and ROUNDTRIP presets land as their dependencies do (R-75); structural views precede the scheduler logic (REQ-TOOL-004).
 - Review checklist (code §7) on `plan/tasks.yaml`: no task builds or half-starts extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever, other than the Real-generic payload (TASK-M0-14) (REQ-SYS-007).
 
