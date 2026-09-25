@@ -1173,6 +1173,7 @@ Like RQ-56 and RQ-67.
 - **Needed:** (a) the frequency of each unscheduled suite (every commit / nightly / pre-release / at the milestone gate);
   (b) the CI GPU (software adapter, self-hosted machine) and whether a second backend gates M4 or only Paper 2; (c) the
   browsers for REQ-VAL-116; (d) the golden renderer before M8 (native wgpu offscreen, then Playwright at M8, or both).
+- **Ruling:** R-110 (decisions.md). Closed in step 7.
 
 ## RQ-80: Retired terms still live in the docs, and the vocabulary lint's doc scope *(step 7, vocabulary)*
 
@@ -1190,6 +1191,7 @@ Like RQ-56 and RQ-67.
   :73, REQ-COL-043) and `M` in the uniform echo becomes `n_renorm`; (b) the lint's doc scope — code only, or docs with an
   exclusion for the retirement passages (named, or marked in the text).
 - *Gaps:* M0-2, M1-10b. *Tasks:* TASK-M0-16, TASK-M1-14, TASK-M7-21.
+- **Ruling:** R-111 (decisions.md). Closed in step 7.
 
 ## RQ-81: The archived briefs' standing parts aren't citable *(step 7, plan)*
 
@@ -1202,6 +1204,7 @@ Like RQ-56 and RQ-67.
   requirements — slippy map: breadth-first, frame budget; kernel build §5: verification gates), or are taken as
   superseded by the consolidated docs (deep_zoom §3, scheduler, parity), with the INDEX rows and REQ-SYS-008 conformed.
 - *Gaps:* M0-3. *Tasks:* TASK-M0-02.
+- **Ruling:** R-112 (decisions.md). Closed in step 7.
 
 ## RQ-82: The generated debug NaN guard vs the bitcast rule *(step 7, render)*
 
@@ -1215,6 +1218,7 @@ Like RQ-56 and RQ-67.
   value is never NaN, R-79), or `raw != raw` stands as best-effort debug garnish (render_contract :81 "bitcast pattern
   tests in debug views are best-effort garnish").
 - *Gaps:* M1-6. *Tasks:* TASK-M1-09, TASK-M1-15.
+- **Ruling:** R-114 (decisions.md). Closed in step 7.
 
 ## RQ-83: The raw `state` debug view's palette: six states or §1.4's nine classes? *(step 7, debug views)*
 
@@ -1229,6 +1233,7 @@ Like RQ-56 and RQ-67.
   without `detail`), or R-77 governs the outcome palette only and the raw debug view keeps a six-colour categorical palette
   (dbg_cat).
 - *Gaps:* M1-11. *Tasks:* TASK-M1-10.
+- **Ruling:** R-115 (decisions.md). Closed in step 7.
 
 ## RQ-84: One decode source vs "the two decode ports" *(step 7, decoder)*
 
@@ -1237,6 +1242,7 @@ Like RQ-56 and RQ-67.
 - The one-source generator emits WGSL only for layouts, accessors and the debug catalogue (`principia_dd_generation_root.md` :9; `principia_render_contract.md` :87); lowering Part 2 (:26) compiles Φ/decode to SPIR-V and the CPU only.
 - **Needed:** whether the fragment WGSL decode/encode is generated from the one Rust source (a generator target, or a translation of the rust-gpu output), so REQ-SYS-015 stands and the agreement presets check translation rather than transcription; or a hand-written second port, kept deliberately as a second reference (REQ-SYS-015 and dd_decoder §1 then name it as the exception).
 - *Gaps:* M2-G1. *Tasks:* TASK-M2-15, TASK-M2-25, TASK-M2-26.
+- **Ruling:** R-116 (decisions.md). Closed in step 7.
 
 ## RQ-85: The shape sphere in the lowering appendix: (α, β) or (θ, φ)? *(step 7, charts)*
 
@@ -1246,6 +1252,7 @@ Like RQ-56 and RQ-67.
 - R-14 calls §3.1/§3.3's convention "the project's one shape-sphere convention"; the corpus leans to conforming the appendix row.
 - **Needed:** whether the appendix row becomes "(θ, φ) … (s,t)→(θ,φ) → n → (ρ̃, λ̃) by §3.2" (conformed to chart_reference §3.3), or the shape sphere lowers as (α, β) ranges (and §3.3 and REQ-CHART-019 change).
 - *Gaps:* M2-G3b. *Tasks:* TASK-M2-08, TASK-M2-14, TASK-M2-25, TASK-M4-06.
+- **Ruling:** R-117 (decisions.md). Closed in step 7.
 
 ## RQ-86: The Chart trait's f64 `map` vs Φ generic over the float type *(step 7, charts)*
 
@@ -1254,6 +1261,7 @@ Like RQ-56 and RQ-67.
 - An f64-only `map` can't be the Φ the f32 kernel monomorphises. The corpus leans to lowering (the later consolidated contract, R-70's rule); chart_reference §5.1 would then read `map<F: Float>(&self, u: F, v: F)`, with `validate(u, v)` staying CPU-side f64 (inverse_encode "Chart-aware validation").
 - **Needed:** confirm that chart_reference §5.1 is conformed to lowering Part 2 (Φ generic over the float type), or say where the f64 trait sits.
 - *Gaps:* M2-G13. *Tasks:* TASK-M2-05, TASK-M2-06.
+- **Ruling:** R-118 (decisions.md). Closed in step 7.
 
 ## RQ-87: Which measurement gives `t_max(f32)`? *(step 7, validation)*
 
@@ -1269,6 +1277,7 @@ Like RQ-56 and RQ-67.
 - **Needed:** which value REQ-VAL-070's gate reads — the change-10 re-run's (then say how an f64 re-run yields an f32
   horizon), or REQ-VAL-071's GPU measurement (then R-93's "from R-35's re-run" and §4.1 are conformed).
 - *Gaps:* M4-5. *Tasks:* TASK-M3-36, TASK-M4-16.
+- **Ruling:** R-119 (decisions.md). Closed in step 7.
 
 ## RQ-88: Eviction order: deepest first, or cost-weighted resistance? *(step 7, scheduler)*
 
@@ -1285,6 +1294,7 @@ Like RQ-56 and RQ-67.
 - **Needed:** which order governs reclaiming (deepest first, or lowest cost-weighted resistance first), and whether the
   other text is conformed; the pinned classes (coarse ancestors, baseline cover, backdrop leaf cover) are common to both.
 - *Gaps:* M5-1. *Tasks:* TASK-M5-09, TASK-M5-11.
+- **Ruling:** R-120 (decisions.md). Closed in step 7.
 
 ## RQ-89: Is the physics overlay baked? *(step 7, render)*
 
@@ -1293,6 +1303,7 @@ Like RQ-56 and RQ-67.
 - R-70 names colour_composition over dd_colouring, not over render_contract.
 - **Needed:** whether the physics overlay leaves the bake tier (render_contract Part 3 and Part 4 conformed: a post occupant evaluated per fragment), or is baked when hoisted (masses constant across the slice, a bake keyed on the mass point).
 - *Gaps:* M7-2. *Tasks:* TASK-M7-10, TASK-M7-16.
+- **Ruling:** R-121 (decisions.md). Closed in step 7.
 
 ## RQ-90: The blob-blend weight and blend: markdown vs reference artefacts *(step 7, colour)*
 
@@ -1301,6 +1312,7 @@ Like RQ-56 and RQ-67.
 - dd_colouring test 5 (:168): "blob maxima exactly at b̂/ê/l̂; strength s = 0 is the identity" — holds for all three forms.
 - **Needed:** the weight as intended (as written; `− 0.01`, which makes the max clip; or the constant inside the exponent) and the blend (additive sum or sequential clamped mix), so the golden image and the formula agree.
 - *Gaps:* M7-6. *Tasks:* TASK-M7-10.
+- **Ruling:** R-122 (decisions.md). Closed in step 7.
 
 ## RQ-91: Achromatopsia: specified, but not offered in the Display window *(step 7, colour)*
 
@@ -1308,6 +1320,7 @@ Like RQ-56 and RQ-67.
 - `principia_render_gui_spec.md` § "Display — the last stages" (:204): "**Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia." — no achromatopsia. REQ-COL-045 carries the four; REQ-COL-042 carries M_achrom.
 - **Needed:** whether achromatopsia is offered in the Display window (render_gui_spec and REQ-COL-045 gain a fifth mode), or kept as a test-only stage.
 - *Gaps:* M7-10b. *Tasks:* TASK-M7-20.
+- **Ruling:** R-123 (decisions.md). Closed in step 7.
 
 ## RQ-92: Rulings not yet applied to some passages *(step 7, cleanup)*
 
@@ -1321,6 +1334,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
   REQ-INT-065 / REQ-INT-069 (TASK-M4-06); it is conformed in the same commit. (A heading change: requirements citing
   it are re-pointed.) Blocks TASK-M4-05 and TASK-M4-06.
 - *Gaps:* M2-G18, M2-G25, M7-R50, M4-1. *Tasks:* TASK-M2-04, TASK-M2-08, TASK-M2-12, TASK-M4-05, TASK-M4-06, TASK-M7-09.
+- **Ruling:** R-124 (decisions.md). Closed in step 7.
 
 ## RQ-93: M0 requirements that need things M0 doesn't have *(step 7, plan)*
 
@@ -1386,6 +1400,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
   converging aggregate (the runner and the gate stay in M0 with a placeholder threshold).
 - **Needed:** which.
 - *Gaps:* M0-1, M0-4, M0-6, M0-9, M0-12, M0-16. *Tasks:* TASK-M0-05, TASK-M0-06, TASK-M0-11, TASK-M0-12, TASK-M0-17, TASK-M0-18, TASK-M1-12, TASK-M5-01, TASK-M5-06, TASK-M8-01, TASK-M8-28.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-94: M1 requirements that need M2, M3, M5 or M8 *(step 7, plan)*
 
@@ -1407,6 +1422,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
 - **Needed:** confirm the splits, or move the four requirements whole (INT-001 → M3, TOOL-010 → M3, TOOL-011 → M5,
   RENDER-022 → M8).
 - *Gaps:* M1-8, M1-9, M1-10a, M1-13, M2-Plan. *Tasks:* TASK-M1-09, TASK-M1-11, TASK-M1-12, TASK-M1-14, TASK-M2-25.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-95: M2 requirements that need M3, M4, M5 or an artboard *(step 7, plan)*
 
@@ -1438,6 +1454,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
 - **Proposed fix:** split REQ-ENC-019 — M2: "lookup must have no coincident-bodies rejection branch; exactly coincident bodies are caught by the range check as `lookup_clamped`"; M3 (closed by TASK-M3-09 beside REQ-EVT-002): "a looked-up IC with bodies within r_coll must reach dispatch and be labelled `collision`, `t_end_step = 0`".
 - **Needed:** confirm the split.
 - *Gaps:* M2-G3a, M2-G5, M2-G23, M2-G24. *Tasks:* TASK-M2-14, TASK-M2-19, TASK-M2-21, TASK-M2-25, TASK-M2-28, TASK-M3-09, TASK-M4-06, TASK-M4-08.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-96: The branch-cut convention is needed in M3, required in M6, and has no author *(step 7, integrator)*
 
@@ -1457,6 +1474,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
   REQ-PAY-070…072 `kind: definition`, physics reviewer) or supplied by the human (§2–§3 are topology, which R-72 must
   not be used to invent).
 - *Gaps:* M3-7, M6-4. *Tasks:* TASK-M3-16, TASK-M3-30, TASK-M6-13.
+- **Ruling:** R-113 and R-125 (decisions.md). Closed in step 7.
 
 ## RQ-97: GPU and browser legs before the GPU kernel or the browser exists *(step 7, parity)*
 
@@ -1484,6 +1502,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
     REQ-VAL-116.
 - **Needed:** confirm the splits (or give the milestone each leg belongs to).
 - *Gaps:* M3-8, M4-3, M4-4. *Tasks:* TASK-M3-03, TASK-M3-04, TASK-M3-05, TASK-M3-16, TASK-M3-17, TASK-M4-03, TASK-M4-09.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-98: M3 and M4 requirements that name later surfaces *(step 7, plan)*
 
@@ -1519,6 +1538,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
     with FTLE on"; "E = 0 with checkerboard on" — and the tier names are checked by REQ-PERF-014 in M5.
 - **Needed:** confirm the splits.
 - *Gaps:* M3-12, M3-14, M4-2, M4-11, M4-13a. *Tasks:* TASK-M3-06, TASK-M3-19, TASK-M4-06, TASK-M4-08, TASK-M4-11, TASK-M5-02, TASK-M5-10, TASK-M5-18, TASK-M8-14.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-99: M5 requirements that need M6, M7 or M8 *(step 7, plan)*
 
@@ -1559,6 +1579,7 @@ Like RQ-56, RQ-67 and RQ-77: each has a ruling behind it, and none is applied ye
   thread, off the input/GUI thread" (SYS-034) and REQ-RENDER-045 without its worker clause; the worker clause is already
   REQ-SYS-039/049 (M8), so no new M8 requirement is needed.
 - *Gaps:* M5-2, M5-3, M5-5. *Tasks:* TASK-M5-03, TASK-M5-04, TASK-M5-23, TASK-M5-24, TASK-M5-26, TASK-M6-07, TASK-M8-37.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-100: Existing requirements closed after the task that needs them *(step 7, plan)*
 
@@ -1577,6 +1598,7 @@ not on the needing task's `depends_on` path).
   M8); REQ-REF-045 moves to M5, closed by TASK-M5-19 (or REQ-PAY-065's latch half moves to M6); REQ-GUI-151/152 move to M7,
   closed by TASK-M7-22; TASK-M2-10 and TASK-M2-11 gain `depends_on: TASK-M2-12`.
 - **Needed:** confirm each, or give the milestone.
+- **Ruling:** R-113 (decisions.md). Closed in step 7.
 
 ## RQ-101: The colour golden oracle and the LUT data live outside the corpus *(step 7, colour)*
 
@@ -1594,6 +1616,7 @@ not on the needing task's `depends_on` path).
   as the oracle (a doc change to §7) — and the LUT data source (those files, or the published matplotlib tables for the
   matplotlib maps).
 - *Gaps:* M1-16, M7-4, M7-5. *Tasks:* TASK-M1-03, TASK-M1-12, TASK-M7-07, TASK-M7-18.
+- **Ruling:** R-122 (decisions.md). Closed in step 7.
 
 ## RQ-102: The regularisation occupants and step control that live only in prin-rs *(step 7, integrator)*
 
@@ -1645,6 +1668,7 @@ not on the needing task's `depends_on` path).
 - A feel call is a product decision, not a value R-71 can calibrate or a definition R-72 can write.
 - **Needed:** hard gate or ramp (the task can supply captures of both at the ceiling as evidence).
 - *Gaps:* M5-3b. *Tasks:* TASK-M5-23.
+- **Ruling:** R-128 (decisions.md). Closed in step 7.
 
 ## RQ-105: GUI surfaces with no artboard *(step 7, GUI)*
 
@@ -1663,6 +1687,7 @@ not on the needing task's `depends_on` path).
 - R-68: artboard values are illustrative, but the artboards are the approved layout; placing a new control is a design decision.
 - **Needed:** where each lives (e.g. the Run window, the footer, the top bar) — or leave it to the GUI reviewer at the M8 gate.
 - *Gaps:* M6-7, M8-7b, M8-17. *Tasks:* TASK-M6-22, TASK-M8-25, TASK-M8-26.
+- **Ruling:** R-129 (decisions.md). Closed in step 7.
 
 ## RQ-106: The Euler landmarks for unequal masses *(step 7, colour)*
 
@@ -1671,6 +1696,7 @@ not on the needing task's `depends_on` path).
 - `principia_colour_explorer.html` :126 places Euler blobs at the antipodes of its (heuristically skewed) BC points; REQ-COL-021's verify gives only the equal-mass values.
 - **Needed:** which points the Euler landmarks are for unequal masses (antipodes of the mass-weighted b̂, or the Euler central configurations mapped through the shape map) — a physics definition the corpus doesn't give.
 - *Gaps:* M7-7. *Tasks:* TASK-M7-09.
+- **Ruling:** R-126 (decisions.md). Closed in step 7.
 
 ## RQ-107: The style presets are named, not defined *(step 7, colour)*
 
@@ -1679,6 +1705,7 @@ not on the needing task's `depends_on` path).
 - A product/design decision (the look), not a definition R-72 can supply.
 - **Needed:** each style's look (a reference image or description and its parameters: paper grain, misregistration), or REQ-COL-044 reduced to plain for v1 with the styles deferred.
 - *Gaps:* M7-12. *Tasks:* TASK-M7-26.
+- **Ruling:** R-130 (decisions.md). Closed in step 7.
 
 ## RQ-108: The MP4 / GIF encoders *(step 7, export)*
 
@@ -1686,6 +1713,7 @@ not on the needing task's `depends_on` path).
 - The browser build (R-85, M8) has no built-in MP4 or GIF encoder: the choice (WebCodecs, a wasm encoder, or PNG frames only in the browser) sets browser support, bundle size and codec licensing.
 - **Needed:** the encoders for native and browser, or which formats the browser offers in v1.
 - *Gaps:* M8-10. *Tasks:* TASK-M8-30, TASK-M8-33.
+- **Ruling:** R-131 (decisions.md). Closed in step 7.
 
 ## RQ-109: Research v2: the fold stability measure and the Poincaré sections *(step 7, research)*
 
@@ -1694,6 +1722,7 @@ not on the needing task's `depends_on` path).
 - Physics the corpus doesn't hold; R-72 must not invent it.
 - **Needed:** the stability measure and fold criterion, and the section family offered — or a source (prin-rs, literature) the task transcribes.
 - *Gaps:* M8-13a, M8-13b. *Tasks:* TASK-M8-36.
+- **Ruling:** R-127 (decisions.md). Closed in step 7.
 
 ## RQ-110: Silences classified under R-71 and R-72 at checkpoint B *(step 7, checkpoint B)*
 
@@ -1770,6 +1799,7 @@ a value that is really a design decision, or a definition that is really physics
 - [ ] REQ-GUI-159 · definition (M8) · TASK-M8-36 · Research side-by-side 'difference view': what is differenced and how it is shown (M8-13c)
 - [ ] REQ-GUI-160 · definition (M8) · TASK-M8-18 · Storage of user-side stores: chart-builder presets, 'Your stains', per-choice warning suppressions (M8-16)
 - **Needed:** confirm the classification, or name the items to move to an RQ of their own.
+- **Ruling:** R-132 (decisions.md). Closed in step 7.
 
 ## RQ-111: Interpretations taken at checkpoint B *(step 7, checkpoint B)*
 
@@ -1795,3 +1825,4 @@ Tick any you don't accept.
   REQ-TOOL-029 and "f32 noise" in REQ-COL-006 are read as REQ-DEC-043's calibrated f32 decode factor (TASK-M2-06);
   the preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0.
 - **Needed:** accept, or rule otherwise on any item.
+- **Ruling:** R-133 (decisions.md). Closed in step 7.

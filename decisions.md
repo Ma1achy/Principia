@@ -788,3 +788,172 @@ During a gesture the frame budget governs: ancestors show, so there are never bl
 
 Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
 windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
+
+---
+
+*Checkpoint B of step 7 (PR #8). Rulings R-110 to R-133, 25 Sep 2026. RQ-102 and RQ-103 (the prin-rs occupants and
+fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
+
+## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
+*25 Sep 2026 · applied in step 7*
+
+- Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
+  milestone gate. GUI screenshots run on GUI PRs and at the gates.
+- GPU CI: a self-hosted Apple-silicon runner (Metal), plus lavapipe as the second backend on every commit. lavapipe
+  satisfies M4's two-backend check; a real non-Metal GPU gates Paper 2 (R-58).
+- Browsers for REQ-VAL-116: Chrome stable and Safari.
+- Goldens render with native wgpu offscreen from M1. At M8 the Playwright browser suite checks against the same
+  baselines within tolerance; no re-baselining without a gate decision.
+
+## R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*
+*25 Sep 2026 · applied in step 7*
+
+Rename `SimResult` → `SimState` in the display chain (render_gui_spec :199, GUI_DESIGN_NOTES under R-107,
+REQ-COL-043), and `M` → `n_renorm` in the uniform echo. The vocabulary lint covers code and docs, excluding passages
+wrapped in `<!-- retired-terms -->` … `<!-- /retired-terms -->`.
+
+## R-112 — The archived briefs' standing parts are superseded *(closes RQ-81)*
+*25 Sep 2026 · applied in step 7*
+
+The archived briefs' standing parts are superseded by the consolidated docs (deep_zoom §3, scheduler, parity).
+TASK-M0-02 checks that each standing obligation exists in a consolidated doc, and ports any that doesn't. Then conform
+INDEX and REQ-SYS-008. Archives are never cited.
+
+## R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*
+*25 Sep 2026 · applied in step 7*
+
+Every proposed fix and split in RQ-93 to RQ-100 is accepted as written, with these choices:
+- RQ-93, QuadReduction: option (b), sizing at M5.
+- REQ-VAL-135 moves to M3 (the runner and the gate stay in M0).
+- RQ-99, M5-2: option (a), REQ-DEC-036 moves to M5.
+- M5-3 and M5-5: the proposed splits. The native frame loop runs on a dedicated render thread.
+- RQ-95, M2-G5: the M2 goldens as proposed. The M8 projection selector and hemisphere toggle live in the Manifold
+  view's Chart section, shown when the chart is the shape sphere.
+
+## R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*
+*25 Sep 2026 · applied in step 7*
+
+The debug NaN guard is the bitcast test against the canonical quiet-NaN pattern. Drop `raw != raw`.
+
+## R-115 — The raw `state` view keeps six colours *(closes RQ-83)*
+*25 Sep 2026 · applied in step 7*
+
+The raw `state` debug view keeps a six-colour `dbg_cat` palette. R-77 governs the outcome palette (state ⊕ detail)
+only.
+
+## R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*
+*25 Sep 2026 · applied in step 7*
+
+The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
+never hand-written. The agreement presets check translation. Conform colour_composition §3 and §6: two compilation
+paths of one source.
+
+## R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*
+*25 Sep 2026 · applied in step 7*
+
+The lowering appendix's shape-sphere row is conformed to R-14's (θ, φ) map.
+
+## R-118 — Φ is generic over the float type *(closes RQ-86)*
+*25 Sep 2026 · applied in step 7*
+
+Φ is generic over the float type (lowering Part 2): chart_reference §5.1 reads `map<F: Float>`. `validate()` stays
+CPU-side f64.
+
+## R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*
+*25 Sep 2026 · applied in step 7*
+
+REQ-VAL-070's gate reads REQ-VAL-071's GPU measurement. The R-35 re-run supplies the f64 figure and the method.
+Conform R-93 and predictability §4.1.
+
+## R-120 — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*
+*25 Sep 2026 · applied in step 7*
+
+Eviction takes the lowest cost-weighted resistance first (scheduler Part 6, caching Part 7). The pinned classes are
+unchanged. Conform telemetry's "deepest first" passages.
+
+## R-121 — The physics overlay isn't baked *(closes RQ-89)*
+*25 Sep 2026 · applied in step 7*
+
+The physics overlay isn't baked: it's a per-fragment occupant. The hoist, when masses are constant over the slice, is
+an allowed optimisation, not a bake tier. Conform render_contract Parts 3 and 4.
+
+## R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*
+*25 Sep 2026 · applied in step 7*
+
+The two reference HTML files (`docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html`)
+are named the golden oracle in colour_composition §7. Formulas follow the oracle: the explorer's blob weight and its
+sequential clamped mix; conform dd_colouring §3.4. LUT data comes from the published matplotlib tables (viridis,
+cividis, plasma, magma, inferno, twilight, cubehelix) and Moreland's table for cool-warm. The Principia palette's
+stops come from the explorer.
+
+## R-123 — Achromatopsia is a fifth Display mode *(closes RQ-91)*
+*25 Sep 2026 · applied in step 7*
+
+Achromatopsia is offered in the Display window as a fifth mode.
+
+## R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*
+*25 Sep 2026 · applied in step 7*
+
+Apply all three now (R-25, R-50, R-102 in systems_architecture §5.5). This unblocks TASK-M4-05 and TASK-M4-06.
+
+## R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*
+*25 Sep 2026 · applied in step 7*
+
+REQ-PAY-070 moves to M3, closed by TASK-M3-16. Its convention (the a/b branch-cut assignment and the crossing sign)
+is transcribed from the literature (Montgomery; Šuvakov–Dmitrašinović) and verified by REQ-VAL-043 against the
+published braid classes. REQ-PAY-071 and REQ-PAY-072 are v2: per-pair views are out of v1 (PL-3, R-38). Retire them
+from the v1 plan with that citation.
+
+Transcribed with citations, physics-reviewed, confirmed at the gate.
+
+## R-126 — The Euler landmarks are the Euler central configurations *(closes RQ-106)*
+*25 Sep 2026 · applied in step 7*
+
+The Euler landmarks are the Euler central configurations (the collinear relative equilibria: roots of Euler's quintic
+in the mass ratios), mapped through the shape map. Transcribed with citation. Equal masses reduce to the antipodes of
+b̂. Physics-reviewed, confirmed at the gate.
+
+## R-127 — Periodic-orbit stability is Floquet; the Poincaré sections are three *(closes RQ-109)*
+*25 Sep 2026 · applied in step 7*
+
+Periodic-orbit stability uses the monodromy matrix's Floquet multipliers. A fold is where a multiplier crosses +1;
+period-doubling, where one crosses −1. Poincaré sections offered: syzygy crossings (w = 0), a chosen shape-sphere great
+circle, and a Jacobi-coordinate hyperplane. Transcribed with citations, physics-reviewed, confirmed at the gate.
+
+## R-128 ✱ — The checkerboard's ceiling form is chosen at the M5 gate *(closes RQ-104)*
+*25 Sep 2026 · applied in step 7 · design; the human may veto*
+
+The task captures both the hard gate and the ramp at the ceiling; the human chooses at the M5 gate.
+
+## R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*
+*25 Sep 2026 · applied in step 7 · design; the human may veto*
+
+Custom quality fields: in the Run window, under "quality: Custom". Target-utilisation ceiling: Run window. Arbiter
+overlay: a Profiler tab. Passive logging: a Profiler switch, with its indicator in the footer. Until the M8 dev GUI
+they're checked by presence only, not layout.
+
+## R-130 ✱ — The styles are the poster's *(closes RQ-107)*
+*25 Sep 2026 · applied in step 7 · design; the human may veto*
+
+The styles are defined by the poster's implementation (`workbench/principia_poster_both_sides.html` and its press
+module): "watercolour & pencil" is its painted treatment; "print" is the paper.design halftone presets with its patches
+(per-plate slip, cell ceiling). v1 offers plain, watercolour & pencil, and the seven print presets.
+
+## R-131 — The video encoders *(closes RQ-108)*
+*25 Sep 2026 · applied in step 7*
+
+Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: PNG frames (zipped), GIF via a wasm
+encoder, and MP4/WebM through WebCodecs where supported.
+
+## R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+*25 Sep 2026 · applied in step 7*
+
+- REQ-COL-055: the invalid colour must collide with no palette entry. Propose a hatched pattern, not a flat colour.
+- REQ-INT-081: `dt_macro = max(1e-3, T/65535)`. T keeps [50, 200], with a default of 50; u16 indices stay exact
+  (R-86).
+- REQ-PERF-086: Ultra and Extreme cap N at 16, and scale through E and render scale (the values are calibrated).
+
+## R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*
+*25 Sep 2026 · applied in step 7*
+
+All seven interpretations in RQ-111 are accepted.
