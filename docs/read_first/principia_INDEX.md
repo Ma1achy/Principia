@@ -130,16 +130,20 @@ and **`Policy::Tolerance`**.
 
 ## Archived — record only, do not implement
 
+Archives are never cited. Where an archived brief once had standing parts, they are superseded by the consolidated
+docs (`principia_deep_zoom.md` §3, the scheduler contract, the parity contract); TASK-M0-02 checks that each
+standing obligation exists there and ports any that doesn't (R-112).
+
 | file | why |
 |---|---|
 | `docs/archive/principia_ARCHIVE_dd_refinement_criterion_v0.md` | the α-exponent era; its metric is void |
 | `docs/archive/principia_ARCHIVE_dd_tree_dump_analysis_v0.md` | numbers computed on the contaminated field |
-| `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` | **§4–4.6, the slippy map, still stands** — the rest does not |
+| `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` | superseded: §4–4.6 (the slippy map) by the consolidated docs (deep_zoom §3, scheduler, parity); the rest does not stand (R-112) |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_signal_audit.md` | premise void: scored in render space |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_criterion_improvement.md` | superseded |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_scheduler_build.md` | built; split/stop rules replaced |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_refinement_experiments.md` | run; most conclusions overturned |
-| `docs/experiments/briefs/principia_ARCHIVE_brief_kernel_build.md` | built; **defaults changed** — §5 gates still stand |
+| `docs/experiments/briefs/principia_ARCHIVE_brief_kernel_build.md` | built; **defaults changed** — §5 gates superseded by the consolidated docs (deep_zoom §3, scheduler, parity) (R-112) |
 | `docs/experiments/briefs/principia_ARCHIVE_brief_vertical_slice.md` | delivered |
 | `docs/experiments/briefs/principia_ARCHIVE_brief2_dom_ke.md` | `dom_KE` rejected |
 | `docs/experiments/briefs/principia_ARCHIVE_brief3_no_discard.md` | validated, and since extended |
