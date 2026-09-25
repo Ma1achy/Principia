@@ -108,8 +108,11 @@ Quality is `render_scale / E / FTLE / word`. The bottom two tiers (Potato/Low) r
 | **Low** | 0.5× | 0 | 1× | — | 8 | 4 | render half, word on, no FTLE |
 | **Medium** | 0.75× | 1 | 2× | on | 16 | 5 | render ¾, 2× SSAA, FTLE — the runs-on-a-laptop baseline, first tier with the chaos measurement |
 | **High** | 1.0× | 3 | 4× | on | 16 | 6 | native, 4× SSAA, FTLE — the sweet spot |
-| **Ultra** | 1.0× | 7 | 8× | on | 24 | 7 | native, 8× SSAA, deeper refinement |
-| **Extreme** | 1.0× | 15 | 16× | on | 32 | 8 | native, 16× SSAA, max everything — melts current top-end GPUs |
+| **Ultra** | 1.0× | 7 | 8× | on | 16 | 7 | native, 8× SSAA, deeper refinement |
+| **Extreme** | 1.0× | 15 | 16× | on | 16 | 8 | native, 16× SSAA, max everything — melts current top-end GPUs |
+
+**Ultra and Extreme cap `N` at 16** (`N² ≤ 256`, the one-workgroup-per-quad invocation ceiling) and scale through `E` and
+`render_scale` instead; their `E` and `render_scale` values are calibrated (REQ-PERF-086, R-132).
 
 **FTLE is on from Medium up, off for Potato/Low — a *compute* + *fidelity* boundary, not memory.** (render_scale already shrank the sample count so much that FTLE's memory cost is trivial — +6 MB at Potato, +0.1 GB at Medium@1080p — so memory is no longer the reason.) The reasons it stays gated at the bottom two tiers: (1) **compute** — FTLE is a *second full trajectory per sample* (the Benettin shadow), ~2× the integration work, and Potato/Low serve genuinely weak, *compute-bound* GPUs (a phone won't OOM at 0.02 GB — it'll chug on 2× the trajectories); (2) **fidelity match** — FTLE is a quantitative chaos measurement, and Potato/Low render at 0.25×/0.5× and upscale, so the measurement would be computed on a blurry quarter-res canvas where its fine structure can't be read. Medium at 0.75× is close enough to native *and* a laptop-dGPU tier (not a phone tier), so FTLE is both affordable and legible there. (Custom can force FTLE on at *any* render_scale — a curious weak-GPU user can enable it and accept the framerate hit; it's just off by default at the bottom.)
 

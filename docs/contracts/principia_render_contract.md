@@ -78,7 +78,7 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 
 **Composite order (constitutional):** baked base → combine (L-override) → the post chain: the physics overlay (`site_overlay`, evaluated per fragment, never baked — R-121, colour_composition §4.2) and the structural/debug overlays → `OUT`; then the display stage, outside the graph (R-67): style → **display scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the display-sized swap chain; all prior stages run at render resolution) → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
 
-**Sentinels, not NaN.** `diffusion = −1.0` when the streaming slope is invalid, i.e. for `n < 2` (R-17; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid colour (R-79). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
+**Sentinels, not NaN.** `diffusion = −1.0` when the streaming slope is invalid, i.e. for `n < 2` (R-17; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default the hatched invalid pattern (R-79, R-132). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
 ---
 
@@ -153,7 +153,7 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
-fn dbg_sentinel(x: f32) -> vec3f                // −1.0 sentinel → magenta; absence-NaN via exact bitcast test → hatched; suspect-flag styling hook
+fn dbg_sentinel(x: f32) -> vec3f                // −1.0 sentinel and absence-NaN (exact bitcast test) → the hatched invalid pattern (R-132); suspect-flag styling hook
 ```
 
 ### Live-state & array inspection

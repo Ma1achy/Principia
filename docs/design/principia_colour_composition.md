@@ -106,7 +106,8 @@ FieldRamp {
 band, base colour elsewhere — this is `grid`, `contours`, and the lattice classifiers `checker`,
 `lat/lon-stripes`, `truchet` on (θ,φ)). **Compaction** (scalar → lightness, for the `brightness`
 slot or before a ramp): `lin`, `log`, `symlog` (signed, through the midpoint), `cyclic` (phase),
-`flag`. Every ramp/compaction carries an explicit **invalid-pixel colour/value** (§3, §6).
+`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default the hatched invalid
+pattern (§3, §6; R-132).
 
 **Default ramps by field role.** Signed fields (energy, L_z, drifts) default to
 diverging-through-neutral so the zero-crossing is a legible contour; positive fields to sequential;
@@ -171,7 +172,7 @@ bounded (black), the t=0 collision (orange), and degenerate (white). The nine cl
 `state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
 assignment lands on `detail`, not on a second field). **How the table reads the payload (R-96):** "degenerate" is
 `decode_failed`; "collision @ t=0" is a collision with `t_end_step == 0`. The two states the table has no row for:
-`running` shows neutral grey, and `sim_failed` shows the invalid colour (§3). There is **no separate `escaper` field**: the
+`running` shows neutral grey, and `sim_failed` shows the invalid pattern (§3). There is **no separate `escaper` field**: the
 escaping body *is* `detail | state=escape`, so “which body escaped” is already carried by this map's
 escape colours. A standalone escaper view is therefore this map **filtered to the escape classes** — a
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
@@ -233,10 +234,10 @@ render-key.
 | **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion `−1` sentinel, `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
 
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
-has an explicit **invalid colour/value**. Without this, debug views silently lie at exactly the
-pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). The default
-invalid colour is a conspicuous out-of-gamut-adjacent tone (a fixed magenta, a plain default, R-16), overridable per
-node.
+has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
+pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). Invalid pixels
+render in a **hatched pattern** that collides with no palette entry; its exact pattern is a calibration (REQ-COL-055,
+R-71; R-132). Overridable per node.
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
@@ -402,9 +403,9 @@ same thing every time. Editing a debug preset **forks it to custom** via the sam
 never mutates the named preset.
 
 **Discipline 2 — validity first (see §3).** Every debug field carries its validity lane and every
-ramp an explicit invalid-pixel colour, or the views lie at the pixels they exist to expose. Debug fields are the
+ramp an explicit invalid-pixel treatment (the hatched invalid pattern, R-132), or the views lie at the pixels they exist to expose. Debug fields are the
 stated exception to masking (R-79): they show literal stored values (a failed-state `0.0` reads as `0.0`, cross-checked
-against `state`), and NaN still goes to the invalid colour.
+against `state`), and NaN still goes to the invalid pattern.
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table

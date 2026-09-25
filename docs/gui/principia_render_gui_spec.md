@@ -222,7 +222,7 @@ corpus's top display bar (R-67).
 
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
-- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, Part 5),
+- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
   `dt_macro`, `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
   default, Aarseth–Zare is kept for benchmarks; Part 2b).
@@ -617,7 +617,8 @@ shaders share them:
   know the range and **clamps out-of-range**; auto is **always full-contrast** with no prior knowledge
   but is **relative** (the mapping shifts with the data — absolute values are not readable, renders are
   not comparable). `range_norm` is a general helper, not debug-specific.
-- **`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel colour (the validity-first invariant, §13):
+- **`DEBUG_NAN : vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first invariant, §13): the hatched
+  pattern that collides with no palette entry, its exact pattern a calibration (REQ-COL-055, R-71; R-132);
   a NaN reads as "no data", never as a value.
 
 Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
@@ -626,7 +627,7 @@ self-comparison or `isnan()`, which fast-math may fold away — R-114), then `ra
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
 code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN
 guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
-against the raw `state` field, not silently recoloured. NaN still goes to the invalid colour.
+against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern.
 
 ---
 
@@ -739,9 +740,9 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   **colour's own L** (pass-through); **both**-None → flat mid-grey. (Matches `principia_colour_
   composition.md` §4.1.)
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
-  invalid-pixel colour — a NaN / sentinel must read as "no data", not as a value (composition spec
+  invalid-pixel treatment, by default the hatched invalid pattern (R-132) — a NaN / sentinel must read as "no data", not as a value (composition spec
   §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
-  invalid colour (§10.1).
+  invalid pattern (§10.1).
 
 ---
 
