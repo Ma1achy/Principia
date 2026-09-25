@@ -179,7 +179,8 @@ mode admits (“just collisions”, “just body-2 escape”), not a distinct re
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
 outcome-state row inherits (that catalogue is out of scope here; this palette is the one piece of it
-that is settled).
+that is settled). It governs the outcome palette (`state ⊕ detail`) only: the raw `state` debug view keeps a six-colour
+`dbg_cat` palette (`principia_debug_tooling_plan.md` §B, R-115).
 
 ---
 

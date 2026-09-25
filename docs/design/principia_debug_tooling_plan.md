@@ -40,7 +40,7 @@ One view + one test per field. Generated from the ledger, conformed to the paylo
 
 | Field | Shader shows | Test asserts |
 |---|---|---|
-| `state` (0–2) | categorical palette, **6 states** (escape/bounded/collision/running/sim_failed/decode_failed) | `sd_state(w)` round-trips 0–5; union legend switches on it; `running`(3) shows in-flight; the three failure/lifecycle states render distinctly |
+| `state` (0–2) | six-colour `dbg_cat` categorical palette, **6 states** (escape/bounded/collision/running/sim_failed/decode_failed) — not the outcome palette, which R-77 sets at `state ⊕ detail` grain (R-115) | `sd_state(w)` round-trips 0–5; union legend switches on it; `running`(3) shows in-flight; the three failure/lifecycle states render distinctly |
 | `detail` (3–4) | **legend keyed by state** (escape→body, collision→pair, sim/decode_failed→failure category — the 4-state union, payload §2; blank for running) | correct code per state; **the three-colours-bug regression test** — detail is read, not dropped; undefined-when-running handled |
 | `saturated` (5) | boolean overlay | set iff `N_sub == N_max` occurred at some macro-step (sticky; R-86) |
 | `dmin_pair` (6–7) | categorical(3) | round-trips; matches the pair that achieved `d_min` (a latched fact, not the word) |
