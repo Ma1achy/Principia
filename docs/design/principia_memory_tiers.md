@@ -108,15 +108,16 @@ Quality is `render_scale / E / FTLE / word`. The bottom two tiers (Potato/Low) r
 | **Low** | 0.5× | 0 | 1× | — | 8 | 4 | render half, word on, no FTLE |
 | **Medium** | 0.75× | 1 | 2× | on | 16 | 5 | render ¾, 2× SSAA, FTLE — the runs-on-a-laptop baseline, first tier with the chaos measurement |
 | **High** | 1.0× | 3 | 4× | on | 16 | 6 | native, 4× SSAA, FTLE — the sweet spot |
-| **Ultra** | 1.0× | 7 | 8× | on | 16 | 7 | native, 8× SSAA, deeper refinement |
-| **Extreme** | 1.0× | 15 | 16× | on | 16 | 8 | native, 16× SSAA, max everything — melts current top-end GPUs |
+| **Ultra** *(provisional, R-137)* | 1.0× | 7 | 8× | on | 16 | 7 | native, 8× SSAA, deeper refinement |
+| **Extreme** *(provisional, R-137)* | 1.0× | 15 | 16× | on | 16 | 8 | native, 16× SSAA, max everything — melts current top-end GPUs |
 
 **Ultra and Extreme cap `N` at 16** (`N² ≤ 256`, the one-workgroup-per-quad invocation ceiling) and scale through `E` and
-`render_scale` instead; their `E` and `render_scale` values are calibrated (REQ-PERF-086, R-132).
+`render_scale` instead; their `E` and `render_scale` values are calibrated (REQ-PERF-086, R-132). Until then the two rows,
+and every memory total that depends on them, are provisional; the totals are recomputed when the values land (R-137).
 
 **FTLE is on from Medium up, off for Potato/Low — a *compute* + *fidelity* boundary, not memory.** (render_scale already shrank the sample count so much that FTLE's memory cost is trivial — +6 MB at Potato, +0.1 GB at Medium@1080p — so memory is no longer the reason.) The reasons it stays gated at the bottom two tiers: (1) **compute** — FTLE is a *second full trajectory per sample* (the Benettin shadow), ~2× the integration work, and Potato/Low serve genuinely weak, *compute-bound* GPUs (a phone won't OOM at 0.02 GB — it'll chug on 2× the trajectories); (2) **fidelity match** — FTLE is a quantitative chaos measurement, and Potato/Low render at 0.25×/0.5× and upscale, so the measurement would be computed on a blurry quarter-res canvas where its fine structure can't be read. Medium at 0.75× is close enough to native *and* a laptop-dGPU tier (not a phone tier), so FTLE is both affordable and legible there. (Custom can force FTLE on at *any* render_scale — a curious weak-GPU user can enable it and accept the framerate hit; it's just off by default at the bottom.)
 
-**Extreme is `1.0×` native, not supersampled.** 16× ensemble SSAA already handles the classification-edge aliasing that matters here; supersampling (`render_scale > 1`) on top would only clean second-order raster-grid aliasing at 2.25×+ the memory — not worth it, and it would make the tier's cost display-dependent (48 GB at 4K). So Extreme stays a fixed, predictable native 16×-SSAA preset that allocates cleanly on a 24 GB card even at 4K. Supersampling remains available as a **Custom-only** option for anyone who specifically wants raster-edge AA and has the VRAM (§5 / Custom slider).
+**Extreme is `1.0×` native, not supersampled** *(provisional, R-137)*. 16× ensemble SSAA already handles the classification-edge aliasing that matters here; supersampling (`render_scale > 1`) on top would only clean second-order raster-grid aliasing at 2.25×+ the memory — not worth it, and it would make the tier's cost display-dependent (48 GB at 4K). So Extreme stays a fixed, predictable native 16×-SSAA preset that allocates cleanly on a 24 GB card even at 4K. Supersampling remains available as a **Custom-only** option for anyone who specifically wants raster-edge AA and has the VRAM (§5 / Custom slider).
 
 **The `SSAA` column is a *label*, not a constraint — E is free-valued.** Hardware MSAA is locked to powers of two (2×/4×/8×/16×) because GPU coverage masks are; *our* SSAA has no such limit — each sample is an independent simulation resolved in a shader, not a fixed-function coverage sample, and the Halton offset sequence (sampling note) gives good sub-pixel coverage at **any** E, not just powers of two. So the controller's fine internal rungs can step E through 2, 3, 4, 5, 6… smoothly; only the six *named tiers* snap E to 1/3/7/15 so the labels read as the familiar "2×/4×/8×/16×". `samples = E + 1`; the "N×" label is just `samples`.
 
@@ -166,12 +167,12 @@ being right.
 | Low | 0.09 | 0.16 | 0.36 |
 | Medium | 0.41 | 0.73 | 1.65 |
 | **High** | **1.38** | 2.45 | 5.51 |
-| Ultra | 2.70 | 4.81 | 10.82 |
-| Extreme | 5.36 | 9.53 | **21.43** |
+| Ultra *(provisional)* | 2.70 | 4.81 | 10.82 |
+| Extreme *(provisional)* | 5.36 | 9.53 | **21.43** |
 
 *(Figures include the render-target term (3 display-res + 3 render-res buffers), at the 144 / 96 B widths plus the 16 B word where the tier has it (R-40 / D6). Split at 4K: Potato 0.05 payload + 0.11 targets — the display-sized buffers dominate the low tiers; High 5.31 + 0.20; Extreme 21.23 + 0.20.)*
 
-**Reading it:** *High @ 1080p ≈ 1.4 GB* is the sweet spot. *Extreme @ 4K ≈ 21 GB* is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
+**Reading it:** *High @ 1080p ≈ 1.4 GB* is the sweet spot. *Extreme @ 4K ≈ 21 GB* (provisional, R-137) is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
 
 ---
 
@@ -208,8 +209,8 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 **Live:** pull **render_scale / E / refinement-floor** down the sub-rungs under motion; restore at rest. If **locked to native**, render_scale is held at 1.0 and adaptation runs on E and the refinement floor only. Never exceed the memory ceiling (the hard clamp) — live adjustment operates *within* the boot-selected memory tier.
 
 **Examples** (totals at the stated display; memory is rarely the binding constraint above the low end — compute usually is):
-- **16 GB M-series Pro, 1440p:** boots **High** (~2.4 GB) comfortably, reaches **Ultra** (~4.8 GB); compute-bound not memory-bound — drops E under motion.
-- **8 GB discrete, 1080p:** **High** (~1.4 GB) or **Ultra** (~2.7 GB) with wide memory margin; frame budget decides.
+- **16 GB M-series Pro, 1440p:** boots **High** (~2.4 GB) comfortably, reaches **Ultra** (~4.8 GB, provisional); compute-bound not memory-bound — drops E under motion.
+- **8 GB discrete, 1080p:** **High** (~1.4 GB) or **Ultra** (~2.7 GB, provisional) with wide memory margin; frame budget decides.
 - **2 GB integrated laptop, 4K panel:** memory-tight — **Low** (0.36 GB, renders at 0.5×→1920×1080) is the safe boot; **Medium** (1.65 GB with FTLE) may fit memory but likely fails the compute probe (FTLE's 2× trajectories on a weak iGPU), so auto holds Low.
 - **Phone (~1 GB), 1080p:** **Potato** (0.04 GB, 480×270 upscaled) or **Low** (0.09 GB) — both FTLE-off, which is what keeps them affordable on a phone GPU (the gating is doing compute work here, not memory).
 
