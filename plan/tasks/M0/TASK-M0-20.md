@@ -17,9 +17,10 @@
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
 - `decisions.md` § "R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*"
+- `decisions.md` § "R-177 — Cadence *(closes G4, C6)*"
 
 ## Deliverables
-- `xtask/src/screenshot.rs` — `cargo xtask screenshot <suite>`: renders a GUI surface headless (native wgpu offscreen) and writes the capture beside the artboard it names (`docs/gui/design/NN_*.png`) under `target/screenshot/`, for layout comparison only (R-68). A case may instead be presence-only (R-129): it lists the controls or items it must contain, and the runner asserts them. Registered in `cargo xtask ci` for GUI PRs and the milestone gates (R-110).
+- `xtask/src/screenshot.rs` — `cargo xtask screenshot <suite>`: renders a GUI surface headless (native wgpu offscreen) and writes the capture beside the artboard it names (`docs/gui/design/NN_*.png`) under `target/screenshot/`, for layout comparison only (R-68). A case may instead be presence-only (R-129): it lists the controls or items it must contain, and the runner asserts them. Not in the per-commit `cargo xtask ci`: `.github/workflows/screenshot.yml` runs `cargo xtask screenshot --all` on pull requests touching `crates/gui/**` or `docs/gui/**` (a GUI PR, R-177), and `gate.yml` runs it at the gates (R-110).
 - `fixtures/screenshot/selftest/` — a minimal egui surface with two named controls: one layout case against a checked-in reference image, one presence-only case.
 - Negative controls for this task's tests (R-176).
 

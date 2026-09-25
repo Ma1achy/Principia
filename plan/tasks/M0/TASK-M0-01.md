@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The cargo workspace exists under `crates/` with the plan's crates — `kernel`, `ledger`, `engine`, `render`, `gui`, `validation`, `prin` — and `xtask`, each a compiling stub with no behaviour. There is no `contract` crate: the typed surfaces live in `crates/engine/src/contract/` (R-146, R-172). A GitHub Actions workflow runs the build, `cargo test --workspace` and `cargo xtask ci` on every push; `cargo xtask ci` is the single entry point into which every later runner registers (plan-check, controls, gate, golden, codegen, bench). The crate graph is itself checked: `cargo xtask deps` reads `cargo metadata` and fails when a workspace dependency edge is outside the allowed-edge table of systems_architecture §7.1, the crate map (R-170) — the layout table (the ledger) is a root with no workspace dependency, the payload precedes its consumers, and nothing depends on the gui crate (canonical_spec §1 item 5; gui_state_contract §1).
+The cargo workspace exists under `crates/` with the plan's crates — `kernel`, `ledger`, `engine`, `render`, `gui`, `validation`, `prin` — and `xtask`, each a compiling stub with no behaviour. There is no `contract` crate: the typed surfaces live in `crates/engine/src/contract/` (R-146, R-172). A GitHub Actions workflow runs the build, `cargo test --workspace` and `cargo xtask ci` on every push; `cargo xtask ci` is the single per-push entry point into which every later per-commit runner registers (plan-check, controls, gate, golden, codegen); bench runs nightly and screenshots on GUI PRs, in their own workflows (R-177). The crate graph is itself checked: `cargo xtask deps` reads `cargo metadata` and fails when a workspace dependency edge is outside the allowed-edge table of systems_architecture §7.1, the crate map (R-170) — the layout table (the ledger) is a root with no workspace dependency, the payload precedes its consumers, and nothing depends on the gui crate (canonical_spec §1 item 5; gui_state_contract §1).
 
 ## References
 - `docs/design/principia_systems_architecture.md` § "7. Hierarchy and dependency (the build DAG, abstract)"
@@ -20,6 +20,7 @@ The cargo workspace exists under `crates/` with the plan's crates — `kernel`, 
 - `docs/design/principia_dd_generation_root.md` § "1. What it is"
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 - `decisions.md` § "R-172 — There is no contract crate *(closes C1, C4)*"
+- `decisions.md` § "R-177 — Cadence *(closes G4, C6)*"
 
 ## Deliverables
 - `Cargo.toml` (workspace), `.cargo/config.toml` (the `xtask` alias), `.gitignore` additions for `target/`.

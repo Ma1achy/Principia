@@ -19918,3 +19918,19 @@
   rulings:
   - R-175
   milestone: M0
+- id: REQ-SYS-067
+  area: SYS
+  statement: "CI must run at the cadence R-110 and R-177 set: ci.yml runs `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs bench (and the survey from M8); screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every suite and writes the gate report. Bench is not in the per-commit ci."
+  source:
+  - file: decisions.md
+    section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: R-177 — Cadence *(closes G4, C6)*
+  verify:
+    method: unit test
+    detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks and fails on a missing one; review: ci.yml has no bench, nightly.yml is scheduled, gate.yml takes a milestone input"
+  rulings:
+  - R-110
+  - R-134
+  - R-177
+  milestone: M0

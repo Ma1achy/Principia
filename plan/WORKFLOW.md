@@ -12,14 +12,17 @@ does what, in what order, and what stops the line.
   demonstrates it, with its output. It links the task file.
 - A task that turns out bigger than one reviewable PR (roughly 500 lines of change) is split **in the plan first**:
   new task files and manifest entries, `plan/check_plan.py` green, then the work.
-- CI runs on every push: the build, `cargo test` and `cargo xtask plan-check` (`plan/check_plan.py`). The other
-  suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
+- CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
+  (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
   `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
   and codegen suites among them) on every commit; benchmarks nightly and at each milestone gate; GUI screenshots on GUI
   PRs and at the gates; from M8 the Playwright browser suite nightly, on GUI and colour PRs and at each gate, and the
   aggregate survey nightly and before release (R-134). GPU CI is a self-hosted Apple-silicon runner (Metal)
   plus lavapipe as the second backend, both on every commit; lavapipe satisfies M4's two-backend check, and a real
   non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
+- The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs bench and, from M8, the survey;
+  `screenshot.yml` on GUI PRs, which are PRs touching `crates/gui/**` or `docs/gui/**`; `gate.yml` (`workflow_dispatch`,
+  input `milestone`) runs every suite and writes the gate report the milestone checkpoint reviews.
 - Whatever its CI frequency, a task's PR shows every one of its acceptance commands run, with their output.
 
 ## Task files

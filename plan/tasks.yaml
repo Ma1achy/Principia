@@ -159,9 +159,9 @@
 - id: TASK-M0-19
   milestone: M0
   title: The benchmark runner and the session header
-  depends_on: [TASK-M0-04, TASK-M0-14, TASK-M0-18]
+  depends_on: [TASK-M0-04, TASK-M0-14, TASK-M0-18, TASK-M0-05, TASK-M0-06, TASK-M0-20]
   needs: []
-  requirements: [REQ-TOOL-001, REQ-TOOL-121]
+  requirements: [REQ-SYS-067, REQ-TOOL-001, REQ-TOOL-121]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M0-20
