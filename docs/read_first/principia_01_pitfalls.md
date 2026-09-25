@@ -281,6 +281,8 @@ across **eleven hypotheses of which nine were refuted.**
 **An independent integrator on the same initial conditions produces an unrelated drift field.**
 Leapfrog drift tracks FTLE at **+0.305** — what physics looks like. AZ drift tracks FTLE at
 **−0.082** and leapfrog drift at **−0.096**.
+These are FTLE–drift Spearman correlations, prior findings rather than control ICs, and AZ's is a null against its shifted
+control (−0.102; prin-rs `NOTES.md:2077`). No gate rests on them (R-164).
 
 **Keep a regularisation-free occupant permanently for this reason.** It shares no coordinate
 machinery with the others, so it is the only arm that can adjudicate when they disagree.
@@ -380,6 +382,12 @@ all three            0         0.0001
 **The unchanged column — `0.0026 → 0.0026` — is the finding.** Hunting a single cause for two
 co-located symptoms cost most of a week. **When a fix removes one symptom and leaves another
 numerically identical, that is two defects, and the identical column is the evidence.**
+
+The table was measured on Aarseth–Zare, at 512², on `config_stability` to t = 50. The switches and the density metric are
+prin-rs `examples/wedge_census.rs`'s: "dtau" is the per-step-interval dτ mode, "clamp" the landing clamp on the final step,
+"limit" the predictive step limit; wedge density is the fraction of pixels in a dense region, at least 25% pale pixels in
+a 9×9 window at 1024². M3 re-runs this ablation on Heggie, the shipping default, with Aarseth–Zare kept for comparison
+(R-163).
 
 ---
 

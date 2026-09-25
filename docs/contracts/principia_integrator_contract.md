@@ -166,10 +166,10 @@ reason:
 
 | occupant | chart | re-registers? | why it is kept |
 |---|---|---|---|
-| **none** | Cartesian | — | **the INDEPENDENT control.** Shares no coordinate machinery with the others, which is what let it catch the wedge bug: leapfrog drift tracks FTLE at **+0.305**, AZ at **−0.082**. Keep permanently. |
+| **none** | Cartesian | — | **the INDEPENDENT control.** Shares no coordinate machinery with the others, which is what let it catch the wedge bug. Prior findings, not controls (R-164): the FTLE–drift Spearman correlation is **+0.305** for leapfrog and **−0.082** for AZ, and AZ's is a null against its shifted control (−0.102; prin-rs `NOTES.md:2077`). No gate rests on them. Keep permanently. |
 | **Aarseth–Zare** | two pairs, reference body from the longest side | **yes, at every sync boundary** | wins on **sustained hierarchy** (`far`: all 65,536 pixels, 0.7–0.9 decades) — precisely because the reference never has to change |
-| **Heggie 1974 (global)** | three relative vectors, symmetric | **no reference body at all** | the general default. **31 of 32 cases**, `err>10` 3916 → 73, fixes AZ's worst decile on 100% of pixels |
-| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property |
+| **Heggie 1974 (global)** | three relative vectors, symmetric | **no reference body at all** | the general default. **31 of 32 cases**, `err>10` (`error_ratio > 10`) 3915 → 74 at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), fixes AZ's worst decile on 100% of pixels. Default time transformation: Eq. 22 at n = 3/2 (R-161) |
+| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property. Its **TTL time mode (Mikkola–Tanikawa)** is the reversible occupant (R-162) |
 
 **Why this axis exists at all — the measured finding it came from.** Doubling the sync-boundary
 **re-registration count** at *fixed step size* moves the drift field by **0.444 decades**, against
@@ -180,6 +180,21 @@ thousand and one hundred and seventy-five thousand times respectively.
 
 That is a property of the **regularisation**, not of the stepper — which is why it needs its own
 slot rather than being folded into `STEP`.
+
+#### The equations and the step control (R-160, R-161)
+
+The Heggie, logH and TTL equations of motion, their time transformations and their step control are transcribed into
+this Part from the prin-rs reference set (`docs/reference/prin-rs/src/integrate/heggie/`, `.../logh/`; reference, not
+authority, R-159), with citations: Heggie 1974; Mikkola & Tanikawa 1999; Preto & Tremaine 1999. The transcription is
+physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
+
+- **Heggie's default time transformation is Eq. 22 at n = 3/2:** `dτ = S^{3/2}/(R₁R₂R₃) dt`, the configuration measured
+  (R-161). Eq. 20 (`dτ = dt/(R₁R₂R₃)`) stays as a selectable time mode. M3's re-run of the 32-case matrix confirms the
+  default.
+- **The predictive step limit:** `dτ ≤ f·d_min / (|v_rel|_max·A·B)`, with f = 0.02 (R-160). It is what removed the wedges
+  (INDEX, the evidence base).
+- **TTL is a prior finding, not an open build:** it is built and validated in prin-rs, and it loses on accuracy,
+  monotonically worse with mass ratio (prin-rs `NOTES.md:2573`; R-162).
 
 #### The profile gains a field
 
@@ -291,8 +306,9 @@ staying symplectic and reversible, and it is what unblocks the reversibility dia
 
 **Specify the slot now even if RK4 fills it initially**, so the profile advertises `symplectic:
 false` loudly and nothing downstream quietly assumes otherwise. Note `Gamma` is **not separable**
-(the `|u|^2 |p_lambda|^2` term couples position and momentum), so plain KDK does not apply — the
-Mikkola–Tanikawa form is required, not optional.
+(the `|u|^2 |p_lambda|^2` term couples position and momentum), so plain KDK does not apply to AZ. *Was: "the
+Mikkola–Tanikawa form is required, not optional."* **A reversible occupant exists: logH's TTL time mode
+(Mikkola–Tanikawa), as prin-rs built it; Aarseth–Zare with Mikkola–Tanikawa isn't required (R-162).**
 
 ---
 
