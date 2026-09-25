@@ -345,6 +345,11 @@ split trigger (R-91): under the one `eps`, a footprint is unresolved if its spre
 running maximum ever did, and a quad is unresolved if any of its footprints is. `θ_s`, `θ_max`, `θ_trend` and the trend
 signal are dropped, so there is no `divergence_trend` member.
 
+**The latch is evaluated on the GPU; only its verdict returns (R-142).** The latch is evaluated in the resolve pass
+(R-135), and its state stays in GPU-resident per-quad memory. `QuadReduction` carries only the verdict: the count of
+the quad's unresolved footprints, latched ones included (policy §1's `n_unresolved`). `QuadReduction` stays the sole
+automatic return.
+
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.
 
