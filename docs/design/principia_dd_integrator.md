@@ -8,7 +8,7 @@
 > regularisation** (`principia_integrator_contract.md` Part 2b, `principia_spec_pending_changes.md`
 > change 8).
 >
-> **Measured:** 31 of 32 cases, `err>10` **3916 → 73**, AZ's worst decile fixed on 100% of pixels. AZ
+> **Measured:** 31 of 32 cases, `err>10` **3915 → 74** at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), AZ's worst decile fixed on 100% of pixels. AZ
 > retains exactly one win — **`far`**, where sustained hierarchy means it **never re-registers**.
 >
 > **The mechanism:** doubling the sync-boundary **re-registration count** at fixed step size moves the

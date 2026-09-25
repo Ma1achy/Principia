@@ -291,7 +291,7 @@ machinery with the others, so it is the only arm that can adjudicate when they d
 
 Heggie 1974 global regularisation: three relative vectors on equal footing, **no reference body to
 re-choose and therefore no re-registration at all.** Measured **31 of 32 cases**, `err>10`
-**3916 → 73**, AZ's worst decile fixed on 100% of pixels.
+**3915 → 74** at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), AZ's worst decile fixed on 100% of pixels.
 
 **And the loss is the strongest evidence.** `far` is AZ's only win and it is total — all 65,536
 pixels — because there one body stays distant, AZ's reference choice is ideal, and **it never

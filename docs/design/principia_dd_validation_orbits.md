@@ -164,7 +164,7 @@ does not care where the code came from.
 | **closure, free-fall** | 2–3 from Hristov et al. 2023 | same, on brake orbits: returns to rest in the same configuration |
 | **analytic, all `t`** | Lagrange circular | stays equilateral at every sampled `t`, not just at `T` |
 | **chart landmark** | Lagrange at `z = 0`, Euler at `beta → 0, pi` | the decoder puts them where the geometry says |
-| **reversibility (`xi`)** | free-fall brake orbits | time-symmetric by construction — **the natural test bed, and blocked on a reversible occupant** |
+| **reversibility (`xi`)** | free-fall brake orbits | time-symmetric by construction — **the natural test bed, and blocked on a reversible occupant** *(R-162: a reversible occupant exists: logH's TTL time mode)* |
 | **word calculus** | Šuvakov–Dmitrašinović families | the encoder reproduces the published braid class |
 
 **Report the convergence order, not just the error.** A pass/fail at one `eta` would have missed §0
