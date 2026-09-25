@@ -110,7 +110,8 @@ A milestone exits only at a human checkpoint. Before it:
   listed, and every earlier gate still green;
 - every **calibration** requirement of the milestone (`kind: calibration`, R-71) has its proposed value, the evidence
   and the reviewer's check in the PR that closed it; **the human confirms each value at the gate**, and it is then
-  recorded in `decisions.md`. An unconfirmed calibration blocks the gate;
+  recorded in `decisions.md`. Until then CI uses the proposed value provisionally, and the test or gate report marks
+  it provisional (R-182). An unconfirmed calibration blocks the gate;
 - every **definition** requirement (`kind: definition`, R-72) has its doc change merged with the physics reviewer's
   approval.
 The human reviews the gate report and either passes the milestone or rules on what blocks it. No work in the next
