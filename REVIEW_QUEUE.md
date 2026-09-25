@@ -259,3 +259,77 @@ completes. That follows from the rule as written; it is not a separate choice. T
 - **Needed:** confirm, or rule a t = 0 escape test (for example `E_rel > 0` alone at t = 0, which is the "energy alone
   flickers" failure the criterion exists to avoid).
 - **Ruling:** R-60 (decisions.md): confirmed, no t = 0 escape; the only valid t = 0 terminal is a collision. Closed in step 5.
+
+## RQ-20: The stain editor — a free node graph, or a four-slot inspector *(step 6, GUI)*
+
+The corpus disagrees with itself, and the notes side with one half. Nothing is chosen. The rewritten render_gui_spec keeps the node
+graph (its existing §3–§11), and gui_state_contract §5 is left as it is, marked with this entry.
+- `principia_gui_state_contract.md` §5: "The editor is a **four-slot inspector** (fixed wiring — stage order is
+  constitutional, so there is no free-form topology to build or mis-wire)"; the occupants are
+  `{colour_id, brightness_id, combiner_id, post_id, uniforms}`; §7 (teardown): "edit the four-slot object for colour".
+- `principia_render_gui_spec.md` §3–§4, §15 items 1–6: source nodes, a "free-ish graph with a fixed OUT + combiner
+  backbone", fan-out, multi-input nodes, and a variable-length post chain.
+- GUI_DESIGN_NOTES 02: "Stain — the plain node-graph editor … Graph with typed pins (field / colour / brightness) and wires."
+- **Needed:** whether the stain is a graph (and gui_state_contract §5/§7 are rewritten to a graph object, with post as a
+  chain rather than one `post_id`), or the four-slot object (and the graph editor is a view over it).
+- **Ruling:** R-64 (decisions.md): the free, typed node graph. Closed in step 6.
+
+## RQ-21: One inspector window, or the click inspector plus a separate IC Inspector *(step 6, GUI)*
+
+Nothing is chosen; the spec writes the notes' window and marks the difference.
+- GUI_DESIGN_NOTES 05: "The IC Inspector and the trajectory viewer are ONE window." Pane 2 is "bodies or shape sphere
+  (turning, with axes, or unwrapped)", a toggle; the sphere "turns slowly".
+- `principia_trajectory_viewing.md` §4: the click inspector shows **four** things at once — "3D shape sphere
+  (rotatable)", "2D UV unwrap", "Real space", "Scalar readout" — and "The 3D orbit control rotates the **camera, not the
+  data**". `ic_inspector_scratchpad.md` Build notes: the IC Inspector is its own tool whose "eventual home is an **egui**
+  panel in the F3 debug menu".
+- **Needed:** whether the merged window supersedes trajectory_viewing §4's panel set (sphere and unwrap as a toggle, and an
+  auto-turning sphere), or keeps both sphere views on screen together.
+- **Ruling:** R-65 (decisions.md): one Inspector window; the panels are hosted there and in Explore's Trajectory panel. Closed in step 6.
+
+## RQ-22: A time scrubber that re-integrates, against "there is no scrub" *(step 6, GUI)*
+
+Nothing is chosen.
+- GUI_DESIGN_NOTES 01, Time: "play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure
+  refines progressively. It is not instant, and says so."
+- `principia_export_animation_contract.md` Part 1: "There is no scrub — the playhead is a clock, not a slider over stored
+  data." Its transport controls are play/pause, restart, loop and speed. `principia_temporal_architecture_note.md`: "No
+  scrub; playback only."
+- The notes' scrubber stores nothing (it re-marches), so it may be compatible with lockstep, but the contract names no
+  seek control and says there is no scrub.
+- **Needed:** whether a seek-by-re-march transport control joins export_animation Part 1 (and its catch-up rules), or the
+  Time panel has no scrubber.
+- **Ruling:** R-66 (decisions.md): the scrubber stays; "no scrub" applies to exported animations only. Closed in step 6.
+
+## RQ-23: The display stage — the style stage, and where gamut clamp, display scale and the controls sit *(step 6, GUI)*
+
+Nothing is chosen.
+- GUI_DESIGN_NOTES 04, Display: "fixed order — SimResult → stain → style → colour-vision simulation → screen. Style is
+  optional and applies to the figure only; scientific checks run with plain." The display settings are a **window**, and
+  the overlays are a top-bar **Overlays ▾** menu (01).
+- `principia_render_gui_spec.md` §12: the display stage is "**gamut clamp**, **CVD simulation** …, **render→display
+  scale**", in "the top display bar"; §1: "Global display bar (top) — gamut / CVD / render-scale / boundary-overlay";
+  §15 item 11. There is no style stage in the corpus.
+- **Needed:** (a) where gamut clamp and render→display scale sit in the notes' order (before or after style; the notes
+  don't list them); (b) whether the "global display bar" placement is replaced by the Display window and Overlays menu.
+  The spec keeps both corpus settings, and keeps the display stage global and outside the pipeline.
+- **Ruling:** R-67 (decisions.md): stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
+  Display window and Overlays menu replace the top display bar. Closed in step 6.
+
+## RQ-24: Artboard details that differ from the corpus *(step 6, GUI)*
+
+The pictures differ from the corpus in these details, and the notes say nothing about them. The spec follows the corpus on each;
+please confirm.
+- **Outcome palette** (02, 06): e.g. bounded `#3f4652`, body-escape `#d6a83c`. colour_composition §3's canonical
+  palette is bounded `#141418`, body 0 escape `#F0DE32`, and so on, with golden tests pinned to it (R-16).
+- **Substep cap** (04 Run, and the profiler's "100k (cap)"): 100 000. integrator_contract Part 3: `N_max` default 64.
+- **"tolerance ε 1e-9"** under Integration (04 Run): integrator_contract has no integrator tolerance. The step is
+  `dt_macro` (fixed) with substepping, and `eps` is the refinement tolerance (`Policy::Tolerance`, R-15).
+- **Sonification mapping** (01, 05: "separations → pitch", a selector): scratchpad_pointer_channels and trajectory_viewing
+  define one mapping, `θ(t), φ(t)` → spectrum.
+
+Settled by a ruling or the notes, so not questions: the 1-based labels (R-22); the escape "persistence 8" (R-29, change
+11); the profiler's top-level categories (R-56: telemetry §2's five stages); "linked camera", "CameraZoom" and "fate
+edges" (notes: no camera object; "Legend", never "Fate").
+- **Ruling:** R-68 (decisions.md): artboard values are illustrative; corpus values win; the Run window uses contract
+  names. Closed in step 6.

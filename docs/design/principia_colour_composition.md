@@ -163,8 +163,8 @@ its nine terminal classes carry structure worth encoding in the colours themselv
 | degenerate     | white   | `#ECECF0` | |                 |         |           |
 
 The assignment is a **mnemonic, not arbitrary**: **collisions are additive primaries keyed by the
-colliding pair** (1–2 → R, 1–3 → G, 2–3 → B); **escapes are subtractive primaries keyed by the
-escaping body** (1 → Y, 2 → M, 3 → C). The two event *families* (collision vs escape) are therefore
+colliding pair** (0–1 → R, 0–2 → G, 1–2 → B); **escapes are subtractive primaries keyed by the
+escaping body** (0 → Y, 1 → M, 2 → C; 0-based, R-22). The two event *families* (collision vs escape) are therefore
 separable at a glance while the pair/body identity stays legible; the three non-generic outcomes are
 bounded (black), the t=0 collision (orange), and degenerate (white). The nine classes read from the
 `state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
@@ -313,8 +313,11 @@ A **fixed terminal stage** applied to the finished output, **as settings, not no
 never sees them and they are not part of any occupant or preset:
 
 ```
-gamut_clamp  →  cvd_sim(mode)  →  render→display scale
+style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
 ```
+
+**Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **Style** is optional and applies to
+the figure only; scientific checks run with plain. *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
 
 **CVD is here, not in the pipeline, and this is a category correction, not a convenience.** CVD
 simulation asks "what does this *finished encoding* look like to a deuteranope/protanope/…?" — it
@@ -485,8 +488,8 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 
 - **`principia_gui_state_contract.md` §4–§5** — "fixed 4-slot pipeline; occupants are data" becomes
   **"fixed typed *backbone* (`colour`/`brightness` → `combine`) with `Option` occupants · variable-
-  length ordered *post chain* · fixed terminal *display stage* (gamut → CVD → scale, settings not
-  nodes)."** The occupant model (source+reduction / channel / mapping, channel independent of source)
+  length ordered *post chain* · fixed terminal *display stage* (style → scale → gamut → CVD, settings not
+  nodes; R-67)."** The occupant model (source+reduction / channel / mapping, channel independent of source)
   is retained and points here for the compositional interior. CVD moves out of the pipeline.
 - **`principia_dd_colouring.md`** — the vMF engine, LUT-sphere, physics overlay (Eq. 11), and
   combiner/compaction forms are retained as the *primitives* of §1 and cross-referenced; the

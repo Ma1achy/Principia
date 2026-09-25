@@ -132,6 +132,7 @@ If that holds you can *hear* which resonance you are near.
 - **The cursor-bias refinement idea** (slippy-map notes §18) composes directly: **the thing you are
   pointing at is the thing you are hearing and the thing being refined.** One attention signal,
   three consumers.
+  **Ratified as cursor bias (R-55):** `P_focus` centres on the pointer while it is in view (scheduler contract Part 6).
 
 ---
 

@@ -179,6 +179,9 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
   a courtesy and the reason they will actually send it.
 - **Self-contained.** It must carry the build hash and the full config, or it cannot be interpreted
   six weeks later — the same provenance rule that `refine_flagged` propagation made non-negotiable.
+- **Format: JSON, profiler schema v1 (R-56).** At the top level, §2's frame record and its five stages; beneath them,
+  nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and write it
+  (`principia_render_gui_spec.md` §G5). JSON is plain text, so the file stays readable by the sender.
 - **Bounded size.** A long session at 60 fps is 200k+ frame records. Either downsample on write
   (keep every frame during motion, every Nth while idle) or roll up idle stretches into summaries.
 

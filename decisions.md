@@ -480,3 +480,45 @@ trailing digit reads as a body index. Files: dd_generation_root §3.6; render_co
 *24 Sep 2026 · applied in step 5*
 
 As written in payload §3: any change to the continuation table changes the schema version automatically.
+
+## R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*
+*25 Sep 2026 · applied in step 6*
+
+render_gui_spec Part II stands. gui_state_contract §5's four-slot, fixed-wiring description predates Part II and is
+updated to the graph. Files: gui_state_contract §5, §7; render_gui_spec Part II header.
+
+## R-65 — One Inspector window; the standalone IC Inspector is absorbed *(closes RQ-21)*
+*25 Sep 2026 · applied in step 6*
+
+The IC Inspector and the trajectory viewer are one Inspector window (the notes, §05). trajectory_viewing §4's panels are
+hosted there and in Explore's Trajectory side panel; trajectory_viewing says where each panel lives. The IC Inspector's
+reference HTML stays in `docs/gui/reference/` as prior art. Files: trajectory_viewing §4, §6; render_gui_spec §G2, §G8;
+ic_inspector_scratchpad (build notes); INDEX.
+
+## R-66 — The time scrubber stays *(closes RQ-22)*
+*25 Sep 2026 · applied in step 6*
+
+It sets the display time and re-integrates progressively; it never replays stored frames. The export contract's "no scrub"
+applies to exported animations only, and one sentence there says so. Files: export_animation_contract Part 1;
+render_gui_spec §G2.
+
+## R-67 — The display chain *(closes RQ-23)*
+*25 Sep 2026 · applied in step 6*
+
+stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut
+colours. The corpus's top display bar is replaced by the Display window plus the Overlays menu (the approved design).
+Files: colour_composition §4.3 and the §7 summary; render_gui_spec §G2, §G5, Part II §1, §12, §15.
+
+## R-68 — Artboard values are illustrative; corpus values win *(closes RQ-24)*
+*25 Sep 2026 · applied in step 6*
+
+The corpus's palette hex codes, the substep cap (default 64) and the sound mapping win. The Run window exposes the parameters
+the contracts define, under their contract names. The rule is added to the header line of render_gui_spec §G13. Files:
+render_gui_spec §G2, §G5, §G13.
+
+## R-69 — What is undoable *(closes the step-6 open question)*
+*25 Sep 2026 · applied in step 6*
+
+`SimConfig` and `RenderState` edits are undoable, including navigation (it edits `z₀` and the basis) and lock / unlock (chart
+construction). `ViewUI`-only state — open panels, focus, selection, the kept-orbit list — is not. Files: gui_state_contract
+§2.

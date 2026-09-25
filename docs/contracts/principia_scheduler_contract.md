@@ -117,7 +117,7 @@ The per-quad dispatch request carries a bit-packed `flags` word:
 | 1 | `ENSEMBLE_ENABLED` | dispatch `E` jittered copies per grid position |
 | 2 | `FTLE_ENABLED` | compute the full Benettin FTLE (tier-gated) |
 | 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |
-| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result |
+| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result. **Owner: the measurement path** (R-39) — the Measure tool and matched N / 2N renders, a uniform grid with every sample retained (`principia_render_gui_spec.md` §G10) |
 | 5 | `COMPUTE_IC_DESCRIPTOR` | write the `ICDescriptor` buffer alongside the results (dd_decoder §3.6) |
 | 6–7 | reserved | not `DEBUG_MODE`, which is a baked kernel variant (R-41) |
 
@@ -129,7 +129,7 @@ When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel
 
 Recorded so the contract is self-contained. **The split decision is `Policy::Tolerance`'s** (R-15, `principia_dd_refinement_policy.md`); this Part keeps the scheduling mechanics around it.
 
-**Priority.** `P_tile = w_v·P_visible + w_z·P_zoom + w_c·P_complexity + w_f·P_focus`, defaults `w_v=10, w_z=2, w_c=3, w_f=1`. Visibility dominates (never compute off-screen); complexity (`1 − coherence`) drives adaptive refinement; zoom-match is a tiebreaker; focus (inverse distance to viewport centre) is subtle. Weights exposed in research mode.
+**Priority.** `P_tile = w_v·P_visible + w_z·P_zoom + w_c·P_complexity + w_f·P_focus`, defaults `w_v=10, w_z=2, w_c=3, w_f=1`. Visibility dominates (never compute off-screen); complexity (`1 − coherence`) drives adaptive refinement; zoom-match is a tiebreaker; focus (inverse distance to the **pointer** while it is in view, to the viewport centre otherwise — cursor bias, R-55; its weight and decay are still to be written) is subtle. Weights exposed in research mode.
 
 **Split/keep/merge.** Decided by `Policy::Tolerance` (R-15): split iff any footprint is unresolved (`spread_shape > eps`, the copies disagree on event class, or the footprint is undetermined — policy §1); the stop rule is `alpha_area` (§2); merging is the split rule read backwards (§3); the decision variants are in §6. The scheduler applies it **and** `ℓ < camera_depth + MAX_REL_DEPTH`. Guards checked first: terminal (Part 4) or offscreen → stop.
 *Superseded (R-15), kept for the record: split if any spread/impurity threshold was exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low ensemble agreement — now `spread_event`, R-18 — persistent parent-child disagreement); tiebreakers `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel; keep coarse if dominant purity high, all spreads low, summary visually stable, already finer than screen demand; merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure; default keep.*

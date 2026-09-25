@@ -120,7 +120,7 @@ Because they're all invariant, the measurement panel doubles as a second invaria
 ## Build notes
 
 - static, single-sample. **Reframe under the Rust substrate:** the production decode/encode is now Rust, so this HTML tool is an *independent JS re-port* of the decode maths (`principia_dd_decoder.md` §3) — a **second implementation**. Its value is therefore *cross-implementation* validation (it catches Rust-decode logic bugs the way an independent reference does), not exercising the one codebase. When the Inspector becomes an **egui panel** in the F3 debug menu (Rust, calling the engine's actual decode), *that* is the verbatim-reuse test; this standalone stays valuable as the independent oracle. Both worth keeping.
-- hand-rolled HTML/canvas for both the numeric fields and the drag layer (not Tweakpane). Standalone artefact for the dev phase; the eventual home is an **egui** panel in the F3 debug menu (Rust), with the production TS GUI re-skinning the same operations later.
+- hand-rolled HTML/canvas for both the numeric fields and the drag layer (not Tweakpane). Standalone artefact for the dev phase; the eventual home is an **egui** panel in the F3 debug menu (Rust) — now the dev GUI's Inspector window, which absorbs this tool (R-65; `principia_render_gui_spec.md` §G8), with the production TS GUI re-skinning the same operations later.
 - everything here is CPU-side f64 single-sample — no shader work.
 
 ## Open questions

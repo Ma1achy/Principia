@@ -95,13 +95,14 @@ and **`Policy::Tolerance`**.
 
 ## GUI
 
-- `docs/gui/principia_render_gui_spec.md` — Render / Colour GUI (dev): the developer colour-and-render GUI. **Rewritten from the dev-GUI canvas in step 6**
+- `docs/gui/principia_render_gui_spec.md` — Dev GUI (egui / F3): the whole developer GUI (Part I) and the stain editor (Part II). **Rewritten from the dev-GUI artboards and design notes in step 6**
+- `docs/gui/design/` — the twelve dev-GUI artboards and `GUI_DESIGN_NOTES.md` (the notes win over the pictures; rulings win over both)
 - `docs/gui/reference/principia_dev_gui.html` — Render / Colour Dev GUI (interactive reference)
 - `docs/gui/reference/principia_gui_mock.html` — GUI mock
 - `docs/gui/reference/principia_render_modes.html` — Render-Mode Catalogue
 - `docs/gui/reference/principia_colour_presets.html` — Colour Composition · Preset Gallery
 - `docs/gui/reference/principia_colour_explorer.html` — Colour Composition Explorer
-- `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8)
+- `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8). Prior art: the tool is absorbed into the dev GUI's Inspector window (R-65)
 
 ---
 
