@@ -277,6 +277,53 @@ Arrows read "requires". The *can't-exist-before* graph, not the milestone plan.
 
 Reading it: the **layout table and link registry are roots** (everything generated flows from them); the **decoder is the first real artefact**; **canonicalise is the neck**; the **payload is the waist**; the **Allocation ring** sits beside the flow, deciding what flows, never what it contains.
 
+### 7.1 Crate map
+
+*R-170: drafted from §7 and R-146. **Status: awaiting the human's confirmation**; TASK-M0-01 doesn't start until it is confirmed.*
+
+Each node of the graph above is assigned to one crate of the confirmed layout (R-146; there is no contract crate, R-172).
+`cargo xtask deps` checks the workspace's crate graph against the allowed edges below (REQ-SYS-004). Edges *inside* one
+crate (decoder before kernel, canonicalise before the integrator) are not visible to a crate-graph check; they stay a
+code-review item.
+
+| §7 node | crate | note |
+|---|---|---|
+| layout table | `ledger` | a root: no workspace dependency |
+| link registry | `ledger` | a root |
+| pack/unpack gen | `ledger` | the generator; its Rust output lands in `kernel`, its WGSL output in `render` |
+| debug catalogue gen | `ledger` | the generator; its output (the debug fragment variants) lands in `render` |
+| decoder (factorised) | `kernel` | shared CPU/GPU source |
+| chart system | `kernel` | the chart maps and `validate(u, v)` (R-26) |
+| canonicalise, encode | `kernel` | shared source; lookup and lock (CPU, `SimConfig`) are in `engine` |
+| compute KERNEL, occupants + wrapper | `kernel` | compiled twice: f32 SPIR-V → WGSL, and native f64 |
+| validation (the §7 node: chart-aware validation before lowering) | `engine` | not the `validation` crate, which is the test harness |
+| resolve/lowering, dispatch | `engine` | |
+| navigation (uniform edits) | `engine` | behind the typed surface (`crates/engine/src/contract/`) |
+| payload (`SimState`/`ICDescriptor`) | `ledger` → `kernel` | the layout is the ledger's; the generated types are the kernel's; the buffers are the engine's |
+| fragment assembly, compositor, screen | `render` | |
+| QuadReduction, scheduler, cache | `engine` | |
+| inspector / hover (CPU f64+), animation/export runner | `engine` | their windows are in `gui` |
+
+Crates outside the graph: `gui` (the dev GUI: depends on `engine`'s typed surface only; nothing depends on it),
+`validation` (the harness: may depend on any crate; others reach it only as a dev-dependency, R-176), `prin` (the CLI:
+depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate depends on it).
+
+**Allowed workspace edges** (arrows read "depends on"):
+
+| from | to | the §7 arrow it realises |
+|---|---|---|
+| `kernel` | `ledger` | layout table → pack/unpack gen → kernel; link registry → decoder |
+| `render` | `ledger` | layout table → pack/unpack gen (WGSL), debug catalogue gen |
+| `engine` | `ledger`, `kernel` | kernel → dispatch; chart system → validation → resolve/lowering |
+| `engine` | `render` | payload → fragment assembly (the frame loop and dispatch drive the fragment side) |
+| `gui` | `engine` | GUI → state → engine (gui_state_contract §1) |
+| `prin` | `engine` | |
+| `validation` | any of the above except `gui` | the harness exercises each seam |
+| any (dev-dependency only) | `validation` | R-176 |
+
+Every other workspace edge is forbidden; in particular `ledger` depends on nothing, `kernel` on nothing but `ledger`,
+`render` never on `engine` (the edge would run against the payload's direction), and nothing on `gui`.
+
 ---
 
 ## 8. What drills down from here

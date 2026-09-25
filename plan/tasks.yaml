@@ -4,10 +4,18 @@
 #   needs        earlier-milestone requirement ids this task builds on; the task closing each is reachable through depends_on
 #   requirements the live requirement ids this task closes (each closed by exactly one task)
 #   reviewers    from code, qa, physics, gui, perf (plan/reviewers/); pitfalls: PIT-<section> of principia_01_pitfalls.md
+- id: TASK-M0-00
+  milestone: M0
+  title: "The crate map: every §7 node assigned to a crate, confirmed by the human"
+  depends_on: []
+  needs: []
+  requirements: [REQ-SYS-064]
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M0-01
   milestone: M0
   title: The cargo workspace, the crates and CI
-  depends_on: []
+  depends_on: [TASK-M0-00]
   needs: []
   requirements: [REQ-SYS-004]
   reviewers: [code, qa]
