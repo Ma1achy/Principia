@@ -82,10 +82,6 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
 
-**Register**
-
-- `docs/principia_spec_pending_changes.md` — twelve changes; 7, 8, 10, 11, 12 have **landed**
-
 ---
 
 ## Notes — working notes
@@ -150,6 +146,8 @@ and **`Policy::Tolerance`**.
 | `docs/archive/principia_validation_scratchpad.md` | **SUPERSEDED / ABSORBED**: the current authorities are `validation_ground_truth_note` and `parity_contract` |
 | `docs/archive/principia_dd_generation_root.md.bak` | an older backup of the Generation Root drill-down (it still targets "TypeScript constants"). The live file is in `docs/design/` |
 | `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
+| `docs/archive/principia_spec_pending_changes.md` | the pending-changes register, closed: twelve changes; 1, 7, 8, 9, 10, 11, 12 are folded into their owning files, 3 was folded earlier, 4 is moot; 2, 5 and 6 are open decisions |
+| `docs/archive/spec_sources/` | the retired implementation spec (`principia_spec_revised`, see canonical_spec §11), the retired colour-map and COM-projection PDFs, the Burrau and render-quadtree PDFs, older IC Inspector copies, and `SECTION_MAP.md` (the ledger of the port into markdown). Record only; the markdown is the authority |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
 

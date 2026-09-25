@@ -190,7 +190,7 @@ sharper test.
 
 ## 5. Immediate action
 
-1. **~~Isolate the first-order error~~ — done (§0.1). Adopt the overshoot fix.** Confirmed
+1. **~~Isolate the first-order error~~ — done (§0.1). ~~Adopt the overshoot fix~~ — adopted (pending change 10, landed; it was not the wedge fix).** Confirmed
    analytically and by measurement: closure improves **665,795×** at `eta = 0.001` and convergence
    goes first-order → ~third. It changes results, so re-run the Python cross-check and the
    divergence-vs-horizon table after adopting it — both were measured with the overshoot present.

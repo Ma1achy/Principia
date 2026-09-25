@@ -236,7 +236,7 @@ action and aren't listed.
 | colour_composition:233 | T | "invalid colour is … (spec: a fixed magenta)" | **source not located.** The `.tex` magenta (1600, 1638) is a hue in a colour scheme, not an invalid-colour marker. It may be the colour PDF. Group B · done: 75d6261 (attribution removed; source not located, see RQ-14) |
 | core_design:3 | S | "the thing to hand a code agent — not the big spec" | wording · Group B (port 10) · done: 75d6261 |
 | scheduler_contract:66 | S | "An agent reading the un-renamed spec will implement the absolute one" | wording · Group B (port 10) · done: c53705d |
-| dd_generation_root:198 | R | "`detail = 11` (spec pending change 7)" | step 4 |
+| dd_generation_root:198 | R | "`detail = 11` (spec pending change 7)" | step 4 · closed: 27579c0 (change 7 folded) |
 
 ### principia_spec_pending_changes.md: 22 lines, class R
 This whole file is the LaTeX edit queue. It is closed in step 4 (fold each change's substance in, then archive the file). The

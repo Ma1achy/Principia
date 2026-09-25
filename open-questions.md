@@ -25,3 +25,28 @@ Everything left open, each with its source. Nothing is deferred silently.
 - **Fold R-15 and R-18 into the scheduler contract** (step 4, with pending change 12). Part 6's split/keep/merge rule
   defers to `principia_dd_refinement_policy.md` (R-15). Its split list still names `ensemble_outcome_agreement`, which
   R-18 retires in favour of `spread_event`. Source: rulings R-15 and R-18, step 3.
+- **Pending-changes register, closed in step 4.** Where each of the twelve changes went:
+  1. Resolved (joint grain, dd_generation_root §3.7). The impurity mask's field: ruled by R-20 (RQ-18).
+  2. **Open:** which quotient the Burrau survey wants, shape-only (fold the leg swap) or shape × labelling. Stated in
+     chart_reference §4.5. It is not in audit section B, so it is a candidate for the step-5 decision sheet.
+  3. Folded in step 3 (inverse_encode_contract Part 5, "encode reuses decode").
+  4. Moot: a LaTeX figure caption. No markdown file makes the 5-DOF claim.
+  5. **Open:** audit decision B1 (body index base).
+  6. **Open:** R-10 keeps `α_min` (0 or 0.05) on the step-5 decision sheet. The register's "removed, α_min = 0" is not
+     folded, because R-10 overrides it.
+  7. Folded (detectors, payload §2). **Open:** the ionisation gate's definition, and whether the old-data consequence
+     (two-pair collisions recorded as binary) applies to any stored outcome data.
+  8. Folded: landed in full, ruled by R-19 (RQ-17).
+  9. Folded: payload memory table recomputed, closure and period in the debug catalogue; the caching signature already
+     carries the payload schema version. **Open:** the stated fraction that defines `t_min` (payload §1, "Define `t_min`
+     gauge-covariantly"); and `principia_memory_tiers.md` §4's tier totals, still at the old 136 B width (with audit B10).
+  10. Folded (validation_orbits §5 item 1). **Open:** its consequences — re-run the Python cross-check and the
+      divergence-vs-horizon table, and fix the NumPy reference's matching defect. Whether these were done isn't recorded.
+  11. Folded (integrator_contract Part 7, dd_integrator §3.6). **Open:** whether escape terminates (pitfalls §2.4, three
+      checks); the window length for `|Δn̂|`; which energy `E_rel` is; how the escaping body's id is determined.
+  12. Folded (R-15, R-18; scheduler contract Parts 3, 4, 6). **Open, recorded in the policy doc:** the two `alpha_area`
+      defects (§2.2), and the camera not wired into priority.
+
+  Status reconciliation (audit A3): the register's own Status sections say 7, 8 and 10 are "Open", while the banners
+  added above them later say "LANDED", and the index agrees with the banners. Step 4 takes the banners as the register's
+  last word for 7, 10, 11 and 12; 8 was RQ-17, since ruled by R-19. Source: step 4.

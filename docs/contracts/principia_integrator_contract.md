@@ -6,7 +6,7 @@
 
 ## Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper
 
-Same pattern as the render pipeline's swappable colour/brightness slots. The integrator is **not** a monolith; it is one small swappable piece inside a fixed loop.
+Same pattern as the render pipeline's swappable colour/brightness slots. The integrator is **not** a monolith; it is one small swappable piece inside a fixed loop. *(The occupant seam is `ADVANCE(state, t_now, t_target, params)`, Part 2a, R-19. For a stepper with no regularisation, `ADVANCE` is the loop below.)*
 
 ```
 integrate(ic, params):
@@ -212,7 +212,7 @@ better, never switch silently.** Revisit only with a measurement showing the bou
 
 ### Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature
 
-**PROPOSED CHANGE, driven by measurement.** The wrapper's model — `STEP(state, dt)` called `N_sub`
+**DECIDED (change 8, extended by Part 2b; R-19), driven by measurement.** The wrapper's model — `STEP(state, dt)` called `N_sub`
 times at `dt_macro/N_sub`, with adaptive substepping owned by the wrapper — was measured **failing on
 the regime this instrument exists to explore.** Unregularised adaptive stepping on `deep interior`
 did not hang; it returned `|dE/E| = 2.8e+02` in 35k steps against a 2e6 budget. **A wrong number
@@ -227,8 +227,8 @@ at `d_min = 1.35e-11` with energy drift **6.2e-15**, where every unregularised a
 **The change is one signature and one flag:**
 
 ```
-STEP(state, dt, params)                   -> state'    # current
-ADVANCE(state, t_now, t_target, params)   -> state'    # proposed
+STEP(state, dt, params)                   -> state'    # the earlier seam
+ADVANCE(state, t_now, t_target, params)   -> state'    # the occupant seam (R-19)
 ```
 
 The seam moves from *"advance by `dt`"* to *"advance to `t`"*. **The wrapper owns the target; the
@@ -236,7 +236,8 @@ occupant owns how it gets there.** KDK/Yoshida implement `ADVANCE` as the loop t
 rename, no behaviour change. AZ implements it by stepping in `tau` until it lands on `t_target`.
 
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
-regularised" but **"does the wrapper still know how far a step goes"**.
+regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**
+(stepper × regularisation, Part 2b): `true` whenever the regularisation is not `none` (R-19).
 
 **Why widen rather than hold AZ outside the occupant system** (as RK45 is held outside): RK45 sits
 outside because it is a *reference* — rare, inspector-only, validation. **AZ is the opposite: it is
@@ -261,7 +262,7 @@ guarantee; the occupant declares its own schedule.
 **Preserved — the refinement machinery**, which compares reductions at a shared playhead. The
 playhead is exactly what the new signature makes explicit.
 
-**Cost 1 — the per-substep cadence must become a callback.** Projection, invariant accumulation and
+**Cost 1 — the per-substep cadence is a callback passed in (R-19).** Projection, invariant accumulation and
 terminal detection currently run in the wrapper *after* every `STEP`. Under `ADVANCE` the occupant
 must invoke them, so **pass them in rather than doing them after** — otherwise an occupant can
 silently skip them and nothing catches it. That cadence is load-bearing: it is what catches
@@ -375,13 +376,17 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
 Escape and collision are where the categorical outcome comes from — every outcome-class debug view bottoms out here.
 
 - **Collision:** `min_{i<j} ‖r_i − r_j‖ < r_coll`. Uses the *same* `r_min` the substepper already computes — one value, two consumers (like `d_min`). Records the pair.
+  **Count the pairs before classifying (pending change 7, landed).** Exactly one pair below `r_coll` → `collision`, `detail` = that pair. Two or more → `collision`, `detail = 3`, a **triple collision**. Testing "any pair below `r_coll`" first steals genuine triples into the binary arm. The rule is on the count, not on "all three", because of the triangle inequality: `|AB| < r_coll` and `|AC| < r_coll` give `|BC| < 2·r_coll`, so exactly two pairs below threshold is already a near-triple. A triple collision is terminal and **non-continuable** (it is provably non-regularisable), unlike a binary collision, where stopping is a choice.
+  **`d_min` is the primary stored quantity; the label is derived from it.** `d_min` (over all three pairs) is stored, the collision label is read from it, and `r_coll` is a **recorded parameter carried on every output**, not a physical constant. Measured on a 64×64 near-field sweep: the collision fraction runs 0.0000 → 0.0242 → 1.0000 across three decades of `r_coll`, because the whole grid's `d_min/R` spans less than one decade. No threshold in that range is a physical event boundary. The default `1e-3` of `R` separates tail from bulk on the slices measured, and no more.
 
 **`r_coll` is user-exposed (sim-key), not a fixed constant.** It is *definitional* — it sets what counts as a collision, which is a regularisation choice, not a precision. A slider from "regularise aggressively" (large) to "refuse to regularise" (→0), all valid, answering different questions; changing it is a **sim-key change → invalidate → re-boot** (masked by the staleness backdrop), and it must be the **same value on both pipelines** so the collision *branch* stays bit-identical (parity's shared-branch rule — the threshold is shared sim-key, so this holds). Honest framing of the extremes, because neither means what a naive user expects:
   - **Large `r_coll`** — terminates at any moderately-close approach: *cheaper* (stops before the expensive close-encounter integration) and *coarser* (lumps survived-slingshots in with hits); the basin floods with what are really *close-approach events at threshold R*, not physical collisions.
   - **`r_coll → 0` (or 0)** — refuses to regularise: near-collisions are integrated *through*, so the force `∝1/r²` blows up and the substepper drives `N_sub` toward `N_max`. Singular encounters then **saturate the substep cap** — the trajectory advances under-resolved and flagged (not terminated; saturation is non-terminal — Terminal states, below), continuing to whatever dynamical outcome it reaches. So zero is *not* "perfect integration" and it no longer *manufactures terminations* — it *degrades confidence* at the singular structure (high saturation flag) while the trajectories still run. Expensive (the substepper works hardest here), and the true coincidence still can't be integrated through — but the region is *computed-with-low-confidence*, not *cut off*.
   - **Coupling to `N_max`:** the usable minimum `r_coll` is bounded below by what the substepper resolves before the cap — very small `r_coll` fills the field with **substep-saturated (under-resolved, flagged) samples** (the integration floor, Part 6), not terminations. Either surface the coupling in the UI, or let very-small `r_coll` raise `N_max` at a cost the quality controller accounts for. This is the same floor KS regularisation (v2) would lift.
   - **Benchmarks pin it:** literature comparisons (Burrau especially — it *is* a close-encounter problem) assume a specific regularisation, so the ground-truth validation suite records the `r_coll` used (`principia_validation_ground_truth_note.md`).
-- **Escape:** the three-gate persistent detector on the outer Jacobi pair — distance (`‖λ‖ > R_esc`), outward (`λ·v_λ > 0`), and outer two-body energy (`E_out > 0`) — with the ±1 persistence counter to `k_esc = 8`. Note it reads `v_λ = λ̇`, a *velocity*, so it evaluates **post-step on the projected state** (the drift step has the velocity; COM projection has run). Records which body escaped.
+- **Escape (pending change 11, landed):** `ESCAPE ⟺ |Δn̂| over a window < tau AND E_rel > 0`. The shape vector has settled, and the escaper is unbound. Escape is a limit being approached, not a threshold crossed: as the third body recedes, `n̂` converges with `|dn̂/dt| ~ 1/t³` (`principia_01_pitfalls.md` §2.1). **`tau` is not a tuned constant.** Closure separates escapers from bound trajectories by 383× (7.04e-05 against 2.70e-02, stable across `t = 25–30`), and any value in the middle two orders gives the same answer. Measured: **100% precision, 96.3% recall.** It fires late (`t≈10` rather than `t≈1.5`), which is right for a *stored* `t_end`. Neither condition alone is enough: closure alone also fires on bound hierarchies that settle, and energy alone flickers during encounters. It evaluates **post-step on the projected state**. Records which body escaped. **Whether escape terminates integration is open**: the three checks of pitfalls §2.4 are outstanding. Collision stays terminal regardless.
+  **Triple ejection (ionisation)** is `escape` with `detail = 3` (pending change 7): all three bodies mutually unbound, which needs `E > 0`, so it is reachable on the 8D chart but not from rest. The proposed gate is all three pairwise relative energies positive and all three separations growing. Its definition pass is open.
+  *Superseded (change 11): the three-gate persistent detector on the outer Jacobi pair — distance (`‖λ‖ > R_esc`), outward (`λ·v_λ > 0`), outer two-body energy (`E_out > 0`) — with a ±1 persistence counter to `k_esc = 8`. It fired on transients: 0 of 895 escapes were still unbound eight sync boundaries later, which would have overstated the escape fraction 5.8×. Under the new rule `receding` and `d > R_esc` are redundant (identical to the digit), so three tuned constants are gone.*
 - **Terminal states** are captured by the `state` enum (ledger §3.1): `escape`/`bounded`/`collision` are the physical outcomes; `sim_failed` (NaN/Inf during integration) and `decode_failed` (the decoder could not produce a valid physical IC — NEVER a valid t=0 terminal, which is a real outcome per §5) are lifecycle states, mutually exclusive with them. **`timeout` is not a separate state** — reaching horizon `T` without escape or collision IS `bounded` (it was merged; a bounded trajectory is one that stayed bounded to the horizon). `sim_failed` means the payload is untrustworthy except the state field. **`MAX_SUBSTEPS` is NOT a terminal label** — hitting the substep cap advances the trajectory with the best-available state and sets the sticky **`saturated`** confidence flag (in `sample_descriptor`, bit 5); the march continues to its real dynamical outcome. The cap bounds work-per-step (frame-loop protection) but never terminates. See Part 4 and `principia_dd_integrator.md` §3.6 for the determinism rule (count-bound, not wall-clock).
 
 The detectors are wrapper machinery (shared, determinism-critical per §4), not occupant machinery — they wrap the step and read the same state regardless of which `STEP` produced it.

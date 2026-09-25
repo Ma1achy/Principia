@@ -152,7 +152,7 @@ fraction of the system size — not as an absolute time, or the field inherits a
 | Field | Bits | Width | Values / scale |
 |---|---|---|---|
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed · 5 decode_failed. **Codes 6–7 reserved** — a binary decoder treats **unknown non-running states as conservatively finished and untrusted** (forward-compat). `detail` meaningful when state ∈ {escape, collision, sim_failed, decode_failed} (enum below) |
-| `detail` | 3–4 | 2 | **union keyed by state** — 4 codes per state. escape → body id (0–2, `3`=invalid); collision → pair id (0–2, `3`=invalid); sim_failed / decode_failed → failure category |
+| `detail` | 3–4 | 2 | **union keyed by state** — 4 codes per state. escape → body id (0–2), `3` = **triple ejection**; collision → pair id (0–2), `3` = **triple collision** — one rule, *3 means all three* (pending change 7); sim_failed / decode_failed → failure category |
 | `saturated` | 5 | 1 | sticky — **`N_sub == N_max` occurred** at some macro-step (substep cap hit; advance-and-flag, never terminates) |
 | `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (0–2, `3`=unset/invalid; latched, NOT from the word) |
 | `last_symbol` | 8–9 | 2 | **final symbol of the free-group word**, cached from the append loop for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`). Redundant with the sidecar word `W` (recoverable there only in O(length)); kept coherent by the march (§3). **No in-band "none" code** — validity gates on the sidecar `length`: meaningful iff `length ≥ 1 && length ≠ 127` (empty word → no last symbol; truncated → invalid, like every word-derived read). Written by `set_last_symbol` wherever the loop mutates `prev` (§3, §6) |
@@ -165,7 +165,7 @@ fraction of the system size — not as an absolute time, or the field inherits a
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
-- **escape / collision** use `detail` as body id / pair id (`3` = invalid).
+- **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)
 
 > **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Likewise an IC that at t=0 genuinely satisfies the complete escape detector (outward *and* positive outer-energy gates, not merely beyond `R_esc`) is an **escape at step 0** (`state=escape`, `detail=body`, `t_end_step=0`). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC. (Whether beyond-`R_esc`-alone counts as t=0 escape is deferred to the decoder contract's escape-gate definition.)
 
@@ -441,25 +441,23 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **No double-buffering.** The march updates state **in place** each step (temporal note) — samples are independent (no stencil/neighbour hazard: each sample's force loop couples only its own 3 bodies), so read-modify-write of a sample's own slot is safe, no ping-pong copy.
 
-> **⚠ THE TIER TABLE BELOW IS STALE — recompute at 144 / 96 B.** The closure field (§1) moved
-> `SimStateFTLE` 136 → 144 (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte
-> aligned so nothing repacks, and no tier is expected to cross a budget boundary on 5.9% unless it
-> was already sitting on one — but the figures below were computed at the old widths and every one of
-> them is now low. Recompute before quoting.
+> **Recomputed at 144 / 96 B (pending change 9).** The closure field (§1) moved `SimStateFTLE` 136 → 144
+> (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte aligned, so nothing repacks. The
+> figures below are at the new widths; at the old widths they were 1.261 / 0.863 / 0.431 / 5.043 / 1.725 GB.
 
 Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|
-| 1080p E=3 FTLE-on (High-like) | 1.128 GB | 0.133 | **1.261 GB** |
-| 1080p E=3 FTLE-off | 0.730 GB | 0.133 | **0.863 GB** |
-| 1080p E=1 FTLE-off | 0.365 GB | 0.066 | **0.431 GB** |
-| 4K E=3 FTLE-on (High-like) | 4.512 GB | 0.531 | **5.043 GB** |
-| 4K E=1 FTLE-off | 1.460 GB | 0.265 | **1.725 GB** |
+| 1080p E=3 FTLE-on (High-like) | 1.194 GB | 0.133 | **1.327 GB** |
+| 1080p E=3 FTLE-off | 0.796 GB | 0.133 | **0.929 GB** |
+| 1080p E=1 FTLE-off | 0.398 GB | 0.066 | **0.464 GB** |
+| 4K E=3 FTLE-on (High-like) | 4.778 GB | 0.531 | **5.308 GB** |
+| 4K E=1 FTLE-off | 1.593 GB | 0.265 | **1.858 GB** |
 
-Span ~80 MB (phone: FTLE-off E=0 720p) to ~5.0 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split, 5.04 GB, matches the E=3 row here). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
+Span ~88 MB (phone: FTLE-off E=0 720p, hot only) to ~5.3 GB (4K FTLE-on E=3), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split, 5.04 GB, was computed at the old 136 B width and now matches the old E=3 figure, not the 5.31 GB here — open-questions). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
 
-> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.6 GB" means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
+> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.7 GB" (1.6 GB at the old width) means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
 
 **WebGPU allocation — logical buffers are SHARDED.** WebGPU guaranteed defaults: **`maxStorageBufferBindingSize` = 128 MiB, `maxBufferSize` = 256 MiB** (adapters may expose larger, but the baseline must be assumed for reach). So "the `SimState` buffer" and "the word buffer" are **logical** entities implemented as *many* physical quad/chunk buffers — a multi-GB payload cannot be one `GPUBuffer` and cannot be bound in one binding, regardless of available memory. Sharding is per-quad (natural — quads are the compute/eviction unit already); the allocator hands out chunk buffers and the scheduler tracks which quad lives in which chunk. Hard constraint, not an optimisation.
 

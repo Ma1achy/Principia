@@ -127,7 +127,7 @@ These certify the **CPU brain** — a wrong view here exonerates the GPU and poi
 | energy agreement | `|E_0 − (K_0+V_0)|` log | ≤ tol (decode-time vs kernel-time) |
 | winding consistency | derived `orbit_count = ⌊|θ̃|/2π⌋`, `retrograde = θ̃<0` vs the running `θ̃` accumulator | derivation = live source; terminal-latch respected |
 | diffusion (Welford) | slope `C_ty/C_tt` vs reference computed identically | the streaming accumulator bookkeeping is correct |
-| **impurity mask** | per-sample `state` ≠ quad majority `state` | spatial mean = `outcome_impurity` — **needs the `dominant_outcome` grain fix (pending change 1)** |
+| **impurity mask** | per-sample `class ⊕ detail` ≠ the quad's `dominant_outcome` (joint grain; no `majority_class` field — R-20) | spatial mean = `outcome_impurity` — the grain fix is change 1's resolution: one joint `class ⊕ detail` grain, `principia_dd_generation_root.md` §3.7 |
 | drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max) | distinguishes secular loss from recovered spike |
 
 ---

@@ -125,7 +125,7 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 17. **NaN-sentinel read-side + descriptor-predicate validity** — fixed read-side type; tier-absent = NaN (loud, not load-bearing); validity via `has_<feature>` + descriptor predicates, never `isnan()`. *[render, lowering, payload]*
 18. **Deterministic fixed-dt** *(amended — see `principia_integrator_contract.md` §2a: the
     count-bound relocates to a fixed **`tau`-schedule** for occupants that own their own time
-    mapping. Same guarantee, occupant-declared.)* — fixed `dt`, deterministic schedule, count-bound never wall-clock; the same spec re-renders the same result up to cross-backend f32 tolerance (branches exact). *[temporal, integrator, parity, export]*
+    mapping. Same guarantee, occupant-declared. R-19: the count bound is on a fixed `tau`-schedule.)* — fixed `dt`, deterministic schedule, count-bound never wall-clock; the same spec re-renders the same result up to cross-backend f32 tolerance (branches exact). *[temporal, integrator, parity, export]*
 
 ---
 
@@ -141,7 +141,7 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 - **Codegen roots:** `dd_generation_root` (the ledger + link registry; **payload is canonical where they overlap**).
 - **Colour/GUI/export:** `dd_colouring`, `gui_state_contract`, `trajectory_viewing`, `quality_device_note`, `export_animation_contract`.
 - **Testing/validation:** `parity_contract`, `validation_ground_truth_note`, `debug_tooling_plan`.
-- **Meta / superseded / throwaway:** `spec_pending_changes` (the register of pending changes), `ftle_shadow_precision_experiment`, `spike_brief` (throwaway), `parity_testing_note` (**SUPERSEDED** → parity_contract), `validation_scratchpad` (**SUPERSEDED** → validation notes).
+- **Meta / superseded / throwaway:** `spec_pending_changes` (the register of pending changes, closed and archived), `ftle_shadow_precision_experiment`, `spike_brief` (throwaway), `parity_testing_note` (**SUPERSEDED** → parity_contract), `validation_scratchpad` (**SUPERSEDED** → validation notes).
 
 ---
 
@@ -152,7 +152,7 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 - **Symbolic-dynamics `dominant_pair` attribution** — OPEN (generator↔cut convention, punctured-sphere relation, third-pair algorithm) before per-pair quantities are trusted; the word *storage* is settled.
 - **Milestone/implementation build plan** — M0–M8 phasing and the task DAG are unwritten (native-first: prove parity/toolchain → validate physics numerically → build the browser product on top). **The vertical slice has since collapsed the research phases** — integrator, step control, escape criterion and refinement policy are settled with evidence — so the plan is now a *build* plan. The remaining unknowns are all interactive or GPU: the dispatch shape (settled on paper, `principia_systems_architecture.md` §5.5), cache eviction under real motion, and whether the frame budget holds. **Written after the GUI design pass**, since the GUI's scope sets half the milestones.
 - **The non-Metal parity run** — a standing pre-Paper-2 action item (§2), a task not a doc.
-- **The LaTeX spec is retired.** The markdown corpus is the only authority. What the corpus relied on from `principia_spec_revised.tex` and the two PDFs (the shape-sphere colour map, the COM-projection mini spec) has been ported into the files that rely on it, and the originals are archived under `docs/archive/spec_sources/` for the record only; where they disagree with the corpus, the corpus wins. The five pending edits (`QuadReduction` grain, Burrau leg-swap, constrained-inverse wording, the 5-DOF→8-DOF caption, body-index naming) are tracked in `principia_spec_pending_changes.md`.
+- **The LaTeX spec is retired.** The markdown corpus is the only authority. What the corpus relied on from `principia_spec_revised.tex` and the two PDFs (the shape-sphere colour map, the COM-projection mini spec) has been ported into the files that rely on it, and the originals are archived under `docs/archive/spec_sources/` for the record only; where they disagree with the corpus, the corpus wins. The five pending edits (`QuadReduction` grain, Burrau leg-swap, constrained-inverse wording, the 5-DOF→8-DOF caption, body-index naming) are closed with the rest of the pending-changes register, now archived: each landed change is folded into its owning file, the caption is moot, and the Burrau leg-swap quotient and body-index naming remain open decisions.
 
 ---
 
