@@ -346,12 +346,13 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy. The chart's `system_image` is **`DoubleCover`** — it covers each shape twice, as two labelled
+the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). The chart's `system_image` is **`DoubleCover`** — it covers each shape twice, as two labelled
 systems (2-to-1 over the φ hemispheres; `principia_chart_decoder_contract.md` Part 5, R-59 D5, R-104).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
-equal-area alternative (Mollweide or Hammer–Aitoff). This matters because the Lagrange configurations sit
+equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
+section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
 at the poles and can be compressed to invisibility in equirectangular.
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
