@@ -4,22 +4,17 @@
 //! Edges *inside* one crate (decoder before kernel, canonicalise before the integrator) are not visible to
 //! a crate-graph check; they stay a code-review item (systems_architecture §7.1).
 //!
-//! It also enforces R-187's condition on the `validation` dev-dependency: in `kernel` and `ledger`, no
-//! source under `src/` uses `validation` (a test that does is an integration test in `tests/`), because
-//! the dev-dependency cycle would give unit tests two copies of the crate (`Metadata::source_violations`). The scan
-//! fails on any identifier named `validation` there, a local item included (a deliberate over-approximation: it
-//! has no name resolution), and requires the crates' library and binary targets in `src/`. So that the scan of the
-//! `.rs` files under `src/` is the whole of what those crates compile there, `#[path]`, any `include` identifier and
-//! any attribute holding a macro variable are forbidden in their `src/` (R-189, which replaces R-188's following of
-//! `include!`; R-190). The one exception is kernel's item-level `include!(concat!(env!("OUT_DIR"), "/<name>.rs"))`,
-//! the route by which the ledger's generated code reaches it (R-185, R-190).
+//! It also enforces R-187's condition on the `validation` dev-dependency: in `kernel` and `ledger`, a test that
+//! uses `validation` is an integration test (`tests/`), not a unit test in `src/`, because the dev-dependency
+//! cycle would give unit tests two copies of the crate. The check compiles (R-191, `compile_check`): when either
+//! crate takes `validation` as a dev-dependency, a copy of the workspace without that dev-dependency must pass
+//! `cargo check -p kernel -p ledger --lib --tests`, so a use by a unit test fails whatever its route (an alias, a
+//! macro, `#[path]`, `include!`). Both crates must also keep their library and binary targets under `src/`.
 
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::str::FromStr;
 
-use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use serde::Deserialize;
 
 /// The kind of a dependency, as `cargo metadata` reports it (`kind`: `null`, `"dev"`, `"build"`).
@@ -187,6 +182,12 @@ fn rule_broken(edge: &Edge) -> Option<&'static str> {
 pub struct Metadata {
     pub packages: Vec<Package>,
     pub workspace_members: Vec<String>,
+    /// `cargo metadata` always writes it; the minimal test fixtures may not.
+    #[serde(default)]
+    pub workspace_root: Option<String>,
+    /// `cargo metadata` always writes it; the minimal test fixtures may not.
+    #[serde(default)]
+    pub target_directory: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -243,11 +244,14 @@ impl Dependency {
 impl Metadata {
     /// Runs `cargo metadata --format-version 1` on this workspace.
     pub fn from_cargo() -> Result<Self, String> {
-        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-        let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml");
-        let output = Command::new(cargo)
+        Self::from_cargo_at(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml"))
+    }
+
+    /// Runs `cargo metadata --format-version 1` on the workspace of `manifest`.
+    pub fn from_cargo_at(manifest: &Path) -> Result<Self, String> {
+        let output = Command::new(cargo())
             .args(["metadata", "--format-version", "1", "--manifest-path"])
-            .arg(&manifest)
+            .arg(manifest)
             .output()
             .map_err(|e| format!("cannot run cargo metadata: {e}"))?;
         if !output.status.success() {
@@ -275,79 +279,26 @@ impl Metadata {
         self.packages.iter().filter(|p| self.workspace_members.contains(&p.id)).collect()
     }
 
-    /// In each crate of `NO_VALIDATION_IN_SRC`, every `.rs` file under its `src/` is scanned (`scan_text`):
-    /// - R-189, R-190: any `#[path = …]` attribute (under `cfg_attr` too), any `include` identifier and any attribute
-    ///   holding a macro variable is a violation, whether or not the crate depends on `validation`, so no file
-    ///   outside `src/` joins the crate unscanned. The exception: in `OUT_DIR_INCLUDE` (kernel), the item-level
-    ///   `include!(concat!(env!("OUT_DIR"), "/<name>.rs"))` passes, unless the crate's `src/` also defines or aliases
-    ///   a macro named `concat` or `env`, which would make that form load another file (each such site then fails);
-    /// - R-187: when the crate depends on `validation`, any identifier named `validation` or the name the crate
-    ///   gives the dependency is a violation (a deliberate over-approximation that fails local items with that
-    ///   name too).
-    ///
-    /// Every crate of `NO_VALIDATION_IN_SRC` must also keep its library and binary targets under `src/`, where the
-    /// unit tests the scan looks for live.
-    ///
-    /// `require_sources`: whether a crate to scan must have its `src/` and its targets on disk and in the
-    /// metadata. It is set for the live workspace; a fixture may describe a graph with no sources behind it, and
-    /// then the scan is skipped.
-    pub fn source_violations(&self, require_sources: bool) -> Result<Vec<SourceViolation>, String> {
-        let members = self.members();
-        let validation = members.iter().find(|m| m.name == "validation");
-        let mut violations = Vec::new();
-        for package in members.iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())) {
-            let out_dir_include = OUT_DIR_INCLUDE.contains(&package.name.as_str());
+    /// The members of `NO_VALIDATION_IN_SRC` (kernel, ledger), in the order `cargo metadata` lists them.
+    fn no_validation_in_src(&self) -> Vec<&Package> {
+        self.members().into_iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())).collect()
+    }
+
+    /// Fails when a library or binary target of kernel or ledger has its root outside the crate's `src/`
+    /// (systems_architecture §7.1; R-187, R-191). `require_sources`: whether each crate must have its manifest path
+    /// and targets in the metadata, as the live workspace does; a fixture may describe a graph without them, and then
+    /// the crate is skipped.
+    pub fn check_targets(&self, require_sources: bool) -> Result<(), String> {
+        for package in self.no_validation_in_src() {
             let Some(dir) = package.manifest_path.as_deref().and_then(|m| Path::new(m).parent()) else {
                 if require_sources {
                     return Err(format!("{}: cargo metadata gives no manifest_path", package.name));
                 }
                 continue;
             };
-            let src = dir.join("src");
-            package.targets_under(&src, require_sources)?;
-            // The crate's own name and each name the dependency is given (a rename); empty without the dependency.
-            let mut names: Vec<String> = package
-                .dependencies
-                .iter()
-                .filter(|d| validation.is_some_and(|v| d.is_on(v)))
-                .flat_map(|d| [Some(&d.name), d.rename.as_ref()])
-                .flatten()
-                .map(|n| n.replace('-', "_"))
-                .collect();
-            names.sort();
-            names.dedup();
-            if !src.is_dir() {
-                if require_sources {
-                    return Err(format!("{}: cannot find its src/ directory to scan", package.name));
-                }
-                continue;
-            }
-            let (mut includes, mut shadows) = (0, Vec::new());
-            for file in rust_files(&src)? {
-                let text = std::fs::read_to_string(&file)
-                    .map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-                let scan = scan_text(&text, &names, out_dir_include).map_err(|e| {
-                    format!(
-                        "{}: {e}; it cannot be checked for a use of validation (R-187) or for #[path] and \
-                         include! (R-189, R-190)",
-                        file.display()
-                    )
-                })?;
-                for (line, what) in scan.found {
-                    violations.push(SourceViolation { krate: package.name.clone(), file: file.clone(), line, what });
-                }
-                includes += scan.out_dir_includes.len();
-                shadows.extend(scan.shadows.into_iter().map(|line| (file.clone(), line)));
-            }
-            if includes > 0 {
-                for (file, line) in shadows {
-                    let what = Forbidden::ShadowedBuiltin;
-                    violations.push(SourceViolation { krate: package.name.clone(), file, line, what });
-                }
-            }
+            package.targets_under(&dir.join("src"), require_sources)?;
         }
-        violations.sort_by(|a, b| (&a.file, a.line).cmp(&(&b.file, b.line)));
-        Ok(violations)
+        Ok(())
     }
 
     /// The workspace edges: each dependency of a workspace member that resolves to another workspace member
@@ -374,12 +325,22 @@ impl Metadata {
         }
         Ok(edges)
     }
+
+    /// Each dependency of kernel or ledger on the workspace's `validation` that is a dev-dependency, with its crate.
+    fn validation_dev_dependencies(&self) -> Vec<(&Package, &Dependency)> {
+        let members = self.members();
+        let Some(validation) = members.iter().find(|m| m.name == "validation") else { return Vec::new() };
+        self.no_validation_in_src()
+            .into_iter()
+            .flat_map(|p| p.dependencies.iter().map(move |d| (p, d)))
+            .filter(|(_, d)| d.kind.as_deref() == Some("dev") && d.is_on(validation))
+            .collect()
+    }
 }
 
 impl Package {
     /// Fails when a library or binary target of the package (the targets with unit tests; `tests/`, examples,
-    /// benches and the build script are not ones) has its root outside `src`: a `[lib] path` elsewhere would put
-    /// unit tests where R-187's scan of `src/` does not look.
+    /// benches and the build script are not ones) has its root outside `src`.
     fn targets_under(&self, src: &Path, require_sources: bool) -> Result<(), String> {
         let with_unit_tests = |t: &&Target| {
             t.kind.iter().any(|k| !matches!(k.as_str(), "test" | "example" | "bench" | "custom-build"))
@@ -389,8 +350,9 @@ impl Package {
             found = true;
             if !normalize(Path::new(&target.src_path)).starts_with(src) {
                 return Err(format!(
-                    "{}: its {} target is at {}, outside {}: its unit tests would escape the check that no source \
-                     under src/ uses validation (systems_architecture §7.1; R-187)",
+                    "{}: its {} target is at {}, outside {}: kernel's and ledger's library and binary targets, \
+                     whose unit tests may not use validation, sit under src/ (systems_architecture §7.1; R-187, \
+                     R-191)",
                     self.name,
                     target.kind.join(", "),
                     target.src_path,
@@ -405,97 +367,207 @@ impl Package {
     }
 }
 
-/// The crates in which no source under `src/` may use `validation` (systems_architecture §7.1; R-187).
+/// The crates in which no unit test may use `validation` (systems_architecture §7.1; R-187).
 pub const NO_VALIDATION_IN_SRC: &[&str] = &["kernel", "ledger"];
 
-/// The crates of `NO_VALIDATION_IN_SRC` whose `src/` may hold the item-level
-/// `include!(concat!(env!("OUT_DIR"), "/<name>.rs"))`: kernel, into which the ledger generates code at build time
-/// (R-185, R-190). Ledger allows no `include!` at all.
-pub const OUT_DIR_INCLUDE: &[&str] = &["kernel"];
+/// Where, under the workspace's target directory, the compile check keeps its own target directory: stable, so that
+/// the check is incremental, and separate, so that it never contends with the build that runs `xtask`.
+pub const CHECK_TARGET_DIR: &str = "xtask-deps-check";
 
-/// What a source under `src/` of a crate in `NO_VALIDATION_IN_SRC` holds that it must not.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Forbidden {
-    /// An identifier named `validation`, or the dependency's rename (R-187).
-    Validation,
-    /// A `#[path = …]` attribute, under `cfg_attr` too (R-189).
-    PathAttribute,
-    /// An `include` identifier other than kernel's item-level `OUT_DIR` form (R-189, R-190).
-    Include,
-    /// An attribute holding a macro variable: `#[$a]`, `#[cfg_attr(…, $a)]`, `# $a` (R-190).
-    MacroVariableAttribute,
-    /// A macro named `concat` or `env` defined or aliased in a crate whose `src/` uses the `OUT_DIR` include, which
-    /// that form would then call in place of the builtin (R-190).
-    ShadowedBuiltin,
-}
-
-/// A forbidden item in a source under `src/` of a crate in `NO_VALIDATION_IN_SRC`.
+/// What `compile_check` did when it did not fail.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SourceViolation {
-    pub krate: String,
-    pub file: PathBuf,
-    /// 1-based.
-    pub line: usize,
-    pub what: Forbidden,
+pub enum CompileCheck {
+    /// Neither kernel nor ledger takes `validation` as a dev-dependency, so no unit test of theirs can use it.
+    NotNeeded,
+    /// The copy without the dev-dependency compiled; these crates took it.
+    Passed(Vec<String>),
 }
 
-impl fmt::Display for SourceViolation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let at = format!("{} src/ at {}:{}", self.krate, self.file.display(), self.line);
-        match self.what {
-            Forbidden::Validation => write!(
-                f,
-                "forbidden use of validation in {at}: in kernel and ledger a test that uses validation is an \
-                 integration test (tests/), not a unit test in src/ (systems_architecture §7.1; R-187). Any \
-                 identifier named validation (or the dependency's rename) outside comments and literals counts, a \
-                 local item with that name included: without name resolution `validation::x` cannot be told apart \
-                 from the crate, so rename the local item"
-            ),
-            Forbidden::PathAttribute => write!(
-                f,
-                "forbidden #[path] in {at}: kernel and ledger src/ use no #[path], so that every file they compile \
-                 there is a .rs file under src/ (R-189, R-190)"
-            ),
-            Forbidden::Include => write!(
-                f,
-                "forbidden include! in {at}: kernel and ledger src/ use no include identifier (an alias, a macro \
-                 argument and a path-qualified include! included), so that every file they compile there is a .rs \
-                 file under src/; the one exception is kernel's item-level \
-                 include!(concat!(env!(\"OUT_DIR\"), \"/<name>.rs\")), outside any macro body (R-189, R-190)"
-            ),
-            Forbidden::MacroVariableAttribute => write!(
-                f,
-                "forbidden attribute with a macro variable in {at}: kernel and ledger src/ use no attribute whose \
-                 contents hold a macro variable ($), which could expand to #[path] (R-189, R-190)"
-            ),
-            Forbidden::ShadowedBuiltin => write!(
-                f,
-                "forbidden macro named concat or env in {at}: this crate's src/ uses \
-                 include!(concat!(env!(\"OUT_DIR\"), …)), which is allowed only with the builtin concat! and env!; \
-                 this one would take their place and could load a file outside src/ (R-190)"
-            ),
-        }
+/// R-187's condition, checked by compiling (R-191). When kernel or ledger takes `validation` as a dev-dependency, the
+/// workspace is copied to a temporary directory (`copy_workspace`), `validation` is removed from their
+/// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --offline` must pass, with
+/// `CARGO_TARGET_DIR` at `CHECK_TARGET_DIR` under the workspace's target directory. The copy also leaves out their
+/// integration-test, example and bench targets: those are not unit tests, and an integration test may use
+/// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode. A use
+/// of `validation` by a unit test, by any route, then fails to compile, and the error carries the compiler's output.
+///
+/// `--offline`: the check needs no package that the workspace's own build has not already fetched.
+pub fn compile_check(metadata: &Metadata) -> Result<CompileCheck, String> {
+    let deps = metadata.validation_dev_dependencies();
+    if deps.is_empty() {
+        return Ok(CompileCheck::NotNeeded);
     }
+    let root = metadata.workspace_root.as_deref().map(PathBuf::from).ok_or("cargo metadata gives no workspace_root")?;
+    let target =
+        metadata.target_directory.as_deref().map(PathBuf::from).ok_or("cargo metadata gives no target_directory")?;
+    let copy = std::env::temp_dir().join(format!(
+        "xtask-deps-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos())
+    ));
+    let result = check_copy(metadata, &deps, &root, &target, &copy);
+    let _ = std::fs::remove_dir_all(&copy);
+    result
 }
 
-/// Every `.rs` file under `dir`, recursively, sorted.
-fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(dir) = stack.pop() {
-        let entries =
-            std::fs::read_dir(&dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
-        for entry in entries {
-            let path = entry.map_err(|e| format!("cannot read {}: {e}", dir.display()))?.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == "rs") {
-                files.push(path);
+fn check_copy(
+    metadata: &Metadata,
+    deps: &[(&Package, &Dependency)],
+    root: &Path,
+    target: &Path,
+    copy: &Path,
+) -> Result<CompileCheck, String> {
+    let member_dirs: Vec<PathBuf> = metadata
+        .members()
+        .iter()
+        .filter_map(|m| Some(Path::new(m.manifest_path.as_deref()?).parent()?.to_path_buf()))
+        .collect();
+    copy_workspace(root, copy, &member_dirs, &[target.to_path_buf(), root.join(".git")])?;
+    let crates = metadata.no_validation_in_src();
+    for package in &crates {
+        let manifest = package.manifest_path.as_deref().ok_or_else(|| format!("{}: no manifest_path", package.name))?;
+        let relative = Path::new(manifest)
+            .strip_prefix(root)
+            .map_err(|_| format!("{}: its manifest {manifest} is outside the workspace root", package.name))?;
+        // The name each dev-dependency on validation has in this manifest: its rename, or `validation`.
+        let keys: Vec<&str> = deps
+            .iter()
+            .filter(|(p, _)| p.id == package.id)
+            .map(|(_, d)| d.rename.as_deref().unwrap_or(&d.name))
+            .collect();
+        strip_manifest(&copy.join(relative), &keys)?;
+    }
+    let mut command = Command::new(cargo());
+    command.arg("check").arg("--manifest-path").arg(copy.join("Cargo.toml"));
+    for package in &crates {
+        command.args(["-p", &package.name]);
+    }
+    let output = command
+        .args(["--lib", "--tests", "--offline"])
+        .env("CARGO_TARGET_DIR", target.join(CHECK_TARGET_DIR))
+        .output()
+        .map_err(|e| format!("cannot run cargo check: {e}"))?;
+    if output.status.success() {
+        let mut names: Vec<String> = deps.iter().map(|(p, _)| p.name.clone()).collect();
+        names.dedup();
+        return Ok(CompileCheck::Passed(names));
+    }
+    // The compiler names files in the copy; name them in the workspace.
+    let copy_prefix = format!("{}{}", copy.display(), std::path::MAIN_SEPARATOR);
+    let root_prefix = format!("{}{}", root.display(), std::path::MAIN_SEPARATOR);
+    let stderr = String::from_utf8_lossy(&output.stderr).replace(&copy_prefix, &root_prefix);
+    Err(format!(
+        "kernel and ledger do not compile without their validation dev-dependency, so a unit test in src/ uses \
+         validation, or they do not compile at all: in kernel and ledger a test that uses validation is an \
+         integration test (tests/), not a unit test in src/ (systems_architecture §7.1; R-187, R-191). \
+         `cargo check {} --lib --tests --offline`, on a copy of the workspace without that dev-dependency, says:\n{stderr}",
+        crates.iter().map(|p| format!("-p {}", p.name)).collect::<Vec<_>>().join(" ")
+    ))
+}
+
+/// In the manifest at `path` (a copy): removes each of `keys` from every dev-dependency table (`[dev-dependencies]`
+/// and each `[target.'…'.dev-dependencies]`), and leaves out every integration-test, example and bench target
+/// (`autotests`, `autoexamples` and `autobenches` off; `[[test]]`, `[[example]]` and `[[bench]]` removed).
+fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
+    let strip = |table: &mut toml_edit::Table| {
+        for name in ["dev-dependencies", "dev_dependencies"] {
+            if let Some(deps) = table.get_mut(name).and_then(toml_edit::Item::as_table_like_mut) {
+                for key in keys {
+                    deps.remove(key);
+                }
+            }
+        }
+    };
+    strip(doc.as_table_mut());
+    if let Some(targets) = doc.get_mut("target").and_then(toml_edit::Item::as_table_like_mut) {
+        for (_, platform) in targets.iter_mut() {
+            if let Some(platform) = platform.as_table_mut() {
+                strip(platform);
             }
         }
     }
-    files.sort();
-    Ok(files)
+    for kind in ["test", "example", "bench"] {
+        doc.remove(kind);
+    }
+    let package = doc
+        .get_mut("package")
+        .and_then(toml_edit::Item::as_table_like_mut)
+        .ok_or_else(|| format!("{}: no [package] table", path.display()))?;
+    for auto in ["autotests", "autoexamples", "autobenches"] {
+        package.insert(auto, toml_edit::value(false));
+    }
+    std::fs::write(path, doc.to_string()).map_err(|e| format!("cannot write {}: {e}", path.display()))
+}
+
+/// Copies the workspace at `root` to `to`, leaving out `skip` (the target directory, `.git`). Each member's directory
+/// is copied whole, and so is each `Cargo.toml` and `Cargo.lock`; everything else, which cargo does not edit or read
+/// as a manifest (the docs, a large archive), is linked, so that a file a member reaches outside its directory
+/// (`include!("../../x.rs")`) is still there and the copy stays cheap.
+fn copy_workspace(root: &Path, to: &Path, members: &[PathBuf], skip: &[PathBuf]) -> Result<(), String> {
+    let err = |p: &Path, e: std::io::Error| format!("cannot copy {} to the check's workspace: {e}", p.display());
+    std::fs::create_dir_all(to).map_err(|e| err(to, e))?;
+    for entry in std::fs::read_dir(root).map_err(|e| err(root, e))? {
+        let entry = entry.map_err(|e| err(root, e))?;
+        let (path, dest) = (entry.path(), to.join(entry.file_name()));
+        let kind = entry.file_type().map_err(|e| err(&path, e))?;
+        if skip.contains(&path) {
+            continue;
+        }
+        if kind.is_dir() && members.contains(&path) {
+            copy_tree(&path, &dest, skip)?;
+        } else if kind.is_dir() && members.iter().any(|m| m.starts_with(&path)) {
+            copy_workspace(&path, &dest, members, skip)?;
+        } else if kind.is_file() && matches!(entry.file_name().to_str(), Some("Cargo.toml" | "Cargo.lock")) {
+            std::fs::copy(&path, &dest).map_err(|e| err(&path, e))?;
+        } else {
+            link(&path, &dest).map_err(|e| err(&path, e))?;
+        }
+    }
+    Ok(())
+}
+
+/// Copies the tree at `from` to `to`, leaving out `skip`; a symbolic link is copied as a link.
+fn copy_tree(from: &Path, to: &Path, skip: &[PathBuf]) -> Result<(), String> {
+    let err = |p: &Path, e: std::io::Error| format!("cannot copy {} to the check's workspace: {e}", p.display());
+    std::fs::create_dir_all(to).map_err(|e| err(to, e))?;
+    for entry in std::fs::read_dir(from).map_err(|e| err(from, e))? {
+        let entry = entry.map_err(|e| err(from, e))?;
+        let (path, dest) = (entry.path(), to.join(entry.file_name()));
+        let kind = entry.file_type().map_err(|e| err(&path, e))?;
+        if skip.contains(&path) {
+            continue;
+        }
+        if kind.is_symlink() {
+            let target = std::fs::read_link(&path).map_err(|e| err(&path, e))?;
+            link(&target, &dest).map_err(|e| err(&path, e))?;
+        } else if kind.is_dir() {
+            copy_tree(&path, &dest, skip)?;
+        } else {
+            std::fs::copy(&path, &dest).map_err(|e| err(&path, e))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn link(target: &Path, dest: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(target, dest)
+}
+
+#[cfg(not(unix))]
+fn link(target: &Path, dest: &Path) -> std::io::Result<()> {
+    if target.is_dir() {
+        copy_tree(target, dest, &[]).map_err(std::io::Error::other)
+    } else {
+        std::fs::copy(target, dest).map(|_| ())
+    }
+}
+
+/// The cargo that runs `xtask`, or `cargo`.
+fn cargo() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
 }
 
 /// `path` with `.` and `..` components resolved lexically.
@@ -511,227 +583,4 @@ fn normalize(path: &Path) -> PathBuf {
         }
     }
     out
-}
-
-/// What `scan_text` finds in one file.
-#[derive(Debug, Default)]
-struct Scan {
-    /// The forbidden items, each with its 1-based line, sorted and without duplicates.
-    found: Vec<(usize, Forbidden)>,
-    /// The lines of the allowed item-level `OUT_DIR` includes (only when they are allowed).
-    out_dir_includes: Vec<usize>,
-    /// The lines that define or alias a macro named `concat` or `env` (only when `OUT_DIR` includes are allowed).
-    shadows: Vec<usize>,
-}
-
-/// The forbidden items in `text`. `text` is lexed with `proc-macro2`; a file that does not lex is an error, so it is
-/// never passed unscanned. Comments and string, char and byte literals are never tokens, so they hold nothing; macro
-/// bodies and attributes are scanned too.
-///
-/// - `Forbidden::Validation`: an identifier in `names` (a raw identifier `r#name` counts). Every such identifier
-///   counts as a use of the crate, a local item with the same name included (`mod validation`, `fn validation`, an
-///   associated item `<T as Tr>::validation`). This over-approximates R-187 on purpose: from edition 2018
-///   `validation::x` may name a local module or the extern crate, and only name resolution can tell them apart,
-///   so a check without it that must never pass a real use has to fail both. Rename the local item.
-/// - `Forbidden::PathAttribute` (R-189): an identifier `path` followed by `=` anywhere inside an attribute, so
-///   `#[path = …]`, `#![path = …]` and `#[cfg_attr(…, path = …)]`, in a `macro_rules!` body too. Another attribute
-///   with a `path = …` argument fails as well (an over-approximation, never under). A `path` outside an attribute
-///   (`let path = …`) is not one (R-190).
-/// - `Forbidden::Include` (R-189, R-190): any identifier `include` (a raw `r#include` too), whatever follows it, so
-///   `include!`, `std::include!`, `use std::include as inc`, `m!(include)`, in a `macro_rules!` body too. The one
-///   exception, when `out_dir_include` is set (kernel): `out_dir_include_at` holds. `include_str!` and
-///   `include_bytes!` are other identifiers and stay allowed: they expand to a `&str` or `&[u8]` value, never to
-///   Rust tokens.
-/// - `Forbidden::MacroVariableAttribute` (R-190): a `$` anywhere inside an attribute (`#[$a]`, `#[$($t)*]`,
-///   `#[cfg_attr(…, $a)]`), or an attribute whose brackets are themselves a macro variable (`# $a`, `#! $a`).
-///
-/// With `out_dir_include` set, `Scan::shadows` also lists `macro_rules! concat|env`, `macro concat|env` and
-/// `as concat|env`, the ways a crate can put its own macro in place of the builtin the exception names.
-fn scan_text(text: &str, names: &[String], out_dir_include: bool) -> Result<Scan, String> {
-    struct Ctx<'a> {
-        names: &'a [String],
-        out_dir_include: bool,
-        scan: Scan,
-    }
-    /// `item_level`: `stream` is the file or the body of a `mod name { … }` reached from it through `mod` bodies
-    /// only, so never a macro definition, a macro invocation, a function body or an attribute.
-    fn walk(stream: TokenStream, ctx: &mut Ctx<'_>, in_attr: bool, item_level: bool) {
-        let trees: Vec<TokenTree> = stream.into_iter().collect();
-        let punct = |k: usize, c: char| matches!(trees.get(k), Some(TokenTree::Punct(p)) if p.as_char() == c);
-        let ident = |k: usize, w: &str| matches!(trees.get(k), Some(TokenTree::Ident(id)) if id == w);
-        for (i, tree) in trees.iter().enumerate() {
-            match tree {
-                TokenTree::Ident(id) => {
-                    let line = id.span().start().line;
-                    let word = id.to_string();
-                    let word = word.strip_prefix("r#").unwrap_or(&word);
-                    if ctx.names.iter().any(|n| n == word) {
-                        ctx.scan.found.push((line, Forbidden::Validation));
-                    }
-                    if in_attr && word == "path" && punct(i + 1, '=') {
-                        ctx.scan.found.push((line, Forbidden::PathAttribute));
-                    }
-                    if word == "include" {
-                        if ctx.out_dir_include && !in_attr && item_level && out_dir_include_at(&trees, i) {
-                            ctx.scan.out_dir_includes.push(line);
-                        } else {
-                            ctx.scan.found.push((line, Forbidden::Include));
-                        }
-                    }
-                    let shadow = |w: &str| {
-                        (w == "concat" || w == "env")
-                            && ((punct(i.wrapping_sub(1), '!') && ident(i.wrapping_sub(2), "macro_rules"))
-                                || ident(i.wrapping_sub(1), "macro")
-                                || ident(i.wrapping_sub(1), "as"))
-                    };
-                    if ctx.out_dir_include && shadow(word) {
-                        ctx.scan.shadows.push(line);
-                    }
-                }
-                TokenTree::Punct(p) => {
-                    let line = p.span().start().line;
-                    if in_attr && p.as_char() == '$' {
-                        ctx.scan.found.push((line, Forbidden::MacroVariableAttribute));
-                    }
-                    if p.as_char() == '#' && (punct(i + 1, '$') || (punct(i + 1, '!') && punct(i + 2, '$'))) {
-                        ctx.scan.found.push((line, Forbidden::MacroVariableAttribute));
-                    }
-                }
-                TokenTree::Group(group) => {
-                    // `i.wrapping_sub(k)` is out of range, so `None`, before the first token.
-                    let attr = group.delimiter() == Delimiter::Bracket
-                        && (punct(i.wrapping_sub(1), '#')
-                            || (punct(i.wrapping_sub(1), '!') && punct(i.wrapping_sub(2), '#')));
-                    let mod_body = group.delimiter() == Delimiter::Brace
-                        && matches!(trees.get(i.wrapping_sub(1)), Some(TokenTree::Ident(_)))
-                        && ident(i.wrapping_sub(2), "mod");
-                    walk(group.stream(), ctx, in_attr || attr, item_level && mod_body && !attr);
-                }
-                TokenTree::Literal(_) => {}
-            }
-        }
-    }
-    let stream = TokenStream::from_str(text).map_err(|e| format!("cannot lex it: {e}"))?;
-    let mut ctx = Ctx { names, out_dir_include, scan: Scan::default() };
-    walk(stream, &mut ctx, false, true);
-    let mut scan = ctx.scan;
-    scan.found.sort_by_key(|&(line, what)| (line, what as u8));
-    scan.found.dedup();
-    Ok(scan)
-}
-
-/// Whether `trees[i]`, an identifier `include` in an item-level stream, is the start of the one `include!` R-190
-/// allows in kernel `src/`: the bare identifier `include` (not raw, not path-qualified), at the start of an item
-/// (after nothing, `;`, a `{ … }` item or outer or inner attributes), followed by `!`, then exactly
-/// `(concat!(env!("OUT_DIR"), "/<name>.rs"))`, then `;`. `<name>` is a plain file name: ASCII letters, digits, `_`,
-/// `-` and `.`, not starting with `.`, with no `..`, ending in `.rs`. Anything that differs is not the form.
-fn out_dir_include_at(trees: &[TokenTree], i: usize) -> bool {
-    let punct = |k: usize, c: char| matches!(trees.get(k), Some(TokenTree::Punct(p)) if p.as_char() == c);
-    if !matches!(&trees[i], TokenTree::Ident(id) if id == "include") {
-        return false;
-    }
-    // The start of an item: skip back over attributes, then nothing, `;` or a `{ … }` group.
-    let mut k = i;
-    let item_start = loop {
-        if k == 0 {
-            break true;
-        }
-        match &trees[k - 1] {
-            TokenTree::Punct(p) if p.as_char() == ';' => break true,
-            TokenTree::Group(g) if g.delimiter() == Delimiter::Brace => break true,
-            TokenTree::Group(g) if g.delimiter() == Delimiter::Bracket && k >= 2 && punct(k - 2, '#') => k -= 2,
-            TokenTree::Group(g)
-                if g.delimiter() == Delimiter::Bracket && k >= 3 && punct(k - 2, '!') && punct(k - 3, '#') =>
-            {
-                k -= 3
-            }
-            _ => break false,
-        }
-    };
-    let Some(TokenTree::Group(arg)) = trees.get(i + 2) else { return false };
-    item_start && punct(i + 1, '!') && arg.delimiter() == Delimiter::Parenthesis && punct(i + 3, ';')
-        && out_dir_argument(arg.stream())
-}
-
-/// Whether `stream` is exactly `concat!(env!("OUT_DIR"), "/<name>.rs")` (see `out_dir_include_at`).
-fn out_dir_argument(stream: TokenStream) -> bool {
-    let is = |t: Option<&TokenTree>, w: &str| match t {
-        Some(TokenTree::Ident(id)) => id == w,
-        Some(TokenTree::Punct(p)) => w.len() == 1 && w.starts_with(p.as_char()),
-        Some(TokenTree::Literal(l)) => l.to_string() == w,
-        _ => false,
-    };
-    let paren = |t: Option<&TokenTree>| match t {
-        Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis => {
-            Some(g.stream().into_iter().collect::<Vec<_>>())
-        }
-        _ => None,
-    };
-    let outer: Vec<TokenTree> = stream.into_iter().collect();
-    let Some(concat) = paren(outer.get(2)) else { return false };
-    let Some(env) = paren(concat.get(2)) else { return false };
-    let file_name = |t: Option<&TokenTree>| {
-        let Some(TokenTree::Literal(l)) = t else { return false };
-        let text = l.to_string();
-        let Some(name) = text.strip_prefix("\"/").and_then(|n| n.strip_suffix('"')) else { return false };
-        name.len() > ".rs".len()
-            && name.ends_with(".rs")
-            && !name.starts_with('.')
-            && !name.contains("..")
-            && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
-    };
-    outer.len() == 3
-        && is(outer.first(), "concat")
-        && is(outer.get(1), "!")
-        && concat.len() == 5
-        && is(concat.first(), "env")
-        && is(concat.get(1), "!")
-        && env.len() == 1
-        && is(env.first(), "\"OUT_DIR\"")
-        && is(concat.get(3), ",")
-        && file_name(concat.get(4))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{scan_text, Forbidden};
-
-    fn lines(src: &str) -> Vec<usize> {
-        let found = scan_text(src, &["validation".to_owned()], false).unwrap().found;
-        found.into_iter().filter(|&(_, what)| what == Forbidden::Validation).map(|(line, _)| line).collect()
-    }
-
-    #[test]
-    fn scan_text_finds_every_identifier_with_the_name() {
-        let src = "use validation::Harness;\n\
-                   extern crate validation;\n\
-                   fn g() -> u8 { <u8 as Tr>::validation::X }\n\
-                   mod validation {}\n\
-                   fn f() { vec![r#validation::X]; }\n\
-                   #[validation::attr] fn h() {}\n\
-                   fn t(c: char, d: u8) -> bool { 'a' < c && d > ::validation::LIMIT }\n";
-        assert_eq!(lines(src), vec![1, 2, 3, 4, 5, 6, 7]);
-    }
-
-    #[test]
-    fn scan_text_ignores_comments_and_literals() {
-        // Control for the test above: the name in places that are not identifiers.
-        let src = "// validation::run();\n\
-                   /* use validation; */\n\
-                   /// validation in a doc comment\n\
-                   const S: &str = \"validation::run\";\n\
-                   const R: &str = r#\"use validation;\"#;\n\
-                   const C: &core::ffi::CStr = cr#\"a\"validation\"#;\n\
-                   const B: &[u8] = b\"validation\";\n\
-                   fn f() -> char { 'v' }\n";
-        assert_eq!(lines(src), Vec::<usize>::new());
-        assert_eq!(lines("\n\nfn f() { validation(); }"), vec![3]);
-    }
-
-    #[test]
-    fn scan_text_fails_on_a_file_that_does_not_lex() {
-        assert!(scan_text("fn f() { \"unterminated }", &["validation".to_owned()], false).is_err());
-        // Control: the same file, terminated.
-        assert!(scan_text("fn f() { \"terminated\" }", &["validation".to_owned()], false).is_ok());
-    }
 }
