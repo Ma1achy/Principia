@@ -68,6 +68,16 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
     }
 }
 
+/// Asserts that `text` contains `needle`.
+fn has(text: &str, needle: &str) {
+    assert!(text.contains(needle), "{needle:?} not in:\n{text}");
+}
+
+/// An inline control's assertion: `text` does not contain `needle`.
+fn lacks(text: &str, needle: &str) {
+    assert!(!text.contains(needle), "control: {needle:?} in:\n{text}");
+}
+
 #[test]
 fn controls_discriminating_fixture_passes() {
     let v = run_fixture("discriminating", None);
@@ -76,11 +86,9 @@ fn controls_discriminating_fixture_passes() {
         "a discriminated test fails the command:\n{}",
         v.stderr
     );
-    assert!(
-        v.stdout
-            .contains("controls_discriminating: 1 test(s), each failed by its control"),
-        "{}",
-        v.stdout
+    has(
+        &v.stdout,
+        "controls_discriminating: 1 test(s), each failed by its control",
     );
     // Control: a fixture whose control leaves its test passing does fail, so the pass above is the control's doing.
     assert!(
@@ -93,18 +101,16 @@ fn controls_discriminating_fixture_passes() {
 fn controls_test_without_control_fails_naming_it() {
     let v = run_fixture("uncontrolled", None);
     assert!(!v.ok, "a test with no control passed the command");
-    assert!(
-        v.stderr
-            .contains("controls_uncontrolled: test `lacks_control` has no control"),
-        "{}",
-        v.stderr
+    has(
+        &v.stderr,
+        "controls_uncontrolled: test `lacks_control` has no control",
+    );
+    has(
+        &v.stderr,
+        "xtask: 1 test(s) without a control that makes them fail",
     );
     // Control: the test beside it has a control named for it, and is not reported: the pairing is by name.
-    assert!(
-        !v.stderr.contains("`has_control`"),
-        "control: the controlled test was reported:\n{}",
-        v.stderr
-    );
+    lacks(&v.stderr, "`has_control`");
 }
 
 #[test]
@@ -114,18 +120,14 @@ fn controls_control_leaving_test_passing_fails_naming_it() {
         !v.ok,
         "a control that leaves its test passing passed the command"
     );
-    assert!(
-        v.stderr
-            .contains("controls_leaky: test `round_trips`: its control leaves it passing"),
-        "{}",
-        v.stderr
+    has(
+        &v.stderr,
+        "controls_leaky: test `round_trips`: its control leaves it passing",
     );
     // Control: a discriminating control is not reported as leaving its test passing.
-    let good = run_fixture("discriminating", None);
-    assert!(
-        !good.stderr.contains("leaves it passing"),
-        "control: {}",
-        good.stderr
+    lacks(
+        &run_fixture("discriminating", None).stderr,
+        "leaves it passing",
     );
 }
 
@@ -137,15 +139,12 @@ fn controls_crate_without_feature_is_skipped() {
         "a crate without the feature failed the command:\n{}",
         v.stderr
     );
-    assert!(
-        v.stdout
-            .contains("controls_featureless: skipped: it declares no `controls` feature"),
-        "{}",
-        v.stdout
+    has(
+        &v.stdout,
+        "controls_featureless: skipped: it declares no `controls` feature",
     );
     // Control: a crate with the feature is not reported skipped.
-    let good = run_fixture("discriminating", None);
-    assert!(!good.stdout.contains("skipped"), "control: {}", good.stdout);
+    lacks(&run_fixture("discriminating", None).stdout, "skipped");
 }
 
 #[test]
@@ -156,13 +155,11 @@ fn controls_unit_test_pairs_with_control_in_tests_dir() {
         "the cross-target pair failed the command:\n{}",
         v.stderr
     );
-    assert!(
-        v.stdout
-            .contains("controls_cross_target: 1 test(s), each failed by its control"),
-        "{}",
-        v.stdout
+    has(
+        &v.stdout,
+        "controls_cross_target: 1 test(s), each failed by its control",
     );
-    assert!(!v.stderr.contains("has no control"), "{}", v.stderr);
+    lacks(&v.stderr, "has no control");
     // Control: without the control in tests/, the unit test in src/ is reported (R-201).
     let bare = run_fixture("cross_target", Some("tests/controls.rs"));
     assert!(!bare.ok, "control: the unit test passed with no control");
@@ -172,19 +169,25 @@ fn controls_unit_test_pairs_with_control_in_tests_dir() {
 fn controls_unit_test_without_its_control_fails_naming_it() {
     let v = run_fixture("cross_target", Some("tests/controls.rs"));
     assert!(!v.ok, "the unit test passed with its control removed");
-    assert!(
-        v.stderr
-            .contains("controls_cross_target: test `tests::triples` has no control"),
-        "{}",
-        v.stderr
+    has(
+        &v.stderr,
+        "controls_cross_target: test `tests::triples` has no control",
     );
     // Control: with the control in place, the unit test is not reported.
-    let paired = run_fixture("cross_target", None);
-    assert!(
-        !paired.stderr.contains("tests::triples"),
-        "control: {}",
-        paired.stderr
-    );
+    lacks(&run_fixture("cross_target", None).stderr, "tests::triples");
+}
+
+#[test]
+fn controls_on_this_workspace_skips_gui() {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("controls")
+        .output()
+        .expect("run xtask");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // gui has no route to validation (R-187), so it never declares the feature.
+    has(&stdout, "xtask controls: gui: skipped");
+    // Control: validation declares the feature, and is not reported skipped.
+    lacks(&stdout, "validation: skipped");
 }
 
 fn names(list: &[&str]) -> Vec<String> {
@@ -251,8 +254,8 @@ fn controls_findings_pair_by_name() {
     );
     // Control: a paired control with no result is an error, not a pass.
     let err = findings(&listed, &BTreeMap::new()).unwrap_err();
-    assert!(
-        err.contains("`doubles::negative_control` of test `tests::doubles` did not run"),
-        "control: {err}"
+    has(
+        &err,
+        "`doubles::negative_control` of test `tests::doubles` did not run",
     );
 }
