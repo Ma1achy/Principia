@@ -19069,9 +19069,11 @@
     section: "R-192 — The compile check builds with `--all-features` *(closes RQ-131)*"
   - file: decisions.md
     section: "R-193 — The compile check is host-only; that is its known limit *(closes RQ-132)*"
+  - file: decisions.md
+    section: "R-194 — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*"
   verify:
     method: review checklist
-    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no unit test uses validation (R-187): when either takes validation as a dev-dependency, cargo xtask deps copies the workspace to a temporary directory, removes validation from their dev-dependencies there and runs cargo check -p kernel -p ledger --lib --tests --all-features (R-192, so a unit test behind any feature is compiled), and fails, showing the compiler's error, when that does not compile, whatever the route of the use (alias, macro, #[path], include!) (R-191, which lifts R-189's and R-190's token rules); the compile check builds for the host only, so a unit test gated on another platform is not seen, its known limit (R-193); kernel's and ledger's library and binary targets sit under src/; a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
+    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no unit test uses validation (R-187): when either takes validation as a dev-dependency, cargo xtask deps copies the workspace to a temporary directory, removes validation from their dev-dependencies there and runs cargo check -p kernel -p ledger --lib --tests six times, with --no-default-features, with default features and with --all-features, each in the dev and the release profile (R-194, amending R-192, so a unit test behind a feature, behind a feature's absence or behind the release profile is compiled), and fails, showing the compiler's error, when that does not compile, whatever the route of the use (alias, macro, #[path], include!) (R-191, which lifts R-189's and R-190's token rules); the compile check builds for the host only, so a unit test gated on another platform is not seen, its known limit (R-193), and any cfg combination outside that 3×2 matrix (for example a test gated on feature a on and b off) is not seen, a known limit too (R-194); a kernel or ledger doctest may use validation, and the check does not compile doctests (R-194); kernel's and ledger's library and binary targets sit under src/; a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
   rulings:
   - R-170
   - R-172
@@ -19083,6 +19085,7 @@
   - R-191
   - R-192
   - R-193
+  - R-194
   milestone: M0
 - id: REQ-SYS-005
   area: SYS
