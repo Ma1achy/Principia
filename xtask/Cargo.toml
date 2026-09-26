@@ -7,3 +7,5 @@ publish.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The R-187 source scan lexes Rust with it (`deps::identifier_lines`); `span-locations` gives each token its line.
+proc-macro2 = { version = "1", default-features = false, features = ["span-locations"] }

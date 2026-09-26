@@ -304,12 +304,21 @@ fn deps_validation_use_is_found_in_submodules_and_under_a_rename() {
     let (ok, stderr) = run_deps_path(&metadata);
     assert!(!ok, "a use of the renamed validation in src/chart/mod.rs passes xtask deps");
     assert!(stderr.contains("chart/mod.rs:2"), "{stderr}");
-    // Control: under the rename, the name `validation` alone is not the crate.
+    // Under the rename, the crate's own name still counts (a local `mod validation` included).
+    let metadata = source_workspace(
+        "kernel_renamed_own_name",
+        "kernel",
+        renamed,
+        &[("src/chart/mod.rs", "mod validation { pub fn run() {} }\nfn t() { validation::run(); }\n")],
+    );
+    let (ok, stderr) = run_deps_path(&metadata);
+    assert!(!ok && stderr.contains("chart/mod.rs:1"), "{stderr}");
+    // Control: the same module without either name passes.
     let metadata = source_workspace(
         "kernel_renamed_control",
         "kernel",
         renamed,
-        &[("src/chart/mod.rs", "mod validation { pub fn run() {} }\nfn t() { validation::run(); }\n")],
+        &[("src/chart/mod.rs", "mod checks { pub fn run() {} }\nfn t() { checks::run(); }\n")],
     );
     let (ok, stderr) = run_deps_path(&metadata);
     assert!(ok, "{stderr}");
@@ -327,40 +336,60 @@ fn deps_missing_sources_are_an_error_for_the_live_workspace() {
     assert_eq!(metadata.source_violations(false).unwrap(), vec![]);
 }
 
-/// A `>` that is part of an operator, or a `>` that closes no qualified path or turbofish, does not make the
-/// `::validation::…` after it an associated item: after `>=`, `>>=`, a shift `>>`, a comparison `>` (alone or
-/// after a comparison `<`) or the `>` of `impl<T>`, it is a use of the crate in src/ and fails, naming the line.
-/// Control: after the `>` or `>>` that closes a qualified path or a turbofish (`<u8 as Tr>::validation::X`,
-/// `Vec::<Vec<u8>>::validation::X`), `validation` is an associated item, not the crate, and passes.
+/// Any identifier named `validation` in kernel or ledger src/, outside comments and literals, fails, naming the
+/// line: a use of the crate after a comparison, a qualified path, a C raw string, in a macro or an attribute, and a
+/// local item with the name (a deliberate over-approximation: without name resolution `validation::x` may be a
+/// local module or the crate). Controls: the same source under tests/ passes, and so does the source without the
+/// identifier.
 #[test]
-fn deps_validation_path_after_an_operator_with_a_closing_angle_fails() {
-    let uses = [
-        ("ge", "#[cfg(test)]\nfn t(a: u8) -> bool {\n    a >= ::validation::LIMIT\n}\n"),
-        ("shr_assign", "#[cfg(test)]\nfn t(mut a: u8) {\n    a >>= ::validation::SHIFT;\n}\n"),
-        ("shr", "#[cfg(test)]\nfn t(a: u8) -> u8 {\n    a >> ::validation::SHIFT\n}\n"),
-        ("gt", "#[cfg(test)]\nfn t(a: u8) -> bool {\n    a > ::validation::LIMIT\n}\n"),
-        ("lt_shr", "#[cfg(test)]\nfn t(a: u8, b: u8) -> bool {\n    a < b >> ::validation::SHIFT\n}\n"),
-        ("lt_and_gt", "#[cfg(test)]\nfn t(a: u8, b: u8) -> bool {\n    a < b && b > ::validation::LIMIT\n}\n"),
-        ("impl_generics", "#[cfg(test)]\nstruct S<T>(T);\nimpl<T> ::validation::Harness for S<T> {}\n"),
+fn deps_any_validation_identifier_in_src_fails() {
+    let cases = [
+        ("char_lt", "#[cfg(test)]\nfn t(c: char, d: u8) -> bool {\n    'a' < c && d > ::validation::LIMIT\n}\n"),
+        ("qualified", "fn t() -> u8 {\n\n    <u8 as Tr>::validation::X\n}\n"),
+        ("c_raw_string", "pub const C: &core::ffi::CStr = cr#\"a\"b\"#;\n#[cfg(test)]\nfn t() { validation::run(); }\n"),
+        ("macro", "#[cfg(test)]\nfn t() {\n    assert!(validation::ok());\n}\n"),
+        ("attribute", "#[cfg(test)]\n\n#[validation::harness]\nfn t() {}\n"),
+        ("local_mod", "mod checks {}\n\nmod validation { pub fn run() {} }\n"),
     ];
-    for (case, src) in uses {
-        let metadata = source_workspace(&format!("op_{case}"), "kernel", DEV_ON_VALIDATION, &[("src/lib.rs", src)]);
+    for (case, src) in cases {
+        let metadata = source_workspace(&format!("id_{case}"), "kernel", DEV_ON_VALIDATION, &[("src/lib.rs", src)]);
         let (ok, stderr) = run_deps_path(&metadata);
-        assert!(!ok, "{case}: a use of validation after the operator passes xtask deps");
+        assert!(!ok, "{case}: an identifier named validation in src/ passes xtask deps");
         assert!(stderr.contains("src/lib.rs:3"), "{case}: stderr does not name the line:\n{stderr}");
-    }
-
-    // Control: the same position after a `>` or `>>` that closes a qualified path or turbofish is an associated item.
-    let items = [
-        ("qualified", "fn t() -> u8 {\n    <u8 as Tr>::validation::X\n}\n"),
-        ("turbofish", "fn t() -> u8 {\n    Vec::<Vec<u8>>::validation::X\n}\n"),
-        ("nested_qualified", "fn t() -> u8 {\n    <Vec<u8> as Tr>::validation::X\n}\n"),
-        ("qualified_in_arm", "fn t(x: u8) -> u8 {\n    match x { _ => <u8 as Tr>::validation::X }\n}\n"),
-    ];
-    for (case, src) in items {
-        let metadata =
-            source_workspace(&format!("op_control_{case}"), "kernel", DEV_ON_VALIDATION, &[("src/lib.rs", src)]);
+        let metadata = source_workspace(
+            &format!("id_{case}_tests"),
+            "kernel",
+            DEV_ON_VALIDATION,
+            &[("tests/controls.rs", src)],
+        );
         let (ok, stderr) = run_deps_path(&metadata);
-        assert!(ok, "{case}: an associated item named validation fails xtask deps:\n{stderr}");
+        assert!(ok, "{case}: control, the same source under tests/, fails:\n{stderr}");
+        let plain = src.replace("validation", "checks");
+        let metadata =
+            source_workspace(&format!("id_{case}_plain"), "kernel", DEV_ON_VALIDATION, &[("src/lib.rs", &plain)]);
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(ok, "{case}: control, the source without the identifier, fails:\n{stderr}");
     }
+}
+
+/// A source under kernel src/ that does not lex fails `xtask deps`, naming the file: it is never passed unscanned.
+/// Control: the same file, lexing, passes.
+#[test]
+fn deps_a_src_file_that_does_not_lex_fails() {
+    let metadata = source_workspace(
+        "lex_error",
+        "kernel",
+        DEV_ON_VALIDATION,
+        &[("src/broken.rs", "fn f() { \"unterminated }\n")],
+    );
+    let (ok, stderr) = run_deps_path(&metadata);
+    assert!(!ok && stderr.contains("src/broken.rs: cannot lex it"), "{stderr}");
+    let metadata = source_workspace(
+        "lex_error_control",
+        "kernel",
+        DEV_ON_VALIDATION,
+        &[("src/broken.rs", "fn f() { \"terminated\"; }\n")],
+    );
+    let (ok, stderr) = run_deps_path(&metadata);
+    assert!(ok, "{stderr}");
 }

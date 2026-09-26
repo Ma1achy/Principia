@@ -11,7 +11,9 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 
+use proc_macro2::{TokenStream, TokenTree};
 use serde::Deserialize;
 
 /// The kind of a dependency, as `cargo metadata` reports it (`kind`: `null`, `"dev"`, `"build"`).
@@ -259,8 +261,9 @@ impl Metadata {
     }
 
     /// R-187's condition on the `validation` dev-dependency: in each crate of `NO_VALIDATION_IN_SRC` that
-    /// depends on `validation`, no `.rs` file under its `src/` uses `validation` (under the name it gives the
-    /// dependency). A crate without that dependency cannot use the crate, so it is not scanned.
+    /// depends on `validation`, no `.rs` file under its `src/` has an identifier named `validation` or the name
+    /// the crate gives the dependency (`identifier_lines`: a deliberate over-approximation that fails local items
+    /// with that name too). A crate without that dependency cannot use the crate, so it is not scanned.
     ///
     /// `require_sources`: whether a crate to scan must have its `src/` on disk. It is set for the live
     /// workspace; a fixture may describe a graph with no sources behind it, and then the scan is skipped.
@@ -271,11 +274,13 @@ impl Metadata {
         };
         let mut violations = Vec::new();
         for package in members.iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())) {
-            let mut names: Vec<String> = package
-                .dependencies
+            let deps: Vec<&Dependency> = package.dependencies.iter().filter(|d| d.is_on(validation)).collect();
+            // The crate's own name and each name the dependency is given (a rename).
+            let mut names: Vec<String> = deps
                 .iter()
-                .filter(|d| d.is_on(validation))
-                .map(|d| d.rename.as_deref().unwrap_or(&d.name).replace('-', "_"))
+                .flat_map(|d| [Some(&d.name), d.rename.as_ref()])
+                .flatten()
+                .map(|n| n.replace('-', "_"))
                 .collect();
             names.sort();
             names.dedup();
@@ -295,14 +300,11 @@ impl Metadata {
             for file in rust_files(&src)? {
                 let text = std::fs::read_to_string(&file)
                     .map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-                for name in &names {
-                    for line in crate_uses(&text, name) {
-                        violations.push(SourceViolation {
-                            krate: package.name.clone(),
-                            file: file.clone(),
-                            line,
-                        });
-                    }
+                let lines = identifier_lines(&text, &names).map_err(|e| {
+                    format!("{}: {e}; it cannot be checked for a use of validation (R-187)", file.display())
+                })?;
+                for line in lines {
+                    violations.push(SourceViolation { krate: package.name.clone(), file: file.clone(), line });
                 }
             }
         }
@@ -353,7 +355,9 @@ impl fmt::Display for SourceViolation {
             f,
             "forbidden use of validation in {} src/ at {}:{}: in kernel and ledger a test that uses \
              validation is an integration test (tests/), not a unit test in src/ (systems_architecture §7.1; \
-             R-187)",
+             R-187). Any identifier named validation (or the dependency's rename) outside comments and literals \
+             counts, a local item with that name included: without name resolution `validation::x` cannot be told \
+             apart from the crate, so rename the local item",
             self.krate,
             self.file.display(),
             self.line
@@ -381,211 +385,76 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
-#[derive(Debug, PartialEq)]
-enum Token {
-    Ident(String),
-    PathSep,
-    /// A multi-character operator with `<` or `>` in it (`->`, `=>`, `>=`, `<=`, `>>=`, `<<=`, `>>`, `<<`), kept
-    /// whole so that its `>` is not read as the `>` that closes a generic or a qualified path.
-    Op(&'static str),
-    Punct(char),
-}
-
-/// The multi-character operators lexed as one `Token::Op`, longest first.
-const ANGLE_OPS: [&str; 8] = [">>=", "<<=", "->", "=>", ">=", "<=", ">>", "<<"];
-
-/// Splits Rust source into identifiers, `::`, the operators in `ANGLE_OPS` and other punctuation, each with its
-/// 1-based line. Comments, string and character literals are skipped, so a mention there is not a use.
-fn tokens(text: &str) -> Vec<(Token, usize)> {
-    let chars: Vec<char> = text.chars().collect();
-    let mut out = Vec::new();
-    let (mut i, mut line) = (0, 1);
-    let at = |i: usize| chars.get(i).copied().unwrap_or('\0');
-    // Skips to just past the closing `"` followed by `hashes` `#`s, counting lines.
-    let skip_string = |mut i: usize, line: &mut usize, hashes: usize, escapes: bool| -> usize {
-        while i < chars.len() {
-            match chars[i] {
-                '\\' if escapes => i += 1,
-                '\n' => *line += 1,
-                '"' if (1..=hashes).all(|k| at(i + k) == '#') => return i + 1 + hashes,
-                _ => {}
-            }
-            i += 1;
-        }
-        i
-    };
-    while i < chars.len() {
-        let c = chars[i];
-        if c == '\n' {
-            line += 1;
-            i += 1;
-        } else if c.is_whitespace() {
-            i += 1;
-        } else if c == '/' && at(i + 1) == '/' {
-            while i < chars.len() && chars[i] != '\n' {
-                i += 1;
-            }
-        } else if c == '/' && at(i + 1) == '*' {
-            let mut depth = 0;
-            while i < chars.len() {
-                if chars[i] == '/' && at(i + 1) == '*' {
-                    depth += 1;
-                    i += 2;
-                } else if chars[i] == '*' && at(i + 1) == '/' {
-                    depth -= 1;
-                    i += 2;
-                    if depth == 0 {
-                        break;
+/// The 1-based lines on which an identifier in `names` appears in `text`, outside comments and string, char and
+/// byte literals, inside macro bodies and attributes too (a raw identifier `r#name` counts). `text` is lexed with
+/// `proc-macro2`; a file that does not lex is an error, so it is never passed unscanned.
+///
+/// Every such identifier counts as a use of the crate, a local item with the same name included (`mod validation`,
+/// `fn validation`, an associated item `<T as Tr>::validation`). This over-approximates R-187 on purpose: from
+/// edition 2018 `validation::x` may name a local module or the extern crate, and only name resolution can tell
+/// them apart, so a check without it that must never pass a real use has to fail both. Rename the local item.
+fn identifier_lines(text: &str, names: &[String]) -> Result<Vec<usize>, String> {
+    fn walk(stream: TokenStream, names: &[String], lines: &mut Vec<usize>) {
+        for tree in stream {
+            match tree {
+                TokenTree::Ident(ident) => {
+                    let word = ident.to_string();
+                    if names.iter().any(|n| *n == word.strip_prefix("r#").unwrap_or(&word)) {
+                        lines.push(ident.span().start().line);
                     }
-                } else {
-                    if chars[i] == '\n' {
-                        line += 1;
-                    }
-                    i += 1;
                 }
+                TokenTree::Group(group) => walk(group.stream(), names, lines),
+                TokenTree::Punct(_) | TokenTree::Literal(_) => {}
             }
-        } else if c == '"' {
-            i = skip_string(i + 1, &mut line, 0, true);
-        } else if c == '\'' {
-            // A character literal ('x', '\n', '\u{..}'), or a lifetime ('a), which is skipped as punctuation.
-            if at(i + 1) == '\\' {
-                i += 2;
-                while i < chars.len() && chars[i] != '\'' {
-                    i += 1;
-                }
-                i += 1;
-            } else if at(i + 2) == '\'' {
-                i += 3;
-            } else {
-                i += 1;
-            }
-        } else if c.is_alphabetic() || c == '_' {
-            let start = i;
-            while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_') {
-                i += 1;
-            }
-            let word: String = chars[start..i].iter().collect();
-            // Raw and byte string prefixes: r"…", r#"…"#, b"…", br"…".
-            if matches!(word.as_str(), "r" | "br" | "b") && (at(i) == '"' || (word != "b" && at(i) == '#')) {
-                let mut hashes = 0;
-                while at(i + hashes) == '#' {
-                    hashes += 1;
-                }
-                if at(i + hashes) == '"' {
-                    i = skip_string(i + hashes + 1, &mut line, hashes, word == "b");
-                    continue;
-                }
-            }
-            out.push((Token::Ident(word), line));
-        } else if c == ':' && at(i + 1) == ':' {
-            out.push((Token::PathSep, line));
-            i += 2;
-        } else if let Some(op) = ANGLE_OPS.iter().find(|op| op.chars().enumerate().all(|(k, o)| at(i + k) == o)) {
-            out.push((Token::Op(op), line));
-            i += op.len();
-        } else {
-            out.push((Token::Punct(c), line));
-            i += 1;
         }
     }
-    out
-}
-
-/// The lines on which `text` uses the external crate `name`: as a path root (`name::…` or `::name::…`), in
-/// `use name` or in `extern crate name`. `a::name::…` names a module of `a`, not the crate, and is not a use.
-fn crate_uses(text: &str, name: &str) -> Vec<usize> {
-    let toks = tokens(text);
-    let ident = |k: Option<usize>, w: &str| {
-        k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| *t == Token::Ident(w.to_owned()))
-    };
-    let is_ident = |k: Option<usize>| k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| matches!(t, Token::Ident(_)));
-    let is = |k: Option<usize>, want: &Token| k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| t == want);
+    let stream = TokenStream::from_str(text).map_err(|e| format!("cannot lex it: {e}"))?;
     let mut lines = Vec::new();
-    for (k, (tok, line)) in toks.iter().enumerate() {
-        if *tok != Token::Ident(name.to_owned()) {
-            continue;
-        }
-        let prev = k.checked_sub(1);
-        let prev2 = k.checked_sub(2);
-        let path_root = is(Some(k + 1), &Token::PathSep)
-            && (!is(prev, &Token::PathSep) || !(is_ident(prev2) || prev2.is_some_and(|j| closes_angle(&toks, j))));
-        let used = path_root || ident(prev, "use") || (ident(prev, "crate") && ident(prev2, "extern"));
-        if used && lines.last() != Some(line) {
-            lines.push(*line);
-        }
-    }
-    lines
-}
-
-/// Whether the token at `j` (`>` or `>>`) closes a qualified path (`<T as Trait>`, `<Vec<u8>>`) or a turbofish
-/// (`Vec::<Vec<u8>>`), so that the `::name` after it is an associated item, not the crate. The walk back finds the
-/// `<` that the `>` balances, skipping balanced `()` and `[]` and stopping at `;`, `{`, `}` or an unmatched `(`
-/// or `[`. That `<` opens a qualified path when no operand comes before it, and a turbofish when `::` does.
-/// Anything else is a use of the crate: a `>` or `>>` that balances no `<` (a comparison or a shift), and one that
-/// balances a `<` after an identifier, `)`, `]` or a digit, which is a comparison (`a < b && c > ::name::X`) or a
-/// generic parameter list (`impl<T> ::name::Trait for S<T>`). Where the tokens alone cannot decide, the answer
-/// is a use: `Foo<T>::name::X` in a type counts as one. `->`, `=>`, `>=` and `>>=` are `Token::Op`s that close
-/// nothing.
-fn closes_angle(toks: &[(Token, usize)], j: usize) -> bool {
-    let angles = |t: &Token| match t {
-        Token::Punct('>') => 1,
-        Token::Op(">>") => 2,
-        Token::Punct('<') => -1,
-        Token::Op("<<") => -2,
-        _ => 0,
-    };
-    let mut depth = angles(&toks[j].0);
-    if depth <= 0 {
-        return false;
-    }
-    let mut groups = 0usize;
-    for m in (0..j).rev() {
-        match &toks[m].0 {
-            Token::Punct(')' | ']') => groups += 1,
-            Token::Punct('(' | '[') if groups > 0 => groups -= 1,
-            Token::Punct('(' | '[' | ';' | '{' | '}') => return false,
-            _ if groups > 0 => {}
-            t => {
-                depth += angles(t);
-                if depth <= 0 {
-                    return match m.checked_sub(1).map(|p| &toks[p].0) {
-                        None | Some(Token::PathSep) => true,
-                        Some(Token::Ident(_)) => false,
-                        Some(Token::Punct(c)) => !(c.is_alphanumeric() || matches!(c, ')' | ']')),
-                        Some(Token::Op(_)) => true,
-                    };
-                }
-            }
-        }
-    }
-    false
+    walk(stream, names, &mut lines);
+    lines.sort_unstable();
+    lines.dedup();
+    Ok(lines)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::crate_uses;
+    use super::identifier_lines;
 
-    #[test]
-    fn crate_uses_finds_path_roots_use_and_extern_crate() {
-        let src = "use validation::Harness;\n\
-                   fn f() { validation::run(); }\n\
-                   extern crate validation;\n\
-                   use validation as v;\n\
-                   fn g() { ::validation::run(); }\n";
-        assert_eq!(crate_uses(src, "validation"), vec![1, 2, 3, 4, 5]);
+    fn lines(src: &str) -> Vec<usize> {
+        identifier_lines(src, &["validation".to_owned()]).unwrap()
     }
 
     #[test]
-    fn crate_uses_ignores_comments_literals_and_other_paths() {
-        // Control for the test above: the same name, in places that are not a use of the crate.
+    fn identifier_lines_finds_every_identifier_with_the_name() {
+        let src = "use validation::Harness;\n\
+                   extern crate validation;\n\
+                   fn g() -> u8 { <u8 as Tr>::validation::X }\n\
+                   mod validation {}\n\
+                   fn f() { vec![r#validation::X]; }\n\
+                   #[validation::attr] fn h() {}\n\
+                   fn t(c: char, d: u8) -> bool { 'a' < c && d > ::validation::LIMIT }\n";
+        assert_eq!(lines(src), vec![1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn identifier_lines_ignores_comments_and_literals() {
+        // Control for the test above: the name in places that are not identifiers.
         let src = "// validation::run();\n\
                    /* use validation; */\n\
+                   /// validation in a doc comment\n\
                    const S: &str = \"validation::run\";\n\
                    const R: &str = r#\"use validation;\"#;\n\
-                   fn f() { crate::validation::run(); engine::validation::check(); }\n\
-                   fn validation() {}\n\
-                   fn g<'a>(x: &'a u8) -> char { let _ = validation(); 'v' }\n";
-        assert_eq!(crate_uses(src, "validation"), Vec::<usize>::new());
-        assert_eq!(crate_uses("fn f() { validation::run(); }", "validation"), vec![1]);
+                   const C: &core::ffi::CStr = cr#\"a\"validation\"#;\n\
+                   const B: &[u8] = b\"validation\";\n\
+                   fn f() -> char { 'v' }\n";
+        assert_eq!(lines(src), Vec::<usize>::new());
+        assert_eq!(lines("\n\nfn f() { validation(); }"), vec![3]);
+    }
+
+    #[test]
+    fn identifier_lines_fails_on_a_file_that_does_not_lex() {
+        assert!(identifier_lines("fn f() { \"unterminated }", &["validation".to_owned()]).is_err());
+        // Control: the same file, terminated.
+        assert!(identifier_lines("fn f() { \"terminated\" }", &["validation".to_owned()]).is_ok());
     }
 }
