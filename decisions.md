@@ -1390,3 +1390,14 @@ ruling's parenthetical says it holds "for every crate except gui". The ruling's 
 "any except `gui`", and `xtask deps` forbids `gui` → `validation` in every kind. Under R-176, gui's tests then have no
 route to `negative_control!`; a crate without the `controls` feature is skipped, not failed. The `validation` row
 (line 321) now excludes `prin` as well as `gui`. Line 324 cites "the `validation` row above" rather than a line number.
+
+## R-188 — TASK-M0-01 is accepted over its size; the source scan also follows `include!`
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked in review of PR #16, the human chose:
+1. "Accept, record it": PR #16 stays one PR, at about three times TASK-M0-01's ~450-line budget (+1507 / −6 at
+   4250b46, not counting `Cargo.lock`, fixtures and qa's files). The overage comes from R-187's source scan, which the
+   task did not have when it was sized. `plan/WORKFLOW.md` § "Task files" ("One task is one reviewable PR") is waived
+   for this task only.
+2. "Yes, close it": in kernel and ledger `src/`, `cargo xtask deps` follows `include!` string paths as it follows
+   `#[path]`, and scans the file; a path it can't resolve (built with `concat!`, `env!` and the like) fails the check.
