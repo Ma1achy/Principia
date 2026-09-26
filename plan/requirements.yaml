@@ -19041,12 +19041,15 @@
     section: 7.1 Crate map
   - file: decisions.md
     section: R-170 — The crate map *(closes G2)*
+  - file: decisions.md
+    section: "R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*"
   verify:
     method: review checklist
-    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table, and a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
+    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
   rulings:
   - R-170
   - R-172
+  - R-185
   milestone: M0
 - id: REQ-SYS-005
   area: SYS
@@ -19912,6 +19915,8 @@
     section: 7. Hierarchy and dependency (the build DAG, abstract)
   - file: decisions.md
     section: R-170 — The crate map *(closes G2)*
+  - file: decisions.md
+    section: "R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*"
   verify:
     method: review checklist
     detail: "every §7 node appears in the §7.1 table with one crate; every allowed edge names its §7 arrow; the human's confirmation is recorded in decisions.md"
@@ -19919,6 +19924,7 @@
   - R-146
   - R-170
   - R-172
+  - R-185
   milestone: M0
 - id: REQ-SYS-065
   area: SYS

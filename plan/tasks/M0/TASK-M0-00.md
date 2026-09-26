@@ -18,6 +18,7 @@ systems_architecture §7.1 assigns each node of the §7 build DAG to one crate o
 - `decisions.md` § "R-170 — The crate map *(closes G2)*"
 - `decisions.md` § "R-172 — There is no contract crate *(closes C1, C4)*"
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
+- `decisions.md` § "R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*"
 
 ## Deliverables
 - `docs/design/principia_systems_architecture.md` §7.1: any change review asks for, and its status line changed to "confirmed (R-n)" once the human rules.
@@ -30,3 +31,4 @@ systems_architecture §7.1 assigns each node of the §7 build DAG to one crate o
 ## Notes
 - First task of the build: no dependencies. TASK-M0-01 depends on it (R-170).
 - A definition requirement (R-72): the deliverable is the doc change, and the human confirms it.
+- **Done:** R-185 (26 Sep 2026) records the human's confirmation, and §7.1's status line cites it. The docs PR that recorded R-185 closes this task. TASK-M0-01 is unblocked.

@@ -1340,3 +1340,10 @@ TASK-M0-06 splits into the golden and repro runner (TASK-M0-06) and the screensh
 - TASK-M0-02 includes the `check_plan.py` change that names archive faults.
 - TASK-M2-08 says R-14 supersedes R-12's axis wording.
 - The INDEX file count is updated.
+
+## R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*
+*26 Sep 2026 · applied in step 8*
+
+The crate map in systems_architecture §7.1 is confirmed, with one change: kernel's dependency on ledger is a
+build-dependency only (the ledger generates code into the kernel at build time). The kernel stays no_std so rust-gpu
+can compile it.
