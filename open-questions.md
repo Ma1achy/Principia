@@ -93,14 +93,14 @@ import (a validation-phase tool); tier-table numbers (guesses by design, calibra
 ## Corpus defects found while writing the decision sheet
 
 **Corpus defects found while writing the decision sheet** (step 5; no decision needed, fix during the build; listed in
-`DECISIONS_TO_MAKE.md` §8 as D1–D6): stale escape-detector remnants the step-4 fold missed (integrator_contract :318,
+`docs/archive/untangling/DECISIONS_TO_MAKE.md` §8 as D1–D6): stale escape-detector remnants the step-4 fold missed (integrator_contract :318,
 :340, :357; dd_integrator :283); `payload.md:527` conflates `closure_min` with the windowed `|Δn̂|`; the ledger lacks the
 closure fields; the ledger's `alpha` row is from the α era; `inverse_encode_contract.md:199` still uses
 `has_redundant_hemisphere`; the 136/88 B widths in canonical_spec :79 and systems_architecture :63, :163.
 
 ## Every open item is on the decision sheet
 
-**Every open item above and in audit section B is on `DECISIONS_TO_MAKE.md`** (step 5).
+**Every open item above and in audit section B is on `docs/archive/untangling/DECISIONS_TO_MAKE.md`** (step 5).
 **All of them are ruled** (R-21 to R-59, 24 Sep 2026). The rulings not yet applied are tracked in `decisions.md` by their status lines.
 
 ## Whether ViewUI edits enter the undo history

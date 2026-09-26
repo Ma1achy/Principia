@@ -1,6 +1,6 @@
 # Principia — document index and reading order
 
-**173 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
+**178 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
 defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for the record and
 **should not be implemented from**.
 
@@ -154,7 +154,8 @@ standing obligation exists there and ports any that doesn't (R-112).
 | `docs/archive/principia_parity_testing_note.md` | **SUPERSEDED**: "became `principia_parity_contract.md`; read that instead" |
 | `docs/archive/principia_validation_scratchpad.md` | **SUPERSEDED / ABSORBED**: the current authorities are `validation_ground_truth_note` and `parity_contract` |
 | `docs/archive/principia_dd_generation_root.md.bak` | an older backup of the Generation Root drill-down (it still targets "TypeScript constants"). The live file is in `docs/design/` |
-| `docs/archive/HANDOFF_claude_code.md` | a duplicate of the root `HANDOFF_claude_code.md`. The root copy is the live one |
+| `docs/archive/HANDOFF_claude_code.md` | an earlier copy of the untangling handoff; the final one is `docs/archive/untangling/HANDOFF_claude_code.md` |
+| `docs/archive/untangling/` | the finished untangling (steps 1–8): `HANDOFF_claude_code.md` (the handoff), `principia_AUDIT_2026-09-24.md` (the audit), `DECISIONS_TO_MAKE.md` (the step-5 decision sheet, ruled by R-21 to R-59), `MOVES.md` (the file-move ledger), `REVIEW_cold_read.md` (the cold-read review, ruled by R-168 to R-186). Record only |
 | `docs/archive/principia_spec_pending_changes.md` | the pending-changes register, closed: twelve changes; 1, 7, 8, 9, 10, 11, 12 are folded into their owning files, 3 was folded earlier, 4 is moot; 2, 5 and 6 are ruled — 2 (the Burrau leg-swap quotient) by R-27, 5 (body-index naming) by R-22, 6 (`α_min`) by R-21 |
 | `docs/archive/spec_sources/` | the retired implementation spec (`principia_spec_revised`, see canonical_spec §11), the retired colour-map and COM-projection PDFs, the Burrau and render-quadtree PDFs, older IC Inspector copies, and `SECTION_MAP.md` (the ledger of the port into markdown). Record only; the markdown is the authority |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
