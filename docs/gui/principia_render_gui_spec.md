@@ -189,7 +189,8 @@ prin profile --scenario deep_zoom_03 --frames 600 --json out/prof.json   # a fix
 prin profile diff out/base.json out/prof.json --threshold 5%            # exits non-zero on regression
 prin profile query "top 10 scopes by p95" --live                        # query while running, same schema
 ```
-Scenarios are deterministic. Buttons: Export trace (JSON), Open in Tracy, Headless render….
+Scenarios are deterministic. Buttons: Export trace (JSON; it also writes the Chrome Trace Event format for Perfetto
+and `chrome://tracing`, R-207), Open in Tracy, Headless render….
 
 ### Export & share
 

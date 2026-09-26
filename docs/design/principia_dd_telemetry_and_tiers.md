@@ -184,6 +184,9 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 - **Format: JSON, profiler schema v1 (R-56).** At the top level, §2's frame record and its five stages; beneath them,
   nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and write it
   (`principia_render_gui_spec.md` §G5). JSON is plain text, so the file stays readable by the sender.
+- **Also: Chrome Trace Event format (R-207).** Export trace also writes the same capture in the Chrome Trace Event
+  format, openable in Perfetto and `chrome://tracing`, alongside schema v1: CPU scopes as complete events, GPU passes
+  on their own track, counters as counter events. Schema v1 stays the file `prin profile` and the dev GUI read.
 - **Bounded size.** A long session at 60 fps is 200k+ frame records. Either downsample on write
   (keep every frame during motion, every Nth while idle) or roll up idle stretches into summaries.
 

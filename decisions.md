@@ -1599,3 +1599,15 @@ on."
 Asked when PR #18 was ready (R-204, exceeding a budget), the human chose "Accept as one PR": TASK-M0-04's 570 code
 lines, against the ~500 budget and its ~380 estimate, stay one PR. The overage is the inline controls each test
 carries until TASK-M0-21's registry exists, rustfmt wrapping, and R-203's added test.
+
+## R-207 — Export trace also writes the Chrome Trace Event format
+*27 Sep 2026*
+
+"Export trace also writes the Chrome Trace Event format (openable in Perfetto and chrome://tracing), alongside
+profiler schema v1: CPU scopes as complete events, GPU passes on their own track, counters as counter events. Add it
+to REQ-TOOL-098's task (M8), with a test that a captured trace loads and round-trips its span count. Apply without
+asking; it's an addition, not a choice."
+
+*Applied:* `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender" and `docs/gui/principia_render_gui_spec.md`
+§ "Profiler" name the second format; a new requirement, closed by TASK-M8-28 (which closes REQ-TOOL-098), carries it
+and its test.
