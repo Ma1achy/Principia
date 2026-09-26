@@ -1,7 +1,7 @@
 # Decisions
 
 The log of human rulings. Each entry is dated and names the step that applies it. The open decisions are in
-`DECISIONS_TO_MAKE.md` (step 5). Once a ruling is made it is recorded here.
+`docs/archive/untangling/DECISIONS_TO_MAKE.md` (step 5; archived, every item ruled). Once a ruling is made it is recorded here.
 
 ---
 
@@ -202,7 +202,7 @@ resolution, `principia_dd_generation_root.md` §3.7). The impurity-mask rows in 
 
 ## Rulings on the decision sheet (step 5, PR #6)
 
-R-21 to R-59 rule every item on `DECISIONS_TO_MAKE.md`, in the order of the sheet. The six blockers (R-21 CD-1, R-22 CD-2,
+R-21 to R-59 rule every item on `docs/archive/untangling/DECISIONS_TO_MAKE.md`, in the order of the sheet. The six blockers (R-21 CD-1, R-22 CD-2,
 R-29 IE-1, R-36 PL-1, R-37 PL-2, R-41 RS-1) are applied in step 5, one commit each. The defects D1–D3 go with the blockers they belong to
 (IE-1 and PL-2, as the sheet ties them). The rest are applied when the build reaches them, as the sheet says for each.
 
@@ -1207,7 +1207,7 @@ The human may add one to prin-rs later.
 
 ---
 
-*Rulings on the cold-read review (`plan/REVIEW_cold_read.md`, PR #9), 25 Sep 2026. The finding ids (G1, A1, …) are the
+*Rulings on the cold-read review (`docs/archive/untangling/REVIEW_cold_read.md`, PR #9), 25 Sep 2026. The finding ids (G1, A1, …) are the
 review's. Applied in step 8.*
 
 ## R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*
