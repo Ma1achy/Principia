@@ -27,7 +27,7 @@ Mutation testing joins the QA gate (R-196). On every pull request CI runs `cargo
 - The checked-in equivalent-mutants list, read by the `mutants` job: each entry names one mutant and carries a one-line justification of why it is equivalent; a change to the list is approved by the code and qa reviewers, as R-197 does for lint suppressions (R-202).
 - `fixtures/mutants/untested/` — a fixture crate outside the workspace, with a diff that adds an untested branch, and the test that kills its mutants.
 - The time-limit proposal, in the PR description: the wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far (each PR, its diff size and the mutants tested), the proposed limit and the headroom it leaves. The human confirms it at the M0 gate (R-71).
-- `plan/reviewers/qa.md` carries R-196's line (every surviving mutant in a PR's diff is a finding, killed with a test or justified as equivalent in the review); it was added with the plan change applying R-198, and this task's review is its first use.
+- `plan/reviewers/qa.md` carries R-196's line (every surviving mutant in a PR's diff is a finding, killed with a test or listed in the checked-in equivalent-mutants list with a one-line justification the code and qa reviewers approve, R-202); it was added with the plan change applying R-198 (7f90866) and applies to every qa review from then on. This task adds the CI job that makes the check mechanical.
 
 ## Acceptance tests
 - `cargo mutants --dir fixtures/mutants/untested --in-diff fixtures/mutants/untested/change.diff` — without the killing test, the untested branch's mutant is reported as surviving (missed); with it, none survives: the gate can fire (REQ-VAL-148).
