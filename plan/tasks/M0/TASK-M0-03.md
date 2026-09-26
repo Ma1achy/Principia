@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008, REQ-SYS-066
-- **Depends on:** TASK-M0-01, TASK-M0-04
+- **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-4.5
@@ -19,6 +19,8 @@ Every PR opens on a template that asks what the process rules ask, and CI checks
 - `decisions.md` § "Porting rule — a port adds, it never removes a decision"
 - `decisions.md` § "R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*"
 - `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
+- `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+- `decisions.md` § "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
 - `decisions.md` § "R-180 — pr-check is item-level *(closes A5)*"
 
 ## Deliverables
@@ -28,7 +30,7 @@ Every PR opens on a template that asks what the process rules ask, and CI checks
 - `xtask/tests/fixtures/pr_*.json` — complete and incomplete bodies per label.
 - `xtask/src/reviews_check.rs` — `cargo xtask reviews-check [--pr N]`: reads the task id from the PR title, the Reviewers field from `plan/tasks/<Mn>/<TASK-id>.md`, and the PR's reviews (`gh api repos/{owner}/{repo}/pulls/N/reviews`); a role counts as approved when its latest review whose body starts `VERDICT: APPROVE <role>` was submitted on the head commit and no later `VERDICT: CHANGES <role>` exists; fails naming each missing role. `.github/workflows/reviews.yml` runs it as the `reviews-complete` check on `pull_request` and `pull_request_review` events (R-175).
 - `xtask/tests/fixtures/reviews_*.json` — review lists: all roles approved on head; one role approved on an older commit; an APPROVE superseded by a later CHANGES; a missing role.
-- Negative controls for this task's xtask tests, registered with `negative_control!` through `xtask`'s dev-dependency on `crates/validation` (R-176).
+- Negative controls for this task's xtask tests, registered with `negative_control!(test_name, "description", control)` through `xtask`'s dev-dependency on `crates/validation` (R-176, R-199).
 
 ## Acceptance tests
 - `cargo test -p xtask pr_check_design` — a `design` body missing one of the four drift answers fails naming the question; a complete body passes (REQ-SYS-006).

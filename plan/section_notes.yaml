@@ -426,3 +426,15 @@
   section: "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*"
   reason: informative only
   note: process ruling; recorded in CLAUDE.md
+- file: decisions.md
+  section: "R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*"
+  reason: informative only
+  note: plan ruling (a task's size and a dependency); applied in plan/tasks.yaml and the TASK-M0-16 and TASK-M0-22 task files; no requirement
+- file: decisions.md
+  section: R-204 — When to ask the human
+  reason: informative only
+  note: process ruling; recorded in CLAUDE.md
+- file: decisions.md
+  section: R-205 — TASK-M0-04 is accepted at 570 code lines
+  reason: informative only
+  note: process ruling; a size acceptance for one PR

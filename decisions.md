@@ -1497,3 +1497,105 @@ Standing rule, "so this doesn't recur":
 - Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
 
 *Recorded before R-196, which was given earlier and is recorded with TASK-M0-04.*
+
+## R-196 — Mutation testing joins the QA gate
+*26 Sep 2026 · given before R-197, recorded with TASK-M0-04*
+
+"mutation testing joins the QA gate.
+- M0-04 adds cargo-mutants to CI: per PR, `cargo mutants --in-diff` on the changed code (with a per-PR time limit);
+  nightly, a full run written as a report.
+- Every surviving mutant in a PR's diff is a QA finding: kill it with a test, or justify it as equivalent in the
+  review. QA's checklist gains that line.
+- Excluded: generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing.
+- If the time limit makes per-PR runs impractical, raise it in REVIEW_QUEUE rather than dropping it."
+
+*Open when recorded:* the per-PR time limit has no value; it becomes a calibration requirement (R-71). The nightly
+workflow is TASK-M0-19's deliverable, so the nightly run cannot land before it. Where R-196's work goes is RQ-135.
+
+## R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-135, the human chose "Accept the split":
+- TASK-M0-04 keeps the GPU harness (`gpu.rs`, `PRIN_GPU_BACKEND`, the identity and `extractBits` self-tests, the
+  `metal_hosted_probe`, the `gpu-metal` and `gpu-lavapipe` CI jobs) and `prop.rs`, and closes REQ-SYS-065.
+- TASK-M0-21: the control registry and `cargo xtask controls`, with its fixture tests; not yet in `cargo xtask ci`.
+- TASK-M0-22: controls for every test merged before it, and `controls` registered in `cargo xtask ci`; closes
+  REQ-VAL-007.
+- TASK-M0-23: R-196's per-PR `cargo mutants --in-diff` job, its exclusions, the per-PR time limit as a calibration
+  requirement, and qa's checklist line.
+- R-196's nightly full run joins TASK-M0-19, which creates `nightly.yml`.
+- TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04.
+
+## R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-136, the human chose "Name in the macro": there is no test-name attribute and no proc-macro crate.
+`negative_control!(test_name, "description", control)` names its test, and `cargo xtask controls` pairs tests and
+controls by that name. R-176's "Tests are matched to their controls by a shared test-name attribute" is replaced by
+this; its dev-dependency route to `crates/validation` and the skipping of crates without the `controls` feature stand.
+
+## R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-137, the human chose "Accept ~650, mechanical": TASK-M0-22 stays one PR over the size budget, as
+repetitive registration of one control per test, as R-188 did for TASK-M0-01. And "Yes, depend on M0-22":
+TASK-M0-16 depends on TASK-M0-22, so M0-16 to M0-18 register their own controls and TASK-M0-22 covers only the
+tests merged before it (TASK-M0-01's, TASK-M0-04's and TASK-M0-21's).
+
+## R-201 — A kernel or ledger unit test's control is registered from that crate's `tests/`, by name *(closes RQ-138)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-138, the human chose "Control in tests/, by name": because R-187 keeps `validation` out of kernel's and
+ledger's unit tests, a unit test there has its control registered from the same crate's integration tests
+(`tests/`), paired by the test's name (R-199). `cargo xtask controls` pairs tests and controls across a crate's
+targets.
+
+## R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-139, the human chose "Fail; list justified ones": the per-PR `cargo mutants --in-diff` job goes red on
+any surviving mutant not in a checked-in list of equivalent mutants. Each entry carries a one-line justification,
+and the code and qa reviewers approve it, as R-197 does for lint suppressions.
+
+## R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-140, the human chose "Calibration, 256 provisional": the case count is a calibration requirement (R-71)
+closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked so (R-182); the human confirms or
+changes it at the M0 gate.
+
+## R-204 — When to ask the human
+*26 Sep 2026 · given as "R-198", which was already taken (the TASK-M0-04 split); recorded as R-204*
+
+"Standing rule: when to ask me.
+
+Don't ask me when the answer follows from an existing ruling or the docs. That covers:
+- sequencing and dependencies (like M0-16 → M0-22 under R-176);
+- splits within the size budget;
+- mechanical consequences of a ruling;
+- wording and citation fixes;
+- anything where your recommendation is just "apply R-n".
+Apply it, and record it in decisions.md as "applied per R-n: <what>" (or in the PR description), so I can see it and
+veto it later.
+
+Ask me only for genuine choices:
+- physics or conventions;
+- design and GUI behaviour;
+- numeric values and calibrations;
+- conflicts the rulings don't settle;
+- scope or cost trade-offs (dropping or deferring anything, exceeding budgets);
+- anything irreversible.
+
+Batch what isn't blocking: collect those questions and ask them once, when the PR is ready, not one at a time.
+
+If you're unsure which kind it is, apply the recommendation, mark it "applied per R-198 — veto?" in the PR, and carry
+on."
+
+*Applied note:* the marker is written "applied per R-204 — veto?", the number this rule is recorded under.
+
+## R-205 — TASK-M0-04 is accepted at 570 code lines
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked when PR #18 was ready (R-204, exceeding a budget), the human chose "Accept as one PR": TASK-M0-04's 570 code
+lines, against the ~500 budget and its ~380 estimate, stay one PR. The overage is the inline controls each test
+carries until TASK-M0-21's registry exists, rustfmt wrapping, and R-203's added test.
