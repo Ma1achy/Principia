@@ -141,12 +141,12 @@ impl GpuHarness {
             .collect();
         buffers.push(storage(
             &vec![0; len],
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_SRC),
         ));
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("readback"),
             size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
             mapped_at_creation: false,
         });
         let entries: Vec<_> = buffers
