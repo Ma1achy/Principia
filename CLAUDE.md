@@ -54,8 +54,8 @@ Read this first; each rule points at its source.
 
 ## Lints (`decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*")
 - CI runs `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push (R-195).
-- A lint fix that doesn't change behaviour (renaming, restructuring, simplifying) is the implementer's to make and the
-  code reviewer's to approve. It doesn't go to REVIEW_QUEUE.
+- A lint fix that doesn't change behaviour (renaming, restructuring, simplifying) may be made by the implementer and
+  approved by the code reviewer. It doesn't go to REVIEW_QUEUE.
 - A suppression (`#[allow]`) carries a comment giving the reason, and needs the code reviewer's explicit approval of
   that suppression.
 - Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
