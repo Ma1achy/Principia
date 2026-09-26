@@ -475,3 +475,85 @@ fn deps_a_kernel_or_ledger_lib_outside_src_fails() {
         assert!(ok, "{name}: control, the library at src/lib.rs, fails:\n{stderr}");
     }
 }
+
+/// R-188: a file an `include!` in kernel src/ loads is scanned too, resolved relative to the including file, and
+/// transitively (an `include!` in the included file, a `mod` it declares). Each case fails naming the included file
+/// and line; the control, the same files without the identifier, passes.
+#[test]
+fn deps_scans_files_loaded_by_include() {
+    let use_it = "\nfn t() { validation::run(); }\n";
+    let cases: [(&str, &[(&str, &str)], &str); 4] = [
+        ("outside", &[("src/lib.rs", "include!(\"../elsewhere/t.rs\");\n")], "elsewhere/t.rs:2"),
+        (
+            "in_tests",
+            &[("src/lib.rs", "#[cfg(test)]\nmod tests {\n    std::include! { r\"../../kernel/elsewhere/t.rs\", }\n}\n")],
+            "elsewhere/t.rs:2",
+        ),
+        (
+            "transitive",
+            &[("src/lib.rs", "include!(\"../elsewhere/i.rs\");\n"), ("elsewhere/i.rs", "include!(\"t.rs\");\n")],
+            "elsewhere/t.rs:2",
+        ),
+        (
+            "from_path_module",
+            &[("src/lib.rs", "#[path = \"../elsewhere/m.rs\"]\nmod m;\n"), ("elsewhere/m.rs", "include!(\"t.rs\");\n")],
+            "elsewhere/t.rs:2",
+        ),
+    ];
+    for (case, files, named) in cases {
+        let mut with_use: Vec<(&str, &str)> = files.to_vec();
+        with_use.push(("elsewhere/t.rs", use_it));
+        let metadata = source_workspace(&format!("include_{case}"), "kernel", DEV_ON_VALIDATION, &with_use);
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(!ok && stderr.contains(named), "{case}: a use in the file include! loads passes:\n{stderr}");
+        // Control: the same files without the identifier.
+        let plain: Vec<(&str, String)> =
+            with_use.iter().map(|(p, s)| (*p, s.replace("validation", "checks"))).collect();
+        let plain: Vec<(&str, &str)> = plain.iter().map(|(p, s)| (*p, s.as_str())).collect();
+        let metadata = source_workspace(&format!("include_{case}_plain"), "kernel", DEV_ON_VALIDATION, &plain);
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(ok, "{case}: control, the files without the identifier, fails:\n{stderr}");
+    }
+}
+
+/// R-188: an `include!` whose path resolves to no file fails, naming the including file and line. Control: the same
+/// `include!` with the file present passes.
+#[test]
+fn deps_an_unresolvable_include_fails() {
+    let lib = [("src/lib.rs", "pub fn f() {}\n\ninclude!(\"../elsewhere/gone.rs\");\n")];
+    let (ok, stderr) = run_deps_path(&source_workspace("include_missing", "kernel", DEV_ON_VALIDATION, &lib));
+    assert!(!ok && stderr.contains("src/lib.rs:3: include!(\"../elsewhere/gone.rs\") names no file"), "{stderr}");
+    let present = [lib[0], ("elsewhere/gone.rs", "fn g() {}\n")];
+    let (ok, stderr) =
+        run_deps_path(&source_workspace("include_missing_control", "kernel", DEV_ON_VALIDATION, &present));
+    assert!(ok, "control, the included file present, fails:\n{stderr}");
+}
+
+/// R-188: an `include!` whose path is not a plain string literal (`concat!`, `env!`, an escaped string) cannot be
+/// resolved without expanding it, and fails, naming the file and line. Controls: the same file with a literal path
+/// passes, and `include_str!`/`include_bytes!` with a non-literal path pass (they load no Rust tokens).
+#[test]
+fn deps_a_non_literal_include_path_fails() {
+    let cases = [
+        ("concat", "include!(concat!(env!(\"OUT_DIR\"), \"/t.rs\"));"),
+        ("env", "include!(env!(\"T_RS\"));"),
+        ("escaped", "include!(\"t\\x2ers\");"),
+    ];
+    for (case, invocation) in cases {
+        let lib = format!("pub fn f() {{}}\n\n{invocation}\n");
+        let files = [("src/lib.rs", lib.as_str()), ("src/t.rs", "fn g() {}\n")];
+        let (ok, stderr) =
+            run_deps_path(&source_workspace(&format!("include_{case}"), "kernel", DEV_ON_VALIDATION, &files));
+        assert!(
+            !ok && stderr.contains("src/lib.rs: line 3: an include! whose path is not a plain string literal"),
+            "{case}: {stderr}"
+        );
+    }
+    let control = [
+        ("src/lib.rs", "pub fn f() {}\n\ninclude!(\"t.rs\");\n"),
+        ("src/t.rs", "const S: &str = include_str!(concat!(env!(\"OUT_DIR\"), \"/x\"));\n"),
+        ("src/u.rs", "const B: &[u8] = include_bytes!(env!(\"X\"));\n"),
+    ];
+    let (ok, stderr) = run_deps_path(&source_workspace("include_literal", "kernel", DEV_ON_VALIDATION, &control));
+    assert!(ok, "control, a literal include! path, fails:\n{stderr}");
+}

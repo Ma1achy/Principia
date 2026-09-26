@@ -7,7 +7,8 @@ Usage: cargo xtask <command>
 Commands:
   ci                         run every registered per-push runner, in order (R-177)
   deps [--metadata <file>]   check the workspace crate graph against systems_architecture §7.1, and
-                             that kernel and ledger use validation only outside src/ (R-187)
+                             that kernel and ledger use validation only outside src/ (R-187),
+                             following #[path] and include! (R-188)
                              (reads `cargo metadata --format-version 1`, or <file> if given)";
 
 fn main() -> ExitCode {

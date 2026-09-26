@@ -8,7 +8,8 @@
 //! source under `src/` uses `validation` (a test that does is an integration test in `tests/`), because
 //! the dev-dependency cycle would give unit tests two copies of the crate (`Metadata::source_violations`). The scan
 //! fails on any identifier named `validation` there, a local item included (a deliberate over-approximation: it
-//! has no name resolution), follows `#[path]` out of `src/`, and requires the crates' library targets in `src/`.
+//! has no name resolution), follows `#[path]` and `include!` out of `src/` (R-188), and requires the crates' library
+//! targets in `src/`.
 
 use std::fmt;
 use std::collections::BTreeSet;
@@ -327,6 +328,20 @@ impl Metadata {
                 for line in found.lines {
                     violations.push(SourceViolation { krate: package.name.clone(), file: file.clone(), line });
                 }
+                for include in found.includes {
+                    let loaded = include.resolve(&file).ok_or_else(|| {
+                        format!(
+                            "{}:{}: include!({:?}) names no file this check can find to scan for a use of \
+                             validation (R-187, R-188)",
+                            file.display(),
+                            include.line,
+                            include.rel
+                        )
+                    })?;
+                    if seen.insert(loaded.clone()) {
+                        queue.push(loaded);
+                    }
+                }
                 for module in found.modules {
                     let loaded = module.candidates(&file);
                     if loaded.is_empty() && module.by_path {
@@ -470,6 +485,24 @@ struct Scanned {
     lines: Vec<usize>,
     /// The files its out-of-line module declarations may load.
     modules: Vec<ModuleFile>,
+    /// The files its `include!` invocations load (R-188).
+    includes: Vec<IncludeFile>,
+}
+
+/// The file an `include!("rel")` on 1-based `line` loads.
+#[derive(Debug)]
+struct IncludeFile {
+    line: usize,
+    rel: String,
+}
+
+impl IncludeFile {
+    /// The file `rel` names, resolved as rustc does, relative to the directory of `file`, the file that holds the
+    /// invocation (`None` when there is no such file).
+    fn resolve(&self, file: &Path) -> Option<PathBuf> {
+        let dir = file.parent().unwrap_or(Path::new(""));
+        Some(normalize(&dir.join(&self.rel))).filter(|p| p.is_file())
+    }
 }
 
 /// A file a module declaration may load: `rel`, declared inside the inline modules `inline`.
@@ -521,7 +554,12 @@ fn str_literal(token: &str) -> Option<String> {
 /// them apart, so a check without it that must never pass a real use has to fail both. Rename the local item.
 ///
 /// It also lists the files the module declarations may load: each `#[path = "…"]` (anywhere in an attribute, so
-/// under `cfg_attr` too) and each `mod name;`, with the inline modules around it.
+/// under `cfg_attr` too) and each `mod name;`, with the inline modules around it, and the file of each `include!`
+/// (R-188), whose argument must be one plain string literal: any other argument (`concat!`, `env!`, a macro
+/// variable) cannot be resolved without expanding it, so it is an error, naming the line.
+///
+/// `include_str!` and `include_bytes!` are not followed: they expand to a `&str` or `&[u8]` value, never to Rust
+/// tokens, so the file they read cannot hold a use of the crate.
 fn scan_text(text: &str, names: &[String]) -> Result<Scanned, String> {
     fn word(ident: &proc_macro2::Ident) -> String {
         let word = ident.to_string();
@@ -557,6 +595,26 @@ fn scan_text(text: &str, names: &[String]) -> Result<Scanned, String> {
                         let rel =
                             rel.ok_or_else(|| format!("line {line}: a #[path] whose value is not a plain string"))?;
                         found.modules.push(ModuleFile { inline: inline.clone(), rel, by_path: true });
+                    }
+                    // `include!(…)`, `include![…]` or `include!{…}`, also as `std::include!` or `core::include!`.
+                    if w == "include" && punct(i + 1, '!') {
+                        if let Some(TokenTree::Group(args)) = at(i + 2) {
+                            let args: Vec<TokenTree> = args.stream().into_iter().collect();
+                            let rel = match args.as_slice() {
+                                [TokenTree::Literal(lit)] => str_literal(&lit.to_string()),
+                                [TokenTree::Literal(lit), TokenTree::Punct(p)] if p.as_char() == ',' => {
+                                    str_literal(&lit.to_string())
+                                }
+                                _ => None,
+                            };
+                            let rel = rel.ok_or_else(|| {
+                                format!(
+                                    "line {line}: an include! whose path is not a plain string literal, so the \
+                                     file it loads cannot be found (R-188)"
+                                )
+                            })?;
+                            found.includes.push(IncludeFile { line, rel });
+                        }
                     }
                     if !in_attr && w == "mod" && punct(i + 2, ';') {
                         if let Some(name) = ident(i + 1) {
