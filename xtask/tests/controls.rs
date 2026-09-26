@@ -1,0 +1,258 @@
+//! `cargo xtask controls` over the fixture crates in `tests/fixtures/controls/` (REQ-VAL-147): a test with a
+//! discriminating control passes; a test with no control, and one whose control leaves it passing, fail naming the
+//! test; a crate without the `controls` feature is skipped (R-176); a unit test in `src/` pairs by name with the
+//! control in the crate's `tests/` (R-199, R-201). Each test keeps an inline control; the registry's own controls
+//! for these tests are TASK-M0-22's (R-198).
+
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use xtask::controls::{control_of, findings, parse_list, parse_results, Finding};
+
+/// The outcome of one `cargo xtask controls` run.
+struct Verdict {
+    ok: bool,
+    stdout: String,
+    stderr: String,
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for entry in std::fs::read_dir(from).unwrap() {
+        let path = entry.unwrap().path();
+        let dest = to.join(path.file_name().unwrap());
+        if path.is_dir() {
+            copy_dir(&path, &dest);
+        } else {
+            std::fs::copy(&path, &dest).unwrap();
+        }
+    }
+}
+
+/// Runs `xtask controls` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile and
+/// the `validation` path made absolute, building in this workspace's target directory, where `validation` is already built. `remove` names a file deleted from the copy first.
+fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
+    let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = xtask.parent().unwrap();
+    let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    // One copy per run, removed after it: tests run in parallel, and several run the same fixture.
+    static RUN: AtomicUsize = AtomicUsize::new(0);
+    let run = RUN.fetch_add(1, Ordering::Relaxed);
+    let copy = tmp
+        .join("controls")
+        .join(format!("{name}-{}-{run}", std::process::id()));
+    copy_dir(&xtask.join("tests/fixtures/controls").join(name), &copy);
+    if let Some(file) = remove {
+        std::fs::remove_file(copy.join(file)).unwrap();
+    }
+    let manifest = copy.join("Cargo.toml");
+    let text = std::fs::read_to_string(&manifest).unwrap().replace(
+        "../../../../../crates/validation",
+        root.join("crates/validation").to_str().unwrap(),
+    );
+    std::fs::write(&manifest, text).unwrap();
+    std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["controls", "--manifest-path"])
+        .arg(&manifest)
+        .env("CARGO_TARGET_DIR", tmp.parent().unwrap())
+        .output()
+        .expect("run xtask");
+    std::fs::remove_dir_all(&copy).unwrap();
+    Verdict {
+        ok: output.status.success(),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    }
+}
+
+#[test]
+fn controls_discriminating_fixture_passes() {
+    let v = run_fixture("discriminating", None);
+    assert!(
+        v.ok,
+        "a discriminated test fails the command:\n{}",
+        v.stderr
+    );
+    assert!(
+        v.stdout
+            .contains("controls_discriminating: 1 test(s), each failed by its control"),
+        "{}",
+        v.stdout
+    );
+    // Control: a fixture whose control leaves its test passing does fail, so the pass above is the control's doing.
+    assert!(
+        !run_fixture("leaky", None).ok,
+        "control: the leaky fixture passed"
+    );
+}
+
+#[test]
+fn controls_test_without_control_fails_naming_it() {
+    let v = run_fixture("uncontrolled", None);
+    assert!(!v.ok, "a test with no control passed the command");
+    assert!(
+        v.stderr
+            .contains("controls_uncontrolled: test `lacks_control` has no control"),
+        "{}",
+        v.stderr
+    );
+    // Control: the test beside it has a control named for it, and is not reported: the pairing is by name.
+    assert!(
+        !v.stderr.contains("`has_control`"),
+        "control: the controlled test was reported:\n{}",
+        v.stderr
+    );
+}
+
+#[test]
+fn controls_control_leaving_test_passing_fails_naming_it() {
+    let v = run_fixture("leaky", None);
+    assert!(
+        !v.ok,
+        "a control that leaves its test passing passed the command"
+    );
+    assert!(
+        v.stderr
+            .contains("controls_leaky: test `round_trips`: its control leaves it passing"),
+        "{}",
+        v.stderr
+    );
+    // Control: a discriminating control is not reported as leaving its test passing.
+    let good = run_fixture("discriminating", None);
+    assert!(
+        !good.stderr.contains("leaves it passing"),
+        "control: {}",
+        good.stderr
+    );
+}
+
+#[test]
+fn controls_crate_without_feature_is_skipped() {
+    let v = run_fixture("featureless", None);
+    assert!(
+        v.ok,
+        "a crate without the feature failed the command:\n{}",
+        v.stderr
+    );
+    assert!(
+        v.stdout
+            .contains("controls_featureless: skipped: it declares no `controls` feature"),
+        "{}",
+        v.stdout
+    );
+    // Control: a crate with the feature is not reported skipped.
+    let good = run_fixture("discriminating", None);
+    assert!(!good.stdout.contains("skipped"), "control: {}", good.stdout);
+}
+
+#[test]
+fn controls_unit_test_pairs_with_control_in_tests_dir() {
+    let v = run_fixture("cross_target", None);
+    assert!(
+        v.ok,
+        "the cross-target pair failed the command:\n{}",
+        v.stderr
+    );
+    assert!(
+        v.stdout
+            .contains("controls_cross_target: 1 test(s), each failed by its control"),
+        "{}",
+        v.stdout
+    );
+    assert!(!v.stderr.contains("has no control"), "{}", v.stderr);
+    // Control: without the control in tests/, the unit test in src/ is reported (R-201).
+    let bare = run_fixture("cross_target", Some("tests/controls.rs"));
+    assert!(!bare.ok, "control: the unit test passed with no control");
+}
+
+#[test]
+fn controls_unit_test_without_its_control_fails_naming_it() {
+    let v = run_fixture("cross_target", Some("tests/controls.rs"));
+    assert!(!v.ok, "the unit test passed with its control removed");
+    assert!(
+        v.stderr
+            .contains("controls_cross_target: test `tests::triples` has no control"),
+        "{}",
+        v.stderr
+    );
+    // Control: with the control in place, the unit test is not reported.
+    let paired = run_fixture("cross_target", None);
+    assert!(
+        !paired.stderr.contains("tests::triples"),
+        "control: {}",
+        paired.stderr
+    );
+}
+
+fn names(list: &[&str]) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
+#[test]
+fn controls_control_of_reads_the_module_name() {
+    assert_eq!(control_of("a::doubles::negative_control"), Some("doubles"));
+    assert_eq!(control_of("doubles::negative_control"), Some("doubles"));
+    assert_eq!(control_of("negative_control"), None);
+    assert_eq!(control_of("doubles::xnegative_control"), None);
+    // Control: a test that is not a control names no test.
+    assert_eq!(
+        control_of("a::doubles"),
+        None,
+        "control: a plain test read as a control"
+    );
+}
+
+#[test]
+fn controls_parse_list_and_results() {
+    let list = "doubles: test\ndoubles::negative_control: test\n\n2 tests, 0 benchmarks\nbench_it: benchmark\n";
+    assert_eq!(
+        parse_list(list),
+        names(&["doubles", "doubles::negative_control"])
+    );
+    let run = "running 2 tests\ntest a::negative_control - should panic ... ok\n\
+               test b::negative_control - should panic ... FAILED\ntest c ... ok\n\ntest result: FAILED.";
+    let results = parse_results(run);
+    let expected: BTreeMap<String, bool> = [
+        ("a::negative_control".to_owned(), true),
+        ("b::negative_control".to_owned(), false),
+        ("c".to_owned(), true),
+    ]
+    .into();
+    assert_eq!(results, expected);
+    // Control: a FAILED line reads as failed, so `true` above is read from the outcome.
+    assert_eq!(parse_results("test d ... FAILED").get("d"), Some(&false));
+}
+
+#[test]
+fn controls_findings_pair_by_name() {
+    let listed = names(&[
+        "tests::doubles",
+        "halves",
+        "leaks",
+        "other::negative_control",
+        "doubles::negative_control",
+        "leaks::negative_control",
+    ]);
+    let results: BTreeMap<String, bool> = [
+        ("doubles::negative_control".to_owned(), true),
+        ("leaks::negative_control".to_owned(), false),
+        ("other::negative_control".to_owned(), true),
+    ]
+    .into();
+    assert_eq!(
+        findings(&listed, &results),
+        Ok(vec![
+            Finding::NoControl("halves".to_owned()),
+            Finding::ControlPasses("leaks".to_owned()),
+        ])
+    );
+    // Control: a paired control with no result is an error, not a pass.
+    let err = findings(&listed, &BTreeMap::new()).unwrap_err();
+    assert!(
+        err.contains("`doubles::negative_control` of test `tests::doubles` did not run"),
+        "control: {err}"
+    );
+}

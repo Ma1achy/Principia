@@ -773,7 +773,7 @@ fn link(target: &Path, dest: &Path) -> std::io::Result<()> {
 }
 
 /// The cargo that runs `xtask`, or `cargo`.
-fn cargo() -> String {
+pub(crate) fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
 }
 

@@ -2,4 +2,5 @@
 //! `cargo metadata`; no crate depends on it).
 
 pub mod ci;
+pub mod controls;
 pub mod deps;
