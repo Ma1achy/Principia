@@ -1,0 +1,408 @@
+//! QA tests for TASK-M0-04, written from REQ-SYS-065, REQ-VAL-151, the task's acceptance lines, parity_contract §6
+//! and pitfalls §9. Each test carries an inline negative control (R-176; the registry is TASK-M0-21/M0-22, R-198).
+//!
+//! Tests that must change process state (the `PRIN_GPU_BACKEND` and `PROPTEST_RNG_SEED` variables, both read once or
+//! at construction) re-run this test binary as a child process with `QA_M0_04_CHILD` set, so the parent's environment
+//! is never mutated.
+
+use std::process::Command;
+use validation::gpu::{GpuHarness, BACKEND_VAR};
+use validation::prop;
+
+const CHILD_VAR: &str = "QA_M0_04_CHILD";
+
+fn harness() -> GpuHarness {
+    GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// Index of the first differing word, compared as full 32-bit words (no mask; pitfalls §9), lengths included.
+fn diff_at(a: &[u32], b: &[u32]) -> Option<usize> {
+    if a.len() != b.len() {
+        return Some(a.len().min(b.len()));
+    }
+    (0..a.len()).find(|&i| a[i] != b[i])
+}
+
+/// A 2^16-word fixture independent of the implementation's: 0, all ones, every single-bit word, every
+/// single-bit-cleared word, then xorshift32 words. Every bit position is exercised alone in both states.
+fn qa_fixture() -> Vec<u32> {
+    let mut v = vec![0u32, u32::MAX];
+    v.extend((0..32).map(|b| 1u32 << b));
+    v.extend((0..32).map(|b| !(1u32 << b)));
+    let mut x = 0x1234_5678u32;
+    while v.len() < 1 << 16 {
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        v.push(x);
+    }
+    v
+}
+
+const IDENTITY: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn identity(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x]; }
+}
+// Control: flips bit 0 of word 12345 (a low-bit fork, the bits a mask would hide).
+@compute @workgroup_size(64)
+fn flip_low_bit(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x] ^ select(0u, 1u, id.x == 12345u); }
+}
+// Control: never writes the last word.
+@compute @workgroup_size(64)
+fn skip_last(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x + 1u < arrayLength(&input)) { output[id.x] = input[id.x]; }
+}
+";
+
+/// REQ-SYS-065 / acceptance `gpu_harness`: a WGSL identity dispatch round-trips 2^16 u32 words bit-exact.
+#[test]
+fn qa_gpu_harness_identity_round_trips_2_16_words_bit_exact() {
+    let h = harness();
+    let input = qa_fixture();
+    assert_eq!(input.len(), 1 << 16);
+    let out = h.run_wgsl(IDENTITY, "identity", &[&input]);
+    assert_eq!(
+        diff_at(&input, &out),
+        None,
+        "identity is not bit-exact on {}",
+        h.adapter_info()
+    );
+    // Control: a dispatch that flips one low bit must be seen at that word.
+    let bad = h.run_wgsl(IDENTITY, "flip_low_bit", &[&input]);
+    assert_eq!(
+        diff_at(&input, &bad),
+        Some(12345),
+        "control: a one-bit fork went unseen"
+    );
+}
+
+/// The harness dispatches over the whole buffer, not only whole workgroups: lengths off the workgroup size.
+#[test]
+fn qa_gpu_harness_round_trips_lengths_off_the_workgroup_size() {
+    let h = harness();
+    let fixture = qa_fixture();
+    for len in [1usize, 63, 64, 65, 1000, (1 << 16) - 1] {
+        let input: Vec<u32> = fixture.iter().rev().take(len).map(|w| w | 1).collect();
+        let out = h.run_wgsl(IDENTITY, "identity", &[&input]);
+        assert_eq!(
+            diff_at(&input, &out),
+            None,
+            "identity failed at length {len}"
+        );
+        // Control: a kernel that leaves the last word unwritten must differ there (every input word is nonzero).
+        let bad = h.run_wgsl(IDENTITY, "skip_last", &[&input]);
+        assert_eq!(
+            diff_at(&input, &bad),
+            Some(len - 1),
+            "control: unwritten tail unseen at length {len}"
+        );
+    }
+}
+
+/// `run_wgsl(module, entry, inputs)` takes several storage buffers; input k is binding k, output the next.
+#[test]
+fn qa_gpu_harness_binds_several_inputs_in_order() {
+    const SUB: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read> b: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<u32>;
+@compute @workgroup_size(64)
+fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&a)) { out[id.x] = a[id.x] - b[id.x]; }
+}
+";
+    let h = harness();
+    let a = qa_fixture();
+    let b: Vec<u32> = a.iter().map(|w| w.rotate_left(7) ^ 0xA5A5_A5A5).collect();
+    let want: Vec<u32> = a.iter().zip(&b).map(|(x, y)| x.wrapping_sub(*y)).collect();
+    let got = h.run_wgsl(SUB, "sub", &[&a, &b]);
+    assert_eq!(
+        diff_at(&want, &got),
+        None,
+        "a - b is wrong: inputs bound out of order or lost"
+    );
+    // Control: the swapped order gives b - a, which must differ, so the check above can tell the order.
+    let swapped = h.run_wgsl(SUB, "sub", &[&b, &a]);
+    assert!(
+        diff_at(&want, &swapped).is_some(),
+        "control: swapping the inputs changed nothing"
+    );
+}
+
+/// Pitfalls §9 / acceptance `gpu_harness_can_fire`: on words with bit 31 set, the i32 `extractBits` overload
+/// sign-extends and the u32 one does not, for every field width ending at bit 31 below 32; at width 32 the two agree
+/// (nothing to extend), and with bit 31 clear they agree at every width. The harness's reachable output includes the
+/// sign-extension failure.
+#[test]
+fn qa_gpu_harness_sees_extractbits_sign_extension_at_every_width() {
+    const EXTRACT: &str = r"
+@group(0) @binding(0) var<storage, read> word: array<u32>;
+@group(0) @binding(1) var<storage, read> width: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<u32>;
+@compute @workgroup_size(64)
+fn as_i32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&word)) {
+        let w = width[id.x];
+        out[id.x] = bitcast<u32>(extractBits(bitcast<i32>(word[id.x]), 32u - w, w));
+    }
+}
+@compute @workgroup_size(64)
+fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&word)) {
+        let w = width[id.x];
+        out[id.x] = extractBits(word[id.x], 32u - w, w);
+    }
+}
+";
+    let h = harness();
+    let base = qa_fixture();
+    let widths: Vec<u32> = (0..base.len()).map(|i| 1 + (i as u32 % 32)).collect();
+    let high: Vec<u32> = base.iter().map(|w| w | 0x8000_0000).collect();
+    let s = h.run_wgsl(EXTRACT, "as_i32", &[&high, &widths]);
+    let u = h.run_wgsl(EXTRACT, "as_u32", &[&high, &widths]);
+    for i in 0..high.len() {
+        let w = widths[i];
+        let want_u = if w == 32 {
+            high[i]
+        } else {
+            high[i] >> (32 - w)
+        };
+        let want_s = ((high[i] as i32) >> (32 - w)) as u32;
+        assert_eq!(u[i], want_u, "u32 extractBits wrong at word {i} width {w}");
+        assert_eq!(s[i], want_s, "i32 extractBits wrong at word {i} width {w}");
+        if w < 32 {
+            assert_ne!(
+                s[i], u[i],
+                "i32 and u32 overloads agree at width {w} on a bit-31 word {i}"
+            );
+        } else {
+            assert_eq!(
+                s[i], u[i],
+                "control: at width 32 there is nothing to extend (word {i})"
+            );
+        }
+    }
+    // Control: bit 31 clear, the overloads agree at every width.
+    let low: Vec<u32> = base.iter().map(|w| w & 0x7FFF_FFFF).collect();
+    let s = h.run_wgsl(EXTRACT, "as_i32", &[&low, &widths]);
+    let u = h.run_wgsl(EXTRACT, "as_u32", &[&low, &widths]);
+    assert_eq!(
+        diff_at(&s, &u),
+        None,
+        "control: overloads differ with bit 31 clear"
+    );
+}
+
+/// Runs this test binary's `test` alone in a child process with the given environment changes.
+fn child(test: &str, env: &[(&str, Option<&str>)]) -> std::process::Output {
+    let mut cmd = Command::new(std::env::current_exe().expect("test binary path"));
+    cmd.args([test, "--exact", "--nocapture", "--test-threads=1"])
+        .env(CHILD_VAR, "1");
+    for (k, v) in env {
+        match v {
+            Some(v) => cmd.env(k, v),
+            None => cmd.env_remove(k),
+        };
+    }
+    cmd.output().expect("child test binary ran")
+}
+
+/// The child's marker line, from `tag` to the end of its line (libtest prints the test name before it).
+fn marker(t: &str, tag: &str) -> String {
+    let at = t
+        .find(tag)
+        .unwrap_or_else(|| panic!("child printed no {tag}: {t}"));
+    t[at..].lines().next().unwrap_or_default().to_string()
+}
+
+fn text(o: &std::process::Output) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&o.stdout),
+        String::from_utf8_lossy(&o.stderr)
+    )
+}
+
+/// Child mode only: opens `GpuHarness::new()` and prints the outcome on one line.
+#[test]
+fn qa_child_open_harness() {
+    if std::env::var_os(CHILD_VAR).is_none() {
+        return;
+    }
+    match GpuHarness::new() {
+        Ok(h) => println!("QA_OPEN_OK backend={:?}", h.adapter_info().backend),
+        Err(e) => println!("QA_OPEN_ERR {e}"),
+    }
+}
+
+fn open_with(value: Option<&str>) -> String {
+    let o = child("qa_child_open_harness", &[(BACKEND_VAR, value)]);
+    let t = text(&o);
+    assert!(o.status.success(), "child crashed: {t}");
+    marker(&t, "QA_OPEN_")
+}
+
+/// REQ-SYS-065 / acceptance `gpu_backend_env`: `GpuHarness::new()` itself (not only the parser) fails naming
+/// `PRIN_GPU_BACKEND` when it is unset, `dx12`, empty or a wrong-case name; `metal` and `vulkan` select that backend
+/// and never another.
+#[test]
+fn qa_gpu_backend_env_governs_harness_new() {
+    for value in [None, Some("dx12"), Some(""), Some("Metal"), Some("gl")] {
+        let line = open_with(value);
+        assert!(
+            line.starts_with("QA_OPEN_ERR"),
+            "{BACKEND_VAR}={value:?} opened a device: {line}"
+        );
+        assert!(
+            line.contains(BACKEND_VAR),
+            "{BACKEND_VAR}={value:?}: error does not name the variable: {line}"
+        );
+    }
+    for (value, backend) in [("metal", "Metal"), ("vulkan", "Vulkan")] {
+        let line = open_with(Some(value));
+        if line.starts_with("QA_OPEN_OK") {
+            assert_eq!(
+                line,
+                format!("QA_OPEN_OK backend={backend}"),
+                "{BACKEND_VAR}={value} gave another backend"
+            );
+        }
+    }
+    // Control: the backend this run was given opens a device on exactly that backend, so the refusals above are
+    // not unconditional.
+    let current =
+        std::env::var(BACKEND_VAR).expect("the suite runs with PRIN_GPU_BACKEND set (R-169)");
+    let want = match current.as_str() {
+        "metal" => "Metal",
+        "vulkan" => "Vulkan",
+        other => panic!("unexpected {BACKEND_VAR}={other}"),
+    };
+    assert_eq!(
+        open_with(Some(&current)),
+        format!("QA_OPEN_OK backend={want}"),
+        "control: the configured backend did not open"
+    );
+}
+
+/// Child mode only: a property made to fail through `prop::run`; prints the first failing draw.
+#[test]
+fn qa_child_failing_property() {
+    if std::env::var_os(CHILD_VAR).is_none() {
+        return;
+    }
+    let first = std::sync::Mutex::new(None::<u32>);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        prop::run(&proptest::prelude::any::<u32>(), |x| {
+            if x % 7 == 3 {
+                first.lock().unwrap().get_or_insert(x);
+                return Err(proptest::test_runner::TestCaseError::fail("x % 7 == 3"));
+            }
+            Ok(())
+        })
+    }));
+    println!("QA_FIRST_DRAW {:?}", first.lock().unwrap());
+    assert!(r.is_err(), "the property was made to fail");
+    std::panic::resume_unwind(r.unwrap_err());
+}
+
+fn seed_in(t: &str) -> u64 {
+    let at = t
+        .find("PROPTEST_RNG_SEED=")
+        .unwrap_or_else(|| panic!("no seed printed on failure: {t}"));
+    t[at + "PROPTEST_RNG_SEED=".len()..]
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect::<String>()
+        .parse()
+        .unwrap_or_else(|_| panic!("seed is not a number: {t}"))
+}
+
+fn first_draw(t: &str) -> String {
+    marker(t, "QA_FIRST_DRAW")
+}
+
+/// Acceptance `prop_seed`: a property made to fail prints the seed it failed on, and re-running with that seed the
+/// way the message says (`PROPTEST_RNG_SEED=<seed>`, a fresh process) fails on the same case.
+#[test]
+fn qa_prop_seed_printed_and_rerun_through_the_environment() {
+    let first = child("qa_child_failing_property", &[("PROPTEST_RNG_SEED", None)]);
+    let t1 = text(&first);
+    assert!(!first.status.success(), "the failing property passed: {t1}");
+    let seed = seed_in(&t1);
+    let again = child(
+        "qa_child_failing_property",
+        &[("PROPTEST_RNG_SEED", Some(&seed.to_string()))],
+    );
+    let t2 = text(&again);
+    assert!(
+        !again.status.success(),
+        "re-run with the printed seed passed: {t2}"
+    );
+    assert_eq!(seed_in(&t2), seed, "the re-run reports a different seed");
+    assert_eq!(
+        first_draw(&t1),
+        first_draw(&t2),
+        "the printed seed did not reproduce the failing case"
+    );
+    // Control: another seed draws a different first failing case, so the match above is the seed's doing.
+    let other = child(
+        "qa_child_failing_property",
+        &[("PROPTEST_RNG_SEED", Some(&(seed ^ 0xDEAD_BEEF).to_string()))],
+    );
+    assert_ne!(
+        first_draw(&t1),
+        first_draw(&text(&other)),
+        "control: two seeds drew the same failing case"
+    );
+}
+
+/// REQ-VAL-151 / R-203: the shared config runs 256 cases per property, and says the value is provisional (R-182).
+#[test]
+fn qa_prop_shared_config_runs_256_cases_marked_provisional() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    let n = AtomicU32::new(0);
+    prop::run(&proptest::prelude::any::<u64>(), |_| {
+        n.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    });
+    assert_eq!(
+        n.load(Ordering::Relaxed),
+        256,
+        "prop::run did not run R-203's 256 cases"
+    );
+    assert_eq!(
+        prop::config(1).cases,
+        256,
+        "the shared config's case count is not R-203's 256"
+    );
+    let status = prop::cases_status();
+    println!("{status}");
+    assert!(
+        std::hint::black_box(prop::CASES_PROVISIONAL),
+        "256 is provisional until the M0 gate (R-203)"
+    );
+    assert!(
+        status.contains("256") && status.contains("provisional"),
+        "status hides value or status: {status}"
+    );
+    // Control: the counter sees a different case count when the config differs, so 256 above was measured.
+    let m = AtomicU32::new(0);
+    proptest::test_runner::TestRunner::new(proptest::test_runner::Config {
+        cases: 255,
+        ..prop::config(1)
+    })
+    .run(&proptest::prelude::any::<u64>(), |_| {
+        m.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    })
+    .unwrap();
+    assert_ne!(
+        m.load(Ordering::Relaxed),
+        256,
+        "control: the counter cannot see the case count"
+    );
+}
