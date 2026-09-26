@@ -19997,7 +19997,7 @@
   milestone: M0
 - id: REQ-SYS-067
   area: SYS
-  statement: "CI must run at the cadence R-110, R-177 and R-186 set: ci.yml runs `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs the CPU and lavapipe suites (and the survey from M8), not benchmarks; screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every hosted suite and writes the gate report. Benchmarks and performance gates run only on the human's own Mac via prin profile, at gates and on demand."
+  statement: "CI must run at the cadence R-110, R-177 and R-186 set: ci.yml runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` (R-195) and `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs the CPU and lavapipe suites (and the survey from M8), not benchmarks; screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every hosted suite and writes the gate report. Benchmarks and performance gates run only on the human's own Mac via prin profile, at gates and on demand."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -20005,6 +20005,8 @@
     section: R-177 — Cadence *(closes G4, C6)*
   - file: decisions.md
     section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  - file: decisions.md
+    section: R-195 — CI checks formatting and lints
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -20013,4 +20015,5 @@
   - R-134
   - R-177
   - R-186
+  - R-195
   milestone: M0

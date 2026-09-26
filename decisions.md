@@ -1478,3 +1478,8 @@ Asked in review of PR #16, the human chose:
 2. "Yes, like integration tests": a kernel or ledger doctest may use `validation`. rustdoc compiles each doctest as a
    separate crate that links the library from outside, so R-187's two-copies problem cannot arise. The check does not
    compile doctests.
+
+## R-195 — CI checks formatting and lints
+*26 Sep 2026*
+
+"CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
