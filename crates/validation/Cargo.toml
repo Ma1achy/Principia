@@ -1,0 +1,11 @@
+[package]
+name = "validation"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ledger = { path = "../ledger" }
+kernel = { path = "../kernel" }
+engine = { path = "../engine" }
+render = { path = "../render" }

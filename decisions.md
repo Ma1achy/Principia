@@ -1370,3 +1370,111 @@ is split. TASK-M0-04 checks, on `macos-15`, that wgpu finds a Metal adapter and 
 (the identity dispatch) round-trips bit-exact. TASK-M0-06 runs `golden selftest` on `macos-15` within REQ-VAL-138's
 tolerance. The same stop-and-raise rule governs both.
 
+
+## R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on prin *(closes RQ-129)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+1. Yes: kernel and ledger may take validation as a dev-dependency only (§7.1's "any (dev-dependency only) →
+   validation" holds for every crate except gui). Never as a normal or build dependency; the no_std kernel and
+   rust-gpu builds never see it. Condition: in kernel and ledger, any test that uses validation must be an integration
+   test (tests/), not a unit test inside src/, because the dev-dependency cycle gives unit tests two copies of the
+   crate. xtask deps enforces it.
+2. No: validation may not depend on prin. Where validation needs the CLI, it runs the built binary as a separate
+   process.
+
+Fix §7.1 line 324 to say "ledger depends on nothing, kernel on nothing but ledger — normal and build dependencies;
+dev-dependencies per line 322".
+
+*Applied (TASK-M0-01):* §7.1's "any (dev-dependency only) → `validation`" row read "any", with no gui exception; the
+ruling's parenthetical says it holds "for every crate except gui". The ruling's words are applied: the row now reads
+"any except `gui`", and `xtask deps` forbids `gui` → `validation` in every kind. Under R-176, gui's tests then have no
+route to `negative_control!`; a crate without the `controls` feature is skipped, not failed. The `validation` row
+(line 321) now excludes `prin` as well as `gui`. Line 324 cites "the `validation` row above" rather than a line number.
+
+## R-188 — TASK-M0-01 is accepted over its size; the source scan also follows `include!`
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked in review of PR #16, the human chose:
+1. "Accept, record it": PR #16 stays one PR, at about three times TASK-M0-01's ~450-line budget (+1507 / −6 at
+   4250b46, not counting `Cargo.lock`, fixtures and qa's files). The overage comes from R-187's source scan, which the
+   task did not have when it was sized. `plan/WORKFLOW.md` § "Task files" ("One task is one reviewable PR") is waived
+   for this task only.
+2. "Yes, close it": in kernel and ledger `src/`, `cargo xtask deps` follows `include!` string paths as it follows
+   `#[path]`, and scans the file; a path it can't resolve (built with `concat!`, `env!` and the like) fails the check.
+
+## R-189 — kernel and ledger `src/` use neither `#[path]` nor `include!` *(amends R-188 item 2)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked in review of PR #16 how to close an `include!` or `#[path]` inside a `macro_rules!` body (rustc resolves it at
+the call site), the human chose "Forbid #[path]/include!": in kernel and ledger `src/`, `#[path]` (including under
+`cfg_attr`) and `include!` are forbidden outright, and `cargo xtask deps` fails on any occurrence, naming the file and
+line. The R-187 scan then covers the `.rs` files under `src/` only, and no longer follows `#[path]` or `include!` into
+other files. R-188 item 2 ("follows `include!` string paths as it follows `#[path]`") is replaced by this. The
+check that kernel's and ledger's targets sit under `src/` stays. qa gets a one-round exception to update or remove its
+own tests that expect a `#[path]` or `include!` to be followed.
+
+## R-190 — kernel `src/` may include the ledger's generated code from `OUT_DIR`; everything else `include`-shaped fails *(amends R-189)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+R-189 forbade every `include!` in kernel `src/`, which also forbade the usual route by which R-185's generated code
+("the ledger generates code into the kernel at build time") reaches the kernel. Asked in review of PR #16, the human
+chose "Allow the OUT_DIR form":
+- In kernel `src/`, exactly one form is allowed: `include!(concat!(env!("OUT_DIR"), "/<literal>.rs"))`, at item level,
+  not inside a macro body and not through an alias. Ledger `src/` allows no `include!` at all, as R-189 has it.
+- Everything else fails `cargo xtask deps` in kernel and ledger `src/`: any other `include` identifier (which covers
+  `use std::include as …` and `include` passed to a macro), any `#[path]` (as R-189), and any attribute whose contents
+  include a macro variable (`#[$a]`, `#[$($t)*]`, `#[cfg_attr(…, $a)]`).
+- qa's suggested rule, failing on any `path` followed by `=` anywhere, is not adopted. It would catch ordinary bindings
+  such as `let path = …`. The macro-variable attribute rule closes the same bypass.
+
+## R-191 — R-187's integration-test condition is checked by compiling, not by reading tokens *(amends R-189, R-190; closes RQ-130)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+The token scan behind R-187's condition ("in kernel and ledger, any test that uses validation must be an integration
+test") was bypassed in review of PR #16 again and again by macro constructions: aliases, metavariable attributes,
+attributes assembled from `tt` fragments (RQ-130), shadowed builtins. Asked whether to replace it, the human chose
+"Compile check":
+- `cargo xtask deps` copies the workspace to a temporary directory, removes `validation` from kernel's and ledger's
+  dev-dependencies there, and runs `cargo check -p kernel -p ledger --lib --tests`. Any use of the validation crate
+  by a unit test, whatever the route (alias, macro, `#[path]`, `include!`), fails to compile, and the check fails,
+  showing the compiler's error.
+- The token rules of R-189 and R-190 are lifted: `#[path]`, `include!` (the `OUT_DIR` form included) and attributes
+  holding macro variables are no longer forbidden by `xtask deps`. A local item named `validation` is allowed again.
+  The token scanner is removed. The check that kernel's and ledger's targets sit under `src/` stays.
+- RQ-130 is moot and closed by this ruling.
+- qa gets a one-round exception to replace or remove its own token-level tests with compile-level ones.
+
+*Applied (TASK-M0-01, 42ccd3c):* the command as written, `cargo check -p kernel -p ledger --lib --tests`, would also
+compile kernel's and ledger's integration tests, which R-187 allows to use `validation`. The ruling's intent is applied
+instead: in the temporary copy, kernel's and ledger's integration-test, example and bench targets are left out, so only
+the lib and bin unit tests are compiled without `validation`. Which features the check compiles is RQ-131.
+
+## R-192 — The compile check builds with `--all-features` *(closes RQ-131)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked which features R-191's compile check builds, the human chose "--all-features": the check runs with
+`--all-features`, so a unit test behind any feature of kernel or ledger is compiled without `validation`. If kernel or
+ledger ever gains mutually exclusive features, that is ruled on then.
+
+## R-193 — The compile check is host-only; that is its known limit *(closes RQ-132)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+"Accept host-only, and record it as the check's known limit. Kernel and ledger unit tests run on the host by nature
+(the SPIR-V target can't run a test harness), so the check sees every unit test that can exist. Any platform-gated
+unit test that ever appears gets ruled on then."
+
+*Applied note:* "the host" is not one platform. The check runs on Linux in CI, while tests also run on the human's
+Mac, so a unit test gated on `target_os = "macos"` would run there with `validation` linked, unseen by the Linux
+check. The check therefore sees every unit test that can exist on Linux. The ruling stands: such a test is ruled on
+when it appears.
+
+## R-194 — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked in review of PR #16, the human chose:
+1. "3×2 matrix + known limit": the check runs with `--no-default-features`, with default features and with
+   `--all-features`, each in the dev and the release profile. Any other cfg combination (for example a test gated on
+   feature `a` on and `b` off) is a known limit, ruled on if it ever appears, as R-193 does for platforms.
+2. "Yes, like integration tests": a kernel or ledger doctest may use `validation`. rustdoc compiles each doctest as a
+   separate crate that links the library from outside, so R-187's two-copies problem cannot arise. The check does not
+   compile doctests.

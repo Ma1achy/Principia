@@ -2064,3 +2064,98 @@ Tick any you don't accept.
   REQ-SYS-052; R-147 to REQ-SCHED-039, 053 and 085; R-156 to REQ-INT-081, REQ-PAY-070 and REQ-PERF-012.
 - **Needed:** accept, or rule otherwise on any item.
 - **Ruling:** R-158 (decisions.md). Closed in step 7.
+
+---
+
+*Found in review of TASK-M0-01 (PR #16). Nothing is chosen.*
+
+## RQ-129: §7.1 — may `kernel` and `ledger` take `validation` as a dev-dependency, and may `validation` depend on `prin`? *(build, TASK-M0-01)*
+
+- **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map".
+- **Passage A** (the allowed-edge table, :322): "| any (dev-dependency only) | `validation` | R-176 |". Read
+  literally, "any" includes `kernel` and `ledger`. The crates-outside-the-graph list (:308) agrees: "`validation` (the
+  harness: may depend on any crate; others reach it only as a dev-dependency, R-176)".
+- **Passage B** (the same section, :324): "Every other workspace edge is forbidden; in particular `ledger` depends on
+  nothing, `kernel` on nothing but `ledger` (and that only as a build-dependency)". The node table (:291) says the same
+  of `ledger`: "a root: no workspace dependency". TASK-M0-01's Deliverables repeat it: "`ledger` has no workspace
+  dependency; `kernel` depends on no workspace crate but `ledger`".
+- **Why it matters:** R-176 says "Controls reach xtask tests through a dev-dependency on `crates/validation`", and
+  TASK-M0-04 says "crates reach the macro through a dev-dependency on `crates/validation`". Under reading B, the tests
+  of `kernel` and `ledger` can't reach `negative_control!`.
+- **Second case** (:321): "| `validation` | any of the above except `gui` |". `prin` appears in the table above that
+  row only as a `from` (`prin` → `engine`), and it is a binary-only crate. So it is unclear whether `validation` → `prin`
+  is allowed.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): reading B. `kernel` → `validation` and
+  `ledger` → `validation` fail in every kind, the dev-dependency included. `validation` → `prin` is allowed, in any
+  kind. `xtask/tests/deps.rs` pins all three cases, so a ruling changes an assertion there.
+- **Needed:** (1) whether `kernel` and `ledger` may take `validation` as a dev-dependency (reading A), or not
+  (reading B). (2) whether `validation` may depend on `prin`.
+- **Ruling:** R-187 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+## RQ-130: R-190 — an attribute assembled from macro variables with no `#[` in the source *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-190 — kernel `src/` may include the ledger's generated code from `OUT_DIR`;
+  everything else `include`-shaped fails *(amends R-189)*": "any attribute whose contents include a macro variable
+  (`#[$a]`, `#[$($t)*]`, `#[cfg_attr(…, $a)]`)".
+- **Finding:** the rule covers an attribute whose `#` is written in the source. A `macro_rules!` can take the `#` and
+  the bracket group as two `tt` fragments, so neither the body nor the invocation holds an attribute, and rustc still
+  expands them to `#[path]`. In ledger or kernel `src/lib.rs`:
+  ```rust
+  macro_rules! m { ($h:tt ; $g:tt) => { $h $g mod t; }; }
+  m!(# ; [path = "../gen/t.rs"]);
+  ```
+  `rustc --edition 2021 --crate-type lib` compiles it and loads `gen/t.rs`. `cargo xtask deps` passes it at the
+  TASK-M0-01 head: `[path = …]` in the invocation is a bracket group with no `#` before it, and the body has no `#`.
+  `$h [path = "../gen/t.rs"] mod t;` invoked as `m!(#)` is the same case. R-190 names `# $a` only by implication;
+  the code treats `#` followed by `$` as an attribute holding a macro variable and fails it.
+- **What the code applies until a ruling:** R-190's words. These spellings pass.
+- **Needed:** a rule that closes it, or a ruling that it stays a review item. For example, one of:
+  (a) fail a bracket group holding `path` followed by `=` anywhere in kernel and ledger `src/`, not only in an
+  attribute (it catches `[path = …]` passed as a `tt`, and not `let path = …`); or (b) fail a `tt` fragment spliced
+  directly before a bracket group or another `$` fragment at item position in a macro body.
+- **Ruling:** R-191 (decisions.md): moot; the compile check replaces the token rules. Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-131: R-191 — which features does the compile check build? *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-191 — R-187's integration-test condition is checked by compiling, not by
+  reading tokens *(amends R-189, R-190; closes RQ-130)*": "runs `cargo check -p kernel -p ledger --lib --tests`".
+- **Silence:** the ruling names no feature set. Built with default features, a unit test under
+  `#[cfg(all(test, feature = "x"))]` is never compiled by the check, so it may use `validation` unseen. Kernel and
+  ledger declare no features today.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): default features, host target.
+- **Needed:** default features only, `--all-features`, or each feature set in turn.
+- **Ruling:** R-192 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-132: R-191/R-192 — the compile check sees only unit tests that compile on the host *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-192 — The compile check builds with `--all-features` *(closes RQ-131)*".
+- **Silence:** R-192 settles features, not targets. The check runs on the CI host (Linux). A kernel or ledger unit
+  test gated on another platform (`#[cfg(all(test, target_os = "windows"))]`) is never compiled by it.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): the host target only.
+- **Needed:** accept host-only, check on more hosts, or forbid target-gated unit tests.
+- **Ruling:** R-193 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-133: R-192 — unit tests gated on a feature being off, on the release profile, and doctests *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-192 — The compile check builds with `--all-features` *(closes RQ-131)*";
+  `decisions.md` § "R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on
+  prin *(closes RQ-129)*" ("any test that uses validation must be an integration test (tests/), not a unit test").
+- **Gaps:** a unit test under `#[cfg(all(test, not(feature = "gpu")))]` runs under plain `cargo test` but is never
+  compiled by an `--all-features` check; one under `#[cfg(all(test, not(debug_assertions)))]` runs under
+  `cargo test --release` but is never compiled by a dev-profile check. R-187 does not name doctests.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): `--all-features`, dev profile, doctests
+  not compiled.
+- **Needed:** which feature sets and profiles the check builds; whether a doctest may use `validation`.
+- **Ruling:** R-194 (decisions.md). Closed in TASK-M0-01 (PR #16).

@@ -1,0 +1,27 @@
+# Per-push CI (R-177): build, test, the crate-graph check (REQ-SYS-004) and `cargo xtask ci`, the single
+# per-push entry point every later per-commit runner registers into. Bench runs nightly and screenshots
+# on GUI PRs, in their own workflows (R-177). GitHub-hosted runners (R-186).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo build --workspace
+        run: cargo build --workspace
+      - name: cargo test --workspace
+        run: cargo test --workspace
+      - name: cargo xtask deps
+        run: cargo xtask deps
+      - name: cargo xtask ci
+        run: cargo xtask ci

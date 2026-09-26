@@ -1,0 +1,9 @@
+[package]
+name = "kernel"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# systems_architecture §7.1: kernel -> ledger is a build-dependency only (R-185).
+[build-dependencies]
+ledger = { path = "../ledger" }
