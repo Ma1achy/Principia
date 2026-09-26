@@ -1533,3 +1533,33 @@ Asked in RQ-136, the human chose "Name in the macro": there is no test-name attr
 `negative_control!(test_name, "description", control)` names its test, and `cargo xtask controls` pairs tests and
 controls by that name. R-176's "Tests are matched to their controls by a shared test-name attribute" is replaced by
 this; its dev-dependency route to `crates/validation` and the skipping of crates without the `controls` feature stand.
+
+## R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-137, the human chose "Accept ~650, mechanical": TASK-M0-22 stays one PR over the size budget, as
+repetitive registration of one control per test, as R-188 did for TASK-M0-01. And "Yes, depend on M0-22":
+TASK-M0-16 depends on TASK-M0-22, so M0-16 to M0-18 register their own controls and TASK-M0-22 covers only the
+tests merged before it (TASK-M0-01's, TASK-M0-04's and TASK-M0-21's).
+
+## R-201 — A kernel or ledger unit test's control is registered from that crate's `tests/`, by name *(closes RQ-138)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-138, the human chose "Control in tests/, by name": because R-187 keeps `validation` out of kernel's and
+ledger's unit tests, a unit test there has its control registered from the same crate's integration tests
+(`tests/`), paired by the test's name (R-199). `cargo xtask controls` pairs tests and controls across a crate's
+targets.
+
+## R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-139, the human chose "Fail; list justified ones": the per-PR `cargo mutants --in-diff` job goes red on
+any surviving mutant not in a checked-in list of equivalent mutants. Each entry carries a one-line justification,
+and the code and qa reviewers approve it, as R-197 does for lint suppressions.
+
+## R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-140, the human chose "Calibration, 256 provisional": the case count is a calibration requirement (R-71)
+closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked so (R-182); the human confirms or
+changes it at the M0 gate.

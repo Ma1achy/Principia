@@ -2256,6 +2256,7 @@ Tick any you don't accept.
   it, and name a requirement the first part closes; (d) something else. And whether TASK-M0-16 should depend on
   TASK-M0-22, so that the set of tests TASK-M0-22 covers is fixed.
 - **Needed:** a ruling on the size, and on TASK-M0-16's dependency.
+- **Ruling:** R-200 (decisions.md). Closed in TASK-M0-04.
 
 ## RQ-138: how a unit test in kernel or ledger gets its negative control *(build, TASK-M0-21)*
 
@@ -2274,6 +2275,7 @@ Tick any you don't accept.
   can reach `validation`, and kernel's and ledger's unit tests are a recorded known limit, like R-193's.
 - **Needed:** which. It doesn't affect TASK-M0-21's fixtures; it affects the first task that gives kernel or ledger a
   unit test (TASK-M0-07 onward).
+- **Ruling:** R-201 (decisions.md). Closed in TASK-M0-04.
 
 ## RQ-139: R-196 — does a surviving mutant fail the per-PR job? *(build, TASK-M0-23)*
 
@@ -2292,6 +2294,7 @@ Tick any you don't accept.
   equivalent mutants are listed in `.cargo/mutants.toml`, each with its reason, and a change to that list needs the
   qa reviewer's approval; (d) something else.
 - **Needed:** which. TASK-M0-23 waits for it.
+- **Ruling:** R-202 (decisions.md). Closed in TASK-M0-04.
 
 ## RQ-140: the shared proptest case count has no value in the corpus *(calibration, TASK-M0-04)*
 
@@ -2305,3 +2308,4 @@ Tick any you don't accept.
   the library's tuned default and costs well under a second for the M0 properties; there is no measurement yet that
   argues for more or fewer. TASK-M0-04 carries it as `prop::CASES = 256`, marked as pending this entry.
 - **Needed:** a calibration requirement for the value (M0), and the human's confirmation of 256 or another number.
+- **Ruling:** R-203 (decisions.md). Closed in TASK-M0-04.
