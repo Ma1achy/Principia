@@ -305,7 +305,8 @@ code-review item.
 | inspector / hover (CPU f64+), animation/export runner | `engine` | their windows are in `gui` |
 
 Crates outside the graph: `gui` (the dev GUI: depends on `engine`'s typed surface only; nothing depends on it),
-`validation` (the harness: may depend on any crate; others reach it only as a dev-dependency, R-176), `prin` (the CLI:
+`validation` (the harness: may depend on any crate but `gui` and `prin`; every crate but `gui` may reach it, and only
+as a dev-dependency, R-176, R-187), `prin` (the CLI:
 depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate depends on it).
 
 **Allowed workspace edges** (arrows read "depends on"):
