@@ -2292,3 +2292,16 @@ Tick any you don't accept.
   equivalent mutants are listed in `.cargo/mutants.toml`, each with its reason, and a change to that list needs the
   qa reviewer's approval; (d) something else.
 - **Needed:** which. TASK-M0-23 waits for it.
+
+## RQ-140: the shared proptest case count has no value in the corpus *(calibration, TASK-M0-04)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-04.md` § "Deliverables": "`crates/validation/src/prop.rs` — the shared
+  proptest config (case count, seed printed on failure)."; `decisions.md` § "R-71 — A missing value becomes a
+  calibration requirement": "Every value the corpus doesn't give becomes a **calibration** requirement in the milestone
+  that needs it. The task proposes the value with its evidence".
+- **Silence:** no contract, ruling or requirement gives the number of cases a property test runs, and
+  `plan/requirements.yaml` has no calibration requirement for it.
+- **Proposed (R-71):** 256 cases, proptest's own default (`proptest` 1.11, `Config::default().cases`). Evidence: it is
+  the library's tuned default and costs well under a second for the M0 properties; there is no measurement yet that
+  argues for more or fewer. TASK-M0-04 carries it as `prop::CASES = 256`, marked as pending this entry.
+- **Needed:** a calibration requirement for the value (M0), and the human's confirmation of 256 or another number.
