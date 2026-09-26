@@ -19063,9 +19063,11 @@
     section: "R-189 — kernel and ledger `src/` use neither `#[path]` nor `include!` *(amends R-188 item 2)*"
   - file: decisions.md
     section: "R-190 — kernel `src/` may include the ledger's generated code from `OUT_DIR`; everything else `include`-shaped fails *(amends R-189)*"
+  - file: decisions.md
+    section: "R-191 — R-187's integration-test condition is checked by compiling, not by reading tokens *(amends R-189, R-190; closes RQ-130)*"
   verify:
     method: review checklist
-    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no .rs file under src/ uses validation (R-187); in kernel and ledger src/, #[path] (including under cfg_attr) is forbidden (R-189), any include identifier is forbidden except, in kernel src/ only, an item-level include!(concat!(env!(\"OUT_DIR\"), \"/<literal>.rs\")) not inside a macro body and not through an alias, and any attribute containing a macro variable ($) is forbidden; cargo xtask deps fails on any occurrence, naming the file and line (R-189, R-190); a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
+    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no unit test uses validation (R-187): when either takes validation as a dev-dependency, cargo xtask deps copies the workspace to a temporary directory, removes validation from their dev-dependencies there and runs cargo check -p kernel -p ledger --lib --tests, and fails, showing the compiler's error, when that does not compile, whatever the route of the use (alias, macro, #[path], include!) (R-191, which lifts R-189's and R-190's token rules); kernel's and ledger's library and binary targets sit under src/; a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
   rulings:
   - R-170
   - R-172
@@ -19074,6 +19076,7 @@
   - R-188
   - R-189
   - R-190
+  - R-191
   milestone: M0
 - id: REQ-SYS-005
   area: SYS
