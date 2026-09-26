@@ -2159,3 +2159,26 @@ Tick any you don't accept.
   not compiled.
 - **Needed:** which feature sets and profiles the check builds; whether a doctest may use `validation`.
 - **Ruling:** R-194 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found applying R-195 (branch `rulings/r195-fmt-clippy`).*
+
+## RQ-134: R-195 — the workspace fails `cargo clippy -D warnings` *(build, R-195)*
+
+- **File, section:** `decisions.md` § "R-195 — CI checks formatting and lints": "CI runs cargo fmt --check and cargo
+  clippy --workspace --all-targets -- -D warnings on every push."
+- **Conflict:** the code already on `main` does not pass the clippy step the ruling adds.
+  `cargo clippy --workspace --all-targets --keep-going -- -D warnings` (rustfmt 1.9.0, clippy 0.1.96), after
+  `cargo fmt --all`, reports one finding, and no others in any target:
+  - `xtask/tests/deps.rs:495:16` — `clippy::type_complexity` — "very complex type used. Consider factoring parts
+    into `type` definitions", on `let cases: [(&str, &str, Option<(&str, &str)>, &str); 4] = [` in
+    `deps_every_route_to_validation_from_a_unit_test_fails` (test target `deps`).
+- **What the code applies until a ruling:** nothing is fixed beyond formatting. CI stays red on the clippy step until
+  the human rules; the fmt step passes.
+- **Needed:** one of, for example:
+  (a) fix the code: factor the tuple into a `type` alias or a small struct in `xtask/tests/deps.rs`;
+  (b) `#[allow(clippy::type_complexity)]` on that test, with a comment giving the reason;
+  (c) a workspace `clippy.toml` raising `type-complexity-threshold`, with the reason recorded;
+  (d) allow the lint in test targets only (e.g. `[lints.clippy]` in the workspace or crate manifest), with a reason.
+- **Ruling:** pending.
