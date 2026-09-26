@@ -24,9 +24,18 @@ fn third() -> Result<(), String> {
 #[test]
 fn ci_runs_runners_in_order_and_reports_failures() {
     let runners = [
-        Runner { name: "first", run: first },
-        Runner { name: "second", run: second },
-        Runner { name: "third", run: third },
+        Runner {
+            name: "first",
+            run: first,
+        },
+        Runner {
+            name: "second",
+            run: second,
+        },
+        Runner {
+            name: "third",
+            run: third,
+        },
     ];
     let result = run(&runners);
     assert_eq!(*ORDER.lock().unwrap(), ["first", "second", "third"]);

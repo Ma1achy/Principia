@@ -24,7 +24,11 @@ const VALIDATION_DEV: &str = "\n[dev-dependencies]\nvalidation = { path = \"../v
 
 /// A library whose unit test, under `cfg`, uses the validation crate (`used`) or does not.
 fn lib_rs(cfg: &str, used: bool) -> String {
-    let body = if used { "let _ = validation::Harness;" } else { "" };
+    let body = if used {
+        "let _ = validation::Harness;"
+    } else {
+        ""
+    };
     format!("pub fn f() {{}}\n\n#[cfg({cfg})]\nmod tests {{\n    #[test]\n    fn t() {{\n        {body}\n    }}\n}}\n")
 }
 
@@ -35,14 +39,20 @@ fn manifest(pre: &str, name: &str, extra: &str) -> String {
 
 /// The manifest of `krate` (kernel with its build-dependency on ledger, R-185) with the validation dev-dependency.
 fn crate_manifest(krate: &str, pre: &str, extra: &str) -> String {
-    let build = if krate == "kernel" { "\n[build-dependencies]\nledger = { path = \"../ledger\" }\n" } else { "" };
+    let build = if krate == "kernel" {
+        "\n[build-dependencies]\nledger = { path = \"../ledger\" }\n"
+    } else {
+        ""
+    };
     manifest(pre, krate, &format!("{extra}{build}{VALIDATION_DEV}"))
 }
 
 /// Writes a cargo workspace (ledger; kernel, build-depending on ledger; validation, depending on both) for `case`,
 /// with `files` written over the defaults.
 fn workspace(case: &str, files: &[(String, String)]) -> PathBuf {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_TASK-M0-01_r193").join(case);
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("qa_TASK-M0-01_r193")
+        .join(case);
     let _ = std::fs::remove_dir_all(&root);
     let mut all: Vec<(String, String)> = vec![
         (
@@ -105,11 +115,24 @@ fn premise_cargo_test_runs_the_unit_test(case: &str, root: &Path, krate: &str, f
 
 /// The case fails `xtask deps` (with the compiler's error naming the file), and its control (no use) passes it with
 /// the compile check run.
-fn fails_and_its_control_passes(case: &str, krate: &str, pre: &str, extra: &str, cfg: &str, flags: &[&str]) {
+fn fails_and_its_control_passes(
+    case: &str,
+    krate: &str,
+    pre: &str,
+    extra: &str,
+    cfg: &str,
+    flags: &[&str],
+) {
     let toml = format!("crates/{krate}/Cargo.toml");
     let lib = format!("crates/{krate}/src/lib.rs");
     let cargo = crate_manifest(krate, pre, extra);
-    let root = workspace(case, &[(toml.clone(), cargo.clone()), (lib.clone(), lib_rs(cfg, true))]);
+    let root = workspace(
+        case,
+        &[
+            (toml.clone(), cargo.clone()),
+            (lib.clone(), lib_rs(cfg, true)),
+        ],
+    );
     premise_cargo_test_runs_the_unit_test(case, &root, krate, flags);
     let (ok, stdout, stderr) = deps(&root);
     assert!(
@@ -117,14 +140,26 @@ fn fails_and_its_control_passes(case: &str, krate: &str, pre: &str, extra: &str,
         "{case}: a unit test of {krate} that `cargo test --lib {flags:?}` builds with validation passes xtask deps \
          (R-187; R-193's only known limit is another platform):\n{stdout}\n{stderr}"
     );
-    assert!(stderr.contains("error[E"), "{case}: stderr does not show the compiler's error:\n{stderr}");
-    assert!(stderr.contains(&lib), "{case}: the compiler's error does not name {lib}:\n{stderr}");
+    assert!(
+        stderr.contains("error[E"),
+        "{case}: stderr does not show the compiler's error:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(&lib),
+        "{case}: the compiler's error does not name {lib}:\n{stderr}"
+    );
 
     let control = format!("{case}_control");
     let root = workspace(&control, &[(toml, cargo), (lib, lib_rs(cfg, false))]);
     let (ok, stdout, stderr) = deps(&root);
-    assert!(ok, "{control}: the same workspace without the use fails xtask deps:\n{stdout}\n{stderr}");
-    assert!(stdout.contains("compile check passed"), "{control}: the compile check did not run:\n{stdout}");
+    assert!(
+        ok,
+        "{control}: the same workspace without the use fails xtask deps:\n{stdout}\n{stderr}"
+    );
+    assert!(
+        stdout.contains("compile check passed"),
+        "{control}: the compile check did not run:\n{stdout}"
+    );
 }
 
 /// R-193 keeps the host in scope: a unit test gated on the host's own `target_os`, and on its family, is seen.
@@ -132,8 +167,22 @@ fn fails_and_its_control_passes(case: &str, krate: &str, pre: &str, extra: &str,
 fn qa_a_unit_test_gated_on_the_host_platform_fails() {
     let os = std::env::consts::OS;
     let family = std::env::consts::FAMILY;
-    fails_and_its_control_passes("host_os", "kernel", "", "", &format!("all(test, target_os = \"{os}\")"), &[]);
-    fails_and_its_control_passes("host_family", "ledger", "", "", &format!("all(test, {family})"), &[]);
+    fails_and_its_control_passes(
+        "host_os",
+        "kernel",
+        "",
+        "",
+        &format!("all(test, target_os = \"{os}\")"),
+        &[],
+    );
+    fails_and_its_control_passes(
+        "host_family",
+        "ledger",
+        "",
+        "",
+        &format!("all(test, {family})"),
+        &[],
+    );
 }
 
 /// R-192 compiles "a unit test behind any feature"; a unit test behind the absence of a feature is built by plain
@@ -166,7 +215,28 @@ fn qa_a_unit_test_gated_on_the_release_profile_fails() {
 /// must fail.
 #[test]
 fn qa_a_lib_with_test_false_in_every_toml_form_fails() {
-    fails_and_its_control_passes("lib_table_ledger", "ledger", "", "\n[lib]\ntest = false\n", "test", &[]);
-    fails_and_its_control_passes("lib_inline_kernel", "kernel", "lib = { test = false }\n\n", "", "test", &[]);
-    fails_and_its_control_passes("lib_dotted_kernel", "kernel", "lib.test = false\n\n", "", "test", &[]);
+    fails_and_its_control_passes(
+        "lib_table_ledger",
+        "ledger",
+        "",
+        "\n[lib]\ntest = false\n",
+        "test",
+        &[],
+    );
+    fails_and_its_control_passes(
+        "lib_inline_kernel",
+        "kernel",
+        "lib = { test = false }\n\n",
+        "",
+        "test",
+        &[],
+    );
+    fails_and_its_control_passes(
+        "lib_dotted_kernel",
+        "kernel",
+        "lib.test = false\n\n",
+        "",
+        "test",
+        &[],
+    );
 }

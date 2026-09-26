@@ -14,7 +14,10 @@ use std::process::Command;
 use serde_json::{json, Value};
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf()
 }
 
 /// The full `cargo metadata --format-version 1` document (the form `xtask deps` reads by default).
@@ -25,13 +28,21 @@ fn live_metadata() -> Value {
         .arg(workspace_root().join("Cargo.toml"))
         .output()
         .expect("run cargo metadata");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     serde_json::from_slice(&out.stdout).unwrap()
 }
 
 fn members(doc: &Value) -> Vec<Value> {
-    let ids: Vec<&str> =
-        doc["workspace_members"].as_array().unwrap().iter().map(|v| v.as_str().unwrap()).collect();
+    let ids: Vec<&str> = doc["workspace_members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
     doc["packages"]
         .as_array()
         .unwrap()
@@ -42,7 +53,10 @@ fn members(doc: &Value) -> Vec<Value> {
 }
 
 fn dir_of(pkg: &Value) -> PathBuf {
-    Path::new(pkg["manifest_path"].as_str().unwrap()).parent().unwrap().to_path_buf()
+    Path::new(pkg["manifest_path"].as_str().unwrap())
+        .parent()
+        .unwrap()
+        .to_path_buf()
 }
 
 /// Independent count of workspace edges: dependencies whose `path` is a member's directory.
@@ -99,7 +113,10 @@ fn path_dep(name: &str, path: &Path) -> Value {
 
 fn with_dep_on(doc: &Value, from: &str, dep: Value) -> Value {
     let mut doc = doc.clone();
-    let ids: Vec<String> = members(&doc).iter().map(|p| p["id"].as_str().unwrap().to_owned()).collect();
+    let ids: Vec<String> = members(&doc)
+        .iter()
+        .map(|p| p["id"].as_str().unwrap().to_owned())
+        .collect();
     let pkgs = doc["packages"].as_array_mut().unwrap();
     let pkg = pkgs
         .iter_mut()
@@ -117,7 +134,10 @@ fn member_dir(doc: &Value, name: &str) -> PathBuf {
 fn qa_live_deps_sees_every_live_workspace_edge() {
     let doc = live_metadata();
     let want = independent_edge_count(&doc);
-    assert!(want > 0, "independent reader found no workspace edges: the reader is broken");
+    assert!(
+        want > 0,
+        "independent reader found no workspace edges: the reader is broken"
+    );
 
     // The default path (`cargo xtask deps`, reading cargo metadata itself).
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
@@ -126,8 +146,16 @@ fn qa_live_deps_sees_every_live_workspace_edge() {
         .output()
         .expect("run xtask deps");
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(out.status.success(), "xtask deps fails:\n{stdout}{}", String::from_utf8_lossy(&out.stderr));
-    assert_eq!(reported_edges(&stdout), want, "xtask deps does not see every live workspace edge");
+    assert!(
+        out.status.success(),
+        "xtask deps fails:\n{stdout}{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        reported_edges(&stdout),
+        want,
+        "xtask deps does not see every live workspace edge"
+    );
 
     // The same document through --metadata (the control used below).
     let (ok, stdout, stderr) = run_deps_on("live_unmodified", &doc);
@@ -140,13 +168,25 @@ fn qa_live_metadata_with_a_forbidden_edge_fails() {
     let doc = live_metadata();
     // Each forbidden edge the task names, injected into the real document as a path dependency on the real
     // member directory. Control: `qa_live_deps_sees_every_live_workspace_edge` (the unmodified doc passes).
-    for (from, to) in [("kernel", "engine"), ("engine", "gui"), ("ledger", "engine"), ("kernel", "ledger")] {
+    for (from, to) in [
+        ("kernel", "engine"),
+        ("engine", "gui"),
+        ("ledger", "engine"),
+        ("kernel", "ledger"),
+    ] {
         let dep = path_dep(to, &member_dir(&doc, to));
-        let (ok, _, stderr) = run_deps_on(&format!("live_{from}_{to}"), &with_dep_on(&doc, from, dep));
+        let (ok, _, stderr) =
+            run_deps_on(&format!("live_{from}_{to}"), &with_dep_on(&doc, from, dep));
         assert!(!ok, "real metadata plus {from} → {to} (normal) passes");
-        assert!(stderr.contains(&format!("{from} → {to}")), "{from} → {to} not named:\n{stderr}");
+        assert!(
+            stderr.contains(&format!("{from} → {to}")),
+            "{from} → {to} not named:\n{stderr}"
+        );
         if (from, to) == ("kernel", "ledger") {
-            assert!(stderr.contains("normal"), "kernel → ledger failure does not name its kind:\n{stderr}");
+            assert!(
+                stderr.contains("normal"),
+                "kernel → ledger failure does not name its kind:\n{stderr}"
+            );
         }
     }
 }
@@ -157,11 +197,19 @@ fn qa_live_path_package_outside_the_workspace_is_not_a_workspace_edge() {
     // workspace's gui is not engine → gui. Control: the same entry pointing at the member directory fails.
     let doc = live_metadata();
     let outside = workspace_root().join("target/qa-not-a-member/gui");
-    let (ok, _, stderr) =
-        run_deps_on("live_outside_gui", &with_dep_on(&doc, "engine", path_dep("gui", &outside)));
-    assert!(ok, "a non-member path package named gui is reported as a workspace edge:\n{stderr}");
+    let (ok, _, stderr) = run_deps_on(
+        "live_outside_gui",
+        &with_dep_on(&doc, "engine", path_dep("gui", &outside)),
+    );
+    assert!(
+        ok,
+        "a non-member path package named gui is reported as a workspace edge:\n{stderr}"
+    );
     let inside = member_dir(&doc, "gui");
-    let (ok, _, _) = run_deps_on("live_inside_gui", &with_dep_on(&doc, "engine", path_dep("gui", &inside)));
+    let (ok, _, _) = run_deps_on(
+        "live_inside_gui",
+        &with_dep_on(&doc, "engine", path_dep("gui", &inside)),
+    );
     assert!(!ok, "control: engine → workspace gui passes");
 }
 
@@ -176,20 +224,41 @@ fn qa_live_metadata_with_the_r187_validation_edges() {
         dep
     };
     for from in ["kernel", "ledger"] {
-        let (ok, _, stderr) =
-            run_deps_on(&format!("live_{from}_validation_dev"), &with_dep_on(&doc, from, with_kind("validation", "dev")));
-        assert!(ok, "real metadata plus {from} → validation (dev) fails:\n{stderr}");
+        let (ok, _, stderr) = run_deps_on(
+            &format!("live_{from}_validation_dev"),
+            &with_dep_on(&doc, from, with_kind("validation", "dev")),
+        );
+        assert!(
+            ok,
+            "real metadata plus {from} → validation (dev) fails:\n{stderr}"
+        );
         let (ok, _, _) = run_deps_on(
             &format!("live_{from}_validation_normal"),
-            &with_dep_on(&doc, from, path_dep("validation", &member_dir(&doc, "validation"))),
+            &with_dep_on(
+                &doc,
+                from,
+                path_dep("validation", &member_dir(&doc, "validation")),
+            ),
         );
-        assert!(!ok, "control: real metadata plus {from} → validation (normal) passes");
+        assert!(
+            !ok,
+            "control: real metadata plus {from} → validation (normal) passes"
+        );
     }
-    let (ok, _, stderr) = run_deps_on("live_gui_validation_dev", &with_dep_on(&doc, "gui", with_kind("validation", "dev")));
+    let (ok, _, stderr) = run_deps_on(
+        "live_gui_validation_dev",
+        &with_dep_on(&doc, "gui", with_kind("validation", "dev")),
+    );
     assert!(!ok, "real metadata plus gui → validation (dev) passes");
     assert!(stderr.contains("gui → validation"), "{stderr}");
-    for (tag, dep) in [("normal", path_dep("prin", &member_dir(&doc, "prin"))), ("dev", with_kind("prin", "dev"))] {
-        let (ok, _, stderr) = run_deps_on(&format!("live_validation_prin_{tag}"), &with_dep_on(&doc, "validation", dep));
+    for (tag, dep) in [
+        ("normal", path_dep("prin", &member_dir(&doc, "prin"))),
+        ("dev", with_kind("prin", "dev")),
+    ] {
+        let (ok, _, stderr) = run_deps_on(
+            &format!("live_validation_prin_{tag}"),
+            &with_dep_on(&doc, "validation", dep),
+        );
         assert!(!ok, "real metadata plus validation → prin ({tag}) passes");
         assert!(stderr.contains("validation → prin"), "{stderr}");
     }

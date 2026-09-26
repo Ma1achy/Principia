@@ -28,7 +28,10 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         _ => {
-            eprintln!("xtask: unrecognised arguments: {}\n\n{USAGE}", args.join(" "));
+            eprintln!(
+                "xtask: unrecognised arguments: {}\n\n{USAGE}",
+                args.join(" ")
+            );
             return ExitCode::from(2);
         }
     };
@@ -79,7 +82,11 @@ fn run_deps(source: Source<'_>) -> Result<(), String> {
                 Ok(())
             }
             Ok(CompileCheck::Passed(crates)) => {
-                let verb = if crates.len() == 1 { "compiles" } else { "compile" };
+                let verb = if crates.len() == 1 {
+                    "compiles"
+                } else {
+                    "compile"
+                };
                 println!(
                     "xtask deps: compile check passed: {} {verb} without the validation dev-dependency, so no \
                      unit test uses it (R-187, R-191)",
@@ -101,5 +108,8 @@ fn run_deps(source: Source<'_>) -> Result<(), String> {
     if let Err(message) = compiled {
         eprintln!("xtask deps: {message}");
     }
-    Err(format!("{} forbidden workspace edge(s) (REQ-SYS-004)", violations.len()))
+    Err(format!(
+        "{} forbidden workspace edge(s) (REQ-SYS-004)",
+        violations.len()
+    ))
 }

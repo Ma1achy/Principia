@@ -21,11 +21,13 @@ use std::process::Command;
 const VALIDATION_DEV: &str = "\n[dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
 
 /// A unit test that uses the validation crate by its plain name.
-const UNIT_USE: &str = "pub fn f() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        \
+const UNIT_USE: &str =
+    "pub fn f() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        \
                         let _ = validation::Harness;\n    }\n}\n";
 
 /// An integration-test (or example, or bench) body that uses the validation crate.
-const EXTERNAL_USE: &str = "#[allow(dead_code)]\nfn uses() {\n    let _ = validation::Harness;\n}\n\n\
+const EXTERNAL_USE: &str =
+    "#[allow(dead_code)]\nfn uses() {\n    let _ = validation::Harness;\n}\n\n\
                             #[test]\nfn t() {\n    uses();\n}\n";
 
 /// A package manifest: `[package]` for `name`, then `extra` verbatim.
@@ -35,13 +37,18 @@ fn manifest(name: &str, extra: &str) -> String {
 
 /// kernel's manifest with its build-dependency on ledger (R-185), then `extra`.
 fn kernel_manifest(extra: &str) -> String {
-    manifest("kernel", &format!("\n[build-dependencies]\nledger = {{ path = \"../ledger\" }}\n{extra}"))
+    manifest(
+        "kernel",
+        &format!("\n[build-dependencies]\nledger = {{ path = \"../ledger\" }}\n{extra}"),
+    )
 }
 
 /// Writes the workspace for `case`; `files` (paths relative to the root) are written last, over the defaults, which
 /// give kernel and ledger no dev-dependency.
 fn workspace(case: &str, files: &[(&str, &str)]) -> PathBuf {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_TASK-M0-01_r191").join(case);
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("qa_TASK-M0-01_r191")
+        .join(case);
     let _ = std::fs::remove_dir_all(&root);
     let mut all: Vec<(String, String)> = vec![
         (
@@ -86,7 +93,15 @@ fn deps(root: &Path) -> (bool, String, String) {
 /// Control: the workspace, as written (with its dev-dependency), compiles every target of `krate` in test mode.
 fn compiles_with_the_dependency(case: &str, root: &Path, krate: &str) {
     let out = Command::new(env!("CARGO"))
-        .args(["check", "--offline", "--all-targets", "--all-features", "-p", krate, "--manifest-path"])
+        .args([
+            "check",
+            "--offline",
+            "--all-targets",
+            "--all-features",
+            "-p",
+            krate,
+            "--manifest-path",
+        ])
         .arg(root.join("Cargo.toml"))
         .output()
         .expect("run cargo check");
@@ -102,8 +117,14 @@ fn compiles_with_the_dependency(case: &str, root: &Path, krate: &str) {
 fn fails_with_compiler_error(case: &str, root: &Path, krate: &str, file: &str) -> String {
     let (ok, stdout, stderr) = deps(root);
     assert!(!ok, "{case}: a unit test of {krate} that uses validation passes xtask deps:\n{stdout}\n{stderr}");
-    assert!(stderr.contains("error[E"), "{case}: stderr does not show the compiler's error:\n{stderr}");
-    assert!(stderr.contains(file), "{case}: the compiler's error does not name {file}:\n{stderr}");
+    assert!(
+        stderr.contains("error[E"),
+        "{case}: stderr does not show the compiler's error:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(file),
+        "{case}: the compiler's error does not name {file}:\n{stderr}"
+    );
     compiles_with_the_dependency(case, root, krate);
     stderr
 }
@@ -112,7 +133,10 @@ fn fails_with_compiler_error(case: &str, root: &Path, krate: &str, file: &str) -
 fn passes_the_compile_check(case: &str, root: &Path) {
     let (ok, stdout, stderr) = deps(root);
     assert!(ok, "{case}: xtask deps fails:\n{stdout}\n{stderr}");
-    assert!(stdout.contains("compile check passed"), "{case}: the compile check did not run:\n{stdout}");
+    assert!(
+        stdout.contains("compile check passed"),
+        "{case}: the compile check did not run:\n{stdout}"
+    );
 }
 
 /// R-187 for ledger as for kernel, in the crate root and in a nested module file; the failure shows the compiler's
@@ -121,10 +145,22 @@ fn passes_the_compile_check(case: &str, root: &Path) {
 fn qa_unit_test_use_in_kernel_or_ledger_fails_and_its_integration_test_passes() {
     for krate in ["kernel", "ledger"] {
         let cargo = format!("crates/{krate}/Cargo.toml");
-        let text = if krate == "kernel" { kernel_manifest(VALIDATION_DEV) } else { manifest(krate, VALIDATION_DEV) };
+        let text = if krate == "kernel" {
+            kernel_manifest(VALIDATION_DEV)
+        } else {
+            manifest(krate, VALIDATION_DEV)
+        };
         for (at, lib, file) in [
-            ("root", UNIT_USE.to_owned(), format!("crates/{krate}/src/lib.rs")),
-            ("nested", "mod a;\n".to_owned(), format!("crates/{krate}/src/a/b.rs")),
+            (
+                "root",
+                UNIT_USE.to_owned(),
+                format!("crates/{krate}/src/lib.rs"),
+            ),
+            (
+                "nested",
+                "mod a;\n".to_owned(),
+                format!("crates/{krate}/src/a/b.rs"),
+            ),
         ] {
             let case = format!("{krate}_{at}");
             let lib_path = format!("crates/{krate}/src/lib.rs");
@@ -140,7 +176,13 @@ fn qa_unit_test_use_in_kernel_or_ledger_fails_and_its_integration_test_passes() 
             fails_with_compiler_error(&case, &root, krate, &file);
         }
         let case = format!("{krate}_integration");
-        let root = workspace(&case, &[(&cargo, &text), (&format!("crates/{krate}/tests/uses.rs"), EXTERNAL_USE)]);
+        let root = workspace(
+            &case,
+            &[
+                (&cargo, &text),
+                (&format!("crates/{krate}/tests/uses.rs"), EXTERNAL_USE),
+            ],
+        );
         passes_the_compile_check(&case, &root);
         compiles_with_the_dependency(&case, &root, krate);
     }
@@ -154,7 +196,9 @@ fn qa_unit_test_use_in_kernel_or_ledger_fails_and_its_integration_test_passes() 
 #[test]
 fn qa_every_form_of_the_dev_dependency_is_removed() {
     let ws_members = "[workspace]\nresolver = \"2\"\nmembers = [\"crates/ledger\", \"crates/kernel\", \"crates/validation\"]\n";
-    let ws_dep = format!("{ws_members}\n[workspace.dependencies]\nvalidation = {{ path = \"crates/validation\" }}\n");
+    let ws_dep = format!(
+        "{ws_members}\n[workspace.dependencies]\nvalidation = {{ path = \"crates/validation\" }}\n"
+    );
     let ws_renamed =
         format!("{ws_members}\n[workspace.dependencies]\nharness = {{ package = \"validation\", path = \"crates/validation\" }}\n");
     let harness_use = UNIT_USE.replace("validation::", "harness::");
@@ -187,15 +231,24 @@ fn qa_every_form_of_the_dev_dependency_is_removed() {
                 ("crates/kernel/src/lib.rs".to_owned(), lib.to_owned()),
             ]
         };
-        let as_refs = |v: &[(String, String)]| v.iter().map(|(a, b)| (a.clone(), b.clone())).collect::<Vec<_>>();
+        let as_refs = |v: &[(String, String)]| {
+            v.iter()
+                .map(|(a, b)| (a.clone(), b.clone()))
+                .collect::<Vec<_>>()
+        };
         let with = as_refs(&files(&lib));
         let with: Vec<(&str, &str)> = with.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
         let root = workspace(case, &with);
         fails_with_compiler_error(case, &root, "kernel", "crates/kernel/src/lib.rs");
 
         let control = format!("{case}_control");
-        let without = as_refs(&files("pub fn f() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n"));
-        let without: Vec<(&str, &str)> = without.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+        let without = as_refs(&files(
+            "pub fn f() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n",
+        ));
+        let without: Vec<(&str, &str)> = without
+            .iter()
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .collect();
         passes_the_compile_check(&control, &workspace(&control, &without));
     }
 }
@@ -207,11 +260,20 @@ fn qa_unit_test_in_a_kernel_binary_fails() {
     let cargo = kernel_manifest(VALIDATION_DEV);
     let main = format!("fn main() {{}}\n\n{UNIT_USE}");
     let plain = "fn main() {}\n";
-    for (case, file) in [("bin_main", "crates/kernel/src/main.rs"), ("bin_tool", "crates/kernel/src/bin/tool.rs")] {
+    for (case, file) in [
+        ("bin_main", "crates/kernel/src/main.rs"),
+        ("bin_tool", "crates/kernel/src/bin/tool.rs"),
+    ] {
         let root = workspace(case, &[("crates/kernel/Cargo.toml", &cargo), (file, &main)]);
         fails_with_compiler_error(case, &root, "kernel", file);
         let control = format!("{case}_control");
-        passes_the_compile_check(&control, &workspace(&control, &[("crates/kernel/Cargo.toml", &cargo), (file, plain)]));
+        passes_the_compile_check(
+            &control,
+            &workspace(
+                &control,
+                &[("crates/kernel/Cargo.toml", &cargo), (file, plain)],
+            ),
+        );
     }
 }
 
@@ -221,15 +283,31 @@ fn qa_unit_test_in_a_kernel_binary_fails() {
 #[test]
 fn qa_unit_test_of_a_lib_with_test_false_fails() {
     let cargo = kernel_manifest(&format!("\n[lib]\ntest = false\n{VALIDATION_DEV}"));
-    let root = workspace("lib_test_false", &[("crates/kernel/Cargo.toml", &cargo), ("crates/kernel/src/lib.rs", UNIT_USE)]);
+    let root = workspace(
+        "lib_test_false",
+        &[
+            ("crates/kernel/Cargo.toml", &cargo),
+            ("crates/kernel/src/lib.rs", UNIT_USE),
+        ],
+    );
     // Premise: the unit test is built and run by `cargo test --lib`.
     let out = Command::new(env!("CARGO"))
-        .args(["test", "--offline", "-p", "kernel", "--lib", "--manifest-path"])
+        .args([
+            "test",
+            "--offline",
+            "-p",
+            "kernel",
+            "--lib",
+            "--manifest-path",
+        ])
         .arg(root.join("Cargo.toml"))
         .output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(out.status.success() && stdout.contains("test tests::t ... ok"), "premise: {stdout}");
+    assert!(
+        out.status.success() && stdout.contains("test tests::t ... ok"),
+        "premise: {stdout}"
+    );
     let (ok, stdout, stderr) = deps(&root);
     assert!(
         !ok,
@@ -237,7 +315,10 @@ fn qa_unit_test_of_a_lib_with_test_false_fails() {
     );
     let control = workspace(
         "lib_test_false_control",
-        &[("crates/kernel/Cargo.toml", &cargo), ("crates/kernel/src/lib.rs", "pub fn f() {}\n")],
+        &[
+            ("crates/kernel/Cargo.toml", &cargo),
+            ("crates/kernel/src/lib.rs", "pub fn f() {}\n"),
+        ],
     );
     passes_the_compile_check("lib_test_false_control", &control);
 }
@@ -246,12 +327,32 @@ fn qa_unit_test_of_a_lib_with_test_false_fails() {
 /// Control: the same feature-gated test without the use passes.
 #[test]
 fn qa_ledger_unit_test_behind_a_feature_fails() {
-    let cargo = manifest("ledger", &format!("\n[features]\nslow = []\n{VALIDATION_DEV}"));
+    let cargo = manifest(
+        "ledger",
+        &format!("\n[features]\nslow = []\n{VALIDATION_DEV}"),
+    );
     let gated = UNIT_USE.replace("#[cfg(test)]", "#[cfg(all(test, feature = \"slow\"))]");
-    let root = workspace("ledger_feature", &[("crates/ledger/Cargo.toml", &cargo), ("crates/ledger/src/lib.rs", &gated)]);
-    fails_with_compiler_error("ledger_feature", &root, "ledger", "crates/ledger/src/lib.rs");
+    let root = workspace(
+        "ledger_feature",
+        &[
+            ("crates/ledger/Cargo.toml", &cargo),
+            ("crates/ledger/src/lib.rs", &gated),
+        ],
+    );
+    fails_with_compiler_error(
+        "ledger_feature",
+        &root,
+        "ledger",
+        "crates/ledger/src/lib.rs",
+    );
     let plain = "pub fn f() {}\n\n#[cfg(all(test, feature = \"slow\"))]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
-    let control = workspace("ledger_feature_control", &[("crates/ledger/Cargo.toml", &cargo), ("crates/ledger/src/lib.rs", plain)]);
+    let control = workspace(
+        "ledger_feature_control",
+        &[
+            ("crates/ledger/Cargo.toml", &cargo),
+            ("crates/ledger/src/lib.rs", plain),
+        ],
+    );
     passes_the_compile_check("ledger_feature_control", &control);
 }
 
@@ -295,7 +396,11 @@ fn qa_path_and_include_routes_fail_only_when_the_loaded_file_uses_validation() {
     ];
     for (krate, route, lib, macros) in routes {
         let cargo_path = format!("crates/{krate}/Cargo.toml");
-        let cargo = if krate == "kernel" { kernel_manifest(VALIDATION_DEV) } else { manifest(krate, VALIDATION_DEV) };
+        let cargo = if krate == "kernel" {
+            kernel_manifest(VALIDATION_DEV)
+        } else {
+            manifest(krate, VALIDATION_DEV)
+        };
         let lib_path = format!("crates/{krate}/src/lib.rs");
         let mod_path = format!("crates/{krate}/src/m.rs");
         let gen_path = format!("crates/{krate}/gen/t.rs");
@@ -317,7 +422,10 @@ fn qa_path_and_include_routes_fail_only_when_the_loaded_file_uses_validation() {
         fails_with_compiler_error(&case, &root, krate, "gen/t.rs");
 
         let without = files(unused);
-        let without: Vec<(&str, &str)> = without.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+        let without: Vec<(&str, &str)> = without
+            .iter()
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .collect();
         let control = format!("route_{route}_control");
         passes_the_compile_check(&control, &workspace(&control, &without));
     }
@@ -369,9 +477,22 @@ fn qa_integration_tests_examples_and_benches_may_use_validation() {
 #[test]
 fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_under_target() {
     let cargo = kernel_manifest(VALIDATION_DEV);
-    let root = workspace("unchanged", &[("crates/kernel/Cargo.toml", &cargo), ("crates/kernel/src/lib.rs", UNIT_USE)]);
+    let root = workspace(
+        "unchanged",
+        &[
+            ("crates/kernel/Cargo.toml", &cargo),
+            ("crates/kernel/src/lib.rs", UNIT_USE),
+        ],
+    );
     let out = Command::new(env!("CARGO"))
-        .args(["metadata", "--format-version", "1", "--no-deps", "--offline", "--manifest-path"])
+        .args([
+            "metadata",
+            "--format-version",
+            "1",
+            "--no-deps",
+            "--offline",
+            "--manifest-path",
+        ])
         .arg(root.join("Cargo.toml"))
         .output()
         .expect("run cargo metadata");
@@ -379,7 +500,12 @@ fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_unde
     let target = PathBuf::from(doc["target_directory"].as_str().expect("target_directory"));
     let dirs = |t: &Path| -> Vec<PathBuf> {
         let mut v: Vec<PathBuf> = std::fs::read_dir(t)
-            .map(|r| r.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect())
+            .map(|r| {
+                r.filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.is_dir())
+                    .collect()
+            })
             .unwrap_or_default();
         v.sort();
         v
@@ -389,11 +515,22 @@ fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_unde
     let before = dirs(&target);
 
     let read = |rel: &str| std::fs::read(root.join(rel)).unwrap();
-    let (manifest_before, lib_before) = (read("crates/kernel/Cargo.toml"), read("crates/kernel/src/lib.rs"));
+    let (manifest_before, lib_before) = (
+        read("crates/kernel/Cargo.toml"),
+        read("crates/kernel/src/lib.rs"),
+    );
     let (ok, _, stderr) = deps(&root);
     assert!(!ok, "the unit test that uses validation passes:\n{stderr}");
-    assert_eq!(read("crates/kernel/Cargo.toml"), manifest_before, "xtask deps changed kernel's Cargo.toml");
-    assert_eq!(read("crates/kernel/src/lib.rs"), lib_before, "xtask deps changed kernel's src/lib.rs");
+    assert_eq!(
+        read("crates/kernel/Cargo.toml"),
+        manifest_before,
+        "xtask deps changed kernel's Cargo.toml"
+    );
+    assert_eq!(
+        read("crates/kernel/src/lib.rs"),
+        lib_before,
+        "xtask deps changed kernel's src/lib.rs"
+    );
     assert!(!root.join("crates/kernel/Cargo.toml.orig").exists());
 
     let after_first = dirs(&target);
@@ -405,6 +542,14 @@ fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_unde
     );
     std::fs::write(root.join("crates/kernel/src/lib.rs"), "pub fn f() {}\n").unwrap();
     passes_the_compile_check("unchanged_second", &root);
-    assert_eq!(dirs(&target), after_first, "the second run used a different target directory: not stable");
-    assert_eq!(read("crates/kernel/Cargo.toml"), manifest_before, "xtask deps changed kernel's Cargo.toml");
+    assert_eq!(
+        dirs(&target),
+        after_first,
+        "the second run used a different target directory: not stable"
+    );
+    assert_eq!(
+        read("crates/kernel/Cargo.toml"),
+        manifest_before,
+        "xtask deps changed kernel's Cargo.toml"
+    );
 }

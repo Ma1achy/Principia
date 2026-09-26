@@ -23,7 +23,11 @@ pub fn run(runners: &[Runner]) -> Result<(), String> {
         match (runner.run)() {
             Ok(()) => println!("xtask ci: [{}/{total}] {} ok", i + 1, runner.name),
             Err(message) => {
-                println!("xtask ci: [{}/{total}] {} FAILED: {message}", i + 1, runner.name);
+                println!(
+                    "xtask ci: [{}/{total}] {} FAILED: {message}",
+                    i + 1,
+                    runner.name
+                );
                 failed.push(runner.name);
             }
         }

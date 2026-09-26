@@ -26,7 +26,10 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("prin: unrecognised arguments: {}\n\n{USAGE}", args.join(" "));
+            eprintln!(
+                "prin: unrecognised arguments: {}\n\n{USAGE}",
+                args.join(" ")
+            );
             ExitCode::from(2)
         }
     }
