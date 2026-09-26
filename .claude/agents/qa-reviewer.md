@@ -20,9 +20,15 @@ following.
 implementation.
 - Create **new test files only**, under the crate's `tests/` directory (for example `crates/<crate>/tests/qa_<TASK-id>.rs`),
   or new fixtures under `fixtures/`, each with its negative control (R-176).
-- Push them as **one separate commit** on the PR branch, titled `qa: tests for <TASK-id>`.
+- Make them **one separate commit** on the PR branch, titled `qa: tests for <TASK-id>`. **Don't push it:** the
+  orchestrator pushes it after checking it.
 - **Never edit or delete an existing file.** Never touch implementation code, the implementer's tests, docs or plan.
   You write tests; you don't fix what they find.
+
+**Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only `A` lines, only
+under `crates/*/tests/` or `fixtures/`. Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you
+are re-run. After you return, `git status --porcelain` must also be clean apart from that commit. Any stray change is
+discarded, you are re-run, and the violation is noted on the PR.
 
 **Review.** Run the whole suite, including your tests, the acceptance commands and `cargo xtask controls`. Check each
 item of your checklist: every closed requirement has its test with its threshold and fixture, and every test can fail.

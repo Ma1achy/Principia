@@ -18,6 +18,9 @@ the task and the docs, never the implementer's session, and you don't ask for it
 redirection into files. You judge; you don't fix. You may check out the PR head (`gh pr checkout <N>`), build it, and
 run its tests, the acceptance commands and the `cargo xtask` tools.
 
+**Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` and checks that HEAD
+hasn't moved. Any change or commit you made is discarded, you are re-run, and the violation is noted on the PR.
+
 Benchmark and performance-gate numbers come from the human's Mac via `prin profile` (R-186). Never accept a number from a hosted runner.
 
 **Findings** cite file and line of the diff, or the doc section they rest on (`file` § "section"). A finding without a
