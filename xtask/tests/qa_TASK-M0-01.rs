@@ -1,13 +1,11 @@
 //! QA tests for TASK-M0-01, written from REQ-SYS-004 and systems_architecture §7.1 ("Allowed workspace
-//! edges"), R-170, R-172, R-177 and R-185 — not from the implementation.
+//! edges"), R-170, R-172, R-177, R-185 and R-187 — not from the implementation.
 //!
 //! The oracle below is an independent transcription of the §7.1 allowed-edge table. Every ordered pair of
 //! workspace crates, in every dependency kind, is run through the `xtask deps` binary on a synthetic
 //! `cargo metadata` document: the §7.1 workspace graph plus that one edge. Each forbidden case is paired
 //! with its control (the same graph without the edge passes), so each red result is shown to come from
 //! the edge and nothing else.
-//!
-//! Cases the corpus leaves open are not asserted either way (see `expected`).
 #![allow(non_snake_case)]
 
 use std::path::{Path, PathBuf};
@@ -43,41 +41,36 @@ impl Kind {
     }
 }
 
-/// The §7.1 allowed-edge table ("arrows read 'depends on'"), transcribed independently.
-/// `Some(true)` allowed, `Some(false)` forbidden, `None` the corpus does not settle it (not asserted):
-/// - `kernel`/`ledger` → `validation` as a dev-dependency: the "any (dev-dependency only) → validation"
-///   row (R-176) admits it, while "ledger depends on nothing, kernel on nothing but ledger" forbids it.
-/// - `validation` → `prin`: whether `prin` is among "any of the above".
-fn expected(from: &str, to: &str, kind: Kind) -> Option<bool> {
+/// The §7.1 allowed-edge table ("arrows read 'depends on'"), transcribed independently; `true` allowed.
+/// R-187 (closes RQ-129) settles the two cases left open before it: every crate but `gui` may take
+/// `validation` as a dev-dependency only (`kernel` and `ledger` included), and `validation` never
+/// depends on `prin`.
+fn expected(from: &str, to: &str, kind: Kind) -> bool {
     // "nothing on gui"; xtask: "no crate depends on it".
     if to == "gui" || to == "xtask" {
-        return Some(false);
+        return false;
     }
-    // "any (dev-dependency only) → validation" (R-176).
+    // "any except gui (dev-dependency only) → validation" (R-176, R-187); gui → validation in no kind.
     if to == "validation" {
-        if (from == "kernel" || from == "ledger") && kind == Kind::Dev {
-            return None;
-        }
-        return Some(kind == Kind::Dev);
+        return from != "gui" && kind == Kind::Dev;
     }
-    // "ledger depends on nothing".
+    // "ledger depends on nothing" (normal and build; dev-dependencies per the validation row).
     if from == "ledger" {
-        return Some(false);
+        return false;
     }
     // "kernel on nothing but ledger (and that only as a build-dependency)" (R-185).
     if from == "kernel" {
-        return Some(to == "ledger" && kind == Kind::Build);
+        return to == "ledger" && kind == Kind::Build;
     }
-    let allowed = match (from, to) {
-        ("render", "ledger") => true,
-        ("engine", "ledger" | "kernel" | "render") => true,
-        ("gui", "engine") => true,
-        ("prin", "engine") => true,
-        ("validation", "ledger" | "kernel" | "render" | "engine") => true,
-        ("validation", "prin") => return None,
-        _ => false,
-    };
-    Some(allowed)
+    matches!(
+        (from, to),
+        ("render", "ledger")
+            | ("engine", "ledger" | "kernel" | "render")
+            | ("gui", "engine")
+            | ("prin", "engine")
+            // "validation → any of the above except gui and prin" (R-187).
+            | ("validation", "ledger" | "kernel" | "render" | "engine")
+    )
 }
 
 /// The workspace graph §7.1 describes: each allowed edge the stub crates realise.
@@ -164,15 +157,24 @@ fn run_deps_on(tag: &str, doc: &Value) -> (bool, String) {
 fn qa_oracle_is_not_trivial() {
     // Control on the oracle itself: it both allows and forbids, in every kind.
     for kind in KINDS {
-        let verdicts: Vec<Option<bool>> = CRATES
+        let verdicts: Vec<bool> = CRATES
             .iter()
             .flat_map(|f| CRATES.iter().filter(move |t| *t != f).map(move |t| expected(f, t, kind)))
             .collect();
-        assert!(verdicts.contains(&Some(true)), "{kind:?}: oracle allows nothing");
-        assert!(verdicts.contains(&Some(false)), "{kind:?}: oracle forbids nothing");
+        assert!(verdicts.contains(&true), "{kind:?}: oracle allows nothing");
+        assert!(verdicts.contains(&false), "{kind:?}: oracle forbids nothing");
     }
     for (from, to, kind) in baseline_edges() {
-        assert_eq!(expected(from, to, kind), Some(true), "baseline edge {from} → {to} {kind:?}");
+        assert!(expected(from, to, kind), "baseline edge {from} → {to} {kind:?}");
+    }
+    // The R-187 cases, pinned against the ruling's words.
+    assert!(expected("kernel", "validation", Kind::Dev) && expected("ledger", "validation", Kind::Dev));
+    for kind in KINDS {
+        assert!(!expected("gui", "validation", kind), "gui → validation ({kind:?})");
+        assert!(!expected("validation", "prin", kind), "validation → prin ({kind:?})");
+    }
+    for kind in [Kind::Normal, Kind::Build] {
+        assert!(!expected("kernel", "validation", kind) && !expected("ledger", "validation", kind));
     }
 }
 
@@ -191,7 +193,7 @@ fn qa_every_pair_and_kind_matches_the_crate_map() {
                 continue;
             }
             for kind in KINDS {
-                let Some(allowed) = expected(from, to, kind) else { continue };
+                let allowed = expected(from, to, kind);
                 let mut edges = baseline_edges();
                 edges.push((from, to, kind));
                 let tag = format!("pair_{from}_{to}_{}", kind.word());
@@ -346,11 +348,7 @@ fn qa_live_workspace_edges_are_all_allowed() {
     let edges = live_edges(&live_metadata());
     assert!(!edges.is_empty(), "no workspace edges read: the reader is broken");
     for (from, to, kind) in &edges {
-        assert_eq!(
-            expected(from, to, *kind),
-            Some(true),
-            "live workspace edge {from} → {to} ({kind:?}) is not allowed by §7.1"
-        );
+        assert!(expected(from, to, *kind), "live workspace edge {from} → {to} ({kind:?}) is not allowed by §7.1");
     }
     // R-185: kernel → ledger exists only as a build-dependency.
     let kl: Vec<Kind> = edges.iter().filter(|e| e.0 == "kernel" && e.1 == "ledger").map(|e| e.2).collect();

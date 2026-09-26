@@ -164,3 +164,33 @@ fn qa_live_path_package_outside_the_workspace_is_not_a_workspace_edge() {
     let (ok, _, _) = run_deps_on("live_inside_gui", &with_dep_on(&doc, "engine", path_dep("gui", &inside)));
     assert!(!ok, "control: engine → workspace gui passes");
 }
+
+#[test]
+fn qa_live_metadata_with_the_r187_validation_edges() {
+    // R-187 on the real document. Allowed: kernel and ledger take validation as a dev-dependency (their
+    // real src/ does not use it). Forbidden: gui → validation (dev), validation → prin (normal and dev).
+    let doc = live_metadata();
+    let with_kind = |to: &str, kind: &str| {
+        let mut dep = path_dep(to, &member_dir(&doc, to));
+        dep["kind"] = json!(kind);
+        dep
+    };
+    for from in ["kernel", "ledger"] {
+        let (ok, _, stderr) =
+            run_deps_on(&format!("live_{from}_validation_dev"), &with_dep_on(&doc, from, with_kind("validation", "dev")));
+        assert!(ok, "real metadata plus {from} → validation (dev) fails:\n{stderr}");
+        let (ok, _, _) = run_deps_on(
+            &format!("live_{from}_validation_normal"),
+            &with_dep_on(&doc, from, path_dep("validation", &member_dir(&doc, "validation"))),
+        );
+        assert!(!ok, "control: real metadata plus {from} → validation (normal) passes");
+    }
+    let (ok, _, stderr) = run_deps_on("live_gui_validation_dev", &with_dep_on(&doc, "gui", with_kind("validation", "dev")));
+    assert!(!ok, "real metadata plus gui → validation (dev) passes");
+    assert!(stderr.contains("gui → validation"), "{stderr}");
+    for (tag, dep) in [("normal", path_dep("prin", &member_dir(&doc, "prin"))), ("dev", with_kind("prin", "dev"))] {
+        let (ok, _, stderr) = run_deps_on(&format!("live_validation_prin_{tag}"), &with_dep_on(&doc, "validation", dep));
+        assert!(!ok, "real metadata plus validation → prin ({tag}) passes");
+        assert!(stderr.contains("validation → prin"), "{stderr}");
+    }
+}
