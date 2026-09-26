@@ -20079,7 +20079,7 @@
   milestone: M0
 - id: REQ-SYS-065
   area: SYS
-  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-latest with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan; the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
+  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-latest with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -20089,6 +20089,8 @@
     section: "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
   - file: decisions.md
     section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  - file: decisions.md
+    section: R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
   verify:
     method: review checklist
     detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
@@ -20097,6 +20099,7 @@
   - R-169
   - R-174
   - R-186
+  - R-206
   milestone: M0
 - id: REQ-SYS-066
   area: SYS

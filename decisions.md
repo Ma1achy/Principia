@@ -1611,3 +1611,15 @@ asking; it's an addition, not a choice."
 *Applied:* `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender" and `docs/gui/principia_render_gui_spec.md`
 § "Profiler" name the second format; a new requirement, closed by TASK-M8-28 (which closes REQ-TOOL-098), carries it
 and its test.
+
+## R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+*27 Sep 2026*
+
+"When PRIN_GPU_BACKEND is unset, default by platform: metal on macOS, vulkan elsewhere. An explicit value still
+overrides, and an unknown value is still an error. CI keeps setting it explicitly. Log which backend was chosen, so a
+test run always says what it ran on."
+
+*Applied:* R-169 says only that `GpuHarness` picks its backend from `PRIN_GPU_BACKEND`; the "unset is an error" rule
+was TASK-M0-04's (its Deliverables and its `gpu_backend_env` acceptance line), and those lines are amended here.
+REQ-SYS-065's statement gains the default. The code, and the merged tests that assert an unset value fails (qa's
+among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
