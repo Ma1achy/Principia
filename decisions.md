@@ -1455,3 +1455,15 @@ the lib and bin unit tests are compiled without `validation`. Which features the
 Asked which features R-191's compile check builds, the human chose "--all-features": the check runs with
 `--all-features`, so a unit test behind any feature of kernel or ledger is compiled without `validation`. If kernel or
 ledger ever gains mutually exclusive features, that is ruled on then.
+
+## R-193 — The compile check is host-only; that is its known limit *(closes RQ-132)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+"Accept host-only, and record it as the check's known limit. Kernel and ledger unit tests run on the host by nature
+(the SPIR-V target can't run a test harness), so the check sees every unit test that can exist. Any platform-gated
+unit test that ever appears gets ruled on then."
+
+*Applied note:* "the host" is not one platform. The check runs on Linux in CI, while tests also run on the human's
+Mac, so a unit test gated on `target_os = "macos"` would run there with `validation` linked, unseen by the Linux
+check. The check therefore sees every unit test that can exist on Linux. The ruling stands: such a test is ruled on
+when it appears.

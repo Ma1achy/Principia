@@ -2129,3 +2129,16 @@ Tick any you don't accept.
 - **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): default features, host target.
 - **Needed:** default features only, `--all-features`, or each feature set in turn.
 - **Ruling:** R-192 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-132: R-191/R-192 — the compile check sees only unit tests that compile on the host *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-192 — The compile check builds with `--all-features` *(closes RQ-131)*".
+- **Silence:** R-192 settles features, not targets. The check runs on the CI host (Linux). A kernel or ledger unit
+  test gated on another platform (`#[cfg(all(test, target_os = "windows"))]`) is never compiled by it.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): the host target only.
+- **Needed:** accept host-only, check on more hosts, or forbid target-gated unit tests.
+- **Ruling:** R-193 (decisions.md). Closed in TASK-M0-01 (PR #16).
