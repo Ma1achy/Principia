@@ -2113,4 +2113,4 @@ Tick any you don't accept.
   (a) fail a bracket group holding `path` followed by `=` anywhere in kernel and ledger `src/`, not only in an
   attribute (it catches `[path = …]` passed as a `tt`, and not `let path = …`); or (b) fail a `tt` fragment spliced
   directly before a bracket group or another `$` fragment at item position in a macro body.
-- **Ruling:** open.
+- **Ruling:** R-191 (decisions.md): moot; the compile check replaces the token rules. Closed in TASK-M0-01 (PR #16).

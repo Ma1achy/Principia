@@ -1426,3 +1426,20 @@ chose "Allow the OUT_DIR form":
   include a macro variable (`#[$a]`, `#[$($t)*]`, `#[cfg_attr(…, $a)]`).
 - qa's suggested rule, failing on any `path` followed by `=` anywhere, is not adopted. It would catch ordinary bindings
   such as `let path = …`. The macro-variable attribute rule closes the same bypass.
+
+## R-191 — R-187's integration-test condition is checked by compiling, not by reading tokens *(amends R-189, R-190; closes RQ-130)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+The token scan behind R-187's condition ("in kernel and ledger, any test that uses validation must be an integration
+test") was bypassed in review of PR #16 again and again by macro constructions: aliases, metavariable attributes,
+attributes assembled from `tt` fragments (RQ-130), shadowed builtins. Asked whether to replace it, the human chose
+"Compile check":
+- `cargo xtask deps` copies the workspace to a temporary directory, removes `validation` from kernel's and ledger's
+  dev-dependencies there, and runs `cargo check -p kernel -p ledger --lib --tests`. Any use of the validation crate
+  by a unit test, whatever the route (alias, macro, `#[path]`, `include!`), fails to compile, and the check fails,
+  showing the compiler's error.
+- The token rules of R-189 and R-190 are lifted: `#[path]`, `include!` (the `OUT_DIR` form included) and attributes
+  holding macro variables are no longer forbidden by `xtask deps`. A local item named `validation` is allowed again.
+  The token scanner is removed. The check that kernel's and ledger's targets sit under `src/` stays.
+- RQ-130 is moot and closed by this ruling.
+- qa gets a one-round exception to replace or remove its own token-level tests with compile-level ones.
