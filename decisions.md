@@ -1497,3 +1497,17 @@ Standing rule, "so this doesn't recur":
 - Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
 
 *Recorded before R-196, which was given earlier and is recorded with TASK-M0-04.*
+
+## R-196 — Mutation testing joins the QA gate
+*26 Sep 2026 · given before R-197, recorded with TASK-M0-04*
+
+"mutation testing joins the QA gate.
+- M0-04 adds cargo-mutants to CI: per PR, `cargo mutants --in-diff` on the changed code (with a per-PR time limit);
+  nightly, a full run written as a report.
+- Every surviving mutant in a PR's diff is a QA finding: kill it with a test, or justify it as equivalent in the
+  review. QA's checklist gains that line.
+- Excluded: generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing.
+- If the time limit makes per-PR runs impractical, raise it in REVIEW_QUEUE rather than dropping it."
+
+*Open when recorded:* the per-PR time limit has no value; it becomes a calibration requirement (R-71). The nightly
+workflow is TASK-M0-19's deliverable, so the nightly run cannot land before it. Where R-196's work goes is RQ-135.

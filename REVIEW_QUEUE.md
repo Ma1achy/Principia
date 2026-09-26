@@ -2182,3 +2182,53 @@ Tick any you don't accept.
   (c) a workspace `clippy.toml` raising `type-complexity-threshold`, with the reason recorded;
   (d) allow the lint in test targets only (e.g. `[lints.clippy]` in the workspace or crate manifest), with a reason.
 - **Ruling:** R-197 (decisions.md): option (a), a small named struct; no allow, no config change. Closed in PR #17.
+
+---
+
+*Found sizing TASK-M0-04 before implementation. Nothing is chosen.*
+
+## RQ-135: TASK-M0-04 is well over one reviewable PR; a proposed split *(plan, TASK-M0-04)*
+
+- **File, section:** `plan/WORKFLOW.md` § "Task files" ("One task is one reviewable PR: roughly ≤ 500 lines of
+  change"); `plan/tasks/M0/TASK-M0-04.md` ("Size: ~400 lines"); `decisions.md` § "R-196 — Mutation testing joins the
+  QA gate".
+- **Why it is over:** besides the GPU harness, the Metal probe and the CI GPU jobs, the task must (a) build the control
+  registry and `cargo xtask controls`, (b) register a control for every test already merged, which is now 82 tests
+  (80 in `xtask/tests/`, 2 in `crates/prin/tests/`; the task was sized when TASK-M0-01 had a handful), and (c) add
+  R-196's cargo-mutants gate. PR #16, with far less, came to +1545.
+- **Proposed split** (new ids take the next free numbers; they are out of build order within M0, and no suffix ids
+  are used):
+  - **TASK-M0-04** keeps the GPU harness: `gpu.rs`, `PRIN_GPU_BACKEND`, the identity and `extractBits` self-tests, the
+    `metal_hosted_probe`, the `gpu-metal`/`gpu-lavapipe` CI jobs, and `prop.rs`. Closes REQ-SYS-065. Reviewers code,
+    qa, physics. Its own tests register no controls yet (the registry comes next); TASK-M0-22 registers them.
+  - **TASK-M0-21** — the control registry (`control.rs`, `negative_control!`, the `controls` feature) and
+    `cargo xtask controls`, with its fixture tests (a test with no control, a control that passes). Not yet in
+    `cargo xtask ci`. Depends on TASK-M0-01. Reviewers code, qa. Blocked on RQ-136.
+  - **TASK-M0-22** — controls for every test merged before it (TASK-M0-01's, TASK-M0-04's, TASK-M0-21's), and
+    `controls` registered in `cargo xtask ci`. Closes REQ-VAL-007. Depends on TASK-M0-04, TASK-M0-21. Reviewers
+    code, qa.
+  - **TASK-M0-23** — R-196's per-PR job: `cargo mutants --in-diff` in `ci.yml` with the exclusions, the per-PR time
+    limit as a calibration requirement (proposed value with evidence), and qa's checklist line. Closes a new
+    requirement for R-196's per-PR gate and its calibration requirement. Depends on TASK-M0-22. Reviewers code, qa.
+  - R-196's nightly full run joins **TASK-M0-19**, which creates `nightly.yml`, as one more deliverable and a new
+    requirement.
+  - TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04, because they register controls (R-176).
+    The other tasks that depend on TASK-M0-04 (M0-05, 06, 07, 14, 15, 19, 20) keep it.
+- **Needed:** accept the split, or rule another.
+- **Ruling:** open.
+
+## RQ-136: R-176's "shared test-name attribute" needs a proc-macro crate that the crate map lacks *(build, TASK-M0-04)*
+
+- **File, section:** `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*":
+  "Tests are matched to their controls by a shared test-name attribute." `plan/tasks/M0/TASK-M0-04.md` Deliverables:
+  "matched by a shared test-name attribute (`#[control_for = "<test name>"]`)". `docs/design/principia_systems_architecture.md`
+  § "7.1 Crate map" lists no proc-macro crate.
+- **Conflict:** on stable Rust an unknown attribute such as `#[control_for = "…"]` is a compile error unless a
+  proc-macro crate defines it, and a proc-macro must live in its own crate (`proc-macro = true`). That would be a new
+  workspace crate and a new §7.1 edge (validation → the proc-macro crate, or every test crate → it).
+- **Options seen:** (a) add a proc-macro crate (for example `crates/validation-macros`) to §7.1 as a dev-only
+  dependency of the test crates; (b) match by name without an attribute: `negative_control!(test_name, "description",
+  control)` names its test in the macro call, and `cargo xtask controls` pairs names; (c) an attribute that stable
+  Rust already accepts, such as a tool attribute or `#[doc]` marker, read by `xtask controls` from the source.
+- **Needed:** which matching mechanism, and if (a), the crate's place in §7.1.
+- **Ruling:** open.
