@@ -1,12 +1,12 @@
 # TASK-M8-28 — Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128
+- **Closes:** REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128, REQ-TOOL-135
 - **Depends on:** TASK-M8-26, TASK-M8-27
 - **Needs (earlier milestones):** REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053
 - **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** PIT-3
-- **Size:** ~500 lines
+- **Size:** ~580 lines (~500 before R-207's Chrome Trace export; over budget, to be ruled at M8, R-204)
 
 ## Goal
 The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live / pause / Capture, and shows §G5's views (frame-time trace with p50 / p95 / p99 / worst, the donut, stacked bars for 60 frames, the substeps-per-pixel histogram with the cap marked at N_max, the main-thread flame chart, GPU timestamps per pass, memory over time, live allocations with their 60 s change) and the Export trace, Open in Tracy and Headless render… buttons. The leak detector flags steady memory growth while idle, with "idle" and the hot-path summary defined in §G5 and the threshold and window calibrated. The exported JSON carries precomputed leak flags and hot-path summaries within schema v1. `prin profile query "…" --live` queries a running app and answers in the same schema.
@@ -19,11 +19,14 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
 - `decisions.md` § "R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-207 — Export trace also writes the Chrome Trace Event format"
+- `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 
 ## Deliverables
 - `crates/gui/src/windows/profiler/{timeline,flame,gpu,memory,counters}.rs`.
 - `crates/engine/src/telemetry/{leak,hot_path}.rs` — the detector and summaries written into the v1 export.
 - `crates/prin/src/cmd/profile_query.rs` + an engine-side query endpoint.
+- `crates/engine/src/telemetry/chrome_trace.rs` — Export trace also writes the Chrome Trace Event format alongside schema v1: CPU scopes as complete events, GPU passes on their own track, counters as counter events (R-207).
 - Doc change: `docs/gui/principia_render_gui_spec.md` § "Profiler" (idle; the hot-path summary's fields within schema v1).
 - Calibration proposal: idle traces with and without an injected leak; the threshold and window.
 
@@ -34,6 +37,7 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `cargo test -p prin profile_query_live` — 'top 10 scopes by p95' against a running app returns ten v1-schema scope records (REQ-TOOL-101).
 - Doc review of `docs/gui/principia_render_gui_spec.md` § "Profiler" — the Profiler section defines idle and lists the hot-path summary's fields within profiler schema v1; the physics reviewer approves the doc change before merge (REQ-TOOL-114).
 - `cargo xtask gate leak-detector` — the proposal shows idle memory traces with and without an injected leak and a threshold and window that flag the leak and not the clean trace; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-TOOL-115).
+- `cargo test -p engine chrome_trace_export` — a captured trace exported in the Chrome Trace Event format loads as valid trace JSON and round-trips its span count; CPU scopes are complete (`ph: X`) events, GPU passes sit on their own track, counters are counter (`ph: C`) events (REQ-TOOL-135).
 - Definition: the `--live` transport and discovery written into render_gui_spec's Profiler section and approved by the physics reviewer (REQ-TOOL-128).
 
 ## Notes

@@ -18,13 +18,13 @@
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 160 |
-| TOOL | 133 |
+| TOOL | 134 |
 | VAL | 150 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1233** |
+| **total** | **1234** |
 
-Of these: 96 calibration, 101 definition, 1036 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 96 calibration, 101 definition, 1037 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -38,14 +38,14 @@ Of these: 96 calibration, 101 definition, 1036 obligation. Retired (kept for the
 | M5 | 158 |
 | M6 | 134 |
 | M7 | 112 |
-| M8 | 229 |
+| M8 | 230 |
 
 ## Sections
 
-894 sections in 46 files: 785 yield at least one requirement; 109 yield none and are listed below with the reason.
+897 sections in 46 files: 786 yield at least one requirement; 111 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 61 |
+| informative only | 63 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -70,6 +70,8 @@ Of these: 96 calibration, 101 definition, 1036 obligation. Retired (kept for the
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | informative only | plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement |
 | R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)* | informative only | process ruling; recorded in CLAUDE.md |
 | R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)* | informative only | plan ruling (a task's size and a dependency); applied in plan/tasks.yaml and the TASK-M0-16 and TASK-M0-22 task files; no requirement |
+| R-204 — When to ask the human | informative only | process ruling; recorded in CLAUDE.md |
+| R-205 — TASK-M0-04 is accepted at 570 code lines | informative only | process ruling; a size acceptance for one PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
