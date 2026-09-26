@@ -1467,3 +1467,14 @@ unit test that ever appears gets ruled on then."
 Mac, so a unit test gated on `target_os = "macos"` would run there with `validation` linked, unseen by the Linux
 check. The check therefore sees every unit test that can exist on Linux. The ruling stands: such a test is ruled on
 when it appears.
+
+## R-194 — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked in review of PR #16, the human chose:
+1. "3×2 matrix + known limit": the check runs with `--no-default-features`, with default features and with
+   `--all-features`, each in the dev and the release profile. Any other cfg combination (for example a test gated on
+   feature `a` on and `b` off) is a known limit, ruled on if it ever appears, as R-193 does for platforms.
+2. "Yes, like integration tests": a kernel or ledger doctest may use `validation`. rustdoc compiles each doctest as a
+   separate crate that links the library from outside, so R-187's two-copies problem cannot arise. The check does not
+   compile doctests.

@@ -2142,3 +2142,20 @@ Tick any you don't accept.
 - **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): the host target only.
 - **Needed:** accept host-only, check on more hosts, or forbid target-gated unit tests.
 - **Ruling:** R-193 (decisions.md). Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-133: R-192 — unit tests gated on a feature being off, on the release profile, and doctests *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-192 — The compile check builds with `--all-features` *(closes RQ-131)*";
+  `decisions.md` § "R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on
+  prin *(closes RQ-129)*" ("any test that uses validation must be an integration test (tests/), not a unit test").
+- **Gaps:** a unit test under `#[cfg(all(test, not(feature = "gpu")))]` runs under plain `cargo test` but is never
+  compiled by an `--all-features` check; one under `#[cfg(all(test, not(debug_assertions)))]` runs under
+  `cargo test --release` but is never compiled by a dev-profile check. R-187 does not name doctests.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): `--all-features`, dev profile, doctests
+  not compiled.
+- **Needed:** which feature sets and profiles the check builds; whether a doctest may use `validation`.
+- **Ruling:** R-194 (decisions.md). Closed in TASK-M0-01 (PR #16).
