@@ -460,3 +460,38 @@ fn deps_the_compile_check_runs_only_with_the_dev_dependency() {
     let (ok, stdout, stderr) = run_workspace(&root);
     assert!(ok && stdout.contains("compile check passed: ledger compiles"), "{stdout}\n{stderr}");
 }
+
+/// R-187, R-191: `test = false` on a `[[bin]]` keeps its unit tests out of `cargo check --tests`, but
+/// `cargo test --bin` still builds them with the dev-dependency, so the check sets `test = true` on every binary. A
+/// unit test that uses validation fails, in a `[[bin]]` with a path, in one that names an auto-discovered
+/// `src/bin/` file, and in the inline-array form `bin = [{ … }]`. Controls: each workspace compiles with the
+/// dev-dependency, and the same manifest without the use passes the check.
+#[test]
+fn deps_a_unit_test_of_a_binary_with_test_false_fails() {
+    let head = "[package]\nname = \"kernel\"\nversion = \"0.1.0\"\nedition = \"2021\"\n";
+    let tail = "\n[build-dependencies]\nledger = { path = \"../ledger\" }\n\n\
+                [dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
+    let cases: [(&str, String, &str); 3] = [
+        ("bin_path", format!("{head}\n[[bin]]\nname = \"k\"\npath = \"src/main.rs\"\ntest = false\n{tail}"), "src/main.rs"),
+        ("bin_auto", format!("{head}\n[[bin]]\nname = \"tool\"\ntest = false\n{tail}"), "src/bin/tool.rs"),
+        (
+            "bin_inline",
+            format!("bin = [{{ name = \"k\", path = \"src/main.rs\", test = false }}]\n\n{head}{tail}"),
+            "src/main.rs",
+        ),
+    ];
+    let with_use = format!("fn main() {{}}\n\n{UNIT_TEST}");
+    let without_use = "fn main() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
+    for (case, manifest, main) in cases {
+        let main = format!("crates/kernel/{main}");
+        let toml = "crates/kernel/Cargo.toml";
+        let root = cargo_workspace(case, &[], &[(toml, &manifest), (&main, &with_use)]);
+        assert_fails_to_compile(case, &root, "kernel", &main);
+
+        let control = format!("{case}_control");
+        let root = cargo_workspace(&control, &[], &[(toml, &manifest), (&main, without_use)]);
+        let (ok, stdout, stderr) = run_workspace(&root);
+        assert!(ok, "{control}: the same binary without the use fails xtask deps:\n{stderr}");
+        assert!(stdout.contains("compile check passed: kernel compiles"), "{control}: {stdout}");
+    }
+}

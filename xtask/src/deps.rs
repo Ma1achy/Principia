@@ -388,7 +388,8 @@ pub enum CompileCheck {
 /// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --all-features --offline` must pass, with
 /// `CARGO_TARGET_DIR` at `CHECK_TARGET_DIR` under the workspace's target directory. The copy also leaves out their
 /// integration-test, example and bench targets: those are not unit tests, and an integration test may use
-/// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode. A use
+/// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode; each has
+/// `test = true` there, so a `test = false` one is compiled in test mode too (`strip_manifest`). A use
 /// of `validation` by a unit test, by any route, then fails to compile, and the error carries the compiler's output.
 /// `--all-features` (R-192): a unit test behind any feature of kernel or ledger is compiled too.
 ///
@@ -467,8 +468,14 @@ fn check_copy(
 }
 
 /// In the manifest at `path` (a copy): removes each of `keys` from every dev-dependency table (`[dev-dependencies]`
-/// and each `[target.'…'.dev-dependencies]`), and leaves out every integration-test, example and bench target
-/// (`autotests`, `autoexamples` and `autobenches` off; `[[test]]`, `[[example]]` and `[[bench]]` removed).
+/// and each `[target.'…'.dev-dependencies]`), leaves out every integration-test, example and bench target
+/// (`autotests`, `autoexamples` and `autobenches` off; `[[test]]`, `[[example]]` and `[[bench]]` removed), and sets
+/// `test = true` on `[lib]` and on every `[[bin]]`. `--tests` selects only targets with `test = true`, and `--lib`
+/// checks the library outside test mode, so a `test = false` target would keep its `#[cfg(test)]` code out of the
+/// check, while `cargo test --lib` (or `--bin`) still builds that code with the dev-dependency. An auto-discovered
+/// binary with no `[[bin]]` entry already has `test = true`. No other manifest key keeps a library's or binary's
+/// `#[cfg(test)]` code out of `cargo check --lib --tests` (`harness = false`, `doctest = false`, `proc-macro` and
+/// `crate-type` leave it in).
 fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
@@ -491,6 +498,26 @@ fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
     }
     for kind in ["test", "example", "bench"] {
         doc.remove(kind);
+    }
+    if let Some(lib) = doc.get_mut("lib").and_then(toml_edit::Item::as_table_like_mut) {
+        lib.insert("test", toml_edit::value(true));
+    }
+    match doc.get_mut("bin") {
+        Some(toml_edit::Item::ArrayOfTables(bins)) => {
+            for bin in bins.iter_mut() {
+                bin.insert("test", toml_edit::value(true));
+            }
+        }
+        Some(toml_edit::Item::Value(toml_edit::Value::Array(bins))) => {
+            for bin in bins.iter_mut() {
+                let bin = bin
+                    .as_inline_table_mut()
+                    .ok_or_else(|| format!("{}: a `bin` entry is not a table", path.display()))?;
+                bin.insert("test", toml_edit::Value::from(true));
+            }
+        }
+        Some(_) => return Err(format!("{}: `bin` is not an array of tables", path.display())),
+        None => {}
     }
     let package = doc
         .get_mut("package")
