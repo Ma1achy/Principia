@@ -491,29 +491,47 @@ fn deps_a_unit_test_using_validation_fails_and_an_integration_test_passes() {
 /// each (R-189, R-190). Control: each workspace compiles with the dev-dependency (`assert_fails_to_compile`).
 #[test]
 fn deps_every_route_to_validation_from_a_unit_test_fails() {
+    /// One route: the kernel lib.rs that takes it, an optional extra file (path, contents) it brings in, and the
+    /// file the compiler's error must name.
+    struct Route {
+        name: &'static str,
+        lib_rs: &'static str,
+        extra_file: Option<(&'static str, &'static str)>,
+        error_file: &'static str,
+    }
     let outside = ("crates/kernel/outside/t.rs", INTEGRATION_TEST);
-    let cases: [(&str, &str, Option<(&str, &str)>, &str); 4] = [
-        (
-            "alias",
-            "#[cfg(test)]\nuse validation as v;\n\n#[cfg(test)]\n#[test]\nfn t() {\n    let _ = v::Harness;\n}\n",
-            None,
-            "crates/kernel/src/lib.rs",
-        ),
-        (
-            "macro",
-            "macro_rules! from {\n    ($k:ident) => {\n        #[cfg(test)]\n        #[test]\n        fn t() {\n            \
+    let routes = [
+        Route {
+            name: "alias",
+            lib_rs: "#[cfg(test)]\nuse validation as v;\n\n#[cfg(test)]\n#[test]\nfn t() {\n    let _ = v::Harness;\n}\n",
+            extra_file: None,
+            error_file: "crates/kernel/src/lib.rs",
+        },
+        Route {
+            name: "macro",
+            lib_rs: "macro_rules! from {\n    ($k:ident) => {\n        #[cfg(test)]\n        #[test]\n        fn t() {\n            \
              let _ = $k::Harness;\n        }\n    };\n}\n\nfrom!(validation);\n",
-            None,
-            "crates/kernel/src/lib.rs",
-        ),
-        ("path", "#[cfg(test)]\n#[path = \"../outside/t.rs\"]\nmod t;\n", Some(outside), "outside/t.rs"),
-        ("include", "#[cfg(test)]\nmod t {\n    include!(\"../outside/t.rs\");\n}\n", Some(outside), "outside/t.rs"),
+            extra_file: None,
+            error_file: "crates/kernel/src/lib.rs",
+        },
+        Route {
+            name: "path",
+            lib_rs: "#[cfg(test)]\n#[path = \"../outside/t.rs\"]\nmod t;\n",
+            extra_file: Some(outside),
+            error_file: "outside/t.rs",
+        },
+        Route {
+            name: "include",
+            lib_rs: "#[cfg(test)]\nmod t {\n    include!(\"../outside/t.rs\");\n}\n",
+            extra_file: Some(outside),
+            error_file: "outside/t.rs",
+        },
     ];
-    for (case, lib, extra, file) in cases {
-        let mut files = vec![("crates/kernel/src/lib.rs", lib)];
-        files.extend(extra);
-        let root = cargo_workspace(&format!("route_{case}"), &["kernel"], &files);
-        assert_fails_to_compile(case, &root, "kernel", file);
+    for route in routes {
+        let mut files = vec![("crates/kernel/src/lib.rs", route.lib_rs)];
+        files.extend(route.extra_file);
+        let root = cargo_workspace(&format!("route_{}", route.name), &["kernel"], &files);
+        assert_fails_to_compile(route.name, &root, "kernel", route.error_file);
     }
 }
 
