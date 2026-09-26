@@ -5,8 +5,22 @@ use proptest::strategy::Strategy;
 use proptest::test_runner::{Config, RngSeed, TestCaseError, TestError, TestRunner};
 use std::fmt;
 
-/// Cases per property. Proposed value, pending the calibration requirement REVIEW_QUEUE RQ-140 asks for (R-71).
+/// Cases per property: the calibration value of REQ-VAL-151 (R-203, R-71). 256 is the proposed value, proptest's own
+/// default; it is provisional until the human confirms or changes it at the M0 gate, and is marked so (R-182).
 pub const CASES: u32 = 256;
+
+/// True while [`CASES`] is the proposed, unconfirmed value (R-182, R-203). Set false when the M0 gate confirms it.
+pub const CASES_PROVISIONAL: bool = true;
+
+/// [`CASES`] with its status, as the tests print it.
+pub fn cases_status() -> String {
+    let status = if CASES_PROVISIONAL {
+        "provisional until confirmed at the M0 gate"
+    } else {
+        "confirmed"
+    };
+    format!("prop::CASES = {CASES} ({status}; REQ-VAL-151, R-203)")
+}
 
 /// The config every property test uses: [`CASES`] cases, the given seed, no persistence file (the seed replaces it).
 pub fn config(seed: u64) -> Config {
@@ -126,5 +140,42 @@ mod tests {
         // Control: another seed fails on a different first draw, so the equality above is the seed's doing.
         let (_, other) = first_failing_draw(printed.wrapping_add(1));
         assert_ne!(draw, other, "control: two seeds drew the same failing case");
+    }
+
+    /// Runs a property that always holds under `config` and counts the cases it ran.
+    fn cases_run(config: Config) -> u32 {
+        let runs = Cell::new(0u32);
+        TestRunner::new(config)
+            .run(&any::<u32>(), |_| {
+                runs.set(runs.get() + 1);
+                Ok(())
+            })
+            .expect("the property holds");
+        runs.get()
+    }
+
+    #[test]
+    fn prop_seed_runs_the_provisional_case_count() {
+        let status = cases_status();
+        println!("{status}");
+        assert!(
+            status.contains("provisional"),
+            "CASES is provisional until the M0 gate (R-182, R-203): {status}"
+        );
+        assert_eq!(
+            cases_run(config(seed())),
+            CASES,
+            "the shared config ran a different case count"
+        );
+        // Control: a config with half the cases runs half, so the count above is the config's doing.
+        let half = Config {
+            cases: CASES / 2,
+            ..config(seed())
+        };
+        assert_ne!(
+            cases_run(half),
+            CASES,
+            "control: the case count is not read"
+        );
     }
 }
