@@ -389,8 +389,8 @@ fn deps_every_route_to_validation_from_a_unit_test_fails() {
     }
 }
 
-/// R-192: the compile check builds with `--all-features`, so a kernel unit test behind a feature (`x`, off by default)
-/// that uses validation fails. Control: the same workspace with the use removed passes, so it is the use, not the
+/// R-192, R-194: the compile check builds with `--all-features`, so a kernel unit test behind a feature (`x`, off by
+/// default) that uses validation fails, and only that feature set sees it. Control: the same workspace with the use removed passes, so it is the use, not the
 /// feature, that fails the check.
 #[test]
 fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
@@ -406,13 +406,155 @@ fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
     let root = cargo_workspace("feature_unit", &[], &[(toml, manifest), (lib, with_use)]);
     let (ok, _, stderr) = run_workspace(&root);
     assert!(!ok, "a kernel unit test behind feature x that uses validation passes xtask deps");
-    assert!(stderr.contains("R-192") && stderr.contains("--all-features"), "stderr does not cite R-192:\n{stderr}");
+    assert!(
+        stderr.contains("R-194") && stderr.contains("with --all-features in the dev profile"),
+        "stderr does not name --all-features in the dev profile and cite R-194:\n{stderr}"
+    );
     assert!(stderr.contains("error[E04") && stderr.contains(lib), "stderr does not show the compiler's error:\n{stderr}");
 
     let root = cargo_workspace("feature_unit_control", &[], &[(toml, manifest), (lib, without_use)]);
     let (ok, stdout, stderr) = run_workspace(&root);
     assert!(ok, "control: the same unit test behind feature x without the use fails xtask deps:\n{stderr}");
     assert!(stdout.contains("compile check passed: kernel compiles"), "control: {stdout}");
+}
+
+/// A kernel manifest with the validation dev-dependency and the given `[features]` table.
+fn kernel_manifest(features: &str) -> String {
+    format!(
+        "[package]\nname = \"kernel\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\n{features}\n\
+         [build-dependencies]\nledger = {{ path = \"../ledger\" }}\n\n\
+         [dev-dependencies]\nvalidation = {{ path = \"../validation\" }}\n"
+    )
+}
+
+/// validation's manifest, taking kernel without its default features.
+const VALIDATION_WITHOUT_KERNEL_DEFAULTS: &str = "[package]\nname = \"validation\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
+     [dependencies]\nledger = { path = \"../ledger\" }\nkernel = { path = \"../kernel\", default-features = false }\n";
+
+/// A kernel lib whose unit test sits under `#[cfg(all(test, <gate>))]`, with or without a use of validation.
+fn gated_unit_test(gate: &str, uses: bool) -> String {
+    let body = if uses { "let _ = validation::Harness;" } else { "" };
+    format!("pub fn f() {{}}\n\n#[cfg(all(test, {gate}))]\nmod tests {{\n    #[test]\n    fn t() {{\n        {body}\n    }}\n}}\n")
+}
+
+/// R-194: a kernel unit test under `gate` that uses validation fails the check at the first run that compiles it,
+/// and the failure names that run (`expected`: its feature set and profile) and cites R-194. Premise: plain
+/// `cargo test` with `premise_args` builds and runs the test with validation linked. Control: the same workspace
+/// without the use passes, with the compile check run, so it is the use, not the gate, that fails the check.
+fn assert_gated_unit_test_fails(
+    case: &str,
+    features: &str,
+    gate: &str,
+    premise_args: &[&str],
+    expected: &str,
+    extra: &[(&str, &str)],
+) {
+    let toml = "crates/kernel/Cargo.toml";
+    let lib = "crates/kernel/src/lib.rs";
+    let manifest = kernel_manifest(features);
+
+    let mut files = vec![(toml, manifest.as_str())];
+    files.extend_from_slice(extra);
+    let with_use = gated_unit_test(gate, true);
+    let root = cargo_workspace(case, &[], &[files.as_slice(), &[(lib, with_use.as_str())]].concat());
+    let premise = Command::new(env!("CARGO"))
+        .args(["test", "--offline", "--lib", "-p", "kernel", "--manifest-path"])
+        .arg(root.join("Cargo.toml"))
+        .args(premise_args)
+        .env("CARGO_TARGET_DIR", root.join("target"))
+        .output()
+        .expect("run cargo test");
+    let stdout = String::from_utf8_lossy(&premise.stdout);
+    assert!(
+        premise.status.success() && stdout.contains("test tests::t ... ok"),
+        "{case}: premise: cargo test {premise_args:?} does not run the unit test:\n{stdout}{}",
+        String::from_utf8_lossy(&premise.stderr)
+    );
+    let (ok, _, stderr) = run_workspace(&root);
+    assert!(!ok, "{case}: a kernel unit test under {gate} that uses validation passes xtask deps");
+    assert!(stderr.contains(expected), "{case}: stderr does not name {expected:?}:\n{stderr}");
+    assert!(stderr.contains("R-194"), "{case}: stderr does not cite R-194:\n{stderr}");
+    assert!(stderr.contains("error[E04") && stderr.contains(lib), "{case}: stderr does not show the compiler's error:\n{stderr}");
+
+    let control = format!("{case}_control");
+    let without_use = gated_unit_test(gate, false);
+    let root = cargo_workspace(&control, &[], &[files.as_slice(), &[(lib, without_use.as_str())]].concat());
+    let (ok, stdout, stderr) = run_workspace(&root);
+    assert!(ok, "{control}: the same unit test without the use fails xtask deps:\n{stderr}");
+    assert!(stdout.contains("compile check passed: kernel compiles"), "{control}: {stdout}");
+}
+
+/// R-194: a unit test behind the absence of a non-default feature (`not(feature = "x")`), which plain `cargo test`
+/// builds, fails; `--all-features` alone would not see it. Control in `assert_gated_unit_test_fails`.
+#[test]
+fn deps_a_unit_test_behind_a_missing_feature_using_validation_fails() {
+    assert_gated_unit_test_fails(
+        "missing_feature",
+        "x = []\n",
+        "not(feature = \"x\")",
+        &[],
+        "with --no-default-features in the dev profile",
+        &[],
+    );
+}
+
+/// R-194: a unit test behind `not(debug_assertions)`, which `cargo test --release` builds, fails in the release
+/// profile; every dev-profile run passes it. Control in `assert_gated_unit_test_fails`.
+#[test]
+fn deps_a_unit_test_behind_the_release_profile_using_validation_fails() {
+    assert_gated_unit_test_fails(
+        "release_profile",
+        "",
+        "not(debug_assertions)",
+        &["--release"],
+        "with --no-default-features in the release profile",
+        &[],
+    );
+}
+
+/// R-194: a unit test behind the absence of a default feature (`not(feature = "d")`, `default = ["d"]`), which only
+/// `cargo test --no-default-features` builds, fails; neither default features nor `--all-features` see it. Control
+/// in `assert_gated_unit_test_fails`. validation takes kernel with `default-features = false` here: with kernel's
+/// defaults, cargo would unify `d` back on for `cargo test --no-default-features`, and the test would never be built.
+#[test]
+fn deps_a_unit_test_present_only_without_default_features_using_validation_fails() {
+    assert_gated_unit_test_fails(
+        "no_default_features",
+        "default = [\"d\"]\nd = []\n",
+        "not(feature = \"d\")",
+        &["--no-default-features"],
+        "with --no-default-features in the dev profile",
+        &[("crates/validation/Cargo.toml", VALIDATION_WITHOUT_KERNEL_DEFAULTS)],
+    );
+}
+
+/// R-194: a kernel doctest in src/ may use validation; rustdoc builds it as a separate crate, and the check does not
+/// compile doctests. Premise: `cargo test --doc` compiles and runs the doctest with validation linked. Control: the
+/// same use in a unit test in the same file fails the check.
+#[test]
+fn deps_a_doctest_using_validation_passes() {
+    let lib = "crates/kernel/src/lib.rs";
+    let doc = "/// ```\n/// let _ = validation::Harness;\n/// kernel::f();\n/// ```\npub fn f() {}\n";
+    let root = cargo_workspace("doctest", &["kernel"], &[(lib, doc)]);
+    let premise = Command::new(env!("CARGO"))
+        .args(["test", "--offline", "--doc", "-p", "kernel", "--manifest-path"])
+        .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
+        .output()
+        .expect("run cargo test --doc");
+    let stdout = String::from_utf8_lossy(&premise.stdout);
+    assert!(
+        premise.status.success() && stdout.contains("1 passed"),
+        "premise: cargo test --doc does not run the doctest:\n{stdout}{}",
+        String::from_utf8_lossy(&premise.stderr)
+    );
+    let (ok, stdout, stderr) = run_workspace(&root);
+    assert!(ok, "a kernel doctest that uses validation fails xtask deps:\n{stderr}");
+    assert!(stdout.contains("compile check passed: kernel compiles"), "{stdout}");
+
+    let with_unit = format!("{doc}\n#[cfg(test)]\nmod tests {{\n    #[test]\n    fn t() {{\n        let _ = validation::Harness;\n    }}\n}}\n");
+    let root = cargo_workspace("doctest_control", &["kernel"], &[(lib, &with_unit)]);
+    assert_fails_to_compile("doctest_control", &root, "kernel", lib);
 }
 
 /// R-191 allows a local item named validation again: a unit test that uses kernel's own `mod validation` passes.
