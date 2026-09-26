@@ -1,15 +1,15 @@
-# TASK-M0-04 — The test harness: native wgpu self-test dispatch, proptest and negative controls
+# TASK-M0-04 — The test harness: native wgpu self-test dispatch and proptest
 
 - **Milestone:** M0
-- **Closes:** REQ-VAL-007, REQ-SYS-065
+- **Closes:** REQ-SYS-065
 - **Depends on:** TASK-M0-01
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-9
-- **Size:** ~400 lines
+- **Size:** ~380 lines
 
 ## Goal
-`crates/validation` carries the shared test harness. A native in-process `wgpu` harness opens a headless device (requesting no optional features), compiles a WGSL compute module, dispatches it over storage buffers and reads the result back in the same process (parity_contract §6). A shared proptest configuration records its seed on failure. And a negative-control registry: every test registers the discriminating control that must make it fail — a mutation, a contaminated input, a sign-flipped variant or a comparison that must differ — and `cargo xtask controls` runs every control and fails if any control passes or any test has none, so no test in the suite is one that cannot fail (philosophy §4.4; pitfalls §9's general form).
+`crates/validation` carries the shared test harness. A native in-process `wgpu` harness opens a headless device (requesting no optional features), compiles a WGSL compute module, dispatches it over storage buffers and reads the result back in the same process (parity_contract §6). A shared proptest configuration records its seed on failure. The harness is shown able to fire before anything relies on it: its self-test includes the `extractBits` sign-extension failure of pitfalls §9. The negative-control registry that was once part of this task is TASK-M0-21, and TASK-M0-22 registers this task's controls (R-198).
 
 ## References
 - `docs/contracts/principia_parity_contract.md` § "6. The harness"
@@ -20,28 +20,26 @@
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
 - `decisions.md` § "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
-- `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+- `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
 
 ## Deliverables
 - `crates/validation/src/gpu.rs` — `GpuHarness::new()` (headless, no surface, no optional features; the backend is read from `PRIN_GPU_BACKEND=metal|vulkan`, and an unset or unknown value is an error naming the variable, R-169), `run_wgsl(module, entry, inputs) -> Vec<u32>`, and the adapter info (name, backend, driver) exposed for TASK-M0-19's session header.
-- `crates/validation/src/control.rs` — the negative-control registry (`negative_control!(test, description, control)`) and a `controls` feature under which each control runs its test against the control input. A test and its control are matched by a shared test-name attribute (`#[control_for = "<test name>"]`); crates reach the macro through a dev-dependency on `crates/validation` (R-176).
 - `crates/validation/src/prop.rs` — the shared proptest config (case count, seed printed on failure).
-- `xtask/src/controls.rs` — `cargo xtask controls`: lists the workspace's tests, runs `cargo test --features controls` in each crate that declares the feature (a crate without it is skipped and reported, not failed, R-176), and fails when a control passes or a test in a controls crate has no control; registered in `cargo xtask ci`.
-- Controls for TASK-M0-01's `deps` tests, the only tests merged before this task (TASK-M0-02 and TASK-M0-03 now depend on this one and register their own, R-176).
-- `.github/workflows/ci.yml` — two GPU jobs on GitHub-hosted runners (R-169, R-186): `gpu-metal` on `runs-on: macos-15` (Apple silicon, paravirtual Metal) with `PRIN_GPU_BACKEND=metal`, for the Metal correctness suites only, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`. *Dormant (R-186):* R-174's same-repository guard, `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`, applies to a self-hosted job and is added back only if one is (R-174).
-- Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads.
+- `.github/workflows/ci.yml` — two GPU jobs on GitHub-hosted runners (R-169, R-186): `gpu-metal` on `runs-on: macos-15` (Apple silicon, paravirtual Metal) with `PRIN_GPU_BACKEND=metal`, for the Metal correctness suites only, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`; `gpu-metal` also runs `metal_hosted_probe`. *Dormant (R-186):* R-174's same-repository guard, `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`, applies to a self-hosted job and is added back only if one is (R-174).
+- Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads; `metal_hosted_probe`.
 
 ## Acceptance tests
-- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu, in CI on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110, R-186).
-- `cargo test -p validation gpu_harness_can_fire` — on words with bit 31 set, the i32 `extractBits` dispatch differs from the u32 one: the harness's reachable output includes the sign-extension failure.
+- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu, in CI on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110, R-186) (REQ-SYS-065).
+- `cargo test -p validation gpu_harness_can_fire` — on words with bit 31 set, the i32 `extractBits` dispatch differs from the u32 one: the harness's reachable output includes the sign-extension failure (pitfalls §9).
 - `cargo test -p validation metal_hosted_probe`, the first check on `macos-15` (R-186): wgpu finds an adapter whose backend is Metal, and the harness's M0 fixture, the 2¹⁶-word identity dispatch, round-trips bit-exact. If it fails or is flaky (any failure in 10 consecutive runs), stop and raise a REVIEW_QUEUE entry proposing the self-hosted runner. The agent then scripts its setup, and the human approves it (REQ-SYS-065).
 - CI log on the PR head: `gpu-metal` (macos-15) and `gpu-lavapipe` (ubuntu-latest) each run `gpu_harness` green, and the adapter info each prints names the Metal and the Vulkan (llvmpipe/lavapipe) backend; review checklist (code): no job uses a self-hosted runner (REQ-SYS-065).
 - `cargo test -p validation gpu_backend_env` — `PRIN_GPU_BACKEND` unset or `dx12` fails naming the variable; `vulkan` and `metal` select that backend (REQ-SYS-065).
-- `cargo xtask controls` — every test in the workspace has a registered negative control and every control makes its test fail; a fixture test with no control, and one whose control passes, each fail the command (REQ-VAL-007).
-- Review checklist (qa §3): no test is arithmetically impossible or true by construction (the n_hot < N² quantile case, a distinct-value count bounded below the claimed effect) (REQ-VAL-007).
+- `cargo test -p validation prop_seed` — a property made to fail prints the seed it failed on, and re-running with that seed fails on the same case.
 
 ## Notes
-- Every later task's tests register their controls here; the qa reviewer checks each control is discriminating (qa §3).
+- R-198 split the old TASK-M0-04: the control registry and `cargo xtask controls` are TASK-M0-21; controls for every test merged before TASK-M0-22, this task's among them, and `controls` in `cargo xtask ci` are TASK-M0-22 (which closes REQ-VAL-007); R-196's per-PR mutation gate is TASK-M0-23; its nightly run is TASK-M0-19.
+- This task's tests register no negative controls, because the registry does not exist yet; TASK-M0-22 registers them (R-198). Each self-test above is still shown able to fire in the PR: `gpu_harness_can_fire` is its own discriminating comparison, and the PR shows each other test going red on a contaminated input (qa §3).
+- Reviewers and pitfalls are unchanged by the split: `physics` stays because the `extractBits` self-test is a pitfall §9 regression (PIT-9), and PIT-3 because the harness is shown able to fire before its output is read.
 - R-110 as amended by R-186: the harness's CI adapters are GitHub-hosted `macos-15` (Metal) and lavapipe on `ubuntu-latest`, both on every commit; `GpuHarness` selects one from `PRIN_GPU_BACKEND` (R-169). There is no self-hosted runner, and R-174 is dormant.
 - The harness lives in `crates/validation` ("the validation harness" in the plan layout) so that the codegen self-test and, from M4, the native parity suite share one device path.

@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-VAL-003, REQ-VAL-009, REQ-VAL-138
-- **Depends on:** TASK-M0-01, TASK-M0-04
+- **Depends on:** TASK-M0-01, TASK-M0-04, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1.2, PIT-1.3, PIT-3, PIT-8
@@ -41,6 +41,7 @@
 - Proposal: the golden-image diff metric and default tolerance with evidence (same-backend re-render on native wgpu offscreen passes, a one-variable change fails); the human confirms it at the M0 gate (REQ-VAL-138).
 
 ## Notes
+- Depends on TASK-M0-04 for the harness it renders through, and on TASK-M0-22 (R-198 split TASK-M0-04) because its tests register negative controls, which come before the tests that need them (R-176).
 - No golden-image requirement exists before M1 (REQ-RENDER-024 is the first); the runner is built before them (MILESTONES M0: every verify method has its runner first).
 - RQ-79 ruled: R-110 — native golden suites run on every commit, GUI screenshots on GUI PRs and at the gates; goldens render with native wgpu offscreen from M1, and M8's Playwright suite reuses the baselines.
 - RQ-93 ruled: R-113 — the screenshot runner was built here, beside the golden-image runner; R-183 splits it into TASK-M0-20.

@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 133 |
-| VAL | 145 |
+| VAL | 149 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1228** |
+| **total** | **1232** |
 
-Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 95 calibration, 101 definition, 1036 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 67 |
+| M0 | 71 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 
 ## Sections
 
-877 sections in 46 files: 770 yield at least one requirement; 107 yield none and are listed below with the reason.
+890 sections in 46 files: 782 yield at least one requirement; 108 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 59 |
+| informative only | 60 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -68,6 +68,7 @@ Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for the
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | informative only | plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement |
+| R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)* | informative only | process ruling; recorded in CLAUDE.md |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

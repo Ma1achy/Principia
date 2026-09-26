@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-VAL-002, REQ-VAL-004
-- **Depends on:** TASK-M0-01, TASK-M0-04
+- **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -33,5 +33,6 @@
 - `cargo test -p validation gate_report` — a report missing its scatter, region-count or negative-results section is refused; a conclusion from fewer regions than declared is flagged (REQ-VAL-002).
 
 ## Notes
+- Depends on TASK-M0-22 in place of TASK-M0-04 (R-198 split it): this task's tests register negative controls, which come before the tests that need them (R-176). TASK-M0-04 is still reached through TASK-M0-22.
 - No physics runs in M0; the gate is exercised on recorded sequences. Its first physical use is M3 (escape fraction and the other aggregate quantities).
 - RQ-93 ruled: R-113 — REQ-VAL-135 moves to M3 (TASK-M3-34 proposes it on a real converging aggregate); the runner and the gate stay here with the provisional threshold 0.1 (R-171).

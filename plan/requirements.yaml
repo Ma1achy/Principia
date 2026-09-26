@@ -15294,11 +15294,17 @@
     section: 9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN
   - file: decisions.md
     section: "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
+  - file: decisions.md
+    section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  - file: decisions.md
+    section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
   verify:
     method: review checklist
     detail: "Each test in the suite has a recorded negative control that makes it fail (mutation or contaminated input); arithmetically impossible tests (e.g. expecting thousands of distinct values from a fraction over N² = 64 footprints) and tests true by construction (n_hot < N² under a quantile rule) are rejected."
   rulings:
   - R-176
+  - R-198
+  - R-199
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\"; pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\" — 3. — CHECK THE MEASUREMENT CAN FIRE BEFORE READING IT; 9. general form: a check whose reachable output set does not include the failure."
 - id: REQ-VAL-008
@@ -17611,6 +17617,78 @@
   - R-71
   - R-166
   milestone: M3
+- id: REQ-VAL-147
+  area: VAL
+  statement: "`cargo xtask controls` must pair each test with its negative control by the test name given in `negative_control!(test_name, \"description\", control)` — no test-name attribute and no proc-macro crate (R-199) — run every control under the `controls` feature of each crate that declares it, and fail naming the test when a control leaves its test passing or when a test in such a crate has no control; a crate without the `controls` feature is skipped and reported, not failed, and tests reach the macro through a dev-dependency on `crates/validation` (R-176)."
+  source:
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
+  - file: decisions.md
+    section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
+  - file: decisions.md
+    section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  verify:
+    method: unit test
+    detail: "fixture crates run through `cargo xtask controls`: a test with a discriminating control passes; a test with no control and a test whose control leaves it passing each fail the command naming the test; a crate without the `controls` feature is reported as skipped and does not fail the command"
+  rulings:
+  - R-176
+  - R-198
+  - R-199
+  milestone: M0
+- id: REQ-VAL-148
+  area: VAL
+  statement: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, within the per-PR time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped."
+  source:
+  - file: decisions.md
+    section: R-196 — Mutation testing joins the QA gate
+  - file: decisions.md
+    section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  verify:
+    method: review checklist
+    detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events, and each exclusion names which of R-196's three categories it falls in; qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant, and with the test added it reports none"
+  rulings:
+  - R-196
+  - R-198
+  milestone: M0
+  rq:
+  - RQ-139
+- id: REQ-VAL-149
+  area: VAL
+  kind: calibration
+  statement: "The per-PR time limit of the `cargo mutants --in-diff` job (R-196) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: R-196 — Mutation testing joins the QA gate
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the limit with its evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, and the headroom the limit leaves; the job runs under that limit, marked provisional until the human confirms it at the M0 gate (R-182); if no practical limit covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
+  rulings:
+  - R-71
+  - R-182
+  - R-196
+  - R-198
+  milestone: M0
+- id: REQ-VAL-150
+  area: VAL
+  statement: "A scheduled nightly workflow must run the full `cargo mutants` over the workspace, with R-196's exclusions, and write its result as a report."
+  source:
+  - file: decisions.md
+    section: R-196 — Mutation testing joins the QA gate
+  - file: decisions.md
+    section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  verify:
+    method: review checklist
+    detail: "code: `nightly.yml` runs `cargo mutants` over the workspace with the exclusions of the per-PR job (one exclusion list, shared) and uploads the mutants report as an artifact; the report lists caught, missed, unviable and timed-out mutants"
+  rulings:
+  - R-196
+  - R-198
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

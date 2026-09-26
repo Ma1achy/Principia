@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-GEN-002, REQ-GEN-003, REQ-GEN-024
-- **Depends on:** TASK-M0-01, TASK-M0-04
+- **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** none
@@ -37,6 +37,7 @@
 - Definition: §3.8's derived-field location kind and vector type written into dd_generation_root §3.8 and approved by the physics reviewer (REQ-GEN-024).
 
 ## Notes
+- Depends on TASK-M0-22 in place of TASK-M0-04 (R-198 split it): this task's tests register negative controls, which come before the tests that need them (R-176). TASK-M0-04 is still reached through TASK-M0-22.
 - The generated-file guard (a hand edit to a generated file is detected) is REQ-GEN-010, M1; not built here.
 - The link registry (generation-root §3.9) is the second root; its requirements are M2 (REQ-GEN-013 onward), so it is not built here.
 - See Gaps: §3.8 has no location kind for a derived (not stored) catalogue field.

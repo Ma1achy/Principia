@@ -2232,3 +2232,63 @@ Tick any you don't accept.
   Rust already accepts, such as a tool attribute or `#[doc]` marker, read by `xtask controls` from the source.
 - **Needed:** which matching mechanism, and if (a), the crate's place in §7.1.
 - **Ruling:** R-199 (decisions.md). Closed in TASK-M0-04.
+
+## RQ-137: TASK-M0-22 is over one reviewable PR, and a further split leaves a part that closes nothing *(plan, TASK-M0-22)*
+
+- **File, section:** `plan/WORKFLOW.md` § "Task files": "One task is one reviewable PR: roughly ≤ 500 lines of
+  change" and "every task closes at least one" requirement; `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04,
+  M0-21, M0-22 and M0-23 *(closes RQ-135)*": "TASK-M0-22: controls for every test merged before it, and `controls`
+  registered in `cargo xtask ci`; closes REQ-VAL-007."
+- **Why it is over:** at R-198 there are 82 merged tests (80 in `xtask/tests/`, 2 in `crates/prin/tests/`), and
+  TASK-M0-04 and TASK-M0-21 add about 10 more. One `negative_control!(test_name, "description", control)` call with
+  its control input is about 6 lines after rustfmt, so ~92 controls come to ~560 lines. With the helper inputs, the
+  `controls` feature and dev-dependency in `xtask`, `prin` and `validation`, and the `cargo xtask ci` registration,
+  the estimate is ~650 lines.
+- **Why it can't simply be split:** `controls` can join `cargo xtask ci` only once every test in a controls crate has
+  its control, so the part that registers it must come last and closes REQ-VAL-007. The earlier part (for example the
+  controls for TASK-M0-01's qa test files) would close no requirement. `plan/check_plan.py` fails a task that closes
+  none, and no existing requirement belongs to it.
+- **Also:** R-198's "every test merged before it" depends on merge order. TASK-M0-16, -17 and -18 depend only on
+  TASK-M0-01 (through TASK-M0-16), so their tests may land before TASK-M0-22 and enlarge it, or after it without a
+  control (their crates may not yet declare `controls`, and are then skipped).
+- **Options seen:** (a) accept TASK-M0-22 at ~650 lines, as R-188 did for TASK-M0-01; (b) split it, with the first
+  part (controls for TASK-M0-01's qa test files, not in `cargo xtask ci`) allowed to close no requirement; (c) split
+  it, and name a requirement the first part closes; (d) something else. And whether TASK-M0-16 should depend on
+  TASK-M0-22, so that the set of tests TASK-M0-22 covers is fixed.
+- **Needed:** a ruling on the size, and on TASK-M0-16's dependency.
+
+## RQ-138: how a unit test in kernel or ledger gets its negative control *(build, TASK-M0-21)*
+
+- **File, section:** `decisions.md` § "R-187 — kernel and ledger may take validation as a dev-dependency; validation
+  never depends on prin *(closes RQ-129)*": "in kernel and ledger, any test that uses validation must be an integration
+  test (tests/), not a unit test inside src/"; `decisions.md` § "R-176 — Controls come before the tests that need them
+  *(closes G3, S2)*": "Crates without the `controls` feature are skipped, not failed."; `decisions.md` § "R-199 — A test
+  is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*".
+- **Conflict:** `negative_control!` comes from `validation`, so a unit test in `kernel` or `ledger` cannot register
+  its control beside it. If either crate declares the `controls` feature for its integration tests, `cargo xtask
+  controls` fails each of its unit tests as having no control. If it doesn't, all its tests are skipped, integration
+  tests included.
+- **Options seen:** (a) kernel and ledger keep every test as an integration test, so no unit test needs a control;
+  (b) a unit test's control is registered from an integration test in the same crate, naming the unit test, and
+  `cargo xtask controls` pairs names across a crate's targets; (c) `cargo xtask controls` checks only the targets that
+  can reach `validation`, and kernel's and ledger's unit tests are a recorded known limit, like R-193's.
+- **Needed:** which. It doesn't affect TASK-M0-21's fixtures; it affects the first task that gives kernel or ledger a
+  unit test (TASK-M0-07 onward).
+
+## RQ-139: R-196 — does a surviving mutant fail the per-PR job? *(build, TASK-M0-23)*
+
+- **File, section:** `decisions.md` § "R-196 — Mutation testing joins the QA gate": "Every surviving mutant in a PR's
+  diff is a QA finding: kill it with a test, or justify it as equivalent in the review."; `plan/WORKFLOW.md` § "The
+  unit: one task, one branch, one PR": "A red CI blocks review."
+- **Silence:** the ruling says what a survivor is (a qa finding) but not whether it turns the `mutants` job red.
+  `cargo mutants` exits non-zero when a mutant is missed. If the job fails on a survivor, an equivalent mutant
+  justified in the review keeps CI red, and the PR can't merge, unless the justification is recorded where the job
+  reads it (for example `#[mutants::skip]` on the function or an `exclude_re` entry). Both are suppressions, and
+  R-197 treats suppressing a lint as needing a comment and the code reviewer's explicit approval, and lint
+  configuration as needing a ruling.
+- **Options seen:** (a) the job reports survivors and stays green; qa raises each as a finding, and the review
+  records the justification; (b) the job fails on a survivor; an equivalent mutant is skipped with
+  `#[mutants::skip]` and a comment giving the reason, approved by the qa reviewer; (c) the job fails on a survivor;
+  equivalent mutants are listed in `.cargo/mutants.toml`, each with its reason, and a change to that list needs the
+  qa reviewer's approval; (d) something else.
+- **Needed:** which. TASK-M0-23 waits for it.

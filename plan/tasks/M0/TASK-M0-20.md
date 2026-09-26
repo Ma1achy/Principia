@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-TOOL-134
-- **Depends on:** TASK-M0-01, TASK-M0-04
+- **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-3
@@ -28,5 +28,6 @@
 - `cargo xtask screenshot selftest` — the layout case writes the capture beside its reference; the presence-only case passes, and fails naming the control when one control is removed. The runner can fire, and it exists before the first `GUI screenshot` requirement, REQ-GUI-014 in M6 (REQ-TOOL-134).
 
 ## Notes
+- Depends on TASK-M0-22 in place of TASK-M0-04 (R-198 split it): this task registers negative controls for its tests, which come before the tests that need them (R-176). TASK-M0-04 is still reached through TASK-M0-22.
 - Split from TASK-M0-06 (R-183). Its id is the next free one, because ids are never renumbered.
 - The first `GUI screenshot` requirements are M6's (REQ-GUI-014, REQ-TOOL-058). REQ-TOOL-010 was once named here as M1's, but R-153 moved it to golden images.

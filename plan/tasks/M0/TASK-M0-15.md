@@ -38,5 +38,5 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 - `cargo test -p validation unpack_without_shader_f16` — the fragment unpack self-test runs on a device without `shader-f16`, and its results match the Rust unpack (REQ-PAY-011).
 
 ## Notes
-- Negative controls (TASK-M0-04): a WGSL accessor with a shifted offset; the i32 overload; a mask over bits a round trip compares (pitfalls §9).
+- Negative controls (registered with TASK-M0-21's `negative_control!`, R-198): a WGSL accessor with a shifted offset; the i32 overload; a mask over bits a round trip compares (pitfalls §9).
 - R-110 (RQ-79), amended by R-186: GPU CI is GitHub-hosted `macos-15` (Metal) plus lavapipe on `ubuntu-latest`, on every commit; the acceptance commands above run on both.
