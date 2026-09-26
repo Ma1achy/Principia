@@ -1592,3 +1592,10 @@ If you're unsure which kind it is, apply the recommendation, mark it "applied pe
 on."
 
 *Applied note:* the marker is written "applied per R-204 — veto?", the number this rule is recorded under.
+
+## R-205 — TASK-M0-04 is accepted at 570 code lines
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked when PR #18 was ready (R-204, exceeding a budget), the human chose "Accept as one PR": TASK-M0-04's 570 code
+lines, against the ~500 budget and its ~380 estimate, stay one PR. The overage is the inline controls each test
+carries until TASK-M0-21's registry exists, rustfmt wrapping, and R-203's added test.

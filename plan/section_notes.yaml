@@ -434,3 +434,7 @@
   section: R-204 — When to ask the human
   reason: informative only
   note: process ruling; recorded in CLAUDE.md
+- file: decisions.md
+  section: R-205 — TASK-M0-04 is accepted at 570 code lines
+  reason: informative only
+  note: process ruling; a size acceptance for one PR
