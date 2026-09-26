@@ -1204,3 +1204,139 @@ Quote 3915 → 74, the current regeneration at `8600d45`. Note the original 3916
 *25 Sep 2026 · applied in step 7*
 
 The human may add one to prin-rs later.
+
+---
+
+*Rulings on the cold-read review (`plan/REVIEW_cold_read.md`, PR #9), 25 Sep 2026. The finding ids (G1, A1, …) are the
+review's. Applied in step 8.*
+
+## R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*
+*25 Sep 2026 · applied in step 8 · fills the unused number before R-169*
+
+The number R-168 was never used in step 7. It is taken here by the human, issued with the cold-read rulings.
+Aarseth–Zare + time-transformed leapfrog isn't built in v1 (R-162). REQ-INT-014 is narrowed to the occupants that are built.
+It isn't retired, and TASK-M3-02 still closes it. integrator_contract Part 2a keeps the row as an allowed future occupant,
+not a requirement.
+
+## R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M0-04 adds the GPU CI jobs: a macOS arm64 self-hosted job (Metal) and an ubuntu job with `mesa-vulkan-drivers`
+(lavapipe). `GpuHarness` picks its backend from `PRIN_GPU_BACKEND=metal|vulkan`. Every toolchain gets an install step
+in the task that first needs it: `.nvmrc` for Node (TASK-M2-08), apt for Mesa (TASK-M0-04), `rust-toolchain.toml` for the
+rust-gpu pin (TASK-M0-14).
+
+## R-170 — The crate map *(closes G2)*
+*25 Sep 2026 · applied in step 8 · the map awaits the human's confirmation*
+
+Before TASK-M0-01, systems_architecture §7 gains a "Crate map": each node of its graph assigned to a crate (`kernel`,
+`ledger`, `engine`, `render`, `gui`, `validation`, `prin`, `xtask`). The agent drafts it from §7 and R-146; the human
+confirms it; REQ-SYS-004's lint checks the crate graph against it.
+
+## R-171 — The convergence gate, defined *(closes A1, A2, T2)*
+*25 Sep 2026 · applied in step 8*
+
+- Samples are ordered coarse → fine: strides 32, 4, 1, 0, where stride 0 is unstrided (the finest).
+- r_k = |x_k − x_{k−1}| / |x_{k−1}|.
+- Pass iff r_k is strictly decreasing and the finest r_k is below the threshold.
+
+The canonical sequence (strides 32, 4, 1, 0: 0.2153, 0.4423, 0.5494, 0.0947) gives r = 1.054, 0.242, 0.828. It fails,
+because r isn't strictly decreasing. (The ruling as issued quoted the absolute steps 0.227, 0.107, 0.455; the human
+confirmed the relative values are the ones recorded.) M0 uses a provisional threshold of 0.1, named against REQ-VAL-135
+and marked provisional until M3 calibrates it. A passing fixture with strictly shrinking steps is added.
+
+## R-172 — There is no contract crate *(closes C1, C4)*
+*25 Sep 2026 · applied in step 8*
+
+The typed surfaces live in `crates/engine/src/contract/` (R-146). TASK-M0-01 and TASK-M0-08 are fixed, and so are the
+stale "pending" notes.
+
+## R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*
+*25 Sep 2026 · applied in step 8*
+
+- REQ-EVT-024 (TASK-M3-12) is the provisional tau, stated in the task file and taken inside the provisional range
+  7.04e-05 … 2.70e-02. prin-rs used `CLOSURE_TAU = 1e-3` (`src/outcome.rs:263` at `8600d45`), so that value is used and
+  cited. It is inside the range, and near its geometric mean (≈ 1.4e-03).
+- REQ-EVT-025 (TASK-M3-34), added, is the confirmed tau, inside the re-measured gap. (The ruling as issued named them
+  024a and 024b; ids take the next free number, and the human confirmed this numbering.)
+
+TASK-M3-12's stale note is removed.
+
+## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
+*25 Sep 2026 · applied in step 8*
+
+GPU jobs on the self-hosted runner run only for pushes and for PRs from this repository:
+`if: github.event.pull_request.head.repo.full_name == github.repository` (or the event is a push). Fork PRs get the CPU
+and lavapipe jobs only. The runner runs under its own macOS user account. Outside contributors need approval before any
+workflow runs.
+
+## R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
+*25 Sep 2026 · applied in step 8*
+
+GitHub won't let one account approve its own PR, so each reviewer posts a PR review headed `VERDICT: APPROVE <role>` or
+`VERDICT: CHANGES <role>`. A CI check, `reviews-complete`, passes only when every role the task file names has approved
+on the latest commit. The human merges, or a merge bot does once all the checks are green.
+
+## R-176 — Controls come before the tests that need them *(closes G3, S2)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M0-02 and TASK-M0-03 depend on TASK-M0-04, and register controls for their xtask tests. Controls reach xtask tests
+through a dev-dependency on `crates/validation`. Tests are matched to their controls by a shared test-name attribute.
+Crates without the `controls` feature are skipped, not failed.
+
+## R-177 — Cadence *(closes G4, C6)*
+*25 Sep 2026 · applied in step 8*
+
+- `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
+- `nightly.yml` (scheduled) runs bench and the survey.
+- A GUI PR is one touching `crates/gui/**` or `docs/gui/**`; screenshots run on those.
+- `gate.yml` (`workflow_dispatch`, input: milestone) runs every suite and writes the gate report.
+
+Bench is removed from the per-commit `ci`.
+
+## R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M2-08's round-trip gate composes Φ alone. The canonicaliser's fold is checked separately, on the upper hemisphere
+(R-141).
+
+## R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*
+*25 Sep 2026 · applied in step 8*
+
+"Sim data" means per-sample `SimState` payload. `QuadReduction` is a reduction: it is the one permitted automatic
+GPU→CPU return (R-142), and it is allowed.
+
+## R-180 — pr-check is item-level *(closes A5)*
+*25 Sep 2026 · applied in step 8*
+
+The PR template gives each error meter and discriminator its own line (`- meter: <name> — <statement>`,
+`- discriminator: <name> — <statement>`), and pr-check parses those lines.
+
+## R-181 — The shape-sphere round-trip bound *(closes T1)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M2-08's round trip is bounded by ≤ 1e-13 absolute, as a provisional calibration confirmed at the M2 gate.
+
+## R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M3-12's seven escape fixtures are defined in the task, with their parameters, as an R-72 definition. Any tolerance
+a PR proposes is used by CI provisionally until its gate confirms it.
+
+## R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*
+*25 Sep 2026 · applied in step 8*
+
+TASK-M0-06 splits into the golden and repro runner (TASK-M0-06) and the screenshot runner (TASK-M0-20, the next free id).
+
+## R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*
+*25 Sep 2026 · applied in step 8*
+
+- TASK-M3-12 cites gpu_determinism_note rule 6 and integrator_contract Part 4.
+- The TASK-M2-08 fixture: `ic_inspector.html`'s script is extracted with a pinned script and run on the `.nvmrc` Node
+  version, and CI reads the checked-in fixture without regenerating it.
+- The OKLab reference is Ottosson's published reference code, with its URL and revision pinned in the task.
+- Open-question citations point at specific entries.
+- The screenshot runner's argument is `<suite>`.
+- TASK-M0-02 includes the `check_plan.py` change that names archive faults.
+- TASK-M2-08 says R-14 supersedes R-12's axis wording.
+- The INDEX file count is updated.

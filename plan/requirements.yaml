@@ -1744,11 +1744,17 @@
     section: 5.2 Tests that can fail
   - file: decisions.md
     section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+  - file: decisions.md
+    section: "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
+  - file: decisions.md
+    section: R-181 — The shape-sphere round-trip bound *(closes T1)*
   verify:
     method: numerical gate
-    detail: "shape_vec(decode(u,v)) == n(u,v) to ~1e−14 over random masses and shapes"
+    detail: "Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141)"
   rulings:
   - R-14
+  - R-178
+  - R-181
   milestone: M2
 - id: REQ-CHART-021
   area: CHART
@@ -2332,6 +2338,23 @@
   - R-113
   milestone: M4
   note: Split from REQ-CHART-033 (R-113, RQ-95).
+- id: REQ-CHART-053
+  area: CHART
+  kind: calibration
+  statement: "The shape-sphere round-trip bound (max |shape_vec(Φ(u,v)) − n(u,v)|) must be calibrated: provisionally 1e−13 absolute, proposed with the measured maximum as evidence by the task that builds the inverse, used by CI provisionally, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.2 Inverse — closed form
+  - file: decisions.md
+    section: R-181 — The shape-sphere round-trip bound *(closes T1)*
+  verify:
+    method: review checklist
+    detail: "the proposal states the bound with the measured max |Δn| and its margin; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-181
+  - R-182
+  milestone: M2
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -2555,7 +2578,7 @@
   note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
 - id: REQ-INT-014
   area: INT
-  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check), Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping) and Aarseth–Zare + time-transformed leapfrog (2, 1, symplectic, reversible, owns time mapping), the last specified in Part 2a but not required to be built (R-162)."
+  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -2563,11 +2586,14 @@
     section: The table gains two rows
   - file: decisions.md
     section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: decisions.md
+    section: "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
   verify:
     method: unit test
-    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is not required to be built (R-162)"
+    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables"
   rulings:
   - R-162
+  - R-168
   milestone: M3
 - id: REQ-INT-015
   area: INT
@@ -3259,12 +3285,12 @@
   source:
   - file: decisions.md
     section: "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
-  - file: open-questions.md
-    section: Open questions
   - file: docs/design/principia_dd_integrator.md
     section: 3.2 Occupants
   - file: docs/design/principia_dd_integrator.md
     section: 6. Deferred / flagged
+  - file: open-questions.md
+    section: Audit section C — transcription checks
   verify:
     method: unit test
     detail: "Coefficients in the shared source equal the published digits; composition order test (6th-order convergence slope on a Kepler fixture)."
@@ -4050,7 +4076,7 @@
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: open-questions.md
-    section: Open questions
+    section: Pending-changes register
   verify:
     method: unit test
     detail: "Fixtures: settled hierarchical escaper (fires); bound hierarchy with settled shape but E_rel < 0 (does not fire — closure alone is only 82.8% precise); mid-encounter flicker with E_rel > 0 but |Δn̂| ≥ tau (does not fire — energy alone flickers); assert the detector has no r_esc/receding/k_esc inputs (stale three-gate remnants, R-59 D1, absent)."
@@ -4198,8 +4224,7 @@
   milestone: M3
 - id: REQ-EVT-024
   area: EVT
-  kind: calibration
-  statement: "The escape settling threshold tau (the |Δn̂| closure bound over the escape window) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  statement: "The escape detector must use a provisional settling threshold tau = 1e-3 (prin-rs CLOSURE_TAU, src/outcome.rs:263 at 8600d45), stated in TASK-M3-12 and inside the recorded range 7.04e-05 … 2.70e-02, until the confirmed tau (REQ-EVT-025) replaces it."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
@@ -4209,12 +4234,54 @@
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
   verify:
-    method: review checklist
-    detail: "a provisional tau inside the recorded 7.04e-05 … 2.70e-02 gap is used by the detector until REQ-VAL-051's re-measurement with R-29's E_rel; the proposal places tau inside the re-measured gap and shows outcomes unchanged across its middle; recorded in decisions.md"
+    method: unit test
+    detail: "the detector's tau is 1e-3, lies inside 7.04e-05 … 2.70e-02, and its definition cites its source and marks it provisional"
   rulings:
   - R-29
   - R-71
+  - R-173
+  milestone: M3
+- id: REQ-EVT-025
+  area: EVT
+  kind: calibration
+  statement: "The confirmed escape settling threshold tau (the |Δn̂| closure bound over the escape window) must be calibrated inside REQ-VAL-051's re-measured gap: proposed with its evidence by the task that measures the gap, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it replaces the provisional 1e-3."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 2.2 The criterion
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
+  verify:
+    method: review checklist
+    detail: "the proposal places tau inside the re-measured gap and shows outcomes unchanged across its middle; recorded in decisions.md"
+  rulings:
+  - R-29
+  - R-71
+  - R-173
+  milestone: M3
+- id: REQ-EVT-026
+  area: EVT
+  kind: definition
+  statement: "The escape detector's seven synthetic fixtures (hyperbolic ejection, grazing near-escape, settled bound hierarchy, mid-encounter flicker, unequal-mass E_rel, two-candidate escaper, three-way unbound with its one-bound-pair control) must be defined with every parameter and expected outcome, and reviewed by the physics reviewer."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.6 Detectors (per `STEP`, on the projected state)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+  verify:
+    method: review checklist
+    detail: "TASK-M3-12's fixture definitions give masses, positions, velocities, t_end and the expected outcome for each; the physics reviewer checks each E_rel and energy claim"
+  rulings:
+  - R-72
+  - R-182
   milestone: M3
 - id: REQ-PAY-001
   area: PAY
@@ -5178,14 +5245,14 @@
   area: PAY
   statement: "The n̂ from one window earlier must be held in a lagged register updated at the window's sampling points — macro-step boundaries for unregularised occupants, sync boundaries for regularised ones — and the payload/SimState widths must include it."
   source:
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.2 The criterion
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: review checklist
     detail: "SimState layout table lists the lagged n̂ register and the payload §1 width totals are recomputed to include it; unit test that the register is updated only at the occupant's sampling points (macro-step or sync boundaries)"
@@ -6133,10 +6200,13 @@
   source:
   - file: docs/design/principia_deep_zoom.md
     section: 3. Three-layer quadtree
+  - file: decisions.md
+    section: "R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*"
   verify:
     method: review checklist
-    detail: "milestone plan and code history show L0 → L1 → L2, with L1 having no GPU→CPU sim data"
-  rulings: []
+    detail: "milestone plan and code history show L0 → L1 → L2, with L1 returning no per-sample SimState payload GPU→CPU; QuadReduction, a reduction, is the one permitted automatic return (R-179, R-142)"
+  rulings:
+  - R-179
   milestone: M0
 - id: REQ-SCHED-002
   area: SCHED
@@ -10237,7 +10307,7 @@
   - file: decisions.md
     section: "R-51 — The OKLab coefficients are checked against Ottosson *(CO-2)*"
   - file: open-questions.md
-    section: Open questions
+    section: Audit section C — transcription checks
   verify:
     method: unit test
     detail: "dd_colouring unit test 1: round trips across a gamut lattice within tolerance; white → (1,0,0); primaries match Ottosson's published values"
@@ -15092,16 +15162,38 @@
   - R-113
   milestone: M5
   note: Split from REQ-TOOL-011 (R-113, RQ-94).
+- id: REQ-TOOL-134
+  area: TOOL
+  statement: "The GUI screenshot runner (`cargo xtask screenshot <suite>`) must exist before the first GUI screenshot requirement: it captures a GUI surface headless beside the artboard it names for layout comparison only (R-68), or asserts a presence-only case's named controls where no artboard exists (R-129)."
+  source:
+  - file: decisions.md
+    section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+  - file: decisions.md
+    section: "R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*"
+  verify:
+    method: unit test
+    detail: "cargo xtask screenshot selftest: the layout case writes its capture; the presence-only case passes, and fails naming the control when one is removed"
+  rulings:
+  - R-68
+  - R-113
+  - R-129
+  - R-183
+  milestone: M0
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.5 Verify against the formulation, not just the data
+  - file: decisions.md
+    section: R-180 — pr-check is item-level *(closes A5)*
   verify:
     method: review checklist
     detail: "Each error meter documents which quantity the occupant actually integrates; meters on non-dynamical quantities are rejected."
-  rulings: []
+  rulings:
+  - R-180
   milestone: M0
 - id: REQ-VAL-002
   area: VAL
@@ -15142,11 +15234,14 @@
     section: "4.5a A quantity that does not converge under refinement is measuring the sampling"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: R-171 — The convergence gate, defined *(closes A1, A2, T2)*
   verify:
     method: numerical gate
-    detail: "Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate."
+    detail: "R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass."
   rulings:
   - R-71
+  - R-171
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. Standing rules — A QUANTITY THAT DOES NOT CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING. The convergence threshold: REQ-VAL-135 (calibration)."
 - id: REQ-VAL-005
@@ -15155,10 +15250,13 @@
   source:
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: decisions.md
+    section: R-180 — pr-check is item-level *(closes A5)*
   verify:
     method: review checklist
     detail: "Each discriminator in a validation record lists its dependency on termination; any that depends on the tested termination (d_min, t_end-truncated statistics) is rejected or recomputed on fully integrated runs."
-  rulings: []
+  rulings:
+  - R-180
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. — A DISCRIMINATOR CAN BE POISONED BY ITS OWN SUBJECT."
 - id: REQ-VAL-006
@@ -15185,10 +15283,13 @@
     section: 4.4 A test that cannot fail is not a test
   - file: docs/read_first/principia_01_pitfalls.md
     section: 9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN
+  - file: decisions.md
+    section: "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
   verify:
     method: review checklist
     detail: "Each test in the suite has a recorded negative control that makes it fail (mutation or contaminated input); arithmetically impossible tests (e.g. expecting thousands of distinct values from a fraction over N² = 64 footprints) and tests true by construction (n_hot < N² under a quantile rule) are rejected."
-  rulings: []
+  rulings:
+  - R-176
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\"; pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\" — 3. — CHECK THE MEASUREMENT CAN FIRE BEFORE READING IT; 9. general form: a check whose reachable output set does not include the failure."
 - id: REQ-VAL-008
@@ -15646,10 +15747,10 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: R-119 — `t_max(f32)` is the GPU measurement *(closes RQ-87)*
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "re-run outputs recorded; table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119)"
@@ -15720,14 +15821,14 @@
     section: 11. Still open / downstream (not yet fully in the corpus)
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.2 The criterion
-  - file: open-questions.md
-    section: Open questions
   - file: decisions.md
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.4 Should it terminate?
   - file: decisions.md
     section: R-166 — The fixtures
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "re-run the escape validation against check 2's ground truth and against the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; fixtures/slices.toml) at t = 30 under the legacy classifier (docs/reference/prin-rs/src/outcome.rs) and checks in as a fixture (R-166); record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both"
@@ -15932,7 +16033,7 @@
   - file: decisions.md
     section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
   - file: open-questions.md
-    section: Open questions
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "Measure the |Δn̂| distributions of escapers and bound trajectories across t = 25–30; record the gap ratio (claimed 383x, 7.04e-05 vs 2.70e-02; prin-rs reports at best 6.8x) and assert the chosen tau lies within the gap and that outcomes are unchanged across the middle of the gap."
@@ -16008,12 +16109,12 @@
   source:
   - file: decisions.md
     section: "R-37 — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*"
-  - file: open-questions.md
-    section: Open questions
   - file: docs/design/principia_dd_validation_orbits.md
     section: 6. The closure field — from validation to discovery
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
+  - file: open-questions.md
+    section: Pending-changes register
   verify:
     method: numerical gate
     detail: "Measurement report of |n̂(t) − n̂(0)| distributions on periodic-orbit and generic fixtures justifying δ_dep; ledger row for the departed bit exists and schema version changes."
@@ -17303,14 +17404,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: R-171 — The convergence gate, defined *(closes A1, A2, T2)*
   verify:
     method: review checklist
-    detail: "the proposal states the relative-step threshold, shown to fail the recorded 0.0947 → 0.2153 → 0.4423 → 0.5494 sequence and to pass a converging aggregate from the M3 march; recorded in decisions.md"
+    detail: "the proposal states the threshold on the finest r_k (R-171's definition), shown to fail the recorded 0.2153 → 0.4423 → 0.5494 → 0.0947 sequence and to pass a converging aggregate from the M3 march; replaces M0's provisional 0.1; recorded in decisions.md"
   rulings:
   - R-71
   - R-113
+  - R-171
   milestone: M3
-  note: "R-113 (RQ-93 M0-16): moved to M3; the convergence runner and gate stay in M0 with a placeholder threshold."
+  note: "R-113 (RQ-93 M0-16): moved to M3; the convergence runner and gate stay in M0 with the provisional threshold 0.1 (R-171)."
 - id: REQ-VAL-136
   area: VAL
   kind: calibration
@@ -17922,7 +18026,7 @@
   - file: docs/read_first/principia_INDEX.md
     section: Known open items
   - file: open-questions.md
-    section: Open questions
+    section: Audit section D — deliberately parked
   verify:
     method: benchmark
     detail: "config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them"
@@ -18931,10 +19035,18 @@
   source:
   - file: docs/design/principia_systems_architecture.md
     section: 7. Hierarchy and dependency (the build DAG, abstract)
+  - file: decisions.md
+    section: R-172 — There is no contract crate *(closes C1, C4)*
+  - file: docs/design/principia_systems_architecture.md
+    section: 7.1 Crate map
+  - file: decisions.md
+    section: R-170 — The crate map *(closes G2)*
   verify:
     method: review checklist
-    detail: the crate/module graph has no edge against the DAG
-  rulings: []
+    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table, and a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
+  rulings:
+  - R-170
+  - R-172
   milestone: M0
 - id: REQ-SYS-005
   area: SYS
@@ -19788,4 +19900,69 @@
   rulings:
   - R-36
   - R-72
+  milestone: M0
+- id: REQ-SYS-064
+  area: SYS
+  kind: definition
+  statement: "The crate map (systems_architecture §7.1) must assign every node of the §7 build DAG to one crate of the R-146 layout and list the allowed workspace edges, each with the §7 arrow it realises, and must be confirmed by the human before TASK-M0-01 starts."
+  source:
+  - file: docs/design/principia_systems_architecture.md
+    section: 7.1 Crate map
+  - file: docs/design/principia_systems_architecture.md
+    section: 7. Hierarchy and dependency (the build DAG, abstract)
+  - file: decisions.md
+    section: R-170 — The crate map *(closes G2)*
+  verify:
+    method: review checklist
+    detail: "every §7 node appears in the §7.1 table with one crate; every allowed edge names its §7 arrow; the human's confirmation is recorded in decisions.md"
+  rulings:
+  - R-146
+  - R-170
+  - R-172
+  milestone: M0
+- id: REQ-SYS-065
+  area: SYS
+  statement: "GPU CI must run on two backends on every commit: a self-hosted Apple-silicon job (Metal) and an ubuntu job with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan; the self-hosted job must run only for pushes and PRs from this repository, never for fork PRs."
+  source:
+  - file: decisions.md
+    section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
+  - file: decisions.md
+    section: "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
+  verify:
+    method: review checklist
+    detail: "the CI log shows gpu_harness green on both jobs with the named backends; the self-hosted job carries the same-repository if: guard; an unknown PRIN_GPU_BACKEND fails naming the variable"
+  rulings:
+  - R-110
+  - R-169
+  - R-174
+  milestone: M0
+- id: REQ-SYS-066
+  area: SYS
+  statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict."
+  source:
+  - file: decisions.md
+    section: "R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*"
+  verify:
+    method: unit test
+    detail: "reviews-check fixtures: all roles approved on head passes; an approval on an older commit, an APPROVE superseded by CHANGES, and a missing role each fail naming the role"
+  rulings:
+  - R-175
+  milestone: M0
+- id: REQ-SYS-067
+  area: SYS
+  statement: "CI must run at the cadence R-110 and R-177 set: ci.yml runs `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs bench (and the survey from M8); screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every suite and writes the gate report. Bench is not in the per-commit ci."
+  source:
+  - file: decisions.md
+    section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: R-177 — Cadence *(closes G4, C6)*
+  verify:
+    method: unit test
+    detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks and fails on a missing one; review: ci.yml has no bench, nightly.yml is scheduled, gate.yml takes a milestone input"
+  rulings:
+  - R-110
+  - R-134
+  - R-177
   milestone: M0

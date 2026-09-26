@@ -8,7 +8,8 @@ gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks ar
 
 - **The implementation lives in this repo, in `crates/` next to `docs/`.** The corpus names two crates, the
   engine crate and the gui crate (canonical_spec §1, item 5: "the engine crate exposes only the typed state
-  surface `pub`"); other crate boundaries are for the build to set and are not requirements.
+  surface `pub`"). The rest of the layout is confirmed by R-146 (plan/WORKFLOW.md, "Conventions"); there is no separate
+  contract crate (R-172).
 - **The docs stay the authority.** `plan/` is derived from `docs/` and `decisions.md`. Where a requirement
   and its source disagree, the source wins and the requirement is the bug. A change of design goes into the
   docs first (with an RQ and a ruling, per the porting rule); the plan follows.
@@ -69,15 +70,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 62 requirements** (and every earlier gate still green):
+**Exit gate — 67 requirements** (and every earlier gate still green):
 
 - PAY (20): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087
 - GEN (9): REQ-GEN-001…008, REQ-GEN-024
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
-- TOOL (11): REQ-TOOL-001…008, REQ-TOOL-119…121
+- TOOL (12): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134
 - VAL (10): REQ-VAL-001…009, REQ-VAL-138
-- SYS (9): REQ-SYS-001…008, REQ-SYS-063
+- SYS (13): REQ-SYS-001…008, REQ-SYS-063…067
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -123,11 +124,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 155 requirements** (and every earlier gate still green):
+**Exit gate — 156 requirements** (and every earlier gate still green):
 
 - DEC (36): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…044
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
-- CHART (45): REQ-CHART-001…036, REQ-CHART-043…051
+- CHART (46): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053
 - INT (2): REQ-INT-002…003
 - PAY (3): REQ-PAY-034…035, REQ-PAY-088
 - GEN (5): REQ-GEN-013…015, REQ-GEN-025…026
@@ -159,11 +160,11 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 188 requirements** (and every earlier gate still green):
+**Exit gate — 190 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - INT (63): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084
-- EVT (22): REQ-EVT-001…020, REQ-EVT-023…024
+- EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
 - PAY (28): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003

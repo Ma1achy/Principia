@@ -297,7 +297,7 @@ of the config that is hashed.
 | Occupant | Order | Force evals/step | Symplectic | Reversible | Owns time mapping | Default tier |
 |---|---|---|---|---|---|---|
 | **Aarseth–Zare + RK4** | 4 | 4× | ✗ | ✗ | ✓ | close-encounter regimes; **validation-grade stepper** |
-| **Aarseth–Zare + time-transformed leapfrog** | 2 | 1× | ✓ | ✓ | ✓ | **the entry the table wants** |
+| **Aarseth–Zare + time-transformed leapfrog** | 2 | 1× | ✓ | ✓ | ✓ | **the entry the table wants**; an allowed future occupant, not a v1 requirement (R-168) |
 
 **AZ is currently stepped with RK4, which was chosen to prove the physics rather than to ship** — it
 is neither symplectic nor reversible, so binding it makes the regularised default a *validation*

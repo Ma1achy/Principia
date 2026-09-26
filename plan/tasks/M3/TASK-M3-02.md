@@ -23,10 +23,11 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 - `docs/contracts/principia_integrator_contract.md` § "The table gains two rows"
 - `docs/design/principia_dd_integrator.md` § "3.2 Occupants"
 - `decisions.md` § "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Audit section C — transcription checks"
 - `docs/design/principia_dd_integrator.md` § "6. Deferred / flagged"
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
+- `decisions.md` § "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
 
 ## Deliverables
 - `crates/kernel/src/occupant/mod.rs` — the `Stepper` trait (`fn step(state, dt, geom)`), `CapabilityProfile` struct, and the closed, build-time occupant set (an enum of monomorphised types; no runtime compilation or interpretation path).
@@ -38,7 +39,7 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 ## Acceptance tests
 - Review (code): the occupant set is closed at build time; no code path compiles or interprets user-authored compute code (REQ-INT-005).
 - Review (code, physics): `CapabilityProfile` exists with the listed fields for every composed occupant, and energy-drift interpretation, the reversibility diagnostic and `total_substeps_log2`/FTLE confidence read it — grep shows no occupant-name special cases outside the profile (REQ-INT-013).
-- `cargo test -p kernel occupant_profiles` — each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is specified but not required to be built (R-162) (REQ-INT-014).
+- `cargo test -p kernel occupant_profiles` — each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is an allowed future occupant in Part 2a, not a v1 requirement, and is not built (R-162, R-168) (REQ-INT-014).
 - Review (code): Euler is absent from tier defaults and production occupant lists and present only in the debug selection (REQ-INT-015).
 - `cargo test -p kernel occupant_coefficients` — constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃) (REQ-INT-037).
 - `cargo test -p kernel yoshida6_published` — Yoshida-6 coefficients equal the published digits of Yoshida (1990) Table 1 solution A, and the composition shows a 6th-order convergence slope on a Kepler fixture (REQ-INT-056).

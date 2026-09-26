@@ -25,7 +25,7 @@
 ## Deliverables
 - `crates/ledger/src/constants.rs` — `Constant { name, value, class, citation, relative_basis }` and the register; the generation gate.
 - The register's M0 entries, the constants the payload ledger uses: the `horizon_steps` limit 65535 (R-86), the word capacity 76 and the length sentinel 127 (payload §3), the diffusion sentinel −1.0 (generation-root §3.4) and the f16 pack clamp ±65504 (payload §1), each with its class and citation.
-- `xtask/src/lint_constants.rs` — `cargo xtask lint constants` over `crates/{kernel,ledger,contract,engine}` (generated files excluded: their numbers are emitted from the ledger); registered in `cargo xtask ci`.
+- `xtask/src/lint_constants.rs` — `cargo xtask lint constants` over `crates/{kernel,ledger,engine}` (generated files excluded: their numbers are emitted from the ledger); registered in `cargo xtask ci`.
 
 ## Acceptance tests
 - `cargo test -p ledger constants_gate` — an entry without a citation fails generation naming the constant (REQ-SYS-001); an entry without an admissibility class fails the same way (REQ-SYS-005).

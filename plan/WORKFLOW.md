@@ -12,14 +12,17 @@ does what, in what order, and what stops the line.
   demonstrates it, with its output. It links the task file.
 - A task that turns out bigger than one reviewable PR (roughly 500 lines of change) is split **in the plan first**:
   new task files and manifest entries, `plan/check_plan.py` green, then the work.
-- CI runs on every push: the build, `cargo test` and `cargo xtask plan-check` (`plan/check_plan.py`). The other
-  suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
+- CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
+  (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
   `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
   and codegen suites among them) on every commit; benchmarks nightly and at each milestone gate; GUI screenshots on GUI
   PRs and at the gates; from M8 the Playwright browser suite nightly, on GUI and colour PRs and at each gate, and the
   aggregate survey nightly and before release (R-134). GPU CI is a self-hosted Apple-silicon runner (Metal)
   plus lavapipe as the second backend, both on every commit; lavapipe satisfies M4's two-backend check, and a real
   non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
+- The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs bench and, from M8, the survey;
+  `screenshot.yml` on GUI PRs, which are PRs touching `crates/gui/**` or `docs/gui/**`; `gate.yml` (`workflow_dispatch`,
+  input `milestone`) runs every suite and writes the gate report the milestone checkpoint reviews.
 - Whatever its CI frequency, a task's PR shows every one of its acceptance commands run, with their output.
 
 ## Task files
@@ -81,7 +84,7 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 | `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite, on Chromium and WebKit (R-149), checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
 | `numerical gate` | `cargo xtask gate <gate>`, with fixtures in `fixtures/gates/` |
 | `benchmark` | `cargo xtask bench <bench>` |
-| `GUI screenshot` | `cargo xtask screenshot <artboard>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
+| `GUI screenshot` | `cargo xtask screenshot <suite>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
 | `review checklist` | the named reviewer's checklist, or a CI lint that installs the check |
 
 `cargo xtask plan-check` runs `plan/check_plan.py`.
@@ -90,13 +93,15 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally.
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
-   References. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
+   References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
+   `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
 5. **Every reviewer re-checks** — not only the one who raised a finding: a fix can break another reviewer's check.
-   Each reviewer approves explicitly.
-6. Merge when every named reviewer has approved and CI is green.
+   Each reviewer approves explicitly, with a new `VERDICT: APPROVE <role>` review on the latest commit.
+6. Merge when `ci` and `reviews-complete` are green: `reviews-complete` (`cargo xtask reviews-check`) passes only when
+   every role the task file names has approved on the latest commit. The human merges, or a merge bot does (R-175).
 
 ## Human checkpoints: the milestone gates
 
@@ -105,7 +110,8 @@ A milestone exits only at a human checkpoint. Before it:
   listed, and every earlier gate still green;
 - every **calibration** requirement of the milestone (`kind: calibration`, R-71) has its proposed value, the evidence
   and the reviewer's check in the PR that closed it; **the human confirms each value at the gate**, and it is then
-  recorded in `decisions.md`. An unconfirmed calibration blocks the gate;
+  recorded in `decisions.md`. Until then CI uses the proposed value provisionally, and the test or gate report marks
+  it provisional (R-182). An unconfirmed calibration blocks the gate;
 - every **definition** requirement (`kind: definition`, R-72) has its doc change merged with the physics reviewer's
   approval.
 The human reviews the gate report and either passes the milestone or rules on what blocks it. No work in the next

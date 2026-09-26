@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-GUI-031, REQ-COL-022, REQ-GUI-151, REQ-GUI-152
-- **Depends on:** TASK-M7-12, TASK-M7-17
+- **Depends on:** TASK-M7-12, TASK-M7-17, TASK-M0-20
 - **Needs (earlier milestones):** REQ-RENDER-009
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none

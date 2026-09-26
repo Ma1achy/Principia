@@ -46,7 +46,7 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - REQ-VAL-122 is a calibration (R-71); REQ-VAL-010's acceptance uses the proposed value until the human confirms it.
 - Not available at M1 (milestone Gaps): no artboard shows the debug views, so R-153 gives them golden images of their own, recorded at the gate; the ledger metadata schema (generation root §3.8) has no vector type, so "the ledger knows n is a vector" (gui_state_contract §4) has nothing to key on.
 - `dbg_hash_u32`'s hash is not specified (TASK-M1-03's gap); REQ-TOOL-025's "distinct colours" is asserted over a fixed fixture set of words.
-- RQ-93 ruled: R-113 — the screenshot runner is TASK-M0-06's.
+- RQ-93 ruled: R-113 — the screenshot runner is TASK-M0-20's (split from TASK-M0-06 by R-183).
 - RQ-94 ruled: R-113 — REQ-TOOL-010 renders every view on a synthetic payload at M1; the real-march |n|−1 check and the live effort heatmap are a new M3 requirement (REQ-TOOL-132, TASK-M3-22).
 - RQ-101 ruled: R-122 — the Twilight data for the θ̃ view is the published matplotlib table (the prelude's, TASK-M1-03).
 - RQ-123 ruled: R-153 — the debug views are checked against golden images of their own, recorded at the M1 gate, not against artboards (REQ-TOOL-010).

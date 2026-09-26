@@ -19,7 +19,7 @@ The BodyPlane chart (today's slice) is kept and reproduces the Python reference'
 - `decisions.md` § "R-35 — The change-10 cross-checks are re-run and the NumPy reference patched *(IE-7)*"
 - `docs/design/principia_dd_validation_orbits.md` § "0.1 The mechanism, and the fix — measured, not proposed"
 - `docs/design/principia_dd_validation_orbits.md` § "5. Immediate action"
-- `open-questions.md` § "Open questions"
+- `open-questions.md` § "Pending-changes register"
 - `docs/design/principia_dd_predictability_horizon.md` § "5.1 Retrospective: which existing measurements are inside the horizon"
 - `docs/design/principia_dd_predictability_horizon.md` § "7.6 Escape statistics are shadowing-robust to `t=80`, but `t=240` is untested"
 - `docs/design/principia_dd_predictability_horizon.md` § "7.2 `lambda` is 0.6–0.8, not 1 — and `t` is not e-foldings"

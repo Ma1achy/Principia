@@ -22,9 +22,10 @@
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
 - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
 
 ## Deliverables
-- `rust-toolchain.toml` — the toolchain pin rust-gpu needs; CI installs it.
+- `rust-toolchain.toml` — the toolchain pin rust-gpu needs; CI installs it from this file in every job (R-169).
 - `crates/kernel` — `#![no_std]`; a `Real` trait with f32 and f64 impls; the trivial kernel entry point (`#[spirv(compute)]`) over the generated pack/unpack.
 - `xtask/src/build_kernel.rs` — `cargo xtask build-kernel`: spirv-builder → `target/spirv/kernel.spv`, naga → `target/spirv/kernel.wgsl`; registered in `cargo xtask ci`.
 - `crates/ledger/src/gen/rust.rs` — per-precision emission: the payload structs instantiated per `Real`, widths from `size_of::<Real>()`; the DoubleF64 stub as a ledger precision row.

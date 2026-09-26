@@ -418,3 +418,7 @@
   section: R-167 — The prin-rs licence is not blocking
   reason: informative only
   note: no requirement; recorded in docs/reference/prin-rs/README.md § "Licence"
+- file: decisions.md
+  section: R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*
+  reason: informative only
+  note: plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement

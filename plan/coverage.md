@@ -8,9 +8,9 @@
 |---|---|
 | DEC | 44 |
 | ENC | 33 |
-| CHART | 51 |
+| CHART | 52 |
 | INT | 84 |
-| EVT | 24 |
+| EVT | 26 |
 | PAY | 87 |
 | GEN | 27 |
 | SCHED | 88 |
@@ -18,22 +18,22 @@
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 160 |
-| TOOL | 132 |
+| TOOL | 133 |
 | VAL | 145 |
 | PERF | 93 |
-| SYS | 63 |
-| **total** | **1220** |
+| SYS | 67 |
+| **total** | **1228** |
 
-Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 94 calibration, 101 definition, 1033 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 62 |
+| M0 | 67 |
 | M1 | 81 |
-| M2 | 155 |
-| M3 | 188 |
+| M2 | 156 |
+| M3 | 190 |
 | M4 | 101 |
 | M5 | 158 |
 | M6 | 134 |
@@ -42,10 +42,10 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 
 ## Sections
 
-857 sections in 46 files: 751 yield at least one requirement; 106 yield none and are listed below with the reason.
+875 sections in 46 files: 768 yield at least one requirement; 107 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 58 |
+| informative only | 59 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -67,6 +67,7 @@ Of these: 93 calibration, 99 definition, 1028 obligation. Retired (kept for thei
 | Porting rule — a port adds, it never removes a decision | informative only | process ruling |
 | Rulings on the decision sheet (step 5, PR #6) | informative only | application schedule for R-21..R-59 |
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
+| R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | informative only | plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

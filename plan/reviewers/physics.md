@@ -18,13 +18,13 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 *94 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
-- [ ] REQ-VAL-004 — Compute the quantity at successively finer sampling (e.g. strides 0, 32, 4, 1); assert the relative steps shrink monotonically; the recorded failure (0.0947 → 0.2153 → 0.4423 → 0.5494) must fail the gate.
+- [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
 
 **M2**
 - [ ] REQ-DEC-043 — the proposal measures f64-vs-f32 decode differences on the golden IC and fuzzed interiors and states the multiple of f32 eps that covers them; recorded in decisions.md
 - [ ] REQ-ENC-024 — the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md
 - [ ] REQ-ENC-027 — the proposal measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and sets the tolerance above them; recorded in decisions.md
-- [ ] REQ-CHART-020 — shape_vec(decode(u,v)) == n(u,v) to ~1e−14 over random masses and shapes
+- [ ] REQ-CHART-020 — Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141)
 - [ ] REQ-COL-006 — agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey, with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement
 - [ ] REQ-VAL-015 — on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target
 - [ ] REQ-VAL-019 — import the literature ICs; compare E, L_z after multiplying back by the recorded rescale
