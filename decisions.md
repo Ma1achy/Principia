@@ -1443,3 +1443,8 @@ attributes assembled from `tt` fragments (RQ-130), shadowed builtins. Asked whet
   The token scanner is removed. The check that kernel's and ledger's targets sit under `src/` stays.
 - RQ-130 is moot and closed by this ruling.
 - qa gets a one-round exception to replace or remove its own token-level tests with compile-level ones.
+
+*Applied (TASK-M0-01, 42ccd3c):* the command as written, `cargo check -p kernel -p ledger --lib --tests`, would also
+compile kernel's and ledger's integration tests, which R-187 allows to use `validation`. The ruling's intent is applied
+instead: in the temporary copy, kernel's and ledger's integration-test, example and bench targets are left out, so only
+the lib and bin unit tests are compiled without `validation`. Which features the check compiles is RQ-131.

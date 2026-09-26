@@ -2114,3 +2114,18 @@ Tick any you don't accept.
   attribute (it catches `[path = …]` passed as a `tt`, and not `let path = …`); or (b) fail a `tt` fragment spliced
   directly before a bracket group or another `$` fragment at item position in a macro body.
 - **Ruling:** R-191 (decisions.md): moot; the compile check replaces the token rules. Closed in TASK-M0-01 (PR #16).
+
+---
+
+*Found in review of TASK-M0-01 (PR #16).*
+
+## RQ-131: R-191 — which features does the compile check build? *(build, TASK-M0-01)*
+
+- **File, section:** `decisions.md` § "R-191 — R-187's integration-test condition is checked by compiling, not by
+  reading tokens *(amends R-189, R-190; closes RQ-130)*": "runs `cargo check -p kernel -p ledger --lib --tests`".
+- **Silence:** the ruling names no feature set. Built with default features, a unit test under
+  `#[cfg(all(test, feature = "x"))]` is never compiled by the check, so it may use `validation` unseen. Kernel and
+  ledger declare no features today.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): default features, host target.
+- **Needed:** default features only, `--all-features`, or each feature set in turn.
+- **Ruling:** open.
