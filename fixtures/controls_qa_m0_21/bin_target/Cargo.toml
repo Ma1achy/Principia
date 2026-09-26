@@ -1,0 +1,12 @@
+[package]
+name = "qa_controls_bin_target"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (QA fixture, TASK-M0-21; run on a copy).
+[workspace]
+[features]
+controls = []
+[dev-dependencies]
+validation = { path = "../../../crates/validation" }
