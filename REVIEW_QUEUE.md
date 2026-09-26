@@ -2064,3 +2064,30 @@ Tick any you don't accept.
   REQ-SYS-052; R-147 to REQ-SCHED-039, 053 and 085; R-156 to REQ-INT-081, REQ-PAY-070 and REQ-PERF-012.
 - **Needed:** accept, or rule otherwise on any item.
 - **Ruling:** R-158 (decisions.md). Closed in step 7.
+
+---
+
+*Found in review of TASK-M0-01 (PR #16). Nothing is chosen.*
+
+## RQ-129: §7.1 — may `kernel` and `ledger` take `validation` as a dev-dependency, and may `validation` depend on `prin`? *(build, TASK-M0-01)*
+
+- **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map".
+- **Passage A** (the allowed-edge table, :322): "| any (dev-dependency only) | `validation` | R-176 |". Read
+  literally, "any" includes `kernel` and `ledger`. The crates-outside-the-graph list (:308) agrees: "`validation` (the
+  harness: may depend on any crate; others reach it only as a dev-dependency, R-176)".
+- **Passage B** (the same section, :324): "Every other workspace edge is forbidden; in particular `ledger` depends on
+  nothing, `kernel` on nothing but `ledger` (and that only as a build-dependency)". The node table (:291) says the same
+  of `ledger`: "a root: no workspace dependency". TASK-M0-01's Deliverables repeat it: "`ledger` has no workspace
+  dependency; `kernel` depends on no workspace crate but `ledger`".
+- **Why it matters:** R-176 says "Controls reach xtask tests through a dev-dependency on `crates/validation`", and
+  TASK-M0-04 says "crates reach the macro through a dev-dependency on `crates/validation`". Under reading B, the tests
+  of `kernel` and `ledger` can't reach `negative_control!`.
+- **Second case** (:321): "| `validation` | any of the above except `gui` |". `prin` appears in the table above that
+  row only as a `from` (`prin` → `engine`), and it is a binary-only crate. So it is unclear whether `validation` → `prin`
+  is allowed.
+- **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): reading B. `kernel` → `validation` and
+  `ledger` → `validation` fail in every kind, the dev-dependency included. `validation` → `prin` is allowed, in any
+  kind. `xtask/tests/deps.rs` pins all three cases, so a ruling changes an assertion there.
+- **Needed:** (1) whether `kernel` and `ledger` may take `validation` as a dev-dependency (reading A), or not
+  (reading B). (2) whether `validation` may depend on `prin`.
+- **Ruling:** R-187 (decisions.md). Closed in TASK-M0-01 (PR #16).

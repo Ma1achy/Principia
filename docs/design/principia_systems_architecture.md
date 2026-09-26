@@ -318,10 +318,10 @@ depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate dep
 | `engine` | `render` | payload → fragment assembly (the frame loop and dispatch drive the fragment side) |
 | `gui` | `engine` | GUI → state → engine (gui_state_contract §1) |
 | `prin` | `engine` | |
-| `validation` | any of the above except `gui` | the harness exercises each seam |
-| any (dev-dependency only) | `validation` | R-176 |
+| `validation` | any of the above except `gui` and `prin` | the harness exercises each seam; where it needs the CLI it runs the built `prin` binary as a separate process (R-187) |
+| any except `gui` (dev-dependency only) | `validation` | R-176, R-187. Never a normal or build dependency, so the no_std kernel and rust-gpu builds never see it. In `kernel` and `ledger`, a test that uses `validation` is an integration test (`tests/`), not a unit test in `src/`, because the dev-dependency cycle would give unit tests two copies of the crate; `cargo xtask deps` enforces it |
 
-The kernel is `no_std` (R-185). Every other workspace edge is forbidden; in particular `ledger` depends on nothing, `kernel` on nothing but `ledger` (and that only as a build-dependency),
+The kernel is `no_std` (R-185). Every other workspace edge is forbidden; in particular `ledger` depends on nothing, `kernel` on nothing but `ledger` (and that only as a build-dependency) — normal and build dependencies; dev-dependencies per the `validation` row above (R-187),
 `render` never on `engine` (the edge would run against the payload's direction), and nothing on `gui`.
 
 ---

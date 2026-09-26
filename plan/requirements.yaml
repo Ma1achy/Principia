@@ -19055,13 +19055,19 @@
     section: R-170 — The crate map *(closes G2)*
   - file: decisions.md
     section: "R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*"
+  - file: decisions.md
+    section: "R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on prin *(closes RQ-129)*"
+  - file: decisions.md
+    section: "R-188 — TASK-M0-01 is accepted over its size; the source scan also follows `include!`"
   verify:
     method: review checklist
-    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
+    detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no source under src/ uses validation (R-187), counting every file loaded through #[path] or include!, and an include! path that is not a string literal, or does not resolve, fails (R-188); a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
   rulings:
   - R-170
   - R-172
   - R-185
+  - R-187
+  - R-188
   milestone: M0
 - id: REQ-SYS-005
   area: SYS

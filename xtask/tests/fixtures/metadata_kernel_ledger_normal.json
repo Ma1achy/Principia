@@ -1,0 +1,114 @@
+{
+  "packages": [
+    {
+      "name": "engine",
+      "id": "path+file:///workspace/crates/engine#0.1.0",
+      "dependencies": [
+        {
+          "name": "kernel",
+          "kind": null
+        },
+        {
+          "name": "ledger",
+          "kind": null
+        },
+        {
+          "name": "render",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "gui",
+      "id": "path+file:///workspace/crates/gui#0.1.0",
+      "dependencies": [
+        {
+          "name": "engine",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "kernel",
+      "id": "path+file:///workspace/crates/kernel#0.1.0",
+      "dependencies": [
+        {
+          "name": "ledger",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "ledger",
+      "id": "path+file:///workspace/crates/ledger#0.1.0",
+      "dependencies": []
+    },
+    {
+      "name": "prin",
+      "id": "path+file:///workspace/crates/prin#0.1.0",
+      "dependencies": [
+        {
+          "name": "engine",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "render",
+      "id": "path+file:///workspace/crates/render#0.1.0",
+      "dependencies": [
+        {
+          "name": "ledger",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "validation",
+      "id": "path+file:///workspace/crates/validation#0.1.0",
+      "dependencies": [
+        {
+          "name": "engine",
+          "kind": null
+        },
+        {
+          "name": "kernel",
+          "kind": null
+        },
+        {
+          "name": "ledger",
+          "kind": null
+        },
+        {
+          "name": "render",
+          "kind": null
+        }
+      ]
+    },
+    {
+      "name": "xtask",
+      "id": "path+file:///workspace/xtask#0.1.0",
+      "dependencies": [
+        {
+          "name": "serde",
+          "kind": null
+        },
+        {
+          "name": "serde_json",
+          "kind": null
+        }
+      ]
+    }
+  ],
+  "workspace_members": [
+    "path+file:///workspace/crates/engine#0.1.0",
+    "path+file:///workspace/crates/gui#0.1.0",
+    "path+file:///workspace/crates/kernel#0.1.0",
+    "path+file:///workspace/crates/ledger#0.1.0",
+    "path+file:///workspace/crates/prin#0.1.0",
+    "path+file:///workspace/crates/render#0.1.0",
+    "path+file:///workspace/crates/validation#0.1.0",
+    "path+file:///workspace/xtask#0.1.0"
+  ],
+  "version": 1
+}
