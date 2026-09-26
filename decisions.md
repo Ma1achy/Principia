@@ -1448,3 +1448,10 @@ attributes assembled from `tt` fragments (RQ-130), shadowed builtins. Asked whet
 compile kernel's and ledger's integration tests, which R-187 allows to use `validation`. The ruling's intent is applied
 instead: in the temporary copy, kernel's and ledger's integration-test, example and bench targets are left out, so only
 the lib and bin unit tests are compiled without `validation`. Which features the check compiles is RQ-131.
+
+## R-192 — The compile check builds with `--all-features` *(closes RQ-131)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+Asked which features R-191's compile check builds, the human chose "--all-features": the check runs with
+`--all-features`, so a unit test behind any feature of kernel or ledger is compiled without `validation`. If kernel or
+ledger ever gains mutually exclusive features, that is ruled on then.

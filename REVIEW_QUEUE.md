@@ -2128,4 +2128,4 @@ Tick any you don't accept.
   ledger declare no features today.
 - **What the code applies until a ruling** (`xtask/src/deps.rs`, TASK-M0-01): default features, host target.
 - **Needed:** default features only, `--all-features`, or each feature set in turn.
-- **Ruling:** open.
+- **Ruling:** R-192 (decisions.md). Closed in TASK-M0-01 (PR #16).
