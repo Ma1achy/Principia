@@ -22,6 +22,7 @@ The cargo workspace exists under `crates/` with the plan's crates — `kernel`, 
 - `decisions.md` § "R-172 — There is no contract crate *(closes C1, C4)*"
 - `decisions.md` § "R-177 — Cadence *(closes G4, C6)*"
 - `decisions.md` § "R-185 — The crate map is confirmed; kernel → ledger is a build-dependency only *(closes TASK-M0-00)*"
+- `decisions.md` § "R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on prin *(closes RQ-129)*"
 
 ## Deliverables
 - `Cargo.toml` (workspace), `.cargo/config.toml` (the `xtask` alias), `.gitignore` additions for `target/`.
