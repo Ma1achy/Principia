@@ -76,7 +76,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-065 — nightly and before-release headless run (R-134); fractions within grid sampling noise; boundary sets match within 1–2 pixels
 - [ ] REQ-VAL-071 — measured f32 horizon recorded from GPU-kernel runs
 - [ ] REQ-VAL-073 — compare GPU vs f64 CPU on the parity fixtures; assert |diff| within the parity contract's declared tolerances (tolerances are not stated in this file)
-- [ ] REQ-VAL-079 — Parity run over full trajectories on two backends — Metal on the self-hosted Apple-silicon runner and lavapipe (R-110); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory).
+- [ ] REQ-VAL-079 — Parity run over full trajectories on two backends — Metal on GitHub-hosted macos-15 and lavapipe (R-110, R-186); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory).
 - [ ] REQ-VAL-112 — the proposal shows the measured f32 disagreement of each view on a healthy survey and a deliberately broken case each tolerance must flag
 - [ ] REQ-VAL-125 — the proposal names the statistic and sets the threshold from the measured sampling noise on uniform grids; recorded in decisions.md
 - [ ] REQ-VAL-137 — the proposal renders the plane, reads closure at the known orbit locations against the background and states the threshold; recorded in decisions.md

@@ -2,27 +2,20 @@
 
 The build assumes these are in place. The agent can't do them, except where noted. Each cites the ruling it serves.
 
-## 1. Register the self-hosted Apple-silicon runner (R-110, R-169, R-174)
+## Runner registration: not needed (R-186)
 
-The `gpu-metal` job in `ci.yml` (TASK-M0-04) runs on `runs-on: [self-hosted, macOS, ARM64]`.
+CI runs on GitHub-hosted runners: `ubuntu-latest` (CPU suites, lavapipe) and `macos-15` (Metal correctness suites).
+There is no self-hosted runner to register. Benchmarks and performance gates run on your own Mac via `prin profile`, at
+milestone gates and on demand. If the first Metal check on `macos-15` fails or is flaky, the build stops with a
+REVIEW_QUEUE entry proposing a self-hosted runner. The agent then scripts its setup for your approval.
 
-1. On the Mac, create a separate macOS user account for the runner (System Settings → Users & Groups), e.g.
-   `gh-runner`, a standard user, not an administrator. The runner never runs under your own account (R-174).
-2. Log in as that user. In the repository go to **Settings → Actions → Runners → New self-hosted runner**, choose
-   macOS / ARM64, and follow the download and `./config.sh` steps it shows. Keep the default labels
-   (`self-hosted`, `macOS`, `ARM64`).
-3. Install it as a service so that it survives logout: `./svc.sh install && ./svc.sh start`.
-4. Install the toolchain the job needs under that user: Xcode command-line tools (`xcode-select --install`) and
-   rustup. The Rust toolchain itself comes from `rust-toolchain.toml` (TASK-M0-14).
-5. Check: `gh api repos/Ma1achy/Principia/actions/runners -q '.runners[] | .name+" "+.status'` shows it `online`.
-
-## 2. Fork and outside-contributor policy (R-174)
+## 1. Outside-contributor approval (R-174, R-186)
 
 The repository is public. In **Settings → Actions → General → Fork pull request workflows from outside
-collaborators**, choose **"Require approval for all outside collaborators"**. The `gpu-metal` job also carries the
-same-repository `if:` guard, so a fork PR never reaches the self-hosted runner even after approval.
+collaborators**, choose **"Require approval for all outside collaborators"**. (R-174's same-repository `if:` guard is
+dormant while there is no self-hosted runner, R-186; the approval setting still applies.)
 
-## 3. Branch protection on `main` (R-175, R-177)
+## 2. Branch protection on `main` (R-175, R-177)
 
 In **Settings → Branches → Add branch protection rule** (or a ruleset) for `main`:
 - require a pull request before merging;
@@ -33,12 +26,11 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
 Leave "require approvals" off: the reviewers are agents posting `VERDICT:` reviews from one account, which GitHub
 doesn't count as approvals, and `reviews-complete` is the check that does (R-175).
 
-## 4. PR labels (R-180, R-177): done by the agent
+## 3. PR labels (R-180, R-177): done by the agent
 
 `design`, `investigation`, `validation` (pr-check, TASK-M0-03) and `gui`. They were created with `gh label create`
 when the R-168 to R-184 rulings were applied; nothing to do unless they're missing.
 
-## 5. Confirm the crate map (R-170)
+## 4. Confirm the crate map (R-170): done
 
-Read `docs/design/principia_systems_architecture.md` §7.1 and rule on it (confirm, or say what to change). TASK-M0-00
-records the confirmation, and TASK-M0-01 doesn't start before it.
+Confirmed by R-185 (26 Sep 2026); TASK-M0-00 is done.

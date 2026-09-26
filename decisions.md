@@ -1264,6 +1264,7 @@ TASK-M3-12's stale note is removed.
 
 ## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
 *25 Sep 2026 · applied in step 8*
+*Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
 
 GPU jobs on the self-hosted runner run only for pushes and for PRs from this repository:
 `if: github.event.pull_request.head.repo.full_name == github.repository` (or the event is a push). Fork PRs get the CPU
@@ -1347,3 +1348,25 @@ TASK-M0-06 splits into the golden and repro runner (TASK-M0-06) and the screensh
 The crate map in systems_architecture §7.1 is confirmed, with one change: kernel's dependency on ledger is a
 build-dependency only (the ledger generates code into the kernel at build time). The kernel stays no_std so rust-gpu
 can compile it.
+
+## R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
+*26 Sep 2026 · applied in step 8*
+
+Start with GitHub-hosted runners, and no self-hosted runner.
+- Per-commit CI: `ubuntu-latest` for the CPU suites and the lavapipe (`mesa-vulkan-drivers`) GPU suites; `macos-15`
+  (GitHub-hosted, Apple silicon, paravirtual Metal) for the Metal correctness suites only.
+- Benchmarks and every performance gate run on the human's own Mac via `prin profile`, at milestone gates and on
+  demand, never on hosted runners. The nightly workflow runs the CPU and lavapipe suites and the survey, not benchmarks.
+- TASK-M0-04 adds a first check: on `macos-15`, wgpu finds a Metal adapter and the M0 golden fixture renders within
+  tolerance. If it fails or is flaky, stop and raise a REVIEW_QUEUE entry proposing the self-hosted runner (the agent
+  then scripts the setup; the human approves it).
+- R-174's fork guard is no longer needed while no self-hosted runner exists. Its text is kept, marked dormant until one
+  is added.
+- HUMAN_SETUP.md drops runner registration. What remains is the approval setting and branch protection.
+
+*Placement (applied in step 8):* the golden-image runner and its M0 fixture (`fixtures/golden/selftest/`) are built
+in TASK-M0-06, which depends on TASK-M0-04, and the fixture's tolerance is REQ-VAL-138, calibrated there. So the check
+is split. TASK-M0-04 checks, on `macos-15`, that wgpu finds a Metal adapter and that the harness's M0 fixture
+(the identity dispatch) round-trips bit-exact. TASK-M0-06 runs `golden selftest` on `macos-15` within REQ-VAL-138's
+tolerance. The same stop-and-raise rule governs both.
+

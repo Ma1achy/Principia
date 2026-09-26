@@ -15,15 +15,19 @@ does what, in what order, and what stops the line.
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
   (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
   `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
-  and codegen suites among them) on every commit; benchmarks nightly and at each milestone gate; GUI screenshots on GUI
+  and codegen suites among them) on every commit; benchmarks and every performance gate on the human's own Mac via
+  `prin profile`, at each milestone gate and on demand, never on hosted runners (R-186); GUI screenshots on GUI
   PRs and at the gates; from M8 the Playwright browser suite nightly, on GUI and colour PRs and at each gate, and the
-  aggregate survey nightly and before release (R-134). GPU CI is a self-hosted Apple-silicon runner (Metal)
-  plus lavapipe as the second backend, both on every commit; lavapipe satisfies M4's two-backend check, and a real
+  aggregate survey nightly and before release (R-134). GPU CI runs on GitHub-hosted runners (R-186): lavapipe
+  (`mesa-vulkan-drivers`) on `ubuntu-latest`, and `macos-15` (Apple silicon, paravirtual Metal) for the Metal
+  correctness suites only, both on every commit. There is no self-hosted runner, and lavapipe satisfies M4's two-backend check, and a real
   non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
-- The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs bench and, from M8, the survey;
+- The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs the CPU and lavapipe suites and, from M8, the survey, not benchmarks (R-186);
   `screenshot.yml` on GUI PRs, which are PRs touching `crates/gui/**` or `docs/gui/**`; `gate.yml` (`workflow_dispatch`,
   input `milestone`) runs every suite and writes the gate report the milestone checkpoint reviews.
-- Whatever its CI frequency, a task's PR shows every one of its acceptance commands run, with their output.
+- Whatever its CI frequency, a task's PR shows every one of its acceptance commands run, with their output. A
+  `benchmark` or performance-gate command runs on the human's Mac (R-186): the PR includes that run's `prin profile`
+  output, or waits for it.
 
 ## Task files
 
@@ -83,7 +87,7 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 | `property test` | `cargo test -p <crate>`, using proptest |
 | `golden image` | `cargo xtask golden <suite>`, rendered with native wgpu offscreen from M1 against the baselines in `fixtures/golden/`; at M8 the Playwright browser suite, on Chromium and WebKit (R-149), checks against the same baselines within tolerance, and no baseline is re-baselined without a gate decision (R-110) |
 | `numerical gate` | `cargo xtask gate <gate>`, with fixtures in `fixtures/gates/` |
-| `benchmark` | `cargo xtask bench <bench>` |
+| `benchmark` | `cargo xtask bench <bench>`, run on the human's own Mac (compared with `prin profile diff`), never on a hosted runner (R-186) |
 | `GUI screenshot` | `cargo xtask screenshot <suite>` (native wgpu offscreen; on GUI PRs and at the gates, R-110), compared against `docs/gui/design/NN_*.png` for layout only (R-68); a surface with no artboard is checked by presence only until the M8 dev GUI (`decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*") |
 | `review checklist` | the named reviewer's checklist, or a CI lint that installs the check |
 
