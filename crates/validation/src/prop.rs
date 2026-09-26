@@ -142,6 +142,24 @@ mod tests {
         assert_ne!(draw, other, "control: two seeds drew the same failing case");
     }
 
+    /// True if `config` loads and saves no failure-persistence file (the fixed seed replaces it).
+    fn persists_nothing(config: &Config) -> bool {
+        config.failure_persistence.is_none()
+    }
+
+    #[test]
+    fn prop_seed_config_has_no_persistence_file() {
+        assert!(
+            persists_nothing(&config(seed())),
+            "the shared config sets a failure-persistence file"
+        );
+        // Control: proptest's default config sets one, and the check rejects it.
+        assert!(
+            !persists_nothing(&Config::default()),
+            "control: the persistence check does not read the field"
+        );
+    }
+
     /// Runs a property that always holds under `config` and counts the cases it ran.
     fn cases_run(config: Config) -> u32 {
         let runs = Cell::new(0u32);
