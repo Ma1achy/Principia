@@ -149,3 +149,31 @@ fn deps_pins_the_reading_applied_until_rq_129() {
         );
     }
 }
+
+fn metadata_json(dep: &str) -> Metadata {
+    let doc = format!(
+        r#"{{"workspace_members": ["path+file:///ws/crates/engine#0.1.0", "path+file:///ws/crates/gui#0.1.0"],
+            "packages": [
+              {{"name": "engine", "id": "path+file:///ws/crates/engine#0.1.0",
+                "manifest_path": "/ws/crates/engine/Cargo.toml", "dependencies": [{dep}]}},
+              {{"name": "gui", "id": "path+file:///ws/crates/gui#0.1.0",
+                "manifest_path": "/ws/crates/gui/Cargo.toml", "dependencies": []}}]}}"#
+    );
+    Metadata::from_json(doc.as_bytes()).unwrap()
+}
+
+/// REQ-SYS-004 constrains workspace edges. A registry package, or a path package outside the workspace, that
+/// shares a member's name is not one.
+#[test]
+fn deps_a_dependency_that_only_shares_a_member_name_is_not_an_edge() {
+    let registry =
+        r#"{"name": "gui", "kind": null, "source": "registry+https://github.com/rust-lang/crates.io-index"}"#;
+    assert_eq!(metadata_json(registry).edges().unwrap(), vec![]);
+    let elsewhere = r#"{"name": "gui", "kind": null, "source": null, "path": "/elsewhere/gui"}"#;
+    assert_eq!(metadata_json(elsewhere).edges().unwrap(), vec![]);
+    // Control: the same dependency as a path dependency on the member is an edge, and a forbidden one.
+    let member = r#"{"name": "gui", "kind": null, "source": null, "path": "/ws/crates/gui"}"#;
+    let edges = metadata_json(member).edges().unwrap();
+    assert_eq!(edges, vec![edge("engine", "gui", DepKind::Normal)]);
+    assert_eq!(check(&edges).len(), 1);
+}

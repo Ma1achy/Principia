@@ -169,6 +169,9 @@ pub struct Metadata {
 pub struct Package {
     pub name: String,
     pub id: String,
+    /// The package's `Cargo.toml`. `cargo metadata` always writes it; the minimal test fixtures may not.
+    #[serde(default)]
+    pub manifest_path: Option<String>,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -176,6 +179,29 @@ pub struct Package {
 pub struct Dependency {
     pub name: String,
     pub kind: Option<String>,
+    /// `null` for a path dependency; `registry+…` or `git+…` otherwise.
+    #[serde(default)]
+    pub source: Option<String>,
+    /// The directory of a path dependency.
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+impl Dependency {
+    /// Whether this dependency resolves to the workspace member `member`, as opposed to a package that only
+    /// shares its name. A registry or git dependency (`source` set) is never a workspace member. A path
+    /// dependency is one only if its `path` is the member's directory, when both paths are known.
+    fn is_on(&self, member: &Package) -> bool {
+        if self.source.is_some() || self.name != member.name {
+            return false;
+        }
+        match (&self.path, &member.manifest_path) {
+            (Some(path), Some(manifest)) => {
+                Path::new(manifest).parent() == Some(Path::new(path.as_str()))
+            }
+            _ => true,
+        }
+    }
 }
 
 impl Metadata {
@@ -208,17 +234,18 @@ impl Metadata {
         serde_json::from_slice(bytes).map_err(|e| format!("cannot parse cargo metadata: {e}"))
     }
 
-    /// The workspace edges: each dependency of a workspace member on another workspace member.
+    /// The workspace edges: each dependency of a workspace member that resolves to another workspace member
+    /// (not merely one with a member's name; see `Dependency::is_on`).
     pub fn edges(&self) -> Result<Vec<Edge>, String> {
         let members: Vec<&Package> = self
             .packages
             .iter()
             .filter(|p| self.workspace_members.contains(&p.id))
             .collect();
-        let is_member = |name: &str| members.iter().any(|p| p.name == name);
+        let is_member = |dep: &Dependency| members.iter().any(|m| dep.is_on(m));
         let mut edges = Vec::new();
         for package in &members {
-            for dep in package.dependencies.iter().filter(|d| is_member(&d.name)) {
+            for dep in package.dependencies.iter().filter(|d| is_member(d)) {
                 let kind = match dep.kind.as_deref() {
                     None => DepKind::Normal,
                     Some("dev") => DepKind::Dev,
