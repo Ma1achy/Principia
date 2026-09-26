@@ -176,12 +176,14 @@ impl GpuHarness {
         self.device
             .poll(wgpu::PollType::wait_indefinitely())
             .expect("device poll failed");
-        let words = slice
-            .get_mapped_range()
-            .expect("readback range")
-            .chunks_exact(4)
-            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        let view = slice.get_mapped_range().expect("readback range");
+        let words = view
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| u32::from_le_bytes(*b))
             .collect();
+        drop(view);
         readback.unmap();
         words
     }
