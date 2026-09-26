@@ -2181,4 +2181,4 @@ Tick any you don't accept.
   (b) `#[allow(clippy::type_complexity)]` on that test, with a comment giving the reason;
   (c) a workspace `clippy.toml` raising `type-complexity-threshold`, with the reason recorded;
   (d) allow the lint in test targets only (e.g. `[lints.clippy]` in the workspace or crate manifest), with a reason.
-- **Ruling:** pending.
+- **Ruling:** R-197 (decisions.md): option (a), a small named struct; no allow, no config change. Closed in PR #17.
