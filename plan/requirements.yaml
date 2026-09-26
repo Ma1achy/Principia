@@ -4468,11 +4468,14 @@
     section: "6. Accessors (illustrative of generated output; source is the Rust layout definition — emitted as Rust for the kernel/host and WGSL for the fragment side)"
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: unit test
-    detail: "run the fragment unpack self-test on an adapter without shader-f16; results match the Rust unpack; in CI on every commit on the self-hosted Apple-silicon Metal runner and on lavapipe (R-110)"
+    detail: "run the fragment unpack self-test on an adapter without shader-f16; results match the Rust unpack; in CI on every commit on GitHub-hosted macos-15 (Metal) and on lavapipe (R-110, R-186)"
   rulings:
   - R-110
+  - R-186
   milestone: M0
 - id: REQ-PAY-012
   area: PAY
@@ -5823,11 +5826,14 @@
     section: 6. The harness
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: property test
-    detail: "fuzz all fields incl. top bits set (catches i32 sign extension); the GPU self-test dispatch runs in CI on every commit on the self-hosted Metal runner and on lavapipe (R-110)"
+    detail: "fuzz all fields incl. top bits set (catches i32 sign extension); the GPU self-test dispatch runs in CI on every commit on GitHub-hosted macos-15 (Metal) and on lavapipe (R-110, R-186)"
   rulings:
   - R-110
+  - R-186
   milestone: M0
 - id: REQ-GEN-005
   area: GEN
@@ -13265,11 +13271,14 @@
     section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: unit test
-    detail: "fields with the top bit set round-trip without sign extension on the GPU: the self-hosted Metal runner and lavapipe, every commit (R-110)"
+    detail: "fields with the top bit set round-trip without sign extension on the GPU: GitHub-hosted macos-15 (Metal) and lavapipe, every commit (R-110, R-186)"
   rulings:
   - R-110
+  - R-186
   milestone: M0
 - id: REQ-TOOL-004
   area: TOOL
@@ -16488,13 +16497,16 @@
     section: 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: numerical gate
-    detail: "Parity run over full trajectories on two backends — Metal on the self-hosted Apple-silicon runner and lavapipe (R-110); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory)."
+    detail: "Parity run over full trajectories on two backends — Metal on GitHub-hosted macos-15 and lavapipe (R-110, R-186); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory)."
   rulings:
   - R-34
   - R-58
   - R-110
+  - R-186
   milestone: M4
   note: "pitfall: \"10. GENERALISING A STATELESS RESULT TO A TRAJECTORY\" — 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY."
 - id: REQ-VAL-080
@@ -19928,7 +19940,7 @@
   milestone: M0
 - id: REQ-SYS-065
   area: SYS
-  statement: "GPU CI must run on two backends on every commit: a self-hosted Apple-silicon job (Metal) and an ubuntu job with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan; the self-hosted job must run only for pushes and PRs from this repository, never for fork PRs."
+  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-latest with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan; the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -19936,13 +19948,16 @@
     section: "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
   - file: decisions.md
     section: "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: review checklist
-    detail: "the CI log shows gpu_harness green on both jobs with the named backends; the self-hosted job carries the same-repository if: guard; an unknown PRIN_GPU_BACKEND fails naming the variable"
+    detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
   rulings:
   - R-110
   - R-169
   - R-174
+  - R-186
   milestone: M0
 - id: REQ-SYS-066
   area: SYS
@@ -19958,17 +19973,20 @@
   milestone: M0
 - id: REQ-SYS-067
   area: SYS
-  statement: "CI must run at the cadence R-110 and R-177 set: ci.yml runs `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs bench (and the survey from M8); screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every suite and writes the gate report. Bench is not in the per-commit ci."
+  statement: "CI must run at the cadence R-110, R-177 and R-186 set: ci.yml runs `cargo xtask ci` (plan-check included) on every push; nightly.yml, scheduled, runs the CPU and lavapipe suites (and the survey from M8), not benchmarks; screenshot.yml runs screenshots on GUI PRs (those touching crates/gui/** or docs/gui/**); gate.yml, dispatched with a milestone, runs every hosted suite and writes the gate report. Benchmarks and performance gates run only on the human's own Mac via prin profile, at gates and on demand."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
   - file: decisions.md
     section: R-177 — Cadence *(closes G4, C6)*
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   verify:
     method: unit test
-    detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks and fails on a missing one; review: ci.yml has no bench, nightly.yml is scheduled, gate.yml takes a milestone input"
+    detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
   rulings:
   - R-110
   - R-134
   - R-177
+  - R-186
   milestone: M0

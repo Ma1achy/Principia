@@ -21,11 +21,12 @@
 - `decisions.md` § "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 
 ## Deliverables
 - `crates/engine/src/chunking.rs`: chunk planner (macro-steps per dispatch) used by the GPU march and the CPU rayon path alike.
 - `crates/validation/tests/loop_shape.rs`: the 100-macro-step single-dispatch parity test.
-- `xtask` bench `dispatch-chunk`: per-chunk duration measurements on each available backend (the self-hosted Metal runner and lavapipe, R-110); the proposed bound with its evidence in the PR.
+- `xtask` bench `dispatch-chunk`: per-chunk duration measurements on the human's own Mac (Metal) via `prin profile`, never on a hosted runner (R-186); the proposed bound with its evidence in the PR.
 
 ## Acceptance tests
 - `cargo test -p engine chunked_march` — a long march run as multiple bounded dispatches gives results identical to one long dispatch; the CPU path yields through the same mechanism (REQ-PERF-010).

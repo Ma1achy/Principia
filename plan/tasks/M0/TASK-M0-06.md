@@ -23,6 +23,7 @@
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-183 — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*"
+- `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 
 ## Deliverables
 - `xtask/src/golden.rs` — `cargo xtask golden <suite>`, `cargo xtask golden --all` (registered in `cargo xtask ci`, run on every commit, R-110), `cargo xtask golden repro`. Cases render through native wgpu offscreen.
@@ -33,7 +34,7 @@
 - `fixtures/golden/BASELINES.md` — the rule that a baseline image changes only with a recorded gate decision (R-110); the golden runner refuses a case whose reference changed without an entry naming that decision.
 
 ## Acceptance tests
-- `cargo xtask golden selftest` — the analytic gradient matches its reference; the same case against a reference shifted by one 8-bit step fails (the runner can fire).
+- `cargo xtask golden selftest` — the analytic gradient matches its reference; the same case against a reference shifted by one 8-bit step fails (the runner can fire). It runs on `ubuntu-latest` (lavapipe) and on `macos-15` (Metal) within REQ-VAL-138's tolerance: the golden half of R-186's first Metal check. If it fails or is flaky on `macos-15`, stop and raise a REVIEW_QUEUE entry proposing the self-hosted runner (R-186).
 - `cargo test -p xtask golden_repro` — a repro pair whose configurations differ in two fields is refused; a one-field pair reports the RGB profile along the line for each arm (REQ-VAL-003).
 - `cargo test -p xtask golden_repro_columns` — the report tabulates each symptom in its own column per arm; on a fixture where the change moves one symptom and leaves the other unchanged, the unchanged column is reported as unchanged, not merged (REQ-VAL-009).
 - Review checklist (physics §3): an artefact investigation record made with this mode shows the one-variable-changed reproduction and the measurement that killed or confirmed each hypothesis (REQ-VAL-003); an ablation closes a fix only against the columns it moved (REQ-VAL-009).

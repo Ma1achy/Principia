@@ -21,6 +21,7 @@
 - `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*"
 - `decisions.md` § "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
 - `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
+- `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 
 ## Deliverables
 - `crates/validation/src/gpu.rs` — `GpuHarness::new()` (headless, no surface, no optional features; the backend is read from `PRIN_GPU_BACKEND=metal|vulkan`, and an unset or unknown value is an error naming the variable, R-169), `run_wgsl(module, entry, inputs) -> Vec<u32>`, and the adapter info (name, backend, driver) exposed for TASK-M0-19's session header.
@@ -28,18 +29,19 @@
 - `crates/validation/src/prop.rs` — the shared proptest config (case count, seed printed on failure).
 - `xtask/src/controls.rs` — `cargo xtask controls`: lists the workspace's tests, runs `cargo test --features controls` in each crate that declares the feature (a crate without it is skipped and reported, not failed, R-176), and fails when a control passes or a test in a controls crate has no control; registered in `cargo xtask ci`.
 - Controls for TASK-M0-01's `deps` tests, the only tests merged before this task (TASK-M0-02 and TASK-M0-03 now depend on this one and register their own, R-176).
-- `.github/workflows/ci.yml` — two GPU jobs (R-169): `gpu-metal` on `runs-on: [self-hosted, macOS, ARM64]` with `PRIN_GPU_BACKEND=metal`, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`. The self-hosted job runs only for pushes and for PRs from this repository: `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`; fork PRs get the CPU and lavapipe jobs only (R-174).
+- `.github/workflows/ci.yml` — two GPU jobs on GitHub-hosted runners (R-169, R-186): `gpu-metal` on `runs-on: macos-15` (Apple silicon, paravirtual Metal) with `PRIN_GPU_BACKEND=metal`, for the Metal correctness suites only, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`. *Dormant (R-186):* R-174's same-repository guard, `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`, applies to a self-hosted job and is added back only if one is (R-174).
 - Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads.
 
 ## Acceptance tests
-- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu, in CI on the self-hosted Metal runner and on lavapipe (R-110).
+- `cargo test -p validation gpu_harness` — a WGSL identity dispatch round-trips 2¹⁶ u32 words bit-exact on native in-process wgpu, in CI on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110, R-186).
 - `cargo test -p validation gpu_harness_can_fire` — on words with bit 31 set, the i32 `extractBits` dispatch differs from the u32 one: the harness's reachable output includes the sign-extension failure.
-- CI log on the PR head: `gpu-metal` and `gpu-lavapipe` each run `gpu_harness` green, and the adapter info each prints names the Metal and the Vulkan (llvmpipe/lavapipe) backend; review checklist (code): the `gpu-metal` job carries the R-174 `if:` guard (REQ-SYS-065).
+- `cargo test -p validation metal_hosted_probe`, the first check on `macos-15` (R-186): wgpu finds an adapter whose backend is Metal, and the harness's M0 fixture, the 2¹⁶-word identity dispatch, round-trips bit-exact. If it fails or is flaky (any failure in 10 consecutive runs), stop and raise a REVIEW_QUEUE entry proposing the self-hosted runner. The agent then scripts its setup, and the human approves it (REQ-SYS-065).
+- CI log on the PR head: `gpu-metal` (macos-15) and `gpu-lavapipe` (ubuntu-latest) each run `gpu_harness` green, and the adapter info each prints names the Metal and the Vulkan (llvmpipe/lavapipe) backend; review checklist (code): no job uses a self-hosted runner (REQ-SYS-065).
 - `cargo test -p validation gpu_backend_env` — `PRIN_GPU_BACKEND` unset or `dx12` fails naming the variable; `vulkan` and `metal` select that backend (REQ-SYS-065).
 - `cargo xtask controls` — every test in the workspace has a registered negative control and every control makes its test fail; a fixture test with no control, and one whose control passes, each fail the command (REQ-VAL-007).
 - Review checklist (qa §3): no test is arithmetically impossible or true by construction (the n_hot < N² quantile case, a distinct-value count bounded below the claimed effect) (REQ-VAL-007).
 
 ## Notes
 - Every later task's tests register their controls here; the qa reviewer checks each control is discriminating (qa §3).
-- R-110 (RQ-79): the harness's CI adapters are a self-hosted Apple-silicon runner (Metal) and lavapipe, both on every commit; `GpuHarness` selects one from `PRIN_GPU_BACKEND` (R-169). The runner itself is registered by the human under its own macOS user account (R-174; `plan/HUMAN_SETUP.md`).
+- R-110 as amended by R-186: the harness's CI adapters are GitHub-hosted `macos-15` (Metal) and lavapipe on `ubuntu-latest`, both on every commit; `GpuHarness` selects one from `PRIN_GPU_BACKEND` (R-169). There is no self-hosted runner, and R-174 is dormant.
 - The harness lives in `crates/validation` ("the validation harness" in the plan layout) so that the codegen self-test and, from M4, the native parity suite share one device path.
