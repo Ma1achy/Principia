@@ -41,7 +41,7 @@
   title: "The test harness: native wgpu self-test dispatch and proptest"
   depends_on: [TASK-M0-01]
   needs: []
-  requirements: [REQ-SYS-065]
+  requirements: [REQ-SYS-065, REQ-VAL-151]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M0-05
@@ -135,7 +135,7 @@
 - id: TASK-M0-16
   milestone: M0
   title: The contract surfaces' skeleton in the engine crate, and the vocabulary lint
-  depends_on: [TASK-M0-01]
+  depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
   requirements: [REQ-SYS-002, REQ-SYS-003]
   reviewers: [code, qa, gui]

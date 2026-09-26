@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-SYS-002, REQ-SYS-003
-- **Depends on:** TASK-M0-01
+- **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -19,6 +19,7 @@
 - `docs/design/principia_memory_tiers.md` § "1. Taxonomy (locked vocabulary)"
 - `decisions.md` § "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+- `decisions.md` § "R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*"
 
 ## Deliverables
 - `crates/engine/src/contract/{sim_config,render_state,view_ui,set_field,snapshot}.rs` — the types, with doc comments citing gui_state_contract §2; fields the corpus names at M0 only, no defaults, no methods.
@@ -35,3 +36,4 @@
 - The field lists are completed by the requirements that need them (REQ-GUI-036, REQ-GUI-102, M8, and the SimConfig requirements of M2–M6); this task names the surfaces and the §2 groups (R-133: gui_state_contract §2 lists the groups, each group's fields come from the contract that owns them).
 - The firewall (engine exposes only these surfaces `pub`) is REQ-SYS-052, M8.
 - RQ-80 ruled: R-111 — the docs already read `SimState` in the display chain and `n_renorm` in the uniform echo, and wrap their retirement passages in the `retired-terms` markers (applied in step 7); the lint covers code and docs, excluding the marked passages.
+- R-200: this task depends on TASK-M0-22, so its tests (and TASK-M0-17's and TASK-M0-18's) register their own negative controls with `negative_control!` in the same PR.

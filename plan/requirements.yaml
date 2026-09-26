@@ -17619,7 +17619,7 @@
   milestone: M3
 - id: REQ-VAL-147
   area: VAL
-  statement: "`cargo xtask controls` must pair each test with its negative control by the test name given in `negative_control!(test_name, \"description\", control)` — no test-name attribute and no proc-macro crate (R-199) — run every control under the `controls` feature of each crate that declares it, and fail naming the test when a control leaves its test passing or when a test in such a crate has no control; a crate without the `controls` feature is skipped and reported, not failed, and tests reach the macro through a dev-dependency on `crates/validation` (R-176)."
+  statement: "`cargo xtask controls` must pair each test with its negative control by the test name given in `negative_control!(test_name, \"description\", control)` — no test-name attribute and no proc-macro crate (R-199) — pairing by name across all of a crate's test targets, so that a control registered in the crate's integration tests (`tests/`) pairs with a unit test in its `src/` (R-201); run every control under the `controls` feature of each crate that declares it, and fail naming the test when a control leaves its test passing or when a test in such a crate has no control; a crate without the `controls` feature is skipped and reported, not failed, and tests reach the macro through a dev-dependency on `crates/validation` (R-176)."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.4 A test that cannot fail is not a test
@@ -17629,17 +17629,20 @@
     section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
   - file: decisions.md
     section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  - file: decisions.md
+    section: "R-201 — A kernel or ledger unit test's control is registered from that crate's `tests/`, by name *(closes RQ-138)*"
   verify:
     method: unit test
-    detail: "fixture crates run through `cargo xtask controls`: a test with a discriminating control passes; a test with no control and a test whose control leaves it passing each fail the command naming the test; a crate without the `controls` feature is reported as skipped and does not fail the command"
+    detail: "fixture crates run through `cargo xtask controls`: a test with a discriminating control passes; a test with no control and a test whose control leaves it passing each fail the command naming the test; a crate without the `controls` feature is reported as skipped and does not fail the command; a unit test in `src/` whose control is registered in the same crate's `tests/` is paired with it by name and passes (R-201)"
   rulings:
   - R-176
   - R-198
   - R-199
+  - R-201
   milestone: M0
 - id: REQ-VAL-148
   area: VAL
-  statement: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, within the per-PR time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped."
+  statement: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, within the per-PR time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped. The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202)."
   source:
   - file: decisions.md
     section: R-196 — Mutation testing joins the QA gate
@@ -17647,15 +17650,16 @@
     section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
   verify:
     method: review checklist
-    detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events, and each exclusion names which of R-196's three categories it falls in; qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant, and with the test added it reports none"
+    detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events, and each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
   rulings:
   - R-196
   - R-198
+  - R-202
   milestone: M0
-  rq:
-  - RQ-139
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
@@ -17688,6 +17692,23 @@
   rulings:
   - R-196
   - R-198
+  milestone: M0
+- id: REQ-VAL-151
+  area: VAL
+  kind: calibration
+  statement: "The number of cases the shared proptest configuration runs per property (R-203) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the case count with its evidence (proposed: 256, proptest's own default); `crates/validation/src/prop.rs` carries it, marked provisional until the human confirms or changes it at the M0 gate (R-182), and `cargo test -p validation prop_seed` shows the value and that it is provisional"
+  rulings:
+  - R-71
+  - R-182
+  - R-203
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

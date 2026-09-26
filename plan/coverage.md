@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 133 |
-| VAL | 149 |
+| VAL | 150 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1232** |
+| **total** | **1233** |
 
-Of these: 95 calibration, 101 definition, 1036 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 96 calibration, 101 definition, 1036 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 71 |
+| M0 | 72 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 95 calibration, 101 definition, 1036 obligation. Retired (kept for the
 
 ## Sections
 
-890 sections in 46 files: 782 yield at least one requirement; 108 yield none and are listed below with the reason.
+894 sections in 46 files: 785 yield at least one requirement; 109 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 60 |
+| informative only | 61 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -69,6 +69,7 @@ Of these: 95 calibration, 101 definition, 1036 obligation. Retired (kept for the
 | R-167 — The prin-rs licence is not blocking | informative only | no requirement; recorded in docs/reference/prin-rs/README.md § "Licence" |
 | R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)* | informative only | plan and doc fixes applied in step 8 (task references, fixture procedure, the pinned OKLab source, open-questions entries, the INDEX count); no requirement |
 | R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)* | informative only | process ruling; recorded in CLAUDE.md |
+| R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)* | informative only | plan ruling (a task's size and a dependency); applied in plan/tasks.yaml and the TASK-M0-16 and TASK-M0-22 task files; no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -1,7 +1,7 @@
 # TASK-M0-04 — The test harness: native wgpu self-test dispatch and proptest
 
 - **Milestone:** M0
-- **Closes:** REQ-SYS-065
+- **Closes:** REQ-SYS-065, REQ-VAL-151
 - **Depends on:** TASK-M0-01
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -22,10 +22,13 @@
 - `decisions.md` § "R-174 — The self-hosted runner runs only this repository's code *(closes H1)*"
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 - `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+- `decisions.md` § "R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*"
 
 ## Deliverables
 - `crates/validation/src/gpu.rs` — `GpuHarness::new()` (headless, no surface, no optional features; the backend is read from `PRIN_GPU_BACKEND=metal|vulkan`, and an unset or unknown value is an error naming the variable, R-169), `run_wgsl(module, entry, inputs) -> Vec<u32>`, and the adapter info (name, backend, driver) exposed for TASK-M0-19's session header.
-- `crates/validation/src/prop.rs` — the shared proptest config (case count, seed printed on failure).
+- `crates/validation/src/prop.rs` — the shared proptest config (case count, seed printed on failure). The case count is REQ-VAL-151's calibration value: 256 proposed, used provisionally and marked so until the human confirms or changes it at the M0 gate (R-203, R-182).
 - `.github/workflows/ci.yml` — two GPU jobs on GitHub-hosted runners (R-169, R-186): `gpu-metal` on `runs-on: macos-15` (Apple silicon, paravirtual Metal) with `PRIN_GPU_BACKEND=metal`, for the Metal correctness suites only, and `gpu-lavapipe` on `ubuntu-latest` with `sudo apt-get install -y mesa-vulkan-drivers` and `PRIN_GPU_BACKEND=vulkan`. Both run `cargo test -p validation gpu_harness`; `gpu-metal` also runs `metal_hosted_probe`. *Dormant (R-186):* R-174's same-repository guard, `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`, applies to a self-hosted job and is added back only if one is (R-174).
 - Harness self-tests: a WGSL identity kernel; a WGSL kernel reading a top-bit-set word with the i32 and the u32 `extractBits` overloads; `metal_hosted_probe`.
 
@@ -36,6 +39,7 @@
 - CI log on the PR head: `gpu-metal` (macos-15) and `gpu-lavapipe` (ubuntu-latest) each run `gpu_harness` green, and the adapter info each prints names the Metal and the Vulkan (llvmpipe/lavapipe) backend; review checklist (code): no job uses a self-hosted runner (REQ-SYS-065).
 - `cargo test -p validation gpu_backend_env` — `PRIN_GPU_BACKEND` unset or `dx12` fails naming the variable; `vulkan` and `metal` select that backend (REQ-SYS-065).
 - `cargo test -p validation prop_seed` — a property made to fail prints the seed it failed on, and re-running with that seed fails on the same case.
+- `cargo test -p validation prop_seed -- --nocapture` — the shared config runs 256 cases per property, and the output marks the value provisional (R-182); proposal in the PR: 256 with its evidence, confirmed or changed by the human at the M0 gate (R-203) (REQ-VAL-151).
 
 ## Notes
 - R-198 split the old TASK-M0-04: the control registry and `cargo xtask controls` are TASK-M0-21; controls for every test merged before TASK-M0-22, this task's among them, and `controls` in `cargo xtask ci` are TASK-M0-22 (which closes REQ-VAL-007); R-196's per-PR mutation gate is TASK-M0-23; its nightly run is TASK-M0-19.
