@@ -1511,3 +1511,25 @@ Standing rule, "so this doesn't recur":
 
 *Open when recorded:* the per-PR time limit has no value; it becomes a calibration requirement (R-71). The nightly
 workflow is TASK-M0-19's deliverable, so the nightly run cannot land before it. Where R-196's work goes is RQ-135.
+
+## R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-135, the human chose "Accept the split":
+- TASK-M0-04 keeps the GPU harness (`gpu.rs`, `PRIN_GPU_BACKEND`, the identity and `extractBits` self-tests, the
+  `metal_hosted_probe`, the `gpu-metal` and `gpu-lavapipe` CI jobs) and `prop.rs`, and closes REQ-SYS-065.
+- TASK-M0-21: the control registry and `cargo xtask controls`, with its fixture tests; not yet in `cargo xtask ci`.
+- TASK-M0-22: controls for every test merged before it, and `controls` registered in `cargo xtask ci`; closes
+  REQ-VAL-007.
+- TASK-M0-23: R-196's per-PR `cargo mutants --in-diff` job, its exclusions, the per-PR time limit as a calibration
+  requirement, and qa's checklist line.
+- R-196's nightly full run joins TASK-M0-19, which creates `nightly.yml`.
+- TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04.
+
+## R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*
+*26 Sep 2026 · applied in TASK-M0-04*
+
+Asked in RQ-136, the human chose "Name in the macro": there is no test-name attribute and no proc-macro crate.
+`negative_control!(test_name, "description", control)` names its test, and `cargo xtask controls` pairs tests and
+controls by that name. R-176's "Tests are matched to their controls by a shared test-name attribute" is replaced by
+this; its dev-dependency route to `crates/validation` and the skipping of crates without the `controls` feature stand.

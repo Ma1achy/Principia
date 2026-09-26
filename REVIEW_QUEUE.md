@@ -2215,7 +2215,7 @@ Tick any you don't accept.
   - TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04, because they register controls (R-176).
     The other tasks that depend on TASK-M0-04 (M0-05, 06, 07, 14, 15, 19, 20) keep it.
 - **Needed:** accept the split, or rule another.
-- **Ruling:** open.
+- **Ruling:** R-198 (decisions.md). Closed in TASK-M0-04.
 
 ## RQ-136: R-176's "shared test-name attribute" needs a proc-macro crate that the crate map lacks *(build, TASK-M0-04)*
 
@@ -2231,4 +2231,4 @@ Tick any you don't accept.
   control)` names its test in the macro call, and `cargo xtask controls` pairs names; (c) an attribute that stable
   Rust already accepts, such as a tool attribute or `#[doc]` marker, read by `xtask controls` from the source.
 - **Needed:** which matching mechanism, and if (a), the crate's place in §7.1.
-- **Ruling:** open.
+- **Ruling:** R-199 (decisions.md). Closed in TASK-M0-04.
