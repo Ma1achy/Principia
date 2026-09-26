@@ -392,6 +392,7 @@ pub enum CompileCheck {
 /// `test = true` there, so a `test = false` one is compiled in test mode too (`strip_manifest`). A use
 /// of `validation` by a unit test, by any route, then fails to compile, and the error carries the compiler's output.
 /// `--all-features` (R-192): a unit test behind any feature of kernel or ledger is compiled too.
+/// Host-only (R-193): the check builds for the host target, so a unit test gated on another platform is not seen.
 ///
 /// `--offline`: the check needs no package that the workspace's own build has not already fetched.
 pub fn compile_check(metadata: &Metadata) -> Result<CompileCheck, String> {
