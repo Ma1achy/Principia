@@ -279,7 +279,7 @@ Reading it: the **layout table and link registry are roots** (everything generat
 
 ### 7.1 Crate map
 
-*R-170: drafted from §7 and R-146. **Status: awaiting the human's confirmation**; TASK-M0-01 doesn't start until it is confirmed.*
+*R-170: drafted from §7 and R-146. **Confirmed by R-185**, with the kernel → ledger edge a build-dependency only.*
 
 Each node of the graph above is assigned to one crate of the confirmed layout (R-146; there is no contract crate, R-172).
 `cargo xtask deps` checks the workspace's crate graph against the allowed edges below (REQ-SYS-004). Edges *inside* one
@@ -295,7 +295,7 @@ code-review item.
 | decoder (factorised) | `kernel` | shared CPU/GPU source |
 | chart system | `kernel` | the chart maps and `validate(u, v)` (R-26) |
 | canonicalise, encode | `kernel` | shared source; lookup and lock (CPU, `SimConfig`) are in `engine` |
-| compute KERNEL, occupants + wrapper | `kernel` | compiled twice: f32 SPIR-V → WGSL, and native f64 |
+| compute KERNEL, occupants + wrapper | `kernel` | compiled twice: f32 SPIR-V → WGSL, and native f64; `no_std`, so rust-gpu can compile it (R-185) |
 | validation (the §7 node: chart-aware validation before lowering) | `engine` | not the `validation` crate, which is the test harness |
 | resolve/lowering, dispatch | `engine` | |
 | navigation (uniform edits) | `engine` | behind the typed surface (`crates/engine/src/contract/`) |
@@ -312,7 +312,7 @@ depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate dep
 
 | from | to | the §7 arrow it realises |
 |---|---|---|
-| `kernel` | `ledger` | layout table → pack/unpack gen → kernel; link registry → decoder |
+| `kernel` | `ledger` | layout table → pack/unpack gen → kernel; link registry → decoder. **Build-dependency only (R-185)**: the ledger generates code into the kernel at build time; a normal dependency on this edge is forbidden |
 | `render` | `ledger` | layout table → pack/unpack gen (WGSL), debug catalogue gen |
 | `engine` | `ledger`, `kernel` | kernel → dispatch; chart system → validation → resolve/lowering |
 | `engine` | `render` | payload → fragment assembly (the frame loop and dispatch drive the fragment side) |
@@ -321,7 +321,7 @@ depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate dep
 | `validation` | any of the above except `gui` | the harness exercises each seam |
 | any (dev-dependency only) | `validation` | R-176 |
 
-Every other workspace edge is forbidden; in particular `ledger` depends on nothing, `kernel` on nothing but `ledger`,
+The kernel is `no_std` (R-185). Every other workspace edge is forbidden; in particular `ledger` depends on nothing, `kernel` on nothing but `ledger` (and that only as a build-dependency),
 `render` never on `engine` (the edge would run against the payload's direction), and nothing on `gui`.
 
 ---
