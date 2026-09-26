@@ -8,8 +8,11 @@
 //! uses `validation` is an integration test (`tests/`), not a unit test in `src/`, because the dev-dependency
 //! cycle would give unit tests two copies of the crate. The check compiles (R-191, `compile_check`): when either
 //! crate takes `validation` as a dev-dependency, a copy of the workspace without that dev-dependency must pass
-//! `cargo check -p kernel -p ledger --lib --tests --all-features`, so a use by a unit test fails whatever its route (an
-//! alias, a macro, `#[path]`, `include!`) and whatever feature it sits behind (R-192). Both crates must also keep their library and binary targets under `src/`.
+//! `cargo check -p kernel -p ledger --lib --tests` with `--no-default-features`, with default features and with
+//! `--all-features`, each in the dev and the release profile (R-194), so a use by a unit test fails whatever its route
+//! (an alias, a macro, `#[path]`, `include!`). Its known limits: other platforms (R-193) and other cfg combinations
+//! (R-194); doctests are not compiled, and may use `validation` (R-194). Both crates must also keep their library and
+//! binary targets under `src/`.
 
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
@@ -385,14 +388,19 @@ pub enum CompileCheck {
 
 /// R-187's condition, checked by compiling (R-191). When kernel or ledger takes `validation` as a dev-dependency, the
 /// workspace is copied to a temporary directory (`copy_workspace`), `validation` is removed from their
-/// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --all-features --offline` must pass, with
+/// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --offline` must pass in each feature set and profile, with
 /// `CARGO_TARGET_DIR` at `CHECK_TARGET_DIR` under the workspace's target directory. The copy also leaves out their
 /// integration-test, example and bench targets: those are not unit tests, and an integration test may use
 /// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode; each has
 /// `test = true` there, so a `test = false` one is compiled in test mode too (`strip_manifest`). A use
 /// of `validation` by a unit test, by any route, then fails to compile, and the error carries the compiler's output.
-/// `--all-features` (R-192): a unit test behind any feature of kernel or ledger is compiled too.
-/// Host-only (R-193): the check builds for the host target, so a unit test gated on another platform is not seen.
+/// The check runs six times, stopping at the first failure (R-194, amending R-192): `--no-default-features`, default
+/// features and `--all-features` (`FEATURE_SETS`), each in the dev and the release profile (`PROFILES`). A unit test
+/// behind a feature, behind a feature's absence, or behind the release profile is compiled too.
+/// Known limits: the check builds for the host target, so a unit test gated on another platform is not seen (R-193);
+/// any other cfg combination (for example a test gated on feature `a` on and `b` off) is not seen either (R-194).
+/// Doctests are not compiled: a kernel or ledger doctest may use `validation`, since rustdoc builds each one as a
+/// separate crate that links the library from outside (R-194).
 ///
 /// `--offline`: the check needs no package that the workspace's own build has not already fetched.
 pub fn compile_check(metadata: &Metadata) -> Result<CompileCheck, String> {
@@ -440,33 +448,58 @@ fn check_copy(
             .collect();
         strip_manifest(&copy.join(relative), &keys)?;
     }
-    let mut command = Command::new(cargo());
-    command.arg("check").arg("--manifest-path").arg(copy.join("Cargo.toml"));
-    for package in &crates {
-        command.args(["-p", &package.name]);
+    let packages: Vec<String> = crates.iter().map(|p| format!("-p {}", p.name)).collect();
+    for (profile, profile_args) in PROFILES {
+        for (features, feature_args) in FEATURE_SETS {
+            let mut command = Command::new(cargo());
+            command.arg("check").arg("--manifest-path").arg(copy.join("Cargo.toml"));
+            for package in &crates {
+                command.args(["-p", &package.name]);
+            }
+            let output = command
+                .args(["--lib", "--tests", "--offline"])
+                .args(*feature_args)
+                .args(*profile_args)
+                .env("CARGO_TARGET_DIR", target.join(CHECK_TARGET_DIR))
+                .output()
+                .map_err(|e| format!("cannot run cargo check: {e}"))?;
+            if output.status.success() {
+                continue;
+            }
+            // The compiler names files in the copy; name them in the workspace.
+            let copy_prefix = format!("{}{}", copy.display(), std::path::MAIN_SEPARATOR);
+            let root_prefix = format!("{}{}", root.display(), std::path::MAIN_SEPARATOR);
+            let stderr = String::from_utf8_lossy(&output.stderr).replace(&copy_prefix, &root_prefix);
+            let flags: Vec<&str> = feature_args.iter().chain(profile_args.iter()).copied().collect();
+            return Err(format!(
+                "kernel and ledger do not compile without their validation dev-dependency with {features} in the \
+                 {profile} profile, so a unit test in src/ uses validation, or they do not compile at all: in kernel \
+                 and ledger a test that uses validation is an integration test (tests/), not a unit test in src/ \
+                 (systems_architecture §7.1; R-187, R-191, R-194). `cargo check {} --lib --tests --offline{}`, on a \
+                 copy of the workspace without that dev-dependency, says:\n{stderr}",
+                packages.join(" "),
+                flags.iter().map(|f| format!(" {f}")).collect::<String>()
+            ));
+        }
     }
-    let output = command
-        .args(["--lib", "--tests", "--all-features", "--offline"])
-        .env("CARGO_TARGET_DIR", target.join(CHECK_TARGET_DIR))
-        .output()
-        .map_err(|e| format!("cannot run cargo check: {e}"))?;
-    if output.status.success() {
-        let mut names: Vec<String> = deps.iter().map(|(p, _)| p.name.clone()).collect();
-        names.dedup();
-        return Ok(CompileCheck::Passed(names));
-    }
-    // The compiler names files in the copy; name them in the workspace.
-    let copy_prefix = format!("{}{}", copy.display(), std::path::MAIN_SEPARATOR);
-    let root_prefix = format!("{}{}", root.display(), std::path::MAIN_SEPARATOR);
-    let stderr = String::from_utf8_lossy(&output.stderr).replace(&copy_prefix, &root_prefix);
-    Err(format!(
-        "kernel and ledger do not compile without their validation dev-dependency, so a unit test in src/ uses \
-         validation, or they do not compile at all: in kernel and ledger a test that uses validation is an \
-         integration test (tests/), not a unit test in src/ (systems_architecture §7.1; R-187, R-191, R-192). \
-         `cargo check {} --lib --tests --all-features --offline`, on a copy of the workspace without that dev-dependency, says:\n{stderr}",
-        crates.iter().map(|p| format!("-p {}", p.name)).collect::<Vec<_>>().join(" ")
-    ))
+    let mut names: Vec<String> = deps.iter().map(|(p, _)| p.name.clone()).collect();
+    names.dedup();
+    Ok(CompileCheck::Passed(names))
 }
+
+/// The feature sets the compile check builds (R-194): no features, the default ones, and all of them. A unit test
+/// behind a feature, or behind a feature's absence (`not(feature = "…")`, whether that feature is default or not), is
+/// compiled by one of them.
+const FEATURE_SETS: &[(&str, &[&str])] = &[
+    ("--no-default-features", &["--no-default-features"]),
+    ("default features", &[]),
+    ("--all-features", &["--all-features"]),
+];
+
+/// The profiles the compile check builds each feature set in (R-194): dev, and release (`--release`), so a unit test
+/// behind `debug_assertions` or its absence is compiled. One `CARGO_TARGET_DIR` serves both; cargo keeps each
+/// profile's output apart.
+const PROFILES: &[(&str, &[&str])] = &[("dev", &[]), ("release", &["--release"])];
 
 /// In the manifest at `path` (a copy): removes each of `keys` from every dev-dependency table (`[dev-dependencies]`
 /// and each `[target.'…'.dev-dependencies]`), leaves out every integration-test, example and bench target
