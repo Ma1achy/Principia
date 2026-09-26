@@ -1,5 +1,5 @@
-# Per-push CI (R-177): build, test, the crate-graph check (REQ-SYS-004) and `cargo xtask ci`, the single
-# per-push entry point every later per-commit runner registers into. Bench runs nightly and screenshots
+# Per-push CI (R-177): formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and
+# `cargo xtask ci`, the single per-push entry point every later per-commit runner registers into. Bench runs nightly and screenshots
 # on GUI PRs, in their own workflows (R-177). GitHub-hosted runners (R-186).
 name: ci
 
@@ -16,7 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt --all --check
+        run: cargo fmt --all --check
+      - name: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: cargo build --workspace
         run: cargo build --workspace
       - name: cargo test --workspace
