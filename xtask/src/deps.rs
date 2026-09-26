@@ -517,12 +517,15 @@ fn crate_uses(text: &str, name: &str) -> Vec<usize> {
     lines
 }
 
-/// Whether the token at `j` (`>` or `>>`) closes a `<` opened earlier in the same statement, as in
-/// `<T as Trait>::name` or `Vec::<Vec<u8>>::name`, so that the `::name` after it is an associated item, not the
-/// crate. A `>` or `>>` with no such `<` is a comparison or a shift, and `::name` after it is the crate. `->`,
-/// `=>`, `>=` and `>>=` are `Token::Op`s that close nothing. The walk back skips balanced `()` and `[]` and stops
-/// at `;`, `{`, `}` or an unmatched `(` or `[`. It cannot tell a comparison `<` from a generic one, so in
-/// `a < b && c > ::name::X` the `>` is read as closing the `<`.
+/// Whether the token at `j` (`>` or `>>`) closes a qualified path (`<T as Trait>`, `<Vec<u8>>`) or a turbofish
+/// (`Vec::<Vec<u8>>`), so that the `::name` after it is an associated item, not the crate. The walk back finds the
+/// `<` that the `>` balances, skipping balanced `()` and `[]` and stopping at `;`, `{`, `}` or an unmatched `(`
+/// or `[`. That `<` opens a qualified path when no operand comes before it, and a turbofish when `::` does.
+/// Anything else is a use of the crate: a `>` or `>>` that balances no `<` (a comparison or a shift), and one that
+/// balances a `<` after an identifier, `)`, `]` or a digit, which is a comparison (`a < b && c > ::name::X`) or a
+/// generic parameter list (`impl<T> ::name::Trait for S<T>`). Where the tokens alone cannot decide, the answer
+/// is a use: `Foo<T>::name::X` in a type counts as one. `->`, `=>`, `>=` and `>>=` are `Token::Op`s that close
+/// nothing.
 fn closes_angle(toks: &[(Token, usize)], j: usize) -> bool {
     let angles = |t: &Token| match t {
         Token::Punct('>') => 1,
@@ -536,8 +539,8 @@ fn closes_angle(toks: &[(Token, usize)], j: usize) -> bool {
         return false;
     }
     let mut groups = 0usize;
-    for (tok, _) in toks[..j].iter().rev() {
-        match tok {
+    for m in (0..j).rev() {
+        match &toks[m].0 {
             Token::Punct(')' | ']') => groups += 1,
             Token::Punct('(' | '[') if groups > 0 => groups -= 1,
             Token::Punct('(' | '[' | ';' | '{' | '}') => return false,
@@ -545,7 +548,12 @@ fn closes_angle(toks: &[(Token, usize)], j: usize) -> bool {
             t => {
                 depth += angles(t);
                 if depth <= 0 {
-                    return true;
+                    return match m.checked_sub(1).map(|p| &toks[p].0) {
+                        None | Some(Token::PathSep) => true,
+                        Some(Token::Ident(_)) => false,
+                        Some(Token::Punct(c)) => !(c.is_alphanumeric() || matches!(c, ')' | ']')),
+                        Some(Token::Op(_)) => true,
+                    };
                 }
             }
         }

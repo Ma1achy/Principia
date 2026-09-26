@@ -327,11 +327,11 @@ fn deps_missing_sources_are_an_error_for_the_live_workspace() {
     assert_eq!(metadata.source_violations(false).unwrap(), vec![]);
 }
 
-/// A `>` that is part of an operator, or a `>` that closes no `<`, does not make the `::validation::…` after it
-/// an associated item: after `>=`, `>>=`, a shift `>>` or a comparison `>`, it is a use of the crate in src/ and
-/// fails, naming the line. Control: after the `>` or `>>` that closes a qualified path or a generic
-/// (`<T as Tr>::validation::X`, `Vec::<Vec<u8>>::validation::X`), `validation` is an associated item, not the
-/// crate, and passes.
+/// A `>` that is part of an operator, or a `>` that closes no qualified path or turbofish, does not make the
+/// `::validation::…` after it an associated item: after `>=`, `>>=`, a shift `>>`, a comparison `>` (alone or
+/// after a comparison `<`) or the `>` of `impl<T>`, it is a use of the crate in src/ and fails, naming the line.
+/// Control: after the `>` or `>>` that closes a qualified path or a turbofish (`<u8 as Tr>::validation::X`,
+/// `Vec::<Vec<u8>>::validation::X`), `validation` is an associated item, not the crate, and passes.
 #[test]
 fn deps_validation_path_after_an_operator_with_a_closing_angle_fails() {
     let uses = [
@@ -340,6 +340,8 @@ fn deps_validation_path_after_an_operator_with_a_closing_angle_fails() {
         ("shr", "#[cfg(test)]\nfn t(a: u8) -> u8 {\n    a >> ::validation::SHIFT\n}\n"),
         ("gt", "#[cfg(test)]\nfn t(a: u8) -> bool {\n    a > ::validation::LIMIT\n}\n"),
         ("lt_shr", "#[cfg(test)]\nfn t(a: u8, b: u8) -> bool {\n    a < b >> ::validation::SHIFT\n}\n"),
+        ("lt_and_gt", "#[cfg(test)]\nfn t(a: u8, b: u8) -> bool {\n    a < b && b > ::validation::LIMIT\n}\n"),
+        ("impl_generics", "#[cfg(test)]\nstruct S<T>(T);\nimpl<T> ::validation::Harness for S<T> {}\n"),
     ];
     for (case, src) in uses {
         let metadata = source_workspace(&format!("op_{case}"), "kernel", DEV_ON_VALIDATION, &[("src/lib.rs", src)]);
@@ -348,11 +350,12 @@ fn deps_validation_path_after_an_operator_with_a_closing_angle_fails() {
         assert!(stderr.contains("src/lib.rs:3"), "{case}: stderr does not name the line:\n{stderr}");
     }
 
-    // Control: the same position after a `>` or `>>` that closes a `<` is an associated item.
+    // Control: the same position after a `>` or `>>` that closes a qualified path or turbofish is an associated item.
     let items = [
         ("qualified", "fn t() -> u8 {\n    <u8 as Tr>::validation::X\n}\n"),
         ("turbofish", "fn t() -> u8 {\n    Vec::<Vec<u8>>::validation::X\n}\n"),
         ("nested_qualified", "fn t() -> u8 {\n    <Vec<u8> as Tr>::validation::X\n}\n"),
+        ("qualified_in_arm", "fn t(x: u8) -> u8 {\n    match x { _ => <u8 as Tr>::validation::X }\n}\n"),
     ];
     for (case, src) in items {
         let metadata =
