@@ -6,7 +6,8 @@ Usage: cargo xtask <command>
 
 Commands:
   ci                         run every registered per-push runner, in order (R-177)
-  deps [--metadata <file>]   check the workspace crate graph against systems_architecture §7.1
+  deps [--metadata <file>]   check the workspace crate graph against systems_architecture §7.1, and
+                             that kernel and ledger use validation only outside src/ (R-187)
                              (reads `cargo metadata --format-version 1`, or <file> if given)";
 
 fn main() -> ExitCode {
@@ -35,13 +36,16 @@ fn main() -> ExitCode {
 }
 
 fn deps(fixture: Option<PathBuf>) -> Result<(), String> {
+    // A fixture may describe a graph with no sources behind it; the live workspace must have them.
+    let require_sources = fixture.is_none();
     let metadata = match fixture {
         Some(path) => xtask::deps::Metadata::from_file(&path)?,
         None => xtask::deps::Metadata::from_cargo()?,
     };
     let edges = metadata.edges()?;
     let violations = xtask::deps::check(&edges);
-    if violations.is_empty() {
+    let uses = metadata.source_violations(require_sources)?;
+    if violations.is_empty() && uses.is_empty() {
         println!(
             "xtask deps: {} workspace edge(s), all in the allowed-edge table (systems_architecture §7.1)",
             edges.len()
@@ -51,5 +55,12 @@ fn deps(fixture: Option<PathBuf>) -> Result<(), String> {
     for violation in &violations {
         eprintln!("xtask deps: {violation}");
     }
-    Err(format!("{} forbidden workspace edge(s) (REQ-SYS-004)", violations.len()))
+    for source_use in &uses {
+        eprintln!("xtask deps: {source_use}");
+    }
+    Err(format!(
+        "{} forbidden workspace edge(s), {} forbidden use(s) of validation under src/ (REQ-SYS-004)",
+        violations.len(),
+        uses.len()
+    ))
 }

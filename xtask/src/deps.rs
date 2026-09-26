@@ -3,9 +3,13 @@
 //!
 //! Edges *inside* one crate (decoder before kernel, canonicalise before the integrator) are not visible to
 //! a crate-graph check; they stay a code-review item (systems_architecture §7.1).
+//!
+//! It also enforces R-187's condition on the `validation` dev-dependency: in `kernel` and `ledger`, no
+//! source under `src/` uses `validation` (a test that does is an integration test in `tests/`), because
+//! the dev-dependency cycle would give unit tests two copies of the crate (`Metadata::source_violations`).
 
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde::Deserialize;
@@ -57,11 +61,9 @@ pub struct AllowedEdge {
     pub kinds: Kinds,
 }
 
-/// `from` for the "any (dev-dependency only) → validation" row. In effect it covers every workspace crate
-/// but `validation`, `kernel` and `ledger`. `rule_broken` rejects `kernel` → `validation` and `ledger` →
-/// `validation` before it consults this table. That applies §7.1's "`ledger` depends on nothing, `kernel`
-/// on nothing but `ledger`" ahead of this row, the reading taken until RQ-129 is ruled.
-const ANY: &str = "*";
+/// `from` for §7.1's "any except `gui` (dev-dependency only) → `validation`" row (R-176, R-187): every
+/// workspace crate but `gui` and `validation` itself, `kernel` and `ledger` included.
+const ANY_EXCEPT_GUI: &str = "*";
 
 /// The allowed workspace edges, transcribed from systems_architecture §7.1 ("Allowed workspace edges";
 /// arrows read "depends on"). Every other workspace edge is forbidden.
@@ -80,15 +82,15 @@ pub const ALLOWED: &[AllowedEdge] = &[
     AllowedEdge { from: "gui", to: "engine", kinds: Kinds::Any },
     // The CLI depends on engine.
     AllowedEdge { from: "prin", to: "engine", kinds: Kinds::Any },
-    // validation → any of the above except gui: the harness exercises each seam.
+    // validation → any of the above except gui and prin: the harness exercises each seam; where it needs
+    // the CLI it runs the built `prin` binary as a separate process (R-187). So no validation → prin.
     AllowedEdge { from: "validation", to: "kernel", kinds: Kinds::Any },
     AllowedEdge { from: "validation", to: "ledger", kinds: Kinds::Any },
     AllowedEdge { from: "validation", to: "render", kinds: Kinds::Any },
     AllowedEdge { from: "validation", to: "engine", kinds: Kinds::Any },
-    // Whether `prin` is among "any of the above" is open (RQ-129); allowed until it is ruled.
-    AllowedEdge { from: "validation", to: "prin", kinds: Kinds::Any },
-    // any → validation, dev-dependency only (R-176).
-    AllowedEdge { from: ANY, to: "validation", kinds: Kinds::DevOnly },
+    // any except gui → validation, dev-dependency only (R-176, R-187). Never a normal or build dependency,
+    // so the no_std kernel and rust-gpu builds never see it.
+    AllowedEdge { from: ANY_EXCEPT_GUI, to: "validation", kinds: Kinds::DevOnly },
 ];
 
 /// One workspace dependency edge: `from` depends on `to` with `kind`.
@@ -130,25 +132,39 @@ fn rule_broken(edge: &Edge) -> Option<&'static str> {
     if to == "gui" {
         return Some("nothing depends on gui (systems_architecture §7.1; gui_state_contract §1)");
     }
-    // Reading B of RQ-129 (pending a ruling): §7.1's "ledger depends on nothing, kernel on nothing but
-    // ledger" is applied ahead of its "any (dev-dependency only) → validation" row.
-    if (from == "ledger" || from == "kernel") && to == "validation" {
+    if from == "gui" && to == "validation" {
+        return Some("gui never depends on validation, in any kind (systems_architecture §7.1; R-187)");
+    }
+    if from == "validation" && to == "prin" {
         return Some(
-            "ledger and kernel take no workspace dependency on validation, not even a dev-dependency \
-             (systems_architecture §7.1; the reading applied until RQ-129 is ruled)",
+            "validation never depends on prin; it runs the built binary as a separate process \
+             (systems_architecture §7.1; R-187)",
         );
     }
-    if from == "ledger" {
-        return Some("ledger is a root: it has no workspace dependency (systems_architecture §7.1)");
+    if to == "validation" && edge.kind != DepKind::Dev {
+        return Some(
+            "validation is reached only as a dev-dependency, never a normal or build dependency \
+             (systems_architecture §7.1; R-176, R-187)",
+        );
     }
-    if from == "kernel" && to != "ledger" {
-        return Some("kernel depends on no workspace crate but ledger (systems_architecture §7.1)");
+    if from == "ledger" && to != "validation" {
+        return Some(
+            "ledger is a root: it has no workspace dependency but validation as a dev-dependency \
+             (systems_architecture §7.1; R-187)",
+        );
+    }
+    if from == "kernel" && to != "ledger" && to != "validation" {
+        return Some(
+            "kernel depends on no workspace crate but ledger, and validation as a dev-dependency \
+             (systems_architecture §7.1; R-187)",
+        );
     }
     if from == "kernel" && to == "ledger" && edge.kind != DepKind::Build {
         return Some("kernel → ledger is a build-dependency only (R-185)");
     }
     let allowed = ALLOWED.iter().any(|a| {
-        let from_matches = a.from == from || (a.from == ANY && from != a.to);
+        let from_matches =
+            a.from == from || (a.from == ANY_EXCEPT_GUI && from != "gui" && from != a.to);
         from_matches && a.to == to && a.kinds.admits(edge.kind)
     });
     if allowed {
@@ -185,6 +201,9 @@ pub struct Dependency {
     /// The directory of a path dependency.
     #[serde(default)]
     pub path: Option<String>,
+    /// The name the dependent uses for it, when renamed in its `Cargo.toml`.
+    #[serde(default)]
+    pub rename: Option<String>,
 }
 
 impl Dependency {
@@ -234,14 +253,66 @@ impl Metadata {
         serde_json::from_slice(bytes).map_err(|e| format!("cannot parse cargo metadata: {e}"))
     }
 
+    /// The workspace members, in the order `cargo metadata` lists them.
+    fn members(&self) -> Vec<&Package> {
+        self.packages.iter().filter(|p| self.workspace_members.contains(&p.id)).collect()
+    }
+
+    /// R-187's condition on the `validation` dev-dependency: in each crate of `NO_VALIDATION_IN_SRC` that
+    /// depends on `validation`, no `.rs` file under its `src/` uses `validation` (under the name it gives the
+    /// dependency). A crate without that dependency cannot use the crate, so it is not scanned.
+    ///
+    /// `require_sources`: whether a crate to scan must have its `src/` on disk. It is set for the live
+    /// workspace; a fixture may describe a graph with no sources behind it, and then the scan is skipped.
+    pub fn source_violations(&self, require_sources: bool) -> Result<Vec<SourceViolation>, String> {
+        let members = self.members();
+        let Some(validation) = members.iter().find(|m| m.name == "validation") else {
+            return Ok(Vec::new());
+        };
+        let mut violations = Vec::new();
+        for package in members.iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())) {
+            let mut names: Vec<String> = package
+                .dependencies
+                .iter()
+                .filter(|d| d.is_on(validation))
+                .map(|d| d.rename.as_deref().unwrap_or(&d.name).replace('-', "_"))
+                .collect();
+            names.sort();
+            names.dedup();
+            if names.is_empty() {
+                continue;
+            }
+            let src = package
+                .manifest_path
+                .as_deref()
+                .and_then(|m| Path::new(m).parent())
+                .map(|dir| dir.join("src"));
+            let src = match src {
+                Some(src) if src.is_dir() => src,
+                _ if !require_sources => continue,
+                _ => return Err(format!("{}: cannot find its src/ directory to scan", package.name)),
+            };
+            for file in rust_files(&src)? {
+                let text = std::fs::read_to_string(&file)
+                    .map_err(|e| format!("cannot read {}: {e}", file.display()))?;
+                for name in &names {
+                    for line in crate_uses(&text, name) {
+                        violations.push(SourceViolation {
+                            krate: package.name.clone(),
+                            file: file.clone(),
+                            line,
+                        });
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
     /// The workspace edges: each dependency of a workspace member that resolves to another workspace member
     /// (not merely one with a member's name; see `Dependency::is_on`).
     pub fn edges(&self) -> Result<Vec<Edge>, String> {
-        let members: Vec<&Package> = self
-            .packages
-            .iter()
-            .filter(|p| self.workspace_members.contains(&p.id))
-            .collect();
+        let members = self.members();
         let is_member = |dep: &Dependency| members.iter().any(|m| dep.is_on(m));
         let mut edges = Vec::new();
         for package in &members {
@@ -261,5 +332,208 @@ impl Metadata {
             }
         }
         Ok(edges)
+    }
+}
+
+/// The crates in which no source under `src/` may use `validation` (systems_architecture §7.1; R-187).
+pub const NO_VALIDATION_IN_SRC: &[&str] = &["kernel", "ledger"];
+
+/// A use of `validation` in a source under `src/` of a crate in `NO_VALIDATION_IN_SRC`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceViolation {
+    pub krate: String,
+    pub file: PathBuf,
+    /// 1-based.
+    pub line: usize,
+}
+
+impl fmt::Display for SourceViolation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "forbidden use of validation in {} src/ at {}:{}: in kernel and ledger a test that uses \
+             validation is an integration test (tests/), not a unit test in src/ (systems_architecture §7.1; \
+             R-187)",
+            self.krate,
+            self.file.display(),
+            self.line
+        )
+    }
+}
+
+/// Every `.rs` file under `dir`, recursively, sorted.
+fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let entries =
+            std::fs::read_dir(&dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+        for entry in entries {
+            let path = entry.map_err(|e| format!("cannot read {}: {e}", dir.display()))?.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+#[derive(Debug, PartialEq)]
+enum Token {
+    Ident(String),
+    PathSep,
+    Punct(char),
+}
+
+/// Splits Rust source into identifiers, `::` and other punctuation, each with its 1-based line. Comments,
+/// string and character literals are skipped, so a mention there is not a use.
+fn tokens(text: &str) -> Vec<(Token, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = Vec::new();
+    let (mut i, mut line) = (0, 1);
+    let at = |i: usize| chars.get(i).copied().unwrap_or('\0');
+    // Skips to just past the closing `"` followed by `hashes` `#`s, counting lines.
+    let skip_string = |mut i: usize, line: &mut usize, hashes: usize, escapes: bool| -> usize {
+        while i < chars.len() {
+            match chars[i] {
+                '\\' if escapes => i += 1,
+                '\n' => *line += 1,
+                '"' if (1..=hashes).all(|k| at(i + k) == '#') => return i + 1 + hashes,
+                _ => {}
+            }
+            i += 1;
+        }
+        i
+    };
+    while i < chars.len() {
+        let c = chars[i];
+        if c == '\n' {
+            line += 1;
+            i += 1;
+        } else if c.is_whitespace() {
+            i += 1;
+        } else if c == '/' && at(i + 1) == '/' {
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
+            }
+        } else if c == '/' && at(i + 1) == '*' {
+            let mut depth = 0;
+            while i < chars.len() {
+                if chars[i] == '/' && at(i + 1) == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if chars[i] == '*' && at(i + 1) == '/' {
+                    depth -= 1;
+                    i += 2;
+                    if depth == 0 {
+                        break;
+                    }
+                } else {
+                    if chars[i] == '\n' {
+                        line += 1;
+                    }
+                    i += 1;
+                }
+            }
+        } else if c == '"' {
+            i = skip_string(i + 1, &mut line, 0, true);
+        } else if c == '\'' {
+            // A character literal ('x', '\n', '\u{..}'), or a lifetime ('a), which is skipped as punctuation.
+            if at(i + 1) == '\\' {
+                i += 2;
+                while i < chars.len() && chars[i] != '\'' {
+                    i += 1;
+                }
+                i += 1;
+            } else if at(i + 2) == '\'' {
+                i += 3;
+            } else {
+                i += 1;
+            }
+        } else if c.is_alphabetic() || c == '_' {
+            let start = i;
+            while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_') {
+                i += 1;
+            }
+            let word: String = chars[start..i].iter().collect();
+            // Raw and byte string prefixes: r"…", r#"…"#, b"…", br"…".
+            if matches!(word.as_str(), "r" | "br" | "b") && (at(i) == '"' || (word != "b" && at(i) == '#')) {
+                let mut hashes = 0;
+                while at(i + hashes) == '#' {
+                    hashes += 1;
+                }
+                if at(i + hashes) == '"' {
+                    i = skip_string(i + hashes + 1, &mut line, hashes, word == "b");
+                    continue;
+                }
+            }
+            out.push((Token::Ident(word), line));
+        } else if c == ':' && at(i + 1) == ':' {
+            out.push((Token::PathSep, line));
+            i += 2;
+        } else {
+            out.push((Token::Punct(c), line));
+            i += 1;
+        }
+    }
+    out
+}
+
+/// The lines on which `text` uses the external crate `name`: as a path root (`name::…` or `::name::…`), in
+/// `use name` or in `extern crate name`. `a::name::…` names a module of `a`, not the crate, and is not a use.
+fn crate_uses(text: &str, name: &str) -> Vec<usize> {
+    let toks = tokens(text);
+    let ident = |k: Option<usize>, w: &str| {
+        k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| *t == Token::Ident(w.to_owned()))
+    };
+    let is_ident = |k: Option<usize>| k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| matches!(t, Token::Ident(_)));
+    let is = |k: Option<usize>, want: &Token| k.and_then(|k| toks.get(k)).is_some_and(|(t, _)| t == want);
+    let mut lines = Vec::new();
+    for (k, (tok, line)) in toks.iter().enumerate() {
+        if *tok != Token::Ident(name.to_owned()) {
+            continue;
+        }
+        let prev = k.checked_sub(1);
+        let prev2 = k.checked_sub(2);
+        let path_root = is(Some(k + 1), &Token::PathSep)
+            && (!is(prev, &Token::PathSep)
+                || !(is_ident(prev2) || is(prev2, &Token::Punct('>'))));
+        let used = path_root || ident(prev, "use") || (ident(prev, "crate") && ident(prev2, "extern"));
+        if used && lines.last() != Some(line) {
+            lines.push(*line);
+        }
+    }
+    lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::crate_uses;
+
+    #[test]
+    fn crate_uses_finds_path_roots_use_and_extern_crate() {
+        let src = "use validation::Harness;\n\
+                   fn f() { validation::run(); }\n\
+                   extern crate validation;\n\
+                   use validation as v;\n\
+                   fn g() { ::validation::run(); }\n";
+        assert_eq!(crate_uses(src, "validation"), vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn crate_uses_ignores_comments_literals_and_other_paths() {
+        // Control for the test above: the same name, in places that are not a use of the crate.
+        let src = "// validation::run();\n\
+                   /* use validation; */\n\
+                   const S: &str = \"validation::run\";\n\
+                   const R: &str = r#\"use validation;\"#;\n\
+                   fn f() { crate::validation::run(); engine::validation::check(); }\n\
+                   fn validation() {}\n\
+                   fn g<'a>(x: &'a u8) -> char { let _ = validation(); 'v' }\n";
+        assert_eq!(crate_uses(src, "validation"), Vec::<usize>::new());
+        assert_eq!(crate_uses("fn f() { validation::run(); }", "validation"), vec![1]);
     }
 }
