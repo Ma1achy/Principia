@@ -2090,3 +2090,4 @@ Tick any you don't accept.
   kind. `xtask/tests/deps.rs` pins all three cases, so a ruling changes an assertion there.
 - **Needed:** (1) whether `kernel` and `ledger` may take `validation` as a dev-dependency (reading A), or not
   (reading B). (2) whether `validation` may depend on `prin`.
+- **Ruling:** R-187 (decisions.md). Closed in TASK-M0-01 (PR #16).

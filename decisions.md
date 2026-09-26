@@ -1370,3 +1370,23 @@ is split. TASK-M0-04 checks, on `macos-15`, that wgpu finds a Metal adapter and 
 (the identity dispatch) round-trips bit-exact. TASK-M0-06 runs `golden selftest` on `macos-15` within REQ-VAL-138's
 tolerance. The same stop-and-raise rule governs both.
 
+
+## R-187 — kernel and ledger may take validation as a dev-dependency; validation never depends on prin *(closes RQ-129)*
+*26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
+
+1. Yes: kernel and ledger may take validation as a dev-dependency only (§7.1's "any (dev-dependency only) →
+   validation" holds for every crate except gui). Never as a normal or build dependency; the no_std kernel and
+   rust-gpu builds never see it. Condition: in kernel and ledger, any test that uses validation must be an integration
+   test (tests/), not a unit test inside src/, because the dev-dependency cycle gives unit tests two copies of the
+   crate. xtask deps enforces it.
+2. No: validation may not depend on prin. Where validation needs the CLI, it runs the built binary as a separate
+   process.
+
+Fix §7.1 line 324 to say "ledger depends on nothing, kernel on nothing but ledger — normal and build dependencies;
+dev-dependencies per line 322".
+
+*Applied (TASK-M0-01):* §7.1's "any (dev-dependency only) → `validation`" row read "any", with no gui exception; the
+ruling's parenthetical says it holds "for every crate except gui". The ruling's words are applied: the row now reads
+"any except `gui`", and `xtask deps` forbids `gui` → `validation` in every kind. Under R-176, gui's tests then have no
+route to `negative_control!`; a crate without the `controls` feature is skipped, not failed. The `validation` row
+(line 321) now excludes `prin` as well as `gui`. Line 324 cites "the `validation` row above" rather than a line number.
