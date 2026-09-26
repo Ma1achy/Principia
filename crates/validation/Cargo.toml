@@ -9,3 +9,6 @@ ledger = { path = "../ledger" }
 kernel = { path = "../kernel" }
 engine = { path = "../engine" }
 render = { path = "../render" }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+proptest = "1.11"

@@ -1,6 +1,7 @@
 # Per-push CI (R-177): formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and
 # `cargo xtask ci`, the single per-push entry point every later per-commit runner registers into. Bench runs nightly and screenshots
-# on GUI PRs, in their own workflows (R-177). GitHub-hosted runners (R-186).
+# on GUI PRs, in their own workflows (R-177). GitHub-hosted runners (R-186); the GPU jobs are GitHub-hosted too, so
+# R-174's same-repository guard stays dormant until a self-hosted job is added (R-186).
 name: ci
 
 on:
@@ -25,9 +26,43 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: cargo build --workspace
         run: cargo build --workspace
+      # The workspace tests include the GPU harness self-tests, which need an adapter and PRIN_GPU_BACKEND (R-169):
+      # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo test --workspace
+        env:
+          PRIN_GPU_BACKEND: vulkan
         run: cargo test --workspace
       - name: cargo xtask deps
         run: cargo xtask deps
       - name: cargo xtask ci
         run: cargo xtask ci
+
+  # GitHub-hosted Apple silicon, paravirtual Metal: the Metal correctness suites only (R-169, R-186).
+  gpu-metal:
+    runs-on: macos-15
+    env:
+      PRIN_GPU_BACKEND: metal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test -p validation metal_hosted_probe
+        run: cargo test -p validation metal_hosted_probe -- --nocapture
+      - name: cargo test -p validation gpu_harness
+        run: cargo test -p validation gpu_harness -- --nocapture
+
+  # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
+  gpu-lavapipe:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - name: cargo test -p validation gpu_harness
+        run: cargo test -p validation gpu_harness -- --nocapture
