@@ -324,15 +324,20 @@ fn deps_validation_use_is_found_in_submodules_and_under_a_rename() {
     assert!(ok, "{stderr}");
 }
 
-/// The live workspace must have its sources to scan: a kernel with a validation dependency whose src/ is
-/// missing is an error, not a silent pass. Control: the same metadata read as a fixture skips the scan.
+/// The live workspace must have its sources and targets to check: a kernel with a validation dependency whose src/
+/// is missing is an error, not a silent pass, and so is metadata without kernel's and ledger's targets. Control: the
+/// same metadata read as a fixture skips the scan.
 #[test]
 fn deps_missing_sources_are_an_error_for_the_live_workspace() {
     let path = source_workspace("kernel_no_src", "kernel", DEV_ON_VALIDATION, &[]);
+    let err = Metadata::from_file(&path).unwrap().source_violations(true).unwrap_err();
+    assert!(err.contains("no library or binary target"), "{err}");
+    with_lib_target(&path, "kernel", "src/lib.rs");
+    with_lib_target(&path, "ledger", "src/lib.rs");
     std::fs::remove_dir_all(path.parent().unwrap().join("crates/kernel/src")).unwrap();
     let metadata = Metadata::from_file(&path).unwrap();
     let err = metadata.source_violations(true).unwrap_err();
-    assert!(err.contains("kernel"), "{err}");
+    assert!(err.contains("kernel: cannot find its src/"), "{err}");
     assert_eq!(metadata.source_violations(false).unwrap(), vec![]);
 }
 
@@ -346,7 +351,10 @@ fn deps_any_validation_identifier_in_src_fails() {
     let cases = [
         ("char_lt", "#[cfg(test)]\nfn t(c: char, d: u8) -> bool {\n    'a' < c && d > ::validation::LIMIT\n}\n"),
         ("qualified", "fn t() -> u8 {\n\n    <u8 as Tr>::validation::X\n}\n"),
-        ("c_raw_string", "pub const C: &core::ffi::CStr = cr#\"a\"b\"#;\n#[cfg(test)]\nfn t() { validation::run(); }\n"),
+        (
+            "c_raw_string",
+            "pub const C: &core::ffi::CStr = cr#\"a\"b\"#;\n#[cfg(test)]\nfn t() { validation::run(); }\n",
+        ),
         ("macro", "#[cfg(test)]\nfn t() {\n    assert!(validation::ok());\n}\n"),
         ("attribute", "#[cfg(test)]\n\n#[validation::harness]\nfn t() {}\n"),
         ("local_mod", "mod checks {}\n\nmod validation { pub fn run() {} }\n"),
@@ -392,4 +400,78 @@ fn deps_a_src_file_that_does_not_lex_fails() {
     );
     let (ok, stderr) = run_deps_path(&metadata);
     assert!(ok, "{stderr}");
+}
+
+/// A file a `#[path]` attribute in kernel src/ names is scanned too, relative to the declaring file (and, inside an
+/// inline module, below the module's directory), as is a `mod name;` in that file: a unit test cannot reach a use of
+/// validation outside src/ through it. Each case fails naming the file; the control, the same files without the
+/// identifier, passes. A `#[path]` naming no file fails, never passes unscanned.
+#[test]
+fn deps_scans_files_loaded_by_a_path_attribute() {
+    let use_it = "#[cfg(test)]\nfn t() { validation::run(); }\n";
+    let cases: [(&str, &[(&str, &str)], &str); 4] = [
+        ("outside", &[("src/lib.rs", "#[cfg(test)]\n#[path = \"../elsewhere/t.rs\"]\nmod t;\n")], "elsewhere/t.rs:2"),
+        (
+            "cfg_attr",
+            &[("src/lib.rs", "#[cfg_attr(test, path = r\"../elsewhere/t.rs\")]\nmod t;\n")],
+            "elsewhere/t.rs:2",
+        ),
+        (
+            "inline",
+            &[("src/lib.rs", "#[cfg(test)]\nmod tests {\n    #[path = \"../../elsewhere/t.rs\"]\n    mod t;\n}\n")],
+            "elsewhere/t.rs:2",
+        ),
+        (
+            "nested",
+            &[("src/lib.rs", "#[path = \"../elsewhere/t.rs\"]\nmod t;\n"), ("elsewhere/t/u.rs", use_it)],
+            "elsewhere/t/u.rs:2",
+        ),
+    ];
+    for (case, files, named) in cases {
+        let t = if case == "nested" { "mod u;\n" } else { use_it };
+        let mut with_use: Vec<(&str, &str)> = files.to_vec();
+        with_use.push(("elsewhere/t.rs", t));
+        let metadata = source_workspace(&format!("path_{case}"), "kernel", DEV_ON_VALIDATION, &with_use);
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(!ok && stderr.contains(named), "{case}: a use in the file #[path] loads passes:\n{stderr}");
+        // Control: the same files without the identifier.
+        let plain: Vec<(&str, String)> =
+            with_use.iter().map(|(p, s)| (*p, s.replace("validation", "checks"))).collect();
+        let plain: Vec<(&str, &str)> = plain.iter().map(|(p, s)| (*p, s.as_str())).collect();
+        let metadata = source_workspace(&format!("path_{case}_plain"), "kernel", DEV_ON_VALIDATION, &plain);
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(ok, "{case}: control, the files without the identifier, fails:\n{stderr}");
+    }
+    let missing = [("src/lib.rs", "#[path = \"../elsewhere/gone.rs\"]\nmod t;\n")];
+    let (ok, stderr) = run_deps_path(&source_workspace("path_missing", "kernel", DEV_ON_VALIDATION, &missing));
+    assert!(!ok && stderr.contains("src/lib.rs: #[path = \"../elsewhere/gone.rs\"]"), "{stderr}");
+}
+
+/// Sets `crate_name`'s targets in the metadata at `path` to one `lib` target at `src_path` (relative to the crate).
+fn with_lib_target(path: &std::path::Path, crate_name: &str, src_path: &str) {
+    let mut doc: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let dir = path.parent().unwrap().join("crates").join(crate_name);
+    for package in doc["packages"].as_array_mut().unwrap() {
+        if package["name"] == crate_name {
+            let src_path = dir.join(src_path).display().to_string();
+            package["targets"] = serde_json::json!([{ "kind": ["lib"], "src_path": src_path }]);
+        }
+    }
+    std::fs::write(path, serde_json::to_vec(&doc).unwrap()).unwrap();
+}
+
+/// A kernel or ledger library target outside src/ (`[lib] path = "lib/lib.rs"`) fails, naming the crate: its unit
+/// tests would escape the scan of src/. Control: the same crate with its library at src/lib.rs passes.
+#[test]
+fn deps_a_kernel_or_ledger_lib_outside_src_fails() {
+    for name in ["kernel", "ledger"] {
+        let metadata = source_workspace(&format!("lib_{name}"), name, DEV_ON_VALIDATION, &[("lib/lib.rs", "")]);
+        with_lib_target(&metadata, name, "lib/lib.rs");
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(!ok && stderr.contains(&format!("{name}: its lib target is at ")), "{name}: {stderr}");
+        let metadata = source_workspace(&format!("lib_{name}_control"), name, DEV_ON_VALIDATION, &[]);
+        with_lib_target(&metadata, name, "src/lib.rs");
+        let (ok, stderr) = run_deps_path(&metadata);
+        assert!(ok, "{name}: control, the library at src/lib.rs, fails:\n{stderr}");
+    }
 }

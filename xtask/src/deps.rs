@@ -6,14 +6,17 @@
 //!
 //! It also enforces R-187's condition on the `validation` dev-dependency: in `kernel` and `ledger`, no
 //! source under `src/` uses `validation` (a test that does is an integration test in `tests/`), because
-//! the dev-dependency cycle would give unit tests two copies of the crate (`Metadata::source_violations`).
+//! the dev-dependency cycle would give unit tests two copies of the crate (`Metadata::source_violations`). The scan
+//! fails on any identifier named `validation` there, a local item included (a deliberate over-approximation: it
+//! has no name resolution), follows `#[path]` out of `src/`, and requires the crates' library targets in `src/`.
 
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::collections::BTreeSet;
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use serde::Deserialize;
 
 /// The kind of a dependency, as `cargo metadata` reports it (`kind`: `null`, `"dev"`, `"build"`).
@@ -191,6 +194,15 @@ pub struct Package {
     #[serde(default)]
     pub manifest_path: Option<String>,
     pub dependencies: Vec<Dependency>,
+    /// The package's targets. `cargo metadata` always writes them; the minimal test fixtures may not.
+    #[serde(default)]
+    pub targets: Vec<Target>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Target {
+    pub kind: Vec<String>,
+    pub src_path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -261,23 +273,34 @@ impl Metadata {
     }
 
     /// R-187's condition on the `validation` dev-dependency: in each crate of `NO_VALIDATION_IN_SRC` that
-    /// depends on `validation`, no `.rs` file under its `src/` has an identifier named `validation` or the name
-    /// the crate gives the dependency (`identifier_lines`: a deliberate over-approximation that fails local items
-    /// with that name too). A crate without that dependency cannot use the crate, so it is not scanned.
+    /// depends on `validation`, no `.rs` file under its `src/`, nor any file a module declaration in those files
+    /// loads from outside `src/` (`#[path = "…"]`, followed transitively), has an identifier named `validation` or
+    /// the name the crate gives the dependency (`scan_text`: a deliberate over-approximation that fails local items
+    /// with that name too). A crate without that dependency cannot use the crate, so it is not scanned. Every
+    /// crate of `NO_VALIDATION_IN_SRC` must also keep its library and binary targets under `src/`, where the unit
+    /// tests the scan looks for live.
     ///
-    /// `require_sources`: whether a crate to scan must have its `src/` on disk. It is set for the live
-    /// workspace; a fixture may describe a graph with no sources behind it, and then the scan is skipped.
+    /// `require_sources`: whether a crate to scan must have its `src/` and its targets on disk and in the
+    /// metadata. It is set for the live workspace; a fixture may describe a graph with no sources behind it, and
+    /// then the scan is skipped.
     pub fn source_violations(&self, require_sources: bool) -> Result<Vec<SourceViolation>, String> {
         let members = self.members();
-        let Some(validation) = members.iter().find(|m| m.name == "validation") else {
-            return Ok(Vec::new());
-        };
+        let validation = members.iter().find(|m| m.name == "validation");
         let mut violations = Vec::new();
         for package in members.iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())) {
-            let deps: Vec<&Dependency> = package.dependencies.iter().filter(|d| d.is_on(validation)).collect();
+            let Some(dir) = package.manifest_path.as_deref().and_then(|m| Path::new(m).parent()) else {
+                if require_sources {
+                    return Err(format!("{}: cargo metadata gives no manifest_path", package.name));
+                }
+                continue;
+            };
+            let src = dir.join("src");
+            package.targets_under(&src, require_sources)?;
             // The crate's own name and each name the dependency is given (a rename).
-            let mut names: Vec<String> = deps
+            let mut names: Vec<String> = package
+                .dependencies
                 .iter()
+                .filter(|d| validation.is_some_and(|v| d.is_on(v)))
                 .flat_map(|d| [Some(&d.name), d.rename.as_ref()])
                 .flatten()
                 .map(|n| n.replace('-', "_"))
@@ -287,27 +310,38 @@ impl Metadata {
             if names.is_empty() {
                 continue;
             }
-            let src = package
-                .manifest_path
-                .as_deref()
-                .and_then(|m| Path::new(m).parent())
-                .map(|dir| dir.join("src"));
-            let src = match src {
-                Some(src) if src.is_dir() => src,
-                _ if !require_sources => continue,
-                _ => return Err(format!("{}: cannot find its src/ directory to scan", package.name)),
-            };
-            for file in rust_files(&src)? {
+            if !src.is_dir() {
+                if require_sources {
+                    return Err(format!("{}: cannot find its src/ directory to scan", package.name));
+                }
+                continue;
+            }
+            let mut queue = rust_files(&src)?;
+            let mut seen: BTreeSet<PathBuf> = queue.iter().cloned().collect();
+            while let Some(file) = queue.pop() {
                 let text = std::fs::read_to_string(&file)
                     .map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-                let lines = identifier_lines(&text, &names).map_err(|e| {
+                let found = scan_text(&text, &names).map_err(|e| {
                     format!("{}: {e}; it cannot be checked for a use of validation (R-187)", file.display())
                 })?;
-                for line in lines {
+                for line in found.lines {
                     violations.push(SourceViolation { krate: package.name.clone(), file: file.clone(), line });
+                }
+                for module in found.modules {
+                    let loaded = module.candidates(&file);
+                    if loaded.is_empty() && module.by_path {
+                        return Err(format!(
+                            "{}: #[path = {:?}] names no file this check can find to scan for a use of \
+                             validation (R-187)",
+                            file.display(),
+                            module.rel
+                        ));
+                    }
+                    queue.extend(loaded.into_iter().filter(|f| seen.insert(f.clone())));
                 }
             }
         }
+        violations.sort_by(|a, b| (&a.file, a.line).cmp(&(&b.file, b.line)));
         Ok(violations)
     }
 
@@ -334,6 +368,35 @@ impl Metadata {
             }
         }
         Ok(edges)
+    }
+}
+
+impl Package {
+    /// Fails when a library or binary target of the package (the targets with unit tests; `tests/`, examples,
+    /// benches and the build script are not ones) has its root outside `src`: a `[lib] path` elsewhere would put
+    /// unit tests where R-187's scan of `src/` does not look.
+    fn targets_under(&self, src: &Path, require_sources: bool) -> Result<(), String> {
+        let with_unit_tests = |t: &&Target| {
+            t.kind.iter().any(|k| !matches!(k.as_str(), "test" | "example" | "bench" | "custom-build"))
+        };
+        let mut found = false;
+        for target in self.targets.iter().filter(with_unit_tests) {
+            found = true;
+            if !normalize(Path::new(&target.src_path)).starts_with(src) {
+                return Err(format!(
+                    "{}: its {} target is at {}, outside {}: its unit tests would escape the check that no source \
+                     under src/ uses validation (systems_architecture §7.1; R-187)",
+                    self.name,
+                    target.kind.join(", "),
+                    target.src_path,
+                    src.display()
+                ));
+            }
+        }
+        if !found && require_sources {
+            return Err(format!("{}: cargo metadata gives no library or binary target to check", self.name));
+        }
+        Ok(())
     }
 }
 
@@ -385,6 +448,69 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
+/// `path` with `.` and `..` components resolved lexically.
+fn normalize(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+/// What `scan_text` finds in one file.
+#[derive(Debug, Default)]
+struct Scanned {
+    /// The 1-based lines with an identifier in `names`.
+    lines: Vec<usize>,
+    /// The files its out-of-line module declarations may load.
+    modules: Vec<ModuleFile>,
+}
+
+/// A file a module declaration may load: `rel`, declared inside the inline modules `inline`.
+#[derive(Debug)]
+struct ModuleFile {
+    inline: Vec<String>,
+    rel: String,
+    /// Named by a `#[path]` attribute, rather than `mod name;`'s `name.rs` or `name/mod.rs`.
+    by_path: bool,
+}
+
+impl ModuleFile {
+    /// The existing files `rel` may mean, declared in `file`: relative to its directory, and inside inline modules
+    /// also below the directories those modules name (from its directory, or from a directory named after a
+    /// non-`mod.rs` file). Taking every reading that exists over-approximates rustc's rule, never under.
+    fn candidates(&self, file: &Path) -> Vec<PathBuf> {
+        let dir = file.parent().unwrap_or(Path::new(""));
+        let inline: PathBuf = self.inline.iter().collect();
+        let stem = file.file_stem().map(PathBuf::from).unwrap_or_default();
+        let readings = [dir.to_path_buf(), dir.join(&inline), dir.join(stem).join(&inline)];
+        let mut found: Vec<PathBuf> = readings
+            .iter()
+            .map(|base| base.join(&self.rel))
+            .map(|p| normalize(&p))
+            .filter(|p| p.is_file())
+            .collect();
+        found.dedup();
+        found
+    }
+}
+
+/// The value of a plain or raw string literal token, without escapes (`None` otherwise).
+fn str_literal(token: &str) -> Option<String> {
+    if let Some(raw) = token.strip_prefix('r') {
+        let hashes = raw.len() - raw.trim_start_matches('#').len();
+        return raw.get(hashes + 1..raw.len().checked_sub(hashes + 1)?).map(str::to_owned);
+    }
+    let body = token.strip_prefix('"')?.strip_suffix('"')?;
+    (!body.contains('\\')).then(|| body.to_owned())
+}
+
 /// The 1-based lines on which an identifier in `names` appears in `text`, outside comments and string, char and
 /// byte literals, inside macro bodies and attributes too (a raw identifier `r#name` counts). `text` is lexed with
 /// `proc-macro2`; a file that does not lex is an error, so it is never passed unscanned.
@@ -393,39 +519,91 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
 /// `fn validation`, an associated item `<T as Tr>::validation`). This over-approximates R-187 on purpose: from
 /// edition 2018 `validation::x` may name a local module or the extern crate, and only name resolution can tell
 /// them apart, so a check without it that must never pass a real use has to fail both. Rename the local item.
-fn identifier_lines(text: &str, names: &[String]) -> Result<Vec<usize>, String> {
-    fn walk(stream: TokenStream, names: &[String], lines: &mut Vec<usize>) {
-        for tree in stream {
+///
+/// It also lists the files the module declarations may load: each `#[path = "…"]` (anywhere in an attribute, so
+/// under `cfg_attr` too) and each `mod name;`, with the inline modules around it.
+fn scan_text(text: &str, names: &[String]) -> Result<Scanned, String> {
+    fn word(ident: &proc_macro2::Ident) -> String {
+        let word = ident.to_string();
+        word.strip_prefix("r#").map(str::to_owned).unwrap_or(word)
+    }
+    fn walk(
+        stream: TokenStream,
+        names: &[String],
+        inline: &mut Vec<String>,
+        in_attr: bool,
+        found: &mut Scanned,
+    ) -> Result<(), String> {
+        let trees: Vec<TokenTree> = stream.into_iter().collect();
+        let at = |k: usize| trees.get(k);
+        let punct = |k: usize, c: char| matches!(at(k), Some(TokenTree::Punct(p)) if p.as_char() == c);
+        let ident = |k: usize| match at(k) {
+            Some(TokenTree::Ident(i)) => Some(word(i)),
+            _ => None,
+        };
+        for (i, tree) in trees.iter().enumerate() {
             match tree {
-                TokenTree::Ident(ident) => {
-                    let word = ident.to_string();
-                    if names.iter().any(|n| *n == word.strip_prefix("r#").unwrap_or(&word)) {
-                        lines.push(ident.span().start().line);
+                TokenTree::Ident(id) => {
+                    let line = id.span().start().line;
+                    let w = word(id);
+                    if names.contains(&w) {
+                        found.lines.push(line);
+                    }
+                    if in_attr && w == "path" && punct(i + 1, '=') {
+                        let rel = match at(i + 2) {
+                            Some(TokenTree::Literal(lit)) => str_literal(&lit.to_string()),
+                            _ => None,
+                        };
+                        let rel =
+                            rel.ok_or_else(|| format!("line {line}: a #[path] whose value is not a plain string"))?;
+                        found.modules.push(ModuleFile { inline: inline.clone(), rel, by_path: true });
+                    }
+                    if !in_attr && w == "mod" && punct(i + 2, ';') {
+                        if let Some(name) = ident(i + 1) {
+                            for rel in [format!("{name}.rs"), format!("{name}/mod.rs")] {
+                                found.modules.push(ModuleFile { inline: inline.clone(), rel, by_path: false });
+                            }
+                        }
                     }
                 }
-                TokenTree::Group(group) => walk(group.stream(), names, lines),
+                TokenTree::Group(group) => {
+                    // `i.wrapping_sub(k)` is out of range, so `None`, before the first token.
+                    let (back1, back2) = (i.wrapping_sub(1), i.wrapping_sub(2));
+                    let attr = group.delimiter() == Delimiter::Bracket
+                        && (punct(back1, '#') || (punct(back1, '!') && punct(back2, '#')));
+                    let inline_mod = !in_attr
+                        && group.delimiter() == Delimiter::Brace
+                        && ident(back2).as_deref() == Some("mod");
+                    let module = if inline_mod { ident(back1) } else { None };
+                    let pushed = module.map(|m| inline.push(m)).is_some();
+                    walk(group.stream(), names, inline, in_attr || attr, found)?;
+                    if pushed {
+                        inline.pop();
+                    }
+                }
                 TokenTree::Punct(_) | TokenTree::Literal(_) => {}
             }
         }
+        Ok(())
     }
     let stream = TokenStream::from_str(text).map_err(|e| format!("cannot lex it: {e}"))?;
-    let mut lines = Vec::new();
-    walk(stream, names, &mut lines);
-    lines.sort_unstable();
-    lines.dedup();
-    Ok(lines)
+    let mut found = Scanned::default();
+    walk(stream, names, &mut Vec::new(), false, &mut found)?;
+    found.lines.sort_unstable();
+    found.lines.dedup();
+    Ok(found)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::identifier_lines;
+    use super::scan_text;
 
     fn lines(src: &str) -> Vec<usize> {
-        identifier_lines(src, &["validation".to_owned()]).unwrap()
+        scan_text(src, &["validation".to_owned()]).unwrap().lines
     }
 
     #[test]
-    fn identifier_lines_finds_every_identifier_with_the_name() {
+    fn scan_text_finds_every_identifier_with_the_name() {
         let src = "use validation::Harness;\n\
                    extern crate validation;\n\
                    fn g() -> u8 { <u8 as Tr>::validation::X }\n\
@@ -437,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn identifier_lines_ignores_comments_and_literals() {
+    fn scan_text_ignores_comments_and_literals() {
         // Control for the test above: the name in places that are not identifiers.
         let src = "// validation::run();\n\
                    /* use validation; */\n\
@@ -452,9 +630,9 @@ mod tests {
     }
 
     #[test]
-    fn identifier_lines_fails_on_a_file_that_does_not_lex() {
-        assert!(identifier_lines("fn f() { \"unterminated }", &["validation".to_owned()]).is_err());
+    fn scan_text_fails_on_a_file_that_does_not_lex() {
+        assert!(scan_text("fn f() { \"unterminated }", &["validation".to_owned()]).is_err());
         // Control: the same file, terminated.
-        assert!(identifier_lines("fn f() { \"terminated\" }", &["validation".to_owned()]).is_ok());
+        assert!(scan_text("fn f() { \"terminated\" }", &["validation".to_owned()]).is_ok());
     }
 }
