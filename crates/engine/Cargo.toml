@@ -1,0 +1,10 @@
+[package]
+name = "engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ledger = { path = "../ledger" }
+kernel = { path = "../kernel" }
+render = { path = "../render" }
