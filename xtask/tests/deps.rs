@@ -389,6 +389,32 @@ fn deps_every_route_to_validation_from_a_unit_test_fails() {
     }
 }
 
+/// R-192: the compile check builds with `--all-features`, so a kernel unit test behind a feature (`x`, off by default)
+/// that uses validation fails. Control: the same workspace with the use removed passes, so it is the use, not the
+/// feature, that fails the check.
+#[test]
+fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
+    let manifest = "[package]\nname = \"kernel\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\nx = []\n\n\
+                    [build-dependencies]\nledger = { path = \"../ledger\" }\n\n\
+                    [dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
+    let with_use = "pub fn f() {}\n\n#[cfg(all(test, feature = \"x\"))]\nmod tests {\n    #[test]\n    fn t() {\n        \
+                    let _ = validation::Harness;\n    }\n}\n";
+    let without_use = "pub fn f() {}\n\n#[cfg(all(test, feature = \"x\"))]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
+    let lib = "crates/kernel/src/lib.rs";
+    let toml = "crates/kernel/Cargo.toml";
+
+    let root = cargo_workspace("feature_unit", &[], &[(toml, manifest), (lib, with_use)]);
+    let (ok, _, stderr) = run_workspace(&root);
+    assert!(!ok, "a kernel unit test behind feature x that uses validation passes xtask deps");
+    assert!(stderr.contains("R-192") && stderr.contains("--all-features"), "stderr does not cite R-192:\n{stderr}");
+    assert!(stderr.contains("error[E04") && stderr.contains(lib), "stderr does not show the compiler's error:\n{stderr}");
+
+    let root = cargo_workspace("feature_unit_control", &[], &[(toml, manifest), (lib, without_use)]);
+    let (ok, stdout, stderr) = run_workspace(&root);
+    assert!(ok, "control: the same unit test behind feature x without the use fails xtask deps:\n{stderr}");
+    assert!(stdout.contains("compile check passed: kernel compiles"), "control: {stdout}");
+}
+
 /// R-191 allows a local item named validation again: a unit test that uses kernel's own `mod validation` passes.
 /// Control: the unit test that uses the crate fails (`deps_a_unit_test_using_validation_fails_and_…`), and here the
 /// same test with the local module removed fails.

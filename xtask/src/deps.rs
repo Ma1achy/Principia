@@ -8,8 +8,8 @@
 //! uses `validation` is an integration test (`tests/`), not a unit test in `src/`, because the dev-dependency
 //! cycle would give unit tests two copies of the crate. The check compiles (R-191, `compile_check`): when either
 //! crate takes `validation` as a dev-dependency, a copy of the workspace without that dev-dependency must pass
-//! `cargo check -p kernel -p ledger --lib --tests`, so a use by a unit test fails whatever its route (an alias, a
-//! macro, `#[path]`, `include!`). Both crates must also keep their library and binary targets under `src/`.
+//! `cargo check -p kernel -p ledger --lib --tests --all-features`, so a use by a unit test fails whatever its route (an
+//! alias, a macro, `#[path]`, `include!`) and whatever feature it sits behind (R-192). Both crates must also keep their library and binary targets under `src/`.
 
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
@@ -385,11 +385,12 @@ pub enum CompileCheck {
 
 /// R-187's condition, checked by compiling (R-191). When kernel or ledger takes `validation` as a dev-dependency, the
 /// workspace is copied to a temporary directory (`copy_workspace`), `validation` is removed from their
-/// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --offline` must pass, with
+/// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --all-features --offline` must pass, with
 /// `CARGO_TARGET_DIR` at `CHECK_TARGET_DIR` under the workspace's target directory. The copy also leaves out their
 /// integration-test, example and bench targets: those are not unit tests, and an integration test may use
 /// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode. A use
 /// of `validation` by a unit test, by any route, then fails to compile, and the error carries the compiler's output.
+/// `--all-features` (R-192): a unit test behind any feature of kernel or ledger is compiled too.
 ///
 /// `--offline`: the check needs no package that the workspace's own build has not already fetched.
 pub fn compile_check(metadata: &Metadata) -> Result<CompileCheck, String> {
@@ -443,7 +444,7 @@ fn check_copy(
         command.args(["-p", &package.name]);
     }
     let output = command
-        .args(["--lib", "--tests", "--offline"])
+        .args(["--lib", "--tests", "--all-features", "--offline"])
         .env("CARGO_TARGET_DIR", target.join(CHECK_TARGET_DIR))
         .output()
         .map_err(|e| format!("cannot run cargo check: {e}"))?;
@@ -459,8 +460,8 @@ fn check_copy(
     Err(format!(
         "kernel and ledger do not compile without their validation dev-dependency, so a unit test in src/ uses \
          validation, or they do not compile at all: in kernel and ledger a test that uses validation is an \
-         integration test (tests/), not a unit test in src/ (systems_architecture §7.1; R-187, R-191). \
-         `cargo check {} --lib --tests --offline`, on a copy of the workspace without that dev-dependency, says:\n{stderr}",
+         integration test (tests/), not a unit test in src/ (systems_architecture §7.1; R-187, R-191, R-192). \
+         `cargo check {} --lib --tests --all-features --offline`, on a copy of the workspace without that dev-dependency, says:\n{stderr}",
         crates.iter().map(|p| format!("-p {}", p.name)).collect::<Vec<_>>().join(" ")
     ))
 }
