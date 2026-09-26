@@ -52,6 +52,14 @@ Read this first; each rule points at its source.
 - Where a ruling contradicts the corpus or itself, flag it and record what was applied (as with R-171, R-173, R-186's
   placement note); ask only if the contradiction changes what gets built.
 
+## Lints (`decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*")
+- CI runs `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push (R-195).
+- A lint fix that doesn't change behaviour (renaming, restructuring, simplifying) may be made by the implementer and
+  approved by the code reviewer. It doesn't go to REVIEW_QUEUE.
+- A suppression (`#[allow]`) carries a comment giving the reason, and needs the code reviewer's explicit approval of
+  that suppression.
+- Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
+
 ## Git
 - Merge commits, not squash. Merging stacked PRs: retarget each child PR to `main` before deleting the branch below it,
   because deleting a base branch closes its child PRs.

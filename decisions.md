@@ -1478,3 +1478,22 @@ Asked in review of PR #16, the human chose:
 2. "Yes, like integration tests": a kernel or ledger doctest may use `validation`. rustdoc compiles each doctest as a
    separate crate that links the library from outside, so R-187's two-copies problem cannot arise. The check does not
    compile doctests.
+
+## R-195 — CI checks formatting and lints
+*26 Sep 2026*
+
+"CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
+
+## R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*
+*26 Sep 2026*
+
+RQ-134: "option (a). Factor the tuple in xtask/tests/deps.rs into a small named struct; no allow, no config change."
+
+Standing rule, "so this doesn't recur":
+- A lint fix that doesn't change behaviour (renaming, restructuring, simplifying) may be made by the implementer and
+  approved by the code reviewer. It doesn't go to REVIEW_QUEUE.
+- Suppressing a lint (`#[allow]`) needs a comment giving the reason, and the code reviewer's explicit approval of that
+  suppression.
+- Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
+
+*Recorded before R-196, which was given earlier and is recorded with TASK-M0-04.*

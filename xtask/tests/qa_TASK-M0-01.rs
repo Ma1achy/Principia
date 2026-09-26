@@ -13,7 +13,16 @@ use std::process::Command;
 
 use serde_json::{json, Value};
 
-const CRATES: [&str; 8] = ["kernel", "ledger", "engine", "render", "gui", "validation", "prin", "xtask"];
+const CRATES: [&str; 8] = [
+    "kernel",
+    "ledger",
+    "engine",
+    "render",
+    "gui",
+    "validation",
+    "prin",
+    "xtask",
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Kind {
@@ -105,12 +114,19 @@ fn dep_entry(to: &str, kind: Kind) -> Value {
 
 /// A `cargo metadata` document: the eight workspace crates, `edges` as path dependencies, and `extra`
 /// raw dependency entries appended to the named crate.
-fn metadata(edges: &[(&str, &str, Kind)], extra: &[(&str, Value)], extra_packages: &[Value]) -> Value {
+fn metadata(
+    edges: &[(&str, &str, Kind)],
+    extra: &[(&str, Value)],
+    extra_packages: &[Value],
+) -> Value {
     let mut packages: Vec<Value> = CRATES
         .iter()
         .map(|name| {
-            let mut deps: Vec<Value> =
-                edges.iter().filter(|e| e.0 == *name).map(|e| dep_entry(e.1, e.2)).collect();
+            let mut deps: Vec<Value> = edges
+                .iter()
+                .filter(|e| e.0 == *name)
+                .map(|e| dep_entry(e.1, e.2))
+                .collect();
             deps.extend(extra.iter().filter(|e| e.0 == *name).map(|e| e.1.clone()));
             json!({
                 "name": name, "version": "0.1.0", "id": pkg_id(name), "license": null,
@@ -159,19 +175,38 @@ fn qa_oracle_is_not_trivial() {
     for kind in KINDS {
         let verdicts: Vec<bool> = CRATES
             .iter()
-            .flat_map(|f| CRATES.iter().filter(move |t| *t != f).map(move |t| expected(f, t, kind)))
+            .flat_map(|f| {
+                CRATES
+                    .iter()
+                    .filter(move |t| *t != f)
+                    .map(move |t| expected(f, t, kind))
+            })
             .collect();
         assert!(verdicts.contains(&true), "{kind:?}: oracle allows nothing");
-        assert!(verdicts.contains(&false), "{kind:?}: oracle forbids nothing");
+        assert!(
+            verdicts.contains(&false),
+            "{kind:?}: oracle forbids nothing"
+        );
     }
     for (from, to, kind) in baseline_edges() {
-        assert!(expected(from, to, kind), "baseline edge {from} → {to} {kind:?}");
+        assert!(
+            expected(from, to, kind),
+            "baseline edge {from} → {to} {kind:?}"
+        );
     }
     // The R-187 cases, pinned against the ruling's words.
-    assert!(expected("kernel", "validation", Kind::Dev) && expected("ledger", "validation", Kind::Dev));
+    assert!(
+        expected("kernel", "validation", Kind::Dev) && expected("ledger", "validation", Kind::Dev)
+    );
     for kind in KINDS {
-        assert!(!expected("gui", "validation", kind), "gui → validation ({kind:?})");
-        assert!(!expected("validation", "prin", kind), "validation → prin ({kind:?})");
+        assert!(
+            !expected("gui", "validation", kind),
+            "gui → validation ({kind:?})"
+        );
+        assert!(
+            !expected("validation", "prin", kind),
+            "validation → prin ({kind:?})"
+        );
     }
     for kind in [Kind::Normal, Kind::Build] {
         assert!(!expected("kernel", "validation", kind) && !expected("ledger", "validation", kind));
@@ -200,26 +235,39 @@ fn qa_every_pair_and_kind_matches_the_crate_map() {
                 let (ok, text) = run_deps_on(&tag, &metadata(&edges, &[], &[]));
                 if allowed {
                     if !ok {
-                        wrong.push(format!("{from} → {to} ({kind:?}) is allowed by §7.1 but fails:\n{text}"));
+                        wrong.push(format!(
+                            "{from} → {to} ({kind:?}) is allowed by §7.1 but fails:\n{text}"
+                        ));
                     }
                     continue;
                 }
                 if ok {
-                    wrong.push(format!("{from} → {to} ({kind:?}) is forbidden by §7.1 but passes"));
+                    wrong.push(format!(
+                        "{from} → {to} ({kind:?}) is forbidden by §7.1 but passes"
+                    ));
                     continue;
                 }
                 // Fails naming the edge (REQ-SYS-004 verify: "a fixture with each forbidden edge fails naming it").
                 if !text.contains(&format!("{from} → {to}")) {
-                    wrong.push(format!("{from} → {to} ({kind:?}) fails without naming the edge:\n{text}"));
+                    wrong.push(format!(
+                        "{from} → {to} ({kind:?}) fails without naming the edge:\n{text}"
+                    ));
                 }
                 // kernel → ledger: the failure names the dependency kind (R-185).
                 if from == "kernel" && to == "ledger" && !text.contains(kind.word()) {
-                    wrong.push(format!("kernel → ledger ({kind:?}) fails without naming its kind:\n{text}"));
+                    wrong.push(format!(
+                        "kernel → ledger ({kind:?}) fails without naming its kind:\n{text}"
+                    ));
                 }
             }
         }
     }
-    assert!(wrong.is_empty(), "{} case(s) disagree with §7.1:\n{}", wrong.len(), wrong.join("\n"));
+    assert!(
+        wrong.is_empty(),
+        "{} case(s) disagree with §7.1:\n{}",
+        wrong.len(),
+        wrong.join("\n")
+    );
 }
 
 #[test]
@@ -229,9 +277,15 @@ fn qa_kernel_ledger_normal_fails_even_beside_the_build_edge() {
     edges.push(("kernel", "ledger", Kind::Normal));
     let (ok, text) = run_deps_on("kernel_ledger_both", &metadata(&edges, &[], &[]));
     assert!(!ok, "kernel → ledger as a normal dependency passes");
-    assert!(text.contains("kernel → ledger") && text.contains("normal"), "{text}");
+    assert!(
+        text.contains("kernel → ledger") && text.contains("normal"),
+        "{text}"
+    );
     // Control: the build edge alone passes.
-    let (ok, text) = run_deps_on("kernel_ledger_build_only", &metadata(&baseline_edges(), &[], &[]));
+    let (ok, text) = run_deps_on(
+        "kernel_ledger_build_only",
+        &metadata(&baseline_edges(), &[], &[]),
+    );
     assert!(ok, "{text}");
 }
 
@@ -241,7 +295,10 @@ fn qa_renamed_workspace_dependency_is_still_an_edge() {
     // and the alias in `rename`. The edge kernel → engine is forbidden however it is spelled.
     let mut dep = dep_entry("engine", Kind::Normal);
     dep["rename"] = json!("eng");
-    let (ok, text) = run_deps_on("renamed", &metadata(&baseline_edges(), &[("kernel", dep)], &[]));
+    let (ok, text) = run_deps_on(
+        "renamed",
+        &metadata(&baseline_edges(), &[("kernel", dep)], &[]),
+    );
     assert!(!ok, "a renamed forbidden workspace dependency passes");
     assert!(text.contains("kernel → engine"), "{text}");
 }
@@ -250,13 +307,22 @@ fn qa_renamed_workspace_dependency_is_still_an_edge() {
 fn qa_target_specific_and_optional_workspace_dependencies_are_edges() {
     let mut target = dep_entry("gui", Kind::Normal);
     target["target"] = json!("cfg(unix)");
-    let (ok, text) = run_deps_on("target_specific", &metadata(&baseline_edges(), &[("prin", target)], &[]));
-    assert!(!ok, "a target-specific forbidden workspace dependency passes");
+    let (ok, text) = run_deps_on(
+        "target_specific",
+        &metadata(&baseline_edges(), &[("prin", target)], &[]),
+    );
+    assert!(
+        !ok,
+        "a target-specific forbidden workspace dependency passes"
+    );
     assert!(text.contains("prin → gui"), "{text}");
 
     let mut optional = dep_entry("engine", Kind::Normal);
     optional["optional"] = json!(true);
-    let (ok, text) = run_deps_on("optional", &metadata(&baseline_edges(), &[("render", optional)], &[]));
+    let (ok, text) = run_deps_on(
+        "optional",
+        &metadata(&baseline_edges(), &[("render", optional)], &[]),
+    );
     assert!(!ok, "an optional forbidden workspace dependency passes");
     assert!(text.contains("render → engine"), "{text}");
 }
@@ -277,8 +343,10 @@ fn qa_registry_dependency_sharing_a_workspace_name_is_not_a_workspace_edge() {
         "manifest_path": "/home/.cargo/registry/src/gui-0.1.0/Cargo.toml", "edition": "2021",
         "metadata": null, "publish": null, "authors": []
     });
-    let (ok, text) =
-        run_deps_on("registry_same_name", &metadata(&baseline_edges(), &[("engine", dep)], &[pkg]));
+    let (ok, text) = run_deps_on(
+        "registry_same_name",
+        &metadata(&baseline_edges(), &[("engine", dep)], &[pkg]),
+    );
     assert!(ok, "a non-workspace dependency named like a workspace crate is reported as a workspace edge:\n{text}");
     // Control: the same edge as a workspace (path) dependency fails.
     let mut edges = baseline_edges();
@@ -290,17 +358,30 @@ fn qa_registry_dependency_sharing_a_workspace_name_is_not_a_workspace_edge() {
 // --- The live workspace -------------------------------------------------------------------------------
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf()
 }
 
 fn live_metadata() -> Value {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let out = Command::new(cargo)
-        .args(["metadata", "--format-version", "1", "--no-deps", "--manifest-path"])
+        .args([
+            "metadata",
+            "--format-version",
+            "1",
+            "--no-deps",
+            "--manifest-path",
+        ])
         .arg(workspace_root().join("Cargo.toml"))
         .output()
         .expect("run cargo metadata");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     serde_json::from_slice(&out.stdout).unwrap()
 }
 
@@ -308,13 +389,20 @@ fn live_metadata() -> Value {
 fn live_edges(doc: &Value) -> Vec<(String, String, Kind)> {
     let members: Vec<&Value> = doc["packages"].as_array().unwrap().iter().collect();
     let dir_of = |p: &Value| {
-        Path::new(p["manifest_path"].as_str().unwrap()).parent().unwrap().to_path_buf()
+        Path::new(p["manifest_path"].as_str().unwrap())
+            .parent()
+            .unwrap()
+            .to_path_buf()
     };
     let mut edges = Vec::new();
     for p in &members {
         for d in p["dependencies"].as_array().unwrap() {
-            let Some(path) = d["path"].as_str() else { continue };
-            let Some(target) = members.iter().find(|m| dir_of(m) == Path::new(path)) else { continue };
+            let Some(path) = d["path"].as_str() else {
+                continue;
+            };
+            let Some(target) = members.iter().find(|m| dir_of(m) == Path::new(path)) else {
+                continue;
+            };
             let kind = match d["kind"].as_str() {
                 None => Kind::Normal,
                 Some("dev") => Kind::Dev,
@@ -334,26 +422,52 @@ fn live_edges(doc: &Value) -> Vec<(String, String, Kind)> {
 #[test]
 fn qa_live_workspace_has_the_plan_crates_and_no_contract_crate() {
     let doc = live_metadata();
-    let mut names: Vec<String> =
-        doc["packages"].as_array().unwrap().iter().map(|p| p["name"].as_str().unwrap().to_owned()).collect();
+    let mut names: Vec<String> = doc["packages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["name"].as_str().unwrap().to_owned())
+        .collect();
     names.sort();
     let mut want: Vec<String> = CRATES.iter().map(|s| s.to_string()).collect();
     want.sort();
-    assert_eq!(names, want, "workspace crates differ from the plan's (R-146, R-170, R-172)");
-    assert!(!names.iter().any(|n| n == "contract"), "R-172: there is no contract crate");
+    assert_eq!(
+        names, want,
+        "workspace crates differ from the plan's (R-146, R-170, R-172)"
+    );
+    assert!(
+        !names.iter().any(|n| n == "contract"),
+        "R-172: there is no contract crate"
+    );
 }
 
 #[test]
 fn qa_live_workspace_edges_are_all_allowed() {
     let edges = live_edges(&live_metadata());
-    assert!(!edges.is_empty(), "no workspace edges read: the reader is broken");
+    assert!(
+        !edges.is_empty(),
+        "no workspace edges read: the reader is broken"
+    );
     for (from, to, kind) in &edges {
-        assert!(expected(from, to, *kind), "live workspace edge {from} → {to} ({kind:?}) is not allowed by §7.1");
+        assert!(
+            expected(from, to, *kind),
+            "live workspace edge {from} → {to} ({kind:?}) is not allowed by §7.1"
+        );
     }
     // R-185: kernel → ledger exists only as a build-dependency.
-    let kl: Vec<Kind> = edges.iter().filter(|e| e.0 == "kernel" && e.1 == "ledger").map(|e| e.2).collect();
-    assert!(kl.iter().all(|k| *k == Kind::Build), "kernel → ledger kinds: {kl:?}");
-    assert!(!edges.iter().any(|e| e.0 == "ledger"), "ledger has a workspace dependency");
+    let kl: Vec<Kind> = edges
+        .iter()
+        .filter(|e| e.0 == "kernel" && e.1 == "ledger")
+        .map(|e| e.2)
+        .collect();
+    assert!(
+        kl.iter().all(|k| *k == Kind::Build),
+        "kernel → ledger kinds: {kl:?}"
+    );
+    assert!(
+        !edges.iter().any(|e| e.0 == "ledger"),
+        "ledger has a workspace dependency"
+    );
 }
 
 #[test]
@@ -386,12 +500,23 @@ fn qa_cargo_xtask_alias_runs_deps() {
             .expect("run cargo xtask")
     };
     let out = run(&["xtask", "deps"]);
-    assert!(out.status.success(), "cargo xtask deps: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "cargo xtask deps: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let out = run(&["xtask", "ci"]);
-    assert!(out.status.success(), "cargo xtask ci: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "cargo xtask ci: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     // Control: the alias reaches xtask's own argument handling, which refuses an unknown command.
     let out = run(&["xtask", "qa-no-such-command"]);
-    assert!(!out.status.success(), "cargo xtask accepts an unknown command");
+    assert!(
+        !out.status.success(),
+        "cargo xtask accepts an unknown command"
+    );
 }
 
 #[test]
@@ -404,8 +529,9 @@ fn qa_kernel_is_no_std() {
         .filter(|l| !l.is_empty() && !l.starts_with("//"))
         .collect();
     assert!(
-        code.iter().any(|l| l.replace(' ', "").starts_with("#![no_std]")
-            || l.replace(' ', "").starts_with("#![cfg_attr(") && l.contains("no_std")),
+        code.iter()
+            .any(|l| l.replace(' ', "").starts_with("#![no_std]")
+                || l.replace(' ', "").starts_with("#![cfg_attr(") && l.contains("no_std")),
         "crates/kernel/src/lib.rs has no #![no_std]"
     );
 }
@@ -415,14 +541,36 @@ fn qa_ci_workflow_runs_the_per_push_steps_and_not_bench() {
     // Task deliverable + R-177: on push and pull_request; build, test, deps, `cargo xtask ci`; bench is
     // not in the per-commit workflow.
     let yml = std::fs::read_to_string(workspace_root().join(".github/workflows/ci.yml")).unwrap();
-    let lines: Vec<&str> = yml.lines().map(str::trim).filter(|l| !l.starts_with('#')).collect();
+    let lines: Vec<&str> = yml
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#'))
+        .collect();
     let has = |s: &str| lines.iter().any(|l| l.contains(s));
     assert!(has("push"), "ci.yml does not trigger on push");
-    assert!(has("pull_request"), "ci.yml does not trigger on pull_request");
-    let runs: Vec<&str> = lines.iter().filter_map(|l| l.strip_prefix("run:")).map(str::trim).collect();
+    assert!(
+        has("pull_request"),
+        "ci.yml does not trigger on pull_request"
+    );
+    let runs: Vec<&str> = lines
+        .iter()
+        .filter_map(|l| l.strip_prefix("run:"))
+        .map(str::trim)
+        .collect();
     let pos = |cmd: &str| runs.iter().position(|r| *r == cmd);
-    for cmd in ["cargo build --workspace", "cargo test --workspace", "cargo xtask deps", "cargo xtask ci"] {
-        assert!(pos(cmd).is_some(), "ci.yml has no step `run: {cmd}`; runs: {runs:?}");
+    for cmd in [
+        "cargo build --workspace",
+        "cargo test --workspace",
+        "cargo xtask deps",
+        "cargo xtask ci",
+    ] {
+        assert!(
+            pos(cmd).is_some(),
+            "ci.yml has no step `run: {cmd}`; runs: {runs:?}"
+        );
     }
-    assert!(!runs.iter().any(|r| r.contains("xtask bench")), "R-177: bench is not per-commit");
+    assert!(
+        !runs.iter().any(|r| r.contains("xtask bench")),
+        "R-177: bench is not per-commit"
+    );
 }

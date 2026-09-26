@@ -27,7 +27,11 @@ const VALIDATION_DEV: &str = "\n[dev-dependencies]\nvalidation = { path = \"../v
 
 /// A library whose unit test, under `cfg`, uses the validation crate (`used`) or does not.
 fn lib_rs(cfg: &str, used: bool) -> String {
-    let body = if used { "let _ = validation::Harness;" } else { "" };
+    let body = if used {
+        "let _ = validation::Harness;"
+    } else {
+        ""
+    };
     format!("pub fn f() {{}}\n\n#[cfg({cfg})]\nmod tests {{\n    #[test]\n    fn t() {{\n        {body}\n    }}\n}}\n")
 }
 
@@ -38,14 +42,20 @@ fn manifest(name: &str, extra: &str) -> String {
 
 /// The manifest of `krate` (kernel with its build-dependency on ledger, R-185) with the validation dev-dependency.
 fn crate_manifest(krate: &str, extra: &str) -> String {
-    let build = if krate == "kernel" { "\n[build-dependencies]\nledger = { path = \"../ledger\" }\n" } else { "" };
+    let build = if krate == "kernel" {
+        "\n[build-dependencies]\nledger = { path = \"../ledger\" }\n"
+    } else {
+        ""
+    };
     manifest(krate, &format!("{extra}{build}{VALIDATION_DEV}"))
 }
 
 /// Writes a cargo workspace (ledger; kernel, build-depending on ledger; validation, depending on both) for `case`,
 /// with `files` written over the defaults.
 fn workspace(case: &str, files: &[(String, String)]) -> PathBuf {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_TASK-M0-01_r194").join(case);
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("qa_TASK-M0-01_r194")
+        .join(case);
     let _ = std::fs::remove_dir_all(&root);
     let mut all: Vec<(String, String)> = vec![
         (
@@ -98,18 +108,35 @@ fn cargo_test(root: &Path, krate: &str, args: &[&str]) -> (bool, String) {
         .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo test");
-    let text = format!("{}\n{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
     (out.status.success(), text)
 }
 
 /// The case fails `xtask deps` (with the compiler's error naming the file), and its control (no use) passes it with
 /// the compile check run. Premise: `cargo test --lib <flags>` builds and runs the unit test that uses validation.
 /// Premise of isolation: `cargo test --lib <other>` for each `others` cell does not build it.
-fn fails_and_its_control_passes(case: &str, krate: &str, extra: &str, cfg: &str, flags: &[&str], others: &[&[&str]]) {
+fn fails_and_its_control_passes(
+    case: &str,
+    krate: &str,
+    extra: &str,
+    cfg: &str,
+    flags: &[&str],
+    others: &[&[&str]],
+) {
     let toml = format!("crates/{krate}/Cargo.toml");
     let lib = format!("crates/{krate}/src/lib.rs");
     let cargo = crate_manifest(krate, extra);
-    let root = workspace(case, &[(toml.clone(), cargo.clone()), (lib.clone(), lib_rs(cfg, true))]);
+    let root = workspace(
+        case,
+        &[
+            (toml.clone(), cargo.clone()),
+            (lib.clone(), lib_rs(cfg, true)),
+        ],
+    );
 
     let args: Vec<&str> = ["--lib"].iter().chain(flags).copied().collect();
     let (ok, out) = cargo_test(&root, krate, &args);
@@ -134,14 +161,26 @@ fn fails_and_its_control_passes(case: &str, krate: &str, extra: &str, cfg: &str,
          (R-187; R-194 compiles every cell of --no-default-features / default / --all-features × dev / release):\n\
          {stdout}\n{stderr}"
     );
-    assert!(stderr.contains("error[E"), "{case}: stderr does not show the compiler's error:\n{stderr}");
-    assert!(stderr.contains(&lib), "{case}: the compiler's error does not name {lib}:\n{stderr}");
+    assert!(
+        stderr.contains("error[E"),
+        "{case}: stderr does not show the compiler's error:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(&lib),
+        "{case}: the compiler's error does not name {lib}:\n{stderr}"
+    );
 
     let control = format!("{case}_control");
     let root = workspace(&control, &[(toml, cargo), (lib, lib_rs(cfg, false))]);
     let (ok, stdout, stderr) = deps(&root);
-    assert!(ok, "{control}: the same workspace without the use fails xtask deps:\n{stdout}\n{stderr}");
-    assert!(stdout.contains("compile check passed"), "{control}: the compile check did not run:\n{stdout}");
+    assert!(
+        ok,
+        "{control}: the same workspace without the use fails xtask deps:\n{stdout}\n{stderr}"
+    );
+    assert!(
+        stdout.contains("compile check passed"),
+        "{control}: the compile check did not run:\n{stdout}"
+    );
 }
 
 const A_DEFAULT_B_NOT: &str = "\n[features]\ndefault = [\"a\"]\na = []\nb = []\n";
@@ -152,8 +191,22 @@ const X_NOT_DEFAULT: &str = "\n[features]\nx = []\n";
 fn qa_a_unit_test_seen_only_with_default_features_in_dev_fails() {
     let cfg = "all(test, feature = \"a\", not(feature = \"b\"))";
     let others: &[&[&str]] = &[&["--features", "b"]];
-    fails_and_its_control_passes("default_dev_kernel", "kernel", A_DEFAULT_B_NOT, cfg, &[], others);
-    fails_and_its_control_passes("default_dev_ledger", "ledger", A_DEFAULT_B_NOT, cfg, &[], others);
+    fails_and_its_control_passes(
+        "default_dev_kernel",
+        "kernel",
+        A_DEFAULT_B_NOT,
+        cfg,
+        &[],
+        others,
+    );
+    fails_and_its_control_passes(
+        "default_dev_ledger",
+        "ledger",
+        A_DEFAULT_B_NOT,
+        cfg,
+        &[],
+        others,
+    );
 }
 
 /// Default features, release profile: only that cell compiles a unit test under `a` on, `b` off and
@@ -162,7 +215,14 @@ fn qa_a_unit_test_seen_only_with_default_features_in_dev_fails() {
 fn qa_a_unit_test_seen_only_with_default_features_in_release_fails() {
     let cfg = "all(test, feature = \"a\", not(feature = \"b\"), not(debug_assertions))";
     let others: &[&[&str]] = &[&[], &["--release", "--features", "b"]];
-    fails_and_its_control_passes("default_release_kernel", "kernel", A_DEFAULT_B_NOT, cfg, &["--release"], others);
+    fails_and_its_control_passes(
+        "default_release_kernel",
+        "kernel",
+        A_DEFAULT_B_NOT,
+        cfg,
+        &["--release"],
+        others,
+    );
 }
 
 /// All features, release profile: only that cell compiles a unit test under non-default `x` and
@@ -197,7 +257,10 @@ fn qa_a_ledger_doctest_using_validation_passes() {
     let lib = "crates/ledger/src/lib.rs".to_owned();
     let cargo = crate_manifest("ledger", "");
     let doc = "/// ```\n/// let _ = validation::Harness;\n/// ```\npub fn f() {}\n".to_owned();
-    let root = workspace("doctest_ledger", &[(toml.clone(), cargo.clone()), (lib.clone(), doc)]);
+    let root = workspace(
+        "doctest_ledger",
+        &[(toml.clone(), cargo.clone()), (lib.clone(), doc)],
+    );
 
     let (ok, out) = cargo_test(&root, "ledger", &["--doc"]);
     assert!(
@@ -206,10 +269,22 @@ fn qa_a_ledger_doctest_using_validation_passes() {
     );
     let (ok, stdout, stderr) = deps(&root);
     assert!(ok, "a ledger doctest that uses validation fails xtask deps (R-194 allows it):\n{stdout}\n{stderr}");
-    assert!(stdout.contains("compile check passed"), "the compile check did not run:\n{stdout}");
+    assert!(
+        stdout.contains("compile check passed"),
+        "the compile check did not run:\n{stdout}"
+    );
 
-    let root = workspace("doctest_ledger_control", &[(toml, cargo), (lib, lib_rs("test", true))]);
+    let root = workspace(
+        "doctest_ledger_control",
+        &[(toml, cargo), (lib, lib_rs("test", true))],
+    );
     let (ok, stdout, stderr) = deps(&root);
-    assert!(!ok, "control: the same use in a ledger unit test passes xtask deps:\n{stdout}\n{stderr}");
-    assert!(stderr.contains("error[E"), "control: stderr does not show the compiler's error:\n{stderr}");
+    assert!(
+        !ok,
+        "control: the same use in a ledger unit test passes xtask deps:\n{stdout}\n{stderr}"
+    );
+    assert!(
+        stderr.contains("error[E"),
+        "control: stderr does not show the compiler's error:\n{stderr}"
+    );
 }

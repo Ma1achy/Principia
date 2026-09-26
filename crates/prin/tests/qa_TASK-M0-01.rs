@@ -4,7 +4,10 @@
 use std::process::Command;
 
 fn prin(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_prin")).args(args).output().expect("run prin")
+    Command::new(env!("CARGO_BIN_EXE_prin"))
+        .args(args)
+        .output()
+        .expect("run prin")
 }
 
 #[test]
@@ -12,7 +15,10 @@ fn qa_prin_help_succeeds_and_prints_usage() {
     let out = prin(&["--help"]);
     assert!(out.status.success(), "prin --help fails");
     let text = String::from_utf8_lossy(&out.stdout);
-    assert!(text.to_lowercase().contains("usage"), "prin --help prints no usage:\n{text}");
+    assert!(
+        text.to_lowercase().contains("usage"),
+        "prin --help prints no usage:\n{text}"
+    );
 }
 
 #[test]

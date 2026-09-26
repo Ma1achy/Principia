@@ -76,27 +76,75 @@ const ANY_EXCEPT_GUI: &str = "*";
 pub const ALLOWED: &[AllowedEdge] = &[
     // §7: layout table → pack/unpack gen → kernel; link registry → decoder.
     // Build-dependency only (R-185): the ledger generates code into the kernel at build time.
-    AllowedEdge { from: "kernel", to: "ledger", kinds: Kinds::BuildOnly },
+    AllowedEdge {
+        from: "kernel",
+        to: "ledger",
+        kinds: Kinds::BuildOnly,
+    },
     // §7: layout table → pack/unpack gen (WGSL), debug catalogue gen.
-    AllowedEdge { from: "render", to: "ledger", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "render",
+        to: "ledger",
+        kinds: Kinds::Any,
+    },
     // §7: kernel → dispatch; chart system → validation → resolve/lowering.
-    AllowedEdge { from: "engine", to: "ledger", kinds: Kinds::Any },
-    AllowedEdge { from: "engine", to: "kernel", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "engine",
+        to: "ledger",
+        kinds: Kinds::Any,
+    },
+    AllowedEdge {
+        from: "engine",
+        to: "kernel",
+        kinds: Kinds::Any,
+    },
     // §7: payload → fragment assembly (the frame loop and dispatch drive the fragment side).
-    AllowedEdge { from: "engine", to: "render", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "engine",
+        to: "render",
+        kinds: Kinds::Any,
+    },
     // GUI → state → engine (gui_state_contract §1).
-    AllowedEdge { from: "gui", to: "engine", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "gui",
+        to: "engine",
+        kinds: Kinds::Any,
+    },
     // The CLI depends on engine.
-    AllowedEdge { from: "prin", to: "engine", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "prin",
+        to: "engine",
+        kinds: Kinds::Any,
+    },
     // validation → any of the above except gui and prin: the harness exercises each seam; where it needs
     // the CLI it runs the built `prin` binary as a separate process (R-187). So no validation → prin.
-    AllowedEdge { from: "validation", to: "kernel", kinds: Kinds::Any },
-    AllowedEdge { from: "validation", to: "ledger", kinds: Kinds::Any },
-    AllowedEdge { from: "validation", to: "render", kinds: Kinds::Any },
-    AllowedEdge { from: "validation", to: "engine", kinds: Kinds::Any },
+    AllowedEdge {
+        from: "validation",
+        to: "kernel",
+        kinds: Kinds::Any,
+    },
+    AllowedEdge {
+        from: "validation",
+        to: "ledger",
+        kinds: Kinds::Any,
+    },
+    AllowedEdge {
+        from: "validation",
+        to: "render",
+        kinds: Kinds::Any,
+    },
+    AllowedEdge {
+        from: "validation",
+        to: "engine",
+        kinds: Kinds::Any,
+    },
     // any except gui → validation, dev-dependency only (R-176, R-187). Never a normal or build dependency,
     // so the no_std kernel and rust-gpu builds never see it.
-    AllowedEdge { from: ANY_EXCEPT_GUI, to: "validation", kinds: Kinds::DevOnly },
+    AllowedEdge {
+        from: ANY_EXCEPT_GUI,
+        to: "validation",
+        kinds: Kinds::DevOnly,
+    },
 ];
 
 /// One workspace dependency edge: `from` depends on `to` with `kind`.
@@ -129,7 +177,12 @@ impl fmt::Display for Violation {
 pub fn check(edges: &[Edge]) -> Vec<Violation> {
     edges
         .iter()
-        .filter_map(|edge| rule_broken(edge).map(|rule| Violation { edge: edge.clone(), rule }))
+        .filter_map(|edge| {
+            rule_broken(edge).map(|rule| Violation {
+                edge: edge.clone(),
+                rule,
+            })
+        })
         .collect()
 }
 
@@ -139,7 +192,9 @@ fn rule_broken(edge: &Edge) -> Option<&'static str> {
         return Some("nothing depends on gui (systems_architecture §7.1; gui_state_contract §1)");
     }
     if from == "gui" && to == "validation" {
-        return Some("gui never depends on validation, in any kind (systems_architecture §7.1; R-187)");
+        return Some(
+            "gui never depends on validation, in any kind (systems_architecture §7.1; R-187)",
+        );
     }
     if from == "validation" && to == "prin" {
         return Some(
@@ -279,12 +334,18 @@ impl Metadata {
 
     /// The workspace members, in the order `cargo metadata` lists them.
     fn members(&self) -> Vec<&Package> {
-        self.packages.iter().filter(|p| self.workspace_members.contains(&p.id)).collect()
+        self.packages
+            .iter()
+            .filter(|p| self.workspace_members.contains(&p.id))
+            .collect()
     }
 
     /// The members of `NO_VALIDATION_IN_SRC` (kernel, ledger), in the order `cargo metadata` lists them.
     fn no_validation_in_src(&self) -> Vec<&Package> {
-        self.members().into_iter().filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str())).collect()
+        self.members()
+            .into_iter()
+            .filter(|m| NO_VALIDATION_IN_SRC.contains(&m.name.as_str()))
+            .collect()
     }
 
     /// Fails when a library or binary target of kernel or ledger has its root outside the crate's `src/`
@@ -293,9 +354,16 @@ impl Metadata {
     /// the crate is skipped.
     pub fn check_targets(&self, require_sources: bool) -> Result<(), String> {
         for package in self.no_validation_in_src() {
-            let Some(dir) = package.manifest_path.as_deref().and_then(|m| Path::new(m).parent()) else {
+            let Some(dir) = package
+                .manifest_path
+                .as_deref()
+                .and_then(|m| Path::new(m).parent())
+            else {
                 if require_sources {
-                    return Err(format!("{}: cargo metadata gives no manifest_path", package.name));
+                    return Err(format!(
+                        "{}: cargo metadata gives no manifest_path",
+                        package.name
+                    ));
                 }
                 continue;
             };
@@ -323,7 +391,11 @@ impl Metadata {
                         ))
                     }
                 };
-                edges.push(Edge { from: package.name.clone(), to: dep.name.clone(), kind });
+                edges.push(Edge {
+                    from: package.name.clone(),
+                    to: dep.name.clone(),
+                    kind,
+                });
             }
         }
         Ok(edges)
@@ -332,7 +404,9 @@ impl Metadata {
     /// Each dependency of kernel or ledger on the workspace's `validation` that is a dev-dependency, with its crate.
     fn validation_dev_dependencies(&self) -> Vec<(&Package, &Dependency)> {
         let members = self.members();
-        let Some(validation) = members.iter().find(|m| m.name == "validation") else { return Vec::new() };
+        let Some(validation) = members.iter().find(|m| m.name == "validation") else {
+            return Vec::new();
+        };
         self.no_validation_in_src()
             .into_iter()
             .flat_map(|p| p.dependencies.iter().map(move |d| (p, d)))
@@ -346,7 +420,9 @@ impl Package {
     /// benches and the build script are not ones) has its root outside `src`.
     fn targets_under(&self, src: &Path, require_sources: bool) -> Result<(), String> {
         let with_unit_tests = |t: &&Target| {
-            t.kind.iter().any(|k| !matches!(k.as_str(), "test" | "example" | "bench" | "custom-build"))
+            t.kind
+                .iter()
+                .any(|k| !matches!(k.as_str(), "test" | "example" | "bench" | "custom-build"))
         };
         let mut found = false;
         for target in self.targets.iter().filter(with_unit_tests) {
@@ -364,7 +440,10 @@ impl Package {
             }
         }
         if !found && require_sources {
-            return Err(format!("{}: cargo metadata gives no library or binary target to check", self.name));
+            return Err(format!(
+                "{}: cargo metadata gives no library or binary target to check",
+                self.name
+            ));
         }
         Ok(())
     }
@@ -408,13 +487,22 @@ pub fn compile_check(metadata: &Metadata) -> Result<CompileCheck, String> {
     if deps.is_empty() {
         return Ok(CompileCheck::NotNeeded);
     }
-    let root = metadata.workspace_root.as_deref().map(PathBuf::from).ok_or("cargo metadata gives no workspace_root")?;
-    let target =
-        metadata.target_directory.as_deref().map(PathBuf::from).ok_or("cargo metadata gives no target_directory")?;
+    let root = metadata
+        .workspace_root
+        .as_deref()
+        .map(PathBuf::from)
+        .ok_or("cargo metadata gives no workspace_root")?;
+    let target = metadata
+        .target_directory
+        .as_deref()
+        .map(PathBuf::from)
+        .ok_or("cargo metadata gives no target_directory")?;
     let copy = std::env::temp_dir().join(format!(
         "xtask-deps-{}-{}",
         std::process::id(),
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos())
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos())
     ));
     let result = check_copy(metadata, &deps, &root, &target, &copy);
     let _ = std::fs::remove_dir_all(&copy);
@@ -431,15 +519,32 @@ fn check_copy(
     let member_dirs: Vec<PathBuf> = metadata
         .members()
         .iter()
-        .filter_map(|m| Some(Path::new(m.manifest_path.as_deref()?).parent()?.to_path_buf()))
+        .filter_map(|m| {
+            Some(
+                Path::new(m.manifest_path.as_deref()?)
+                    .parent()?
+                    .to_path_buf(),
+            )
+        })
         .collect();
-    copy_workspace(root, copy, &member_dirs, &[target.to_path_buf(), root.join(".git")])?;
+    copy_workspace(
+        root,
+        copy,
+        &member_dirs,
+        &[target.to_path_buf(), root.join(".git")],
+    )?;
     let crates = metadata.no_validation_in_src();
     for package in &crates {
-        let manifest = package.manifest_path.as_deref().ok_or_else(|| format!("{}: no manifest_path", package.name))?;
-        let relative = Path::new(manifest)
-            .strip_prefix(root)
-            .map_err(|_| format!("{}: its manifest {manifest} is outside the workspace root", package.name))?;
+        let manifest = package
+            .manifest_path
+            .as_deref()
+            .ok_or_else(|| format!("{}: no manifest_path", package.name))?;
+        let relative = Path::new(manifest).strip_prefix(root).map_err(|_| {
+            format!(
+                "{}: its manifest {manifest} is outside the workspace root",
+                package.name
+            )
+        })?;
         // The name each dev-dependency on validation has in this manifest: its rename, or `validation`.
         let keys: Vec<&str> = deps
             .iter()
@@ -452,7 +557,10 @@ fn check_copy(
     for (profile, profile_args) in PROFILES {
         for (features, feature_args) in FEATURE_SETS {
             let mut command = Command::new(cargo());
-            command.arg("check").arg("--manifest-path").arg(copy.join("Cargo.toml"));
+            command
+                .arg("check")
+                .arg("--manifest-path")
+                .arg(copy.join("Cargo.toml"));
             for package in &crates {
                 command.args(["-p", &package.name]);
             }
@@ -469,8 +577,13 @@ fn check_copy(
             // The compiler names files in the copy; name them in the workspace.
             let copy_prefix = format!("{}{}", copy.display(), std::path::MAIN_SEPARATOR);
             let root_prefix = format!("{}{}", root.display(), std::path::MAIN_SEPARATOR);
-            let stderr = String::from_utf8_lossy(&output.stderr).replace(&copy_prefix, &root_prefix);
-            let flags: Vec<&str> = feature_args.iter().chain(profile_args.iter()).copied().collect();
+            let stderr =
+                String::from_utf8_lossy(&output.stderr).replace(&copy_prefix, &root_prefix);
+            let flags: Vec<&str> = feature_args
+                .iter()
+                .chain(profile_args.iter())
+                .copied()
+                .collect();
             return Err(format!(
                 "kernel and ledger do not compile without their validation dev-dependency with {features} in the \
                  {profile} profile, so a unit test in src/ uses validation, or they do not compile at all: in kernel \
@@ -511,11 +624,17 @@ const PROFILES: &[(&str, &[&str])] = &[("dev", &[]), ("release", &["--release"])
 /// `#[cfg(test)]` code out of `cargo check --lib --tests` (`harness = false`, `doctest = false`, `proc-macro` and
 /// `crate-type` leave it in).
 fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut doc: toml_edit::DocumentMut = text
+        .parse()
+        .map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
     let strip = |table: &mut toml_edit::Table| {
         for name in ["dev-dependencies", "dev_dependencies"] {
-            if let Some(deps) = table.get_mut(name).and_then(toml_edit::Item::as_table_like_mut) {
+            if let Some(deps) = table
+                .get_mut(name)
+                .and_then(toml_edit::Item::as_table_like_mut)
+            {
                 for key in keys {
                     deps.remove(key);
                 }
@@ -523,7 +642,10 @@ fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
         }
     };
     strip(doc.as_table_mut());
-    if let Some(targets) = doc.get_mut("target").and_then(toml_edit::Item::as_table_like_mut) {
+    if let Some(targets) = doc
+        .get_mut("target")
+        .and_then(toml_edit::Item::as_table_like_mut)
+    {
         for (_, platform) in targets.iter_mut() {
             if let Some(platform) = platform.as_table_mut() {
                 strip(platform);
@@ -533,7 +655,10 @@ fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
     for kind in ["test", "example", "bench"] {
         doc.remove(kind);
     }
-    if let Some(lib) = doc.get_mut("lib").and_then(toml_edit::Item::as_table_like_mut) {
+    if let Some(lib) = doc
+        .get_mut("lib")
+        .and_then(toml_edit::Item::as_table_like_mut)
+    {
         lib.insert("test", toml_edit::value(true));
     }
     match doc.get_mut("bin") {
@@ -550,7 +675,12 @@ fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
                 bin.insert("test", toml_edit::Value::from(true));
             }
         }
-        Some(_) => return Err(format!("{}: `bin` is not an array of tables", path.display())),
+        Some(_) => {
+            return Err(format!(
+                "{}: `bin` is not an array of tables",
+                path.display()
+            ))
+        }
         None => {}
     }
     let package = doc
@@ -560,15 +690,23 @@ fn strip_manifest(path: &Path, keys: &[&str]) -> Result<(), String> {
     for auto in ["autotests", "autoexamples", "autobenches"] {
         package.insert(auto, toml_edit::value(false));
     }
-    std::fs::write(path, doc.to_string()).map_err(|e| format!("cannot write {}: {e}", path.display()))
+    std::fs::write(path, doc.to_string())
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
 /// Copies the workspace at `root` to `to`, leaving out `skip` (the target directory, `.git`). Each member's directory
 /// is copied whole, and so is each `Cargo.toml` and `Cargo.lock`; everything else, which cargo does not edit or read
 /// as a manifest (the docs, a large archive), is linked, so that a file a member reaches outside its directory
 /// (`include!("../../x.rs")`) is still there and the copy stays cheap.
-fn copy_workspace(root: &Path, to: &Path, members: &[PathBuf], skip: &[PathBuf]) -> Result<(), String> {
-    let err = |p: &Path, e: std::io::Error| format!("cannot copy {} to the check's workspace: {e}", p.display());
+fn copy_workspace(
+    root: &Path,
+    to: &Path,
+    members: &[PathBuf],
+    skip: &[PathBuf],
+) -> Result<(), String> {
+    let err = |p: &Path, e: std::io::Error| {
+        format!("cannot copy {} to the check's workspace: {e}", p.display())
+    };
     std::fs::create_dir_all(to).map_err(|e| err(to, e))?;
     for entry in std::fs::read_dir(root).map_err(|e| err(root, e))? {
         let entry = entry.map_err(|e| err(root, e))?;
@@ -581,7 +719,12 @@ fn copy_workspace(root: &Path, to: &Path, members: &[PathBuf], skip: &[PathBuf])
             copy_tree(&path, &dest, skip)?;
         } else if kind.is_dir() && members.iter().any(|m| m.starts_with(&path)) {
             copy_workspace(&path, &dest, members, skip)?;
-        } else if kind.is_file() && matches!(entry.file_name().to_str(), Some("Cargo.toml" | "Cargo.lock")) {
+        } else if kind.is_file()
+            && matches!(
+                entry.file_name().to_str(),
+                Some("Cargo.toml" | "Cargo.lock")
+            )
+        {
             std::fs::copy(&path, &dest).map_err(|e| err(&path, e))?;
         } else {
             link(&path, &dest).map_err(|e| err(&path, e))?;
@@ -592,7 +735,9 @@ fn copy_workspace(root: &Path, to: &Path, members: &[PathBuf], skip: &[PathBuf])
 
 /// Copies the tree at `from` to `to`, leaving out `skip`; a symbolic link is copied as a link.
 fn copy_tree(from: &Path, to: &Path, skip: &[PathBuf]) -> Result<(), String> {
-    let err = |p: &Path, e: std::io::Error| format!("cannot copy {} to the check's workspace: {e}", p.display());
+    let err = |p: &Path, e: std::io::Error| {
+        format!("cannot copy {} to the check's workspace: {e}", p.display())
+    };
     std::fs::create_dir_all(to).map_err(|e| err(to, e))?;
     for entry in std::fs::read_dir(from).map_err(|e| err(from, e))? {
         let entry = entry.map_err(|e| err(from, e))?;
