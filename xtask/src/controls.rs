@@ -58,47 +58,70 @@ pub fn parse_list(stdout: &str) -> Vec<String> {
         .collect()
 }
 
-/// Each test libtest reports in `stdout`, and whether it passed. A control is `#[should_panic]`, so it passes when it
-/// makes its test's check fail.
-pub fn parse_results(stdout: &str) -> BTreeMap<String, bool> {
-    stdout
-        .lines()
-        .filter_map(|line| {
-            let (name, outcome) = line.strip_prefix("test ")?.rsplit_once(" ... ")?;
-            let name = name.strip_suffix(" - should panic").unwrap_or(name);
-            Some((name.to_owned(), outcome == "ok"))
-        })
-        .collect()
+/// Each test libtest reports in `stdout`, and whether it passed, once per run of it. A crate's test targets are
+/// separate binaries, so one name can run in several of them (two targets each registering
+/// `negative_control!(doubles, ...)`); each run keeps its own outcome, in the order reported. A control is
+/// `#[should_panic]`, so it passes when it makes its test's check fail.
+pub fn parse_results(stdout: &str) -> BTreeMap<String, Vec<bool>> {
+    let mut results: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    for line in stdout.lines() {
+        let Some((name, outcome)) = line
+            .strip_prefix("test ")
+            .and_then(|rest| rest.rsplit_once(" ... "))
+        else {
+            continue;
+        };
+        let name = name.strip_suffix(" - should panic").unwrap_or(name);
+        results
+            .entry(name.to_owned())
+            .or_default()
+            .push(outcome == "ok");
+    }
+    results
 }
 
 /// Pairs each listed test with the controls named for it, by the test's last path segment (R-199, R-201), and
-/// returns the tests with no control or with a control that `results` shows passing. `Err` when a paired control
-/// has no result.
+/// returns the tests with no control or with a control that `results` shows passing. Every run of every paired
+/// control is judged on its own: one leaky control fails its test, whatever a control of the same name in another
+/// target does. A name listed in several targets is reported once. `Err` when a paired control has fewer results
+/// than it was listed.
 pub fn findings(
     listed: &[String],
-    results: &BTreeMap<String, bool>,
+    results: &BTreeMap<String, Vec<bool>>,
 ) -> Result<Vec<Finding>, String> {
-    let controls: Vec<(&str, &String)> = listed
-        .iter()
-        .filter_map(|name| Some((control_of(name)?, name)))
-        .collect();
+    let mut controls: Vec<(&str, &String, usize)> = Vec::new();
+    for name in listed {
+        let Some(of) = control_of(name) else { continue };
+        match controls.iter_mut().find(|(_, control, _)| *control == name) {
+            Some((_, _, count)) => *count += 1,
+            None => controls.push((of, name, 1)),
+        }
+    }
+    let mut tests: Vec<&String> = Vec::new();
+    for name in listed.iter().filter(|name| control_of(name).is_none()) {
+        if !tests.contains(&name) {
+            tests.push(name);
+        }
+    }
     let mut found = Vec::new();
-    for test in listed.iter().filter(|name| control_of(name).is_none()) {
+    for test in tests {
         let short = test.rsplit("::").next().unwrap_or(test);
-        let mut paired = controls.iter().filter(|(of, _)| *of == short).peekable();
+        let mut paired = controls.iter().filter(|(of, _, _)| *of == short).peekable();
         if paired.peek().is_none() {
             found.push(Finding::NoControl(test.clone()));
         }
-        for (_, control) in paired {
-            match results.get(*control) {
-                Some(true) => {}
-                Some(false) => found.push(Finding::ControlPasses(test.clone())),
-                None => {
-                    return Err(format!(
-                        "the control `{control}` of test `{test}` did not run"
-                    ))
-                }
+        let mut leaks = false;
+        for (_, control, count) in paired {
+            let runs = results.get(*control).map_or(&[][..], Vec::as_slice);
+            if runs.len() < *count {
+                return Err(format!(
+                    "the control `{control}` of test `{test}` did not run"
+                ));
             }
+            leaks |= runs.iter().any(|passed| !passed);
+        }
+        if leaks {
+            found.push(Finding::ControlPasses(test.clone()));
         }
     }
     Ok(found)

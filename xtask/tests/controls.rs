@@ -218,15 +218,18 @@ fn controls_parse_list_and_results() {
     let run = "running 2 tests\ntest a::negative_control - should panic ... ok\n\
                test b::negative_control - should panic ... FAILED\ntest c ... ok\n\ntest result: FAILED.";
     let results = parse_results(run);
-    let expected: BTreeMap<String, bool> = [
-        ("a::negative_control".to_owned(), true),
-        ("b::negative_control".to_owned(), false),
-        ("c".to_owned(), true),
+    let expected: BTreeMap<String, Vec<bool>> = [
+        ("a::negative_control".to_owned(), vec![true]),
+        ("b::negative_control".to_owned(), vec![false]),
+        ("c".to_owned(), vec![true]),
     ]
     .into();
     assert_eq!(results, expected);
     // Control: a FAILED line reads as failed, so `true` above is read from the outcome.
-    assert_eq!(parse_results("test d ... FAILED").get("d"), Some(&false));
+    assert_eq!(
+        parse_results("test d ... FAILED").get("d"),
+        Some(&vec![false])
+    );
 }
 
 #[test]
@@ -239,10 +242,10 @@ fn controls_findings_pair_by_name() {
         "doubles::negative_control",
         "leaks::negative_control",
     ]);
-    let results: BTreeMap<String, bool> = [
-        ("doubles::negative_control".to_owned(), true),
-        ("leaks::negative_control".to_owned(), false),
-        ("other::negative_control".to_owned(), true),
+    let results: BTreeMap<String, Vec<bool>> = [
+        ("doubles::negative_control".to_owned(), vec![true]),
+        ("leaks::negative_control".to_owned(), vec![false]),
+        ("other::negative_control".to_owned(), vec![true]),
     ]
     .into();
     assert_eq!(
@@ -257,5 +260,48 @@ fn controls_findings_pair_by_name() {
     has(
         &err,
         "`doubles::negative_control` of test `tests::doubles` did not run",
+    );
+}
+
+/// Two test targets each register a control named `doubles`, so libtest reports the same control name once per
+/// target. Every run is judged on its own: a leaky one fails `doubles` whichever target reports last, and the test
+/// listed in both targets is reported once.
+#[test]
+fn controls_same_name_in_two_targets_judged_each() {
+    let listed = names(&[
+        "doubles",
+        "doubles::negative_control",
+        "doubles",
+        "doubles::negative_control",
+    ]);
+    for run in [
+        "test doubles::negative_control - should panic ... FAILED\n\
+         test doubles::negative_control - should panic ... ok\n",
+        "test doubles::negative_control - should panic ... ok\n\
+         test doubles::negative_control - should panic ... FAILED\n",
+    ] {
+        let results = parse_results(run);
+        assert_eq!(
+            results.get("doubles::negative_control").map(Vec::len),
+            Some(2)
+        );
+        assert_eq!(
+            findings(&listed, &results),
+            Ok(vec![Finding::ControlPasses("doubles".to_owned())]),
+            "a leaky control of `doubles` was masked by a sound one of the same name:\n{run}"
+        );
+    }
+    // Control: with both runs discriminating, `doubles` has no finding, so the one above comes from the leak.
+    let sound = parse_results(
+        "test doubles::negative_control - should panic ... ok\n\
+         test doubles::negative_control - should panic ... ok\n",
+    );
+    assert_eq!(findings(&listed, &sound), Ok(vec![]));
+    // Control: a control listed in two targets but run in one is an error, not a pass.
+    let once = parse_results("test doubles::negative_control - should panic ... ok\n");
+    let err = findings(&listed, &once).unwrap_err();
+    has(
+        &err,
+        "`doubles::negative_control` of test `doubles` did not run",
     );
 }
