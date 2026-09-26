@@ -385,11 +385,17 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
 enum Token {
     Ident(String),
     PathSep,
+    /// A multi-character operator with `<` or `>` in it (`->`, `=>`, `>=`, `<=`, `>>=`, `<<=`, `>>`, `<<`), kept
+    /// whole so that its `>` is not read as the `>` that closes a generic or a qualified path.
+    Op(&'static str),
     Punct(char),
 }
 
-/// Splits Rust source into identifiers, `::` and other punctuation, each with its 1-based line. Comments,
-/// string and character literals are skipped, so a mention there is not a use.
+/// The multi-character operators lexed as one `Token::Op`, longest first.
+const ANGLE_OPS: [&str; 8] = [">>=", "<<=", "->", "=>", ">=", "<=", ">>", "<<"];
+
+/// Splits Rust source into identifiers, `::`, the operators in `ANGLE_OPS` and other punctuation, each with its
+/// 1-based line. Comments, string and character literals are skipped, so a mention there is not a use.
 fn tokens(text: &str) -> Vec<(Token, usize)> {
     let chars: Vec<char> = text.chars().collect();
     let mut out = Vec::new();
@@ -474,6 +480,9 @@ fn tokens(text: &str) -> Vec<(Token, usize)> {
         } else if c == ':' && at(i + 1) == ':' {
             out.push((Token::PathSep, line));
             i += 2;
+        } else if let Some(op) = ANGLE_OPS.iter().find(|op| op.chars().enumerate().all(|(k, o)| at(i + k) == o)) {
+            out.push((Token::Op(op), line));
+            i += op.len();
         } else {
             out.push((Token::Punct(c), line));
             i += 1;
@@ -499,14 +508,49 @@ fn crate_uses(text: &str, name: &str) -> Vec<usize> {
         let prev = k.checked_sub(1);
         let prev2 = k.checked_sub(2);
         let path_root = is(Some(k + 1), &Token::PathSep)
-            && (!is(prev, &Token::PathSep)
-                || !(is_ident(prev2) || is(prev2, &Token::Punct('>'))));
+            && (!is(prev, &Token::PathSep) || !(is_ident(prev2) || prev2.is_some_and(|j| closes_angle(&toks, j))));
         let used = path_root || ident(prev, "use") || (ident(prev, "crate") && ident(prev2, "extern"));
         if used && lines.last() != Some(line) {
             lines.push(*line);
         }
     }
     lines
+}
+
+/// Whether the token at `j` (`>` or `>>`) closes a `<` opened earlier in the same statement, as in
+/// `<T as Trait>::name` or `Vec::<Vec<u8>>::name`, so that the `::name` after it is an associated item, not the
+/// crate. A `>` or `>>` with no such `<` is a comparison or a shift, and `::name` after it is the crate. `->`,
+/// `=>`, `>=` and `>>=` are `Token::Op`s that close nothing. The walk back skips balanced `()` and `[]` and stops
+/// at `;`, `{`, `}` or an unmatched `(` or `[`. It cannot tell a comparison `<` from a generic one, so in
+/// `a < b && c > ::name::X` the `>` is read as closing the `<`.
+fn closes_angle(toks: &[(Token, usize)], j: usize) -> bool {
+    let angles = |t: &Token| match t {
+        Token::Punct('>') => 1,
+        Token::Op(">>") => 2,
+        Token::Punct('<') => -1,
+        Token::Op("<<") => -2,
+        _ => 0,
+    };
+    let mut depth = angles(&toks[j].0);
+    if depth <= 0 {
+        return false;
+    }
+    let mut groups = 0usize;
+    for (tok, _) in toks[..j].iter().rev() {
+        match tok {
+            Token::Punct(')' | ']') => groups += 1,
+            Token::Punct('(' | '[') if groups > 0 => groups -= 1,
+            Token::Punct('(' | '[' | ';' | '{' | '}') => return false,
+            _ if groups > 0 => {}
+            t => {
+                depth += angles(t);
+                if depth <= 0 {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]
