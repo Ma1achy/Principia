@@ -57,7 +57,10 @@ pub struct AllowedEdge {
     pub kinds: Kinds,
 }
 
-/// `from` for the "any (dev-dependency only) → validation" row: every workspace crate but `validation`.
+/// `from` for the "any (dev-dependency only) → validation" row. In effect it covers every workspace crate
+/// but `validation`, `kernel` and `ledger`. `rule_broken` rejects `kernel` → `validation` and `ledger` →
+/// `validation` before it consults this table. That applies §7.1's "`ledger` depends on nothing, `kernel`
+/// on nothing but `ledger`" ahead of this row, the reading taken until RQ-129 is ruled.
 const ANY: &str = "*";
 
 /// The allowed workspace edges, transcribed from systems_architecture §7.1 ("Allowed workspace edges";
