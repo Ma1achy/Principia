@@ -52,6 +52,17 @@ Read this first; each rule points at its source.
 - Where a ruling contradicts the corpus or itself, flag it and record what was applied (as with R-171, R-173, R-186's
   placement note); ask only if the contradiction changes what gets built.
 
+## When to ask the human (`decisions.md` § "R-204 — When to ask the human")
+- Don't ask when the answer follows from an existing ruling or the docs: sequencing and dependencies, splits within
+  the size budget, mechanical consequences of a ruling, wording and citation fixes, anything whose recommendation is
+  just "apply R-n". Apply it, and record it in `decisions.md` as "applied per R-n: <what>" (or in the PR
+  description), so the human can see it and veto it later.
+- Ask only for genuine choices: physics or conventions; design and GUI behaviour; numeric values and calibrations;
+  conflicts the rulings don't settle; scope or cost trade-offs (dropping or deferring anything, exceeding budgets);
+  anything irreversible.
+- Batch what isn't blocking: collect those questions and ask them once, when the PR is ready, not one at a time.
+- If unsure which kind it is, apply the recommendation, mark it "applied per R-204 — veto?" in the PR, and carry on.
+
 ## Lints (`decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*")
 - CI runs `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push (R-195).
 - A lint fix that doesn't change behaviour (renaming, restructuring, simplifying) may be made by the implementer and

@@ -1563,3 +1563,32 @@ and the code and qa reviewers approve it, as R-197 does for lint suppressions.
 Asked in RQ-140, the human chose "Calibration, 256 provisional": the case count is a calibration requirement (R-71)
 closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked so (R-182); the human confirms or
 changes it at the M0 gate.
+
+## R-204 — When to ask the human
+*26 Sep 2026 · given as "R-198", which was already taken (the TASK-M0-04 split); recorded as R-204*
+
+"Standing rule: when to ask me.
+
+Don't ask me when the answer follows from an existing ruling or the docs. That covers:
+- sequencing and dependencies (like M0-16 → M0-22 under R-176);
+- splits within the size budget;
+- mechanical consequences of a ruling;
+- wording and citation fixes;
+- anything where your recommendation is just "apply R-n".
+Apply it, and record it in decisions.md as "applied per R-n: <what>" (or in the PR description), so I can see it and
+veto it later.
+
+Ask me only for genuine choices:
+- physics or conventions;
+- design and GUI behaviour;
+- numeric values and calibrations;
+- conflicts the rulings don't settle;
+- scope or cost trade-offs (dropping or deferring anything, exceeding budgets);
+- anything irreversible.
+
+Batch what isn't blocking: collect those questions and ask them once, when the PR is ready, not one at a time.
+
+If you're unsure which kind it is, apply the recommendation, mark it "applied per R-198 — veto?" in the PR, and carry
+on."
+
+*Applied note:* the marker is written "applied per R-204 — veto?", the number this rule is recorded under.
