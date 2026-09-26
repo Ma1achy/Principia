@@ -82,6 +82,7 @@ pub const ALLOWED: &[AllowedEdge] = &[
     AllowedEdge { from: "validation", to: "ledger", kinds: Kinds::Any },
     AllowedEdge { from: "validation", to: "render", kinds: Kinds::Any },
     AllowedEdge { from: "validation", to: "engine", kinds: Kinds::Any },
+    // Whether `prin` is among "any of the above" is open (RQ-129); allowed until it is ruled.
     AllowedEdge { from: "validation", to: "prin", kinds: Kinds::Any },
     // any → validation, dev-dependency only (R-176).
     AllowedEdge { from: ANY, to: "validation", kinds: Kinds::DevOnly },
@@ -125,6 +126,14 @@ fn rule_broken(edge: &Edge) -> Option<&'static str> {
     let (from, to) = (edge.from.as_str(), edge.to.as_str());
     if to == "gui" {
         return Some("nothing depends on gui (systems_architecture §7.1; gui_state_contract §1)");
+    }
+    // Reading B of RQ-129 (pending a ruling): §7.1's "ledger depends on nothing, kernel on nothing but
+    // ledger" is applied ahead of its "any (dev-dependency only) → validation" row.
+    if (from == "ledger" || from == "kernel") && to == "validation" {
+        return Some(
+            "ledger and kernel take no workspace dependency on validation, not even a dev-dependency \
+             (systems_architecture §7.1; the reading applied until RQ-129 is ruled)",
+        );
     }
     if from == "ledger" {
         return Some("ledger is a root: it has no workspace dependency (systems_architecture §7.1)");

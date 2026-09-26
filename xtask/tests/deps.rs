@@ -128,3 +128,24 @@ fn deps_table_forbids_edges_outside_the_crate_map() {
         assert!(forbidden(from, to, kind), "{from} → {to} ({kind}) should be forbidden");
     }
 }
+
+/// RQ-129 is open: §7.1's "any (dev-dependency only) → validation" row conflicts with its "ledger depends
+/// on nothing, kernel on nothing but ledger", and "any of the above except gui" may or may not cover
+/// `prin`. These assertions pin the reading the check applies until the ruling, so a ruling changes them.
+#[test]
+fn deps_pins_the_reading_applied_until_rq_129() {
+    use DepKind::*;
+    for from in ["kernel", "ledger"] {
+        let violations = check(&[edge(from, "validation", Dev)]);
+        assert_eq!(violations.len(), 1, "{from} → validation (dev) should be forbidden until RQ-129 is ruled");
+        assert!(violations[0].rule.contains("RQ-129"), "the rule does not cite RQ-129: {}", violations[0].rule);
+    }
+    // Control: the same dev-dependency edge from a crate the conflict does not touch is allowed.
+    assert!(!forbidden("engine", "validation", Dev));
+    for kind in [Normal, Dev, Build] {
+        assert!(
+            !forbidden("validation", "prin", kind),
+            "validation → prin ({kind}) should be allowed until RQ-129 is ruled"
+        );
+    }
+}
