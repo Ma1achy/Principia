@@ -22,6 +22,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use validation::spawn::Spawn;
 
 const VALIDATION_DEV: &str = "\n[dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
 
@@ -93,7 +94,7 @@ fn deps(root: &Path) -> (bool, String, String) {
         .arg(root.join("Cargo.toml"))
         .env("CARGO", env!("CARGO"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
     (out.status.success(), text(&out.stdout), text(&out.stderr))
@@ -107,7 +108,7 @@ fn cargo_test(root: &Path, krate: &str, args: &[&str]) -> (bool, String) {
         .arg("--manifest-path")
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run cargo test");
     let text = format!(
         "{}\n{}",

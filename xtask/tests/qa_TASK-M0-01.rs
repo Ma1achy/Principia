@@ -10,6 +10,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use validation::spawn::Spawn;
 
 use serde_json::{json, Value};
 
@@ -159,7 +160,7 @@ fn run_deps_on(tag: &str, doc: &Value) -> (bool, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--metadata"])
         .arg(&path)
-        .output()
+        .timed_output()
         .expect("run xtask");
     let text = format!(
         "{}{}",
@@ -375,7 +376,7 @@ fn live_metadata() -> Value {
             "--manifest-path",
         ])
         .arg(workspace_root().join("Cargo.toml"))
-        .output()
+        .timed_output()
         .expect("run cargo metadata");
     assert!(
         out.status.success(),
@@ -475,7 +476,7 @@ fn qa_xtask_deps_passes_on_the_live_workspace() {
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("deps")
         .current_dir(workspace_root())
-        .output()
+        .timed_output()
         .expect("run xtask deps");
     assert!(
         out.status.success(),
@@ -496,7 +497,7 @@ fn qa_cargo_xtask_alias_runs_deps() {
             .args(args)
             .current_dir(workspace_root())
             .env("CARGO_TARGET_DIR", &target)
-            .output()
+            .timed_output()
             .expect("run cargo xtask")
     };
     let out = run(&["xtask", "deps"]);

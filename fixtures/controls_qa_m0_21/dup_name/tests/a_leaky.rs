@@ -6,5 +6,6 @@ fn doubles() {
 validation::negative_control!(
     doubles,
     "leaky: the control input is the correct doubling, so the check passes",
+    expected = "not the double of 3",
     qa_controls_dup_name::check_double(|x| x * 2)
 );

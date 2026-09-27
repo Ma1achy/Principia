@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use validation::negative_control;
+use validation::spawn::Spawn;
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -73,7 +74,7 @@ fn on_copy(name: &str, remove: &str, args: &[&str]) -> Output {
         .args(args)
         .arg("--manifest-path")
         .arg(dir.join("Cargo.toml"))
-        .output()
+        .timed_output()
         .unwrap();
     let _ = std::fs::remove_dir_all(&dir);
     output
@@ -106,6 +107,7 @@ fn controls(name: &str, remove: &str) -> (bool, String) {
 negative_control!(
     qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test,
     "with the leaky control removed, the command passes, so the must-fail check must fail",
+    expected = "a control that leaves `doubles` passing passed the command",
     {
         let (ok, all) = controls("dup_name", "tests/a_leaky.rs");
         assert!(
@@ -118,6 +120,7 @@ negative_control!(
 negative_control!(
     qa_control_under_another_name_does_not_pair,
     "with the misnamed control removed, the rightly named one pairs, so the must-fail check must fail",
+    expected = "a test whose only control names another test passed",
     {
         let (ok, all) = controls("misnamed", "tests/misnamed.rs");
         assert!(!ok, "a test whose only control names another test passed:\n{all}");
@@ -127,6 +130,7 @@ negative_control!(
 negative_control!(
     qa_unit_test_in_a_binary_target_pairs_with_its_control_in_tests,
     "with the control in tests/ removed, the must-pass check must fail",
+    expected = "the binary's unit test did not pair with its control",
     {
         let (ok, all) = controls("bin_target", "tests/controls.rs");
         assert!(
@@ -139,6 +143,7 @@ negative_control!(
 negative_control!(
     qa_workspace_pairs_within_each_crate_and_skips_the_featureless_one,
     "with bare's uncontrolled test removed, the command passes, so the must-fail check must fail",
+    expected = "a test paired with a control in another crate",
     {
         let (ok, all) = controls("workspace", "bare/tests/doubles.rs");
         assert!(!ok, "a test paired with a control in another crate:\n{all}");
@@ -148,6 +153,7 @@ negative_control!(
 negative_control!(
     qa_binary_only_crate_is_checked_and_passes,
     "with the control in tests/ removed, the must-pass check must fail",
+    expected = "a binary-only crate with a discriminating control failed the command",
     {
         let (ok, all) = controls("bin_only", "tests/controls.rs");
         assert!(
@@ -160,6 +166,7 @@ negative_control!(
 negative_control!(
     qa_controls_exist_only_under_the_feature,
     "under the feature the sound control compiles and runs, so the no-control check must fail",
+    expected = "a control compiled",
     {
         let args = [
             "test",

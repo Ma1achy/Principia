@@ -6,5 +6,5 @@ pub fn double(x: u32) -> u32 {
 
 /// The test's check: `double(3)` is 6.
 pub fn check_double(double: fn(u32) -> u32) {
-    assert_eq!(double(3), 6);
+    assert_eq!(double(3), 6, "not the double of 3");
 }

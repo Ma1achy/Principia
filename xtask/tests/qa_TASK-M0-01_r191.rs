@@ -17,6 +17,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use validation::spawn::Spawn;
 
 const VALIDATION_DEV: &str = "\n[dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
 
@@ -85,7 +86,7 @@ fn deps(root: &Path) -> (bool, String, String) {
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
     (out.status.success(), text(&out.stdout), text(&out.stderr))
@@ -105,7 +106,7 @@ fn compiles_with_the_dependency(case: &str, root: &Path, krate: &str) {
         ])
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run cargo check");
     assert!(
         out.status.success(),
@@ -304,7 +305,7 @@ fn qa_unit_test_of_a_lib_with_test_false_fails() {
         ])
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
@@ -498,7 +499,7 @@ fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_unde
         ])
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", root.join("target"))
-        .output()
+        .timed_output()
         .expect("run cargo metadata");
     let doc: serde_json::Value = serde_json::from_slice(&out.stdout).expect("metadata JSON");
     let target = PathBuf::from(doc["target_directory"].as_str().expect("target_directory"));

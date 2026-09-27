@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+use validation::spawn::Spawn;
 use xtask::deps::{check, DepKind, Edge, Metadata};
 
 fn fixture(name: &str) -> PathBuf {
@@ -18,7 +19,7 @@ fn run_deps(name: &str) -> (bool, String) {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--metadata"])
         .arg(fixture(name))
-        .output()
+        .timed_output()
         .expect("run xtask");
     (
         output.status.success(),
@@ -264,7 +265,7 @@ fn deps_a_fixture_skips_the_compile_check_and_says_so() {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--metadata"])
         .arg(fixture("metadata_workspace.json"))
-        .output()
+        .timed_output()
         .expect("run xtask");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -276,7 +277,7 @@ fn deps_a_fixture_skips_the_compile_check_and_says_so() {
     // Control: the live workspace, which has sources, is not skipped.
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("deps")
-        .output()
+        .timed_output()
         .expect("run xtask");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -408,7 +409,7 @@ fn run_workspace_in(root: &std::path::Path, target: &std::path::Path) -> (bool, 
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
         .env("CARGO_TARGET_DIR", target)
-        .output()
+        .timed_output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
     (
@@ -431,7 +432,7 @@ fn assert_compiles_with_the_dependency(root: &std::path::Path, krate: &str) {
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
-        .output()
+        .timed_output()
         .expect("run cargo check");
     assert!(
         output.status.success(),
@@ -650,7 +651,7 @@ fn assert_gated_unit_test_fails(
         ])
         .arg(root.join("Cargo.toml"))
         .args(premise_args)
-        .output()
+        .timed_output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&premise.stdout);
     assert!(
@@ -760,7 +761,7 @@ fn deps_a_doctest_using_validation_passes() {
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
-        .output()
+        .timed_output()
         .expect("run cargo test --doc");
     let stdout = String::from_utf8_lossy(&premise.stdout);
     assert!(
@@ -1078,24 +1079,31 @@ const KERNEL_LIB: &str = "crates/kernel/src/lib.rs";
 validation::negative_control!(
     deps_workspace_fixture_passes,
     "a fixture with a forbidden edge, required to pass",
-    assert!(run_deps("metadata_kernel_engine.json").0)
+    expected = "control: the fixture with a forbidden edge did not pass",
+    assert!(
+        run_deps("metadata_kernel_engine.json").0,
+        "control: the fixture with a forbidden edge did not pass"
+    )
 );
 
 validation::negative_control!(
     deps_forbidden_kernel_to_engine_fails,
     "another fixture's forbidden edge, required to name kernel → engine",
+    expected = "stderr does not name \"forbidden edge kernel → engine\"",
     assert_fails_naming("metadata_engine_gui.json", "forbidden edge kernel → engine")
 );
 
 validation::negative_control!(
     deps_forbidden_engine_to_gui_fails,
     "another fixture's forbidden edge, required to name engine → gui",
+    expected = "stderr does not name \"forbidden edge engine → gui\"",
     assert_fails_naming("metadata_ledger_engine.json", "forbidden edge engine → gui")
 );
 
 validation::negative_control!(
     deps_forbidden_ledger_to_engine_fails,
     "another fixture's forbidden edge, required to name ledger → engine",
+    expected = "stderr does not name \"forbidden edge ledger → engine\"",
     assert_fails_naming(
         "metadata_kernel_engine.json",
         "forbidden edge ledger → engine"
@@ -1105,93 +1113,125 @@ validation::negative_control!(
 validation::negative_control!(
     deps_forbidden_kernel_to_ledger_normal_fails_naming_kind,
     "the workspace fixture, whose kernel → ledger edge is allowed, required to fail on it",
+    expected = "metadata_workspace.json: xtask deps passed, but the fixture has a forbidden edge",
     assert_fails_naming("metadata_workspace.json", "forbidden edge kernel → ledger")
 );
 
 validation::negative_control!(
     deps_workspace_fixture_has_kernel_ledger_as_build_dependency,
     "the fixture whose kernel → ledger edge is normal, required to hold it as a build-dependency",
+    expected = "control: kernel → ledger is not a build-dependency",
     {
         let metadata = Metadata::from_file(&fixture("metadata_kernel_ledger_normal.json")).unwrap();
-        assert!(metadata
-            .edges()
-            .unwrap()
-            .contains(&edge("kernel", "ledger", DepKind::Build)));
+        assert!(
+            metadata
+                .edges()
+                .unwrap()
+                .contains(&edge("kernel", "ledger", DepKind::Build)),
+            "control: kernel → ledger is not a build-dependency"
+        );
     }
 );
 
 validation::negative_control!(
     deps_live_workspace_passes,
     "the live graph with kernel → engine added, required to pass",
+    expected = "control: the live graph with kernel → engine added has findings",
     {
         let mut edges = Metadata::from_cargo().unwrap().edges().unwrap();
         edges.push(edge("kernel", "engine", DepKind::Normal));
-        assert_eq!(check(&edges), vec![]);
+        assert_eq!(
+            check(&edges),
+            vec![],
+            "control: the live graph with kernel → engine added has findings"
+        );
     }
 );
 
 validation::negative_control!(
     deps_table_allows_the_crate_map_edges,
     "kernel → ledger as a dev-dependency, outside the crate map, required to be allowed",
-    assert!(!forbidden("kernel", "ledger", DepKind::Dev))
+    expected = "control: kernel → ledger as a dev-dependency is forbidden",
+    assert!(
+        !forbidden("kernel", "ledger", DepKind::Dev),
+        "control: kernel → ledger as a dev-dependency is forbidden"
+    )
 );
 
 validation::negative_control!(
     deps_table_forbids_edges_outside_the_crate_map,
     "kernel → ledger as a build-dependency, in the crate map, required to be forbidden",
-    assert!(forbidden("kernel", "ledger", DepKind::Build))
+    expected = "control: kernel → ledger as a build-dependency is allowed",
+    assert!(
+        forbidden("kernel", "ledger", DepKind::Build),
+        "control: kernel → ledger as a build-dependency is allowed"
+    )
 );
 
 validation::negative_control!(
     deps_applies_r_187_to_the_validation_edges,
     "kernel → validation as a normal dependency, required to be allowed",
+    expected = "control: kernel → validation as a normal dependency is forbidden",
     assert_eq!(
         check(&[edge("kernel", "validation", DepKind::Normal)]),
-        vec![]
+        vec![],
+        "control: kernel → validation as a normal dependency is forbidden"
     )
 );
 
 validation::negative_control!(
     deps_a_dependency_that_only_shares_a_member_name_is_not_an_edge,
     "a path dependency on the member gui, required to be no edge",
+    expected = "control: a path dependency on the member gui is an edge",
     {
         let member = r#"{"name": "gui", "kind": null, "source": null, "path": "/ws/crates/gui"}"#;
-        assert_eq!(metadata_json(member).edges().unwrap(), vec![]);
+        assert_eq!(
+            metadata_json(member).edges().unwrap(),
+            vec![],
+            "control: a path dependency on the member gui is an edge"
+        );
     }
 );
 
 validation::negative_control!(
     deps_a_fixture_skips_the_compile_check_and_says_so,
     "a workspace with sources, required to skip the compile check",
+    expected = "control: the compile check was not skipped",
     {
         let (_, stdout, _) = Case::new("skip").run(&[], &[]);
-        assert!(stdout.contains("compile check skipped"), "{stdout}");
+        assert!(
+            stdout.contains("compile check skipped"),
+            "control: the compile check was not skipped:\n{stdout}"
+        );
     }
 );
 
 validation::negative_control!(
     deps_a_kernel_or_ledger_lib_outside_src_fails,
     "the libraries at src/lib.rs, required to fail",
+    expected = "control: the libraries at src/lib.rs were accepted",
     {
         target_metadata("control_inside", Some("src/lib.rs"))
             .check_targets(true)
-            .unwrap_err();
+            .expect_err("control: the libraries at src/lib.rs were accepted");
     }
 );
 
 validation::negative_control!(
     deps_missing_targets_are_an_error_for_a_workspace,
     "the metadata without targets read as a fixture, required to be an error",
+    expected = "control: the metadata without targets was accepted as a fixture's",
     {
         target_metadata("control_no_targets", None)
             .check_targets(false)
-            .unwrap_err();
+            .expect_err("control: the metadata without targets was accepted as a fixture's");
     }
 );
 
 validation::negative_control!(
     deps_a_unit_test_using_validation_fails_and_an_integration_test_passes,
     "the use as an integration test, required to fail to compile",
+    expected = "src/ that uses validation passes xtask deps",
     {
         let case = Case::new("integration");
         let tests = [("crates/kernel/tests/uses.rs", INTEGRATION_TEST)];
@@ -1207,6 +1247,7 @@ validation::negative_control!(
 validation::negative_control!(
     deps_every_route_to_validation_from_a_unit_test_fails,
     "a `#[path]` route to a file that does not use validation, required to fail to compile",
+    expected = "src/ that uses validation passes xtask deps",
     {
         let case = Case::new("route");
         let lib = "#[cfg(test)]\n#[path = \"../outside/t.rs\"]\nmod t;\n";
@@ -1226,6 +1267,7 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_unit_test_behind_a_feature_using_validation_fails,
     "the unit test behind feature x without the use, required to fail",
+    expected = "control: the unit test behind feature x without the use passed xtask deps",
     {
         let (toml, lib) = (
             kernel_manifest("x = []\n"),
@@ -1235,13 +1277,17 @@ validation::negative_control!(
             ("crates/kernel/Cargo.toml", toml.as_str()),
             (KERNEL_LIB, &lib),
         ];
-        assert!(!Case::new("feature").run(&[], &files).0);
+        assert!(
+            !Case::new("feature").run(&[], &files).0,
+            "control: the unit test behind feature x without the use passed xtask deps"
+        );
     }
 );
 
 validation::negative_control!(
     deps_a_unit_test_behind_a_missing_feature_using_validation_fails,
     "the failure required to name --all-features, which does not see the test",
+    expected = "stderr does not name \"with --all-features in the dev profile\"",
     {
         let case = Case::new("missing_feature");
         let gate = "not(feature = \"x\")";
@@ -1253,6 +1299,7 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_unit_test_behind_the_release_profile_using_validation_fails,
     "the failure required to name the dev profile, which does not see the test",
+    expected = "stderr does not name \"with --no-default-features in the dev profile\"",
     {
         let case = Case::new("release_profile");
         let gate = "not(debug_assertions)";
@@ -1264,6 +1311,7 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_unit_test_present_only_without_default_features_using_validation_fails,
     "the failure required to name default features, which do not see the test",
+    expected = "stderr does not name \"with default features in the dev profile\"",
     {
         let case = Case::new("no_default_features");
         let validation = [(
@@ -1284,11 +1332,13 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_doctest_using_validation_passes,
     "the use in a unit test instead of a doctest, required to pass",
+    expected = "control: the use in a unit test did not pass xtask deps",
     {
         assert!(
             Case::new("doctest")
                 .run(&["kernel"], &[(KERNEL_LIB, UNIT_TEST)])
-                .0
+                .0,
+            "control: the use in a unit test did not pass xtask deps"
         );
     }
 );
@@ -1296,12 +1346,14 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_local_mod_validation_passes,
     "the unit test without the local mod validation, required to pass",
+    expected = "control: the unit test without the local mod did not pass xtask deps",
     {
         let test = "#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        crate::validation::run();\n    }\n}\n";
         assert!(
             Case::new("local_mod")
                 .run(&["kernel"], &[(KERNEL_LIB, test)])
-                .0
+                .0,
+            "control: the unit test without the local mod did not pass xtask deps"
         );
     }
 );
@@ -1309,26 +1361,36 @@ validation::negative_control!(
 validation::negative_control!(
     deps_the_kernel_out_dir_include_passes,
     "generated code with a unit test that uses validation, required to pass",
+    expected =
+        "control: generated code with a unit test that uses validation did not pass xtask deps",
     {
         let lib = "include!(concat!(env!(\"OUT_DIR\"), \"/generated.rs\"));\n";
         let build = build_rs("pub const GENERATED: u32 = 1;\n#[cfg(test)]\n#[test]\nfn t() { let _ = validation::Harness; }\n");
         let files = [(KERNEL_LIB, lib), ("crates/kernel/build.rs", &build)];
-        assert!(Case::new("out_dir").run(&["kernel"], &files).0);
+        assert!(
+            Case::new("out_dir").run(&["kernel"], &files).0,
+            "control: generated code with a unit test that uses validation did not pass xtask deps"
+        );
     }
 );
 
 validation::negative_control!(
     deps_the_compile_check_runs_only_with_the_dev_dependency,
     "a workspace with the dev-dependency, required to need no compile check",
+    expected = "control: the compile check was needed",
     {
         let (_, stdout, _) = Case::new("with_dev").run(&["ledger"], &[]);
-        assert!(stdout.contains("compile check not needed"), "{stdout}");
+        assert!(
+            stdout.contains("compile check not needed"),
+            "control: the compile check was needed:\n{stdout}"
+        );
     }
 );
 
 validation::negative_control!(
     deps_a_unit_test_of_a_binary_with_test_false_fails,
     "a `test = false` binary whose unit test does not use validation, required to fail to compile",
+    expected = "src/ that uses validation passes xtask deps",
     {
         let case = Case::new("bin");
         let manifest =
@@ -1347,39 +1409,53 @@ validation::negative_control!(
 validation::negative_control!(
     deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace,
     "a unit test that uses validation, with CARGO_TARGET_DIR outside the workspace, required to pass",
+    expected = "control: the unit test that uses validation did not pass xtask deps",
     {
         let case = Case::new("outside_target");
         let root = case.root(&["kernel"], &[(KERNEL_LIB, UNIT_TEST)]);
-        assert!(run_workspace_in(&root, &std::env::temp_dir().join(&case.0)).0);
+        assert!(
+            run_workspace_in(&root, &std::env::temp_dir().join(&case.0)).0,
+            "control: the unit test that uses validation did not pass xtask deps"
+        );
     }
 );
 
 validation::negative_control!(
     deps_a_workspace_does_not_reuse_another_workspaces_check_build,
     "workspace A, without the unit test, required to fail as B does",
+    expected = "control: workspace A without the unit test did not fail",
     {
         let case = Case::new("shared_target");
         let a = case.root(&["kernel"], &[]);
         without_build_script(&a);
         let (ok, _, stderr) = run_workspace_in(&a, &std::env::temp_dir().join(&case.0));
-        assert!(!ok && stderr.contains("R-191"), "{stderr}");
+        assert!(
+            !ok && stderr.contains("R-191"),
+            "control: workspace A without the unit test did not fail:\n{stderr}"
+        );
     }
 );
 
 validation::negative_control!(
     deps_an_edit_with_an_old_modification_time_is_checked_again,
     "the workspace without the edit, required to fail",
+    expected = "control: the workspace without the edit did not fail",
     {
         let (ok, _, stderr) = Case::new("old_mtime_edit").run(&["kernel"], &[]);
-        assert!(!ok && stderr.contains("R-191"), "{stderr}");
+        assert!(
+            !ok && stderr.contains("R-191"),
+            "control: the workspace without the edit did not fail:\n{stderr}"
+        );
     }
 );
 
 validation::negative_control!(
     deps_the_check_directory_is_keyed_by_the_workspace_root,
     "the root \"b\", required to have \"a\"'s pinned directory",
+    expected = "control: the root \"b\" does not have \"a\"'s pinned directory",
     assert_eq!(
         xtask::deps::check_target_dir(std::path::Path::new("/t"), std::path::Path::new("b")),
-        std::path::Path::new("/t/xtask-deps-check/a-af63dc4c8601ec8c")
+        std::path::Path::new("/t/xtask-deps-check/a-af63dc4c8601ec8c"),
+        "control: the root \"b\" does not have \"a\"'s pinned directory"
     )
 );
