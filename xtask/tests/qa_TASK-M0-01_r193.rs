@@ -89,6 +89,7 @@ fn deps(root: &Path) -> (bool, String, String) {
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
         .env("CARGO", env!("CARGO"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
@@ -102,6 +103,7 @@ fn premise_cargo_test_runs_the_unit_test(case: &str, root: &Path, krate: &str, f
         .args(flags)
         .arg("--manifest-path")
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&out.stdout);

@@ -92,6 +92,7 @@ fn deps(root: &Path) -> (bool, String, String) {
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
         .env("CARGO", env!("CARGO"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
