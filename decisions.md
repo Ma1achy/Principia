@@ -1623,3 +1623,22 @@ test run always says what it ran on."
 was TASK-M0-04's (its Deliverables and its `gpu_backend_env` acceptance line), and those lines are amended here.
 REQ-SYS-065's statement gains the default. The code, and the merged tests that assert an unset value fails (qa's
 among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
+
+## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
+*27 Sep 2026 · applied in TASK-M0-21*
+
+"Merge-level decisions for PR #19:
+- Size overrun accepted (record as R-208). From now on, if a task looks set to exceed ~500 lines, propose a split in
+  REVIEW_QUEUE before implementing it.
+- All three "applied per R-204" items stand.
+- Fix the flaky xtask/tests/deps.rs tests in the R-206/R-207 PR: give each test workspace its own CARGO_TARGET_DIR (a
+  temp dir per test), so they never share the outer build directory. Add a test showing it passes with
+  CARGO_TARGET_DIR set outside the repo.
+Then R-206/R-207, then TASK-M0-22."
+
+*Applied:* TASK-M0-21's 762 code lines (fixtures and qa's tests excluded), against the ~500 budget, stay one PR. The
+three items confirmed are PR #19's "applied per R-204 — veto?" rules for `cargo xtask controls`, in a crate that
+declares the `controls` feature: a doctest counts as a test without a control; a control covers exactly one test, and
+a name with more tests than controls fails naming them; `negative_control` is a reserved test name. So TASK-M0-22 turns
+the `ignore` example in `crates/validation/src/control.rs` into a non-test block. The `deps.rs` fix lands in the
+R-206/R-207 PR.
