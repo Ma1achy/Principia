@@ -39,8 +39,10 @@ Every test in the workspace has a registered negative control that makes it fail
 ## Acceptance tests
 - `cargo xtask controls` — on the PR head, every test in each crate declaring the `controls` feature has a registered control and every control makes its test fail; the command runs inside `cargo xtask ci`, in CI on every push; a crate skipped for lacking the feature is listed in its output (REQ-VAL-007).
 - Review checklist (qa §3): each control is discriminating, and no test is arithmetically impossible or true by construction (the n_hot < N² quantile case, a distinct-value count bounded below the claimed effect) (REQ-VAL-007).
-- `cargo test -p validation spawn` — a child that outlives a short test timeout is killed and the helper's error names it; a child that exits in time returns its output (REQ-VAL-155).
-- `cargo test -p validation --features controls` — a fixture control that panics in its setup fails; with its expected message reaching the check it passes; every registered control in the workspace carries an expected message and passes (REQ-VAL-154).
+- `cargo test -p validation spawn` — a child that outlives a short test timeout is killed, the helper's error names it and the killed child no longer exists; a child that exits in time returns its output (REQ-VAL-155).
+- `cargo test -p validation -- --list` — lists no child path of `qa_R-206.rs`: `qa_r206_harness_opens_the_selected_backend` is a test only, its child body in the `qa_child` bin (R-213) (REQ-VAL-155).
+- `cargo test -p validation --features controls` — a fixture control that panics in its setup fails; with its expected message reaching the check it passes (REQ-VAL-154).
+- `cargo xtask controls` — every control in the workspace (validation, prin, xtask) carries an expected message, which the macro requires, and trips it (REQ-VAL-154).
 - Proposal (REQ-VAL-156): the helper's 120 s timeout with its evidence (the longest child run measured in the suite, and the headroom), provisional until the human confirms it at the M0 gate.
 - Review checklist (code and qa): no inline control duplicates a registered one, no check body is copied between test files, no test spawns a child except through the helper (REQ-VAL-154, REQ-VAL-155).
 
