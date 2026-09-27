@@ -2415,3 +2415,31 @@ Tick any you don't accept.
   checked with `--nocapture`; (c) something else.
 - **Needed:** a ruling. It bears on TASK-M0-22, which registers the last 33 controls, and on every control written after
   it.
+
+## RQ-146: `qa_r206_harness_opens_the_selected_backend` is also a subprocess body *(build, TASK-M0-25)*
+
+- **File, section:** `decisions.md` § "R-210 — Subprocess bodies leave libtest *(closes RQ-142)*": "a subprocess body a
+  test spawns is not itself a `#[test]`", with the one-round exception naming only `qa_child_open_harness`,
+  `qa_child_failing_property` and `qa_child_count_cases`; REQ-VAL-153's verify detail names the same three.
+- **What:** `crates/validation/tests/qa_R-206.rs:131-181` (merged in PR #20): `qa_r206_harness_opens_the_selected_backend`
+  is a real `#[test]` with its own control, and when `CHILD_VAR` is set other tests in the file re-run the test
+  binary as a child through it. So it is both a test and a subprocess body. Raised by qa on PR #24.
+- **Conflict:** R-210's principle covers it; its exception and REQ-VAL-153 don't name it, so TASK-M0-25 can't move it.
+- **Options seen:** (a) extend R-210's exception to it and move its child path into the `qa_child` bin in TASK-M0-25
+  (or TASK-M0-22); (b) accept it as a test that is also a child entry point, since it can fail and has a control; (c)
+  something else.
+- **Needed:** a ruling.
+
+## RQ-147: a hung child process stalls the whole test suite *(build, TASK-M0-04)*
+
+- **File, section:** `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test" (a test
+  that hangs never reports); the corpus names no timeout for a spawned child.
+- **What:** every parent that spawns a child uses `Command::output()` with no timeout: `qa_R-206.rs:168-180`, qa's
+  `child()` in `qa_TASK-M0-04.rs` and `counts_with` in `qa_TASK-M0-04_r2.rs`, and the new controls files in PR #24. On
+  PR #24 one run hung in `qa_r206_harness_logs_the_backend_it_ran_on` (the child blocked on a Metal shader-cache lock)
+  and passed on re-run; qa could not reproduce it in 40 serial runs and 15 rounds of three concurrent ones. A hang
+  stalls CI until the job's own limit instead of failing the test.
+- **Silence:** no timeout for child processes, and no value for one (R-71).
+- **Options seen:** (a) a shared spawn-with-timeout helper in `crates/validation`, with a calibrated limit (R-71), that
+  every parent uses; (b) rely on the CI job's timeout; (c) something else.
+- **Needed:** a ruling, and a value if (a).
