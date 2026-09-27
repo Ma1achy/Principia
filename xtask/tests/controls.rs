@@ -306,6 +306,63 @@ fn controls_same_name_in_two_targets_judged_each() {
     );
 }
 
+/// Applied per R-204: within a controls crate a control covers exactly one test. `doubles` in `tests/a.rs` has a
+/// control; `doubles` in `tests/b.rs` has none, and `a.rs`'s control does not stand for it.
+#[test]
+fn controls_same_named_tests_need_a_control_each() {
+    let v = run_fixture("collision", None);
+    assert!(!v.ok, "two tests `doubles` passed with one control");
+    has(
+        &v.stderr,
+        "controls_collision: tests `doubles` share the name `doubles`: listed 2 time(s), but 1 control(s)",
+    );
+    has(
+        &v.stderr,
+        "xtask: 1 test(s) without a control that makes them fail",
+    );
+    // Control: without the uncontrolled `b.rs`, the one test named `doubles` has its control and passes.
+    let one = run_fixture("collision", Some("tests/b.rs"));
+    assert!(
+        one.ok,
+        "control: one test with its control failed:\n{}",
+        one.stderr
+    );
+    has(
+        &one.stdout,
+        "controls_collision: 1 test(s), each failed by its control",
+    );
+}
+
+/// The same rule on unit tests in two modules of `src/`: one control named `round_trips` does not cover both
+/// `a::tests::round_trips` and `b::tests::round_trips`.
+#[test]
+fn controls_findings_same_named_unit_tests_collide() {
+    let listed = names(&[
+        "a::tests::round_trips",
+        "b::tests::round_trips",
+        "round_trips::negative_control",
+    ]);
+    let results: BTreeMap<String, Vec<bool>> =
+        [("round_trips::negative_control".to_owned(), vec![true])].into();
+    let found = findings(&listed, &results).unwrap();
+    assert_eq!(
+        found,
+        vec![Finding::Collision {
+            name: "round_trips".to_owned(),
+            tests: names(&["a::tests::round_trips", "b::tests::round_trips"]),
+            listings: 2,
+            controls: 1,
+        }]
+    );
+    assert_eq!(found[0].tests(), 1);
+    // Control: a second control of that name, from another target, gives each test its own, and nothing is found.
+    let mut both = listed.clone();
+    both.push("round_trips::negative_control".to_owned());
+    let twice: BTreeMap<String, Vec<bool>> =
+        [("round_trips::negative_control".to_owned(), vec![true, true])].into();
+    assert_eq!(findings(&both, &twice), Ok(vec![]));
+}
+
 /// Applied per R-204: a doctest in a controls crate counts as a test without a control. The `doctest` fixture is
 /// the `discriminating` one with a doctest added.
 #[test]

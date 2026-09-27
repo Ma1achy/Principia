@@ -4,8 +4,8 @@
 //! (R-176). Tests and controls are paired by the name in the macro call (R-199), across all of a crate's test
 //! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). Not yet in `cargo xtask ci` (R-198).
 //!
-//! Applied per R-204, pending a veto: a doctest, which `negative_control!` cannot name, counts as a test without a
-//! control.
+//! Applied per R-204, pending a veto: within a crate, a control covers exactly one test, so tests sharing a name
+//! need a control each; and a doctest, which `negative_control!` cannot name, counts as a test without a control.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -31,6 +31,30 @@ pub enum Finding {
     ControlPasses(String),
     /// A doctest, which `negative_control!` cannot name, so it has no control (applied per R-204).
     Doctest(String),
+    /// Tests sharing the last path segment `name` are listed more times across the crate's targets than controls
+    /// named `name` are: each test needs its own control (applied per R-204).
+    Collision {
+        /// The shared name, as `negative_control!` names it.
+        name: String,
+        /// The distinct full names of the tests that share it.
+        tests: Vec<String>,
+        /// How many times tests of that name are listed, counting each target's listing.
+        listings: usize,
+        /// How many controls named `name` are listed.
+        controls: usize,
+    },
+}
+
+impl Finding {
+    /// How many tests the finding leaves without a control that makes them fail.
+    pub fn tests(&self) -> usize {
+        match self {
+            Finding::Collision {
+                listings, controls, ..
+            } => listings - controls,
+            _ => 1,
+        }
+    }
 }
 
 impl fmt::Display for Finding {
@@ -47,6 +71,17 @@ impl fmt::Display for Finding {
             Finding::Doctest(test) => write!(
                 f,
                 "doctest `{test}` has no control: `negative_control!` cannot name a doctest (REQ-VAL-147)"
+            ),
+            Finding::Collision {
+                name,
+                tests,
+                listings,
+                controls,
+            } => write!(
+                f,
+                "tests `{}` share the name `{name}`: listed {listings} time(s), but {controls} control(s) name \
+                 `{name}`, and each test needs its own (REQ-VAL-147)",
+                tests.join("`, `")
             ),
         }
     }
@@ -90,10 +125,11 @@ pub fn parse_results(stdout: &str) -> BTreeMap<String, Vec<bool>> {
 }
 
 /// Pairs each listed test with the controls named for it, by the test's last path segment (R-199, R-201), and
-/// returns the tests with no control or with a control that `results` shows passing. Every run of every paired
-/// control is judged on its own: one leaky control fails its test, whatever a control of the same name in another
-/// target does. A name listed in several targets is reported once. `Err` when a paired control has fewer results
-/// than it was listed.
+/// returns the tests with no control, with a control that `results` shows passing, or sharing their name with more
+/// tests than there are controls of it (each listing of a test needs a listing of its own control). Every run of
+/// every paired control is judged on its own: one leaky control fails its test, whatever a control of the same name
+/// in another target does. A name listed in several targets is reported once. `Err` when a paired control has fewer
+/// results than it was listed.
 pub fn findings(
     listed: &[String],
     results: &BTreeMap<String, Vec<bool>>,
@@ -106,31 +142,52 @@ pub fn findings(
             None => controls.push((of, name, 1)),
         }
     }
-    let mut tests: Vec<&String> = Vec::new();
+    // The tests by last path segment, in the order first listed: the distinct full names, and the listings.
+    let mut groups: Vec<(&str, Vec<&String>, usize)> = Vec::new();
     for name in listed.iter().filter(|name| control_of(name).is_none()) {
-        if !tests.contains(&name) {
-            tests.push(name);
+        let short = name.rsplit("::").next().unwrap_or(name);
+        match groups.iter_mut().find(|(of, _, _)| *of == short) {
+            Some((_, names, listings)) => {
+                *listings += 1;
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+            None => groups.push((short, vec![name], 1)),
         }
     }
     let mut found = Vec::new();
-    for test in tests {
-        let short = test.rsplit("::").next().unwrap_or(test);
-        let mut paired = controls.iter().filter(|(of, _, _)| *of == short).peekable();
-        if paired.peek().is_none() {
-            found.push(Finding::NoControl(test.clone()));
+    for (short, names, listings) in groups {
+        let paired: Vec<_> = controls.iter().filter(|(of, _, _)| *of == short).collect();
+        let registered: usize = paired.iter().map(|(_, _, count)| count).sum();
+        if registered == 0 {
+            found.extend(names.iter().map(|name| Finding::NoControl((*name).clone())));
+        } else if listings > registered {
+            found.push(Finding::Collision {
+                name: short.to_owned(),
+                tests: names.iter().map(|name| (*name).clone()).collect(),
+                listings,
+                controls: registered,
+            });
         }
         let mut leaks = false;
         for (_, control, count) in paired {
             let runs = results.get(*control).map_or(&[][..], Vec::as_slice);
             if runs.len() < *count {
+                let tests = names.iter().map(|name| name.as_str()).collect::<Vec<_>>();
                 return Err(format!(
-                    "the control `{control}` of test `{test}` did not run"
+                    "the control `{control}` of test `{}` did not run",
+                    tests.join("`, `")
                 ));
             }
             leaks |= runs.iter().any(|passed| !passed);
         }
         if leaks {
-            found.push(Finding::ControlPasses(test.clone()));
+            found.extend(
+                names
+                    .iter()
+                    .map(|name| Finding::ControlPasses((*name).clone())),
+            );
         }
     }
     Ok(found)
@@ -201,7 +258,7 @@ pub fn run(manifest: &Path) -> Result<(), String> {
         if found.is_empty() {
             println!("xtask controls: {name}: {tests} test(s), each failed by its control");
         }
-        failed += found.len();
+        failed += found.iter().map(Finding::tests).sum::<usize>();
     }
     if failed == 0 {
         return Ok(());
