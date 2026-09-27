@@ -418,10 +418,14 @@ fn build_old_form(add_expected: bool) -> Output {
         );
         std::fs::write(&test, body).unwrap();
     }
-    // The copy's own target directory, as R-208 gave `deps.rs`: the test and its control never reuse each other's
-    // build (R-224).
+    // A target directory each of the test and its control has to itself, as R-208 gave `deps.rs`'s workspaces: neither
+    // reuses the other's build (R-224). Each keeps its own across runs, so only the fixture is rebuilt.
+    let own = if add_expected { "control" } else { "test" };
     let o = cargo()
-        .env("CARGO_TARGET_DIR", copy.join("target"))
+        .env(
+            "CARGO_TARGET_DIR",
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m0_26-old_form-{own}")),
+        )
         .args([
             "test",
             "--no-run",
