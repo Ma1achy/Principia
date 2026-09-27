@@ -391,11 +391,23 @@ fn build_rs(generated: &str) -> String {
     )
 }
 
+/// Every cargo run on a synthetic workspace at `root` builds in `<root>/target`, its own directory, made fresh with the
+/// workspace, and never in the outer build's, which an inherited `CARGO_TARGET_DIR` would have every test share (R-208).
+fn own_target<'a>(command: &'a mut Command, root: &std::path::Path) -> &'a mut Command {
+    command.env("CARGO_TARGET_DIR", root.join("target"))
+}
+
 /// Runs `xtask deps --manifest-path <root>/Cargo.toml`; returns (success, stdout, stderr).
 fn run_workspace(root: &std::path::Path) -> (bool, String, String) {
+    run_workspace_in(root, &root.join("target"))
+}
+
+/// `run_workspace`, with `CARGO_TARGET_DIR` at `target`.
+fn run_workspace_in(root: &std::path::Path, target: &std::path::Path) -> (bool, String, String) {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", target)
         .output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
@@ -409,7 +421,7 @@ fn run_workspace(root: &std::path::Path) -> (bool, String, String) {
 /// The control for each failing case: with the dev-dependency, the same workspace compiles its tests, so the use is
 /// real and it is removing the dev-dependency, not a broken fixture, that fails the check.
 fn assert_compiles_with_the_dependency(root: &std::path::Path, krate: &str) {
-    let output = Command::new(env!("CARGO"))
+    let output = own_target(&mut Command::new(env!("CARGO")), root)
         .args([
             "check",
             "--offline",
@@ -627,7 +639,7 @@ fn assert_gated_unit_test_fails(
         &[],
         &[files.as_slice(), &[(lib, with_use.as_str())]].concat(),
     );
-    let premise = Command::new(env!("CARGO"))
+    let premise = own_target(&mut Command::new(env!("CARGO")), &root)
         .args([
             "test",
             "--offline",
@@ -638,7 +650,6 @@ fn assert_gated_unit_test_fails(
         ])
         .arg(root.join("Cargo.toml"))
         .args(premise_args)
-        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&premise.stdout);
@@ -739,7 +750,7 @@ fn deps_a_doctest_using_validation_passes() {
     let doc =
         "/// ```\n/// let _ = validation::Harness;\n/// kernel::f();\n/// ```\npub fn f() {}\n";
     let root = cargo_workspace("doctest", &["kernel"], &[(lib, doc)]);
-    let premise = Command::new(env!("CARGO"))
+    let premise = own_target(&mut Command::new(env!("CARGO")), &root)
         .args([
             "test",
             "--offline",
@@ -749,7 +760,6 @@ fn deps_a_doctest_using_validation_passes() {
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
-        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo test --doc");
     let stdout = String::from_utf8_lossy(&premise.stdout);
@@ -888,4 +898,34 @@ fn deps_a_unit_test_of_a_binary_with_test_false_fails() {
             "{control}: {stdout}"
         );
     }
+}
+
+/// R-208: the check runs with `CARGO_TARGET_DIR` set to a directory outside the workspace and the repository, as when a developer's
+/// environment sets it outside the repository, keeps its own build there, and passes. Control: in the same directory,
+/// the same workspace with a unit test that uses validation fails.
+#[test]
+fn deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace() {
+    let outside = std::env::temp_dir().join(format!("xtask-deps-target-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&outside);
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let root = cargo_workspace("outside_target", &["kernel"], &[]);
+    assert!(!outside.starts_with(&root) && !outside.starts_with(repo.canonicalize().unwrap()));
+    let (ok, stdout, stderr) = run_workspace_in(&root, &outside);
+    assert!(
+        ok && stdout.contains("compile check passed: kernel compiles"),
+        "with CARGO_TARGET_DIR outside the workspace the check fails:\n{stdout}\n{stderr}"
+    );
+    assert!(
+        outside.join(xtask::deps::CHECK_TARGET_DIR).is_dir(),
+        "the check did not build under CARGO_TARGET_DIR"
+    );
+
+    let lib = "crates/kernel/src/lib.rs";
+    let root = cargo_workspace("outside_target_control", &["kernel"], &[(lib, UNIT_TEST)]);
+    let (ok, _, stderr) = run_workspace_in(&root, &outside);
+    assert!(
+        !ok && stderr.contains("R-191"),
+        "control: a unit test that uses validation passes with CARGO_TARGET_DIR outside the workspace:\n{stderr}"
+    );
+    let _ = std::fs::remove_dir_all(&outside);
 }
