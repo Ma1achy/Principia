@@ -442,3 +442,7 @@
   section: R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
   reason: informative only
   note: process ruling; a size acceptance for one PR, and the split-first rule for later overruns
+- file: decisions.md
+  section: R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
+  reason: informative only
+  note: process ruling; two size acceptances, and what the budget counts (recorded in plan/WORKFLOW.md)

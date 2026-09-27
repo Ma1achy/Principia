@@ -1668,3 +1668,55 @@ lives in a `harness = false` test target (or a bin) whose `main` the parent spaw
 lists it. The three qa child-mode helpers (`qa_child_open_harness`, `qa_child_failing_property`,
 `qa_child_count_cases`) move there, under a one-round exception to edit qa's merged files, like R-206's, with qa
 reviewing.
+
+## R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"Both sizes accepted. From now on the ~500-line budget counts implementation code and the implementer's own tests
+only; QA test commits and negative_control! blocks don't count. Pre-split only if implementation alone looks set to
+exceed ~500 (this applies to TASK-M0-22)."
+
+*Applied:* TASK-M0-24 (638 lines, PR #23) and TASK-M0-25 (610 lines, PR #24) stay one PR each. `plan/WORKFLOW.md`
+§ "Task files" and its split rule say what the budget counts. It amends R-208's split-first rule, which now applies
+to the counted lines.
+
+## R-212 — A control names the panic it expects *(amends R-199; closes RQ-145)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"negative_control! takes the expected panic message (should_panic(expected = …)), so a control must trip its intended
+assertion. Convert existing controls in M0-22."
+
+*Applied:* R-199's form gains the expected message; how it is written in the call is the implementation's (the task
+says). Every control registered before TASK-M0-22 is converted there. A new requirement carries it, since
+REQ-VAL-147 is closed.
+
+## R-213 — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"R-210's exception extends to qa_r206_harness_opens_the_selected_backend."
+
+*Applied:* its child path moves out of libtest, into the `qa_child` bin TASK-M0-25 created, under the same one-round
+exception to edit qa's merged file (`crates/validation/tests/qa_R-206.rs`), with qa reviewing. TASK-M0-25 is merged,
+so TASK-M0-22 does it.
+
+## R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"One shared spawn helper with a timeout; on timeout it kills the child and fails naming it. 120 s provisional,
+calibration confirmed at the M0 gate. Tests that spawn children use it."
+
+*Applied:* the helper lives in `crates/validation`. Every test that spawns a child process uses it, including qa's
+merged files, under a one-round exception limited to replacing the spawn call. The 120 s value is a calibration
+requirement (R-71), provisional in CI until the human confirms it at the M0 gate (R-182).
+
+## R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"All stand. M0-22 also removes the inline controls duplicated by registered ones, and moves checks copied between test
+files into a shared test-support module."
+
+*Applied:* the items that stand: `--features controls` on the gpu-metal and gpu-lavapipe jobs; `metal_hosted_probe`'s
+control asserting the other platform's expectation; inline controls kept beside registered ones (until TASK-M0-22
+removes the duplicates); controls copying their test's check (until TASK-M0-22 moves the copies into the shared
+module). Editing qa's merged files to use the shared module is limited to replacing the copied check with a call, under
+a one-round exception, with qa reviewing.

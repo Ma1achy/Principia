@@ -2375,6 +2375,7 @@ Tick any you don't accept.
   a new requirement for part (b); (c) something else.
 - **Also:** TASK-M0-25 and TASK-M0-22 were estimated the same way (~400–500), so they may overrun too.
 - **Needed:** a ruling on the size.
+- **Ruling:** R-211 (decisions.md). Closed in TASK-M0-24.
 
 ## RQ-144: TASK-M0-25 is 610 lines, over its ~500 budget *(plan, TASK-M0-25)*
 
@@ -2396,6 +2397,7 @@ Tick any you don't accept.
   TASK-M0-22 (qa's 33 xtask tests, estimated ~450–500) is likely to overrun the same way, and may need the same
   decision before it starts.
 - **Needed:** a ruling on the size.
+- **Ruling:** R-211 (decisions.md). Closed in TASK-M0-25.
 
 ## RQ-145: a control passes on any panic, including one in its own setup *(build, TASK-M0-21)*
 
@@ -2415,6 +2417,7 @@ Tick any you don't accept.
   checked with `--nocapture`; (c) something else.
 - **Needed:** a ruling. It bears on TASK-M0-22, which registers the last 33 controls, and on every control written after
   it.
+- **Ruling:** R-212 (decisions.md). Closed in TASK-M0-22.
 
 ## RQ-146: `qa_r206_harness_opens_the_selected_backend` is also a subprocess body *(build, TASK-M0-25)*
 
@@ -2429,6 +2432,7 @@ Tick any you don't accept.
   (or TASK-M0-22); (b) accept it as a test that is also a child entry point, since it can fail and has a control; (c)
   something else.
 - **Needed:** a ruling.
+- **Ruling:** R-213 (decisions.md). Closed in TASK-M0-22.
 
 ## RQ-147: a hung child process stalls the whole test suite *(build, TASK-M0-04)*
 
@@ -2443,3 +2447,4 @@ Tick any you don't accept.
 - **Options seen:** (a) a shared spawn-with-timeout helper in `crates/validation`, with a calibrated limit (R-71), that
   every parent uses; (b) rely on the CI job's timeout; (c) something else.
 - **Needed:** a ruling, and a value if (a).
+- **Ruling:** R-214 (decisions.md). Closed in TASK-M0-22.

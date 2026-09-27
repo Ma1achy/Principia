@@ -17769,6 +17769,63 @@
   - R-209
   - R-210
   milestone: M0
+- id: REQ-VAL-154
+  area: VAL
+  statement: "`negative_control!` must take the panic message its control expects and register the control with `#[should_panic(expected = …)]`, so a control passes only by tripping its intended assertion, not by panicking in its own setup (R-212, amending R-199); every control registered before TASK-M0-22 must be converted to that form; an inline control duplicated by a registered one must be removed, and a check copied between test files must live once in a shared test-support module that both call (R-215)."
+  source:
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-212 — A control names the panic it expects *(amends R-199; closes RQ-145)*"
+  - file: decisions.md
+    section: "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
+  - file: decisions.md
+    section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
+  verify:
+    method: unit test
+    detail: "a fixture control that panics in its setup, before its check, fails under `cargo xtask controls` (or `cargo test --features controls`); the same control with its expected message reaching the check passes; every `negative_control!` call in the workspace carries an expected message; no test keeps an inline control its registered one duplicates; no check body is copied between test files (review checklist, code and qa)"
+  rulings:
+  - R-199
+  - R-212
+  - R-215
+  milestone: M0
+- id: REQ-VAL-155
+  area: VAL
+  statement: "Every test that spawns a child process must do so through one shared helper in `crates/validation` that waits at most the calibrated timeout (REQ-VAL-156) and, on timeout, kills the child and fails naming it (R-214); a subprocess body is not a `#[test]` (R-210), which includes `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)."
+  source:
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
+  - file: decisions.md
+    section: "R-213 — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*"
+  - file: decisions.md
+    section: R-210 — Subprocess bodies leave libtest *(closes RQ-142)*
+  verify:
+    method: unit test
+    detail: "a child that sleeps past a short test timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child that exits in time returns its output; no test in the workspace spawns a child except through the helper (review checklist); `cargo test -- --list` lists no child path of `qa_R-206.rs`"
+  rulings:
+  - R-210
+  - R-213
+  - R-214
+  milestone: M0
+- id: REQ-VAL-156
+  area: VAL
+  kind: calibration
+  statement: "The timeout of the shared child-spawn helper (R-214) must be calibrated: 120 s provisional, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the helper carries 120 s, marked provisional until the human confirms or changes it at the M0 gate (R-182); the PR states the evidence: the longest child run measured in the suite, and the headroom 120 s leaves"
+  rulings:
+  - R-71
+  - R-182
+  - R-214
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

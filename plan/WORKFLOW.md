@@ -10,7 +10,7 @@ does what, in what order, and what stops the line.
 - A task starts only when every task in its **Depends on** list is merged.
 - The PR description lists the requirement ids the task closes and, for each, the acceptance command that
   demonstrates it, with its output. It links the task file.
-- A task that turns out bigger than one reviewable PR (roughly 500 lines of change) is split **in the plan first**:
+- A task that turns out bigger than one reviewable PR (roughly 500 counted lines, § "Task files", R-211) is split **in the plan first**:
   new task files and manifest entries, `plan/check_plan.py` green, then the work.
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
   (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
@@ -34,6 +34,8 @@ does what, in what order, and what stops the line.
 Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`; the two agree exactly (checked by
 `plan/check_plan.py`). Task ids are `TASK-<Mn>-<nn>`, in build order within the milestone.
 - **One task is one reviewable PR:** roughly ≤ 500 lines of change.
+- **What the budget counts (R-211):** implementation code and the implementer's own tests. qa's test commits and
+  `negative_control!` blocks don't count, and a task is pre-split only if its counted lines look set to exceed ~500.
 - **Every live requirement is closed by exactly one task, and every task closes at least one.** A task's milestone
   is never later than the milestones of the requirements it closes.
 - **Calibration requirements** (R-71) are closed by the task that needs the value. Its deliverable is the proposal

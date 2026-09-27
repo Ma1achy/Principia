@@ -185,7 +185,7 @@
   title: "Controls for qa's xtask tests, and `controls` in `cargo xtask ci`"
   depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25]
   needs: []
-  requirements: [REQ-VAL-007]
+  requirements: [REQ-VAL-007, REQ-VAL-154, REQ-VAL-155, REQ-VAL-156]
   reviewers: [code, qa]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M0-23
