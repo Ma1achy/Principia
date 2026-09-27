@@ -205,10 +205,10 @@ fn child(test: &str, env: &[(&str, Option<&str>)]) -> std::process::Output {
             None => cmd.env_remove(k),
         };
     }
-    cmd.output().expect("child test binary ran")
+    cmd.output().expect("qa_child ran")
 }
 
-/// The child's marker line, from `tag` to the end of its line (libtest prints the test name before it).
+/// The child's marker line, from `tag` to the end of its line (the child may print before it).
 fn marker(t: &str, tag: &str) -> String {
     let at = t
         .find(tag)

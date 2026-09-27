@@ -69,7 +69,7 @@ fn counts_with(proptest_cases: &str) -> String {
         .arg("count_cases")
         .env("PROPTEST_CASES", proptest_cases)
         .output()
-        .expect("child test binary ran");
+        .expect("qa_child ran");
     let t = format!(
         "{}{}",
         String::from_utf8_lossy(&o.stdout),
