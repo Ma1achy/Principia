@@ -7,13 +7,14 @@
 //! check on an input it must accept (the test) and on one it must reject, tripping the check's own assertion by its
 //! message (the control, R-176, R-212). Workspaces are named `qa30_*`, apart from the cases of
 //! `qa_TASK-M0-01_r193.rs`, which write to the same directory.
+// The file name `qa_TASK-M0-30_…` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 #[path = "support/qa_m0_01_r193.rs"]
 mod qa_m0_01_r193;
 
 use qa_m0_01_r193::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use validation::negative_control;
 
 /// A kernel workspace, with the validation dev-dependency, whose unit test under `cfg(test)` uses validation or not.
@@ -83,6 +84,17 @@ negative_control!(
     check_the_control_passes("qa30_control_nc", &kernel("qa30_control_nc", true))
 );
 
+/// `qa_m0_30_r193_deps_passes_without_a_dev_dependency`'s check, called by the test and its control: `xtask deps`
+/// passes on `root`.
+fn check_deps_passes(root: &Path) {
+    let (ok, stdout, stderr) = deps(root);
+    assert!(
+        ok,
+        "xtask deps fails on {}:\n{stdout}\n{stderr}",
+        root.display()
+    );
+}
+
 /// `deps` and `manifest`, called directly: `xtask deps` passes on a workspace whose kernel has no dev-dependency.
 #[test]
 fn qa_m0_30_r193_deps_passes_without_a_dev_dependency() {
@@ -97,11 +109,7 @@ fn qa_m0_30_r193_deps_passes_without_a_dev_dependency() {
             ),
         )],
     );
-    let (ok, stdout, stderr) = deps(&root);
-    assert!(
-        ok,
-        "xtask deps fails on a workspace without the dev-dependency:\n{stdout}\n{stderr}"
-    );
+    check_deps_passes(&root);
 }
 
 negative_control!(
@@ -109,12 +117,6 @@ negative_control!(
     "a unit test that uses validation fails xtask deps, so `deps` must report failure",
     expected = "xtask deps fails on",
     {
-        let root = kernel("qa30_deps_nc", true);
-        let (ok, stdout, stderr) = deps(&root);
-        assert!(
-            ok,
-            "xtask deps fails on {}:\n{stdout}\n{stderr}",
-            root.display()
-        );
+        check_deps_passes(&kernel("qa30_deps_nc", true));
     }
 );

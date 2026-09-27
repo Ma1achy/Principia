@@ -8,6 +8,7 @@
 //! and runs each check twice: on an input it must accept (the test), and on one it must reject, tripping the check's
 //! own assertion by its message (the control, R-176, R-212). Workspaces are named `qa30_*`, apart from the cases of
 //! `qa_TASK-M0-01_r191.rs`, which write to the same directory.
+// The file name `qa_TASK-M0-30_…` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 #[path = "support/qa_m0_01_r191.rs"]

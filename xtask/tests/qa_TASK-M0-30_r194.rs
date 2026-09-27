@@ -8,13 +8,14 @@
 //! (the test) and on one it must reject, tripping the check's own assertion by its message (the control, R-176,
 //! R-212). Workspaces are named `qa30_*`, apart from the cases of `qa_TASK-M0-01_r194.rs`, which write to the same
 //! directory.
+// The file name `qa_TASK-M0-30_…` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 #[path = "support/qa_m0_01_r194.rs"]
 mod qa_m0_01_r194;
 
 use qa_m0_01_r194::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use validation::negative_control;
 
 /// A workspace whose `krate`, with the validation dev-dependency and `features`, has `lib`.
@@ -192,13 +193,19 @@ negative_control!(
     check_the_unit_test_use_fails(&with_lib("qa30_unit_nc", "ledger", "", DOC_USE.to_owned()))
 );
 
+/// `qa_m0_30_r194_runners_report_a_passing_doctest`'s doctest check, called by the test and its control: `cargo test
+/// --doc` on `root`'s ledger passes and reports one doctest passed.
+fn check_the_doctest_count(root: &Path) {
+    let (ok, out) = cargo_test(root, "ledger", &["--doc"]);
+    assert!(ok && out.contains("1 passed"), "cargo test --doc: {out}");
+}
+
 /// `cargo_test` and `deps`, called directly: the doctest premise's runner reports the doctest's pass, and `xtask deps`
 /// passes the doctest workspace.
 #[test]
 fn qa_m0_30_r194_runners_report_a_passing_doctest() {
     let root = with_lib("qa30_runners", "ledger", "", DOC_USE.to_owned());
-    let (ok, out) = cargo_test(&root, "ledger", &["--doc"]);
-    assert!(ok && out.contains("1 passed"), "cargo test --doc: {out}");
+    check_the_doctest_count(&root);
     let (ok, stdout, stderr) = deps(&root);
     assert!(
         ok,
@@ -217,7 +224,6 @@ negative_control!(
             "",
             "pub fn f() {}\n".to_owned(),
         );
-        let (ok, out) = cargo_test(&root, "ledger", &["--doc"]);
-        assert!(ok && out.contains("1 passed"), "cargo test --doc: {out}");
+        check_the_doctest_count(&root);
     }
 );
