@@ -2449,7 +2449,7 @@ Tick any you don't accept.
 - **Needed:** a ruling, and a value if (a).
 - **Ruling:** R-214 (decisions.md). Closed in TASK-M0-22.
 
-## RQ-148: TASK-M0-22's counted lines look set to reach ~1,100, over the ~500 budget *(plan, TASK-M0-22)*
+## RQ-148: TASK-M0-22's counted lines look set to reach ~1,130, over the ~500 budget *(plan, TASK-M0-22)*
 
 - **File, section:** `decisions.md` § "R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts
   implementation only": "Pre-split only if implementation alone looks set to exceed ~500 (this applies to
