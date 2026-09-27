@@ -466,3 +466,11 @@
   section: R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
   reason: informative only
   note: process ruling; what the size budget counts (recorded in plan/WORKFLOW.md), and a size acceptance for one PR
+- file: decisions.md
+  section: R-228 — Each agent builds and tests with four jobs and four test threads
+  reason: informative only
+  note: process ruling; a per-agent build cap (recorded in CLAUDE.md)
+- file: decisions.md
+  section: R-229 — Reviewers run the tests their diff touches; CI runs the full suite
+  reason: informative only
+  note: process ruling; what a reviewer runs (recorded in CLAUDE.md, plan/WORKFLOW.md and .claude/agents/)

@@ -17910,15 +17910,18 @@
   milestone: M0
 - id: REQ-VAL-162
   area: VAL
-  statement: "`qa_m0_26_a_control_without_an_expected_message_does_not_compile` and its control must build their fixture in separate target directories, as R-208 did for `deps.rs`; `qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on`'s failure under load must be fixed at its cause (timing, a shared resource, a timeout), not by a retry; and the whole workspace suite must then pass 20 times in a row under load (R-224)."
+  statement: "`qa_m0_26_a_control_without_an_expected_message_does_not_compile` and its control must build their fixture in separate target directories, as R-208 did for `deps.rs`; `qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on`'s failure under load must be fixed at its cause (timing, a shared resource, a timeout), not by a retry; and the whole workspace suite must then pass 5 times in a row under normal load, with CI green on the head (R-224, R-230)."
   source:
   - file: decisions.md
     section: R-224 — The two flaky tests are fixed before TASK-M0-29
+  - file: decisions.md
+    section: "R-230 — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*"
   verify:
     method: review checklist
-    detail: "code and qa: the qa_m0_26 test and its control use separate target directories; the PR names the cause of the qa_m0_25 failure under load, with evidence, and the fix removes that cause; no retry is added; the PR shows 20 consecutive full-workspace runs under load (with the controls features, alongside a concurrent load), with no failures"
+    detail: "code and qa: the qa_m0_26 test and its control use separate target directories; the PR names the cause of the qa_m0_25 failure under load, with evidence, and the fix removes that cause; no retry is added; the PR shows 5 consecutive full-workspace runs under normal load (with the controls features), with no failures, and CI is green on the head (R-230)"
   rulings:
   - R-224
+  - R-230
   milestone: M0
 - id: REQ-VAL-163
   area: VAL
@@ -17934,15 +17937,30 @@
   milestone: M0
 - id: REQ-VAL-164
   area: VAL
-  statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 20 times in a row under load (R-227, as R-224)."
+  statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 5 times in a row under normal load, with CI green on the head (R-227, R-230)."
   source:
   - file: decisions.md
     section: "R-227 — The two remaining latent races are fixed now, in their own task"
+  - file: decisions.md
+    section: "R-230 — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*"
   verify:
     method: review checklist
-    detail: "code and qa: no test's cargo run rewrites a binary another test spawns; no two parallel fixture copies share a target directory; no retry is added; the PR shows 20 consecutive full-workspace runs under a named load, with no failures"
+    detail: "code and qa: no test's cargo run rewrites a binary another test spawns; no two parallel fixture copies share a target directory; no retry is added; the PR shows 5 consecutive full-workspace runs under normal load, with no failures, and CI is green on the head (R-230)"
   rulings:
   - R-227
+  - R-230
+  milestone: M0
+- id: REQ-VAL-165
+  area: VAL
+  statement: "The test suite must run through `cargo nextest run` in CI and in the documented local run (doctests through `cargo test --doc`); fixture workspaces must be written only when their content changes, each with its own target directory kept across runs; and the spawn helper's grace and timeout must be injectable so its own tests need not wait the calibrated values; no test may be dropped (R-231)."
+  source:
+  - file: decisions.md
+    section: "R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings"
+  verify:
+    method: review checklist
+    detail: "code and qa: the CI test steps use nextest plus `cargo test --doc`, and together list every test `cargo test --workspace -- --list` lists (both feature sets); a warm second run of a fixture test rebuilds nothing; no spawn-helper test waits the calibrated 5 s grace or 300 s timeout; the PR shows the suite's wall time before and after, on the same machine"
+  rulings:
+  - R-231
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

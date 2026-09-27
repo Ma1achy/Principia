@@ -26,6 +26,9 @@ Read this first; each rule points at its source.
   (`git worktree add --detach <dir> <head>`) and its own `CARGO_TARGET_DIR`, name both in the dispatch, and remove
   both when the reviewer is done (`git worktree remove`, then delete the target directory). The checks below run in
   that worktree, and qa's commit is pushed from it (`git push origin HEAD:task/<TASK-id>`).
+- Each agent builds with `CARGO_BUILD_JOBS=4` and `RUST_TEST_THREADS=4` (R-228). Reviewers run the tests their diff
+  touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
+  commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
 - Reviewers' read-only is enforced, not just instructed. After each reviewer returns, run `git status --porcelain`
   and check that HEAD hasn't moved. If anything changed, discard it (`git restore` / `git clean` on the affected paths,
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by

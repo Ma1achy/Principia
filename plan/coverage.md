@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 134 |
-| VAL | 163 |
+| VAL | 164 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1247** |
+| **total** | **1248** |
 
-Of these: 97 calibration, 101 definition, 1049 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 85 |
+| M0 | 86 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1049 obligation. Retired (kept for the
 
 ## Sections
 
-918 sections in 46 files: 801 yield at least one requirement; 117 yield none and are listed below with the reason.
+922 sections in 46 files: 803 yield at least one requirement; 119 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 69 |
+| informative only | 71 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -78,6 +78,8 @@ Of these: 97 calibration, 101 definition, 1049 obligation. Retired (kept for the
 | R-222 — TASK-M0-28's size accepted; its veto items stand | informative only | process ruling; a size acceptance for one PR |
 | R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md) |
 | R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md), and a size acceptance for one PR |
+| R-228 — Each agent builds and tests with four jobs and four test threads | informative only | process ruling; a per-agent build cap (recorded in CLAUDE.md) |
+| R-229 — Reviewers run the tests their diff touches; CI runs the full suite | informative only | process ruling; what a reviewer runs (recorded in CLAUDE.md, plan/WORKFLOW.md and .claude/agents/) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

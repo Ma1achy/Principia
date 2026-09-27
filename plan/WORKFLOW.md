@@ -106,6 +106,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
+   A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
+   on the head for the full suite; a full local run is only for a cross-cutting change (R-229).
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.

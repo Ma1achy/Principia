@@ -268,6 +268,14 @@
   requirements: [REQ-VAL-164]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M0-33
+  milestone: M0
+  title: "Test-suite speed: nextest, stable fixtures, injectable spawn timings"
+  depends_on: [TASK-M0-22]
+  needs: []
+  requirements: [REQ-VAL-165]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"

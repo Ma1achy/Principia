@@ -34,7 +34,9 @@ under `crates/*/tests/` or `fixtures/`. Anything else, and the commit is rejecte
 are re-run. After you return, `git status --porcelain` must also be clean apart from that commit. Any stray change is
 discarded, you are re-run, and the violation is noted on the PR.
 
-**Review.** Run the whole suite, including your tests, the acceptance commands and `cargo xtask controls`. Check each
+**Review.** Run the acceptance commands, your tests, the test targets the diff touches and those that depend on what it
+changes (with and without the controls features), and `cargo xtask controls`; check that CI is green on the head. Run
+the whole suite locally only for a cross-cutting change (R-229). Check each
 item of your checklist: every closed requirement has its test with its threshold and fixture, and every test can fail.
 Findings cite file and line, or `file` § "section".
 

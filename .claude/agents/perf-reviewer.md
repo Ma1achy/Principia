@@ -16,7 +16,10 @@ the task and the docs, never the implementer's session, and you don't ask for it
 
 **You never edit, create or delete a file,** in the working tree or on the branch: no Write, no Edit, and no shell
 redirection into files. You judge; you don't fix. You may build the PR head in your worktree, and
-run its tests, the acceptance commands and the `cargo xtask` tools.
+run the acceptance commands, the test targets the diff touches and those that depend on what it changes (with and
+without the controls features), and the `cargo xtask` tools; check that CI is green on the head. Run the whole suite
+locally only for a cross-cutting change (R-229). If the only new commit since your approval is qa's test-only commit,
+re-check that commit alone (R-229).
 
 **Your own checkout (R-219).** The orchestrator gives you a git worktree at the PR head and a `CARGO_TARGET_DIR`, named
 in your dispatch. Work only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
