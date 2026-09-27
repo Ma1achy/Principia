@@ -30,12 +30,11 @@ fn root() -> PathBuf {
         .unwrap()
 }
 
-/// The workspace's target directory, where `validation` is already built.
+/// The qa_R-206 cargo runs' own target directory (R-224). A cargo run into the workspace's target directory replaces
+/// `target/debug/qa_child` (removes it, then copies the build back) even when nothing is rebuilt, and
+/// `qa_child_r206` spawns that file meanwhile. Here no cargo run writes that file.
 fn target_dir() -> PathBuf {
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
+    Path::new(env!("CARGO_TARGET_TMPDIR")).join("qa_m0_26-r206")
 }
 
 /// A fresh scratch directory under the target's tmp dir.
