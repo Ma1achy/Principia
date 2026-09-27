@@ -2396,3 +2396,22 @@ Tick any you don't accept.
   TASK-M0-22 (qa's 33 xtask tests, estimated ~450–500) is likely to overrun the same way, and may need the same
   decision before it starts.
 - **Needed:** a ruling on the size.
+
+## RQ-145: a control passes on any panic, including one in its own setup *(build, TASK-M0-21)*
+
+- **File, section:** `decisions.md` § "R-199 — A test is matched to its control by name in the macro call *(amends
+  R-176; closes RQ-136)*" (the form `negative_control!(test_name, "description", control)`);
+  `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test".
+- **What:** the merged macro (`crates/validation/src/control.rs:34-38`) expands the control to `#[test]
+  #[should_panic] fn negative_control() { $control }`, with no `expected` message. A control that panics during setup
+  (an `unwrap` on a fixture copy, a missing marker, `GpuHarness::new` failing on a runner with no adapter) passes
+  without reaching the check it is meant to trip. Raised by qa on PR #23 and by code on PR #24. Today the reviewers
+  guard it by hand, running each control with `--nocapture` and reading where it panics.
+- **Silence:** R-199 fixes the macro's arguments; the corpus doesn't say whether a control must show which failure it
+  produced.
+- **Options seen:** (a) the macro takes the expected panic message (for example a fourth argument, or `expected =` in
+  the call) and emits `#[should_panic(expected = …)]`; this amends R-199's form, and every registered control gains
+  it; (b) keep the form, and make "each control panics at the check it controls" an explicit qa checklist line,
+  checked with `--nocapture`; (c) something else.
+- **Needed:** a ruling. It bears on TASK-M0-22, which registers the last 33 controls, and on every control written after
+  it.
