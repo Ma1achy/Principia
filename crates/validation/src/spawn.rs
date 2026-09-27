@@ -229,28 +229,38 @@ mod tests {
             .success()
     }
 
+    /// A fresh scratch directory; one per call, as a test and its control may run at once.
+    fn scratch() -> std::path::PathBuf {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static CALLS: AtomicUsize = AtomicUsize::new(0);
+        let call = CALLS.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("spawn-{}-{call}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        dir
+    }
+
+    /// The pid in a timed-out child's error.
+    fn pid_in(err: &io::Error) -> String {
+        err.to_string()
+            .split("(pid ")
+            .nth(1)
+            .and_then(|rest| rest.split(')').next())
+            .expect("the error names the pid")
+            .to_owned()
+    }
+
     /// A child that starts a grandchild (by running `start`, which backgrounds it and writes its pid to `$1`) and then
     /// hangs is timed out. After the timeout the child and the grandchild are gone, and no process of the child's group
     /// remains (R-217).
     fn check_group_ended(start: &str) {
-        // One directory per call: the test and its control may run at once.
-        static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-        let call = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("spawn-group-{}-{call}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let dir = scratch();
         let pid_file = dir.join("grandchild");
         let err = Command::new("sh")
             .args(["-c", &format!("{start}; sleep 30"), "sh"])
             .arg(&pid_file)
             .output_within(Duration::from_millis(500))
             .expect_err("the child was not timed out");
-        let child = err
-            .to_string()
-            .split("(pid ")
-            .nth(1)
-            .and_then(|rest| rest.split(')').next())
-            .expect("the error names the pid")
-            .to_owned();
+        let child = pid_in(&err);
         let grandchild = std::fs::read_to_string(&pid_file).expect("the grandchild's pid");
         let grandchild = grandchild.trim();
         let (child_left, grandchild_left, group_left) = (
@@ -279,6 +289,91 @@ mod tests {
         "a grandchild that leaves the child's process group, required to be gone after the timeout",
         expected = "of the timed-out child survived its timeout",
         check_group_ended("perl -e 'setpgrp(0, 0); exec @ARGV' sleep 30 & echo $! > \"$1\"")
+    );
+
+    /// A grandchild that ignores SIGTERM, while the child dies of it, is killed after the grace.
+    #[test]
+    fn spawn_ends_a_grandchild_that_ignores_sigterm() {
+        check_group_ended("(trap '' TERM; sleep 30) & echo $! > \"$1\"");
+    }
+
+    crate::negative_control!(
+        spawn_ends_a_grandchild_that_ignores_sigterm,
+        "the same grandchild, leaving the child's process group, required to be gone after the timeout",
+        expected = "of the timed-out child survived its timeout",
+        check_group_ended(
+            "(trap '' TERM; exec perl -e 'setpgrp(0, 0); exec @ARGV' sleep 30) & echo $! > \"$1\""
+        )
+    );
+
+    /// A timed-out child whose SIGTERM handler takes `cleanup` seconds, then writes a file and exits, is let finish it
+    /// within the grace before SIGKILL.
+    fn check_grace(cleanup: &str) {
+        let dir = scratch();
+        let done = dir.join("done");
+        let script =
+            format!("trap 'sleep {cleanup}; echo done > \"$1\"; exit 0' TERM; sleep 30 & wait");
+        let err = Command::new("sh")
+            .args(["-c", &script, "sh"])
+            .arg(&done)
+            .output_within(Duration::from_millis(500))
+            .expect_err("the child was not timed out");
+        let finished = std::fs::read_to_string(&done).unwrap_or_default();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(err.kind(), io::ErrorKind::TimedOut, "{err}");
+        assert_eq!(
+            finished, "done\n",
+            "the child's SIGTERM handler was not let finish within the grace"
+        );
+    }
+
+    #[test]
+    fn spawn_gives_a_timed_out_child_its_grace_after_sigterm() {
+        check_grace("1");
+    }
+
+    crate::negative_control!(
+        spawn_gives_a_timed_out_child_its_grace_after_sigterm,
+        "a SIGTERM handler that takes 7 s, longer than the grace, required to finish",
+        expected = "the child's SIGTERM handler was not let finish within the grace",
+        check_grace("7")
+    );
+
+    /// `program` runs `sh -c`'s arguments; the child exits at once while a process outside its group, whose pid it
+    /// writes to `$1`, holds its output open. The helper still fails with a timeout, although the child's group is
+    /// empty when it is signalled.
+    fn check_timed_out(program: &str) {
+        let dir = scratch();
+        let pid_file = dir.join("holder");
+        let script = "perl -e 'setpgrp(0, 0); exec @ARGV' sleep 30 & echo $! > \"$1\"; echo x";
+        let result = Command::new(program)
+            .args(["-c", script, "sh"])
+            .arg(&pid_file)
+            .output_within(Duration::from_millis(500));
+        if let Ok(holder) = std::fs::read_to_string(&pid_file) {
+            let _ = Command::new("kill")
+                .args(["-9", holder.trim()])
+                .timed_output();
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+        let err = result.expect_err("the helper returned the output");
+        assert_eq!(
+            err.kind(),
+            io::ErrorKind::TimedOut,
+            "the helper's error is not a timeout: {err}"
+        );
+    }
+
+    #[test]
+    fn spawn_times_out_a_child_whose_output_is_held_outside_its_group() {
+        check_timed_out("sh");
+    }
+
+    crate::negative_control!(
+        spawn_times_out_a_child_whose_output_is_held_outside_its_group,
+        "a program that does not exist, which fails to spawn, required to time out",
+        expected = "the helper's error is not a timeout",
+        check_timed_out("/nonexistent/spawn-control")
     );
 
     crate::negative_control!(
