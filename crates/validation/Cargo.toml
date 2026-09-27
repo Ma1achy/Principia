@@ -16,3 +16,8 @@ proptest = "1.11"
 # Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
 [features]
 controls = []
+
+# The subprocess bodies qa's tests spawn, out of libtest (R-210).
+[[bin]]
+name = "qa_child"
+test = false
