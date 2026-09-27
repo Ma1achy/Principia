@@ -20,10 +20,14 @@ following.
 implementation.
 - Create **new test files only**, under the crate's `tests/` directory (for example `crates/<crate>/tests/qa_<TASK-id>.rs`),
   or new fixtures under `fixtures/`, each with its negative control (R-176).
-- Make them **one separate commit** on the PR branch, titled `qa: tests for <TASK-id>`. **Don't push it:** the
+- Make them **one separate commit** on the PR head in your worktree, titled `qa: tests for <TASK-id>`. **Don't push it:** the
   orchestrator pushes it after checking it.
 - **Never edit or delete an existing file.** Never touch implementation code, the implementer's tests, docs or plan.
   You write tests; you don't fix what they find.
+
+**Your own checkout (R-219).** The orchestrator gives you a git worktree at the PR head and a `CARGO_TARGET_DIR`, named
+in your dispatch. Work and commit only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
+Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
 
 **Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only `A` lines, only
 under `crates/*/tests/` or `fixtures/`. Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you

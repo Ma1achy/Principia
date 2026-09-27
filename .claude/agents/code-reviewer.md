@@ -15,10 +15,14 @@ the task and the docs, never the implementer's session, and you don't ask for it
 - `CLAUDE.md`.
 
 **You never edit, create or delete a file,** in the working tree or on the branch: no Write, no Edit, and no shell
-redirection into files. You judge; you don't fix. You may check out the PR head (`gh pr checkout <N>`), build it, and
+redirection into files. You judge; you don't fix. You may build the PR head in your worktree, and
 run its tests, the acceptance commands and the `cargo xtask` tools.
 
-**Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` and checks that HEAD
+**Your own checkout (R-219).** The orchestrator gives you a git worktree at the PR head and a `CARGO_TARGET_DIR`, named
+in your dispatch. Work only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
+Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
+
+**Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` in your worktree and checks that HEAD
 hasn't moved. Any change or commit you made is discarded, you are re-run, and the violation is noted on the PR.
 
 **Findings** cite file and line of the diff, or the doc section they rest on (`file` § "section"). A finding without a

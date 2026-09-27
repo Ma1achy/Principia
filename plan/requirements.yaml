@@ -17855,12 +17855,58 @@
     section: "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
   - file: decisions.md
     section: "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
+  - file: decisions.md
+    section: "R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*"
   verify:
     method: review checklist
     detail: "code and qa: no implementer test keeps an inline control its registered one duplicates; no check body is copied into a controls target; every registered control still trips its test's assertion (`cargo xtask controls`)"
   rulings:
   - R-215
   - R-216
+  - R-221
+  milestone: M0
+- id: REQ-VAL-159
+  area: VAL
+  statement: "An input a control must share with its test (shader text, a fixture, a constant) must live once, in the shared test-support module that both use, as a check does (R-215, R-218); the duplicated GPU shader text in `crates/validation/tests/qa_TASK-M0-04_controls.rs` moves there. An input that is the control's own (a mutated kernel, a contaminated input) stays with the control."
+  source:
+  - file: decisions.md
+    section: "R-218 — Inputs a control shares with its test live in the shared module too *(extends R-215)*"
+  - file: decisions.md
+    section: "R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: no input the test and its control both need is copied between qa's test files and the controls targets; qa's merged files change only where a copy is replaced by a reference to the shared item (R-215's one-round exception); every registered control still trips its test's assertion (`cargo xtask controls`)"
+  rulings:
+  - R-218
+  - R-221
+  milestone: M0
+- id: REQ-VAL-160
+  area: VAL
+  statement: "The helpers and inline checks in qa's `xtask/tests/qa_TASK-M0-01.rs` and `qa_TASK-M0-01_live.rs` must live in shared test-support modules that each test and a control can both call, so a control in a new target trips the test's own assertion and shares its inputs (R-212, R-215, R-218, R-221); the move changes no test's behaviour."
+  source:
+  - file: decisions.md
+    section: "R-218 — Inputs a control shares with its test live in the shared module too *(extends R-215)*"
+  - file: decisions.md
+    section: "R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: every helper and check the tests' controls need is callable from a support module; qa's merged files change only where a helper or check is replaced by a call (R-215's one-round exception); `cargo test -p xtask` passes and lists the same tests as before"
+  rulings:
+  - R-221
+  milestone: M0
+- id: REQ-VAL-161
+  area: VAL
+  statement: "The helpers and inline checks in qa's `xtask/tests/qa_TASK-M0-01_r191.rs`, `_r193.rs` and `_r194.rs` must live in shared test-support modules that each test and a control can both call, so a control in a new target trips the test's own assertion and shares its inputs (R-212, R-215, R-218, R-221); the move changes no test's behaviour."
+  source:
+  - file: decisions.md
+    section: "R-218 — Inputs a control shares with its test live in the shared module too *(extends R-215)*"
+  - file: decisions.md
+    section: "R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: every helper and check the tests' controls need is callable from a support module; qa's merged files change only where a helper or check is replaced by a call (R-215's one-round exception); `cargo test -p xtask` passes and lists the same tests as before"
+  rulings:
+  - R-221
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

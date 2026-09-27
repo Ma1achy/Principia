@@ -101,6 +101,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
    References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
+   Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
+   which the orchestrator makes before dispatch and removes afterwards (R-219).
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
