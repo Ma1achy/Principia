@@ -17920,6 +17920,30 @@
   rulings:
   - R-224
   milestone: M0
+- id: REQ-VAL-163
+  area: VAL
+  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226)."
+  source:
+  - file: decisions.md
+    section: "R-226 — The suite stops re-running every control; folded into TASK-M0-22"
+  verify:
+    method: review checklist
+    detail: "code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs"
+  rulings:
+  - R-226
+  milestone: M0
+- id: REQ-VAL-164
+  area: VAL
+  statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 20 times in a row under load (R-227, as R-224)."
+  source:
+  - file: decisions.md
+    section: "R-227 — The two remaining latent races are fixed now, in their own task"
+  verify:
+    method: review checklist
+    detail: "code and qa: no test's cargo run rewrites a binary another test spawns; no two parallel fixture copies share a target directory; no retry is added; the PR shows 20 consecutive full-workspace runs under a named load, with no failures"
+  rulings:
+  - R-227
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

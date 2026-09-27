@@ -1854,3 +1854,17 @@ or changed lines count.
 *Applied:* a PR's counted size is its added lines, less those that are the same text as a line the same diff deletes
 (a verbatim move), in implementation code and the implementer's own tests, leaving out qa's commits and
 `negative_control!` blocks (R-211, R-223). A line moved and then edited counts. PR #33 (TASK-M0-30) is accepted on size.
+
+## R-226 — The suite stops re-running every control; folded into TASK-M0-22
+*27 Sep 2026 · applied in TASK-M0-22*
+
+Asked whether to stop the suite running every control twice (the survey on 27 Sep found `controls_on_this_workspace_skips_gui`, `xtask/tests/controls.rs:167`, re-running every control in the workspace through `xtask controls`, and qa's `qa_m0_24_every_registered_control_makes_its_test_fail`, `crates/validation/tests/qa_TASK-M0-24.rs:271`, doing a smaller re-run — together about a third of the suite's time), the human chose "Fold into M0-22": once TASK-M0-22 makes `cargo xtask controls` its own CI step, those two tests check only what they claim, through a listing-only mode, without re-running every control.
+
+*Applied:* REQ-VAL-163 (new) carries it, closed by TASK-M0-22. The CI step must fail on any finding, so no coverage is lost. qa's merged `qa_TASK-M0-24.rs` changes only as far as this needs, under a one-round exception, with qa reviewing, as R-215's did.
+
+## R-227 — The two remaining latent races are fixed now, in their own task
+*27 Sep 2026 · applied in TASK-M0-32*
+
+Asked about three latent races of R-224's kind, none yet seen failing, the human chose "One task now": fixed at their cause, in a small task like TASK-M0-31, with a loaded multi-run proof.
+
+*Applied:* the first race (`qa_TASK-M0-26.rs`'s r206 test spawning `qa_child` while sibling cargo runs rewrite it) is inside R-224's exception for that file, and qa's review of PR #35 found it blocking, so TASK-M0-31 fixes it. The other two go to TASK-M0-32 (new, REQ-VAL-164): `cargo build -p xtask` in `crates/validation/tests/support/qa_m0_21_fixture.rs:35` rewriting the `xtask` binary while sibling tests spawn it; and parallel copies of one fixture building into the shared outer target (`xtask/tests/controls.rs:63`, `qa_m0_21_fixture.rs:143`, `support/qa_m0_21.rs:16`, `crates/validation/tests/expected_message.rs:42`). The proof is R-224's: 20 whole-workspace runs in a row under load. Edits to qa's merged files are limited to the fix, under a one-round exception, with qa reviewing. TASK-M0-32 depends on TASK-M0-31, and TASK-M0-22 depends on TASK-M0-32 (both edit `xtask/tests/controls.rs`).
