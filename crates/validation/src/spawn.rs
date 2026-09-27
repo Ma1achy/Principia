@@ -53,25 +53,27 @@ impl Spawn for Command {
         let (tx, rx) = mpsc::channel();
         drain(child.stdout.take(), 0, tx.clone());
         drain(child.stderr.take(), 1, tx);
-        let timed_out = |pid: u32, what: &str| {
-            io::Error::new(
-                io::ErrorKind::TimedOut,
-                format!(
-                    "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
-                     REQ-VAL-156)",
-                    name(self),
-                    timeout.as_secs_f64(),
-                    TIMEOUT.as_secs_f64()
-                ),
-            )
+        // Whatever went wrong in ending the child is told in the timeout's error, never in place of it (REQ-VAL-155).
+        let timed_out = |pid: u32, what: &str, ended: io::Result<()>| {
+            let mut message = format!(
+                "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
+                 REQ-VAL-156)",
+                name(self),
+                timeout.as_secs_f64(),
+                TIMEOUT.as_secs_f64()
+            );
+            if let Err(e) = ended {
+                message.push_str(&format!("; {ENDING}: {e}"));
+            }
+            io::Error::new(io::ErrorKind::TimedOut, message)
         };
         let status = loop {
             if let Some(status) = child.try_wait()? {
                 break status;
             }
             if Instant::now() >= deadline {
-                end(&mut child)?;
-                return Err(timed_out(child.id(), "was killed: it outlived"));
+                let ended = end(&mut child);
+                return Err(timed_out(child.id(), "was killed: it outlived", ended));
             }
             thread::sleep(Duration::from_millis(10));
         };
@@ -81,10 +83,11 @@ impl Spawn for Command {
             let wait = deadline.saturating_duration_since(Instant::now());
             let Ok((stream, bytes)) = rx.recv_timeout(wait) else {
                 // What holds the output open is something the child started: it is ended too (R-217).
-                end(&mut child)?;
+                let ended = end(&mut child);
                 return Err(timed_out(
                     child.id(),
                     "exited, but its output stayed open past",
+                    ended,
                 ));
             };
             streams[stream] = bytes?;
@@ -98,30 +101,49 @@ impl Spawn for Command {
     }
 }
 
+/// What a timeout's error says before a failure to end the child: a signal its group refused, or a failure to reap it.
+const ENDING: &str = "ending it and its process group failed";
+
 /// Ends a timed-out child and everything in its process group (R-217): SIGTERM to the group, then, unless the child
-/// has been reaped and the group is empty within [`GRACE`], SIGKILL to the group, and the child is reaped.
+/// has been reaped and nothing in the group can still be signalled within [`GRACE`], SIGKILL to the group. The child
+/// itself is then killed, in case it has left its group, and reaped, whatever the signals to the group met. A signal
+/// the group refused is returned as the error, once the child is reaped.
 #[cfg(unix)]
 fn end(child: &mut Child) -> io::Result<()> {
     use rustix::io::Errno;
     use rustix::process::{kill_process_group, test_kill_process_group, Pid, Signal};
     // The group's id is the child's pid, and stays taken while the child is unreaped or any member lives.
     let group = Pid::from_child(child);
-    // A group with no member left has nothing to signal.
-    let signal = |signal| match kill_process_group(group, signal) {
-        Err(e) if e != Errno::SRCH => Err(io::Error::from(e)),
-        _ => Ok(()),
+    // A group with no member left has nothing to signal (ESRCH). Any other failure is kept, to be reported. It is
+    // EPERM when no member may be signalled: one not ours, or, on macOS, a group of only zombies, which is refused.
+    let refused = |signal| match kill_process_group(group, signal) {
+        Err(e) if e != Errno::SRCH => Some(e),
+        _ => None,
     };
-    signal(Signal::TERM)?;
-    let grace_ends = Instant::now() + GRACE;
-    while Instant::now() < grace_ends {
-        if child.try_wait()?.is_some() && test_kill_process_group(group) == Err(Errno::SRCH) {
-            return Ok(());
-        }
-        thread::sleep(Duration::from_millis(10));
+    let mut refusal = refused(Signal::TERM);
+    // After a refused SIGTERM no member can be signalled, and SIGKILL would be refused too.
+    if refusal.is_none() {
+        refusal = 'grace: {
+            let grace_ends = Instant::now() + GRACE;
+            while Instant::now() < grace_ends {
+                // Nothing is left for SIGKILL once the child is reaped and the group is empty or refuses signals.
+                if child.try_wait()?.is_some()
+                    && matches!(
+                        test_kill_process_group(group),
+                        Err(Errno::SRCH | Errno::PERM)
+                    )
+                {
+                    break 'grace None;
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+            refused(Signal::KILL)
+        };
     }
-    signal(Signal::KILL)?;
+    // The child is ours to kill (a no-op once it has exited) and to reap, so the wait is bounded.
+    child.kill()?;
     child.wait()?;
-    Ok(())
+    refusal.map_or(Ok(()), |e| Err(io::Error::from(e)))
 }
 
 /// Ends a timed-out child. Without process groups, only the child itself is killed and reaped.
@@ -176,6 +198,7 @@ mod tests {
             message.contains(&format!("child `sleep {seconds}` (pid ")),
             "{message}"
         );
+        assert!(!message.contains(ENDING), "{message}");
         let pid = message
             .split("(pid ")
             .nth(1)
@@ -362,6 +385,10 @@ mod tests {
             io::ErrorKind::TimedOut,
             "the helper's error is not a timeout: {err}"
         );
+        assert!(
+            !err.to_string().contains(ENDING),
+            "an empty group was reported as refusing its signal: {err}"
+        );
     }
 
     #[test]
@@ -374,6 +401,96 @@ mod tests {
         "a program that does not exist, which fails to spawn, required to time out",
         expected = "the helper's error is not a timeout",
         check_timed_out("/nonexistent/spawn-control")
+    );
+
+    /// A holder that forks a process which exits at once and is never reaped, then leaves the child's process group
+    /// and holds the child's output open, writing its pid to `$1`. The zombie stays in the group while the holder lives.
+    #[cfg(target_os = "macos")]
+    const ZOMBIE_HOLDER: &str = "perl -e 'exit 0 if fork == 0; setpgrp(0, 0); \
+        open my $f, \">\", $ARGV[0] or die; print $f $$; close $f; sleep 30' \"$1\" &";
+    /// The same holder, without the zombie.
+    #[cfg(all(target_os = "macos", feature = "controls"))]
+    const HOLDER: &str = "perl -e 'setpgrp(0, 0); \
+        open my $f, \">\", $ARGV[0] or die; print $f $$; close $f; sleep 30' \"$1\" &";
+
+    /// Runs `sh -c <script>` under a 500 ms timeout, with `$1` a file the script writes a holder's pid to, which is
+    /// killed afterwards. Returns the helper's error and how long the helper took.
+    #[cfg(target_os = "macos")]
+    fn time_out(script: &str) -> (io::Error, Duration) {
+        let dir = scratch();
+        let pid_file = dir.join("holder");
+        let started = Instant::now();
+        let result = Command::new("sh")
+            .args(["-c", script, "sh"])
+            .arg(&pid_file)
+            .output_within(Duration::from_millis(500));
+        let took = started.elapsed();
+        if let Ok(holder) = std::fs::read_to_string(&pid_file) {
+            let _ = Command::new("kill")
+                .args(["-9", holder.trim()])
+                .timed_output();
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+        (result.expect_err("the helper returned the output"), took)
+    }
+
+    /// macOS refuses a signal to a group whose only members are zombies (EPERM). A timed-out child whose group is only
+    /// a zombie when it is signalled still fails with the timeout naming the child, reaped, and the refusal is told.
+    #[cfg(target_os = "macos")]
+    fn check_refusal_told(holder: &str) {
+        let (err, _) = time_out(&format!("{holder} echo x"));
+        assert_eq!(err.kind(), io::ErrorKind::TimedOut, "{err}");
+        let message = err.to_string();
+        assert!(message.contains("child `sh -c "), "{message}");
+        assert!(
+            !exists(&pid_in(&err)),
+            "the child was not reaped: {message}"
+        );
+        assert!(
+            message.contains(&format!("{ENDING}: Operation not permitted")),
+            "the group's refusal of the signal was not told: {message}"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn spawn_tells_a_timed_out_group_of_zombies_refused_the_signal() {
+        check_refusal_told(ZOMBIE_HOLDER);
+    }
+
+    #[cfg(target_os = "macos")]
+    crate::negative_control!(
+        spawn_tells_a_timed_out_group_of_zombies_refused_the_signal,
+        "the same child without the zombie, whose group is empty and refuses nothing, required to tell a refusal",
+        expected = "the group's refusal of the signal was not told",
+        check_refusal_told(HOLDER)
+    );
+
+    /// A hanging child whose group, once SIGTERM has ended the child, holds only a zombie is not kept for the grace:
+    /// nothing is left that SIGKILL could reach (macOS refuses it), and nothing is reported as refused.
+    #[cfg(target_os = "macos")]
+    fn check_no_grace_for_zombies(script: &str) {
+        let (err, took) = time_out(script);
+        assert_eq!(err.kind(), io::ErrorKind::TimedOut, "{err}");
+        assert!(!err.to_string().contains(ENDING), "{err}");
+        assert!(
+            took < Duration::from_millis(500) + GRACE,
+            "the helper waited out the grace for a group of zombies: {took:?}"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn spawn_does_not_keep_a_group_of_zombies_for_the_grace() {
+        check_no_grace_for_zombies(&format!("{ZOMBIE_HOLDER} sleep 30"));
+    }
+
+    #[cfg(target_os = "macos")]
+    crate::negative_control!(
+        spawn_does_not_keep_a_group_of_zombies_for_the_grace,
+        "the same group with a member that ignores SIGTERM, required to end before the grace",
+        expected = "the helper waited out the grace for a group of zombies",
+        check_no_grace_for_zombies(&format!("{ZOMBIE_HOLDER} (trap '' TERM; sleep 30) & wait"))
     );
 
     crate::negative_control!(
