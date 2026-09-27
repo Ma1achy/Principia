@@ -91,15 +91,17 @@ pub fn run<S: Strategy>(strategy: &S, test: impl Fn(S::Value) -> Result<(), Test
     }
 }
 
-#[cfg(test)]
-mod tests {
+/// The checks of `prop::tests`, which `tests/controls.rs` calls so that each control runs its test's own check, not a
+/// copy of it (REQ-VAL-158; R-215).
+#[cfg(any(test, feature = "controls"))]
+pub mod checks {
     use super::*;
     use proptest::prelude::*;
     use std::cell::Cell;
 
     /// Fails on any word at or above 2^20, and records the first failing word drawn (before shrinking), which depends
     /// on the seed; the minimal case after shrinking does not.
-    fn first_failing_draw(seed: u64) -> (Failure, u32) {
+    pub fn first_failing_draw(seed: u64) -> (Failure, u32) {
         let first = Cell::new(None);
         let failure = check_with_seed(seed, &any::<u32>(), |x| {
             if x >= 1 << 20 && first.get().is_none() {
@@ -111,6 +113,53 @@ mod tests {
         .expect_err("the property was made to fail");
         (failure, first.get().expect("a failing draw was recorded"))
     }
+
+    /// `prop_seed_is_printed_and_reproduces`'s check: `seed` and `again` fail on the same minimal case, for the same
+    /// reason, after the same first failing draw.
+    pub fn check_reproduces(seed: u64, again: u64) {
+        let key = |seed| {
+            let (failure, draw) = first_failing_draw(seed);
+            (failure.case, failure.reason, draw)
+        };
+        assert_eq!(
+            key(seed),
+            key(again),
+            "the printed seed did not reproduce the failing case"
+        );
+    }
+
+    /// `prop_seed_config_has_no_persistence_file`'s check: `config` loads and saves no failure-persistence file (the
+    /// fixed seed replaces it).
+    pub fn check_no_persistence(config: &Config) {
+        assert!(
+            config.failure_persistence.is_none(),
+            "the shared config sets a failure-persistence file"
+        );
+    }
+
+    /// `prop_seed_runs_the_provisional_case_count`'s check: a property that always holds runs [`CASES`] cases under
+    /// `config`.
+    pub fn check_runs_cases(config: Config) {
+        let runs = Cell::new(0u32);
+        TestRunner::new(config)
+            .run(&any::<u32>(), |_| {
+                runs.set(runs.get() + 1);
+                Ok(())
+            })
+            .expect("the property holds");
+        assert_eq!(
+            runs.get(),
+            CASES,
+            "the shared config ran a different case count"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::checks::*;
+    use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn prop_seed_is_printed_and_reproduces() {
@@ -129,47 +178,13 @@ mod tests {
             .next()
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(|| panic!("no seed in the failure message: {message}"));
-        let (failure, draw) = first_failing_draw(printed);
-        let (again, draw_again) = first_failing_draw(printed);
-        assert_eq!(failure.seed, printed);
-        assert_eq!(
-            (failure, draw),
-            (again, draw_again),
-            "the printed seed did not reproduce the failing case"
-        );
-        // Control: another seed fails on a different first draw, so the equality above is the seed's doing.
-        let (_, other) = first_failing_draw(printed.wrapping_add(1));
-        assert_ne!(draw, other, "control: two seeds drew the same failing case");
-    }
-
-    /// True if `config` loads and saves no failure-persistence file (the fixed seed replaces it).
-    fn persists_nothing(config: &Config) -> bool {
-        config.failure_persistence.is_none()
+        assert_eq!(first_failing_draw(printed).0.seed, printed);
+        check_reproduces(printed, printed);
     }
 
     #[test]
     fn prop_seed_config_has_no_persistence_file() {
-        assert!(
-            persists_nothing(&config(seed())),
-            "the shared config sets a failure-persistence file"
-        );
-        // Control: proptest's default config sets one, and the check rejects it.
-        assert!(
-            !persists_nothing(&Config::default()),
-            "control: the persistence check does not read the field"
-        );
-    }
-
-    /// Runs a property that always holds under `config` and counts the cases it ran.
-    fn cases_run(config: Config) -> u32 {
-        let runs = Cell::new(0u32);
-        TestRunner::new(config)
-            .run(&any::<u32>(), |_| {
-                runs.set(runs.get() + 1);
-                Ok(())
-            })
-            .expect("the property holds");
-        runs.get()
+        check_no_persistence(&config(seed()));
     }
 
     #[test]
@@ -180,20 +195,6 @@ mod tests {
             status.contains("provisional"),
             "CASES is provisional until the M0 gate (R-182, R-203): {status}"
         );
-        assert_eq!(
-            cases_run(config(seed())),
-            CASES,
-            "the shared config ran a different case count"
-        );
-        // Control: a config with half the cases runs half, so the count above is the config's doing.
-        let half = Config {
-            cases: CASES / 2,
-            ..config(seed())
-        };
-        assert_ne!(
-            cases_run(half),
-            CASES,
-            "control: the case count is not read"
-        );
+        check_runs_cases(config(seed()));
     }
 }

@@ -28,25 +28,6 @@ fn qa_fixture() -> Vec<u32> {
     v
 }
 
-const IDENTITY: &str = r"
-@group(0) @binding(0) var<storage, read> input: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-@compute @workgroup_size(64)
-fn identity(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x]; }
-}
-// Control: flips bit 0 of word 12345 (a low-bit fork, the bits a mask would hide).
-@compute @workgroup_size(64)
-fn flip_low_bit(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x] ^ select(0u, 1u, id.x == 12345u); }
-}
-// Control: never writes the last word.
-@compute @workgroup_size(64)
-fn skip_last(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x + 1u < arrayLength(&input)) { output[id.x] = input[id.x]; }
-}
-";
-
 /// REQ-SYS-065 / acceptance `gpu_harness`: a WGSL identity dispatch round-trips 2^16 u32 words bit-exact.
 #[test]
 fn qa_gpu_harness_identity_round_trips_2_16_words_bit_exact() {
@@ -86,15 +67,6 @@ fn qa_gpu_harness_round_trips_lengths_off_the_workgroup_size() {
 /// `run_wgsl(module, entry, inputs)` takes several storage buffers; input k is binding k, output the next.
 #[test]
 fn qa_gpu_harness_binds_several_inputs_in_order() {
-    const SUB: &str = r"
-@group(0) @binding(0) var<storage, read> a: array<u32>;
-@group(0) @binding(1) var<storage, read> b: array<u32>;
-@group(0) @binding(2) var<storage, read_write> out: array<u32>;
-@compute @workgroup_size(64)
-fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&a)) { out[id.x] = a[id.x] - b[id.x]; }
-}
-";
     let h = harness();
     let a = qa_fixture();
     let b: Vec<u32> = a.iter().map(|w| w.rotate_left(7) ^ 0xA5A5_A5A5).collect();
@@ -115,25 +87,6 @@ fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
 /// sign-extension failure.
 #[test]
 fn qa_gpu_harness_sees_extractbits_sign_extension_at_every_width() {
-    const EXTRACT: &str = r"
-@group(0) @binding(0) var<storage, read> word: array<u32>;
-@group(0) @binding(1) var<storage, read> width: array<u32>;
-@group(0) @binding(2) var<storage, read_write> out: array<u32>;
-@compute @workgroup_size(64)
-fn as_i32(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&word)) {
-        let w = width[id.x];
-        out[id.x] = bitcast<u32>(extractBits(bitcast<i32>(word[id.x]), 32u - w, w));
-    }
-}
-@compute @workgroup_size(64)
-fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&word)) {
-        let w = width[id.x];
-        out[id.x] = extractBits(word[id.x], 32u - w, w);
-    }
-}
-";
     let h = harness();
     let base = qa_fixture();
     let widths: Vec<u32> = (0..base.len()).map(|i| 1 + (i as u32 % 32)).collect();

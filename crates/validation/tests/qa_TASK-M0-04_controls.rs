@@ -22,19 +22,6 @@ fn words() -> Vec<u32> {
         .collect()
 }
 
-const FAULTY: &str = r"
-@group(0) @binding(0) var<storage, read> input: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-@compute @workgroup_size(64)
-fn flip_low_bit(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x] ^ select(0u, 1u, id.x == 12345u); }
-}
-@compute @workgroup_size(64)
-fn skip_last(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x + 1u < arrayLength(&input)) { output[id.x] = input[id.x]; }
-}
-";
-
 negative_control!(
     qa_gpu_harness_identity_round_trips_2_16_words_bit_exact,
     "a dispatch that flips one low bit must fail the bit-exact check",
@@ -42,7 +29,7 @@ negative_control!(
     {
         let h = harness();
         let input = words();
-        let out = h.run_wgsl(FAULTY, "flip_low_bit", &[&input]);
+        let out = h.run_wgsl(IDENTITY, "flip_low_bit", &[&input]);
         check_bit_exact(&input, &out, h.adapter_info());
     }
 );
@@ -53,20 +40,10 @@ negative_control!(
     expected = "identity failed at length 65",
     {
         let input = &words()[..65];
-        let out = harness().run_wgsl(FAULTY, "skip_last", &[input]);
+        let out = harness().run_wgsl(IDENTITY, "skip_last", &[input]);
         check_length(65, input, &out);
     }
 );
-
-const SUB: &str = r"
-@group(0) @binding(0) var<storage, read> a: array<u32>;
-@group(0) @binding(1) var<storage, read> b: array<u32>;
-@group(0) @binding(2) var<storage, read_write> out: array<u32>;
-@compute @workgroup_size(64)
-fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&a)) { out[id.x] = a[id.x] - b[id.x]; }
-}
-";
 
 negative_control!(
     qa_gpu_harness_binds_several_inputs_in_order,
@@ -80,22 +57,6 @@ negative_control!(
         check_sub(&want, &got);
     }
 );
-
-const EXTRACT: &str = r"
-@group(0) @binding(0) var<storage, read> word: array<u32>;
-@group(0) @binding(1) var<storage, read> width: array<u32>;
-@group(0) @binding(2) var<storage, read_write> out: array<u32>;
-@compute @workgroup_size(64)
-fn as_i32(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&word)) {
-        out[id.x] = bitcast<u32>(extractBits(bitcast<i32>(word[id.x]), 32u - width[id.x], width[id.x]));
-    }
-}
-@compute @workgroup_size(64)
-fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&word)) { out[id.x] = extractBits(word[id.x], 32u - width[id.x], width[id.x]); }
-}
-";
 
 negative_control!(
     qa_gpu_harness_sees_extractbits_sign_extension_at_every_width,

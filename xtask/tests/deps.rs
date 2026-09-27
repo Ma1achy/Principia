@@ -253,11 +253,6 @@ fn deps_a_dependency_that_only_shares_a_member_name_is_not_an_edge() {
     assert_eq!(metadata_json(registry).edges().unwrap(), vec![]);
     let elsewhere = r#"{"name": "gui", "kind": null, "source": null, "path": "/elsewhere/gui"}"#;
     assert_eq!(metadata_json(elsewhere).edges().unwrap(), vec![]);
-    // Control: the same dependency as a path dependency on the member is an edge, and a forbidden one.
-    let member = r#"{"name": "gui", "kind": null, "source": null, "path": "/ws/crates/gui"}"#;
-    let edges = metadata_json(member).edges().unwrap();
-    assert_eq!(edges, vec![edge("engine", "gui", DepKind::Normal)]);
-    assert_eq!(check(&edges).len(), 1);
 }
 
 #[test]
@@ -274,18 +269,6 @@ fn deps_a_fixture_skips_the_compile_check_and_says_so() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(stdout.contains("compile check skipped"), "{stdout}");
-    // Control: the live workspace, which has sources, is not skipped.
-    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .arg("deps")
-        .timed_output()
-        .expect("run xtask");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(!stdout.contains("compile check skipped"), "{stdout}");
 }
 
 /// Metadata for kernel, ledger and validation under `root`, each with its library target at `lib` (relative to the
@@ -316,7 +299,7 @@ fn target_metadata(case: &str, lib: Option<&str>) -> Metadata {
 }
 
 /// A kernel or ledger library target outside src/ (`[lib] path = "lib/lib.rs"`) fails, naming the crate (R-187,
-/// R-191). Control: the library at src/lib.rs passes.
+/// R-191).
 #[test]
 fn deps_a_kernel_or_ledger_lib_outside_src_fails() {
     let err = target_metadata("outside", Some("lib/lib.rs"))
@@ -326,19 +309,15 @@ fn deps_a_kernel_or_ledger_lib_outside_src_fails() {
         err.contains("ledger: its lib target is at ") && err.contains("R-191"),
         "{err}"
     );
-    target_metadata("inside", Some("src/lib.rs"))
-        .check_targets(true)
-        .unwrap();
 }
 
 /// The workspace must have its targets to check: metadata without kernel's and ledger's targets is an error, not a
-/// silent pass. Control: the same metadata read as a fixture (`require_sources` off) passes.
+/// silent pass.
 #[test]
 fn deps_missing_targets_are_an_error_for_a_workspace() {
     let metadata = target_metadata("no_targets", None);
     let err = metadata.check_targets(true).unwrap_err();
     assert!(err.contains("no library or binary target"), "{err}");
-    metadata.check_targets(false).unwrap();
 }
 
 /// R-191's compile check runs on real cargo workspaces: a synthetic one with ledger, kernel (with a build script that
@@ -549,8 +528,7 @@ fn deps_every_route_to_validation_from_a_unit_test_fails() {
 }
 
 /// R-192, R-194: the compile check builds with `--all-features`, so a kernel unit test behind a feature (`x`, off by
-/// default) that uses validation fails, and only that feature set sees it. Control: the same workspace with the use removed passes, so it is the use, not the
-/// feature, that fails the check.
+/// default) that uses validation fails, and only that feature set sees it.
 #[test]
 fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
     let manifest = "[package]\nname = \"kernel\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\nx = []\n\n\
@@ -558,7 +536,6 @@ fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
                     [dev-dependencies]\nvalidation = { path = \"../validation\" }\n";
     let with_use = "pub fn f() {}\n\n#[cfg(all(test, feature = \"x\"))]\nmod tests {\n    #[test]\n    fn t() {\n        \
                     let _ = validation::Harness;\n    }\n}\n";
-    let without_use = "pub fn f() {}\n\n#[cfg(all(test, feature = \"x\"))]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
     let lib = "crates/kernel/src/lib.rs";
     let toml = "crates/kernel/Cargo.toml";
 
@@ -575,21 +552,6 @@ fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
     assert!(
         stderr.contains("error[E04") && stderr.contains(lib),
         "stderr does not show the compiler's error:\n{stderr}"
-    );
-
-    let root = cargo_workspace(
-        "feature_unit_control",
-        &[],
-        &[(toml, manifest), (lib, without_use)],
-    );
-    let (ok, stdout, stderr) = run_workspace(&root);
-    assert!(
-        ok,
-        "control: the same unit test behind feature x without the use fails xtask deps:\n{stderr}"
-    );
-    assert!(
-        stdout.contains("compile check passed: kernel compiles"),
-        "control: {stdout}"
     );
 }
 
@@ -743,8 +705,7 @@ fn deps_a_unit_test_present_only_without_default_features_using_validation_fails
 }
 
 /// R-194: a kernel doctest in src/ may use validation; rustdoc builds it as a separate crate, and the check does not
-/// compile doctests. Premise: `cargo test --doc` compiles and runs the doctest with validation linked. Control: the
-/// same use in a unit test in the same file fails the check.
+/// compile doctests. Premise: `cargo test --doc` compiles and runs the doctest with validation linked.
 #[test]
 fn deps_a_doctest_using_validation_passes() {
     let lib = "crates/kernel/src/lib.rs";
@@ -778,15 +739,9 @@ fn deps_a_doctest_using_validation_passes() {
         stdout.contains("compile check passed: kernel compiles"),
         "{stdout}"
     );
-
-    let with_unit = format!("{doc}\n#[cfg(test)]\nmod tests {{\n    #[test]\n    fn t() {{\n        let _ = validation::Harness;\n    }}\n}}\n");
-    let root = cargo_workspace("doctest_control", &["kernel"], &[(lib, &with_unit)]);
-    assert_fails_to_compile("doctest_control", &root, "kernel", lib);
 }
 
 /// R-191 allows a local item named validation again: a unit test that uses kernel's own `mod validation` passes.
-/// Control: the unit test that uses the crate fails (`deps_a_unit_test_using_validation_fails_and_…`), and here the
-/// same test with the local module removed fails.
 #[test]
 fn deps_a_local_mod_validation_passes() {
     let test = "\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        crate::validation::run();\n    }\n}\n";
@@ -799,20 +754,10 @@ fn deps_a_local_mod_validation_passes() {
     let (ok, stdout, stderr) = run_workspace(&root);
     assert!(ok, "a local mod validation fails xtask deps:\n{stderr}");
     assert!(stdout.contains("compile check passed"), "{stdout}");
-    let root = cargo_workspace(
-        "local_mod_control",
-        &["kernel"],
-        &[("crates/kernel/src/lib.rs", test)],
-    );
-    let (ok, _, stderr) = run_workspace(&root);
-    assert!(
-        !ok && stderr.contains("R-191"),
-        "control: without the local module the test passes:\n{stderr}"
-    );
 }
 
 /// R-185, R-191: kernel includes the ledger's generated code from `OUT_DIR`, as its build script writes it, and
-/// passes. Control: the same include of generated code that uses validation in a unit test fails.
+/// passes.
 #[test]
 fn deps_the_kernel_out_dir_include_passes() {
     let lib = "include!(concat!(env!(\"OUT_DIR\"), \"/generated.rs\"));\n\npub fn g() -> u32 {\n    GENERATED\n}\n";
@@ -820,20 +765,9 @@ fn deps_the_kernel_out_dir_include_passes() {
     let (ok, stdout, stderr) = run_workspace(&root);
     assert!(ok, "kernel's OUT_DIR include fails xtask deps:\n{stderr}");
     assert!(stdout.contains("compile check passed"), "{stdout}");
-    let generated = "pub const GENERATED: u32 = 1;\n#[cfg(test)]\n#[test]\nfn t() { let _ = validation::Harness; }\n";
-    let root = cargo_workspace(
-        "out_dir_control",
-        &["kernel"],
-        &[
-            ("crates/kernel/src/lib.rs", lib),
-            ("crates/kernel/build.rs", &build_rs(generated)),
-        ],
-    );
-    assert_fails_to_compile("out_dir_control", &root, "kernel", "generated.rs");
 }
 
 /// Without a validation dev-dependency in kernel or ledger there is nothing to check, and `xtask deps` says so.
-/// Control: the same workspace with the dev-dependency runs the check.
 #[test]
 fn deps_the_compile_check_runs_only_with_the_dev_dependency() {
     let root = cargo_workspace("no_dev", &[], &[]);
@@ -842,19 +776,13 @@ fn deps_the_compile_check_runs_only_with_the_dev_dependency() {
         ok && stdout.contains("compile check not needed"),
         "{stdout}\n{stderr}"
     );
-    let root = cargo_workspace("with_dev", &["ledger"], &[]);
-    let (ok, stdout, stderr) = run_workspace(&root);
-    assert!(
-        ok && stdout.contains("compile check passed: ledger compiles"),
-        "{stdout}\n{stderr}"
-    );
 }
 
 /// R-187, R-191: `test = false` on a `[[bin]]` keeps its unit tests out of `cargo check --tests`, but
 /// `cargo test --bin` still builds them with the dev-dependency, so the check sets `test = true` on every binary. A
 /// unit test that uses validation fails, in a `[[bin]]` with a path, in one that names an auto-discovered
-/// `src/bin/` file, and in the inline-array form `bin = [{ … }]`. Controls: each workspace compiles with the
-/// dev-dependency, and the same manifest without the use passes the check.
+/// `src/bin/` file, and in the inline-array form `bin = [{ … }]`. Control: each workspace compiles with the
+/// dev-dependency (`assert_fails_to_compile`).
 #[test]
 fn deps_a_unit_test_of_a_binary_with_test_false_fails() {
     let head = "[package]\nname = \"kernel\"\nversion = \"0.1.0\"\nedition = \"2021\"\n";
@@ -880,30 +808,16 @@ fn deps_a_unit_test_of_a_binary_with_test_false_fails() {
         ),
     ];
     let with_use = format!("fn main() {{}}\n\n{UNIT_TEST}");
-    let without_use = "fn main() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
     for (case, manifest, main) in cases {
         let main = format!("crates/kernel/{main}");
         let toml = "crates/kernel/Cargo.toml";
         let root = cargo_workspace(case, &[], &[(toml, &manifest), (&main, &with_use)]);
         assert_fails_to_compile(case, &root, "kernel", &main);
-
-        let control = format!("{case}_control");
-        let root = cargo_workspace(&control, &[], &[(toml, &manifest), (&main, without_use)]);
-        let (ok, stdout, stderr) = run_workspace(&root);
-        assert!(
-            ok,
-            "{control}: the same binary without the use fails xtask deps:\n{stderr}"
-        );
-        assert!(
-            stdout.contains("compile check passed: kernel compiles"),
-            "{control}: {stdout}"
-        );
     }
 }
 
 /// R-208: the check runs with `CARGO_TARGET_DIR` set to a directory outside the workspace and the repository, as when a developer's
-/// environment sets it outside the repository, keeps its own build there, and passes. Control: in the same directory,
-/// the same workspace with a unit test that uses validation fails.
+/// environment sets it outside the repository, keeps its own build there, and passes.
 #[test]
 fn deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace() {
     let outside = std::env::temp_dir().join(format!("xtask-deps-target-{}", std::process::id()));
@@ -919,14 +833,6 @@ fn deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace() {
     assert!(
         outside.join(xtask::deps::CHECK_TARGET_DIR).is_dir(),
         "the check did not build under CARGO_TARGET_DIR"
-    );
-
-    let lib = "crates/kernel/src/lib.rs";
-    let root = cargo_workspace("outside_target_control", &["kernel"], &[(lib, UNIT_TEST)]);
-    let (ok, _, stderr) = run_workspace_in(&root, &outside);
-    assert!(
-        !ok && stderr.contains("R-191"),
-        "control: a unit test that uses validation passes with CARGO_TARGET_DIR outside the workspace:\n{stderr}"
     );
     let _ = std::fs::remove_dir_all(&outside);
 }

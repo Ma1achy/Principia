@@ -1,6 +1,7 @@
 //! The helpers and checks `qa_TASK-M0-04.rs` shares with its controls in `qa_TASK-M0-04_controls.rs`, so each control
 //! runs the check it controls, not a copy of it (REQ-VAL-157; R-215). A `tests/*.rs` file is a crate of its own, so
-//! each includes this file with `#[path]`; every item here is used by both.
+//! each includes this file with `#[path]`; every item here is used by both. The shader text is shared too, as an input
+//! the test and its controls both need (REQ-VAL-159; R-218).
 
 use std::process::{Command, Output};
 use validation::gpu::{AdapterInfo, GpuHarness, BACKEND_VAR};
@@ -118,3 +119,56 @@ pub fn check_same_draw(first: &str, again: &str) {
 pub fn check_ran_256(n: u32) {
     assert_eq!(n, 256, "prop::run did not run R-203's 256 cases");
 }
+
+/// The identity kernel of `qa_gpu_harness_identity_round_trips_2_16_words_bit_exact` and
+/// `qa_gpu_harness_round_trips_lengths_off_the_workgroup_size`, with the faulty entry points their controls dispatch.
+pub const IDENTITY: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn identity(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x]; }
+}
+// Control: flips bit 0 of word 12345 (a low-bit fork, the bits a mask would hide).
+@compute @workgroup_size(64)
+fn flip_low_bit(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x] ^ select(0u, 1u, id.x == 12345u); }
+}
+// Control: never writes the last word.
+@compute @workgroup_size(64)
+fn skip_last(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x + 1u < arrayLength(&input)) { output[id.x] = input[id.x]; }
+}
+";
+
+/// `qa_gpu_harness_binds_several_inputs_in_order`'s kernel: `out = a - b`.
+pub const SUB: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read> b: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<u32>;
+@compute @workgroup_size(64)
+fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&a)) { out[id.x] = a[id.x] - b[id.x]; }
+}
+";
+
+/// `qa_gpu_harness_sees_extractbits_sign_extension_at_every_width`'s two `extractBits` overloads, at a width per word.
+pub const EXTRACT: &str = r"
+@group(0) @binding(0) var<storage, read> word: array<u32>;
+@group(0) @binding(1) var<storage, read> width: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<u32>;
+@compute @workgroup_size(64)
+fn as_i32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&word)) {
+        let w = width[id.x];
+        out[id.x] = bitcast<u32>(extractBits(bitcast<i32>(word[id.x]), 32u - w, w));
+    }
+}
+@compute @workgroup_size(64)
+fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&word)) {
+        let w = width[id.x];
+        out[id.x] = extractBits(word[id.x], 32u - w, w);
+    }
+}
+";
