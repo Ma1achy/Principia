@@ -5,7 +5,7 @@
 //!   `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)." Verify: "a child that sleeps past a short test
 //!   timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child
 //!   that exits in time returns its output; [...] `cargo test -- --list` lists no child path of `qa_R-206.rs`".
-//! - REQ-VAL-156: "120 s provisional".
+//! - REQ-VAL-156: "300 s provisional (R-217)".
 //! - REQ-VAL-154: "every `negative_control!` call in the workspace carries an expected message (the macro requires
 //!   it)", checked on the fixture `fixtures/qa_m0_26/old_form`, a control in R-199's form without the message.
 //!
@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use validation::negative_control;
-use validation::spawn::{Spawn, TIMEOUT};
+use validation::spawn::{Spawn, GRACE, TIMEOUT};
 
 /// A slack for process start-up and reaping on a loaded machine, on top of the timeout the helper is given.
 const SLACK: Duration = Duration::from_secs(5);
@@ -90,15 +90,15 @@ fn check_timeout_is(want: Duration) {
 }
 
 #[test]
-fn qa_m0_26_the_timeout_is_the_provisional_120_s() {
+fn qa_m0_26_the_timeout_is_the_provisional_300_s() {
     check_timeout_is(Duration::from_secs(300));
 }
 
 negative_control!(
-    qa_m0_26_the_timeout_is_the_provisional_120_s,
-    "a timeout of 119 s, required to be the helper's",
+    qa_m0_26_the_timeout_is_the_provisional_300_s,
+    "a timeout of 299 s, required to be the helper's",
     expected = "the helper's timeout is not the provisional REQ-VAL-156 value",
-    check_timeout_is(Duration::from_secs(119))
+    check_timeout_is(Duration::from_secs(299))
 );
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -121,7 +121,8 @@ fn run_sleeper(timeout: Duration, rest: &str) -> (std::io::Result<Output>, Durat
 }
 
 /// The child running `rest` under `timeout` is killed: the error is a timeout that names the child, the helper
-/// returned within the timeout (plus start-up slack), and the child's pid no longer names a process.
+/// returned within the timeout and R-217's grace after SIGTERM (plus start-up slack), and the child's pid no longer
+/// names a process.
 fn check_killed_named_and_gone(timeout: Duration, rest: &str) {
     let (result, took, pid) = run_sleeper(timeout, rest);
     let err = result.expect_err("the child was not killed at the timeout");
@@ -132,8 +133,8 @@ fn check_killed_named_and_gone(timeout: Duration, rest: &str) {
         "the error does not name the child: {message}"
     );
     assert!(
-        took < timeout + SLACK,
-        "the helper waited {took:?}, past the {timeout:?} timeout"
+        took < timeout + GRACE + SLACK,
+        "the helper waited {took:?}, past the {timeout:?} timeout and the {GRACE:?} grace"
     );
     assert!(!alive(&pid), "the timed-out child {pid} still exists");
 }
