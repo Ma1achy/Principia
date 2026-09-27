@@ -2503,3 +2503,45 @@ Tick any you don't accept.
   between R-214's 120 s and R-198's registration, and it will come back here with the measured time.
 - **Needed:** a ruling on the size.
 - **Ruling:** R-216 (decisions.md). Closed in TASK-M0-22.
+
+## RQ-149: TASK-M0-22 still looks set to reach ~1,300 counted lines, against R-216's ~285 *(plan, TASK-M0-22)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-22.md` "**Size:** ~285 counted lines per R-211"; `decisions.md` §
+  "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first": "if a task looks set to exceed
+  ~500 lines, propose a split in REVIEW_QUEUE before implementing it"; § "R-209": "The controls live in new targets
+  where they can"; § "R-212": a control trips its test's own assertion; § "R-218": inputs a control shares with its
+  test live in the shared module.
+- **What:** the implementer estimated the task before writing any code, from main at `f71765e`. Nothing is built.
+  qa's 33 xtask tests (`xtask/tests/qa_TASK-M0-01.rs`, `_live`, `_r191`, `_r193`, `_r194`) keep their helpers and checks
+  inline in each file. For a control in a new target to trip the test's own assertion (R-212), and to share its inputs
+  rather than copy them (R-215, R-218), those helpers and checks move into support modules, as TASK-M0-27 did. RQ-148
+  noted "needs the check made callable" but didn't count it.
+
+  | Part | Counted lines (est.) |
+  |---|---|
+  | qa's xtask helpers moved to support modules (`qa_TASK-M0-01.rs` 17–171 and 361–421, `_live` 17–132, `_r191` 22–143, `_r193` 24–166, `_r194` 27–186) | ~710 |
+  | Inline checks pulled out into check functions (mostly `qa_TASK-M0-01.rs` and `_live`; `fails_and_its_control_passes` split in r193 and r194) | ~200 |
+  | REQ-VAL-158: gpu and prop checks made shared (~70), duplicated inline controls removed (~165, deletions) | ~235 |
+  | REQ-VAL-159 (R-218): shader text from `qa_TASK-M0-04_controls.rs` into `support/qa_m0_04.rs` | ~80 |
+  | `controls` runner in `ci`, ci-registry test, docs, control-file lines outside `negative_control!` blocks | ~80 |
+  | **Total** | **~1,300** |
+
+  The r193 and r194 helpers are near-duplicates, but merging them would edit qa's calls beyond R-215's exception. The
+  no-dead-code rule keeps them in separate modules.
+- **Measured (R-217's note in the task file):** with `controls` in `ci`, `qa_cargo_xtask_alias_runs_deps` takes 60.6 s
+  cold (61.8 s with its binary's 13 tests in parallel) and 28.7 s warm. The 16 controls still to be written add an
+  estimated 10–20 s. That fits under 300 s, so there is no R-214/R-198 conflict.
+- **Also:** qa's `crates/validation/tests/qa_TASK-M0-24.rs` (`run_controls`, ~line 222) runs `cargo test -p validation
+  --lib --test controls`, so `crates/validation/tests/controls.rs` stays. The gpu and prop checks become reachable from
+  it through `#[cfg(any(test, feature = "controls"))] pub mod checks`. That is within the ~235.
+- **Options seen:**
+  1. accept TASK-M0-22 at ~1,300 as mechanical moves (as R-200 and R-211 did);
+  2. split as R-216 did:
+     - (a) REQ-VAL-158 and REQ-VAL-159, ~400;
+     - (b) qa's xtask support modules, moves only, with qa reviewing, ~900, which splits again: `qa_TASK-M0-01.rs` and
+       `_live` ~480, r191/r193/r194 ~420;
+     - (c) the 33 controls and `controls` in `ci`, keeping REQ-VAL-007, ~60;
+  3. register the 33 controls inside qa's own xtask files, next to the tests, so no helpers move. The count is ~0 for
+     this part and ~400 for the task. It departs from R-209's "in new targets where they can", and has the implementer
+     add to qa's merged files.
+- **Needed:** a ruling on the size and the form.
