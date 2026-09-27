@@ -239,7 +239,7 @@
 - id: TASK-M0-29
   milestone: M0
   title: "qa's xtask helpers and checks move into shared modules: qa_TASK-M0-01 and _live"
-  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-31]
   needs: []
   requirements: [REQ-VAL-160]
   reviewers: [code, qa]
@@ -250,6 +250,14 @@
   depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
   needs: []
   requirements: [REQ-VAL-161]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-31
+  milestone: M0
+  title: "The two flaky qa tests fixed at their cause"
+  depends_on: [TASK-M0-28]
+  needs: []
+  requirements: [REQ-VAL-162]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M1-01

@@ -454,3 +454,11 @@
   section: R-220 — TASK-M0-27's size accepted; its veto item stands
   reason: informative only
   note: process ruling; a size acceptance for one PR
+- file: decisions.md
+  section: R-222 — TASK-M0-28's size accepted; its veto items stand
+  reason: informative only
+  note: process ruling; a size acceptance for one PR
+- file: decisions.md
+  section: R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)*
+  reason: informative only
+  note: process ruling; what the size budget counts (recorded in plan/WORKFLOW.md)

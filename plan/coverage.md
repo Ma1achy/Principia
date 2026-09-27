@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 134 |
-| VAL | 160 |
+| VAL | 161 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1244** |
+| **total** | **1245** |
 
-Of these: 97 calibration, 101 definition, 1046 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 97 calibration, 101 definition, 1047 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 82 |
+| M0 | 83 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1046 obligation. Retired (kept for the
 
 ## Sections
 
-912 sections in 46 files: 798 yield at least one requirement; 114 yield none and are listed below with the reason.
+915 sections in 46 files: 799 yield at least one requirement; 116 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 66 |
+| informative only | 68 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -75,6 +75,8 @@ Of these: 97 calibration, 101 definition, 1046 obligation. Retired (kept for the
 | R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)* | informative only | process ruling; two size acceptances, and what the budget counts (recorded in plan/WORKFLOW.md) |
 | R-219 — Reviewers never share a checkout | informative only | process ruling; each reviewer gets its own worktree and target directory (recorded in CLAUDE.md and .claude/agents/) |
 | R-220 — TASK-M0-27's size accepted; its veto item stands | informative only | process ruling; a size acceptance for one PR |
+| R-222 — TASK-M0-28's size accepted; its veto items stand | informative only | process ruling; a size acceptance for one PR |
+| R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -17908,6 +17908,18 @@
   rulings:
   - R-221
   milestone: M0
+- id: REQ-VAL-162
+  area: VAL
+  statement: "`qa_m0_26_a_control_without_an_expected_message_does_not_compile` and its control must build their fixture in separate target directories, as R-208 did for `deps.rs`; `qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on`'s failure under load must be fixed at its cause (timing, a shared resource, a timeout), not by a retry; and the whole workspace suite must then pass 20 times in a row under load (R-224)."
+  source:
+  - file: decisions.md
+    section: R-224 — The two flaky tests are fixed before TASK-M0-29
+  verify:
+    method: review checklist
+    detail: "code and qa: the qa_m0_26 test and its control use separate target directories; the PR names the cause of the qa_m0_25 failure under load, with evidence, and the fix removes that cause; no retry is added; the PR shows 20 consecutive full-workspace runs under load (with the controls features, alongside a concurrent load), with no failures"
+  rulings:
+  - R-224
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
