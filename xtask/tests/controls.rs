@@ -355,6 +355,14 @@ fn controls_findings_same_named_unit_tests_collide() {
         }]
     );
     assert_eq!(found[0].tests(), 1);
+    // Control: three tests of a name with one control leave two without their own, and are counted as two.
+    let three = Finding::Collision {
+        name: "round_trips".to_owned(),
+        tests: names(&["a::round_trips", "b::round_trips", "c::round_trips"]),
+        listings: 3,
+        controls: 1,
+    };
+    assert_eq!(three.tests(), 2, "control: a collision counted as one test");
     // Control: a second control of that name, from another target, gives each test its own, and nothing is found.
     let mut both = listed.clone();
     both.push("round_trips::negative_control".to_owned());
