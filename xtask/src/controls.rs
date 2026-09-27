@@ -3,6 +3,9 @@
 //! makes its test fail (philosophy §4.4; pitfalls §9). A crate without the feature is skipped and reported, not failed
 //! (R-176). Tests and controls are paired by the name in the macro call (R-199), across all of a crate's test
 //! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). Not yet in `cargo xtask ci` (R-198).
+//!
+//! Applied per R-204, pending a veto: a doctest, which `negative_control!` cannot name, counts as a test without a
+//! control.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -26,6 +29,8 @@ pub enum Finding {
     NoControl(String),
     /// A control named for the test ran and left it passing.
     ControlPasses(String),
+    /// A doctest, which `negative_control!` cannot name, so it has no control (applied per R-204).
+    Doctest(String),
 }
 
 impl fmt::Display for Finding {
@@ -38,6 +43,10 @@ impl fmt::Display for Finding {
             Finding::ControlPasses(test) => write!(
                 f,
                 "test `{test}`: its control leaves it passing, so it cannot fail (philosophy §4.4)"
+            ),
+            Finding::Doctest(test) => write!(
+                f,
+                "doctest `{test}` has no control: `negative_control!` cannot name a doctest (REQ-VAL-147)"
             ),
         }
     }
@@ -136,6 +145,12 @@ struct Metadata {
 struct Package {
     name: String,
     features: BTreeMap<String, Vec<String>>,
+    targets: Vec<Target>,
+}
+
+#[derive(Deserialize)]
+struct Target {
+    doctest: bool,
 }
 
 /// Runs the check on every member of the workspace of `manifest`; `Err` if any test fails it.
@@ -163,13 +178,23 @@ pub fn run(manifest: &Path) -> Result<(), String> {
         }
         let listed = parse_list(&succeeded(
             "cargo test -- --list",
-            cargo_test(manifest, name, &["--list"])?,
+            cargo_test(manifest, name, "--tests", &["--list"])?,
         )?);
+        // Doctests are tests of the crate that no `negative_control!` can name (applied per R-204).
+        let doctests = if package.targets.iter().any(|target| target.doctest) {
+            parse_list(&succeeded(
+                "cargo test --doc -- --list",
+                cargo_test(manifest, name, "--doc", &["--list"])?,
+            )?)
+        } else {
+            Vec::new()
+        };
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
         // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
-        let output = cargo_test(manifest, name, &[CONTROL_FN])?;
+        let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
         let results = parse_results(&String::from_utf8_lossy(&output.stdout));
-        let found = findings(&listed, &results).map_err(|e| format!("{name}: {e}"))?;
+        let mut found = findings(&listed, &results).map_err(|e| format!("{name}: {e}"))?;
+        found.extend(doctests.into_iter().map(Finding::Doctest));
         for finding in &found {
             eprintln!("xtask controls: {name}: {finding}");
         }
@@ -186,8 +211,13 @@ pub fn run(manifest: &Path) -> Result<(), String> {
     ))
 }
 
-/// `cargo test --features controls --tests --no-fail-fast` on `package`, with `harness` passed to libtest.
-fn cargo_test(manifest: &Path, package: &str, harness: &[&str]) -> Result<Output, String> {
+/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest.
+fn cargo_test(
+    manifest: &Path,
+    package: &str,
+    targets: &str,
+    harness: &[&str],
+) -> Result<Output, String> {
     Command::new(cargo())
         .arg("test")
         .arg("--manifest-path")
@@ -197,7 +227,7 @@ fn cargo_test(manifest: &Path, package: &str, harness: &[&str]) -> Result<Output
             package,
             "--features",
             FEATURE,
-            "--tests",
+            targets,
             "--no-fail-fast",
             "--",
         ])

@@ -305,3 +305,27 @@ fn controls_same_name_in_two_targets_judged_each() {
         "`doubles::negative_control` of test `doubles` did not run",
     );
 }
+
+/// Applied per R-204: a doctest in a controls crate counts as a test without a control. The `doctest` fixture is
+/// the `discriminating` one with a doctest added.
+#[test]
+fn controls_doctest_fails_naming_it() {
+    let v = run_fixture("doctest", None);
+    assert!(!v.ok, "a doctest passed the command with no control");
+    has(
+        &v.stderr,
+        "controls_doctest: doctest `src/lib.rs - double (line 6)` has no control",
+    );
+    has(
+        &v.stderr,
+        "xtask: 1 test(s) without a control that makes them fail",
+    );
+    // Control: the same crate without the doctest passes, so the failure above is the doctest's.
+    let without = run_fixture("discriminating", None);
+    assert!(
+        without.ok,
+        "control: the fixture without a doctest failed:\n{}",
+        without.stderr
+    );
+    lacks(&without.stderr, "doctest");
+}
