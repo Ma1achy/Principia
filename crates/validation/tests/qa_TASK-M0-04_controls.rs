@@ -224,15 +224,20 @@ negative_control!(
 
 negative_control!(
     qa_prop_case_count_is_not_replaced_by_proptest_cases,
-    "the default runner, which PROPTEST_CASES does replace, must fail the 256-case check",
+    "a shared count replaced as the default runner's is by PROPTEST_CASES=3 must fail the 256-case check",
     {
-        let line = marker(
+        let measured = marker(
             &child("count_cases", &[("PROPTEST_CASES", Some("3"))]),
             "QA_CASES ",
         );
+        let d = measured
+            .rsplit_once("default=")
+            .map(|(_, d)| d.trim())
+            .unwrap_or_else(|| panic!("child printed no default count: {measured}"));
+        let line = format!("QA_CASES shared={d} config={d} default={d}");
         assert!(
-            line.ends_with("default=256"),
-            "PROPTEST_CASES=3 changed the case count: {line}"
+            line.contains("shared=256 ") && line.contains("config=256 "),
+            "PROPTEST_CASES=3 changed the shared case count: {line}"
         );
     }
 );
