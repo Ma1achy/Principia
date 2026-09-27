@@ -2,14 +2,12 @@
 //! and pitfalls §9. Each test carries an inline negative control (R-176; the registry is TASK-M0-21/M0-22, R-198).
 //!
 //! Tests that must change process state (the `PRIN_GPU_BACKEND` and `PROPTEST_RNG_SEED` variables, both read once or
-//! at construction) re-run this test binary as a child process with `QA_M0_04_CHILD` set, so the parent's environment
-//! is never mutated.
+//! at construction) run a body of the `qa_child` binary as a child process (R-210), so the parent's environment is
+//! never mutated.
 
 use std::process::Command;
 use validation::gpu::{GpuHarness, BACKEND_VAR};
 use validation::prop;
-
-const CHILD_VAR: &str = "QA_M0_04_CHILD";
 
 fn harness() -> GpuHarness {
     GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
@@ -197,11 +195,10 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     );
 }
 
-/// Runs this test binary's `test` alone in a child process with the given environment changes.
+/// Runs the `qa_child` body `test` in a child process with the given environment changes (R-210).
 fn child(test: &str, env: &[(&str, Option<&str>)]) -> std::process::Output {
-    let mut cmd = Command::new(std::env::current_exe().expect("test binary path"));
-    cmd.args([test, "--exact", "--nocapture", "--test-threads=1"])
-        .env(CHILD_VAR, "1");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_qa_child"));
+    cmd.arg(test.strip_prefix("qa_child_").expect("a qa_child body"));
     for (k, v) in env {
         match v {
             Some(v) => cmd.env(k, v),
@@ -225,18 +222,6 @@ fn text(o: &std::process::Output) -> String {
         String::from_utf8_lossy(&o.stdout),
         String::from_utf8_lossy(&o.stderr)
     )
-}
-
-/// Child mode only: opens `GpuHarness::new()` and prints the outcome on one line.
-#[test]
-fn qa_child_open_harness() {
-    if std::env::var_os(CHILD_VAR).is_none() {
-        return;
-    }
-    match GpuHarness::new() {
-        Ok(h) => println!("QA_OPEN_OK backend={:?}", h.adapter_info().backend),
-        Err(e) => println!("QA_OPEN_ERR {e}"),
-    }
 }
 
 fn open_with(value: Option<&str>) -> String {
@@ -312,27 +297,6 @@ fn qa_gpu_backend_env_governs_harness_new() {
         format!("QA_OPEN_OK backend={want}"),
         "control: the configured backend did not open"
     );
-}
-
-/// Child mode only: a property made to fail through `prop::run`; prints the first failing draw.
-#[test]
-fn qa_child_failing_property() {
-    if std::env::var_os(CHILD_VAR).is_none() {
-        return;
-    }
-    let first = std::sync::Mutex::new(None::<u32>);
-    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        prop::run(&proptest::prelude::any::<u32>(), |x| {
-            if x % 7 == 3 {
-                first.lock().unwrap().get_or_insert(x);
-                return Err(proptest::test_runner::TestCaseError::fail("x % 7 == 3"));
-            }
-            Ok(())
-        })
-    }));
-    println!("QA_FIRST_DRAW {:?}", first.lock().unwrap());
-    assert!(r.is_err(), "the property was made to fail");
-    std::panic::resume_unwind(r.unwrap_err());
 }
 
 fn seed_in(t: &str) -> u64 {

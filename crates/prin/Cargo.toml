@@ -6,3 +6,10 @@ publish.workspace = true
 
 [dependencies]
 engine = { path = "../engine" }
+
+[dev-dependencies]
+validation = { path = "../validation" }
+
+# Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-153, R-176).
+[features]
+controls = []

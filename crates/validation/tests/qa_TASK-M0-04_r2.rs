@@ -7,15 +7,10 @@
 //!   calibrated value, whatever proptest's own `PROPTEST_CASES` variable says.
 //!
 //! Each test carries an inline negative control (R-176; the registry is TASK-M0-21/M0-22, R-198). The environment test
-//! re-runs this binary as a child, so the parent's environment is never mutated.
+//! runs the `qa_child` binary as a child (R-210), so the parent's environment is never mutated.
 
-use proptest::test_runner::{Config, TestRunner};
 use std::process::Command;
-use std::sync::atomic::{AtomicU32, Ordering};
 use validation::gpu::{AdapterInfo, GpuHarness};
-use validation::prop;
-
-const CHILD_VAR: &str = "QA_M0_04_R2_CHILD";
 
 fn info(backend: wgpu::Backend) -> AdapterInfo {
     AdapterInfo {
@@ -69,36 +64,9 @@ fn qa_adapter_info_printout_names_the_backend() {
     );
 }
 
-/// Child mode only: counts the cases `prop::run` and a default proptest runner run, and prints both.
-#[test]
-fn qa_child_count_cases() {
-    if std::env::var_os(CHILD_VAR).is_none() {
-        return;
-    }
-    let shared = AtomicU32::new(0);
-    prop::run(&proptest::prelude::any::<u64>(), |_| {
-        shared.fetch_add(1, Ordering::Relaxed);
-        Ok(())
-    });
-    let default = AtomicU32::new(0);
-    TestRunner::new(Config::default())
-        .run(&proptest::prelude::any::<u64>(), |_| {
-            default.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        })
-        .unwrap();
-    println!(
-        "QA_CASES shared={} config={} default={}",
-        shared.load(Ordering::Relaxed),
-        prop::config(1).cases,
-        default.load(Ordering::Relaxed)
-    );
-}
-
 fn counts_with(proptest_cases: &str) -> String {
-    let o = Command::new(std::env::current_exe().expect("test binary path"))
-        .args(["qa_child_count_cases", "--exact", "--nocapture"])
-        .env(CHILD_VAR, "1")
+    let o = Command::new(env!("CARGO_BIN_EXE_qa_child"))
+        .arg("count_cases")
         .env("PROPTEST_CASES", proptest_cases)
         .output()
         .expect("child test binary ran");
