@@ -46,10 +46,11 @@ impl Spawn for Command {
             io::Error::new(
                 io::ErrorKind::TimedOut,
                 format!(
-                    "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the 120 s default is provisional, \
+                    "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
                      REQ-VAL-156)",
                     name(self),
-                    timeout.as_secs_f64()
+                    timeout.as_secs_f64(),
+                    TIMEOUT.as_secs_f64()
                 ),
             )
         };
