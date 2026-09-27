@@ -242,53 +242,21 @@ pub fn first_mismatch(expected: &[u32], got: &[u32]) -> Option<usize> {
     expected.iter().zip(got).position(|(a, b)| a != b)
 }
 
-#[cfg(test)]
-mod tests {
+/// The checks of `gpu::tests`, and the inputs they share with their controls, which `tests/controls.rs` calls so that
+/// each control runs its test's own check, not a copy of it (REQ-VAL-158, REQ-VAL-159; R-215, R-218).
+#[cfg(any(test, feature = "controls"))]
+pub mod checks {
     use super::*;
 
-    fn harness() -> GpuHarness {
+    /// A harness on the configured backend, its adapter printed; a harness failure panics.
+    pub fn harness() -> GpuHarness {
         let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
         eprintln!("{}", h.adapter_info());
         h
     }
 
-    /// The identity kernel with bit 31 of word 40000 flipped: the control the round-trip must catch.
-    const CONTAMINATED_WGSL: &str = r"
-@group(0) @binding(0) var<storage, read> input: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-@compute @workgroup_size(64)
-fn contaminated(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x] ^ select(0u, 0x80000000u, id.x == 40000u); }
-}
-";
-
-    fn identity_round_trips(h: &GpuHarness) {
-        let input = identity_fixture();
-        let output = h.run_wgsl(IDENTITY_WGSL, "identity", &[&input]);
-        assert_eq!(
-            first_mismatch(&input, &output),
-            None,
-            "identity dispatch is not bit-exact"
-        );
-        // Control: the same comparison, on a dispatch that flips bit 31 of one word, must fire at that word.
-        let bad = h.run_wgsl(CONTAMINATED_WGSL, "contaminated", &[&input]);
-        assert_eq!(
-            first_mismatch(&input, &bad),
-            Some(40000),
-            "control: the round-trip cannot see a flipped bit"
-        );
-    }
-
-    #[test]
-    fn gpu_harness_identity_round_trip() {
-        identity_round_trips(&harness());
-    }
-
-    /// Pitfalls §9: a check whose reachable output excludes the failure it guards cannot fail. On words with bit 31
-    /// set, the i32 `extractBits` overload sign-extends and the u32 one does not; the harness must see the difference.
-    #[test]
-    fn gpu_harness_can_fire() {
-        const EXTRACT_WGSL: &str = r"
+    /// The two `extractBits` overloads, which differ only on words with bit 31 set.
+    pub const EXTRACT_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<u32>;
 @group(0) @binding(1) var<storage, read_write> output: array<u32>;
 @compute @workgroup_size(64)
@@ -300,12 +268,68 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     if (id.x < arrayLength(&input)) { output[id.x] = extractBits(input[id.x], 28u, 4u); }
 }
 ";
-        let h = harness();
+
+    /// `gpu_harness_identity_round_trip`'s check: `output` is `expected`, bit for bit.
+    pub fn check_bit_exact(expected: &[u32], output: &[u32]) {
+        assert_eq!(
+            first_mismatch(expected, output),
+            None,
+            "identity dispatch is not bit-exact"
+        );
+    }
+
+    /// `gpu_harness_can_fire`'s check: the two overloads of [`EXTRACT_WGSL`], run on `words`, differ on every word.
+    /// Returns their outputs, signed then unsigned.
+    pub fn check_overloads_differ(h: &GpuHarness, words: &[u32]) -> (Vec<u32>, Vec<u32>) {
+        let signed = h.run_wgsl(EXTRACT_WGSL, "as_i32", &[words]);
+        let unsigned = h.run_wgsl(EXTRACT_WGSL, "as_u32", &[words]);
+        assert!(
+            signed.iter().zip(&unsigned).all(|(s, u)| s != u),
+            "i32 and u32 overloads agree on bit-31 words"
+        );
+        (signed, unsigned)
+    }
+
+    /// `metal_hosted_probe`'s check: the harness opened an adapter on `want`.
+    pub fn check_backend(info: &AdapterInfo, want: wgpu::Backend) {
+        assert_eq!(
+            info.backend, want,
+            "{BACKEND_VAR} did not give a {want:?} adapter"
+        );
+    }
+
+    /// `gpu_backend_env_selects_backend`'s check: `value` selects `want`.
+    pub fn check_selects(value: &str, want: wgpu::Backends) {
+        assert_eq!(
+            backend_from(Some(value)),
+            Ok(want),
+            "{BACKEND_VAR}={value} did not select {want:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::checks::*;
+    use super::*;
+
+    #[test]
+    fn gpu_harness_identity_round_trip() {
+        let input = identity_fixture();
+        check_bit_exact(
+            &input,
+            &harness().run_wgsl(IDENTITY_WGSL, "identity", &[&input]),
+        );
+    }
+
+    /// Pitfalls §9: a check whose reachable output excludes the failure it guards cannot fail. On words with bit 31
+    /// set, the i32 `extractBits` overload sign-extends and the u32 one does not; the harness must see the difference.
+    #[test]
+    fn gpu_harness_can_fire() {
         let high: Vec<u32> = (0..4096u32)
             .map(|i| 0x8000_0000 | i.wrapping_mul(0x0001_0F31))
             .collect();
-        let signed = h.run_wgsl(EXTRACT_WGSL, "as_i32", &[&high]);
-        let unsigned = h.run_wgsl(EXTRACT_WGSL, "as_u32", &[&high]);
+        let (signed, unsigned) = check_overloads_differ(&harness(), &high);
         let want_signed: Vec<u32> = high.iter().map(|&w| ((w as i32) >> 28) as u32).collect();
         let want_unsigned: Vec<u32> = high.iter().map(|&w| w >> 28).collect();
         assert_eq!(
@@ -318,21 +342,6 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
             None,
             "u32 extractBits did not zero-extend"
         );
-        assert!(
-            signed.iter().zip(&unsigned).all(|(s, u)| s != u),
-            "i32 and u32 overloads agree on bit-31 words"
-        );
-        // Control: with bit 31 clear the overloads must agree, so the difference above is the sign bit's.
-        let low: Vec<u32> = high.iter().map(|w| w & 0x7FFF_FFFF).collect();
-        let (s, u) = (
-            h.run_wgsl(EXTRACT_WGSL, "as_i32", &[&low]),
-            h.run_wgsl(EXTRACT_WGSL, "as_u32", &[&low]),
-        );
-        assert_eq!(
-            first_mismatch(&s, &u),
-            None,
-            "control: overloads differ without bit 31"
-        );
     }
 
     /// R-186's first check on `macos-15`: a Metal adapter, and the M0 fixture round-trips bit-exact.
@@ -340,12 +349,9 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     #[cfg_attr(not(target_os = "macos"), ignore = "Metal is macOS-only")]
     fn metal_hosted_probe() {
         let h = harness();
-        assert_eq!(
-            h.adapter_info().backend,
-            wgpu::Backend::Metal,
-            "{BACKEND_VAR} did not give a Metal adapter"
-        );
-        identity_round_trips(&h);
+        check_backend(h.adapter_info(), wgpu::Backend::Metal);
+        let input = identity_fixture();
+        check_bit_exact(&input, &h.run_wgsl(IDENTITY_WGSL, "identity", &[&input]));
     }
 
     fn rejects_naming_the_variable(value: &str) {
@@ -359,11 +365,6 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     #[test]
     fn gpu_backend_env_rejects_unknown() {
         rejects_naming_the_variable("dx12");
-        // Control: a known backend is accepted, so the rejection above is not unconditional.
-        assert!(
-            backend_from(Some("metal")).is_ok(),
-            "control: metal was rejected"
-        );
     }
 
     crate::negative_control!(
@@ -415,9 +416,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
 
     #[test]
     fn gpu_backend_env_selects_backend() {
-        assert_eq!(backend_from(Some("metal")), Ok(wgpu::Backends::METAL));
-        assert_eq!(backend_from(Some("vulkan")), Ok(wgpu::Backends::VULKAN));
-        // Control: the two values select different backends, so the comparison above can tell them apart.
-        assert_ne!(backend_from(Some("metal")), backend_from(Some("vulkan")));
+        check_selects("metal", wgpu::Backends::METAL);
+        check_selects("vulkan", wgpu::Backends::VULKAN);
     }
 }

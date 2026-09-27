@@ -1,8 +1,8 @@
 //! `cargo xtask controls` over the fixture crates in `tests/fixtures/controls/` (REQ-VAL-147): a test with a
 //! discriminating control passes; a test with no control, and one whose control leaves it passing, fail naming the
 //! test; a crate without the `controls` feature is skipped (R-176); a unit test in `src/` pairs by name with the
-//! control in the crate's `tests/` (R-199, R-201). Each test keeps its inline control, and its registered control
-//! joins it (REQ-VAL-152).
+//! control in the crate's `tests/` (R-199, R-201). A test's registered control replaces the inline one it duplicated
+//! (REQ-VAL-152, REQ-VAL-158; R-215).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -76,9 +76,9 @@ fn has(text: &str, needle: &str) {
     assert!(text.contains(needle), "{needle:?} not in:\n{text}");
 }
 
-/// An inline control's assertion: `text` does not contain `needle`.
+/// Asserts that `text` does not contain `needle`.
 fn lacks(text: &str, needle: &str) {
-    assert!(!text.contains(needle), "control: {needle:?} in:\n{text}");
+    assert!(!text.contains(needle), "{needle:?} in:\n{text}");
 }
 
 #[test]
@@ -92,11 +92,6 @@ fn controls_discriminating_fixture_passes() {
     has(
         &v.stdout,
         "controls_discriminating: 1 test(s), each failed by its control",
-    );
-    // Control: a fixture whose control leaves its test passing does fail, so the pass above is the control's doing.
-    assert!(
-        !run_fixture("leaky", None).ok,
-        "control: the leaky fixture passed"
     );
 }
 
@@ -127,11 +122,6 @@ fn controls_control_leaving_test_passing_fails_naming_it() {
         &v.stderr,
         "controls_leaky: test `round_trips`: its control leaves it passing",
     );
-    // Control: a discriminating control is not reported as leaving its test passing.
-    lacks(
-        &run_fixture("discriminating", None).stderr,
-        "leaves it passing",
-    );
 }
 
 #[test]
@@ -146,8 +136,6 @@ fn controls_crate_without_feature_is_skipped() {
         &v.stdout,
         "controls_featureless: skipped: it declares no `controls` feature",
     );
-    // Control: a crate with the feature is not reported skipped.
-    lacks(&run_fixture("discriminating", None).stdout, "skipped");
 }
 
 #[test]
@@ -163,9 +151,6 @@ fn controls_unit_test_pairs_with_control_in_tests_dir() {
         "controls_cross_target: 1 test(s), each failed by its control",
     );
     lacks(&v.stderr, "has no control");
-    // Control: without the control in tests/, the unit test in src/ is reported (R-201).
-    let bare = run_fixture("cross_target", Some("tests/controls.rs"));
-    assert!(!bare.ok, "control: the unit test passed with no control");
 }
 
 #[test]
@@ -176,8 +161,6 @@ fn controls_unit_test_without_its_control_fails_naming_it() {
         &v.stderr,
         "controls_cross_target: test `tests::triples` has no control",
     );
-    // Control: with the control in place, the unit test is not reported.
-    lacks(&run_fixture("cross_target", None).stderr, "tests::triples");
 }
 
 #[test]
@@ -203,12 +186,6 @@ fn controls_control_of_reads_the_module_name() {
     assert_eq!(control_of("doubles::negative_control"), Some("doubles"));
     assert_eq!(control_of("negative_control"), None);
     assert_eq!(control_of("doubles::xnegative_control"), None);
-    // Control: a test that is not a control names no test.
-    assert_eq!(
-        control_of("a::doubles"),
-        None,
-        "control: a plain test read as a control"
-    );
 }
 
 #[test]
@@ -323,17 +300,6 @@ fn controls_same_named_tests_need_a_control_each() {
         &v.stderr,
         "xtask: 1 test(s) without a control that makes them fail",
     );
-    // Control: without the uncontrolled `b.rs`, the one test named `doubles` has its control and passes.
-    let one = run_fixture("collision", Some("tests/b.rs"));
-    assert!(
-        one.ok,
-        "control: one test with its control failed:\n{}",
-        one.stderr
-    );
-    has(
-        &one.stdout,
-        "controls_collision: 1 test(s), each failed by its control",
-    );
 }
 
 /// The same rule on unit tests in two modules of `src/`: one control named `round_trips` does not cover both
@@ -388,14 +354,6 @@ fn controls_doctest_fails_naming_it() {
         &v.stderr,
         "xtask: 1 test(s) without a control that makes them fail",
     );
-    // Control: the same crate without the doctest passes, so the failure above is the doctest's.
-    let without = run_fixture("discriminating", None);
-    assert!(
-        without.ok,
-        "control: the fixture without a doctest failed:\n{}",
-        without.stderr
-    );
-    lacks(&without.stderr, "doctest");
 }
 
 /// R-212: a control that panics in its own setup, before its test's check, does not count as failing the test; the
