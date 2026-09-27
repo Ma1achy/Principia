@@ -17791,7 +17791,7 @@
   milestone: M0
 - id: REQ-VAL-155
   area: VAL
-  statement: "Every test that spawns a child process must do so through one shared helper in `crates/validation` that waits at most the calibrated timeout (REQ-VAL-156) and, on timeout, kills the child and fails naming it (R-214); a subprocess body is not a `#[test]` (R-210), which includes `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)."
+  statement: "Every test that spawns a child process must do so through one shared helper in `crates/validation` that waits at most the calibrated timeout (REQ-VAL-156) and, on timeout, kills the child and fails naming it (R-214); on Unix the child runs in its own process group, and on timeout the whole group is sent SIGTERM, then SIGKILL after a 5 s grace, and reaped, so nothing the child started survives its timeout (R-217); a subprocess body is not a `#[test]` (R-210), which includes `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.4 A test that cannot fail is not a test
@@ -17801,30 +17801,36 @@
     section: "R-213 — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*"
   - file: decisions.md
     section: R-210 — Subprocess bodies leave libtest *(closes RQ-142)*
+  - file: decisions.md
+    section: "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
   verify:
     method: unit test
-    detail: "a child that sleeps past a short test timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child that exits in time returns its output; no test in the workspace spawns a child except through the helper (review checklist); `cargo test -- --list` lists no child path of `qa_R-206.rs`"
+    detail: "a child that sleeps past a short test timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child that starts a grandchild and then hangs: after the timeout both are gone and no process from its group remains (R-217); a child that exits in time returns its output; no test in the workspace spawns a child except through the helper (review checklist); `cargo test -- --list` lists no child path of `qa_R-206.rs`"
   rulings:
   - R-210
   - R-213
   - R-214
+  - R-217
   milestone: M0
 - id: REQ-VAL-156
   area: VAL
   kind: calibration
-  statement: "The timeout of the shared child-spawn helper (R-214) must be calibrated: 120 s provisional, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  statement: "The timeout of the shared child-spawn helper (R-214) must be calibrated: 300 s provisional (R-217), checked by a reviewer, confirmed by the human at the M0 gate from cold and warm measurements on CI and the human's Mac, and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
   verify:
     method: review checklist
-    detail: "the helper carries 120 s, marked provisional until the human confirms or changes it at the M0 gate (R-182); the PR states the evidence: the longest child run measured in the suite, and the headroom 120 s leaves"
+    detail: "the helper carries 300 s, marked provisional until the human confirms or changes it at the M0 gate (R-182); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom 300 s leaves"
   rulings:
   - R-71
   - R-182
   - R-214
+  - R-217
   milestone: M0
 - id: REQ-VAL-157
   area: VAL

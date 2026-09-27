@@ -1736,3 +1736,21 @@ Each earlier part gets a requirement of its own, as R-209 did, and the last keep
 - TASK-M0-22 (parts 3 and 5, ~285): the implementer's duplicated inline controls removed and its copied checks
   replaced (REQ-VAL-158), the controls for qa's 33 xtask tests and `controls` in `cargo xtask ci` (REQ-VAL-007). It
   depends on TASK-M0-26 and TASK-M0-27, so every task waiting on it still waits for all three.
+
+## R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*
+*27 Sep 2026 · applied in TASK-M0-26*
+
+"On PR #27: size accepted. The timeout item is vetoed; fix it before merging:
+- Spawn every child in its own process group (process_group(0) on Unix). On timeout, kill the whole group: SIGTERM,
+  then after a 5 s grace SIGKILL, and reap it. Nothing a child started may survive its timeout.
+- Add a test: a child that starts a grandchild and then hangs. After the timeout, both are gone, and no process from
+  the group remains.
+- The 120 s provisional is too tight (a cold run was killed at 120 s). Raise it to 300 s provisional, covering cold
+  builds with margin. It's still confirmed at the M0 gate, from cold and warm measurements on CI and my Mac.
+The error-return item stands."
+
+*Applied note:* the human gave this as "R-216", which already records TASK-M0-22's split (RQ-148); it is recorded here
+as R-217. "Size accepted" is PR #27's size as it merges: 532 counted lines at the head reviewed, plus the fix this ruling requires, against the ~500 budget. The timeout item vetoed is PR
+#27's "applied per R-204 — veto?" item 2 (kill only the direct child); item 1 (the helper returns `io::Result`)
+stands. R-214's "kills the child" now means the child's whole process group, and its 120 s becomes 300 s, still
+provisional (R-71, R-182). REQ-VAL-155 and REQ-VAL-156 carry both; TASK-M0-26 applies them.
