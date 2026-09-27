@@ -2375,3 +2375,24 @@ Tick any you don't accept.
   a new requirement for part (b); (c) something else.
 - **Also:** TASK-M0-25 and TASK-M0-22 were estimated the same way (~400–500), so they may overrun too.
 - **Needed:** a ruling on the size.
+
+## RQ-144: TASK-M0-25 is 610 lines, over its ~500 budget *(plan, TASK-M0-25)*
+
+- **File, section:** `decisions.md` § "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split
+  first"; `plan/tasks/M0/TASK-M0-25.md` "**Size:** ~400–450 lines".
+- **What happened:** the implementer measured two representative controls first (~10 lines each formatted, plus copied
+  helpers), which already put the estimate near 600, then wrote the rest to get an exact count: 610 lines (534
+  insertions, 76 deletions); 526 insertions excluding qa's files. By file: `qa_TASK-M0-04_controls.rs` +238 (9
+  controls, copied GPU and child helpers, WGSL kernels), `qa_TASK-M0-21_controls.rs` +179 (6 controls, fixture-copy
+  and xtask helpers), `src/bin/qa_child.rs` +65 (the three child bodies, R-210), qa's `qa_TASK-M0-04.rs` +5/−41 and
+  `_r2.rs` +3/−35 (the move), prin's `qa_TASK-M0-01_controls.rs` +31, manifests +13. Controls must copy helpers
+  because each `tests/*.rs` file is its own crate and qa's checks are inline.
+- **Split proposed by the implementer:** (1) ~390 lines: the R-210 move and the controls for `qa_TASK-M0-04.rs` and
+  `_r2`, which spawn the moved bin; (2) ~220 lines: the controls for `qa_TASK-M0-21.rs`, `_r2` and prin's
+  `qa_TASK-M0-01.rs`, with prin's feature and dev-dependency. As R-209 did, the second part would need a requirement
+  of its own.
+- **Options seen:** (a) accept TASK-M0-25 at 610 lines as one PR; (b) the two-way split; (c) something else.
+- **Also:** with RQ-143 this is the second task sized from R-209's per-control estimate to overrun by ~130 lines;
+  TASK-M0-22 (qa's 33 xtask tests, estimated ~450–500) is likely to overrun the same way, and may need the same
+  decision before it starts.
+- **Needed:** a ruling on the size.
