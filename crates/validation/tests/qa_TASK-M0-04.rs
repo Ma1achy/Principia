@@ -5,22 +5,12 @@
 //! at construction) run a body of the `qa_child` binary as a child process (R-210), so the parent's environment is
 //! never mutated.
 
-use std::process::Command;
-use validation::gpu::{GpuHarness, BACKEND_VAR};
+#[path = "support/qa_m0_04.rs"]
+mod qa_m0_04;
+
+use qa_m0_04::*;
+use validation::gpu::BACKEND_VAR;
 use validation::prop;
-use validation::spawn::Spawn;
-
-fn harness() -> GpuHarness {
-    GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
-}
-
-/// Index of the first differing word, compared as full 32-bit words (no mask; pitfalls §9), lengths included.
-fn diff_at(a: &[u32], b: &[u32]) -> Option<usize> {
-    if a.len() != b.len() {
-        return Some(a.len().min(b.len()));
-    }
-    (0..a.len()).find(|&i| a[i] != b[i])
-}
 
 /// A 2^16-word fixture independent of the implementation's: 0, all ones, every single-bit word, every
 /// single-bit-cleared word, then xorshift32 words. Every bit position is exercised alone in both states.
@@ -64,12 +54,7 @@ fn qa_gpu_harness_identity_round_trips_2_16_words_bit_exact() {
     let input = qa_fixture();
     assert_eq!(input.len(), 1 << 16);
     let out = h.run_wgsl(IDENTITY, "identity", &[&input]);
-    assert_eq!(
-        diff_at(&input, &out),
-        None,
-        "identity is not bit-exact on {}",
-        h.adapter_info()
-    );
+    check_bit_exact(&input, &out, h.adapter_info());
     // Control: a dispatch that flips one low bit must be seen at that word.
     let bad = h.run_wgsl(IDENTITY, "flip_low_bit", &[&input]);
     assert_eq!(
@@ -87,11 +72,7 @@ fn qa_gpu_harness_round_trips_lengths_off_the_workgroup_size() {
     for len in [1usize, 63, 64, 65, 1000, (1 << 16) - 1] {
         let input: Vec<u32> = fixture.iter().rev().take(len).map(|w| w | 1).collect();
         let out = h.run_wgsl(IDENTITY, "identity", &[&input]);
-        assert_eq!(
-            diff_at(&input, &out),
-            None,
-            "identity failed at length {len}"
-        );
+        check_length(len, &input, &out);
         // Control: a kernel that leaves the last word unwritten must differ there (every input word is nonzero).
         let bad = h.run_wgsl(IDENTITY, "skip_last", &[&input]);
         assert_eq!(
@@ -119,11 +100,7 @@ fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
     let b: Vec<u32> = a.iter().map(|w| w.rotate_left(7) ^ 0xA5A5_A5A5).collect();
     let want: Vec<u32> = a.iter().zip(&b).map(|(x, y)| x.wrapping_sub(*y)).collect();
     let got = h.run_wgsl(SUB, "sub", &[&a, &b]);
-    assert_eq!(
-        diff_at(&want, &got),
-        None,
-        "a - b is wrong: inputs bound out of order or lost"
-    );
+    check_sub(&want, &got);
     // Control: the swapped order gives b - a, which must differ, so the check above can tell the order.
     let swapped = h.run_wgsl(SUB, "sub", &[&b, &a]);
     assert!(
@@ -174,10 +151,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         assert_eq!(u[i], want_u, "u32 extractBits wrong at word {i} width {w}");
         assert_eq!(s[i], want_s, "i32 extractBits wrong at word {i} width {w}");
         if w < 32 {
-            assert_ne!(
-                s[i], u[i],
-                "i32 and u32 overloads agree at width {w} on a bit-31 word {i}"
-            );
+            check_overloads_differ(s[i], u[i], w, i);
         } else {
             assert_eq!(
                 s[i], u[i],
@@ -196,51 +170,6 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     );
 }
 
-/// Runs the `qa_child` body `test` in a child process with the given environment changes (R-210).
-fn child(test: &str, env: &[(&str, Option<&str>)]) -> std::process::Output {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_qa_child"));
-    cmd.arg(test.strip_prefix("qa_child_").expect("a qa_child body"));
-    for (k, v) in env {
-        match v {
-            Some(v) => cmd.env(k, v),
-            None => cmd.env_remove(k),
-        };
-    }
-    cmd.timed_output().expect("qa_child ran")
-}
-
-/// The child's marker line, from `tag` to the end of its line (the child may print before it).
-fn marker(t: &str, tag: &str) -> String {
-    let at = t
-        .find(tag)
-        .unwrap_or_else(|| panic!("child printed no {tag}: {t}"));
-    t[at..].lines().next().unwrap_or_default().to_string()
-}
-
-fn text(o: &std::process::Output) -> String {
-    format!(
-        "{}{}",
-        String::from_utf8_lossy(&o.stdout),
-        String::from_utf8_lossy(&o.stderr)
-    )
-}
-
-fn open_with(value: Option<&str>) -> String {
-    let o = child("qa_child_open_harness", &[(BACKEND_VAR, value)]);
-    let t = text(&o);
-    assert!(o.status.success(), "child crashed: {t}");
-    marker(&t, "QA_OPEN_")
-}
-
-/// The backend an unset `PRIN_GPU_BACKEND` selects on this platform, as the variable names it (R-206).
-fn platform_default() -> &'static str {
-    if cfg!(target_os = "macos") {
-        "metal"
-    } else {
-        "vulkan"
-    }
-}
-
 /// REQ-SYS-065 / acceptance `gpu_backend_env`: `GpuHarness::new()` itself (not only the parser) fails naming
 /// `PRIN_GPU_BACKEND` when it is `dx12`, empty or a wrong-case name; unset opens the platform's backend and logs that
 /// it was the default (R-206); `metal` and `vulkan` select that backend and never another.
@@ -248,10 +177,7 @@ fn platform_default() -> &'static str {
 fn qa_gpu_backend_env_governs_harness_new() {
     for value in [Some("dx12"), Some(""), Some("Metal"), Some("gl")] {
         let line = open_with(value);
-        assert!(
-            line.starts_with("QA_OPEN_ERR"),
-            "{BACKEND_VAR}={value:?} opened a device: {line}"
-        );
+        check_refused(value, &line);
         assert!(
             line.contains(BACKEND_VAR),
             "{BACKEND_VAR}={value:?}: error does not name the variable: {line}"
@@ -312,10 +238,6 @@ fn seed_in(t: &str) -> u64 {
         .unwrap_or_else(|_| panic!("seed is not a number: {t}"))
 }
 
-fn first_draw(t: &str) -> String {
-    marker(t, "QA_FIRST_DRAW")
-}
-
 /// Acceptance `prop_seed`: a property made to fail prints the seed it failed on, and re-running with that seed the
 /// way the message says (`PROPTEST_RNG_SEED=<seed>`, a fresh process) fails on the same case.
 #[test]
@@ -334,11 +256,7 @@ fn qa_prop_seed_printed_and_rerun_through_the_environment() {
         "re-run with the printed seed passed: {t2}"
     );
     assert_eq!(seed_in(&t2), seed, "the re-run reports a different seed");
-    assert_eq!(
-        first_draw(&t1),
-        first_draw(&t2),
-        "the printed seed did not reproduce the failing case"
-    );
+    check_same_draw(&first_draw(&t1), &first_draw(&t2));
     // Control: another seed draws a different first failing case, so the match above is the seed's doing.
     let other = child(
         "qa_child_failing_property",
@@ -360,11 +278,7 @@ fn qa_prop_shared_config_runs_256_cases_marked_provisional() {
         n.fetch_add(1, Ordering::Relaxed);
         Ok(())
     });
-    assert_eq!(
-        n.load(Ordering::Relaxed),
-        256,
-        "prop::run did not run R-203's 256 cases"
-    );
+    check_ran_256(n.load(Ordering::Relaxed));
     assert_eq!(
         prop::config(1).cases,
         256,

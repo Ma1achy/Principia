@@ -11,156 +11,16 @@
 //!   crate's test targets", R-201).
 //! - `workspace`: three crates; pairing stays within a crate, the crate without the feature is skipped and reported.
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::OnceLock;
-use validation::spawn::Spawn;
+#[path = "support/qa_m0_21.rs"]
+mod qa_m0_21;
+#[path = "support/qa_m0_21_fixture.rs"]
+mod qa_m0_21_fixture;
 
-/// The workspace root (this crate is `crates/validation`).
-fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .unwrap()
-}
-
-/// The workspace's target directory, where `validation` is already built.
-fn target_dir() -> PathBuf {
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
-
-fn cargo() -> String {
-    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
-}
-
-/// The `xtask` binary, built once.
-fn xtask() -> &'static Path {
-    static BIN: OnceLock<PathBuf> = OnceLock::new();
-    BIN.get_or_init(|| {
-        let status = Command::new(cargo())
-            .args(["build", "-p", "xtask", "--manifest-path"])
-            .arg(root().join("Cargo.toml"))
-            .env("CARGO_TARGET_DIR", target_dir())
-            .timed_output()
-            .expect("run cargo build")
-            .status;
-        assert!(status.success(), "cargo build -p xtask failed");
-        target_dir()
-            .join("debug")
-            .join(format!("xtask{}", std::env::consts::EXE_SUFFIX))
-    })
-}
-
-fn copy_dir(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let path = entry.unwrap().path();
-        let dest = to.join(path.file_name().unwrap());
-        if path.is_dir() {
-            copy_dir(&path, &dest);
-        } else {
-            std::fs::copy(&path, &dest).unwrap();
-        }
-    }
-}
-
-/// Makes each manifest's relative `crates/validation` path absolute, so the copy builds outside the workspace.
-fn absolutise(dir: &Path, validation: &str) {
-    for entry in std::fs::read_dir(dir).unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_dir() {
-            absolutise(&path, validation);
-        } else if path.file_name().unwrap() == "Cargo.toml" {
-            let text = std::fs::read_to_string(&path).unwrap();
-            let fixed: String = text
-                .lines()
-                .map(|line| match line.find("path = \"") {
-                    Some(at) if line.contains("crates/validation\"") => {
-                        format!("{}path = \"{validation}\" }}", &line[..at])
-                    }
-                    _ => line.to_owned(),
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            std::fs::write(&path, fixed + "\n").unwrap();
-        }
-    }
-}
-
-/// A copy of the fixture `name` outside this workspace, with the files `remove` deleted; removed on drop.
-struct Copy(PathBuf);
-
-impl Copy {
-    fn new(name: &str, remove: &[&str]) -> Copy {
-        static RUN: AtomicUsize = AtomicUsize::new(0);
-        let run = RUN.fetch_add(1, Ordering::Relaxed);
-        let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-            .join("qa_m0_21")
-            .join(format!("{name}-{}-{run}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        copy_dir(&root().join("fixtures/controls_qa_m0_21").join(name), &dir);
-        for file in remove {
-            std::fs::remove_file(dir.join(file)).unwrap();
-        }
-        absolutise(&dir, root().join("crates/validation").to_str().unwrap());
-        std::fs::copy(root().join("Cargo.lock"), dir.join("Cargo.lock")).unwrap();
-        Copy(dir)
-    }
-
-    fn manifest(&self) -> PathBuf {
-        self.0.join("Cargo.toml")
-    }
-}
-
-impl Drop for Copy {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-struct Verdict {
-    ok: bool,
-    stdout: String,
-    stderr: String,
-}
-
-impl Verdict {
-    fn from(output: Output) -> Verdict {
-        Verdict {
-            ok: output.status.success(),
-            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-        }
-    }
-
-    fn all(&self) -> String {
-        format!("stdout:\n{}\nstderr:\n{}", self.stdout, self.stderr)
-    }
-}
-
-/// `cargo xtask controls --manifest-path` on a copy of fixture `name` with `remove` deleted.
-fn controls(name: &str, remove: &[&str]) -> Verdict {
-    let copy = Copy::new(name, remove);
-    Verdict::from(
-        Command::new(xtask())
-            .args(["controls", "--manifest-path"])
-            .arg(copy.manifest())
-            .env("CARGO_TARGET_DIR", target_dir())
-            .timed_output()
-            .expect("run xtask controls"),
-    )
-}
+use qa_m0_21::*;
+use qa_m0_21_fixture::*;
 
 fn has(text: &str, needle: &str) {
     assert!(text.contains(needle), "{needle:?} not in:\n{text}");
-}
-
-fn lacks(text: &str, needle: &str) {
-    assert!(!text.contains(needle), "{needle:?} in:\n{text}");
 }
 
 /// REQ-VAL-147: "fail naming the test when a control leaves its test passing". Two test targets each hold a test
@@ -169,12 +29,7 @@ fn lacks(text: &str, needle: &str) {
 #[test]
 fn qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test() {
     let v = controls("dup_name", &[]);
-    assert!(
-        !v.ok,
-        "a control that leaves `doubles` passing passed the command, because a control of the same name in \
-         another target discriminates:\n{}",
-        v.all()
-    );
+    check_leaky_fails(&v);
     has(&v.stderr, "test `doubles`: its control leaves it passing");
     // Control: with the leaky target removed, only the sound control remains and the command passes.
     let sound = controls("dup_name", &["tests/a_leaky.rs"]);
@@ -201,11 +56,7 @@ fn qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test() 
 #[test]
 fn qa_control_under_another_name_does_not_pair() {
     let v = controls("misnamed", &["tests/named.rs"]);
-    assert!(
-        !v.ok,
-        "a test whose only control names another test passed:\n{}",
-        v.all()
-    );
+    check_misnamed_fails(&v);
     has(&v.stderr, "test `doubles` has no control");
     // Control: the same control registered as `doubles` pairs, and the command passes.
     let named = controls("misnamed", &["tests/misnamed.rs"]);
@@ -222,11 +73,7 @@ fn qa_control_under_another_name_does_not_pair() {
 #[test]
 fn qa_unit_test_in_a_binary_target_pairs_with_its_control_in_tests() {
     let v = controls("bin_target", &[]);
-    assert!(
-        v.ok,
-        "the binary's unit test did not pair with its control:\n{}",
-        v.all()
-    );
+    check_bin_target_pairs(&v);
     has(
         &v.stdout,
         "qa_controls_bin_target: 1 test(s), each failed by its control",
@@ -247,11 +94,7 @@ fn qa_unit_test_in_a_binary_target_pairs_with_its_control_in_tests() {
 #[test]
 fn qa_workspace_pairs_within_each_crate_and_skips_the_featureless_one() {
     let v = controls("workspace", &[]);
-    assert!(
-        !v.ok,
-        "a test paired with a control in another crate:\n{}",
-        v.all()
-    );
+    check_workspace_fails(&v);
     has(
         &v.stderr,
         "qa_controls_ws_bare: test `doubles` has no control",
@@ -283,17 +126,7 @@ fn qa_workspace_pairs_within_each_crate_and_skips_the_featureless_one() {
 #[test]
 fn qa_controls_exist_only_under_the_feature() {
     let copy = Copy::new("dup_name", &[]);
-    let test = |features: &[&str]| {
-        Verdict::from(
-            Command::new(cargo())
-                .args(["test", "--tests", "--no-fail-fast", "--manifest-path"])
-                .arg(copy.manifest())
-                .args(features)
-                .env("CARGO_TARGET_DIR", target_dir())
-                .timed_output()
-                .expect("run cargo test"),
-        )
-    };
+    let test = |features: &[&str]| cargo_test(&copy, features);
     let plain = test(&[]);
     assert!(
         plain.ok,
