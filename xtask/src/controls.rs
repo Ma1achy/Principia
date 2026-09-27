@@ -19,7 +19,9 @@ use crate::deps::cargo;
 /// The feature under which `negative_control!` compiles its controls (R-176).
 pub const FEATURE: &str = "controls";
 
-/// The last path segment of the test `negative_control!` generates, under a module named for its test.
+/// The last path segment of the test `negative_control!` generates, under a module named for its test. The name is
+/// reserved in a crate that declares the feature: a listing carries no mark of the macro, so a hand-written test
+/// whose path ends in `::negative_control` is read as a control of its parent module's name.
 pub const CONTROL_FN: &str = "negative_control";
 
 /// A test the command fails on, by the test's full name as libtest lists it.
