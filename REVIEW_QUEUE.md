@@ -2356,3 +2356,90 @@ Tick any you don't accept.
   (for example a name prefix the command skips); (c) something else.
 - **Needed:** a ruling before whichever part covers qa's validation tests.
 - **Ruling:** R-210 (decisions.md). Closed in TASK-M0-25.
+
+## RQ-143: TASK-M0-24 is 638 lines, over its ~500 budget *(plan, TASK-M0-24)*
+
+- **File, section:** `decisions.md` § "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split
+  first": "if a task looks set to exceed ~500 lines, propose a split in REVIEW_QUEUE before implementing it";
+  `plan/tasks/M0/TASK-M0-24.md` "**Size:** ~450–500 lines".
+- **What happened:** the implementer trusted the task file's estimate and found the overrun only in the finished,
+  formatted diff: 53 new controls at ~10 lines each after rustfmt, plus helpers. The change is complete: 638 lines
+  (629 insertions, 9 deletions). By file: `xtask/tests/deps.rs` 344, `crates/validation/tests/controls.rs` 116 (new),
+  `xtask/tests/controls.rs` 115, `xtask/tests/ci.rs` 40, `.github/workflows/ci.yml` 12, `xtask/Cargo.toml` 8,
+  `crates/validation/src/control.rs` 2, `Cargo.lock` 1. It is open as a PR for review, not merged.
+- **Split proposed by the implementer:** (a) ~290 lines: xtask's `controls` feature and dev-dependency, the
+  `control.rs` example as a `text` block, `--features controls` on the GPU jobs, validation's 7 controls, and the
+  controls for `xtask/tests/ci.rs` (3) and `controls.rs` (14); (b) ~345 lines: the 29 `xtask/tests/deps.rs` controls
+  and their cleanup helper, depending on (a). As R-209 did, the second part would need a requirement of its own.
+- **Options seen:** (a) accept TASK-M0-24 at 638 lines as one PR, as R-205 and R-208 did; (b) the two-way split, with
+  a new requirement for part (b); (c) something else.
+- **Also:** TASK-M0-25 and TASK-M0-22 were estimated the same way (~400–500), so they may overrun too.
+- **Needed:** a ruling on the size.
+
+## RQ-144: TASK-M0-25 is 610 lines, over its ~500 budget *(plan, TASK-M0-25)*
+
+- **File, section:** `decisions.md` § "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split
+  first"; `plan/tasks/M0/TASK-M0-25.md` "**Size:** ~400–450 lines".
+- **What happened:** the implementer measured two representative controls first (~10 lines each formatted, plus copied
+  helpers), which already put the estimate near 600, then wrote the rest to get an exact count: 610 lines (534
+  insertions, 76 deletions); 526 insertions excluding qa's files. By file: `qa_TASK-M0-04_controls.rs` +238 (9
+  controls, copied GPU and child helpers, WGSL kernels), `qa_TASK-M0-21_controls.rs` +179 (6 controls, fixture-copy
+  and xtask helpers), `src/bin/qa_child.rs` +65 (the three child bodies, R-210), qa's `qa_TASK-M0-04.rs` +5/−41 and
+  `_r2.rs` +3/−35 (the move), prin's `qa_TASK-M0-01_controls.rs` +31, manifests +13. Controls must copy helpers
+  because each `tests/*.rs` file is its own crate and qa's checks are inline.
+- **Split proposed by the implementer:** (1) ~390 lines: the R-210 move and the controls for `qa_TASK-M0-04.rs` and
+  `_r2`, which spawn the moved bin; (2) ~220 lines: the controls for `qa_TASK-M0-21.rs`, `_r2` and prin's
+  `qa_TASK-M0-01.rs`, with prin's feature and dev-dependency. As R-209 did, the second part would need a requirement
+  of its own.
+- **Options seen:** (a) accept TASK-M0-25 at 610 lines as one PR; (b) the two-way split; (c) something else.
+- **Also:** with RQ-143 this is the second task sized from R-209's per-control estimate to overrun by ~130 lines;
+  TASK-M0-22 (qa's 33 xtask tests, estimated ~450–500) is likely to overrun the same way, and may need the same
+  decision before it starts.
+- **Needed:** a ruling on the size.
+
+## RQ-145: a control passes on any panic, including one in its own setup *(build, TASK-M0-21)*
+
+- **File, section:** `decisions.md` § "R-199 — A test is matched to its control by name in the macro call *(amends
+  R-176; closes RQ-136)*" (the form `negative_control!(test_name, "description", control)`);
+  `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test".
+- **What:** the merged macro (`crates/validation/src/control.rs:34-38`) expands the control to `#[test]
+  #[should_panic] fn negative_control() { $control }`, with no `expected` message. A control that panics during setup
+  (an `unwrap` on a fixture copy, a missing marker, `GpuHarness::new` failing on a runner with no adapter) passes
+  without reaching the check it is meant to trip. Raised by qa on PR #23 and by code on PR #24. Today the reviewers
+  guard it by hand, running each control with `--nocapture` and reading where it panics.
+- **Silence:** R-199 fixes the macro's arguments; the corpus doesn't say whether a control must show which failure it
+  produced.
+- **Options seen:** (a) the macro takes the expected panic message (for example a fourth argument, or `expected =` in
+  the call) and emits `#[should_panic(expected = …)]`; this amends R-199's form, and every registered control gains
+  it; (b) keep the form, and make "each control panics at the check it controls" an explicit qa checklist line,
+  checked with `--nocapture`; (c) something else.
+- **Needed:** a ruling. It bears on TASK-M0-22, which registers the last 33 controls, and on every control written after
+  it.
+
+## RQ-146: `qa_r206_harness_opens_the_selected_backend` is also a subprocess body *(build, TASK-M0-25)*
+
+- **File, section:** `decisions.md` § "R-210 — Subprocess bodies leave libtest *(closes RQ-142)*": "a subprocess body a
+  test spawns is not itself a `#[test]`", with the one-round exception naming only `qa_child_open_harness`,
+  `qa_child_failing_property` and `qa_child_count_cases`; REQ-VAL-153's verify detail names the same three.
+- **What:** `crates/validation/tests/qa_R-206.rs:131-181` (merged in PR #20): `qa_r206_harness_opens_the_selected_backend`
+  is a real `#[test]` with its own control, and when `CHILD_VAR` is set other tests in the file re-run the test
+  binary as a child through it. So it is both a test and a subprocess body. Raised by qa on PR #24.
+- **Conflict:** R-210's principle covers it; its exception and REQ-VAL-153 don't name it, so TASK-M0-25 can't move it.
+- **Options seen:** (a) extend R-210's exception to it and move its child path into the `qa_child` bin in TASK-M0-25
+  (or TASK-M0-22); (b) accept it as a test that is also a child entry point, since it can fail and has a control; (c)
+  something else.
+- **Needed:** a ruling.
+
+## RQ-147: a hung child process stalls the whole test suite *(build, TASK-M0-04)*
+
+- **File, section:** `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test" (a test
+  that hangs never reports); the corpus names no timeout for a spawned child.
+- **What:** every parent that spawns a child uses `Command::output()` with no timeout: `qa_R-206.rs:168-180`, qa's
+  `child()` in `qa_TASK-M0-04.rs` and `counts_with` in `qa_TASK-M0-04_r2.rs`, and the new controls files in PR #24. On
+  PR #24 one run hung in `qa_r206_harness_logs_the_backend_it_ran_on` (the child blocked on a Metal shader-cache lock)
+  and passed on re-run; qa could not reproduce it in 40 serial runs and 15 rounds of three concurrent ones. A hang
+  stalls CI until the job's own limit instead of failing the test.
+- **Silence:** no timeout for child processes, and no value for one (R-71).
+- **Options seen:** (a) a shared spawn-with-timeout helper in `crates/validation`, with a calibrated limit (R-71), that
+  every parent uses; (b) rely on the CI job's timeout; (c) something else.
+- **Needed:** a ruling, and a value if (a).
