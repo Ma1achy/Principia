@@ -42,10 +42,10 @@ Of these: 96 calibration, 101 definition, 1037 obligation. Retired (kept for the
 
 ## Sections
 
-897 sections in 46 files: 786 yield at least one requirement; 111 yield none and are listed below with the reason.
+899 sections in 46 files: 787 yield at least one requirement; 112 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 63 |
+| informative only | 64 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -72,6 +72,7 @@ Of these: 96 calibration, 101 definition, 1037 obligation. Retired (kept for the
 | R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)* | informative only | plan ruling (a task's size and a dependency); applied in plan/tasks.yaml and the TASK-M0-16 and TASK-M0-22 task files; no requirement |
 | R-204 — When to ask the human | informative only | process ruling; recorded in CLAUDE.md |
 | R-205 — TASK-M0-04 is accepted at 570 code lines | informative only | process ruling; a size acceptance for one PR |
+| R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first | informative only | process ruling; a size acceptance for one PR, and the split-first rule for later overruns |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
