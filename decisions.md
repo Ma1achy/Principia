@@ -1720,3 +1720,19 @@ control asserting the other platform's expectation; inline controls kept beside 
 removes the duplicates); controls copying their test's check (until TASK-M0-22 moves the copies into the shared
 module). Editing qa's merged files to use the shared module is limited to replacing the copied check with a call, under
 a one-round exception, with qa reviewing.
+
+## R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+Asked in RQ-148, the human chose "Three tasks": parts 1 and 2, part 4, and parts 3 and 5 of the implementer's split.
+Each earlier part gets a requirement of its own, as R-209 did, and the last keeps REQ-VAL-007.
+
+*Applied:*
+- TASK-M0-26 (parts 1 and 2, ~350 counted lines): the spawn helper, every spawn moved to it and R-213's move
+  (REQ-VAL-155, REQ-VAL-156), and the expected messages (REQ-VAL-154, narrowed to R-212; its R-215 half moves to the
+  two new requirements below).
+- TASK-M0-27 (part 4, ~540, about half deletions): qa's copied checks moved into shared test-support modules
+  (REQ-VAL-157).
+- TASK-M0-22 (parts 3 and 5, ~285): the implementer's duplicated inline controls removed and its copied checks
+  replaced (REQ-VAL-158), the controls for qa's 33 xtask tests and `controls` in `cargo xtask ci` (REQ-VAL-007). It
+  depends on TASK-M0-26 and TASK-M0-27, so every task waiting on it still waits for all three.

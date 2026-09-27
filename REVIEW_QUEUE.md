@@ -2448,3 +2448,58 @@ Tick any you don't accept.
   every parent uses; (b) rely on the CI job's timeout; (c) something else.
 - **Needed:** a ruling, and a value if (a).
 - **Ruling:** R-214 (decisions.md). Closed in TASK-M0-22.
+
+## RQ-148: TASK-M0-22's counted lines look set to reach ~1,130, over the ~500 budget *(plan, TASK-M0-22)*
+
+- **File, section:** `decisions.md` § "R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts
+  implementation only": "Pre-split only if implementation alone looks set to exceed ~500 (this applies to
+  TASK-M0-22)"; `plan/WORKFLOW.md` § "Task files": "a task is pre-split only if its counted lines look set to exceed
+  ~500"; `plan/tasks/M0/TASK-M0-22.md` "**Size:** ... the spawn helper, the macro change and the shared test-support
+  module, est. well under ~500".
+- **What:** estimated before implementing, from the merged code at `f370714`, counting insertions and deletions as
+  RQ-143 and RQ-144 did, and leaving out `negative_control!` blocks and qa's commits (R-211):
+
+  | Part of the task | Counted lines (est.) |
+  |---|---|
+  | Spawn helper in `crates/validation` (R-214), with its `spawn` tests (REQ-VAL-155) | ~125 |
+  | The implementer's own spawn sites moved to it (`xtask/tests/deps.rs` 7, `controls.rs` 2, the `*_controls.rs` files, prin) | ~40 |
+  | `negative_control!` takes the expected message (R-212), its docs, the `controls` Display for a wrong panic | ~30 |
+  | REQ-VAL-154's fixture: a control panicking in setup fails, one reaching its check passes (crate + test) | ~70 |
+  | Messages added to the implementer's test assertions that an expected message must name (many are bare `assert!`) | ~50 |
+  | `controls` in `cargo xtask ci` (R-177, R-198), the runner, the ci-registry test | ~40 |
+  | R-215 shared test-support modules: the checks and helpers copied between `qa_TASK-M0-04.rs`/`_r2` and `qa_TASK-M0-04_controls.rs` (diff_at, child, marker, 9 checks), `qa_TASK-M0-21.rs` and `qa_TASK-M0-21_controls.rs` (fixture copy, xtask run, 6 checks), prin's two | ~290 added |
+  | The copies those modules replace, removed from the two `*_controls.rs` files and prin's | ~250 removed |
+  | The copies of `gpu::tests`/`prop::tests` checks in `crates/validation/tests/controls.rs`, replaced by the tests' own checks (controls beside the unit tests) | ~70 |
+  | Inline controls duplicated by registered ones, removed from the implementer's tests (`xtask/tests/controls.rs` 15, `deps.rs` ~8, `gpu.rs` ~5, `prop.rs` 3) | ~165 removed |
+  | **Total** | **~1,130 (~680 insertions, ~450 deletions)** |
+
+  Not counted, as edits to qa's merged files under the one-round exceptions: the spawn call replaced at ~20 sites
+  (R-214), the R-206 child path moved (R-213), copied checks replaced by calls and duplicated inline controls removed
+  (R-215): ~300 lines. The 33 xtask controls are blocks, excluded, but several of qa's xtask checks are inline in their
+  `#[test]` bodies, so a control that trips the test's own assertion (R-212) needs the check made callable.
+- **Why the task file's estimate is low:** it counts the helper, the macro and the module, but not the removal of the
+  copies the module replaces nor of the duplicated inline controls, which R-215 adds; those alone are ~400.
+- **Split proposed by the implementer** (each part with a requirement of its own, as R-209 did; the last keeps
+  REQ-VAL-007, so the tasks depending on TASK-M0-22 still wait for all of it):
+  1. **Spawn helper** (REQ-VAL-155, REQ-VAL-156): the helper and its tests, every spawn moved to it, qa's files
+     included (R-214), and R-213's move. ~200 counted.
+  2. **Expected messages** (REQ-VAL-154): the macro change, every control converted, the messages the controls name,
+     the setup-panic fixture. ~150 counted.
+  3. **Consolidation in the implementer's tests** (new requirement, R-215): `crates/validation/tests/controls.rs`'s
+     copies replaced by the unit tests' own checks, and the duplicated inline controls removed. ~235 counted, ~165 of
+     them deletions.
+  4. **Consolidation of qa's copies** (new requirement, R-215): the shared test-support modules and the copies they
+     replace. ~540 counted, ~250 of them deletions of the copies (~290 if the move is counted once).
+  5. **TASK-M0-22 proper** (REQ-VAL-007): the controls for qa's 33 xtask tests, `controls` in `cargo xtask ci`, the
+     ci-registry test. ~50 counted.
+- **Options seen:** (a) accept TASK-M0-22 at ~1,130 counted lines as one PR, as R-211 did for TASK-M0-24 and
+  TASK-M0-25; (b) the five-way split above; (c) three tasks: parts 1 and 2 (~350), part 4 (~540, half of it
+  deletions), parts 3 and 5 (~285); (d) something else.
+- **Also, not yet measured:** qa's `qa_cargo_xtask_alias_runs_deps` (`xtask/tests/qa_TASK-M0-01.rs:489-520`) runs
+  `cargo xtask ci` with its own `CARGO_TARGET_DIR`. Once `controls` joins `ci`, that child builds the workspace with
+  every `controls` feature in a fresh target directory and runs every control, inside `cargo test --workspace`, and
+  R-214's helper would kill it at 120 s. Whether it fits could not be measured on this Mac today: syspolicyd was
+  stalling every freshly built binary at `_dyld_start` for more than five minutes. If it doesn't fit, it's a conflict
+  between R-214's 120 s and R-198's registration, and it will come back here with the measured time.
+- **Needed:** a ruling on the size.
+- **Ruling:** R-216 (decisions.md). Closed in TASK-M0-22.

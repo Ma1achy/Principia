@@ -17771,23 +17771,23 @@
   milestone: M0
 - id: REQ-VAL-154
   area: VAL
-  statement: "`negative_control!` must take the panic message its control expects and register the control with `#[should_panic(expected = …)]`, so a control passes only by tripping its intended assertion, not by panicking in its own setup (R-212, amending R-199); every control registered before TASK-M0-22 must be converted to that form; an inline control duplicated by a registered one must be removed, and a check copied between test files must live once in a shared test-support module that both call (R-215)."
+  statement: "`negative_control!` must take the panic message its control expects and register the control with `#[should_panic(expected = …)]`, so a control passes only by tripping its intended assertion, not by panicking in its own setup (R-212, amending R-199); every control registered before TASK-M0-26 must be converted to that form."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.4 A test that cannot fail is not a test
   - file: decisions.md
     section: "R-212 — A control names the panic it expects *(amends R-199; closes RQ-145)*"
   - file: decisions.md
-    section: "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
-  - file: decisions.md
     section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
+  - file: decisions.md
+    section: "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
   verify:
     method: unit test
-    detail: "a fixture control that panics in its setup, before its check, fails under `cargo xtask controls` (or `cargo test --features controls`); the same control with its expected message reaching the check passes; every `negative_control!` call in the workspace carries an expected message; no test keeps an inline control its registered one duplicates; no check body is copied between test files (review checklist, code and qa)"
+    detail: "a fixture control that panics in its setup, before its check, fails under `cargo xtask controls` (or `cargo test --features controls`); the same control with its expected message reaching the check passes; every `negative_control!` call in the workspace carries an expected message (the macro requires it)"
   rulings:
   - R-199
   - R-212
-  - R-215
+  - R-216
   milestone: M0
 - id: REQ-VAL-155
   area: VAL
@@ -17825,6 +17825,36 @@
   - R-71
   - R-182
   - R-214
+  milestone: M0
+- id: REQ-VAL-157
+  area: VAL
+  statement: "A check copied between qa's test files and the `*_controls.rs` targets (`qa_TASK-M0-04*`, `qa_TASK-M0-21*`, prin's `qa_TASK-M0-01`) must live once, in a shared test-support module that the test and its control both call (R-215)."
+  source:
+  - file: decisions.md
+    section: "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
+  - file: decisions.md
+    section: "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: no check body is copied between qa's test files and the controls targets; each control calls the same check its test does, and still trips it (`cargo test --features controls`); qa's merged files change only where a copy is replaced by a call (R-215's one-round exception)"
+  rulings:
+  - R-215
+  - R-216
+  milestone: M0
+- id: REQ-VAL-158
+  area: VAL
+  statement: "In the implementer's tests, an inline control duplicated by a registered one must be removed, and a check copied into a controls target (`crates/validation/tests/controls.rs`'s copies of the `gpu` and `prop` unit-test checks) must be replaced by the test's own check (R-215)."
+  source:
+  - file: decisions.md
+    section: "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
+  - file: decisions.md
+    section: "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: no implementer test keeps an inline control its registered one duplicates; no check body is copied into a controls target; every registered control still trips its test's assertion (`cargo xtask controls`)"
+  rulings:
+  - R-215
+  - R-216
   milestone: M0
 - id: REQ-PERF-001
   area: PERF
