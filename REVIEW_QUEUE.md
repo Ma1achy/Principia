@@ -2337,6 +2337,7 @@ Tick any you don't accept.
   to close no requirement; (c) the split, with a new requirement for each earlier part (for example "every test in
   crate X has a registered control"); (d) something else.
 - **Needed:** a ruling on the size and the split.
+- **Ruling:** R-209 (decisions.md). Closed in TASK-M0-22.
 
 ## RQ-142: qa's child-mode helpers are `#[test]`s that cannot fail *(build, TASK-M0-22)*
 
@@ -2354,3 +2355,4 @@ Tick any you don't accept.
   like R-206's, with qa reviewing; (b) keep them as `#[test]`s and exempt them from the controls rule by a marked form
   (for example a name prefix the command skips); (c) something else.
 - **Needed:** a ruling before whichever part covers qa's validation tests.
+- **Ruling:** R-210 (decisions.md). Closed in TASK-M0-25.
