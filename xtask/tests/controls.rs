@@ -1,8 +1,8 @@
 //! `cargo xtask controls` over the fixture crates in `tests/fixtures/controls/` (REQ-VAL-147): a test with a
 //! discriminating control passes; a test with no control, and one whose control leaves it passing, fail naming the
 //! test; a crate without the `controls` feature is skipped (R-176); a unit test in `src/` pairs by name with the
-//! control in the crate's `tests/` (R-199, R-201). Each test keeps an inline control; the registry's own controls
-//! for these tests are TASK-M0-22's (R-198).
+//! control in the crate's `tests/` (R-199, R-201). Each test keeps its inline control, and its registered control
+//! joins it (REQ-VAL-152).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -394,3 +394,114 @@ fn controls_doctest_fails_naming_it() {
     );
     lacks(&without.stderr, "doctest");
 }
+
+validation::negative_control!(
+    controls_discriminating_fixture_passes,
+    "the leaky fixture, required to pass",
+    assert!(run_fixture("leaky", None).ok)
+);
+
+validation::negative_control!(
+    controls_test_without_control_fails_naming_it,
+    "the discriminating fixture, required to fail",
+    assert!(!run_fixture("discriminating", None).ok)
+);
+
+validation::negative_control!(
+    controls_control_leaving_test_passing_fails_naming_it,
+    "the discriminating fixture, required to report a control leaving its test passing",
+    has(
+        &run_fixture("discriminating", None).stderr,
+        "leaves it passing"
+    )
+);
+
+validation::negative_control!(
+    controls_crate_without_feature_is_skipped,
+    "the discriminating fixture, which declares the feature, required to be skipped",
+    has(
+        &run_fixture("discriminating", None).stdout,
+        "skipped: it declares no `controls` feature"
+    )
+);
+
+validation::negative_control!(
+    controls_unit_test_pairs_with_control_in_tests_dir,
+    "the cross-target fixture without its control in tests/, required to pass",
+    assert!(run_fixture("cross_target", Some("tests/controls.rs")).ok)
+);
+
+validation::negative_control!(
+    controls_unit_test_without_its_control_fails_naming_it,
+    "the cross-target fixture with its control, required to fail",
+    assert!(!run_fixture("cross_target", None).ok)
+);
+
+// On a fixture, never on this workspace: the command there would run this control again, without end.
+validation::negative_control!(
+    controls_on_this_workspace_skips_gui,
+    "a fixture workspace, which has no gui, required to report gui skipped",
+    has(
+        &run_fixture("discriminating", None).stdout,
+        "xtask controls: gui: skipped"
+    )
+);
+
+validation::negative_control!(
+    controls_control_of_reads_the_module_name,
+    "a plain test's name, required to name the test it controls",
+    assert_eq!(control_of("a::doubles"), Some("doubles"))
+);
+
+validation::negative_control!(
+    controls_parse_list_and_results,
+    "a benchmark line, required to list as a test",
+    assert_eq!(parse_list("doubles: benchmark\n"), names(&["doubles"]))
+);
+
+validation::negative_control!(
+    controls_findings_pair_by_name,
+    "a test with no control, required to have no finding",
+    assert_eq!(findings(&names(&["halves"]), &BTreeMap::new()), Ok(vec![]))
+);
+
+validation::negative_control!(
+    controls_same_name_in_two_targets_judged_each,
+    "one sound and one leaky run of `doubles`, required to have no finding",
+    {
+        let listed = names(&["doubles", "doubles::negative_control"]);
+        let listed = [listed.clone(), listed].concat();
+        let run = "test doubles::negative_control - should panic ... ok\n\
+                   test doubles::negative_control - should panic ... FAILED\n";
+        assert_eq!(findings(&listed, &parse_results(run)), Ok(vec![]));
+    }
+);
+
+validation::negative_control!(
+    controls_same_named_tests_need_a_control_each,
+    "the collision fixture without its uncontrolled test, required to fail",
+    assert!(!run_fixture("collision", Some("tests/b.rs")).ok)
+);
+
+validation::negative_control!(
+    controls_findings_same_named_unit_tests_collide,
+    "two unit tests `round_trips` with one control, required to have no finding",
+    {
+        let listed = names(&[
+            "a::tests::round_trips",
+            "b::tests::round_trips",
+            "round_trips::negative_control",
+        ]);
+        let results = [("round_trips::negative_control".to_owned(), vec![true])].into();
+        assert_eq!(findings(&listed, &results), Ok(vec![]));
+    }
+);
+
+validation::negative_control!(
+    controls_doctest_fails_naming_it,
+    "the discriminating fixture, which has no doctest, required to report one",
+    has(
+        &run_fixture("discriminating", None).stderr,
+        "has no control: `negative_control!` cannot name a doctest"
+    )
+);
