@@ -2,5 +2,6 @@
 //! reaches it only as a dev-dependency, and `gui` never does (systems_architecture §7.1; R-176,
 //! R-187).
 
+pub mod control;
 pub mod gpu;
 pub mod prop;

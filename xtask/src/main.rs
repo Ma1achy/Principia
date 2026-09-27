@@ -8,6 +8,10 @@ Usage: cargo xtask <command>
 
 Commands:
   ci                              run every registered per-push runner, in order (R-177)
+  controls [--manifest-path <Cargo.toml>]
+                                  check that every test of each crate declaring the `controls` feature has a
+                                  negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
+                                  workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176)
   deps [--metadata <file> | --manifest-path <Cargo.toml>]
                                   check the workspace crate graph against systems_architecture §7.1, and
                                   that no unit test of kernel or ledger uses validation, by compiling them
@@ -20,6 +24,8 @@ fn main() -> ExitCode {
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let result = match args.as_slice() {
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
+        ["controls"] => xtask::controls::run(&workspace_manifest()),
+        ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path)),
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
@@ -42,6 +48,11 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// This workspace's `Cargo.toml`.
+fn workspace_manifest() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml")
 }
 
 enum Source<'a> {

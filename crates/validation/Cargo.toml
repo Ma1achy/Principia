@@ -12,3 +12,7 @@ render = { path = "../render" }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 pollster = "1"
 proptest = "1.11"
+
+# Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
+[features]
+controls = []
