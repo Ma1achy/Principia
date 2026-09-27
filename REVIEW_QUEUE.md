@@ -2309,3 +2309,50 @@ Tick any you don't accept.
   argues for more or fewer. TASK-M0-04 carries it as `prop::CASES = 256`, marked as pending this entry.
 - **Needed:** a calibration requirement for the value (M0), and the human's confirmation of 256 or another number.
 - **Ruling:** R-203 (decisions.md). Closed in TASK-M0-04.
+
+## RQ-141: TASK-M0-22 is now ~1,300 lines, twice what R-200 accepted *(plan, TASK-M0-22)*
+
+- **File, section:** `decisions.md` § "R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes
+  RQ-137)*"; `decisions.md` § "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first": "if a
+  task looks set to exceed ~500 lines, propose a split in REVIEW_QUEUE before implementing it."
+- **Count at main 7ff5445** (`cargo test --workspace --all-targets -- --list`, and `--doc`): 113 tests need a
+  registered control, against ~92 at R-198 — xtask 79 (implementer's `ci.rs` 3, `controls.rs` 14, `deps.rs` 29; qa's
+  `qa_TASK-M0-01*.rs` 33), prin 2 (qa's), validation 32 (unit tests in `gpu` 6 and `prop` 3; qa's 23 across
+  `qa_TASK-M0-04*.rs`, `qa_TASK-M0-21*.rs`, `qa_R-206.rs`), plus the one `ignore` doctest R-208 turns into a `text`
+  block. No bare-name collisions today.
+- **Why it grew:** TASK-M0-21, its qa tests and PR #20 added ~21 tests. Most controls need a contaminated synthetic
+  workspace, not a one-line call (~9 lines each, ~1,000 in all). Each `tests/*.rs` file is its own crate, so controls
+  in a new target can't reach qa's helpers and have to copy them (~250–350 lines). Plumbing adds ~60. Estimate:
+  ~1,200–1,400 lines.
+- **Split proposed by the implementer** (each part ≤ ~500):
+  - TASK-M0-22a (~450–500): controls for the implementer's 55 tests (validation `gpu`/`prop`; xtask `ci.rs`,
+    `controls.rs`, `deps.rs`); xtask's `controls` feature and validation dev-dependency; the `text` doc block.
+  - TASK-M0-22b (~400–450): controls for qa's 25 validation and prin tests, in new `*_controls.rs` targets; prin's
+    feature and dev-dependency.
+  - TASK-M0-22c (~450–500): controls for qa's 33 xtask tests; `controls` registered in `cargo xtask ci`; the ci
+    registry test updated. Closes REQ-VAL-007.
+- **The obstacle R-200 named:** 22a and 22b close no requirement (`plan/WORKFLOW.md` § "Task files": every task
+  closes at least one; `plan/check_plan.py` fails one that closes none).
+- **Options seen:** (a) accept TASK-M0-22 at ~1,300 lines as one PR; (b) the three-way split, with 22a and 22b allowed
+  to close no requirement; (c) the split, with a new requirement for each earlier part (for example "every test in
+  crate X has a registered control"); (d) something else.
+- **Needed:** a ruling on the size and the split.
+- **Ruling:** R-209 (decisions.md). Closed in TASK-M0-22.
+
+## RQ-142: qa's child-mode helpers are `#[test]`s that cannot fail *(build, TASK-M0-22)*
+
+- **File, section:** `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test";
+  REQ-VAL-007 (TASK-M0-22): every test in a controls crate has a control that makes it fail.
+- **What:** `qa_child_open_harness` (`crates/validation/tests/qa_TASK-M0-04.rs:232`), `qa_child_failing_property`
+  (same file, :319) and `qa_child_count_cases` (`crates/validation/tests/qa_TASK-M0-04_r2.rs:74`) are subprocess
+  bodies the parent tests spawn. Each is a `#[test]` that begins `if std::env::var_os(CHILD_VAR).is_none() { return;
+  }` and then only prints markers; none asserts. Run on their own they always pass, so no honest control can make
+  them fail, and `cargo xtask controls` lists them as tests.
+- **Silence:** the corpus doesn't say whether a subprocess body counts as a test under REQ-VAL-007, or how it should be
+  written.
+- **Options seen:** (a) move the child bodies out of libtest: a `harness = false` test target (or a bin) whose `main`
+  the parent spawns, so they are no longer listed as tests. This edits qa's merged files, under a one-round exception
+  like R-206's, with qa reviewing; (b) keep them as `#[test]`s and exempt them from the controls rule by a marked form
+  (for example a name prefix the command skips); (c) something else.
+- **Needed:** a ruling before whichever part covers qa's validation tests.
+- **Ruling:** R-210 (decisions.md). Closed in TASK-M0-25.

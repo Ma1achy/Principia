@@ -1642,3 +1642,29 @@ declares the `controls` feature: a doctest counts as a test without a control; a
 a name with more tests than controls fails naming them; `negative_control` is a reserved test name. So TASK-M0-22 turns
 the `ignore` example in `crates/validation/src/control.rs` into a non-test block. The `deps.rs` fix lands in the
 R-206/R-207 PR.
+
+## R-209 — TASK-M0-22 is split three ways, each part closing its own requirement *(closes RQ-141)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+Asked in RQ-141, the human chose "Split, new reqs": the three-way split the implementer proposed, where each of the
+two earlier parts gets a new requirement of its own, so every task still closes one (`plan/WORKFLOW.md` § "Task
+files").
+
+*Applied:* the earlier parts take new ids, so every task that depends on TASK-M0-22 still waits for the last part:
+- TASK-M0-24 (part a): controls for the implementer's tests merged before TASK-M0-22 (validation's `gpu` and `prop`
+  unit tests; xtask's `ci.rs`, `controls.rs`, `deps.rs`), xtask's `controls` feature and validation dev-dependency,
+  and the `control.rs` example made a non-test block (R-208). Closes REQ-VAL-152.
+- TASK-M0-25 (part b): controls for qa's validation and prin tests, and the child-mode move (R-210). Closes
+  REQ-VAL-153.
+- TASK-M0-22 (part c): controls for qa's xtask tests, and `controls` registered in `cargo xtask ci`. Still closes
+  REQ-VAL-007, and now depends on TASK-M0-24 and TASK-M0-25.
+Supersedes R-200's size acceptance; R-200's dependency of TASK-M0-16 on TASK-M0-22 stands.
+
+## R-210 — Subprocess bodies leave libtest *(closes RQ-142)*
+*27 Sep 2026 · applied in TASK-M0-25*
+
+Asked in RQ-142, the human chose "Move out of libtest": a subprocess body a test spawns is not itself a `#[test]`. It
+lives in a `harness = false` test target (or a bin) whose `main` the parent spawns, so `cargo xtask controls` never
+lists it. The three qa child-mode helpers (`qa_child_open_harness`, `qa_child_failing_property`,
+`qa_child_count_cases`) move there, under a one-round exception to edit qa's merged files, like R-206's, with qa
+reviewing.
