@@ -1842,3 +1842,72 @@ Then TASK-M0-29."
 *Applied:* TASK-M0-31 (new, REQ-VAL-162) carries it, and TASK-M0-29 depends on it. Both tests are in qa's merged files
 (`crates/validation/tests/qa_TASK-M0-26.rs`, `qa_TASK-M0-25.rs`), so the fix edits them under a one-round exception
 limited to what the fix needs, with qa reviewing, as R-215's did.
+
+## R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
+*27 Sep 2026 · applied in plan/WORKFLOW.md and TASK-M0-30*
+
+Asked whether code moved verbatim counts toward the budget (TASK-M0-30 counted 657 added lines under R-223, nearly all
+of them qa's helpers moved into support modules), the human chose "Moves don't count": accept TASK-M0-30, and from now on
+lines moved verbatim — the same text, shown by the diff as a deletion and an addition — count like deletions; only new
+or changed lines count.
+
+*Applied:* a PR's counted size is its added lines, less those that are the same text as a line the same diff deletes
+(a verbatim move), in implementation code and the implementer's own tests, leaving out qa's commits and
+`negative_control!` blocks (R-211, R-223). A line moved and then edited counts. PR #33 (TASK-M0-30) is accepted on size.
+
+## R-226 — The suite stops re-running every control; folded into TASK-M0-22
+*27 Sep 2026 · applied in TASK-M0-22*
+
+Asked whether to stop the suite running every control twice (the survey on 27 Sep found `controls_on_this_workspace_skips_gui`, `xtask/tests/controls.rs:167`, re-running every control in the workspace through `xtask controls`, and qa's `qa_m0_24_every_registered_control_makes_its_test_fail`, `crates/validation/tests/qa_TASK-M0-24.rs:271`, doing a smaller re-run — together about a third of the suite's time), the human chose "Fold into M0-22": once TASK-M0-22 makes `cargo xtask controls` its own CI step, those two tests check only what they claim, through a listing-only mode, without re-running every control.
+
+*Applied:* REQ-VAL-163 (new) carries it, closed by TASK-M0-22. The CI step must fail on any finding, so no coverage is lost. qa's merged `qa_TASK-M0-24.rs` changes only as far as this needs, under a one-round exception, with qa reviewing, as R-215's did.
+
+## R-227 — The two remaining latent races are fixed now, in their own task
+*27 Sep 2026 · applied in TASK-M0-32*
+
+Asked about three latent races of R-224's kind, none yet seen failing, the human chose "One task now": fixed at their cause, in a small task like TASK-M0-31, with a loaded multi-run proof.
+
+*Applied:* the first race (`qa_TASK-M0-26.rs`'s r206 test spawning `qa_child` while sibling cargo runs rewrite it) is inside R-224's exception for that file, and qa's review of PR #35 found it blocking, so TASK-M0-31 fixes it. The other two go to TASK-M0-32 (new, REQ-VAL-164): `cargo build -p xtask` in `crates/validation/tests/support/qa_m0_21_fixture.rs:35` rewriting the `xtask` binary while sibling tests spawn it; and parallel copies of one fixture building into the shared outer target (`xtask/tests/controls.rs:63`, `qa_m0_21_fixture.rs:143`, `support/qa_m0_21.rs:16`, `crates/validation/tests/expected_message.rs:42`). The proof is R-224's: 20 whole-workspace runs in a row under load. Edits to qa's merged files are limited to the fix, under a one-round exception, with qa reviewing. TASK-M0-32 depends on TASK-M0-31, and TASK-M0-22 depends on TASK-M0-32 (both edit `xtask/tests/controls.rs`).
+
+## R-228 — Each agent builds and tests with four jobs and four test threads
+*28 Sep 2026 · applied in CLAUDE.md and the local build environment*
+
+"Each agent: CARGO_BUILD_JOBS=4 and RUST_TEST_THREADS=4."
+
+*Applied note:* the human's message of 28 Sep gave five speed items under "R-228 to R-231". They are recorded in its
+order: this one; the reviewers' scope and the qa-only re-check together as R-229; the proofs as R-230; the task as R-231.
+The cap is set in the shared agent environment file (outside the repo); CLAUDE.md records it. Process only.
+
+## R-229 — Reviewers run the tests their diff touches; CI runs the full suite
+*28 Sep 2026 · applied in CLAUDE.md, plan/WORKFLOW.md and `.claude/agents/`*
+
+"Reviewers run the tests their diff touches plus dependents; CI runs the full suite. Full local runs only for
+cross-cutting changes." "If the only new commit since an approval is QA's test-only commit, the code reviewer re-checks
+that commit alone."
+
+*Applied:* a reviewer runs the acceptance commands, the test targets the diff adds or changes and those that depend on
+what it changes (with and without the controls features), fmt, clippy and the `cargo xtask` tools, and checks that CI is
+green on the head. A full local run is for a cross-cutting change (the workspace manifest, CI, the spawn helper, the
+controls machinery, a support module many targets include). An acceptance command that is itself a whole-suite run
+(R-230's proof) still runs. Process only.
+
+## R-230 — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*
+*28 Sep 2026 · applied in TASK-M0-31 and TASK-M0-32*
+
+"Proofs of flaky-test fixes: 5 full runs under normal load plus green CI. Apply this to #35 now."
+
+*Applied:* R-224's and R-227's "20 times in a row under load" becomes 5 consecutive full-workspace runs under normal load,
+with no failures, plus CI green on the head. REQ-VAL-162 and REQ-VAL-164 and the two task files carry it.
+
+## R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings
+*28 Sep 2026 · applied in TASK-M0-33*
+
+"After TASK-M0-22, one task: cargo-nextest (CI and local), fixtures written only when changed with a target dir per
+fixture, and injectable spawn-helper timings."
+
+*Applied:* TASK-M0-33 (new, REQ-VAL-165), depending on TASK-M0-22. No test is dropped: doctests still run through
+`cargo test --doc`, and `cargo xtask controls` keeps its own cargo invocations. Each fixture's target directory is never
+shared between a test and its control (R-224). The spawn helper's calibrated values (REQ-VAL-156) are unchanged. Edits
+to qa's merged files are limited to what these need, under a one-round exception, with qa reviewing.
+*Applied note:* the human had also chosen "Lighter debug info" (`[profile.dev] debug = "line-tables-only"`) a few
+minutes earlier; this later list leaves it out, so it is not in the task.

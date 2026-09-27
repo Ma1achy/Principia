@@ -9,7 +9,7 @@
 - **Size:** small (R-224: "one small follow-up")
 
 ## Goal
-Two merged qa tests each failed once under load and passed on rerun. A test that fails for a reason other than its claim shows nothing (philosophy §4.4), and a retry would hide the cause. Each is fixed at its cause, and the workspace suite then passes 20 times in a row under load (R-224).
+Two merged qa tests each failed once under load and passed on rerun. A test that fails for a reason other than its claim shows nothing (philosophy §4.4), and a retry would hide the cause. Each is fixed at its cause, and the workspace suite then passes 5 times in a row under normal load, with CI green (R-224, R-230).
 
 ## References
 - `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"
@@ -17,13 +17,16 @@ Two merged qa tests each failed once under load and passed on rerun. A test that
 - `decisions.md` § "R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated"
 - `decisions.md` § "R-224 — The two flaky tests are fixed before TASK-M0-29"
 
+- `decisions.md` § "R-227 — The two remaining latent races are fixed now, in their own task"
+- `decisions.md` § "R-230 — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*"
 ## Deliverables
 - `qa_m0_26_a_control_without_an_expected_message_does_not_compile` (`crates/validation/tests/qa_TASK-M0-26.rs`) and its control build their fixture in separate target directories, as R-208 did for `deps.rs`, so neither reuses the other's build.
 - `qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on` (`crates/validation/tests/qa_TASK-M0-25.rs`): the cause of its failure under load found (timing, a shared resource, a timeout), shown in the PR with the evidence, and fixed at that cause. No retry.
 - The edits to qa's merged files are limited to what the fix needs, under a one-round exception, with qa reviewing (R-224, as R-215).
 
+- `qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it` and its control spawn `qa_child` while `r206_listing` and `test_binary_as_child` run cargo into the workspace target, which rewrites it: those cargo runs get their own target directory (R-227; qa's review of PR #35).
 ## Acceptance tests
-- The whole workspace suite (`PRIN_GPU_BACKEND=metal cargo test --workspace --features validation/controls,prin/controls,xtask/controls`) passes 20 times in a row under load, with no failures; the PR shows the loop, the load used and each run's result (REQ-VAL-162).
+- The whole workspace suite (`PRIN_GPU_BACKEND=metal cargo test --workspace --features validation/controls,prin/controls,xtask/controls`) passes 5 times in a row under normal load, with no failures, and CI is green on the head; the PR shows the loop and each run's result (R-230) (REQ-VAL-162).
 - Review checklist (code and qa): the qa_m0_26 test and its control use separate target directories; the PR names the qa_m0_25 cause with evidence and the fix removes it; no retry is added (REQ-VAL-162).
 
 ## Notes

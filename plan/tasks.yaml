@@ -183,9 +183,9 @@
 - id: TASK-M0-22
   milestone: M0
   title: "Controls for qa's xtask tests, and `controls` in `cargo xtask ci`"
-  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-28, TASK-M0-29, TASK-M0-30]
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-28, TASK-M0-29, TASK-M0-30, TASK-M0-32]
   needs: []
-  requirements: [REQ-VAL-007]
+  requirements: [REQ-VAL-007, REQ-VAL-163]
   reviewers: [code, qa]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M0-23
@@ -258,6 +258,22 @@
   depends_on: [TASK-M0-28]
   needs: []
   requirements: [REQ-VAL-162]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-32
+  milestone: M0
+  title: "The two remaining latent test races fixed at their cause"
+  depends_on: [TASK-M0-31]
+  needs: []
+  requirements: [REQ-VAL-164]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-33
+  milestone: M0
+  title: "Test-suite speed: nextest, stable fixtures, injectable spawn timings"
+  depends_on: [TASK-M0-22]
+  needs: []
+  requirements: [REQ-VAL-165]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M1-01
