@@ -21,9 +21,10 @@ The first of R-216's three parts of TASK-M0-22. Every child process a test spawn
 - `decisions.md` § "R-213 — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*"
 - `decisions.md` § "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
 - `decisions.md` § "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
+- `decisions.md` § "R-217 — TASK-M0-26 accepted at 532 counted lines; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
 
 ## Deliverables
-- A shared child-spawn helper in `crates/validation`: it waits at most the timeout (120 s, provisional, REQ-VAL-156) and on timeout kills the child and fails naming it. Every test that spawns a child uses it, qa's merged files included, under R-214's one-round exception limited to replacing the spawn call (R-214).
+- A shared child-spawn helper in `crates/validation`: it waits at most the timeout (300 s, provisional, REQ-VAL-156, R-217) and on timeout kills the child and fails naming it; on Unix the child runs in its own process group, and on timeout the whole group gets SIGTERM, then SIGKILL after a 5 s grace, and is reaped (R-217). Every test that spawns a child uses it, qa's merged files included, under R-214's one-round exception limited to replacing the spawn call (R-214).
 - `qa_r206_harness_opens_the_selected_backend`'s child path moved into the `qa_child` bin, so it is no longer reached through a `#[test]` (R-213, R-210's exception).
 - `negative_control!` takes the panic message its control expects and registers it with `#[should_panic(expected = …)]` (R-212; the form in the call is this task's to choose, stated in the PR). Every control registered before this task — TASK-M0-21's fixtures, TASK-M0-24's, TASK-M0-25's, qa's and PR #20's — is converted to it, with messages added to the assertions a control must name. `cargo xtask controls` reports a control that panics with the wrong message.
 
@@ -32,8 +33,10 @@ The first of R-216's three parts of TASK-M0-22. Every child process a test spawn
 - `cargo test -p validation -- --list` — lists no child path of `qa_R-206.rs`: `qa_r206_harness_opens_the_selected_backend` is a test only, its child body in the `qa_child` bin (R-213) (REQ-VAL-155).
 - `cargo test -p validation --features controls` — a fixture control that panics in its setup fails; with its expected message reaching the check it passes (REQ-VAL-154).
 - `cargo xtask controls` — every control in the workspace (validation, prin, xtask) carries an expected message, which the macro requires, and trips it; the command may still fail naming qa's xtask tests, which TASK-M0-22 covers (REQ-VAL-154).
-- Proposal (REQ-VAL-156): the helper's 120 s timeout with its evidence (the longest child run measured in the suite, and the headroom), provisional until the human confirms it at the M0 gate.
+- `cargo test -p validation spawn` — a child that starts a grandchild and then hangs: after the timeout both are gone and no process from its group remains (R-217) (REQ-VAL-155).
+- Proposal (REQ-VAL-156): the helper's 300 s timeout (R-217) with its evidence (the longest child run measured in the suite, cold and warm, and the headroom), provisional until the human confirms it at the M0 gate.
 - Review checklist (code and qa): no test spawns a child except through the helper (REQ-VAL-155).
 
 ## Notes
 - R-216 (closes RQ-148): TASK-M0-22 is split into this task, TASK-M0-27 and TASK-M0-22 itself, which comes last.
+- R-217 (amends R-214): the task is accepted at 532 counted lines; a timed-out child's whole process group is killed; the timeout is 300 s provisional.
