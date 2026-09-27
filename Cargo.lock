@@ -999,6 +999,7 @@ dependencies = [
  "pollster",
  "proptest",
  "render",
+ "rustix",
  "wgpu",
 ]
 

@@ -13,6 +13,10 @@ wgpu = { version = "30", default-features = false, features = ["std", "parking_l
 pollster = "1"
 proptest = "1.11"
 
+# The spawn helper signals a timed-out child's process group (R-217). rustix is already in the build, under tempfile.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process", "std"] }
+
 # Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
 [features]
 controls = []

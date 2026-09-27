@@ -6,22 +6,30 @@
 //!
 //! let output = Command::new("cargo").arg("--version").timed_output().expect("cargo ran");
 //! ```
+//!
+//! On Unix every child runs in a process group of its own, and a timeout ends the whole group: SIGTERM, then after
+//! [`GRACE`] SIGKILL, and the child is reaped, so nothing the child started survives its timeout (R-217). Elsewhere
+//! there are no process groups, and only the child itself is killed.
 
 use std::io::{self, Read};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// How long a child may run before it is killed: the calibration value of REQ-VAL-156 (R-214, R-71). 120 s is the
-/// proposed value; it is provisional until the human confirms or changes it at the M0 gate (R-182).
-pub const TIMEOUT: Duration = Duration::from_secs(120);
+/// How long a child may run before it is killed: the calibration value of REQ-VAL-156 (R-214, R-71). 300 s is the
+/// provisional value, covering cold builds with margin (R-217); the human confirms or changes it at the M0 gate, from
+/// cold and warm measurements on CI and on their Mac (R-182, R-217).
+pub const TIMEOUT: Duration = Duration::from_secs(300);
+
+/// How long a timed-out child's process group has, after SIGTERM, to exit before it is sent SIGKILL (R-217).
+pub const GRACE: Duration = Duration::from_secs(5);
 
 /// `Command::output`, bounded by a timeout (R-214).
 pub trait Spawn {
     /// Runs the command as `Command::output` does (stdin closed, stdout and stderr captured) but waits at most
-    /// `timeout` for it to exit and close its output. A child still running then is killed and reaped, and the error,
-    /// of kind `TimedOut`, names it and its pid.
+    /// `timeout` for it to exit and close its output. A child still running then is ended with everything it started
+    /// (see the module docs) and reaped, and the error, of kind `TimedOut`, names it and its pid.
     fn output_within(&mut self, timeout: Duration) -> io::Result<Output>;
 
     /// [`Spawn::output_within`] the provisional [`TIMEOUT`].
@@ -33,6 +41,9 @@ pub trait Spawn {
 impl Spawn for Command {
     fn output_within(&mut self, timeout: Duration) -> io::Result<Output> {
         let deadline = Instant::now() + timeout;
+        // The child leads a new process group, which everything it starts joins unless it leaves it (R-217).
+        #[cfg(unix)]
+        std::os::unix::process::CommandExt::process_group(self, 0);
         let mut child = self
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -59,8 +70,7 @@ impl Spawn for Command {
                 break status;
             }
             if Instant::now() >= deadline {
-                child.kill()?;
-                child.wait()?;
+                end(&mut child)?;
                 return Err(timed_out(child.id(), "was killed: it outlived"));
             }
             thread::sleep(Duration::from_millis(10));
@@ -69,9 +79,14 @@ impl Spawn for Command {
         let mut streams = [Vec::new(), Vec::new()];
         for _ in 0..2 {
             let wait = deadline.saturating_duration_since(Instant::now());
-            let (stream, bytes) = rx
-                .recv_timeout(wait)
-                .map_err(|_| timed_out(child.id(), "exited, but its output stayed open past"))?;
+            let Ok((stream, bytes)) = rx.recv_timeout(wait) else {
+                // What holds the output open is something the child started: it is ended too (R-217).
+                end(&mut child)?;
+                return Err(timed_out(
+                    child.id(),
+                    "exited, but its output stayed open past",
+                ));
+            };
             streams[stream] = bytes?;
         }
         let [stdout, stderr] = streams;
@@ -81,6 +96,40 @@ impl Spawn for Command {
             stderr,
         })
     }
+}
+
+/// Ends a timed-out child and everything in its process group (R-217): SIGTERM to the group, then, unless the child
+/// has been reaped and the group is empty within [`GRACE`], SIGKILL to the group, and the child is reaped.
+#[cfg(unix)]
+fn end(child: &mut Child) -> io::Result<()> {
+    use rustix::io::Errno;
+    use rustix::process::{kill_process_group, test_kill_process_group, Pid, Signal};
+    // The group's id is the child's pid, and stays taken while the child is unreaped or any member lives.
+    let group = Pid::from_child(child);
+    // A group with no member left has nothing to signal.
+    let signal = |signal| match kill_process_group(group, signal) {
+        Err(e) if e != Errno::SRCH => Err(io::Error::from(e)),
+        _ => Ok(()),
+    };
+    signal(Signal::TERM)?;
+    let grace_ends = Instant::now() + GRACE;
+    while Instant::now() < grace_ends {
+        if child.try_wait()?.is_some() && test_kill_process_group(group) == Err(Errno::SRCH) {
+            return Ok(());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    signal(Signal::KILL)?;
+    child.wait()?;
+    Ok(())
+}
+
+/// Ends a timed-out child. Without process groups, only the child itself is killed and reaped.
+#[cfg(not(unix))]
+fn end(child: &mut Child) -> io::Result<()> {
+    child.kill()?;
+    child.wait()?;
+    Ok(())
 }
 
 /// Reads `pipe` to its end on a thread of its own, and sends the bytes as stream `index`.
@@ -169,6 +218,68 @@ mod tests {
     fn spawn_returns_the_output_of_a_child_in_time() {
         check_in_time(Duration::from_secs(10), "echo out; echo err >&2; exit 3");
     }
+
+    /// Whether `kill -0 <target>` finds a process: a pid, or `-<pgid>` for any member of a process group.
+    fn exists(target: &str) -> bool {
+        Command::new("kill")
+            .args(["-0", "--", target])
+            .timed_output()
+            .expect("kill ran")
+            .status
+            .success()
+    }
+
+    /// A child that starts a grandchild (by running `start`, which backgrounds it and writes its pid to `$1`) and then
+    /// hangs is timed out. After the timeout the child and the grandchild are gone, and no process of the child's group
+    /// remains (R-217).
+    fn check_group_ended(start: &str) {
+        // One directory per call: the test and its control may run at once.
+        static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let call = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("spawn-group-{}-{call}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let pid_file = dir.join("grandchild");
+        let err = Command::new("sh")
+            .args(["-c", &format!("{start}; sleep 30"), "sh"])
+            .arg(&pid_file)
+            .output_within(Duration::from_millis(500))
+            .expect_err("the child was not timed out");
+        let child = err
+            .to_string()
+            .split("(pid ")
+            .nth(1)
+            .and_then(|rest| rest.split(')').next())
+            .expect("the error names the pid")
+            .to_owned();
+        let grandchild = std::fs::read_to_string(&pid_file).expect("the grandchild's pid");
+        let grandchild = grandchild.trim();
+        let (child_left, grandchild_left, group_left) = (
+            exists(&child),
+            exists(grandchild),
+            exists(&format!("-{child}")),
+        );
+        // A survivor is ended here, so a failing run leaks nothing.
+        let _ = Command::new("kill").args(["-9", grandchild]).timed_output();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!child_left, "the timed-out child {child} still exists");
+        assert!(
+            !grandchild_left,
+            "the grandchild {grandchild} of the timed-out child survived its timeout"
+        );
+        assert!(!group_left, "a process of the group {child} remains");
+    }
+
+    #[test]
+    fn spawn_ends_the_group_of_a_child_that_outlives_the_timeout() {
+        check_group_ended("sleep 30 & echo $! > \"$1\"");
+    }
+
+    crate::negative_control!(
+        spawn_ends_the_group_of_a_child_that_outlives_the_timeout,
+        "a grandchild that leaves the child's process group, required to be gone after the timeout",
+        expected = "of the timed-out child survived its timeout",
+        check_group_ended("perl -e 'setpgrp(0, 0); exec @ARGV' sleep 30 & echo $! > \"$1\"")
+    );
 
     crate::negative_control!(
         spawn_returns_the_output_of_a_child_in_time,
