@@ -205,11 +205,12 @@ fn qa_r206_harness_logs_the_backend_it_ran_on() {
 validation::negative_control!(
     qa_r206_harness_logs_the_backend_it_ran_on,
     "a run on the platform's backend must not pass as logging the other one",
-    expected = "the harness did not open",
+    expected = "no stderr line says the run used",
     {
+        let (name, _) = ruling_default();
         let (other, _) = ruling_other();
         let (out, err) = run_child(None);
-        let shown = if other == "metal" { "Metal" } else { "Vulkan" };
+        let shown = if name == "metal" { "Metal" } else { "Vulkan" };
         check_logged(&out, &err, other, shown)
     }
 );
