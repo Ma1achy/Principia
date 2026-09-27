@@ -50,13 +50,16 @@ fn qa_adapter_info_printout_names_the_backend() {
     assert!(!info(wgpu::Backend::Metal).to_string().contains("Vulkan"));
     assert!(!info(wgpu::Backend::Vulkan).to_string().contains("Metal"));
 
-    // The live harness's printout names the backend PRIN_GPU_BACKEND selected.
+    // The live harness's printout names the backend PRIN_GPU_BACKEND, or the platform default, selected.
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let live = h.adapter_info();
     let expected = match std::env::var("PRIN_GPU_BACKEND").as_deref() {
         Ok("metal") => "Metal",
         Ok("vulkan") => "Vulkan",
-        other => panic!("PRIN_GPU_BACKEND must be metal or vulkan here: {other:?}"),
+        // Unset: the platform default (R-206).
+        Err(std::env::VarError::NotPresent) if cfg!(target_os = "macos") => "Metal",
+        Err(std::env::VarError::NotPresent) => "Vulkan",
+        other => panic!("PRIN_GPU_BACKEND must be metal, vulkan or unset here: {other:?}"),
     };
     let shown = live.to_string();
     println!("{shown}");

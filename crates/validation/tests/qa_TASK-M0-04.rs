@@ -246,12 +246,21 @@ fn open_with(value: Option<&str>) -> String {
     marker(&t, "QA_OPEN_")
 }
 
+/// The backend an unset `PRIN_GPU_BACKEND` selects on this platform, as the variable names it (R-206).
+fn platform_default() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "metal"
+    } else {
+        "vulkan"
+    }
+}
+
 /// REQ-SYS-065 / acceptance `gpu_backend_env`: `GpuHarness::new()` itself (not only the parser) fails naming
-/// `PRIN_GPU_BACKEND` when it is unset, `dx12`, empty or a wrong-case name; `metal` and `vulkan` select that backend
-/// and never another.
+/// `PRIN_GPU_BACKEND` when it is `dx12`, empty or a wrong-case name; unset opens the platform's backend and logs that
+/// it was the default (R-206); `metal` and `vulkan` select that backend and never another.
 #[test]
 fn qa_gpu_backend_env_governs_harness_new() {
-    for value in [None, Some("dx12"), Some(""), Some("Metal"), Some("gl")] {
+    for value in [Some("dx12"), Some(""), Some("Metal"), Some("gl")] {
         let line = open_with(value);
         assert!(
             line.starts_with("QA_OPEN_ERR"),
@@ -272,10 +281,27 @@ fn qa_gpu_backend_env_governs_harness_new() {
             );
         }
     }
-    // Control: the backend this run was given opens a device on exactly that backend, so the refusals above are
-    // not unconditional.
-    let current =
-        std::env::var(BACKEND_VAR).expect("the suite runs with PRIN_GPU_BACKEND set (R-169)");
+    let unset = text(&child("qa_child_open_harness", &[(BACKEND_VAR, None)]));
+    let default = platform_default();
+    let shown = if default == "metal" {
+        "Metal"
+    } else {
+        "Vulkan"
+    };
+    assert_eq!(
+        marker(&unset, "QA_OPEN_"),
+        format!("QA_OPEN_OK backend={shown}"),
+        "unset {BACKEND_VAR} did not open the platform's backend"
+    );
+    assert!(
+        unset.contains(&format!(
+            "gpu backend: {default} (platform default, {BACKEND_VAR} unset)"
+        )),
+        "unset {BACKEND_VAR}: the harness did not log the default it chose: {unset}"
+    );
+    // Control: the backend this run was given (or the platform default, R-206) opens a device on exactly that
+    // backend, so the refusals above are not unconditional.
+    let current = std::env::var(BACKEND_VAR).unwrap_or_else(|_| default.to_owned());
     let want = match current.as_str() {
         "metal" => "Metal",
         "vulkan" => "Vulkan",

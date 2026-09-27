@@ -1881,7 +1881,7 @@
   title: Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
   depends_on: [TASK-M8-26, TASK-M8-27]
   needs: [REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053]
-  requirements: [REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128]
+  requirements: [REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128, REQ-TOOL-135]
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-3]
 - id: TASK-M8-29

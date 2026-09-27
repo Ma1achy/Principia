@@ -84,6 +84,7 @@ fn deps(root: &Path) -> (bool, String, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--manifest-path"])
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run xtask");
     let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
@@ -103,6 +104,7 @@ fn compiles_with_the_dependency(case: &str, root: &Path, krate: &str) {
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo check");
     assert!(
@@ -301,6 +303,7 @@ fn qa_unit_test_of_a_lib_with_test_false_fails() {
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -494,6 +497,7 @@ fn qa_the_check_leaves_the_workspace_unchanged_and_uses_a_stable_target_dir_unde
             "--manifest-path",
         ])
         .arg(root.join("Cargo.toml"))
+        .env("CARGO_TARGET_DIR", root.join("target"))
         .output()
         .expect("run cargo metadata");
     let doc: serde_json::Value = serde_json::from_slice(&out.stdout).expect("metadata JSON");

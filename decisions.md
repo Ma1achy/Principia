@@ -1599,3 +1599,46 @@ on."
 Asked when PR #18 was ready (R-204, exceeding a budget), the human chose "Accept as one PR": TASK-M0-04's 570 code
 lines, against the ~500 budget and its ~380 estimate, stay one PR. The overage is the inline controls each test
 carries until TASK-M0-21's registry exists, rustfmt wrapping, and R-203's added test.
+
+## R-207 — Export trace also writes the Chrome Trace Event format
+*27 Sep 2026*
+
+"Export trace also writes the Chrome Trace Event format (openable in Perfetto and chrome://tracing), alongside
+profiler schema v1: CPU scopes as complete events, GPU passes on their own track, counters as counter events. Add it
+to REQ-TOOL-098's task (M8), with a test that a captured trace loads and round-trips its span count. Apply without
+asking; it's an addition, not a choice."
+
+*Applied:* `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender" and `docs/gui/principia_render_gui_spec.md`
+§ "Profiler" name the second format; a new requirement, closed by TASK-M8-28 (which closes REQ-TOOL-098), carries it
+and its test.
+
+## R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+*27 Sep 2026*
+
+"When PRIN_GPU_BACKEND is unset, default by platform: metal on macOS, vulkan elsewhere. An explicit value still
+overrides, and an unknown value is still an error. CI keeps setting it explicitly. Log which backend was chosen, so a
+test run always says what it ran on."
+
+*Applied:* R-169 says only that `GpuHarness` picks its backend from `PRIN_GPU_BACKEND`; the "unset is an error" rule
+was TASK-M0-04's (its Deliverables and its `gpu_backend_env` acceptance line), and those lines are amended here.
+REQ-SYS-065's statement gains the default. The code, and the merged tests that assert an unset value fails (qa's
+among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
+
+## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
+*27 Sep 2026 · applied in TASK-M0-21*
+
+"Merge-level decisions for PR #19:
+- Size overrun accepted (record as R-208). From now on, if a task looks set to exceed ~500 lines, propose a split in
+  REVIEW_QUEUE before implementing it.
+- All three "applied per R-204" items stand.
+- Fix the flaky xtask/tests/deps.rs tests in the R-206/R-207 PR: give each test workspace its own CARGO_TARGET_DIR (a
+  temp dir per test), so they never share the outer build directory. Add a test showing it passes with
+  CARGO_TARGET_DIR set outside the repo.
+Then R-206/R-207, then TASK-M0-22."
+
+*Applied:* TASK-M0-21's 762 code lines (fixtures and qa's tests excluded), against the ~500 budget, stay one PR. The
+three items confirmed are PR #19's "applied per R-204 — veto?" rules for `cargo xtask controls`, in a crate that
+declares the `controls` feature: a doctest counts as a test without a control; a control covers exactly one test, and
+a name with more tests than controls fails naming them; `negative_control` is a reserved test name. So TASK-M0-22 turns
+the `ignore` example in `crates/validation/src/control.rs` into a non-test block. The `deps.rs` fix lands in the
+R-206/R-207 PR.

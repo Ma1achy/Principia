@@ -1,6 +1,7 @@
 //! The native in-process `wgpu` harness (parity_contract §6): a headless device, a WGSL compute dispatch over storage
-//! buffers, and the result read back in the same process. The backend comes from `PRIN_GPU_BACKEND` (R-169); CI runs it
-//! on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110, R-186).
+//! buffers, and the result read back in the same process. The backend comes from `PRIN_GPU_BACKEND` (R-169), or by
+//! platform when it is unset (R-206); CI sets it, and runs on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110,
+//! R-186).
 
 use std::fmt;
 
@@ -22,18 +23,42 @@ impl fmt::Display for GpuError {
 
 impl std::error::Error for GpuError {}
 
-/// Maps a value of `PRIN_GPU_BACKEND` to the one backend it selects. Unset or unknown is an error naming the variable.
-pub fn backend_from(value: Option<&str>) -> Result<wgpu::Backends, GpuError> {
-    match value {
-        Some("metal") => Ok(wgpu::Backends::METAL),
-        Some("vulkan") => Ok(wgpu::Backends::VULKAN),
-        Some(other) => Err(GpuError(format!(
-            "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
-        ))),
-        None => Err(GpuError(format!(
-            "{BACKEND_VAR} is unset; set it to metal or vulkan"
-        ))),
+/// The backend an unset `PRIN_GPU_BACKEND` selects, as the variable names it (R-206): metal on macOS, vulkan
+/// elsewhere.
+pub fn default_backend() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "metal"
+    } else {
+        "vulkan"
     }
+}
+
+/// Maps a value of `PRIN_GPU_BACKEND` to the one backend it selects, and the line [`GpuHarness::new`] logs for it,
+/// which says whether the backend came from the variable or the platform default (R-206). Unset selects
+/// [`default_backend`]; an unknown value is an error naming the variable.
+pub fn backend_choice(value: Option<&str>) -> Result<(wgpu::Backends, String), GpuError> {
+    let (name, source) = match value {
+        Some(name) => (name, format!("from {BACKEND_VAR}")),
+        None => (
+            default_backend(),
+            format!("platform default, {BACKEND_VAR} unset"),
+        ),
+    };
+    let backends = match name {
+        "metal" => wgpu::Backends::METAL,
+        "vulkan" => wgpu::Backends::VULKAN,
+        other => {
+            return Err(GpuError(format!(
+                "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
+            )))
+        }
+    };
+    Ok((backends, format!("gpu backend: {name} ({source})")))
+}
+
+/// The backend [`backend_choice`] selects for `value`.
+pub fn backend_from(value: Option<&str>) -> Result<wgpu::Backends, GpuError> {
+    backend_choice(value).map(|(backends, _)| backends)
 }
 
 /// The adapter the harness opened, for the session header (TASK-M0-19).
@@ -63,9 +88,11 @@ pub struct GpuHarness {
 }
 
 impl GpuHarness {
-    /// Opens a device on the backend `PRIN_GPU_BACKEND` names.
+    /// Opens a device on the backend `PRIN_GPU_BACKEND` names, or the platform default when it is unset, and logs
+    /// the choice to stderr (R-206).
     pub fn new() -> Result<Self, GpuError> {
-        let backends = backend_from(std::env::var(BACKEND_VAR).ok().as_deref())?;
+        let (backends, log) = backend_choice(std::env::var(BACKEND_VAR).ok().as_deref())?;
+        eprintln!("{log}");
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends,
             ..wgpu::InstanceDescriptor::new_without_display_handle()
@@ -321,21 +348,68 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         identity_round_trips(&h);
     }
 
+    fn rejects_naming_the_variable(value: &str) {
+        let err = backend_from(Some(value)).expect_err("an unknown backend was accepted");
+        assert!(
+            err.0.contains(BACKEND_VAR),
+            "error does not name {BACKEND_VAR}: {err}"
+        );
+    }
+
     #[test]
-    fn gpu_backend_env_rejects_unset_and_unknown() {
-        for value in [None, Some("dx12")] {
-            let err = backend_from(value).expect_err("an unset or unknown backend was accepted");
-            assert!(
-                err.0.contains(BACKEND_VAR),
-                "error does not name {BACKEND_VAR}: {err}"
-            );
-        }
+    fn gpu_backend_env_rejects_unknown() {
+        rejects_naming_the_variable("dx12");
         // Control: a known backend is accepted, so the rejection above is not unconditional.
         assert!(
             backend_from(Some("metal")).is_ok(),
             "control: metal was rejected"
         );
     }
+
+    crate::negative_control!(
+        gpu_backend_env_rejects_unknown,
+        "a known backend is not rejected",
+        rejects_naming_the_variable("metal")
+    );
+
+    /// The platform's backend for an unset variable (R-206), and the log line that says so.
+    fn unset_selects(want: wgpu::Backends, name: &str) {
+        let (backends, log) = backend_choice(None).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(backends, want, "unset {BACKEND_VAR} selected {backends:?}");
+        assert_eq!(
+            log,
+            format!("gpu backend: {name} (platform default, {BACKEND_VAR} unset)")
+        );
+    }
+
+    #[test]
+    fn gpu_backend_env_unset_defaults_by_platform() {
+        if cfg!(target_os = "macos") {
+            unset_selects(wgpu::Backends::METAL, "metal");
+        } else {
+            unset_selects(wgpu::Backends::VULKAN, "vulkan");
+        }
+        // Control: an explicit value overrides the default and is logged as coming from the variable.
+        for (value, want) in [
+            ("metal", wgpu::Backends::METAL),
+            ("vulkan", wgpu::Backends::VULKAN),
+        ] {
+            assert_eq!(
+                backend_choice(Some(value)),
+                Ok((want, format!("gpu backend: {value} (from {BACKEND_VAR})")))
+            );
+        }
+    }
+
+    crate::negative_control!(
+        gpu_backend_env_unset_defaults_by_platform,
+        "the other platform's backend is not the default",
+        if cfg!(target_os = "macos") {
+            unset_selects(wgpu::Backends::VULKAN, "vulkan")
+        } else {
+            unset_selects(wgpu::Backends::METAL, "metal")
+        }
+    );
 
     #[test]
     fn gpu_backend_env_selects_backend() {
