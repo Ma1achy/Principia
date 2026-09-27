@@ -1209,11 +1209,11 @@ validation::negative_control!(
 validation::negative_control!(
     deps_a_kernel_or_ledger_lib_outside_src_fails,
     "the libraries at src/lib.rs, required to fail",
-    expected = "control: the libraries at src/lib.rs were refused",
+    expected = "control: the libraries at src/lib.rs were accepted",
     {
         target_metadata("control_inside", Some("src/lib.rs"))
             .check_targets(true)
-            .expect_err("control: the libraries at src/lib.rs were refused");
+            .expect_err("control: the libraries at src/lib.rs were accepted");
     }
 );
 
