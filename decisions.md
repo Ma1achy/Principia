@@ -1737,7 +1737,7 @@ Each earlier part gets a requirement of its own, as R-209 did, and the last keep
   replaced (REQ-VAL-158), the controls for qa's 33 xtask tests and `controls` in `cargo xtask ci` (REQ-VAL-007). It
   depends on TASK-M0-26 and TASK-M0-27, so every task waiting on it still waits for all three.
 
-## R-217 — TASK-M0-26 accepted at 532 counted lines; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*
+## R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*
 *27 Sep 2026 · applied in TASK-M0-26*
 
 "On PR #27: size accepted. The timeout item is vetoed; fix it before merging:
@@ -1750,7 +1750,7 @@ Each earlier part gets a requirement of its own, as R-209 did, and the last keep
 The error-return item stands."
 
 *Applied note:* the human gave this as "R-216", which already records TASK-M0-22's split (RQ-148); it is recorded here
-as R-217. "Size accepted" is TASK-M0-26's 532 counted lines against the ~500 budget. The timeout item vetoed is PR
+as R-217. "Size accepted" is PR #27's size as it merges: 532 counted lines at the head reviewed, plus the fix this ruling requires, against the ~500 budget. The timeout item vetoed is PR
 #27's "applied per R-204 — veto?" item 2 (kill only the direct child); item 1 (the helper returns `io::Result`)
 stands. R-214's "kills the child" now means the child's whole process group, and its 120 s becomes 300 s, still
 provisional (R-71, R-182). REQ-VAL-155 and REQ-VAL-156 carry both; TASK-M0-26 applies them.

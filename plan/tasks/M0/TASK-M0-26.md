@@ -21,7 +21,7 @@ The first of R-216's three parts of TASK-M0-22. Every child process a test spawn
 - `decisions.md` § "R-213 — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*"
 - `decisions.md` § "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
 - `decisions.md` § "R-216 — TASK-M0-22 is split three ways under R-211 *(closes RQ-148)*"
-- `decisions.md` § "R-217 — TASK-M0-26 accepted at 532 counted lines; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
+- `decisions.md` § "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
 
 ## Deliverables
 - A shared child-spawn helper in `crates/validation`: it waits at most the timeout (300 s, provisional, REQ-VAL-156, R-217) and on timeout kills the child and fails naming it; on Unix the child runs in its own process group, and on timeout the whole group gets SIGTERM, then SIGKILL after a 5 s grace, and is reaped (R-217). Every test that spawns a child uses it, qa's merged files included, under R-214's one-round exception limited to replacing the spawn call (R-214).
@@ -39,4 +39,4 @@ The first of R-216's three parts of TASK-M0-22. Every child process a test spawn
 
 ## Notes
 - R-216 (closes RQ-148): TASK-M0-22 is split into this task, TASK-M0-27 and TASK-M0-22 itself, which comes last.
-- R-217 (amends R-214): the task is accepted at 532 counted lines; a timed-out child's whole process group is killed; the timeout is 300 s provisional.
+- R-217 (amends R-214): the task's size is accepted as it merges (532 counted lines at the head reviewed, plus the fix R-217 requires); a timed-out child's whole process group is killed; the timeout is 300 s provisional.

@@ -17802,7 +17802,7 @@
   - file: decisions.md
     section: R-210 — Subprocess bodies leave libtest *(closes RQ-142)*
   - file: decisions.md
-    section: "R-217 — TASK-M0-26 accepted at 532 counted lines; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
+    section: "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
   verify:
     method: unit test
     detail: "a child that sleeps past a short test timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child that starts a grandchild and then hangs: after the timeout both are gone and no process from its group remains (R-217); a child that exits in time returns its output; no test in the workspace spawns a child except through the helper (review checklist); `cargo test -- --list` lists no child path of `qa_R-206.rs`"
@@ -17822,7 +17822,7 @@
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
-    section: "R-217 — TASK-M0-26 accepted at 532 counted lines; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
+    section: "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
   verify:
     method: review checklist
     detail: "the helper carries 300 s, marked provisional until the human confirms or changes it at the M0 gate (R-182); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom 300 s leaves"
