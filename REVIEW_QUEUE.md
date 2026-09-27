@@ -2502,3 +2502,4 @@ Tick any you don't accept.
   stalling every freshly built binary at `_dyld_start` for more than five minutes. If it doesn't fit, it's a conflict
   between R-214's 120 s and R-198's registration, and it will come back here with the measured time.
 - **Needed:** a ruling on the size.
+- **Ruling:** R-216 (decisions.md). Closed in TASK-M0-22.
