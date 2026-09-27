@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 134 |
-| VAL | 152 |
+| VAL | 155 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1236** |
+| **total** | **1239** |
 
-Of these: 96 calibration, 101 definition, 1039 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 97 calibration, 101 definition, 1041 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 74 |
+| M0 | 77 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 96 calibration, 101 definition, 1039 obligation. Retired (kept for the
 
 ## Sections
 
-901 sections in 46 files: 790 yield at least one requirement; 111 yield none and are listed below with the reason.
+906 sections in 46 files: 794 yield at least one requirement; 112 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 63 |
+| informative only | 64 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -72,6 +72,7 @@ Of these: 96 calibration, 101 definition, 1039 obligation. Retired (kept for the
 | R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)* | informative only | plan ruling (a task's size and a dependency); applied in plan/tasks.yaml and the TASK-M0-16 and TASK-M0-22 task files; no requirement |
 | R-204 — When to ask the human | informative only | process ruling; recorded in CLAUDE.md |
 | R-205 — TASK-M0-04 is accepted at 570 code lines | informative only | process ruling; a size acceptance for one PR |
+| R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)* | informative only | process ruling; two size acceptances, and what the budget counts (recorded in plan/WORKFLOW.md) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
