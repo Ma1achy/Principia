@@ -1788,3 +1788,20 @@ one-commit check run in that worktree; the orchestrator pushes qa's commit from 
 R-220, after the two rulings the human numbered in the same message. The size is PR #29's as it merged, against the
 ~500 budget (R-211). The item that stands is PR #29's "applied per R-204 — veto?" item 1: `qa_TASK-M0-21_r2.rs` uses the
 shared fixture and xtask helpers instead of its own variant.
+
+## R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+Asked in RQ-149, the human chose "Split": the four-way split RQ-149 lists as option 2. Each earlier part gets a
+requirement of its own, as R-209 and R-216 did, and the last keeps REQ-VAL-007.
+
+*Applied:*
+- TASK-M0-28 (part (a), ~400 counted lines): the implementer's duplicated inline controls removed and its copied gpu and
+  prop checks replaced (REQ-VAL-158), and the shader text shared (REQ-VAL-159, R-218).
+- TASK-M0-29 (part (b1), ~480): qa's helpers and inline checks in `xtask/tests/qa_TASK-M0-01.rs` and `_live` moved into
+  shared test-support modules, moves only (REQ-VAL-160).
+- TASK-M0-30 (part (b2), ~420): the same for `_r191`, `_r193` and `_r194` (REQ-VAL-161).
+- TASK-M0-22 (part (c), ~60): the 33 controls and `controls` in `cargo xtask ci` (REQ-VAL-007). It depends on
+  TASK-M0-28, -29 and -30, so every task waiting on it still waits for all four.
+The edits to qa's merged files in TASK-M0-29 and TASK-M0-30 are limited to replacing a helper or an inline check with a
+call to the shared module, under R-215's one-round exception, with qa reviewing.

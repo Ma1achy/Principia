@@ -2545,3 +2545,4 @@ Tick any you don't accept.
      this part and ~400 for the task. It departs from R-209's "in new targets where they can", and has the implementer
      add to qa's merged files.
 - **Needed:** a ruling on the size and the form.
+- **Ruling:** R-221 (decisions.md). Closed in TASK-M0-22.

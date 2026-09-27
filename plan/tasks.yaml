@@ -183,9 +183,9 @@
 - id: TASK-M0-22
   milestone: M0
   title: "Controls for qa's xtask tests, and `controls` in `cargo xtask ci`"
-  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-28, TASK-M0-29, TASK-M0-30]
   needs: []
-  requirements: [REQ-VAL-007, REQ-VAL-158, REQ-VAL-159]
+  requirements: [REQ-VAL-007]
   reviewers: [code, qa]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M0-23
@@ -226,6 +226,30 @@
   depends_on: [TASK-M0-26]
   needs: []
   requirements: [REQ-VAL-157]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-28
+  milestone: M0
+  title: "The implementer's duplicated controls and copied checks, and the shared shader text"
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
+  needs: []
+  requirements: [REQ-VAL-158, REQ-VAL-159]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3, PIT-9]
+- id: TASK-M0-29
+  milestone: M0
+  title: "qa's xtask helpers and checks move into shared modules: qa_TASK-M0-01 and _live"
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
+  needs: []
+  requirements: [REQ-VAL-160]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-30
+  milestone: M0
+  title: "qa's xtask helpers and checks move into shared modules: _r191, _r193, _r194"
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27]
+  needs: []
+  requirements: [REQ-VAL-161]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M1-01
