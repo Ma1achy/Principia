@@ -17862,6 +17862,18 @@
   - R-215
   - R-216
   milestone: M0
+- id: REQ-VAL-159
+  area: VAL
+  statement: "An input a control must share with its test (shader text, a fixture, a constant) must live once, in the shared test-support module that both use, as a check does (R-215, R-218); the duplicated GPU shader text in `crates/validation/tests/qa_TASK-M0-04_controls.rs` moves there. An input that is the control's own (a mutated kernel, a contaminated input) stays with the control."
+  source:
+  - file: decisions.md
+    section: "R-218 — Inputs a control shares with its test live in the shared module too *(extends R-215)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: no input the test and its control both need is copied between qa's test files and the controls targets; qa's merged files change only where a copy is replaced by a reference to the shared item (R-215's one-round exception); every registered control still trips its test's assertion (`cargo xtask controls`)"
+  rulings:
+  - R-218
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

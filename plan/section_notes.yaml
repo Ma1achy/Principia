@@ -446,3 +446,11 @@
   section: R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
   reason: informative only
   note: process ruling; two size acceptances, and what the budget counts (recorded in plan/WORKFLOW.md)
+- file: decisions.md
+  section: R-219 — Reviewers never share a checkout
+  reason: informative only
+  note: process ruling; each reviewer gets its own worktree and target directory (recorded in CLAUDE.md and .claude/agents/)
+- file: decisions.md
+  section: R-220 — TASK-M0-27's size accepted; its veto item stands
+  reason: informative only
+  note: process ruling; a size acceptance for one PR

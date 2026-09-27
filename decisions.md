@@ -1754,3 +1754,37 @@ as R-217. "Size accepted" is PR #27's size as it merges: 532 counted lines at th
 #27's "applied per R-204 — veto?" item 2 (kill only the direct child); item 1 (the helper returns `io::Result`)
 stands. R-214's "kills the child" now means the child's whole process group, and its 120 s becomes 300 s, still
 provisional (R-71, R-182). REQ-VAL-155 and REQ-VAL-156 carry both; TASK-M0-26 applies them.
+
+## R-218 — Inputs a control shares with its test live in the shared module too *(extends R-215)*
+*27 Sep 2026 · applied in TASK-M0-22*
+
+"R-215's shared-module rule extends to inputs a control must share with its test (shader text, fixtures, constants),
+not just checks. M0-22 moves the duplicated GPU shader text in qa_TASK-M0-04_controls.rs into the shared support
+module, under the same exception for QA's files."
+
+*Applied:* REQ-VAL-159 (new) carries it, closed by TASK-M0-22. R-215's one-round exception for editing qa's merged
+files covers this move: a copied input is replaced by a reference to the shared one, and nothing else changes, with qa
+reviewing. An input that is the control's own (a mutated kernel, a contaminated input) is not a copy and stays with the
+control.
+
+## R-219 — Reviewers never share a checkout
+*27 Sep 2026 · applied in CLAUDE.md and `.claude/agents/`*
+
+"Reviewers never share a checkout. The orchestrator gives each reviewer its own git worktree and its own
+CARGO_TARGET_DIR, and removes them afterwards. Add this to CLAUDE.md and the agent definitions."
+
+*Applied:* each reviewer runs in a worktree the orchestrator makes at the PR head (detached), with its own
+`CARGO_TARGET_DIR`, both named in the dispatch. The read-only checks (`git status --porcelain`, HEAD unmoved) and qa's
+one-commit check run in that worktree; the orchestrator pushes qa's commit from it
+(`git push origin HEAD:task/<TASK-id>`), then removes the worktree and the target directory. Process only
+(section_notes); no requirement changes.
+
+## R-220 — TASK-M0-27's size accepted; its veto item stands
+*27 Sep 2026 · applied in TASK-M0-27*
+
+"PR #29: size accepted (R-217), and the veto item stands."
+
+*Applied note:* the human cited this as "R-217", which already records TASK-M0-26's ruling; it is recorded here as
+R-220, after the two rulings the human numbered in the same message. The size is PR #29's as it merged, against the
+~500 budget (R-211). The item that stands is PR #29's "applied per R-204 — veto?" item 1: `qa_TASK-M0-21_r2.rs` uses the
+shared fixture and xtask helpers instead of its own variant.
