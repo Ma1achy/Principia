@@ -462,3 +462,7 @@
   section: R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)*
   reason: informative only
   note: process ruling; what the size budget counts (recorded in plan/WORKFLOW.md)
+- file: decisions.md
+  section: R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
+  reason: informative only
+  note: process ruling; what the size budget counts (recorded in plan/WORKFLOW.md), and a size acceptance for one PR

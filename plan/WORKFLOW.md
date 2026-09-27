@@ -34,9 +34,11 @@ does what, in what order, and what stops the line.
 Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`; the two agree exactly (checked by
 `plan/check_plan.py`). Task ids are `TASK-<Mn>-<nn>`, in build order within the milestone.
 - **One task is one reviewable PR:** roughly ≤ 500 lines of change.
-- **What the budget counts (R-211, R-223):** added and changed lines (a diff's `+` lines) in implementation code and the
-  implementer's own tests. Pure deletions, qa's test commits and `negative_control!` blocks don't count. A PR within
-  ~500 on that count raises no size question, and a task is pre-split only if that count looks set to exceed ~500.
+- **What the budget counts (R-211, R-223, R-225):** added and changed lines (a diff's `+` lines) in implementation code
+  and the implementer's own tests. Pure deletions, lines moved verbatim (the same text deleted elsewhere in the same
+  diff), qa's test commits and `negative_control!` blocks don't count. A PR
+  within ~500 on that count raises no size question, and a task is pre-split only if that count looks set to exceed
+  ~500.
 - **Every live requirement is closed by exactly one task, and every task closes at least one.** A task's milestone
   is never later than the milestones of the requirements it closes.
 - **Calibration requirements** (R-71) are closed by the task that needs the value. Its deliverable is the proposal

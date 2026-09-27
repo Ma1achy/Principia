@@ -1842,3 +1842,15 @@ Then TASK-M0-29."
 *Applied:* TASK-M0-31 (new, REQ-VAL-162) carries it, and TASK-M0-29 depends on it. Both tests are in qa's merged files
 (`crates/validation/tests/qa_TASK-M0-26.rs`, `qa_TASK-M0-25.rs`), so the fix edits them under a one-round exception
 limited to what the fix needs, with qa reviewing, as R-215's did.
+
+## R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
+*27 Sep 2026 · applied in plan/WORKFLOW.md and TASK-M0-30*
+
+Asked whether code moved verbatim counts toward the budget (TASK-M0-30 counted 657 added lines under R-223, nearly all
+of them qa's helpers moved into support modules), the human chose "Moves don't count": accept TASK-M0-30, and from now on
+lines moved verbatim — the same text, shown by the diff as a deletion and an addition — count like deletions; only new
+or changed lines count.
+
+*Applied:* a PR's counted size is its added lines, less those that are the same text as a line the same diff deletes
+(a verbatim move), in implementation code and the implementer's own tests, leaving out qa's commits and
+`negative_control!` blocks (R-211, R-223). A line moved and then edited counts. PR #33 (TASK-M0-30) is accepted on size.

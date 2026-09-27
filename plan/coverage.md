@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1047 obligation. Retired (kept for the
 
 ## Sections
 
-915 sections in 46 files: 799 yield at least one requirement; 116 yield none and are listed below with the reason.
+916 sections in 46 files: 799 yield at least one requirement; 117 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 68 |
+| informative only | 69 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -77,6 +77,7 @@ Of these: 97 calibration, 101 definition, 1047 obligation. Retired (kept for the
 | R-220 — TASK-M0-27's size accepted; its veto item stands | informative only | process ruling; a size acceptance for one PR |
 | R-222 — TASK-M0-28's size accepted; its veto items stand | informative only | process ruling; a size acceptance for one PR |
 | R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md) |
+| R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md), and a size acceptance for one PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
