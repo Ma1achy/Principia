@@ -15314,6 +15314,8 @@
     section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
   - file: decisions.md
     section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
+  - file: decisions.md
+    section: "R-209 — TASK-M0-22 is split three ways, each part closing its own requirement *(closes RQ-141)*"
   verify:
     method: review checklist
     detail: "Each test in the suite has a recorded negative control that makes it fail (mutation or contaminated input); arithmetically impossible tests (e.g. expecting thousands of distinct values from a fraction over N² = 64 footprints) and tests true by construction (n_hot < N² under a quantile rule) are rejected."
@@ -15321,6 +15323,7 @@
   - R-176
   - R-198
   - R-199
+  - R-209
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\"; pitfall: \"9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN\" — 3. — CHECK THE MEASUREMENT CAN FIRE BEFORE READING IT; 9. general form: a check whose reachable output set does not include the failure."
 - id: REQ-VAL-008
@@ -17725,6 +17728,46 @@
   - R-71
   - R-182
   - R-203
+  milestone: M0
+- id: REQ-VAL-152
+  area: VAL
+  statement: "Every test the implementer merged before TASK-M0-22 must have a registered negative control that makes it fail (R-199): validation's `gpu` and `prop` unit tests and xtask's `ci`, `controls` and `deps` tests; xtask must declare the `controls` feature with a dev-dependency on `crates/validation` (R-176); and the example in `crates/validation/src/control.rs` must be a non-test block, since a doctest in a controls crate counts as a test without a control (R-208)."
+  source:
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-209 — TASK-M0-22 is split three ways, each part closing its own requirement *(closes RQ-141)*"
+  - file: decisions.md
+    section: "R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*"
+  - file: decisions.md
+    section: "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first"
+  verify:
+    method: unit test
+    detail: "`cargo xtask controls` on the PR head reports each of these tests paired with a control that makes it fail, and lists no doctest for validation; qa checklist: each control is discriminating"
+  rulings:
+  - R-176
+  - R-199
+  - R-208
+  - R-209
+  milestone: M0
+- id: REQ-VAL-153
+  area: VAL
+  statement: "Every qa test in `crates/validation` and `crates/prin` merged before TASK-M0-22 must have a registered negative control that makes it fail (R-199), and prin must declare the `controls` feature with a dev-dependency on `crates/validation` (R-176); a subprocess body a test spawns must not be a `#[test]` but live in a `harness = false` test target or a bin whose `main` the parent spawns (R-210)."
+  source:
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.4 A test that cannot fail is not a test
+  - file: decisions.md
+    section: "R-209 — TASK-M0-22 is split three ways, each part closing its own requirement *(closes RQ-141)*"
+  - file: decisions.md
+    section: R-210 — Subprocess bodies leave libtest *(closes RQ-142)*
+  verify:
+    method: unit test
+    detail: "`cargo xtask controls` on the PR head reports each of these tests paired with a control that makes it fail, and lists none of `qa_child_open_harness`, `qa_child_failing_property`, `qa_child_count_cases`; the parent tests that spawn them still pass, and still fail under their controls"
+  rulings:
+  - R-176
+  - R-199
+  - R-209
+  - R-210
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

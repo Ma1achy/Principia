@@ -182,8 +182,8 @@
   pitfalls: []
 - id: TASK-M0-22
   milestone: M0
-  title: "Controls for every merged test, and `controls` in `cargo xtask ci`"
-  depends_on: [TASK-M0-04, TASK-M0-21]
+  title: "Controls for qa's xtask tests, and `controls` in `cargo xtask ci`"
+  depends_on: [TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25]
   needs: []
   requirements: [REQ-VAL-007]
   reviewers: [code, qa]
@@ -196,6 +196,22 @@
   requirements: [REQ-VAL-148, REQ-VAL-149]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-24
+  milestone: M0
+  title: "Controls for the implementer's merged tests, and xtask's `controls` feature"
+  depends_on: [TASK-M0-04, TASK-M0-21]
+  needs: []
+  requirements: [REQ-VAL-152]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-25
+  milestone: M0
+  title: "Controls for qa's validation and prin tests; subprocess bodies leave libtest"
+  depends_on: [TASK-M0-04, TASK-M0-21]
+  needs: []
+  requirements: [REQ-VAL-153]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
