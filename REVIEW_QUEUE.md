@@ -2356,3 +2356,22 @@ Tick any you don't accept.
   (for example a name prefix the command skips); (c) something else.
 - **Needed:** a ruling before whichever part covers qa's validation tests.
 - **Ruling:** R-210 (decisions.md). Closed in TASK-M0-25.
+
+## RQ-143: TASK-M0-24 is 638 lines, over its ~500 budget *(plan, TASK-M0-24)*
+
+- **File, section:** `decisions.md` § "R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split
+  first": "if a task looks set to exceed ~500 lines, propose a split in REVIEW_QUEUE before implementing it";
+  `plan/tasks/M0/TASK-M0-24.md` "**Size:** ~450–500 lines".
+- **What happened:** the implementer trusted the task file's estimate and found the overrun only in the finished,
+  formatted diff: 53 new controls at ~10 lines each after rustfmt, plus helpers. The change is complete: 638 lines
+  (629 insertions, 9 deletions). By file: `xtask/tests/deps.rs` 344, `crates/validation/tests/controls.rs` 116 (new),
+  `xtask/tests/controls.rs` 115, `xtask/tests/ci.rs` 40, `.github/workflows/ci.yml` 12, `xtask/Cargo.toml` 8,
+  `crates/validation/src/control.rs` 2, `Cargo.lock` 1. It is open as a PR for review, not merged.
+- **Split proposed by the implementer:** (a) ~290 lines: xtask's `controls` feature and dev-dependency, the
+  `control.rs` example as a `text` block, `--features controls` on the GPU jobs, validation's 7 controls, and the
+  controls for `xtask/tests/ci.rs` (3) and `controls.rs` (14); (b) ~345 lines: the 29 `xtask/tests/deps.rs` controls
+  and their cleanup helper, depending on (a). As R-209 did, the second part would need a requirement of its own.
+- **Options seen:** (a) accept TASK-M0-24 at 638 lines as one PR, as R-205 and R-208 did; (b) the two-way split, with
+  a new requirement for part (b); (c) something else.
+- **Also:** TASK-M0-25 and TASK-M0-22 were estimated the same way (~400–500), so they may overrun too.
+- **Needed:** a ruling on the size.
