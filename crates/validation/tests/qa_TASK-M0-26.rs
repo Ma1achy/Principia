@@ -418,7 +418,10 @@ fn build_old_form(add_expected: bool) -> Output {
         );
         std::fs::write(&test, body).unwrap();
     }
+    // The copy's own target directory, as R-208 gave `deps.rs`: the test and its control never reuse each other's
+    // build (R-224).
     let o = cargo()
+        .env("CARGO_TARGET_DIR", copy.join("target"))
         .args([
             "test",
             "--no-run",
