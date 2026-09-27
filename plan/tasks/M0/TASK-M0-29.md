@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-VAL-160
-- **Depends on:** TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27
+- **Depends on:** TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-31
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** PIT-3
@@ -27,3 +27,4 @@ The second of R-221's four parts of TASK-M0-22. The helpers and inline checks in
 
 ## Notes
 - R-221 (closes RQ-149): part (b1) of the split. RQ-149 counted the helpers to move from the files' non-blank lines at `f71765e`.
+- R-224: the two flaky qa tests are fixed first, in TASK-M0-31.

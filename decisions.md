@@ -1805,3 +1805,40 @@ requirement of its own, as R-209 and R-216 did, and the last keeps REQ-VAL-007.
   TASK-M0-28, -29 and -30, so every task waiting on it still waits for all four.
 The edits to qa's merged files in TASK-M0-29 and TASK-M0-30 are limited to replacing a helper or an inline check with a
 call to the shared module, under R-215's one-round exception, with qa reviewing.
+
+## R-222 — TASK-M0-28's size accepted; its veto items stand
+*27 Sep 2026 · applied in TASK-M0-28*
+
+"PR #31: size accepted, and all three veto items stand."
+
+*Applied note:* PR #31 counted 572 lines against the ~500 budget (R-211), 379 of them deletions. The items that stand:
+two removed inline controls broader than the registered ones that replace them
+(`deps_a_unit_test_of_a_binary_with_test_false_fails`, one manifest form of three; `deps.rs:251`'s exactly-one-edge
+check); `words()` kept as the controls' own input; `metal_hosted_probe`'s control asserting the other platform's
+expectation through the test's own check.
+
+## R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)*
+*27 Sep 2026 · applied in plan/WORKFLOW.md*
+
+"So size stops needing a ruling every PR: the ~500-line budget counts added and changed lines only. Pure deletions
+don't count (R-211's exclusions still apply). A PR within budget under this rule needs no size question."
+
+*Applied:* a PR's counted size is its added lines (`+` lines of the diff; a changed line shows as one `-` and one `+`,
+and counts once, by its `+`), in implementation code and the implementer's own tests, leaving out qa's commits and
+`negative_control!` blocks (R-211). A PR within ~500 on that count raises no size question; a task is pre-split
+(R-208) only if that count looks set to exceed ~500.
+
+## R-224 — The two flaky tests are fixed before TASK-M0-29
+*27 Sep 2026 · applied in TASK-M0-31*
+
+"Fix both flaky tests next, before TASK-M0-29, as one small follow-up:
+- qa_m0_26_a_control_without_an_expected_message_does_not_compile: give the test and its control separate target
+  directories, as R-208 did for deps.rs.
+- qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on: find the actual cause of the failure under load
+  (timing, shared resources, a timeout), fix that, and show the reason in the PR. Don't just add retries.
+- Prove each fix: run the whole workspace suite 20 times under load, with no failures.
+Then TASK-M0-29."
+
+*Applied:* TASK-M0-31 (new, REQ-VAL-162) carries it, and TASK-M0-29 depends on it. Both tests are in qa's merged files
+(`crates/validation/tests/qa_TASK-M0-26.rs`, `qa_TASK-M0-25.rs`), so the fix edits them under a one-round exception
+limited to what the fix needs, with qa reviewing, as R-215's did.
