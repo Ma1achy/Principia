@@ -80,7 +80,7 @@ fn read_pid(file: &Path) -> String {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-VAL-156: the helper's timeout is 120 s, provisional.
+// REQ-VAL-156: the helper's timeout is 300 s, provisional (R-217).
 
 fn check_timeout_is(want: Duration) {
     assert_eq!(
@@ -91,7 +91,7 @@ fn check_timeout_is(want: Duration) {
 
 #[test]
 fn qa_m0_26_the_timeout_is_the_provisional_120_s() {
-    check_timeout_is(Duration::from_secs(120));
+    check_timeout_is(Duration::from_secs(300));
 }
 
 negative_control!(
