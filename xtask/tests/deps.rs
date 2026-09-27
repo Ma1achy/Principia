@@ -929,3 +929,113 @@ fn deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace() {
     );
     let _ = std::fs::remove_dir_all(&outside);
 }
+
+/// Sets the modification time of every file under `dir` to 1 January 2000, as a copy that keeps its source's times
+/// (`cp -p`, an archive) leaves a file older than any build.
+fn make_old(dir: &std::path::Path) {
+    let old = std::time::UNIX_EPOCH + std::time::Duration::from_secs(946_684_800);
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            make_old(&path);
+        } else {
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_modified(old)
+                .unwrap();
+        }
+    }
+}
+
+/// Removes kernel's build script from the synthetic workspace at `root`. The check rewrites kernel's manifest, so a
+/// build script, which cargo reruns when a file of its package is newer, would make cargo check kernel again anyway
+/// and hide a reused build.
+fn without_build_script(root: &std::path::Path) {
+    std::fs::remove_file(root.join("crates/kernel/build.rs")).unwrap();
+}
+
+/// R-208: two workspaces with the same member names share one `CARGO_TARGET_DIR` outside them. Workspace B, whose
+/// kernel has a unit test that uses validation and whose files are older than any build, is checked after workspace A,
+/// the same without the unit test; B still fails, since the check does not reuse A's build. Controls: A passes in the
+/// shared directory (so there is a build to reuse), and B fails alone in a fresh one (so it is B's failure).
+#[test]
+fn deps_a_workspace_does_not_reuse_another_workspaces_check_build() {
+    let shared = std::env::temp_dir().join(format!("xtask-deps-shared-{}", std::process::id()));
+    let fresh = std::env::temp_dir().join(format!("xtask-deps-fresh-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&shared);
+    let _ = std::fs::remove_dir_all(&fresh);
+    let lib = "crates/kernel/src/lib.rs";
+    let b = cargo_workspace("shared_target_b", &["kernel"], &[(lib, UNIT_TEST)]);
+    without_build_script(&b);
+    make_old(&b);
+    let a = cargo_workspace("shared_target_a", &["kernel"], &[]);
+    without_build_script(&a);
+
+    let (ok, stdout, stderr) = run_workspace_in(&b, &fresh);
+    assert!(
+        !ok && stderr.contains("R-191"),
+        "control: B passes alone in a fresh target directory:\n{stdout}\n{stderr}"
+    );
+    let (ok, stdout, stderr) = run_workspace_in(&a, &shared);
+    assert!(
+        ok && stdout.contains("compile check passed: kernel compiles"),
+        "control: A fails in the shared target directory:\n{stdout}\n{stderr}"
+    );
+    let (ok, stdout, stderr) = run_workspace_in(&b, &shared);
+    assert!(
+        !ok && stderr.contains("R-191") && stderr.contains("error[E04"),
+        "B passes after A in the shared target directory, reusing A's build:\n{stdout}\n{stderr}"
+    );
+    let _ = std::fs::remove_dir_all(&shared);
+    let _ = std::fs::remove_dir_all(&fresh);
+}
+
+/// R-208: in one workspace, a unit test that uses validation, written after a passing check with a modification time
+/// older than that check, still fails: the check does not take the old copy's build for the new source. Control: the
+/// same workspace passed just before, in the same target directory.
+#[test]
+fn deps_an_edit_with_an_old_modification_time_is_checked_again() {
+    let root = cargo_workspace("old_mtime_edit", &["kernel"], &[]);
+    without_build_script(&root);
+    let (ok, stdout, stderr) = run_workspace(&root);
+    assert!(
+        ok && stdout.contains("compile check passed: kernel compiles"),
+        "control: the workspace without the unit test fails:\n{stdout}\n{stderr}"
+    );
+    std::fs::write(root.join("crates/kernel/src/lib.rs"), UNIT_TEST).unwrap();
+    make_old(&root.join("crates"));
+    let (ok, stdout, stderr) = run_workspace(&root);
+    assert!(
+        !ok && stderr.contains("R-191") && stderr.contains("error[E04"),
+        "an edit older than the last check passes, reusing that check's build:\n{stdout}\n{stderr}"
+    );
+}
+
+/// R-208: the check's directory is `xtask-deps-check/<root's name>-<FNV-1a hash of the root's path>` under the target
+/// directory, so each root has its own, and the same one on every run. Pinned to FNV-1a's published values ("a" is
+/// 0xaf63dc4c8601ec8c, the empty string 0xcbf29ce484222325). Control: two roots with the same name differ.
+#[test]
+fn deps_the_check_directory_is_keyed_by_the_workspace_root() {
+    use std::path::Path;
+    use xtask::deps::check_target_dir;
+    let target = Path::new("/t");
+    assert_eq!(
+        check_target_dir(target, Path::new("a")),
+        Path::new("/t/xtask-deps-check/a-af63dc4c8601ec8c")
+    );
+    assert_eq!(
+        check_target_dir(target, Path::new("")),
+        Path::new("/t/xtask-deps-check/workspace-cbf29ce484222325")
+    );
+    assert_eq!(
+        check_target_dir(target, Path::new("/x/ws")),
+        check_target_dir(target, Path::new("/x/ws"))
+    );
+    assert_ne!(
+        check_target_dir(target, Path::new("/x/ws")),
+        check_target_dir(target, Path::new("/y/ws")),
+        "control: two roots with the same name share a check directory"
+    );
+}

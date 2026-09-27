@@ -454,7 +454,31 @@ pub const NO_VALIDATION_IN_SRC: &[&str] = &["kernel", "ledger"];
 
 /// Where, under the workspace's target directory, the compile check keeps its own target directory: stable, so that
 /// the check is incremental, and separate, so that it never contends with the build that runs `xtask`.
+/// Each workspace checks in its own subdirectory, `check_target_dir`, since a `CARGO_TARGET_DIR` set outside the
+/// repository is shared by every workspace (R-208).
 pub const CHECK_TARGET_DIR: &str = "xtask-deps-check";
+
+/// The compile check's target directory for the workspace at `root`: `CHECK_TARGET_DIR/<name>-<key>` under `target`,
+/// where `<key>` is a hash of the root's path. Cargo keys a path package's build by its name and its path relative to
+/// the workspace, not by the workspace's location, so two workspaces with the same member names sharing one directory
+/// would reuse each other's builds; one directory per root keeps them apart, and keeps each one incremental (its
+/// registry dependencies are built once).
+pub fn check_target_dir(target: &Path, root: &Path) -> PathBuf {
+    // FNV-1a, 64-bit: stable across toolchains, unlike `DefaultHasher`, so a root keeps its directory.
+    let key = root
+        .as_os_str()
+        .as_encoded_bytes()
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+            (h ^ u64::from(*b)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    let name = root
+        .file_name()
+        .map_or_else(|| "workspace".into(), |n| n.to_string_lossy());
+    target
+        .join(CHECK_TARGET_DIR)
+        .join(format!("{name}-{key:016x}"))
+}
 
 /// What `compile_check` did when it did not fail.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -468,7 +492,7 @@ pub enum CompileCheck {
 /// R-187's condition, checked by compiling (R-191). When kernel or ledger takes `validation` as a dev-dependency, the
 /// workspace is copied to a temporary directory (`copy_workspace`), `validation` is removed from their
 /// dev-dependencies there, and `cargo check -p kernel -p ledger --lib --tests --offline` must pass in each feature set and profile, with
-/// `CARGO_TARGET_DIR` at `CHECK_TARGET_DIR` under the workspace's target directory. The copy also leaves out their
+/// `CARGO_TARGET_DIR` at `check_target_dir`, under the workspace's target directory. The copy also leaves out their
 /// integration-test, example and bench targets: those are not unit tests, and an integration test may use
 /// `validation` (R-187), so only the library and binary targets remain for `--tests` to compile in test mode; each has
 /// `test = true` there, so a `test = false` one is compiled in test mode too (`strip_manifest`). A use
@@ -568,7 +592,7 @@ fn check_copy(
                 .args(["--lib", "--tests", "--offline"])
                 .args(*feature_args)
                 .args(*profile_args)
-                .env("CARGO_TARGET_DIR", target.join(CHECK_TARGET_DIR))
+                .env("CARGO_TARGET_DIR", check_target_dir(target, root))
                 .output()
                 .map_err(|e| format!("cannot run cargo check: {e}"))?;
             if output.status.success() {
@@ -725,12 +749,26 @@ fn copy_workspace(
                 Some("Cargo.toml" | "Cargo.lock")
             )
         {
-            std::fs::copy(&path, &dest).map_err(|e| err(&path, e))?;
+            copy_file(&path, &dest).map_err(|e| err(&path, e))?;
         } else {
             link(&path, &dest).map_err(|e| err(&path, e))?;
         }
     }
     Ok(())
+}
+
+/// Copies the file at `from` to `to`, modified now. A copy keeps its source's modification time on some platforms
+/// (macOS); cargo would then take a file older than the check's last build as unchanged and reuse that build, which
+/// may be of other source (another workspace, or this one before an edit that kept an old time, R-208). Every file the
+/// check copies is newer than every build before it, so cargo checks the copy's own crates again on each run.
+/// A read-only copy (the copy keeps the permissions) is opened for reading: on Unix its owner may still set its times.
+fn copy_file(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::copy(from, to)?;
+    std::fs::File::options()
+        .write(true)
+        .open(to)
+        .or_else(|_| std::fs::File::open(to))?
+        .set_modified(std::time::SystemTime::now())
 }
 
 /// Copies the tree at `from` to `to`, leaving out `skip`; a symbolic link is copied as a link.
@@ -752,7 +790,7 @@ fn copy_tree(from: &Path, to: &Path, skip: &[PathBuf]) -> Result<(), String> {
         } else if kind.is_dir() {
             copy_tree(&path, &dest, skip)?;
         } else {
-            std::fs::copy(&path, &dest).map_err(|e| err(&path, e))?;
+            copy_file(&path, &dest).map_err(|e| err(&path, e))?;
         }
     }
     Ok(())
