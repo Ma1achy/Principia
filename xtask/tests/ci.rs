@@ -52,3 +52,43 @@ fn ci_with_no_runners_passes() {
 fn ci_registry_is_empty_at_task_m0_01() {
     assert!(RUNNERS.is_empty());
 }
+
+/// A runner for the controls that fails without touching `ORDER`, which the tests read.
+#[cfg(feature = "controls")]
+fn failing() -> Result<(), String> {
+    Err("boom".to_owned())
+}
+
+validation::negative_control!(
+    ci_runs_runners_in_order_and_reports_failures,
+    "a run whose one runner passes, required to report it failed",
+    {
+        let passing = Runner {
+            name: "second",
+            run: || Ok(()),
+        };
+        assert!(run(&[passing]).unwrap_err().contains("second"));
+    }
+);
+
+validation::negative_control!(
+    ci_with_no_runners_passes,
+    "a run with a failing runner, required to pass",
+    assert_eq!(
+        run(&[Runner {
+            name: "failing",
+            run: failing,
+        }]),
+        Ok(())
+    )
+);
+
+validation::negative_control!(
+    ci_registry_is_empty_at_task_m0_01,
+    "a registry holding one runner, checked for emptiness",
+    assert!([Runner {
+        name: "failing",
+        run: failing,
+    }]
+    .is_empty())
+);

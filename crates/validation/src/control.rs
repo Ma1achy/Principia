@@ -2,7 +2,7 @@
 //! in the suite is one that cannot fail (philosophy §4.4; pitfalls §9). A crate reaches the macro through a
 //! dev-dependency on `validation` (R-176).
 //!
-//! ```ignore
+//! ```text
 //! fn check_double(x: u32, doubled: u32) {
 //!     assert_eq!(x * 2, doubled);
 //! }

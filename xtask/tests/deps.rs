@@ -1039,3 +1039,347 @@ fn deps_the_check_directory_is_keyed_by_the_workspace_root() {
         "control: two roots with the same name share a check directory"
     );
 }
+
+/// A control's case: `<name>_nc_<pid>`, so a control shares no synthetic workspace with a test, nor with itself run
+/// by the `cargo xtask controls` that `controls_on_this_workspace_skips_gui` starts. Dropped as the control panics,
+/// it removes the workspaces `<case>` and `<case>_control` and the temporary directory `<case>`.
+#[cfg(feature = "controls")]
+struct Case(String);
+
+#[cfg(feature = "controls")]
+impl Case {
+    fn new(name: &str) -> Self {
+        Case(format!("{name}_nc_{}", std::process::id()))
+    }
+
+    fn root(&self, dev: &[&str], files: &[(&str, &str)]) -> PathBuf {
+        cargo_workspace(&self.0, dev, files)
+    }
+
+    /// `run_workspace` on the case's workspace.
+    fn run(&self, dev: &[&str], files: &[(&str, &str)]) -> (bool, String, String) {
+        run_workspace(&self.root(dev, files))
+    }
+}
+
+#[cfg(feature = "controls")]
+impl Drop for Case {
+    fn drop(&mut self) {
+        let workspaces = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("deps_r191");
+        let _ = std::fs::remove_dir_all(workspaces.join(&self.0));
+        let _ = std::fs::remove_dir_all(workspaces.join(format!("{}_control", self.0)));
+        let _ = std::fs::remove_dir_all(std::env::temp_dir().join(&self.0));
+    }
+}
+
+#[cfg(feature = "controls")]
+const KERNEL_LIB: &str = "crates/kernel/src/lib.rs";
+
+validation::negative_control!(
+    deps_workspace_fixture_passes,
+    "a fixture with a forbidden edge, required to pass",
+    assert!(run_deps("metadata_kernel_engine.json").0)
+);
+
+validation::negative_control!(
+    deps_forbidden_kernel_to_engine_fails,
+    "another fixture's forbidden edge, required to name kernel → engine",
+    assert_fails_naming("metadata_engine_gui.json", "forbidden edge kernel → engine")
+);
+
+validation::negative_control!(
+    deps_forbidden_engine_to_gui_fails,
+    "another fixture's forbidden edge, required to name engine → gui",
+    assert_fails_naming("metadata_ledger_engine.json", "forbidden edge engine → gui")
+);
+
+validation::negative_control!(
+    deps_forbidden_ledger_to_engine_fails,
+    "another fixture's forbidden edge, required to name ledger → engine",
+    assert_fails_naming(
+        "metadata_kernel_engine.json",
+        "forbidden edge ledger → engine"
+    )
+);
+
+validation::negative_control!(
+    deps_forbidden_kernel_to_ledger_normal_fails_naming_kind,
+    "the workspace fixture, whose kernel → ledger edge is allowed, required to fail on it",
+    assert_fails_naming("metadata_workspace.json", "forbidden edge kernel → ledger")
+);
+
+validation::negative_control!(
+    deps_workspace_fixture_has_kernel_ledger_as_build_dependency,
+    "the fixture whose kernel → ledger edge is normal, required to hold it as a build-dependency",
+    {
+        let metadata = Metadata::from_file(&fixture("metadata_kernel_ledger_normal.json")).unwrap();
+        assert!(metadata
+            .edges()
+            .unwrap()
+            .contains(&edge("kernel", "ledger", DepKind::Build)));
+    }
+);
+
+validation::negative_control!(
+    deps_live_workspace_passes,
+    "the live graph with kernel → engine added, required to pass",
+    {
+        let mut edges = Metadata::from_cargo().unwrap().edges().unwrap();
+        edges.push(edge("kernel", "engine", DepKind::Normal));
+        assert_eq!(check(&edges), vec![]);
+    }
+);
+
+validation::negative_control!(
+    deps_table_allows_the_crate_map_edges,
+    "kernel → ledger as a dev-dependency, outside the crate map, required to be allowed",
+    assert!(!forbidden("kernel", "ledger", DepKind::Dev))
+);
+
+validation::negative_control!(
+    deps_table_forbids_edges_outside_the_crate_map,
+    "kernel → ledger as a build-dependency, in the crate map, required to be forbidden",
+    assert!(forbidden("kernel", "ledger", DepKind::Build))
+);
+
+validation::negative_control!(
+    deps_applies_r_187_to_the_validation_edges,
+    "kernel → validation as a normal dependency, required to be allowed",
+    assert_eq!(
+        check(&[edge("kernel", "validation", DepKind::Normal)]),
+        vec![]
+    )
+);
+
+validation::negative_control!(
+    deps_a_dependency_that_only_shares_a_member_name_is_not_an_edge,
+    "a path dependency on the member gui, required to be no edge",
+    {
+        let member = r#"{"name": "gui", "kind": null, "source": null, "path": "/ws/crates/gui"}"#;
+        assert_eq!(metadata_json(member).edges().unwrap(), vec![]);
+    }
+);
+
+validation::negative_control!(
+    deps_a_fixture_skips_the_compile_check_and_says_so,
+    "a workspace with sources, required to skip the compile check",
+    {
+        let (_, stdout, _) = Case::new("skip").run(&[], &[]);
+        assert!(stdout.contains("compile check skipped"), "{stdout}");
+    }
+);
+
+validation::negative_control!(
+    deps_a_kernel_or_ledger_lib_outside_src_fails,
+    "the libraries at src/lib.rs, required to fail",
+    {
+        target_metadata("control_inside", Some("src/lib.rs"))
+            .check_targets(true)
+            .unwrap_err();
+    }
+);
+
+validation::negative_control!(
+    deps_missing_targets_are_an_error_for_a_workspace,
+    "the metadata without targets read as a fixture, required to be an error",
+    {
+        target_metadata("control_no_targets", None)
+            .check_targets(false)
+            .unwrap_err();
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_using_validation_fails_and_an_integration_test_passes,
+    "the use as an integration test, required to fail to compile",
+    {
+        let case = Case::new("integration");
+        let tests = [("crates/kernel/tests/uses.rs", INTEGRATION_TEST)];
+        assert_fails_to_compile(
+            &case.0,
+            &case.root(&["kernel"], &tests),
+            "kernel",
+            KERNEL_LIB,
+        );
+    }
+);
+
+validation::negative_control!(
+    deps_every_route_to_validation_from_a_unit_test_fails,
+    "a `#[path]` route to a file that does not use validation, required to fail to compile",
+    {
+        let case = Case::new("route");
+        let lib = "#[cfg(test)]\n#[path = \"../outside/t.rs\"]\nmod t;\n";
+        let files = [
+            (KERNEL_LIB, lib),
+            ("crates/kernel/outside/t.rs", "#[test]\nfn t() {}\n"),
+        ];
+        assert_fails_to_compile(
+            &case.0,
+            &case.root(&["kernel"], &files),
+            "kernel",
+            "outside/t.rs",
+        );
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_behind_a_feature_using_validation_fails,
+    "the unit test behind feature x without the use, required to fail",
+    {
+        let (toml, lib) = (
+            kernel_manifest("x = []\n"),
+            gated_unit_test("feature = \"x\"", false),
+        );
+        let files = [
+            ("crates/kernel/Cargo.toml", toml.as_str()),
+            (KERNEL_LIB, &lib),
+        ];
+        assert!(!Case::new("feature").run(&[], &files).0);
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_behind_a_missing_feature_using_validation_fails,
+    "the failure required to name --all-features, which does not see the test",
+    {
+        let case = Case::new("missing_feature");
+        let gate = "not(feature = \"x\")";
+        let expected = "with --all-features in the dev profile";
+        assert_gated_unit_test_fails(&case.0, "x = []\n", gate, &[], expected, &[]);
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_behind_the_release_profile_using_validation_fails,
+    "the failure required to name the dev profile, which does not see the test",
+    {
+        let case = Case::new("release_profile");
+        let gate = "not(debug_assertions)";
+        let expected = "with --no-default-features in the dev profile";
+        assert_gated_unit_test_fails(&case.0, "", gate, &["--release"], expected, &[]);
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_present_only_without_default_features_using_validation_fails,
+    "the failure required to name default features, which do not see the test",
+    {
+        let case = Case::new("no_default_features");
+        let validation = [(
+            "crates/validation/Cargo.toml",
+            VALIDATION_WITHOUT_KERNEL_DEFAULTS,
+        )];
+        assert_gated_unit_test_fails(
+            &case.0,
+            "default = [\"d\"]\nd = []\n",
+            "not(feature = \"d\")",
+            &["--no-default-features"],
+            "with default features in the dev profile",
+            &validation,
+        );
+    }
+);
+
+validation::negative_control!(
+    deps_a_doctest_using_validation_passes,
+    "the use in a unit test instead of a doctest, required to pass",
+    {
+        assert!(
+            Case::new("doctest")
+                .run(&["kernel"], &[(KERNEL_LIB, UNIT_TEST)])
+                .0
+        );
+    }
+);
+
+validation::negative_control!(
+    deps_a_local_mod_validation_passes,
+    "the unit test without the local mod validation, required to pass",
+    {
+        let test = "#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        crate::validation::run();\n    }\n}\n";
+        assert!(
+            Case::new("local_mod")
+                .run(&["kernel"], &[(KERNEL_LIB, test)])
+                .0
+        );
+    }
+);
+
+validation::negative_control!(
+    deps_the_kernel_out_dir_include_passes,
+    "generated code with a unit test that uses validation, required to pass",
+    {
+        let lib = "include!(concat!(env!(\"OUT_DIR\"), \"/generated.rs\"));\n";
+        let build = build_rs("pub const GENERATED: u32 = 1;\n#[cfg(test)]\n#[test]\nfn t() { let _ = validation::Harness; }\n");
+        let files = [(KERNEL_LIB, lib), ("crates/kernel/build.rs", &build)];
+        assert!(Case::new("out_dir").run(&["kernel"], &files).0);
+    }
+);
+
+validation::negative_control!(
+    deps_the_compile_check_runs_only_with_the_dev_dependency,
+    "a workspace with the dev-dependency, required to need no compile check",
+    {
+        let (_, stdout, _) = Case::new("with_dev").run(&["ledger"], &[]);
+        assert!(stdout.contains("compile check not needed"), "{stdout}");
+    }
+);
+
+validation::negative_control!(
+    deps_a_unit_test_of_a_binary_with_test_false_fails,
+    "a `test = false` binary whose unit test does not use validation, required to fail to compile",
+    {
+        let case = Case::new("bin");
+        let manifest =
+            kernel_manifest("\n[[bin]]\nname = \"k\"\npath = \"src/main.rs\"\ntest = false\n");
+        let main = "crates/kernel/src/main.rs";
+        let without_use =
+            "fn main() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {}\n}\n";
+        let files = [
+            ("crates/kernel/Cargo.toml", manifest.as_str()),
+            (main, without_use),
+        ];
+        assert_fails_to_compile(&case.0, &case.root(&[], &files), "kernel", main);
+    }
+);
+
+validation::negative_control!(
+    deps_the_compile_check_passes_with_cargo_target_dir_outside_the_workspace,
+    "a unit test that uses validation, with CARGO_TARGET_DIR outside the workspace, required to pass",
+    {
+        let case = Case::new("outside_target");
+        let root = case.root(&["kernel"], &[(KERNEL_LIB, UNIT_TEST)]);
+        assert!(run_workspace_in(&root, &std::env::temp_dir().join(&case.0)).0);
+    }
+);
+
+validation::negative_control!(
+    deps_a_workspace_does_not_reuse_another_workspaces_check_build,
+    "workspace A, without the unit test, required to fail as B does",
+    {
+        let case = Case::new("shared_target");
+        let a = case.root(&["kernel"], &[]);
+        without_build_script(&a);
+        let (ok, _, stderr) = run_workspace_in(&a, &std::env::temp_dir().join(&case.0));
+        assert!(!ok && stderr.contains("R-191"), "{stderr}");
+    }
+);
+
+validation::negative_control!(
+    deps_an_edit_with_an_old_modification_time_is_checked_again,
+    "the workspace without the edit, required to fail",
+    {
+        let (ok, _, stderr) = Case::new("old_mtime_edit").run(&["kernel"], &[]);
+        assert!(!ok && stderr.contains("R-191"), "{stderr}");
+    }
+);
+
+validation::negative_control!(
+    deps_the_check_directory_is_keyed_by_the_workspace_root,
+    "the root \"b\", required to have \"a\"'s pinned directory",
+    assert_eq!(
+        xtask::deps::check_target_dir(std::path::Path::new("/t"), std::path::Path::new("b")),
+        std::path::Path::new("/t/xtask-deps-check/a-af63dc4c8601ec8c")
+    )
+);
