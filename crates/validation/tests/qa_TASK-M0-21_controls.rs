@@ -159,7 +159,7 @@ negative_control!(
 
 negative_control!(
     qa_controls_exist_only_under_the_feature,
-    "under the feature the leaky control compiles and fails, so the plain-suite check must fail",
+    "under the feature the sound control compiles and runs, so the no-control check must fail",
     {
         let args = [
             "test",
@@ -168,7 +168,7 @@ negative_control!(
             "--features",
             "controls",
         ];
-        let o = on_copy("dup_name", "tests/b_sound.rs", &args);
+        let o = on_copy("dup_name", "tests/a_leaky.rs", &args);
         let out = String::from_utf8_lossy(&o.stdout);
         assert!(o.status.success(), "cargo test failed:\n{out}");
         assert!(
