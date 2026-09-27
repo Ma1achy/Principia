@@ -20,7 +20,7 @@ The second of R-209's three parts of TASK-M0-22. Every qa test merged in `crates
 
 ## Deliverables
 - `crates/prin/Cargo.toml` — the `controls` feature and a dev-dependency on `crates/validation` (R-176).
-- A negative control, registered with `negative_control!` (R-199), for each qa test in `crates/validation/tests/` (`qa_TASK-M0-04.rs`, `_r2`, `qa_TASK-M0-21.rs`, `_r2`, `qa_R-206.rs`) and `crates/prin/tests/qa_TASK-M0-01.rs` (25 at R-209, not counting the three child bodies). Each makes its test fail. The controls live in new `*_controls.rs` targets where they can; an edit to qa's merged files is limited to what registration forces, and is reviewed by qa (R-209).
+- A negative control, registered with `negative_control!` (R-199), for each qa test in `crates/validation/tests/` (`qa_TASK-M0-04.rs`, `_r2`, `qa_TASK-M0-21.rs`, `_r2`, `qa_R-206.rs`) and `crates/prin/tests/qa_TASK-M0-01.rs` (22 at R-209, not counting the three child bodies; 25 with them, as RQ-141 counts). Each makes its test fail. The controls live in new `*_controls.rs` targets where they can; an edit to qa's merged files is limited to what registration forces, and is reviewed by qa (R-209).
 - The child bodies `qa_child_open_harness`, `qa_child_failing_property` (`qa_TASK-M0-04.rs`) and `qa_child_count_cases` (`qa_TASK-M0-04_r2.rs`) moved into a `harness = false` test target (or a bin) whose `main` the parent tests spawn, so they are no longer `#[test]`s. This edits qa's merged files, under R-210's one-round exception; the parent tests keep their assertions (R-210).
 
 ## Acceptance tests
