@@ -33,18 +33,24 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
 negative_control!(
     gpu_harness_identity_round_trip,
     "the identity readback compared with the input with bit 31 of word 40000 flipped",
+    expected = "control: the readback differs from the flipped input",
     {
         let input = identity_fixture();
         let mut flipped = input.clone();
         flipped[40000] ^= 1 << 31;
         let output = harness().run_wgsl(IDENTITY_WGSL, "identity", &[&input]);
-        assert_eq!(first_mismatch(&flipped, &output), None);
+        assert_eq!(
+            first_mismatch(&flipped, &output),
+            None,
+            "control: the readback differs from the flipped input"
+        );
     }
 );
 
 negative_control!(
     gpu_harness_can_fire,
     "the overloads required to differ on every word, on words with bit 31 clear",
+    expected = "control: the overloads agree on a word with bit 31 clear",
     {
         let h = harness();
         let low: Vec<u32> = (0..4096u32)
@@ -52,28 +58,39 @@ negative_control!(
             .collect();
         let signed = h.run_wgsl(EXTRACT_WGSL, "as_i32", &[&low]);
         let unsigned = h.run_wgsl(EXTRACT_WGSL, "as_u32", &[&low]);
-        assert!(signed.iter().zip(&unsigned).all(|(s, u)| s != u));
+        assert!(
+            signed.iter().zip(&unsigned).all(|(s, u)| s != u),
+            "control: the overloads agree on a word with bit 31 clear"
+        );
     }
 );
 
 negative_control!(
     metal_hosted_probe,
     "the probe's Metal check on the other platform's expectation: not Metal on macOS, Metal elsewhere",
+    expected = "control: the adapter is not on the other platform's backend",
     assert_eq!(
         harness().adapter_info().backend == wgpu::Backend::Metal,
-        !cfg!(target_os = "macos")
+        !cfg!(target_os = "macos"),
+        "control: the adapter is not on the other platform's backend"
     )
 );
 
 negative_control!(
     gpu_backend_env_selects_backend,
     "metal required to select the Vulkan backend",
-    assert_eq!(backend_from(Some("metal")), Ok(wgpu::Backends::VULKAN))
+    expected = "control: metal did not select Vulkan",
+    assert_eq!(
+        backend_from(Some("metal")),
+        Ok(wgpu::Backends::VULKAN),
+        "control: metal did not select Vulkan"
+    )
 );
 
 negative_control!(
     prop_seed_is_printed_and_reproduces,
     "the first failing draw of one seed required to reproduce under the next seed",
+    expected = "control: seed 1's first failing draw is not seed 2's",
     {
         let first_failing_draw = |seed| {
             let first = Cell::new(None);
@@ -86,19 +103,28 @@ negative_control!(
             });
             first.get()
         };
-        assert_eq!(first_failing_draw(1), first_failing_draw(2));
+        assert_eq!(
+            first_failing_draw(1),
+            first_failing_draw(2),
+            "control: seed 1's first failing draw is not seed 2's"
+        );
     }
 );
 
 negative_control!(
     prop_seed_config_has_no_persistence_file,
     "proptest's default config, which sets a persistence file, checked for none",
-    assert!(Config::default().failure_persistence.is_none())
+    expected = "control: the config has a persistence file",
+    assert!(
+        Config::default().failure_persistence.is_none(),
+        "control: the config has a persistence file"
+    )
 );
 
 negative_control!(
     prop_seed_runs_the_provisional_case_count,
     "a config of half the cases required to run CASES",
+    expected = "control: the runner did not run CASES cases",
     {
         let runs = Cell::new(0u32);
         let half = Config {
@@ -111,6 +137,10 @@ negative_control!(
                 Ok(())
             })
             .expect("the property holds");
-        assert_eq!(runs.get(), CASES);
+        assert_eq!(
+            runs.get(),
+            CASES,
+            "control: the runner did not run CASES cases"
+        );
     }
 );

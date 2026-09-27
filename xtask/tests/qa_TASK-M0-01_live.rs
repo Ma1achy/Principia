@@ -10,6 +10,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use validation::spawn::Spawn;
 
 use serde_json::{json, Value};
 
@@ -26,7 +27,7 @@ fn live_metadata() -> Value {
     let out = Command::new(cargo)
         .args(["metadata", "--format-version", "1", "--manifest-path"])
         .arg(workspace_root().join("Cargo.toml"))
-        .output()
+        .timed_output()
         .expect("run cargo metadata");
     assert!(
         out.status.success(),
@@ -83,7 +84,7 @@ fn run_deps_on(tag: &str, doc: &Value) -> (bool, String, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["deps", "--metadata"])
         .arg(&path)
-        .output()
+        .timed_output()
         .expect("run xtask");
     (
         out.status.success(),
@@ -143,7 +144,7 @@ fn qa_live_deps_sees_every_live_workspace_edge() {
     let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("deps")
         .current_dir(workspace_root())
-        .output()
+        .timed_output()
         .expect("run xtask deps");
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(

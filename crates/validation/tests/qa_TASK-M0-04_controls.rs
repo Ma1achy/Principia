@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use validation::gpu::{AdapterInfo, GpuHarness, BACKEND_VAR};
 use validation::negative_control;
 use validation::prop;
+use validation::spawn::Spawn;
 
 fn harness() -> GpuHarness {
     GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
@@ -31,7 +32,7 @@ fn child(body: &str, env: &[(&str, Option<&str>)]) -> String {
             None => cmd.env_remove(k),
         };
     }
-    let o = cmd.output().expect("qa_child ran");
+    let o = cmd.timed_output().expect("qa_child ran");
     let (out, err) = (
         String::from_utf8_lossy(&o.stdout),
         String::from_utf8_lossy(&o.stderr),
@@ -70,6 +71,7 @@ fn skip_last(@builtin(global_invocation_id) id: vec3<u32>) {
 negative_control!(
     qa_gpu_harness_identity_round_trips_2_16_words_bit_exact,
     "a dispatch that flips one low bit must fail the bit-exact check",
+    expected = "identity is not bit-exact",
     {
         let input = words();
         let out = harness().run_wgsl(FAULTY, "flip_low_bit", &[&input]);
@@ -80,6 +82,7 @@ negative_control!(
 negative_control!(
     qa_gpu_harness_round_trips_lengths_off_the_workgroup_size,
     "a dispatch that leaves the last word unwritten must fail at a length off the workgroup size",
+    expected = "identity failed at length 65",
     {
         let input = &words()[..65];
         let out = harness().run_wgsl(FAULTY, "skip_last", &[input]);
@@ -100,6 +103,7 @@ fn sub(@builtin(global_invocation_id) id: vec3<u32>) {
 negative_control!(
     qa_gpu_harness_binds_several_inputs_in_order,
     "inputs bound in the swapped order must fail the a - b check",
+    expected = "a - b is wrong",
     {
         let a = words();
         let b: Vec<u32> = a.iter().map(|w| w.rotate_left(7) ^ 0xA5A5_A5A5).collect();
@@ -128,6 +132,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
 negative_control!(
     qa_gpu_harness_sees_extractbits_sign_extension_at_every_width,
     "with bit 31 clear there is no sign to extend, so the overloads agree and the check must fail",
+    expected = "the overloads agree at width",
     {
         let h = harness();
         let low: Vec<u32> = words().iter().map(|w| w & 0x7FFF_FFFF).collect();
@@ -147,6 +152,7 @@ negative_control!(
 negative_control!(
     qa_gpu_backend_env_governs_harness_new,
     "the platform's own backend opens a device, so the refusal check must fail on it",
+    expected = "opened a device",
     {
         let value = if cfg!(target_os = "macos") {
             "metal"
@@ -167,6 +173,7 @@ negative_control!(
 negative_control!(
     qa_prop_seed_printed_and_rerun_through_the_environment,
     "two different seeds must fail the same-failing-case check",
+    expected = "the seed did not reproduce the failing case",
     {
         let draw = |seed: &str| {
             marker(
@@ -185,6 +192,7 @@ negative_control!(
 negative_control!(
     qa_prop_shared_config_runs_256_cases_marked_provisional,
     "a runner of 255 cases must fail the 256-case count",
+    expected = "the runner did not run 256 cases",
     {
         let n = AtomicU32::new(0);
         proptest::test_runner::TestRunner::new(proptest::test_runner::Config {
@@ -207,6 +215,7 @@ negative_control!(
 negative_control!(
     qa_adapter_info_printout_names_the_backend,
     "a Metal adapter's printout must fail the check that it names Vulkan",
+    expected = "adapter info does not name Vulkan",
     {
         let shown = AdapterInfo {
             name: "qa-adapter-name".into(),
@@ -225,6 +234,7 @@ negative_control!(
 negative_control!(
     qa_prop_case_count_is_not_replaced_by_proptest_cases,
     "a shared count replaced as the default runner's is by PROPTEST_CASES=3 must fail the 256-case check",
+    expected = "PROPTEST_CASES=3 changed the shared case count",
     {
         let measured = marker(
             &child("count_cases", &[("PROPTEST_CASES", Some("3"))]),

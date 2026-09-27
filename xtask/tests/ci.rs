@@ -62,33 +62,42 @@ fn failing() -> Result<(), String> {
 validation::negative_control!(
     ci_runs_runners_in_order_and_reports_failures,
     "a run whose one runner passes, required to report it failed",
+    expected = "control: the passing runner was not reported failed",
     {
         let passing = Runner {
             name: "second",
             run: || Ok(()),
         };
-        assert!(run(&[passing]).unwrap_err().contains("second"));
+        assert!(run(&[passing])
+            .expect_err("control: the passing runner was not reported failed")
+            .contains("second"));
     }
 );
 
 validation::negative_control!(
     ci_with_no_runners_passes,
     "a run with a failing runner, required to pass",
+    expected = "control: the run with a failing runner did not pass",
     assert_eq!(
         run(&[Runner {
             name: "failing",
             run: failing,
         }]),
-        Ok(())
+        Ok(()),
+        "control: the run with a failing runner did not pass"
     )
 );
 
 validation::negative_control!(
     ci_registry_is_empty_at_task_m0_01,
     "a registry holding one runner, checked for emptiness",
-    assert!([Runner {
-        name: "failing",
-        run: failing,
-    }]
-    .is_empty())
+    expected = "control: a registry holding one runner is not empty",
+    assert!(
+        [Runner {
+            name: "failing",
+            run: failing,
+        }]
+        .is_empty(),
+        "control: a registry holding one runner is not empty"
+    )
 );

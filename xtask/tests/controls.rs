@@ -8,8 +8,11 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use validation::spawn::Spawn;
 
-use xtask::controls::{control_of, findings, parse_list, parse_results, Finding};
+use xtask::controls::{
+    control_of, findings, name_wrong_panics, parse_list, parse_results, parse_wrong_panics, Finding,
+};
 
 /// The outcome of one `cargo xtask controls` run.
 struct Verdict {
@@ -58,7 +61,7 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
         .args(["controls", "--manifest-path"])
         .arg(&manifest)
         .env("CARGO_TARGET_DIR", tmp.parent().unwrap())
-        .output()
+        .timed_output()
         .expect("run xtask");
     std::fs::remove_dir_all(&copy).unwrap();
     Verdict {
@@ -181,7 +184,7 @@ fn controls_unit_test_without_its_control_fails_naming_it() {
 fn controls_on_this_workspace_skips_gui() {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("controls")
-        .output()
+        .timed_output()
         .expect("run xtask");
     let stdout = String::from_utf8_lossy(&output.stdout);
     // gui has no route to validation (R-187), so it never declares the feature.
@@ -395,21 +398,112 @@ fn controls_doctest_fails_naming_it() {
     lacks(&without.stderr, "doctest");
 }
 
+/// R-212: a control that panics in its own setup, before its test's check, does not count as failing the test; the
+/// command names the test with libtest's note. The control beside it, which trips the check, is not reported.
+#[test]
+fn controls_control_panicking_without_its_message_fails_naming_it() {
+    let v = run_fixture("wrong_message", None);
+    assert!(
+        !v.ok,
+        "a control that panicked in its setup passed the command"
+    );
+    has(
+        &v.stderr,
+        "controls_wrong_message: test `doubles_again`: its control leaves it passing, so it cannot fail \
+         (philosophy §4.4): it panicked without its expected message (R-212)",
+    );
+    has(&v.stderr, "the fixture's setup failed");
+    lacks(&v.stderr, "test `doubles`:");
+}
+
+/// libtest's report of two failed controls: `a` did not panic, `b` panicked with the wrong message.
+const WRONG_PANIC_RUN: &str = "---- a::negative_control stdout ----
+note: test did not panic as expected at tests/a.rs:3:60
+---- b::negative_control stdout ----
+
+thread 'b::negative_control' (7) panicked at tests/b.rs:6:36:
+setup failed
+note: panic did not contain expected string
+      panic message: \"setup failed\"
+ expected substring: \"the check\"
+";
+
+/// `stdout`'s one wrong panic is `b`'s, and it turns `b`'s `ControlPasses` into `WrongPanic`, leaving `a`'s alone.
+fn check_wrong_panics(stdout: &str) {
+    let wrong = parse_wrong_panics(stdout);
+    let note = "panic message: \"setup failed\" expected substring: \"the check\"";
+    assert_eq!(
+        wrong,
+        [("b::negative_control".to_owned(), note.to_owned())].into(),
+        "the wrong panic of `b` was not read"
+    );
+    let found = vec![
+        Finding::ControlPasses("a".to_owned()),
+        Finding::ControlPasses("tests::b".to_owned()),
+        Finding::NoControl("b".to_owned()),
+    ];
+    assert_eq!(
+        name_wrong_panics(found, &wrong),
+        vec![
+            Finding::ControlPasses("a".to_owned()),
+            Finding::WrongPanic {
+                test: "tests::b".to_owned(),
+                note: note.to_owned(),
+            },
+            Finding::NoControl("b".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn controls_parse_wrong_panics_reads_libtest_notes() {
+    check_wrong_panics(WRONG_PANIC_RUN);
+}
+
+validation::negative_control!(
+    controls_control_panicking_without_its_message_fails_naming_it,
+    "the discriminating fixture, whose control trips its check, required to report a wrong panic",
+    expected = "\"it panicked without its expected message (R-212)\" not in",
+    has(
+        &run_fixture("discriminating", None).stderr,
+        "it panicked without its expected message (R-212)"
+    )
+);
+
+validation::negative_control!(
+    controls_parse_wrong_panics_reads_libtest_notes,
+    "the same run with `b`'s note replaced by a did-not-panic one, required to read a wrong panic",
+    expected = "the wrong panic of `b` was not read",
+    check_wrong_panics(&WRONG_PANIC_RUN.replace(
+        "note: panic did not contain expected string",
+        "note: test did not panic as expected"
+    ))
+);
+
 validation::negative_control!(
     controls_discriminating_fixture_passes,
     "the leaky fixture, required to pass",
-    assert!(run_fixture("leaky", None).ok)
+    expected = "control: the leaky fixture did not pass",
+    assert!(
+        run_fixture("leaky", None).ok,
+        "control: the leaky fixture did not pass"
+    )
 );
 
 validation::negative_control!(
     controls_test_without_control_fails_naming_it,
     "the discriminating fixture, required to fail",
-    assert!(!run_fixture("discriminating", None).ok)
+    expected = "control: the discriminating fixture passed",
+    assert!(
+        !run_fixture("discriminating", None).ok,
+        "control: the discriminating fixture passed"
+    )
 );
 
 validation::negative_control!(
     controls_control_leaving_test_passing_fails_naming_it,
     "the discriminating fixture, required to report a control leaving its test passing",
+    expected = "\"leaves it passing\" not in",
     has(
         &run_fixture("discriminating", None).stderr,
         "leaves it passing"
@@ -419,6 +513,7 @@ validation::negative_control!(
 validation::negative_control!(
     controls_crate_without_feature_is_skipped,
     "the discriminating fixture, which declares the feature, required to be skipped",
+    expected = "\"skipped: it declares no `controls` feature\" not in",
     has(
         &run_fixture("discriminating", None).stdout,
         "skipped: it declares no `controls` feature"
@@ -428,19 +523,28 @@ validation::negative_control!(
 validation::negative_control!(
     controls_unit_test_pairs_with_control_in_tests_dir,
     "the cross-target fixture without its control in tests/, required to pass",
-    assert!(run_fixture("cross_target", Some("tests/controls.rs")).ok)
+    expected = "control: the cross-target fixture without its control in tests/ did not pass",
+    assert!(
+        run_fixture("cross_target", Some("tests/controls.rs")).ok,
+        "control: the cross-target fixture without its control in tests/ did not pass"
+    )
 );
 
 validation::negative_control!(
     controls_unit_test_without_its_control_fails_naming_it,
     "the cross-target fixture with its control, required to fail",
-    assert!(!run_fixture("cross_target", None).ok)
+    expected = "control: the cross-target fixture with its control passed",
+    assert!(
+        !run_fixture("cross_target", None).ok,
+        "control: the cross-target fixture with its control passed"
+    )
 );
 
 // On a fixture, never on this workspace: the command there would run this control again, without end.
 validation::negative_control!(
     controls_on_this_workspace_skips_gui,
     "a fixture workspace, which has no gui, required to report gui skipped",
+    expected = "\"xtask controls: gui: skipped\" not in",
     has(
         &run_fixture("discriminating", None).stdout,
         "xtask controls: gui: skipped"
@@ -450,42 +554,67 @@ validation::negative_control!(
 validation::negative_control!(
     controls_control_of_reads_the_module_name,
     "a plain test's name, required to name the test it controls",
-    assert_eq!(control_of("a::doubles"), Some("doubles"))
+    expected = "control: a plain test's name names no test",
+    assert_eq!(
+        control_of("a::doubles"),
+        Some("doubles"),
+        "control: a plain test's name names no test"
+    )
 );
 
 validation::negative_control!(
     controls_parse_list_and_results,
     "a benchmark line, required to list as a test",
-    assert_eq!(parse_list("doubles: benchmark\n"), names(&["doubles"]))
+    expected = "control: a benchmark line is not listed as a test",
+    assert_eq!(
+        parse_list("doubles: benchmark\n"),
+        names(&["doubles"]),
+        "control: a benchmark line is not listed as a test"
+    )
 );
 
 validation::negative_control!(
     controls_findings_pair_by_name,
     "a test with no control, required to have no finding",
-    assert_eq!(findings(&names(&["halves"]), &BTreeMap::new()), Ok(vec![]))
+    expected = "control: a test with no control has a finding",
+    assert_eq!(
+        findings(&names(&["halves"]), &BTreeMap::new()),
+        Ok(vec![]),
+        "control: a test with no control has a finding"
+    )
 );
 
 validation::negative_control!(
     controls_same_name_in_two_targets_judged_each,
     "one sound and one leaky run of `doubles`, required to have no finding",
+    expected = "control: a leaky run of `doubles` has a finding",
     {
         let listed = names(&["doubles", "doubles::negative_control"]);
         let listed = [listed.clone(), listed].concat();
         let run = "test doubles::negative_control - should panic ... ok\n\
                    test doubles::negative_control - should panic ... FAILED\n";
-        assert_eq!(findings(&listed, &parse_results(run)), Ok(vec![]));
+        assert_eq!(
+            findings(&listed, &parse_results(run)),
+            Ok(vec![]),
+            "control: a leaky run of `doubles` has a finding"
+        );
     }
 );
 
 validation::negative_control!(
     controls_same_named_tests_need_a_control_each,
     "the collision fixture without its uncontrolled test, required to fail",
-    assert!(!run_fixture("collision", Some("tests/b.rs")).ok)
+    expected = "control: the collision fixture without b.rs passed",
+    assert!(
+        !run_fixture("collision", Some("tests/b.rs")).ok,
+        "control: the collision fixture without b.rs passed"
+    )
 );
 
 validation::negative_control!(
     controls_findings_same_named_unit_tests_collide,
     "two unit tests `round_trips` with one control, required to have no finding",
+    expected = "control: two unit tests `round_trips` with one control have a finding",
     {
         let listed = names(&[
             "a::tests::round_trips",
@@ -493,13 +622,18 @@ validation::negative_control!(
             "round_trips::negative_control",
         ]);
         let results = [("round_trips::negative_control".to_owned(), vec![true])].into();
-        assert_eq!(findings(&listed, &results), Ok(vec![]));
+        assert_eq!(
+            findings(&listed, &results),
+            Ok(vec![]),
+            "control: two unit tests `round_trips` with one control have a finding"
+        );
     }
 );
 
 validation::negative_control!(
     controls_doctest_fails_naming_it,
     "the discriminating fixture, which has no doctest, required to report one",
+    expected = "cannot name a doctest\" not in",
     has(
         &run_fixture("discriminating", None).stderr,
         "has no control: `negative_control!` cannot name a doctest"

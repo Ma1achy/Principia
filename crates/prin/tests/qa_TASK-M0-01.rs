@@ -2,11 +2,12 @@
 #![allow(non_snake_case)]
 
 use std::process::Command;
+use validation::spawn::Spawn;
 
 fn prin(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_prin"))
         .args(args)
-        .output()
+        .timed_output()
         .expect("run prin")
 }
 

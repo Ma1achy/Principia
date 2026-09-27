@@ -8,6 +8,7 @@
 use std::process::Command;
 use validation::gpu::{GpuHarness, BACKEND_VAR};
 use validation::prop;
+use validation::spawn::Spawn;
 
 fn harness() -> GpuHarness {
     GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
@@ -205,7 +206,7 @@ fn child(test: &str, env: &[(&str, Option<&str>)]) -> std::process::Output {
             None => cmd.env_remove(k),
         };
     }
-    cmd.output().expect("qa_child ran")
+    cmd.timed_output().expect("qa_child ran")
 }
 
 /// The child's marker line, from `tag` to the end of its line (the child may print before it).

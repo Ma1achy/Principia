@@ -11,6 +11,7 @@
 
 use std::process::Command;
 use validation::gpu::{AdapterInfo, GpuHarness};
+use validation::spawn::Spawn;
 
 fn info(backend: wgpu::Backend) -> AdapterInfo {
     AdapterInfo {
@@ -68,7 +69,7 @@ fn counts_with(proptest_cases: &str) -> String {
     let o = Command::new(env!("CARGO_BIN_EXE_qa_child"))
         .arg("count_cases")
         .env("PROPTEST_CASES", proptest_cases)
-        .output()
+        .timed_output()
         .expect("qa_child ran");
     let t = format!(
         "{}{}",

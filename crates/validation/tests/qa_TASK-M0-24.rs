@@ -14,6 +14,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use validation::spawn::Spawn;
 
 /// The workspace manifest (this crate is `crates/validation`).
 fn workspace_manifest() -> PathBuf {
@@ -40,7 +41,7 @@ fn cargo_test_status(
         .args(cargo_args)
         .arg("--")
         .args(harness_args)
-        .output()
+        .timed_output()
         .expect("run cargo test");
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     if !output.status.success() && stdout.is_empty() {
@@ -260,6 +261,7 @@ fn qa_m0_24_every_implementer_test_has_a_registered_control() {
 validation::negative_control!(
     qa_m0_24_every_implementer_test_has_a_registered_control,
     "the same tests listed without the `controls` feature, where no control compiles",
+    expected = "tests without a registered control of their own",
     for scope in scopes(&[]) {
         assert_each_has_a_control(&scope);
     }
@@ -277,6 +279,7 @@ fn qa_m0_24_every_registered_control_makes_its_test_fail() {
 validation::negative_control!(
     qa_m0_24_every_registered_control_makes_its_test_fail,
     "validation's real control results with one control's run turned to FAILED (a control leaving its test passing)",
+    expected = "leaves it passing",
     {
         let scope = scopes(&["--features", "controls"]).remove(0);
         let tests = assert_each_has_a_control(&scope);
@@ -295,7 +298,7 @@ fn assert_declares_controls(package: &str) {
             .arg(workspace_manifest())
             .args(["-p", package, "--prefix", "none"])
             .args(extra)
-            .output()
+            .timed_output()
             .expect("run cargo tree")
     };
     let featured = tree(&["--features", "controls", "--depth", "0"]);
@@ -329,6 +332,7 @@ fn qa_m0_24_xtask_declares_controls_with_a_validation_dev_dependency() {
 validation::negative_control!(
     qa_m0_24_xtask_declares_controls_with_a_validation_dev_dependency,
     "gui, which has neither the feature nor the dev-dependency (R-187), checked the same way",
+    expected = "gui declares no `controls` feature",
     assert_declares_controls("gui")
 );
 
@@ -370,6 +374,7 @@ fn crate_with_fence(fence: &str) -> PathBuf {
 validation::negative_control!(
     qa_m0_24_validation_lists_no_doctest,
     "a crate whose examples are ```ignore blocks (control.rs's fence before R-208): rustdoc still lists them",
+    expected = "the crate lists doctests",
     {
         let manifest = crate_with_fence("```ignore");
         let found = doctests(&manifest, "qa_m0_24_doc");
@@ -393,6 +398,7 @@ fn qa_m0_24_a_text_block_is_not_a_doctest() {
 validation::negative_control!(
     qa_m0_24_a_text_block_is_not_a_doctest,
     "the same crate with ```rust blocks, which are doctests",
+    expected = "the crate lists doctests",
     {
         let manifest = crate_with_fence("```rust");
         let found = doctests(&manifest, "qa_m0_24_doc");

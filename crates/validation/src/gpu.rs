@@ -369,6 +369,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     crate::negative_control!(
         gpu_backend_env_rejects_unknown,
         "a known backend is not rejected",
+        expected = "an unknown backend was accepted",
         rejects_naming_the_variable("metal")
     );
 
@@ -404,6 +405,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     crate::negative_control!(
         gpu_backend_env_unset_defaults_by_platform,
         "the other platform's backend is not the default",
+        expected = "unset PRIN_GPU_BACKEND selected",
         if cfg!(target_os = "macos") {
             unset_selects(wgpu::Backends::VULKAN, "vulkan")
         } else {

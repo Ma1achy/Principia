@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
+use validation::spawn::Spawn;
 
 /// The workspace root (this crate is `crates/validation`).
 fn root() -> PathBuf {
@@ -44,8 +45,9 @@ fn xtask() -> &'static Path {
             .args(["build", "-p", "xtask", "--manifest-path"])
             .arg(root().join("Cargo.toml"))
             .env("CARGO_TARGET_DIR", target_dir())
-            .status()
-            .expect("run cargo build");
+            .timed_output()
+            .expect("run cargo build")
+            .status;
         assert!(status.success(), "cargo build -p xtask failed");
         target_dir()
             .join("debug")
@@ -148,7 +150,7 @@ fn controls(name: &str, remove: &[&str]) -> Verdict {
             .args(["controls", "--manifest-path"])
             .arg(copy.manifest())
             .env("CARGO_TARGET_DIR", target_dir())
-            .output()
+            .timed_output()
             .expect("run xtask controls"),
     )
 }
@@ -288,7 +290,7 @@ fn qa_controls_exist_only_under_the_feature() {
                 .arg(copy.manifest())
                 .args(features)
                 .env("CARGO_TARGET_DIR", target_dir())
-                .output()
+                .timed_output()
                 .expect("run cargo test"),
         )
     };

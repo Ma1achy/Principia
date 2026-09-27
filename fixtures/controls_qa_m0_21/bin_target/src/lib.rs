@@ -7,5 +7,5 @@ pub fn quadruple(x: u32) -> u32 {
 
 /// The binary's unit test's check: `quadruple(2)` is 8.
 pub fn check_quadruple(quadruple: fn(u32) -> u32) {
-    assert_eq!(quadruple(2), 8);
+    assert_eq!(quadruple(2), 8, "not the quadruple of 2");
 }

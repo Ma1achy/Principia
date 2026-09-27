@@ -3,13 +3,13 @@
 //! still an error. [...] Log which backend was chosen, so a test run always says what it ran on."
 //!
 //! The log's wording is not fixed by the ruling, so these tests assert only that it names the backend chosen and not
-//! the other one. Each test registers a negative control (R-176, R-199). The harness test that needs the variable
-//! unset re-runs this binary as a child with `QA_R206_CHILD` set, so the parent's environment is never mutated.
+//! the other one. Each test registers a negative control (R-176, R-199). The harness tests that need the variable
+//! unset run the `qa_child` binary's `r206_opened` body as a child (R-210, R-213), so the parent's environment is
+//! never mutated.
 
 use std::process::Command;
 use validation::gpu::{backend_choice, backend_from, GpuHarness, BACKEND_VAR};
-
-const CHILD_VAR: &str = "QA_R206_CHILD";
+use validation::spawn::Spawn;
 
 /// R-206's platform default, from the ruling (not from the implementation): metal on macOS, vulkan elsewhere.
 fn ruling_default() -> (&'static str, wgpu::Backends) {
@@ -63,6 +63,7 @@ fn qa_r206_unset_defaults_by_platform_and_explicit_overrides() {
 validation::negative_control!(
     qa_r206_unset_defaults_by_platform_and_explicit_overrides,
     "an unset variable claimed to select the other platform's backend must fail",
+    expected = "PRIN_GPU_BACKEND=None selected",
     {
         let (other_name, other) = ruling_other();
         check_selects(None, other, other_name)
@@ -106,6 +107,7 @@ fn qa_r206_unknown_value_is_still_an_error() {
 validation::negative_control!(
     qa_r206_unknown_value_is_still_an_error,
     "a known backend name must not be refused",
+    expected = "was accepted",
     check_refused(ruling_default().0)
 );
 
@@ -127,23 +129,20 @@ fn check_opened(value: Option<&str>, opened: wgpu::Backend) {
     );
 }
 
-/// `GpuHarness::new()` opens the backend selected for this run's variable, set or unset. In child mode it also prints
-/// the backend it opened, for `qa_r206_harness_logs_the_backend_it_ran_on`.
+/// `GpuHarness::new()` opens the backend selected for this run's variable, set or unset. Its child path, which prints
+/// the backend it opened for `qa_r206_harness_logs_the_backend_it_ran_on`, is the `qa_child` body `r206_opened` (R-213).
 #[test]
 fn qa_r206_harness_opens_the_selected_backend() {
     let value = std::env::var(BACKEND_VAR).ok();
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let opened = h.adapter_info().backend;
-    // Printed before the check, so a parent sees what was opened even when the check fails.
-    if std::env::var_os(CHILD_VAR).is_some() {
-        println!("QA_R206_OPENED backend={opened:?}");
-    }
     check_opened(value.as_deref(), opened);
 }
 
 validation::negative_control!(
     qa_r206_harness_opens_the_selected_backend,
     "an adapter on the other backend must not pass as the selected one",
+    expected = "PRIN_GPU_BACKEND=None: opened",
     {
         let (name, _) = ruling_default();
         let other = if name == "metal" {
@@ -155,8 +154,8 @@ validation::negative_control!(
     }
 );
 
-/// Runs `qa_r206_harness_opens_the_selected_backend` in a child with `PRIN_GPU_BACKEND` set to `value` (or removed);
-/// returns (stdout, stderr).
+/// Runs the `qa_child` body `r206_opened` in a child with `PRIN_GPU_BACKEND` set to `value` (or removed); returns
+/// (stdout, stderr).
 fn run_child(value: Option<&str>) -> (String, String) {
     let (ok, out, err) = spawn_child(value);
     assert!(ok, "{BACKEND_VAR}={value:?}: child failed:\n{out}\n{err}");
@@ -165,19 +164,13 @@ fn run_child(value: Option<&str>) -> (String, String) {
 
 /// `run_child` without the success assertion: (success, stdout, stderr).
 fn spawn_child(value: Option<&str>) -> (bool, String, String) {
-    let mut cmd = Command::new(std::env::current_exe().expect("test binary path"));
-    cmd.args([
-        "qa_r206_harness_opens_the_selected_backend",
-        "--exact",
-        "--nocapture",
-        "--test-threads=1",
-    ])
-    .env(CHILD_VAR, "1");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_qa_child"));
+    cmd.arg("r206_opened");
     match value {
         Some(v) => cmd.env(BACKEND_VAR, v),
         None => cmd.env_remove(BACKEND_VAR),
     };
-    let o = cmd.output().expect("child test binary ran");
+    let o = cmd.timed_output().expect("qa_child ran");
     let out = String::from_utf8_lossy(&o.stdout).into_owned();
     let err = String::from_utf8_lossy(&o.stderr).into_owned();
     (o.status.success(), out, err)
@@ -212,6 +205,7 @@ fn qa_r206_harness_logs_the_backend_it_ran_on() {
 validation::negative_control!(
     qa_r206_harness_logs_the_backend_it_ran_on,
     "a run on the platform's backend must not pass as logging the other one",
+    expected = "the harness did not open",
     {
         let (other, _) = ruling_other();
         let (out, err) = run_child(None);
@@ -242,5 +236,6 @@ fn qa_r206_harness_explicit_value_overrides_the_default() {
 validation::negative_control!(
     qa_r206_harness_explicit_value_overrides_the_default,
     "an unset variable opens the default, so it must fail the check",
+    expected = "the harness opened the platform default",
     check_not_the_default(None)
 );

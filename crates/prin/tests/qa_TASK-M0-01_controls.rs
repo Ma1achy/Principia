@@ -4,17 +4,19 @@
 
 use std::process::{Command, Output};
 use validation::negative_control;
+use validation::spawn::Spawn;
 
 fn prin(arg: &str) -> Output {
     Command::new(env!("CARGO_BIN_EXE_prin"))
         .arg(arg)
-        .output()
+        .timed_output()
         .expect("run prin")
 }
 
 negative_control!(
     qa_prin_help_succeeds_and_prints_usage,
     "an unknown flag fails, so the --help check must fail on it",
+    expected = "prin --help fails",
     assert!(
         prin("--qa-no-such-flag").status.success(),
         "prin --help fails"
@@ -24,6 +26,7 @@ negative_control!(
 negative_control!(
     qa_prin_refuses_an_unknown_argument,
     "--help succeeds, so the refusal check must fail on it",
+    expected = "prin accepts an unknown flag",
     assert!(
         !prin("--help").status.success(),
         "prin accepts an unknown flag"

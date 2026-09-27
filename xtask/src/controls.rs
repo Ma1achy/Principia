@@ -1,6 +1,7 @@
 //! `cargo xtask controls` (REQ-VAL-147): every test in a crate that declares the `controls` feature has a negative
-//! control, registered with `validation::negative_control!(test_name, "description", control)`, and every control
-//! makes its test fail (philosophy §4.4; pitfalls §9). A crate without the feature is skipped and reported, not failed
+//! control, registered with `validation::negative_control!(test_name, "description", expected = "message", control)`,
+//! and every control makes its test fail by panicking with its expected message (philosophy §4.4; pitfalls §9;
+//! R-212). A crate without the feature is skipped and reported, not failed
 //! (R-176). Tests and controls are paired by the name in the macro call (R-199), across all of a crate's test
 //! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). Not yet in `cargo xtask ci` (R-198).
 //!
@@ -31,6 +32,14 @@ pub enum Finding {
     NoControl(String),
     /// A control named for the test ran and left it passing.
     ControlPasses(String),
+    /// A control named for the test panicked, but not with the message it expects (R-212), so it did not trip the
+    /// test's check. `note` is libtest's: the panic message and the expected substring.
+    WrongPanic {
+        /// The test's full name.
+        test: String,
+        /// libtest's note on the panic.
+        note: String,
+    },
     /// A doctest, which `negative_control!` cannot name, so it has no control (applied per R-204).
     Doctest(String),
     /// Tests sharing the last path segment `name` are listed more times across the crate's targets than controls
@@ -69,6 +78,11 @@ impl fmt::Display for Finding {
             Finding::ControlPasses(test) => write!(
                 f,
                 "test `{test}`: its control leaves it passing, so it cannot fail (philosophy §4.4)"
+            ),
+            Finding::WrongPanic { test, note } => write!(
+                f,
+                "test `{test}`: its control leaves it passing, so it cannot fail (philosophy §4.4): it panicked \
+                 without its expected message (R-212): {note}"
             ),
             Finding::Doctest(test) => write!(
                 f,
@@ -124,6 +138,52 @@ pub fn parse_results(stdout: &str) -> BTreeMap<String, Vec<bool>> {
             .push(outcome == "ok");
     }
     results
+}
+
+/// The controls libtest reports in `stdout` as panicking without their expected message (R-212), each with libtest's
+/// note: the panic message and the expected substring, on one line.
+pub fn parse_wrong_panics(stdout: &str) -> BTreeMap<String, String> {
+    let mut found = BTreeMap::new();
+    let mut current = None;
+    let mut lines = stdout.lines();
+    while let Some(line) = lines.next() {
+        if let Some(name) = line
+            .strip_prefix("---- ")
+            .and_then(|rest| rest.strip_suffix(" stdout ----"))
+        {
+            current = Some(name);
+        } else if line == "note: panic did not contain expected string" {
+            if let Some(name) = current {
+                let note = lines.by_ref().take(2).map(str::trim).collect::<Vec<_>>();
+                found.insert(name.to_owned(), note.join(" "));
+            }
+        }
+    }
+    found
+}
+
+/// `found` with each `ControlPasses` whose test has a control in `wrong` (by [`parse_wrong_panics`]) reported as
+/// `WrongPanic` with that control's note.
+pub fn name_wrong_panics(found: Vec<Finding>, wrong: &BTreeMap<String, String>) -> Vec<Finding> {
+    found
+        .into_iter()
+        .map(|finding| {
+            let Finding::ControlPasses(test) = finding else {
+                return finding;
+            };
+            let short = test.rsplit("::").next().unwrap_or(&test);
+            match wrong
+                .iter()
+                .find(|(control, _)| control_of(control) == Some(short))
+            {
+                Some((_, note)) => Finding::WrongPanic {
+                    test,
+                    note: note.clone(),
+                },
+                None => Finding::ControlPasses(test),
+            }
+        })
+        .collect()
 }
 
 /// Pairs each listed test with the controls named for it, by the test's last path segment (R-199, R-201), and
@@ -251,8 +311,10 @@ pub fn run(manifest: &Path) -> Result<(), String> {
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
         // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
         let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
-        let results = parse_results(&String::from_utf8_lossy(&output.stdout));
-        let mut found = findings(&listed, &results).map_err(|e| format!("{name}: {e}"))?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let found =
+            findings(&listed, &parse_results(&stdout)).map_err(|e| format!("{name}: {e}"))?;
+        let mut found = name_wrong_panics(found, &parse_wrong_panics(&stdout));
         found.extend(doctests.into_iter().map(Finding::Doctest));
         for finding in &found {
             eprintln!("xtask controls: {name}: {finding}");

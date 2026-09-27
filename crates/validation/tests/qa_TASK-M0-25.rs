@@ -6,6 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use validation::negative_control;
+use validation::spawn::Spawn;
 
 /// The qa tests merged before TASK-M0-22, per crate, from the files the task names (22 at R-209).
 const QA_TESTS: &[(&str, &[&str])] = &[
@@ -82,7 +83,7 @@ fn listed(krate: &str, controls: bool) -> Vec<String> {
     }
     let o = cmd
         .args(["--", "--list", "--format", "terse"])
-        .output()
+        .timed_output()
         .expect("run cargo test --list");
     let out = String::from_utf8_lossy(&o.stdout);
     assert!(
@@ -130,6 +131,7 @@ fn qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test() {
 negative_control!(
     qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test,
     "without the feature no control compiles, so the pairing check must fail on that listing",
+    expected = "has no registered control",
     {
         let (krate, qa) = QA_TESTS[0];
         check_paired(krate, &listed(krate, false), qa)
@@ -141,7 +143,7 @@ fn first_failing_draw(seed: &str) -> u32 {
     let o = Command::new(env!("CARGO_BIN_EXE_qa_child"))
         .arg("failing_property")
         .env("PROPTEST_RNG_SEED", seed)
-        .output()
+        .timed_output()
         .expect("run qa_child");
     let t = format!(
         "{}{}",
@@ -181,5 +183,6 @@ fn qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on() {
 negative_control!(
     qa_m0_25_moved_failing_property_reports_a_draw_the_property_fails_on,
     "the draw after the reported one is not 3 mod 7, so the check must fail on it",
+    expected = "is not one the moved property (x % 7 == 3) fails on",
     check_fails_as_moved(first_failing_draw("1").wrapping_add(1))
 );
