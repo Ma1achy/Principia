@@ -474,3 +474,15 @@
   section: R-229 — Reviewers run the tests their diff touches; CI runs the full suite
   reason: informative only
   note: process ruling; what a reviewer runs (recorded in CLAUDE.md, plan/WORKFLOW.md and .claude/agents/)
+- file: decisions.md
+  section: R-232 — TASK-M0-30's veto items stand
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
+  reason: informative only
+  note: process ruling
+- file: decisions.md
+  section: R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
+  reason: informative only
+  note: process ruling

@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for the
 
 ## Sections
 
-922 sections in 46 files: 803 yield at least one requirement; 119 yield none and are listed below with the reason.
+925 sections in 46 files: 803 yield at least one requirement; 122 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 71 |
+| informative only | 74 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -80,6 +80,9 @@ Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for the
 | R-225 — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)* | informative only | process ruling; what the size budget counts (recorded in plan/WORKFLOW.md), and a size acceptance for one PR |
 | R-228 — Each agent builds and tests with four jobs and four test threads | informative only | process ruling; a per-agent build cap (recorded in CLAUDE.md) |
 | R-229 — Reviewers run the tests their diff touches; CI runs the full suite | informative only | process ruling; what a reviewer runs (recorded in CLAUDE.md, plan/WORKFLOW.md and .claude/agents/) |
+| R-232 — TASK-M0-30's veto items stand | informative only | process ruling |
+| R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default | informative only | process ruling |
+| R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice | informative only | process ruling |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

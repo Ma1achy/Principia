@@ -1911,3 +1911,35 @@ shared between a test and its control (R-224). The spawn helper's calibrated val
 to qa's merged files are limited to what these need, under a one-round exception, with qa reviewing.
 *Applied note:* the human had also chosen "Lighter debug info" (`[profile.dev] debug = "line-tables-only"`) a few
 minutes earlier; this later list leaves it out, so it is not in the task.
+
+## R-232 — TASK-M0-30's veto items stand
+*28 Sep 2026 · applied in TASK-M0-30*
+
+"#33: both veto items stand. Merge it."
+
+*Applied note:* the items are r194's constants moved into its support module as shared inputs (R-218), and inputs
+written inside test functions left in qa's files. Numbered R-232 and R-233 because the human's rule in the same message
+is R-234.
+
+## R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
+*28 Sep 2026 · applied in TASK-M0-31*
+
+"#35: all three veto items stand. Merge it." "The R-228 to R-231 numbering is fine." "Leave debug info at the default;
+builds on the SSD make disk a non-issue." "The 300 s timeout is noted for the M0 gate."
+
+*Applied note:* the items are the test's and its control's target directories kept across runs rather than fresh per
+call; `--no-fail-fast` in the heavy-load loop only; `cargo xtask deps` not re-run for a test-only change. R-231's
+applied note leaving out lighter debug info stands. REQ-VAL-156's 300 s is confirmed at the M0 gate, with the load
+measurements from PRs #33 and #35.
+
+## R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
+*28 Sep 2026 · applied in overnight runs*
+
+"So veto items don't stall overnight runs: you may merge a PR with "applied per R-204 — veto?" items if every named
+reviewer explicitly accepted each item AND every item is test infrastructure, process, sequencing or mechanical. Hold it
+(keep going on other tasks) if any item touches physics or conventions, numeric values or calibrations, design or GUI
+behaviour, scope or deferrals, or if the reviewers disagree. List every item merged this way in the summary, for me to
+veto afterwards."
+
+*Applied:* the overnight merge conditions otherwise stand (every named reviewer approves the head, CI green,
+`check_plan.py` passes, within budget, no REVIEW_QUEUE entry needing the human). Process only.
