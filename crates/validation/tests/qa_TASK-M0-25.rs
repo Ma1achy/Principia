@@ -63,12 +63,11 @@ fn root() -> PathBuf {
         .unwrap()
 }
 
-/// The workspace's target directory.
+/// The listing's own target directory (R-224). A cargo run into the workspace's target directory replaces
+/// `target/debug/qa_child` (removes it, then copies the build back) even when nothing is rebuilt, and the moved-property
+/// test spawns that file meanwhile: it found no file (`NotFound`) under load. Here no listing writes that file.
 fn target_dir() -> PathBuf {
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
+    Path::new(env!("CARGO_TARGET_TMPDIR")).join("qa_m0_25-listing")
 }
 
 /// The names libtest lists for every test target of `krate` (`cargo test --tests -- --list`), with or without the
