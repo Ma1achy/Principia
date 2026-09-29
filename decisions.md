@@ -2289,3 +2289,18 @@ only.
 and reviews-complete, if they aren't yet) to the required checks once #56 merges." Recorded under R-256's PR as
 applied: REQ-PAY-002 keeps the SimState and ICDescriptor part (TASK-M0-09); RenderQuad's field set moves to TASK-M1-06
 and the WGSL layout comparison to TASK-M0-13, each as a split-off requirement.
+
+## R-264 — TASK-M0-09 accepted at ~1,084 lines; TASK-M3-08 and TASK-M5-18 stay whole over budget *(amends R-256)*
+*30 Sep 2026 · applied to PR #59, TASK-M3-08 and TASK-M5-18*
+
+"yes i accept it being larger"
+
+"2/ again doesn't matter that they are over budget, 500 line budget is too strict"
+
+*Applied:* PR #59 (TASK-M0-09) stays one PR at 1,084 counted lines (R-211, R-223, R-225). R-256 accepted ~1,000; the
+extra ~80 are R-263's `floor` key, its gate and its tests. TASK-M3-08 (~520, with REQ-VAL-170/171) and TASK-M5-18
+(~510, with REQ-VAL-172/173), both raised by PR #54's RQ-157 ports, stay one task each: no split, and REQ-VAL-170/171
+do not move to TASK-M3-07.
+
+*Not applied:* the ruling calls the ~500-line budget too strict but names no new figure, so `plan/WORKFLOW.md`'s
+"roughly ≤ 500 lines" stands as written until the human gives one (a numeric value, R-204).
