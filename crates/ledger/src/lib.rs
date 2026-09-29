@@ -1,9 +1,10 @@
 //! The roots: the layout table and the link registry, and the generators that read them
 //! (systems_architecture §7.1; dd_generation_root §1). A root: no workspace dependency.
 //!
-//! The generation root (debug_tooling_plan step 0a): the §3.8 entry schema ([`schema`]) and the generator driver
-//! ([`gen`]), which `cargo xtask codegen` runs (R-241).
+//! The generation root (debug_tooling_plan step 0a): the §3.8 entry schema ([`schema`]), the static layout check
+//! ([`check`]) and the generator driver ([`gen`]), which `cargo xtask codegen` runs (R-241).
 
+pub mod check;
 pub mod gen;
 pub mod schema;
 

@@ -1,10 +1,12 @@
-//! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8,
-//! then run each emitter. It refuses to emit anything when an entry is incomplete, naming each field and the missing
-//! key. The emitters are registered in [`EMITTERS`]; the static layout check (§5 test 1) is TASK-M0-35's (R-240).
+//! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
+//! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
+//! entry is incomplete, naming each field and the missing key, or when the layout check finds anything. The emitters
+//! are registered in [`EMITTERS`].
 
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use crate::check::{self, LayoutError};
 use crate::schema::{Entry, FieldType, IncompleteEntry, Ledger, Location, Word};
 
 /// One generated file: its path, relative to the workspace root, and its contents.
@@ -28,6 +30,8 @@ pub enum GenError {
     /// Derived fields whose `from` is empty or names something other than a stored entry, and vectors whose
     /// component is not a scalar type or whose `k` is below 2 (§3.8 `location`, `type`).
     Malformed(Vec<String>),
+    /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
+    Layout(Vec<LayoutError>),
 }
 
 impl fmt::Display for GenError {
@@ -35,10 +39,11 @@ impl fmt::Display for GenError {
         let lines: Vec<String> = match self {
             GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
             GenError::Malformed(lines) => lines.clone(),
+            GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
         };
         write!(
             f,
-            "generation refused: {} ledger entry problem(s):\n  {}",
+            "generation refused: {} ledger problem(s):\n  {}",
             lines.len(),
             lines.join("\n  ")
         )
@@ -118,9 +123,14 @@ fn bad_vector(e: &Entry) -> Option<String> {
     }
 }
 
-/// Validates `ledger`, then runs `emitters` over it; the files they generate, or why not.
+/// Validates `ledger` and runs the static layout check over it, then runs `emitters` over it; the files they
+/// generate, or why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
+    let findings = check::check(&ledger.words, &entries);
+    if !findings.is_empty() {
+        return Err(GenError::Layout(findings));
+    }
     Ok(emitters
         .iter()
         .flat_map(|emit| emit(&ledger.words, &entries))

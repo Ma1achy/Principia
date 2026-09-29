@@ -51,6 +51,7 @@ fn entry(
         range: Some(range),
         sentinel: None,
         tier_gate: None,
+        overflow: None,
         provenance: Some(Provenance::Kernel),
         consumers: Some(ALL.to_vec()),
     }
