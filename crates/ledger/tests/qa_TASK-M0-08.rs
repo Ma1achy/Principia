@@ -184,30 +184,50 @@ negative_control!(
 /// Two populations the fixture threshold 0.5 lies between.
 const SPLIT: &[Population] = &[pop("smooth", 1e-3, 1e-1), pop("structured", 1.0, 1e2)];
 
-/// REQ-VAL-006 verify: "a threshold ... at an extreme percentile (tau_display at the 0.4th percentile) fails review".
-/// philosophy §4.2: at the 0.4th percentile the split predicate is true for 99.6% of quads. The requirement fails
-/// the threshold for its percentile, whatever populations its basis names.
-fn tau_display_at(percentile: f64) {
+/// REQ-VAL-006 verify, as R-250 reads it: a threshold must sit between populations of its own distribution, and one
+/// inside a population fails at whatever percentile. `tau_display` at the 0.4th percentile of its own distribution
+/// (philosophy §4.2) lies inside the one population of quads; the same percentile with a rare population holding 0.4%
+/// of the observations below a gap (the control) is admissible. The ends and counts are this fixture's.
+const QUADS: &[Population] = &[Population {
+    name: "quads",
+    lo: 1e-3,
+    hi: 1e2,
+    count: 1000,
+}];
+
+fn tau_display_at_0_4(v: f64, populations: &'static [Population]) {
     refused_naming(
-        &[threshold(
-            "tau_display",
-            0.5,
-            distribution(percentile, SPLIT),
-        )],
+        &[threshold("tau_display", v, distribution(0.4, populations))],
         &["tau_display"],
     );
 }
 
 #[test]
 fn qa_constants_threshold_tau_display_at_the_0_4th_percentile_fails_whatever_its_populations() {
-    tau_display_at(0.4);
+    tau_display_at_0_4(5e-3, QUADS);
 }
 
 negative_control!(
     qa_constants_threshold_tau_display_at_the_0_4th_percentile_fails_whatever_its_populations,
-    "the same threshold at the median of its distribution is not at an extreme percentile, so the refusal must fail",
+    "at the same 0.4th percentile, a threshold between populations is admissible (R-250), so the refusal must fail",
     expected = "the gate admitted the register",
-    tau_display_at(50.0)
+    {
+        const RARE_BELOW_A_GAP: &[Population] = &[
+            Population {
+                name: "rare",
+                lo: 1e-4,
+                hi: 1e-3,
+                count: 4,
+            },
+            Population {
+                name: "quads",
+                lo: 1e-2,
+                hi: 1e2,
+                count: 996,
+            },
+        ];
+        tau_display_at_0_4(5e-3, RARE_BELOW_A_GAP)
+    }
 );
 
 /// §3.8 (the definition this task writes): "a threshold separates populations". One below every population, or
