@@ -135,7 +135,8 @@ fn entries() -> Vec<EntryBuilder> {
         descriptor("state", 0, 3, Scale::Categorical(6), 5),
         descriptor("detail", 3, 2, Scale::Categorical(4), 3),
         descriptor("saturated", 5, 1, Scale::Flag, 1),
-        descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2),
+        // Pair ids 0–2 (R-22); the stored code 3 is "unset/invalid" (payload §2), so it is the sentinel.
+        descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2).sentinel(3.0),
         descriptor("last_symbol", 8, 2, Scale::Categorical(4), 3),
         latch("d_min", packed("packed_a", 16, 16), Bound::Open(0.0)),
         latch("dE_max", packed("packed_b", 0, 16), Bound::Closed(0.0)),
