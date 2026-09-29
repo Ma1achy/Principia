@@ -6,6 +6,7 @@ pub mod codegen;
 pub mod controls;
 pub mod deps;
 pub mod lint_constants;
+pub mod pr_check;
 
 use std::path::{Path, PathBuf};
 

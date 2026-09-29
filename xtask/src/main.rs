@@ -25,7 +25,11 @@ Commands:
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
-                                  from the constants register, naming file and line (dd_generation_root §3.8)";
+                                  from the constants register, naming file and line (dd_generation_root §3.8)
+  pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
+                                  make mandatory that is missing or empty, and each validation meter or
+                                  discriminator line with no statement (R-180); reads the pull_request event JSON
+                                  at <file>, or at $GITHUB_EVENT_PATH";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -41,6 +45,13 @@ fn main() -> ExitCode {
             xtask::controls::run(Path::new(path), Mode::List)
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
+            Ok(path) => xtask::pr_check::run(Path::new(&path)),
+            Err(_) => {
+                Err("pr-check: no --event <file>, and $GITHUB_EVENT_PATH is not set".to_owned())
+            }
+        },
+        ["pr-check", "--event", path] => xtask::pr_check::run(Path::new(path)),
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
