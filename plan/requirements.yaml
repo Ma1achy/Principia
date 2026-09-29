@@ -4814,7 +4814,7 @@
   milestone: M1
 - id: REQ-PAY-032
   area: PAY
-  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and `ftle` must read NaN whenever it is false (R-254)."
+  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and `ftle` must read NaN whenever it is false (R-254); every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) must exclude samples by `ftle_valid` explicitly, never by NaN propagation (R-255)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 5. Derived — computed at read, NOT stored
@@ -4824,11 +4824,14 @@
     section: 3.4 `SimState` scalars — with presentation metadata
   - file: decisions.md
     section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: unit test
     detail: truth table over tier/state/n/renorms
   rulings:
   - R-254
+  - R-255
   milestone: M1
 - id: REQ-PAY-033
   area: PAY
@@ -8797,13 +8800,16 @@
     section: "R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*"
   - file: decisions.md
     section: "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: review checklist
-    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; the debug NaN guard is the bitcast test (R-114)"
+    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; every aggregate over ftle excludes samples by ftle_valid, not by NaN propagation or min/max/clamp on NaN (R-255); the debug NaN guard is the bitcast test (R-114)"
   rulings:
   - R-79
   - R-114
   - R-145
+  - R-255
   milestone: M1
 - id: REQ-RENDER-016
   area: RENDER

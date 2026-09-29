@@ -2182,4 +2182,19 @@ contract said per-sample failure surfaces as the defined failed-state values, ne
 worded, so a failed sample's `ftle` reads NaN too; the lowering contract names `ftle` as the one exception. R-79's
 storage rule stands: `ftle` is derived at read, never stored, so storage still never holds NaN, and a failed sample's
 stored fields keep their defined failed-state values.
+*Accepted by the human (29 Sep, with R-255):* "The failed-sample item on #53 stands: a failed sample's ftle reads NaN
+(R-254 as applied)."
+
+## R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*
+*29 Sep 2026 · applied in the lowering and render contracts, REQ-PAY-032, REQ-RENDER-015 and `plan/reviewers/physics.md`*
+
+"The failed-sample item on #53 stands: a failed sample's ftle reads NaN (R-254 as applied). Condition, recorded with it
+as R-255: every aggregate over ftle (footprint means and spreads, quad reductions, histograms, statistics) excludes
+samples by ftle_valid explicitly and never relies on NaN propagation, since one NaN poisons a sum or mean, and WGSL's
+min/max/clamp with NaN operands are implementation-defined (a parity hazard). Add this to the physics reviewer's
+checklist."
+
+*Applied:* the lowering contract's Part 3a and the render contract's validity bullet state the rule. REQ-PAY-032 carries
+it for every consumer and REQ-RENDER-015's check covers the fragment side; `plan/reviewers/physics.md` § 7 gains the
+item, so every task that aggregates `ftle` is checked against it.
 
