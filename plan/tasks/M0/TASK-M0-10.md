@@ -9,9 +9,10 @@
 - **Size:** ~450 lines
 
 ## Goal
-The ledger transcribes payload §2's bit layouts and the Rust emitter writes the kernel/host pack/unpack (`no_std`): `sample_descriptor` in the low 16 bits of `packed_a` — `state` 0–2 (0 escape, 1 bounded, 2 collision, 3 running, 4 sim_failed, 5 decode_failed; 6–7 reserved and decoded as finished and untrusted), `detail` 3–4, `saturated` 5, `dmin_pair` 6–7, `last_symbol` 8–9, bits 10–15 reserved and decoding as zero — with `d_min` f16 in bits 16–31; `packed_b` with `dE_max` f16 low and `dLz_max` f16 high; `times` with `t_end_step` u16 low and `t_dmin_step` u16 high. Accessors carry the payload §6 names (`sd_*`, `pa_d_min`, `pb_dE_max`, `pb_dLz_max`, `tm_*`, `set_last_symbol`, the state predicates, `total_substeps_log2`); the f16 packer clamps to ±65504 before packing (payload §1); and `roundtrip_ctl` compares the whole raw word, so a contaminated value in any bit fails it — including bits an unpack masks off (pitfalls §9).
+Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-256), the Rust emitter writes the kernel/host pack/unpack (`no_std`): `sample_descriptor` in the low 16 bits of `packed_a` — `state` 0–2 (0 escape, 1 bounded, 2 collision, 3 running, 4 sim_failed, 5 decode_failed; 6–7 reserved and decoded as finished and untrusted), `detail` 3–4, `saturated` 5, `dmin_pair` 6–7, `last_symbol` 8–9, bits 10–15 reserved and decoding as zero — with `d_min` f16 in bits 16–31; `packed_b` with `dE_max` f16 low and `dLz_max` f16 high; `times` with `t_end_step` u16 low and `t_dmin_step` u16 high. Accessors carry the payload §6 names (`sd_*`, `pa_d_min`, `pb_dE_max`, `pb_dLz_max`, `tm_*`, `set_last_symbol`, the state predicates, `total_substeps_log2`); the f16 packer clamps to ±65504 before packing (payload §1); and `roundtrip_ctl` compares the whole raw word, so a contaminated value in any bit fails it — including bits an unpack masks off (pitfalls §9).
 
 ## References
+- `decisions.md` § "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
 - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)"
 - `docs/design/principia_dd_simstate_payload.md` § "`packed_a` (u32)"
 - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
@@ -31,7 +32,6 @@ The ledger transcribes payload §2's bit layouts and the Rust emitter writes the
 - `decisions.md` § "R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*"
 
 ## Deliverables
-- `crates/ledger/src/payload.rs` — entries for `packed_a`, the descriptor, `packed_b`, `times`, `total_substeps`.
 - `crates/ledger/src/gen/rust.rs` — pack/unpack/insert emitters → `crates/kernel/src/payload/generated.rs` (accessors named as payload §6; f16 via a `no_std` binary16 conversion matching `pack2x16float`, clamping first).
 - `crates/kernel/src/payload/roundtrip.rs` — `roundtrip_ctl`: pack → unpack → repack and compare the full raw u32, never the masked fields.
 - Tests in `crates/kernel/tests/` and `crates/ledger/tests/`.
@@ -49,3 +49,4 @@ The ledger transcribes payload §2's bit layouts and the Rust emitter writes the
 - The GPU halves of the round trips (the WGSL unpack and the kernel on the GPU) are TASK-M0-15.
 - Dispatch's refusal of ⌈T/dt⌉ > 65535 (R-86) belongs to the dispatch that doesn't exist yet; the limit is in the constants register (TASK-M0-08).
 - Failure `detail` categories follow payload §2; payload §8 says to confirm them against the integrator contract's failure modes when that is finalised (M3).
+- R-256: TASK-M0-09 transcribed the entries for `packed_a`, the descriptor, `packed_b`, `times` and `total_substeps`; this task keeps only the pack/unpack/insert emitters, the accessors and `roundtrip_ctl` over them.

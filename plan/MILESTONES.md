@@ -70,15 +70,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 89 requirements** (and every earlier gate still green):
+**Exit gate — 94 requirements** (and every earlier gate still green):
 
-- PAY (20): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087
-- GEN (10): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028
+- PAY (21): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091
+- GEN (11): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
 - TOOL (12): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134
-- VAL (31): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167
-- SYS (13): REQ-SYS-001…008, REQ-SYS-063…067
+- VAL (33): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…169
+- SYS (14): REQ-SYS-001…008, REQ-SYS-063…068
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -98,10 +98,10 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - The baseline outcome palette that the field views need, pinned by golden images.
 
 <!-- gate:M1 -->
-**Exit gate — 81 requirements** (and every earlier gate still green):
+**Exit gate — 82 requirements** (and every earlier gate still green):
 
 - INT (1): REQ-INT-001
-- PAY (13): REQ-PAY-021…033
+- PAY (14): REQ-PAY-021…033, REQ-PAY-090
 - GEN (5): REQ-GEN-009…012, REQ-GEN-027
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
 - COL (8): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056

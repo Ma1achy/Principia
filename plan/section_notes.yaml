@@ -526,3 +526,12 @@
   section: R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
   reason: informative only
   note: process ruling; the memory limit on dispatch (recorded in CLAUDE.md)
+- file: decisions.md
+  section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  reason: informative only
+  note: rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR #54)
+- file: decisions.md
+  section: R-262 — Builds move to the internal disk, three agents at most
+  reason: informative only
+  note: process ruling; where builds run
+
