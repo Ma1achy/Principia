@@ -580,18 +580,15 @@ fn gated_unit_test(gate: &str, uses: bool) -> String {
     format!("pub fn f() {{}}\n\n#[cfg(all(test, {gate}))]\nmod tests {{\n    #[test]\n    fn t() {{\n        {body}\n    }}\n}}\n")
 }
 
-/// R-194: a kernel unit test under `gate` that uses validation fails the check at the first run that compiles it,
-/// and the failure names that run (`expected`: its feature set and profile) and cites R-194. Premise: plain
-/// `cargo test` with `premise_args` builds and runs the test with validation linked. Control: the same workspace
-/// without the use passes, with the compile check run, so it is the use, not the gate, that fails the check.
-fn assert_gated_unit_test_fails(
+/// `assert_gated_unit_test_fails`'s run: the premise checked, `xtask deps` on the workspace whose kernel unit test
+/// under `gate` uses validation; whether it passed, and its stderr.
+fn run_gated_unit_test(
     case: &str,
     features: &str,
     gate: &str,
     premise_args: &[&str],
-    expected: &str,
     extra: &[(&str, &str)],
-) {
+) -> (bool, String) {
     let toml = "crates/kernel/Cargo.toml";
     let lib = "crates/kernel/src/lib.rs";
     let manifest = kernel_manifest(features);
@@ -624,6 +621,13 @@ fn assert_gated_unit_test_fails(
         String::from_utf8_lossy(&premise.stderr)
     );
     let (ok, _, stderr) = run_workspace(&root);
+    (ok, stderr)
+}
+
+/// `assert_gated_unit_test_fails`'s check of the run: it failed, naming `expected` and R-194, with the compiler's
+/// error.
+fn check_gated_unit_test_fails(case: &str, gate: &str, ok: bool, stderr: &str, expected: &str) {
+    let lib = "crates/kernel/src/lib.rs";
     assert!(
         !ok,
         "{case}: a kernel unit test under {gate} that uses validation passes xtask deps"
@@ -640,7 +644,28 @@ fn assert_gated_unit_test_fails(
         stderr.contains("error[E04") && stderr.contains(lib),
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
+}
 
+/// R-194: a kernel unit test under `gate` that uses validation fails the check at the first run that compiles it,
+/// and the failure names that run (`expected`: its feature set and profile) and cites R-194. Premise: plain
+/// `cargo test` with `premise_args` builds and runs the test with validation linked. Control: the same workspace
+/// without the use passes, with the compile check run, so it is the use, not the gate, that fails the check.
+fn assert_gated_unit_test_fails(
+    case: &str,
+    features: &str,
+    gate: &str,
+    premise_args: &[&str],
+    expected: &str,
+    extra: &[(&str, &str)],
+) {
+    let (ok, stderr) = run_gated_unit_test(case, features, gate, premise_args, extra);
+    check_gated_unit_test_fails(case, gate, ok, &stderr, expected);
+
+    let toml = "crates/kernel/Cargo.toml";
+    let lib = "crates/kernel/src/lib.rs";
+    let manifest = kernel_manifest(features);
+    let mut files = vec![(toml, manifest.as_str())];
+    files.extend_from_slice(extra);
     let control = format!("{case}_control");
     let without_use = gated_unit_test(gate, false);
     let root = cargo_workspace(
@@ -1212,7 +1237,13 @@ validation::negative_control!(
         let case = Case::new("release_profile");
         let gate = "not(debug_assertions)";
         let expected = "with --no-default-features in the dev profile";
-        assert_gated_unit_test_fails(&case.0, "", gate, &["--release"], expected, &[]);
+        let (ok, stderr) = run_gated_unit_test(&case.0, "", gate, &["--release"], &[]);
+        // R-236: the child's expected compile error first, so a run that fails otherwise is not read as the check's.
+        assert!(
+            !ok && stderr.contains("error[E04") && stderr.contains("crates/kernel/src/lib.rs"),
+            "control: xtask deps did not fail with the compiler's error in the kernel unit test:\n{stderr}"
+        );
+        check_gated_unit_test_fails(&case.0, gate, ok, &stderr, expected);
     }
 );
 
