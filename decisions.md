@@ -2198,3 +2198,94 @@ checklist."
 it for every consumer and REQ-RENDER-015's check covers the fragment side; `plan/reviewers/physics.md` § 7 gains the
 item, so every task that aggregates `ftle` is checked against it.
 
+## R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack
+*29 Sep 2026 · applied in TASK-M0-09 and TASK-M0-10*
+
+"1. TASK-M0-09 accepted at ~1,000 lines, one PR. Veto items (a) and (b) stand. Update TASK-M0-10's task file so it
+keeps only pack/unpack."
+
+*Applied:* TASK-M0-09 (built at ~1,000 counted lines: ~473 implementation, ~529 the implementer's own tests) is one PR.
+Its veto items stand: (a) it transcribes the interiors of `packed_a`, `packed_b` and `times` (the descriptor fields
+included), so the static check sees every declared bit; (b) §3.4's `delta_E_max_abs` and `delta_Lz_max_abs` are the
+payload's `dE_max` and `dLz_max` (R-70, R-86). TASK-M0-10 now builds the pack/unpack/insert emitters, the accessors
+and `roundtrip_ctl` over the entries TASK-M0-09 transcribed.
+
+## R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*
+*29 Sep 2026 · applied in TASK-M0-02 (PR #54)*
+
+"2. RQ-157: all five as recommended (1 superseded, 2 and 3 ported with calibration and definition requirements, 4 not
+standing, 5 ported with values into dd_validation_orbits §2). #54's veto item 1 stands: current docs win where they
+contradict a brief."
+
+*Applied:* (1) the 2:1 balance constraint and `neighbour(i, dir)` are superseded: scheduler Part 3's split predicate
+governs, and one sample per tile names no crack. (2) the persistent frontier and its permanent from-scratch
+cross-check are ported, with N, the frames between cross-checks, a calibration requirement (R-71). (3) "zoom-out
+recomputes ≈ 0 quads" is ported as a benchmark with its tolerance a calibration requirement, and ranking on a quad's
+visible part is ported with `P_visible` a definition requirement (R-72). (4) the reporting items are experiment
+reporting, not standing obligations. (5) kernel-build §5's gates are ported, with their values, into
+`dd_validation_orbits` § 2. Where a consolidated doc contradicts a brief, the doc wins and nothing is ported (PR #54's
+veto item 1). The ports land in PR #54 (TASK-M0-02), docs first, then the requirements.
+
+## R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*
+*29 Sep 2026 · applied in TASK-M0-05*
+
+"3. RQ-159: all three as recommended."
+
+*Applied:* (1) the number of regions the convergence gate declares is a calibration requirement (R-71), closed by
+TASK-M0-05 and confirmed at the M0 gate; until then the report prints the count it saw and marks the minimum "not yet
+calibrated". (2) the two fixtures record their region count as "not recorded", and a conclusion drawn from an
+unrecorded count is flagged like one from too few regions. (3) scatter, for the convergence gate, is a definition
+requirement (R-72): the r_k sequence per region, and the min–max spread of the final r across regions.
+
+## R-259 — The vocabulary lint matches four retired ideas as phrases; `spawn::TIMEOUT` becomes `SPAWN_TIMEOUT`; it scans `.md` and `.html` *(closes RQ-160)*
+*29 Sep 2026 · applied in TASK-M0-16 and REQ-SYS-002*
+
+"4. RQ-160: all three as recommended, including SPAWN_TIMEOUT with a one-round exception for qa's file."
+
+*Applied:* (1) the four retired ideas are matched as case-insensitive phrases in code and docs: "checkpoint count",
+"ensemble shadow(s)", `fround` (with `Math.fround`), "TypeScript layout constant" / "TS layout constant"; the
+identifier terms stay whole, case-sensitive identifiers (R-140). (2) `validation::spawn::TIMEOUT` is renamed
+`SPAWN_TIMEOUT` in TASK-M0-16, and qa's `crates/validation/tests/qa_TASK-M0-26.rs` follows under a one-round
+exception, qa reviewing. (3) the lint scans `.md` and `.html` under `docs/`, excluding `docs/archive/` and
+`docs/reference/`; `docs/experiments/` holds no `.md` contract.
+
+## R-260 — qa's approval carries over its own test commit *(amends R-175)*
+*29 Sep 2026 · applied in REQ-SYS-066 and TASK-M0-37*
+
+"5. reviews-complete: an approval still counts if the only later commit is qa's own "qa: tests for <task>" commit,
+adding files only under qa's paths."
+
+*Applied:* a role's APPROVE on an earlier commit counts on the head when every commit after it is a commit titled
+`qa: tests for <TASK-id>` that adds files only under qa's paths (`crates/*/tests/`, `xtask/tests/`, `fixtures/`,
+R-237). `reviews-check` implements it in TASK-M0-37.
+
+## R-261 — A PR whose title names no task passes `reviews-complete` *(amends R-175)*
+*29 Sep 2026 · applied in REQ-SYS-066 and TASK-M0-37*
+
+"6. reviews-complete: a PR naming no task passes, with "no task, no named reviewers"."
+
+*Applied:* a PR whose title names no task id passes `reviews-complete` and prints "no task, no named reviewers".
+`reviews-check` implements it in TASK-M0-37.
+
+## R-262 — Builds move to the internal disk, three agents at most
+*29 Sep 2026 · process*
+
+"7. Move builds to the internal disk, three agents at most. Keep the disk rules (≥25 GB target, never start work below
+15 GB)."
+
+*Applied:* new worktrees and target directories go on the internal disk; at most three agents build at once; free disk
+stays ≥ 25 GB where possible and no work starts below 15 GB. Work already on the external SSD finishes there. Process
+only.
+
+## R-263 — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*
+*29 Sep 2026 · applied in generation-root §3.8 and TASK-M0-09*
+
+"8. RQ-158: add the optional §3.8 key floor?: <sim-key parameter>."
+
+*Applied:* §3.8's schema gains `floor?: <sim-key parameter>`; `energy_drift` carries `floor: eps_E` and `Lz_drift`
+`floor: eps_L` (§3.4), set in TASK-M0-09.
+
+*Also in the same message:* "The REQ-PAY-002 split and the M0-03 → M0-36 split both stand. I'll add pr-check (and ci
+and reviews-complete, if they aren't yet) to the required checks once #56 merges." Recorded under R-256's PR as
+applied: REQ-PAY-002 keeps the SimState and ICDescriptor part (TASK-M0-09); RenderQuad's field set moves to TASK-M1-06
+and the WGSL layout comparison to TASK-M0-13, each as a split-off requirement.

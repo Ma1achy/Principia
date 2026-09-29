@@ -1,7 +1,7 @@
 # TASK-M0-05 — The numerical-gate runner, and the convergence-under-refinement gate
 
 - **Milestone:** M0
-- **Closes:** REQ-VAL-002, REQ-VAL-004
+- **Closes:** REQ-VAL-002, REQ-VAL-004, REQ-VAL-168, REQ-VAL-169
 - **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -19,6 +19,7 @@
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-171 — The convergence gate, defined *(closes A1, A2, T2)*"
 
+- `decisions.md` § "R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*"
 ## Deliverables
 - `crates/validation/src/gate/` — the gate trait (`run(fixture) -> GateReport`) and registry; `xtask/src/gate.rs` — `cargo xtask gate <gate>` and `cargo xtask gate --all` (registered in `cargo xtask ci`).
 - Fixture format `fixtures/gates/<gate>/gate.json`: inputs, and the threshold given as a requirement id; the runner refuses a numeric threshold that names no requirement or calibration requirement.
@@ -31,8 +32,11 @@
 ## Acceptance tests
 - `cargo xtask gate convergence` — `pitfall_escape_fraction.json` fails (r not strictly decreasing); `converging.json` passes (finest r = 0.0046 < 0.1); a sequence in the wrong order is refused; threshold: 0.1, provisional against REQ-VAL-135 (R-171; calibrated in M3, R-113) (REQ-VAL-004).
 - `cargo test -p validation gate_report` — a report missing its scatter, region-count or negative-results section is refused; a conclusion from fewer regions than declared is flagged (REQ-VAL-002).
+- `cargo xtask gate convergence` — the report prints the region count it saw and "minimum not yet calibrated"; each fixture records its region count as "not recorded", and a conclusion from an unrecorded count is flagged like one from too few regions (REQ-VAL-168).
+- `cargo test -p validation convergence_scatter` — the scatter section lists r_k per region and the min–max of the final r_k across regions, for a two-region fixture computed by hand (REQ-VAL-169).
 
 ## Notes
 - Depends on TASK-M0-22 in place of TASK-M0-04 (R-198 split it): this task's tests register negative controls, which come before the tests that need them (R-176). TASK-M0-04 is still reached through TASK-M0-22.
 - No physics runs in M0; the gate is exercised on recorded sequences. Its first physical use is M3 (escape fraction and the other aggregate quantities).
 - RQ-93 ruled: R-113 — REQ-VAL-135 moves to M3 (TASK-M3-34 proposes it on a real converging aggregate); the runner and the gate stay here with the provisional threshold 0.1 (R-171).
+- R-258 (closes RQ-159): the region minimum is a calibration requirement (REQ-VAL-168, confirmed at the M0 gate), the fixtures' counts are "not recorded", and scatter is defined (REQ-VAL-169). The local RQ commit b01bb83 on this branch is superseded by RQ-159 on main; drop it.
