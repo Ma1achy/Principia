@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-A separate CPU arbitrary-precision integrator with convergence gating — raise the precision and tighten the tolerance until the result stops changing — exists in `crates/validation`, sharing no source with the kernel. It is the reference for the integration-floor probe and Burrau ground truth; double-double is a fast screen only and RK45 stays the inspector's reference (R-33). Its protocol (the precision/tolerance ladder, the stop rule, when it runs, its harness interface) is defined in the validation note (R-72).
+A separate CPU arbitrary-precision integrator with convergence gating — raise the precision and tighten the tolerance until the result stops changing — exists in `crates/validation`, sharing no source with the kernel. It is the reference for the integration-floor probe and Burrau ground truth; double-double is a fast screen only (R-33; R-265: this reference itself serves as the screen) and RK45 stays the inspector's reference (R-33). Its protocol (the precision/tolerance ladder, the stop rule, when it runs, its harness interface) is defined in the validation note (R-72).
 
 ## References
 - `docs/contracts/principia_canonical_spec.md` § "7. Precision & validation model *(authoritative: `parity_contract`, `validation_ground_truth_note`, `core_design`)*"
