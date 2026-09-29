@@ -1,7 +1,7 @@
 //! The constants register's generation gate (dd_generation_root §3.8, "The constants register"): an entry without a
 //! citation or an admissibility class refuses generation, naming the constant (REQ-SYS-001, REQ-SYS-005); a threshold
 //! without a relative basis, or one not sitting between populations of its own distribution, is refused (REQ-VAL-006,
-//! R-250).
+//! R-250); and the generator driver refuses to generate from a register the gate refuses.
 
 use ledger::constants::{
     gate, Admissibility, Citation, ConstantBuilder, Population, RelativeBasis, Value, REGISTER,
@@ -305,5 +305,59 @@ negative_control!(
             ..settled()
         },
         &["fx_infinite"]
+    )
+);
+
+/// `gen::run_with_register` with `register` over the empty ledger, under a fresh root named `case`: it refuses,
+/// naming each of `names`, and writes nothing.
+fn check_driver_refuses(case: &str, register: &[ConstantBuilder], names: &[&str]) {
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(case);
+    let _ = std::fs::remove_dir_all(&root);
+    let stub = |_: &[ledger::schema::Word], _: &[ledger::schema::Entry]| {
+        vec![ledger::gen::Generated {
+            path: std::path::PathBuf::from("gen/stub.txt"),
+            contents: String::new(),
+        }]
+    };
+    let result = ledger::gen::run_with_register(
+        register,
+        &ledger::schema::Ledger::default(),
+        &[stub],
+        &root,
+    );
+    let message = match result {
+        Ok(_) => panic!("the driver generated"),
+        Err(e) => e,
+    };
+    for name in names {
+        assert!(
+            message.contains(name),
+            "refused, but not naming `{name}`: {message}"
+        );
+    }
+    assert!(!root.exists(), "the refused driver wrote under {root:?}");
+}
+
+#[test]
+fn constants_gate_incomplete_entry_refuses_the_generator_driver() {
+    check_driver_refuses(
+        "constants_gate_driver",
+        &[ConstantBuilder {
+            name: "fx_uncited",
+            citation: None,
+            ..settled()
+        }],
+        &["fx_uncited"],
+    );
+}
+
+negative_control!(
+    constants_gate_incomplete_entry_refuses_the_generator_driver,
+    "a complete register lets the driver generate, so the refusal check must fail on it",
+    expected = "the driver generated",
+    check_driver_refuses(
+        "constants_gate_driver_control",
+        &[settled()],
+        &["fx_constant"]
     )
 );
