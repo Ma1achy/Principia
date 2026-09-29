@@ -502,3 +502,11 @@
   section: R-240 — TASK-M0-07 is split in two *(closes RQ-151)*
   reason: informative only
   note: plan ruling; a task split (recorded in plan/tasks.yaml, TASK-M0-07 and TASK-M0-35)
+- file: decisions.md
+  section: R-243 — TASK-M0-07 is accepted at ~725 counted lines
+  reason: informative only
+  note: size acceptance for one PR
+- file: decisions.md
+  section: R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)*
+  reason: informative only
+  note: wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8)

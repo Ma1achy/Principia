@@ -2029,3 +2029,44 @@ as "entry #i (unnamed)"; `ledger::layout()` stays empty until the §3 entries ar
 field of width w requires the least value ≥ −2^(w−1) and the greatest ≤ 2^(w−1) − 1; a field type the width check does
 not recognise fails the check, naming the field and its type. REQ-GEN-028 (new) carries the width rules, closed by
 TASK-M0-35; the range ends and the unnamed-entry report are TASK-M0-07's.
+
+## R-243 — TASK-M0-07 is accepted at ~725 counted lines
+*29 Sep 2026 · applied in PR #42*
+
+Asked whether to accept PR #42 at 725 counted lines against R-240's ~560 (the excess: R-241's `xtask` → `ledger` edge,
+~50, and the fixes code, qa and physics asked for, ~115), the human chose "Accept, merge". Merged as c1fd103.
+
+## R-244 — TASK-M0-34's first deliverable moves to `xtask/src/controls.rs` *(amends R-236; closes RQ-155)*
+*29 Sep 2026 · applied in TASK-M0-34*
+
+Asked in RQ-155, the human chose "Move it to controls.rs": `xtask/src/controls.rs`'s `ControlPasses` / `WrongPanic`
+findings carry the control's own output and drop "leaves it passing"; the one-round exception extends to the qa files
+that assert the old wording. R-236's intent holds: the cause isn't lost next time.
+
+*Applied:* REQ-VAL-167 is reworded to match. The exception covers `xtask/tests/qa_TASK-M0-22.rs`,
+`crates/validation/tests/qa_TASK-M0-21.rs` and `xtask/tests/controls.rs`, limited to the assertions on that wording,
+with qa reviewing.
+
+## R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*
+*29 Sep 2026 · applied in the docs listed below*
+
+Asked in RQ-152, the human chose "Validity predicate": drop the value sentinel; validity is read at derive time from
+`n ≥ 2` (§3.5 already says invalid for `n < 2`), and an invalid fit reads NaN like R-79's tier-absent fields.
+
+*Applied per R-245 — veto? (mechanical consequences):* `diffusion` is derived at read (§3.5 stores only `mean_y`,
+`C_ty`), so storage still never holds NaN (R-79 stands). Every place that named the −1.0 sentinel now names the
+predicate `n ≥ 2` and NaN: generation-root §3.4, §3.5, §3.8's worked entry and §5 item 5; simstate_payload §§ the
+`n < 2` guard, the derived table and the WGSL helper's comment; the render contract's sentinel paragraph, generation
+note and field table; debug_tooling_plan's field row; colour_composition's validity lane. R-136's rule stands for any
+stored sentinel; `diffusion` is no longer one, and an invalid fit gets the hatch as NaN. R-17's streaming slope stands.
+REQ-INT-041, REQ-PAY-030, REQ-PAY-039, REQ-GEN-012, REQ-RENDER-028 and REQ-TOOL-012 are reworded to match. The
+non-normative GUI mockups under `docs/gui/reference/` are not edited.
+
+## R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)*
+*29 Sep 2026 · applied in the render contract and generation-root §3.5, §3.8*
+
+Asked in RQ-153, the human chose "§3.1: derived": the final drift is derived at read; the max is an accumulator. The
+render contract's "stored" is reworded to "kept".
+
+*Applied:* render contract Part 6's "Drift shape" row, generation-root §3.5's accumulator list and §3.8's two worked
+entries are reworded to cite this ruling.

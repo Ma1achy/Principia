@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 
 ## Sections
 
-933 sections in 46 files: 807 yield at least one requirement; 126 yield none and are listed below with the reason.
+937 sections in 46 files: 809 yield at least one requirement; 128 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 78 |
+| informative only | 80 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -87,6 +87,8 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 | R-238 — The old prin-impl scratch directory is deleted | informative only | housekeeping outside the repo |
 | R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high | informative only | process ruling; a memory limit on dispatch (recorded in CLAUDE.md) |
 | R-240 — TASK-M0-07 is split in two *(closes RQ-151)* | informative only | plan ruling; a task split (recorded in plan/tasks.yaml, TASK-M0-07 and TASK-M0-35) |
+| R-243 — TASK-M0-07 is accepted at ~725 counted lines | informative only | size acceptance for one PR |
+| R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)* | informative only | wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
