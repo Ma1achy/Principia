@@ -2070,3 +2070,23 @@ render contract's "stored" is reworded to "kept".
 
 *Applied:* render contract Part 6's "Drift shape" row, generation-root §3.5's accumulator list and §3.8's two worked
 entries are reworded to cite this ruling.
+
+## R-247 — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*
+*29 Sep 2026 · applied in REQ-GEN-028 and TASK-M0-35*
+
+Asked in RQ-156, the human chose "Defer to first signed type": §3.8 is left alone; the signed case is dropped from
+REQ-GEN-028's test and TASK-M0-35's acceptance line. R-242's signed rule stays recorded and lands with the first signed
+type.
+
+## R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*
+*29 Sep 2026 · applied in generation-root §3.8, REQ-GEN-028 and TASK-M0-35*
+
+"Exact width, no range-vs-width test: f16-pair and fixed16 need exactly 16 bits, f32 exactly 32; a vector or anything
+else at a packed location still fails. Plus: an f16 field's declared range must lie within f16's finite range
+(±65504). An unbounded end fails unless the ledger entry states its overflow behaviour (saturate or ±inf)."
+
+*Applied per R-248 — veto?:* §3.8 gains an optional key, `overflow: saturate | inf`, where the entry states it. "An
+f16 field" is read as an `f16-pair` field wherever it sits, and each `f16-pair` component of a vector (range applies
+per component, §3.8); `fixed16` is not binary16, so the f16 range rule doesn't apply to it. REQ-GEN-028 carries the
+rules, closed by TASK-M0-35. TASK-M0-09 gains a note: `d_min` (`f16`, range "> 0", §3.4) has an unbounded upper end,
+so its entry must state its overflow behaviour or bound its range.

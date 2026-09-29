@@ -510,3 +510,7 @@
   section: R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)*
   reason: informative only
   note: wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8)
+- file: decisions.md
+  section: "R-247 — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*"
+  reason: informative only
+  note: sequencing ruling; the rule is carried by REQ-GEN-028

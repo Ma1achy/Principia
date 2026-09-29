@@ -6214,15 +6214,21 @@
   milestone: M1
 - id: REQ-GEN-028
   area: GEN
-  statement: "The static layout check's width test must hold for every field type it meets: an unsigned (u-bits) field of width w needs its range's least value ≥ 0 and greatest ≤ 2^w − 1; a signed integer field of width w needs least ≥ −2^(w−1) and greatest ≤ 2^(w−1) − 1; an unbounded range end fits no width; and a field type the check does not recognise must fail the check, naming the field and its type, rather than pass unchecked (R-242)."
+  statement: "The static layout check's width test must hold for every field type it meets at a packed location: an unsigned (u-bits) field of width w needs its range's least value ≥ 0 and greatest ≤ 2^w − 1, and an unbounded end fits no width; `f16-pair` and `fixed16` need exactly 16 bits and `f32` exactly 32, with no range-against-width test; any other type there (a vector included) fails the check, naming the field and its type (R-242, R-248). An `f16-pair` field's declared range, wherever it sits, must lie within ±65504, and an unbounded end fails unless the entry states its `overflow` (saturate or inf) (R-248). The signed-integer rule (R-242) lands with the first signed type in §3.8 (R-247)."
   source:
   - file: decisions.md
     section: "R-242 — The layout check's range and width rules *(closes RQ-151's rules)*"
+  - file: decisions.md
+    section: "R-247 — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*"
+  - file: decisions.md
+    section: "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
   verify:
     method: unit test
-    detail: "cargo test -p ledger layout_static: an unsigned field too narrow for its range, a signed field too narrow for its range, an unbounded range on a packed field, and a field of an unrecognised type each fail, naming the word, the field and the bits; each has a registered negative control"
+    detail: "cargo test -p ledger layout_static: an unsigned field too narrow for its range, an unbounded range on a packed u-bits field, an f16-pair or fixed16 field not exactly 16 bits wide, an f32 field not exactly 32, a vector at a packed location, an f16-pair range beyond ±65504, and an f16-pair unbounded end with no `overflow` each fail, naming the word or entry, the field and the bits; an f16-pair unbounded end with `overflow` passes; each has a registered negative control"
   rulings:
   - R-242
+  - R-247
+  - R-248
   milestone: M0
 - id: REQ-SCHED-001
   area: SCHED

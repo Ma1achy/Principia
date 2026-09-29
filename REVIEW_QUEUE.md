@@ -2651,3 +2651,14 @@ Tick any you don't accept.
 - **Options seen:** move the deliverable to `xtask/src/controls.rs`, extending the exception to the files asserting the
   wording; or retire it and keep only the `deps.rs` deliverable.
 - **Ruling:** R-244 (decisions.md). Closed in TASK-M0-34.
+
+## RQ-156: R-242's width rules meet no signed type, and float types at packed locations *(plan, TASK-M0-35)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema": "type: u-bits | f32 |
+  f16-pair | fixed16 | vector(type, k)"; § 3.1: "the high 16 bits of `packed_a` hold `d_min:f16`"; `decisions.md`
+  § "R-242": "the width check also covers signed integer fields if the ledger has any" and "a field type the width
+  check does not recognise fails the check"; REQ-GEN-028's verify: "a signed field too narrow for its range".
+- **What:** raised by TASK-M0-35's implementer before building. §3.8 has no signed integer type, so REQ-GEN-028's
+  signed test can't be written. And R-242 gives width rules only for integer types, so a literal reading fails
+  `d_min:f16` at its packed location once §3 is transcribed.
+- **Ruling:** R-247, R-248 (decisions.md). Closed in TASK-M0-35.

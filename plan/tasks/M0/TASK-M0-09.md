@@ -69,3 +69,4 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
   §3 transcription must make names unique across the ledger or add a `struct.name` qualifier, and the gate must then
   refuse a `from` name matching more than one entry; if neither fits, file it in REVIEW_QUEUE. §3.8 also has no key
   for §3.4's drift floors `eps_E` and `eps_L`: place them or file it.
+- R-248: `d_min` (`f16-pair`, range "> 0", §3.4) has an unbounded upper end, so its entry must state `overflow` (saturate or inf) or bound its range within ±65504; if the corpus doesn't settle which, file it in REVIEW_QUEUE.
