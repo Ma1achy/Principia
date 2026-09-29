@@ -12,6 +12,7 @@
   requirements: [REQ-SYS-064]
   reviewers: [code, qa]
   pitfalls: []
+  status: done  # closed by R-185 (PR #11), not by a task PR
 - id: TASK-M0-01
   milestone: M0
   title: The cargo workspace, the crates and CI
@@ -33,7 +34,7 @@
   title: Process templates and `cargo xtask pr-check`
   depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
-  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008, REQ-SYS-066]
+  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-4.5]
 - id: TASK-M0-04
@@ -49,7 +50,7 @@
   title: The numerical-gate runner, and the convergence-under-refinement gate
   depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
-  requirements: [REQ-VAL-002, REQ-VAL-004]
+  requirements: [REQ-VAL-002, REQ-VAL-004, REQ-VAL-168, REQ-VAL-169]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M0-06
@@ -81,7 +82,7 @@
   title: "Payload ledger I: SimState (both variants), ICDescriptor and the word buffer, with generated Rust structs"
   depends_on: [TASK-M0-07, TASK-M0-08, TASK-M0-35]
   needs: []
-  requirements: [REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002]
+  requirements: [REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002, REQ-GEN-029]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-10
@@ -113,7 +114,7 @@
   title: "The WGSL generator: the fragment-side unpack layer"
   depends_on: [TASK-M0-10, TASK-M0-11, TASK-M0-12]
   needs: []
-  requirements: [REQ-RENDER-001, REQ-PAY-016]
+  requirements: [REQ-RENDER-001, REQ-PAY-016, REQ-PAY-091]
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M0-14
@@ -329,7 +330,7 @@
   title: "The synthetic payload harness and RenderContext: CPU-filled buffers bound to the fragment"
   depends_on: [TASK-M1-01, TASK-M1-02, TASK-M1-05, TASK-M0-02]
   needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-008, REQ-PAY-012, REQ-SYS-003, REQ-TOOL-004]
-  requirements: [REQ-RENDER-004, REQ-RENDER-007, REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014, REQ-COL-056]
+  requirements: [REQ-RENDER-004, REQ-RENDER-007, REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014, REQ-COL-056, REQ-PAY-090]
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M1-07
@@ -2090,5 +2091,21 @@
   depends_on: [TASK-M0-07]
   needs: []
   requirements: [REQ-GEN-003, REQ-GEN-028]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-36
+  milestone: M0
+  title: "`cargo xtask reviews-check` and the `reviews-complete` check"
+  depends_on: [TASK-M0-01, TASK-M0-22]
+  needs: []
+  requirements: [REQ-SYS-066]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-37
+  milestone: M0
+  title: "`reviews-check`: qa's test commits keep an approval, and a PR naming no task passes"
+  depends_on: [TASK-M0-36]
+  needs: []
+  requirements: [REQ-SYS-068]
   reviewers: [code, qa]
   pitfalls: []

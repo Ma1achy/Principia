@@ -522,3 +522,16 @@
   section: R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
   reason: informative only
   note: size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12
+- file: decisions.md
+  section: R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
+  reason: informative only
+  note: process ruling; the memory limit on dispatch (recorded in CLAUDE.md)
+- file: decisions.md
+  section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  reason: informative only
+  note: rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR #54)
+- file: decisions.md
+  section: R-262 — Builds move to the internal disk, three agents at most
+  reason: informative only
+  note: process ruling; where builds run
+

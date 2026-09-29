@@ -3070,7 +3070,7 @@
   milestone: M3
 - id: REQ-INT-043
   area: INT
-  statement: "The Benettin FTLE must use one shadow renormalised every `n_renorm` steps (`S += log(δ/δ₀)`, shadow reset to `x + δ₀·δ⃗/δ`), and at read or termination finalise the partial interval `S_final = S + log(δ_current/δ₀)` then `λ = S_final/(step_count·dt_macro)`, with `completed_renorms = step_count / renorm_interval_steps` derived."
+  statement: "The Benettin FTLE must use one shadow renormalised every `n_renorm` steps (`S += log(δ/δ₀)`, shadow reset to `x + δ₀·δ⃗/δ`), and at read or termination finalise the partial interval `S_final = S + log(δ_current/δ₀)` then `λ = S_final/(step_count·dt_macro)`, with `completed_renorms = step_count / renorm_interval_steps` derived; the read is NaN whenever `ftle_valid` is false (`step_count = 0` and no completed renorm included), with no sentinel (R-253, R-254)."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
@@ -3084,12 +3084,18 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: unit test
     detail: "dd test 10: halving δ₀ and doubling n_renorm leaves λ_T unchanged within tolerance; λ_T ≈ 0 on Kepler-embedded orbit, large on Burrau; reading between renorm boundaries is not biased low"
   rulings:
   - R-71
   - R-72
+  - R-253
+  - R-254
   milestone: M3
   note: "‖δ₀‖ and n_renorm: REQ-INT-076 (calibration); δ₀'s direction: REQ-INT-077 (definition)."
 - id: REQ-INT-044
@@ -4310,19 +4316,22 @@
   note: "R-113 (RQ-93 M0-9, option b): QuadReduction's sizing is a separate M5 requirement, closed with REQ-PAY-077."
 - id: REQ-PAY-002
   area: PAY
-  statement: "The SimState, ICDescriptor and RenderQuad field sets and packing must be generated from the generation-root ledger as the single source of truth, matching the fields listed in render contract Part 1 (live r,p in CoM frame, one tier-gated Benettin shadow, Benettin S, unwrapped theta, Welford mean_y/C_ty, E_0/Lz_0 f32, d_min/dE_max/dLz_max f16 packed with the descriptor, times as exact u16 macro-step indices, exact total_substeps u32, sample_descriptor u32; ICDescriptor's 12 fields; RenderQuad's 9 fields)."
+  statement: "The SimState and ICDescriptor field sets and packing must be generated from the generation-root ledger as the single source of truth, matching the fields listed in render contract Part 1 (live r,p in CoM frame, one tier-gated Benettin shadow, Benettin S, unwrapped theta, Welford mean_y/C_ty, E_0/Lz_0 f32, d_min/dE_max/dLz_max f16 packed with the descriptor, times as exact u16 macro-step indices, exact total_substeps u32, sample_descriptor u32; ICDescriptor's 12 fields); RenderQuad's field set and the WGSL layouts are split off (R-256's applied note)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Part 1 — The payload (render input)
   - file: decisions.md
     section: R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*
+  - file: decisions.md
+    section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
   verify:
     method: unit test
-    detail: "generated Rust and WGSL struct layouts compared field-by-field against the ledger tables; the Part 1 field lists are a subset check"
+    detail: "generated Rust struct layouts compared field-by-field against the ledger tables; the Part 1 SimState and ICDescriptor field lists are a subset check"
   rulings:
   - R-22
   - R-36
   - R-62
+  - R-256
   milestone: M0
   note: "ICDescriptor field names are 0-based per R-22 and rho_mag/lambda_mag per R-62."
 - id: REQ-PAY-003
@@ -4808,7 +4817,7 @@
   milestone: M1
 - id: REQ-PAY-032
   area: PAY
-  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`."
+  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and `ftle` must read NaN whenever it is false (R-254); every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) must exclude samples by `ftle_valid` explicitly, never by NaN propagation (R-255)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 5. Derived — computed at read, NOT stored
@@ -4816,10 +4825,16 @@
     section: "6. Accessors (illustrative of generated output; source is the Rust layout definition — emitted as Rust for the kernel/host and WGSL for the fragment side)"
   - file: docs/design/principia_dd_generation_root.md
     section: 3.4 `SimState` scalars — with presentation metadata
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: unit test
     detail: truth table over tier/state/n/renorms
-  rulings: []
+  rulings:
+  - R-254
+  - R-255
   milestone: M1
 - id: REQ-PAY-033
   area: PAY
@@ -5776,6 +5791,30 @@
   - R-113
   milestone: M5
   note: Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b).
+- id: REQ-PAY-090
+  area: PAY
+  statement: "The RenderQuad field set (render contract Part 1's 9 fields) must be generated from the generation-root ledger as the single source of truth (split from REQ-PAY-002, R-256's applied note)."
+  source:
+  - file: decisions.md
+    section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
+  verify:
+    method: unit test
+    detail: "the generated RenderQuad layout is compared field-by-field against the ledger table; render contract Part 1's RenderQuad field list is a subset check"
+  rulings:
+  - R-256
+  milestone: M1
+- id: REQ-PAY-091
+  area: PAY
+  statement: "The generated WGSL struct layouts for SimState and ICDescriptor must match the ledger tables field by field, as the generated Rust layouts do (split from REQ-PAY-002, R-256's applied note)."
+  source:
+  - file: decisions.md
+    section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
+  verify:
+    method: unit test
+    detail: "generated WGSL struct layouts compared field-by-field against the ledger tables"
+  rulings:
+  - R-256
+  milestone: M0
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -6229,6 +6268,18 @@
   - R-242
   - R-247
   - R-248
+  milestone: M0
+- id: REQ-GEN-029
+  area: GEN
+  statement: "The `energy_drift` and `Lz_drift` ledger entries must carry §3.8's `floor` key naming their sim-key floor parameters, `eps_E` and `eps_L`, and the gate must accept `floor` only as a sim-key parameter name (R-263)."
+  source:
+  - file: decisions.md
+    section: "R-263 — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*"
+  verify:
+    method: unit test
+    detail: "the payload ledger's energy_drift and Lz_drift entries carry floor eps_E and eps_L; an entry whose floor names a ledger field fails the gate"
+  rulings:
+  - R-263
   milestone: M0
 - id: REQ-SCHED-001
   area: SCHED
@@ -8788,13 +8839,16 @@
     section: "R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*"
   - file: decisions.md
     section: "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: review checklist
-    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; the debug NaN guard is the bitcast test (R-114)"
+    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; every aggregate over ftle excludes samples by ftle_valid, not by NaN propagation or min/max/clamp on NaN (R-255); the debug NaN guard is the bitcast test (R-114)"
   rulings:
   - R-79
   - R-114
   - R-145
+  - R-255
   milestone: M1
 - id: REQ-RENDER-016
   area: RENDER
@@ -13464,7 +13518,7 @@
   note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
 - id: REQ-TOOL-012
   area: TOOL
-  statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, or an invalid diffusion fit, R-245) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
+  statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -13480,6 +13534,10 @@
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   - file: decisions.md
     section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
+  - file: decisions.md
+    section: "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: golden image
     detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min renders as its literal 0.0"
@@ -13487,6 +13545,8 @@
   - R-79
   - R-136
   - R-245
+  - R-253
+  - R-254
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
@@ -18028,6 +18088,34 @@
   - R-236
   - R-244
   milestone: M0
+- id: REQ-VAL-168
+  area: VAL
+  kind: calibration
+  statement: "The minimum number of regions the convergence gate declares, below which its conclusion is flagged, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md; until then the report prints the count it saw and marks the minimum \"not yet calibrated\" (R-258)."
+  source:
+  - file: decisions.md
+    section: "R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are \"not recorded\", and scatter is defined *(closes RQ-159)*"
+  verify:
+    method: review checklist
+    detail: "`cargo xtask gate convergence` prints the region count and \"minimum not yet calibrated\"; the fixtures record their count as \"not recorded\" and a conclusion from an unrecorded count is flagged like one from too few regions (R-258)"
+  rulings:
+  - R-71
+  - R-258
+  milestone: M0
+- id: REQ-VAL-169
+  area: VAL
+  kind: definition
+  statement: "For the convergence gate, the report's scatter must be the r_k sequence per region and the min–max spread of the final r_k across regions (R-258)."
+  source:
+  - file: decisions.md
+    section: "R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are \"not recorded\", and scatter is defined *(closes RQ-159)*"
+  verify:
+    method: unit test
+    detail: "the convergence report's scatter section lists r_k per region and the min–max of the final r_k across regions, for a two-region fixture computed by hand"
+  rulings:
+  - R-72
+  - R-258
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -19440,12 +19528,15 @@
     section: "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
   - file: decisions.md
     section: R-140 — The four readings are accepted *(closes RQ-118)*
+  - file: decisions.md
+    section: "R-259 — The vocabulary lint matches four retired ideas as phrases; `spawn::TIMEOUT` becomes `SPAWN_TIMEOUT`; it scans `.md` and `.html` *(closes RQ-160)*"
   verify:
     method: review checklist
-    detail: "the vocabulary lint over code and docs (excluding archive and passages wrapped in <!-- retired-terms --> … <!-- /retired-terms -->, R-111) finds none of the retired identifiers, matched case-sensitively as identifiers (TIMEOUT, not the prose \"timeout\"; R-140)"
+    detail: "the vocabulary lint over code and `.md`/`.html` docs (excluding docs/archive, docs/reference and passages wrapped in <!-- retired-terms --> … <!-- /retired-terms -->, R-111) finds none of the retired terms: identifiers matched case-sensitively as whole identifiers (TIMEOUT, not the prose \"timeout\"; R-140), and the four retired ideas as case-insensitive phrases — \"checkpoint count\", \"ensemble shadow(s)\", fround / Math.fround, \"TypeScript/TS layout constant\" (R-259)"
   rulings:
   - R-111
   - R-140
+  - R-259
   milestone: M0
 - id: REQ-SYS-003
   area: SYS
@@ -20408,15 +20499,21 @@
   milestone: M0
 - id: REQ-SYS-066
   area: SYS
-  statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict."
+  statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict; an approval followed only by qa's own `qa: tests for <TASK-id>` commits, adding files only under qa's paths, counts on the head (R-260), and a PR whose title names no task passes with \"no task, no named reviewers\" (R-261)."
   source:
   - file: decisions.md
     section: "R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*"
+  - file: decisions.md
+    section: "R-260 — qa's approval carries over its own test commit *(amends R-175)*"
+  - file: decisions.md
+    section: "R-261 — A PR whose title names no task passes `reviews-complete` *(amends R-175)*"
   verify:
     method: unit test
     detail: "reviews-check fixtures: all roles approved on head passes; an approval on an older commit, an APPROVE superseded by CHANGES, and a missing role each fail naming the role"
   rulings:
   - R-175
+  - R-260
+  - R-261
   milestone: M0
 - id: REQ-SYS-067
   area: SYS
@@ -20439,4 +20536,19 @@
   - R-177
   - R-186
   - R-195
+  milestone: M0
+- id: REQ-SYS-068
+  area: SYS
+  statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."
+  source:
+  - file: decisions.md
+    section: "R-260 — qa's approval carries over its own test commit *(amends R-175)*"
+  - file: decisions.md
+    section: "R-261 — A PR whose title names no task passes `reviews-complete` *(amends R-175)*"
+  verify:
+    method: unit test
+    detail: "reviews-check fixtures: an approval followed only by a qa test commit passes; followed by a qa-titled commit that modifies a file, or adds outside qa's paths, or by any other commit, fails naming the role; a title naming no task passes with \"no task, no named reviewers\""
+  rulings:
+  - R-260
+  - R-261
   milestone: M0

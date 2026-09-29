@@ -28,7 +28,10 @@ Commands:
                                   from the constants register, naming file and line (dd_generation_root §3.8)
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
-                                  exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)";
+                                  exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
+  reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
+                                  Reviewers field names that has not approved on the head commit; reads PR <N>, or
+                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -55,6 +58,11 @@ fn main() -> ExitCode {
             };
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["reviews-check"] => xtask::reviews_check::run(&workspace_root(), None),
+        ["reviews-check", "--pr", n] => match n.parse() {
+            Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),
+            Err(_) => Err(format!("reviews-check: --pr takes a PR number, not `{n}`")),
+        },
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
@@ -77,6 +85,14 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// This workspace's root directory.
+fn workspace_root() -> PathBuf {
+    workspace_manifest()
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default()
 }
 
 enum Source<'a> {

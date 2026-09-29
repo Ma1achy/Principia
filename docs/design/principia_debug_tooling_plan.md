@@ -77,7 +77,7 @@ Regenerated from the ledger's §3.4 rows (R-86); the storage column is the paylo
 |---|---|---|---|
 | `t_end_step` | `times` low u16 (exact) | lin [0,T] via `horizon_steps` | completed-step count at all times, latched at termination (payload §2) |
 | `d_min` | f16, `packed_a` high half | log | > 0; = min over trajectory |
-| `ftle` | derived: `S_final/(step_count·dt_macro)` | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
+| `ftle` | derived: `S_final/(step_count·dt_macro)`; NaN whenever `ftle_valid` is false (R-253, R-254) | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
 | `energy_drift` | derived: `H(r,p) − E_0` | **diverging** | oscillates (symplectic) vs drifts (Euler/RK4) |
 | `diffusion` | derived: `C_ty/C_tt(n)` | lin, an invalid fit (`n < 2`) reads NaN and gets the hatch (R-245) | NaN iff `n < 2`; never scaled |
 | `delta_E_max_abs` | f16, `packed_b` low (`dE_max`) | log | ≥ the final absolute drift (spike-that-recovered) |

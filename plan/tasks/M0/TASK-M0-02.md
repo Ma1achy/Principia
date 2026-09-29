@@ -30,6 +30,7 @@
 - `decisions.md` § "R-179 — Sim data is per-sample payload; QuadReduction is allowed *(closes A4, T3)*"
 - `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
 
+- `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 ## Deliverables
 - `xtask/src/plan_check.rs` — `cargo xtask plan-check`: runs `python3 plan/check_plan.py` from the repo root, streams its output, exits with its status; a clear error if `python3` or PyYAML is missing.
 - `.github/workflows/ci.yml` — Python and PyYAML set up; `plan-check` registered in `cargo xtask ci`.
@@ -46,7 +47,9 @@
 - Review checklist on `plan/MILESTONES.md` and `plan/tasks.yaml`: the generation root and codegen self-test (0a) are M0; the synthetic harness, field views and the bring-up mode (0b, 0c) are M1; the UV, DECODE and ROUNDTRIP presets land as their dependencies do (R-75); structural views precede the scheduler logic (REQ-TOOL-004).
 - Review checklist (code §7) on `plan/tasks.yaml`: no task builds or half-starts extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever, other than the Real-generic payload (TASK-M0-14) (REQ-SYS-007).
 
+
 ## Notes
 - `plan/check_plan.py` is the checker drafted at step 7; it is at that path.
 - REQ-SCHED-001 and REQ-TOOL-004 also say "code history shows" the order: at each later milestone gate the gate review re-reads the history against the same order; this task installs the check that holds the plan.
 - RQ-81 ruled: R-112 — the two briefs' standing parts (structure-criterion §4–4.6, kernel-build §5, in `docs/experiments/briefs/`) are superseded by the consolidated docs and never cited; this task checks each obligation is held there and ports any that isn't.
+- R-257 (closes RQ-157): items 2 and 3 are ported (the persistent frontier with N a calibration requirement; the zoom-out benchmark with its tolerance a calibration requirement, and `P_visible` a definition requirement), item 5 is ported with its values into `dd_validation_orbits` § 2, item 1 is superseded and item 4 is not standing; the ports land in this task's PR, docs first, then the requirements.

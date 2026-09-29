@@ -7,6 +7,7 @@
 - **Reviewers:** code, qa
 - **Pitfalls:** none
 - **Size:** ~80 lines (docs)
+- **Status:** done — closed by R-185 (PR #11, crate map confirmed); it has no task PR
 
 ## Goal
 systems_architecture §7.1 assigns each node of the §7 build DAG to one crate of the R-146 layout (`kernel`, `ledger`, `engine`, `render`, `gui`, `validation`, `prin`, `xtask`; no contract crate, R-172) and lists the allowed workspace edges, each with the §7 arrow it realises. The draft was written with R-170; this task takes it through review, and the human confirms it. TASK-M0-01's `cargo xtask deps` table is transcribed from the confirmed map.

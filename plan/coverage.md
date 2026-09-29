@@ -11,27 +11,27 @@
 | CHART | 52 |
 | INT | 84 |
 | EVT | 26 |
-| PAY | 87 |
-| GEN | 28 |
+| PAY | 89 |
+| GEN | 29 |
 | SCHED | 88 |
 | REF | 49 |
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 134 |
-| VAL | 166 |
+| VAL | 168 |
 | PERF | 93 |
-| SYS | 67 |
-| **total** | **1251** |
+| SYS | 68 |
+| **total** | **1257** |
 
-Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 98 calibration, 102 definition, 1057 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 89 |
-| M1 | 81 |
+| M0 | 94 |
+| M1 | 82 |
 | M2 | 156 |
 | M3 | 190 |
 | M4 | 101 |
@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 
 ## Sections
 
-941 sections in 46 files: 812 yield at least one requirement; 129 yield none and are listed below with the reason.
+954 sections in 46 files: 821 yield at least one requirement; 133 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 81 |
+| informative only | 85 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -90,6 +90,10 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 | R-243 — TASK-M0-07 is accepted at ~725 counted lines | informative only | size acceptance for one PR |
 | R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)* | informative only | wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8) |
 | R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR | informative only | size acceptance for one PR |
+| R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class | informative only | size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR |
+| R-252 — The memory limit reads memory pressure, not swap *(amends R-239)* | informative only | process ruling; the memory limit on dispatch (recorded in CLAUDE.md) |
+| R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)* | informative only | rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR |
+| R-262 — Builds move to the internal disk, three agents at most | informative only | process ruling; where builds run |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

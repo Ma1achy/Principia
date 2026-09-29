@@ -132,7 +132,7 @@ fn check_no_control_run(o: &Outcome) {
 #[test]
 fn qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing() {
     let o = run_with_fake_cargo("ci_leaked", &["ci"], LISTED, LEAKED);
-    check_ci_fails_naming(&o, "qa_m022_t::pairs", "its control leaves it passing");
+    check_ci_fails_naming(&o, "qa_m022_t::pairs", "its control did not make it fail");
 }
 
 #[test]
@@ -164,7 +164,7 @@ validation::negative_control!(
     check_ci_fails_naming(
         &run_with_fake_cargo("ctl_ci_leaked", &["ci"], LISTED, TRIPPED),
         "qa_m022_t::pairs",
-        "its control leaves it passing"
+        "its control did not make it fail"
     )
 );
 

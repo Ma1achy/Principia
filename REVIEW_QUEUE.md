@@ -2637,6 +2637,7 @@ Tick any you don't accept.
 - **Options seen:** NaN (extending R-79 to "not yet defined"); a sentinel like `diffusion`'s (see RQ-152); 0.0
   with a validity predicate `step_count ≥ 1`.
 - **Needed:** a ruling before the `ftle` read accessor is built. Does not block TASK-M0-07.
+- **Ruling:** R-253 (decisions.md).
 
 ## RQ-155: TASK-M0-34's first deliverable names a message TASK-M0-22 removed *(plan, TASK-M0-34)*
 
@@ -2696,3 +2697,87 @@ Tick any you don't accept.
   requirements, R-71); or rule it superseded by the current design and record why (1 may be moot under one-tile
   rendering; 4 may be experiment reporting, not a standing obligation).
 - **Needed:** a ruling per item. TASK-M0-02's R-112 record and REQ-SYS-008 wait on it; the plan-check code does not.
+- **Ruling:** R-257 (decisions.md). Closed in TASK-M0-02 (PR #54).
+
+## RQ-158: §3.4's drift floors `eps_E` and `eps_L` have no §3.8 key *(docs, TASK-M0-09)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation
+  metadata": "`energy_drift` | **diverging** (signed) | log-magnitude styling; floor `eps_E`" and "`Lz_drift` |
+  **diverging** (signed) | floor `eps_L`"; § "3.8 Metadata schema": "range, sentinel?, tier_gate?, overflow?: saturate |
+  inf"; `plan/tasks/M0/TASK-M0-09.md` § Notes: "§3.8 also has no key for §3.4's drift floors `eps_E` and `eps_L`: place
+  them or file it."
+- **What:** raised by TASK-M0-09's implementer. §3.8 has no key for a presentation floor, so the `energy_drift` and
+  `Lz_drift` entries can't record theirs. `eps_E` and `eps_L` are sim settings (the Run window's fields, 10⁻⁶ by
+  default), the same for every sample, so they are neither ledger entries nor, as user-set values, register constants.
+  Placing them means adding a key to §3.8, which is a schema decision.
+- **Options seen:** an optional §3.8 key `floor?: <sim-key parameter>`, naming the parameter the log-magnitude styling
+  floors at (`eps_E` on `energy_drift`, `eps_L` on `Lz_drift`); or leave the floors to the colour pipeline and say so in
+  §3.4.
+- **Needed:** a ruling on where the floors live. It doesn't block TASK-M0-09's acceptance (REQ-GEN-001 checks scale,
+  range and sentinel): the two entries ship without floors until the ruling.
+- **Ruling:** R-263 (decisions.md). Closed in TASK-M0-09.
+
+## RQ-159: the convergence gate's region count and scatter are not given *(values and definition, TASK-M0-05)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-05.md` § Deliverables: "`GateReport` …: verdict, threshold and its source
+  id, scatter, region count, negative results; a conclusion drawn from fewer regions than the gate declares is flagged;
+  the writer refuses a report with an empty section." `docs/read_first/principia_00_philosophy.md` § "4.6 Report the
+  negative, and the messy": "A clean summary that hides scatter is worse than useless here" and "Region count was
+  load-bearing and it did mislead." `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this
+  sequence" and philosophy § 4.5a give the record only as "Escape fraction went 0.0947 → 0.2153 → 0.4423 → 0.5494 at
+  strides 0, 32, 4, 1". `decisions.md` § "R-171" defines r_k, the pass rule and the threshold, and nothing else.
+- **What:** raised by TASK-M0-05's implementer before building. Three things the convergence gate's report needs are
+  not in the corpus:
+  1. **The number of regions the convergence gate declares** — the count below which its conclusion is flagged. A
+     value: R-71 makes it a calibration requirement.
+  2. **The region counts of its two fixtures.** The pitfall record gives strides and values, no region count;
+     `converging.json` is constructed (task § Deliverables) and has none either.
+  3. **What the convergence gate's scatter section reports.** §4.6 names scatter but doesn't say, for a sequence of
+     refinement levels, what it is. A definition: R-72 makes it a definition requirement.
+- **Options seen:** (1) a new calibration requirement with a provisional value, as R-171 did for the threshold
+  (REQ-VAL-135), confirmed in M3 with it; or no declared minimum at M0. (2) fixtures record "not recorded", and a
+  conclusion from an unrecorded region count is flagged like one from too few; or a count is added to each fixture.
+  (3) scatter as the r_k sequence itself (the spread across refinement levels); as the range of x_k; or per-level
+  scatter across regions, which the recorded fixtures don't carry.
+- **Needed:** a ruling on all three before the convergence gate's report is built. The runner, the report writer
+  (REQ-VAL-002) and R-171's pass rule don't depend on it, but the task's first acceptance command prints this report.
+- **Ruling:** R-258 (decisions.md). Closed in TASK-M0-05. (Filed locally as RQ-157 on task/TASK-M0-05; renumbered.)
+
+## RQ-160: the vocabulary lint's retired terms have no lexical form, and `TIMEOUT` is a live identifier *(plan, TASK-M0-16)*
+
+- **File, section:** `docs/contracts/principia_canonical_spec.md` § "8. Locked vocabulary": "**Retired terms (must not
+  reappear):** `TileID`/`computeTile`/`samples_per_tile` (→ QUAD vocabulary / `computeQuad`) · `M` checkpoint count
+  (→ `n_renorm`; no stored trajectory under lockstep) · a `TIMEOUT` state (→ reaching the horizon *is* `bounded`) ·
+  `sd_is_untrusted` (→ `sd_is_failed`) · "N ensemble shadows" (→ E ensemble copies that are full samples) · the
+  `Math.fround`/f32-evaluation `N_sub` rule (→ the frozen threshold-table bucket lookup) · "a single TypeScript layout
+  constant generates WGSL pack for the kernel" (→ …)"; `plan/tasks/M0/TASK-M0-16.md` § Acceptance tests: "a fixture
+  with each retired term fails naming it"; `decisions.md` § "R-140" (accepting RQ-118): "the retired term `TIMEOUT` is
+  the case-sensitive identifier … the lint matches identifiers case-sensitively".
+- **What:** raised by TASK-M0-16's implementer before building the lint.
+  1. **Four retired terms are concepts, not identifiers**, so the lint has nothing to match without a definition:
+     the `M` checkpoint count (a bare `M` token is everywhere — matrices, generics, prose); "N ensemble shadows";
+     the `Math.fround`/f32-evaluation `N_sub` rule; "a single TypeScript layout constant generates WGSL". The five
+     identifier terms (`TileID`, `computeTile`, `samples_per_tile`, `sd_is_untrusted`, `SimResult`), `TIMEOUT` and the
+     four memory_tiers §1 identifiers are matchable as whole, case-sensitive identifiers.
+  2. **`TIMEOUT` is live in merged code, not as a state:** `crates/validation/src/spawn.rs:23`
+     `pub const TIMEOUT: Duration = Duration::from_secs(300);` (R-217's subprocess timeout), used by qa's
+     `crates/validation/tests/qa_TASK-M0-26.rs:21,86`; and in `docs/experiments/results/xp_results/xp2c_t120.py:30,38`
+     (a Python variable). Under R-140's reading the lint fails the tree on all of them, and neither file is in this
+     task's deliverables (the `.py` file can't carry the HTML-comment markers either).
+  3. **Doc file types:** the task scans `docs/` except `docs/archive/`; the `retired-terms` markers are HTML comments,
+     so only `.md`/`.html` can carry them. `docs/` also holds `.py`, `.json` (`docs/experiments/`) and `.rs`
+     (`docs/reference/prin-rs/`, which has no hit today).
+- **Options seen:**
+  1. (item 1) match phrases, case-insensitive, in code and docs: "checkpoint count"; "ensemble shadow(s)";
+     `Math.fround` / `fround`; "TypeScript layout constant" / "TS layout constant". The live passages these hit are
+     retirement passages and get wrapped in this PR (`principia_lowering_contract.md` :55, a table row — the whole
+     table would be wrapped, since a comment line inside a table breaks it; `principia_dd_integrator.md` :298).
+     Or: lint only the identifier terms, and the four concepts stay a review-checklist item (code §7).
+  2. (item 2) rename `spawn::TIMEOUT` (e.g. `SPAWN_TIMEOUT`, touching validation's source and qa's M0-26 test in this
+     PR); or narrow `TIMEOUT` to an outcome/state context (an enum variant, `Outcome::TIMEOUT`, "`TIMEOUT` state").
+  3. (item 3) scan every text file under `docs/` and exclude `docs/experiments/` (record, not contract); or scan only
+     `.md` and `.html` under `docs/`.
+- **Applied per R-204 (veto?), not needing a ruling:** the lint excludes its own term list (`xtask/src/lint_vocab.rs`)
+  and its fixture directory (`xtask/tests/fixtures/vocab/`), which must contain the terms.
+- **Needed:** a ruling on items 1–3. TASK-M0-16 waits on it.
+- **Ruling:** R-259 (decisions.md). Closed in TASK-M0-16. (Filed locally as RQ-157 on task/TASK-M0-16; renumbered.)
