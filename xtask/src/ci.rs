@@ -9,8 +9,16 @@ pub struct Runner {
     pub run: fn() -> Result<(), String>,
 }
 
-/// The registered runners, in the order `cargo xtask ci` runs them. Empty at TASK-M0-01.
-pub const RUNNERS: &[Runner] = &[];
+/// The registered runners, in the order `cargo xtask ci` runs them.
+pub const RUNNERS: &[Runner] = &[Runner {
+    name: "controls",
+    run: controls,
+}];
+
+/// `cargo xtask controls` on this workspace: every control run, failing on any finding (R-198, R-226).
+fn controls() -> Result<(), String> {
+    crate::controls::run(&crate::workspace_manifest(), crate::controls::Mode::Run)
+}
 
 /// Runs every runner in `runners`, in order, printing each to stdout. Every runner runs even after a
 /// failure; the result is `Err` naming each runner that failed.

@@ -36,7 +36,11 @@ jobs:
         run: cargo test --workspace
       - name: cargo xtask deps
         run: cargo xtask deps
+      # `cargo xtask ci` runs `cargo xtask controls`: every control, failing on any finding (R-198, R-226). The GPU
+      # harness's controls run on lavapipe, as its tests do.
       - name: cargo xtask ci
+        env:
+          PRIN_GPU_BACKEND: vulkan
         run: cargo xtask ci
 
   # GitHub-hosted Apple silicon, paravirtual Metal: the Metal correctness suites only (R-169, R-186).

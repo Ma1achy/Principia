@@ -1,4 +1,5 @@
-//! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177).
+//! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177); its registry holds
+//! `controls` (R-198).
 
 use std::sync::Mutex;
 
@@ -48,9 +49,19 @@ fn ci_with_no_runners_passes() {
     assert_eq!(run(&[]), Ok(()));
 }
 
+/// The registry's names: `controls` alone, since TASK-M0-22 (R-198).
+fn check_the_registry(runners: &[Runner]) {
+    let names: Vec<&str> = runners.iter().map(|runner| runner.name).collect();
+    assert_eq!(
+        names,
+        ["controls"],
+        "the ci registry is not `controls` alone (R-198)"
+    );
+}
+
 #[test]
-fn ci_registry_is_empty_at_task_m0_01() {
-    assert!(RUNNERS.is_empty());
+fn ci_registry_runs_controls() {
+    check_the_registry(RUNNERS);
 }
 
 /// A runner for the controls that fails without touching `ORDER`, which the tests read.
@@ -89,15 +100,11 @@ validation::negative_control!(
 );
 
 validation::negative_control!(
-    ci_registry_is_empty_at_task_m0_01,
-    "a registry holding one runner, checked for emptiness",
-    expected = "control: a registry holding one runner is not empty",
-    assert!(
-        [Runner {
-            name: "failing",
-            run: failing,
-        }]
-        .is_empty(),
-        "control: a registry holding one runner is not empty"
-    )
+    ci_registry_runs_controls,
+    "a registry holding a runner other than `controls`",
+    expected = "the ci registry is not `controls` alone",
+    check_the_registry(&[Runner {
+        name: "failing",
+        run: failing,
+    }])
 );
