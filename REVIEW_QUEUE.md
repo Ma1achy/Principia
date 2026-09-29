@@ -2546,3 +2546,29 @@ Tick any you don't accept.
      add to qa's merged files.
 - **Needed:** a ruling on the size and the form.
 - **Ruling:** R-221 (decisions.md). Closed in TASK-M0-22.
+
+## RQ-150: with `controls` in `ci`, qa's `qa_cargo_xtask_alias_runs_deps` outlives the 300 s timeout on CI *(plan, TASK-M0-22)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-22.md` § Notes: "If it does not fit, that is a conflict between R-214 and
+  R-198, and goes to REVIEW_QUEUE with the measured time."; `decisions.md` § "R-214 — Children are spawned through one
+  helper with a timeout"; § "R-217" (300 s provisional, REQ-VAL-156); § "R-233" (300 s noted for the M0 gate).
+- **What:** PR #39 registers `controls` in `cargo xtask ci`. qa's `qa_cargo_xtask_alias_runs_deps`
+  (`xtask/tests/qa_TASK-M0-01.rs`) runs `cargo xtask ci` as a child, which now builds everything with the `controls`
+  features cold, in a fresh target directory, and runs every control.
+
+  | where | whole test | `ci` child |
+  |---|---|---|
+  | local, cold | 190.81 s | 182.4 s, at load average ~28 |
+  | local, warm | 39.18 s | – |
+  | CI at f4850d5 | 297.5 s, passed | – |
+  | CI at 44c71cc (run 36531127415) | 301.16 s, failed | killed at 300 s |
+
+  RQ-149's scratch measurement (60.6 s cold) did not include the 16 r191/r193/r194 controls, or the hosted runner.
+  CI's test step went from 5m06s on main to about 9m; the new `cargo xtask ci` step adds 1m12s.
+- **Options seen:**
+  1. raise the provisional timeout (REQ-VAL-156);
+  2. run that child on a warm target: edits qa's `run_cargo_in_the_workspace`, needs an exception;
+  3. give `cargo xtask ci` a listing-only form for that test (as REQ-VAL-163 did for the two control tests), since
+     the CI step itself runs the controls;
+  4. accept that the suite re-runs every control once, cold (still needs 1 or 2 to fit).
+- **Needed:** a ruling. TASK-M0-22 waits, and every other M0 task waits on it.
