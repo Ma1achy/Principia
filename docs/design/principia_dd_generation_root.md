@@ -481,26 +481,34 @@ declared once, in the constants register beside the layout table in `crates/ledg
   class: achievable-maximum | conservation-law | canonical-units,
   citation: corpus(file, section) | prin-rs(commit, path) | calibration(requirement id),
   relative_basis?: distribution(source, percentile, populations) | gap(source, below, above) }
+population = { name, lo, hi, count }
 ```
 
 - **`value`**: a settled number, a settled threshold, or `calibration`. A constant the corpus leaves open is not
   entered with a value: its value is `calibration` and its citation is its calibration requirement, until the human
-  confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement.
+  confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement. A
+  settled number or threshold is finite.
 - **`class`**: why the constant is admissible, one of philosophy §4.2's three: bounded by its own achievable maximum,
   fixed by a conservation law, or expressed in canonical units.
 - **`citation`**: where the value was measured or derived (INDEX, "The evidence base"): a corpus section, named by
   file and heading; a prin-rs `FINDINGS.md`, `README.md` or `results/` path at its prin-rs commit (R-159); or a
   calibration requirement id.
 - **`relative_basis`**, required of a threshold. A threshold on a quantity spanning decades is relative: it is set from
-  the observed distribution or from a measured gap (pitfalls §3). `distribution` names the populations the observed
-  distribution shows, each with the range of its values, and the percentile the threshold sits at; `gap` names the
-  population below the gap and the one above it. Either way a threshold separates populations, so it lies outside the
-  range of every population its basis names; a `gap` threshold lies inside the gap; and a basis naming fewer than two
-  populations separates nothing. Closure's absolute cutoff of 2e-3, inside the bound population's range, and
-  `tau_display` at the 0.4th percentile of the population it was to split, both fail (pitfalls §3; philosophy §4.2).
-- **The gate:** an entry missing its value, class or citation, a threshold without a relative basis or one that does
-  not separate its populations, and a value that is `calibration` without citing its requirement (or the reverse)
-  fail generation, naming the constant.
+  the observed distribution or from a measured gap (pitfalls §3). Each population is named with the closed range
+  `[lo, hi]` of its values and its `count`, the observations it holds; its ends are finite, `lo ≤ hi`, and
+  `count ≥ 1`. `distribution` names the populations the observed distribution shows and the percentile the threshold
+  sits at; `gap` names the population below the gap and the one above it. Either way the threshold is finite and sits
+  between populations of its own distribution (R-250): it lies inside the range of none of them, at least one lies
+  wholly below it and at least one wholly above; a `gap` threshold lies inside the gap. A `distribution` threshold's
+  percentile is derived from the counts: `100 · (count of the populations wholly below) / (total count)`, and the
+  recorded percentile must equal it. There is no numeric bound on the percentile: a threshold inside any population
+  fails, at whatever percentile, and one between populations passes at whatever percentile (R-250). Closure's absolute
+  cutoff of 2e-3, inside the bound population's range, and `tau_display` at the 0.4th percentile of its own
+  distribution, inside the population of quads it was to split, both fail (pitfalls §3; philosophy §4.2).
+- **The gate:** an entry missing its value, class or citation, a non-finite value, a threshold without a relative
+  basis, one whose basis names an ill-formed population, one that does not sit between its populations or whose
+  recorded percentile is not the one its counts give, and a value that is `calibration` without citing its
+  requirement (or the reverse) fail generation, naming the constant.
 - **Reading a constant:** code in the physics and engine crates (`kernel`, `ledger`, `engine`) reads each number from
   the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
   and line. The generated files are exempt: their numbers are emitted from the ledger.
