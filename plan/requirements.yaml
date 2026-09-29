@@ -7766,6 +7766,90 @@
   - R-55
   - R-71
   milestone: M6
+- id: REQ-SCHED-091
+  area: SCHED
+  statement: "The refinement frontier must be a persistent priority order maintained incrementally across frames; every N frames it must be rebuilt from scratch and the incremental frontier asserted to match the rebuild, and the from-scratch path must be kept permanently as the reference implementation."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: unit test
+    detail: "on a scripted camera path the incremental frontier matches the from-scratch rebuild at every cross-check; a stale priority injected into the incremental frontier makes the cross-check fail; the from-scratch path is a kept, callable reference"
+  rulings:
+  - R-257
+  milestone: M6
+  note: "N: REQ-SCHED-092 (calibration)."
+- id: REQ-SCHED-092
+  area: SCHED
+  kind: calibration
+  statement: "N, the number of frames between the persistent frontier's from-scratch cross-checks (REQ-SCHED-091), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states N with its evidence: the from-scratch rebuild's cost per cross-check on scripted camera paths; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-257
+  milestone: M6
+- id: REQ-SCHED-093
+  area: SCHED
+  kind: definition
+  statement: "`P_visible`, which ranks a quad on its visible part rather than the whole quad, must be defined in scheduler_contract Part 6 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Part 6 gives P_visible's formula over the quad's visible part, so a quad half off-screen ranks on its on-screen part; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-257
+  milestone: M6
+- id: REQ-SCHED-094
+  area: SCHED
+  statement: "The count of newly computed quads after a zoom-out must be ≈ 0, within a calibrated tolerance, asserted by a benchmark."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: benchmark
+    detail: "scripted zoom-in then zoom-out over the same region: the quads newly computed during the zoom-out are within the calibrated tolerance (REQ-SCHED-095)"
+  rulings:
+  - R-257
+  milestone: M6
+  note: "The tolerance: REQ-SCHED-095 (calibration)."
+- id: REQ-SCHED-095
+  area: SCHED
+  kind: calibration
+  statement: "The tolerance on the count of newly computed quads after a zoom-out (REQ-SCHED-094) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance with the measured zoom-out counts on scripted camera paths; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-257
+  milestone: M6
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -15762,13 +15846,18 @@
     section: R-166 — The fixtures
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
   verify:
     method: golden image
-    detail: "BodyPlane render/dump against the fixture M3 records from the Python reference (docs/reference/prin-rs/tools/xcheck, reference/*.py): bit-exact where the operation order is identical, otherwise within the calibrated tolerance; the Python cross-check passes"
+    detail: "BodyPlane render/dump against the fixture M3 records from the Python reference (docs/reference/prin-rs/tools/xcheck, reference/*.py): bit-exact where the operation order is identical, otherwise within the calibrated tolerance; the Python cross-check passes, agreeing with the Python reference at f64 to ~1e-10 on a small grid (dd_validation_orbits §2, R-257)"
   rulings:
   - R-71
   - R-72
   - R-166
+  - R-257
   milestone: M3
   note: "BodyPlane's map and the reference artefact it must match: REQ-VAL-119 (definition). The tolerance where the operation order differs: REQ-VAL-146 (calibration)."
 - id: REQ-VAL-029
@@ -16056,10 +16145,15 @@
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 4. What the suite cannot do
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
   verify:
     method: numerical gate
-    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11)"
-  rulings: []
+    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12"
+  rulings:
+  - R-257
   milestone: M3
 - id: REQ-VAL-046
   area: VAL
@@ -18116,6 +18210,81 @@
   - R-72
   - R-258
   milestone: M0
+- id: REQ-VAL-170
+  area: VAL
+  statement: "The analytic derivatives of the Hamiltonian (the equations of motion) of each occupant must agree with a finite difference of the Hamiltonian, within a calibrated step and tolerance."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: numerical gate
+    detail: "for each occupant, the analytic derivatives match the finite-differenced Hamiltonian within REQ-VAL-171's step and tolerance, over random states; a sign-flipped derivative fails"
+  rulings:
+  - R-257
+  milestone: M3
+  note: "The step and tolerance: REQ-VAL-171 (calibration)."
+- id: REQ-VAL-171
+  area: VAL
+  kind: calibration
+  statement: "The finite-difference step and tolerance of the Hamiltonian check (REQ-VAL-170) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the step and the tolerance with the measured discrepancy per occupant; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-257
+  milestone: M3
+- id: REQ-VAL-172
+  area: VAL
+  statement: "The gauge-invariance gate must rescale the ICs by alpha ∈ {0.25, 1, 4} and t by alpha^{3/2}, and the shape_vec spread (spread_shape) must be identical to ~10 decimals."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: numerical gate
+    detail: "a small grid run at alpha = 0.25, 1 and 4 with t rescaled by alpha^{3/2}: spread_shape agrees across the three to ~10 decimals"
+  rulings:
+  - R-257
+  milestone: M5
+- id: REQ-VAL-173
+  area: VAL
+  statement: "The energy-control gate must read error_ratio = 1.0000 at t = 13 on the near-field slice."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: numerical gate
+    detail: "the near-field slice (fixtures/slices.toml) run to t = 13: error_ratio reads 1.0000"
+  rulings:
+  - R-257
+  milestone: M5
+- id: REQ-VAL-174
+  area: VAL
+  statement: "The Burrau constants gate must read M = 12, R = 2.2361 and E = −12.8167 for the Burrau rest start."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  verify:
+    method: numerical gate
+    detail: "the imported Burrau rest start, multiplied back by the recorded rescale, gives M = 12, R = 2.2361 and E = −12.8167"
+  rulings:
+  - R-257
+  milestone: M2
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

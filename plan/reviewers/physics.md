@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*94 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*98 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -31,6 +31,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-021 — 2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)
 - [ ] REQ-VAL-022 — 2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole and collinear → w = 0 exactly
 - [ ] REQ-VAL-121 — the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles) and states the gates; recorded in decisions.md
+- [ ] REQ-VAL-174 — the imported Burrau rest start, multiplied back by the recorded rescale, gives M = 12, R = 2.2361 and E = −12.8167
 
 **M3**
 - [ ] REQ-INT-044 — at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form
@@ -54,7 +55,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-041 — closure |dr| per eta and fitted order; fail if the order is below the occupant's (the check that exposed §0's first-order error)
 - [ ] REQ-VAL-042 — each orbit returns to rest in the same configuration after one period; order reported
 - [ ] REQ-VAL-044 — runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`
-- [ ] REQ-VAL-045 — radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11)
+- [ ] REQ-VAL-045 — radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12
 - [ ] REQ-VAL-047 — Lagrange circular: equilateral residual at every sampled t within a tight f64 tolerance; figure-eight shape-sphere curve matches the published one
 - [ ] REQ-VAL-051 — Measure the |Δn̂| distributions of escapers and bound trajectories across t = 25–30; record the gap ratio (claimed 383x, 7.04e-05 vs 2.70e-02; prin-rs reports at best 6.8x) and assert the chosen tau lies within the gap and that outcomes are unchanged across the middle of the gap.
 - [ ] REQ-VAL-052 — Double the sync-boundary re-registration count with eta adjusted so steps p50 stays flat within 6%; record the drift-field change in decades against the controls (LC branch 2.5e-6, hysteresis 7.5e-5, AZ re-registration x2 4.4e-1); render config_stability and assert no pale straight-edged wedges.
@@ -68,6 +69,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-133 — the proposal gives |dr| and fitted order per occupant across the eta/step ladder and states the threshold and tolerance; recorded in decisions.md
 - [ ] REQ-VAL-136 — the proposal measures the default occupant (Heggie) under the doubling protocol and states the acceptance level relative to the controls; recorded in decisions.md
 - [ ] REQ-VAL-146 — the proposal lists the operations whose order differs from the Python reference, measures BodyPlane's difference against the recorded fixture and states the tolerance; recorded in decisions.md
+- [ ] REQ-VAL-170 — for each occupant, the analytic derivatives match the finite-differenced Hamiltonian within REQ-VAL-171's step and tolerance, over random states; a sign-flipped derivative fails
 
 **M4**
 - [ ] REQ-PAY-085 — FTLE of both shadow forms against known-Lyapunov periodic orbits, and the improvement the switch requires
@@ -86,6 +88,8 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-DEC-036 — over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50
 - [ ] REQ-REF-009 — starved near-field fixture (64/64 budget, 512/512 non-finite) → Undetermined, although its spread_median reads 4.58e-4
 - [ ] REQ-VAL-081 — on the M5 render at E + 1 = 8, measure mean reconstruction error vs dt; ceiling set where it crosses ~2 levels; both forms above it — the hard gate and the ramp — are captured at the ceiling for the human's choice at the M5 gate (R-128)
+- [ ] REQ-VAL-172 — a small grid run at alpha = 0.25, 1 and 4 with t rescaled by alpha^{3/2}: spread_shape agrees across the three to ~10 decimals
+- [ ] REQ-VAL-173 — the near-field slice (fixtures/slices.toml) run to t = 13: error_ratio reads 1.0000
 
 **M6**
 - [ ] REQ-DEC-034 — decoder test 11: at quad centre x₀ + J_D·0 equals the full decode exactly; at half-width the error vs full decode shrinks ∝ h² across depths; identical behaviour for an affine chart and the exponential-map shape-sphere chart
