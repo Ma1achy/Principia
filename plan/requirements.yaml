@@ -17962,6 +17962,30 @@
   rulings:
   - R-231
   milestone: M0
+- id: REQ-VAL-166
+  area: VAL
+  statement: "`qa_cargo_xtask_alias_runs_deps` must run `cargo xtask ci` in a listing-only form that runs no control, while CI runs every control through `cargo xtask ci` in a job of its own, in parallel with the tests, failing on any finding (R-235)."
+  source:
+  - file: decisions.md
+    section: "R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: the test's `cargo xtask ci` child runs no control and still fails under its control; CI's workflow runs `cargo xtask ci` (every control) in its own job beside the tests, and that job is green on the head; qa's merged file changes only as far as this needs"
+  rulings:
+  - R-235
+  milestone: M0
+- id: REQ-VAL-167
+  area: VAL
+  statement: "When a registered control fails to make its test fail, `qa_TASK-M0-24.rs`'s message must include that control's own output, and must not say it \"leaves it passing\"; and the control of `deps_a_unit_test_behind_the_release_profile_using_validation_fails` (`xtask/tests/deps.rs`) must first assert the expected compile error before its test's check (R-236)."
+  source:
+  - file: decisions.md
+    section: "R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first"
+  verify:
+    method: review checklist
+    detail: "code and qa: a scratch control that fails its test with the wrong panic shows that control's output in the message; the deps.rs control fails with its own message when the child does not fail to compile with the expected error; every control still trips (`cargo xtask controls`)"
+  rulings:
+  - R-236
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

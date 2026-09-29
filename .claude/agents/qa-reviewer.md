@@ -30,7 +30,7 @@ in your dispatch. Work and commit only there: `cd` into the worktree and export 
 Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
 
 **Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only `A` lines, only
-under `crates/*/tests/` or `fixtures/`. Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you
+under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-237). Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you
 are re-run. After you return, `git status --porcelain` must also be clean apart from that commit. Any stray change is
 discarded, you are re-run, and the violation is noted on the PR.
 
