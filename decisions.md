@@ -2138,3 +2138,17 @@ non-trivial numeric literal in kernel or engine code must be a register constant
 - Item 6 (the lint's scope): accepted; `plan/reviewers/physics.md` § 9 gains the item the human worded.
 *Applied per R-204 — veto? (sequencing):* TASK-M0-12's reviewers gain `physics`, since what the schema version covers
 is now a physics definition (the physics reviewer's suggestion).
+*Accepted by the human (29 Sep, with R-252):* "#49: accept the veto item (physics as a reviewer on TASK-M0-12). Merge
+#49, then #47."
+
+## R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
+*29 Sep 2026 · applied in CLAUDE.md*
+
+"R-252, amends R-239: the memory limit uses memory pressure, not swap size. macOS keeps swap allocated after memory
+frees up, so swap over-reports. Check `memory_pressure` (or vm_stat's pressure level): start new builds or reviewers
+only when pressure is normal; hold new work at warning; at critical, finish the running work only. Log the pressure
+level instead of swap in summaries."
+
+*Applied:* before each dispatch the orchestrator reads the kernel's pressure level (`sysctl
+kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical) with `memory_pressure`'s free percentage,
+alongside free disk. R-239's 4 GB swap limit no longer applies. Process only.

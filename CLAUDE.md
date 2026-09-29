@@ -29,8 +29,9 @@ Read this first; each rule points at its source.
 - Each agent builds with `CARGO_BUILD_JOBS=4` and `RUST_TEST_THREADS=4` (R-228). Reviewers run the tests their diff
   touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
   commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
-- Before starting a build or reviewer, check free disk, swap and memory pressure. Don't start one while swap in use is
-  above 4 GB or memory pressure is high; wait for running work to finish (R-239).
+- Before starting a build or reviewer, check free disk and memory pressure (`sysctl kern.memorystatus_vm_pressure_level`
+  or `memory_pressure`), not swap, which macOS keeps allocated. Start one only at normal pressure; at warning, hold new
+  work; at critical, only finish the running work (R-239, R-252).
 - Reviewers' read-only is enforced, not just instructed. After each reviewer returns, run `git status --porcelain`
   and check that HEAD hasn't moved. If anything changed, discard it (`git restore` / `git clean` on the affected paths,
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by

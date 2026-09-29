@@ -522,3 +522,7 @@
   section: R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
   reason: informative only
   note: size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12
+- file: decisions.md
+  section: R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
+  reason: informative only
+  note: process ruling; the memory limit on dispatch (recorded in CLAUDE.md)
