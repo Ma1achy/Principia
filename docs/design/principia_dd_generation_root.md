@@ -414,8 +414,8 @@ quad **floors** — correct, since refining does not make a close encounter easi
 ### 3.8 Metadata schema (what every entry must carry)
 
 ```
-{ name, location: (word, offset, width) | scalar-index,
-  type: u-bits | f32 | f16-pair | fixed16,
+{ name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
+  type: u-bits | f32 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
   range, sentinel?, tier_gate?,
   provenance: kernel | decode | reduction | cpu,
@@ -423,6 +423,18 @@ quad **floors** — correct, since refining does not make a close encounter easi
 ```
 
 **A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
+
+**Derived fields and vector fields** *(definition, R-72; REQ-GEN-024)*:
+- **`derived(from: [field, …])`** is the location of a field computed at read rather than stored (§3.1's "Derived, NOT
+  packed" list: `total_substeps_log2` is `derived(from: [total_substeps])`, `orbit_count` and `retrograde` are
+  `derived(from: [theta])`). `from` names the stored fields it is computed from; each must be an entry of the ledger
+  whose location is a packed word or a scalar index, never another derived field. A derived field occupies no bits, so
+  the static check (§5 test 1) does not see it; it carries the rest of the entry (type, scale, range, …) like any
+  field, so the catalogue generates its view.
+- **`vector(type, k)`** is the type of a vector-valued field such as the shape vector `n`: `k` components (3 for `n`),
+  each of the scalar `type` (f32 for `n`). Stored, it sits at `k` consecutive scalar indices starting at its
+  `scalar-index`. The type is what tells the generator the field is a vector, so the debug catalogue offers its
+  reductions (`‖·‖` as a scalar beside direction cosines, gui_state_contract §4).
 
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
 
