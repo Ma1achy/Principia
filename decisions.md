@@ -2167,3 +2167,19 @@ payload §5's derived table and FTLE note, generation-root §3.4's row and §3.8
 table, and debug_tooling_plan's field row. REQ-INT-043 gains the read at `step_count = 0`; REQ-TOOL-012 names it among
 the NaN a field view hatches.
 
+## R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*
+*29 Sep 2026 · applied in the docs listed below, REQ-INT-043, REQ-PAY-032 and REQ-TOOL-012*
+
+"R-254, refining R-253 (fold into #53 if it hasn't merged): ftle reads NaN whenever ftle_valid is false, i.e. before
+the first completed renorm as well as at step_count = 0. One rule, so no consumer ever sees a meaningless 0.0 alongside
+a false validity flag."
+
+*Applied:* `ftle` reads NaN exactly when `ftle_valid` (payload §6) is false: the tier off (as R-79 already had), a
+failed sample, `step_count = 0`, or no completed renorm. The docs R-253 touched now state the one rule, and the
+lowering contract's `sample.ftle` row says the accessor returns it.
+*Applied per R-204 — veto? (reading of "whenever"):* `ftle_valid` is also false for a failed sample, and the lowering
+contract said per-sample failure surfaces as the defined failed-state values, never NaN (R-79). R-254 is applied as
+worded, so a failed sample's `ftle` reads NaN too; the lowering contract names `ftle` as the one exception. R-79's
+storage rule stands: `ftle` is derived at read, never stored, so storage still never holds NaN, and a failed sample's
+stored fields keep their defined failed-state values.
+
