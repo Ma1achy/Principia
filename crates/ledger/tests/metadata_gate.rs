@@ -3,7 +3,7 @@
 
 mod support;
 
-use ledger::schema::{Ledger, REQUIRED_KEYS};
+use ledger::schema::{FieldType, Ledger, REQUIRED_KEYS};
 use support::{check_generates, check_refused_naming, entry, fixture};
 use validation::negative_control;
 
@@ -37,12 +37,12 @@ fn check_deleting_refuses(field: &str, key: &str) {
 
 #[test]
 fn metadata_gate_deleting_scale_names_the_field() {
-    check_deleting_refuses("saturated", "scale");
+    check_deleting_refuses("fx_flag", "scale");
 }
 
 #[test]
 fn metadata_gate_deleting_any_required_key_names_the_field() {
-    for field in ["state", "t_end_step", "diffusion", "n", "t_end_fraction"] {
+    for field in ["fx_enum", "fx_u16", "fx_scalar", "fx_vector", "fx_derived"] {
         for key in REQUIRED_KEYS {
             check_deleting_refuses(field, key);
         }
@@ -56,26 +56,55 @@ fn check_generates_without(field: &str, keys: &[&str]) {
 
 #[test]
 fn metadata_gate_sentinel_and_tier_gate_are_optional() {
-    check_generates_without("diffusion", &["sentinel", "tier_gate"]);
+    check_generates_without("fx_scalar", &["sentinel", "tier_gate"]);
 }
 
 negative_control!(
     metadata_gate_deleting_scale_names_the_field,
     "deleting an optional key leaves the entry complete, so the gate check must fail on it",
     expected = "generation was not refused",
-    check_deleting_refuses("saturated", "sentinel")
+    check_deleting_refuses("fx_flag", "sentinel")
 );
 
 negative_control!(
     metadata_gate_deleting_any_required_key_names_the_field,
     "deleting nothing leaves generation allowed, so the gate check must fail on it",
     expected = "generation was not refused",
-    check_deleting_refuses("t_end_fraction", "no such key")
+    check_deleting_refuses("fx_derived", "no such key")
 );
 
 negative_control!(
     metadata_gate_sentinel_and_tier_gate_are_optional,
     "an entry without its scale is refused, so the generates check must fail on it",
     expected = "generation refused",
-    check_generates_without("diffusion", &["sentinel", "scale"])
+    check_generates_without("fx_scalar", &["sentinel", "scale"])
+);
+
+/// Generation from the fixture with `fx_vector`'s type set to `vector(component, k)` is refused, naming it (§3.8:
+/// "`k ≥ 2` components, each of the scalar `type`").
+fn check_vector_refused(component: FieldType, k: u32) {
+    let mut ledger = fixture();
+    entry(&mut ledger, "fx_vector").ty = Some(FieldType::Vector {
+        component: Box::new(component),
+        k,
+    });
+    check_refused_naming(&ledger, &["fx_vector"]);
+}
+
+#[test]
+fn metadata_gate_vector_needs_two_or_more_scalar_components() {
+    let f32x3 = FieldType::Vector {
+        component: Box::new(FieldType::F32),
+        k: 3,
+    };
+    check_vector_refused(f32x3, 2);
+    check_vector_refused(FieldType::F32, 1);
+    check_vector_refused(FieldType::F32, 0);
+}
+
+negative_control!(
+    metadata_gate_vector_needs_two_or_more_scalar_components,
+    "vector(f16-pair, 2) is a valid vector, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_vector_refused(FieldType::F16Pair, 2)
 );

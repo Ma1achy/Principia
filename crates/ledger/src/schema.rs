@@ -15,7 +15,8 @@ pub enum Location {
     },
     /// A scalar slot of the struct; a `vector(type, k)` field takes `k` consecutive slots from here (§3.8).
     Scalar(u32),
-    /// Computed at read from the named stored fields; occupies no bits (§3.8, R-72).
+    /// Computed at read from the named stored entries (of any §3 struct; never a sim-key parameter); occupies no bits
+    /// (§3.8, R-72).
     Derived { from: Vec<&'static str> },
 }
 
@@ -27,7 +28,8 @@ pub enum FieldType {
     F32,
     F16Pair,
     Fixed16,
-    /// `vector(type, k)`: `k` components of the scalar `component` type, such as `n` (§3.8, R-72).
+    /// `vector(type, k)`: `k ≥ 2` components of the scalar `component` type, such as `n`; [`crate::gen::validate`]
+    /// refuses a vector component or a smaller `k` (§3.8, R-72).
     Vector {
         component: Box<FieldType>,
         k: u32,
@@ -69,7 +71,7 @@ pub enum Consumer {
 pub enum Bound {
     /// The value itself is in the range.
     Closed(f64),
-    /// Values up to, but not including, this one.
+    /// The value itself is not in the range; the values beyond it, on the range's side, are.
     Open(f64),
     Unbounded,
 }

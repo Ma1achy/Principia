@@ -1,6 +1,6 @@
 //! The fixture ledger for ledger's tests, and the checks they share: a packed word with fields, reserved bits and
 //! ranges; a second word with a u16 field; a scalar with a sentinel and a tier gate; a vector; and a derived field
-//! (dd_generation_root §3.1, §3.4, §3.8).
+//! (dd_generation_root §3.8). Its names (`fx_…`) are not ledger fields; the real entries are §3's.
 
 use ledger::gen;
 use ledger::schema::{
@@ -33,13 +33,13 @@ fn field(
         .consumers(&[Consumer::Render, Consumer::Export, Consumer::Debug])
 }
 
-/// The fixture: `descriptor` (16 declared bits: fields at 0–2 and 5, 8–15 reserved) and `times` (a u16 at 0–15).
+/// The fixture: `fx_word` (16 declared bits: fields at 0–2 and 5, 8–15 reserved) and `fx_times` (a u16 at 0–15).
 pub fn fixture() -> Ledger {
     let u = FieldType::UBits;
     Ledger {
         words: vec![
             Word {
-                name: "descriptor",
+                name: "fx_word",
                 bits: 16,
                 reserved: vec![Span {
                     offset: 8,
@@ -47,35 +47,35 @@ pub fn fixture() -> Ledger {
                 }],
             },
             Word {
-                name: "times",
+                name: "fx_times",
                 bits: 16,
                 reserved: vec![],
             },
         ],
         entries: vec![
             field(
-                "state",
-                packed("descriptor", 0, 3),
+                "fx_enum",
+                packed("fx_word", 0, 3),
                 u.clone(),
                 Scale::Categorical(6),
                 Range::int(0, 5),
             ),
             field(
-                "saturated",
-                packed("descriptor", 5, 1),
+                "fx_flag",
+                packed("fx_word", 5, 1),
                 u.clone(),
                 Scale::Flag,
                 Range::int(0, 1),
             ),
             field(
-                "t_end_step",
-                packed("times", 0, 16),
+                "fx_u16",
+                packed("fx_times", 0, 16),
                 u,
                 Scale::Lin,
                 Range::int(0, 65535),
             ),
             field(
-                "diffusion",
+                "fx_scalar",
                 Location::Scalar(0),
                 FieldType::F32,
                 Scale::Lin,
@@ -85,9 +85,9 @@ pub fn fixture() -> Ledger {
                 },
             )
             .sentinel(-1.0)
-            .tier_gate("ftle_valid"),
+            .tier_gate("fx_gate"),
             field(
-                "n",
+                "fx_vector",
                 Location::Scalar(1),
                 FieldType::Vector {
                     component: Box::new(FieldType::F32),
@@ -100,9 +100,9 @@ pub fn fixture() -> Ledger {
                 },
             ),
             field(
-                "t_end_fraction",
+                "fx_derived",
                 Location::Derived {
-                    from: vec!["t_end_step"],
+                    from: vec!["fx_u16"],
                 },
                 FieldType::F32,
                 Scale::Lin,

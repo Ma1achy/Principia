@@ -5,7 +5,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::schema::{Entry, IncompleteEntry, Ledger, Location, Word};
+use crate::schema::{Entry, FieldType, IncompleteEntry, Ledger, Location, Word};
 
 /// One generated file: its path, relative to the workspace root, and its contents.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -25,15 +25,16 @@ pub const EMITTERS: &[Emitter] = &[];
 pub enum GenError {
     /// Entries missing a required §3.8 key (REQ-GEN-002).
     Incomplete(Vec<IncompleteEntry>),
-    /// Derived fields whose `from` is empty or names something other than a stored entry (§3.8 `location`).
-    BadDerived(Vec<String>),
+    /// Derived fields whose `from` is empty or names something other than a stored entry, and vectors whose
+    /// component is not a scalar type or whose `k` is below 2 (§3.8 `location`, `type`).
+    Malformed(Vec<String>),
 }
 
 impl fmt::Display for GenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let lines: Vec<String> = match self {
             GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
-            GenError::BadDerived(lines) => lines.clone(),
+            GenError::Malformed(lines) => lines.clone(),
         };
         write!(
             f,
@@ -63,11 +64,12 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
     if !incomplete.is_empty() {
         return Err(GenError::Incomplete(incomplete));
     }
-    let bad = bad_derived(&entries);
+    let mut bad = bad_derived(&entries);
+    bad.extend(entries.iter().filter_map(bad_vector));
     if bad.is_empty() {
         Ok(entries)
     } else {
-        Err(GenError::BadDerived(bad))
+        Err(GenError::Malformed(bad))
     }
 }
 
@@ -98,6 +100,22 @@ fn bad_derived(entries: &[Entry]) -> Vec<String> {
         }
     }
     bad
+}
+
+/// A line naming `e` if it is a vector whose component is itself a vector or whose `k` is below 2 (§3.8: "`k ≥ 2`
+/// components, each of the scalar `type`").
+fn bad_vector(e: &Entry) -> Option<String> {
+    match &e.ty {
+        FieldType::Vector { component, k }
+            if matches!(**component, FieldType::Vector { .. }) || *k < 2 =>
+        {
+            Some(format!(
+                "vector field `{}` needs k ≥ 2 scalar components (dd_generation_root §3.8)",
+                e.name
+            ))
+        }
+        _ => None,
+    }
 }
 
 /// Validates `ledger`, then runs `emitters` over it; the files they generate, or why not.
