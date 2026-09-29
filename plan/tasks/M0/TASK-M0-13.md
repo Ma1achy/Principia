@@ -1,7 +1,7 @@
 # TASK-M0-13 — The WGSL generator: the fragment-side unpack layer
 
 - **Milestone:** M0
-- **Closes:** REQ-RENDER-001, REQ-PAY-016
+- **Closes:** REQ-RENDER-001, REQ-PAY-016, REQ-PAY-091
 - **Depends on:** TASK-M0-10, TASK-M0-11, TASK-M0-12
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
@@ -22,6 +22,7 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-63 — The continuation table is hashed with the ledger *(confirms R-36's application)*"
 
+- `decisions.md` § "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
 ## Deliverables
 - `crates/ledger/src/gen/wgsl.rs` — the WGSL emitter; `cargo xtask codegen` writes `crates/render/frag/generated/payload_unpack.wgsl`.
 - `xtask/src/lint_wgsl.rs` — `cargo xtask lint wgsl`: parses the generated WGSL with naga and checks every `extractBits` argument's type is u32, no f64 type, no `enable f16`, the vec2 groupings and the separate word binding; registered in `cargo xtask ci`.
@@ -31,8 +32,10 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - `cargo xtask lint wgsl` — on the generated WGSL: every `extractBits` argument is u32, no f64, no `enable f16`, `r`/`p`/`r_sh`/`p_sh` are `array<vec2<f32>, 3>`, the word buffer is its own binding indexed per copy; review checklist (code §4) grep of the generated WGSL agrees (REQ-RENDER-001).
 - `cargo test -p xtask lint_wgsl` — a fixture with an i32 `extractBits`, one with an f64 and one with `enable f16` each fail, naming the rule (REQ-RENDER-001; the lint can fire).
 - `cargo test -p ledger continuation_table` — the generated Rust and WGSL tables equal the frozen arrays (`inverse = [1,0,3,2]`, `cont_symbol[0] = [0,1,2,3]`, `[1] = [2,3,0,1]`, `[2] = [3,2,1,0]`); each digit map is an involution; no continuation equals `inverse(prev)` (REQ-PAY-016).
+- `cargo test -p ledger wgsl_layouts` — the generated WGSL struct layouts for SimState and ICDescriptor match the ledger tables field by field (REQ-PAY-091).
 
 ## Notes
 - The WGSL debug catalogue and the Rust export decoder (the other two generated artefacts) are M1 (REQ-GEN-010, REQ-GEN-011).
 - The fragment read side's tier-uniform interface (`has_<feature>` consts, NaN for absent features — lowering Part 3a) is M1's; this task emits the stored layouts only.
 - The GPU self-test of this WGSL is TASK-M0-15.
+- R-256's applied note: the WGSL half of REQ-PAY-002 is split off as REQ-PAY-091 and closed here.
