@@ -3021,7 +3021,7 @@
   milestone: M3
 - id: REQ-INT-041
   area: INT
-  statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as a sentinel for n < 2."
+  statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as NaN for n < 2 (R-245)."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.5 Invariant monitoring (per `STEP`, post-projection)
@@ -3041,12 +3041,15 @@
     section: "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: unit test
-    detail: "streaming slope equals least-squares slope of y on t for random series within f32 tolerance; n=0,1 returns the sentinel; no shared mutable global in the dispatch"
+    detail: "streaming slope equals least-squares slope of y on t for random series within f32 tolerance; n=0,1 reads NaN (R-245); no shared mutable global in the dispatch"
   rulings:
   - R-17
   - R-72
+  - R-245
   milestone: M3
   note: "What the per-sample y is: REQ-PAY-073 (definition)."
 - id: REQ-INT-042
@@ -4766,7 +4769,7 @@
   milestone: M1
 - id: REQ-PAY-030
   area: PAY
-  statement: "The diffusion slope must be `C_ty / C_tt(n)` with `n` taken from the sample's own `t_end_step`, and for `n < 2` it must return the sentinel −1.0 without dividing by zero."
+  statement: "The diffusion slope must be `C_ty / C_tt(n)` with `n` taken from the sample's own `t_end_step`, and for `n < 2` it must read NaN, by the validity predicate `n ≥ 2`, without dividing by zero (R-245)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 4. Welford diffusion (streaming regression)
@@ -4778,11 +4781,14 @@
     section: 3.4 `SimState` scalars — with presentation metadata
   - file: docs/design/principia_dd_generation_root.md
     section: 5. Tests (properties any generator must satisfy)
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: unit test
-    detail: "n = 0, 1 → −1.0 and slope_valid false; a latched sample uses its own n, not the playhead"
+    detail: "n = 0, 1 → NaN and slope_valid false; a latched sample uses its own n, not the playhead"
   rulings:
   - R-17
+  - R-245
   milestone: M1
   note: "Payload §4 offers \"NaN/sentinel or −1\"; the ledger fixes −1.0."
 - id: REQ-PAY-031
@@ -4922,7 +4928,7 @@
   milestone: M3
 - id: REQ-PAY-039
   area: PAY
-  statement: "Storage buffers must never hold NaN: a blown-up sample must store the defined failed-state values, diffusion must read the −1.0 sentinel when the streaming slope is invalid (n < 2), and the kernel-set state enum (sim_failed/decode_failed) and sticky saturated bit must be the primary invalid signals."
+  statement: "Storage buffers must never hold NaN: a blown-up sample must store the defined failed-state values; diffusion, derived at read, must read NaN when the streaming slope is invalid (n < 2, R-245); and the kernel-set state enum (sim_failed/decode_failed) and sticky saturated bit must be the primary invalid signals."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Part 4 — Semantic rules
@@ -4930,12 +4936,15 @@
     section: "R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*"
   - file: decisions.md
     section: R-79 — NaN and sentinels *(closes RQ-30)*
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: unit test
-    detail: "scan every stored float in synthetic, forced-failure and real payloads: no NaN bit patterns; a sample with n<2 reads diffusion == -1.0"
+    detail: "scan every stored float in synthetic, forced-failure and real payloads: no NaN bit patterns; a sample with n<2 reads diffusion as NaN at derive (R-245)"
   rulings:
   - R-17
   - R-79
+  - R-245
   milestone: M3
 - id: REQ-PAY-040
   area: PAY
@@ -5964,18 +5973,21 @@
   milestone: M1
 - id: REQ-GEN-012
   area: GEN
-  statement: "The diffusion sentinel −1.0 must survive pack/unpack bit-exact and the catalogue must show it as its literal value on the ramp, never scale it (R-136)."
+  statement: "A stored sentinel must survive pack/unpack bit-exact and the catalogue must show it as its literal value on the ramp, never scale it (R-136); an invalid diffusion fit is no longer a sentinel but reads NaN and gets the hatch (R-245)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 5. Tests (properties any generator must satisfy)
   - file: decisions.md
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: unit test
-    detail: "sentinel round trip; catalogue render of −1.0 shows the literal value −1.0 on the ramp (R-136)"
+    detail: "sentinel round trip for each stored sentinel field; catalogue render of a stored sentinel shows its literal value (R-136); a diffusion with n < 2 renders the hatch (R-245)"
   rulings:
   - R-17
   - R-136
+  - R-245
   milestone: M1
 - id: REQ-GEN-013
   area: GEN
@@ -6202,15 +6214,21 @@
   milestone: M1
 - id: REQ-GEN-028
   area: GEN
-  statement: "The static layout check's width test must hold for every field type it meets: an unsigned (u-bits) field of width w needs its range's least value ≥ 0 and greatest ≤ 2^w − 1; a signed integer field of width w needs least ≥ −2^(w−1) and greatest ≤ 2^(w−1) − 1; an unbounded range end fits no width; and a field type the check does not recognise must fail the check, naming the field and its type, rather than pass unchecked (R-242)."
+  statement: "The static layout check's width test must hold for every field type it meets at a packed location: an unsigned (u-bits) field of width w needs its range's least value ≥ 0 and greatest ≤ 2^w − 1, and an unbounded end fits no width; `f16-pair` and `fixed16` need exactly 16 bits and `f32` exactly 32, with no range-against-width test; any other type there (a vector included) fails the check, naming the field and its type (R-242, R-248). An `f16-pair` field's declared range, wherever it sits, must lie within ±65504, and an unbounded end fails unless the entry states its `overflow` (saturate or inf) (R-248). The signed-integer rule (R-242) lands with the first signed type in §3.8 (R-247)."
   source:
   - file: decisions.md
     section: "R-242 — The layout check's range and width rules *(closes RQ-151's rules)*"
+  - file: decisions.md
+    section: "R-247 — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*"
+  - file: decisions.md
+    section: "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
   verify:
     method: unit test
-    detail: "cargo test -p ledger layout_static: an unsigned field too narrow for its range, a signed field too narrow for its range, an unbounded range on a packed field, and a field of an unrecognised type each fail, naming the word, the field and the bits; each has a registered negative control"
+    detail: "cargo test -p ledger layout_static: an unsigned field too narrow for its range, an unbounded range on a packed u-bits field, an f16-pair or fixed16 field not exactly 16 bits wide, an f32 field not exactly 32, a vector at a packed location, an f16-pair range beyond ±65504, and an f16-pair unbounded end with no `overflow` each fail, naming the word or entry, the field and the bits; an f16-pair unbounded end with `overflow` passes; each has a registered negative control"
   rulings:
   - R-242
+  - R-247
+  - R-248
   milestone: M0
 - id: REQ-SCHED-001
   area: SCHED
@@ -8973,15 +8991,18 @@
   note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75). R-113 (RQ-95): the Burrau int lattice and the Anosova physical-frame chart are a separate M4 requirement."
 - id: REQ-RENDER-028
   area: RENDER
-  statement: "The diffusion sentinel must use the streaming slope defined by the payload ledger."
+  statement: "The diffusion validity must use the streaming slope defined by the payload ledger: the predicate n ≥ 2, with NaN for an invalid fit (R-17, R-245)."
   source:
   - file: decisions.md
     section: "R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*"
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: unit test
-    detail: "Sentinel reads the ledger's streaming-slope field; fixture with known slope trips the sentinel at the ledger-defined value."
+    detail: "the predicate reads the ledger's streaming-slope n; a fixture with n < 2 reads NaN, n ≥ 2 the slope (R-245)"
   rulings:
   - R-17
+  - R-245
   milestone: M3
 - id: REQ-RENDER-029
   area: RENDER
@@ -13443,7 +13464,7 @@
   note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
 - id: REQ-TOOL-012
   area: TOOL
-  statement: "Field views must keep the NaN absence sentinel and the −1 sentinel distinct — NaN hatched by debug_invalid(frag_xy), −1 shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
+  statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, or an invalid diffusion fit, R-245) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -13457,12 +13478,15 @@
     section: 10.1 The shared prelude library
   - file: decisions.md
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   verify:
     method: golden image
-    detail: "synthetic payload with NaN-absent ftle and diffusion = −1 renders ftle hatched and diffusion = −1 as its literal ramp value (R-136); a forced-failure sample's d_min renders as its literal 0.0"
+    detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min renders as its literal 0.0"
   rulings:
   - R-79
   - R-136
+  - R-245
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
@@ -17988,15 +18012,18 @@
   milestone: M0
 - id: REQ-VAL-167
   area: VAL
-  statement: "When a registered control fails to make its test fail, `qa_TASK-M0-24.rs`'s message must include that control's own output, and must not say it \"leaves it passing\"; and the control of `deps_a_unit_test_behind_the_release_profile_using_validation_fails` (`xtask/tests/deps.rs`) must first assert the expected compile error before its test's check (R-236)."
+  statement: "When a registered control fails to make its test fail, `xtask/src/controls.rs`'s finding (`ControlPasses` / `WrongPanic`) must include that control's own output, and must not say it \"leaves it passing\"; and the control of `deps_a_unit_test_behind_the_release_profile_using_validation_fails` (`xtask/tests/deps.rs`) must first assert the expected compile error before its test's check (R-236, R-244)."
   source:
   - file: decisions.md
     section: "R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first"
+  - file: decisions.md
+    section: "R-244 — TASK-M0-34's first deliverable moves to `xtask/src/controls.rs` *(amends R-236; closes RQ-155)*"
   verify:
     method: review checklist
-    detail: "code and qa: a scratch control that fails its test with the wrong panic shows that control's output in the message; the deps.rs control fails with its own message when the child does not fail to compile with the expected error; every control still trips (`cargo xtask controls`)"
+    detail: "code and qa: a scratch control that leaves its test passing, and one that fails it with the wrong panic, each show that control's output in `cargo xtask controls`'s finding; the deps.rs control fails with its own message when the child does not fail to compile with the expected error; qa's files change only in their assertions on the old wording (R-244); every control still trips (`cargo xtask controls`)"
   rulings:
   - R-236
+  - R-244
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

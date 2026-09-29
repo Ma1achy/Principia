@@ -328,7 +328,7 @@ state.C_ty   += delta_t * (y - state.mean_y);   // OLD time-dev × NEW y-dev
 ```
 Per-sample state: **`mean_y, C_ty`** (2 × f32, in `SimState`). No shared mutable state. Must stay f32.
 
-> **`n < 2` guard.** `C_tt(0) = C_tt(1) = 0` (zero or one time-point has no time-variance). The read accessor **must return an invalid/sentinel slope, not divide by zero** — e.g. `slope_valid = (n ≥ 2)`, and a NaN/sentinel or a `diffusion = −1` marker (payload sentinel convention) when `n < 2`.
+> **`n < 2` guard.** `C_tt(0) = C_tt(1) = 0` (zero or one time-point has no time-variance). The read accessor **must return an invalid/sentinel slope, not divide by zero** — e.g. `slope_valid = (n ≥ 2)`, and NaN when `n < 2` (R-245: no `−1` marker).
 
 > **Terminal-sample subtlety.** A latched (terminated) sample stops at *its* terminal step, so its denominator uses **its own `n = t_end_step`** (exact, §2), not the current playhead — handled by construction since `n` is derived per-sample from `t_end_step`, and `C_tt` is evaluated at *that* `n`.
 
@@ -345,7 +345,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | Derived quantity | From | Note |
 |---|---|---|
 | `ftle` | `S_final / (step_count · dt_macro)` — see FTLE note | **NOT simply `S/t`**: `S` only contains growth through the last *completed* renormalisation, so at read the **partial interval must be finalised** first. Validity conditional (§6 `ftle_valid`) |
-| `diffusion_slope` | `C_ty / C_tt(n)` | `C_tt(n)=h²n(n²−1)/12`. **Invalid for `n < 2`** (`C_tt=0`) → sentinel slope, never divide-by-zero (§4, §6) |
+| `diffusion_slope` | `C_ty / C_tt(n)` | `C_tt(n)=h²n(n²−1)/12`. **Invalid for `n < 2`** (`C_tt=0`) → reads NaN (R-245), never divide-by-zero (§4, §6) |
 | `orbit_count` | `⌊|theta| / 2π⌋` | winding count |
 | `retrograde` | `theta < 0` | winding sense |
 | current drift `ΔE` | `H(r,p) − E_0` | cancellation-tolerant (feeds thresholds/display); threshold uses live f32 |
@@ -411,7 +411,7 @@ fn tm_t_dmin_fraction(w:u32, horizon_steps:u32)->f32 { return select(0.0, f32(tm
 fn ftle_valid(state:u32, ftle_tier_on:bool, n:u32, benettin_renorms:u32)->bool {
     return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;
 }
-fn diffusion_slope_valid(n:u32)->bool { return n >= 2u; }   // C_tt(n)=0 for n<2 → sentinel slope, no divide-by-zero
+fn diffusion_slope_valid(n:u32)->bool { return n >= 2u; }   // C_tt(n)=0 for n<2 → NaN slope (R-245), no divide-by-zero
 
 // word (from word_buffer[i], NOT SimState)
 fn fgw_length_raw(w:vec4u)->u32       { return extractBits(w.w, 25u, 7u); }        // 0…76 valid; 127 = truncated

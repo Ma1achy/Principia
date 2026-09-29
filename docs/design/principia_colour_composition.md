@@ -231,7 +231,7 @@ render-key.
 | **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
 | **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples/quad), `E` (ensemble) |
 | **payload**   | every per-pixel field written by the kernel — `state`, `ftle`, `energy_drift`, `Lz_drift`, `diffusion`, `d_min`, `word`/hash, `t_end`, decoded-IC quantities, masses, … |
-| **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion `−1` sentinel, `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
+| **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
 
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the

@@ -2611,6 +2611,7 @@ Tick any you don't accept.
      §3.5 already says "invalid for `n<2`");
   3. keep −1.0 and accept the collision as negligible.
 - **Needed:** a ruling. TASK-M0-07's §3.8 entry for `diffusion` follows whichever is chosen.
+- **Ruling:** R-245 (decisions.md).
 
 ## RQ-153: render contract Part 6 calls the drifts "stored"; §3.1 says they are derived *(docs, TASK-M0-07)*
 
@@ -2623,6 +2624,7 @@ Tick any you don't accept.
 - **Options seen:** reword the render contract line to "kept" (a wording fix, if the intent is §3.1's); or the final
   drift is stored after all, and §3.1 changes.
 - **Needed:** a ruling on which reading holds.
+- **Ruling:** R-246 (decisions.md).
 
 ## RQ-154: `ftle` at `step_count = 0` is 0/0, with no sentinel *(physics, TASK-M0-07)*
 
@@ -2636,3 +2638,27 @@ Tick any you don't accept.
   with a validity predicate `step_count ≥ 1`.
 - **Needed:** a ruling before the `ftle` read accessor is built. Does not block TASK-M0-07.
 
+## RQ-155: TASK-M0-34's first deliverable names a message TASK-M0-22 removed *(plan, TASK-M0-34)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-34.md` § Deliverables: "`crates/validation/tests/qa_TASK-M0-24.rs`: when a
+  control fails to make its test fail, the message includes that control's own output and no longer says it "leaves it
+  passing""; `decisions.md` § "R-236".
+- **What:** TASK-M0-22 (R-226) removed `run_controls` and `assert_each_control_fails_its_test` from
+  `qa_TASK-M0-24.rs`; it now runs no control. The "leaves it passing" wording is produced by `xtask/src/controls.rs`
+  (`Finding::ControlPasses` / `WrongPanic`), and qa's `xtask/tests/qa_TASK-M0-22.rs`,
+  `crates/validation/tests/qa_TASK-M0-21.rs` and `xtask/tests/controls.rs` assert it. The orchestrator wrote the task
+  against the file as it stood before TASK-M0-22.
+- **Options seen:** move the deliverable to `xtask/src/controls.rs`, extending the exception to the files asserting the
+  wording; or retire it and keep only the `deps.rs` deliverable.
+- **Ruling:** R-244 (decisions.md). Closed in TASK-M0-34.
+
+## RQ-156: R-242's width rules meet no signed type, and float types at packed locations *(plan, TASK-M0-35)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema": "type: u-bits | f32 |
+  f16-pair | fixed16 | vector(type, k)"; § 3.1: "the high 16 bits of `packed_a` hold `d_min:f16`"; `decisions.md`
+  § "R-242": "the width check also covers signed integer fields if the ledger has any" and "a field type the width
+  check does not recognise fails the check"; REQ-GEN-028's verify: "a signed field too narrow for its range".
+- **What:** raised by TASK-M0-35's implementer before building. §3.8 has no signed integer type, so REQ-GEN-028's
+  signed test can't be written. And R-242 gives width rules only for integer types, so a literal reading fails
+  `d_min:f16` at its packed location once §3 is transcribed.
+- **Ruling:** R-247, R-248 (decisions.md). Closed in TASK-M0-35.

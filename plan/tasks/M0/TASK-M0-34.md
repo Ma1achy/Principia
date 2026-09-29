@@ -15,9 +15,10 @@ When a control fails to make its test fail, the reason is kept. During PR #38's 
 - `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"
 - `decisions.md` § "R-212 — A control names the panic it expects *(amends R-199; closes RQ-145)*"
 - `decisions.md` § "R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first"
+- `decisions.md` § "R-244 — TASK-M0-34's first deliverable moves to `xtask/src/controls.rs` *(amends R-236; closes RQ-155)*"
 
 ## Deliverables
-- `crates/validation/tests/qa_TASK-M0-24.rs`: when a control fails to make its test fail, the message includes that control's own output and no longer says it "leaves it passing". qa's merged file changes only as far as this needs, under a one-round exception, with qa reviewing (R-236).
+- `xtask/src/controls.rs`: when a control fails to make its test fail (`ControlPasses`, `WrongPanic`), the finding includes that control's own output and no longer says it "leaves it passing". The one-round exception covers qa's `xtask/tests/qa_TASK-M0-22.rs`, `crates/validation/tests/qa_TASK-M0-21.rs` and `xtask/tests/controls.rs`, limited to their assertions on that wording, with qa reviewing (R-236, R-244).
 - `xtask/tests/deps.rs`: the control of `deps_a_unit_test_behind_the_release_profile_using_validation_fails` first asserts the expected compile error, with its own message, before its test's check (R-236).
 
 ## Acceptance tests
@@ -26,3 +27,4 @@ When a control fails to make its test fail, the reason is kept. During PR #38's 
 
 ## Notes
 - R-236: from the diagnosis of 29 Sep: not reproduced in ~340 runs, likely an environmental transient; these changes keep the evidence next time. Depends on TASK-M0-22, which also edits `qa_TASK-M0-24.rs` (applied per R-204, sequencing).
+- R-244 (closes RQ-155): TASK-M0-22 had removed the control-running code from `qa_TASK-M0-24.rs`; the message lives in `xtask/src/controls.rs`, so the deliverable moves there.

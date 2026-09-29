@@ -134,7 +134,7 @@ The word lives here, not in `SimState`. Specification:
 | `d_min` | log | > 0 |
 | `ftle` | lin | tier-gated (`ftle_valid`). **A *point* quantity — every sample (base and each ensemble copy) computes its own** from its Benettin shadow, so it anti-aliases under the SSAA resolve (sampling/SSAA note) |
 | `energy_drift` | **diverging** (signed) | log-magnitude styling; floor `eps_E` |
-| `diffusion` | lin | **sentinel −1.0** = fit invalid |
+| `diffusion` | lin | invalid fit (`n < 2`) reads NaN, by the predicate `n ≥ 2` (R-245) |
 | `delta_E_max_abs` | log | ≥ 0 |
 | `Lz_drift` | **diverging** (signed) | floor `eps_L` |
 | `delta_Lz_max_abs` | log | ≥ 0 |
@@ -154,7 +154,7 @@ The word lives here, not in `SimState`. Specification:
 | **Phase state** | `r, p` — 12 × f32 (vec2-grouped, `array<vec2<f32>, 3>` each; 8-byte aligned — payload §1, R-86) | the marching state at the playhead |
 | **Shadow states** (tier-gated) | 1 Benettin shadow **per sample** (base and each ensemble copy), 12 × f32 each | **resident under lockstep — they march too.** Every sample is a full, uniform `SimState` computing its own FTLE (the sampling/SSAA decision: uniformity over micro-saving), so its FTLE shadow rides with it. Tier gates existence; `contains-ensemble` / `contains-FTLE` advertise it. The shadow is an *ingredient* of the sample's `ftle` field — never itself a coloured sample (renormalisation corrupts its endpoint) |
 | **Ensemble copies** (tier-gated) | E full uniform `SimState`s per nominal sample — a footprint has **E+1 samples, `copy_index` 0..E**: copy 0 is the un-jittered centre, copies 1..E sit at **Halton (2,3) points 1..E**, centred (minus ½) and scaled to the footprint (R-80) | structurally identical to the base (colour through any render graph, no special-casing) but **scheduler-leaves** — a copy never spawns its own ensemble (`ENSEMBLE_ENABLED` applies only to nominal samples; no recursion). They double as the SSAA sample pool *and* the spread-metric pool. Per-pixel ≈ `2(E+1)` trajectories (each sample + its shadow); E is the tier's free-valued SSAA knob (0–15; High = 3, Extreme = 15 — memory-tiers) |
-| **Running accumulators** | Benettin `S` (f32); unwrapped phase `θ̃` (f32 — `orbit_count`/`retrograde` derived at read); drift running-final + running-max pairs; **diffusion via Welford streaming regression** — per-sample `mean_y, C_ty` (2 × f32); the time-only terms `n, mean_t, C_tt` are **the same for all samples** (lockstep synchronises `t`) and are **DERIVED closed-form** (from `step_count`), not stored per-sample or in a mutable global — see the invariant | ⚠ **INVARIANT (footgun 1): diffusion is accumulated as *streaming regression state*, never as `(t, y)` points collected for a later fit** — points regrow the history the reversal deleted. **Welford, not raw moments:** the old raw-moment form (`Σt, Σt², Σy, Σty, Σy²`) computes slope as `(nΣty−ΣtΣy)/(nΣt²−(Σt)²)` — a *catastrophic-cancellation* difference of large nearly-equal products, precision-risky even at f32 as the sums grow over ~10⁵ steps. Welford tracks *centered* co-moments (running means + `C_tt, C_ty`), so **slope = `C_ty / C_tt`** directly — stable, no cancellation, no unbounded sums. **Lockstep — time-moments are DERIVED, not a shared mutable global** (WGSL has no dispatch-wide barrier to publish one safely mid-dispatch). For uniform sampling: `n=step_count`, `mean_t=(n+1)h/2`, **`C_tt(n)=h²·n(n²−1)/12`** (closed form). The per-sample covariance update uses the **OLD-mean** time deviation `δ_t=0.5·n·h` (NOT `t−mean_t` post-insertion, which is wrong): `mean_y += (y−mean_y)/n; C_ty += δ_t·(y−mean_y)`. Slope `C_ty/C_tt(n)`, **invalid for `n<2`** (sentinel, no divide-by-zero). Only `mean_y, C_ty` are stored. (Non-uniform schedule → small precomputed prefix table, still read-only.) Net: **2 per-sample f32** (was 5), *and* numerically robust. Slope + R² derived from `(C_ty, C_tt, mean_y, mean_t, n)` at any playhead |
+| **Running accumulators** | Benettin `S` (f32); unwrapped phase `θ̃` (f32 — `orbit_count`/`retrograde` derived at read); drift running-max accumulators (the current drift is derived at read, §3.1; R-246); **diffusion via Welford streaming regression** — per-sample `mean_y, C_ty` (2 × f32); the time-only terms `n, mean_t, C_tt` are **the same for all samples** (lockstep synchronises `t`) and are **DERIVED closed-form** (from `step_count`), not stored per-sample or in a mutable global — see the invariant | ⚠ **INVARIANT (footgun 1): diffusion is accumulated as *streaming regression state*, never as `(t, y)` points collected for a later fit** — points regrow the history the reversal deleted. **Welford, not raw moments:** the old raw-moment form (`Σt, Σt², Σy, Σty, Σy²`) computes slope as `(nΣty−ΣtΣy)/(nΣt²−(Σt)²)` — a *catastrophic-cancellation* difference of large nearly-equal products, precision-risky even at f32 as the sums grow over ~10⁵ steps. Welford tracks *centered* co-moments (running means + `C_tt, C_ty`), so **slope = `C_ty / C_tt`** directly — stable, no cancellation, no unbounded sums. **Lockstep — time-moments are DERIVED, not a shared mutable global** (WGSL has no dispatch-wide barrier to publish one safely mid-dispatch). For uniform sampling: `n=step_count`, `mean_t=(n+1)h/2`, **`C_tt(n)=h²·n(n²−1)/12`** (closed form). The per-sample covariance update uses the **OLD-mean** time deviation `δ_t=0.5·n·h` (NOT `t−mean_t` post-insertion, which is wrong): `mean_y += (y−mean_y)/n; C_ty += δ_t·(y−mean_y)`. Slope `C_ty/C_tt(n)`, **invalid for `n<2`** (reads NaN by the predicate `n ≥ 2`, R-245; no divide-by-zero). Only `mean_y, C_ty` are stored. (Non-uniform schedule → small precomputed prefix table, still read-only.) Net: **2 per-sample f32** (was 5), *and* numerically robust. Slope + R² derived from `(C_ty, C_tt, mean_y, mean_t, n)` at any playhead |
 
 Terminal latch: on termination the whole block freezes (state stops advancing, accumulators stop updating).
 
@@ -417,12 +417,17 @@ quad **floors** — correct, since refining does not make a close encounter easi
 { name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
   type: u-bits | f32 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
-  range, sentinel?, tier_gate?,
+  range, sentinel?, tier_gate?, overflow?: saturate | inf,
   provenance: kernel | decode | reduction | cpu,
   consumers: [render, export, debug, scheduler] }
 ```
 
 **A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
+
+`overflow` (R-248) states what an `f16-pair` value does past f16's finite range (±65504): `saturate` clamps to
+±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is
+allowed only when the entry states `overflow`. At a packed location, `f16-pair` and `fixed16` take exactly 16 bits
+and `f32` exactly 32, with no range-against-width test; any other non-integer type there fails the static check.
 
 **Derived fields and vector fields** *(definition, R-72; REQ-GEN-024)*:
 - **`derived(from: [field, …])`** is the location of a field computed at read rather than stored (§3.1's "Derived, NOT
@@ -463,9 +468,9 @@ render it (§3.4 gives `n` none); export because seam 13 generates the export de
 |---|---|---|---|---|---|---|
 | `t_end` | `derived(from: [t_end_step])` | `T · t_end_step / horizon_steps`, the fraction of the horizon (§3.1, §3.4) | f32 | lin | [0, T] (§3.4; render contract Part 6) | — |
 | `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79) |
-| `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])`; render contract Part 6 says stored, RQ-153 pending | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
-| `Lz_drift` | `derived(from: [r, p, Lz_0])`; render contract Part 6 says stored, RQ-153 pending | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
-| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | sentinel −1.0 for `n < 2` (§3.4, R-17); a sentinel inside the unbounded range, RQ-152 pending |
+| `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])` (R-246) | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `Lz_drift` | `derived(from: [r, p, Lz_0])` (R-246) | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | — (an invalid fit, `n < 2`, reads NaN by the predicate `n ≥ 2`, R-245) |
 | `n` | `derived(from: [r, m0, m1, m2])` | the Montgomery map, never stored (§3.5; integrator dd §3.7) | vector(f32, 3) | lin, per component | [−1, 1] per component | — |
 
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
@@ -501,7 +506,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 2. **Pack∘unpack = id**, per field, property-fuzzed over the full value range — in **Rust** (host + the kernel's own pack/unpack) *and* in a GPU self-test dispatch of the **WGSL fragment** unpack (which is where the `i32-extractBits` sign-extension trap lives — u32 overload only; the Rust side has no `extractBits`, so that trap is fragment-specific).
 3. **f16 pairs** round-trip via `pack2x16float`/`unpack2x16float` within f16 eps.
 4. **Exact step indices:** `t_end_step`/`t_dmin_step` (in `times`) round-trip exactly as u16 — no fixed-point, no Q0.16 (R-86); dispatch refuses a configuration with `⌈T/dt⌉ > 65535`; bit-identical CPU/GPU on identical inputs (parity).
-5. **Sentinels:** `diffusion = −1.0` survives pack/unpack bit-exact; catalogue styles it, never scales it.
+5. **Sentinels:** a stored sentinel survives pack/unpack bit-exact; catalogue styles it, never scales it. (`diffusion` is no longer one: an invalid fit reads NaN, R-245.)
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
 7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.
 8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in range); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
