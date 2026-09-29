@@ -46,19 +46,24 @@ pub enum Citation {
     Calibration(&'static str),
 }
 
-/// A population in an observed distribution: its name and the closed range `[lo, hi]` of its values.
+/// A population in an observed distribution: its name, the closed range `[lo, hi]` of its values, and how many of
+/// the distribution's observations it holds. A population is well formed when its ends are finite, `lo ≤ hi`, and
+/// `count ≥ 1`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Population {
     pub name: &'static str,
     pub lo: f64,
     pub hi: f64,
+    pub count: u64,
 }
 
 /// What a threshold was set from (pitfalls §3: "Set thresholds from the observed distribution, or from a measured
-/// gap"). Either way the threshold separates populations, so it lies outside each one's range.
+/// gap"). Either way the threshold sits between populations: at least one wholly below it, at least one wholly above
+/// it, and none containing it (R-250).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RelativeBasis {
     /// The observed distribution at `source`: the populations it shows, and the percentile the threshold sits at.
+    /// The percentile is derived from the populations' counts ([`percentile_below`]); the recorded one must equal it.
     Distribution {
         source: Citation,
         percentile: f64,
@@ -115,6 +120,13 @@ impl ConstantBuilder {
                  (R-71)"
             ));
         }
+        if let Value::Exact(v) | Value::Threshold(v) = value {
+            if !v.is_finite() {
+                return Err(format!(
+                    "constant `{name}` = {v} is not finite (dd_generation_root §3.8)"
+                ));
+            }
+        }
         if let Value::Threshold(v) = value {
             let basis = self.relative_basis.ok_or_else(|| {
                 format!(
@@ -134,42 +146,75 @@ impl ConstantBuilder {
     }
 }
 
-/// `Ok` if the threshold `v` lies outside every population of `basis` (and, for a gap, between its two); otherwise a
-/// line naming the threshold and the population it falls in.
-fn check_basis(name: &str, v: f64, basis: &RelativeBasis) -> Result<(), String> {
-    let (populations, at) = match basis {
-        RelativeBasis::Distribution {
-            populations,
-            percentile,
-            ..
-        } => (
-            populations.to_vec(),
-            format!(", at the {percentile}th percentile of its distribution"),
-        ),
-        RelativeBasis::Gap { below, above, .. } => {
-            if !(below.hi < v && v < above.lo) {
-                return Err(format!(
-                    "threshold `{name}` = {v} is not inside the measured gap ({}, {}) between `{}` and `{}` \
-                     (pitfalls §3)",
-                    below.hi, above.lo, below.name, above.name
-                ));
-            }
-            (vec![*below, *above], String::new())
-        }
-    };
-    if let Some(p) = populations.iter().find(|p| p.lo <= v && v <= p.hi) {
+/// The percentile of the distribution `populations` at the threshold `v`: the share of its observations, in percent,
+/// held by the populations wholly below `v` (R-250). It is `100 · below / total`, computed as one division of the
+/// integer counts, so a recorded percentile equal to that quotient compares equal.
+pub fn percentile_below(v: f64, populations: &[Population]) -> f64 {
+    let total: u64 = populations.iter().map(|p| p.count).sum();
+    let below: u64 = populations
+        .iter()
+        .filter(|p| p.hi < v)
+        .map(|p| p.count)
+        .sum();
+    (100 * below) as f64 / total as f64
+}
+
+/// `Err` naming the threshold `name` and the population `p` if `p` is not well formed: finite ends, `lo ≤ hi`,
+/// `count ≥ 1`.
+fn check_population(name: &str, p: &Population) -> Result<(), String> {
+    if !(p.lo.is_finite() && p.hi.is_finite() && p.lo <= p.hi && p.count >= 1) {
         return Err(format!(
-            "threshold `{name}` = {v} lies inside the range [{}, {}] of the population `{}`{at} (pitfalls §3)",
-            p.lo, p.hi, p.name
-        ));
-    }
-    if populations.len() < 2 {
-        return Err(format!(
-            "threshold `{name}` separates no populations: its basis names {} (pitfalls §3)",
-            populations.len()
+            "threshold `{name}`: its population `{}` = [{}, {}] with count {} needs finite ends, lo ≤ hi and \
+             count ≥ 1 (dd_generation_root §3.8)",
+            p.name, p.lo, p.hi, p.count
         ));
     }
     Ok(())
+}
+
+/// `Ok` if the finite threshold `v` sits between populations of `basis` (R-250): each population is well formed,
+/// none contains `v`, at least one lies wholly below and one wholly above it, a `gap` threshold lies inside its gap,
+/// and a `distribution`'s recorded percentile equals the one its counts give. Otherwise a line naming the threshold
+/// and what is wrong.
+fn check_basis(name: &str, v: f64, basis: &RelativeBasis) -> Result<(), String> {
+    let populations = match basis {
+        RelativeBasis::Distribution { populations, .. } => populations.to_vec(),
+        RelativeBasis::Gap { below, above, .. } => vec![*below, *above],
+    };
+    for p in &populations {
+        check_population(name, p)?;
+    }
+    if let Some(p) = populations.iter().find(|p| p.lo <= v && v <= p.hi) {
+        return Err(format!(
+            "threshold `{name}` = {v} lies inside the range [{}, {}] of the population `{}`, at whatever percentile \
+             (pitfalls §3; R-250)",
+            p.lo, p.hi, p.name
+        ));
+    }
+    let below = populations.iter().filter(|p| p.hi < v).count();
+    let above = populations.iter().filter(|p| v < p.lo).count();
+    if below == 0 || above == 0 {
+        return Err(format!(
+            "threshold `{name}` = {v} does not sit between populations: {below} of its basis's lie wholly below it \
+             and {above} wholly above; it needs at least one of each (R-250)"
+        ));
+    }
+    match basis {
+        RelativeBasis::Gap { below, above, .. } if !(below.hi < v && v < above.lo) => Err(format!(
+            "threshold `{name}` = {v} is not inside the measured gap ({}, {}) between `{}` and `{}` (pitfalls §3)",
+            below.hi, above.lo, below.name, above.name
+        )),
+        RelativeBasis::Distribution {
+            percentile,
+            populations,
+            ..
+        } if *percentile != percentile_below(v, populations) => Err(format!(
+            "threshold `{name}` records the {percentile}th percentile, but its populations' counts put it at the \
+             {}th (R-250)",
+            percentile_below(v, populations)
+        )),
+        _ => Ok(()),
+    }
 }
 
 /// The generation gate: every entry of `register` built, or generation refused with a line naming each constant

@@ -1,6 +1,7 @@
 //! The constants register's generation gate (dd_generation_root §3.8, "The constants register"): an entry without a
 //! citation or an admissibility class refuses generation, naming the constant (REQ-SYS-001, REQ-SYS-005); a threshold
-//! without a relative basis, or one lying inside a population it should separate, is refused (REQ-VAL-006).
+//! without a relative basis, or one not sitting between populations of its own distribution, is refused (REQ-VAL-006,
+//! R-250).
 
 use ledger::constants::{
     gate, Admissibility, Citation, ConstantBuilder, Population, RelativeBasis, Value, REGISTER,
@@ -133,8 +134,13 @@ fn threshold(name: &'static str, value: f64, basis: Option<RelativeBasis>) -> Co
     }
 }
 
-const fn population(name: &'static str, lo: f64, hi: f64) -> Population {
-    Population { name, lo, hi }
+const fn population(name: &'static str, lo: f64, hi: f64, count: u64) -> Population {
+    Population {
+        name,
+        lo,
+        hi,
+        count,
+    }
 }
 
 /// A gap basis between `below` and `above`.
@@ -162,7 +168,10 @@ negative_control!(
         threshold(
             "fx_cutoff",
             2e-3,
-            gap(population("a", 1e-6, 1e-4), population("b", 1e-2, 1.0))
+            gap(
+                population("a", 1e-6, 1e-4, 1),
+                population("b", 1e-2, 1.0, 1)
+            )
         ),
         &["fx_cutoff"]
     )
@@ -171,8 +180,8 @@ negative_control!(
 /// The closure regression (pitfalls §3): an absolute cutoff of 2e-3 that sits inside the bound population's range.
 /// The recorded fact is that 2e-3 lies inside it; the range's ends are this fixture's.
 fn closure_cutoff(value: f64) -> ConstantBuilder {
-    let bound = population("bound", 1e-6, 1e-1);
-    let escape = population("escape", 2e-1, 1.0);
+    let bound = population("bound", 1e-6, 1e-1, 1);
+    let escape = population("escape", 2e-1, 1.0, 1);
     threshold("closure_cutoff", value, gap(bound, escape))
 }
 
@@ -189,35 +198,112 @@ negative_control!(
 );
 
 /// The tau_display regression (philosophy §4.2): a threshold at the 0.4th percentile of its own distribution, inside
-/// the one population of quads it was to split. The population's ends are this fixture's.
-fn tau_display(value: f64, populations: &'static [Population]) -> ConstantBuilder {
+/// the one population of quads it was to split. It fails for sitting inside a population, at whatever percentile
+/// (R-250). The populations' ends and counts are this fixture's.
+fn tau_display(value: f64, percentile: f64, populations: &'static [Population]) -> ConstantBuilder {
     let basis = RelativeBasis::Distribution {
         source: SOURCE,
-        percentile: 0.4,
+        percentile,
         populations,
     };
     threshold("tau_display", value, Some(basis))
 }
 
-const QUADS: &[Population] = &[population("quads", 1e-3, 1e2)];
+const QUADS: &[Population] = &[population("quads", 1e-3, 1e2, 1000)];
+
+/// A rare population holding 0.4% of the observations, separated by a gap from the rest: a threshold in the gap sits
+/// at the 0.4th percentile and between populations, so it is admissible (R-250).
+const RARE_AND_QUADS: &[Population] = &[
+    population("rare", 1e-4, 1e-3, 4),
+    population("quads", 1e-2, 1e2, 996),
+];
 
 #[test]
 fn constants_threshold_tau_display_at_the_0_4th_percentile_fails() {
     check_refused_naming(
-        tau_display(1.2e-3, QUADS),
-        &["tau_display", "quads", "0.4th percentile"],
+        tau_display(1.2e-3, 0.4, QUADS),
+        &["tau_display", "quads", "whatever percentile"],
     );
 }
 
 negative_control!(
     constants_threshold_tau_display_at_the_0_4th_percentile_fails,
-    "a threshold between two observed populations is admissible, so the refusal check must fail on it",
+    "a threshold at the 0.4th percentile between two observed populations is admissible, so the refusal check must \
+     fail on it",
     expected = "generation was not refused",
-    {
-        const SPLIT: &[Population] = &[
-            population("smooth", 1e-3, 1e-1),
-            population("structured", 1.0, 1e2),
-        ];
-        check_refused_naming(tau_display(0.5, SPLIT), &["tau_display"])
+    check_refused_naming(tau_display(5e-3, 0.4, RARE_AND_QUADS), &["tau_display"])
+);
+
+#[test]
+fn constants_threshold_recorded_percentile_must_equal_the_counts() {
+    check_refused_naming(
+        tau_display(5e-3, 50.0, RARE_AND_QUADS),
+        &["tau_display", "50th percentile", "0.4th"],
+    );
+}
+
+negative_control!(
+    constants_threshold_recorded_percentile_must_equal_the_counts,
+    "the percentile the counts give is admissible, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_refused_naming(tau_display(5e-3, 0.4, RARE_AND_QUADS), &["tau_display"])
+);
+
+/// A gap threshold at 5e-3 whose lower population is `below`.
+fn gap_above(below: Population) -> ConstantBuilder {
+    threshold(
+        "fx_gap",
+        5e-3,
+        gap(below, population("upper", 1e-2, 1.0, 1)),
+    )
+}
+
+#[test]
+fn constants_threshold_ill_formed_population_fails() {
+    for below in [
+        population("reversed", 1e-3, 1e-4, 1),
+        population("unbounded", f64::NEG_INFINITY, 1e-4, 1),
+        population("nan_end", f64::NAN, 1e-4, 1),
+        population("empty", 1e-4, 1e-3, 0),
+    ] {
+        check_refused_naming(gap_above(below), &["fx_gap", below.name]);
     }
+}
+
+negative_control!(
+    constants_threshold_ill_formed_population_fails,
+    "a well-formed lower population is admissible, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_refused_naming(gap_above(population("lower", 1e-4, 1e-3, 1)), &["fx_gap"])
+);
+
+#[test]
+fn constants_gate_non_finite_value_fails() {
+    for v in [f64::INFINITY, f64::NAN] {
+        check_refused_naming(
+            ConstantBuilder {
+                name: "fx_infinite",
+                value: Some(Value::Exact(v)),
+                ..settled()
+            },
+            &["fx_infinite", "not finite"],
+        );
+        check_refused_naming(
+            tau_display(v, 0.4, RARE_AND_QUADS),
+            &["tau_display", "not finite"],
+        );
+    }
+}
+
+negative_control!(
+    constants_gate_non_finite_value_fails,
+    "a finite value is admissible, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_refused_naming(
+        ConstantBuilder {
+            name: "fx_infinite",
+            ..settled()
+        },
+        &["fx_infinite"]
+    )
 );

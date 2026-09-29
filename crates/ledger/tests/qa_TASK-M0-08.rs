@@ -131,7 +131,12 @@ negative_control!(
 // ---- REQ-VAL-006: thresholds ----
 
 const fn pop(name: &'static str, lo: f64, hi: f64) -> Population {
-    Population { name, lo, hi }
+    Population {
+        name,
+        lo,
+        hi,
+        count: 1,
+    }
 }
 
 fn threshold(name: &'static str, v: f64, basis: Option<RelativeBasis>) -> ConstantBuilder {
