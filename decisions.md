@@ -2316,3 +2316,27 @@ orchestrator decides whether an oversized task splits in the plan or stays one P
 description. The limit on that choice: nothing is skipped, deferred or drifts. A split moves every requirement to a
 named task, and deferral still needs a human ruling. The self-merge condition "the PR is within budget" is met by this
 recorded choice.
+
+## R-265 — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
+*30 Sep 2026 · applied in canonical_spec §1, §7, §11; core_design; systems_architecture §1; REQ-INT-004; REQ-SYS-007; TASK-M3-01*
+
+"RQ-161: option 2, park it (R-265). The shared kernel is instantiated for f32 and f64 only. The precision reference is
+R-33's CPU arbitrary-precision integrator (TASK-M3-25), which also serves as the screen. TASK-M3-01 and REQ-INT-004 drop
+the Dd instantiation; core_design and canonical_spec §1 are conformed; REQ-SYS-007 names only the R-33 reference;
+philosophy §7.1/§7.7 stay as they are. Record Dd under parked ideas: it returns only if a precision question needs it
+and Brutus is too slow."
+
+*Applied:* canonical_spec §1 items 2 and 3 and its vehicle rationale; core_design's inspector line and substrate
+paragraph. REQ-INT-004 and TASK-M3-01 lose the `Dd` instantiation (f32 and f64 only). REQ-SYS-007 names R-33's
+reference (TASK-M3-25) as the one extended-precision build before 1.0, beside §7.1's payload genericity.
+
+*Applied per R-265 — veto?:* R-33's "double-double is a fast screen only" is amended where it is quoted
+(canonical_spec §7 :91 and §11 :153, systems_architecture §1 :45) by an added note that the reference itself serves as
+the screen. systems_architecture :45's inspector witness "(f64 or double-double)" reads "(f64; double-double parked,
+R-265)". Measured records stay as they are: dd_integrator :124's verified bit-identity across CPU-double-double,
+experiments/results/findings.md and the spike brief.
+
+*Parked:* **the shared kernel's double-double (`Dd`) instantiation.** What it buys: f64-plus precision on the same
+source as the survey. Why it waits: R-33's independent reference covers extended precision. It returns only if a
+precision question needs it and the Brutus-style reference is too slow. Recorded here, since philosophy §7.1 and §7.7
+stay as they are (§7.1 already parks extended precision; this is its kernel-instantiation row).

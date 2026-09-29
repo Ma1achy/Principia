@@ -2812,3 +2812,4 @@ Tick any you don't accept.
      over `Real`, per §7.1's "decide now"), and core_design / canonical_spec §1 are conformed. REQ-SYS-007 names only
      the R-33 reference as the exception.
 - **Needed:** a ruling on item 2. TASK-M0-02's REQ-SYS-007 record, and REQ-SYS-007's conformance to R-33, wait on it.
+- **Ruling:** R-265 (decisions.md): option 2, park it. Closed in TASK-M0-02 (REQ-SYS-007) and by the plan port on PR #61.
