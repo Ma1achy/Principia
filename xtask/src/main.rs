@@ -26,6 +26,10 @@ Commands:
                                   (the compile check is then skipped)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
+  pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
+                                  make mandatory that is missing or empty, and each validation meter or
+                                  discriminator line with no statement (R-180); reads the pull_request event JSON
+                                  at <file>, or at $GITHUB_EVENT_PATH
   reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
                                   Reviewers field names that has not approved on the head commit; reads PR <N>, or
                                   the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
@@ -44,6 +48,13 @@ fn main() -> ExitCode {
             xtask::controls::run(Path::new(path), Mode::List)
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
+            Ok(path) => xtask::pr_check::run(Path::new(&path)),
+            Err(_) => {
+                Err("pr-check: no --event <file>, and $GITHUB_EVENT_PATH is not set".to_owned())
+            }
+        },
+        ["pr-check", "--event", path] => xtask::pr_check::run(Path::new(path)),
         ["reviews-check"] => xtask::reviews_check::run(&workspace_root(), None),
         ["reviews-check", "--pr", n] => match n.parse() {
             Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),

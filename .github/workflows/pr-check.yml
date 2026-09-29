@@ -1,0 +1,21 @@
+# `cargo xtask pr-check` (REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008): the PR description answers every
+# section its labels (design, investigation, validation) make mandatory. It re-runs when the description is edited
+# and when a reviewer relabels.
+name: pr-check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo xtask pr-check
+        run: cargo xtask pr-check
