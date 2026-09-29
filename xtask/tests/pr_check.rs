@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use validation::negative_control;
+use validation::spawn::Spawn;
 use xtask::pr_check::{check, PullRequest};
 
 fn fixture(name: &str) -> PathBuf {
@@ -112,7 +113,7 @@ fn run_binary(name: &str) -> (bool, String) {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["pr-check", "--event"])
         .arg(fixture(name))
-        .output()
+        .timed_output()
         .expect("xtask ran");
     (
         output.status.success(),
