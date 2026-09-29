@@ -2563,6 +2563,8 @@ Tick any you don't accept.
   | CI at f4850d5 | 297.5 s, passed | – |
   | CI at 44c71cc (run 36531127415) | 301.16 s, failed | killed at 300 s |
 
+  qa's review found the same on this Mac: 300.48 s, running alone with 4 jobs (R-228). Because `cargo test
+  --workspace` fails first, the new `cargo xtask ci` step has not yet run on CI.
   RQ-149's scratch measurement (60.6 s cold) did not include the 16 r191/r193/r194 controls, or the hosted runner.
   CI's test step went from 5m06s on main to about 9m; the new `cargo xtask ci` step adds 1m12s.
 - **Options seen:**
