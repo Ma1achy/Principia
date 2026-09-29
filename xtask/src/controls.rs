@@ -31,7 +31,7 @@ pub const CONTROL_FN: &str = "negative_control";
 pub enum Finding {
     /// No `negative_control!` names the test.
     NoControl(String),
-    /// A control named for the test ran and left it passing.
+    /// A control named for the test ran and did not make it fail.
     ControlPasses(String),
     /// A control named for the test panicked, but not with the message it expects (R-212), so it did not trip the
     /// test's check. `note` is libtest's: the panic message and the expected substring.
@@ -78,12 +78,12 @@ impl fmt::Display for Finding {
             ),
             Finding::ControlPasses(test) => write!(
                 f,
-                "test `{test}`: its control leaves it passing, so it cannot fail (philosophy §4.4)"
+                "test `{test}`: its control did not make it fail, so the test may not be able to (philosophy §4.4)"
             ),
             Finding::WrongPanic { test, note } => write!(
                 f,
-                "test `{test}`: its control leaves it passing, so it cannot fail (philosophy §4.4): it panicked \
-                 without its expected message (R-212): {note}"
+                "test `{test}`: its control did not make it fail (philosophy §4.4): it panicked without its \
+                 expected message (R-212): {note}"
             ),
             Finding::Doctest(test) => write!(
                 f,
@@ -185,6 +185,111 @@ pub fn name_wrong_panics(found: Vec<Finding>, wrong: &BTreeMap<String, String>) 
             }
         })
         .collect()
+}
+
+/// Each test libtest reports failing in `stdout`, with its own output: the lines under its `---- <name> stdout ----`
+/// header, up to the next header or libtest's closing list of failures. A name failing in several targets keeps
+/// each output.
+///
+/// A test's output can itself hold libtest's lines (a control that embeds a child's `cargo test` report), so a
+/// boundary is taken only where it is libtest's own, for the target being read: a header names a test that target
+/// reported `FAILED` and not yet given a header, and the closing list is a `failures:` line followed by exactly the
+/// names that target reported `FAILED`, sorted, then a blank line and `test result:`. A target's `FAILED` names are
+/// dropped at its `test result:` or, if it died before printing one, at the next target's `running <n> tests`.
+pub fn parse_outputs(stdout: &str) -> BTreeMap<String, Vec<String>> {
+    let lines: Vec<&str> = stdout.lines().collect();
+    let mut blocks: Vec<(&str, String)> = Vec::new();
+    // The tests the current target reported failing, and those of them still without a header.
+    let mut failed: Vec<&str> = Vec::new();
+    let mut pending: Vec<&str> = Vec::new();
+    let mut in_outputs = false;
+    let mut open = false;
+    for (at, line) in lines.iter().enumerate() {
+        if !in_outputs {
+            if let Some((name, "FAILED")) = line
+                .strip_prefix("test ")
+                .and_then(|rest| rest.rsplit_once(" ... "))
+            {
+                failed.push(name.strip_suffix(" - should panic").unwrap_or(name));
+            } else if *line == "failures:" && !failed.is_empty() {
+                failed.sort_unstable();
+                pending = failed.clone();
+                in_outputs = true;
+                open = false;
+            } else if line.starts_with("test result:") || starts_target(line) {
+                // A target that dies mid-run (abort, stack overflow, signal) prints no `test result:`, so its
+                // `FAILED` names are dropped when the next target starts too.
+                failed.clear();
+            }
+            continue;
+        }
+        if let Some(i) = line
+            .strip_prefix("---- ")
+            .and_then(|rest| rest.strip_suffix(" stdout ----"))
+            .and_then(|name| pending.iter().position(|p| *p == name))
+        {
+            blocks.push((pending.remove(i), String::new()));
+            open = true;
+        } else if *line == "failures:" && closes(&lines[at + 1..], &failed) {
+            in_outputs = false;
+            open = false;
+            failed.clear();
+        } else if let (true, Some((_, output))) = (open, blocks.last_mut()) {
+            output.push_str(line);
+            output.push('\n');
+        }
+    }
+    let mut found: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (name, output) in blocks {
+        let output = output.trim().to_owned();
+        found.entry(name.to_owned()).or_default().push(output);
+    }
+    found
+}
+
+/// Whether `line` is libtest's first line for a target: `running <n> test` or `running <n> tests`.
+fn starts_target(line: &str) -> bool {
+    line.strip_prefix("running ")
+        .and_then(|rest| {
+            rest.strip_suffix(" tests")
+                .or_else(|| rest.strip_suffix(" test"))
+        })
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// Whether `rest`, the lines after a `failures:` line, is libtest's closing list for a target whose failing tests are
+/// `failed` (sorted): one `    <name>` line for each, then a blank line and the `test result:` line.
+fn closes(rest: &[&str], failed: &[&str]) -> bool {
+    let n = failed.len();
+    rest.len() > n + 1
+        && rest[..n]
+            .iter()
+            .zip(failed)
+            .all(|(line, name)| line.strip_prefix("    ") == Some(*name))
+        && rest[n].is_empty()
+        && rest[n + 1].starts_with("test result:")
+}
+
+/// The message of `finding`; for a control that did not make its test fail (`ControlPasses`, `WrongPanic`), followed
+/// by the output of each control named for the test that libtest reports failing, by [`parse_outputs`] (R-236,
+/// R-244), so the cause is kept.
+pub fn describe(finding: &Finding, outputs: &BTreeMap<String, Vec<String>>) -> String {
+    let (Finding::ControlPasses(test) | Finding::WrongPanic { test, .. }) = finding else {
+        return finding.to_string();
+    };
+    let short = test.rsplit("::").next().unwrap_or(test);
+    let mut message = finding.to_string();
+    let mut shown = false;
+    for (control, runs) in outputs.iter().filter(|(c, _)| control_of(c) == Some(short)) {
+        for output in runs {
+            message.push_str(&format!("\n--- output of control `{control}`:\n{output}"));
+            shown = true;
+        }
+    }
+    if !shown {
+        message.push_str("\n--- libtest reported no output for its control");
+    }
+    message
 }
 
 /// Pairs each listed test with the controls named for it, by the test's last path segment (R-199, R-201), and
@@ -342,6 +447,7 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
             Vec::new()
         };
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
+        let mut outputs = BTreeMap::new();
         let mut found = match mode {
             Mode::Run => {
                 // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
@@ -349,6 +455,7 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let found = findings(&listed, &parse_results(&stdout))
                     .map_err(|e| format!("{name}: {e}"))?;
+                outputs = parse_outputs(&stdout);
                 name_wrong_panics(found, &parse_wrong_panics(&stdout))
             }
             Mode::List => {
@@ -360,7 +467,7 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
         };
         found.extend(doctests.into_iter().map(Finding::Doctest));
         for finding in &found {
-            eprintln!("xtask controls: {name}: {finding}");
+            eprintln!("xtask controls: {name}: {}", describe(finding, &outputs));
         }
         if found.is_empty() {
             match mode {
@@ -416,4 +523,59 @@ fn succeeded(what: &str, output: Output) -> Result<String, String> {
         ));
     }
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The output of the control of `tests::t`: a child's libtest report, with its own list of failures (as a control
+    /// embedding a child's `cargo test` report prints), then its panic without its expected message.
+    const OUTPUT: &str = "running 1 test\ntest c::negative_control ... FAILED\n\nfailures:\n\n\
+                          ---- c::negative_control stdout ----\nchild output\n\nfailures:\n    \
+                          c::negative_control\n\ntest result: FAILED. 0 passed; 1 failed\n\n\
+                          thread 't::negative_control' panicked at tests/t.rs:6:36:\nsetup failed\n\
+                          note: panic did not contain expected string\n      panic message: \"setup failed\"\n \
+                          expected substring: \"the check\"";
+
+    /// libtest's report of a run in which the control of `tests::t` printed [`OUTPUT`].
+    fn run() -> String {
+        format!(
+            "running 2 tests\ntest tests::t ... ok\ntest t::negative_control - should panic ... FAILED\n\n\
+             failures:\n\n---- t::negative_control stdout ----\n{OUTPUT}\n\nfailures:\n    \
+             t::negative_control\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered \
+             out; finished in 0.01s\n"
+        )
+    }
+
+    /// R-236, R-244: each finding of a control that did not make its test fail carries that control's output, all of
+    /// it up to libtest's own list of failures, and no longer says it "leaves it passing".
+    fn check_output_kept(stdout: &str) {
+        let output = format!("--- output of control `t::negative_control`:\n{OUTPUT}");
+        let test = "tests::t".to_owned();
+        let note = "the note".to_owned();
+        for finding in [
+            Finding::ControlPasses(test.clone()),
+            Finding::WrongPanic { test, note },
+        ] {
+            let message = describe(&finding, &parse_outputs(stdout));
+            assert!(
+                message.ends_with(&output),
+                "the control's output is not in the message:\n{message}"
+            );
+            assert!(!message.contains("leaves it passing"), "{message}");
+        }
+    }
+
+    #[test]
+    fn controls_finding_keeps_the_control_output() {
+        check_output_kept(&run());
+    }
+
+    validation::negative_control!(
+        controls_finding_keeps_the_control_output,
+        "the same run with the control's header renamed, so no output is the control's",
+        expected = "the control's output is not in the message",
+        check_output_kept(&run().replace("---- t::", "---- u::"))
+    );
 }

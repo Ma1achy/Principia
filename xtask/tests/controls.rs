@@ -144,7 +144,7 @@ fn controls_control_leaving_test_passing_fails_naming_it() {
     );
     has(
         &v.stderr,
-        "controls_leaky: test `round_trips`: its control leaves it passing",
+        "controls_leaky: test `round_trips`: its control did not make it fail",
     );
 }
 
@@ -467,8 +467,8 @@ fn controls_control_panicking_without_its_message_fails_naming_it() {
     );
     has(
         &v.stderr,
-        "controls_wrong_message: test `doubles_again`: its control leaves it passing, so it cannot fail \
-         (philosophy §4.4): it panicked without its expected message (R-212)",
+        "controls_wrong_message: test `doubles_again`: its control did not make it fail (philosophy §4.4): it \
+         panicked without its expected message (R-212)",
     );
     has(&v.stderr, "the fixture's setup failed");
     lacks(&v.stderr, "test `doubles`:");
@@ -561,10 +561,10 @@ validation::negative_control!(
 validation::negative_control!(
     controls_control_leaving_test_passing_fails_naming_it,
     "the discriminating fixture, required to report a control leaving its test passing",
-    expected = "\"leaves it passing\" not in",
+    expected = "\"did not make it fail\" not in",
     has(
         &run_fixture("discriminating", None).stderr,
-        "leaves it passing"
+        "did not make it fail"
     )
 );
 
