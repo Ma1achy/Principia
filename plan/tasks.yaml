@@ -12,6 +12,7 @@
   requirements: [REQ-SYS-064]
   reviewers: [code, qa]
   pitfalls: []
+  status: done  # closed by R-185 (PR #11), not by a task PR
 - id: TASK-M0-01
   milestone: M0
   title: The cargo workspace, the crates and CI
