@@ -149,12 +149,14 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Lin,
         )
         .tier_gate("ftle_valid"),
+        // The drifts' log-magnitude views floor at the sim-key parameters `eps_E` and `eps_L` (§3.4, §3.8, R-263).
         derived(
             "energy_drift",
             &["r", "p", "m0", "m1", "m2", "E_0"],
             Scale::Diverging,
-        ),
-        derived("Lz_drift", &["r", "p", "Lz_0"], Scale::Diverging),
+        )
+        .floor("eps_E"),
+        derived("Lz_drift", &["r", "p", "Lz_0"], Scale::Diverging).floor("eps_L"),
         derived("diffusion", &["C_ty", "t_end_step"], Scale::Lin),
         ic("m0", 0, Scale::Lin),
         ic("m1", 1, Scale::Lin),

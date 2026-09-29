@@ -1,5 +1,5 @@
 //! The ledger entry and its §3.8 metadata (dd_generation_root §3.8): every field carries a name, a location, a
-//! type, a scale, a range, an optional sentinel, tier gate and overflow, a provenance and its consumers. An entry is
+//! type, a scale, a range, an optional sentinel, tier gate, overflow and floor, a provenance and its consumers. An entry is
 //! written as an [`EntryBuilder`]; [`EntryBuilder::build`] refuses an incomplete one, naming the field and the missing
 //! key.
 
@@ -114,12 +114,15 @@ pub struct Entry {
     pub sentinel: Option<f64>,
     pub tier_gate: Option<&'static str>,
     pub overflow: Option<Overflow>,
+    /// The sim-key parameter a log-magnitude or diverging view floors at (§3.8 `floor`, R-263): named, never stored,
+    /// and neither a ledger entry nor a register constant.
+    pub floor: Option<&'static str>,
     pub provenance: Provenance,
     pub consumers: Vec<Consumer>,
 }
 
-/// The required §3.8 keys, in the order [`EntryBuilder::build`] checks them; `sentinel`, `tier_gate` and `overflow`
-/// are optional.
+/// The required §3.8 keys, in the order [`EntryBuilder::build`] checks them; `sentinel`, `tier_gate`, `overflow` and
+/// `floor` are optional.
 pub const REQUIRED_KEYS: [&str; 7] = [
     "name",
     "location",
@@ -141,6 +144,7 @@ pub struct EntryBuilder {
     pub sentinel: Option<f64>,
     pub tier_gate: Option<&'static str>,
     pub overflow: Option<Overflow>,
+    pub floor: Option<&'static str>,
     pub provenance: Option<Provenance>,
     pub consumers: Option<Vec<Consumer>>,
 }
@@ -206,6 +210,11 @@ impl EntryBuilder {
         self
     }
 
+    pub fn floor(mut self, parameter: &'static str) -> Self {
+        self.floor = Some(parameter);
+        self
+    }
+
     pub fn provenance(mut self, provenance: Provenance) -> Self {
         self.provenance = Some(provenance);
         self
@@ -247,6 +256,7 @@ impl EntryBuilder {
             sentinel: self.sentinel,
             tier_gate: self.tier_gate,
             overflow: self.overflow,
+            floor: self.floor,
             provenance: self.provenance.ok_or_else(|| missing("provenance"))?,
             consumers: self.consumers.clone().ok_or_else(|| missing("consumers"))?,
         })

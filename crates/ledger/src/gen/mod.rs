@@ -30,8 +30,8 @@ pub enum GenError {
     /// Entries missing a required §3.8 key (REQ-GEN-002).
     Incomplete(Vec<IncompleteEntry>),
     /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
-    /// one stored entry, and vectors whose component is not a scalar type or whose `k` is below 2 (§3.8 `location`,
-    /// `type`).
+    /// one stored entry, vectors whose component is not a scalar type or whose `k` is below 2, and a `floor` that is
+    /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`).
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),
@@ -88,6 +88,7 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
         .collect();
     bad.extend(bad_derived(&entries));
     bad.extend(entries.iter().filter_map(bad_vector));
+    bad.extend(bad_floor(&entries));
     if bad.is_empty() {
         Ok(entries)
     } else {
@@ -138,6 +139,31 @@ fn bad_vector(e: &Entry) -> Option<String> {
         }
         _ => None,
     }
+}
+
+/// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
+/// parameter, which is "neither a ledger entry nor a register constant" (R-263), so an empty name, a ledger entry's
+/// name or a register constant's name fails.
+fn bad_floor(entries: &[Entry]) -> Vec<String> {
+    let register = crate::constants::REGISTER;
+    entries
+        .iter()
+        .filter_map(|e| e.floor.map(|floor| (e.name, floor)))
+        .filter_map(|(name, floor)| {
+            let what = if floor.is_empty() {
+                "is empty"
+            } else if entries.iter().any(|f| f.name == floor) {
+                "names a ledger entry"
+            } else if register.iter().any(|c| c.name == floor) {
+                "names a register constant"
+            } else {
+                return None;
+            };
+            Some(format!(
+                "field `{name}`: `floor` `{floor}` {what}, not a sim-key parameter (dd_generation_root §3.8, R-263)"
+            ))
+        })
+        .collect()
 }
 
 /// Validates `ledger` and runs the static layout check over it, then runs `emitters` over it; the files they

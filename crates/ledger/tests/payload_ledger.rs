@@ -1,6 +1,7 @@
 //! The payload ledger (dd_simstate_payload §0–§1; dd_generation_root §3.1, §3.3a–§3.6; render contract Part 1): the
 //! generated Rust structs against the ledger, precision, §3.4's catalogue metadata, the two payload buffers, no
-//! per-pair entry, and unique names (REQ-PAY-002, -005, -007, -010, REQ-GEN-001, REQ-RENDER-002).
+//! per-pair entry, unique names, and the drifts' `floor` (REQ-PAY-002, -005, -007, -010, REQ-GEN-001, REQ-GEN-029,
+//! REQ-RENDER-002).
 
 mod support;
 
@@ -371,4 +372,56 @@ negative_control!(
     "a fresh name duplicates nothing, so the refusal check must fail on it",
     expected = "generation was not refused",
     check_renamed_refused("fx_detail", "fx_other", &["more than one entry"])
+);
+
+/// Each named entry of `entries` carries its `floor` (§3.4, §3.8, R-263).
+fn check_floors(entries: &[Entry], floors: &[(&str, &str)]) {
+    for &(name, floor) in floors {
+        assert_eq!(find(entries, name).floor, Some(floor), "`{name}`'s floor");
+    }
+}
+
+#[test]
+fn payload_floor_drifts_carry_eps_e_and_eps_l() {
+    check_floors(
+        &entries(),
+        &[("energy_drift", "eps_E"), ("Lz_drift", "eps_L")],
+    );
+}
+
+negative_control!(
+    payload_floor_drifts_carry_eps_e_and_eps_l,
+    "the floors swapped between the drifts must fail the floor check",
+    expected = "`energy_drift`'s floor",
+    check_floors(
+        &entries(),
+        &[("energy_drift", "eps_L"), ("Lz_drift", "eps_E")],
+    )
+);
+
+/// The payload ledger with `energy_drift`'s `floor` set to `floor`: generation is refused naming `names`.
+fn check_floor_refused(floor: &'static str, names: &[&str]) {
+    let mut ledger = layout();
+    entry(&mut ledger, "energy_drift").floor = Some(floor);
+    check_refused_naming(&ledger, names);
+}
+
+#[test]
+fn payload_floor_gate_refuses_a_ledger_field_or_constant() {
+    check_floor_refused(
+        "E_0",
+        &["field `energy_drift`: `floor` `E_0` names a ledger entry"],
+    );
+    check_floor_refused(
+        "f16_finite_max",
+        &["`floor` `f16_finite_max` names a register constant"],
+    );
+    check_floor_refused("", &["field `energy_drift`: `floor` `` is empty"]);
+}
+
+negative_control!(
+    payload_floor_gate_refuses_a_ledger_field_or_constant,
+    "eps_E is a sim-key parameter, so the gate passes it and the refusal check must fail",
+    expected = "generation was not refused",
+    check_floor_refused("eps_E", &["floor"])
 );
