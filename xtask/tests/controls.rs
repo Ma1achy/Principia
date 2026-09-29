@@ -236,6 +236,46 @@ fn controls_list_fails_naming_a_test_without_control() {
     );
 }
 
+/// `xtask <command>` with a `CARGO` that does not exist, so the first cargo run it starts fails, and no control runs.
+fn without_cargo(command: &str) -> Verdict {
+    let spawning = WORKSPACE_TARGET
+        .read()
+        .unwrap_or_else(PoisonError::into_inner);
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg(command)
+        .env(
+            "CARGO",
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join("no-such-cargo"),
+        )
+        .timed_output()
+        .expect("run xtask");
+    drop(spawning);
+    Verdict {
+        ok: output.status.success(),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    }
+}
+
+/// `v`, the run of `xtask <command>` by `without_cargo`, failed at the check's first cargo run.
+fn check_reached_cargo(command: &str, v: &Verdict) {
+    assert!(!v.ok, "xtask {command} passed with no cargo to run");
+    has(
+        &format!("{}{}", v.stdout, v.stderr),
+        "cannot run cargo metadata",
+    );
+}
+
+/// Bare `xtask controls`, and the `controls` runner of `xtask ci`, run the check on this workspace: with no cargo to
+/// run, each fails at `cargo metadata`, not at its arguments or with a pass. Their passing runs are `cargo xtask ci`,
+/// in CI (R-198, R-226).
+#[test]
+fn controls_runs_on_this_workspace_bare_and_in_ci() {
+    for command in ["controls", "ci"] {
+        check_reached_cargo(command, &without_cargo(command));
+    }
+}
+
 fn names(list: &[&str]) -> Vec<String> {
     list.iter().map(|s| s.to_string()).collect()
 }
@@ -673,4 +713,11 @@ validation::negative_control!(
         &run_fixture_with("discriminating", None, &["--list"]).stderr,
         "has no control"
     )
+);
+
+validation::negative_control!(
+    controls_runs_on_this_workspace_bare_and_in_ci,
+    "an unknown command, which stops at its arguments",
+    expected = "\"cannot run cargo metadata\" not in",
+    check_reached_cargo("m022-unknown", &without_cargo("m022-unknown"))
 );
