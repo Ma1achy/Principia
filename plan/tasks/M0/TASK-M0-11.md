@@ -38,3 +38,6 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - REQ-PAY-019's "the agreement view computes from spread_event" is a view; field views are M1 (REQ-TOOL-009 onward). This task holds the storage half.
 - The latch `running_max_divergence` is per footprint, not a `QuadReduction` member (R-99); its layout is M5's (REQ-REF-045, TASK-M5-19, R-113).
 - RQ-93 ruled: R-113 (option b) — REQ-PAY-001 keeps the ICDescriptor size and the descriptor bits; QuadReduction's sizing (REQ-PAY-089) and REQ-PAY-006 move to TASK-M5-01 with its member order, packing and histogram N (REQ-PAY-075, REQ-PAY-077).
+- From PR #42's physics review (29 Sep): §3.8's vector rule (TASK-M0-07) treats a `u-bits` component at a scalar index
+  as a full u32, so §3.7's `class_histogram[N]` (u8 × N) doesn't fit it. This task places it or files it in
+  REVIEW_QUEUE.

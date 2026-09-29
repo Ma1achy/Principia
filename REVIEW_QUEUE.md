@@ -2595,3 +2595,44 @@ Tick any you don't accept.
   then split.
 - **Needed:** a ruling on the size, the edge and the rules.
 - **Ruling:** R-240, R-241, R-242 (decisions.md). Closed in TASK-M0-07 and TASK-M0-35.
+
+## RQ-152: `diffusion`'s sentinel −1.0 lies inside its valid range *(physics, TASK-M0-07)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation
+  metadata": "| `diffusion` | lin | **sentinel −1.0** = fit invalid |"; § "5. Tests": "Sentinels: `diffusion = −1.0`
+  survives pack/unpack bit-exact"; `decisions.md` § "R-17 — The diffusion sentinel uses the streaming slope"; §3.5's
+  Welford mini-spec: "slope = C_ty / C_tt … diffusion coefficient".
+- **What:** TASK-M0-07 (PR #42) writes §3.8 entries for §3.4's derived fields. The corpus gives `diffusion` no range,
+  and the slope of spread on time can take either sign, so its range is (−∞, ∞). A real slope of exactly −1.0 would
+  then read as "fit invalid". No text says the slope is non-negative.
+- **Options seen:**
+  1. the range is [0, ∞) if spread can't shrink on average (a physics claim the corpus doesn't make);
+  2. a sentinel outside any finite slope (NaN, or a separate validity predicate `n ≥ 2` read at derive time, as
+     §3.5 already says "invalid for `n<2`");
+  3. keep −1.0 and accept the collision as negligible.
+- **Needed:** a ruling. TASK-M0-07's §3.8 entry for `diffusion` follows whichever is chosen.
+
+## RQ-153: render contract Part 6 calls the drifts "stored"; §3.1 says they are derived *(docs, TASK-M0-07)*
+
+- **File, section:** `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue": "| Drift shape |
+  `energy_drift` (final) vs `delta_E_max_abs` (max); same pair for L_z | secular loss vs a transient spike that
+  recovered — the *reason* both are stored |"; `docs/design/principia_dd_generation_root.md` § 3.1: "**Derived, NOT
+  packed** … current drifts (`H(r,p)−E_0`)"; § 3.5: "drift running-final + running-max pairs" among the accumulators.
+- **What:** TASK-M0-07 follows §3.1 and makes `energy_drift` and `Lz_drift` derived. The render contract's "stored"
+  may mean "kept in the payload" (the max is an accumulator; the final is derived at read) or may be stale.
+- **Options seen:** reword the render contract line to "kept" (a wording fix, if the intent is §3.1's); or the final
+  drift is stored after all, and §3.1 changes.
+- **Needed:** a ruling on which reading holds.
+
+## RQ-154: `ftle` at `step_count = 0` is 0/0, with no sentinel *(physics, TASK-M0-07)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § 3.1: "`ftle = S_final/(step_count·dt)`";
+  § "3.4 `SimState` scalars — with presentation metadata" (no sentinel for `ftle`); `decisions.md` § "R-79 — NaN and
+  sentinels" (NaN for tier-absent fields only).
+- **What:** raised by the physics review of PR #42. Before the first step, `ftle`'s read is 0/0. §3.4 gives it no
+  sentinel and R-79's NaN covers only tier-absent fields. The first task whose generated read accessor computes
+  `ftle` needs the value.
+- **Options seen:** NaN (extending R-79 to "not yet defined"); a sentinel like `diffusion`'s (see RQ-152); 0.0
+  with a validity predicate `step_count ≥ 1`.
+- **Needed:** a ruling before the `ftle` read accessor is built. Does not block TASK-M0-07.
+
