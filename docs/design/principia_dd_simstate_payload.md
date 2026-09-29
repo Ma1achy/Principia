@@ -328,7 +328,7 @@ state.C_ty   += delta_t * (y - state.mean_y);   // OLD time-dev × NEW y-dev
 ```
 Per-sample state: **`mean_y, C_ty`** (2 × f32, in `SimState`). No shared mutable state. Must stay f32.
 
-> **`n < 2` guard.** `C_tt(0) = C_tt(1) = 0` (zero or one time-point has no time-variance). The read accessor **must return an invalid/sentinel slope, not divide by zero** — e.g. `slope_valid = (n ≥ 2)`, and NaN when `n < 2` (R-245: no `−1` marker).
+> **`n < 2` guard.** `C_tt(0) = C_tt(1) = 0` (zero or one time-point has no time-variance). The read accessor **must return an invalid slope (NaN, R-245), not divide by zero** — e.g. `slope_valid = (n ≥ 2)`, and NaN when `n < 2` (R-245: no `−1` marker).
 
 > **Terminal-sample subtlety.** A latched (terminated) sample stops at *its* terminal step, so its denominator uses **its own `n = t_end_step`** (exact, §2), not the current playhead — handled by construction since `n` is derived per-sample from `t_end_step`, and `C_tt` is evaluated at *that* `n`.
 

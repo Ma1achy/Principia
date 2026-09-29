@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
-- **Size:** ~300 lines
+- **Size:** ~756 counted lines, accepted in one PR (R-249); estimated ~300 before building
 
 ## Goal
 `crates/ledger` holds a constants register beside the layout table. Each settled default or threshold is declared once with its value, its admissibility class (bounded by its own achievable maximum; fixed by a conservation law; expressed in canonical units — philosophy §4.2) and a citation of where it was measured or derived (a corpus section, a prin-rs FINDINGS/results path per INDEX's evidence base, or a calibration requirement id). A threshold on a quantity spanning decades also records that it is relative and the distribution or measured gap it was set from (pitfalls §3). Generation fails on an entry missing any of these, and `cargo xtask lint constants` fails on a numeric constant in the physics and engine crates that is not read from the register.
@@ -24,7 +24,7 @@
 
 ## Deliverables
 - `crates/ledger/src/constants.rs` — `Constant { name, value, class, citation, relative_basis }` and the register; the generation gate.
-- The register's M0 entries, the constants the payload ledger uses: the `horizon_steps` limit 65535 (R-86), the word capacity 76 and the length sentinel 127 (payload §3), the diffusion sentinel −1.0 (generation-root §3.4) and the f16 pack clamp ±65504 (payload §1), each with its class and citation.
+- The register's M0 entries, the constants the payload ledger uses: the `horizon_steps` limit 65535 (R-86), the word capacity 76 and the length sentinel 127 (payload §3), the f16 pack clamp ±65504 (payload §1), each with its class and citation.
 - `xtask/src/lint_constants.rs` — `cargo xtask lint constants` over `crates/{kernel,ledger,engine}` (generated files excluded: their numbers are emitted from the ledger); registered in `cargo xtask ci`.
 
 ## Acceptance tests
@@ -37,3 +37,4 @@
 - Constants the corpus leaves open are not entered with a value: they are calibration requirements, and the register cites the requirement id until the human confirms the value (R-71).
 - See Gaps: where the register lives relative to the §3.8 schema and the R-36 hash; prin-rs citations are not resolvable from this repo.
 - Closes, for gaps the corpus leaves open: REQ-SYS-063 (R-72 definition) (classification accepted by R-132).
+- R-245: `diffusion` has no sentinel (an invalid fit reads NaN), so the register carries no diffusion entry (applied per R-245). R-249: built at 756 counted lines; the human accepted it in one PR rather than the proposed split (register and gate; `cargo xtask lint constants`).

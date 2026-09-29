@@ -514,3 +514,7 @@
   section: "R-247 — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*"
   reason: informative only
   note: sequencing ruling; the rule is carried by REQ-GEN-028
+- file: decisions.md
+  section: R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR
+  reason: informative only
+  note: size acceptance for one PR
