@@ -34,7 +34,7 @@
   title: Process templates and `cargo xtask pr-check`
   depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
-  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008, REQ-SYS-066]
+  requirements: [REQ-SYS-006, REQ-VAL-001, REQ-VAL-005, REQ-VAL-008]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-4.5]
 - id: TASK-M0-04
@@ -2091,5 +2091,13 @@
   depends_on: [TASK-M0-07]
   needs: []
   requirements: [REQ-GEN-003, REQ-GEN-028]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-36
+  milestone: M0
+  title: "`cargo xtask reviews-check` and the `reviews-complete` check"
+  depends_on: [TASK-M0-01, TASK-M0-22]
+  needs: []
+  requirements: [REQ-SYS-066]
   reviewers: [code, qa]
   pitfalls: []
