@@ -2663,3 +2663,20 @@ Tick any you don't accept.
   signed test can't be written. And R-242 gives width rules only for integer types, so a literal reading fails
   `d_min:f16` at its packed location once §3 is transcribed.
 - **Ruling:** R-247, R-248 (decisions.md). Closed in TASK-M0-35.
+
+## RQ-158: §3.4's drift floors `eps_E` and `eps_L` have no §3.8 key *(docs, TASK-M0-09)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation
+  metadata": "`energy_drift` | **diverging** (signed) | log-magnitude styling; floor `eps_E`" and "`Lz_drift` |
+  **diverging** (signed) | floor `eps_L`"; § "3.8 Metadata schema": "range, sentinel?, tier_gate?, overflow?: saturate |
+  inf"; `plan/tasks/M0/TASK-M0-09.md` § Notes: "§3.8 also has no key for §3.4's drift floors `eps_E` and `eps_L`: place
+  them or file it."
+- **What:** raised by TASK-M0-09's implementer. §3.8 has no key for a presentation floor, so the `energy_drift` and
+  `Lz_drift` entries can't record theirs. `eps_E` and `eps_L` are sim settings (the Run window's fields, 10⁻⁶ by
+  default), the same for every sample, so they are neither ledger entries nor, as user-set values, register constants.
+  Placing them means adding a key to §3.8, which is a schema decision.
+- **Options seen:** an optional §3.8 key `floor?: <sim-key parameter>`, naming the parameter the log-magnitude styling
+  floors at (`eps_E` on `energy_drift`, `eps_L` on `Lz_drift`); or leave the floors to the colour pipeline and say so in
+  §3.4.
+- **Needed:** a ruling on where the floors live. It doesn't block TASK-M0-09's acceptance (REQ-GEN-001 checks scale,
+  range and sentinel): the two entries ship without floors until the ruling.
