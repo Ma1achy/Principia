@@ -2306,3 +2306,13 @@ do not move to TASK-M3-07.
 
 *Applied:* no new figure. The ~500-line budget stays as a rough heuristic, and whether a task is one reviewable PR
 also weighs its complexity, not its counted lines alone. `plan/WORKFLOW.md` § "Task files" gains a line saying so.
+
+"also you don't have to keep nagging me if it goes over budget, you delagate and split or decide to accept and keep as one
+pr. as long as the work gets done & that nothing is skipped, deffered or drifts. the questions for me should be actually
+ambiguious non specified requirements, features, or problems. not the size of a pr"
+
+*Applied:* size is no longer a question for the human (amends R-208, R-211 and R-204's "exceeding budgets"). The
+orchestrator decides whether an oversized task splits in the plan or stays one PR, and records the choice in the PR
+description. The limit on that choice: nothing is skipped, deferred or drifts. A split moves every requirement to a
+named task, and deferral still needs a human ruling. The self-merge condition "the PR is within budget" is met by this
+recorded choice.

@@ -36,6 +36,8 @@ Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`;
 - **One task is one reviewable PR:** roughly ≤ 500 lines of change.
 - **The budget is a rough heuristic (R-264):** ~500 counted lines is a guide, not a limit. Weigh the task's complexity
   with its size: a simple task may run over and stay one PR, a subtle one may want splitting under it.
+  The orchestrator makes that call (split in the plan, or keep one PR) and records it in the PR; it is not a question
+  for the human, provided nothing is skipped, deferred or drifts.
 - **What the budget counts (R-211, R-223, R-225):** added and changed lines (a diff's `+` lines) in implementation code
   and the implementer's own tests. Pure deletions, lines moved verbatim (the same text deleted elsewhere in the same
   diff), qa's test commits and `negative_control!` blocks don't count. A PR
