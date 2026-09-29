@@ -3,12 +3,13 @@
 //! and every control makes its test fail by panicking with its expected message (philosophy §4.4; pitfalls §9;
 //! R-212). A crate without the feature is skipped and reported, not failed
 //! (R-176). Tests and controls are paired by the name in the macro call (R-199), across all of a crate's test
-//! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). Not yet in `cargo xtask ci` (R-198).
+//! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). It runs in `cargo xtask ci`, on every
+//! push (R-177, R-198). With `--list` it lists each test's controls and runs none (R-226).
 //!
 //! Applied per R-204, pending a veto: within a crate, a control covers exactly one test, so tests sharing a name
 //! need a control each; and a doctest, which `negative_control!` cannot name, counts as a test without a control.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -272,8 +273,40 @@ struct Target {
     doctest: bool,
 }
 
-/// Runs the check on every member of the workspace of `manifest`; `Err` if any test fails it.
-pub fn run(manifest: &Path) -> Result<(), String> {
+/// What [`run`] does with each crate's controls.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mode {
+    /// Runs every control and judges its run.
+    Run,
+    /// Lists each test with the controls named for it, and fails only on what the listing shows (a test with no
+    /// control, a shared name, a doctest); runs no control (`--list`, R-226).
+    List,
+}
+
+/// Each listed test with each control named for it (R-199, R-201), once per pair, sorted.
+pub fn pairs(listed: &[String]) -> BTreeSet<(&str, &str)> {
+    let mut found = BTreeSet::new();
+    for test in listed.iter().filter(|name| control_of(name).is_none()) {
+        let short = test.rsplit("::").next().unwrap_or(test);
+        for control in listed.iter().filter(|name| control_of(name) == Some(short)) {
+            found.insert((test.as_str(), control.as_str()));
+        }
+    }
+    found
+}
+
+/// Results in which every listed control made its test fail on each listing, so that [`findings`] reports only what
+/// the listing shows (`--list`).
+pub fn as_tripped(listed: &[String]) -> BTreeMap<String, Vec<bool>> {
+    let mut results: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    for control in listed.iter().filter(|name| control_of(name).is_some()) {
+        results.entry(control.clone()).or_default().push(true);
+    }
+    results
+}
+
+/// Runs the check in `mode` on every member of the workspace of `manifest`; `Err` if any test fails it.
+pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
     let output = Command::new(cargo())
         .args([
             "metadata",
@@ -309,18 +342,35 @@ pub fn run(manifest: &Path) -> Result<(), String> {
             Vec::new()
         };
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
-        // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
-        let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let found =
-            findings(&listed, &parse_results(&stdout)).map_err(|e| format!("{name}: {e}"))?;
-        let mut found = name_wrong_panics(found, &parse_wrong_panics(&stdout));
+        let mut found = match mode {
+            Mode::Run => {
+                // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
+                let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let found = findings(&listed, &parse_results(&stdout))
+                    .map_err(|e| format!("{name}: {e}"))?;
+                name_wrong_panics(found, &parse_wrong_panics(&stdout))
+            }
+            Mode::List => {
+                for (test, control) in pairs(&listed) {
+                    println!("xtask controls: {name}: test `{test}`: control `{control}`");
+                }
+                findings(&listed, &as_tripped(&listed)).map_err(|e| format!("{name}: {e}"))?
+            }
+        };
         found.extend(doctests.into_iter().map(Finding::Doctest));
         for finding in &found {
             eprintln!("xtask controls: {name}: {finding}");
         }
         if found.is_empty() {
-            println!("xtask controls: {name}: {tests} test(s), each failed by its control");
+            match mode {
+                Mode::Run => {
+                    println!("xtask controls: {name}: {tests} test(s), each failed by its control")
+                }
+                Mode::List => println!(
+                    "xtask controls: {name}: {tests} test(s), each with a control; none run (--list)"
+                ),
+            }
         }
         failed += found.iter().map(Finding::tests).sum::<usize>();
     }

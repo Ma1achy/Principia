@@ -1,17 +1,21 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use xtask::controls::Mode;
 use xtask::deps::{self, CompileCheck, Metadata};
+use xtask::workspace_manifest;
 
 const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
-  ci                              run every registered per-push runner, in order (R-177)
-  controls [--manifest-path <Cargo.toml>]
+  ci [--list]                     run every registered per-push runner, in order (R-177); --list runs each
+                                  runner's listing-only form, which runs no control (R-235)
+  controls [--list] [--manifest-path <Cargo.toml>]
                                   check that every test of each crate declaring the `controls` feature has a
                                   negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
-                                  workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176)
+                                  workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176);
+                                  --list lists each test's controls and checks the listing, running none (R-226)
   deps [--metadata <file> | --manifest-path <Cargo.toml>]
                                   check the workspace crate graph against systems_architecture §7.1, and
                                   that no unit test of kernel or ledger uses validation, by compiling them
@@ -24,8 +28,13 @@ fn main() -> ExitCode {
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let result = match args.as_slice() {
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
-        ["controls"] => xtask::controls::run(&workspace_manifest()),
-        ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path)),
+        ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
+        ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
+        ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
+        ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
+        ["controls", "--list", "--manifest-path", path] => {
+            xtask::controls::run(Path::new(path), Mode::List)
+        }
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
@@ -48,11 +57,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-/// This workspace's `Cargo.toml`.
-fn workspace_manifest() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml")
 }
 
 enum Source<'a> {

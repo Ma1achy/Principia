@@ -154,7 +154,7 @@ fn qa_cargo_xtask_alias_runs_deps() {
     // the lock held by the running `cargo test`.
     let out = run_cargo_in_the_workspace(&["xtask", "deps"]);
     check_the_alias_runs_deps(&out);
-    let out = run_cargo_in_the_workspace(&["xtask", "ci"]);
+    let out = run_cargo_in_the_workspace(&["xtask", "ci", "--list"]);
     check_the_alias_runs_ci(&out);
     // Control: the alias reaches xtask's own argument handling, which refuses an unknown command.
     let out = run_cargo_in_the_workspace(&["xtask", "qa-no-such-command"]);
