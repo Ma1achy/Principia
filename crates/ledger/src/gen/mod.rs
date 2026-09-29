@@ -142,9 +142,9 @@ fn bad_vector(e: &Entry) -> Option<String> {
 }
 
 /// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
-/// parameter, which is "neither a ledger entry nor a register constant" (R-263), so an empty name, a ledger entry's
-/// or packed word's name (a packed word is a stored field of the ledger, payload §1) or a register constant's name
-/// fails.
+/// parameter, which is "neither a ledger entry nor a register constant" (R-263). So an empty floor, one that is not a
+/// name ([`is_name`]: a number such as `1e-6` is a value), a ledger entry's or packed word's name (a packed word is a
+/// stored field of the ledger, payload §1) or a register constant's name fails.
 fn bad_floor(words: &[Word], entries: &[Entry]) -> Vec<String> {
     let register = crate::constants::REGISTER;
     entries
@@ -153,6 +153,8 @@ fn bad_floor(words: &[Word], entries: &[Entry]) -> Vec<String> {
         .filter_map(|(name, floor)| {
             let what = if floor.is_empty() {
                 "is empty"
+            } else if !is_name(floor) {
+                "is not a name"
             } else if entries.iter().any(|f| f.name == floor) {
                 "names a ledger entry"
             } else if words.iter().any(|w| w.name == floor) {
@@ -167,6 +169,17 @@ fn bad_floor(words: &[Word], entries: &[Entry]) -> Vec<String> {
             ))
         })
         .collect()
+}
+
+/// Whether `s` is a name: an ASCII letter or `_`, then ASCII letters, digits or `_` (the form of every sim-key
+/// parameter the corpus names, such as `eps_E`). The corpus does not define "name"; this is the tightest reading
+/// that admits §3.4's `eps_E` and `eps_L` (applied per R-204).
+fn is_name(s: &str) -> bool {
+    let mut chars = s.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Validates `ledger` and runs the static layout check over it, then runs `emitters` over it; the files they
