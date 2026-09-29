@@ -2289,3 +2289,30 @@ only.
 and reviews-complete, if they aren't yet) to the required checks once #56 merges." Recorded under R-256's PR as
 applied: REQ-PAY-002 keeps the SimState and ICDescriptor part (TASK-M0-09); RenderQuad's field set moves to TASK-M1-06
 and the WGSL layout comparison to TASK-M0-13, each as a split-off requirement.
+
+## R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
+*30 Sep 2026 · applied to PR #59, TASK-M3-08 and TASK-M5-18*
+
+"yes i accept it being larger"
+
+"2/ again doesn't matter that they are over budget, 500 line budget is too strict"
+
+*Applied:* PR #59 (TASK-M0-09) stays one PR at 1,084 counted lines (R-211, R-223, R-225). R-256 accepted ~1,000; the
+extra ~80 are R-263's `floor` key, its gate and its tests. TASK-M3-08 (~520, with REQ-VAL-170/171) and TASK-M5-18
+(~510, with REQ-VAL-172/173), both raised by PR #54's RQ-157 ports, stay one task each: no split, and REQ-VAL-170/171
+do not move to TASK-M3-07.
+
+"budget is a rough heruistic, it should consider the task complexity ALSO"
+
+*Applied:* no new figure. The ~500-line budget stays as a rough heuristic, and whether a task is one reviewable PR
+also weighs its complexity, not its counted lines alone. `plan/WORKFLOW.md` § "Task files" gains a line saying so.
+
+"also you don't have to keep nagging me if it goes over budget, you delagate and split or decide to accept and keep as one
+pr. as long as the work gets done & that nothing is skipped, deffered or drifts. the questions for me should be actually
+ambiguious non specified requirements, features, or problems. not the size of a pr"
+
+*Applied:* size is no longer a question for the human (amends R-208, R-211 and R-204's "exceeding budgets"). The
+orchestrator decides whether an oversized task splits in the plan or stays one PR, and records the choice in the PR
+description. The limit on that choice: nothing is skipped, deferred or drifts. A split moves every requirement to a
+named task, and deferral still needs a human ruling. The self-merge condition "the PR is within budget" is met by this
+recorded choice.
