@@ -2671,7 +2671,7 @@ Tick any you don't accept.
   map) by the consolidated docs (deep_zoom §3, scheduler, parity)" and "§5 gates superseded by the consolidated docs
   (deep_zoom §3, scheduler, parity)"; `plan/tasks/M0/TASK-M0-02.md` § Deliverables: "any obligation no consolidated doc
   holds is ported into the fitting one in the same PR, as a doc change for review".
-- **What:** PR #TBD's record maps each obligation. Where a consolidated doc says otherwise, the record reads the brief as
+- **What:** PR #54's record maps each obligation. Where a consolidated doc says otherwise, the record reads the brief as
   superseded (R-112's own word), not ported. What remains is held nowhere, and each would add a design decision, a test
   or a numeric value that the task's reviewers (code, qa) do not cover:
   1. *Structure-criterion §4.4:* the 2:1 balance constraint ("No two adjacent leaves may differ by more than one level,
