@@ -2411,7 +2411,7 @@
   note: "R-50 (applied now, R-124): the collision landmarks are mass-weighted; dd_integrator §3.7's 'B18 still open' is conformed. Decides audit B18 left open in R-14."
 - id: REQ-INT-004
   area: INT
-  statement: "The shared kernel must be generic over its real type so the CPU runs it at f64 by default and at double-double on the same source, while the GPU runs it at f32."
+  statement: "The shared kernel must be generic over its real type and instantiated for f32 and f64 only: the CPU runs it at f64 and the GPU at f32 (R-265 parks double-double)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 1. The substrate (the defining decision)
@@ -2419,10 +2419,13 @@
     section: "Principle: divergence is the observable"
   - file: docs/design/principia_systems_architecture.md
     section: 1. The rings — cross-cutting services
+  - file: decisions.md
+    section: "R-265 — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*"
   verify:
     method: unit test
-    detail: "the kernel instantiates at f32, f64 and double-double and the same golden-IC test runs on each"
-  rulings: []
+    detail: "the kernel instantiates at f32 and f64 and the same golden-IC test runs on each; no double-double instantiation exists"
+  rulings:
+  - R-265
   milestone: M3
 - id: REQ-INT-005
   area: INT
@@ -15685,7 +15688,7 @@
   milestone: M2
 - id: REQ-VAL-025
   area: VAL
-  statement: "The independent convergence reference must be a separate CPU arbitrary-precision integrator with convergence gating (raise precision and tighten tolerance until the result stops changing), not the shared kernel, used for the integration-floor probe and Burrau ground truth; double-double is a fast screen only and RK45 stays the inspector's reference."
+  statement: "The independent convergence reference must be a separate CPU arbitrary-precision integrator with convergence gating (raise precision and tighten tolerance until the result stops changing), not the shared kernel, used for the integration-floor probe and Burrau ground truth; the reference itself serves as the fast screen (R-265, amending R-33's double-double screen) and RK45 stays the inspector's reference."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: "7. Precision & validation model *(authoritative: `parity_contract`, `validation_ground_truth_note`, `core_design`)*"
@@ -15703,12 +15706,15 @@
     section: Why using the same kernel is load-bearing
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-265 — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*"
   verify:
     method: numerical gate
     detail: "reference output unchanged between successive precision/tolerance steps before it is accepted"
   rulings:
   - R-33
   - R-72
+  - R-265
   milestone: M3
   note: "R-33 is now folded into canonical_spec §7, parity §1 and the ground-truth note. The protocol, when it runs and how it plugs into the harness: REQ-VAL-131 (definition)."
 - id: REQ-VAL-026
@@ -19624,16 +19630,20 @@
   milestone: M0
 - id: REQ-SYS-007
   area: SYS
-  statement: "A parked §7 item must not be built or half-started before 1.0, other than decisions that cost nothing now and prevent a fork later (currently only §7.1's payload genericity)."
+  statement: "A parked §7 item must not be built or half-started before 1.0, other than decisions that cost nothing now and prevent a fork later (currently only §7.1's payload genericity) and R-33's independent arbitrary-precision reference integrator (TASK-M3-25, R-265)."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 7.7 The rule for this section
   - file: docs/read_first/principia_00_philosophy.md
     section: 7. Parked — deliberate post-1.0
+  - file: decisions.md
+    section: "R-265 — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*"
   verify:
     method: review checklist
-    detail: "Build plan contains no work items for extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever beyond the Real-generic payload."
-  rulings: []
+    detail: "Build plan contains no work items for extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever beyond the Real-generic payload and R-33's reference integrator (TASK-M3-25); the shared kernel is instantiated at f32 and f64 only (R-265)."
+  rulings:
+  - R-33
+  - R-265
   milestone: M0
 - id: REQ-SYS-008
   area: SYS
