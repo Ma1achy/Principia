@@ -158,10 +158,9 @@ negative_control!(
     }
 );
 
-// Not `cargo xtask ci`: under `cargo xtask controls` that would run this control again, without end.
 negative_control!(
     qa_cargo_xtask_alias_runs_deps,
-    "the `cargo xtask ci` run replaced by an unknown command's, which fails",
+    "the `cargo xtask ci --list` run replaced by an unknown command's, which fails",
     expected = "cargo xtask ci: ",
     {
         check_the_alias_runs_deps(&run_cargo_in_the_workspace(&["xtask", "deps"]));

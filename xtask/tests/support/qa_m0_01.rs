@@ -462,7 +462,7 @@ pub fn check_the_alias_runs_deps(out: &Output) {
     );
 }
 
-/// `qa_cargo_xtask_alias_runs_deps`'s check: the run `out` of `cargo xtask ci` passes.
+/// `qa_cargo_xtask_alias_runs_deps`'s check: the run `out` of `cargo xtask ci --list` passes.
 pub fn check_the_alias_runs_ci(out: &Output) {
     assert!(
         out.status.success(),
