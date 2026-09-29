@@ -536,6 +536,6 @@
   note: process ruling; where builds run
 
 - file: decisions.md
-  section: R-264 — TASK-M0-09 accepted at ~1,084 lines; TASK-M3-08 and TASK-M5-18 stay whole over budget *(amends R-256)*
+  section: R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
   reason: informative only
-  note: size ruling; no requirement changes
+  note: size ruling; applied in plan/WORKFLOW.md § "Task files"; no requirement changes
