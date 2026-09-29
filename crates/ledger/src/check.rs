@@ -62,7 +62,7 @@ fn check_word(word: &Word, entries: &[Entry], found: &mut Vec<String>) {
             }
         }
     }
-    // Each declared bit's first occupant; a bit claimed twice is an overlap, reported once per pair as a run.
+    // Each declared bit's first occupant; a bit claimed twice is an overlap, reported per contiguous run.
     let mut owner: Vec<Option<&str>> = vec![None; word.bits as usize];
     let mut overlaps: Vec<(&str, &str, u32, u32)> = Vec::new();
     for &(field, offset, width) in &occupants {
@@ -76,7 +76,10 @@ fn check_word(word: &Word, entries: &[Entry], found: &mut Vec<String>) {
         for bit in offset..offset.saturating_add(width).min(word.bits) {
             match owner[bit as usize] {
                 None => owner[bit as usize] = Some(field),
-                Some(first) => match overlaps.iter_mut().find(|o| (o.0, o.1) == (first, field)) {
+                Some(first) => match overlaps
+                    .iter_mut()
+                    .find(|o| (o.0, o.1) == (first, field) && o.3 + 1 == bit)
+                {
                     Some(o) => o.3 = bit,
                     None => overlaps.push((first, field, bit, bit)),
                 },
