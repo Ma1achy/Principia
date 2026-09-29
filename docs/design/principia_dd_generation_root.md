@@ -453,18 +453,19 @@ quad **floors** — correct, since refining does not make a close encounter easi
   (`‖·‖` as a scalar beside direction cosines, gui_state_contract §4).
 
 **Worked entries: §3.4's derived fields and `n`.** Each is `f32` unless shown, has no `tier_gate` or `sentinel` unless
-shown, has `provenance: kernel`, and has `consumers: [render, export, debug]`: render because §3.4 gives its
-presentation metadata, export because seam 13 generates the export decoder for every ledger field (systems_architecture
-§5), debug because render contract Part 6 gives each a view. The stored entries named in `from` (`t_end_step`, `S`,
-`shadow`, `r`, `p`, `C_ty`, `E_0`, `Lz_0`, `m0 m1 m2`) are §3's own.
+shown, has `provenance: kernel`, and has `consumers: [render, export, debug]`: render because §3.4 gives the
+presentation metadata of the five scalars, and for `n` because gui_state_contract §4 and render contract Part 5/6
+render it (§3.4 gives `n` none); export because seam 13 generates the export decoder for every ledger field
+(systems_architecture §5); debug because render contract Part 6 gives each a view. The stored entries named in `from`
+(`t_end_step`, `S`, `shadow`, `r`, `p`, `C_ty`, `E_0`, `Lz_0`, `m0 m1 m2`) are §3's own.
 
 | name | location | value | type | scale | range | sentinel · tier_gate |
 |---|---|---|---|---|---|---|
 | `t_end` | `derived(from: [t_end_step])` | `T · t_end_step / horizon_steps`, the fraction of the horizon (§3.1, §3.4) | f32 | lin | [0, T] (§3.4; render contract Part 6) | — |
 | `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79) |
-| `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])` | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
-| `Lz_drift` | `derived(from: [r, p, Lz_0])` | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
-| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | sentinel −1.0 for `n < 2` (§3.4, R-17) |
+| `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])`; render contract Part 6 says stored, RQ-153 pending | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `Lz_drift` | `derived(from: [r, p, Lz_0])`; render contract Part 6 says stored, RQ-153 pending | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | sentinel −1.0 for `n < 2` (§3.4, R-17); a sentinel inside the unbounded range, RQ-152 pending |
 | `n` | `derived(from: [r, m0, m1, m2])` | the Montgomery map, never stored (§3.5; integrator dd §3.7) | vector(f32, 3) | lin, per component | [−1, 1] per component | — |
 
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
