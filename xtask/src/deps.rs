@@ -116,6 +116,12 @@ pub const ALLOWED: &[AllowedEdge] = &[
         to: "engine",
         kinds: Kinds::Any,
     },
+    // `cargo xtask codegen` runs the generator (R-241); a normal dependency.
+    AllowedEdge {
+        from: "xtask",
+        to: "ledger",
+        kinds: Kinds::Any,
+    },
     // validation → any of the above except gui and prin: the harness exercises each seam; where it needs
     // the CLI it runs the built `prin` binary as a separate process (R-187). So no validation → prin.
     AllowedEdge {

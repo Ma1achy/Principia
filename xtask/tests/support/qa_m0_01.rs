@@ -74,6 +74,8 @@ pub fn expected(from: &str, to: &str, kind: Kind) -> bool {
             | ("engine", "ledger" | "kernel" | "render")
             | ("gui", "engine")
             | ("prin", "engine")
+            // `cargo xtask codegen` runs the generator (R-241).
+            | ("xtask", "ledger")
             // "validation → any of the above except gui and prin" (R-187).
             | ("validation", "ledger" | "kernel" | "render" | "engine")
     )
@@ -403,7 +405,7 @@ pub fn check_the_plan_crates_and_no_contract_crate(doc: &Value) {
 }
 
 /// `qa_live_workspace_edges_are_all_allowed`'s check on the `edges` read: some were read, §7.1 allows each, kernel →
-/// ledger is build-only, and ledger has none.
+/// ledger is build-only, and ledger has none but validation as a dev-dependency.
 pub fn check_the_live_edges_are_all_allowed(edges: Vec<(String, String, Kind)>) {
     assert!(
         !edges.is_empty(),
@@ -425,8 +427,11 @@ pub fn check_the_live_edges_are_all_allowed(edges: Vec<(String, String, Kind)>) 
         kl.iter().all(|k| *k == Kind::Build),
         "kernel → ledger kinds: {kl:?}"
     );
+    // "ledger depends on nothing" but validation, as a dev-dependency only (R-187).
     assert!(
-        !edges.iter().any(|e| e.0 == "ledger"),
+        !edges
+            .iter()
+            .any(|e| e.0 == "ledger" && !(e.1 == "validation" && e.2 == Kind::Dev)),
         "ledger has a workspace dependency"
     );
 }
