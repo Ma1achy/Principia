@@ -417,7 +417,7 @@ quad **floors** — correct, since refining does not make a close encounter easi
 { name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
   type: u-bits | f32 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
-  range, sentinel?, tier_gate?, overflow?: saturate | inf,
+  range, sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
   provenance: kernel | decode | reduction | cpu,
   consumers: [render, export, debug, scheduler] }
 ```
@@ -428,6 +428,10 @@ quad **floors** — correct, since refining does not make a close encounter easi
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is
 allowed only when the entry states `overflow`. At a packed location, `f16-pair` and `fixed16` take exactly 16 bits
 and `f32` exactly 32, with no range-against-width test; any other non-integer type there fails the static check.
+
+`floor` (R-263) names the sim-key parameter a log-magnitude or diverging view floors at: `eps_E` on `energy_drift`,
+`eps_L` on `Lz_drift` (§3.4). The parameter is the same for every sample, so it is named, not stored, and it is
+neither a ledger entry nor a register constant.
 
 **Derived fields and vector fields** *(definition, R-72; REQ-GEN-024)*:
 - **`derived(from: [field, …])`** is the location of a field computed at read rather than stored (§3.1's "Derived, NOT

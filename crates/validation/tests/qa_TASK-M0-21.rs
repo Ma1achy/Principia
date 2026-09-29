@@ -30,7 +30,10 @@ fn has(text: &str, needle: &str) {
 fn qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test() {
     let v = controls("dup_name", &[]);
     check_leaky_fails(&v);
-    has(&v.stderr, "test `doubles`: its control leaves it passing");
+    has(
+        &v.stderr,
+        "test `doubles`: its control did not make it fail",
+    );
     // Control: with the leaky target removed, only the sound control remains and the command passes.
     let sound = controls("dup_name", &["tests/a_leaky.rs"]);
     assert!(
@@ -47,7 +50,7 @@ fn qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test() 
     );
     has(
         &leaky.stderr,
-        "test `doubles`: its control leaves it passing",
+        "test `doubles`: its control did not make it fail",
     );
 }
 

@@ -1,7 +1,7 @@
 # TASK-M0-09 — Payload ledger I: SimState (both variants), ICDescriptor and the word buffer, with generated Rust structs
 
 - **Milestone:** M0
-- **Closes:** REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002
+- **Closes:** REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002, REQ-GEN-029
 - **Depends on:** TASK-M0-07, TASK-M0-08, TASK-M0-35
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -41,6 +41,8 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
 - `decisions.md` § "R-59 — Fix D1 to D6 as listed *(sheet §8)*"
 - `decisions.md` § "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
 
+- `decisions.md` § "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
+- `decisions.md` § "R-263 — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*"
 ## Deliverables
 - `crates/ledger/src/payload.rs` — the entries for `SimStateFTLE`/`SimStateBase`, `ICDescriptor`, the word buffer and the §3.4 scalar metadata.
 - `crates/ledger/src/gen/rust.rs` — the struct emitter (`#[repr(C)]`, `no_std`-compatible, vec2 groups as `[[f32; 2]; 3]`) writing `crates/kernel/src/payload/generated.rs`.
@@ -57,6 +59,7 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
 - `cargo test -p ledger catalogue_scalars` — a catalogue entry for each §3.4 field with its scale, range and sentinel; `energy_drift` and `Lz_drift` have scale = diverging (REQ-GEN-001).
 - `cargo test -p ledger payload_buffers` — the generated layout has exactly two payload buffers (SimState + word); `closure_min`/`closure_step` are SimState members, not a parallel buffer (REQ-PAY-007); no time-indexed per-sample buffer exists — review checklist (code §4) (REQ-PAY-005).
 - `cargo test -p ledger no_per_pair` — none of `enc_01`, `enc_02`, `enc_12`, `encounter_count`, `dominant_pair` is a ledger or catalogue entry; review checklist (code §7): no per-pair view in the v1 catalogue or colour-mode list (REQ-RENDER-002).
+- `cargo test -p ledger payload_floor` — `energy_drift` and `Lz_drift` carry `floor` `eps_E` and `eps_L`; an entry whose `floor` names a ledger field fails the gate (REQ-GEN-029).
 
 ## Notes
 - The payload doc is canonical where it and generation-root §3 could drift (generation-root §3; R-70, R-86).
@@ -70,3 +73,5 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
   refuse a `from` name matching more than one entry; if neither fits, file it in REVIEW_QUEUE. §3.8 also has no key
   for §3.4's drift floors `eps_E` and `eps_L`: place them or file it.
 - R-248: `d_min` (`f16-pair`, range "> 0", §3.4) has an unbounded upper end, so its entry must state `overflow` (saturate or inf) or bound its range within ±65504; if the corpus doesn't settle which, file it in REVIEW_QUEUE.
+- R-256: accepted at ~1,000 counted lines in one PR; veto items (a), the interiors of `packed_a`, `packed_b` and `times`, and (b), `dE_max`/`dLz_max`, stand. REQ-PAY-002 is narrowed to SimState and ICDescriptor; RenderQuad goes to TASK-M1-06 (REQ-PAY-090) and the WGSL layouts to TASK-M0-13 (REQ-PAY-091).
+- R-263 (closes RQ-158): §3.8 gains `floor?`; this task sets it on the two drift entries (REQ-GEN-029).
