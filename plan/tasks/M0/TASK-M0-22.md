@@ -1,7 +1,7 @@
 # TASK-M0-22 — Controls for qa's xtask tests, and `controls` in `cargo xtask ci`
 
 - **Milestone:** M0
-- **Closes:** REQ-VAL-007, REQ-VAL-163
+- **Closes:** REQ-VAL-007, REQ-VAL-163, REQ-VAL-166
 - **Depends on:** TASK-M0-04, TASK-M0-21, TASK-M0-24, TASK-M0-25, TASK-M0-26, TASK-M0-27, TASK-M0-28, TASK-M0-29, TASK-M0-30, TASK-M0-32
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
@@ -31,11 +31,13 @@ Every test in the workspace has a registered negative control that makes it fail
 - `decisions.md` § "R-221 — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*"
 
 - `decisions.md` § "R-226 — The suite stops re-running every control; folded into TASK-M0-22"
+- `decisions.md` § "R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*"
 ## Deliverables
 - `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and qa's `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) check only what they claim, through a listing-only mode, without re-running every control in the workspace; the `cargo xtask controls` CI step fails on any finding, so no coverage is lost. qa's merged file changes only as far as this needs, under a one-round exception, with qa reviewing (R-226).
 - The `controls` feature and validation dev-dependency are in place in `xtask` (TASK-M0-24), `prin` (TASK-M0-25) and `validation` (TASK-M0-21) (R-176, R-209).
 - A negative control, registered with `negative_control!` in the form TASK-M0-26 gives it, naming the panic it expects (R-199, R-212), for each of qa's tests in `xtask/tests/` (`qa_TASK-M0-01.rs`, `_live`, `_r191`, `_r193`, `_r194`), and for any test merged after R-209's count that TASK-M0-24 and TASK-M0-25 don't cover. Each control is a mutation, a contaminated input, a sign-flipped variant or a comparison that must differ, and makes its test fail. The controls live in new targets where they can; an edit to qa's merged files is limited to what registration forces and is reviewed by qa (R-209).
 - `cargo xtask controls` registered in `cargo xtask ci`, so it runs on every push (R-177, R-198), and xtask's ci-registry test updated to match.
+- qa's `qa_cargo_xtask_alias_runs_deps` runs `cargo xtask ci` in a listing-only form that runs no control; the `cargo xtask ci` step moves into a CI job of its own, beside the tests, and runs every control there. qa's merged file changes only as far as this needs, under a one-round exception, with qa reviewing (R-235).
 - The controls call the checks and helpers TASK-M0-29 and TASK-M0-30 put in shared test-support modules; they copy none (R-215, R-218, R-221).
 
 ## Acceptance tests
@@ -43,6 +45,7 @@ Every test in the workspace has a registered negative control that makes it fail
 - Review checklist (qa §3): each control is discriminating, and no test is arithmetically impossible or true by construction (the n_hot < N² quantile case, a distinct-value count bounded below the claimed effect) (REQ-VAL-007).
 
 - Review checklist (code and qa): neither test runs the workspace's controls, each still fails under its control, and the CI step fails on a missing or non-tripping control (REQ-VAL-163).
+- Review checklist (code and qa): `qa_cargo_xtask_alias_runs_deps`'s child runs no control and still fails under its control; the `cargo xtask ci` job runs beside the tests and is green on the head (REQ-VAL-166).
 ## Notes
 - R-226: the survey of 27 Sep found these two tests re-running every control (about a third of the suite's time); the human folded the fix into this task, since it adds the CI step.
 - R-209 (closes RQ-141): at R-209, 113 tests needed controls (~1,300 lines), so the task is split three ways and the two earlier parts close REQ-VAL-152 and REQ-VAL-153. This task, the last, still closes REQ-VAL-007, and every task that depends on it still waits for all of it.
@@ -61,3 +64,4 @@ Every test in the workspace has a registered negative control that makes it fail
 - Measured (RQ-149, with `controls` in `ci` as a scratch change): 60.6 s cold (61.8 s with its binary's 13 tests in
   parallel), 28.7 s warm; the 16 r191/r193/r194 controls still to be written add an estimated 10–20 s. It fits under
   300 s. Re-measure on the PR.
+- R-235 (closes RQ-150): with every control in `ci`, that test measured 301 s on CI and 300.5 s on the Mac, over the 300 s timeout, from two nested cold builds; it now takes the listing-only form.

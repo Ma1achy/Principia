@@ -486,3 +486,15 @@
   section: R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
   reason: informative only
   note: process ruling
+- file: decisions.md
+  section: R-237 — qa's commit may add files under `xtask/tests/`
+  reason: informative only
+  note: process ruling; where qa's commit may add files (recorded in CLAUDE.md and .claude/agents/qa-reviewer.md)
+- file: decisions.md
+  section: R-238 — The old prin-impl scratch directory is deleted
+  reason: informative only
+  note: housekeeping outside the repo
+- file: decisions.md
+  section: R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high
+  reason: informative only
+  note: process ruling; a memory limit on dispatch (recorded in CLAUDE.md)
