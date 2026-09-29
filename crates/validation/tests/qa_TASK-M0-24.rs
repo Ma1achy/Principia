@@ -11,9 +11,17 @@
 //!
 //! Each test registers its own negative control (R-176, R-199): the same check on an input it must reject.
 
+// Only `Lease` is used here: the module's `FIXTURES` names the fixture copies' pool, which the other files including
+// it use, and this binary's runs are not fixture copies, so they lease from a pool of their own.
+#[allow(dead_code)]
+#[path = "support/own_target.rs"]
+mod own_target;
+
+use own_target::Lease;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Mutex, OnceLock, PoisonError};
 use validation::spawn::Spawn;
 
 /// The workspace manifest (this crate is `crates/validation`).
@@ -25,6 +33,15 @@ fn cargo() -> Command {
     Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()))
 }
 
+/// The target directory this binary's cargo runs on the workspace build in (REQ-VAL-164, applied per R-227). A cargo
+/// run into the workspace's target replaces `debug/xtask` and `debug/qa_child` even when nothing is rebuilt, and other
+/// tests spawn those (xtask's controls, which `run_controls` runs, spawn `debug/xtask`). Here the runs build in a
+/// leased directory, one at a time, so none replaces a binary another run's tests are spawning.
+fn own_target() -> &'static Mutex<Lease> {
+    static TARGET: OnceLock<Mutex<Lease>> = OnceLock::new();
+    TARGET.get_or_init(|| Mutex::new(Lease::take("qa_m0_24-targets")))
+}
+
 /// `cargo test` on `manifest`'s package `package`, `cargo_args` before `--` and `harness_args` after: whether it
 /// succeeded, and its stdout.
 fn cargo_test_status(
@@ -33,7 +50,13 @@ fn cargo_test_status(
     cargo_args: &[&str],
     harness_args: &[&str],
 ) -> (bool, String) {
-    let output = cargo()
+    let mut command = cargo();
+    let _target = (manifest == workspace_manifest()).then(|| {
+        let target = own_target().lock().unwrap_or_else(PoisonError::into_inner);
+        command.env("CARGO_TARGET_DIR", target.dir());
+        target
+    });
+    let output = command
         .arg("test")
         .arg("--manifest-path")
         .arg(manifest)

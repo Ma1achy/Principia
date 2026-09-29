@@ -6,7 +6,8 @@
 //! process or another, uses that directory until the lease is dropped. The directories are kept across runs, so each
 //! builds cold once, not on every run: a cold build per call pushes a nested build past the 300 s timeout under load
 //! (TASK-M0-31). Included with `#[path]` by `expected_message.rs`, `support/qa_m0_21_fixture.rs` and xtask's
-//! `tests/controls.rs`, which share its pool of fixture target directories.
+//! `tests/controls.rs`, which share its pool of fixture target directories, and by `qa_TASK-M0-24.rs`, whose runs on
+//! the workspace lease from a pool of their own.
 
 use std::fs::{File, TryLockError};
 use std::path::{Path, PathBuf};
