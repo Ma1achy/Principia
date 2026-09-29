@@ -64,3 +64,8 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
 - `δ_dep`'s departed bit (REQ-VAL-055) and the f32-field failed-state contents (R-72) are M3; not here.
 - See Gaps: §3.8 has no location kind for the derived §3.4 fields (`ftle`, `energy_drift`, `Lz_drift`, `diffusion`).
 - R-240: depends on TASK-M0-35 too (applied per R-204, sequencing): the static check guards the first real layout.
+- From PR #42's physics review (29 Sep): entry names are not unique across structs (`state` is a sample_descriptor
+  field and a quad field), and TASK-M0-07's gate accepts a derived field's `from` name if any stored entry has it. The
+  §3 transcription must make names unique across the ledger or add a `struct.name` qualifier, and the gate must then
+  refuse a `from` name matching more than one entry; if neither fits, file it in REVIEW_QUEUE. §3.8 also has no key
+  for §3.4's drift floors `eps_E` and `eps_L`: place them or file it.

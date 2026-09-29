@@ -2623,3 +2623,16 @@ Tick any you don't accept.
 - **Options seen:** reword the render contract line to "kept" (a wording fix, if the intent is §3.1's); or the final
   drift is stored after all, and §3.1 changes.
 - **Needed:** a ruling on which reading holds.
+
+## RQ-154: `ftle` at `step_count = 0` is 0/0, with no sentinel *(physics, TASK-M0-07)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § 3.1: "`ftle = S_final/(step_count·dt)`";
+  § "3.4 `SimState` scalars — with presentation metadata" (no sentinel for `ftle`); `decisions.md` § "R-79 — NaN and
+  sentinels" (NaN for tier-absent fields only).
+- **What:** raised by the physics review of PR #42. Before the first step, `ftle`'s read is 0/0. §3.4 gives it no
+  sentinel and R-79's NaN covers only tier-absent fields. The first task whose generated read accessor computes
+  `ftle` needs the value.
+- **Options seen:** NaN (extending R-79 to "not yet defined"); a sentinel like `diffusion`'s (see RQ-152); 0.0
+  with a validity predicate `step_count ≥ 1`.
+- **Needed:** a ruling before the `ftle` read accessor is built. Does not block TASK-M0-07.
+
