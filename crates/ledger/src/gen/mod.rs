@@ -88,7 +88,7 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
         .collect();
     bad.extend(bad_derived(&entries));
     bad.extend(entries.iter().filter_map(bad_vector));
-    bad.extend(bad_floor(&entries));
+    bad.extend(bad_floor(&ledger.words, &entries));
     if bad.is_empty() {
         Ok(entries)
     } else {
@@ -143,8 +143,9 @@ fn bad_vector(e: &Entry) -> Option<String> {
 
 /// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
 /// parameter, which is "neither a ledger entry nor a register constant" (R-263), so an empty name, a ledger entry's
-/// name or a register constant's name fails.
-fn bad_floor(entries: &[Entry]) -> Vec<String> {
+/// or packed word's name (a packed word is a stored field of the ledger, payload §1) or a register constant's name
+/// fails.
+fn bad_floor(words: &[Word], entries: &[Entry]) -> Vec<String> {
     let register = crate::constants::REGISTER;
     entries
         .iter()
@@ -154,6 +155,8 @@ fn bad_floor(entries: &[Entry]) -> Vec<String> {
                 "is empty"
             } else if entries.iter().any(|f| f.name == floor) {
                 "names a ledger entry"
+            } else if words.iter().any(|w| w.name == floor) {
+                "names a ledger word"
             } else if register.iter().any(|c| c.name == floor) {
                 "names a register constant"
             } else {
