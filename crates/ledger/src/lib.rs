@@ -2,9 +2,11 @@
 //! (systems_architecture §7.1; dd_generation_root §1). A root: no workspace dependency.
 //!
 //! The generation root (debug_tooling_plan step 0a): the §3.8 entry schema ([`schema`]), the static layout check
-//! ([`check`]) and the generator driver ([`gen`]), which `cargo xtask codegen` runs (R-241).
+//! ([`check`]) and the generator driver ([`gen`]), which `cargo xtask codegen` runs (R-241); the constants register
+//! and its generation gate ([`constants`]).
 
 pub mod check;
+pub mod constants;
 pub mod gen;
 pub mod schema;
 

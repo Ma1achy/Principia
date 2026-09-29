@@ -7,8 +7,8 @@ use std::fmt;
 
 use crate::schema::{Bound, Entry, FieldType, Location, Range, Word};
 
-/// f16's greatest finite value (§3.8 `overflow`, R-248).
-pub const F16_MAX: f64 = 65504.0;
+/// f16's greatest finite value (§3.8 `overflow`, R-248), read from the constants register.
+pub const F16_MAX: f64 = crate::constants::F16_FINITE_MAX.number();
 
 /// One finding of the layout check: what breaks §5 test 1 or §3.8's width rules, naming the word or entry, the field
 /// and the bits (the inclusive run `lo–hi`).

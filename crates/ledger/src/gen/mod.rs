@@ -32,13 +32,16 @@ pub enum GenError {
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),
+    /// Constants-register entries missing a value, class or citation, or thresholds without an admissible relative
+    /// basis, each naming the constant ([`crate::constants::gate`]; REQ-SYS-001, REQ-SYS-005, REQ-VAL-006).
+    Constants(Vec<String>),
 }
 
 impl fmt::Display for GenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let lines: Vec<String> = match self {
             GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
-            GenError::Malformed(lines) => lines.clone(),
+            GenError::Malformed(lines) | GenError::Constants(lines) => lines.clone(),
             GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
         };
         write!(
@@ -137,9 +140,10 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
         .collect())
 }
 
-/// Generates from `ledger` with `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under
-/// `root`; the paths written.
+/// Passes the constants register through its gate ([`crate::constants::gate`]), then generates from `ledger` with
+/// `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under `root`; the paths written.
 pub fn run(ledger: &Ledger, emitters: &[Emitter], root: &Path) -> Result<Vec<PathBuf>, String> {
+    crate::constants::gate(crate::constants::REGISTER).map_err(|e| e.to_string())?;
     let files = generate(ledger, emitters).map_err(|e| e.to_string())?;
     let mut written = Vec::new();
     for file in files {

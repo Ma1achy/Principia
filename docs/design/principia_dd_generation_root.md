@@ -473,6 +473,53 @@ render it (§3.4 gives `n` none); export because seam 13 generates the export de
 | `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | — (an invalid fit, `n < 2`, reads NaN by the predicate `n ≥ 2`, R-245) |
 | `n` | `derived(from: [r, m0, m1, m2])` | the Montgomery map, never stored (§3.5; integrator dd §3.7) | vector(f32, 3) | lin, per component | [−1, 1] per component | — |
 
+**The constants register** *(definition, R-72; REQ-SYS-063)*. Every settled constant, default or threshold is
+declared once, in the constants register beside the layout table in `crates/ledger`, as an entry:
+
+```
+{ name, value: exact(v) | threshold(v) | calibration,
+  class: achievable-maximum | conservation-law | canonical-units,
+  citation: corpus(file, section) | prin-rs(commit, path) | calibration(requirement id),
+  relative_basis?: distribution(source, percentile, populations) | gap(source, below, above) }
+```
+
+- **`value`**: a settled number, a settled threshold, or `calibration`. A constant the corpus leaves open is not
+  entered with a value: its value is `calibration` and its citation is its calibration requirement, until the human
+  confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement.
+- **`class`**: why the constant is admissible, one of philosophy §4.2's three: bounded by its own achievable maximum,
+  fixed by a conservation law, or expressed in canonical units.
+- **`citation`**: where the value was measured or derived (INDEX, "The evidence base"): a corpus section, named by
+  file and heading; a prin-rs `FINDINGS.md`, `README.md` or `results/` path at its prin-rs commit (R-159); or a
+  calibration requirement id.
+- **`relative_basis`**, required of a threshold. A threshold on a quantity spanning decades is relative: it is set from
+  the observed distribution or from a measured gap (pitfalls §3). `distribution` names the populations the observed
+  distribution shows, each with the range of its values, and the percentile the threshold sits at; `gap` names the
+  population below the gap and the one above it. Either way a threshold separates populations, so it lies outside the
+  range of every population its basis names; a `gap` threshold lies inside the gap; and a basis naming fewer than two
+  populations separates nothing. Closure's absolute cutoff of 2e-3, inside the bound population's range, and
+  `tau_display` at the 0.4th percentile of the population it was to split, both fail (pitfalls §3; philosophy §4.2).
+- **The gate:** an entry missing its value, class or citation, a threshold without a relative basis or one that does
+  not separate its populations, and a value that is `calibration` without citing its requirement (or the reverse)
+  fail generation, naming the constant.
+- **Reading a constant:** code in the physics and engine crates (`kernel`, `ledger`, `engine`) reads each number from
+  the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
+  and line. The generated files are exempt: their numbers are emitted from the ledger.
+- **The hash:** the register is part of the ledger hashed into the schema version (R-36). The canonicalised table the
+  hash covers includes each register entry, whole, as it includes each §3 entry, since the payload's own constants
+  decide what its stored bits mean (the word's capacity and length sentinel, §3.3; the `horizon_steps` limit, §3.1).
+  Changing any register entry changes the schema version.
+
+The register's entries, the constants the payload ledger uses:
+
+| name | value | class | citation |
+|---|---|---|---|
+| `horizon_steps_max` | 65535, the greatest count the exact u16 `times` holds; dispatch refuses more | achievable-maximum | R-86 |
+| `fgw_capacity` | 76 symbols, 1 + ⌊(121 − 2)/log₂3⌋ in the 121-bit mixed-radix payload | achievable-maximum | payload §3 |
+| `fgw_length_sentinel` | 127, the greatest value of the 7-bit length field | achievable-maximum | payload §3 |
+| `f16_finite_max` | 65504, binary16's greatest finite value; the pack clamp ±65504 | achievable-maximum | payload §1 |
+
+`diffusion` has no sentinel in the register: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
+
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
 
 | Constraint | Link (forward) | Inverse | log-det | Sampling note |
