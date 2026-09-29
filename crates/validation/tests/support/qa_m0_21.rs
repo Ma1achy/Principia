@@ -2,7 +2,7 @@
 //! check it controls, not a copy of it (REQ-VAL-157; R-215). A `tests/*.rs` file is a crate of its own, so each
 //! includes this file with `#[path]` beside `qa_m0_21_fixture.rs`; every item here is used by both.
 
-use super::qa_m0_21_fixture::{cargo, target_dir, Copy, Verdict};
+use super::qa_m0_21_fixture::{cargo, Copy, Verdict};
 use std::process::Command;
 use validation::spawn::Spawn;
 
@@ -13,7 +13,7 @@ pub fn cargo_test(copy: &Copy, features: &[&str]) -> Verdict {
             .args(["test", "--tests", "--no-fail-fast", "--manifest-path"])
             .arg(copy.manifest())
             .args(features)
-            .env("CARGO_TARGET_DIR", target_dir())
+            .env("CARGO_TARGET_DIR", copy.target())
             .timed_output()
             .expect("run cargo test"),
     )

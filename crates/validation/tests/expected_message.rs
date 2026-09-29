@@ -9,6 +9,10 @@ use std::sync::OnceLock;
 
 use validation::spawn::Spawn;
 
+#[path = "support/own_target.rs"]
+mod own_target;
+use own_target::{Lease, FIXTURES};
+
 /// libtest's stdout for `cargo test --features controls` on a copy of the `wrong_message` fixture, run once.
 fn fixture_run() -> &'static str {
     static RUN: OnceLock<String> = OnceLock::new();
@@ -29,6 +33,8 @@ fn fixture_run() -> &'static str {
         );
         std::fs::write(copy.join("Cargo.toml"), manifest).unwrap();
         std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+        // A target directory of its own: xtask's tests build copies of this fixture too (REQ-VAL-164).
+        let target = Lease::take(FIXTURES);
         let output = Command::new(env!("CARGO"))
             .args([
                 "test",
@@ -39,7 +45,7 @@ fn fixture_run() -> &'static str {
             ])
             .arg("--manifest-path")
             .arg(copy.join("Cargo.toml"))
-            .env("CARGO_TARGET_DIR", tmp.parent().unwrap())
+            .env("CARGO_TARGET_DIR", target.dir())
             .timed_output()
             .expect("run cargo test on the fixture");
         std::fs::remove_dir_all(&copy).unwrap();

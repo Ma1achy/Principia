@@ -8,7 +8,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{PoisonError, RwLock};
 use validation::spawn::Spawn;
+
+#[path = "../../crates/validation/tests/support/own_target.rs"]
+mod own_target;
+use own_target::{Lease, FIXTURES};
 
 use xtask::controls::{
     control_of, findings, name_wrong_panics, parse_list, parse_results, parse_wrong_panics, Finding,
@@ -34,8 +39,14 @@ fn copy_dir(from: &Path, to: &Path) {
     }
 }
 
+/// Held to write by `controls_on_this_workspace_skips_gui`, whose `xtask controls` runs cargo into the workspace's
+/// target directory, and so replaces the `xtask` there (`CARGO_BIN_EXE_xtask`) each time; held to read by each run of
+/// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164).
+static WORKSPACE_TARGET: RwLock<()> = RwLock::new(());
+
 /// Runs `xtask controls` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile and
-/// the `validation` path made absolute, building in this workspace's target directory, where `validation` is already built. `remove` names a file deleted from the copy first.
+/// the `validation` path made absolute, building in a target directory of its own while it runs, since other copies
+/// of the fixture build at the same time (REQ-VAL-164). `remove` names a file deleted from the copy first.
 fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = xtask.parent().unwrap();
@@ -57,12 +68,18 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
     );
     std::fs::write(&manifest, text).unwrap();
     std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+    let spawning = WORKSPACE_TARGET
+        .read()
+        .unwrap_or_else(PoisonError::into_inner);
+    // Taken after the read lock, so no copy holds a directory while it waits for the workspace's run.
+    let target = Lease::take(FIXTURES);
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["controls", "--manifest-path"])
         .arg(&manifest)
-        .env("CARGO_TARGET_DIR", tmp.parent().unwrap())
+        .env("CARGO_TARGET_DIR", target.dir())
         .timed_output()
         .expect("run xtask");
+    drop(spawning);
     std::fs::remove_dir_all(&copy).unwrap();
     Verdict {
         ok: output.status.success(),
@@ -165,10 +182,14 @@ fn controls_unit_test_without_its_control_fails_naming_it() {
 
 #[test]
 fn controls_on_this_workspace_skips_gui() {
+    let replacing = WORKSPACE_TARGET
+        .write()
+        .unwrap_or_else(PoisonError::into_inner);
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("controls")
         .timed_output()
         .expect("run xtask");
+    drop(replacing);
     let stdout = String::from_utf8_lossy(&output.stdout);
     // gui has no route to validation (R-187), so it never declares the feature.
     has(&stdout, "xtask controls: gui: skipped");

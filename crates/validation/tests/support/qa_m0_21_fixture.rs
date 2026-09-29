@@ -8,6 +8,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
 use validation::spawn::Spawn;
 
+// A target directory of its own for each nested cargo run (REQ-VAL-164; R-227).
+#[path = "own_target.rs"]
+mod own_target;
+use own_target::{Lease, FIXTURES};
+
 /// The workspace root (this crate is `crates/validation`).
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -16,34 +21,31 @@ fn root() -> PathBuf {
         .unwrap()
 }
 
-/// The workspace's target directory, where `validation` is already built.
-pub fn target_dir() -> PathBuf {
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
-
 pub fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
 }
 
-/// The `xtask` binary, built once.
+/// The `xtask` binary, built once, in a target directory this process holds while it runs: a build into the
+/// workspace's would replace the `xtask` other tests spawn (REQ-VAL-164).
 fn xtask() -> &'static Path {
-    static BIN: OnceLock<PathBuf> = OnceLock::new();
-    BIN.get_or_init(|| {
+    static BIN: OnceLock<(Lease, PathBuf)> = OnceLock::new();
+    let (_, bin) = BIN.get_or_init(|| {
+        let target = Lease::take("qa_m0_21-xtask");
         let status = Command::new(cargo())
             .args(["build", "-p", "xtask", "--manifest-path"])
             .arg(root().join("Cargo.toml"))
-            .env("CARGO_TARGET_DIR", target_dir())
+            .env("CARGO_TARGET_DIR", target.dir())
             .timed_output()
             .expect("run cargo build")
             .status;
         assert!(status.success(), "cargo build -p xtask failed");
-        target_dir()
+        let bin = target
+            .dir()
             .join("debug")
-            .join(format!("xtask{}", std::env::consts::EXE_SUFFIX))
-    })
+            .join(format!("xtask{}", std::env::consts::EXE_SUFFIX));
+        (target, bin)
+    });
+    bin
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -82,8 +84,9 @@ fn absolutise(dir: &Path, validation: &str) {
     }
 }
 
-/// A copy of the fixture `name` outside this workspace, with the files `remove` deleted; removed on drop.
-pub struct Copy(PathBuf);
+/// A copy of the fixture `name` outside this workspace, with the files `remove` deleted, and the target directory it
+/// builds in, its own while the copy lives (REQ-VAL-164); the copy is removed on drop.
+pub struct Copy(PathBuf, Lease);
 
 impl Copy {
     pub fn new(name: &str, remove: &[&str]) -> Copy {
@@ -99,11 +102,16 @@ impl Copy {
         }
         absolutise(&dir, root().join("crates/validation").to_str().unwrap());
         std::fs::copy(root().join("Cargo.lock"), dir.join("Cargo.lock")).unwrap();
-        Copy(dir)
+        Copy(dir, Lease::take(FIXTURES))
     }
 
     pub fn manifest(&self) -> PathBuf {
         self.0.join("Cargo.toml")
+    }
+
+    /// The copy's target directory, for `CARGO_TARGET_DIR`.
+    pub fn target(&self) -> &Path {
+        self.1.dir()
     }
 }
 
@@ -140,7 +148,7 @@ pub fn controls(name: &str, remove: &[&str]) -> Verdict {
         Command::new(xtask())
             .args(["controls", "--manifest-path"])
             .arg(copy.manifest())
-            .env("CARGO_TARGET_DIR", target_dir())
+            .env("CARGO_TARGET_DIR", copy.target())
             .timed_output()
             .expect("run xtask controls"),
     )
