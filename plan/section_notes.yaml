@@ -535,3 +535,7 @@
   reason: informative only
   note: process ruling; where builds run
 
+- file: decisions.md
+  section: R-264 — TASK-M0-09 accepted at ~1,084 lines; TASK-M3-08 and TASK-M5-18 stay whole over budget *(amends R-256)*
+  reason: informative only
+  note: size ruling; no requirement changes
