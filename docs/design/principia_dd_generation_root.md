@@ -515,10 +515,11 @@ population = { name, lo, hi, count }
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1)
   and the f16 pack clamp (payload §1), which today are all four entries below. The canonicalised table the hash covers
-  includes each such entry, whole, citation included, as it includes each §3 entry, and changing one changes the
-  schema version. Any other register entry, such as a render or scheduler constant the lint brings into the register,
-  is not hashed into the schema version: changing it has the blast radius caching_contract Part 2 gives its knob
-  (render settings and scheduler knobs invalidate nothing; canonical_spec §9, invariant 3).
+  includes each such entry's value, type and class, not its citation text (R-251): changing a hashed entry's value,
+  type or class changes the schema version, and a citation-only edit does not. Any other register entry, such as a
+  render or scheduler constant the lint brings into the register, is not hashed into the schema version: changing it
+  has the blast radius caching_contract Part 2 gives its knob (render settings and
+  scheduler knobs invalidate nothing; canonical_spec §9, invariant 3).
 
 The register's entries, the constants the payload ledger uses:
 
