@@ -427,14 +427,45 @@ quad **floors** — correct, since refining does not make a close encounter easi
 **Derived fields and vector fields** *(definition, R-72; REQ-GEN-024)*:
 - **`derived(from: [field, …])`** is the location of a field computed at read rather than stored (§3.1's "Derived, NOT
   packed" list: `total_substeps_log2` is `derived(from: [total_substeps])`, `orbit_count` and `retrograde` are
-  `derived(from: [theta])`). `from` names the stored fields it is computed from; each must be an entry of the ledger
-  whose location is a packed word or a scalar index, never another derived field. A derived field occupies no bits, so
-  the static check (§5 test 1) does not see it; it carries the rest of the entry (type, scale, range, …) like any
-  field, so the catalogue generates its view.
-- **`vector(type, k)`** is the type of a vector-valued field such as the shape vector `n`: `k` components (3 for `n`),
-  each of the scalar `type` (f32 for `n`). Stored, it sits at `k` consecutive scalar indices starting at its
-  `scalar-index`. The type is what tells the generator the field is a vector, so the debug catalogue offers its
-  reductions (`‖·‖` as a scalar beside direction cosines, gui_state_contract §4).
+  `derived(from: [theta])`). A derived field occupies no bits, so the static check (§5 test 1) does not see it; it
+  carries the rest of the entry (type, scale, range, …) like any field, so the catalogue generates its view.
+- **`from`** names the stored fields it is computed from; each must be an entry of the ledger whose location is a
+  packed word or a scalar index, never another derived field, and `from` is never empty. It names entries by `name`,
+  in any §3 struct: `n` and `energy_drift` name the `ICDescriptor` masses `m0 m1 m2` (§3.6). It names ledger entries
+  only. A sim-key parameter is the same for every sample and is not an entry, so it is left out of `from`, and the
+  read accessor takes it as an argument: `T` (in the sim key, §3.1), `dt` (§3.4's `h`) and `horizon_steps = ⌈T/dt⌉`
+  (§3.1).
+- **`provenance`** of a derived field names the stage that computes it, not the stages that wrote its inputs, since
+  each entry in `from` carries its own. Any of `kernel | decode | reduction | cpu` is valid. `kernel` covers GPU code
+  over the per-sample payload: the march, and the generated read accessor in the shaders that read it. §3.4's derived
+  fields and `n` are all `kernel` (`n` is computed each step in the march, §3.5; the rest at read).
+- **`vector(type, k)`** is the type of a vector-valued field: `k ≥ 2` components, each of the scalar `type`
+  (`u-bits`, `f32`, `f16-pair` or `fixed16`, never a vector). `n` is `vector(f32, 3)`; the stored `r` and `p` are each
+  `vector(f32, 6)` (§3.5's `array<vec2<f32>, 3>`, the same memory). Stored at a scalar index, a 32-bit component
+  (`u-bits`, `f32`) takes one index, so the vector takes `k` consecutive indices from its `scalar-index`. A 16-bit
+  component (`f16-pair`, `fixed16`) takes half of one: two share a 32-bit slot, component `2j` in the low half and
+  `2j+1` in the high half of slot `j` (the `.x` and `.y` of `unpack2x16float`, §5 test 3), so the vector takes ⌈k/2⌉
+  consecutive indices. `f16-pair` names that packing: each component is one binary16 value in half of a u32, as
+  `d_min` is the high half of `packed_a` (§3.1).
+- **Per component:** `scale`, `range` and `sentinel` apply to each component, not to the vector. `n` is `lin` over
+  [−1, 1] in each component; `‖n‖ = 1` is a check on the vector (the catalogue's `|n|−1` view, render contract Part 6),
+  not its range. The type is what tells the generator the field is a vector, so the catalogue offers its reductions
+  (`‖·‖` as a scalar beside direction cosines, gui_state_contract §4).
+
+**Worked entries: §3.4's derived fields and `n`.** Each is `f32` unless shown, has no `tier_gate` or `sentinel` unless
+shown, has `provenance: kernel`, and has `consumers: [render, export, debug]`: render because §3.4 gives its
+presentation metadata, export because seam 13 generates the export decoder for every ledger field (systems_architecture
+§5), debug because render contract Part 6 gives each a view. The stored entries named in `from` (`t_end_step`, `S`,
+`shadow`, `r`, `p`, `C_ty`, `E_0`, `Lz_0`, `m0 m1 m2`) are §3's own.
+
+| name | location | value | type | scale | range | sentinel · tier_gate |
+|---|---|---|---|---|---|---|
+| `t_end` | `derived(from: [t_end_step])` | `T · t_end_step / horizon_steps`, the fraction of the horizon (§3.1, §3.4) | f32 | lin | [0, T] (§3.4; render contract Part 6) | — |
+| `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79) |
+| `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])` | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `Lz_drift` | `derived(from: [r, p, Lz_0])` | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
+| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | sentinel −1.0 for `n < 2` (§3.4, R-17) |
+| `n` | `derived(from: [r, m0, m1, m2])` | the Montgomery map, never stored (§3.5; integrator dd §3.7) | vector(f32, 3) | lin, per component | [−1, 1] per component | — |
 
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
 
