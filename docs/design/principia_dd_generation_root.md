@@ -132,7 +132,7 @@ The word lives here, not in `SimState`. Specification:
 |---|---|---|
 | `t_end_step` (→ fraction) | lin | [0, T] via `/horizon_steps` — **normative meaning = completed-step count at ALL times** (running: advances each step; terminal: latched; initial: 0 — payload §2; no sentinel needed); EXACT u16 |
 | `d_min` | log | > 0 |
-| `ftle` | lin | tier-gated (`ftle_valid`); reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`, no sentinel (R-253). **A *point* quantity — every sample (base and each ensemble copy) computes its own** from its Benettin shadow, so it anti-aliases under the SSAA resolve (sampling/SSAA note) |
+| `ftle` | lin | tier-gated (`ftle_valid`); reads NaN whenever `ftle_valid` is false, `step_count = 0` and no completed renorm included, no sentinel (R-253, R-254). **A *point* quantity — every sample (base and each ensemble copy) computes its own** from its Benettin shadow, so it anti-aliases under the SSAA resolve (sampling/SSAA note) |
 | `energy_drift` | **diverging** (signed) | log-magnitude styling; floor `eps_E` |
 | `diffusion` | lin | invalid fit (`n < 2`) reads NaN, by the predicate `n ≥ 2` (R-245) |
 | `delta_E_max_abs` | log | ≥ 0 |
@@ -467,7 +467,7 @@ render it (§3.4 gives `n` none); export because seam 13 generates the export de
 | name | location | value | type | scale | range | sentinel · tier_gate |
 |---|---|---|---|---|---|---|
 | `t_end` | `derived(from: [t_end_step])` | `T · t_end_step / horizon_steps`, the fraction of the horizon (§3.1, §3.4) | f32 | lin | [0, T] (§3.4; render contract Part 6) | — |
-| `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79); at `step_count = 0` it reads NaN, by the predicate `step_count ≥ 1` (R-253) |
+| `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79); it reads NaN whenever `ftle_valid` is false, `step_count = 0` included (R-253, R-254) |
 | `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])` (R-246) | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
 | `Lz_drift` | `derived(from: [r, p, Lz_0])` (R-246) | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
 | `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | — (an invalid fit, `n < 2`, reads NaN by the predicate `n ≥ 2`, R-245) |

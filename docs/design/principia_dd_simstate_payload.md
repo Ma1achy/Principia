@@ -344,7 +344,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 
 | Derived quantity | From | Note |
 |---|---|---|
-| `ftle` | `S_final / (step_count · dt_macro)` — see FTLE note | **NOT simply `S/t`**: `S` only contains growth through the last *completed* renormalisation, so at read the **partial interval must be finalised** first. Validity conditional (§6 `ftle_valid`); reads NaN at `step_count = 0`, never 0/0 (R-253) |
+| `ftle` | `S_final / (step_count · dt_macro)` — see FTLE note | **NOT simply `S/t`**: `S` only contains growth through the last *completed* renormalisation, so at read the **partial interval must be finalised** first. Validity conditional (§6 `ftle_valid`); reads NaN whenever `ftle_valid` is false — `step_count = 0` or no completed renorm included — never 0/0 or a value beside a false flag (R-253, R-254) |
 | `diffusion_slope` | `C_ty / C_tt(n)` | `C_tt(n)=h²n(n²−1)/12`. **Invalid for `n < 2`** (`C_tt=0`) → reads NaN (R-245), never divide-by-zero (§4, §6) |
 | `orbit_count` | `⌊|theta| / 2π⌋` | winding count |
 | `retrograde` | `theta < 0` | winding sense |
@@ -360,7 +360,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 > S_final = S + log(δ_current / δ₀)              // fold in the unfinished interval's growth
 > ftle    = S_final / (step_count · dt_macro)    // divide by FULL elapsed time
 > ```
-> (Alternative — ignore the partial interval and divide by `N_renorm · M_renorm · h` — is rejected: it discards real growth and makes the denominator not simply `step_count·dt`.) `completed_renorms` need not be stored under a uniform schedule: `completed_renorms = step_count / renorm_interval_steps` (derived). `ftle_valid` requires `completed_renorms > 0` (§6). At `step_count = 0` the quotient is 0/0: `ftle` reads NaN there, with no sentinel, by the predicate `step_count ≥ 1` — `ftle_valid`'s `n > 0` clause (R-253, the form R-245 gives `diffusion`).
+> (Alternative — ignore the partial interval and divide by `N_renorm · M_renorm · h` — is rejected: it discards real growth and makes the denominator not simply `step_count·dt`.) `completed_renorms` need not be stored under a uniform schedule: `completed_renorms = step_count / renorm_interval_steps` (derived). `ftle_valid` requires `completed_renorms > 0` (§6). `ftle` reads NaN whenever `ftle_valid` is false, with no sentinel: at `step_count = 0`, where the quotient is 0/0 (`ftle_valid`'s `n > 0` clause), and before the first completed renorm alike, so no consumer sees a value beside a false validity flag (R-253, R-254; the form R-245 gives `diffusion`).
 
 > **`enc_01/02/12` and `dominant_pair` — MOVED to a separate symbolic-dynamics contract (`principia_symbolic_dynamics_contract.md`), no longer a payload blocker.** These are **not** an authoritative derivation and do not belong in the storage-layout spec: a two-generator (`a/b`) word does not yield three pair-tallies by a symbol histogram — attribution requires the generator↔cut convention, the punctured-sphere relation, and a deterministic third-pair algorithm. That is a topological-dynamics problem, not a payload-bits problem. The payload stores the word (§3); *interpreting* it into pair tallies is specified in the symbolic-dynamics contract. (`dmin_pair` is a *stored* latched fact and is unaffected.)
 
@@ -408,7 +408,7 @@ fn tm_t_end_fraction(w:u32, horizon_steps:u32)->f32  { return select(0.0, f32(tm
 fn tm_t_dmin_fraction(w:u32, horizon_steps:u32)->f32 { return select(0.0, f32(tm_t_dmin_step(w))/f32(horizon_steps), horizon_steps > 0u); }
 
 // validity — DERIVED helpers, no stored bit (ftle_valid is NOT unconditionally true)
-fn ftle_valid(state:u32, ftle_tier_on:bool, n:u32, benettin_renorms:u32)->bool {
+fn ftle_valid(state:u32, ftle_tier_on:bool, n:u32, benettin_renorms:u32)->bool {   // false → ftle reads NaN (R-254)
     return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;
 }
 fn diffusion_slope_valid(n:u32)->bool { return n >= 2u; }   // C_tt(n)=0 for n<2 → NaN slope (R-245), no divide-by-zero
