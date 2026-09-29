@@ -2662,3 +2662,37 @@ Tick any you don't accept.
   signed test can't be written. And R-242 gives width rules only for integer types, so a literal reading fails
   `d_min:f16` at its packed location once §3 is transcribed.
 - **Ruling:** R-247, R-248 (decisions.md). Closed in TASK-M0-35.
+
+## RQ-157: R-112's check finds standing obligations of the two briefs that no consolidated doc holds *(design, physics, TASK-M0-02)*
+
+- **File, section:** `decisions.md` § "R-112 — The archived briefs' standing parts are superseded *(closes RQ-81)*":
+  "TASK-M0-02 checks that each standing obligation exists in a consolidated doc, and ports any that doesn't";
+  `docs/read_first/principia_INDEX.md` § "Archived — record only, do not implement": "superseded: §4–4.6 (the slippy
+  map) by the consolidated docs (deep_zoom §3, scheduler, parity)" and "§5 gates superseded by the consolidated docs
+  (deep_zoom §3, scheduler, parity)"; `plan/tasks/M0/TASK-M0-02.md` § Deliverables: "any obligation no consolidated doc
+  holds is ported into the fitting one in the same PR, as a doc change for review".
+- **What:** PR #TBD's record maps each obligation. Where a consolidated doc says otherwise, the record reads the brief as
+  superseded (R-112's own word), not ported. What remains is held nowhere, and each would add a design decision, a test
+  or a numeric value that the task's reviewers (code, qa) do not cover:
+  1. *Structure-criterion §4.4:* the 2:1 balance constraint ("No two adjacent leaves may differ by more than one level,
+     or the adaptive render has cracks"), with `neighbour(i, dir)` "computed at decision time, never stored on a
+     `Quad`". It forces splits the split predicate of scheduler Part 3 does not make, and the corpus renders "one
+     sample, one tile" (scheduler Part 6), where no crack is named.
+  2. *§4.6:* the persistent frontier: an incrementally maintained priority order, and "rebuild from scratch every N
+     frames and assert the incremental frontier matches … Keep the from-scratch path permanently". N is not given.
+  3. *§4.5:* "the count of newly-computed quads after a zoom-out is ≈ 0" (no tolerance given); "Rank on the VISIBLE
+     part of a quad" (scheduler Part 6's `P_visible` is not defined).
+  4. *§4.2, §4.4, §4.5 reporting:* quads per frame achieved against the budget; the fraction of balance-forced splits;
+     per-frame camera and playhead deltas; the budget share of re-ranking after a zoom versus a pan.
+  5. *Kernel-build §5:* "finite-difference the Hamiltonian and compare against your analytic derivatives"; and the
+     table's values: radial collision `d_min < 1e-10` with `|dE/E| < 1e-12`; gauge invariance at
+     `alpha in {0.25, 1, 4}` "identical to ~10 decimals"; "`error_ratio` at `t=13`, near-field | `1.0000`"; Burrau
+     `M=12`, `R=2.2361`, `E=-12.8167`; Python cross-check "to `~1e-10` on a small grid". `principia_dd_validation_orbits.md`
+     § "2. What the suite tests that the current gates do not" names these gates without their values, and none of the
+     three docs R-112 names (deep_zoom §3, scheduler, parity) holds them. REQ-VAL-045's verify says
+     "d_min ≈ 1e-11 with bounded energy drift".
+- **Options seen:** for each: port it (into scheduler Part 6 or 7 for 1–4, into `principia_dd_validation_orbits.md` §2
+  or the parity contract for 5, with physics review for 1 and 5, and the missing N and tolerances as calibration
+  requirements, R-71); or rule it superseded by the current design and record why (1 may be moot under one-tile
+  rendering; 4 may be experiment reporting, not a standing obligation).
+- **Needed:** a ruling per item. TASK-M0-02's R-112 record and REQ-SYS-008 wait on it; the plan-check code does not.

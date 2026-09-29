@@ -25,7 +25,10 @@ Commands:
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
-                                  from the constants register, naming file and line (dd_generation_root §3.8)";
+                                  from the constants register, naming file and line (dd_generation_root §3.8)
+  plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
+                                  milestones.py and reviewer_lists.py with --check), streaming its output and
+                                  exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -39,6 +42,17 @@ fn main() -> ExitCode {
         ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
+        }
+        ["plan-check"] => {
+            return match xtask::plan_check::status(&xtask::plan_check::repo_root()) {
+                Ok(status) => {
+                    ExitCode::from(status.code().map_or(1, |code| code.clamp(0, 255) as u8))
+                }
+                Err(message) => {
+                    eprintln!("xtask plan-check: {message}");
+                    ExitCode::FAILURE
+                }
+            };
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["deps"] => run_deps(Source::Workspace(None)),
