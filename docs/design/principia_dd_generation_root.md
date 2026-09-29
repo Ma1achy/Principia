@@ -512,10 +512,13 @@ population = { name, lo, hi, count }
 - **Reading a constant:** code in the physics and engine crates (`kernel`, `ledger`, `engine`) reads each number from
   the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
   and line. The generated files are exempt: their numbers are emitted from the ledger.
-- **The hash:** the register is part of the ledger hashed into the schema version (R-36). The canonicalised table the
-  hash covers includes each register entry, whole, as it includes each §3 entry, since the payload's own constants
-  decide what its stored bits mean (the word's capacity and length sentinel, §3.3; the `horizon_steps` limit, §3.1).
-  Changing any register entry changes the schema version.
+- **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
+  into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1)
+  and the f16 pack clamp (payload §1), which today are all four entries below. The canonicalised table the hash covers
+  includes each such entry, whole, citation included, as it includes each §3 entry, and changing one changes the
+  schema version. Any other register entry, such as a render or scheduler constant the lint brings into the register,
+  is not hashed into the schema version: changing it has the blast radius caching_contract Part 2 gives its knob
+  (render settings and scheduler knobs invalidate nothing; canonical_spec §9, invariant 3).
 
 The register's entries, the constants the payload ledger uses:
 
