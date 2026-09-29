@@ -65,8 +65,8 @@
   title: "The generation root: ledger schema, metadata gate and static layout checks"
   depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
-  requirements: [REQ-GEN-002, REQ-GEN-003, REQ-GEN-024]
-  reviewers: [code, qa]
+  requirements: [REQ-GEN-002, REQ-GEN-024]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-08
   milestone: M0
@@ -79,7 +79,7 @@
 - id: TASK-M0-09
   milestone: M0
   title: "Payload ledger I: SimState (both variants), ICDescriptor and the word buffer, with generated Rust structs"
-  depends_on: [TASK-M0-07, TASK-M0-08]
+  depends_on: [TASK-M0-07, TASK-M0-08, TASK-M0-35]
   needs: []
   requirements: [REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002]
   reviewers: [code, qa, physics]
@@ -2083,4 +2083,12 @@
   needs: []
   requirements: [REQ-GUI-069, REQ-GUI-038]
   reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M0-35
+  milestone: M0
+  title: "The static layout check: overlap, coverage-or-reserved, width against range"
+  depends_on: [TASK-M0-07]
+  needs: []
+  requirements: [REQ-GEN-003, REQ-GEN-028]
+  reviewers: [code, qa]
   pitfalls: []
