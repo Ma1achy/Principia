@@ -518,3 +518,7 @@
   section: R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR
   reason: informative only
   note: size acceptance for one PR
+- file: decisions.md
+  section: R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
+  reason: informative only
+  note: size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12

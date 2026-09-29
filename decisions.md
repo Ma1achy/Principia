@@ -2114,3 +2114,27 @@ inside any population fails, at whatever percentile. There is no numeric bound.
 *Applied:* REQ-VAL-006's verify detail is reworded to match. qa's test in PR #47 that encodes the numeric reading
 (`qa_constants_threshold_tau_display_at_the_0_4th_percentile_fails_whatever_its_populations`) is rewritten by the
 implementer to the structural reading, under a one-round exception, with qa reviewing.
+
+## R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
+*29 Sep 2026 · applied in TASK-M0-08, TASK-M0-12 and `plan/reviewers/physics.md`*
+
+Asked whether to accept PR #47 at 918 counted lines (against R-249's ~756; the excess from the fix round the reviewers
+asked for) and its four non-mechanical items, the human chose "Accept at 918" and answered:
+
+"2, 5, 6 accepted. 2: confirm 76 is its representation's maximum, or reclass it. 4: accepted, but the hash covers each
+constant's value, type and class, not its citation text. 6: also add to the physics reviewer's checklist that any
+non-trivial numeric literal in kernel or engine code must be a register constant or justified in the review."
+
+*Applied:*
+- Item 2 (all four constants classed "bounded by its own achievable maximum"): accepted; PR #47 confirms, with the
+  physics reviewer, that 76 (the reduced word's capacity in 121 bits, payload §3) is its representation's maximum, or
+  reclasses it.
+- Item 4 (the hash scope): accepted as scoped to the entries that decide stored bits, but the hash covers each such
+  constant's value, type and class, not its citation text. PR #47's §3.8 text is corrected before merge. TASK-M0-12
+  tests that a value, type or class edit to a hashed entry changes the schema version, that a citation-only edit does
+  not, and that an entry that doesn't decide stored bits leaves it unchanged (from PR #47's physics review; applied per
+  R-72 and REQ-SYS-063, closing the gap its note pointed to).
+- Item 5 (a pending value keeps its class; pending exactly when citing a calibration requirement): accepted.
+- Item 6 (the lint's scope): accepted; `plan/reviewers/physics.md` § 9 gains the item the human worded.
+*Applied per R-204 — veto? (sequencing):* TASK-M0-12's reviewers gain `physics`, since what the schema version covers
+is now a physics definition (the physics reviewer's suggestion).
