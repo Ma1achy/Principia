@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-PAY-002, REQ-PAY-003, REQ-PAY-005, REQ-PAY-007, REQ-PAY-008, REQ-PAY-009, REQ-PAY-010, REQ-PAY-020, REQ-GEN-001, REQ-RENDER-002
-- **Depends on:** TASK-M0-07, TASK-M0-08
+- **Depends on:** TASK-M0-07, TASK-M0-08, TASK-M0-35
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -63,3 +63,4 @@ The ledger transcribes payload §0–§1 and generation-root §3.4–§3.6, and 
 - The f32 layout is the one transcribed here; the per-precision emission is TASK-M0-14 (REQ-PAY-017).
 - `δ_dep`'s departed bit (REQ-VAL-055) and the f32-field failed-state contents (R-72) are M3; not here.
 - See Gaps: §3.8 has no location kind for the derived §3.4 fields (`ftle`, `energy_drift`, `Lz_drift`, `diffusion`).
+- R-240: depends on TASK-M0-35 too (applied per R-204, sequencing): the static check guards the first real layout.

@@ -70,10 +70,10 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 88 requirements** (and every earlier gate still green):
+**Exit gate — 89 requirements** (and every earlier gate still green):
 
 - PAY (20): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087
-- GEN (9): REQ-GEN-001…008, REQ-GEN-024
+- GEN (10): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
 - TOOL (12): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134

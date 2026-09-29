@@ -6200,6 +6200,18 @@
   - R-53
   - R-72
   milestone: M1
+- id: REQ-GEN-028
+  area: GEN
+  statement: "The static layout check's width test must hold for every field type it meets: an unsigned (u-bits) field of width w needs its range's least value ≥ 0 and greatest ≤ 2^w − 1; a signed integer field of width w needs least ≥ −2^(w−1) and greatest ≤ 2^(w−1) − 1; an unbounded range end fits no width; and a field type the check does not recognise must fail the check, naming the field and its type, rather than pass unchecked (R-242)."
+  source:
+  - file: decisions.md
+    section: "R-242 — The layout check's range and width rules *(closes RQ-151's rules)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger layout_static: an unsigned field too narrow for its range, a signed field too narrow for its range, an unbounded range on a packed field, and a field of an unrecognised type each fail, naming the word, the field and the bits; each has a registered negative control"
+  rulings:
+  - R-242
+  milestone: M0
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -19446,6 +19458,8 @@
     section: "R-193 — The compile check is host-only; that is its known limit *(closes RQ-132)*"
   - file: decisions.md
     section: "R-194 — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*"
+  - file: decisions.md
+    section: "R-241 — `xtask` may depend on `ledger`, for `cargo xtask codegen` *(amends systems_architecture §7.1)*"
   verify:
     method: review checklist
     detail: "cargo xtask deps finds no workspace edge outside systems_architecture §7.1's allowed-edge table; kernel → ledger passes only as a build-dependency, and a normal dependency on that edge fails (R-185); every crate but gui may take validation as a dev-dependency only, never normal or build, gui → validation and validation → prin fail in every kind, and in kernel and ledger no unit test uses validation (R-187): when either takes validation as a dev-dependency, cargo xtask deps copies the workspace to a temporary directory, removes validation from their dev-dependencies there and runs cargo check -p kernel -p ledger --lib --tests six times, with --no-default-features, with default features and with --all-features, each in the dev and the release profile (R-194, amending R-192, so a unit test behind a feature, behind a feature's absence or behind the release profile is compiled), and fails, showing the compiler's error, when that does not compile, whatever the route of the use (alias, macro, #[path], include!) (R-191, which lifts R-189's and R-190's token rules); the compile check builds for the host only, so a unit test gated on another platform is not seen, its known limit (R-193), and any cfg combination outside that 3×2 matrix (for example a test gated on feature a on and b off) is not seen, a known limit too (R-194); a kernel or ledger doctest may use validation, and the check does not compile doctests (R-194); kernel's and ledger's library and binary targets sit under src/; a fixture with each forbidden edge fails naming it; module-level edges inside one crate are checked in review"
@@ -19461,6 +19475,7 @@
   - R-192
   - R-193
   - R-194
+  - R-241
   milestone: M0
 - id: REQ-SYS-005
   area: SYS

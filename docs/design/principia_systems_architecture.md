@@ -319,6 +319,7 @@ depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate dep
 | `engine` | `render` | payload → fragment assembly (the frame loop and dispatch drive the fragment side) |
 | `gui` | `engine` | GUI → state → engine (gui_state_contract §1) |
 | `prin` | `engine` | |
+| `xtask` | `ledger` | `cargo xtask codegen` runs the generator (R-241); a normal dependency. Nothing depends on `xtask` |
 | `validation` | any of the above except `gui` and `prin` | the harness exercises each seam; where it needs the CLI it runs the built `prin` binary as a separate process (R-187) |
 | any except `gui` (dev-dependency only) | `validation` | R-176, R-187. Never a normal or build dependency, so the no_std kernel and rust-gpu builds never see it. In `kernel` and `ledger`, a test that uses `validation` is an integration test (`tests/`), not a unit test in `src/`, because the dev-dependency cycle would give unit tests two copies of the crate; `cargo xtask deps` enforces it |
 
