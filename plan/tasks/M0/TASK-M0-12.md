@@ -4,12 +4,12 @@
 - **Closes:** REQ-GEN-008
 - **Depends on:** TASK-M0-11
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa
+- **Reviewers:** code, qa, physics
 - **Pitfalls:** none
 - **Size:** ~200 lines
 
 ## Goal
-The payload schema version is computed at generation as a content hash of the canonicalised ledger — every layout entry and the frozen continuation table (R-36, R-63) — and emitted as a constant into the generated Rust (and, with TASK-M0-13, the WGSL). No hand-bumped version number exists anywhere: changing one ledger row or one continuation-table entry changes the version, and an unchanged ledger gives the same version on every run and machine.
+The payload schema version is computed at generation as a content hash of the canonicalised ledger — every layout entry, the frozen continuation table (R-36, R-63) and each constants-register entry that decides what stored bits mean, by its value, type and class (R-251) — and emitted as a constant into the generated Rust (and, with TASK-M0-13, the WGSL). No hand-bumped version number exists anywhere: changing one ledger row or one continuation-table entry changes the version, and an unchanged ledger gives the same version on every run and machine.
 
 ## References
 - `decisions.md` § "R-36 — Schema version = content hash of the ledger *(PL-1)*"
@@ -27,7 +27,8 @@ The payload schema version is computed at generation as a content hash of the ca
 
 ## Acceptance tests
 - `cargo test -p ledger schema_version` — changing one ledger row, then one continuation-table entry, changes the schema version each time; the unchanged ledger gives a stable version across two runs; the emitted constant equals the computed hash (REQ-GEN-008).
+- `cargo test -p ledger schema_version` — editing a hashed register entry's value, type or class changes the schema version; a citation-only edit to it does not; an entry that doesn't decide stored bits leaves the version unchanged (REQ-SYS-063, R-251). §3.8 gives the criterion but no field marking an entry as hashed, so this task says how it selects them.
 
 ## Notes
-- Constants-register entries (TASK-M0-08) are outside the hashed layout table unless ruled otherwise (see Gaps).
+- Constants-register entries: TASK-M0-08's R-72 definition (§3.8 "The hash") put the entries that decide stored bits inside the schema hash, and R-251 made it cover their value, type and class, not their citation text. This replaces the earlier "outside the hashed layout table unless ruled otherwise".
 - RQ-93 ruled: R-113 — "caching signature carries it" is dropped from REQ-GEN-008's verify; the compatibility signature carrying the version is REQ-GEN-017 (M5, TASK-M5-06).

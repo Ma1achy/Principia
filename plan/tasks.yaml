@@ -106,7 +106,7 @@
   depends_on: [TASK-M0-11]
   needs: []
   requirements: [REQ-GEN-008]
-  reviewers: [code, qa]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-13
   milestone: M0
