@@ -1,6 +1,7 @@
 //! The ledger entry and its §3.8 metadata (dd_generation_root §3.8): every field carries a name, a location, a
-//! type, a scale, a range, an optional sentinel and tier gate, a provenance and its consumers. An entry is written as
-//! an [`EntryBuilder`]; [`EntryBuilder::build`] refuses an incomplete one, naming the field and the missing key.
+//! type, a scale, a range, an optional sentinel, tier gate and overflow, a provenance and its consumers. An entry is
+//! written as an [`EntryBuilder`]; [`EntryBuilder::build`] refuses an incomplete one, naming the field and the missing
+//! key.
 
 use std::fmt;
 
@@ -57,6 +58,15 @@ pub enum Provenance {
     Cpu,
 }
 
+/// What an `f16-pair` value does past f16's finite range, ±65504 (§3.8 `overflow`, R-248).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Overflow {
+    /// Clamps to ±65504.
+    Saturate,
+    /// Rounds to ±∞.
+    Inf,
+}
+
 /// Who reads a field (§3.8 `consumers`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Consumer {
@@ -103,11 +113,13 @@ pub struct Entry {
     pub range: Range,
     pub sentinel: Option<f64>,
     pub tier_gate: Option<&'static str>,
+    pub overflow: Option<Overflow>,
     pub provenance: Provenance,
     pub consumers: Vec<Consumer>,
 }
 
-/// The required §3.8 keys, in the order [`EntryBuilder::build`] checks them; `sentinel` and `tier_gate` are optional.
+/// The required §3.8 keys, in the order [`EntryBuilder::build`] checks them; `sentinel`, `tier_gate` and `overflow`
+/// are optional.
 pub const REQUIRED_KEYS: [&str; 7] = [
     "name",
     "location",
@@ -128,6 +140,7 @@ pub struct EntryBuilder {
     pub range: Option<Range>,
     pub sentinel: Option<f64>,
     pub tier_gate: Option<&'static str>,
+    pub overflow: Option<Overflow>,
     pub provenance: Option<Provenance>,
     pub consumers: Option<Vec<Consumer>>,
 }
@@ -188,6 +201,11 @@ impl EntryBuilder {
         self
     }
 
+    pub fn overflow(mut self, overflow: Overflow) -> Self {
+        self.overflow = Some(overflow);
+        self
+    }
+
     pub fn provenance(mut self, provenance: Provenance) -> Self {
         self.provenance = Some(provenance);
         self
@@ -228,6 +246,7 @@ impl EntryBuilder {
             range: self.range.ok_or_else(|| missing("range"))?,
             sentinel: self.sentinel,
             tier_gate: self.tier_gate,
+            overflow: self.overflow,
             provenance: self.provenance.ok_or_else(|| missing("provenance"))?,
             consumers: self.consumers.clone().ok_or_else(|| missing("consumers"))?,
         })
