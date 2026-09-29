@@ -29,7 +29,10 @@ Commands:
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
                                   make mandatory that is missing or empty, and each validation meter or
                                   discriminator line with no statement (R-180); reads the pull_request event JSON
-                                  at <file>, or at $GITHUB_EVENT_PATH";
+                                  at <file>, or at $GITHUB_EVENT_PATH
+  reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
+                                  Reviewers field names that has not approved on the head commit; reads PR <N>, or
+                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -52,6 +55,11 @@ fn main() -> ExitCode {
             }
         },
         ["pr-check", "--event", path] => xtask::pr_check::run(Path::new(path)),
+        ["reviews-check"] => xtask::reviews_check::run(&workspace_root(), None),
+        ["reviews-check", "--pr", n] => match n.parse() {
+            Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),
+            Err(_) => Err(format!("reviews-check: --pr takes a PR number, not `{n}`")),
+        },
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
@@ -74,6 +82,14 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// This workspace's root directory.
+fn workspace_root() -> PathBuf {
+    workspace_manifest()
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default()
 }
 
 enum Source<'a> {
