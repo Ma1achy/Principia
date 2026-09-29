@@ -2,7 +2,7 @@
 //! discriminating control passes; a test with no control, and one whose control leaves it passing, fail naming the
 //! test; a crate without the `controls` feature is skipped (R-176); a unit test in `src/` pairs by name with the
 //! control in the crate's `tests/` (R-199, R-201). A test's registered control replaces the inline one it duplicated
-//! (REQ-VAL-152, REQ-VAL-158; R-215).
+//! (REQ-VAL-152, REQ-VAL-158; R-215). `--list` pairs and checks the listing without running a control (R-226).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -44,10 +44,15 @@ fn copy_dir(from: &Path, to: &Path) {
 /// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164).
 static WORKSPACE_TARGET: RwLock<()> = RwLock::new(());
 
-/// Runs `xtask controls` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile and
-/// the `validation` path made absolute, building in a target directory of its own while it runs, since other copies
-/// of the fixture build at the same time (REQ-VAL-164). `remove` names a file deleted from the copy first.
+/// Runs `xtask controls` on a copy of the fixture `name`; see [`run_fixture_with`].
 fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
+    run_fixture_with(name, remove, &[])
+}
+
+/// Runs `xtask controls <args>` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile
+/// and the `validation` path made absolute, building in a target directory of its own while it runs, since other
+/// copies of the fixture build at the same time (REQ-VAL-164). `remove` names a file deleted from the copy first.
+fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict {
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = xtask.parent().unwrap();
     let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
@@ -74,7 +79,9 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
     // Taken after the read lock, so no copy holds a directory while it waits for the workspace's run.
     let target = Lease::take(FIXTURES);
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .args(["controls", "--manifest-path"])
+        .arg("controls")
+        .args(args)
+        .arg("--manifest-path")
         .arg(&manifest)
         .env("CARGO_TARGET_DIR", target.dir())
         .timed_output()
@@ -180,13 +187,14 @@ fn controls_unit_test_without_its_control_fails_naming_it() {
     );
 }
 
+/// Through `--list`, which runs no control: the controls of this workspace run in `cargo xtask ci` (R-226).
 #[test]
 fn controls_on_this_workspace_skips_gui() {
     let replacing = WORKSPACE_TARGET
         .write()
         .unwrap_or_else(PoisonError::into_inner);
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .arg("controls")
+        .args(["controls", "--list"])
         .timed_output()
         .expect("run xtask");
     drop(replacing);
@@ -195,6 +203,37 @@ fn controls_on_this_workspace_skips_gui() {
     has(&stdout, "xtask controls: gui: skipped");
     // Control: validation declares the feature, and is not reported skipped.
     lacks(&stdout, "validation: skipped");
+}
+
+/// `v`, a `--list` run on the leaky fixture, passes and pairs `round_trips` with its control: the leak shows only when
+/// the control runs.
+fn check_listed_and_not_run(v: &Verdict) {
+    assert!(
+        v.ok,
+        "the leaky fixture failed, so its control was run:\n{}",
+        v.stderr
+    );
+    has(
+        &v.stdout,
+        "controls_leaky: test `round_trips`: control `round_trips::negative_control`",
+    );
+}
+
+/// R-226: `--list` pairs each test with its controls, and runs none.
+#[test]
+fn controls_list_pairs_each_test_and_runs_no_control() {
+    check_listed_and_not_run(&run_fixture_with("leaky", None, &["--list"]));
+}
+
+/// `--list` still fails on what the listing shows: a test with no control.
+#[test]
+fn controls_list_fails_naming_a_test_without_control() {
+    let v = run_fixture_with("uncontrolled", None, &["--list"]);
+    assert!(!v.ok, "--list passed a test with no control");
+    has(
+        &v.stderr,
+        "controls_uncontrolled: test `lacks_control` has no control",
+    );
 }
 
 fn names(list: &[&str]) -> Vec<String> {
@@ -616,5 +655,22 @@ validation::negative_control!(
     has(
         &run_fixture("discriminating", None).stderr,
         "has no control: `negative_control!` cannot name a doctest"
+    )
+);
+
+validation::negative_control!(
+    controls_list_pairs_each_test_and_runs_no_control,
+    "the leaky fixture run without --list, which runs its leaky control",
+    expected = "the leaky fixture failed, so its control was run",
+    check_listed_and_not_run(&run_fixture("leaky", None))
+);
+
+validation::negative_control!(
+    controls_list_fails_naming_a_test_without_control,
+    "the discriminating fixture under --list, required to report a test with no control",
+    expected = "\"has no control\" not in",
+    has(
+        &run_fixture_with("discriminating", None, &["--list"]).stderr,
+        "has no control"
     )
 );

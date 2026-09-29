@@ -4,3 +4,10 @@
 pub mod ci;
 pub mod controls;
 pub mod deps;
+
+use std::path::{Path, PathBuf};
+
+/// This workspace's `Cargo.toml`.
+pub fn workspace_manifest() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml")
+}
