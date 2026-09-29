@@ -3,6 +3,8 @@
 //! entry is incomplete, naming each field and the missing key, or when the layout check finds anything. The emitters
 //! are registered in [`EMITTERS`].
 
+pub mod rust;
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -19,16 +21,17 @@ pub struct Generated {
 /// An emitter: the files it generates from a validated layout.
 pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
 
-/// The registered emitters, run in order. None yet: this driver is built before them (TASK-M0-07 Deliverables).
-pub const EMITTERS: &[Emitter] = &[];
+/// The registered emitters, run in order.
+pub const EMITTERS: &[Emitter] = &[rust::emit];
 
 /// Why generation was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GenError {
     /// Entries missing a required §3.8 key (REQ-GEN-002).
     Incomplete(Vec<IncompleteEntry>),
-    /// Derived fields whose `from` is empty or names something other than a stored entry, and vectors whose
-    /// component is not a scalar type or whose `k` is below 2 (§3.8 `location`, `type`).
+    /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
+    /// one stored entry, and vectors whose component is not a scalar type or whose `k` is below 2 (§3.8 `location`,
+    /// `type`).
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),
@@ -72,7 +75,18 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
     if !incomplete.is_empty() {
         return Err(GenError::Incomplete(incomplete));
     }
-    let mut bad = bad_derived(&entries);
+    let mut bad: Vec<String> = entries
+        .iter()
+        .enumerate()
+        .filter(|(i, e)| entries[..*i].iter().any(|f| f.name == e.name))
+        .map(|(_, e)| {
+            format!(
+                "field `{}` has more than one entry: names are unique across the ledger (dd_generation_root §3.8)",
+                e.name
+            )
+        })
+        .collect();
+    bad.extend(bad_derived(&entries));
     bad.extend(entries.iter().filter_map(bad_vector));
     if bad.is_empty() {
         Ok(entries)
@@ -81,13 +95,13 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
     }
 }
 
-/// Each derived entry whose `from` is empty, or names anything but a packed or scalar entry, as a line naming it
-/// (§3.8: "each must be an entry of the ledger whose location is a packed word or a scalar index").
+/// Each derived entry whose `from` is empty, or names anything but exactly one entry, a packed or scalar one, as a
+/// line naming it (§3.8: "each must be an entry of the ledger whose location is a packed word or a scalar index").
 fn bad_derived(entries: &[Entry]) -> Vec<String> {
     let stored = |name: &str| {
-        entries
-            .iter()
-            .any(|e| e.name == name && !matches!(e.location, Location::Derived { .. }))
+        let mut named = entries.iter().filter(|e| e.name == name);
+        let one = named.next().filter(|_| named.next().is_none());
+        one.is_some_and(|e| !matches!(e.location, Location::Derived { .. }))
     };
     let mut bad = Vec::new();
     for e in entries {
@@ -102,7 +116,7 @@ fn bad_derived(entries: &[Entry]) -> Vec<String> {
         }
         for source in from.iter().filter(|s| !stored(s)) {
             bad.push(format!(
-                "derived field `{}`: `from` names `{source}`, not a stored ledger entry (dd_generation_root §3.8)",
+                "derived field `{}`: `from` names `{source}`, not exactly one stored ledger entry (dd_generation_root §3.8)",
                 e.name
             ));
         }

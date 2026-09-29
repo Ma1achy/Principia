@@ -274,3 +274,63 @@ pub struct Ledger {
     pub words: Vec<Word>,
     pub entries: Vec<EntryBuilder>,
 }
+
+/// How a struct member is stored: the Rust type the struct emitter writes for it (payload §1; generation-root §3.3a,
+/// §3.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Storage {
+    F32,
+    U16,
+    U32,
+    /// Three `vec2<f32>`: a `vector(f32, 6)` field, vec2-grouped (R-86).
+    Vec2x3,
+    /// One `vec4<u32>`.
+    U32x4,
+    /// `n` u32s of declared padding, never implicit (R-86).
+    Pad(u32),
+}
+
+impl Storage {
+    /// The Rust type written for this storage.
+    pub fn rust(self) -> String {
+        match self {
+            Storage::F32 => "f32".to_owned(),
+            Storage::U16 => "u16".to_owned(),
+            Storage::U32 => "u32".to_owned(),
+            Storage::Vec2x3 => "[[f32; 2]; 3]".to_owned(),
+            Storage::U32x4 => "[u32; 4]".to_owned(),
+            Storage::Pad(n) => format!("[u32; {n}]"),
+        }
+    }
+
+    /// Size in bytes; each storage is aligned to its scalar, 2 bytes for `U16` and 4 for the rest.
+    pub fn size(self) -> u32 {
+        match self {
+            Storage::U16 => 2,
+            Storage::F32 | Storage::U32 => 4,
+            Storage::Vec2x3 => 24,
+            Storage::U32x4 => 16,
+            Storage::Pad(n) => 4 * n,
+        }
+    }
+}
+
+/// One member of a struct: a scalar-located entry, a packed word, or, when its name starts with `_`, reserved space
+/// or padding.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Member {
+    pub name: &'static str,
+    pub storage: Storage,
+}
+
+/// A `#[repr(C)]` struct the struct emitter writes: its members in order, with no implicit padding. `buffer` names
+/// the payload buffer it is an element of (payload §0), if any; when `indexed`, each scalar-located entry's index is
+/// its 4-byte slot in this struct (§3.8 `scalar-index`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Struct {
+    pub name: &'static str,
+    pub align: u32,
+    pub buffer: Option<&'static str>,
+    pub indexed: bool,
+    pub members: Vec<Member>,
+}
