@@ -2577,3 +2577,4 @@ Tick any you don't accept.
      the CI step itself runs the controls;
   4. accept that the suite re-runs every control once, cold (still needs 1 or 2 to fit).
 - **Needed:** a ruling. TASK-M0-22 waits, and every other M0 task waits on it.
+- **Ruling:** R-235 (decisions.md). Closed in TASK-M0-22.

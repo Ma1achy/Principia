@@ -19,18 +19,18 @@
 | COL | 58 |
 | GUI | 160 |
 | TOOL | 134 |
-| VAL | 164 |
+| VAL | 166 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1248** |
+| **total** | **1250** |
 
-Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 97 calibration, 101 definition, 1052 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 86 |
+| M0 | 88 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for the
 
 ## Sections
 
-925 sections in 46 files: 803 yield at least one requirement; 122 yield none and are listed below with the reason.
+930 sections in 46 files: 805 yield at least one requirement; 125 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 74 |
+| informative only | 77 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -83,6 +83,9 @@ Of these: 97 calibration, 101 definition, 1050 obligation. Retired (kept for the
 | R-232 — TASK-M0-30's veto items stand | informative only | process ruling |
 | R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default | informative only | process ruling |
 | R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice | informative only | process ruling |
+| R-237 — qa's commit may add files under `xtask/tests/` | informative only | process ruling; where qa's commit may add files (recorded in CLAUDE.md and .claude/agents/qa-reviewer.md) |
+| R-238 — The old prin-impl scratch directory is deleted | informative only | housekeeping outside the repo |
+| R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high | informative only | process ruling; a memory limit on dispatch (recorded in CLAUDE.md) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

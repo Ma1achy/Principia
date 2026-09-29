@@ -1943,3 +1943,53 @@ veto afterwards."
 
 *Applied:* the overnight merge conditions otherwise stand (every named reviewer approves the head, CI green,
 `check_plan.py` passes, within budget, no REVIEW_QUEUE entry needing the human). Process only.
+
+## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
+*29 Sep 2026 · applied in TASK-M0-22*
+
+"R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
+still runs every control. Also move cargo xtask controls into its own CI job running in parallel with the tests. Get
+qa's explicit word on veto items 4 and 5, then merge #39 under R-234 if everything holds."
+
+*Applied:* RQ-150 numbered its options 1–4; "(c)" is read as the third, the listing-only form, which the ruling's own
+text describes. REQ-VAL-166 (new) carries it, closed by TASK-M0-22. qa's merged `qa_TASK-M0-01.rs` (or its support
+module) changes only as far as this needs, under a one-round exception, with qa reviewing, as R-226's did.
+*Applied per R-235 — veto?:* `cargo xtask ci`'s only runner is `controls`, and REQ-VAL-007 requires `controls` to run
+inside `cargo xtask ci` on every push (R-198). So the `cargo xtask ci` step moves out of the `ci` job into a job of its
+own, running beside the tests, rather than a second job running `cargo xtask controls` beside it; the controls run
+once per push either way.
+*Also in the same message:* the "veto?" items merged under R-234 on PRs #37 and #38 all stand.
+
+## R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first
+*29 Sep 2026 · applied in TASK-M0-34*
+
+"R-236: a small task, run in parallel: qa_TASK-M0-24.rs keeps the failing control's output in its message (reworded
+from "leaves it passing"), and the deps.rs:1205 control first asserts the expected compile error."
+
+*Applied:* TASK-M0-34 (new, REQ-VAL-167). *Applied per R-204 (sequencing):* it depends on TASK-M0-22, which also edits
+`qa_TASK-M0-24.rs`, and runs in parallel with the other tasks ready after it. The edit to qa's merged file is limited
+to the message, under a one-round exception, with qa reviewing.
+
+## R-237 — qa's commit may add files under `xtask/tests/`
+*29 Sep 2026 · applied in CLAUDE.md and `.claude/agents/qa-reviewer.md`*
+
+"R-237: qa's commit paths are crates/*/tests/ and xtask/tests/."
+
+*Applied:* the orchestrator's check on qa's commit accepts `A` lines under `crates/*/tests/`, `xtask/tests/` or
+`fixtures/`. `fixtures/` is kept: the ruling names the test directories, and nothing in it removes the fixtures path.
+
+## R-238 — The old prin-impl scratch directory is deleted
+*29 Sep 2026 · applied 29 Sep*
+
+"R-238: delete the old scratch directory in /private/tmp."
+
+*Applied:* `/private/tmp/claude-501/-Users-malachy-src-prin-impl/c1185d1d-…/` (4.6 GB) was deleted. Outside the repo.
+
+## R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high
+*29 Sep 2026 · applied in CLAUDE.md*
+
+"R-239: memory limit for parallel work. Don't start a new build or reviewer if swap in use is above 4 GB or memory
+pressure is high; wait for running work to finish. Log swap alongside free disk in the summary."
+
+*Applied:* before each dispatch the orchestrator reads `sysctl vm.swapusage` and `memory_pressure`, alongside free
+disk. Process only.

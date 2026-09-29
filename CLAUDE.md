@@ -29,13 +29,15 @@ Read this first; each rule points at its source.
 - Each agent builds with `CARGO_BUILD_JOBS=4` and `RUST_TEST_THREADS=4` (R-228). Reviewers run the tests their diff
   touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
   commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
+- Before starting a build or reviewer, check free disk, swap and memory pressure. Don't start one while swap in use is
+  above 4 GB or memory pressure is high; wait for running work to finish (R-239).
 - Reviewers' read-only is enforced, not just instructed. After each reviewer returns, run `git status --porcelain`
   and check that HEAD hasn't moved. If anything changed, discard it (`git restore` / `git clean` on the affected paths,
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by
   the same reviewer stops the loop for the human.
 - QA commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing, check that it made exactly one new
-  commit, and that `git diff --name-status HEAD~1 HEAD` lists only `A` lines under `crates/*/tests/` or `fixtures/`.
-  Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA.
+  commit, and that `git diff --name-status HEAD~1 HEAD` lists only `A` lines under `crates/*/tests/`, `xtask/tests/`
+  or `fixtures/` (R-237). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA.
 
 ## Never guess, never defer (`plan/WORKFLOW.md` § "Escalation", § "No deferral")
 - A conflict, silence or missing value in the corpus goes to `REVIEW_QUEUE.md`, with file, section and quoted text.
