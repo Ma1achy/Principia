@@ -2152,3 +2152,49 @@ level instead of swap in summaries."
 *Applied:* before each dispatch the orchestrator reads the kernel's pressure level (`sysctl
 kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical) with `memory_pressure`'s free percentage,
 alongside free disk. R-239's 4 GB swap limit no longer applies. Process only.
+
+## R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*
+*29 Sep 2026 · applied in the docs listed below, REQ-INT-043 and REQ-TOOL-012*
+
+Asked in RQ-154, the human answered: "RQ-154: accepted as recommended. ftle reads NaN, with validity predicate
+step_count ≥ 1, no sentinel (same form as R-245). Record it as R-253."
+
+*Applied:* before the first step `ftle = S_final/(step_count·dt)` is 0/0; it reads NaN there, never a stored or value
+sentinel. `ftle` is derived at read, so storage still never holds NaN (R-79 stands). The predicate `step_count ≥ 1` is
+the `n > 0` clause `ftle_valid` already has (payload §6; REQ-PAY-032), and `ftle_valid` stands unchanged: it also
+requires `completed_renorms > 0` before the value counts as usable. The docs that describe `ftle`'s value now say so:
+payload §5's derived table and FTLE note, generation-root §3.4's row and §3.8's entry, the render contract's field
+table, and debug_tooling_plan's field row. REQ-INT-043 gains the read at `step_count = 0`; REQ-TOOL-012 names it among
+the NaN a field view hatches.
+
+## R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*
+*29 Sep 2026 · applied in the docs listed below, REQ-INT-043, REQ-PAY-032 and REQ-TOOL-012*
+
+"R-254, refining R-253 (fold into #53 if it hasn't merged): ftle reads NaN whenever ftle_valid is false, i.e. before
+the first completed renorm as well as at step_count = 0. One rule, so no consumer ever sees a meaningless 0.0 alongside
+a false validity flag."
+
+*Applied:* `ftle` reads NaN exactly when `ftle_valid` (payload §6) is false: the tier off (as R-79 already had), a
+failed sample, `step_count = 0`, or no completed renorm. The docs R-253 touched now state the one rule, and the
+lowering contract's `sample.ftle` row says the accessor returns it.
+*Applied per R-204 — veto? (reading of "whenever"):* `ftle_valid` is also false for a failed sample, and the lowering
+contract said per-sample failure surfaces as the defined failed-state values, never NaN (R-79). R-254 is applied as
+worded, so a failed sample's `ftle` reads NaN too; the lowering contract names `ftle` as the one exception. R-79's
+storage rule stands: `ftle` is derived at read, never stored, so storage still never holds NaN, and a failed sample's
+stored fields keep their defined failed-state values.
+*Accepted by the human (29 Sep, with R-255):* "The failed-sample item on #53 stands: a failed sample's ftle reads NaN
+(R-254 as applied)."
+
+## R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*
+*29 Sep 2026 · applied in the lowering and render contracts, REQ-PAY-032, REQ-RENDER-015 and `plan/reviewers/physics.md`*
+
+"The failed-sample item on #53 stands: a failed sample's ftle reads NaN (R-254 as applied). Condition, recorded with it
+as R-255: every aggregate over ftle (footprint means and spreads, quad reductions, histograms, statistics) excludes
+samples by ftle_valid explicitly and never relies on NaN propagation, since one NaN poisons a sum or mean, and WGSL's
+min/max/clamp with NaN operands are implementation-defined (a parity hazard). Add this to the physics reviewer's
+checklist."
+
+*Applied:* the lowering contract's Part 3a and the render contract's validity bullet state the rule. REQ-PAY-032 carries
+it for every consumer and REQ-RENDER-015's check covers the fragment side; `plan/reviewers/physics.md` § 7 gains the
+item, so every task that aggregates `ftle` is checked against it.
+

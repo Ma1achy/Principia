@@ -3070,7 +3070,7 @@
   milestone: M3
 - id: REQ-INT-043
   area: INT
-  statement: "The Benettin FTLE must use one shadow renormalised every `n_renorm` steps (`S += log(δ/δ₀)`, shadow reset to `x + δ₀·δ⃗/δ`), and at read or termination finalise the partial interval `S_final = S + log(δ_current/δ₀)` then `λ = S_final/(step_count·dt_macro)`, with `completed_renorms = step_count / renorm_interval_steps` derived."
+  statement: "The Benettin FTLE must use one shadow renormalised every `n_renorm` steps (`S += log(δ/δ₀)`, shadow reset to `x + δ₀·δ⃗/δ`), and at read or termination finalise the partial interval `S_final = S + log(δ_current/δ₀)` then `λ = S_final/(step_count·dt_macro)`, with `completed_renorms = step_count / renorm_interval_steps` derived; the read is NaN whenever `ftle_valid` is false (`step_count = 0` and no completed renorm included), with no sentinel (R-253, R-254)."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
@@ -3084,12 +3084,18 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: unit test
     detail: "dd test 10: halving δ₀ and doubling n_renorm leaves λ_T unchanged within tolerance; λ_T ≈ 0 on Kepler-embedded orbit, large on Burrau; reading between renorm boundaries is not biased low"
   rulings:
   - R-71
   - R-72
+  - R-253
+  - R-254
   milestone: M3
   note: "‖δ₀‖ and n_renorm: REQ-INT-076 (calibration); δ₀'s direction: REQ-INT-077 (definition)."
 - id: REQ-INT-044
@@ -4808,7 +4814,7 @@
   milestone: M1
 - id: REQ-PAY-032
   area: PAY
-  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`."
+  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and `ftle` must read NaN whenever it is false (R-254); every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) must exclude samples by `ftle_valid` explicitly, never by NaN propagation (R-255)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 5. Derived — computed at read, NOT stored
@@ -4816,10 +4822,16 @@
     section: "6. Accessors (illustrative of generated output; source is the Rust layout definition — emitted as Rust for the kernel/host and WGSL for the fragment side)"
   - file: docs/design/principia_dd_generation_root.md
     section: 3.4 `SimState` scalars — with presentation metadata
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: unit test
     detail: truth table over tier/state/n/renorms
-  rulings: []
+  rulings:
+  - R-254
+  - R-255
   milestone: M1
 - id: REQ-PAY-033
   area: PAY
@@ -8788,13 +8800,16 @@
     section: "R-114 — The debug NaN guard is the bitcast test *(closes RQ-82)*"
   - file: decisions.md
     section: "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
     method: review checklist
-    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; the debug NaN guard is the bitcast test (R-114)"
+    detail: "grep generated and built-in WGSL for isnan/isNan and for NaN self-comparison (x != x): zero hits; FTLE views guard with has_ftle && ftle_valid; every aggregate over ftle excludes samples by ftle_valid, not by NaN propagation or min/max/clamp on NaN (R-255); the debug NaN guard is the bitcast test (R-114)"
   rulings:
   - R-79
   - R-114
   - R-145
+  - R-255
   milestone: M1
 - id: REQ-RENDER-016
   area: RENDER
@@ -13464,7 +13479,7 @@
   note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
 - id: REQ-TOOL-012
   area: TOOL
-  statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, or an invalid diffusion fit, R-245) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
+  statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -13480,6 +13495,10 @@
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   - file: decisions.md
     section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
+  - file: decisions.md
+    section: "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
+  - file: decisions.md
+    section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: golden image
     detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min renders as its literal 0.0"
@@ -13487,6 +13506,8 @@
   - R-79
   - R-136
   - R-245
+  - R-253
+  - R-254
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
