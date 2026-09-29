@@ -2781,3 +2781,34 @@ Tick any you don't accept.
   and its fixture directory (`xtask/tests/fixtures/vocab/`), which must contain the terms.
 - **Needed:** a ruling on items 1–3. TASK-M0-16 waits on it.
 - **Ruling:** R-259 (decisions.md). Closed in TASK-M0-16. (Filed locally as RQ-157 on task/TASK-M0-16; renumbered.)
+
+## RQ-161: REQ-SYS-007 parks §7.1, and the plan builds a double-double kernel that R-33 doesn't name *(plan, physics, TASK-M0-02, TASK-M3-01)*
+
+- **File, section:** `docs/read_first/principia_00_philosophy.md` § "7. Parked — deliberate post-1.0": "Nothing here
+  should be built before 1.0"; § "7.1 Extended and arbitrary precision": "**Why it waits:** ~15× slower for
+  double-double, ~60× for quad-double. Fine offline, not now." and "a `DoubleF64` impl is another row"; § "7.7 The
+  rule for this section": "§7.1's payload genericity is currently the only one". `plan/requirements.yaml` REQ-SYS-007:
+  "other than … (currently only §7.1's payload genericity)"; verify: "no work items for extended precision … beyond the
+  Real-generic payload".
+  Against it: `decisions.md` § "R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*": "CPU
+  arbitrary precision with convergence gating … Double-double is a fast screen only."; `docs/contracts/principia_canonical_spec.md`
+  § "1. The substrate (the defining decision)": "The CPU is precision-unconstrained: f64 by default, double-double /
+  arbitrary where wanted"; `docs/design/principia_core_design.md` § "Principle: divergence is the observable": "CPU
+  inspector = f64 (or higher — double-double on the *same* kernel, spike criterion 4)"; REQ-INT-004: "at double-double
+  on the same source"; `plan/tasks/M3/TASK-M3-01.md` § Deliverables: "impls for `f32`, `f64` and a double-double type
+  `Dd`".
+- **What:** qa's review of PR #54 (REQ-SYS-007 record) finds two plan items that are §7.1 work.
+  1. *TASK-M3-25* (a separate CPU arbitrary-precision integrator) is exactly what R-33 rules, and decisions.md
+     overrides the corpus (R-1). Settled; REQ-SYS-007 can be conformed to it mechanically.
+  2. *TASK-M3-01*'s `Dd` instantiation of the **shared kernel** is not what R-33 names. R-33 is about the separate,
+     independent reference, sharing no source with the kernel; its "fast screen" is double-double in that role. The
+     shared kernel at double-double comes from canonical_spec §1 and core_design (REQ-INT-004), which contradict
+     philosophy §7.1's parking of double-double. No ruling settles which wins (R-70 lists its pairs; this isn't one).
+- **Options seen:**
+  1. The shared kernel's `Dd` instantiation stands (canonical_spec §1, core_design; R-33's "fast screen" read as the
+     kernel at `Dd`). REQ-SYS-007 and philosophy §7.1/§7.7 are conformed to name both exceptions: the R-33 reference
+     and the `Dd` kernel row.
+  2. §7.1 holds for the shared kernel: `Dd` is parked, REQ-INT-004 and TASK-M3-01 drop it (the kernel stays generic
+     over `Real`, per §7.1's "decide now"), and core_design / canonical_spec §1 are conformed. REQ-SYS-007 names only
+     the R-33 reference as the exception.
+- **Needed:** a ruling on item 2. TASK-M0-02's REQ-SYS-007 record, and REQ-SYS-007's conformance to R-33, wait on it.
