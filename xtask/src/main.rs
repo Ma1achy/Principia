@@ -23,7 +23,9 @@ Commands:
                                   that no unit test of kernel or ledger uses validation, by compiling them
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
-                                  (the compile check is then skipped)";
+                                  (the compile check is then skipped)
+  lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
+                                  from the constants register, naming file and line (dd_generation_root §3.8)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -38,6 +40,7 @@ fn main() -> ExitCode {
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
         }
+        ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),

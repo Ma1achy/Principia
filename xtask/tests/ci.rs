@@ -1,6 +1,6 @@
 //! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177); its registry holds
-//! `controls` (R-198). `cargo xtask ci --list` runs each runner's listing-only form alone, which for `controls` runs
-//! no control (R-235).
+//! `controls` (R-198) and `lint constants` (TASK-M0-08). `cargo xtask ci --list` runs each runner's listing-only form
+//! alone, which for `controls` runs no control (R-235).
 
 use std::cell::RefCell;
 use std::fs;
@@ -59,13 +59,13 @@ fn ci_with_no_runners_passes() {
     assert_eq!(run(&[]), Ok(()));
 }
 
-/// The registry's names: `controls` alone, since TASK-M0-22 (R-198).
+/// The registry's names: `controls` (TASK-M0-22, R-198), then `lint constants` (TASK-M0-08).
 fn check_the_registry(runners: &[Runner]) {
     let names: Vec<&str> = runners.iter().map(|runner| runner.name).collect();
     assert_eq!(
         names,
-        ["controls"],
-        "the ci registry is not `controls` alone (R-198)"
+        ["controls", "lint constants"],
+        "the ci registry is not `controls` then `lint constants`"
     );
 }
 
@@ -113,8 +113,8 @@ validation::negative_control!(
 
 validation::negative_control!(
     ci_registry_runs_controls,
-    "a registry holding a runner other than `controls`",
-    expected = "the ci registry is not `controls` alone",
+    "a registry holding a runner other than `controls` and `lint constants`",
+    expected = "the ci registry is not `controls` then `lint constants`",
     check_the_registry(&[Runner {
         name: "failing",
         run: failing,
