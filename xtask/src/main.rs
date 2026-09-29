@@ -11,6 +11,8 @@ Usage: cargo xtask <command>
 Commands:
   ci [--list]                     run every registered per-push runner, in order (R-177); --list runs each
                                   runner's listing-only form, which runs no control (R-235)
+  codegen                         regenerate the checked-in generated files from the layout table; refuses when
+                                  an entry lacks a §3.8 key, naming the field and the key (dd_generation_root §3.8)
   controls [--list] [--manifest-path <Cargo.toml>]
                                   check that every test of each crate declaring the `controls` feature has a
                                   negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
@@ -29,6 +31,7 @@ fn main() -> ExitCode {
     let result = match args.as_slice() {
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
+        ["codegen"] => xtask::codegen::run(&workspace_manifest()),
         ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
         ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
         ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),

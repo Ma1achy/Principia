@@ -4,3 +4,12 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
+
+# Controls reach ledger's tests through a dev-dependency on validation; they are integration tests in `tests/`, never
+# unit tests in `src/` (R-176, R-187).
+[dev-dependencies]
+validation = { path = "../validation" }
+
+# Under `controls`, each `negative_control!` in ledger's tests compiles as a test (R-176).
+[features]
+controls = []
