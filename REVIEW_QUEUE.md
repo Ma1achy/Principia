@@ -2565,6 +2565,9 @@ Tick any you don't accept.
 
   qa's review found the same on this Mac: 300.48 s, running alone with 4 jobs (R-228). Because `cargo test
   --workspace` fails first, the new `cargo xtask ci` step has not yet run on CI.
+  The code review traced the cost: the `ci` child builds every `controls` crate cold in `qa_TASK-M0-01-alias-target`,
+  and inside that the test's own control runs `cargo xtask deps` in a second cold target nested under it, so the child
+  pays for two cold builds (300.25 s locally, killed).
   RQ-149's scratch measurement (60.6 s cold) did not include the 16 r191/r193/r194 controls, or the hosted runner.
   CI's test step went from 5m06s on main to about 9m; the new `cargo xtask ci` step adds 1m12s.
 - **Options seen:**
