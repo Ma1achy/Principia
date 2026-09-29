@@ -8,7 +8,8 @@ pub fn run(manifest: &Path) -> Result<(), String> {
     let root = manifest
         .parent()
         .ok_or_else(|| format!("{}: no parent directory", manifest.display()))?;
-    let written = ledger::gen::run(&ledger::layout(), root).map_err(|e| format!("codegen: {e}"))?;
+    let written = ledger::gen::run(&ledger::layout(), ledger::gen::EMITTERS, root)
+        .map_err(|e| format!("codegen: {e}"))?;
     println!("codegen: {} generated file(s) written", written.len());
     for path in written {
         println!("codegen:   {}", path.display());

@@ -109,9 +109,10 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
         .collect())
 }
 
-/// Generates from `ledger` with [`EMITTERS`] and writes each file under `root`; the paths written.
-pub fn run(ledger: &Ledger, root: &Path) -> Result<Vec<PathBuf>, String> {
-    let files = generate(ledger, EMITTERS).map_err(|e| e.to_string())?;
+/// Generates from `ledger` with `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under
+/// `root`; the paths written.
+pub fn run(ledger: &Ledger, emitters: &[Emitter], root: &Path) -> Result<Vec<PathBuf>, String> {
+    let files = generate(ledger, emitters).map_err(|e| e.to_string())?;
     let mut written = Vec::new();
     for file in files {
         let path = root.join(&file.path);
