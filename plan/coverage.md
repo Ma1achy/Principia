@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 
 ## Sections
 
-941 sections in 46 files: 812 yield at least one requirement; 129 yield none and are listed below with the reason.
+944 sections in 46 files: 813 yield at least one requirement; 131 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 81 |
+| informative only | 83 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -90,6 +90,8 @@ Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for the
 | R-243 — TASK-M0-07 is accepted at ~725 counted lines | informative only | size acceptance for one PR |
 | R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)* | informative only | wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8) |
 | R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR | informative only | size acceptance for one PR |
+| R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class | informative only | size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR |
+| R-252 — The memory limit reads memory pressure, not swap *(amends R-239)* | informative only | process ruling; the memory limit on dispatch (recorded in CLAUDE.md) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

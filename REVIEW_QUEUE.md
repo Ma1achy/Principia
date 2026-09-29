@@ -2637,6 +2637,7 @@ Tick any you don't accept.
 - **Options seen:** NaN (extending R-79 to "not yet defined"); a sentinel like `diffusion`'s (see RQ-152); 0.0
   with a validity predicate `step_count ≥ 1`.
 - **Needed:** a ruling before the `ftle` read accessor is built. Does not block TASK-M0-07.
+- **Ruling:** R-253 (decisions.md).
 
 ## RQ-155: TASK-M0-34's first deliverable names a message TASK-M0-22 removed *(plan, TASK-M0-34)*
 
