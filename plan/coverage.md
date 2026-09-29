@@ -12,7 +12,7 @@
 | INT | 84 |
 | EVT | 26 |
 | PAY | 87 |
-| GEN | 27 |
+| GEN | 28 |
 | SCHED | 88 |
 | REF | 49 |
 | RENDER | 82 |
@@ -22,15 +22,15 @@
 | VAL | 166 |
 | PERF | 93 |
 | SYS | 67 |
-| **total** | **1250** |
+| **total** | **1251** |
 
-Of these: 97 calibration, 101 definition, 1052 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 97 calibration, 101 definition, 1053 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 88 |
+| M0 | 89 |
 | M1 | 81 |
 | M2 | 156 |
 | M3 | 190 |
@@ -42,10 +42,10 @@ Of these: 97 calibration, 101 definition, 1052 obligation. Retired (kept for the
 
 ## Sections
 
-930 sections in 46 files: 805 yield at least one requirement; 125 yield none and are listed below with the reason.
+933 sections in 46 files: 807 yield at least one requirement; 126 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 77 |
+| informative only | 78 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 11 |
@@ -86,6 +86,7 @@ Of these: 97 calibration, 101 definition, 1052 obligation. Retired (kept for the
 | R-237 — qa's commit may add files under `xtask/tests/` | informative only | process ruling; where qa's commit may add files (recorded in CLAUDE.md and .claude/agents/qa-reviewer.md) |
 | R-238 — The old prin-impl scratch directory is deleted | informative only | housekeeping outside the repo |
 | R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high | informative only | process ruling; a memory limit on dispatch (recorded in CLAUDE.md) |
+| R-240 — TASK-M0-07 is split in two *(closes RQ-151)* | informative only | plan ruling; a task split (recorded in plan/tasks.yaml, TASK-M0-07 and TASK-M0-35) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

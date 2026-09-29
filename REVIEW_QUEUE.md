@@ -2578,3 +2578,20 @@ Tick any you don't accept.
   4. accept that the suite re-runs every control once, cold (still needs 1 or 2 to fit).
 - **Needed:** a ruling. TASK-M0-22 waits, and every other M0 task waits on it.
 - **Ruling:** R-235 (decisions.md). Closed in TASK-M0-22.
+
+## RQ-151: TASK-M0-07 is built at 1003 counted lines, against ~450 *(plan, TASK-M0-07)*
+
+- **File, section:** `plan/tasks/M0/TASK-M0-07.md` "**Size:** ~450 lines"; `decisions.md` § "R-208 — TASK-M0-21 is
+  accepted at 762 code lines; later overruns are split first"; § "R-223", § "R-225" (what the budget counts).
+- **What:** the implementer built the task before counting (on local commits bd6be2d and ce8e559, not pushed). Added
+  lines, less `negative_control!` blocks: `schema.rs` 255, `check.rs` 232, `gen/mod.rs` 100, the ledger `codegen`
+  binary 27, `lib.rs` 12, `Cargo.toml` 9, the fixture ledger 168, `layout_static.rs` 101, `metadata_gate.rs` 56, xtask
+  38, qa's `support/qa_m0_01.rs` 5: **1003**.
+- **Also raised:** `cargo xtask codegen` needs the ledger, and §7.1 has no `xtask` → `ledger` edge ("Every other
+  workspace edge is forbidden"); the implementer ran a new ledger binary through `cargo run` instead. And §3.8/§5 don't
+  spell out the range ends or the width rule, which the implementer applied.
+- **Options seen:** split in two — (a) schema, metadata gate, generator driver, `cargo xtask codegen` and REQ-GEN-024's
+  definition (~560 with the fixture), (b) the static check and its tests (~440); accept at ~1000; compact to ~700,
+  then split.
+- **Needed:** a ruling on the size, the edge and the rules.
+- **Ruling:** R-240, R-241, R-242 (decisions.md). Closed in TASK-M0-07 and TASK-M0-35.

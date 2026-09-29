@@ -1993,3 +1993,39 @@ pressure is high; wait for running work to finish. Log swap alongside free disk 
 
 *Applied:* before each dispatch the orchestrator reads `sysctl vm.swapusage` and `memory_pressure`, alongside free
 disk. Process only.
+
+## R-240 — TASK-M0-07 is split in two *(closes RQ-151)*
+*29 Sep 2026 · applied in TASK-M0-07 and TASK-M0-35*
+
+Asked in RQ-151, the human chose "Split in two": (a) the schema, the metadata gate, the generator driver, `cargo xtask
+codegen` and REQ-GEN-024's definition; (b) the static layout check and its tests.
+
+*Applied:* TASK-M0-07 keeps (a) and closes REQ-GEN-002 and REQ-GEN-024. TASK-M0-35 (new) takes (b), closes REQ-GEN-003
+and REQ-GEN-028 (R-242), and depends on TASK-M0-07; its code is already written, and it opens once TASK-M0-07 merges.
+*Applied per R-204 (sequencing):* TASK-M0-09 depends on TASK-M0-35 too, since its word buffer is the first real layout
+the static check guards; TASK-M0-08 (the constants register) needs only TASK-M0-07. *Applied per R-204:* TASK-M0-07's
+reviewers gain `physics`, which REQ-GEN-024 and its acceptance line require ("approved by the physics reviewer").
+
+## R-241 — `xtask` may depend on `ledger`, for `cargo xtask codegen` *(amends systems_architecture §7.1)*
+*29 Sep 2026 · applied in systems_architecture §7.1 and TASK-M0-07*
+
+Asked whether `cargo xtask codegen` should run a ledger binary through `cargo run` (no new edge) or depend on `ledger`,
+the human chose "Add xtask → ledger edge".
+
+*Applied:* §7.1's allowed-edge table gains `xtask` → `ledger` (a normal dependency), realising `cargo xtask codegen`.
+`cargo xtask deps`'s edge table gains it in TASK-M0-07, and the ledger `codegen` binary is dropped. REQ-SYS-004 cites
+this ruling. `ledger` still depends on nothing.
+
+## R-242 — The layout check's range and width rules *(closes RQ-151's rules)*
+*29 Sep 2026 · applied in TASK-M0-07 and TASK-M0-35*
+
+Asked whether to accept the rules the implementer applied where §3.8 and §5 are silent, the human chose "Accept all,
+plus: the width check also covers signed integer fields if the ledger has any (min ≥ −2^(w−1), max ≤ 2^(w−1) − 1), and a
+field type the check doesn't recognise fails rather than passing unchecked."
+
+*Applied:* accepted — a `Range` end is closed, open or unbounded; the width check on an unsigned (u-bits) field requires
+the least value ≥ 0 and the greatest ≤ 2^w − 1, and an unbounded end fits no width; an entry with no name is reported
+as "entry #i (unnamed)"; `ledger::layout()` stays empty until the §3 entries are transcribed. Added — a signed integer
+field of width w requires the least value ≥ −2^(w−1) and the greatest ≤ 2^(w−1) − 1; a field type the width check does
+not recognise fails the check, naming the field and its type. REQ-GEN-028 (new) carries the width rules, closed by
+TASK-M0-35; the range ends and the unnamed-entry report are TASK-M0-07's.

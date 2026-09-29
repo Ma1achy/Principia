@@ -498,3 +498,7 @@
   section: R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high
   reason: informative only
   note: process ruling; a memory limit on dispatch (recorded in CLAUDE.md)
+- file: decisions.md
+  section: R-240 — TASK-M0-07 is split in two *(closes RQ-151)*
+  reason: informative only
+  note: plan ruling; a task split (recorded in plan/tasks.yaml, TASK-M0-07 and TASK-M0-35)
