@@ -15328,10 +15328,13 @@
     section: 3. Standing rules earned in this sequence
   - file: docs/read_first/principia_00_philosophy.md
     section: 4.2 Every constant must be derived or absent
+  - file: decisions.md
+    section: "R-250 — A threshold must sit between populations of its own distribution; no numeric percentile bound"
   verify:
     method: review checklist
-    detail: "Every threshold constant in the ledger cites the distribution or gap it was set from; regression: an absolute cutoff lying inside the bound population's range (closure 2e-3) or at an extreme percentile (tau_display at the 0.4th percentile) fails review."
-  rulings: []
+    detail: "Every threshold constant in the ledger cites the distribution or gap it was set from, and is finite and sits between populations of its own distribution, with at least one population wholly below and one wholly above; its percentile is derived from the populations' counts (R-250). Regression: an absolute cutoff lying inside the bound population's range (closure 2e-3), or a threshold inside its own distribution (tau_display at the 0.4th percentile), fails, at whatever percentile; there is no numeric percentile bound (R-250)."
+  rulings:
+  - R-250
   milestone: M0
   note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. — A THRESHOLD ON A QUANTITY SPANNING DECADES MUST BE RELATIVE."
 - id: REQ-VAL-007

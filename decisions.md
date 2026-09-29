@@ -2100,3 +2100,17 @@ Asked whether to split TASK-M0-08 (built at 756 counted lines against ~300 estim
 *Applied per R-245 (mechanical):* the task file's register list drops "the diffusion sentinel −1.0", and the two
 remaining places that still called an invalid diffusion fit a sentinel (generation-root §3.4's Welford note,
 simstate_payload's `n < 2` guard) now say NaN, which R-245's list missed.
+
+## R-250 — A threshold must sit between populations of its own distribution; no numeric percentile bound
+*29 Sep 2026 · applied in TASK-M0-08*
+
+Asked how to read REQ-VAL-006's "an extreme percentile (tau_display at the 0.4th percentile) fails", on which qa (a
+numeric bound) and physics (a structural rule, from pitfalls §3's "the same defect as `tau_display` at the 0.4th
+percentile" and philosophy §4.2's "the 0.4th percentile of its own distribution") disagreed on PR #47, the human chose
+"Structural (physics)": the threshold must be finite and sit between populations of its own distribution, with at least
+one population wholly below and one wholly above; its percentile is derived from the populations' counts. A threshold
+inside any population fails, at whatever percentile. There is no numeric bound.
+
+*Applied:* REQ-VAL-006's verify detail is reworded to match. qa's test in PR #47 that encodes the numeric reading
+(`qa_constants_threshold_tau_display_at_the_0_4th_percentile_fails_whatever_its_populations`) is rewritten by the
+implementer to the structural reading, under a one-round exception, with qa reviewing.
