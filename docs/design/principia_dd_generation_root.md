@@ -126,7 +126,7 @@ The word lives here, not in `SimState`. Specification:
 > // READ-TIME (any playhead):
 > slope = C_ty / C_tt               // = Cov(t,y)/Var(t); diffusion coefficient
 > ```
-> Per-sample state: **`mean_y, C_ty`** (2 × f32). The time-only moments `n, mean_t, C_tt` are **DERIVED, not a shared mutable global** — WGSL has no dispatch-wide barrier to publish one safely mid-dispatch. For uniform sampling they are closed-form: `n = step_count`, `mean_t = (n+1)h/2`, `C_tt(n) = h²·n(n²−1)/12`. The per-sample covariance update uses the **old-mean** time deviation `δ_t = 0.5·n·h` (not `t − mean_t` post-insertion, which is wrong). Slope `C_ty/C_tt(n)`, invalid (sentinel) for `n<2`. Must stay f32 (means/co-moments precision-sensitive). (Full detail: payload spec §4.)
+> Per-sample state: **`mean_y, C_ty`** (2 × f32). The time-only moments `n, mean_t, C_tt` are **DERIVED, not a shared mutable global** — WGSL has no dispatch-wide barrier to publish one safely mid-dispatch. For uniform sampling they are closed-form: `n = step_count`, `mean_t = (n+1)h/2`, `C_tt(n) = h²·n(n²−1)/12`. The per-sample covariance update uses the **old-mean** time deviation `δ_t = 0.5·n·h` (not `t − mean_t` post-insertion, which is wrong). Slope `C_ty/C_tt(n)`, invalid for `n<2` (reads NaN by the predicate `n ≥ 2`, R-245). Must stay f32 (means/co-moments precision-sensitive). (Full detail: payload spec §4.)
 
 | Field | Scale | Range / notes |
 |---|---|---|

@@ -2090,3 +2090,13 @@ f16 field" is read as an `f16-pair` field wherever it sits, and each `f16-pair` 
 per component, §3.8); `fixed16` is not binary16, so the f16 range rule doesn't apply to it. REQ-GEN-028 carries the
 rules, closed by TASK-M0-35. TASK-M0-09 gains a note: `d_min` (`f16`, range "> 0", §3.4) has an unbounded upper end,
 so its entry must state its overflow behaviour or bound its range.
+
+## R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR
+*29 Sep 2026 · applied in TASK-M0-08*
+
+Asked whether to split TASK-M0-08 (built at 756 counted lines against ~300 estimated) into the register with its gate
+(~420) and `cargo xtask lint constants` (~336), or to accept it whole, the human chose "Accept at 756".
+
+*Applied per R-245 (mechanical):* the task file's register list drops "the diffusion sentinel −1.0", and the two
+remaining places that still called an invalid diffusion fit a sentinel (generation-root §3.4's Welford note,
+simstate_payload's `n < 2` guard) now say NaN, which R-245's list missed.
