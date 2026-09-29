@@ -194,7 +194,8 @@ pub fn name_wrong_panics(found: Vec<Finding>, wrong: &BTreeMap<String, String>) 
 /// A test's output can itself hold libtest's lines (a control that embeds a child's `cargo test` report), so a
 /// boundary is taken only where it is libtest's own, for the target being read: a header names a test that target
 /// reported `FAILED` and not yet given a header, and the closing list is a `failures:` line followed by exactly the
-/// names that target reported `FAILED`, sorted, then a blank line and `test result:`.
+/// names that target reported `FAILED`, sorted, then a blank line and `test result:`. A target's `FAILED` names are
+/// dropped at its `test result:` or, if it died before printing one, at the next target's `running <n> tests`.
 pub fn parse_outputs(stdout: &str) -> BTreeMap<String, Vec<String>> {
     let lines: Vec<&str> = stdout.lines().collect();
     let mut blocks: Vec<(&str, String)> = Vec::new();
@@ -215,7 +216,9 @@ pub fn parse_outputs(stdout: &str) -> BTreeMap<String, Vec<String>> {
                 pending = failed.clone();
                 in_outputs = true;
                 open = false;
-            } else if line.starts_with("test result:") {
+            } else if line.starts_with("test result:") || starts_target(line) {
+                // A target that dies mid-run (abort, stack overflow, signal) prints no `test result:`, so its
+                // `FAILED` names are dropped when the next target starts too.
                 failed.clear();
             }
             continue;
@@ -242,6 +245,16 @@ pub fn parse_outputs(stdout: &str) -> BTreeMap<String, Vec<String>> {
         found.entry(name.to_owned()).or_default().push(output);
     }
     found
+}
+
+/// Whether `line` is libtest's first line for a target: `running <n> test` or `running <n> tests`.
+fn starts_target(line: &str) -> bool {
+    line.strip_prefix("running ")
+        .and_then(|rest| {
+            rest.strip_suffix(" tests")
+                .or_else(|| rest.strip_suffix(" test"))
+        })
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// Whether `rest`, the lines after a `failures:` line, is libtest's closing list for a target whose failing tests are
