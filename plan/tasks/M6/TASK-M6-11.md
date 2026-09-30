@@ -1,7 +1,7 @@
 # TASK-M6-11 — Tile priority: P_tile, the pointer-centred P_focus, quad-relative relevance and baseline-first
 
 - **Milestone:** M6
-- **Closes:** REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090, REQ-SCHED-091, REQ-SCHED-092, REQ-SCHED-093
+- **Closes:** REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090, REQ-SCHED-091, REQ-SCHED-092, REQ-SCHED-093, REQ-SCHED-096
 - **Depends on:** TASK-M6-02, TASK-M5-13, TASK-M5-24
 - **Needs (earlier milestones):** REQ-SCHED-019, REQ-SCHED-023, REQ-SCHED-074, REQ-DEC-031, REQ-CHART-038
 - **Reviewers:** code, qa, physics, perf
@@ -25,6 +25,7 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+- `decisions.md` § "R-112 — The archived briefs' standing parts are superseded *(closes RQ-81)*"
 
 ## Deliverables
 - Doc change: `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy" — the reconciled off-screen rule and how order in view enters `P_tile` (REQ-SCHED-080); `P_focus`'s decay law (REQ-SCHED-081), any constant it introduces raised as a calibration (R-71).
@@ -32,7 +33,7 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - Baseline-first gate in the dispatcher: refinement jobs held until the baseline cover is complete.
 - `cargo xtask gate relevance-deep` (depth ≥ 40, f64 reference ordering).
 - Doc change: `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy" — `P_visible`'s formula over a quad's visible part (REQ-SCHED-093).
-- `crates/engine/src/sched/frontier_order.rs`: the persistent frontier, maintained incrementally, with the from-scratch rebuild kept as the reference and run every N frames as a cross-check (R-257).
+- `crates/engine/src/sched/frontier_order.rs`: the persistent frontier, maintained incrementally, with the from-scratch rebuild kept as the reference and run every N frames as a cross-check (R-257). Its priority queue reprioritises an entry already queued, by an indexed heap (a `quad_id → heap_position` map) or by priority bucketing; this task chooses which (REQ-SCHED-096).
 
 ## Acceptance tests
 - `cargo test -p engine baseline_first_nav` (proptest) — random navigations: assert no refinement dispatch precedes baseline completion (REQ-SCHED-056).
@@ -44,6 +45,7 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - Review checklist (physics) — the doc states the decay law; any constant it introduces is recorded as a calibration (R-71); the doc change is merged with the physics reviewer's approval (REQ-SCHED-081).
 - Proposal: the P_focus decay constants with scripted-hover evidence; the human confirms them at the M6 gate (REQ-SCHED-090).
 - `cargo test -p engine frontier_cross_check` — on a scripted camera path the incremental frontier matches the from-scratch rebuild at every cross-check; a stale priority injected into the incremental frontier makes the cross-check fail; the from-scratch path is kept and callable (REQ-SCHED-091).
+- `cargo test -p engine frontier_reprioritise` — a quad already queued has its priority changed, and the queue pops it in its new order relative to the other queued quads (REQ-SCHED-096).
 - Proposal: N, the frames between cross-checks, with the from-scratch rebuild's cost per cross-check on scripted camera paths; the human confirms it at the M6 gate and it is recorded in decisions.md (REQ-SCHED-092).
 - Review checklist (physics) — Part 6 gives `P_visible`'s formula over the quad's visible part, so a quad half off-screen ranks on its on-screen part; the doc change is merged with the physics reviewer's approval (REQ-SCHED-093).
 
@@ -51,3 +53,4 @@ The camera is wired into scheduler priority (R-44): `P_tile = w_v·P_visible + w
 - Definitions written: REQ-SCHED-080, REQ-SCHED-081. A decay constant introduced by REQ-SCHED-081 is REQ-SCHED-090 (R-71), not chosen here.
 - Closes, for gaps the corpus leaves open: REQ-SCHED-090 (R-71 calibration) (classification accepted by R-132).
 - R-257 (closes RQ-157) ported the persistent frontier and ranking on a quad's visible part into Part 6: REQ-SCHED-091, REQ-SCHED-092 (R-71 calibration), REQ-SCHED-093 (R-72 definition).
+- TASK-M0-02 ported, under R-112, the structure-criterion brief's point that a plain binary heap can't reprioritise a queued entry into Part 6: REQ-SCHED-096. The indexed heap or priority bucketing is this task's choice.

@@ -248,12 +248,12 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The refinement policy's open measurements.
 
 <!-- gate:M6 -->
-**Exit gate — 139 requirements** (and every earlier gate still green):
+**Exit gate — 140 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
-- SCHED (28): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…095
+- SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
 - GUI (6): REQ-GUI-010…015
 - TOOL (4): REQ-TOOL-055…058

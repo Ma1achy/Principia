@@ -7853,6 +7853,21 @@
   - R-71
   - R-257
   milestone: M6
+- id: REQ-SCHED-096
+  area: SCHED
+  statement: "The refinement frontier's priority queue must support reprioritising an entry already queued, by an indexed heap (a `quad_id → heap_position` map, so a changed entry can be sifted) or by priority bucketing (re-bucketing only when an entry crosses a band boundary); a plain binary heap does not do it."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-112 — The archived briefs' standing parts are superseded *(closes RQ-81)*"
+  verify:
+    method: unit test
+    detail: "a quad already in the frontier has its priority changed, and the queue pops it in its new order relative to the other queued quads"
+  rulings:
+  - R-112
+  milestone: M6
+  note: Which of the two structures is built is TASK-M6-11's choice.
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
