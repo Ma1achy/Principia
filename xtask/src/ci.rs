@@ -18,6 +18,11 @@ pub struct Runner {
 /// The registered runners, in the order `cargo xtask ci` runs them.
 pub const RUNNERS: &[Runner] = &[
     Runner {
+        name: "plan-check",
+        run: plan_check,
+        list: plan_check,
+    },
+    Runner {
         name: "controls",
         run: controls,
         list: controls_list,
@@ -42,6 +47,11 @@ fn gate() -> Result<(), String> {
 /// `cargo xtask gate --list` on this workspace: the gates listed, none run (R-235).
 fn gate_list() -> Result<(), String> {
     crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::List)
+}
+
+/// `cargo xtask plan-check` on this repo; it runs no control, so it is its own listing-only form (R-235).
+fn plan_check() -> Result<(), String> {
+    crate::plan_check::run(&crate::plan_check::repo_root())
 }
 
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).

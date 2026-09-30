@@ -7,7 +7,8 @@ Fails if:
   - a task closes a requirement of a later milestone than its own (the requirement's gate would name a
     requirement no task in or before that milestone closes);
   - a milestone's exit gate names a requirement no task in or before that milestone closes;
-  - any reference (task References, requirement sources) points at a file or section that doesn't exist;
+  - any reference (task References, requirement sources) points at a file or section that doesn't exist, or at an
+    archived file (docs/archive/ or an ARCHIVE_ file), which is reported as such (R-112, R-184);
   - a pitfall id doesn't name a section of the pitfalls file;
   - the dependency graph names an unknown task, depends forward across milestones, or has a cycle;
   - tasks.yaml and the task files disagree, or a needed requirement's task isn't reachable through depends_on;
@@ -33,6 +34,11 @@ MILESTONES = [f"M{i}" for i in range(9)]
 CITE = re.compile(r"`([^`\s]+\.md)` § \"([^\"]+)\"")
 REF = re.compile(r"^- `([^`]+)` § \"(.*)\"\s*$")
 FIELD = re.compile(r"^- \*\*([^*]+):\*\* (.*)$")
+
+
+def archived(path):
+    """An archived file: under docs/archive/, or an ARCHIVE_ file anywhere (INDEX § "Archived"; R-112)."""
+    return path.startswith("docs/archive/") or "ARCHIVE_" in os.path.basename(path)
 
 
 def ids(text):
@@ -106,7 +112,9 @@ def main():
     # requirement sources resolve (coverage.py checks them too; repeated here so this script stands alone)
     for r in reqs:
         for s in r["source"]:
-            if s["file"] not in index or s["section"] not in index[s["file"]]:
+            if archived(s["file"]):
+                errors.append(f"{r['id']}: source cites archived file {s['file']}")
+            elif s["file"] not in index or s["section"] not in index[s["file"]]:
                 errors.append(f"{r['id']}: source {s['file']} § {s['section']!r} doesn't exist")
 
     closed_by = {}
@@ -183,6 +191,8 @@ def main():
         for m in refs:
             if isinstance(m, str):
                 errors.append(f"{path}: reference not in the form `file` § \"section\": {m}")
+            elif archived(m.group(1)):
+                errors.append(f"{path}: reference cites archived file {m.group(1)}")
             elif m.group(1) not in index or m.group(2) not in index[m.group(1)]:
                 errors.append(f"{path}: reference {m.group(1)} § {m.group(2)!r} doesn't exist")
         for rid in t.get("requirements") or []:

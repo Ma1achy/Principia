@@ -1,12 +1,12 @@
 # TASK-M3-08 — Heggie and logH occupants, and the visible re-registration count
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084
+- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171
 - **Depends on:** TASK-M3-07
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-4, PIT-4.3, PIT-4.4
-- **Size:** ~450 lines
+- **Size:** ~520 lines
 
 ## Goal
 The regularisation slot is complete: Heggie 1974 global regularisation (three relative vectors, no reference body, never re-registers) is the default, and logH (time transformation only) is the no-chart arm. The re-registration count is visible downstream, and integrator contract Part 2b defines where it lives — a `re_registrations` profile field, a per-trajectory payload count, or both — with any payload field added to the ledger as a schema change. The two-body radial collision gate is kept as the regularisation test.
@@ -22,6 +22,9 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - `decisions.md` § "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
 - `decisions.md` § "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
+- `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not"
+- `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/kernel/src/regularisation/{heggie,logh}.rs` — transcribed physics layers; logH carries its TTL time mode, the reversible occupant (R-162); Heggie's time transformation defaults to Eq. 22 at n = 3/2, with Eq. 20 selectable (R-161).
@@ -29,15 +32,19 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - Default occupant config = Heggie; `none`, AZ, logH selectable.
 - Doc change: `docs/contracts/principia_integrator_contract.md` § "The profile gains a field" — where the re-registration count lives (definition, R-72); if a payload field: the ledger row in `crates/ledger`, its generated accessors and the schema-version change.
 - `fixtures/gates/radial-collision/` — the two-body radial collision case.
+- `cargo xtask gate hamiltonian-fd`: each occupant's analytic derivatives against a finite difference of its Hamiltonian (R-257).
 
 ## Acceptance tests
 - `cargo test -p kernel regularisation_default` — each stepper composes with each regularisation; the default config selects Heggie, with Eq. 22 at n = 3/2 as its time transformation and Eq. 20 selectable (R-161) (REQ-INT-006).
 - Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate (REQ-INT-084).
 - Review (physics): a consumer can read, per method or per trajectory, how many sync-boundary re-registrations occurred (REQ-INT-018).
 - Part 2b states the choice; any payload field appears in the ledger with a schema-version change; physics reviewer approved (REQ-INT-073).
-- `cargo xtask gate radial-collision` — the radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11), run for the default occupant and AZ (REQ-VAL-045).
+- `cargo xtask gate radial-collision` — the radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11), run for the default occupant and AZ; the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through `d_min < 1e-10` with `|dE/E| < 1e-12` (REQ-VAL-045).
+- `cargo xtask gate hamiltonian-fd` — for each occupant, the analytic derivatives match the finite-differenced Hamiltonian within REQ-VAL-171's step and tolerance over random states; a sign-flipped derivative fails (REQ-VAL-170).
+- `cargo xtask gate hamiltonian-fd --propose` — the step and tolerance with the measured discrepancy per occupant; the human confirms them at the M3 gate and they are recorded in decisions.md (REQ-VAL-171).
 
 ## Notes
 - *Was: "Gap: Heggie's and logH's equations of motion and their step control are not in the corpus; REQ-INT-016 says they are transcribed from prin-rs, which is not in this repository."* RQ-102 ruled: R-159 imports the prin-rs reference set (`docs/reference/prin-rs`, reference, not authority); R-160 has this task transcribe the equations into Part 2b (REQ-INT-084), physics-reviewed and confirmed at the M3 gate. `FINDINGS.md:96`'s Eq. 20 statement is a documentation error; the default is Eq. 22 at n = 3/2 (R-161). TTL is built, validated and loses on accuracy in prin-rs, a prior finding (R-162).
 - The Heggie-vs-AZ gate (REQ-INT-051) and the logH falsification (REQ-VAL-115) are TASK-M3-32's, after the comparison harness.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-073; and, under R-160, REQ-INT-084.
+- R-257 (closes RQ-157) ported kernel-build §5's gates with their values into dd_validation_orbits §2: the radial collision gate reads `d_min < 1e-10` with `|dE/E| < 1e-12` (REQ-VAL-045); the finite-difference Hamiltonian check is REQ-VAL-170, its step and tolerance REQ-VAL-171 (R-71 calibration).
