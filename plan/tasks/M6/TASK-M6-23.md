@@ -1,12 +1,12 @@
 # TASK-M6-23 — The first refine milestone's measurements: depth past level 6, tau, merging under motion, zoom regression
 
 - **Milestone:** M6
-- **Closes:** REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050
+- **Closes:** REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050, REQ-SCHED-094, REQ-SCHED-095
 - **Depends on:** TASK-M6-06, TASK-M6-12, TASK-M6-17, TASK-M6-20, TASK-M5-23
 - **Needs (earlier milestones):** REQ-VAL-081, REQ-TOOL-050, REQ-RENDER-046
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-6, PIT-10, PIT-3
-- **Size:** ~400 lines
+- **Size:** ~440 lines
 
 ## Goal
 The refinement policy's open measurements are taken and recorded at this, the first refine milestone (R-49): depth beyond level 6, a calibrated grid with `tau` set as its own threshold (never `eps × k`), and merging under real camera motion. The zoom regression is benchmarked (in-view texel size flat, `max_depth` tracking the camera, quad count far below the `alpha_lo = 0` degeneration), and checkerboard, coarser refinement during motion and E reduction under motion are confirmed to compose.
@@ -19,12 +19,15 @@ The refinement policy's open measurements are taken and recorded at this, the fi
 - `docs/design/principia_dd_refinement_policy.md` § "0.1 In view, the camera decides depth and the criterion decides ORDER"
 - `docs/contracts/principia_checkerboard_contract.md` § "8. Build-time settles (measure on the real system)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
+- `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 
 ## Deliverables
 - `cargo xtask bench refine-open-measurements` (depth > 6, the charts × horizons × eps grid with `tau`, merging on scripted camera paths), results recorded under `fixtures/bench/results/`.
 - `cargo xtask bench zoom-regression` on `config_stability` and `preset_shape_h1`.
 - `cargo xtask bench motion-composition` (checkerboard + motion floor + E gating, each alone and together).
 - Config check that `tau` has no `eps`-derived default.
+- `cargo xtask bench zoom-out-recompute`: the count of newly computed quads after a zoom-out on scripted camera paths (R-257).
 
 ## Acceptance tests
 - `cargo xtask bench refine-open-measurements` — a recorded results entry covers each of the three measurements (REQ-VAL-092).
@@ -33,8 +36,11 @@ The refinement policy's open measurements are taken and recorded at this, the fi
 - `cargo xtask bench motion-composition` — motion trace with all three active: reconstruction error and visual quality recorded against each alone (REQ-VAL-085).
 - Proposal: the composed-lever degradation bound with the motion-trace evidence; the human confirms it at the M6 gate (REQ-VAL-142).
 - Proposal: tau with the calibrated-grid evidence; the human confirms it at the M6 gate (REQ-REF-050).
+- `cargo xtask bench zoom-out-recompute` — scripted zoom-in then zoom-out over the same region: the quads newly computed during the zoom-out are within the calibrated tolerance (REQ-SCHED-095) (REQ-SCHED-094).
+- Proposal: the zoom-out tolerance with the measured zoom-out counts on scripted camera paths; the human confirms it at the M6 gate and it is recorded in decisions.md (REQ-SCHED-095).
 
 ## Notes
 - REQ-REF-032's `tau` value is a measured setting; it goes to the human at the M6 gate with the other recorded values.
 - REQ-VAL-085 gives no threshold for "without over-degrading" — see Gaps.
 - Closes, for gaps the corpus leaves open: REQ-VAL-142 (R-71 calibration), REQ-REF-050 (R-71 calibration) (classification accepted by R-132).
+- R-257 (closes RQ-157) ported "zoom-out recomputes ≈ 0 quads" into scheduler Part 6 as a benchmark: REQ-SCHED-094, with its tolerance REQ-SCHED-095 (R-71 calibration).

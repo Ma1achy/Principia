@@ -30,6 +30,9 @@ Commands:
                                   taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
                                   .html; not archive/ or reference/, nor passages in `retired-terms` markers),
                                   naming file, line and term (R-111, R-259)
+  plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
+                                  milestones.py and reviewer_lists.py with --check), streaming its output and
+                                  exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
                                   make mandatory that is missing or empty, and each validation meter or
                                   discriminator line with no statement (R-180); reads the pull_request event JSON
@@ -50,6 +53,17 @@ fn main() -> ExitCode {
         ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
+        }
+        ["plan-check"] => {
+            return match xtask::plan_check::status(&xtask::plan_check::repo_root()) {
+                Ok(status) => {
+                    ExitCode::from(status.code().map_or(1, |code| code.clamp(0, 255) as u8))
+                }
+                Err(message) => {
+                    eprintln!("xtask plan-check: {message}");
+                    ExitCode::FAILURE
+                }
+            };
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),

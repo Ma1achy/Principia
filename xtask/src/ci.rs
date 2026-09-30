@@ -18,6 +18,11 @@ pub struct Runner {
 /// The registered runners, in the order `cargo xtask ci` runs them.
 pub const RUNNERS: &[Runner] = &[
     Runner {
+        name: "plan-check",
+        run: plan_check,
+        list: plan_check,
+    },
+    Runner {
         name: "controls",
         run: controls,
         list: controls_list,
@@ -33,6 +38,11 @@ pub const RUNNERS: &[Runner] = &[
         list: lint_vocab,
     },
 ];
+
+/// `cargo xtask plan-check` on this repo; it runs no control, so it is its own listing-only form (R-235).
+fn plan_check() -> Result<(), String> {
+    crate::plan_check::run(&crate::plan_check::repo_root())
+}
 
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_constants() -> Result<(), String> {
