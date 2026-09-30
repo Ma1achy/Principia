@@ -94,12 +94,13 @@ impl Image {
     /// Reads an 8-bit RGB or RGBA PNG; alpha is dropped.
     pub fn read_png(path: &Path) -> Result<Image, String> {
         let file = fs::File::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut decoder = png::Decoder::new(file);
+        let mut decoder = png::Decoder::new(std::io::BufReader::new(file));
         decoder.set_transformations(png::Transformations::EXPAND);
         let mut reader = decoder
             .read_info()
             .map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut buf = vec![0; reader.output_buffer_size()];
+        // png 0.18 gives no size for an image too large to address; the empty buffer then fails `next_frame`.
+        let mut buf = vec![0; reader.output_buffer_size().unwrap_or(0)];
         let info = reader
             .next_frame(&mut buf)
             .map_err(|e| format!("{}: {e}", path.display()))?;

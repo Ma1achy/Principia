@@ -11,6 +11,7 @@ pub mod lint_constants;
 pub mod plan_check;
 pub mod pr_check;
 pub mod reviews_check;
+pub mod screenshot;
 
 use std::path::{Path, PathBuf};
 
