@@ -3,7 +3,7 @@
 //!
 //! - REQ-VAL-148: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, sharded across
 //!   parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149) ... The job must fail
-//!   on any surviving mutant not in a checked-in list of equivalent mutants". verify (code): "`ci.yml` runs `cargo
+//!   on any surviving mutant not in a checked-in list of equivalent mutants". verify (code): "`mutants.yml` runs `cargo
 //!   mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with
 //!   its own timeout, and a shard cut off by its timeout fails the job (R-302)".
 //! - REQ-VAL-149: "each shard runs under that limit".
@@ -33,8 +33,8 @@ fn root() -> PathBuf {
         .to_path_buf()
 }
 
-fn ci_yml() -> String {
-    std::fs::read_to_string(root().join(".github/workflows/ci.yml")).expect("ci.yml")
+fn mutants_yml() -> String {
+    std::fs::read_to_string(root().join(".github/workflows/mutants.yml")).expect("mutants.yml")
 }
 
 /// A fresh directory for one call: tests and their controls run in parallel, so each call gets its own.
@@ -218,14 +218,14 @@ fn every_shard_runs(yml: &str) {
 
 #[test]
 fn qa23s_every_shard_of_n_runs_once() {
-    every_shard_runs(&ci_yml());
+    every_shard_runs(&mutants_yml());
 }
 
 negative_control!(
     qa23s_every_shard_of_n_runs_once,
     "the last shard left out of the matrix",
     expected = "qa23s: the matrix does not run each shard of 0..8 once",
-    every_shard_runs(&ci_yml().replace(
+    every_shard_runs(&mutants_yml().replace(
         "shard: [0, 1, 2, 3, 4, 5, 6, 7]",
         "shard: [0, 1, 2, 3, 4, 5, 6]"
     ))
@@ -237,7 +237,7 @@ mod counted_from_one {
         qa23s_every_shard_of_n_runs_once,
         "shards counted 1..=n, so shard 0 never runs",
         expected = "qa23s: the matrix does not run each shard of 0..8 once",
-        every_shard_runs(&ci_yml().replace(
+        every_shard_runs(&mutants_yml().replace(
             "shard: [0, 1, 2, 3, 4, 5, 6, 7]",
             "shard: [1, 2, 3, 4, 5, 6, 7, 8]"
         ))
@@ -288,14 +288,14 @@ fn cut_off_fails(yml: &str) {
 
 #[test]
 fn qa23s_a_cut_off_shard_fails_visibly() {
-    cut_off_fails(&ci_yml());
+    cut_off_fails(&mutants_yml());
 }
 
 negative_control!(
     qa23s_a_cut_off_shard_fails_visibly,
     "the shard step allowed to fail",
     expected = "qa23s: a failed or cut-off shard can pass",
-    cut_off_fails(&ci_yml().replacen(
+    cut_off_fails(&mutants_yml().replacen(
         "        timeout-minutes: 120\n",
         "        timeout-minutes: 120\n        continue-on-error: true\n",
         1
@@ -308,7 +308,7 @@ mod no_limit {
         qa23s_a_cut_off_shard_fails_visibly,
         "the shard step without its limit",
         expected = "qa23s: the shard's cargo mutants step has no limit of its own",
-        cut_off_fails(&ci_yml().replacen("        timeout-minutes: 120\n", "", 1))
+        cut_off_fails(&mutants_yml().replacen("        timeout-minutes: 120\n", "", 1))
     );
 }
 
@@ -379,7 +379,7 @@ fn untested_shard_fails(script: &str) {
 }
 
 fn shard_script() -> String {
-    script(&shard_step(&job(&ci_yml(), "mutants")))
+    script(&shard_step(&job(&mutants_yml(), "mutants")))
 }
 
 #[test]
@@ -472,7 +472,7 @@ fn aggregate_covers_every_shard(script: &str, n: u32) {
 }
 
 fn aggregate_script() -> String {
-    let lines = job(&ci_yml(), "mutants-check");
+    let lines = job(&mutants_yml(), "mutants-check");
     let step = steps(&lines)
         .into_iter()
         .find(|s| s.iter().any(|l| l.contains("cargo xtask mutants-check")))
@@ -482,7 +482,7 @@ fn aggregate_script() -> String {
 
 #[test]
 fn qa23s_the_aggregate_covers_every_shard() {
-    aggregate_covers_every_shard(&aggregate_script(), shards(&ci_yml()).0);
+    aggregate_covers_every_shard(&aggregate_script(), shards(&mutants_yml()).0);
 }
 
 negative_control!(
@@ -494,7 +494,7 @@ negative_control!(
             "if [ \"${{ needs.mutants.result }}\" != success ]; then",
             "if [ \"${{ needs.mutants.result }}\" = never ]; then"
         ),
-        shards(&ci_yml()).0
+        shards(&mutants_yml()).0
     )
 );
 
@@ -506,7 +506,7 @@ mod first_shard_only {
         expected = "qa23s: the aggregate missed a survivor in some shard",
         aggregate_covers_every_shard(
             &aggregate_script().replace("mutants-report-shard-*; do", "mutants-report-shard-0; do"),
-            shards(&ci_yml()).0
+            shards(&mutants_yml()).0
         )
     );
 }
@@ -539,14 +539,14 @@ fn aggregate_runs_after_every_shard(yml: &str) {
 
 #[test]
 fn qa23s_the_aggregate_runs_after_every_shard() {
-    aggregate_runs_after_every_shard(&ci_yml());
+    aggregate_runs_after_every_shard(&mutants_yml());
 }
 
 negative_control!(
     qa23s_the_aggregate_runs_after_every_shard,
     "an aggregate skipped once a shard has failed",
     expected = "qa23s: the aggregate is skipped when a shard fails",
-    aggregate_runs_after_every_shard(&ci_yml().replace(
+    aggregate_runs_after_every_shard(&mutants_yml().replace(
         "if: always() && github.event_name == 'pull_request'",
         "if: github.event_name == 'pull_request'"
     ))

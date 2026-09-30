@@ -5,8 +5,9 @@
 //!   CI, sharded across parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149),
 //!   excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing ... The job must fail on
 //!   any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line
-//!   justification". verify: "`ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events as
-//!   a matrix of n shards ... each exclusion names which of R-196's three categories it falls in".
+//!   justification". verify: "the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on
+//!   pull_request events as a matrix of n shards ... each exclusion names which of R-196's three categories it falls
+//!   in". (R-305 moved the job from `ci.yml` into `mutants.yml`, which only pull_request runs.)
 //! - REQ-VAL-149 (as reworded by R-302): "each shard runs under that limit, marked provisional until the human
 //!   confirms both at the M0 gate". The `mutants` job below is the matrix job, so its limit is each shard's; the
 //!   sharding itself (every shard runs, a cut-off shard fails, the aggregate reads every shard) is tested in
@@ -44,7 +45,7 @@ fn read(rel: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// ci.yml: the job, its trigger, its diff against the base, its report and its time limit.
+// mutants.yml: the job, its trigger, its diff against the base, its report and its time limit.
 
 /// The lines of job `name` in a workflow's text: from `  <name>:` to the next job key at the same indent.
 fn job<'a>(yml: &'a str, name: &str) -> Vec<&'a str> {
@@ -106,14 +107,14 @@ fn checks_job(yml: &str) {
 
 #[test]
 fn qa23_mutants_job_runs_in_diff_against_the_base_on_pull_requests() {
-    checks_job(&read(".github/workflows/ci.yml"));
+    checks_job(&read(".github/workflows/mutants.yml"));
 }
 
 negative_control!(
     qa23_mutants_job_runs_in_diff_against_the_base_on_pull_requests,
     "cargo mutants pointed at a file other than the PR's diff",
     expected = "qa23: the job's cargo mutants does not read the PR's diff",
-    checks_job(&read(".github/workflows/ci.yml").replace(
+    checks_job(&read(".github/workflows/mutants.yml").replace(
         "--in-diff \"$RUNNER_TEMP/pr.diff\"",
         "--in-diff \"$RUNNER_TEMP/other.diff\""
     ))
@@ -145,7 +146,7 @@ const LIMITED: &str = "on:\n  pull_request:\njobs:\n  mutants:\n    runs-on: ubu
 #[test]
 fn qa23_mutants_job_runs_under_the_provisional_time_limit() {
     under_limit(LIMITED);
-    under_limit(&read(".github/workflows/ci.yml"));
+    under_limit(&read(".github/workflows/mutants.yml"));
 }
 
 negative_control!(
