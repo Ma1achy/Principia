@@ -1587,6 +1587,10 @@ Standing rule, "so this doesn't recur":
 *Recorded before R-196, which was given earlier and is recorded with TASK-M0-04.*
 
 ## R-196 — Mutation testing joins the QA gate
+*Amended by R-302.*
+*Still in force: per PR, `cargo mutants --in-diff` on the changed code, sharded across parallel CI jobs under R-302;
+nightly, a full run written as a report; every surviving mutant in a PR's diff is a qa finding; the three exclusions;
+a REVIEW_QUEUE entry, not a dropped run, if per-PR runs prove impractical.*
 *26 Sep 2026 · given before R-197, recorded with TASK-M0-04*
 
 "mutation testing joins the QA gate.
@@ -2560,6 +2564,9 @@ The max step isn't 0, so under this ruling each golden case keeps one reference 
 one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
 
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
+*Amended by R-301.*
+*Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the
+pool between runs; the local pool ~5 GB. The `ci` wall-time target is R-301's.*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
 "#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
@@ -2982,6 +2989,9 @@ On those 94 columns the two values are one ulp apart, on opposite sides of x + 0
 one.
 
 ## R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
+*Amended by R-303.*
+*Still in force: all of it for native builds; in the browser build each stage's compiled mode is recorded as "unknown"
+and the Run window's control is disabled (R-303).*
 *30 Sep 2026 · applied in parity contract §4, render contract Part 3, caching contract Parts 1 and 2, gui_state_contract
 §2, dd_image_embedding §6, telemetry §5, render_gui_spec §G5 and colour_composition §6; REQ-INT-057; REQ-SYS-074 and
 REQ-TOOL-141 in TASK-M0-44 (new), REQ-COL-060 in TASK-M2-29 (new), REQ-SCHED-097 in TASK-M4-08, REQ-PERF-094 and
@@ -3074,3 +3084,55 @@ did not restore `N_sub`'s determinism (the cause was transcendental latitude, in
 (Tier B), whatever the math mode. The second is open: what the compute
 setting means in the browser build (M8), where WebGPU gives no fast-math control, isn't settled; it is asked in the PR. It is
 filed as RQ-177.
+
+## R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private
+*30 Sep 2026 · applied in TASK-M0-10 (PR #78)*
+
+"#78 items 11–13 accepted (R-300), with 13 amended: DminCounters' fields are private, with increment, read and reset
+methods; workers still share &DminCounters."
+
+*Applied:* PR #78's veto items 11 (`set_d_min_counted` removed) and 12 (`PackedA::pack(&self, counters)`, with
+`roundtrip_ctl` on a scratch pair) stand. Item 13 changes: `DminCounters`' two counters are private fields, reached
+through methods that increment, read and reset them. Workers still share one `&DminCounters` per frame, so R-294 holds:
+the caller owns the counters and no kernel static remains.
+
+## R-301 — TASK-M0-42's CI cost is accepted *(amends R-270)*
+*30 Sep 2026 · applied in TASK-M0-42 (PR #85) and REQ-SYS-073*
+
+"#85: the ~1.5 min cost is accepted (R-301). You may delete the old v0-rust-* Actions caches."
+
+*Applied:* R-285's caching (registry and fixture pool only, per-job keys) costs about 1.5 min per warm `ci` run, 8m56.5s
+before against 10m28.5s after, and about 1m42s per warm `xtask-ci` run, as PR #85 measured. That cost is accepted, and
+R-270's "no slower than before (~10.5 min)" gives way to it as the `ci` target: REQ-SYS-073's second acceptance is met by
+this ruling, not by a run under ~10.5 min. When this was recorded, GitHub had already evicted the old `v0-rust-*`
+caches. The ten `v0-rust-*` entries then present were all in current use by PR #65's branch, so none was deleted.
+
+## R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
+*30 Sep 2026 · applied in REQ-VAL-148, REQ-VAL-149 and TASK-M0-23 (PR #65)*
+
+"RQ-176, ahead of #65's proposal (R-302): per-PR mutation runs are sharded across parallel CI jobs (cargo mutants
+--shard k/n), each with a timeout, and the full nightly run stays the backstop. #65's proposal sets n and the
+per-shard limit, calibrated at the M0 gate."
+
+*Applied:* the per-PR `cargo mutants --in-diff` job runs as n parallel CI jobs, shard k of n each
+(`--shard k/n`), each under its own time limit. REQ-VAL-149's calibration becomes the pair: the shard count n and the
+per-shard time limit. PR #65 (TASK-M0-23) proposes both with its evidence, and the human confirms them at the M0 gate
+(R-182). The nightly full run (REQ-VAL-150) stays as it is, the backstop for anything a per-PR shard misses. RQ-176 was
+filed on PR #65's branch; it is archived here, unchanged, with this ruling, and PR #65 drops it from REVIEW_QUEUE.md when
+it merges main. RQ-176's question whether 180 minutes stands meanwhile is answered by the same proposal: #65 replaces
+its one provisional limit with n and the per-shard limit.
+
+## R-303 — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
+*30 Sep 2026 · applied in telemetry §5, render_gui_spec § "Run — from the top bar", REQ-GUI-163, REQ-VAL-116 and
+REQ-TOOL-143 (new) in TASK-M8-37*
+
+"RQ-177 (R-303): accepted as recommended. In the browser the compiled mode is recorded as "unknown", the Run window
+control is disabled, and runs are held to R-85's tolerances."
+
+*Applied:* RQ-177's option 1. In the browser build, where WebGPU offers no fast-math control and no passthrough, the
+session header records the compute setting as asked for, and the compiled mode of each stage (compute, vertex and
+fragment) as "unknown". The Run window shows the compute fast-math control disabled, with a note that the browser
+chooses the mode. Browser runs are held to R-85's Tier-N tolerances, measured, not bit-exact (REQ-VAL-116). The sim key
+and pxpack keep the setting, so a view made in the browser opens natively with it.
+*Applied per R-204 — veto?:* the header's browser rule is a new requirement, REQ-TOOL-143, closed by TASK-M8-37 (the
+browser build), since REQ-TOOL-141 is an M0 requirement on native backends.

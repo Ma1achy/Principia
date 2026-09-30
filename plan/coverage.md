@@ -18,13 +18,13 @@
 | RENDER | 82 |
 | COL | 59 |
 | GUI | 163 |
-| TOOL | 141 |
+| TOOL | 142 |
 | VAL | 176 |
 | PERF | 94 |
 | SYS | 74 |
-| **total** | **1291** |
+| **total** | **1292** |
 
-Of these: 102 calibration, 103 definition, 1086 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -38,14 +38,14 @@ Of these: 102 calibration, 103 definition, 1086 obligation. Retired (kept for th
 | M5 | 161 |
 | M6 | 141 |
 | M7 | 113 |
-| M8 | 232 |
+| M8 | 233 |
 
 ## Sections
 
-988 sections in 46 files: 838 yield at least one requirement; 150 yield none and are listed below with the reason.
+992 sections in 46 files: 841 yield at least one requirement; 151 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 103 |
+| informative only | 104 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -112,6 +112,7 @@ Of these: 102 calibration, 103 definition, 1086 obligation. Retired (kept for th
 | R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only | informative only | process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling |
 | R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)* | informative only | process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent |
 | R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)* | informative only | process ruling; applied in decisions.md's R-252 and R-293 lines, CURRENT_RULES.md, CLAUDE.md and the code reviewer agent |
+| R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

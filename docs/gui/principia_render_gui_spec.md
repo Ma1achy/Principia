@@ -230,7 +230,8 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
   default, Aarseth–Zare is kept for benchmarks; Part 2b).
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
-  is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates.
+  is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates. In
+  the browser build the control is shown disabled, with a note that the browser chooses the mode (R-303).
 - **Escape:** the criterion is shape closure + energy sign (R-29): `tau` and the escape window (0.4 time units,
   provisional).
   There is no persistence count (change 11).

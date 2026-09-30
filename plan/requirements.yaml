@@ -13503,7 +13503,7 @@
   milestone: M6
 - id: REQ-GUI-163
   area: GUI
-  statement: "The Run window must show the compute shaders' fast-math setting as a control under its SimConfig name, off by default; changing it must be marked as re-integrating (it is on the sim key), and while it is on the window must say that parity is measured, not exact (R-297)."
+  statement: "The Run window must show the compute shaders' fast-math setting as a control under its SimConfig name, off by default; changing it must be marked as re-integrating (it is on the sim key), and while it is on the window must say that parity is measured, not exact (R-297). In the browser build the control must be shown disabled, with a note that the browser chooses the mode (R-303)."
   source:
   - file: decisions.md
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
@@ -13514,6 +13514,7 @@
     detail: "cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on"
   rulings:
   - R-297
+  - R-303
   milestone: M8
 - id: REQ-GUI-164
   area: GUI
@@ -15612,6 +15613,20 @@
   rulings:
   - R-297
   milestone: M7
+- id: REQ-TOOL-143
+  area: TOOL
+  statement: "In the browser build, where WebGPU offers no fast-math control, the session header of every profiler and benchmark file must record the compute shaders' fast-math setting as asked for (the sim key's) and each shader stage's compiled mode — compute, vertex and fragment — as \"unknown\" (R-303)."
+  source:
+  - file: decisions.md
+    section: "R-303 — In the browser build, each stage's compiled fast-math mode is \"unknown\" *(closes RQ-177; amends R-297)*"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  verify:
+    method: unit test
+    detail: "a header written by the browser build (wasm target) records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a native header never records \"unknown\""
+  rulings:
+  - R-303
+  milestone: M8
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -17532,7 +17547,9 @@
   rulings:
   - R-85
   - R-110
+  - R-303
   milestone: M8
+  note: "R-303: the browser's compiled fast-math mode is unknown, so browser runs are held to these Tier-N tolerances whatever the compute setting; they are measured, not bit-exact."
 - id: REQ-VAL-117
   area: VAL
   kind: calibration
@@ -18085,7 +18102,7 @@
   milestone: M0
 - id: REQ-VAL-148
   area: VAL
-  statement: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, within the per-PR time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped. The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202)."
+  statement: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, sharded across parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped; the nightly full run (REQ-VAL-150) is the backstop (R-302). The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202)."
   source:
   - file: decisions.md
     section: R-196 — Mutation testing joins the QA gate
@@ -18095,6 +18112,8 @@
     section: 4.4 A test that cannot fail is not a test
   - file: decisions.md
     section: "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
+  - file: decisions.md
+    section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   verify:
     method: review checklist
     detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events, and each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
@@ -18102,16 +18121,19 @@
   - R-196
   - R-198
   - R-202
+  - R-302
   milestone: M0
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
-  statement: "The per-PR time limit of the `cargo mutants --in-diff` job (R-196) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  statement: "The shard count n and the per-shard time limit of the sharded `cargo mutants --in-diff` job (R-196, R-302) must be calibrated: proposed with their evidence by the task that needs them, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
   source:
   - file: decisions.md
     section: R-196 — Mutation testing joins the QA gate
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   verify:
     method: review checklist
     detail: "the proposal states the limit with its evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, and the headroom the limit leaves; the job runs under that limit, marked provisional until the human confirms it at the M0 gate (R-182); if no practical limit covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
@@ -18120,6 +18142,7 @@
   - R-182
   - R-196
   - R-198
+  - R-302
   milestone: M0
 - id: REQ-VAL-150
   area: VAL
@@ -21080,12 +21103,16 @@
   source:
   - file: decisions.md
     section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
+  - file: decisions.md
+    section: R-301 — TASK-M0-42's CI cost is accepted *(amends R-270)*
   verify:
     method: review checklist
     detail: "code and qa: no workflow caches a target directory; every cache key names its job; the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and the `ci` job's wall time against R-270's ~10.5 min"
   rulings:
   - R-285
+  - R-301
   milestone: M0
+  note: "R-301: the ~1.5 min per warm `ci` run that this caching costs is accepted, and R-270's ~10.5 min target gives way to it; the PR still shows the `ci` wall time."
 - id: REQ-SYS-074
   area: SYS
   statement: "Compute shaders must compile under an explicit fast-math setting that the project sets and records, off by default and on only as an opt-in optimisation, never inherited silently from a backend's default: every compute pipeline must be created through the one entry point that takes the setting, and on Metal, off must compile the project's own MSL with fast-math off and load it through wgpu's passthrough, for the compute pipelines only, while vertex and fragment pipelines keep wgpu's own path (R-297)."

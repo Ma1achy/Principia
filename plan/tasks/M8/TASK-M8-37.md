@@ -1,7 +1,7 @@
 # TASK-M8-37 — Browser build: the wasm engine in a Web Worker on an OffscreenCanvas, the TS shell, coi-serviceworker
 
 - **Milestone:** M8
-- **Closes:** REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047
+- **Closes:** REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143
 - **Depends on:** TASK-M8-02, TASK-M8-04, TASK-M7-16
 - **Needs (earlier milestones):** REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058
 - **Reviewers:** code, qa, perf
@@ -38,8 +38,10 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `npm --prefix web test -- resize_one_message` — resize event yields one message and one reconfigure (REQ-SYS-045).
 - Review checklist (code reviewer) — deployment contains the script; no CDN (REQ-SYS-042).
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
+- `cargo test -p engine --target wasm32-unknown-unknown session_header_browser_fast_math` (or its wasm test runner) — a header written by the browser build records the compute setting as asked for, off and on, and the compute, vertex and fragment modes as "unknown"; a native header never records "unknown" (REQ-TOOL-143).
 
 ## Notes
+- R-303 (closes RQ-177): in the browser build each shader stage's compiled fast-math mode is recorded as "unknown", since WebGPU offers no fast-math control (REQ-TOOL-143).
 - R-146: `web/` unit tests run under Vitest (`npm --prefix web test` runs `vitest run`); the browser suites run under Playwright.
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
 - RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.
