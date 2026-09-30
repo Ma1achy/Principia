@@ -275,6 +275,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-296** — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
 - **R-301** — TASK-M0-42's CI cost is accepted *(amends R-270)*
 - **R-302** — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
+- **R-305** — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
 
 ## One-off acts (history only)
 

@@ -1,0 +1,8 @@
+# The checked-in equivalent-mutants list (R-202), read by the per-PR `mutants` job (`cargo xtask mutants-check`): a
+# mutant that survives in a PR's diff fails the job unless it is listed here. Each entry names one mutant exactly as
+# cargo-mutants prints it, and carries a one-line justification of why no test can tell it from the original. A
+# change to this list is approved by the code and qa reviewers, as R-197 has it for lint suppressions (R-202).
+#
+# [[equivalent]]
+# mutant = "<file>:<line>:<col>: <mutation>"
+# justification = "<one line>"

@@ -663,3 +663,7 @@
   section: 'R-304 — The "veto?" items on #78, #79, #89 and #90 stand'
   reason: informative only
   note: process ruling; it accepts veto items on PRs #78, #79, #89 and #90 and changes no requirement
+- file: decisions.md
+  section: "R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`"
+  reason: informative only
+  note: confirms PR #65's provisional REQ-VAL-149 pair and its veto items 10–13, and makes `mutants-check` a required check on main (a repository setting, plan/HUMAN_SETUP.md §2); REQ-VAL-148 already requires the per-PR job on every pull request, and TASK-M0-23 builds it

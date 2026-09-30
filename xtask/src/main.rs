@@ -43,6 +43,11 @@ Commands:
                                   taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
                                   .html; not archive/ or reference/, nor passages in `retired-terms` markers),
                                   naming file, line and term (R-111, R-259)
+  mutants-check <mutants.out>... [--equivalent <file>]
+                                  the per-PR mutation gate (R-196, R-202): list each mutant that survived the
+                                  `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
+                                  naming each one not in the equivalent-mutants list, .cargo/mutants-equivalent.toml
+                                  or <file>
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
                                   exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
@@ -91,6 +96,19 @@ fn main() -> ExitCode {
         ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
+        ["mutants-check", outs @ .., "--equivalent", list]
+            if !outs.is_empty() && !outs.contains(&"--equivalent") =>
+        {
+            let outs: Vec<&Path> = outs.iter().map(Path::new).collect();
+            xtask::mutants_check::run_shards(&outs, Path::new(list))
+        }
+        ["mutants-check", outs @ ..] if !outs.is_empty() && !outs.contains(&"--equivalent") => {
+            let outs: Vec<&Path> = outs.iter().map(Path::new).collect();
+            xtask::mutants_check::run_shards(
+                &outs,
+                &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
+            )
+        }
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {

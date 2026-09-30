@@ -2,9 +2,11 @@
 # of its own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
 # registers into. The tests run through cargo-nextest, pinned, and doctests, which nextest does not run, through
 # `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test `cargo test` did.
-# Bench runs nightly and screenshots
-# on GUI PRs, in their own workflows (R-177). GitHub-hosted runners (R-186); the GPU jobs are GitHub-hosted too, so
-# R-174's same-repository guard stays dormant until a self-hosted job is added (R-186).
+# The per-PR mutation gate runs on pull requests only, in its own workflow, `mutants.yml` (R-196, R-202, R-302, R-305);
+# the per-push jobs are unchanged by it (R-177). Bench runs nightly and screenshots on GUI PRs, in their own workflows
+# (R-177).
+# GitHub-hosted runners (R-186); the GPU jobs are GitHub-hosted too, so R-174's same-repository guard stays dormant
+# until a self-hosted job is added (R-186).
 #
 # Caches (R-285), in every workflow: the cargo registry and git directories, through rust-cache with its target cache
 # and ~/.cargo/bin cache off, and the fixture pool, saved by the `ci` job alone. Never a whole target directory, so the
