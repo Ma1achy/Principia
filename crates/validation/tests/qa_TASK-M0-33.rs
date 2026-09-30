@@ -272,7 +272,9 @@ fn check_warm_build(tag: &str, rewrite: fn(&Path, &[(&str, String)])) {
     ];
     let build = || {
         let output = Command::new(env!("CARGO"))
-            .args(["build", "--manifest-path"])
+            // Plain text whatever the caller's `CARGO_TERM_COLOR` (CI sets `always`), so "Compiling <crate>" is
+            // matched as written.
+            .args(["build", "--color", "never", "--manifest-path"])
             .arg(root.join("Cargo.toml"))
             .env("CARGO_TARGET_DIR", root.join("target"))
             .timed_output()
