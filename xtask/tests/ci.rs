@@ -5,7 +5,6 @@
 
 use std::cell::RefCell;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
@@ -194,7 +193,7 @@ fn run_with_stand_in_cargo(case: &str, args: &[&str]) -> (bool, Vec<String>) {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let cargo = dir.join("cargo");
-    fs::write(
+    validation::spawn::write_executable(
         &cargo,
         format!(
             r#"#!/bin/sh
@@ -212,7 +211,6 @@ echo 'test pairs::negative_control - should panic ... ok'
         ),
     )
     .unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(args)
         .env("CARGO", &cargo)

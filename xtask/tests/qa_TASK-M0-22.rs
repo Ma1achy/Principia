@@ -11,7 +11,6 @@
 //! call, so nothing is built and these tests stay cheap. Each case has its own directory under the target's tmp.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -57,8 +56,7 @@ fn run_with_fake_cargo(case: &str, args: &[&str], listed: &str, run: &str) -> Ou
         d = dir.display()
     );
     let cargo = dir.join("cargo");
-    fs::write(&cargo, script).unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
+    validation::spawn::write_executable(&cargo, script).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(args)
         .env("CARGO", &cargo)
