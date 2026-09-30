@@ -2356,3 +2356,25 @@ merge, including yours."
 *Applied:* HUMAN_SETUP §2 now says the up-to-date requirement stays off, with the reason, and that bypassing is not
 allowed. The required checks on `main` are `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and
 `gpu-lavapipe`. From this ruling on, no merge, the orchestrator's included, lands with a required check red.
+
+## R-267 — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
+*30 Sep 2026 · applied in TASK-M0-38 (new), REQ-SYS-069 to REQ-SYS-071*
+
+"All merged "veto?" items stand, including #37, #38, #50, #56, #57 and #62, and your own applications on #61 and #63.
+The two #38 flake fixes are already done by TASK-M0-34 (#50); close that item. The three queued follow-ups
+(parse_wrong_panics with an embedded header, the "Text file busy" failure, pr-check passing a nameless meter line)
+become one small low-priority task. Check whether "Text file busy" has the same cause as the earlier
+executable-replacement race."
+
+*Applied:* the items stand as merged: PR #37's four, #38's two, #50's two, #56's five, #57's two, #62's five, #61's
+three R-265 applications and #63's two RQ-162 applications. The #38 `deps.rs` control-flake item is closed by
+TASK-M0-34 (R-236, REQ-VAL-167). TASK-M0-38 is new: code and qa, low priority, depending only on merged tasks.
+
+*The "Text file busy" check (orchestrator's diagnosis, recorded for TASK-M0-38):* not the same cause. CI run
+36634340042 attempt 1 (PR #56, ubuntu): `qa_m022_list_runs_no_control` failed with "xtask: cannot run cargo metadata:
+Text file busy (os error 26)". Each `qa_TASK-M0-22.rs` test writes its own stand-in `cargo` script and runs xtask
+against it, four at once. That is the Linux fork/exec race: while one thread has its script open for writing, another
+thread forks to spawn a child, which inherits the write descriptor until it execs, and an exec of the first script in
+that window fails with ETXTBSY. The #38 race was different: tests shared one binary (`debug/xtask`) that one of them
+rewrote while others ran it, fixed by the `WORKSPACE_RUN` Mutex. Nothing is shared here, so that Mutex cannot cover it;
+it shows on Linux only.

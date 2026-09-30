@@ -543,3 +543,7 @@
   section: R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
   reason: informative only
   note: process ruling; repository settings, applied in plan/HUMAN_SETUP.md §2
+- file: decisions.md
+  section: 'R-267 — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task'
+  reason: informative only
+  note: process ruling; the task it creates is TASK-M0-38 (REQ-SYS-069 to REQ-SYS-071)
