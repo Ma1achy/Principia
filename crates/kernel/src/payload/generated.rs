@@ -335,22 +335,19 @@ pub fn set_d_min(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
 }
 
 /// [`set_d_min`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset
-/// bits (never NaN, R-79) and increments `counters.dmin_nan_unset`; a negative value writes the floor `0x0001`
-/// and increments `counters.dmin_negative_floored`; any other value below 2⁻²⁴, −0.0 included, writes the floor
-/// uncounted. The counts are made in release builds as well as debug ones (R-288; telemetry §2).
+/// bits (never NaN, R-79) and counts it with `counters.increment_nan_unset()`; a negative value
+/// writes the floor `0x0001` and counts it with `counters.increment_negative_floored()`; any other
+/// value below 2⁻²⁴, −0.0 included, writes the floor uncounted. The counts are made in release builds
+/// as well as debug ones (R-288; telemetry §2). The pair's fields are private (R-300).
 #[inline]
 pub fn set_d_min_release(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
     let h = if v.is_nan() {
-        counters
-            .dmin_nan_unset
-            .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        counters.increment_nan_unset();
         PA_D_MIN_UNSET
     } else if v.to_bits() == 0x7f80_0000 {
         PA_D_MIN_UNSET
     } else if v < 0.0 {
-        counters
-            .dmin_negative_floored
-            .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        counters.increment_negative_floored();
         F16_MIN_SUBNORMAL_BITS
     } else if v < F16_MIN_SUBNORMAL {
         F16_MIN_SUBNORMAL_BITS

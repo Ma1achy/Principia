@@ -815,7 +815,7 @@ negative_control!(
     expected = "counters (dmin_nan_unset, dmin_negative_floored)",
     check_counts(
         |w, v, c| {
-            c.dmin_nan_unset.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            c.increment_nan_unset();
             release_scratch(w, v)
         },
         &NEGATIVES,
@@ -865,8 +865,7 @@ negative_control!(
     "a packer that counts every store as a NaN, so the no-count check must fail",
     expected = "counters (dmin_nan_unset, dmin_negative_floored)",
     check_valid_uncounted(|w, v, c| {
-        c.dmin_nan_unset
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        c.increment_nan_unset();
         release_scratch(w, v)
     })
 );
@@ -1032,4 +1031,156 @@ negative_control!(
     "an unguarded division gives NaN or inf at horizon 0, so the check must fail",
     expected = "at horizon 0",
     check_fraction(|w, h| tm_t_dmin_step(w) as f32 / h as f32, tm_t_dmin_step)
+);
+
+// R-300: `DminCounters`' fields are private; its methods increment each counter, read the pair and reset it, and the
+// workers of a frame share `&DminCounters`.
+
+/// `nan` and `neg`, called `n_nan` and `n_neg` times on a fresh pair, move only their own counter, one per call.
+fn check_increments(nan: fn(&DminCounters), neg: fn(&DminCounters), n_nan: u32, n_neg: u32) {
+    let c = DminCounters::new();
+    for i in 1..=n_nan {
+        nan(&c);
+        assert_eq!(
+            c.read(),
+            (i, 0),
+            "increment: (dmin_nan_unset, dmin_negative_floored)"
+        );
+    }
+    for i in 1..=n_neg {
+        neg(&c);
+        assert_eq!(
+            c.read(),
+            (n_nan, i),
+            "increment: (dmin_nan_unset, dmin_negative_floored)"
+        );
+    }
+}
+
+#[test]
+fn dmin_unset_counter_methods_increment_their_own_counter() {
+    check_increments(
+        DminCounters::increment_nan_unset,
+        DminCounters::increment_negative_floored,
+        3,
+        4,
+    );
+}
+
+negative_control!(
+    dmin_unset_counter_methods_increment_their_own_counter,
+    "the two increments swapped, each moving the other's counter, so the increment check must fail",
+    expected = "increment: (dmin_nan_unset, dmin_negative_floored)",
+    check_increments(
+        DminCounters::increment_negative_floored,
+        DminCounters::increment_nan_unset,
+        3,
+        4
+    )
+);
+
+/// `read` gives `(dmin_nan_unset, dmin_negative_floored)` in that order: (0, 0) for a new pair and a default one, and
+/// the counts made for pairs incremented unevenly.
+fn check_read(read: fn(&DminCounters) -> (u32, u32)) {
+    assert_eq!(read(&DminCounters::new()), (0, 0), "read: a new pair");
+    assert_eq!(
+        read(&DminCounters::default()),
+        (0, 0),
+        "read: a default pair"
+    );
+    for (nans, negs) in [(2, 5), (7, 0), (0, 1)] {
+        let c = DminCounters::new();
+        (0..nans).for_each(|_| c.increment_nan_unset());
+        (0..negs).for_each(|_| c.increment_negative_floored());
+        assert_eq!(
+            read(&c),
+            (nans, negs),
+            "read: (dmin_nan_unset, dmin_negative_floored)"
+        );
+    }
+}
+
+#[test]
+fn dmin_unset_counter_methods_read() {
+    check_read(DminCounters::read);
+}
+
+negative_control!(
+    dmin_unset_counter_methods_read,
+    "a read that returns the pair in the wrong order, so the read check must fail",
+    expected = "read: (dmin_nan_unset, dmin_negative_floored)",
+    check_read(|c| {
+        let (nans, negs) = c.read();
+        (negs, nans)
+    })
+);
+
+/// `reset` puts both counts of a used pair back to zero, and the pair counts from zero after it, as a new frame's.
+fn check_reset(reset: fn(&mut DminCounters)) {
+    let mut c = DminCounters::new();
+    (0..3).for_each(|_| c.increment_nan_unset());
+    (0..2).for_each(|_| c.increment_negative_floored());
+    reset(&mut c);
+    assert_eq!(
+        c.read(),
+        (0, 0),
+        "reset: (dmin_nan_unset, dmin_negative_floored)"
+    );
+    c.increment_negative_floored();
+    assert_eq!(
+        c.read(),
+        (0, 1),
+        "reset: (dmin_nan_unset, dmin_negative_floored)"
+    );
+}
+
+#[test]
+fn dmin_unset_counter_methods_reset() {
+    check_reset(DminCounters::reset);
+}
+
+negative_control!(
+    dmin_unset_counter_methods_reset,
+    "a reset that leaves the counts in place, so the reset check must fail",
+    expected = "reset: (dmin_nan_unset, dmin_negative_floored)",
+    check_reset(|_| {})
+);
+
+/// Four workers share the frame's `&DminCounters`, each running `count` on it 1000 times; the owner reads back every
+/// increment made by every worker.
+fn check_workers_share(count: &(dyn Fn(&DminCounters) + Sync)) {
+    let frame = DminCounters::new();
+    std::thread::scope(|s| {
+        for _ in 0..4 {
+            s.spawn(|| {
+                for _ in 0..1000 {
+                    count(&frame);
+                }
+            });
+        }
+    });
+    assert_eq!(
+        frame.read(),
+        (4000, 4000),
+        "shared by workers: (dmin_nan_unset, dmin_negative_floored)"
+    );
+}
+
+#[test]
+fn dmin_unset_counter_methods_shared_by_workers() {
+    check_workers_share(&|c| {
+        c.increment_nan_unset();
+        c.increment_negative_floored();
+    });
+}
+
+negative_control!(
+    dmin_unset_counter_methods_shared_by_workers,
+    "workers that count into pairs of their own, not the frame's shared one, so the owner's read-back must fail",
+    expected = "shared by workers: (dmin_nan_unset, dmin_negative_floored)",
+    check_workers_share(&|_| {
+        let own = DminCounters::new();
+        own.increment_nan_unset();
+        own.increment_negative_floored();
+    })
 );
