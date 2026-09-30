@@ -40,7 +40,7 @@ pub const RUNNERS: &[Runner] = &[
     Runner {
         name: "golden",
         run: golden,
-        list: golden,
+        list: golden_list,
     },
 ];
 
@@ -64,11 +64,17 @@ fn lint_constants() -> Result<(), String> {
     crate::lint_constants::run(&crate::workspace_manifest())
 }
 
-/// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit); it runs no control, so
-/// it is its own listing-only form (R-235).
+/// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit).
 fn golden() -> Result<(), String> {
     let root = crate::plan_check::repo_root();
     crate::golden::cli(&root, &["--all"])
+}
+
+/// `cargo xtask golden --list` on this workspace: every case loaded and checked, none rendered, no device opened
+/// (R-235).
+fn golden_list() -> Result<(), String> {
+    let root = crate::plan_check::repo_root();
+    crate::golden::cli(&root, &["--list"])
 }
 
 /// `cargo xtask controls` on this workspace: every control run, failing on any finding (R-198, R-226).

@@ -1,7 +1,8 @@
 //! QA tests for TASK-M0-06, re-check round: the golden runner is reachable where the task's Deliverables put it.
 //! `cargo xtask golden <suite>` renders each case of the suite and writes a summary under `target/golden/` (the
 //! Deliverables' diff output); `cargo xtask golden --all` is registered in `cargo xtask ci`, run on every commit
-//! (R-110: native golden suites on every commit). Each test has a registered negative control (R-176).
+//! (R-110: native golden suites on every commit), and its listing form renders nothing (R-235). Each test has a
+//! registered negative control (R-176).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -59,8 +60,10 @@ negative_control!(
 /// Runs `run` and checks that it passed and (re)wrote the self-test gradient's summary under the golden output
 /// directory after it started: the runner rendered the suites, rather than passing without rendering. Checks are
 /// serialised, so a test and its control, run side by side, never see each other's summary.
+/// Serialises the checks that watch the golden output directory.
+static SERIAL: Mutex<()> = Mutex::new(());
+
 fn check_runner_renders(run: fn() -> Result<(), String>) {
-    static SERIAL: Mutex<()> = Mutex::new(());
     let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let summary = golden::output_dir(&repo_root()).join("selftest/gradient/summary.txt");
     let start = SystemTime::now();
@@ -86,7 +89,6 @@ fn golden_runner() -> &'static xtask::ci::Runner {
 #[test]
 fn qa_m006_ci_golden_runner_renders() {
     check_runner_renders(golden_runner().run);
-    check_runner_renders(golden_runner().list);
 }
 
 negative_control!(
@@ -94,4 +96,35 @@ negative_control!(
     "a runner that passes without rendering",
     expected = "the ci golden runner did not render the suites",
     check_runner_renders(|| Ok(()))
+);
+
+// --- Its listing form renders nothing (R-235) ----------------------------------------------------------------------
+
+/// Runs `list` and checks that it passed and wrote no self-test summary after it started: the listing form of the
+/// runner (`cargo xtask ci --list`) loads and checks the cases but opens no device and renders nothing.
+fn check_runner_lists_without_rendering(list: fn() -> Result<(), String>) {
+    let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let summary = golden::output_dir(&repo_root()).join("selftest/gradient/summary.txt");
+    let start = SystemTime::now();
+    list().unwrap_or_else(|e| panic!("the golden listing failed: {e}"));
+    let written = fs::metadata(&summary)
+        .and_then(|m| m.modified())
+        .is_ok_and(|t| t >= start);
+    assert!(
+        !written,
+        "the ci golden listing rendered the suites: {} written",
+        summary.display()
+    );
+}
+
+#[test]
+fn qa_m006_ci_golden_listing_renders_nothing() {
+    check_runner_lists_without_rendering(golden_runner().list);
+}
+
+negative_control!(
+    qa_m006_ci_golden_listing_renders_nothing,
+    "the runner's full form in place of its listing form",
+    expected = "the ci golden listing rendered the suites",
+    check_runner_lists_without_rendering(golden_runner().run)
 );

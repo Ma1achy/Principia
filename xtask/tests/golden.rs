@@ -1,13 +1,16 @@
 //! `cargo xtask golden` (TASK-M0-06; R-110, R-186): the self-test's analytic gradient matches its analytically computed
 //! reference and its one-step-shifted twin fails, so the runner can fire (pitfalls §3); the tolerance REQ-VAL-138
 //! proposes passes a same-backend re-render and fails a one-variable change; a bare-number tolerance, a reference
-//! changed without a BASELINES.md entry, and an entry naming no recorded decision are refused.
+//! changed without a BASELINES.md entry, and an entry naming no recorded decision are refused; `golden --list` lists
+//! and checks every case without opening a device (R-235).
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde_json::{json, Value};
 use validation::negative_control;
+use validation::spawn::Spawn;
 use xtask::golden::{self, Case, Image, Outcome, Renderer};
 
 fn repo_root() -> PathBuf {
@@ -336,6 +339,75 @@ negative_control!(
     "a suite name that does not exist",
     expected = "refused for another reason",
     check_refused(golden_with_arg("nosuch"), "unrecognised arguments")
+);
+
+// --- The listing-only form opens no device (R-235) -----------------------------------------------------------------
+
+/// The `xtask` binary run as `xtask golden <mode>` on this repo, with `PRIN_GPU_BACKEND` set to a value that is no
+/// backend, so that opening a device fails, and `CARGO_TARGET_DIR` a scratch directory: whether it passed, its
+/// stdout, and whether it wrote anything under `target/golden/`.
+fn golden_mode_without_device(name: &str, mode: &str) -> (bool, String, bool) {
+    let target = scratch(name);
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["golden", mode])
+        .env(golden::BACKEND_VAR, "none")
+        .env("CARGO_TARGET_DIR", &target)
+        .timed_output()
+        .expect("run xtask");
+    (
+        output.status.success(),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        target.join("golden").exists(),
+    )
+}
+
+fn check_listed_without_device((passed, stdout, wrote): (bool, String, bool)) {
+    assert!(passed, "golden --list failed without a device: {stdout}");
+    for case in ["selftest/gradient:", "selftest/gradient_shifted:"] {
+        assert!(stdout.contains(case), "{case} not listed: {stdout}");
+    }
+    assert!(!wrote, "golden --list wrote under target/golden/");
+}
+
+#[test]
+fn golden_list_opens_no_device() {
+    check_listed_without_device(golden_mode_without_device("list", "--list"));
+}
+
+negative_control!(
+    golden_list_opens_no_device,
+    "the rendering form, --all, in place of --list",
+    expected = "golden --list failed without a device",
+    check_listed_without_device(golden_mode_without_device("ctl_list", "--all"))
+);
+
+/// The self-test copy with the gradient case's `tolerance` set to `tolerance`, listed.
+fn list_with_tolerance(name: &str, tolerance: Value) -> Result<(), String> {
+    let root = selftest_copy(name);
+    let path = root.join("fixtures/golden/selftest/gradient/case.json");
+    let mut case: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    case["tolerance"] = tolerance;
+    fs::write(&path, case.to_string()).unwrap();
+    golden::cli(&root, &["--list"])
+}
+
+/// The listing still loads and checks each case: a refused case fails it.
+#[test]
+fn golden_list_refuses_a_refused_case() {
+    check_refused(
+        list_with_tolerance("list_bare", json!(0)),
+        "golden suite(s) refused: selftest",
+    );
+}
+
+negative_control!(
+    golden_list_refuses_a_refused_case,
+    "a tolerance given as its requirement id",
+    expected = "the case was not refused",
+    check_refused(
+        list_with_tolerance("ctl_list_bare", json!("REQ-VAL-138")),
+        "golden suite(s) refused: selftest"
+    )
 );
 
 // --- The runner's backend rule stays in step with the harness's (R-169, R-206) -------------------------------------

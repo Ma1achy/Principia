@@ -839,6 +839,21 @@ pub fn load_suite(root: &Path, suite: &str) -> Result<Vec<Case>, String> {
         .collect()
 }
 
+/// Loads every case of `suite` under `root`, with [`load_suite`]'s refusals (tolerance and BASELINES.md), and prints
+/// each; it opens no device and renders nothing, so it is golden's listing-only form (R-235).
+pub fn list_suite(root: &Path, suite: &str) -> Result<(), String> {
+    for case in load_suite(root, suite)? {
+        println!(
+            "xtask golden: {}: tolerance {} (max step {}), expect {}",
+            case.name,
+            case.tolerance.id,
+            case.tolerance.max_step,
+            if case.expect_pass { "pass" } else { "fail" }
+        );
+    }
+    Ok(())
+}
+
 /// Runs `suite` under `root`, writing each case's render, difference image and summary under `out/<suite>/<case>/`.
 /// `Err` names each case that did not do what it expects.
 pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, String> {
@@ -1131,6 +1146,33 @@ pub fn cli(root: &Path, args: &[&str]) -> Result<(), String> {
             } else {
                 Err(format!(
                     "golden suite(s) failed: {}",
+                    failed
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
+            }
+        }
+        ["--list"] => {
+            let suites = suites(root)?;
+            let failed: Vec<&String> = suites
+                .iter()
+                .filter(|s| {
+                    list_suite(root, s)
+                        .map_err(|e| eprintln!("xtask golden: {s}: {e}"))
+                        .is_err()
+                })
+                .collect();
+            if failed.is_empty() {
+                println!(
+                    "xtask golden: {} suite(s) listed, none rendered",
+                    suites.len()
+                );
+                Ok(())
+            } else {
+                Err(format!(
+                    "golden suite(s) refused: {}",
                     failed
                         .iter()
                         .map(|s| s.as_str())

@@ -28,9 +28,11 @@ Commands:
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none
-  golden <suite> | --all          render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
+  golden (<suite> | --all | --list)
+                                  render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
-                                  gives, and write the difference image and summary under target/golden/ (R-110)
+                                  gives, and write the difference image and summary under target/golden/ (R-110);
+                                  --list loads and checks every case and lists it, opening no device
   golden repro <suite>/<case> --vary <field>=<a>,<b>
                                   render two arms differing in exactly one field (a pair differing in more is
                                   refused), and report the RGB values along the case's lines and one column per
