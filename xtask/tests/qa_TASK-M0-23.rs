@@ -1,12 +1,16 @@
 //! QA tests for TASK-M0-23, written from REQ-VAL-148 and REQ-VAL-149 (R-196, R-202, R-71, R-182), not from the
 //! implementation:
 //!
-//! - REQ-VAL-148: "Every pull request must run `cargo mutants --in-diff` on its changed code in CI, within the per-PR
-//!   time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness
-//!   plumbing ... The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry
-//!   carrying a one-line justification". verify: "`ci.yml` runs `cargo mutants --in-diff` against the PR's base on
-//!   pull_request events, and each exclusion names which of R-196's three categories it falls in".
-//! - REQ-VAL-149: "the job runs under that limit, marked provisional until the human confirms it at the M0 gate".
+//! - REQ-VAL-148 (as reworded by R-302): "Every pull request must run `cargo mutants --in-diff` on its changed code in
+//!   CI, sharded across parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149),
+//!   excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing ... The job must fail on
+//!   any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line
+//!   justification". verify: "`ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events as
+//!   a matrix of n shards ... each exclusion names which of R-196's three categories it falls in".
+//! - REQ-VAL-149 (as reworded by R-302): "each shard runs under that limit, marked provisional until the human
+//!   confirms both at the M0 gate". The `mutants` job below is the matrix job, so its limit is each shard's; the
+//!   sharding itself (every shard runs, a cut-off shard fails, the aggregate reads every shard) is tested in
+//!   `qa_TASK-M0-23_shards.rs`.
 //! - R-196, as applied per R-204 (RQ-162): "xtask's own harness plumbing" is `xtask/src/main.rs` and
 //!   `xtask/src/codegen.rs` only; xtask's checks stay mutated.
 //! - TASK-M0-23 Deliverables: generated code is "the files `cargo xtask codegen` writes, matched so that a generated
