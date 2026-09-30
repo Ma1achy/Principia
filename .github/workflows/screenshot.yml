@@ -1,0 +1,36 @@
+# GUI screenshots (R-110, R-177): on a GUI PR, one touching `crates/gui/**` or `docs/gui/**`, run every screenshot
+# suite. Not in the per-commit `cargo xtask ci`; the gate workflow runs it at the gates (R-110). A layout case's
+# capture sits beside its artboard under target/screenshot/, uploaded for the GUI reviewer's layout comparison only
+# (R-68); a presence-only case fails the job naming each control its surface lacks (R-129). GitHub-hosted, on lavapipe
+# (R-186).
+name: screenshot
+
+on:
+  pull_request:
+    paths:
+      - "crates/gui/**"
+      - "docs/gui/**"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - name: cargo xtask screenshot --all
+        run: cargo xtask screenshot --all
+      - name: Upload the captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: target/screenshot/
+          if-no-files-found: ignore
