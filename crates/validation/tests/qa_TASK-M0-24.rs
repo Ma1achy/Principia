@@ -18,6 +18,9 @@ use std::process::Command;
 use std::sync::{Mutex, PoisonError};
 use validation::spawn::Spawn;
 
+#[path = "support/fixture_tree.rs"]
+mod fixture_tree;
+
 /// The workspace manifest (this crate is `crates/validation`).
 fn workspace_manifest() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml")
@@ -45,7 +48,12 @@ fn cargo_test_status(
 ) -> (bool, String) {
     let _run = (manifest == workspace_manifest())
         .then(|| WORKSPACE_RUN.lock().unwrap_or_else(PoisonError::into_inner));
-    let output = cargo()
+    let mut command = cargo();
+    if manifest != workspace_manifest() {
+        // A fixture crate builds in a target directory of its own, kept across runs (R-231).
+        command.env("CARGO_TARGET_DIR", manifest.with_file_name("target"));
+    }
+    let output = command
         .arg("test")
         .arg("--manifest-path")
         .arg(manifest)
@@ -342,26 +350,26 @@ fn qa_m0_24_validation_lists_no_doctest() {
 }
 
 /// A one-file library crate in its own workspace under the target's temporary directory, whose one doc comment
-/// holds `fence` around a statement.
+/// holds `fence` around a statement. One per fence, kept across runs with its own target directory, and written only
+/// where it changed (R-231).
 fn crate_with_fence(fence: &str) -> PathBuf {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("qa_m0_24")
-        .join(format!(
-            "{}-{}",
-            fence.replace(|c: char| !c.is_alphanumeric(), "_"),
-            std::process::id()
-        ));
-    std::fs::create_dir_all(dir.join("src")).unwrap();
-    std::fs::write(
-        dir.join("Cargo.toml"),
-        "[package]\nname = \"qa_m0_24_doc\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[workspace]\n",
-    )
-    .unwrap();
-    std::fs::write(
-        dir.join("src/lib.rs"),
-        format!("//! {fence}\n//! assert_eq!(1 + 1, 2);\n//! ```\n\n/// {fence}\n/// let _ = 1;\n/// ```\npub fn f() {{}}\n"),
-    )
-    .unwrap();
+        .join(fence.replace(|c: char| !c.is_alphanumeric(), "_"));
+    fixture_tree::write_tree(
+        &dir,
+        &[
+            (
+                "Cargo.toml",
+                "[package]\nname = \"qa_m0_24_doc\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[workspace]\n"
+                    .to_owned(),
+            ),
+            (
+                "src/lib.rs",
+                format!("//! {fence}\n//! assert_eq!(1 + 1, 2);\n//! ```\n\n/// {fence}\n/// let _ = 1;\n/// ```\npub fn f() {{}}\n"),
+            ),
+        ],
+    );
     dir.join("Cargo.toml")
 }
 
@@ -372,7 +380,6 @@ validation::negative_control!(
     {
         let manifest = crate_with_fence("```ignore");
         let found = doctests(&manifest, "qa_m0_24_doc");
-        let _ = std::fs::remove_dir_all(manifest.parent().unwrap());
         assert!(found.is_empty(), "the crate lists doctests: {found:?}");
     }
 );
@@ -382,7 +389,6 @@ validation::negative_control!(
 fn qa_m0_24_a_text_block_is_not_a_doctest() {
     let manifest = crate_with_fence("```text");
     let found = doctests(&manifest, "qa_m0_24_doc");
-    let _ = std::fs::remove_dir_all(manifest.parent().unwrap());
     assert!(
         found.is_empty(),
         "a ```text block is listed as a doctest: {found:?}"
@@ -396,7 +402,6 @@ validation::negative_control!(
     {
         let manifest = crate_with_fence("```rust");
         let found = doctests(&manifest, "qa_m0_24_doc");
-        let _ = std::fs::remove_dir_all(manifest.parent().unwrap());
         assert!(found.is_empty(), "the crate lists doctests: {found:?}");
     }
 );
