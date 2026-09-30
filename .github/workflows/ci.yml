@@ -128,12 +128,15 @@ jobs:
           cargo mutants --in-place --in-diff "$RUNNER_TEMP/pr.diff" -o "$RUNNER_TEMP"
           code=$?
           echo "cargo mutants: exit $code, wall-clock $(( $(date +%s) - start )) s"
-          # 0: none survived; 2: some survived; 3: some timed out. The check below decides (R-202).
+          # 0: none survived; 2: some survived; 3: some timed out. The check below decides (R-202). Only exit 0 may
+          # mean "no mutant in the diff"; any other exit without outcomes fails the job.
           case $code in 0|2|3) ;; *) exit "$code" ;; esac
           if [ -f "$RUNNER_TEMP/mutants.out/outcomes.json" ]; then
             echo "tested=true" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "$code" -eq 0 ]; then
             echo "cargo mutants: no mutant in this PR's diff"
+          else
+            echo "::error::cargo mutants exited $code but wrote no outcomes.json"; exit "$code"
           fi
       - name: cargo xtask mutants-check (R-202)
         if: steps.run.outputs.tested == 'true'
