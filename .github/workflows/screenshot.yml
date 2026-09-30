@@ -23,6 +23,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: screenshot
+          cache-targets: "false"
+          cache-bin: "false"
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo xtask screenshot --all
