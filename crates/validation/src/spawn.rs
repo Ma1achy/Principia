@@ -44,81 +44,101 @@ pub trait Spawn {
     }
 }
 
+/// How long a timed-out child's process group has, after SIGKILL and once the child is reaped, for its last members to
+/// be torn down and reaped, so that none is left when the helper returns (R-217). A SIGKILLed process cannot delay its
+/// end, and an orphan is reaped by init, so this bounds a loaded machine's delay and is not waited: the helper polls,
+/// and returns as soon as the group is gone. A member still there after it is told in the timeout's error.
+const REAPED_WITHIN: Duration = Duration::from_secs(2);
+
 impl Spawn for Command {
     fn output_within_grace(&mut self, timeout: Duration, grace: Duration) -> io::Result<Output> {
-        let deadline = Instant::now() + timeout;
-        // The child leads a new process group, which everything it starts joins unless it leaves it (R-217).
-        #[cfg(unix)]
-        std::os::unix::process::CommandExt::process_group(self, 0);
-        // No stand-in executable is being written while the child is forked and exec'd (REQ-SYS-070).
-        let spawning = WRITING.read().unwrap_or_else(PoisonError::into_inner);
-        let mut child = self
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        drop(spawning);
-        // Both pipes are drained while the child runs, so a child filling one never blocks on it.
-        let (tx, rx) = mpsc::channel();
-        drain(child.stdout.take(), 0, tx.clone());
-        drain(child.stderr.take(), 1, tx);
-        // Whatever went wrong in ending the child is told in the timeout's error, never in place of it (REQ-VAL-155).
-        let timed_out = |pid: u32, what: &str, ended: io::Result<()>| {
-            let mut message = format!(
-                "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
-                 REQ-VAL-156)",
-                name(self),
-                timeout.as_secs_f64(),
-                SPAWN_TIMEOUT.as_secs_f64()
-            );
-            if let Err(e) = ended {
-                message.push_str(&format!("; {ENDING}: {e}"));
-            }
-            io::Error::new(io::ErrorKind::TimedOut, message)
-        };
-        let status = loop {
-            if let Some(status) = child.try_wait()? {
-                break status;
-            }
-            if Instant::now() >= deadline {
-                let ended = end(&mut child, grace);
-                return Err(timed_out(child.id(), "was killed: it outlived", ended));
-            }
-            thread::sleep(Duration::from_millis(10));
-        };
-        // The child has exited; a grandchild may still hold its pipes open, so reading them is bounded too.
-        let mut streams = [Vec::new(), Vec::new()];
-        for _ in 0..2 {
-            let wait = deadline.saturating_duration_since(Instant::now());
-            let Ok((stream, bytes)) = rx.recv_timeout(wait) else {
-                // What holds the output open is something the child started: it is ended too (R-217).
-                let ended = end(&mut child, grace);
-                return Err(timed_out(
-                    child.id(),
-                    "exited, but its output stayed open past",
-                    ended,
-                ));
-            };
-            streams[stream] = bytes?;
-        }
-        let [stdout, stderr] = streams;
-        Ok(Output {
-            status,
-            stdout,
-            stderr,
-        })
+        output_within_timings(self, timeout, grace, REAPED_WITHIN)
     }
 }
 
-/// What a timeout's error says before a failure to end the child: a signal its group refused, or a failure to reap it.
+/// [`Spawn::output_within_grace`], with `reaped_within` in place of [`REAPED_WITHIN`]: injectable, so the helper's own
+/// tests can show what the wait for the group after SIGKILL prevents.
+fn output_within_timings(
+    command: &mut Command,
+    timeout: Duration,
+    grace: Duration,
+    reaped_within: Duration,
+) -> io::Result<Output> {
+    let deadline = Instant::now() + timeout;
+    // The child leads a new process group, which everything it starts joins unless it leaves it (R-217).
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(command, 0);
+    // No stand-in executable is being written while the child is forked and exec'd (REQ-SYS-070).
+    let spawning = WRITING.read().unwrap_or_else(PoisonError::into_inner);
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    drop(spawning);
+    // Both pipes are drained while the child runs, so a child filling one never blocks on it.
+    let (tx, rx) = mpsc::channel();
+    drain(child.stdout.take(), 0, tx.clone());
+    drain(child.stderr.take(), 1, tx);
+    // Whatever went wrong in ending the child is told in the timeout's error, never in place of it (REQ-VAL-155).
+    let timed_out = |pid: u32, what: &str, ended: io::Result<()>| {
+        let mut message = format!(
+            "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
+             REQ-VAL-156)",
+            name(command),
+            timeout.as_secs_f64(),
+            SPAWN_TIMEOUT.as_secs_f64()
+        );
+        if let Err(e) = ended {
+            message.push_str(&format!("; {ENDING}: {e}"));
+        }
+        io::Error::new(io::ErrorKind::TimedOut, message)
+    };
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            let ended = end(&mut child, grace, reaped_within);
+            return Err(timed_out(child.id(), "was killed: it outlived", ended));
+        }
+        thread::sleep(Duration::from_millis(10));
+    };
+    // The child has exited; a grandchild may still hold its pipes open, so reading them is bounded too.
+    let mut streams = [Vec::new(), Vec::new()];
+    for _ in 0..2 {
+        let wait = deadline.saturating_duration_since(Instant::now());
+        let Ok((stream, bytes)) = rx.recv_timeout(wait) else {
+            // What holds the output open is something the child started: it is ended too (R-217).
+            let ended = end(&mut child, grace, reaped_within);
+            return Err(timed_out(
+                child.id(),
+                "exited, but its output stayed open past",
+                ended,
+            ));
+        };
+        streams[stream] = bytes?;
+    }
+    let [stdout, stderr] = streams;
+    Ok(Output {
+        status,
+        stdout,
+        stderr,
+    })
+}
+
+/// What a timeout's error says before a failure to end the child: a signal its group refused, a failure to reap it, or
+/// a member of its group still there [`REAPED_WITHIN`] after SIGKILL.
 const ENDING: &str = "ending it and its process group failed";
 
 /// Ends a timed-out child and everything in its process group (R-217): SIGTERM to the group, then, unless the child
 /// has been reaped and nothing in the group can still be signalled within `grace` ([`GRACE`] unless injected),
 /// SIGKILL to the group. The child itself is then killed, in case it has left its group, and reaped, whatever the
-/// signals to the group met. A signal the group refused is returned as the error, once the child is reaped.
+/// signals to the group met. Last, whatever those met, the helper waits up to `reaped_within` for the group to be gone,
+/// so that no member SIGKILL ended is still there, dying or unreaped, when it returns. A signal the group refused is
+/// returned as the error, then a failure to reap the child, then a member still there after `reaped_within`.
 #[cfg(unix)]
-fn end(child: &mut Child, grace: Duration) -> io::Result<()> {
+fn end(child: &mut Child, grace: Duration, reaped_within: Duration) -> io::Result<()> {
     use rustix::io::Errno;
     use rustix::process::{kill_process_group, test_kill_process_group, Pid, Signal};
     // The group's id is the child's pid, and stays taken while the child is unreaped or any member lives.
@@ -129,19 +149,22 @@ fn end(child: &mut Child, grace: Duration) -> io::Result<()> {
         Err(e) if e != Errno::SRCH => Some(e),
         _ => None,
     };
+    // Nothing is left for a signal to reach once the group is empty or refuses signals. On Linux a zombie still counts
+    // as a member until it is reaped.
+    let gone = || {
+        matches!(
+            test_kill_process_group(group),
+            Err(Errno::SRCH | Errno::PERM)
+        )
+    };
     let mut refusal = refused(Signal::TERM);
     // After a refused SIGTERM no member can be signalled, and SIGKILL would be refused too.
     if refusal.is_none() {
         refusal = 'grace: {
             let grace_ends = Instant::now() + grace;
             while Instant::now() < grace_ends {
-                // Nothing is left for SIGKILL once the child is reaped and the group is empty or refuses signals.
-                if child.try_wait()?.is_some()
-                    && matches!(
-                        test_kill_process_group(group),
-                        Err(Errno::SRCH | Errno::PERM)
-                    )
-                {
+                // Nothing is left for SIGKILL once the child is reaped and the group is gone.
+                if child.try_wait()?.is_some() && gone() {
                     break 'grace None;
                 }
                 thread::sleep(Duration::from_millis(10));
@@ -150,14 +173,30 @@ fn end(child: &mut Child, grace: Duration) -> io::Result<()> {
         };
     }
     // The child is ours to kill (a no-op once it has exited) and to reap, so the wait is bounded.
-    child.kill()?;
-    child.wait()?;
-    refusal.map_or(Ok(()), |e| Err(io::Error::from(e)))
+    let reaped = child.kill().and_then(|()| child.wait().map(drop));
+    // SIGKILL ends every member it reached, but not at once: a member may still be dying, or, orphaned by the child,
+    // be a zombie until init reaps it. The helper returns only once the group is gone (R-217), or the bound is out.
+    let bound = Instant::now() + reaped_within;
+    while !gone() && Instant::now() < bound {
+        thread::sleep(Duration::from_millis(10));
+    }
+    let left = (!gone()).then(|| {
+        io::Error::other(format!(
+            "a member of the group was still there {} s after SIGKILL",
+            reaped_within.as_secs_f64()
+        ))
+    });
+    match (refusal, reaped, left) {
+        (Some(e), _, _) => Err(io::Error::from(e)),
+        (None, Err(e), _) => Err(e),
+        (None, Ok(()), Some(e)) => Err(e),
+        (None, Ok(()), None) => Ok(()),
+    }
 }
 
 /// Ends a timed-out child. Without process groups, only the child itself is killed and reaped.
 #[cfg(not(unix))]
-fn end(child: &mut Child, _grace: Duration) -> io::Result<()> {
+fn end(child: &mut Child, _grace: Duration, _reaped_within: Duration) -> io::Result<()> {
     child.kill()?;
     child.wait()?;
     Ok(())
@@ -367,6 +406,68 @@ mod tests {
         check_group_ended(
             "(trap '' TERM; exec perl -e 'setpgrp(0, 0); exec @ARGV' sleep 30) & echo $! > \"$1\""
         )
+    );
+
+    /// How many children [`check_gone_at_return`] times out at once. Without the wait after SIGKILL, 14 to 31 of 32
+    /// groups were still there as the helper returned, in each of 20 runs on macOS (TASK-M0-26's R-217 fix, its PR).
+    #[cfg(unix)]
+    const RUNS: usize = 32;
+
+    /// [`RUNS`] children at once, each starting a grandchild that ignores SIGTERM and then hanging, are timed out with a
+    /// short grace, in which SIGTERM ends and the helper reaps the child, and with `reaped_within` after SIGKILL, which
+    /// then reaches only the grandchild. As each call of the helper returns, no process of its child's group remains:
+    /// none is still dying or unreaped (R-217).
+    #[cfg(unix)]
+    fn check_gone_at_return(reaped_within: Duration) {
+        use rustix::io::Errno;
+        use rustix::process::{kill_process_group, test_kill_process_group, Pid, Signal};
+        let left = thread::scope(|scope| {
+            let runs: Vec<_> = (0..RUNS)
+                .map(|_| {
+                    scope.spawn(move || {
+                        let err = output_within_timings(
+                            Command::new("sh").args(["-c", "(trap '' TERM; sleep 30) & wait"]),
+                            Duration::from_millis(300),
+                            Duration::from_millis(200),
+                            reaped_within,
+                        )
+                        .expect_err("the child was not timed out");
+                        let group = Pid::from_raw(pid_in(&err).parse().expect("a pid"))
+                            .expect("a nonzero pid");
+                        // The helper's own test of a group gone: no member may be signalled.
+                        let left = !matches!(
+                            test_kill_process_group(group),
+                            Err(Errno::SRCH | Errno::PERM)
+                        );
+                        // A survivor is ended here, so a failing run leaks nothing.
+                        let _ = kill_process_group(group, Signal::KILL);
+                        left
+                    })
+                })
+                .collect();
+            runs.into_iter()
+                .map(|run| run.join().expect("a run panicked"))
+                .filter(|&left| left)
+                .count()
+        });
+        assert_eq!(
+            left, 0,
+            "a process of the timed-out group was still there as the helper returned, in {left} of {RUNS} runs"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn spawn_returns_once_the_group_is_gone_after_sigkill() {
+        check_gone_at_return(REAPED_WITHIN);
+    }
+
+    #[cfg(unix)]
+    crate::negative_control!(
+        spawn_returns_once_the_group_is_gone_after_sigkill,
+        "no wait for the group after SIGKILL, required to leave nothing of it as the helper returns",
+        expected = "a process of the timed-out group was still there as the helper returned",
+        check_gone_at_return(Duration::ZERO)
     );
 
     /// A timed-out child whose SIGTERM handler takes `cleanup` seconds, then writes a file and exits, is let finish it
