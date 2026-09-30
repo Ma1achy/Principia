@@ -53,7 +53,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-62** — `rho_mag` and `lambda_mag` *(amends R-22)*
 - **R-82** — One mirror test, one seed rule *(closes RQ-33)*
 - **R-83** — The slice scale lives in q *(closes RQ-34)*
-- **R-84** — Branch decisions across precisions *(closes RQ-35)*
+- **R-84** — Branch decisions across precisions *(closes RQ-35)*. Still in force: all of it with the compute shaders' fast-math off, the default; with it on, an opt-in, parity is measured, not exact (R-297). Amended by R-297.
 - **R-93** — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*. Still in force: all of it, as its text now reads: conformed by R-105 (the re-run is R-35's) and R-119 (`t_max(f32)` is the GPU measurement). Corrected by R-105; amended by R-119.
 - **R-95** — After escape fires *(closes RQ-48, in part)*. Still in force: all of it, as its text now reads: conformed by R-103 (escape ends the production loop; the §2.4 march runs in the harness). Amended by R-103.
 - **R-103** — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*
@@ -135,7 +135,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-109** — Only pointer_channels §4 is normative *(closes RQ-70)*. Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and R-72 requirements, and the rest stays working notes; §3 is normative too (R-144). Amended by R-144.
 - **R-114** — The debug NaN guard is the bitcast test *(closes RQ-82)*
 - **R-115** — The raw `state` view keeps six colours *(closes RQ-83)*
-- **R-116** — The fragment decode and encode are generated from the one source *(closes RQ-84)*
+- **R-116** — The fragment decode and encode are generated from the one source *(closes RQ-84)*. Still in force: all of it; the agreement presets compare within a stated tolerance, a calibration requirement, not bit-exactly (R-297). Amended by R-297.
 - **R-120** — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*
 - **R-121** — The physics overlay isn't baked *(closes RQ-89)*
 - **R-122** — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*. Still in force: all of it except cubehelix, whose reference is the analytic form (R-151). Amended by R-151.
@@ -182,6 +182,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line
 - **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and `dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by `roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a buffer bound and reset per frame on the GPU (R-294). Amended by R-294.
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
+- **R-297** — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
 
 ## Values
 
@@ -266,7 +267,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-276** — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
 - **R-279** — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
 - **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys
-- **R-287** — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*
+- **R-287** — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*. Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a tie, so a golden near a tie keeps one reference per backend (R-296). Amended by R-296.
+- **R-296** — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
 
 ## One-off acts (history only)
 
@@ -283,7 +285,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-113** — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*
 - **R-124** — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*
 - **R-132** — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
-- **R-133** — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*
+- **R-133** — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*. Still in force: all seven interpretations, except that "f32 noise" in REQ-COL-006 is read as REQ-DEC-043's calibrated f32 decode factor only until TASK-M2-29 calibrates the agreement presets' tolerance under fragment fast-math, which the agreement gate then uses (REQ-COL-060, R-297). The rest of that interpretation stands: "Tier-N tolerance" in REQ-TOOL-029 is read as REQ-DEC-043's factor until REQ-VAL-064 sets Tier N, and the agreement preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0. Amended by R-297.
 - **R-140** — The four readings are accepted *(closes RQ-118)*
 - **R-147** — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
 - **R-150** — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*

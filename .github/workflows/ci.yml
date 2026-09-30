@@ -6,6 +6,12 @@
 # jobs are unchanged by them (R-177). Bench runs nightly and screenshots on GUI PRs, in their own workflows (R-177).
 # GitHub-hosted runners (R-186); the GPU jobs are GitHub-hosted too, so R-174's same-repository guard stays dormant
 # until a self-hosted job is added (R-186).
+#
+# Caches (R-285), in every workflow: the cargo registry and git directories, through rust-cache with its target cache
+# and ~/.cargo/bin cache off, and the fixture pool, saved by the `ci` job alone. Never a whole target directory, so the
+# repository's Actions cache stays well under GitHub's 10 GB limit. Every key names its job: rust-cache's `shared-key`
+# is the job id (its key reads `cargo-registry-<job>-…`), and the pool's key names `ci`, the job that saves it. The
+# `cargo-registry` prefix keeps these keys apart from the old `v0-rust-…` ones, which held target directories.
 name: ci
 
 on:
@@ -25,16 +31,21 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
       # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
       # what changed. Keyed on what invalidates its builds: the runner, the toolchain, the lockfile and the fixtures'
       # manifests; a new key starts from the latest pool of the same toolchain. Saved only when the job passes, so a
-      # run cut short by a failing test never saves a pool half built. Listed after rust-cache, so it saves before
-      # rust-cache's post-step clean-up of `target`.
+      # run cut short by a failing test never saves a pool half built. Its key names this job, the only one that
+      # saves it (R-285).
       - uses: actions/cache@v4
         with:
           path: target/tmp/fixture-targets
-          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
-          restore-keys: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
+          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+          restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
@@ -76,12 +87,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         id: toolchain
       - uses: Swatinem/rust-cache@v2
-      # The fixture pool the `ci` job saves: `cargo xtask controls` runs the fixture tests' controls (R-270).
+        with:
+          prefix-key: cargo-registry
+          shared-key: xtask-ci
+          cache-targets: "false"
+          cache-bin: "false"
+      # The fixture pool the `ci` job saves, restored only, under its key: `cargo xtask controls` runs the fixture tests'
+      # controls (R-270, R-285).
       - uses: actions/cache/restore@v4
         with:
           path: target/tmp/fixture-targets
-          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
-          restore-keys: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
+          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+          restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: actions/setup-python@v5
@@ -104,6 +121,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: gpu-metal
+          cache-targets: "false"
+          cache-bin: "false"
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
@@ -129,6 +151,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: gpu-lavapipe
+          cache-targets: "false"
+          cache-bin: "false"
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@v2

@@ -48,3 +48,4 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - Plan note: M1's REQ-TOOL-011 already lists the DECODE preset in the M1 catalogue, though the preset needs this task's WGSL decode.
 - RQ-84 ruled: R-116 (above). RQ-85 ruled: R-117 — the shape-sphere DECODE reference uses R-14's (θ, φ) map. RQ-94 ruled: R-113 — REQ-TOOL-011's DECODE row is this task's REQ-RENDER-027. RQ-95 ruled: R-113 (Gap G3 above).
 - Closes, for gaps the corpus leaves open: REQ-COL-057 (R-72 definition) (classification accepted by R-132).
+- R-297: the fragment may compile with fast-math and the compute kernel doesn't, so the agreement preset compares within a stated tolerance, not bit-exactly. TASK-M2-29 calibrates it (REQ-COL-060) and moves the agreement gate to it; until then this task's gate uses REQ-DEC-043's factor. R-297 amends R-133 here, and only here: `decode_preset_vs_decode_only` keeps REQ-DEC-043's factor.

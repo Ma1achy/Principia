@@ -3312,7 +3312,7 @@
   note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation."
 - id: REQ-INT-057
   area: INT
-  statement: "The wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
+  statement: "With the compute shaders' fast-math off, the default (R-297), the wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -3340,12 +3340,17 @@
     section: Tier L — exact, no tolerance (the bulk of the suite)
   - file: decisions.md
     section: R-84 — Branch decisions across precisions *(closes RQ-35)*
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
   verify:
     method: property test
     detail: "identical per-step inputs (fuzzed states) dispatched on GPU-f32 and CPU-f64: branch decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory"
   rulings:
   - R-34
   - R-84
+  - R-297
   milestone: M4
   note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B)."
 - id: REQ-INT-058
@@ -7884,6 +7889,26 @@
   - R-112
   milestone: M6
   note: Which of the two structures is built is TASK-M6-11's choice.
+- id: REQ-SCHED-097
+  area: SCHED
+  statement: "The compute shaders' fast-math setting must be a sim-key component, and so part of the payload compatibility signature: changing it must change the sim key, bind compute pipelines compiled with the new setting, invalidate every sim buffer and re-boot the march from t = 0 (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 3 — Cache tiers and the recompute rule
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 1 — Two-level keying: identity vs validity"
+  - file: docs/contracts/principia_caching_contract.md
+    section: Part 2 — What invalidates what (the dependency graph)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p engine fast_math_sim_key: toggling the setting changes the sim key and the payload signature, binds the compute pipelines compiled with the other setting and re-boots the state to t = 0; the default key has it off; no render-key edit changes it"
+  rulings:
+  - R-297
+  milestone: M4
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -9113,14 +9138,17 @@
     section: R-75 — The kernel keeps one debug mode *(closes RQ-26)*
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
   verify:
     method: golden image
-    detail: "ROUNDTRIP preset render of the latent and (L_z, E) charts: residual below ε_phys except at tagged-expected regions; no kernel variant is involved"
+    detail: "ROUNDTRIP preset render of the latent and (L_z, E) charts, in the jobs the goldens run in (gpu-metal and gpu-lavapipe), with the fragment compiled as the backend compiles it (fast-math on Metal, R-297): residual below ε_phys except at tagged-expected regions; no kernel variant is involved"
   rulings:
   - R-41
   - R-75
+  - R-297
   milestone: M2
-  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration)."
+  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?)."
 - id: REQ-RENDER-026
   area: RENDER
   statement: "The shape-sphere chart must default to an equirectangular projection and offer an equal-area alternative (Mollweide or Hammer–Aitoff) for quantitative area comparisons."
@@ -10111,13 +10139,14 @@
     section: "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
   verify:
     method: numerical gate
-    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey, with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement"
+    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement"
   rulings:
   - R-75
   - R-116
   - R-133
+  - R-297
   milestone: M2
-  note: "R-133: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until REQ-VAL-064 sets Tier N (M4)."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
@@ -10998,6 +11027,26 @@
   - R-67
   - R-72
   milestone: M7
+- id: REQ-COL-060
+  area: COL
+  kind: calibration
+  statement: "The tolerance within which the agreement presets compare the fragment-side decode against the compute kernel's values (|E(fragment-decode) − E₀| and the like), with the fragment shaders compiled with fast-math and the compute shaders not (R-297), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  - file: docs/contracts/principia_render_contract.md
+    section: Cross-check views (the seams)
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)"
+  verify:
+    method: numerical gate
+    detail: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement uses it; recorded in decisions.md"
+  rulings:
+  - R-297
+  milestone: M2
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204 — veto?, R-297's Applied note)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -13452,6 +13501,35 @@
   rulings:
   - R-274
   milestone: M6
+- id: REQ-GUI-163
+  area: GUI
+  statement: "The Run window must show the compute shaders' fast-math setting as a control under its SimConfig name, off by default; changing it must be marked as re-integrating (it is on the sim key), and while it is on the window must say that parity is measured, not exact (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Run — from the top bar
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on"
+  rulings:
+  - R-297
+  milestone: M8
+- id: REQ-GUI-164
+  area: GUI
+  statement: "The Profiler window must show the compute shaders' fast-math setting from the session header, with the compute stage's mode as compiled beside it where the two differ (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Profiler
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 04_windows (profiler_fast_math): the compute setting appears in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both"
+  rulings:
+  - R-297
+  milestone: M8
+  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204 — veto? (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -15506,6 +15584,34 @@
   - R-288
   - R-294
   milestone: M5
+- id: REQ-TOOL-141
+  area: TOOL
+  statement: "The session header of every profiler and benchmark file must record the compute shaders' fast-math setting as asked for (the sim key's) and each shader stage's fast-math mode — compute, vertex and fragment — as compiled on the running backend, so that where the two differ both are recorded (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine session_header_fast_math: the header carries the compute setting and the compute, vertex and fragment modes as compiled; on Metal with the default setting it reads setting off, compute off, and vertex and fragment on; with the setting on it reads setting on and compute on; on lavapipe with the setting on it reads setting on and compute off (compiled as off); a header missing the setting or a stage fails to parse"
+  rulings:
+  - R-297
+  milestone: M0
+- id: REQ-TOOL-142
+  area: TOOL
+  statement: "The embedded record (pxpack) must carry the compute shaders' fast-math setting among its sim fields, and recreating a view from it must restore that setting (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  verify:
+    method: unit test
+    detail: "cargo test -p render embed_fast_math: embed → extract round-trips the setting, off and on; recreating from a record with it on restores it on, and from one with it off restores it off"
+  rulings:
+  - R-297
+  milestone: M7
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -18426,7 +18532,7 @@
   milestone: M0
 - id: REQ-VAL-176
   area: VAL
-  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes and each golden-image case keeps one reference across backends; a case whose bytes still differ between backends must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend (R-269, R-287)."
+  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes at exact ties and each golden-image case whose bytes agree keeps one reference across backends; a case whose bytes still differ between backends, a golden near a tie among them (a value within an ulp of a tie can differ where the display shaders compile with fast-math, Metal via wgpu), must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend (R-269, R-287, R-296)."
   source:
   - file: decisions.md
     section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
@@ -18436,13 +18542,30 @@
     section: 6. The harness
   - file: decisions.md
     section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
+  - file: decisions.md
+    section: "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
   verify:
     method: golden image
-    detail: "CI on the PR head: R-269's half-way fixture renders identical bytes on gpu-metal and gpu-lavapipe (max step 0) with in-shader quantisation, and max step 1 without it (the control); cargo test -p xtask golden: the per-backend fallback passes against its own backend's reference and fails against the other's, and a missing reference fails naming the backend"
+    detail: "CI on the PR head: R-269's half-way fixture, quantised in the shader, renders max step 0 in gpu-metal and in gpu-lavapipe, each against its own backend's reference, and its control (the backend's automatic conversion) shows max step 1 between the backends; the evidence that the quantisation works: lavapipe's quantised bytes equal its automatic ones, and at the fixture's exact f32 ties (R × 255 exactly x + 0.5) both backends round to even; cargo test -p xtask golden: the per-backend fallback passes against its own backend's reference and fails against the other's, and a missing reference fails naming the backend"
   rulings:
   - R-269
   - R-287
+  - R-296
   milestone: M0
+- id: REQ-VAL-177
+  area: VAL
+  statement: "The differences between the compute shaders' fast-math on and off must be measured and reported, not asserted to be zero: over a fixture survey, the per-step branch-word forks, the largest continuous-word differences and the outcome-class fractions, on against off, by a report whose control, off against off, reports exactly zero (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate fast-math-diff in the gpu-metal job: the report lists, on against off, the branch-word forks per step (N_sub, state, terminals), the largest difference per continuous word and the outcome-class fractions, and is written into the gate report; off against off reports zero forks and zero differences (the control)"
+  rulings:
+  - R-297
+  milestone: M4
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -19829,6 +19952,20 @@
   - R-113
   milestone: M5
   note: Split from REQ-PERF-074 (R-113, RQ-100).
+- id: REQ-PERF-094
+  area: PERF
+  statement: "The march's speed with the compute shaders' fast-math on against off must be measured on the human's Mac and recorded, so that turning it on is an informed choice (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench fast-math, run on the human's Mac (R-186): the march kernel at production dispatch granularity on the same fixture survey, fast-math off and on; each run's frame time and march throughput and their ratio, recorded in the PR through prin profile diff"
+  rulings:
+  - R-297
+  milestone: M4
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
@@ -20948,4 +21085,21 @@
     detail: "code and qa: no workflow caches a target directory; every cache key names its job; the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and the `ci` job's wall time against R-270's ~10.5 min"
   rulings:
   - R-285
+  milestone: M0
+- id: REQ-SYS-074
+  area: SYS
+  statement: "Compute shaders must compile under an explicit fast-math setting that the project sets and records, off by default and on only as an opt-in optimisation, never inherited silently from a backend's default: every compute pipeline must be created through the one entry point that takes the setting, and on Metal, off must compile the project's own MSL with fast-math off and load it through wgpu's passthrough, for the compute pipelines only, while vertex and fragment pipelines keep wgpu's own path (R-297)."
+  source:
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: decisions.md
+    section: "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p validation compute_fast_math in the gpu-metal and gpu-lavapipe jobs, the task's own measurement: with the setting off, a probe compute shader computes (x + 0.5) / 255.0 for every x in 0..256 and a fuzzed set of f32 divisions, compares each bit for bit with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either backend (only the 256 inputs of (x + 0.5) / 255.0 have been measured, and on Metal only under wgpu's fast-math compile, R-296's Result; a mismatch with the setting off is a REVIEW_QUEUE entry); on Metal with the setting on it differs on at least one input (R-296's Result's 94 columns), so the switch is shown to act; the setting defaults to off; a lint finds no compute pipeline created outside the entry point and no vertex or fragment pipeline created through the passthrough"
+  rulings:
+  - R-296
+  - R-297
   milestone: M0
