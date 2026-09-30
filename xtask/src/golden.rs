@@ -1104,7 +1104,7 @@ pub fn judge(case: &Case, backend: &str, render: &Image) -> Result<Outcome, Stri
 
 /// For a case keeping one reference per backend, the comparison of its references with each other, as a line of
 /// the summary: how far apart the backends' bytes are (R-269). `None` for a case with one reference.
-fn cross_backend(case: &Case) -> Result<Option<String>, String> {
+pub fn cross_backend(case: &Case) -> Result<Option<String>, String> {
     let References::PerBackend(map) = &case.references else {
         return Ok(None);
     };

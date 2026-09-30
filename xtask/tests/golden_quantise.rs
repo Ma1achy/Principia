@@ -137,6 +137,34 @@ negative_control!(
     ))
 );
 
+// --- A reference object naming no backend is refused --------------------------------------------------------------
+
+fn check_empty_references_refused(result: Result<(), String>) {
+    let message = result.expect_err("a case whose reference object names no backend was loaded");
+    assert!(
+        message.contains(
+            "`reference` is neither a file name nor an object naming one file per backend"
+        ),
+        "refused for another reason: {message}"
+    );
+}
+
+#[test]
+fn golden_empty_reference_object_refused() {
+    check_empty_references_refused(judge_with_references("empty", json!({}), "metal"));
+}
+
+negative_control!(
+    golden_empty_reference_object_refused,
+    "the reference object naming the Metal reference",
+    expected = "a case whose reference object names no backend was loaded",
+    check_empty_references_refused(judge_with_references(
+        "ctl_empty",
+        json!({ "metal": "metal.png" }),
+        "metal",
+    ))
+);
+
 // --- Leaving the rounding to the backend needs one reference per backend ------------------------------------------
 
 fn check_automatic_shared_refused(result: Result<(), String>) {
@@ -199,6 +227,46 @@ negative_control!(
     "the Metal reference compared with itself",
     expected = "automatic references are not one step apart",
     check_one_step_in_r("metal", "metal")
+);
+
+// --- The summary's line comparing a case's per-backend references --------------------------------------------------
+
+/// Checks the line comparing the references of `case` (`<suite>/<case>`) with each other is `expected`.
+fn check_cross_backend(case: &str, expected: Option<&str>) {
+    let (suite, name) = case.split_once('/').unwrap();
+    let dir = repo_root().join("fixtures/golden").join(suite).join(name);
+    let case = Case::load(&dir, case).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        golden::cross_backend(&case)
+            .unwrap_or_else(|e| panic!("{e}"))
+            .as_deref(),
+        expected,
+        "the cross-backend line of {}",
+        case.name
+    );
+}
+
+#[test]
+fn golden_cross_backend_line_compares_references() {
+    check_cross_backend(
+        "quantise/halfway_automatic",
+        Some("references metal and vulkan differ by max step 1 on 32768 of 65536 pixels"),
+    );
+    check_cross_backend(
+        "quantise/halfway",
+        Some("references metal and vulkan differ by max step 1 on 24064 of 65536 pixels"),
+    );
+    check_cross_backend("selftest/gradient", None);
+}
+
+negative_control!(
+    golden_cross_backend_line_compares_references,
+    "the half-way case's line expected to be the control's",
+    expected = "the cross-backend line of quantise/halfway",
+    check_cross_backend(
+        "quantise/halfway",
+        Some("references metal and vulkan differ by max step 1 on 32768 of 65536 pixels"),
+    )
 );
 
 // --- Lavapipe's quantised reference is its automatic one --------------------------------------------------------
@@ -327,8 +395,8 @@ fn check_quantise_rounding(round: fn(f32) -> f32) {
     let mut ties = 0;
     for (i, pixel) in floats.iter().enumerate() {
         let (x, y) = (i % width, i / width);
-        for c in 0..3 {
-            let v = pixel[c].clamp(0.0, 1.0) * 255.0;
+        for (c, channel) in pixel[..3].iter().enumerate() {
+            let v = channel.clamp(0.0, 1.0) * 255.0;
             let expected = round(v) as u8;
             let stored = quantised.rgb[3 * i + c];
             assert_eq!(
