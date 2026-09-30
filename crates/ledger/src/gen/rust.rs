@@ -1,6 +1,7 @@
-//! The Rust struct emitter (dd_generation_root §1; dd_simstate_payload §1): writes each of [`crate::payload::structs`]
-//! as a `#[repr(C)]`, `no_std`-compatible struct into `crates/kernel/src/payload/generated.rs`, members in order, vec2
-//! groups as `[[f32; 2]; 3]`. [`check`] holds each member against the ledger entry or word it stores.
+//! The Rust emitter (dd_generation_root §1; dd_simstate_payload §1, §2, §6): writes each of
+//! [`crate::payload::structs`] as a `#[repr(C)]`, `no_std`-compatible struct into
+//! `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed words'
+//! pack/unpack/insert code ([`accessors`]). [`check`] holds each member against the ledger entry or word it stores.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -58,22 +59,372 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
         }
         out.push_str("}\n");
     }
+    out.push_str(&accessors(words, entries));
     vec![Generated {
         path: PathBuf::from(PATH),
         contents: out,
     }]
 }
 
+/// The accessor prefix of each packed word (payload §6): `pa_`, `pb_` and `tm_`, and `sd_` for the unsigned fields of
+/// `packed_a`, which are the `sample_descriptor`'s.
+pub const PREFIXES: [(&str, &str); 3] = [("packed_a", "pa"), ("packed_b", "pb"), ("times", "tm")];
+
+/// The accessor prefix of `entry` in `word`, or `None` if the word has none.
+fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
+    let (_, p) = PREFIXES.iter().find(|(w, _)| *w == word)?;
+    Some(if *p == "pa" && entry.ty == FieldType::UBits {
+        "sd"
+    } else {
+        p
+    })
+}
+
+/// A sentinel as a Rust literal of the field's type: an f32 for an `f16-pair` field, a u32 for unsigned bits.
+fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
+    match entry.ty {
+        FieldType::F16Pair if value == f64::INFINITY => ("f32", "f32::INFINITY".to_owned()),
+        FieldType::F16Pair => ("f32", format!("{value:?}")),
+        _ => ("u32", format!("{}", value as u64)),
+    }
+}
+
+/// The pack/unpack/insert code of the packed words, emitted from their entries (payload §2, §6), after the fixed
+/// helpers ([`helpers`]). Per packed field `f` of word `w`, at bits `o .. o + n`:
+/// - an unpack accessor named as payload §6, `<prefix>_f(w)`, reading `extract(w, o, n)`: a `bool` for a flag, an f32
+///   through the binary16 conversion for an `f16-pair`, else a `u32`;
+/// - a setter `set_f(w, v)` writing `insert(w, v, o, n)`; an `f16-pair` value is clamped to ±65504 first (payload
+///   §1). An `f16-pair` whose sentinel is +∞ is `d_min` under R-271: +∞ writes the unset bits (f16 +∞, `0x7c00`), a
+///   value below f16's smallest positive subnormal writes that subnormal, both as bit patterns, so 0.0 never appears;
+///   `set_f_unset(w)` writes the unset bits and `<prefix>_f_is_unset(w)` tests them by bits (R-271);
+/// - a sentinel constant `<PREFIX>_F_SENTINEL` when the entry has a sentinel;
+/// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
+///   zero, so reserved bits are zero.
+pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
+    let mut out = helpers();
+    for word in words {
+        let mut fields: Vec<(&Entry, u32, u32)> = entries
+            .iter()
+            .filter_map(|e| match e.location {
+                Location::Packed {
+                    word: w,
+                    offset,
+                    width,
+                } if w == word.name => Some((e, offset, width)),
+                _ => None,
+            })
+            .collect();
+        fields.sort_by_key(|&(_, offset, _)| offset);
+        let mut params = Vec::new();
+        let mut calls = Vec::new();
+        for &(e, offset, width) in &fields {
+            let Some(p) = prefix(word.name, e) else {
+                continue;
+            };
+            let (w, f) = (word.name, e.name);
+            let (ty, get, put) = match (&e.ty, width) {
+                (FieldType::F16Pair, _) => (
+                    "f32",
+                    format!("f16_bits_to_f32(extract(w, {offset}, {width}) as u16)"),
+                    "u32::from(f32_to_f16_bits(clamp_f16(v)))".to_owned(),
+                ),
+                (_, 1) => (
+                    "bool",
+                    format!("extract(w, {offset}, {width}) == 1"),
+                    "u32::from(v)".to_owned(),
+                ),
+                _ => (
+                    "u32",
+                    format!("extract(w, {offset}, {width})"),
+                    "v".to_owned(),
+                ),
+            };
+            let bits = match width {
+                1 => format!("bit {offset} of `{w}`"),
+                _ => format!("bits {offset}–{} of `{w}`", offset + width - 1),
+            };
+            let unset = e.ty == FieldType::F16Pair && e.sentinel == Some(f64::INFINITY);
+            if let Some(s) = e.sentinel {
+                let (t, value) = literal(e, s);
+                let name = format!("{p}_{f}_SENTINEL").to_uppercase();
+                let _ = write!(
+                    out,
+                    "\n/// `{f}`'s sentinel in the ledger (dd_generation_root §3.8).\npub const {name}: {t} = {value};\n"
+                );
+            }
+            let _ = write!(
+                out,
+                "\n/// `{f}`: {bits} (payload §2, §6).\n#[inline]\npub fn {p}_{f}(w: u32) -> {ty} {{\n    {get}\n}}\n"
+            );
+            if unset {
+                let _ = write!(
+                    out,
+                    "\n/// `{f}`'s unset bits: f16 +∞, the minimum of an empty set (R-271).\n\
+                     pub const {upper}_UNSET: u32 = 0x7c00;\n\
+                     \n/// Whether `{f}` is unset: tested by its bits, never by a float comparison (R-271).\n\
+                     #[inline]\npub fn {p}_{f}_is_unset(w: u32) -> bool {{\n    extract(w, {offset}, {width}) == {upper}_UNSET\n}}\n\
+                     \n/// `{w}` with `{f}` unset: a failed sample's, and any sample's before its first step (R-271).\n\
+                     #[inline]\npub fn set_{f}_unset(w: u32) -> u32 {{\n    insert(w, {upper}_UNSET, {offset}, {width})\n}}\n\
+                     \n/// `{w}` with `{f}` set to `v` (R-271, payload §1): +∞ writes the unset bits; a value below f16's smallest\n\
+                     /// positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both are written as bits,\n\
+                     /// not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
+                     #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
+                     \x20   let h = if v == f32::INFINITY {{\n\
+                     \x20       {upper}_UNSET\n\
+                     \x20   }} else if v < F16_MIN_SUBNORMAL {{\n\
+                     \x20       F16_MIN_SUBNORMAL_BITS\n\
+                     \x20   }} else {{\n\
+                     \x20       {put}\n\
+                     \x20   }};\n\
+                     \x20   insert(w, h, {offset}, {width})\n}}\n",
+                    upper = format!("{p}_{f}").to_uppercase(),
+                );
+            } else {
+                let clamp = if e.ty == FieldType::F16Pair {
+                    ", clamped to ±65504 first (payload §1)"
+                } else {
+                    ""
+                };
+                let _ = write!(
+                    out,
+                    "\n/// `{w}` with `{f}` set to `v`{clamp}; every other bit kept.\n#[inline]\n\
+                     pub fn set_{f}(w: u32, v: {ty}) -> u32 {{\n    insert(w, {put}, {offset}, {width})\n}}\n"
+                );
+            }
+            params.push(format!("{f}: {ty}"));
+            calls.push(format!("set_{f}({{}}, {f})"));
+        }
+        let Some(last) = calls.pop() else {
+            continue;
+        };
+        let w = word.name;
+        let line = format!("pub fn pack_{w}({}) -> u32 {{", params.join(", "));
+        // rustfmt's layout: the signature on one line if it fits in 100 columns, else one parameter per line.
+        let signature = if line.chars().count() <= 100 {
+            line
+        } else {
+            let one_per_line: String = params.iter().map(|p| format!("    {p},\n")).collect();
+            format!("pub fn pack_{w}(\n{one_per_line}) -> u32 {{")
+        };
+        let mut body = String::new();
+        let mut from = "0";
+        for call in &calls {
+            let _ = writeln!(body, "    let w = {};", call.replace("{}", from));
+            from = "w";
+        }
+        let _ = writeln!(body, "    {}", last.replace("{}", from));
+        let spans: Vec<String> = word
+            .reserved
+            .iter()
+            .map(|r| format!("({}, {})", r.offset, r.width))
+            .collect();
+        let _ = write!(
+            out,
+            "\n/// `{w}`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero\n\
+             /// (payload §2; dd_generation_root §5 test 1).\n\
+             pub const {upper}_RESERVED: [(u32, u32); {n}] = [{spans}];\n",
+            upper = w.to_uppercase(),
+            n = spans.len(),
+            spans = spans.join(", "),
+        );
+        let _ = write!(
+            out,
+            "\n/// `{w}` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).\n\
+             #[inline]\n{signature}\n{body}}}\n",
+        );
+    }
+    out
+}
+
+/// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /
+/// `unpack2x16float` equivalents, the ±65504 clamp (the register's `f16_finite_max`), and payload §6's accessors that
+/// no single entry determines: the state predicates, `sd_last_symbol_valid` (the register's `fgw_length_sentinel`),
+/// `total_substeps_log2` and the `times` fractions.
+fn helpers() -> String {
+    let f16_max = crate::constants::F16_FINITE_MAX.number();
+    let truncated = crate::constants::FGW_LENGTH_SENTINEL.number();
+    format!(
+        r#"
+/// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
+pub const F16_FINITE_MAX: f32 = {f16_max:?};
+
+/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271).
+pub const F16_MIN_SUBNORMAL: f32 = 5.9604645e-8;
+pub const F16_MIN_SUBNORMAL_BITS: u32 = 0x0001;
+
+/// Bits `offset .. offset + width` of `w`, `width` in 1..=32 (the u32 `extractBits`, payload §6).
+#[inline]
+pub const fn extract(w: u32, offset: u32, width: u32) -> u32 {{
+    (w >> offset) & (u32::MAX >> (32 - width))
+}}
+
+/// `w` with bits `offset .. offset + width` replaced by the low `width` bits of `v`, every other bit kept (the u32
+/// `insertBits`, payload §6).
+#[inline]
+pub const fn insert(w: u32, v: u32, offset: u32, width: u32) -> u32 {{
+    let mask = (u32::MAX >> (32 - width)) << offset;
+    (w & !mask) | ((v << offset) & mask)
+}}
+
+/// `x` clamped to binary16's finite range, ±65504, as payload §1 requires before packing; NaN stays NaN.
+#[inline]
+pub fn clamp_f16(x: f32) -> f32 {{
+    x.clamp(-F16_FINITE_MAX, F16_FINITE_MAX)
+}}
+
+/// The binary16 bits of `x`, rounded to nearest, ties to even: one of the two results WGSL's `pack2x16float` may give
+/// for an inexact value, and the exact one otherwise, subnormals kept. Past the finite range the result is ±∞, where
+/// `pack2x16float` is indeterminate, so packers clamp first (payload §1). NaN stays NaN, keeping its payload's top bits.
+pub fn f32_to_f16_bits(x: f32) -> u16 {{
+    let b = x.to_bits();
+    let sign = ((b >> 16) & 0x8000) as u16;
+    let exp = ((b >> 23) & 0xff) as i32;
+    let man = b & 0x007f_ffff;
+    if exp == 0xff {{
+        let payload = (man >> 13) as u16;
+        let nan = if man != 0 && payload == 0 {{
+            0x0200
+        }} else {{
+            payload
+        }};
+        return sign | 0x7c00 | nan;
+    }}
+    let e = exp - 112;
+    if e >= 0x1f {{
+        return sign | 0x7c00;
+    }}
+    let (full, shift) = if e <= 0 {{
+        (man | 0x0080_0000, (14 - e) as u32)
+    }} else {{
+        (man, 13)
+    }};
+    if shift >= 32 {{
+        return sign;
+    }}
+    let q = full >> shift;
+    let rem = full & ((1 << shift) - 1);
+    let half = 1 << (shift - 1);
+    let q = if rem > half || (rem == half && q & 1 == 1) {{
+        q + 1
+    }} else {{
+        q
+    }};
+    let h = if e <= 0 {{ q }} else {{ ((e as u32) << 10) + q }};
+    sign | h as u16
+}}
+
+/// The f32 value of the binary16 bits `h`, exact for every one of them (`unpack2x16float`'s conversion).
+pub fn f16_bits_to_f32(h: u16) -> f32 {{
+    let sign = u32::from(h & 0x8000) << 16;
+    let exp = u32::from((h >> 10) & 0x1f);
+    let man = u32::from(h & 0x03ff);
+    if exp == 0 {{
+        let magnitude = man as f32 * F16_MIN_SUBNORMAL;
+        return f32::from_bits(sign | magnitude.to_bits());
+    }}
+    if exp == 0x1f {{
+        return f32::from_bits(sign | 0x7f80_0000 | (man << 13));
+    }}
+    f32::from_bits(sign | ((exp + 112) << 23) | (man << 13))
+}}
+
+/// WGSL's `pack2x16float`: `v[0]` in bits 0–15, `v[1]` in bits 16–31. No clamp: callers clamp first (payload §1).
+#[inline]
+pub fn pack2x16float(v: [f32; 2]) -> u32 {{
+    u32::from(f32_to_f16_bits(v[0])) | (u32::from(f32_to_f16_bits(v[1])) << 16)
+}}
+
+/// WGSL's `unpack2x16float`: `[bits 0–15, bits 16–31]` (`.x`, `.y`).
+#[inline]
+pub fn unpack2x16float(w: u32) -> [f32; 2] {{
+    [f16_bits_to_f32(w as u16), f16_bits_to_f32((w >> 16) as u16)]
+}}
+
+/// Escape, bounded or collision: a resolved outcome. sim_failed and decode_failed are finished but not resolved, so
+/// never gate re-dispatch on this (payload §6).
+#[inline]
+pub fn sd_is_resolved_outcome(w: u32) -> bool {{
+    sd_state(w) <= 2
+}}
+
+/// Still marching: state 3 (payload §6).
+#[inline]
+pub fn sd_is_running(w: u32) -> bool {{
+    sd_state(w) == 3
+}}
+
+/// Untrusted: sim_failed or decode_failed, and the reserved codes 6–7 (payload §2, §6).
+#[inline]
+pub fn sd_is_failed(w: u32) -> bool {{
+    sd_state(w) >= 4
+}}
+
+/// Finished, so the scheduler stops marching it: every state but running, the reserved 6–7 included (payload §2, §6).
+#[inline]
+pub fn sd_is_finished(w: u32) -> bool {{
+    !sd_is_running(w)
+}}
+
+/// Whether `last_symbol` is meaningful, from the sidecar word's `length_raw`: at least 1 and not the truncation
+/// sentinel (payload §2, §6).
+#[inline]
+pub fn sd_last_symbol_valid(len: u32) -> bool {{
+    len >= 1 && len != {truncated}
+}}
+
+/// The complexity proxy, ⌊log₂ total⌋ and 0 for a total ≤ 1, derived from the exact `total_substeps` (payload §6, R-86).
+#[inline]
+pub fn total_substeps_log2(total: u32) -> u32 {{
+    if total > 1 {{
+        31 - total.leading_zeros()
+    }} else {{
+        0
+    }}
+}}
+
+/// `t_end_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §2, §6).
+#[inline]
+pub fn tm_t_end_fraction(w: u32, horizon_steps: u32) -> f32 {{
+    if horizon_steps > 0 {{
+        tm_t_end_step(w) as f32 / horizon_steps as f32
+    }} else {{
+        0.0
+    }}
+}}
+
+/// `t_dmin_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §2, §6).
+#[inline]
+pub fn tm_t_dmin_fraction(w: u32, horizon_steps: u32) -> f32 {{
+    if horizon_steps > 0 {{
+        tm_t_dmin_step(w) as f32 / horizon_steps as f32
+    }} else {{
+        0.0
+    }}
+}}
+"#,
+        truncated = truncated as u32,
+    )
+}
+
 /// Every mismatch between `structs` and the ledger: a member stored as other than its entry's type or word's width, an
-/// indexed struct's member off its entry's scalar index, trailing padding, or a member that is neither an entry, a
-/// word, nor `_`-prefixed and not listed in `pending`.
+/// indexed struct's member off its entry's scalar index, trailing padding, a member that is neither an entry, a word,
+/// nor `_`-prefixed and not listed in `pending`, or a packed word with no accessor prefix ([`PREFIXES`]).
 pub fn check(
     structs: &[Struct],
     words: &[Word],
     entries: &[Entry],
     pending: &[&str],
 ) -> Vec<String> {
-    let mut found = Vec::new();
+    let mut found: Vec<String> = words
+        .iter()
+        .filter(|w| !PREFIXES.iter().any(|(name, _)| *name == w.name))
+        .map(|w| {
+            format!(
+                "packed word `{}` has no accessor prefix (payload §6)",
+                w.name
+            )
+        })
+        .collect();
     for s in structs {
         let (offsets, size) = offsets(s);
         let used: u32 = s.members.iter().map(|m| m.storage.size()).sum();

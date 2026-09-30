@@ -69,3 +69,354 @@ pub struct ICDescriptor {
     pub r_min_pair_0: f32,
     pub _pad: [u32; 4],
 }
+
+/// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
+pub const F16_FINITE_MAX: f32 = 65504.0;
+
+/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271).
+pub const F16_MIN_SUBNORMAL: f32 = 5.9604645e-8;
+pub const F16_MIN_SUBNORMAL_BITS: u32 = 0x0001;
+
+/// Bits `offset .. offset + width` of `w`, `width` in 1..=32 (the u32 `extractBits`, payload §6).
+#[inline]
+pub const fn extract(w: u32, offset: u32, width: u32) -> u32 {
+    (w >> offset) & (u32::MAX >> (32 - width))
+}
+
+/// `w` with bits `offset .. offset + width` replaced by the low `width` bits of `v`, every other bit kept (the u32
+/// `insertBits`, payload §6).
+#[inline]
+pub const fn insert(w: u32, v: u32, offset: u32, width: u32) -> u32 {
+    let mask = (u32::MAX >> (32 - width)) << offset;
+    (w & !mask) | ((v << offset) & mask)
+}
+
+/// `x` clamped to binary16's finite range, ±65504, as payload §1 requires before packing; NaN stays NaN.
+#[inline]
+pub fn clamp_f16(x: f32) -> f32 {
+    x.clamp(-F16_FINITE_MAX, F16_FINITE_MAX)
+}
+
+/// The binary16 bits of `x`, rounded to nearest, ties to even: one of the two results WGSL's `pack2x16float` may give
+/// for an inexact value, and the exact one otherwise, subnormals kept. Past the finite range the result is ±∞, where
+/// `pack2x16float` is indeterminate, so packers clamp first (payload §1). NaN stays NaN, keeping its payload's top bits.
+pub fn f32_to_f16_bits(x: f32) -> u16 {
+    let b = x.to_bits();
+    let sign = ((b >> 16) & 0x8000) as u16;
+    let exp = ((b >> 23) & 0xff) as i32;
+    let man = b & 0x007f_ffff;
+    if exp == 0xff {
+        let payload = (man >> 13) as u16;
+        let nan = if man != 0 && payload == 0 {
+            0x0200
+        } else {
+            payload
+        };
+        return sign | 0x7c00 | nan;
+    }
+    let e = exp - 112;
+    if e >= 0x1f {
+        return sign | 0x7c00;
+    }
+    let (full, shift) = if e <= 0 {
+        (man | 0x0080_0000, (14 - e) as u32)
+    } else {
+        (man, 13)
+    };
+    if shift >= 32 {
+        return sign;
+    }
+    let q = full >> shift;
+    let rem = full & ((1 << shift) - 1);
+    let half = 1 << (shift - 1);
+    let q = if rem > half || (rem == half && q & 1 == 1) {
+        q + 1
+    } else {
+        q
+    };
+    let h = if e <= 0 { q } else { ((e as u32) << 10) + q };
+    sign | h as u16
+}
+
+/// The f32 value of the binary16 bits `h`, exact for every one of them (`unpack2x16float`'s conversion).
+pub fn f16_bits_to_f32(h: u16) -> f32 {
+    let sign = u32::from(h & 0x8000) << 16;
+    let exp = u32::from((h >> 10) & 0x1f);
+    let man = u32::from(h & 0x03ff);
+    if exp == 0 {
+        let magnitude = man as f32 * F16_MIN_SUBNORMAL;
+        return f32::from_bits(sign | magnitude.to_bits());
+    }
+    if exp == 0x1f {
+        return f32::from_bits(sign | 0x7f80_0000 | (man << 13));
+    }
+    f32::from_bits(sign | ((exp + 112) << 23) | (man << 13))
+}
+
+/// WGSL's `pack2x16float`: `v[0]` in bits 0–15, `v[1]` in bits 16–31. No clamp: callers clamp first (payload §1).
+#[inline]
+pub fn pack2x16float(v: [f32; 2]) -> u32 {
+    u32::from(f32_to_f16_bits(v[0])) | (u32::from(f32_to_f16_bits(v[1])) << 16)
+}
+
+/// WGSL's `unpack2x16float`: `[bits 0–15, bits 16–31]` (`.x`, `.y`).
+#[inline]
+pub fn unpack2x16float(w: u32) -> [f32; 2] {
+    [f16_bits_to_f32(w as u16), f16_bits_to_f32((w >> 16) as u16)]
+}
+
+/// Escape, bounded or collision: a resolved outcome. sim_failed and decode_failed are finished but not resolved, so
+/// never gate re-dispatch on this (payload §6).
+#[inline]
+pub fn sd_is_resolved_outcome(w: u32) -> bool {
+    sd_state(w) <= 2
+}
+
+/// Still marching: state 3 (payload §6).
+#[inline]
+pub fn sd_is_running(w: u32) -> bool {
+    sd_state(w) == 3
+}
+
+/// Untrusted: sim_failed or decode_failed, and the reserved codes 6–7 (payload §2, §6).
+#[inline]
+pub fn sd_is_failed(w: u32) -> bool {
+    sd_state(w) >= 4
+}
+
+/// Finished, so the scheduler stops marching it: every state but running, the reserved 6–7 included (payload §2, §6).
+#[inline]
+pub fn sd_is_finished(w: u32) -> bool {
+    !sd_is_running(w)
+}
+
+/// Whether `last_symbol` is meaningful, from the sidecar word's `length_raw`: at least 1 and not the truncation
+/// sentinel (payload §2, §6).
+#[inline]
+pub fn sd_last_symbol_valid(len: u32) -> bool {
+    len >= 1 && len != 127
+}
+
+/// The complexity proxy, ⌊log₂ total⌋ and 0 for a total ≤ 1, derived from the exact `total_substeps` (payload §6, R-86).
+#[inline]
+pub fn total_substeps_log2(total: u32) -> u32 {
+    if total > 1 {
+        31 - total.leading_zeros()
+    } else {
+        0
+    }
+}
+
+/// `t_end_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §2, §6).
+#[inline]
+pub fn tm_t_end_fraction(w: u32, horizon_steps: u32) -> f32 {
+    if horizon_steps > 0 {
+        tm_t_end_step(w) as f32 / horizon_steps as f32
+    } else {
+        0.0
+    }
+}
+
+/// `t_dmin_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §2, §6).
+#[inline]
+pub fn tm_t_dmin_fraction(w: u32, horizon_steps: u32) -> f32 {
+    if horizon_steps > 0 {
+        tm_t_dmin_step(w) as f32 / horizon_steps as f32
+    } else {
+        0.0
+    }
+}
+
+/// `state`: bits 0–2 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_state(w: u32) -> u32 {
+    extract(w, 0, 3)
+}
+
+/// `packed_a` with `state` set to `v`; every other bit kept.
+#[inline]
+pub fn set_state(w: u32, v: u32) -> u32 {
+    insert(w, v, 0, 3)
+}
+
+/// `detail`: bits 3–4 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_detail(w: u32) -> u32 {
+    extract(w, 3, 2)
+}
+
+/// `packed_a` with `detail` set to `v`; every other bit kept.
+#[inline]
+pub fn set_detail(w: u32, v: u32) -> u32 {
+    insert(w, v, 3, 2)
+}
+
+/// `saturated`: bit 5 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_saturated(w: u32) -> bool {
+    extract(w, 5, 1) == 1
+}
+
+/// `packed_a` with `saturated` set to `v`; every other bit kept.
+#[inline]
+pub fn set_saturated(w: u32, v: bool) -> u32 {
+    insert(w, u32::from(v), 5, 1)
+}
+
+/// `dmin_pair`'s sentinel in the ledger (dd_generation_root §3.8).
+pub const SD_DMIN_PAIR_SENTINEL: u32 = 3;
+
+/// `dmin_pair`: bits 6–7 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_dmin_pair(w: u32) -> u32 {
+    extract(w, 6, 2)
+}
+
+/// `packed_a` with `dmin_pair` set to `v`; every other bit kept.
+#[inline]
+pub fn set_dmin_pair(w: u32, v: u32) -> u32 {
+    insert(w, v, 6, 2)
+}
+
+/// `last_symbol`: bits 8–9 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_last_symbol(w: u32) -> u32 {
+    extract(w, 8, 2)
+}
+
+/// `packed_a` with `last_symbol` set to `v`; every other bit kept.
+#[inline]
+pub fn set_last_symbol(w: u32, v: u32) -> u32 {
+    insert(w, v, 8, 2)
+}
+
+/// `d_min`'s sentinel in the ledger (dd_generation_root §3.8).
+pub const PA_D_MIN_SENTINEL: f32 = f32::INFINITY;
+
+/// `d_min`: bits 16–31 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn pa_d_min(w: u32) -> f32 {
+    f16_bits_to_f32(extract(w, 16, 16) as u16)
+}
+
+/// `d_min`'s unset bits: f16 +∞, the minimum of an empty set (R-271).
+pub const PA_D_MIN_UNSET: u32 = 0x7c00;
+
+/// Whether `d_min` is unset: tested by its bits, never by a float comparison (R-271).
+#[inline]
+pub fn pa_d_min_is_unset(w: u32) -> bool {
+    extract(w, 16, 16) == PA_D_MIN_UNSET
+}
+
+/// `packed_a` with `d_min` unset: a failed sample's, and any sample's before its first step (R-271).
+#[inline]
+pub fn set_d_min_unset(w: u32) -> u32 {
+    insert(w, PA_D_MIN_UNSET, 16, 16)
+}
+
+/// `packed_a` with `d_min` set to `v` (R-271, payload §1): +∞ writes the unset bits; a value below f16's smallest
+/// positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both are written as bits,
+/// not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
+#[inline]
+pub fn set_d_min(w: u32, v: f32) -> u32 {
+    let h = if v == f32::INFINITY {
+        PA_D_MIN_UNSET
+    } else if v < F16_MIN_SUBNORMAL {
+        F16_MIN_SUBNORMAL_BITS
+    } else {
+        u32::from(f32_to_f16_bits(clamp_f16(v)))
+    };
+    insert(w, h, 16, 16)
+}
+
+/// `packed_a`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const PACKED_A_RESERVED: [(u32, u32); 1] = [(10, 6)];
+
+/// `packed_a` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_packed_a(
+    state: u32,
+    detail: u32,
+    saturated: bool,
+    dmin_pair: u32,
+    last_symbol: u32,
+    d_min: f32,
+) -> u32 {
+    let w = set_state(0, state);
+    let w = set_detail(w, detail);
+    let w = set_saturated(w, saturated);
+    let w = set_dmin_pair(w, dmin_pair);
+    let w = set_last_symbol(w, last_symbol);
+    set_d_min(w, d_min)
+}
+
+/// `dE_max`: bits 0–15 of `packed_b` (payload §2, §6).
+#[inline]
+pub fn pb_dE_max(w: u32) -> f32 {
+    f16_bits_to_f32(extract(w, 0, 16) as u16)
+}
+
+/// `packed_b` with `dE_max` set to `v`, clamped to ±65504 first (payload §1); every other bit kept.
+#[inline]
+pub fn set_dE_max(w: u32, v: f32) -> u32 {
+    insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 0, 16)
+}
+
+/// `dLz_max`: bits 16–31 of `packed_b` (payload §2, §6).
+#[inline]
+pub fn pb_dLz_max(w: u32) -> f32 {
+    f16_bits_to_f32(extract(w, 16, 16) as u16)
+}
+
+/// `packed_b` with `dLz_max` set to `v`, clamped to ±65504 first (payload §1); every other bit kept.
+#[inline]
+pub fn set_dLz_max(w: u32, v: f32) -> u32 {
+    insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 16, 16)
+}
+
+/// `packed_b`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const PACKED_B_RESERVED: [(u32, u32); 0] = [];
+
+/// `packed_b` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_packed_b(dE_max: f32, dLz_max: f32) -> u32 {
+    let w = set_dE_max(0, dE_max);
+    set_dLz_max(w, dLz_max)
+}
+
+/// `t_end_step`: bits 0–15 of `times` (payload §2, §6).
+#[inline]
+pub fn tm_t_end_step(w: u32) -> u32 {
+    extract(w, 0, 16)
+}
+
+/// `times` with `t_end_step` set to `v`; every other bit kept.
+#[inline]
+pub fn set_t_end_step(w: u32, v: u32) -> u32 {
+    insert(w, v, 0, 16)
+}
+
+/// `t_dmin_step`: bits 16–31 of `times` (payload §2, §6).
+#[inline]
+pub fn tm_t_dmin_step(w: u32) -> u32 {
+    extract(w, 16, 16)
+}
+
+/// `times` with `t_dmin_step` set to `v`; every other bit kept.
+#[inline]
+pub fn set_t_dmin_step(w: u32, v: u32) -> u32 {
+    insert(w, v, 16, 16)
+}
+
+/// `times`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const TIMES_RESERVED: [(u32, u32); 0] = [];
+
+/// `times` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_times(t_end_step: u32, t_dmin_step: u32) -> u32 {
+    let w = set_t_end_step(0, t_end_step);
+    set_t_dmin_step(w, t_dmin_step)
+}

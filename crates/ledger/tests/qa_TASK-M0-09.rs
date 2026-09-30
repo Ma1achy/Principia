@@ -389,7 +389,11 @@ fn check_3_4(entries: &[Entry], rows: &[(&str, Scale, Option<Range>)]) {
             assert_eq!(e.range, *r, "§3.4 `{name}`'s range");
         }
         // Payload §1: failed samples store 0.0 in `d_min`, a canonical sentinel (applied per R-227 / R-204).
-        let want = if *name == "d_min" { Some(0.0) } else { None };
+        let want = if *name == "d_min" {
+            Some(f64::INFINITY)
+        } else {
+            None
+        };
         assert_eq!(e.sentinel, want, "§3.4 / payload §1 `{name}`'s sentinel");
     }
     for name in ["ftle", "energy_drift", "Lz_drift", "diffusion"] {
