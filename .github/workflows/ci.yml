@@ -78,6 +78,10 @@ jobs:
         run: cargo test -p validation --features controls metal_hosted_probe -- --nocapture
       - name: cargo test -p validation --features controls gpu_harness
         run: cargo test -p validation --features controls gpu_harness -- --nocapture
+      # The golden half of R-186's first Metal check: the self-test within REQ-VAL-138's tolerance (TASK-M0-06). On
+      # ubuntu-latest (lavapipe) it runs in `cargo xtask ci`, as `golden --all`.
+      - name: cargo xtask golden selftest
+        run: cargo xtask golden selftest
 
   # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
   gpu-lavapipe:

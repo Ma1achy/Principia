@@ -32,6 +32,11 @@ pub const RUNNERS: &[Runner] = &[
         run: lint_constants,
         list: lint_constants,
     },
+    Runner {
+        name: "golden",
+        run: golden,
+        list: golden,
+    },
 ];
 
 /// `cargo xtask plan-check` on this repo; it runs no control, so it is its own listing-only form (R-235).
@@ -42,6 +47,13 @@ fn plan_check() -> Result<(), String> {
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_constants() -> Result<(), String> {
     crate::lint_constants::run(&crate::workspace_manifest())
+}
+
+/// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit); it runs no control, so
+/// it is its own listing-only form (R-235).
+fn golden() -> Result<(), String> {
+    let root = crate::plan_check::repo_root();
+    crate::golden::cli(&root, &["--all"])
 }
 
 /// `cargo xtask controls` on this workspace: every control run, failing on any finding (R-198, R-226).

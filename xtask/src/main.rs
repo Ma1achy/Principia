@@ -24,6 +24,13 @@ Commands:
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
+  golden <suite> | --all          render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
+                                  offscreen, compare it with its reference to the tolerance its requirement id
+                                  gives, and write the difference image and summary under target/golden/ (R-110)
+  golden repro <suite>/<case> --vary <field>=<a>,<b>
+                                  render two arms differing in exactly one field (a pair differing in more is
+                                  refused), and report the RGB values along the case's lines and one column per
+                                  symptom per arm (philosophy §4.3a; pitfalls §8)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
@@ -61,6 +68,7 @@ fn main() -> ExitCode {
                 }
             };
         }
+        ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),

@@ -11,6 +11,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # R-191's compile check edits kernel's and ledger's manifests in its copy of the workspace (`deps::compile_check`).
 toml_edit = "0.25.15"
+# `cargo xtask golden` renders its cases with native wgpu offscreen (parity_contract §6; R-110), reads and writes PNG
+# baselines, and hashes each reference for BASELINES.md (R-110). wgpu is an external crate, not a workspace edge
+# (systems_architecture §7.1 admits xtask → validation only as a dev-dependency).
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+png = "0.17"
+sha2 = "0.10"
 
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).
 [dev-dependencies]
