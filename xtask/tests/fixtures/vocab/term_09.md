@@ -1,3 +1,2 @@
 Fixture 09: one term the vocabulary lint fails on (TASK-M0-16).
-A single TypeScript layout
-constant generates WGSL pack.
+The TS layout constant generates WGSL.

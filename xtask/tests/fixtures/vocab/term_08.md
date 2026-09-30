@@ -1,2 +1,3 @@
 Fixture 08: one term the vocabulary lint fails on (TASK-M0-16).
-The GPU is matched with Math.fround per stage.
+A single TypeScript layout
+constant generates WGSL pack.

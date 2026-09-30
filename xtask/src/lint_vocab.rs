@@ -6,8 +6,9 @@
 //! `<!-- retired-terms -->` … `<!-- /retired-terms -->` is not read (R-111); an opening marker left unclosed, or a
 //! closing one with no opening, is itself a finding, so a marker cannot silence the rest of a file. Outside the docs
 //! the markers exempt nothing. The identifier terms match as whole, case-sensitive identifiers; the retired ideas
-//! with no identifier match as case-insensitive phrases, whose spaces match any run of whitespace (R-259). This file
-//! (the term list) and the lint's fixtures, which must hold the terms, are not read (RQ-160).
+//! with no identifier match as case-insensitive phrases, in the singular or plural, whose spaces match any run of
+//! whitespace (R-259). This file (the term list) and the lint's fixtures, which must hold the terms, are not read
+//! (RQ-160).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,8 @@ use std::path::{Path, PathBuf};
 pub enum Match {
     /// A whole, case-sensitive identifier: no letter, digit or `_` on either side.
     Identifier,
-    /// A case-insensitive phrase, bounded as an identifier is; a space matches any run of whitespace (R-259).
+    /// A case-insensitive phrase, bounded as an identifier is, or followed by a plural `s`; a space matches any run
+    /// of whitespace (R-259).
     Phrase,
 }
 
@@ -69,14 +71,9 @@ pub const TERMS: &[Term] = &[
         matching: Match::Identifier,
         source: SPEC,
     },
-    // "N ensemble shadows" (→ E ensemble copies that are full samples).
+    // "N ensemble shadows" (→ E ensemble copies that are full samples); the plural matches as the phrase does.
     Term {
         text: "ensemble shadow",
-        matching: Match::Phrase,
-        source: SPEC,
-    },
-    Term {
-        text: "ensemble shadows",
         matching: Match::Phrase,
         source: SPEC,
     },
@@ -296,7 +293,8 @@ fn unmark(text: &str) -> (String, Vec<(usize, Found)>) {
 }
 
 /// The byte offsets in `hay` where `needle` starts, bounded as an identifier is on both sides; under
-/// [`Match::Phrase`], each space of `needle` matches any run of whitespace.
+/// [`Match::Phrase`], each space of `needle` matches any run of whitespace, and one `s` after it (the plural) is
+/// part of the match.
 fn find(hay: &str, needle: &str, matching: Match) -> Vec<usize> {
     let ident = |c: u8| c.is_ascii_alphanumeric() || c == b'_';
     let words: Vec<&str> = match matching {
@@ -321,6 +319,10 @@ fn find(hay: &str, needle: &str, matching: Match) -> Vec<usize> {
                 break;
             }
             end += gap + word.len();
+        }
+        // A retired idea in the plural is still the retired idea (R-259: matched as a phrase).
+        if matching == Match::Phrase && b.get(end) == Some(&b's') {
+            end += 1;
         }
         if whole && (end == b.len() || !ident(b[end])) {
             starts.push(start);
