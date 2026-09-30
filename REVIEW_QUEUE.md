@@ -3009,7 +3009,7 @@ Tick any you don't accept.
   its veto item 13.
 - **Ruling:** R-268 (30 Sep 2026): the overnight application stands.
 
-## RQ-169: `d_min`'s unset value is +inf, and a ramp has no place for +inf *(design, GUI, TASK-M1-09)*
+## RQ-170: `d_min`'s unset value is +inf, and a ramp has no place for +inf *(design, GUI, TASK-M1-09)*
 
 - **File, section:** `docs/design/principia_dd_simstate_payload.md` § "Storage never holds NaN (R-79)": "Every
   colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still

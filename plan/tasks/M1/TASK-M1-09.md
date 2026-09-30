@@ -38,7 +38,7 @@ Every generated numeric field view takes the two-line form — the NaN guard (th
 - `cargo test -p ledger numeric_view_template` — generated source matches the two-line template with the bitcast guard and contains no `raw != raw`; toggling `RANGE_AUTO` on the node param updates the generated code and parsing the code back updates the param (REQ-RENDER-022).
 - `cargo test -p render debug_fields_raw` — a sample with state = failed and field sentinel 0.0 renders the ramp colour of 0.0, not the invalid colour (REQ-RENDER-023).
 - `cargo test -p render diffusion_sentinel` — −1.0 round-trips bit-exact; the catalogue render of −1.0 shows the literal value −1.0 on the ramp (R-136) (REQ-GEN-012).
-- `cargo xtask golden m1-numeric` — NaN-absent ftle renders hatched and diffusion = −1 as its literal ramp value (R-136); a forced-failure sample's dE_max renders as its literal 0.0; its d_min holds the unset value f16 +inf (R-271), and how that renders waits on RQ-169 (REQ-TOOL-012).
+- `cargo xtask golden m1-numeric` — NaN-absent ftle renders hatched and diffusion = −1 as its literal ramp value (R-136); a forced-failure sample's dE_max renders as its literal 0.0; its d_min holds the unset value f16 +inf (R-271), and how that renders waits on RQ-170 (REQ-TOOL-012).
 - `cargo test -p render f16_scalar_views` — d_min, dE_max, dLz_max pack/unpack within f16 eps; sentinel values render as their literal values on the ramp (R-136) (REQ-TOOL-023).
 - `cargo xtask golden m1-numeric` — invalid pixels (NaN and sentinel) render the invalid pattern; overriding the node's invalid colour changes only those pixels; a debug field view shows a failed-state 0.0 as literal 0.0 and a NaN as the invalid pattern (REQ-COL-001).
 
@@ -46,5 +46,5 @@ Every generated numeric field view takes the two-line form — the NaN guard (th
 - The invalid pattern and the NaN hatch are the prelude's (TASK-M1-03: REQ-COL-055, REQ-TOOL-122).
 - PIT-8: NaN absence and the −1 sentinel must stay distinct — two conditions, never folded into one colour: NaN gets the hatch, −1 its literal value on the ramp (R-136).
 - RQ-82 ruled: R-114 — the generated guard is the bitcast test against the canonical quiet-NaN pattern (REQ-RENDER-077's bits); `raw != raw` is dropped.
-- Applied per R-271 (30 Sep 2026): a failed sample's `d_min` is +inf, not 0.0, so it can't render as a literal 0.0. RQ-169 asks how an unset `d_min` renders; this task waits on it for that one line.
+- Applied per R-271 (30 Sep 2026): a failed sample's `d_min` is +inf, not 0.0, so it can't render as a literal 0.0. RQ-170 asks how an unset `d_min` renders; this task waits on it for that one line.
 - RQ-94 ruled: R-113 — REQ-RENDER-022 keeps the template and `RANGE_AUTO` as node parameter ↔ code at M1; the node-inspector leg is in REQ-GUI-136's verify (M8).
