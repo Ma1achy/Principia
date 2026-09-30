@@ -1,7 +1,8 @@
 //! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
-//! payload struct member the Rust emitter would write is off the ledger ([`rust::check`]). The emitters are registered in [`EMITTERS`].
+//! payload struct member the Rust emitter would write is off the ledger ([`rust::check`]). The emitters are
+//! registered in [`EMITTERS`].
 
 pub mod rust;
 
