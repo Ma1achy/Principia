@@ -1484,6 +1484,12 @@ Asked in review of PR #16, the human chose:
 
 "CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
 
+*Applied (PR #17, merged as 1caad55; recorded under R-292):* in `.github/workflows/ci.yml` and REQ-SYS-067. The
+toolchain step installs `rustfmt` and `clippy`, and two steps run before `cargo build --workspace`: `cargo fmt --all
+--check` and `cargo clippy --workspace --all-targets -- -D warnings`. The workflow's header comment cites R-195. One
+`cargo fmt --all` commit formatted the workspace, qa's test files included. Clippy's one finding, a
+`clippy::type_complexity` in `xtask/tests/deps.rs`, became RQ-134, which R-197 rules.
+
 ## R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*
 *26 Sep 2026*
 
