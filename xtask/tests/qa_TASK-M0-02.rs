@@ -426,12 +426,7 @@ fn shim(name: &str, probe: i32, code: i32) -> PathBuf {
          named 'yaml'\" >&2; fi\n  exit {probe}\nfi\necho \"QA02-SHIM-RAN $*\"\nexit {code}\n"
     );
     let file = dir.join("python3");
-    fs::write(&file, script).expect("qa02: shim written");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&file, fs::Permissions::from_mode(0o755)).expect("qa02: shim mode");
-    }
+    validation::spawn::write_executable(&file, script).expect("qa02: shim written");
     dir
 }
 
