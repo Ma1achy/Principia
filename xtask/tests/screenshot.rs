@@ -216,3 +216,29 @@ negative_control!(
     expected = "did not fail",
     check_all_with_no_suite_fails(&root("shot_all_empty_control", |_| true))
 );
+
+/// `cargo xtask screenshot <arg>` exits 2, the usage error, so a flag is never taken for a suite name.
+fn check_flag_is_usage_error(arg: &str) {
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["screenshot", arg])
+        .output()
+        .expect("xtask ran");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "`screenshot {arg}` is not a usage error: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn screenshot_flag_is_not_a_suite() {
+    check_flag_is_usage_error("--bogus");
+}
+
+negative_control!(
+    screenshot_flag_is_not_a_suite,
+    "a suite name that is not a flag runs as a suite, and an unknown one exits 1, not 2",
+    expected = "is not a usage error",
+    check_flag_is_usage_error("no_such_suite")
+);
