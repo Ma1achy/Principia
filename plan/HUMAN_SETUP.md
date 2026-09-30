@@ -19,8 +19,8 @@ dormant while there is no self-hosted runner, R-186; the approval setting still 
 
 In **Settings → Branches → Add branch protection rule** (or a ruleset) for `main`:
 - require a pull request before merging;
-- require status checks to pass: `ci`, `pr-check` and `reviews-complete` (they appear in the list after each workflow has run
-  once, i.e. after TASK-M0-01 and TASK-M0-03 merge);
+- require status checks to pass: `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and `gpu-lavapipe`
+  (R-266; each appears in the list after its workflow has run once);
 - require `mutants-check` too (R-305), the per-PR mutation gate's verdict over every shard (TASK-M0-23). It reports on
   every pull request, and passes when the diff has no mutant. The human authorised the agent to add it, once TASK-M0-23
   merges, and this is the one settings change R-305 allows;
