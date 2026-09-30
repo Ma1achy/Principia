@@ -3072,4 +3072,5 @@ attribution was overturned by a controlled test)" records that turning Metal's f
 did not restore `N_sub`'s determinism (the cause was transcendental latitude, in every math mode), and that the switch
 "is not available in a browser regardless". R-297 leaves the first as it stands: branch decisions stay comparison-only
 (Tier B), whatever the math mode. The second is open: what the compute
-setting means in the browser build (M8), where WebGPU gives no fast-math control, isn't settled; it is asked in the PR.
+setting means in the browser build (M8), where WebGPU gives no fast-math control, isn't settled; it is asked in the PR. It is
+filed as RQ-176.
