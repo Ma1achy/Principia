@@ -9,6 +9,7 @@ contract disagree, the contract wins and the disagreement goes to `REVIEW_QUEUE.
 | `slices.toml` | the named slices: `config_stability`, `config_basin`, the five Burrau regions, `tilt_plambda`, `preset_shape` | R-166 (a) |
 | `case_matrix.toml` | the 32-case integrator matrix and its `err>10` metric | R-165, R-166 (b) |
 | `moving_pulse.toml` | the moving pulse: a synthetic field, not a chart slice | R-166 (e) |
+| `gates/<gate>/` | a numerical gate's `gate.json` (inputs, threshold by requirement id) and inputs; `convergence` holds the pitfalls §3 escape-fraction record and a converging sequence, not transcribed from prin-rs | R-171, R-258 |
 
 Two fixtures are produced at M3 and checked in here when they are, not transcribed now:
 
