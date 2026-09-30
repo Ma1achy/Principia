@@ -54,4 +54,18 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
 - The GPU halves of the round trips (the WGSL unpack and the kernel on the GPU) are TASK-M0-15.
 - Dispatch's refusal of ⌈T/dt⌉ > 65535 (R-86) belongs to the dispatch that doesn't exist yet; the limit is in the constants register (TASK-M0-08).
 - Failure `detail` categories follow payload §2; payload §8 says to confirm them against the integrator contract's failure modes when that is finalised (M3).
+- R-278 (closes RQ-169): 2⁻²⁴, R-271's floor, is the register's `f16_min_subnormal`, class `achievable-maximum` as the
+  format's achievable extreme (dd_generation_root §3.8), and the emitter writes `F16_MIN_SUBNORMAL` from it as it
+  writes `F16_FINITE_MAX`. It is a hashed entry, so the schema version (TASK-M0-12) covers it.
+- R-281 (PR #78's item 2, vetoed in part): the `d_min` packer never stores NaN (R-79) and never silently rewrites a
+  negative value; each is a `debug_assert!` failure. In release a NaN stores the unset bits and a negative value the
+  floor `0x0001`, and each case increments a telemetry counter. The counter's definition waits on RQ-171.
+- R-288 (closes RQ-171): the counters are telemetry §2's per-frame atomic u32s `dmin_nan_unset` and
+  `dmin_negative_floored`, counted in release builds too. `roundtrip_ctl`'s repack passes a scratch pair and doesn't
+  count.
+- R-294 (closes RQ-174; PR #78's veto item 10): the counters belong to the frame, never a static, and the kernel holds
+  no mutable static. On the CPU the packer's caller passes in a per-frame `DminCounters` and reads it back:
+  `set_d_min(w, v, counters)`, `set_d_min_release(w, v, counters)` and `pack_packed_a(…, counters)` take it, with no
+  uncounted or global path. The GPU side, an atomic u32 buffer bound and reset per frame and read back with the
+  telemetry readback, is TASK-M5-28's (R-294, REQ-TOOL-140).
 - R-256: TASK-M0-09 transcribed the entries for `packed_a`, the descriptor, `packed_b`, `times` and `total_substeps`; this task keeps only the pack/unpack/insert emitters, the accessors and `roundtrip_ctl` over them.

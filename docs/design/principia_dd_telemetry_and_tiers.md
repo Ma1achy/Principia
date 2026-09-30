@@ -50,6 +50,13 @@ tree_depth_max     and leaf count
 stage_ms           breakdown: integrate / reduce / colour / upload / present
 ```
 
+- `dmin_nan_unset` — u32, the number of `d_min` packs this frame that stored a NaN as the unset value (R-281, R-288)
+- `dmin_negative_floored` — u32, the number of `d_min` packs this frame that clamped a negative value to the floor (R-281, R-288)
+
+Both are atomic counters, counted in release builds as well as debug ones, and read back asynchronously on the
+profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
+sole automatic return of simulation data (R-142, R-288).
+
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
 a 5090 at small workloads may be latency- or dispatch-bound and never approach its throughput at all.

@@ -138,8 +138,9 @@ fn entries() -> Vec<EntryBuilder> {
         // Pair ids 0–2 (R-22); the stored code 3 is "unset/invalid" (payload §2), so it is the sentinel.
         descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2).sentinel(3.0),
         descriptor("last_symbol", 8, 2, Scale::Categorical(4), 3),
-        // A failed sample stores 0.0 here, outside the (0, ∞) range: payload §1's canonical sentinel (R-79).
-        latch("d_min", packed("packed_a", 16, 16), Bound::Open(0.0)).sentinel(0.0),
+        // Unset, the minimum of an empty set, is f16 +∞: a failed sample's, and any sample's before its first step
+        // (R-271, payload §1). A stored value is never 0.0: one below f16's smallest positive subnormal is stored as it.
+        latch("d_min", packed("packed_a", 16, 16), Bound::Open(0.0)).sentinel(f64::INFINITY),
         latch("dE_max", packed("packed_b", 0, 16), Bound::Closed(0.0)),
         latch("dLz_max", packed("packed_b", 16, 16), Bound::Closed(0.0)),
         step("t_end_step", packed("times", 0, 16)),
