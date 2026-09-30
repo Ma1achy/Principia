@@ -264,7 +264,9 @@ pub struct Frame {
 }
 
 impl Drop for Frame {
-    /// The renderer is dropped with its frame, so textures a presence-only case never uploads need no applying.
+    /// epaint panics (a `debug_assert!` in `TexturesDelta`'s own `Drop`) when a `TexturesDelta` still holding deltas
+    /// is dropped. [`Gpu::render`] uploads a layout frame's deltas without clearing them, and a presence-only case never
+    /// uploads its deltas, so every frame clears its deltas here before they are dropped.
     fn drop(&mut self) {
         self.textures.clear();
     }
