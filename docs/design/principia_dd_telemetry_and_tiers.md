@@ -190,6 +190,65 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 - **Bounded size.** A long session at 60 fps is 200k+ frame records. Either downsample on write
   (keep every frame during motion, every Nth while idle) or roll up idle stretches into summaries.
 
+**Profiler schema v1: the keys and the nesting (R-56, R-72).** This is the definition REQ-TOOL-120 asks for. Its typed
+form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
+follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
+key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+
+**The file** is one JSON object: the session header, then the frame records.
+
+```
+schema     "principia-profile-v1"
+header     the session header, once
+frames     [frame record, ...]
+```
+
+**The session header** carries §2's per-session fields, and the full config that §5 requires:
+
+```
+device     gpu (model), cpu (model), cpu_cores, gpu_cores (null when not reported),
+           memory: {"unified": {bytes}} or {"discrete": {vram_bytes, ram_bytes}}
+backend    api ("metal" / "vulkan" / "dx12" / "webgpu"), driver (its version)
+precision  f32, f64 (supported: true / false), f64_rate (the reported f64 rate as a fraction of the f32 rate;
+           null when not reported)
+build      commit (the hash), profile (the release profile), features ([flag, ...])
+display    width_px, height_px, refresh_hz, dpi_scale; null for a headless run
+config     the run's full configuration, a JSON object
+```
+
+Unified memory is its own variant, not a VRAM size of zero (§2).
+
+**The frame record** is §2's, key for key, followed by the five stages' nested sections:
+
+```
+frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
+frame_ms        wall clock
+quads_computed  quads_reused  samples  substeps_total
+playhead_dt     how far time moved (signed)
+camera_delta    pan/zoom magnitude, 0 for a static frame
+tree_depth_max  leaf_count
+stage_ms        {integrate, reduce, colour, upload, present}: each stage's ms
+stages          {integrate, reduce, colour, upload, present}: each stage's nested sections
+```
+
+`stage_ms` and `stages` have exactly the five stages as keys, written in that order, and nothing else. A batch render
+has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.
+
+**A stage's nested sections** sit beneath it:
+
+```
+scopes       [scope, ...]        CPU scopes, nested: {name, start_ms, ms, children: [scope, ...]}
+gpu_passes   [gpu pass, ...]     {name, start_ms, ms}, from the GPU timestamps
+allocations  [allocation, ...]   {kind (the type), pool ("heap" / "gpu" / "tile_cache"), count, bytes}: the
+                                 allocations the stage made, one entry per kind and pool
+events       [event, ...]        {name, at_ms, detail (text, or null)}
+```
+
+`start_ms` and `at_ms` count from the start of the frame. A scope exists only beneath a stage, so every scope has one
+of the five as its ancestor. The finer categories (quadtree, stain + style, IC decode, readback, egui;
+`principia_render_gui_spec.md` § "Profiler") are scopes nested in whichever stage runs them. A scope at the top of a
+frame record, beside the stages, is not schema v1.
+
 ---
 
 ## 5.5 Profiling is FIRST-CLASS, not a debug mode
