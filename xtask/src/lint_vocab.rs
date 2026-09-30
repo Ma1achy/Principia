@@ -231,10 +231,10 @@ fn collect(
 /// marker without its pair is a finding.
 pub fn scan(text: &str, doc: bool) -> Vec<(usize, Found)> {
     let mut found = Vec::new();
-    let line = |at: usize| text[..at].matches('\n').count() + 1;
+    let line = |text: &str, at: usize| text[..at].matches('\n').count() + 1;
     let read = if doc {
         let (read, markers) = unmark(text);
-        found.extend(markers.into_iter().map(|(at, f)| (line(at), f)));
+        found.extend(markers.into_iter().map(|(at, f)| (line(text, at), f)));
         read
     } else {
         text.to_owned()
@@ -248,15 +248,15 @@ pub fn scan(text: &str, doc: bool) -> Vec<(usize, Found)> {
         found.extend(
             find(hay, &needle, term.matching)
                 .into_iter()
-                .map(|at| (line(at), Found::Term(term))),
+                .map(|at| (line(&read, at), Found::Term(term))),
         );
     }
     found.sort_by_key(|&(line, _)| line);
     found
 }
 
-/// `text` with each marked passage, markers included, blanked to spaces with its newlines kept, and the offset of
-/// each marker without its pair.
+/// `text` with each marked passage, markers included, blanked byte for byte to spaces with its newlines kept (so
+/// offsets and lines are unchanged), and the offset of each marker without its pair.
 fn unmark(text: &str) -> (String, Vec<(usize, Found)>) {
     let mut read = String::with_capacity(text.len());
     let mut unpaired = Vec::new();
@@ -268,10 +268,11 @@ fn unmark(text: &str) -> (String, Vec<(usize, Found)>) {
             (Some(o), Some(c)) if o < c => {
                 read.push_str(&text[at..o]);
                 let end = c + CLOSE.len();
+                // Byte for byte, so every offset, and so every line, stays that of `text`.
                 read.extend(
                     text[o..end]
-                        .chars()
-                        .map(|x| if x == '\n' { '\n' } else { ' ' }),
+                        .bytes()
+                        .map(|x| if x == b'\n' { '\n' } else { ' ' }),
                 );
                 at = end;
             }
