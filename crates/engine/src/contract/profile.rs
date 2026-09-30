@@ -7,6 +7,7 @@
 //! (telemetry §5.5). The engine writes it, `prin` reads and writes it, and the dev GUI's profiler reads it.
 
 use std::collections::HashSet;
+use std::fmt;
 use std::hash::Hash;
 use std::io::{self, Write};
 
@@ -443,43 +444,48 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
     // One set of each for the whole trace, cleared for each list, so its capacity is allocated once, not per frame.
     let mut kinds = Seen::default();
     let mut kind_pools = Seen::default();
-    let header = &trace.header;
-    if let Some(rate) = header.precision.f64_rate {
-        non_negative("header.precision.f64_rate", rate)?;
+    let header = At::Key(&At::Root, "header");
+    if let Some(rate) = trace.header.precision.f64_rate {
+        let precision = At::Key(&header, "precision");
+        non_negative(&At::Key(&precision, "f64_rate"), rate)?;
     }
-    if let Some(display) = &header.display {
-        non_negative("header.display.refresh_hz", display.refresh_hz)?;
-        non_negative("header.display.dpi_scale", display.dpi_scale)?;
+    if let Some(display) = &trace.header.display {
+        let at = At::Key(&header, "display");
+        non_negative(&At::Key(&at, "refresh_hz"), display.refresh_hz)?;
+        non_negative(&At::Key(&at, "dpi_scale"), display.dpi_scale)?;
     }
+    let frames = At::Key(&At::Root, "frames");
     for (i, frame) in trace.frames.iter().enumerate() {
-        let at = |key: &str| format!("frames[{i}].{key}");
-        non_negative(&at("frame_ms"), frame.frame_ms)?;
+        let at = At::Index(&frames, i);
+        non_negative(&At::Key(&at, "frame_ms"), frame.frame_ms)?;
         if !frame.playhead_dt.is_finite() {
             return Err(format!(
                 "{} is {}, not a finite number",
-                at("playhead_dt"),
+                At::Key(&at, "playhead_dt"),
                 frame.playhead_dt
             ));
         }
-        non_negative(&at("camera_delta"), frame.camera_delta)?;
+        non_negative(&At::Key(&at, "camera_delta"), frame.camera_delta)?;
         let ms = &frame.stage_ms;
-        let stage_ms = [ms.integrate, ms.reduce, ms.colour, ms.upload];
-        for (stage, value) in Stage::ALL.iter().zip(stage_ms) {
-            non_negative(&at(&format!("stage_ms.{}", stage.key())), value)?;
+        let stage_ms = At::Key(&at, "stage_ms");
+        let values = [ms.integrate, ms.reduce, ms.colour, ms.upload];
+        for (stage, value) in Stage::ALL.iter().zip(values) {
+            non_negative(&At::Key(&stage_ms, stage.key()), value)?;
         }
         if let Some(present) = ms.present {
-            non_negative(&at("stage_ms.present"), present)?;
+            non_negative(&At::Key(&stage_ms, "present"), present)?;
         }
+        let stages = At::Key(&at, "stages");
         if ms.present.is_some() != frame.stages.present.is_some() {
             return Err(format!(
                 "{} and {} are not both null or both present",
-                at("stage_ms.present"),
-                at("stages.present")
+                At::Key(&stage_ms, "present"),
+                At::Key(&stages, "present")
             ));
         }
         for stage in Stage::ALL {
             if let Some(sections) = frame.stages.get(stage) {
-                let path = at(&format!("stages.{}", stage.key()));
+                let path = At::Key(&stages, stage.key());
                 check_sections(&path, sections)?;
                 let pairs = sections
                     .allocations
@@ -488,7 +494,8 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
                 if let Some(j) = kind_pools.first_repeat(pairs) {
                     let a = &sections.allocations[j];
                     return Err(format!(
-                        "{path}.allocations[{j}] repeats kind {:?} in pool {}: one entry per kind and pool",
+                        "{} repeats kind {:?} in pool {}: one entry per kind and pool",
+                        At::Index(&At::Key(&path, "allocations"), j),
                         a.kind,
                         serde_json::to_string(&a.pool).unwrap_or_default()
                     ));
@@ -496,29 +503,54 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
             }
         }
         let live = &frame.live_memory;
+        let live_at = At::Key(&at, "live_memory");
         for (pool, name) in [
             (&live.heap, "heap"),
             (&live.gpu, "gpu"),
             (&live.tile_cache, "tile_cache"),
         ] {
+            let pool_at = At::Key(&live_at, name);
             let sum: u128 = pool.by_kind.iter().map(|k| u128::from(k.bytes)).sum();
             if sum != u128::from(pool.bytes) {
                 return Err(format!(
                     "{} is {}, not the sum of its by_kind bytes ({sum})",
-                    at(&format!("live_memory.{name}.bytes")),
+                    At::Key(&pool_at, "bytes"),
                     pool.bytes
                 ));
             }
             if let Some(j) = kinds.first_repeat(pool.by_kind.iter().map(|k| k.kind.as_str())) {
                 return Err(format!(
-                    "{}[{j}] repeats kind {:?}: one entry for each type",
-                    at(&format!("live_memory.{name}.by_kind")),
+                    "{} repeats kind {:?}: one entry for each type",
+                    At::Index(&At::Key(&pool_at, "by_kind"), j),
                     pool.by_kind[j].kind
                 ));
             }
         }
     }
     Ok(())
+}
+
+/// A path into the file, `frames[3].stages.reduce.scopes[0].ms` say, built on the stack as the check descends and
+/// formatted only when a check fails, so checking a valid file allocates no path.
+#[derive(Clone, Copy)]
+enum At<'a> {
+    /// The file.
+    Root,
+    /// A key of the object at the parent path.
+    Key(&'a At<'a>, &'static str),
+    /// An index into the array at the parent path.
+    Index(&'a At<'a>, usize),
+}
+
+impl fmt::Display for At<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            At::Root => Ok(()),
+            At::Key(At::Root, key) => f.write_str(key),
+            At::Key(parent, key) => write!(f, "{parent}.{key}"),
+            At::Index(parent, i) => write!(f, "{parent}[{i}]"),
+        }
+    }
 }
 
 /// The keys seen so far in one list, to find a repeat (dd_telemetry_and_tiers §5: one entry per type, or per kind and
@@ -541,28 +573,31 @@ impl<K: Eq + Hash> Seen<K> {
     }
 }
 
-fn check_sections(path: &str, sections: &StageSections) -> Result<(), String> {
-    fn check_scopes(path: &str, scopes: &[Scope]) -> Result<(), String> {
+fn check_sections(path: &At, sections: &StageSections) -> Result<(), String> {
+    fn check_scopes(path: &At, scopes: &[Scope]) -> Result<(), String> {
         for (i, scope) in scopes.iter().enumerate() {
-            let at = format!("{path}[{i}]");
-            non_negative(&format!("{at}.start_ms"), scope.start_ms)?;
-            non_negative(&format!("{at}.ms"), scope.ms)?;
-            check_scopes(&format!("{at}.children"), &scope.children)?;
+            let at = At::Index(path, i);
+            non_negative(&At::Key(&at, "start_ms"), scope.start_ms)?;
+            non_negative(&At::Key(&at, "ms"), scope.ms)?;
+            check_scopes(&At::Key(&at, "children"), &scope.children)?;
         }
         Ok(())
     }
-    check_scopes(&format!("{path}.scopes"), &sections.scopes)?;
+    check_scopes(&At::Key(path, "scopes"), &sections.scopes)?;
+    let passes = At::Key(path, "gpu_passes");
     for (i, pass) in sections.gpu_passes.iter().enumerate() {
-        non_negative(&format!("{path}.gpu_passes[{i}].start_ms"), pass.start_ms)?;
-        non_negative(&format!("{path}.gpu_passes[{i}].ms"), pass.ms)?;
+        let at = At::Index(&passes, i);
+        non_negative(&At::Key(&at, "start_ms"), pass.start_ms)?;
+        non_negative(&At::Key(&at, "ms"), pass.ms)?;
     }
+    let events = At::Key(path, "events");
     for (i, event) in sections.events.iter().enumerate() {
-        non_negative(&format!("{path}.events[{i}].at_ms"), event.at_ms)?;
+        non_negative(&At::Key(&At::Index(&events, i), "at_ms"), event.at_ms)?;
     }
     Ok(())
 }
 
-fn non_negative(path: &str, value: f64) -> Result<(), String> {
+fn non_negative(path: &At, value: f64) -> Result<(), String> {
     if value.is_finite() && value >= 0.0 {
         Ok(())
     } else {

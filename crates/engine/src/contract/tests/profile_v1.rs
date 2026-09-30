@@ -3,6 +3,8 @@
 //! one of them (REQ-TOOL-005), and parses as telemetry §2's frame record with the nested sections beneath
 //! (REQ-TOOL-008). Each test registers the control that must make it fail (R-176).
 
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::io;
 
@@ -989,4 +991,87 @@ validation::negative_control!(
     "serde_json straight from the counting reader must fail the check",
     expected = "read unbuffered",
     check_read_buffered(|input| serde_json::from_reader(input))
+);
+
+// ----- the check allocates nothing per frame for a valid trace -----
+
+/// Counts the allocations made on each thread, so tests running in parallel don't see each other's.
+struct CountingAlloc;
+
+thread_local! {
+    // A count from zero, not a physical constant (`usize::MIN` rather than a literal, for `xtask lint constants`).
+    static ALLOCATIONS: Cell<usize> = const { Cell::new(usize::MIN) };
+}
+
+fn count_allocation() {
+    // `try_with`: an allocation during the thread's teardown is not counted rather than a panic.
+    let _ = ALLOCATIONS.try_with(|n| n.set(n.get() + 1));
+}
+
+// SAFETY: each method only counts, then forwards its arguments unchanged to `System`, which upholds the contract.
+unsafe impl GlobalAlloc for CountingAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        count_allocation();
+        // SAFETY: the caller's guarantees for `layout` are `System.alloc`'s.
+        unsafe { System.alloc(layout) }
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        count_allocation();
+        // SAFETY: as for `alloc`.
+        unsafe { System.alloc_zeroed(layout) }
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        count_allocation();
+        // SAFETY: `ptr` came from this allocator, which is `System`'s, with `layout`.
+        unsafe { System.realloc(ptr, layout, new_size) }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // SAFETY: as for `realloc`.
+        unsafe { System.dealloc(ptr, layout) }
+    }
+}
+
+/// engine's unit tests count allocations through this; it forwards every call to `System`.
+#[global_allocator]
+static ALLOCATOR: CountingAlloc = CountingAlloc;
+
+/// The allocations `op` makes on this thread.
+fn allocations(op: impl FnOnce()) -> usize {
+    let before = ALLOCATIONS.with(Cell::get);
+    op();
+    ALLOCATIONS.with(Cell::get) - before
+}
+
+/// `op` on a 64-frame session makes fewer than one allocation more than on a 1-frame session per added frame: the
+/// check before writing builds no path per value, and nothing else in `write` allocates per frame.
+fn check_no_allocation_per_frame(op: impl Fn(&Trace)) {
+    let mut one = interactive();
+    one.frames.truncate(1);
+    let many = long_session();
+    let added = many.frames.len() - one.frames.len();
+    let (few, lots) = (allocations(|| op(&one)), allocations(|| op(&many)));
+    assert!(
+        lots < few + added,
+        "{lots} allocations for {} frames against {few} for 1: at least one per added frame",
+        many.frames.len()
+    );
+}
+
+#[test]
+fn profile_v1_check_allocates_nothing_per_frame() {
+    check_no_allocation_per_frame(|trace| {
+        write(trace, io::sink()).expect("the writer failed");
+    });
+}
+
+validation::negative_control!(
+    profile_v1_check_allocates_nothing_per_frame,
+    "writing a copy of the trace, which allocates per frame, must fail the check",
+    expected = "at least one per added frame",
+    check_no_allocation_per_frame(|trace| {
+        write(&trace.clone(), io::sink()).expect("the writer failed");
+    })
 );
