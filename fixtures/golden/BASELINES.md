@@ -9,6 +9,10 @@ SHA-256 for it, with the decision that set it, named as its `R-n` in `decisions.
 gate decision in `decisions.md`, replace the image, and update its row here with the new hash and that decision, in
 the same commit. A reference that changed without such a row is refused.
 
+The runner checks only that the row holds the reference's current hash and names an `R-n` that `decisions.md` records;
+it cannot tell whether that ruling is the gate decision that changed the baseline. That half of the rule rests on
+review: a change to a row is reviewed for its decision cell naming the gate decision that set the new hash.
+
 A new case's row names the ruling that created it. The self-test's references are computed from the formulas in
 `selftest/gradient/gradient.wgsl`, not rendered; R-186's placement note puts the fixture in TASK-M0-06.
 
