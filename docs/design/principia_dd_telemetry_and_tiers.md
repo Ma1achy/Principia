@@ -198,16 +198,19 @@ key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number �
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gpu_cores`, `width_px`, `height_px` and
 `tree_depth_max` are at most 2^32 − 1, and every other count or size at most 2^64 − 1. `camera_delta`, `refresh_hz`,
 `dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A frame's `stage_ms.present`
-and `stages.present` are both `null` or both present, and each pool's `bytes` in `live_memory` is the sum of its
-`by_kind` bytes (both below). A writer given a value outside its range, NaN or an infinity, or a frame that breaks
-either of those two rules, fails rather than write it, and a reader rejects all of them, so a file the reader accepts
-validates against the JSON Schema. The reverse holds with three exceptions, which the schema accepts and the reader
-rejects: a count or size written with a zero fraction (`"cpu_cores": 4.0`), which JSON Schema's `integer` admits; a
-key repeated within an object whose keys this section lists, where the schema sees only the last copy; and a pool
-whose `bytes` is not the sum of its `by_kind` bytes, a sum JSON Schema cannot express. A key repeated anywhere inside
-`config` or inside a leak-flag or hot-path entry is not an exception: the reader and the schema both keep the last
-copy. A writer produces none of the three: it writes every count and size as a JSON integer, each key once, and each
-pool's `bytes` as that sum.
+and `stages.present` are both `null` or both present; each pool's `bytes` in `live_memory` is the sum of its `by_kind`
+bytes; and a pool's `by_kind` has at most one entry for each `kind`, and a stage's `allocations` at most one for each
+`kind` and `pool` (all three below). A writer given a value outside its range, NaN or an infinity, or a frame that
+breaks any of those three rules, fails rather than write it, and a reader rejects all of them, so a file the reader
+accepts validates against the JSON Schema. The reverse holds with four exceptions, which the schema accepts and the
+reader rejects: a count or size written with a zero fraction (`"cpu_cores": 4.0`), which JSON Schema's `integer`
+admits; a key repeated within an object whose keys this section lists, where the schema sees only the last copy; a
+pool whose `bytes` is not the sum of its `by_kind` bytes, a sum JSON Schema cannot express; and two `by_kind` entries
+in one pool with the same `kind`, or two `allocations` entries in one stage with the same `kind` and `pool`, a
+uniqueness by key that JSON Schema cannot express. A key repeated anywhere inside `config` or inside a leak-flag or
+hot-path entry is not an exception: the reader and the schema both keep the last copy. A writer produces none of the
+four: it writes every count and size as a JSON integer, each key once, each pool's `bytes` as that sum, one `by_kind`
+entry per type in a pool, and one `allocations` entry per kind and pool in a stage.
 
 **The file** is one JSON object: the session header, the frame records, then the precomputed summaries.
 
