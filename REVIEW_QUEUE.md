@@ -2859,3 +2859,25 @@ Tick any you don't accept.
 - **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
   option 1 applied). TASK-M0-23 waits on item 1.
 - **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): item 1 option 1 (the `#[cfg_attr(test, mutants::skip)]` marker), item 2 option 1 (`xtask/src/main.rs` and `xtask/src/codegen.rs` only). Both are the tightest reading, skip nothing R-196 keeps, and are test infrastructure. Recorded in decisions.md under R-196 and in TASK-M0-23.
+
+## RQ-163: an f16 `d_min` below ~6.1e-5 can flush to 0.0, its failed-state sentinel *(physics, payload, TASK-M0-09, TASK-M0-10)*
+
+- **File, section:** `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct": "`packed_a :
+  u32, // sample_descriptor[…] | d_min:f16[high 16]`"; "for `sim_failed`/`decode_failed` samples, `d_min`/`dE_max`/`dLz_max`
+  halves hold **0.0** (a canonical sentinel — the `state` field already marks the sample untrusted …)"; "WGSL permits
+  … binary16 subnormal flushing". `decisions.md` § "R-248 — Float types at a packed location: exact width; an f16
+  range lies within f16's finite range *(amends R-242; closes RQ-156)*" rules on overflow (±65504) only.
+- **What:** raised by the physics reviewer on PR #59. `d_min`'s range is "> 0", and PR #59 declares `sentinel: 0.0`
+  as payload §1 requires. binary16's smallest normal is ~6.1e-5, and WGSL may flush subnormals to zero. So a valid
+  sample whose true `d_min` is below ~6.1e-5 can be stored as 0.0 and read as the sentinel: the colour path would show
+  it as invalid, though `state` says it is valid. It can happen only when a sim key's `r_coll` (the collision radius
+  below which the march stops) is itself that small. Underflow has no ruling. Not blocking: every current key's
+  `r_coll` is far above 6.1e-5, and `state` still separates failed samples from valid ones.
+- **Options seen:**
+  1. **Clamp at the floor (recommended).** A valid `d_min` is clamped up to f16's smallest normal (6.1035e-5) before
+     packing, mirroring R-248's clamp at ±65504, so 0.0 is reached only by failed samples. A display value near the
+     floor reads "≤ 6.1e-5".
+  2. **Constrain the key.** `r_coll` must be ≥ 6.1035e-5 in every sim key; generation refuses a smaller one.
+  3. **Rely on `state` alone.** The sentinel test also checks `state`, and a valid 0.0 is displayed as 0. The ledger's
+     sentinel is then conditional on `state`, which §3.8 has no way to say.
+- **Needed:** a ruling. TASK-M0-10 (pack/unpack) is where option 1 or 2 would be built.
