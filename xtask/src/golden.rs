@@ -738,7 +738,8 @@ impl Renderer {
     }
 }
 
-/// The per-pixel comparison of a render with its reference.
+/// The per-pixel comparison of a render with its reference. It compares RGB only: alpha is dropped on reading and
+/// readback, so a golden whose alpha carries meaning is outside the metric.
 #[derive(Debug)]
 pub struct Diff {
     /// The largest per-channel absolute difference, in 8-bit steps: the metric a tolerance bounds.
