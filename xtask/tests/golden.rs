@@ -2,7 +2,7 @@
 //! reference and its one-step-shifted twin fails, so the runner can fire (pitfalls §3); the tolerance REQ-VAL-138
 //! proposes passes a same-backend re-render and fails a one-variable change; a bare-number tolerance, a reference
 //! changed without a BASELINES.md entry, and an entry naming no recorded decision are refused; `golden --list` lists
-//! and checks every case without opening a device (R-235).
+//! and checks every case without opening a device (R-235), and `golden repro` with no case gives its usage.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -339,6 +339,25 @@ negative_control!(
     "a suite name that does not exist",
     expected = "refused for another reason",
     check_refused(golden_with_arg("nosuch"), "unrecognised arguments")
+);
+
+/// `golden repro` with no case is refused with its usage, not taken for a suite named `repro`.
+#[test]
+fn golden_repro_without_case_gives_usage() {
+    check_refused(
+        golden_with_arg("repro"),
+        "usage: golden repro <suite>/<case>",
+    );
+}
+
+negative_control!(
+    golden_repro_without_case_gives_usage,
+    "a suite name that does not exist",
+    expected = "refused for another reason",
+    check_refused(
+        golden_with_arg("nosuch"),
+        "usage: golden repro <suite>/<case>"
+    )
 );
 
 // --- The listing-only form opens no device (R-235) -----------------------------------------------------------------

@@ -1181,6 +1181,10 @@ pub fn cli(root: &Path, args: &[&str]) -> Result<(), String> {
                 ))
             }
         }
+        ["repro"] => Err(
+            "golden repro: usage: golden repro <suite>/<case> [--vary <field>=<a>,<b>]..."
+                .to_owned(),
+        ),
         ["repro", case, rest @ ..] => {
             let (suite, name) = case
                 .split_once('/')
