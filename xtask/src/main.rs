@@ -24,6 +24,10 @@ Commands:
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
+  gate (<gate> | --all | --list)  run the numerical gate <gate>, or every registered gate, on its inputs in
+                                  fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
+                                  id, writing each report under target/gates/; fails naming each input whose outcome
+                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none
   golden <suite> | --all          render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
                                   gives, and write the difference image and summary under target/golden/ (R-110)
@@ -56,6 +60,11 @@ fn main() -> ExitCode {
         ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
+        }
+        ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
+        ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
+        ["gate", name] if !name.starts_with('-') => {
+            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name))
         }
         ["plan-check"] => {
             return match xtask::plan_check::status(&xtask::plan_check::repo_root()) {

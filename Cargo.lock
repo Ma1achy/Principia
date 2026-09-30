@@ -1149,6 +1149,8 @@ dependencies = [
  "proptest",
  "render",
  "rustix",
+ "serde",
+ "serde_json",
  "wgpu",
 ]
 

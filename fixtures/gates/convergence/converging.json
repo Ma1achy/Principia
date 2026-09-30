@@ -1,0 +1,7 @@
+{
+  "description": "A sequence with strictly shrinking relative steps (R-171: a passing fixture is added); r = 0.0667, 0.0188, 0.0046.",
+  "expected": "pass",
+  "strides": [32, 4, 1, 0],
+  "series": [{ "label": "converging aggregate", "values": [0.3000, 0.3200, 0.3260, 0.3275] }],
+  "region_count": "not recorded"
+}
