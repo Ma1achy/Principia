@@ -22,10 +22,11 @@
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 - `decisions.md` § "R-196 — Mutation testing joins the QA gate"
 - `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+- `decisions.md` § "R-308 — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*"
 
 ## Deliverables
 - `xtask/src/bench.rs` — `cargo xtask bench <bench>` and `cargo xtask bench --all` (not in any hosted workflow: run on the human's own Mac via `prin profile`, at milestone gates and on demand, R-186), baselines in `fixtures/bench/<bench>/baseline.json`, compared with `prin profile diff`.
-- The session-header probe (wgpu adapter info from the harness, CPU model and cores, memory, build metadata from `git` and cargo) — in `crates/engine/src/telemetry/session.rs`, used by both `prin profile` and the bench runner.
+- The session-header probe (wgpu adapter info from the harness, CPU model and cores, memory, build metadata from `git` and cargo) — in `crates/engine/src/telemetry/session.rs`, used by both `prin profile` and the bench runner. It fills the GPU fields only from an adapter the run has already opened, and never opens one to fill the header; a run that opens no GPU gets R-308's form (`backend.api` "none", `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; telemetry §5) (applied per R-308).
 - Bench `trivial-kernel`.
 - `.github/workflows/nightly.yml` — `schedule` (daily) and `workflow_dispatch`: the CPU suites (`cargo xtask ci`) and the lavapipe GPU suites; the aggregate survey joins it at M8 (R-134, R-177). No benchmarks (R-186).
 - `nightly.yml` also runs the full `cargo mutants` over the workspace, with the exclusion list of TASK-M0-23's `.cargo/mutants.toml`, and uploads the mutants report as an artifact (R-196, R-198).

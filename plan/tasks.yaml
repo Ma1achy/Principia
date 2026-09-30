@@ -154,8 +154,8 @@
   title: "`prin profile`: a fixed scenario headless, and the regression diff"
   depends_on: [TASK-M0-17]
   needs: []
-  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139]
-  reviewers: [code, qa, perf]
+  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139, REQ-TOOL-144, REQ-TOOL-145]
+  reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M0-19
   milestone: M0
@@ -2018,7 +2018,7 @@
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
   depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32]
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
-  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100]
+  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-33

@@ -120,6 +120,9 @@ tier                the quality settings actually used
 no jitter field: the footprint fixes the copies' offsets (R-80). This record layout bumps the
 embedding `version`; the byte value is set with the rest of the header (R-71).
 
+**The record's `SimConfig` and `RenderState` are in their canonical serialisation (R-309)**, the one snapshot JSON,
+share links and the profiler header's `config` carry (`principia_gui_state_contract.md` §2).
+
 **The ramp window is not optional.** An auto-ranged ramp manufactures or hides the difference it
 is meant to show — measured, not hypothesised — so a recreated image without it is a different
 image.

@@ -200,6 +200,8 @@ and `chrome://tracing`, R-207), Open in Tracy, Headless render….
   picture carries its own settings, so opening it recreates the view exactly (§G9).
 - **State:** copy snapshot (JSON), save snapshot, load; a share link (`principia://view?…`). The spec is the object and the
   picture is its shadow (`principia_export_animation_contract.md` Part 6).
+  Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
+  serialisation (`principia_gui_state_contract.md` §2, R-309).
 - **Present:** hide all chrome; Esc returns.
 
 ### Display — the last stages
