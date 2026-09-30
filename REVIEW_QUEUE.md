@@ -2888,3 +2888,27 @@ Tick any you don't accept.
      runner change shape.
 - **Needed:** a ruling on the route, before TASK-M6-22 is built. TASK-M0-20 doesn't wait: its runner is the same under
   every option, and option 1 only adds a surface kind.
+
+## RQ-167: "presence" has no definition: a control clipped out of view still counts as present *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `decisions.md` § "R-129 — Where the surfaces with no artboard live": "Until the M8 dev GUI they're
+  checked by presence only, not layout." `plan/requirements.yaml` REQ-GUI-014 verify detail: "presence only (R-129 …):
+  the Run window's 'quality: Custom' section shows each control"; REQ-TOOL-058: "… the Profiler tab shows the four
+  items". `plan/tasks/M0/TASK-M0-20.md` § Deliverables: "it lists the controls or items it must contain, and the runner
+  asserts them".
+- **What:** raised by TASK-M0-20's gui reviewer (PR #72). The runner's presence check collects every AccessKit node
+  name egui produced (`xtask/src/screenshot.rs:307-314`) without looking at its bounds. In a probe with a 120×20 surface,
+  the capture shows only button "A", but presence passes for `["A", "Far below"]`. The requirements say "shows", and
+  the corpus doesn't define whether a control laid out but clipped (off the surface, cut by a fixed panel, or scrolled
+  below the fold) is present. A missing definition, R-72. Nothing is affected until the first M6 presence case
+  (TASK-M6-22).
+- **Options seen:**
+  1. **Present = in egui's tree and its rect intersects the visible surface (recommended).** It matches "shows". A
+     control in a scroll area counts only if it is scrolled into view, so a case that needs one below the fold scrolls
+     to it first. The runner already has each node's bounds.
+  2. **Present = in egui's tree, anywhere.** Today's behaviour. It's weaker than "shows": a control cut off by a panel
+     passes.
+  3. **Both, per case.** A case field (`"visible": true`) picks the stricter check. It's more flexible, but every case
+     author has to choose.
+- **Needed:** a definition, before TASK-M6-22. TASK-M0-20 doesn't wait: option 1 is a small change to the runner, made
+  by whichever task first needs it, or by a follow-up task.
