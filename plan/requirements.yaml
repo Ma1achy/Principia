@@ -20562,3 +20562,45 @@
   - R-260
   - R-261
   milestone: M0
+- id: REQ-SYS-069
+  area: SYS
+  statement: "`xtask/src/controls.rs`'s `parse_wrong_panics` must read a control's section only up to the next libtest section header at the start of a line, so a `---- x stdout ----` string inside a control's own output is not taken as a new section (R-212)."
+  source:
+  - file: decisions.md
+    section: "R-267 — Every merged \"veto?\" item stands; the #38 flake item is closed; three follow-ups become one task"
+  - file: decisions.md
+    section: "R-212 — A control names the panic it expects *(amends R-199; closes RQ-145)*"
+  verify:
+    method: unit test
+    detail: "a control whose output contains an embedded `---- x stdout ----` line is still attributed to its own control, with its full note"
+  rulings:
+  - R-212
+  - R-267
+  milestone: M0
+- id: REQ-SYS-070
+  area: SYS
+  statement: "Tests that write an executable and then spawn it must not fail with ETXTBSY (\"Text file busy\") when run in parallel on Linux: writing a stand-in executable and spawning children must not overlap across the test binary's threads."
+  source:
+  - file: decisions.md
+    section: "R-267 — Every merged \"veto?\" item stands; the #38 flake item is closed; three follow-ups become one task"
+  verify:
+    method: unit test
+    detail: "qa_TASK-M0-22.rs's stand-in-cargo tests pass in 50 consecutive parallel runs on ubuntu-latest, with the run log kept on the PR"
+  rulings:
+  - R-267
+  milestone: M0
+- id: REQ-SYS-071
+  area: SYS
+  statement: "`cargo xtask pr-check` must refuse a `- meter:` or `- discriminator:` line that names nothing before its dash, since R-180's format requires the meter's name."
+  source:
+  - file: decisions.md
+    section: "R-267 — Every merged \"veto?\" item stands; the #38 flake item is closed; three follow-ups become one task"
+  - file: decisions.md
+    section: R-180 — pr-check is item-level *(closes A5)*
+  verify:
+    method: unit test
+    detail: "a validation body whose only meter line is `- meter: — COM drift` fails naming the line; one with a name passes"
+  rulings:
+  - R-180
+  - R-267
+  milestone: M0

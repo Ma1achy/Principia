@@ -2109,3 +2109,11 @@
   requirements: [REQ-SYS-068]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-38
+  milestone: M0
+  title: "Three harness follow-ups: embedded libtest headers, ETXTBSY on stand-in executables, nameless meter lines"
+  depends_on: [TASK-M0-03, TASK-M0-22, TASK-M0-34]
+  needs: []
+  requirements: [REQ-SYS-069, REQ-SYS-070, REQ-SYS-071]
+  reviewers: [code, qa]
+  pitfalls: []
