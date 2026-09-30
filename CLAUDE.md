@@ -7,6 +7,8 @@ Read this first; each rule points at its source.
 - Never cite `workbench/`, `docs/archive/` or `docs/reference/` as normative (R-159; `docs/read_first/principia_INDEX.md`
   § "Archived — record only, do not implement"). Transcribe from `docs/reference/` into the contracts, and cite the
   contract.
+- For the rules in force, read `plan/CURRENT_RULES.md`, which is generated from `decisions.md`. Read `decisions.md` for
+  their history and why they were made (R-292).
 
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
