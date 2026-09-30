@@ -194,6 +194,21 @@ prin profile query "top 10 scopes by p95" --live                        # query 
 Scenarios are deterministic. Buttons: Export trace (JSON; it also writes the Chrome Trace Event format for Perfetto
 and `chrome://tracing`, R-207), Open in Tracy, Headless render….
 
+**What `prin profile diff` compares (REQ-TOOL-119, R-72).** Each scope's p95 in NEW against its p95 in BASE. A scope
+regresses when NEW's p95 is more than P% above BASE's, `(p95_NEW − p95_BASE) / p95_BASE × 100 > P`, or, where BASE's
+p95 is 0, when NEW's is above 0. The diff exits 1 when any scope regresses, 0 when none does, and 2 when it cannot read
+either file as schema v1.
+- **The statistic.** A scope's p95 is the nearest-rank 95th percentile of its per-frame ms over the file's frames: the
+  samples sorted ascending, the ⌈0.95 n⌉-th, counted from 1 (telemetry §3: percentiles, not means). `prin` and the
+  interactive path share the percentile code (telemetry §5.5).
+- **The scope set.** The frame (its `frame_ms`); each of the five stages (its `stage_ms`, in the frames where it is not
+  `null`); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
+  GPU pass, by its stage and name. A scope that occurs more than once in a frame gives that frame the sum of its ms; a
+  frame where it does not occur gives it no sample.
+- **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
+  compared; it does not by itself make the diff exit non-zero. The output names each one, so a scope renamed or gone
+  is shown, not passed over in silence.
+
 ### Export & share
 
 - **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
