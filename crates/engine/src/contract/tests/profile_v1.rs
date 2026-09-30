@@ -2,8 +2,9 @@
 //! trace validates against the checked-in JSON Schema, has exactly the five stages at the top and every scope beneath
 //! one of them (REQ-TOOL-005), and parses as telemetry §2's frame record with the nested sections beneath
 //! (REQ-TOOL-008). The file is JSON Lines (R-286): the header line, one frame record per line, then the summary line,
-//! each line validated against the schema's definition for its place. Each test registers the control that must make
-//! it fail (R-176).
+//! each line validated against the schema's definition for its place. A session that ended before its summary line
+//! reads, its summaries absent with "session incomplete" (R-298). Each test registers the control that must make it
+//! fail (R-176).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -14,9 +15,9 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::contract::profile::{
-    read, write, Allocation, Api, Backend, Build, Device, Display, Event, FrameRecord, GpuPass,
-    LiveKind, LiveMemory, Memory, Pool, PoolLive, Precision, SchemaId, Scope, SessionHeader, Stage,
-    StageMs, StageSections, Stages, Trace, SCHEMA_V1,
+    read, write, Absent, Allocation, Api, Backend, Build, Device, Display, Event, FrameRecord,
+    GpuPass, LiveKind, LiveMemory, Memory, Pool, PoolLive, Precision, SchemaId, Scope, Session,
+    SessionHeader, Stage, StageMs, StageSections, Stages, Trace, SCHEMA_V1,
 };
 
 /// The five stages' keys, in telemetry §2's order.
@@ -180,6 +181,7 @@ fn interactive() -> Trace {
         frames: vec![frame(0, 0.0, true), frame(1, 0.125, true)],
         leak_flags: None,
         hot_paths: None,
+        session: Session::Complete,
     }
 }
 
@@ -191,6 +193,7 @@ fn batch() -> Trace {
         frames: vec![frame(0, 0.0, false)],
         leak_flags: None,
         hot_paths: None,
+        session: Session::Complete,
     }
 }
 
@@ -701,14 +704,13 @@ validation::negative_control!(
 );
 
 /// The reader and the schema both reject a file whose lines are out of their places; the reader accepts a file of no
-/// frames, and a last line without its newline, as JSON Lines allows.
+/// frames, and a last line without its newline, as JSON Lines allows. A file without its summary line is
+/// `profile_v1_superset_truncated_trace_reads`'s (R-298).
 fn check_lines_in_place(file: &[u8]) {
     let base = lines(file);
     let n = base.len();
     let mut cases: Vec<(Vec<u8>, &str)> = vec![
         (Vec::new(), "an empty file"),
-        (file_from(&base[..1]), "a header line alone"),
-        (file_from(&base[..n - 1]), "a file without its summary line"),
         (file_from(&base[1..]), "a file without its header line"),
     ];
     let mut summary_first = base.clone();
@@ -775,6 +777,154 @@ validation::negative_control!(
         file.extend(file_from(&lines(&bytes(&interactive()))[1..2]));
         file
     })
+);
+
+// ----- a session that ended before its summary line (R-298) -----
+
+/// The interactive trace with a leak flag and a hot-path summary, so that absent summaries can't pass for `null` ones.
+fn summarised() -> Trace {
+    let mut trace = interactive();
+    let entry = |key: &str| {
+        let mut entry = serde_json::Map::new();
+        entry.insert(key.to_owned(), json!(1));
+        vec![entry]
+    };
+    trace.leak_flags = Some(entry("growth_bytes_per_s"));
+    trace.hot_paths = Some(entry("p95_ms"));
+    trace
+}
+
+/// The schema's errors for an incomplete file's lines: the first against `header_line`, every other against `frame`,
+/// the place each holds (telemetry §5).
+fn incomplete_line_errors(lines: &[Value]) -> Vec<String> {
+    let (header, frame) = (validator_for("header_line"), validator_for("frame"));
+    let mut errors = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let (validator, place) = if i == 0 {
+            (&header, "header_line")
+        } else {
+            (&frame, "frame")
+        };
+        errors.extend(
+            validator
+                .iter_errors(line)
+                .map(|e| format!("line {} ({place}): {e}", i + 1)),
+        );
+    }
+    errors
+}
+
+/// `read_with` reads `trace`'s file cut before its summary line, as a crashed or still-running session leaves it: the
+/// header and frames come back, the session is incomplete, and both summaries are absent with "session incomplete".
+/// So does the file cut after its first frame, without its last newline, and the header line alone. The writer writes
+/// the incomplete trace back as the same file. A last line cut off inside its object is still rejected.
+fn check_truncated_trace(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let all = lines(&bytes(trace));
+    let n = all.len();
+    let mut one_frame = file_from(&all[..2]);
+    one_frame.pop();
+    let cases: Vec<(Vec<u8>, usize, &str)> = vec![
+        (
+            file_from(&all[..n - 1]),
+            trace.frames.len(),
+            "the file cut before its summary line",
+        ),
+        (
+            one_frame,
+            1,
+            "the file cut after its first frame, without its last newline",
+        ),
+        (file_from(&all[..1]), 0, "the header line alone"),
+    ];
+    for (file, frames, what) in &cases {
+        let got = read_with(file)
+            .unwrap_or_else(|e| panic!("the reader rejected the truncated trace, {what}: {e}"));
+        assert!(
+            got.header == trace.header && got.frames[..] == trace.frames[..*frames],
+            "{what}: the header and frames read are not the ones written"
+        );
+        assert_eq!(
+            got.session,
+            Session::Incomplete,
+            "{what}: not an incomplete session"
+        );
+        for (key, absent) in [
+            ("leak_flags", got.leak_flags()),
+            ("hot_paths", got.hot_paths()),
+        ] {
+            match absent {
+                Err(reason) => assert!(
+                    reason == Absent::SessionIncomplete
+                        && reason.to_string() == "session incomplete",
+                    "{what}: {key} is absent as {reason:?}, not \"session incomplete\""
+                ),
+                Ok(entries) => panic!("{what}: {key} reads as {} entries", entries.len()),
+            }
+        }
+        let errors = incomplete_line_errors(&lines(file));
+        assert!(
+            errors.is_empty(),
+            "{what}: a line fails its place's schema: {errors:?}"
+        );
+        let mut out = Vec::new();
+        write(&got, &mut out).expect("the writer refused the incomplete trace");
+        assert!(
+            lines(&out) == lines(file),
+            "{what}: the incomplete trace is not written back as the same file"
+        );
+    }
+    let mut partial = file_from(&all[..n - 2]);
+    let last = serde_json::to_vec(&all[n - 2]).expect("frame");
+    partial.extend_from_slice(&last[..last.len() / 2]);
+    assert!(
+        read_with(&partial).is_err(),
+        "a last frame line cut off inside its object was accepted by the reader"
+    );
+    let complete = read_with(&bytes(trace)).expect("the reader rejected the complete trace");
+    assert!(
+        complete.session == Session::Complete
+            && complete.leak_flags().is_ok()
+            && complete.hot_paths().is_ok(),
+        "the complete trace's summaries were lost"
+    );
+}
+
+#[test]
+fn profile_v1_superset_truncated_trace_reads() {
+    check_truncated_trace(|file| read(file), &summarised());
+    let precomputed_none =
+        read(bytes(&interactive()).as_slice()).expect("the reader rejected the trace");
+    assert_eq!(
+        precomputed_none.leak_flags(),
+        Err(Absent::NotPrecomputed),
+        "null leak flags are not reported as not precomputed"
+    );
+    let mut summaries_without_their_line = summarised();
+    summaries_without_their_line.session = Session::Incomplete;
+    assert!(
+        write(&summaries_without_their_line, &mut Vec::new()).is_err(),
+        "the writer wrote an incomplete session's summaries, which have no line to go on"
+    );
+}
+
+validation::negative_control!(
+    profile_v1_superset_truncated_trace_reads,
+    "a reader that rejects a file without its summary line must fail",
+    expected = "the reader rejected the truncated trace",
+    check_truncated_trace(
+        |file| {
+            read(file).and_then(|trace| match trace.session {
+                Session::Complete => Ok(trace),
+                Session::Incomplete => Err(<serde_json::Error as serde::de::Error>::custom(
+                    "the file ends before its summary line",
+                )),
+            })
+        },
+        &summarised(),
+    )
 );
 
 // ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----

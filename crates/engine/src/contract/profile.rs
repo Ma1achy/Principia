@@ -30,8 +30,9 @@ pub enum SchemaId {
 /// One profiler trace: the session header, the frame records, then the precomputed summaries (telemetry §5).
 ///
 /// The file is JSON Lines (R-286), which [`write`] writes and [`read`] reads: the header line
-/// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. This
-/// type's own serde form, one object with all five keys, is not the file.
+/// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. A session
+/// that ended before its summary line, a crash or a session still running, is [`Session::Incomplete`] (R-298). This
+/// type's own serde form, one object with the five keys (and `session` when incomplete), is not the file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trace {
@@ -47,6 +48,70 @@ pub struct Trace {
     /// The precomputed hot-path summaries; `None` when not precomputed.
     #[serde(deserialize_with = "nullable")]
     pub hot_paths: Option<Vec<Summary>>,
+    /// Whether the file has its summary line (R-298). Not a key of the file: the summary line's presence is. An
+    /// incomplete session's `leak_flags` and `hot_paths` are `None`, and [`Trace::leak_flags`] and
+    /// [`Trace::hot_paths`] give the reason.
+    #[serde(default, skip_serializing_if = "Session::is_complete")]
+    pub session: Session,
+}
+
+/// Whether a session ended with its summary line (R-298, telemetry §5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Session {
+    /// The file ends with its summary line.
+    #[default]
+    Complete,
+    /// The file ends before its summary line: the session crashed or is still running. Its frames stand; its
+    /// summaries are absent.
+    Incomplete,
+}
+
+impl Session {
+    /// `true` for [`Session::Complete`].
+    pub fn is_complete(&self) -> bool {
+        *self == Session::Complete
+    }
+}
+
+/// Why a trace has no leak flags or hot-path summaries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Absent {
+    /// The summary line holds `null`: they were not precomputed.
+    NotPrecomputed,
+    /// There is no summary line: the session is incomplete (R-298).
+    SessionIncomplete,
+}
+
+impl fmt::Display for Absent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Absent::NotPrecomputed => "not precomputed",
+            Absent::SessionIncomplete => "session incomplete",
+        })
+    }
+}
+
+impl Trace {
+    /// The precomputed leak flags, or why there are none: "session incomplete" when the file has no summary line
+    /// (R-298).
+    pub fn leak_flags(&self) -> Result<&[Summary], Absent> {
+        self.summary(&self.leak_flags)
+    }
+
+    /// The precomputed hot-path summaries, or why there are none: "session incomplete" when the file has no summary
+    /// line (R-298).
+    pub fn hot_paths(&self) -> Result<&[Summary], Absent> {
+        self.summary(&self.hot_paths)
+    }
+
+    fn summary<'a>(&self, field: &'a Option<Vec<Summary>>) -> Result<&'a [Summary], Absent> {
+        match (self.session, field) {
+            (Session::Incomplete, _) => Err(Absent::SessionIncomplete),
+            (Session::Complete, Some(entries)) => Ok(entries),
+            (Session::Complete, None) => Err(Absent::NotPrecomputed),
+        }
+    }
 }
 
 /// One leak flag or hot-path summary (render_gui_spec § "Profiler"): a JSON object whose keys the task closing
@@ -455,7 +520,8 @@ struct SummaryLine {
 /// summary line, never pretty-printed; pretty-printing is on demand, `prin profile show --pretty` or `jq` (telemetry §5). A value outside its range (a negative ms,
 /// NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the sum of its
 /// `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
-/// `allocations` is an error, and nothing is written.
+/// `allocations` is an error, and nothing is written. An incomplete session (R-298) is written without its summary
+/// line, as a session that ended before it leaves the file, and its `leak_flags` and `hot_paths` must be `None`.
 ///
 /// The writer is buffered here and flushed before `write` returns, so a plain `File` costs no more than a `BufWriter`.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
@@ -478,6 +544,9 @@ pub(crate) fn write_lines<W: io::Write>(
     for frame in &trace.frames {
         write_line(&mut writer, frame)?;
     }
+    if trace.session == Session::Incomplete {
+        return Ok(());
+    }
     let summary = SummaryLineOut {
         leak_flags: &trace.leak_flags,
         hot_paths: &trace.hot_paths,
@@ -494,12 +563,16 @@ fn write_line<W: io::Write, T: Serialize>(
 }
 
 /// Reads a schema v1 file, line by line. A line that is not the object its place calls for — the header line first,
-/// a frame record on each line after it, the summary line last — is an error, and so are a blank line, a file that
-/// ends before its summary line, a key outside v1 (a scope beside the five stages, say), a missing key, even one whose
+/// a frame record on each line after it, the summary line last — is an error, and so are a blank line, a last line
+/// cut off inside its object, a key outside v1 (a scope beside the five stages, say), a missing key, even one whose
 /// value may be `null`, a value outside its range, a frame with one `present` null and the other not, a pool whose
 /// `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind` or for one kind and
 /// pool in a stage's `allocations`, so each line `read` accepts validates against [`SCHEMA_V1`]'s definition for its
 /// place. An error names the line, from 1.
+///
+/// A file that ends before its summary line, its last line a frame record or the header line, is a session that
+/// crashed or is still running (R-298). It reads: the header and frames are returned, the trace is
+/// [`Session::Incomplete`], and [`Trace::leak_flags`] and [`Trace::hot_paths`] report "session incomplete".
 ///
 /// The reader is buffered here, so a plain `File` costs no more than a `BufReader`.
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
@@ -507,7 +580,7 @@ pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
 }
 
 /// Reads the lines from `reader`. Each line after the header is held until the next arrives: a line with one after it
-/// is a frame record, and the last is the summary line.
+/// is a frame record, and the last is the summary line or, in an incomplete session, a frame record (R-298).
 pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json::Error> {
     let mut line = String::new();
     let mut held = String::new();
@@ -522,9 +595,12 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         frames: Vec::new(),
         leak_flags: None,
         hot_paths: None,
+        session: Session::Complete,
     };
     if !next_line(&mut reader, &mut held)? {
-        return Err(de_error("the file ends at line 1, before its summary line"));
+        // The header line alone: a session that recorded no frame and ended before its summary line (R-298).
+        trace.session = Session::Incomplete;
+        return Ok(trace);
     }
     let mut number = 2;
     while next_line(&mut reader, &mut line)? {
@@ -535,9 +611,24 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         std::mem::swap(&mut line, &mut held);
         number += 1;
     }
-    let summary: SummaryLine = parse(&held, number, "the summary line, last")?;
-    trace.leak_flags = summary.leak_flags;
-    trace.hot_paths = summary.hot_paths;
+    // The two are told apart by their keys, which no summary line shares with a frame record.
+    match serde_json::from_str::<SummaryLine>(&held) {
+        Ok(summary) => {
+            trace.leak_flags = summary.leak_flags;
+            trace.hot_paths = summary.hot_paths;
+        }
+        Err(as_summary) => {
+            let frame: FrameRecord = serde_json::from_str(&held).map_err(|as_frame| {
+                de_error(format!(
+                    "line {number}, the last: neither the summary line ({as_summary}) nor, for a session that \
+                     ended before its summary line, a frame record ({as_frame})"
+                ))
+            })?;
+            check_frame(&At::Line(number), &frame, &mut Seens::default()).map_err(de_error)?;
+            trace.frames.push(frame);
+            trace.session = Session::Incomplete;
+        }
+    }
     Ok(trace)
 }
 
@@ -568,6 +659,11 @@ fn de_error(message: impl fmt::Display) -> serde_json::Error {
 /// frame `i` on line `i + 2`.
 fn check_ranges(trace: &Trace) -> Result<(), String> {
     check_header(&At::Line(1), &trace.header)?;
+    if trace.session == Session::Incomplete
+        && (trace.leak_flags.is_some() || trace.hot_paths.is_some())
+    {
+        return Err("an incomplete session has no summary line, so its leak_flags and hot_paths must be null".into());
+    }
     let mut seen = Seens::default();
     for (i, frame) in trace.frames.iter().enumerate() {
         check_frame(&At::Line(i + 2), frame, &mut seen)?;
