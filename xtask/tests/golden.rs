@@ -320,6 +320,24 @@ negative_control!(
     )
 );
 
+/// `golden <arg>` on the self-test copy: an argument starting with `-` that is no flag is refused as unrecognised,
+/// not taken for a suite name.
+fn golden_with_arg(arg: &str) -> Result<(), String> {
+    golden::cli(&selftest_copy("cli_arg"), &[arg])
+}
+
+#[test]
+fn golden_refuses_unknown_flag() {
+    check_refused(golden_with_arg("--x"), "unrecognised arguments");
+}
+
+negative_control!(
+    golden_refuses_unknown_flag,
+    "a suite name that does not exist",
+    expected = "refused for another reason",
+    check_refused(golden_with_arg("nosuch"), "unrecognised arguments")
+);
+
 // --- The runner's backend rule stays in step with the harness's (R-169, R-206) -------------------------------------
 
 /// The values of `PRIN_GPU_BACKEND` the rules are compared on: unset, each backend, and values that are none.
