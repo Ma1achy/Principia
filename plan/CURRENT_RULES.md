@@ -324,3 +324,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The `ci` wall-time target is R-301's. Amended by R-301.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
+- **R-304** — The "veto?" items on #78, #79, #89 and #90 stand

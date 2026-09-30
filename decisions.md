@@ -3134,5 +3134,19 @@ session header records the compute setting as asked for, and the compiled mode o
 fragment) as "unknown". The Run window shows the compute fast-math control disabled, with a note that the browser
 chooses the mode. Browser runs are held to R-85's Tier-N tolerances, measured, not bit-exact (REQ-VAL-116). The sim key
 and pxpack keep the setting, so a view made in the browser opens natively with it.
-*Applied per R-204 — veto?:* the header's browser rule is a new requirement, REQ-TOOL-143, closed by TASK-M8-37 (the
-browser build), since REQ-TOOL-141 is an M0 requirement on native backends.
+*Applied per R-204, confirmed by R-304:* the header's browser rule is a new requirement, REQ-TOOL-143, closed by
+TASK-M8-37 (the browser build), since REQ-TOOL-141 is an M0 requirement on native backends.
+
+## R-304 — The "veto?" items on #78, #79, #89 and #90 stand
+*30 Sep 2026 · applied in PRs #78, #79, #89 and #90*
+
+"All stand: #78 items 15–16; #79 items f–i; #89's REQ-TOOL-143 (a new M8 requirement closed by TASK-M8-37); #90's 2 s
+post-SIGKILL bound and its reuse of TASK-M0-26's id and reviewers. Merge each once its reviews and CI are green."
+
+*Applied:* PR #78's item 15 (`DminCounters::reset` takes `&mut self`, so only the owner resets the pair, never while a
+worker holds it) and item 16 (the increment methods take telemetry §2's counter names) stand. So do PR #79's items f
+(an unterminated last line that is complete JSON of the wrong shape is rejected, not dropped), g (a cut-off line after
+the summary line is an error), h (a cut-off header as the only line is an error stating its bytes) and i (R-299 is in
+the design group). REQ-TOOL-143 stands as recorded under R-303. PR #90's 2 s bound on the wait for the process group
+after SIGKILL, and its reuse of TASK-M0-26's id and reviewers for a defect fix in that task's merged code, stand. Each
+PR merges once its named reviewers approve its head and CI is green.

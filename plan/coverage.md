@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 
 ## Sections
 
-992 sections in 46 files: 841 yield at least one requirement; 151 yield none and are listed below with the reason.
+993 sections in 46 files: 841 yield at least one requirement; 152 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 104 |
+| informative only | 105 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -113,6 +113,7 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 | R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)* | informative only | process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent |
 | R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)* | informative only | process ruling; applied in decisions.md's R-252 and R-293 lines, CURRENT_RULES.md, CLAUDE.md and the code reviewer agent |
 | R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
+| R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
