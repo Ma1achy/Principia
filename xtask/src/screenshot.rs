@@ -10,7 +10,9 @@
 //!   artboard values are illustrative and corpus values win (R-68), so the runner compares no pixels.
 //! - a **presence-only** case lists the controls or items the surface must contain (R-129: the surfaces with no
 //!   artboard, checked by presence, not layout). The runner lays the surface out and fails naming each one absent from
-//!   its AccessKit tree, the accessible names egui gives what it actually laid out. It needs no GPU.
+//!   its AccessKit tree, the accessible names egui gives what it actually laid out. A control counts only if its
+//!   node's rect also intersects the visible surface (R-275): one in the tree but clipped out of view is named as
+//!   clipped. A case that needs a control below the fold scrolls to it first. It needs no GPU.
 //!
 //! Not in the per-commit `cargo xtask ci`: `.github/workflows/screenshot.yml` runs `--all` on GUI PRs (R-177), and the
 //! gate workflow at the gates (R-110). The backend is `PRIN_GPU_BACKEND`'s, or the platform's when unset (R-169, R-206).
@@ -227,26 +229,40 @@ fn run_case(
                 .to_owned(),
         ),
         (None, Some(controls)) => {
-            let missing: Vec<&str> = controls
-                .iter()
-                .filter(|c| !frame.names.contains(c))
-                .map(String::as_str)
-                .collect();
-            if missing.is_empty() {
-                Ok(Outcome::Present {
-                    controls: controls.clone(),
-                })
-            } else {
-                Err(format!(
-                    "presence-only case: control(s) absent from surface {}: {} (R-129)",
-                    case.surface,
-                    missing
-                        .iter()
-                        .map(|m| format!("`{m}`"))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ))
+            // R-275: a control counts only if it is in the tree and its rect intersects the visible surface.
+            let (mut absent, mut clipped) = (Vec::new(), Vec::new());
+            for control in controls {
+                if frame.names.contains(control) {
+                    continue;
+                }
+                if frame.clipped.contains(control) {
+                    clipped.push(format!("`{control}`"));
+                } else {
+                    absent.push(format!("`{control}`"));
+                }
             }
+            if absent.is_empty() && clipped.is_empty() {
+                return Ok(Outcome::Present {
+                    controls: controls.clone(),
+                });
+            }
+            let [w, h] = frame.size;
+            let mut parts = Vec::new();
+            if !absent.is_empty() {
+                parts.push(format!(
+                    "control(s) absent from surface {}: {} (R-129)",
+                    case.surface,
+                    absent.join(", ")
+                ));
+            }
+            if !clipped.is_empty() {
+                parts.push(format!(
+                    "control(s) clipped out of surface {}, in the tree but outside its visible {w}×{h}: {} (R-275)",
+                    case.surface,
+                    clipped.join(", ")
+                ));
+            }
+            Err(format!("presence-only case: {}", parts.join("; ")))
         }
         _ => Err(
             "a case names exactly one of `artboard` (a layout case) and `controls` (a presence-only case)"
@@ -255,12 +271,16 @@ fn run_case(
     }
 }
 
-/// A laid-out surface: its size in pixels, its triangles and textures, and the accessible names in its AccessKit tree.
+/// A laid-out surface: its size in pixels, its triangles and textures, and the accessible names in its AccessKit tree,
+/// split by whether their node's rect intersects the visible surface (R-275).
 pub struct Frame {
     pub size: [u32; 2],
     primitives: Vec<egui::ClippedPrimitive>,
     textures: egui::TexturesDelta,
+    /// The names whose node's rect intersects the visible surface: the controls a presence check counts.
     pub names: Vec<String>,
+    /// The names in the tree whose node has no rect, or a rect outside the visible surface: clipped out of view.
+    pub clipped: Vec<String>,
 }
 
 impl Drop for Frame {
@@ -304,12 +324,15 @@ pub fn lay_out(surface: &Surface) -> Frame {
         last = Some(output);
     }
     let output = last.expect("two passes ran");
-    let mut names = Vec::new();
+    let (mut names, mut clipped) = (Vec::new(), Vec::new());
     if let Some(update) = &output.platform_output.accesskit_update {
         for (_, node) in &update.nodes {
-            // egui puts a widget's text in `label`, and a plain label's in `value`.
-            names.extend(node.label().map(str::to_owned));
-            names.extend(node.value().map(str::to_owned));
+            // egui puts a widget's text in `label`, and a plain label's in `value`. Its bounds are in points: the root
+            // node alone carries the pixels-per-point scale, so they compare with the surface's rect directly.
+            let visible = node.bounds().is_some_and(|b| visible_in(b, rect));
+            let into = if visible { &mut names } else { &mut clipped };
+            into.extend(node.label().map(str::to_owned));
+            into.extend(node.value().map(str::to_owned));
         }
     }
     let primitives = ctx.tessellate(output.shapes, output.pixels_per_point);
@@ -318,7 +341,18 @@ pub fn lay_out(surface: &Surface) -> Frame {
         primitives,
         textures,
         names,
+        clipped,
     }
+}
+
+/// Whether `bounds` meets `surface` in a region of positive area: a rect that only touches the surface's edge, or has
+/// no area, shows nothing on it (R-275).
+fn visible_in(bounds: egui::accesskit::Rect, surface: egui::Rect) -> bool {
+    let x0 = bounds.x0.max(f64::from(surface.min.x));
+    let y0 = bounds.y0.max(f64::from(surface.min.y));
+    let x1 = bounds.x1.min(f64::from(surface.max.x));
+    let y1 = bounds.y1.min(f64::from(surface.max.y));
+    x0 < x1 && y0 < y1
 }
 
 /// The backend `value` (of [`BACKEND_VAR`]) selects: metal or vulkan; unset selects the platform's (R-169, R-206).

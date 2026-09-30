@@ -7,6 +7,8 @@ Read this first; each rule points at its source.
 - Never cite `workbench/`, `docs/archive/` or `docs/reference/` as normative (R-159; `docs/read_first/principia_INDEX.md`
   § "Archived — record only, do not implement"). Transcribe from `docs/reference/` into the contracts, and cite the
   contract.
+- For the rules in force, read `plan/CURRENT_RULES.md`, which is generated from `decisions.md`. Read `decisions.md` for
+  their history and why they were made (R-292).
 
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
@@ -30,15 +32,18 @@ Read this first; each rule points at its source.
   touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
   commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
 - Before starting a build or reviewer, check free disk and memory pressure (`sysctl kern.memorystatus_vm_pressure_level`
-  or `memory_pressure`), not swap, which macOS keeps allocated. Start one only at normal pressure; at warning, hold new
-  work; at critical, only finish the running work (R-239, R-252).
+  or `memory_pressure`), not swap, which macOS keeps allocated. At normal pressure (1), three agents may run; at
+  warning (2), two; at critical (4), only finish the running work (R-277).
 - Reviewers' read-only is enforced, not just instructed. After each reviewer returns, run `git status --porcelain`
   and check that HEAD hasn't moved. If anything changed, discard it (`git restore` / `git clean` on the affected paths,
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by
   the same reviewer stops the loop for the human.
 - QA commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing, check that it made exactly one new
-  commit, and that `git diff --name-status HEAD~1 HEAD` lists only `A` lines under `crates/*/tests/`, `xtask/tests/`
-  or `fixtures/` (R-237). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA.
+  commit, and that `git diff --name-status HEAD~1 HEAD` lists only lines under `crates/*/tests/`, `xtask/tests/` or
+  `fixtures/` (R-237): `A` lines, or `M` and `D` lines on a test file whose every earlier commit, by `git log`, is a qa
+  commit ("qa: tests for …") (R-290). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA. The PR
+  lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
+  ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
 ## Never guess, never defer (`plan/WORKFLOW.md` § "Escalation", § "No deferral")
 - A conflict, silence or missing value in the corpus goes to `REVIEW_QUEUE.md`, with file, section and quoted text.

@@ -9,8 +9,8 @@ use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::plan_check::{command, repo_root};
 
-/// Copies the `.md` files under `from` into `to`, skipping `docs/archive`, `docs/experiments` and `docs/reference`,
-/// which the checker never reads.
+/// Copies the `.md` files under `from` into `to`, skipping `docs/archive`, `docs/experiments` and `docs/reference`.
+/// Of those the checker reads only `docs/archive/review_queue/`, which `copy` adds.
 fn copy_md(from: &Path, to: &Path) {
     fs::create_dir_all(to).expect("dir created");
     for entry in fs::read_dir(from).expect("dir read") {
@@ -42,7 +42,8 @@ fn copy_all(from: &Path, to: &Path) {
     }
 }
 
-/// A fresh copy of `plan/`, the corpus and the root files the checker reads.
+/// A fresh copy of `plan/`, the corpus, the archived review queue (the checker resolves RQ-n references against it)
+/// and the root files the checker reads.
 fn copy(name: &str) -> PathBuf {
     let (src, dst) = (
         repo_root(),
@@ -51,6 +52,10 @@ fn copy(name: &str) -> PathBuf {
     let _ = fs::remove_dir_all(&dst);
     copy_all(&src.join("plan"), &dst.join("plan"));
     copy_md(&src.join("docs"), &dst.join("docs"));
+    copy_md(
+        &src.join("docs/archive/review_queue"),
+        &dst.join("docs/archive/review_queue"),
+    );
     for file in ["decisions.md", "open-questions.md", "REVIEW_QUEUE.md"] {
         fs::copy(src.join(file), dst.join(file)).expect("file copied");
     }
