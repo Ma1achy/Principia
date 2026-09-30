@@ -3,10 +3,62 @@
 //! pitfalls §9; R-22, R-86, R-271), not from the implementation. Every bit position, bit pattern and tolerance below
 //! is payload §2's table, IEEE 754 binary16, or the requirement's own figure. Each test has a registered negative
 //! control (R-176).
+//!
+//! R-294 moved the `d_min` counters to the frame: `set_d_min` and `pack_packed_a` take the caller's `DminCounters`.
+//! Every value this file packs is valid, so none counts; each pack here goes through [`pa`] or [`sdm`], which pass a
+//! fresh frame pair and assert that it reads back `(0, 0)`, so no assertion below changed. The counting itself is
+//! `qa_TASK-M0-10_r288.rs`'s.
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
 use validation::negative_control;
+
+/// `pack_packed_a` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288).
+fn pa(
+    state: u32,
+    detail: u32,
+    saturated: bool,
+    dmin_pair: u32,
+    last_symbol: u32,
+    d_min: f32,
+) -> u32 {
+    let frame = DminCounters::new();
+    let w = pack_packed_a(
+        state,
+        detail,
+        saturated,
+        dmin_pair,
+        last_symbol,
+        d_min,
+        &frame,
+    );
+    assert_eq!(
+        frame.read(),
+        (0, 0),
+        "pack_packed_a counted a valid d_min {d_min:e}"
+    );
+    w
+}
+
+/// `set_d_min` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288).
+fn sdm(w: u32, v: f32) -> u32 {
+    let frame = DminCounters::new();
+    let out = set_d_min(w, v, &frame);
+    assert_eq!(
+        frame.read(),
+        (0, 0),
+        "set_d_min counted a valid d_min {v:e}"
+    );
+    out
+}
+
+/// `PackedA::pack` over a fresh frame pair (R-294).
+fn pk(e: &PackedA) -> u32 {
+    let frame = DminCounters::new();
+    let w = e.pack(&frame);
+    assert_eq!(frame.read(), (0, 0), "PackedA::pack counted a valid d_min");
+    w
+}
 
 /// Payload §2's `sample_descriptor` table: `(field, first bit, width)`.
 const TABLE: [(&str, u32, u32); 5] = [
@@ -98,14 +150,14 @@ fn check_all_1024(pack: PackA) {
 
 #[test]
 fn sd_accessors_qa_all_1024_descriptors_round_trip() {
-    check_all_1024(pack_packed_a);
+    check_all_1024(pa);
 }
 
 negative_control!(
     sd_accessors_qa_all_1024_descriptors_round_trip,
     "a packer that swaps dmin_pair and last_symbol is not payload §2's, so the round trip must fail",
     expected = "packed to",
-    check_all_1024(|s, d, sat, pair, sym, dm| pack_packed_a(s, d, sat, sym, pair, dm))
+    check_all_1024(|s, d, sat, pair, sym, dm| pa(s, d, sat, sym, pair, dm))
 );
 
 /// Each `set_*` replaces its field's bits and keeps every other bit, over an all-zero and an all-one word; a value
@@ -157,11 +209,7 @@ fn check_rows(rows: &[(&str, u32, u32)]) {
 /// 0x3800). `times` = t_dmin_step << 16 | t_end_step.
 fn known_rows() -> Vec<(&'static str, u32, u32)> {
     vec![
-        (
-            "packed_a",
-            pack_packed_a(2, 1, true, 0, 3, 1.0),
-            0x3c00_032a,
-        ),
+        ("packed_a", pa(2, 1, true, 0, 3, 1.0), 0x3c00_032a),
         ("packed_b", pack_packed_b(0.5, 2.0), 0x4000_3800),
         ("times", pack_times(0x1234, 0xabcd), 0xabcd_1234),
         ("times max end", pack_times(0xffff, 0), 0x0000_ffff),
@@ -176,11 +224,7 @@ fn known_rows() -> Vec<(&'static str, u32, u32)> {
             set_dLz_max(0x0000_1234, 1.0),
             0x3c00_1234,
         ),
-        (
-            "set_d_min keeps low",
-            set_d_min(0x0000_03ff, 1.0),
-            0x3c00_03ff,
-        ),
+        ("set_d_min keeps low", sdm(0x0000_03ff, 1.0), 0x3c00_03ff),
         (
             "set_t_end_step keeps high",
             set_t_end_step(0xabcd_0000, 7),
@@ -311,7 +355,7 @@ fn check_reserved_zero(pack: PackA, set: fn(&str, u32, u32) -> u32) {
 
 #[test]
 fn reserved_bits_qa_zero_with_every_field_at_max() {
-    check_reserved_zero(pack_packed_a, set);
+    check_reserved_zero(pa, set);
     assert_eq!(PACKED_A_RESERVED, [(10, 6)], "packed_a's reserved list");
 }
 
@@ -319,7 +363,7 @@ negative_control!(
     reserved_bits_qa_zero_with_every_field_at_max,
     "an unmasked last_symbol write spills into bit 10, so the reserved check must fail",
     expected = "bits 10–15",
-    check_reserved_zero(pack_packed_a, |f, w, v| if f == "last_symbol" {
+    check_reserved_zero(pa, |f, w, v| if f == "last_symbol" {
         w | v << 8
     } else {
         set(f, w, v)
@@ -333,7 +377,7 @@ type Ctl = fn(&PackedA, u32) -> bool;
 
 /// `ctl` passes the clean word of `e` and fails every single-bit flip of it, and every non-zero value in bits 10–15.
 fn check_every_flip(ctl: Ctl, e: &PackedA) {
-    let clean = e.pack();
+    let clean = pk(e);
     assert!(ctl(e, clean), "the ctl fails the clean word {clean:#010x}");
     for bit in 0..32 {
         assert!(
@@ -362,12 +406,12 @@ fn fields_ctl(e: &PackedA, observed: u32) -> bool {
             p.d_min.to_bits(),
         )
     };
-    key(PackedA::unpack(observed)) == key(PackedA::unpack(e.pack()))
+    key(PackedA::unpack(observed)) == key(PackedA::unpack(pk(e)))
 }
 
 /// Pitfalls §9's recorded check: `from_bits` masks to bits 2–4 and compares there.
 fn from_bits_ctl(e: &PackedA, observed: u32) -> bool {
-    (observed >> 2) & 0b111 == (e.pack() >> 2) & 0b111
+    (observed >> 2) & 0b111 == (pk(e) >> 2) & 0b111
 }
 
 fn sample() -> PackedA {
@@ -409,7 +453,7 @@ negative_control!(
 
 /// The recorded pitfalls §9 pass: `ctl` must fail the bit-0 and bit-1 forks `from_bits` masks off.
 fn check_recorded_fork(ctl: Ctl) {
-    let clean = sample().pack();
+    let clean = pk(&sample());
     for fork in [clean ^ 0b01, clean ^ 0b10, clean ^ 0b11] {
         assert!(
             !ctl(&sample(), fork),
@@ -420,7 +464,7 @@ fn check_recorded_fork(ctl: Ctl) {
 
 #[test]
 fn roundtrip_ctl_qa_recorded_pitfall_9_pass_now_fails() {
-    let clean = sample().pack();
+    let clean = pk(&sample());
     // The recorded check does pass the fork (so it is the pitfall, reproduced) ...
     assert!(
         from_bits_ctl(&sample(), clean ^ 0b01),
@@ -573,20 +617,20 @@ type SetDMin = fn(u32, f32) -> u32;
 ///   §1 requires of valid values, +inf would store 0x7bff: so `set` writes the unset bits itself.
 fn check_unset_written(set: SetDMin) {
     for state in [4u32, 5] {
-        let w = set_d_min_unset(pack_packed_a(state, 2, true, 3, 1, 0.5));
+        let w = set_d_min_unset(pa(state, 2, true, 3, 1, 0.5));
         assert_eq!(w >> 16, 0x7c00, "failed state {state}: d_min bits");
         assert_eq!(
             w & 0xffff,
-            pack_packed_a(state, 2, true, 3, 1, 0.5) & 0xffff,
+            pa(state, 2, true, 3, 1, 0.5) & 0xffff,
             "failed state {state}: descriptor kept"
         );
         assert!(pa_d_min_is_unset(w), "failed state {state} reads unset");
     }
-    let unstepped = set_d_min_unset(pack_packed_a(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5));
+    let unstepped = set_d_min_unset(pa(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5));
     assert_eq!(unstepped >> 16, 0x7c00, "unstepped: d_min bits");
     assert_eq!(
         unstepped & 0xffff,
-        pack_packed_a(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5) & 0xffff,
+        pa(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5) & 0xffff,
         "unstepped: descriptor kept"
     );
     assert!(pa_d_min_is_unset(unstepped), "unstepped sample reads unset");
@@ -598,7 +642,7 @@ fn check_unset_written(set: SetDMin) {
         );
     }
     for state in [3u32, 4, 5] {
-        let w = set(pack_packed_a(state, 2, true, 3, 1, 0.5), f32::INFINITY);
+        let w = set(pa(state, 2, true, 3, 1, 0.5), f32::INFINITY);
         assert_eq!(
             w >> 16,
             0x7c00,
@@ -606,7 +650,7 @@ fn check_unset_written(set: SetDMin) {
         );
         assert_eq!(
             w & 0xffff,
-            pack_packed_a(state, 2, true, 3, 1, 0.5) & 0xffff,
+            pa(state, 2, true, 3, 1, 0.5) & 0xffff,
             "+inf to the packer, state {state}: descriptor kept"
         );
     }
@@ -614,7 +658,7 @@ fn check_unset_written(set: SetDMin) {
 
 #[test]
 fn dmin_unset_qa_failed_and_unstepped_store_7c00() {
-    check_unset_written(set_d_min);
+    check_unset_written(sdm);
 }
 
 negative_control!(
@@ -648,7 +692,7 @@ fn check_floor(set: SetDMin) {
 
 #[test]
 fn dmin_unset_qa_below_smallest_subnormal_stores_0001() {
-    check_floor(set_d_min);
+    check_floor(sdm);
 }
 
 negative_control!(
@@ -672,7 +716,7 @@ fn check_valid(set: SetDMin, bits: u32) {
 #[test]
 fn dmin_unset_qa_property_no_valid_input_stores_zero() {
     validation::prop::run(&(0u32..=0x7f80_0000), |bits| {
-        check_valid(set_d_min, bits);
+        check_valid(sdm, bits);
         Ok(())
     });
     // Around the edges: zero, the f16 subnormal floor, the finite max and the f16 overflow threshold, f32::MAX, +inf.
@@ -688,7 +732,7 @@ fn dmin_unset_qa_property_no_valid_input_stores_zero() {
         0x7f7f_ffff,
         0x7f80_0000,
     ] {
-        check_valid(set_d_min, bits);
+        check_valid(sdm, bits);
     }
 }
 
