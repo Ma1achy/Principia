@@ -29,6 +29,7 @@ readback (R-294).
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/gui/principia_render_gui_spec.md` § "Profiler"
 - `decisions.md` § "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
+- `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - `decisions.md` § "R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*"
 
 ## Deliverables
@@ -41,6 +42,9 @@ readback (R-294).
   `dmin_negative_floored`, bound to each frame's dispatch and reset each frame; its asynchronous readback with the
   telemetry readback, never stalling the frame; the counters' values in that frame's record. Test
   `crates/engine/tests/dmin_counters.rs`.
+- `crates/kernel` (R-294, REQ-TOOL-140): the survey entry point binds the per-frame `d_min` counter buffer, and the
+  `d_min` packer increments it atomically on the GPU; one packer path for the f32 and f64 instantiations, no `#[cfg]`
+  or type-dependent branch in its logic (code checklist § 1), and no mutable static.
 
 ## Acceptance tests
 - `cargo test -p engine frame_record_fields` — a recorded frame deserialises with every field present (REQ-TOOL-050).
