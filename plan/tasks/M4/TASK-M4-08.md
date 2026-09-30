@@ -1,15 +1,15 @@
 # TASK-M4-08 — The sim key, the render key and resolve()
 
 - **Milestone:** M4
-- **Closes:** REQ-SCHED-005, REQ-SCHED-007, REQ-INT-068, REQ-RENDER-030, REQ-SCHED-006, REQ-SYS-021, REQ-CHART-052
+- **Closes:** REQ-SCHED-005, REQ-SCHED-007, REQ-INT-068, REQ-RENDER-030, REQ-SCHED-006, REQ-SYS-021, REQ-CHART-052, REQ-SCHED-097
 - **Depends on:** TASK-M4-06, TASK-M2-21, TASK-M3-21
-- **Needs (earlier milestones):** REQ-INT-026, REQ-GEN-008, REQ-GUI-002, REQ-GUI-007, REQ-SYS-011, REQ-SYS-013, REQ-RENDER-006, REQ-RENDER-075, REQ-SCHED-002, REQ-CHART-033
+- **Needs (earlier milestones):** REQ-INT-026, REQ-GEN-008, REQ-GUI-002, REQ-GUI-007, REQ-SYS-011, REQ-SYS-013, REQ-RENDER-006, REQ-RENDER-075, REQ-SCHED-002, REQ-CHART-033, REQ-SYS-074
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
-- **Size:** ~450 lines
+- **Size:** ~480 lines (~450 before R-297)
 
 ## Goal
-The recompute rule made mechanical. The sim key holds chart id + params, the slice plane (z₀'s out-of-plane part, span{q₁, q₂}, the in-plane orientation), warps, link ids, integrator config including the bound occupant and `N_max`, T, event thresholds, the tier's sim-key components (N, FTLE, word — not depth, not E) and the ledger content hash; a change re-boots the march from t = 0. Everything on the render key only recolours: no compute dispatch, sim buffers byte-identical. `resolve(ViewState, SimKey, RenderConfig)` runs engine-side in Rust and returns the compute key and uniforms, the fragment key and uniforms, and the dispatch plan.
+The recompute rule made mechanical. The sim key holds chart id + params, the slice plane (z₀'s out-of-plane part, span{q₁, q₂}, the in-plane orientation), warps, link ids, integrator config including the bound occupant and `N_max`, the compute shaders' fast-math setting (off by default, R-297), T, event thresholds, the tier's sim-key components (N, FTLE, word — not depth, not E) and the ledger content hash; a change re-boots the march from t = 0. Everything on the render key only recolours: no compute dispatch, sim buffers byte-identical. `resolve(ViewState, SimKey, RenderConfig)` runs engine-side in Rust and returns the compute key and uniforms, the fragment key and uniforms, and the dispatch plan.
 
 ## References
 - `docs/contracts/principia_integrator_contract.md` § "The table gains two rows"
@@ -36,9 +36,11 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 - `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is"
 - `docs/contracts/principia_lowering_contract.md` § "Part 5 — The resolution function (the "switch", concretely)"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
 
 ## Deliverables
 - `crates/engine`: `SimKey` (hashable, every component above) and the render key.
+- `crates/engine`: the compute fast-math setting on the sim key; a change binds the compute pipelines compiled with the new setting (TASK-M0-44's entry point) and re-boots the march (R-297).
 - `crates/engine/src/resolve.rs`: `resolve` with the five outputs of lowering Part 5 (flat-grid dispatch plan).
 - `crates/engine`: sim-key change → re-boot to t = 0; render-key change → fragment rebind only.
 
@@ -49,9 +51,11 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 - `cargo test -p engine n_max_sim_key` — changing `N_max` changes the sim key; the parity harness passes `N_max` identically to both instantiations (REQ-INT-068).
 - `cargo test -p engine render_swap_no_dispatch` — swapping the colour occupant mid-march issues no compute dispatch and leaves the sim buffers byte-identical (REQ-RENDER-030).
 - `cargo test -p engine render_key_property` (proptest; dd_colouring test 12 / seam "render key") — with the playhead held, cycle every render mode, stain-graph node, uniform and palette: zero compute dispatches and an unchanged sim-buffer hash (REQ-SCHED-006).
+- `cargo test -p engine fast_math_sim_key` — toggling the compute fast-math setting changes the sim key and the payload signature, binds the compute pipelines compiled with the other setting and re-boots the state to t = 0; the default key has it off; no render-key edit changes it (REQ-SCHED-097).
 - `cargo test -p engine resolve_outputs` — `resolve` on a fixture config returns all five outputs; it is Rust, not TS (REQ-SYS-021).
 
 ## Notes
 - The frame loop (TASK-M4-10) consumes the re-boot; this task tests it with the playhead held, driving the march directly.
 - RQ-95 ruled: R-113 — REQ-CHART-033's "a link swap changes the sim key, recompiles and re-integrates from t = 0" is REQ-CHART-052, closed here.
 - RQ-98 ruled: R-113 — REQ-INT-026's sim-key clause is REQ-SCHED-007's; its fixture includes each SimUniforms field.
+- R-297 adds REQ-SCHED-097: the compute fast-math setting is a sim-key component (render contract Part 3; caching contract Parts 1 and 2). Scope added to this task, which builds the sim key (~30 lines).

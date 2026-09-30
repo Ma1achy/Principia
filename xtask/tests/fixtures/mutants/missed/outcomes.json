@@ -1,0 +1,283 @@
+{
+ "outcomes": [
+  {
+   "scenario": "Baseline",
+   "summary": "Success",
+   "log_path": "log/baseline.log",
+   "diff_path": null
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:7:5: replace sign -> i32 with 0",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 7,
+       "column": 5
+      },
+      "end": {
+       "line": 13,
+       "column": 6
+      }
+     },
+     "replacement": "0",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant",
+   "log_path": "log/src__lib.rs_line_7_col_5.log",
+   "diff_path": "diff/src__lib.rs_line_7_col_5.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:7:5: replace sign -> i32 with 1",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 7,
+       "column": 5
+      },
+      "end": {
+       "line": 13,
+       "column": 6
+      }
+     },
+     "replacement": "1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant",
+   "log_path": "log/src__lib.rs_line_7_col_5_001.log",
+   "diff_path": "diff/src__lib.rs_line_7_col_5_001.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:7:5: replace sign -> i32 with -1",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 7,
+       "column": 5
+      },
+      "end": {
+       "line": 13,
+       "column": 6
+      }
+     },
+     "replacement": "-1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant",
+   "log_path": "log/src__lib.rs_line_7_col_5_002.log",
+   "diff_path": "diff/src__lib.rs_line_7_col_5_002.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:9:17: replace < with == in sign",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 9,
+       "column": 17
+      },
+      "end": {
+       "line": 9,
+       "column": 18
+      }
+     },
+     "replacement": "==",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "CaughtMutant",
+   "log_path": "log/src__lib.rs_line_9_col_17.log",
+   "diff_path": "diff/src__lib.rs_line_9_col_17.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:9:17: replace < with > in sign",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 9,
+       "column": 17
+      },
+      "end": {
+       "line": 9,
+       "column": 18
+      }
+     },
+     "replacement": ">",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "MissedMutant",
+   "log_path": "log/src__lib.rs_line_9_col_17_001.log",
+   "diff_path": "diff/src__lib.rs_line_9_col_17_001.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:9:17: replace < with <= in sign",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 9,
+       "column": 17
+      },
+      "end": {
+       "line": 9,
+       "column": 18
+      }
+     },
+     "replacement": "<=",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "CaughtMutant",
+   "log_path": "log/src__lib.rs_line_9_col_17_002.log",
+   "diff_path": "diff/src__lib.rs_line_9_col_17_002.diff"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:10:9: delete - in sign",
+     "package": "mutants_untested",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "sign",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 5,
+        "column": 1
+       },
+       "end": {
+        "line": 14,
+        "column": 2
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 10,
+       "column": 9
+      },
+      "end": {
+       "line": 10,
+       "column": 10
+      }
+     },
+     "replacement": "",
+     "genre": "UnaryOperator"
+    }
+   },
+   "summary": "MissedMutant",
+   "log_path": "log/src__lib.rs_line_10_col_9.log",
+   "diff_path": "diff/src__lib.rs_line_10_col_9.diff"
+  }
+ ],
+ "total_mutants": 7,
+ "missed": 2,
+ "caught": 5,
+ "timeout": 0,
+ "unviable": 0,
+ "success": 0,
+ "cargo_mutants_version": "27.1.0"
+}

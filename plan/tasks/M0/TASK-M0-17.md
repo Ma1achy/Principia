@@ -21,6 +21,8 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 - `decisions.md` § "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*"
+- `decisions.md` § "R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*"
 
 ## Deliverables
 - `crates/engine/src/contract/profile.rs` — `SessionHeader`, `FrameRecord`, `Stage` (the five), `Scope`, `GpuPass`, `Allocation`, `Event`; writer and reader.
@@ -29,7 +31,7 @@ Profiler schema v1 exists as typed Rust (`engine::contract::profile`, serde) and
 
 ## Acceptance tests
 - `cargo test -p engine profile_v1_stages` — an exported trace validates against the v1 JSON Schema; the top level has exactly the five stages; every other scope has one of them as an ancestor; a trace with a top-level `quadtree` scope fails (REQ-TOOL-005).
-- `cargo test -p engine profile_v1_superset` — a profiler dump parses as telemetry §2's frame record (the five stages) and contains the nested sections: scopes, GPU passes, allocations, events (REQ-TOOL-008).
+- `cargo test -p engine profile_v1_superset` — a profiler dump parses as telemetry §2's frame record (the five stages) and contains the nested sections: scopes, GPU passes, allocations, events; a trace with no summary line reads its frames, and reports `leak_flags` and `hot_paths` as absent with "session incomplete" (REQ-TOOL-008, R-298); an unterminated last line that doesn't parse is dropped, the session reported incomplete with the bytes dropped, and a malformed line ending in a newline stays an error (REQ-TOOL-008, R-299).
 - Definition: profiler schema v1's header and record keys and nesting written into dd_telemetry_and_tiers §5 and approved by the physics reviewer (REQ-TOOL-120).
 
 ## Notes

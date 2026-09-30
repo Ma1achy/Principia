@@ -13,7 +13,14 @@ Fails if:
   - the dependency graph names an unknown task, depends forward across milestones, or has a cycle;
   - tasks.yaml and the task files disagree, or a needed requirement's task isn't reachable through depends_on;
   - a reviewer checklist (plan/reviewers/*.md) cites a file or section that doesn't exist, or names an unknown ruling;
-and also runs plan/tools/coverage.py, milestones.py and reviewer_lists.py with --check.
+  - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines, extends or withdraws it), and
+    R-n lacks the matching forward line under its heading (R-292), or "Superseded by" it;
+  - a ruling amended in part has no "Still in force: …" line under its heading, or one superseded outright has one,
+    or plan/CURRENT_RULES.md lists a ruling superseded outright (R-293);
+  - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
+    twice (R-292; plan/tools/rulings.py lists the files);
+and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
+fails if plan/CURRENT_RULES.md is stale, R-292).
 
 Usage: python3 plan/check_plan.py
 """
@@ -24,6 +31,7 @@ import yaml
 ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
+from rulings import missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -232,7 +240,14 @@ def main():
         if not os.path.exists(f"plan/reviewers/{rv}.md"):
             errors.append(f"plan/reviewers/{rv}.md: missing")
 
-    for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py"):
+    # decisions.md and the review queue (R-292)
+    errors += missing_forward_lines()
+    errors += still_in_force_errors()
+    errors += superseded_listed()
+    errors += unresolved_refs()
+
+    for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",
+                 "plan/tools/current_rules.py"):
         r = subprocess.run([sys.executable, tool, "--check"], capture_output=True, text=True)
         if r.returncode:
             errors.append(f"{tool} --check failed:\n{r.stdout}{r.stderr}".rstrip())

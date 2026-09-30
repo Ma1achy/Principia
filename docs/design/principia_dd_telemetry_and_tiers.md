@@ -50,6 +50,13 @@ tree_depth_max     and leaf count
 stage_ms           breakdown: integrate / reduce / colour / upload / present
 ```
 
+- `dmin_nan_unset` — u32, the number of `d_min` packs this frame that stored a NaN as the unset value (R-281, R-288)
+- `dmin_negative_floored` — u32, the number of `d_min` packs this frame that clamped a negative value to the floor (R-281, R-288)
+
+Both are atomic counters, counted in release builds as well as debug ones, and read back asynchronously on the
+profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
+sole automatic return of simulation data (R-142, R-288).
+
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
 a 5090 at small workloads may be latency- or dispatch-bound and never approach its throughput at all.
@@ -181,14 +188,161 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
   a courtesy and the reason they will actually send it.
 - **Self-contained.** It must carry the build hash and the full config, or it cannot be interpreted
   six weeks later — the same provenance rule that `refine_flagged` propagation made non-negotiable.
-- **Format: JSON, profiler schema v1 (R-56).** At the top level, §2's frame record and its five stages; beneath them,
-  nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and write it
-  (`principia_render_gui_spec.md` §G5). JSON is plain text, so the file stays readable by the sender.
+- **The header records the compute fast-math setting and each shader stage's fast-math mode (R-297):** the setting
+  asked for, which is the sim key's, off by default; and the mode of each stage, compute, vertex and fragment, as
+  compiled on the running backend. The two can differ: where a backend's own path compiles without fast-math and
+  offers no switch (Vulkan, on lavapipe), the setting on compiles the compute stage off, and the header shows both. The
+  display stages may keep fast-math on (`principia_parity_contract.md` §4). In the browser build, where WebGPU offers
+  no fast-math control, the header records the setting asked for and each stage's compiled mode as "unknown" (R-303).
+- **Format: JSON Lines, profiler schema v1 (R-56, R-286).** At the top level, §2's frame record and its five stages;
+  beneath them, nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and
+  write it (`principia_render_gui_spec.md` §G5). JSON Lines is plain text, so the file stays readable by the sender:
+  the header on the first line, then one compact frame record per line. Pretty-printing is on demand
+  (`prin profile show --pretty`, or `jq`), never in the file, so the file meets "readable" and "bounded size"
+  together (R-286).
 - **Also: Chrome Trace Event format (R-207).** Export trace also writes the same capture in the Chrome Trace Event
   format, openable in Perfetto and `chrome://tracing`, alongside schema v1: CPU scopes as complete events, GPU passes
   on their own track, counters as counter events. Schema v1 stays the file `prin profile` and the dev GUI read.
 - **Bounded size.** A long session at 60 fps is 200k+ frame records. Either downsample on write
   (keep every frame during motion, every Nth while idle) or roll up idle stretches into summaries.
+
+**Profiler schema v1: the keys and the nesting (R-56, R-72).** This is the definition REQ-TOOL-120 asks for. Its typed
+form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
+follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
+key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+
+The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gpu_cores`, `width_px`, `height_px`,
+`tree_depth_max`, `dmin_nan_unset` and `dmin_negative_floored` are at most 2^32 − 1, and every other count or size at
+most 2^64 − 1. `camera_delta`, `refresh_hz`,
+`dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A frame's `stage_ms.present`
+and `stages.present` are both `null` or both present; each pool's `bytes` in `live_memory` is the sum of its `by_kind`
+bytes; and a pool's `by_kind` has at most one entry for each `kind`, and a stage's `allocations` at most one for each
+`kind` and `pool` (all three below). A writer given a value outside its range, NaN or an infinity, or a frame that
+breaks any of those three rules, fails rather than write it, and a reader rejects all of them, so every line of a file
+the reader accepts validates against the JSON Schema's definition for its place (below). The reverse holds with four
+exceptions, which the schema accepts and the reader rejects: a count or size written with a zero fraction
+(`"cpu_cores": 4.0`), which JSON Schema's `integer` admits; a key repeated within an object whose keys this section
+lists, where the schema sees only the last copy; a
+pool whose `bytes` is not the sum of its `by_kind` bytes, a sum JSON Schema cannot express; and two `by_kind` entries
+in one pool with the same `kind`, or two `allocations` entries in one stage with the same `kind` and `pool`, a
+uniqueness by key that JSON Schema cannot express. A key repeated anywhere inside `config` or inside a leak-flag or
+hot-path entry is not an exception: the reader and the schema both keep the last copy. A writer produces none of the
+four: it writes every count and size as a JSON integer, each key once, each pool's `bytes` as that sum, one `by_kind`
+entry per type in a pool, and one `allocations` entry per kind and pool in a stage.
+
+**The file** is JSON Lines (R-286): one compact JSON object per line. The writer ends every line with a newline, and
+a reader also accepts a last line without one, as JSON Lines allows. The header line comes first, then one line per
+frame record (none, for a session that recorded no frame), then the summary line, last:
+
+```
+header line    {"schema": "principia-profile-v1", "header": the session header}
+frame lines    one frame record per line, in the session's order
+summary line   {"leak_flags": [leak flag, ...] or null, "hot_paths": [hot-path summary, ...] or null}
+```
+
+Each line is one object whose keys this section lists: the header line has exactly `schema` and `header`, a frame line
+is exactly a frame record, and the summary line has exactly `leak_flags` and `hot_paths`. A line that is not the object
+its place calls for, or a blank line among them, is not schema v1. The writer
+writes each line compact, buffered, and never pretty-prints; `prin profile show --pretty`, or `jq`, pretty-prints on
+demand (R-286). A writer can stream the frames as the session runs, since nothing before the summary line depends on a
+later frame. The JSON Schema defines one line for each place, in `$defs`: `header_line`, `frame` and `summary_line`.
+A file's lines are not one JSON document, so the schema checks the file line by line, each line against the
+definition for its place.
+
+**A session that ended before its summary line** (R-298), because it crashed or is still running, leaves a trace whose
+last line is a frame record, or the header line when it recorded no frame. That trace is valid schema v1. A reader
+returns its header and frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never
+rejects the file for the missing summary line; `prin profile query --live` reads an in-progress trace this way. Each
+line is checked against the definition for the place it holds, so the last line is a `frame` (or the `header_line`).
+Only the summary line may be missing, besides the cut-off line below.
+
+**A line cut off at the end** (R-299). A last line with no newline after it that is not one complete JSON value is the
+part of a line the session was writing when it stopped, not a line of the trace. A reader drops it, reads the lines
+before it as the trace (the line before it holds a frame's place, so it is a frame record or the header line), reports
+the session incomplete, with "session incomplete" as above, and states the number of bytes it dropped. A last line with
+no newline that is one complete JSON value is read as any last line is. A line that ends in a newline and is not the
+object its place calls for is not schema v1, wherever it is, and a reader rejects the file for it. A file whose only
+line is cut off has no header line, and a reader rejects it as it does an empty file.
+
+`leak_flags` and `hot_paths` are the precomputed leak flags and hot-path summaries that `principia_render_gui_spec.md`
+§ "Profiler" puts in schema v1, so an agent reads conclusions, not raw traces. They summarise the whole session, so
+they sit at the file's top level, on the summary line after the frames, where a writer that streams the frames writes
+them once the session ends. Each entry is a JSON object, and the task that closes REQ-TOOL-100 (M8)
+defines its keys; until then, a writer writes `null`, and a reader accepts any object as an entry.
+
+**The session header** carries §2's per-session fields, and the full config that §5 requires:
+
+```
+device     gpu (model), cpu (model), cpu_cores, gpu_cores (null when not reported),
+           memory: {"unified": {bytes}} or {"discrete": {vram_bytes, ram_bytes}}
+backend    api ("metal" / "vulkan" / "dx12" / "webgpu"), driver (its version)
+precision  f32, f64 (supported: true / false), f64_rate (the reported f64 rate as a fraction of the f32 rate;
+           null when not reported)
+build      commit (the hash), profile (the release profile), features ([flag, ...])
+display    width_px, height_px, refresh_hz, dpi_scale; null for a headless run
+config     the run's full configuration, a JSON object
+```
+
+Unified memory is its own variant, not a VRAM size of zero (§2).
+
+**The frame record** is §2's, key for key, followed by the five stages' nested sections and the memory live at the
+frame's end:
+
+```
+frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
+frame_ms        wall clock
+quads_computed  quads_reused  samples  substeps_total
+playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
+camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
+tree_depth_max  leaf_count
+dmin_nan_unset  dmin_negative_floored
+stage_ms        {integrate, reduce, colour, upload, present}: each stage's ms
+stages          {integrate, reduce, colour, upload, present}: each stage's nested sections
+live_memory     {heap, gpu, tile_cache}: each pool's live memory at the frame's end,
+                {bytes, by_kind: [{kind (the type), count, bytes}, ...]}
+```
+
+`live_memory` is what `principia_render_gui_spec.md` § "Profiler" draws: memory (heap, GPU, tile cache) over time is
+each pool's `bytes` frame by frame, and live allocations by type, with their change over 60 s, is each pool's
+`by_kind`. A pool's `bytes` is its total live bytes; `by_kind` has one entry for each type with live allocations in the
+pool, its live count and bytes; and a pool's `bytes` is exactly the sum of its `by_kind` bytes, so every tracked live
+byte has a type. The three pools are disjoint: a tracked allocation counts in exactly one pool, so the three stack
+without counting a byte twice. The tile cache lives in heap or GPU memory, and its bytes count in `tile_cache` only,
+never also in `heap` or `gpu`: `heap` and `gpu` are the tracked memory outside the tile cache. The same holds for the
+stages' `allocations`, whose `pool` names the one pool. The leak detector reads the same figures across idle frames.
+It is a snapshot, not a change, so a downsampled file still shows each kept frame's memory. The stages'
+`allocations` say which stage made the allocations.
+
+`stage_ms` and `stages` have exactly the five stages as keys, written in that order, and nothing else. A batch render
+has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.
+The two are `null` together or present together: a frame with a present time and no present sections, or the reverse,
+is neither a batch render nor an interactive frame, and is not schema v1.
+
+`dmin_nan_unset` and `dmin_negative_floored` are telemetry §2's two per-frame `d_min` counters (R-288, closing
+RQ-171), each a u32 count for the frame: how many `d_min` values the packer received as NaN and stored as unset, and
+how many it received negative and clamped to the floor (R-281). They are counted in release builds too, and come back
+on the profiler/telemetry readback a frame or two late, never stalling a frame (R-288).
+
+`playhead_dt` is the change in the playhead's simulation time `t` over the frame, in the unit of `T_horizon`
+(`principia_integrator_contract.md` Part 3, physical time). It is negative when the playhead moves back and 0 when it
+does not move, and it is not wall-clock time. v1 makes only the sign of `camera_delta` normative: `camera_delta > 0`
+means the camera moved (panned or zoomed) this frame and 0 means it did not, the moving/still discriminator of §3.
+The magnitude's metric is not defined in v1; the task that first consumes the magnitude defines it.
+
+**A stage's nested sections** sit beneath it:
+
+```
+scopes       [scope, ...]        CPU scopes, nested: {name, start_ms, ms, children: [scope, ...]}
+gpu_passes   [gpu pass, ...]     {name, start_ms, ms}, from the GPU timestamps
+allocations  [allocation, ...]   {kind (the type), pool ("heap" / "gpu" / "tile_cache"), count, bytes}: the
+                                 allocations the stage made, one entry per kind and pool
+events       [event, ...]        {name, at_ms, detail (text, or null)}
+```
+
+`start_ms` and `at_ms` count from the start of the frame. A scope exists only beneath a stage, so every scope has one
+of the five as its ancestor. The finer categories (quadtree, stain + style, IC decode, readback, egui;
+`principia_render_gui_spec.md` § "Profiler") are scopes nested in whichever stage runs them. A scope at the top of a
+frame record, beside the stages, is not schema v1.
 
 ---
 

@@ -18,19 +18,22 @@ following.
 
 **Your tests.** Write your own tests from the requirements (each statement and its verify detail), not from the
 implementation.
-- Create **new test files only**, under the crate's `tests/` directory (for example `crates/<crate>/tests/qa_<TASK-id>.rs`),
+- Create new test files under the crate's `tests/` directory (for example `crates/<crate>/tests/qa_<TASK-id>.rs`),
   or new fixtures under `fixtures/`, each with its negative control (R-176).
+- You may also modify or delete a test file that only qa has ever committed to: `git log --format=%s -- <file>` must
+  show only `qa: tests for …` commits (R-290). List each such change, with its reason, in your review.
 - Make them **one separate commit** on the PR head in your worktree, titled `qa: tests for <TASK-id>`. **Don't push it:** the
   orchestrator pushes it after checking it.
-- **Never edit or delete an existing file.** Never touch implementation code, the implementer's tests, docs or plan.
-  You write tests; you don't fix what they find.
+- **Never edit or delete any other existing file.** Never touch implementation code, the implementer's tests, docs or
+  plan. You write tests; you don't fix what they find.
 
 **Your own checkout (R-219).** The orchestrator gives you a git worktree at the PR head and a `CARGO_TARGET_DIR`, named
 in your dispatch. Work and commit only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
 Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
 
-**Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only `A` lines, only
-under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-237). Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you
+**Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only lines under
+`crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-237), each an `A` line, or an `M` or `D` line on a file only qa has
+committed to (R-290). Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you
 are re-run. After you return, `git status --porcelain` must also be clean apart from that commit. Any stray change is
 discarded, you are re-run, and the violation is noted on the PR.
 

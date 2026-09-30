@@ -1,0 +1,26 @@
+# cargo-mutants' configuration (R-196; TASK-M0-23): the one exclusion list the per-PR `mutants` job (mutants.yml) and
+# the nightly full run (TASK-M0-19, R-198) share. Each exclusion names which of R-196's three categories it falls in:
+# generated code, GPU-only (spirv-gated) paths, or xtask's own harness plumbing. Nothing else is excluded; a mutant
+# that survives outside these is a qa finding, killed with a test or listed in `mutants-equivalent.toml` (R-202).
+
+exclude_globs = [
+    # Generated code (R-196): the checked-in files `cargo xtask codegen` writes. The plan's emitters write them under
+    # a `generated/` directory (`crates/ledger/generated/`, `crates/kernel/src/generated/`) or as a `generated.rs`
+    # (`crates/kernel/src/payload/generated.rs`); the two globs match every such file, so a generated file added later
+    # is excluded too. Applied per R-204 — veto? (TASK-M0-23). One written elsewhere fails closed: its surviving
+    # mutants are named by the job. The kernel's build-time code in `OUT_DIR` (R-185, R-190) is outside the source
+    # tree, and cargo-mutants never mutates it.
+    "**/generated/**",
+    # Generated code (R-196): a file named `generated.rs` anywhere in the tree (a glob without `/` matches any path
+    # component).
+    "generated.rs",
+    # xtask's own harness plumbing (R-196; RQ-162, applied per R-204 — veto?): argument dispatch and exit codes, and
+    # the `codegen` wrapper, whose logic is `ledger::gen::run`, mutated in `ledger`. xtask's checks and `ci.rs` stay
+    # mutated.
+    "xtask/src/main.rs",
+    "xtask/src/codegen.rs",
+]
+
+# GPU-only (spirv-gated) paths (R-196; RQ-162, applied per R-204 — veto?): cargo-mutants cannot match an attribute
+# from configuration, so every item gated on `target_arch = "spirv"` also carries `#[cfg_attr(test, mutants::skip)]`,
+# which it recognises. A missing marker fails closed: the item's mutants survive and the job names them.

@@ -1,16 +1,17 @@
 //! `cargo xtask lint constants` (dd_generation_root §3.8; REQ-SYS-001, REQ-SYS-005): it passes on this tree, and a
 //! bare numeric `const` in `crates/kernel` fails it, naming the file and line; comments, strings, `const fn` and
-//! constants read from the register are not findings.
+//! constants read from the register are not findings; the register and the generated files are exempt.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use validation::negative_control;
-use xtask::lint_constants::check;
+use xtask::lint_constants::{check, exempt};
 
-/// The lint finds nothing under `root` (the register excluded).
+/// The lint finds nothing under `root`, skipping what it exempts: the register and the generated files (dd_generation_root
+/// §3.8).
 fn check_clean(root: &Path) {
-    let found = check(root, &[PathBuf::from(xtask::lint_constants::REGISTER)]).expect("lint ran");
+    let found = check(root, &exempt().expect("exemptions listed")).expect("lint ran");
     assert!(
         found.is_empty(),
         "numeric constant(s) not read from the register: {found:?}"
@@ -72,5 +73,42 @@ negative_control!(
         let root = tree("lint_control_clean", KERNEL);
         let found = check(&root, &[]).expect("lint ran");
         assert_eq!(found.len(), 1, "not exactly one finding: {found:?}");
+    }
+);
+
+/// A tree with a bare numeric `const` in `crates/kernel/src/payload/generated.rs`, the generator's kernel output.
+fn generated_tree(name: &str) -> PathBuf {
+    let root = tree(name, KERNEL);
+    fs::create_dir_all(root.join("crates/kernel/src/payload")).expect("payload dir created");
+    fs::write(
+        root.join("crates/kernel/src/payload/generated.rs"),
+        "pub const EMITTED: u32 = 0x7c00;\n",
+    )
+    .expect("generated.rs written");
+    root
+}
+
+#[test]
+fn lint_constants_exempts_the_generated_files() {
+    let exempted = exempt().expect("exemptions listed");
+    assert!(
+        exempted.contains(&PathBuf::from("crates/kernel/src/payload/generated.rs")),
+        "the kernel's generated file is not exempt: {exempted:?}"
+    );
+    check_clean(&generated_tree("lint_generated"));
+}
+
+negative_control!(
+    lint_constants_exempts_the_generated_files,
+    "the same generated file checked with only the register exempt must be a finding",
+    expected = "numeric constant(s) not read from the register",
+    {
+        let root = generated_tree("lint_control_generated");
+        let found =
+            check(&root, &[PathBuf::from(xtask::lint_constants::REGISTER)]).expect("lint ran");
+        assert!(
+            found.is_empty(),
+            "numeric constant(s) not read from the register: {found:?}"
+        );
     }
 );

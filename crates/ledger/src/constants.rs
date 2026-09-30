@@ -287,6 +287,17 @@ pub const F16_FINITE_MAX: ConstantBuilder = maximum(
     },
 );
 
+/// binary16's smallest positive subnormal, 2⁻²⁴: the floor a valid `d_min` below it is stored as (bits `0x0001`), so
+/// 0.0 never appears (R-271). Admissible as the format's achievable extreme (R-278; dd_generation_root §3.8).
+pub const F16_MIN_SUBNORMAL: ConstantBuilder = maximum(
+    "f16_min_subnormal",
+    1.0 / 16_777_216.0,
+    Citation::Corpus {
+        file: "decisions.md",
+        section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*",
+    },
+);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08). No `diffusion` sentinel: an invalid fit reads
 /// NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
@@ -294,4 +305,5 @@ pub const REGISTER: &[ConstantBuilder] = &[
     FGW_CAPACITY,
     FGW_LENGTH_SENTINEL,
     F16_FINITE_MAX,
+    F16_MIN_SUBNORMAL,
 ];
