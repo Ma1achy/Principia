@@ -217,8 +217,9 @@ hot-path entry is not an exception: the reader and the schema both keep the last
 four: it writes every count and size as a JSON integer, each key once, each pool's `bytes` as that sum, one `by_kind`
 entry per type in a pool, and one `allocations` entry per kind and pool in a stage.
 
-**The file** is JSON Lines (R-286): one compact JSON object per line, each line ended by a newline. The header line
-comes first, then one line per frame record (none, for a session that recorded no frame), then the summary line, last:
+**The file** is JSON Lines (R-286): one compact JSON object per line. The writer ends every line with a newline, and
+a reader also accepts a last line without one, as JSON Lines allows. The header line comes first, then one line per
+frame record (none, for a session that recorded no frame), then the summary line, last:
 
 ```
 header line    {"schema": "principia-profile-v1", "header": the session header}
