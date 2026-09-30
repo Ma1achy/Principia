@@ -201,8 +201,10 @@ The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gp
 outside its range, NaN or an infinity fails rather than write it, and a reader rejects a value outside its range, so
 a file the reader accepts validates against the JSON Schema. The reverse holds with two exceptions, which the schema
 accepts and the reader rejects: a count or size written with a zero fraction (`"cpu_cores": 4.0`), which JSON
-Schema's `integer` admits, and a key repeated within one object, where the schema sees only the last copy. A writer
-produces neither: it writes every count and size as a JSON integer, and each key once.
+Schema's `integer` admits, and a key repeated within an object whose keys this section lists, where the schema sees
+only the last copy. A key repeated anywhere inside `config` or inside a leak-flag or hot-path entry is not an
+exception: the reader and the schema both keep the last copy. A writer produces neither exception: it writes every
+count and size as a JSON integer, and each key once.
 
 **The file** is one JSON object: the session header, the frame records, then the precomputed summaries.
 
