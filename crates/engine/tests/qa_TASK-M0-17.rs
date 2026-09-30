@@ -16,6 +16,10 @@
 //! - R-298 (amends R-286): a trace with no final summary line, a crashed or still-running session, is valid: its last
 //!   line is a frame record, or the header line when no frame was recorded. The reader returns the frames, reports
 //!   `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it (REQ-TOOL-008).
+//! - R-299 (amends R-298): a last line with no newline after it that doesn't parse (is not one complete JSON value) is
+//!   dropped: the reader reads the lines before it, reports the session incomplete and states how many bytes it
+//!   dropped; an unterminated last line that parses is read as any last line is; a malformed line ending in a newline
+//!   stays an error (REQ-TOOL-008, telemetry §5 "A line cut off at the end").
 //! - R-288: the frame record carries `dmin_nan_unset` and `dmin_negative_floored`, each a u32 count (§5's ranges).
 //!
 //! The fixture is hand-written JSON, filled with known values from the §5 definition and laid out as JSON Lines here,
@@ -2011,5 +2015,335 @@ validation::negative_control!(
     {
         let complete = read_doc(&interactive());
         check_serde_form_keeps_the_session(&complete, &complete)
+    }
+);
+
+// ----- R-299: a last line cut off before its newline -----
+
+/// The file a session leaves when it stops `cut` bytes into line `keep` (counted from 0) of `text`: the first `keep`
+/// lines, each ended by its newline, then the first `cut` bytes of the next line with no newline after them.
+fn cut_into(text: &str, keep: usize, cut: usize) -> Vec<u8> {
+    let next = lines_of(text)[keep].as_bytes();
+    assert!(
+        cut > 0 && cut < next.len(),
+        "a cut of {cut} bytes is not inside a line of {} bytes",
+        next.len()
+    );
+    let mut out = first_lines(text, keep).into_bytes();
+    out.extend_from_slice(&next[..cut]);
+    out
+}
+
+/// R-299: `bytes` reads as the lines before its cut-off last line, holding the first `frames` of `doc`'s frames: the
+/// cut-off line is dropped and `dropped` bytes are stated, the session is incomplete, and `leak_flags` and `hot_paths`
+/// are absent with "session incomplete". Apart from the count, the trace is the one the kept lines alone read as.
+fn check_cut_off(bytes: &[u8], doc: &Value, frames: usize, dropped: usize, what: &str) {
+    let got = read(bytes).unwrap_or_else(|e| panic!("the reader rejects {what}: {e}"));
+    assert_eq!(
+        got.dropped_bytes, dropped as u64,
+        "{what}: dropped_bytes is not the {dropped} bytes cut off"
+    );
+    assert!(
+        got.session == Session::Incomplete,
+        "{what}: the trace does not say its session is incomplete"
+    );
+    let complete = read_doc(doc);
+    assert!(
+        got.header == complete.header,
+        "{what}: the header read is not the one written"
+    );
+    assert!(
+        got.frames[..] == complete.frames[..frames],
+        "{what}: the frames read are not the first {frames} written"
+    );
+    for (key, absent) in [
+        ("leak_flags", got.leak_flags()),
+        ("hot_paths", got.hot_paths()),
+    ] {
+        match absent {
+            Err(reason) => assert_eq!(
+                reason.to_string(),
+                "session incomplete",
+                "{what}: {key} is absent, but not with \"session incomplete\""
+            ),
+            Ok(entries) => panic!("{what}: {key} is present, with {} entries", entries.len()),
+        }
+    }
+    let kept = &bytes[..bytes.len() - dropped];
+    let alone =
+        read(kept).unwrap_or_else(|e| panic!("{what}: the kept lines alone do not read: {e}"));
+    let mut same = got.clone();
+    same.dropped_bytes = 0;
+    assert!(
+        same == alone,
+        "{what}: the trace is not the one its kept lines alone read as"
+    );
+}
+
+/// The summarised fixture with a multi-byte character in its second frame, so a cut can fall inside one.
+fn multibyte() -> Value {
+    let mut doc = summarised();
+    doc["frames"][1]["stages"]["integrate"]["events"][1]["detail"] = json!("naïve – 日本");
+    doc
+}
+
+#[test]
+fn qa_m017_r299_a_cut_off_last_line_is_dropped() {
+    let doc = summarised();
+    let full = jsonl(&doc);
+    let lines = lines_of(&full);
+    assert_eq!(
+        lines.len(),
+        5,
+        "the fixture is not a header, three frames and a summary line"
+    );
+    // Cut into each line after the header (a frame record, or the summary line) at every byte inside it: the lines
+    // before the cut are the trace, header plus `keep - 1` frames.
+    for (keep, line) in lines.iter().enumerate().skip(1) {
+        let len = line.len();
+        let what = format!("a file cut inside line {}", keep + 1);
+        assert!(
+            schema_accepts_file(&first_lines(&full, keep)),
+            "{what}: the schema rejects the kept lines"
+        );
+        for cut in 1..len {
+            check_cut_off(
+                &cut_into(&full, keep, cut),
+                &doc,
+                keep - 1,
+                cut,
+                &format!("{what}, {cut} of its {len} bytes"),
+            );
+        }
+    }
+    // A batch session, headless, cut inside its only frame and inside its summary line.
+    let b = jsonl(&batch());
+    check_cut_off(
+        &cut_into(&b, 1, 40),
+        &batch(),
+        0,
+        40,
+        "a batch file cut inside its frame",
+    );
+    check_cut_off(
+        &cut_into(&b, 2, 5),
+        &batch(),
+        1,
+        5,
+        "a batch file cut inside its summary line",
+    );
+    // A cut inside a multi-byte character: the count is in bytes, and the piece is not UTF-8.
+    let doc = multibyte();
+    let full = jsonl(&doc);
+    let line = lines_of(&full)[2];
+    let at = line
+        .find('日')
+        .expect("the fixture has no multi-byte character")
+        + 1;
+    let bytes = cut_into(&full, 2, at);
+    assert!(
+        std::str::from_utf8(&bytes).is_err(),
+        "the cut does not fall inside the character"
+    );
+    check_cut_off(
+        &bytes,
+        &doc,
+        1,
+        at,
+        "a file cut inside a multi-byte character",
+    );
+    // The same frame line whole reads with its character.
+    let whole =
+        read(first_lines(&full, 3).as_bytes()).expect("the reader rejects the multi-byte frame");
+    assert_eq!(whole.frames.len(), 2, "the multi-byte frame is not read");
+    assert_eq!(
+        whole.dropped_bytes, 0,
+        "bytes are dropped from a whole file"
+    );
+}
+
+validation::negative_control!(
+    qa_m017_r299_a_cut_off_last_line_is_dropped,
+    "a last line with no newline that is whole must fail the dropped check: it is read, not dropped",
+    expected = "dropped_bytes is not",
+    {
+        let full = jsonl(&summarised());
+        let len = lines_of(&full)[2].len();
+        let text = first_lines(&full, 3);
+        check_cut_off(
+            text.strip_suffix('\n').unwrap().as_bytes(),
+            &summarised(),
+            1,
+            len,
+            "a whole frame line without its newline",
+        )
+    }
+);
+
+/// R-299: a last line with no newline that is one complete JSON value was written whole, and is read as any last line
+/// is (R-298's rules unchanged): nothing is dropped.
+#[test]
+fn qa_m017_r299_an_unterminated_last_line_that_parses_is_read() {
+    let doc = summarised();
+    let full = jsonl(&doc);
+    let complete = read(full.strip_suffix('\n').unwrap().as_bytes())
+        .expect("the reader rejects a complete file without its last newline");
+    assert!(
+        complete.session == Session::Complete && complete.dropped_bytes == 0,
+        "a complete file without its last newline is not read as complete, nothing dropped"
+    );
+    assert!(
+        complete.leak_flags().is_ok_and(|f| f.len() == 1)
+            && complete.hot_paths().is_ok_and(|h| h.len() == 1),
+        "the unterminated summary line is not read"
+    );
+    for (keep, frames, what) in [
+        (4, 3, "an unterminated last frame"),
+        (2, 1, "an unterminated first frame"),
+        (1, 0, "an unterminated header line alone"),
+    ] {
+        let text = first_lines(&full, keep);
+        let got = read(text.strip_suffix('\n').unwrap().as_bytes())
+            .unwrap_or_else(|e| panic!("the reader rejects {what}: {e}"));
+        assert_eq!(
+            got.dropped_bytes, 0,
+            "{what}: bytes were dropped from a whole line"
+        );
+        check_incomplete(text.strip_suffix('\n').unwrap(), &doc, frames, what);
+    }
+    // Complete JSON that is not the object its place calls for is an error, not a cut-off line to drop.
+    let head = lines_of(&full)[0].to_owned();
+    let f0 = lines_of(&full)[1].to_owned();
+    let mut bad = frame(1, true, 0.0);
+    bad["frame_ms"] = json!(-1.0);
+    let mut extra = frame(1, true, 0.0);
+    extra["quadtree"] = json!(1);
+    for (last, what) in [
+        ("{\"foo\":1}".to_owned(), "an unknown object"),
+        ("[1,2]".to_owned(), "an array"),
+        ("123".to_owned(), "a number"),
+        ("null".to_owned(), "null"),
+        ("\"text\"".to_owned(), "a string"),
+        (bad.to_string(), "a frame with a negative frame_ms"),
+        (extra.to_string(), "a frame with a key outside v1"),
+        (head.clone(), "a second header line"),
+    ] {
+        let text = format!("{head}\n{f0}\n{last}");
+        check_reader_rejects_file(&text, &format!("{what} as the unterminated last line"));
+    }
+}
+
+validation::negative_control!(
+    qa_m017_r299_an_unterminated_last_line_that_parses_is_read,
+    "an unterminated valid frame must fail the rejection check",
+    expected = "not v1, but the reader accepts",
+    {
+        let full = jsonl(&summarised());
+        check_reader_rejects_file(
+            first_lines(&full, 3).strip_suffix('\n').unwrap(),
+            "an unterminated valid frame",
+        )
+    }
+);
+
+/// The reader rejects `bytes`.
+fn check_bytes_rejected(bytes: &[u8], what: &str) {
+    assert!(
+        read(bytes).is_err(),
+        "not v1, but the reader accepts {what}"
+    );
+}
+
+/// R-299 and telemetry §5: a line ending in a newline that is not the object its place calls for is an error wherever
+/// it is, the same cut-off piece included; the line before a cut-off line holds a frame's place, so a cut-off line after
+/// the summary line is an error; a file whose only line is cut off has no header line, and the error states the bytes.
+#[test]
+fn qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error() {
+    let doc = summarised();
+    let full = jsonl(&doc);
+    let lines = lines_of(&full);
+    for keep in 1..lines.len() {
+        let len = lines[keep].len();
+        for cut in [1, len / 2, len - 1] {
+            let piece = cut_into(&full, keep, cut);
+            // The cut-off piece ended by a newline, at the end of the file.
+            let mut ended = piece.clone();
+            ended.push(b'\n');
+            check_bytes_rejected(
+                &ended,
+                &format!(
+                    "line {} cut at {cut} bytes and ended by a newline",
+                    keep + 1
+                ),
+            );
+            // The same piece, ended by a newline, with the lines that followed it after.
+            let mut mid = ended.clone();
+            for l in &lines[keep + 1..] {
+                mid.extend_from_slice(l.as_bytes());
+                mid.push(b'\n');
+            }
+            check_bytes_rejected(
+                &mid,
+                &format!(
+                    "line {} cut at {cut} bytes with the rest of the file after it",
+                    keep + 1
+                ),
+            );
+            // Two cut-off pieces: only the last can be dropped, and the first ends in a newline.
+            let mut two = ended.clone();
+            two.extend_from_slice(&lines[lines.len() - 1].as_bytes()[..3]);
+            check_bytes_rejected(
+                &two,
+                &format!("line {} cut, then another cut line", keep + 1),
+            );
+        }
+    }
+    // After the summary line nothing is written, so a cut-off line after it is an error.
+    let mut after = full.clone().into_bytes();
+    after.extend_from_slice(&lines[1].as_bytes()[..20]);
+    check_bytes_rejected(&after, "a cut-off frame line after the summary line");
+    // The line before a cut-off line holds a frame's place and is held to a frame's rules.
+    let mut bad = frame(1, true, 0.0);
+    bad["frame_ms"] = json!(-1.0);
+    let mut before_bad = format!("{}\n{}\n{bad}\n", lines[0], lines[1]).into_bytes();
+    before_bad.extend_from_slice(&lines[3].as_bytes()[..30]);
+    check_bytes_rejected(
+        &before_bad,
+        "a cut-off line after a frame with a negative frame_ms",
+    );
+    let mut before_blank = format!("{}\n{}\n\n", lines[0], lines[1]).into_bytes();
+    before_blank.extend_from_slice(&lines[2].as_bytes()[..30]);
+    check_bytes_rejected(&before_blank, "a cut-off line after a blank line");
+    // A file whose only line is a cut-off header line: an error, as an empty file is, stating the bytes.
+    let cut = 37;
+    let only = cut_into(&full, 0, cut);
+    match read(&only[..]) {
+        Ok(_) => {
+            panic!("not v1, but the reader accepts a file whose only line is a cut-off header line")
+        }
+        Err(e) => assert!(
+            e.to_string().contains(&cut.to_string()),
+            "the error for a cut-off header line does not state its {cut} bytes: {e}"
+        ),
+    }
+    let mut only_ended = only.clone();
+    only_ended.push(b'\n');
+    check_bytes_rejected(&only_ended, "a cut-off header line ended by a newline");
+    // A cut-off header line followed by frames, the header ended by a newline.
+    let mut head_cut = only_ended;
+    for l in &lines[1..] {
+        head_cut.extend_from_slice(l.as_bytes());
+        head_cut.push(b'\n');
+    }
+    check_bytes_rejected(&head_cut, "a cut-off header line with the frames after it");
+}
+
+validation::negative_control!(
+    qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error,
+    "a cut-off last line with no newline must fail the rejection check: it is dropped, not an error",
+    expected = "not v1, but the reader accepts",
+    {
+        let full = jsonl(&summarised());
+        check_bytes_rejected(&cut_into(&full, 2, 50), "a cut-off last line")
     }
 );
