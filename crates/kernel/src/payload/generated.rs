@@ -322,8 +322,14 @@ pub fn set_d_min_unset(w: u32) -> u32 {
 /// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s.
 #[inline]
 pub fn set_d_min(w: u32, v: f32) -> u32 {
-    debug_assert!(!v.is_nan(), "`d_min` is NaN: storage never holds NaN (R-79, R-281)");
-    debug_assert!(v.is_nan() || v >= 0.0, "`d_min` is negative: it is never silently rewritten (R-281)");
+    debug_assert!(
+        !v.is_nan(),
+        "`d_min` is NaN: storage never holds NaN (R-79, R-281)"
+    );
+    debug_assert!(
+        v.is_nan() || v >= 0.0,
+        "`d_min` is negative: it is never silently rewritten (R-281)"
+    );
     set_d_min_release(w, v)
 }
 

@@ -185,8 +185,14 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a\n\
                      /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s.\n\
                      #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
-                     \x20   debug_assert!(!v.is_nan(), \"`{f}` is NaN: storage never holds NaN (R-79, R-281)\");\n\
-                     \x20   debug_assert!(v.is_nan() || v >= 0.0, \"`{f}` is negative: it is never silently rewritten (R-281)\");\n\
+                     \x20   debug_assert!(\n\
+                     \x20       !v.is_nan(),\n\
+                     \x20       \"`{f}` is NaN: storage never holds NaN (R-79, R-281)\"\n\
+                     \x20   );\n\
+                     \x20   debug_assert!(\n\
+                     \x20       v.is_nan() || v >= 0.0,\n\
+                     \x20       \"`{f}` is negative: it is never silently rewritten (R-281)\"\n\
+                     \x20   );\n\
                      \x20   set_{f}_release(w, v)\n}}\n\
                      \n/// [`set_{f}`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset bits\n\
                      /// (never NaN, R-79) and a negative value writes the floor `0x0001`, as does any value below 2⁻²⁴. R-281 also\n\
