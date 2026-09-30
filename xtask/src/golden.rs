@@ -57,11 +57,18 @@ pub struct Tolerance {
 
 /// The tolerances a case may name. The metric is the largest per-channel absolute difference over all pixels, in
 /// 8-bit steps.
+///
+/// REQ-VAL-138's default applies to every native backend CI renders a case on (lavapipe in `xtask-ci`, Metal in
+/// `gpu-metal`), each compared against the case's one stored reference: it is a cross-backend tolerance, not a
+/// same-backend one. The evidence for 0 covers only channel values that are exactly representable in 8 bits (the
+/// self-test's k/255), where a correct renderer has nothing to round. Whether 0 across backends, per-backend
+/// baselines, or a revisit when the first golden with values between 8-bit levels lands holds for the M1 goldens
+/// (REQ-RENDER-024 onward) is the human's choice at the M0 gate (R-71).
 pub const TOLERANCES: &[Tolerance] = &[Tolerance {
     id: "REQ-VAL-138",
     max_step: 0,
-    status:
-        "proposed by TASK-M0-06 with its evidence; confirmed by the human at the M0 gate (R-71)",
+    status: "proposed by TASK-M0-06, for every native backend against one reference; evidence covers exact 8-bit \
+             values only; confirmed by the human at the M0 gate (R-71)",
 }];
 
 /// The environment variable naming the backend (R-169), as `validation::gpu` reads it.
