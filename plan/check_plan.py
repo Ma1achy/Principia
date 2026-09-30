@@ -14,7 +14,9 @@ Fails if:
   - tasks.yaml and the task files disagree, or a needed requirement's task isn't reachable through depends_on;
   - a reviewer checklist (plan/reviewers/*.md) cites a file or section that doesn't exist, or names an unknown ruling;
   - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines or extends it), and R-n lacks
-    the matching forward line under its heading (R-292);
+    the matching forward line under its heading (R-292), or "Superseded by" it;
+  - a ruling amended in part has no "Still in force: …" line under its heading, or one superseded outright has one,
+    or plan/CURRENT_RULES.md lists a ruling superseded outright (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
 and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
@@ -29,7 +31,7 @@ import yaml
 ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
-from rulings import missing_forward_lines, unresolved_refs  # noqa: E402
+from rulings import missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -240,6 +242,8 @@ def main():
 
     # decisions.md and the review queue (R-292)
     errors += missing_forward_lines()
+    errors += still_in_force_errors()
+    errors += superseded_listed()
     errors += unresolved_refs()
 
     for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",

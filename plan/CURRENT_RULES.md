@@ -4,9 +4,9 @@
 `python3 plan/check_plan.py` fails if this file is stale (R-292).*
 
 Every ruling in force, grouped, each under its number. The line is the ruling's heading in `decisions.md`, which
-holds its full text and why it was made. An amended ruling names the rulings that amend it; read them with it. A
-superseded ruling is left out. The one-off acts, such as a split, an acceptance or a merge, come last, as history
-only.
+holds its full text and why it was made. A ruling amended in part says what of it is still in force and names the
+rulings that amend it; read them with it. A ruling superseded outright is left out, and the ruling that supersedes
+it is listed (R-293). The one-off acts, such as a split, an acceptance or a merge, come last, as history only.
 
 ## Authority
 
@@ -25,23 +25,23 @@ only.
 ## Physics conventions
 
 - **R-11** — The per-body momentum cap is rejected *(closes RQ-9)*
-- **R-12** — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*. Corrected by R-14 (its premise); superseded in part by R-14 (its axis wording; R-184).
+- **R-12** — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*. Still in force: no polar buffer, the LaTeX's buffer recorded as rejected in chart_reference §3.3; the axes and the premise are R-14's. Corrected by R-14 (its premise); superseded in part by R-14 (its axis wording; R-184).
 - **R-13** — Lookup has no coincident-bodies rejection *(closes RQ-11)*
 - **R-14** — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*
-- **R-17** — The diffusion sentinel uses the streaming slope *(closes RQ-15)*. Amended by R-245.
+- **R-17** — The diffusion sentinel uses the streaming slope *(closes RQ-15)*. Still in force: the diffusion value uses the streaming slope the payload ledger and the payload doc define; it is no longer a sentinel (R-245). Amended by R-245.
 - **R-18** — The agreement value is `spread_event` *(closes RQ-16)*
-- **R-22** — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*. Amended by R-62.
+- **R-22** — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*. Still in force: 0-based body indices and labels, `m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a schema event; the Jacobi fields are named by R-62. Amended by R-62.
 - **R-23** — Encode order: CoM subtraction precedes `I` *(CD-3)*
 - **R-24** — The encode projection metric is confirmed *(CD-4)*
 - **R-25** — `η_E` is kept, with an explicit off switch *(CD-5)*
 - **R-26** — Every chart declares its domain function *(CD-6)*
 - **R-27** — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*
 - **R-28** — Momentum decode has no mass unweighting *(CD-8)*
-- **R-29** — The escape criterion's undefined parts *(IE-1, amended)*. Amended by R-61.
+- **R-29** — The escape criterion's undefined parts *(IE-1, amended)*. Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do); R-61 defines its "largest separation". Amended by R-61.
 - **R-30** — Event precedence is by time *(IE-2)*
 - **R-31** — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*
 - **R-32** — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*
-- **R-33** — The independent convergence reference is Brutus-style *(IE-5, amended)*. Amended by R-265.
+- **R-33** — The independent convergence reference is Brutus-style *(IE-5, amended)*. Still in force: the independent reference is CPU arbitrary precision with convergence gating, and RK45 stays the inspector's reference; that reference also serves as the screen, and double-double is parked (R-265). Amended by R-265.
 - **R-34** — FMA: explicit fma at every branch input, enumerated *(IE-6)*
 - **R-35** — The change-10 cross-checks are re-run and the NumPy reference patched *(IE-7)*
 - **R-37** — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*
@@ -54,10 +54,10 @@ only.
 - **R-82** — One mirror test, one seed rule *(closes RQ-33)*
 - **R-83** — The slice scale lives in q *(closes RQ-34)*
 - **R-84** — Branch decisions across precisions *(closes RQ-35)*
-- **R-93** — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*. Corrected by R-105; amended by R-119.
-- **R-95** — After escape fires *(closes RQ-48, in part)*. Amended by R-103.
+- **R-93** — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*. Still in force: all of it, as its text now reads: conformed by R-105 (the re-run is R-35's) and R-119 (`t_max(f32)` is the GPU measurement). Corrected by R-105; amended by R-119.
+- **R-95** — After escape fires *(closes RQ-48, in part)*. Still in force: all of it, as its text now reads: conformed by R-103 (escape ends the production loop; the §2.4 march runs in the harness). Amended by R-103.
 - **R-103** — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*
-- **R-104** — The new `system_image` value is `DoubleCover` *(closes RQ-64)*. Corrected by R-141.
+- **R-104** — The new `system_image` value is `DoubleCover` *(closes RQ-64)*. Still in force: `DoubleCover` and its meaning, each shape covered twice as two labelled systems; its site is the full-range Burrau chart (R-157), not the shape sphere (R-141). Corrected by R-141.
 - **R-105** — R-93's re-run is R-35's *(closes RQ-65)*
 - **R-117** — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*
 - **R-118** — Φ is generic over the float type *(closes RQ-86)*
@@ -65,7 +65,7 @@ only.
 - **R-125** — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*
 - **R-126** — The Euler landmarks are the Euler central configurations *(closes RQ-106)*
 - **R-127** — Periodic-orbit stability is Floquet; the Poincaré sections are three *(closes RQ-109)*
-- **R-141** — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*. Amended by R-157.
+- **R-141** — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*. Still in force: the shape sphere is 2-to-1 over its φ hemispheres, and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau chart's value (R-157). Amended by R-157.
 - **R-157** — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*
 - **R-160** — The integrator equations are transcribed into integrator_contract Part 2b
 - **R-161 ✱** — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2
@@ -75,7 +75,6 @@ only.
 - **R-168** — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*
 - **R-178** — The shape-sphere round trip composes Φ alone *(closes A3)*
 - **R-245** — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*
-- **R-253** — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*. Refined by R-254.
 - **R-254** — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*
 - **R-255** — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*
 - **R-265** — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
@@ -133,20 +132,20 @@ only.
 - **R-102** — The ensemble isn't a baked variant *(closes RQ-62)*
 - **R-106** — The link ids are the chart's link functions *(closes RQ-66)*
 - **R-108** — Must-split above the floor is the at-rest target *(closes RQ-68)*
-- **R-109** — Only pointer_channels §4 is normative *(closes RQ-70)*. Amended by R-144.
+- **R-109** — Only pointer_channels §4 is normative *(closes RQ-70)*. Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and R-72 requirements, and the rest stays working notes; §3 is normative too (R-144). Amended by R-144.
 - **R-114** — The debug NaN guard is the bitcast test *(closes RQ-82)*
 - **R-115** — The raw `state` view keeps six colours *(closes RQ-83)*
 - **R-116** — The fragment decode and encode are generated from the one source *(closes RQ-84)*
 - **R-120** — Eviction takes the lowest cost-weighted resistance first *(closes RQ-88)*
 - **R-121** — The physics overlay isn't baked *(closes RQ-89)*
-- **R-122** — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*. Amended by R-151.
+- **R-122** — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*. Still in force: all of it except cubehelix, whose reference is the analytic form (R-151). Amended by R-151.
 - **R-123** — Achromatopsia is a fifth Display mode *(closes RQ-91)*
 - **R-128 ✱** — The checkerboard's ceiling form is chosen at the M5 gate *(closes RQ-104)*
 - **R-129 ✱** — Where the surfaces with no artboard live *(closes RQ-105)*
 - **R-130 ✱** — The styles are the poster's *(closes RQ-107)*
 - **R-131** — The video encoders *(closes RQ-108)*
 - **R-135** — The across-copy reduction is its own resolve pass *(closes RQ-113)*
-- **R-136** — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*. Amended by R-245.
+- **R-136** — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*. Still in force: `debug_invalid(frag_xy)` draws the hatch, a stored sentinel shows as its value, and only NaN gets the hatch; `diffusion` is no longer a sentinel (R-245). Amended by R-245.
 - **R-138** — `dt_macro` is derived, shown read-only *(closes RQ-116)*
 - **R-139** — Turbo is Google's table; the §7.1 labels name the oracle files *(closes RQ-117)*
 - **R-142** — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*
@@ -166,7 +165,7 @@ only.
 - **R-207** — Export trace also writes the Chrome Trace Event format
 - **R-206** — An unset `PRIN_GPU_BACKEND` defaults by platform
 - **R-241** — `xtask` may depend on `ledger`, for `cargo xtask codegen` *(amends systems_architecture §7.1)*
-- **R-242** — The layout check's range and width rules *(closes RQ-151's rules)*. Amended by R-247 and R-248.
+- **R-242** — The layout check's range and width rules *(closes RQ-151's rules)*. Still in force: a `Range` end is closed, open or unbounded, the unsigned width rule, the unnamed-entry report, `ledger::layout()` empty until transcribed, and a field type the check doesn't recognise failing; the signed rule waits for the first signed type (R-247), and floats take exact widths (R-248). Amended by R-247 and R-248.
 - **R-246** — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)*
 - **R-247** — The signed-width rule waits for the first signed type *(amends R-242; closes RQ-156 in part)*
 - **R-248** — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*
@@ -181,7 +180,7 @@ only.
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
 - **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line
-- **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Amended by R-294.
+- **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Still in force: the two counters `dmin_nan_unset` and `dmin_negative_floored` in telemetry §2, counted in release builds too, read back asynchronously with the telemetry readback and never stalling a frame, `QuadReduction` unchanged, and the frame record's two keys; they belong to the frame, never a static (R-294). Amended by R-294.
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
 
 ## Values
@@ -198,37 +197,34 @@ only.
 - **R-182** — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*
 - **R-203** — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*
 - **R-250** — A threshold must sit between populations of its own distribution; no numeric percentile bound
-- **R-258** — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*. Amended by R-273.
+- **R-258** — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*. Still in force: all three items, but the region minimum is calibrated at M3 (R-273), not at the M0 gate. Amended by R-273.
 - **R-273** — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*
 
 ## Process
 
-- **R-175** — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*. Amended by R-260 and R-261.
-- **R-176** — Controls come before the tests that need them *(closes G3, S2)*. Amended by R-199.
+- **R-175** — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*. Still in force: the `VERDICT` review headings, `reviews-complete` passing only when every named role has approved on the latest commit, and the merge by the human or a bot; R-260 carries an approval over qa's own test commit, and R-261 passes a PR naming no task. Amended by R-260 and R-261.
+- **R-176** — Controls come before the tests that need them *(closes G3, S2)*. Still in force: TASK-M0-02 and TASK-M0-03 depend on TASK-M0-04 and register controls for their xtask tests, controls reach xtask tests through a dev-dependency on `crates/validation`, and crates without the `controls` feature are skipped; the name matching is R-199's. Amended by R-199.
 - **R-177** — Cadence *(closes G4, C6)*
 - **R-180** — pr-check is item-level *(closes A5)*
 - **R-197** — Who may fix, suppress or configure a lint *(closes RQ-134)*
-- **R-199** — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*. Amended by R-212.
+- **R-199** — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*. Still in force: no test-name attribute and no proc-macro crate; `negative_control!` names its test, and `cargo xtask controls` pairs tests and controls by that name; R-212 adds the expected panic message. Amended by R-212.
 - **R-201** — A kernel or ledger unit test's control is registered from that crate's `tests/`, by name *(closes RQ-138)*
-- **R-204** — When to ask the human. Amended by R-264 (its "exceeding budgets").
-- **R-208** — TASK-M0-21 is accepted at 762 code lines; later overruns are split first. Amended by R-211 and R-264.
+- **R-204** — When to ask the human. Still in force: all of it, except that size and budgets are no longer a question for the human (R-264). Amended by R-264 (its "exceeding budgets").
+- **R-208** — TASK-M0-21 is accepted at 762 code lines; later overruns are split first. Still in force: TASK-M0-21's size acceptance and the three `cargo xtask controls` rules it confirmed (a doctest counts as a test without a control; a control covers exactly one test; `negative_control` is a reserved test name); its split-first rule is R-264's orchestrator choice now. Amended by R-211 and R-264.
 - **R-210** — Subprocess bodies leave libtest *(closes RQ-142)*
-- **R-211** — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*. Amended by R-223 and R-264.
+- **R-211** — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*. Still in force: the size budget counts implementation code and the implementer's own tests, leaving out qa's commits and `negative_control!` blocks, and TASK-M0-24's and TASK-M0-25's sizes stand; which lines count is R-225's, and whether to split is the orchestrator's (R-264). Amended by R-223 and R-264.
 - **R-212** — A control names the panic it expects *(amends R-199; closes RQ-145)*
-- **R-214** — Children are spawned through one helper with a timeout *(closes RQ-147)*. Amended by R-217.
-- **R-215** — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated. Extended by R-218.
+- **R-214** — Children are spawned through one helper with a timeout *(closes RQ-147)*. Still in force: one shared spawn helper in `crates/validation`, used by every test that spawns a child, which on timeout kills and fails naming the child, its timeout a provisional calibration confirmed at the M0 gate (R-71); the kill takes the whole process group and the timeout is 300 s (R-217). Amended by R-217.
+- **R-215** — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated. Still in force: all of it; R-218 extends its shared-module rule to inputs a control shares with its test. Extended by R-218.
 - **R-217** — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*
 - **R-218** — Inputs a control shares with its test live in the shared module too *(extends R-215)*
 - **R-219** — Reviewers never share a checkout
-- **R-223** — The size budget counts added and changed lines, not pure deletions *(amends R-211)*. Amended by R-225.
 - **R-225** — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
 - **R-228** — Each agent builds and tests with four jobs and four test threads
 - **R-229** — Reviewers run the tests their diff touches; CI runs the full suite
 - **R-230** — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*
 - **R-234** — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
-- **R-237** — qa's commit may add files under `xtask/tests/`. Amended by R-290.
-- **R-239** — Parallel work waits while swap is above 4 GB or memory pressure is high. Amended by R-252.
-- **R-252** — The memory limit reads memory pressure, not swap *(amends R-239)*. Amended by R-277.
+- **R-237** — qa's commit may add files under `xtask/tests/`. Still in force: qa's commit touches only `crates/*/tests/`, `xtask/tests/` and `fixtures/`; besides adding files there, it may modify or delete a file only qa has committed to (R-290). Amended by R-290.
 - **R-260** — qa's approval carries over its own test commit *(amends R-175)*
 - **R-262** — Builds move to the internal disk, three agents at most
 - **R-264** — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
@@ -236,26 +232,23 @@ only.
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
 - **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
-- **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Amended by R-293.
+- **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
 
 ## CI
 
 - **R-58** — The non-Metal parity run gates Paper 2, not the build *(TO-2)*
 - **R-85** — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*
-- **R-110** — What CI runs, where, and against which goldens *(closes RQ-79)*. Amended by R-186.
+- **R-110** — What CI runs, where, and against which goldens *(closes RQ-79)*. Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal GPU gating Paper 2; Chrome stable and Safari; the goldens, native offscreen from M1 and checked by Playwright at M8; the runners and the benchmarks' schedule are R-186's. Amended by R-186.
 - **R-111** — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*
 - **R-134** — When the Playwright suite and the aggregate survey run *(closes RQ-112)*
 - **R-149** — The colour suite runs on Chromium and WebKit *(closes RQ-119)*
 - **R-153** — The debug and live-march views have golden images of their own *(closes RQ-123)*
-- **R-169** — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*. Amended by R-186.
-- **R-174** — The self-hosted runner runs only this repository's code *(closes H1)*. Amended by R-186.
+- **R-169** — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*. Still in force: TASK-M0-04's GPU jobs (Metal, and ubuntu with lavapipe), `PRIN_GPU_BACKEND=metal|vulkan`, and an install step for every toolchain in the task that first needs it; the Metal job runs on GitHub-hosted `macos-15`, not a self-hosted runner (R-186). Amended by R-186.
+- **R-174** — The self-hosted runner runs only this repository's code *(closes H1)*. Still in force: all of it, dormant while no self-hosted runner exists (R-186); it applies again when one is added. Amended by R-186.
 - **R-186** — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
-- **R-188** — TASK-M0-01 is accepted over its size; the source scan also follows `include!`. Amended by R-189 (its item 2).
-- **R-189** — kernel and ledger `src/` use neither `#[path]` nor `include!` *(amends R-188 item 2)*. Amended by R-190 and R-191.
-- **R-190** — kernel `src/` may include the ledger's generated code from `OUT_DIR`; everything else `include`-shaped fails *(amends R-189)*. Amended by R-191.
+- **R-188** — TASK-M0-01 is accepted over its size; the source scan also follows `include!`. Still in force: item 1, TASK-M0-01's size acceptance; item 2 is gone (R-189, then R-191). Amended by R-189 (its item 2).
 - **R-191** — R-187's integration-test condition is checked by compiling, not by reading tokens *(amends R-189, R-190; closes RQ-130)*
-- **R-192** — The compile check builds with `--all-features` *(closes RQ-131)*. Amended by R-194.
 - **R-193** — The compile check is host-only; that is its known limit *(closes RQ-132)*
 - **R-194** — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*
 - **R-195** — CI checks formatting and lints
@@ -263,11 +256,11 @@ only.
 - **R-202** — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*
 - **R-226** — The suite stops re-running every control; folded into TASK-M0-22
 - **R-235** — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
-- **R-236** — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first. Amended by R-244.
+- **R-236** — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first. Still in force: the `deps.rs:1205` control first asserts the expected compile error, and a failing control's output is kept; R-244 keeps it in `xtask/src/controls.rs`'s findings. Amended by R-244.
 - **R-259** — The vocabulary lint matches four retired ideas as phrases; `spawn::TIMEOUT` becomes `SPAWN_TIMEOUT`; it scans `.md` and `.html` *(closes RQ-160)*
 - **R-261** — A PR whose title names no task passes `reviews-complete` *(amends R-175)*
 - **R-266** — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
-- **R-269** — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend. Amended by R-287.
+- **R-269** — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend. Still in force: its measurement and result, and one reference per backend as the fallback for a case whose bytes still differ; otherwise goldens share one reference (R-287). Amended by R-287.
 - **R-276** — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
 - **R-279** — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
 - **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys
@@ -276,9 +269,9 @@ only.
 ## One-off acts (history only)
 
 - **R-2** — The index doesn't cite the unpushed commit `52caf14` *(closes RQ-1)*
-- **R-5** — The chart constants go to the decision sheet *(closes RQ-2)*. Amended by R-10.
+- **R-5** — The chart constants go to the decision sheet *(closes RQ-2)*. Still in force: `α_min` (0.05 in the LaTeX and B25, 0 in the markdown and the tool) goes to the step-5 decision sheet, listed with audit B25; `μ_max` is settled by R-10. Amended by R-10.
 - **R-6** — The event priority order goes to the decision sheet *(closes RQ-4)*
-- **R-7** — Step 3's done-check *(closes RQ-6)*. Amended by the entry "R-7 amended — part (a)'s grep".
+- **R-7** — Step 3's done-check *(closes RQ-6)*. Still in force: part (a)'s scope and expected results, part (b) and the rerun after step 4; only part (a)'s grep command is the later entry's. Amended by the entry "R-7 amended — part (a)'s grep".
 - **R-9** — The toolchain spike findings go to results *(closes RQ-7)*
 - **R-16** — The colour PDF's map lists are ported *(closes RQ-14)*
 - **R-19** — Change 8 landed in full *(closes RQ-17)*
@@ -293,13 +286,13 @@ only.
 - **R-147** — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
 - **R-150** — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*
 - **R-154** — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*
-- **R-156** — The plan-pass readings are accepted *(closes RQ-126)*. Reversed in part by R-183 (its size exemption).
+- **R-156** — The plan-pass readings are accepted *(closes RQ-126)*. Still in force: RQ-126's other readings, including removing TASK-M6-13; TASK-M0-06's size exemption is reversed (R-183). Reversed in part by R-183 (its size exemption).
 - **R-158** — The six readings are accepted *(closes RQ-128)*
 - **R-167** — The prin-rs licence is not blocking
 - **R-183** — TASK-M0-06 is split *(closes S1; reverses R-156's size exemption)*
 - **R-184** — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*
 - **R-198** — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*
-- **R-200** — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*. Superseded in part by R-209 (its size acceptance).
+- **R-200** — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*. Still in force: TASK-M0-16 depends on TASK-M0-22, so TASK-M0-16 to TASK-M0-18 register their own controls; the size acceptance gave way to R-209's split. Superseded in part by R-209 (its size acceptance).
 - **R-205** — TASK-M0-04 is accepted at 570 code lines
 - **R-209** — TASK-M0-22 is split three ways, each part closing its own requirement *(closes RQ-141)*
 - **R-213** — R-210's exception extends to `qa_r206_harness_opens_the_selected_backend` *(closes RQ-146)*
@@ -307,9 +300,9 @@ only.
 - **R-220** — TASK-M0-27's size accepted; its veto item stands
 - **R-221** — TASK-M0-22 is split four ways under R-208 *(closes RQ-149)*
 - **R-222** — TASK-M0-28's size accepted; its veto items stand
-- **R-224** — The two flaky tests are fixed before TASK-M0-29. Amended by R-230.
-- **R-227** — The two remaining latent races are fixed now, in their own task. Amended by R-230.
-- **R-231** — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings. Amended by R-270.
+- **R-224** — The two flaky tests are fixed before TASK-M0-29. Still in force: both flaky tests fixed at their cause, not by retries, in TASK-M0-31 before TASK-M0-29; the proof is R-230's, 5 full runs under normal load and green CI. Amended by R-230.
+- **R-227** — The two remaining latent races are fixed now, in their own task. Still in force: the two remaining latent races fixed at their cause in TASK-M0-32; the proof is R-230's. Amended by R-230.
+- **R-231** — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings. Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest, fixtures written only when changed, injectable spawn-helper timings, and no test dropped; fixtures share one build directory per fixture type, cached on CI (R-270). Amended by R-270.
 - **R-232** — TASK-M0-30's veto items stand
 - **R-233** — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
 - **R-238** — The old prin-impl scratch directory is deleted
@@ -317,7 +310,7 @@ only.
 - **R-243** — TASK-M0-07 is accepted at ~725 counted lines
 - **R-244** — TASK-M0-34's first deliverable moves to `xtask/src/controls.rs` *(amends R-236; closes RQ-155)*
 - **R-249** — TASK-M0-08 is accepted at ~756 counted lines in one PR
-- **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Amended by R-264.
+- **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084 counted lines, one PR). Amended by R-264.
 - **R-267** — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
 - **R-268** — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
 - **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*

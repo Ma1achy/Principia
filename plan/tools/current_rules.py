@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
 """Generate plan/CURRENT_RULES.md from decisions.md and plan/rule_groups.yaml (R-292).
 
-CURRENT_RULES.md lists every ruling in force, grouped, each under its number, with its decisions.md heading and the
-rulings that amend it (its forward lines, plan/tools/rulings.py). A ruling with a "Superseded by R-n" forward line (not
-"in part") is left out. The one-off acts are listed last, as history only.
+CURRENT_RULES.md lists every ruling in force, grouped, each under its number, with its decisions.md heading. A ruling
+amended in part also gives its "Still in force" line and the rulings that amend it (its forward lines,
+plan/tools/rulings.py). A ruling with a "Superseded by R-n" forward line (not "in part") is left out (R-293). The
+one-off acts are listed last, as history only.
 
 Fails if an entry of decisions.md is in no group or in two, if a group names an entry decisions.md lacks, or (with
 --check) if CURRENT_RULES.md differs from what this would write.
 
 Usage: python3 plan/tools/current_rules.py [--check]   (--check: don't write, just exit non-zero if it's stale)
 """
-import os, re, sys
+import os, sys
 
 import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
-from rulings import FORWARD, RULINGS, entries  # noqa: E402
+from rulings import RULINGS, entries, forward_notes, still_in_force, superseded  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GROUPS = "plan/rule_groups.yaml"
 OUT = "plan/CURRENT_RULES.md"
-# A forward line of its own, directly under the heading: "*Amended by R-10.*"
-OWN_LINE = re.compile(r"^\*((?:Amended|Superseded|Corrected|Replaced|Reversed|Refined|Extended)\b.*?)\.?\*$")
 
 HEADER = [
     "# Current rules",
@@ -30,26 +29,10 @@ HEADER = [
     "`python3 plan/check_plan.py` fails if this file is stale (R-292).*",
     "",
     "Every ruling in force, grouped, each under its number. The line is the ruling's heading in `decisions.md`, which",
-    "holds its full text and why it was made. An amended ruling names the rulings that amend it; read them with it. A",
-    "superseded ruling is left out. The one-off acts, such as a split, an acceptance or a merge, come last, as history",
-    "only.",
+    "holds its full text and why it was made. A ruling amended in part says what of it is still in force and names the",
+    "rulings that amend it; read them with it. A ruling superseded outright is left out, and the ruling that supersedes",
+    "it is listed (R-293). The one-off acts, such as a split, an acceptance or a merge, come last, as history only.",
 ]
-
-
-def notes(entry):
-    """The entry's forward notes, in order: each own forward line's text, and each "amended by R-n" in its date line."""
-    out = []
-    for line in entry["head"]:
-        m = OWN_LINE.match(line.strip())
-        if m:
-            out.append(m.group(1)[0].lower() + m.group(1)[1:])
-        else:
-            out += [f"{v.lower()}{p or ''} by {ids}" for v, p, ids in FORWARD.findall(line)]
-    return out
-
-
-def superseded(entry):
-    return any(v.lower() == "superseded" and not p for line in entry["head"] for v, p, _ in FORWARD.findall(line))
 
 
 def build():
@@ -81,8 +64,10 @@ def build():
                 continue
             label = e["key"] + (" ✱" if e["star"] else "")
             title = e["title"] if e["id"] else e["title"].split(" — ", 1)[-1]
-            n = "; ".join(notes(e))
-            lines.append(f"- **{label}** — {title}" + (f". {n[0].upper()}{n[1:]}." if n else ""))
+            parts = [f"Still in force: {still_in_force(e).rstrip('.')}"] if still_in_force(e) else []
+            n = "; ".join(forward_notes(e))
+            parts += [f"{n[0].upper()}{n[1:]}"] if n else []
+            lines.append(f"- **{label}** — {title}" + "".join(f". {p}" for p in parts) + ("." if parts else ""))
     return "\n".join(lines) + "\n", errors
 
 
