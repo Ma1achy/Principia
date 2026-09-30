@@ -25,13 +25,15 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
-      # what changed. Keyed on what invalidates its dependencies' builds: the runner, the toolchain and the lockfile.
-      # Saved by the job's last step, even when a test fails, since a failing test leaves the pool sound.
-      - uses: actions/cache/restore@v4
-        id: pool
+      # what changed. Keyed on what invalidates its builds: the runner, the toolchain, the lockfile and the fixtures'
+      # manifests; a new key starts from the latest pool of the same toolchain. Saved only when the job passes, so a
+      # run cut short by a failing test never saves a pool half built. Listed after rust-cache, so it saves before
+      # rust-cache's post-step clean-up of `target`.
+      - uses: actions/cache@v4
         with:
           path: target/tmp/fixture-targets
-          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock') }}
+          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+          restore-keys: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
@@ -59,12 +61,6 @@ jobs:
         run: cargo test --workspace --doc
       - name: cargo xtask deps
         run: cargo xtask deps
-      - name: Save the fixture pool
-        if: ${{ !cancelled() && steps.pool.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
-        with:
-          path: target/tmp/fixture-targets
-          key: ${{ steps.pool.outputs.cache-primary-key }}
 
   # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask plan-check`, which needs
   # Python and PyYAML (REQ-SYS-007), then `cargo xtask controls`, every control, failing on any finding (R-198,
@@ -83,7 +79,8 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: target/tmp/fixture-targets
-          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock') }}
+          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+          restore-keys: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: actions/setup-python@v5
