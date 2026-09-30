@@ -13564,6 +13564,9 @@
   - R-56
   - R-113
   milestone: M0
+  rq:
+  - RQ-180
+  - RQ-181
   note: "R-113 (RQ-93 M0-6): the dev GUI profiler reading the same file, with REQ-GUI-039's provenance object as the header config, is verified by REQ-TOOL-098 (M8)."
 - id: REQ-TOOL-003
   area: TOOL
@@ -13633,6 +13636,8 @@
   rulings:
   - R-113
   milestone: M0
+  rq:
+  - RQ-180
   note: "R-113 (RQ-93 M0-4): the deep_zoom_03 scenario and its 600-frame run are a separate M5 requirement."
 - id: REQ-TOOL-007
   area: TOOL
