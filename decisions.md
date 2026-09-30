@@ -2013,9 +2013,10 @@ with no failures, plus CI green on the head. REQ-VAL-162 and REQ-VAL-164 and the
 *Amended by R-270.*
 *Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest in CI and locally (doctests through `cargo test
 --doc`, `cargo xtask controls` keeping its own cargo invocations), fixtures written only when changed, a build directory
-never shared between a test and its control (R-224), injectable spawn-helper timings with the calibrated values
-(REQ-VAL-156) unchanged, no test dropped, and edits to qa's merged files limited to what these need; fixtures share one
-build directory per fixture type, not per copy, cached on CI (R-270).*
+never used by a test and its control at once (R-224, read per fixture type under R-270, as TASK-M0-33 applied it),
+injectable spawn-helper timings with the calibrated values (REQ-VAL-156) unchanged, no test dropped, and edits to qa's
+merged files limited to what these need; fixtures share one build directory per fixture type, not per copy, cached on
+CI (R-270).*
 *28 Sep 2026 · applied in TASK-M0-33*
 
 "After TASK-M0-22, one task: cargo-nextest (CI and local), fixtures written only when changed with a target dir per
