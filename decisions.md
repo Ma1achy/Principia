@@ -2404,6 +2404,14 @@ holds across backends for the M1 goldens, against one reference. If it isn't, ea
 backend, and the runner picks the one for the backend it renders on. The result and the branch's deletion are recorded
 under this ruling.
 
+*Result (30 Sep 2026, CI run 36719287172, branch `measure/r269-lavapipe-step`, deleted afterwards, no PR):* PR #71's
+fragment (R = (x+0.5)/255, exactly half-way between levels; G = exp(−y/40); B = ((x+y)/510)^2.2; 256×256, Rgba8Unorm)
+rendered through the golden runner. Lavapipe against itself over two renders: max step 0. Metal against itself: 0, and
+the hosted Metal render matches a local M3 Pro byte for byte. Lavapipe against Metal: max step 1, in R only, on 32768
+of 65536 pixels (every even x); G and B are identical. Metal rounds each exact tie up, and lavapipe rounds it to even.
+The max step isn't 0, so under this ruling each golden case keeps one reference per backend, and the runner picks the
+one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
+
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
@@ -2492,3 +2500,83 @@ in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-run
 
 *Applied:* at `kern.memorystatus_vm_pressure_level` 2 (warning), at most two agents run; at 1 (normal), three. At 4
 (critical), only running work finishes (R-252).
+
+## R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*
+*30 Sep 2026 · applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register, REQ-PAY-092*
+
+The human's rulings message of 30 Sep said "Rulings (R-272 onward)"; R-272 to R-277 were already taken, so its rulings
+are recorded here as R-278 to R-285, in the message's order.
+
+"RQ-169: option 1. The f16 subnormal floor joins the register as an achievable maximum ("the format's achievable
+extreme"), beside f16_finite_max; update §3.8's class wording, hash sentence and schema version accordingly."
+
+*Applied:* in TASK-M0-10. §3.8's `achievable-maximum` class also covers a number format's achievable extreme. An
+`f16_min_subnormal` row (2⁻²⁴) sits beside `f16_finite_max`. The hash sentence names the floor and counts five
+entries, and the schema version changes with the hashed ledger. The emitter reads the floor from the register.
+
+## R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
+*30 Sep 2026 · applied in TASK-M0-33 (PR #74, merged)*
+
+"#74 item 11: accepted. Merge #74."
+
+*Applied:* #74 merged at 08999ec. The fixture pool keeps one build directory per fixture source set, and the `xtask`
+build is one of them (R-270).
+
+## R-280 — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*
+*30 Sep 2026 · applied in payload §1, debug_tooling_plan §B, REQ-TOOL-012, REQ-TOOL-137 and TASK-M1-09*
+
+"RQ-170: option 3: an unset d_min renders in the neutral "not yet" style, the same grey as running samples (R-96).
+Not the invalid hatch, not the top of the ramp."
+
+*Applied:* a field view that reads `d_min`'s unset bits (`0x7C00`, R-271) draws the neutral grey that `running`
+samples show (R-96). It doesn't draw the invalid hatch, which stays NaN's (PIT-8), and it doesn't place +inf on the
+ramp. The other sentinels still show as their literal values on the ramp (R-136).
+
+## R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
+*30 Sep 2026 · applied in TASK-M0-10 (PR #78) and REQ-PAY-092*
+
+"#78: items 1 and 7 accepted. Item 2 vetoed in part: the packer never stores NaN (R-79) and never silently rewrites a
+negative value. Both are debug_assert! failures; in release, a NaN stores the unset bits and a negative value clamps
+to the floor, and each case increments a telemetry counter."
+
+*Applied:* in TASK-M0-10. The `d_min` packer's `debug_assert!` fails on a NaN or a negative input. In release, a NaN
+stores `0x7C00` and a negative value stores the floor, `0x0001`, and each case increments a telemetry counter. The
+counter is defined by that task if the corpus doesn't already name it (R-72).
+
+## R-282 — TASK-M0-17's design items accepted
+*30 Sep 2026 · applied in TASK-M0-17 (PR #79)*
+
+"#79: items 3, 4, 5, 6, 10, 11, F1 and F2 accepted."
+
+*Applied:* profiler schema v1 keeps them as PR #79 wrote them. Item 3: a batch render's `present` is null, in both
+places. Item 4: the header shapes. Item 5: the `frame` index key. Item 6: the nested section shapes. Item 10: only
+`camera_delta > 0` is normative. Item 11: the three memory pools are disjoint. F1: `leak_flags` and `hot_paths`,
+null until M8. F2: `live_memory`, a per-frame snapshot of each pool by type.
+
+## R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
+*30 Sep 2026 · applied in the orchestrator's loop*
+
+"Process choices: all stand (physics on #79, qa's edits on #74/#78, the renumbering). If qa keeps needing to edit its
+own files, raise the add-only rule itself in REVIEW_QUEUE rather than exempting it again." "#80: merge it."
+
+*Applied:* physics stays a reviewer of TASK-M0-17. qa's `M` lines on #74 and #78 stand, and the queue renumbering
+(RQ-169 → RQ-170) stands. The next time qa needs to change a file of its own, the orchestrator doesn't grant another
+exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e5526a.
+
+## R-284 — `cargo xtask codegen` writes a generated file only when its content changes
+*30 Sep 2026 · applied in REQ-TOOL-138 and TASK-M0-41 (new)*
+
+"codegen rewriting unchanged files: small task, medium priority. Write generated.rs only when its content changes."
+
+*Applied:* a new task, TASK-M0-41. `cargo xtask codegen` compares each generated file with what's on disk and writes
+it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
+
+## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
+*30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
+
+"CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
+under GitHub's 10 GB limit."
+
+*Applied:* a new task, TASK-M0-42. CI workflows stop caching whole target dirs (`Swatinem/rust-cache` caches `target`
+by default). They cache the cargo registry and the fixture pool (R-270), each under a key naming its job, so the
+repo's Actions cache stays well under GitHub's 10 GB limit.

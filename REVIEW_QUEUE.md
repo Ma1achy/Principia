@@ -3028,3 +3028,5 @@ Tick any you don't accept.
   3. **A distinct "unset" style.** Neither the invalid pattern nor the ramp. This needs its own styling and its own
      test, the way PIT-8 keeps NaN and −1 distinct.
 - **Needed:** which one. Only TASK-M1-09's one `d_min` golden line waits on it; nothing in M0 does.
+- **Ruling:** R-280 (30 Sep 2026): option 3. An unset `d_min` renders in the neutral "not yet" grey of `running`
+  samples (R-96), not the invalid hatch and not the top of the ramp.
