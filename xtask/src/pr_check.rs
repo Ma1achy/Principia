@@ -7,6 +7,7 @@
 //!   (pitfalls §4.5).
 //! - `validation`: `## Validation record`, one line per item (R-180): `- meter: <name> — <the quantity the occupant
 //!   integrates>` (philosophy §4.5) and `- discriminator: <name> — <its dependency on termination>` (pitfalls §3).
+//!   A line naming nothing before its dash fails, quoted (REQ-SYS-071).
 //!
 //! HTML comments, where the template keeps its guidance, are not answers.
 
@@ -110,8 +111,17 @@ pub fn check(body: &str, labels: &[String]) -> Vec<String> {
             ),
         ];
         for (kind, statement) in kinds {
-            for rest in items(text, kind) {
+            for (line, rest) in text
+                .lines()
+                .filter_map(|line| Some((line.trim(), items(line, kind).next()?)))
+            {
                 let (name, said) = rest.split_once('—').unwrap_or((rest, ""));
+                if name.trim().is_empty() {
+                    problems.push(format!(
+                        "validation line `{line}` names no {kind}: expected `- {kind}: <name> — <statement>` \
+                         (R-180)"
+                    ));
+                }
                 if said.trim().is_empty() {
                     problems.push(format!(
                         "validation {kind} `{}` does not state {statement}: expected `- {kind}: <name> — \

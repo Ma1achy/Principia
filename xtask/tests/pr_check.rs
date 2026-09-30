@@ -77,6 +77,37 @@ fn pr_check_investigation_without_entry_or_reason_fails() {
     fails_naming("pr_investigation_incomplete", &["investigation: neither"]);
 }
 
+/// The problems in a `validation` body whose record is the one line `line`.
+fn record_problems(line: &str) -> Vec<String> {
+    check(
+        &format!("## Validation record\n{line}\n"),
+        &["validation".to_owned()],
+    )
+}
+
+/// `line` fails with exactly one problem, and it quotes the line.
+fn fails_quoting(line: &str) {
+    let found = record_problems(line);
+    assert!(
+        found.len() == 1 && found[0].contains(&format!("`{line}`")),
+        "pr-check did not fail quoting `{line}`: {found:?}"
+    );
+}
+
+/// REQ-SYS-071 (R-180): a meter line with nothing before its dash names no meter, and fails quoting the line.
+#[test]
+fn pr_check_validation_nameless_meter_fails_naming_the_line() {
+    fails_quoting("- meter: — COM drift");
+    fails_quoting("- discriminator: — d_min grows as the step shrinks");
+}
+
+/// REQ-SYS-071: the same line with its meter named passes.
+#[test]
+fn pr_check_validation_named_meter_passes() {
+    let found = record_problems("- meter: COM drift — the centre of mass the occupant integrates");
+    assert!(found.is_empty(), "pr-check failed a named meter: {found:?}");
+}
+
 /// The template unfilled, under every label: each labelled section is empty, its guidance being comments.
 #[test]
 fn pr_check_unfilled_template_fails_naming_every_labelled_section() {
@@ -227,5 +258,22 @@ negative_control!(
     {
         let (ok, stderr) = run_binary("pr_validation_meter_incomplete");
         assert!(ok, "complete body failed: {stderr}");
+    }
+);
+
+negative_control!(
+    pr_check_validation_nameless_meter_fails_naming_the_line,
+    "the same line with its meter named gives no problem to quote",
+    expected = "pr-check did not fail quoting",
+    fails_quoting("- meter: COM drift — the centre of mass the occupant integrates")
+);
+
+negative_control!(
+    pr_check_validation_named_meter_passes,
+    "the nameless meter line, required to pass",
+    expected = "pr-check failed a named meter",
+    {
+        let found = record_problems("- meter: — COM drift");
+        assert!(found.is_empty(), "pr-check failed a named meter: {found:?}");
     }
 );
