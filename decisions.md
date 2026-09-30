@@ -832,8 +832,9 @@ fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 *Amended by R-186.*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
-GPU gating Paper 2; Chrome stable and Safari; the goldens, native offscreen from M1 and checked by Playwright at M8; the
-runners and the benchmarks' schedule are R-186's.*
+GPU gating Paper 2 (R-58); Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from
+M1, checked at M8 by the Playwright suite against the same baselines within tolerance, with no re-baselining without a
+gate decision; the runners and the benchmarks' schedule are R-186's.*
 *25 Sep 2026 · applied in step 7*
 
 - Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
@@ -1315,7 +1316,10 @@ TASK-M3-12's stale note is removed.
 
 ## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
 *Amended by R-186.*
-*Still in force: all of it, dormant while no self-hosted runner exists (R-186); it applies again when one is added.*
+*Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); the
+fork guard (GPU jobs only for pushes and this repository's PRs, fork PRs getting the CPU and lavapipe jobs) and the
+runner's own macOS user account are dormant while no self-hosted runner exists (R-186), and apply again when one is
+added.*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
 
@@ -1711,9 +1715,10 @@ among them, under a one-round exception as a mechanical consequence, R-204), cha
 
 ## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
 *Amended by R-211 and R-264.*
-*Still in force: TASK-M0-21's size acceptance and the three `cargo xtask controls` rules it confirmed (a doctest counts
-as a test without a control; a control covers exactly one test; `negative_control` is a reserved test name); its
-split-first rule is R-264's orchestrator choice now.*
+*Still in force: TASK-M0-21's size acceptance; the three `cargo xtask controls` rules it confirmed (a doctest counts as
+a test without a control; a control covers exactly one test, and a name with more tests than controls fails naming them;
+`negative_control` is a reserved test name); and the `deps.rs` fix, each test workspace with its own `CARGO_TARGET_DIR`,
+shown to pass with one outside the repo; its split-first rule is R-264's orchestrator choice now.*
 *27 Sep 2026 · applied in TASK-M0-21*
 
 "Merge-level decisions for PR #19:
@@ -2006,8 +2011,11 @@ with no failures, plus CI green on the head. REQ-VAL-162 and REQ-VAL-164 and the
 
 ## R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings
 *Amended by R-270.*
-*Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest, fixtures written only when changed, injectable
-spawn-helper timings, and no test dropped; fixtures share one build directory per fixture type, cached on CI (R-270).*
+*Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest in CI and locally (doctests through `cargo test
+--doc`, `cargo xtask controls` keeping its own cargo invocations), fixtures written only when changed, a build directory
+never shared between a test and its control (R-224), injectable spawn-helper timings with the calibrated values
+(REQ-VAL-156) unchanged, no test dropped, and edits to qa's merged files limited to what these need; fixtures share one
+build directory per fixture type, not per copy, cached on CI (R-270).*
 *28 Sep 2026 · applied in TASK-M0-33*
 
 "After TASK-M0-22, one task: cargo-nextest (CI and local), fixtures written only when changed with a target dir per
@@ -2732,9 +2740,12 @@ backend, as R-269 ruled, and the PR names it.
 
 ## R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
 *Amended by R-294.*
-*Still in force: the two counters `dmin_nan_unset` and `dmin_negative_floored` in telemetry §2, counted in release
-builds too, read back asynchronously with the telemetry readback and never stalling a frame, `QuadReduction` unchanged,
-and the frame record's two keys; they belong to the frame, never a static (R-294).*
+*Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and
+`dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by
+`roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never
+stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record
+carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a
+buffer bound and reset per frame on the GPU (R-294).*
 *30 Sep 2026 · applied in telemetry §2 and TASK-M0-10 (PR #78), and profiler schema v1's frame record in TASK-M0-17 (PR #79)*
 
 "RQ-171: option (a), recorded as R-288. Two per-frame atomic u32 counters (NaN d_min stored as unset; negative d_min
