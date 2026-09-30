@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*98 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*100 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -25,7 +25,8 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-ENC-024 — the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md
 - [ ] REQ-ENC-027 — the proposal measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and sets the tolerance above them; recorded in decisions.md
 - [ ] REQ-CHART-020 — Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141)
-- [ ] REQ-COL-006 — agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey, with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement
+- [ ] REQ-COL-006 — agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement
+- [ ] REQ-COL-060 — the proposal measures, in gpu-metal and gpu-lavapipe, the fragment-against-compute differences of the agreement presets (|E(fragment-decode) − E₀| and the like) and ROUNDTRIP's residual over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement and the ROUNDTRIP render use it; recorded in decisions.md
 - [ ] REQ-VAL-015 — on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target
 - [ ] REQ-VAL-019 — import the literature ICs; compare E, L_z after multiplying back by the recorded rescale
 - [ ] REQ-VAL-021 — 2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)
@@ -82,6 +83,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-112 — the proposal shows the measured f32 disagreement of each view on a healthy survey and a deliberately broken case each tolerance must flag
 - [ ] REQ-VAL-125 — the proposal names the statistic and sets the threshold from the measured sampling noise on uniform grids; recorded in decisions.md
 - [ ] REQ-VAL-137 — the proposal renders the plane, reads closure at the known orbit locations against the background and states the threshold; recorded in decisions.md
+- [ ] REQ-VAL-177 — cargo xtask gate fast-math-diff in the gpu-metal job: the report lists, on against off, the branch-word forks per step (N_sub, state, terminals), the largest difference per continuous word and the outcome-class fractions, and is written into the gate report; off against off reports zero forks and zero differences (the control)
 
 **M5**
 - [ ] REQ-DEC-031 — at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel
