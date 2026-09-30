@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
-- **Size:** ~500 lines
+- **Size:** ~530 lines
 
 ## Goal
 The browser product exists: the whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render, playhead and barrier) runs in the wasm engine inside a Web Worker on an OffscreenCanvas transferred once at startup; the main thread is a separate TS binary — an input pump and DOM-GUI host that owns no simulation state. Resize is observed on the main thread and sent as one message that reconfigures the swapchain in the worker. Cross-origin isolation on GitHub Pages comes from a self-hosted `coi-serviceworker` beside `index.html`. The equirect bake is debounced (120 ms) via `copyExternalImageToTexture` and never lands inside the frame callback.
@@ -23,12 +23,15 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `docs/contracts/principia_caching_contract.md` § "Part 6 — The responsiveness invariant: the main thread never waits"
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-303 — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*"
+- `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 
 ## Deliverables
 - `web/` — `package.json`, `index.html`, `coi-serviceworker.js` (vendored), `src/main.ts` (shell), `src/engine.worker.ts` (loads the wasm engine), `src/resize.ts`.
 - `crates/engine/src/wasm/entry.rs` — the worker entry, surface from the transferred OffscreenCanvas.
 - `crates/engine/src/wasm/bake.rs` — the debounced bake upload.
-- Tests: `resize_one_message`, `bake_outside_raf`.
+- The session header's browser rule (R-303): the header writer takes the running backend's fast-math capability, and the browser build (`crates/engine/src/wasm/entry.rs`) passes one that exposes no control, so each stage's compiled mode is written as "unknown".
+- Tests: `resize_one_message`, `bake_outside_raf`, `session_header_browser_fast_math`.
 
 ## Acceptance tests
 - Review checklist (code reviewer) — build produces two binaries; main-thread bundle contains no engine state (REQ-SYS-039).
@@ -38,7 +41,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `npm --prefix web test -- resize_one_message` — resize event yields one message and one reconfigure (REQ-SYS-045).
 - Review checklist (code reviewer) — deployment contains the script; no CDN (REQ-SYS-042).
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
-- `cargo test -p engine --target wasm32-unknown-unknown session_header_browser_fast_math` (or its wasm test runner) — a header written by the browser build records the compute setting as asked for, off and on, and the compute, vertex and fragment modes as "unknown"; a native header never records "unknown" (REQ-TOOL-143).
+- `cargo test -p engine session_header_browser_fast_math` — a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the compute setting as asked for, off and on, and the compute, vertex and fragment modes as "unknown"; a native header never records "unknown" (REQ-TOOL-143).
 
 ## Notes
 - R-303 (closes RQ-177): in the browser build each shader stage's compiled fast-math mode is recorded as "unknown", since WebGPU offers no fast-math control (REQ-TOOL-143).

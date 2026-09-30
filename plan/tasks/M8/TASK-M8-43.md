@@ -23,19 +23,22 @@ off). Neither has an artboard, so both are checked by presence only (R-129).
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+- `decisions.md` § "R-303 — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*"
 
 ## Deliverables
 - `crates/gui/src/windows/run.rs` — the compute fast-math control, its re-integrate marking and the measured-not-exact
   note.
 - `crates/gui/src/windows/profiler/` — the fast-math line (the compute setting, and the compiled compute mode where it
   differs), read from the session header.
-- Tests `run_fast_math` and `profiler_fast_math`; screenshot cases `04_windows/run_fast_math` and
+- Tests `run_fast_math`, `run_fast_math_browser` and `profiler_fast_math`; screenshot cases `04_windows/run_fast_math` and
   `04_windows/profiler_fast_math`.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
 - `cargo xtask screenshot 04_windows` (run_fast_math) and `cargo test -p gui run_fast_math` — the control is present in the Run window, reading off by default (presence only, no artboard, R-129); toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on (REQ-GUI-163).
+- `cargo test -p gui run_fast_math_browser` — with the browser build's backend (no fast-math control), the Run window shows the control disabled with the note that the browser chooses the mode, and toggling it emits nothing (R-303) (REQ-GUI-163).
 - `cargo xtask screenshot 04_windows` (profiler_fast_math) and `cargo test -p gui profiler_fast_math` — the compute setting appears in the Profiler (presence only, R-129); a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both (REQ-GUI-164).
 
 ## Notes
+- R-303 (closes RQ-177): in the browser build the Run window's control is shown disabled, with a note that the browser chooses the mode.
 - TASK-M8-42's screen sweep, which checks every schema field is exposed, depends on this task.

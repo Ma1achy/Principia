@@ -13511,7 +13511,7 @@
     section: Run — from the top bar
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on"
+    detail: "cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on; cargo test -p gui run_fast_math_browser: with the browser build's backend the control is shown disabled with the note that the browser chooses the mode, and toggling it emits nothing (R-303)"
   rulings:
   - R-297
   - R-303
@@ -15598,7 +15598,9 @@
     detail: "cargo test -p engine session_header_fast_math: the header carries the compute setting and the compute, vertex and fragment modes as compiled; on Metal with the default setting it reads setting off, compute off, and vertex and fragment on; with the setting on it reads setting on and compute on; on lavapipe with the setting on it reads setting on and compute off (compiled as off); a header missing the setting or a stage fails to parse"
   rulings:
   - R-297
+  - R-303
   milestone: M0
+  note: "Native backends only. The browser build's header, where each stage's compiled mode is \"unknown\", is REQ-TOOL-143 (R-303)."
 - id: REQ-TOOL-142
   area: TOOL
   statement: "The embedded record (pxpack) must carry the compute shaders' fast-math setting among its sim fields, and recreating a view from it must restore that setting (R-297)."
@@ -15623,7 +15625,7 @@
     section: "5. The artefact: one file, plain text, readable by the sender"
   verify:
     method: unit test
-    detail: "a header written by the browser build (wasm target) records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a native header never records \"unknown\""
+    detail: "cargo test -p engine session_header_browser_fast_math: a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a header for a native backend never records \"unknown\""
   rulings:
   - R-303
   milestone: M8
@@ -18116,7 +18118,7 @@
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   verify:
     method: review checklist
-    detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events, and each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
+    detail: "code: `ci.yml` runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
   rulings:
   - R-196
   - R-198
@@ -18136,7 +18138,7 @@
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   verify:
     method: review checklist
-    detail: "the proposal states the limit with its evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, and the headroom the limit leaves; the job runs under that limit, marked provisional until the human confirms it at the M0 gate (R-182); if no practical limit covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
+    detail: "the proposal states the shard count n and the per-shard limit with their evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, each shard's baseline cost, and the headroom the pair leaves; each shard runs under that limit, marked provisional until the human confirms both at the M0 gate (R-182, R-302); if no practical pair covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
   rulings:
   - R-71
   - R-182

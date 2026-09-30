@@ -9,7 +9,7 @@
 - **Size:** ~290 lines
 
 ## Goal
-Mutation testing joins the QA gate (R-196). On every pull request CI runs `cargo mutants --in-diff` on the changed code, under a per-PR time limit, and every mutant that survives in the PR's diff is a qa finding: killed with a test, or justified as equivalent. The job fails on any survivor not in a checked-in list of equivalent mutants, each entry with a one-line justification the code and qa reviewers approve (R-202). Generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing are excluded. The time limit is a value the corpus doesn't give, so this task proposes it with its evidence (R-71). If no practical limit covers per-PR runs, that goes to REVIEW_QUEUE rather than the run being dropped (R-196).
+Mutation testing joins the QA gate (R-196). On every pull request CI runs `cargo mutants --in-diff` on the changed code, sharded across n parallel CI jobs (`--shard k/n`), each under a per-shard time limit (R-302), and every mutant that survives in the PR's diff is a qa finding: killed with a test, or justified as equivalent. The job fails on any survivor not in a checked-in list of equivalent mutants, each entry with a one-line justification the code and qa reviewers approve (R-202). Generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing are excluded. The shard count n and the per-shard limit are values the corpus doesn't give, so this task proposes them with their evidence (R-71, R-302). The nightly full run stays the backstop (R-302). If no practical limit covers per-PR runs, that goes to REVIEW_QUEUE rather than the run being dropped (R-196).
 
 ## References
 - `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"

@@ -2566,7 +2566,8 @@ one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
 *Amended by R-301.*
 *Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the
-pool between runs; the local pool ~5 GB. The `ci` wall-time target is R-301's.*
+pool between runs; the local pool ~5 GB. The "~10.5 min" `ci` target gives way to R-301's accepted cost, about
+10m28.5s per warm `ci` run as PR #85 measured it.*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
 "#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
@@ -2990,8 +2991,10 @@ one.
 
 ## R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
 *Amended by R-303.*
-*Still in force: all of it for native builds; in the browser build each stage's compiled mode is recorded as "unknown"
-and the Run window's control is disabled (R-303).*
+*Still in force: all of it on native backends. In the browser build: the compute setting stays explicit, off by default,
+on the sim key, in pxpack and recorded in the header as asked for, and display stages may keep fast-math on; bit-identity
+with the setting off no longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to
+R-85's Tier-N tolerances (R-303).*
 *30 Sep 2026 · applied in parity contract §4, render contract Part 3, caching contract Parts 1 and 2, gui_state_contract
 §2, dd_image_embedding §6, telemetry §5, render_gui_spec §G5 and colour_composition §6; REQ-INT-057; REQ-SYS-074 and
 REQ-TOOL-141 in TASK-M0-44 (new), REQ-COL-060 in TASK-M2-29 (new), REQ-SCHED-097 in TASK-M4-08, REQ-PERF-094 and
