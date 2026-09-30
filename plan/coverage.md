@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 
 ## Sections
 
-995 sections in 46 files: 843 yield at least one requirement; 152 yield none and are listed below with the reason.
+996 sections in 46 files: 843 yield at least one requirement; 153 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 105 |
+| informative only | 106 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -114,6 +114,7 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 | R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)* | informative only | process ruling; applied in decisions.md's R-252 and R-293 lines, CURRENT_RULES.md, CLAUDE.md and the code reviewer agent |
 | R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
 | R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs |
+| R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main` | informative only | confirms PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
