@@ -2,13 +2,17 @@
 //! diff has no mutant. A diff that names no `.rs` file (a docs-only or rulings PR) skips each shard's setup and run;
 //! a diff naming Rust source runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
 //!
-//! These tests run the `mutants` and `mutants-check` jobs of `.github/workflows/ci.yml` as a runner would, step by
+//! These tests run the `mutants` and `mutants-check` jobs of `.github/workflows/mutants.yml` as a runner would, step by
 //! step: each step's `if:` is evaluated (the subset of GitHub's expressions the jobs use), a `uses:` step that runs
 //! is recorded but not executed, and each `run:` script runs in bash with its `${{ … }}` expressions substituted.
 //! The programs the scripts call are stand-ins that log each call: `git diff` prints the test's diff, `cargo`
 //! (for `cargo mutants`) writes no outcomes, as cargo-mutants does when it finds no mutant, and `sudo` and `python3`
 //! do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
 //! one step it turns on broken, and trips it by its message.
+//!
+//! A job-level `if:` does not stop a workflow run from reporting the job: skipped, which GitHub counts as passed for a
+//! required check. So the gate is a workflow of its own that only `pull_request` runs, and no other workflow has a
+//! `mutants-check` job, which a `push` run would report skipped (R-305).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -24,8 +28,9 @@ fn root() -> PathBuf {
         .to_path_buf()
 }
 
-fn ci_yml() -> String {
-    std::fs::read_to_string(root().join(".github/workflows/ci.yml")).expect("ci.yml")
+/// The per-PR mutation gate's workflow, which only `pull_request` runs (R-305).
+fn mutants_yml() -> String {
+    std::fs::read_to_string(root().join(".github/workflows/mutants.yml")).expect("mutants.yml")
 }
 
 /// A fresh directory per call, since tests and their controls run in parallel.
@@ -50,7 +55,7 @@ fn job(yml: &str, name: &str) -> Vec<String> {
     let mut lines = yml.lines().skip_while(|l| l.trim_end() != head);
     let first = lines
         .next()
-        .unwrap_or_else(|| panic!("no `{name}` job in ci.yml"));
+        .unwrap_or_else(|| panic!("no `{name}` job in mutants.yml"));
     std::iter::once(first)
         .chain(lines.take_while(|l| {
             l.is_empty() || l.starts_with("   ") || l.trim_start().starts_with('#')
@@ -389,7 +394,7 @@ fn shard_passes_with_no_mutant(yml: &str) {
 
 #[test]
 fn mutants_shard_passes_a_diff_with_no_mutant() {
-    shard_passes_with_no_mutant(&ci_yml());
+    shard_passes_with_no_mutant(&mutants_yml());
 }
 
 // Read only by the controls.
@@ -402,10 +407,10 @@ negative_control!(
     "a shard that takes every diff for Rust source",
     expected = "a shard of a diff naming no Rust source set up or ran more than the diff",
     {
-        let yml = ci_yml();
+        let yml = mutants_yml();
         assert!(
             yml.contains(GATE),
-            "the control's gate text is not in ci.yml"
+            "the control's gate text is not in mutants.yml"
         );
         shard_passes_with_no_mutant(&yml.replace(GATE, "if true; then"))
     }
@@ -418,10 +423,10 @@ mod never_rust {
         "a shard that takes no diff for Rust source",
         expected = "a shard of a diff naming Rust source skipped cargo mutants",
         {
-            let yml = ci_yml();
+            let yml = mutants_yml();
             assert!(
                 yml.contains(GATE),
-                "the control's gate text is not in ci.yml"
+                "the control's gate text is not in mutants.yml"
             );
             shard_passes_with_no_mutant(&yml.replace(GATE, "if false; then"))
         }
@@ -468,7 +473,7 @@ fn aggregate_reports_with_no_mutant(yml: &str) {
 
 #[test]
 fn mutants_check_reports_and_passes_a_pr_with_no_mutant() {
-    aggregate_reports_with_no_mutant(&ci_yml());
+    aggregate_reports_with_no_mutant(&mutants_yml());
 }
 
 // Read only by the controls.
@@ -480,10 +485,10 @@ negative_control!(
     "an aggregate that runs the check over no report",
     expected = "mutants-check failed a pull request with no mutant",
     {
-        let yml = ci_yml();
+        let yml = mutants_yml();
         assert!(
             yml.contains(ANY_REPORT),
-            "the control's text is not in ci.yml"
+            "the control's text is not in mutants.yml"
         );
         aggregate_reports_with_no_mutant(&yml.replace(ANY_REPORT, "if true; then"))
     }
@@ -500,12 +505,110 @@ mod not_always {
         "an aggregate that runs only when every shard passed",
         expected = "mutants-check did not report when the shards' result was failure",
         {
-            let yml = ci_yml();
-            assert!(yml.contains(ALWAYS), "the control's text is not in ci.yml");
+            let yml = mutants_yml();
+            assert!(
+                yml.contains(ALWAYS),
+                "the control's text is not in mutants.yml"
+            );
             aggregate_reports_with_no_mutant(&yml.replace(
                 ALWAYS,
                 "  mutants-check:\n    if: github.event_name == 'pull_request'\n",
             ))
         }
+    );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// No run but the pull request's reports `mutants-check`.
+
+/// The events under a workflow's top-level `on:`.
+fn events(yml: &str) -> Vec<String> {
+    yml.lines()
+        .skip_while(|l| l.trim_end() != "on:")
+        .skip(1)
+        .take_while(|l| l.is_empty() || l.starts_with(' ') || l.starts_with('#'))
+        .filter_map(|l| l.strip_prefix("  ").filter(|t| !t.starts_with([' ', '#'])))
+        .filter_map(|t| t.split(':').next().map(str::to_owned))
+        .collect()
+}
+
+/// R-305: `mutants.yml` runs on `pull_request` alone, and no other workflow has a `mutants-check` job, so the only
+/// `mutants-check` check run on a commit is the pull request's real one, never a skipped one from a `push` run.
+fn only_pull_requests_report(workflows: &[(String, String)]) {
+    let (_, mutants) = workflows
+        .iter()
+        .find(|(name, _)| name == "mutants.yml")
+        .expect("mutants.yml");
+    let on = events(mutants);
+    assert!(
+        on == ["pull_request"],
+        "mutants.yml runs on events other than pull_request: {on:?}"
+    );
+    for (name, yml) in workflows {
+        assert!(
+            name == "mutants.yml" || !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
+            "another workflow, {name}, has a mutants-check job"
+        );
+    }
+}
+
+fn workflows() -> Vec<(String, String)> {
+    let dir = root().join(".github/workflows");
+    let mut out: Vec<(String, String)> = std::fs::read_dir(&dir)
+        .expect("workflows")
+        .map(|e| e.expect("entry").path())
+        .filter(|p| p.extension().is_some_and(|x| x == "yml" || x == "yaml"))
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            (name, std::fs::read_to_string(&p).expect("workflow"))
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn mutants_check_is_reported_by_pull_request_runs_only() {
+    only_pull_requests_report(&workflows());
+}
+
+negative_control!(
+    mutants_check_is_reported_by_pull_request_runs_only,
+    "mutants.yml also run on push",
+    expected = "mutants.yml runs on events other than pull_request",
+    only_pull_requests_report(
+        &workflows()
+            .into_iter()
+            .map(|(n, y)| {
+                let y = if n == "mutants.yml" {
+                    y.replacen("on:\n", "on:\n  push:\n", 1)
+                } else {
+                    y
+                };
+                (n, y)
+            })
+            .collect::<Vec<_>>()
+    )
+);
+
+mod in_ci {
+    use super::*;
+    negative_control!(
+        mutants_check_is_reported_by_pull_request_runs_only,
+        "ci.yml, which push runs, with a mutants-check job",
+        expected = "another workflow, ci.yml, has a mutants-check job",
+        only_pull_requests_report(
+            &workflows()
+                .into_iter()
+                .map(|(n, y)| {
+                    let y = if n == "ci.yml" {
+                        y + "\n  mutants-check:\n    if: github.event_name == 'pull_request'\n"
+                    } else {
+                        y
+                    };
+                    (n, y)
+                })
+                .collect::<Vec<_>>()
+        )
     );
 }
