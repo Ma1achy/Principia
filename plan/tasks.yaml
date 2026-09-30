@@ -562,7 +562,7 @@
   title: "Ground-truth ingestion: residual, κ(z) and the literature imports"
   depends_on: [TASK-M2-19, TASK-M0-05]
   needs: [REQ-VAL-002, REQ-VAL-007]
-  requirements: [REQ-VAL-014, REQ-ENC-025, REQ-VAL-019, REQ-VAL-120]
+  requirements: [REQ-VAL-014, REQ-ENC-025, REQ-VAL-019, REQ-VAL-120, REQ-VAL-174]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-5, PIT-3]
 - id: TASK-M2-21
@@ -690,7 +690,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -1210,7 +1210,7 @@
   title: "Resolve stage: ensemble spread, error_ratio and the co-computations"
   depends_on: [TASK-M5-17]
   needs: [REQ-PAY-019, REQ-PAY-021, REQ-INT-039, REQ-SYS-019]
-  requirements: [REQ-REF-002, REQ-REF-003, REQ-REF-004, REQ-REF-005, REQ-REF-010, REQ-PAY-061, REQ-RENDER-051, REQ-RENDER-053, REQ-INT-072, REQ-TOOL-133]
+  requirements: [REQ-REF-002, REQ-REF-003, REQ-REF-004, REQ-REF-005, REQ-REF-010, REQ-PAY-061, REQ-RENDER-051, REQ-RENDER-053, REQ-INT-072, REQ-TOOL-133, REQ-VAL-172, REQ-VAL-173]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-19
@@ -1394,7 +1394,7 @@
   title: "Tile priority: P_tile, the pointer-centred P_focus, quad-relative relevance and baseline-first"
   depends_on: [TASK-M6-02, TASK-M5-13, TASK-M5-24]
   needs: [REQ-SCHED-019, REQ-SCHED-023, REQ-SCHED-074, REQ-DEC-031, REQ-CHART-038]
-  requirements: [REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090]
+  requirements: [REQ-SCHED-056, REQ-SCHED-065, REQ-SCHED-066, REQ-SCHED-067, REQ-SCHED-071, REQ-SCHED-080, REQ-SCHED-081, REQ-SCHED-090, REQ-SCHED-091, REQ-SCHED-092, REQ-SCHED-093, REQ-SCHED-096]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M6-12
@@ -1482,7 +1482,7 @@
   title: "The first refine milestone's measurements: depth past level 6, tau, merging under motion, zoom regression"
   depends_on: [TASK-M6-06, TASK-M6-12, TASK-M6-17, TASK-M6-20, TASK-M5-23]
   needs: [REQ-VAL-081, REQ-TOOL-050, REQ-RENDER-046]
-  requirements: [REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050]
+  requirements: [REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050, REQ-SCHED-094, REQ-SCHED-095]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-6, PIT-10, PIT-3]
 - id: TASK-M7-01

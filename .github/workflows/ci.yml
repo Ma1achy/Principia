@@ -27,6 +27,12 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: cargo build --workspace
         run: cargo build --workspace
+      # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
       # The workspace tests include the GPU harness self-tests, which need an adapter and PRIN_GPU_BACKEND (R-169):
       # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
       - name: Install Mesa (lavapipe)
@@ -38,8 +44,9 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
-  # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask controls`, every control,
-  # failing on any finding (R-198, R-226). The GPU harness's controls run on lavapipe, as its tests do.
+  # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask plan-check`, which needs
+  # Python and PyYAML (REQ-SYS-007), then `cargo xtask controls`, every control, failing on any finding (R-198,
+  # R-226). The GPU harness's controls run on lavapipe, as its tests do.
   xtask-ci:
     runs-on: ubuntu-latest
     env:
@@ -50,6 +57,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
       - name: cargo xtask ci
         run: cargo xtask ci
 
