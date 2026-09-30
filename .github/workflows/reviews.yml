@@ -1,6 +1,11 @@
 # `reviews-complete` (R-175): the reviewers are agents posting from one account, so each posts a PR review headed
 # `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`; this check passes only when every role the task file names
 # has approved on the latest commit. It re-runs on each push to the PR and on each review.
+#
+# A `pull_request` run and a `pull_request_review` run are separate check suites. The `pull_request` run for a head
+# fails before any review and stays failed, so the merge waits (R-266: no bypass). A `pull_request_review` run whose
+# own check passes therefore re-runs that stale run for the same head, so one passing review turns both green (R-276,
+# REQ-SYS-072).
 name: reviews
 
 on:
@@ -14,6 +19,11 @@ permissions:
 jobs:
   reviews-complete:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      # To re-run the stale `pull_request`-event run (R-276).
+      actions: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -22,3 +32,38 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: cargo xtask reviews-check --pr ${{ github.event.pull_request.number }}
+      # Runs only when the check above passed. The `pull_request` run it re-runs checks the reviews afresh, so it
+      # passes on the reviews this run just passed on.
+      - name: re-run the stale pull_request run for this head
+        if: github.event_name == 'pull_request_review'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # The latest `pull_request`-event run of this workflow for the head: its field `$1`, empty if there is none.
+          latest() {
+            gh run list --workflow reviews.yml --event pull_request --commit "$HEAD_SHA" --limit 1 \
+              --json databaseId,status,conclusion --jq ".[0] // empty | .$1"
+          }
+          id=$(latest databaseId)
+          if [ -z "$id" ]; then
+            echo "no pull_request run of reviews for $HEAD_SHA: nothing to re-run"
+            exit 0
+          fi
+          if [ "$(latest status)" != completed ]; then
+            echo "pull_request run $id for $HEAD_SHA is in progress: waiting for it"
+            gh run watch "$id" > /dev/null || true
+          fi
+          conclusion=$(latest conclusion)
+          if [ "$conclusion" = success ]; then
+            echo "pull_request run $id for $HEAD_SHA already passed"
+            exit 0
+          fi
+          echo "pull_request run $id for $HEAD_SHA concluded $conclusion: re-running it"
+          if ! gh run rerun "$id"; then
+            # Another review's run may have re-run it first; that re-run is in progress, and checks the same reviews.
+            [ "$(latest status)" != completed ] || exit 1
+            echo "pull_request run $id is already re-running"
+          fi
