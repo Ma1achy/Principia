@@ -109,7 +109,10 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 ///   unset bits (f16 +∞, `0x7c00`), a value below f16's smallest positive subnormal writes that subnormal, both as bit
 ///   patterns, so 0.0 never appears; `set_f_unset(w)` writes the unset bits and `<prefix>_f_is_unset(w)` tests them by
 ///   bits (R-271). No float comparison with +∞ and no non-finite literal is emitted (GPU determinism note § "The
-///   discipline", rule 4);
+///   discipline", rule 4). Its release setter `set_f_release(w, v, counters)` stores a NaN as unset and a negative
+///   value as the floor, incrementing `counters`' `dmin_nan_unset` or `dmin_negative_floored` (R-281, R-288);
+///   `set_f_counted(w, v, counters)` adds R-281's debug assertions, and `set_f(w, v)` counts into the kernel's
+///   crate-level pair, `DMIN_COUNTERS`;
 /// - a sentinel constant `<PREFIX>_F_SENTINEL` when the entry has a sentinel, a non-finite one written by its bits;
 /// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
 ///   zero, so reserved bits are zero.
@@ -183,8 +186,12 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
                      ///\n\
                      /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a\n\
-                     /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s.\n\
+                     /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s, counting into the crate-level\n\
+                     /// pair [`super::DMIN_COUNTERS`] (R-288).\n\
                      #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
+                     \x20   set_{f}_counted(w, v, &super::DMIN_COUNTERS)\n}}\n\
+                     \n/// [`set_{f}`], counting into `counters` (R-281, R-288): its debug assertions, then [`set_{f}_release`].\n\
+                     #[inline]\npub fn set_{f}_counted(w: u32, v: f32, counters: &super::DminCounters) -> u32 {{\n\
                      \x20   debug_assert!(\n\
                      \x20       !v.is_nan(),\n\
                      \x20       \"`{f}` is NaN: storage never holds NaN (R-79, R-281)\"\n\
@@ -193,13 +200,24 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      \x20       v.is_nan() || v >= 0.0,\n\
                      \x20       \"`{f}` is negative: it is never silently rewritten (R-281)\"\n\
                      \x20   );\n\
-                     \x20   set_{f}_release(w, v)\n}}\n\
-                     \n/// [`set_{f}`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset bits\n\
-                     /// (never NaN, R-79) and a negative value writes the floor `0x0001`, as does any value below 2⁻²⁴. R-281 also\n\
-                     /// has each case increment a telemetry counter; the corpus does not yet define that counter (RQ-171).\n\
-                     #[inline]\npub fn set_{f}_release(w: u32, v: f32) -> u32 {{\n\
-                     \x20   let h = if v.is_nan() || v.to_bits() == {inf} {{\n\
+                     \x20   set_{f}_release(w, v, counters)\n}}\n\
+                     \n/// [`set_{f}_counted`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset\n\
+                     /// bits (never NaN, R-79) and increments `counters.dmin_nan_unset`; a negative value writes the floor `0x0001`\n\
+                     /// and increments `counters.dmin_negative_floored`; any other value below 2⁻²⁴, −0.0 included, writes the floor\n\
+                     /// uncounted. The counts are made in release builds as well as debug ones (R-288; telemetry §2).\n\
+                     #[inline]\npub fn set_{f}_release(w: u32, v: f32, counters: &super::DminCounters) -> u32 {{\n\
+                     \x20   let h = if v.is_nan() {{\n\
+                     \x20       counters\n\
+                     \x20           .dmin_nan_unset\n\
+                     \x20           .fetch_add(1, core::sync::atomic::Ordering::Relaxed);\n\
                      \x20       {upper}_UNSET\n\
+                     \x20   }} else if v.to_bits() == {inf} {{\n\
+                     \x20       {upper}_UNSET\n\
+                     \x20   }} else if v < 0.0 {{\n\
+                     \x20       counters\n\
+                     \x20           .dmin_negative_floored\n\
+                     \x20           .fetch_add(1, core::sync::atomic::Ordering::Relaxed);\n\
+                     \x20       F16_MIN_SUBNORMAL_BITS\n\
                      \x20   }} else if v < F16_MIN_SUBNORMAL {{\n\
                      \x20       F16_MIN_SUBNORMAL_BITS\n\
                      \x20   }} else {{\n\

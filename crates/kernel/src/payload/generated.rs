@@ -319,9 +319,16 @@ pub fn set_d_min_unset(w: u32) -> u32 {
 /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
 ///
 /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a
-/// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s.
+/// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s, counting into the crate-level
+/// pair [`super::DMIN_COUNTERS`] (R-288).
 #[inline]
 pub fn set_d_min(w: u32, v: f32) -> u32 {
+    set_d_min_counted(w, v, &super::DMIN_COUNTERS)
+}
+
+/// [`set_d_min`], counting into `counters` (R-281, R-288): its debug assertions, then [`set_d_min_release`].
+#[inline]
+pub fn set_d_min_counted(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
     debug_assert!(
         !v.is_nan(),
         "`d_min` is NaN: storage never holds NaN (R-79, R-281)"
@@ -330,16 +337,27 @@ pub fn set_d_min(w: u32, v: f32) -> u32 {
         v.is_nan() || v >= 0.0,
         "`d_min` is negative: it is never silently rewritten (R-281)"
     );
-    set_d_min_release(w, v)
+    set_d_min_release(w, v, counters)
 }
 
-/// [`set_d_min`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset bits
-/// (never NaN, R-79) and a negative value writes the floor `0x0001`, as does any value below 2⁻²⁴. R-281 also
-/// has each case increment a telemetry counter; the corpus does not yet define that counter (RQ-171).
+/// [`set_d_min_counted`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset
+/// bits (never NaN, R-79) and increments `counters.dmin_nan_unset`; a negative value writes the floor `0x0001`
+/// and increments `counters.dmin_negative_floored`; any other value below 2⁻²⁴, −0.0 included, writes the floor
+/// uncounted. The counts are made in release builds as well as debug ones (R-288; telemetry §2).
 #[inline]
-pub fn set_d_min_release(w: u32, v: f32) -> u32 {
-    let h = if v.is_nan() || v.to_bits() == 0x7f80_0000 {
+pub fn set_d_min_release(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
+    let h = if v.is_nan() {
+        counters
+            .dmin_nan_unset
+            .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
         PA_D_MIN_UNSET
+    } else if v.to_bits() == 0x7f80_0000 {
+        PA_D_MIN_UNSET
+    } else if v < 0.0 {
+        counters
+            .dmin_negative_floored
+            .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        F16_MIN_SUBNORMAL_BITS
     } else if v < F16_MIN_SUBNORMAL {
         F16_MIN_SUBNORMAL_BITS
     } else {

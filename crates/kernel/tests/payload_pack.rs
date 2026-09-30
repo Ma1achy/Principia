@@ -5,6 +5,7 @@
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
+use std::sync::atomic::Ordering;
 use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -555,8 +556,13 @@ negative_control!(
 );
 
 // R-281: the packer never stores NaN (R-79) and never silently rewrites a negative value. Each is a `debug_assert!`
-// failure; in release a NaN stores the unset bits and a negative value clamps to the floor. (Each case's telemetry
-// counter waits on RQ-171.)
+// failure; in release a NaN stores the unset bits and a negative value clamps to the floor, and each case increments
+// its telemetry counter, `dmin_nan_unset` or `dmin_negative_floored` (R-288; telemetry §2).
+
+/// The release packer counting into a scratch pair, as a `fn(u32, f32) -> u32` for the checks below.
+fn release_scratch(w: u32, v: f32) -> u32 {
+    set_d_min_release(w, v, &DminCounters::new())
+}
 
 /// NaNs of either sign, quiet and signalling, with and without payload bits.
 const NANS: [u32; 5] = [
@@ -624,7 +630,7 @@ negative_control!(
     dmin_unset_debug_nan_trips_the_assertion,
     "the release path has no assertion, so the trip check must fail on NaN",
     expected = "did not trip the debug assertion",
-    check_trips(set_d_min_release, &NANS, "`d_min` is NaN")
+    check_trips(release_scratch, &NANS, "`d_min` is NaN")
 );
 
 #[cfg(debug_assertions)]
@@ -643,7 +649,7 @@ negative_control!(
     dmin_unset_debug_negative_trips_the_assertion,
     "the release path has no assertion, so the trip check must fail on a negative value",
     expected = "did not trip the debug assertion",
-    check_trips(set_d_min_release, &NEGATIVES, "`d_min` is negative")
+    check_trips(release_scratch, &NEGATIVES, "`d_min` is negative")
 );
 
 /// `set` stores `want` as `d_min` for every input whose f32 bits are in `inputs`, keeping the descriptor half.
@@ -659,9 +665,9 @@ fn check_release(set: fn(u32, f32) -> u32, inputs: &[u32], want: u32) {
 
 #[test]
 fn dmin_unset_release_nan_stores_the_unset_bits() {
-    check_release(set_d_min_release, &NANS, 0x7c00);
+    check_release(release_scratch, &NANS, 0x7c00);
     // −0.0 is a zero distance, not a negative value: the floor, silently (R-271).
-    check_release(set_d_min_release, &[0x8000_0000], 0x0001);
+    check_release(release_scratch, &[0x8000_0000], 0x0001);
     check_release(set_d_min, &[0x8000_0000], 0x0001);
 }
 
@@ -678,7 +684,7 @@ negative_control!(
 
 #[test]
 fn dmin_unset_release_negative_stores_the_floor() {
-    check_release(set_d_min_release, &NEGATIVES, 0x0001);
+    check_release(release_scratch, &NEGATIVES, 0x0001);
 }
 
 negative_control!(
@@ -689,6 +695,180 @@ negative_control!(
         |w, v| insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 16, 16),
         &NEGATIVES,
         0x0001
+    )
+);
+
+// R-288: the counters. `dmin_nan_unset` counts the packs that stored a NaN as unset, `dmin_negative_floored` the packs
+// that clamped a negative value to the floor (telemetry §2), in release builds as well as debug ones; a valid value and
+// `roundtrip_ctl`'s repack count neither (RQ-171 option (a)).
+
+/// A counter packer: `set_d_min_release`'s signature.
+type Counted = fn(u32, f32, &DminCounters) -> u32;
+
+/// `(dmin_nan_unset, dmin_negative_floored)` of `c`.
+fn counts(c: &DminCounters) -> (u32, u32) {
+    (
+        c.dmin_nan_unset.load(Ordering::Relaxed),
+        c.dmin_negative_floored.load(Ordering::Relaxed),
+    )
+}
+
+/// For each input whose f32 bits are in `inputs`, `set` over a fresh pair stores `want` as `d_min`, keeps the
+/// descriptor half, and leaves the pair at `per_input`; over one shared pair, the counts add up input by input.
+fn check_counts(set: Counted, inputs: &[u32], want: u32, per_input: (u32, u32)) {
+    let shared = DminCounters::new();
+    for (i, &bits) in inputs.iter().enumerate() {
+        let v = f32::from_bits(bits);
+        let fresh = DminCounters::new();
+        let w = set(0x0000_03ff, v, &fresh);
+        assert_eq!(d_min_bits(w), want, "d_min {bits:#010x}: d_min bits");
+        assert_eq!(w & 0xffff, 0x03ff, "d_min {bits:#010x}: descriptor kept");
+        assert_eq!(
+            counts(&fresh),
+            per_input,
+            "d_min {bits:#010x}: counters (dmin_nan_unset, dmin_negative_floored)"
+        );
+        set(0, v, &shared);
+        let n = i as u32 + 1;
+        assert_eq!(
+            counts(&shared),
+            (per_input.0 * n, per_input.1 * n),
+            "after {n} inputs: counters (dmin_nan_unset, dmin_negative_floored)"
+        );
+    }
+}
+
+/// The release packer storing the right bits but counting into a pair of its own, which the caller never sees.
+fn uncounted(w: u32, v: f32, _: &DminCounters) -> u32 {
+    release_scratch(w, v)
+}
+
+#[test]
+fn dmin_unset_counter_nan_increments_dmin_nan_unset() {
+    check_counts(set_d_min_release, &NANS, 0x7c00, (1, 0));
+    // Release builds pass the pair through the asserting packer too (a debug build's assertion fires first).
+    #[cfg(not(debug_assertions))]
+    check_counts(set_d_min_counted, &NANS, 0x7c00, (1, 0));
+}
+
+negative_control!(
+    dmin_unset_counter_nan_increments_dmin_nan_unset,
+    "a packer that stores the unset bits but counts nothing, so the counter check must fail",
+    expected = "counters (dmin_nan_unset, dmin_negative_floored)",
+    check_counts(uncounted, &NANS, 0x7c00, (1, 0))
+);
+
+#[test]
+fn dmin_unset_counter_negative_increments_dmin_negative_floored() {
+    check_counts(set_d_min_release, &NEGATIVES, 0x0001, (0, 1));
+    #[cfg(not(debug_assertions))]
+    check_counts(set_d_min_counted, &NEGATIVES, 0x0001, (0, 1));
+}
+
+negative_control!(
+    dmin_unset_counter_negative_increments_dmin_negative_floored,
+    "a packer that stores the floor but counts a negative value as a NaN, so the counter check must fail",
+    expected = "counters (dmin_nan_unset, dmin_negative_floored)",
+    check_counts(
+        |w, v, c| {
+            c.dmin_nan_unset.fetch_add(1, Ordering::Relaxed);
+            release_scratch(w, v)
+        },
+        &NEGATIVES,
+        0x0001,
+        (0, 1)
+    )
+);
+
+/// `set` counts nothing for a valid `d_min`: +0.0 and −0.0, below the floor, the floor itself, normals, past 65504,
+/// and +∞ (unset), each stored as its expected bits; and over a sample of every non-negative f32 up to +∞.
+fn check_valid_uncounted(set: Counted) {
+    let cases: [(u32, u32); 9] = [
+        (0x0000_0000, 0x0001),
+        (0x8000_0000, 0x0001),
+        (0x3089_705f, 0x0001),
+        (0x3380_0000, 0x0001),
+        (0x3f80_0000, 0x3c00),
+        (0x477f_e000, 0x7bff),
+        (0x4974_2400, 0x7bff),
+        (0x7f7f_ffff, 0x7bff),
+        (0x7f80_0000, 0x7c00),
+    ];
+    for (bits, want) in cases {
+        check_counts(set, &[bits], want, (0, 0));
+    }
+    let c = DminCounters::new();
+    validation::prop::run(&(0u32..=0x7f80_0000), |bits| {
+        set(0, f32::from_bits(bits), &c);
+        Ok(())
+    });
+    assert_eq!(
+        counts(&c),
+        (0, 0),
+        "valid d_min: counters (dmin_nan_unset, dmin_negative_floored)"
+    );
+}
+
+#[test]
+fn dmin_unset_counter_valid_values_count_nothing() {
+    check_valid_uncounted(set_d_min_release);
+    check_valid_uncounted(set_d_min_counted);
+}
+
+negative_control!(
+    dmin_unset_counter_valid_values_count_nothing,
+    "a packer that counts every store as a NaN, so the no-count check must fail",
+    expected = "counters (dmin_nan_unset, dmin_negative_floored)",
+    check_valid_uncounted(|w, v, c| {
+        c.dmin_nan_unset.fetch_add(1, Ordering::Relaxed);
+        release_scratch(w, v)
+    })
+);
+
+/// `packed_a` words whose `d_min` bits are contaminated with values the packer counts when it stores them: f16 NaNs of
+/// either sign, −1.0, −0 with a subnormal (the smallest negative), −65504 and −∞.
+const CONTAMINATED_D_MIN: [u32; 6] = [0x7e00, 0xfe00, 0xbc00, 0x8001, 0xfbff, 0xfc00];
+
+/// `ctl` fails on every contaminated word (its repack writes the unset bits or the floor, not the observed bits), and
+/// leaves `watched` — the pair it could count into — as it found it: the repack observes, it does not store.
+fn check_roundtrip_uncounted(ctl: fn(&PackedA, u32) -> bool, watched: &DminCounters) {
+    let expected = PackedA::unpack(pack_packed_a(2, 1, true, 0, 3, 1.0));
+    let before = counts(watched);
+    for h in CONTAMINATED_D_MIN {
+        let observed = h << 16 | pack_packed_a(2, 1, true, 0, 3, 1.0) & 0xffff;
+        assert!(
+            !ctl(&expected, observed),
+            "roundtrip_ctl passed d_min bits {h:#06x}"
+        );
+    }
+    assert_eq!(
+        counts(watched),
+        before,
+        "roundtrip_ctl's repack: counters (dmin_nan_unset, dmin_negative_floored)"
+    );
+}
+
+/// The pair the control's repack counts into, its own so the control cannot disturb the crate-level pair.
+static CONTROL_PAIR: DminCounters = DminCounters::new();
+
+#[test]
+fn dmin_unset_counter_roundtrip_repack_counts_nothing() {
+    // No other test in this binary stores a NaN or negative `d_min` through the crate-level pair, which
+    // `roundtrip_ctl`'s packing of `expected` uses.
+    check_roundtrip_uncounted(roundtrip_ctl, &DMIN_COUNTERS);
+}
+
+negative_control!(
+    dmin_unset_counter_roundtrip_repack_counts_nothing,
+    "a parity check whose repack stores through a live pair counts each contaminated value, so the check must fail",
+    expected = "roundtrip_ctl's repack: counters",
+    check_roundtrip_uncounted(
+        |expected, observed| {
+            let d_min = PackedA::unpack(observed).d_min;
+            let repacked = set_d_min_release(observed & 0xffff, d_min, &CONTROL_PAIR);
+            observed == expected.pack() && repacked == observed
+        },
+        &CONTROL_PAIR
     )
 );
 
