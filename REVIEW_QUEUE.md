@@ -2883,3 +2883,7 @@ Tick any you don't accept.
   3. **Keep the soak to listing-only forms.** Drop `qa_m022_ci_passes_when_every_control_trips` from the soak. That
      narrows what REQ-SYS-070 soaks.
 - **Needed:** which one. TASK-M0-06 (PR #71) waits on it, because its soak check is red.
+- **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): option 1. The full `xtask ci` has to
+  render (R-110), so the soak job gets what the `ci` and `xtask-ci` jobs already have: Mesa and
+  `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
+  its veto item 13.
