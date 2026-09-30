@@ -189,34 +189,52 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # cargo-mutants mutates only Rust source, so a diff that names no `.rs` file has no mutant (cargo-mutants itself
+      # then stops at once: "Diff changes no Rust source files", exit 0). Such a shard, a docs-only or rulings PR's,
+      # skips its setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any
+      # `.rs` file, even one cargo-mutants won't mutate, runs the shard in full.
+      - name: git diff origin/${{ github.base_ref }}...HEAD
+        id: diff
+        run: |
+          git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
+          echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
+          if grep -Eq '^\+\+\+ .*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff"; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs)"
+          fi
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.diff.outputs.rust == 'true'
       - uses: Swatinem/rust-cache@v2
+        if: steps.diff.outputs.rust == 'true'
         with:
           prefix-key: cargo-registry
           shared-key: mutants
           cache-targets: "false"
           cache-bin: "false"
       - uses: taiki-e/install-action@v2
+        if: steps.diff.outputs.rust == 'true'
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # What the mutated packages' tests need, as in the per-push jobs: Python and PyYAML for xtask's plan_check
       # tests (TASK-M0-02), cargo-nextest for `xtask/tests/nextest.rs` (R-231), lavapipe for the GPU harness (R-169).
       - uses: actions/setup-python@v5
+        if: steps.diff.outputs.rust == 'true'
         with:
           python-version: "3.12"
       - name: Install PyYAML
+        if: steps.diff.outputs.rust == 'true'
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
+        if: steps.diff.outputs.rust == 'true'
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - name: git diff origin/${{ github.base_ref }}...HEAD
-        run: |
-          git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
-          echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
       # shard's partial report is still uploaded when it is hit, and the step then fails.
       - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, provisional)
         id: run
+        if: steps.diff.outputs.rust == 'true'
         # REQ-VAL-149: 120 minutes per shard, provisional until the human confirms it at the M0 gate (R-71, R-182,
         # R-302).
         timeout-minutes: 120
@@ -291,7 +309,8 @@ jobs:
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
-  # listing each survivor of the whole run.
+  # listing each survivor of the whole run. A required status check on `main` (R-305): `always()` makes it report on
+  # every pull request, a cancelled or skipped shard included (then it fails), and it passes when no shard has a mutant.
   mutants-check:
     if: always() && github.event_name == 'pull_request'
     needs: mutants
@@ -311,6 +330,8 @@ jobs:
           path: ${{ runner.temp }}/shards
       - name: cargo xtask mutants-check over every shard (R-202, R-302)
         run: |
+          # No report at all is a PR whose diff has no mutant (R-305): no shard uploaded one, and this passes.
+          shopt -s nullglob
           fail=0
           if [ "${{ needs.mutants.result }}" != success ]; then
             echo "::error::a mutants shard did not pass (result: ${{ needs.mutants.result }}): a survivor not" \
