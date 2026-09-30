@@ -307,7 +307,9 @@ code-review item.
 Crates outside the graph: `gui` (the dev GUI: depends on `engine`'s typed surface only; nothing depends on it),
 `validation` (the harness: may depend on any crate but `gui` and `prin`; every crate but `gui` may reach it, and only
 as a dev-dependency, R-176, R-187), `prin` (the CLI:
-depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate depends on it).
+depends on `engine`), `xtask` (the runners: reads `cargo metadata`; no crate depends on it). `cargo xtask screenshot` reaches `gui`'s windows by
+spawning `gui`'s headless capture mode as a separate process (R-274), as `gate` spawns validation's binary; that is
+not a crate edge.
 
 **Allowed workspace edges** (arrows read "depends on"):
 

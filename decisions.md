@@ -2378,3 +2378,117 @@ thread forks to spawn a child, which inherits the write descriptor until it exec
 that window fails with ETXTBSY. The #38 race was different: tests shared one binary (`debug/xtask`) that one of them
 rewrote while others ran it, fixed by the `WORKSPACE_RUN` Mutex. Nothing is shared here, so that Mutex cannot cover it;
 it shows on Linux only.
+
+## R-268 — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
+*30 Sep 2026 · applied in PRs #70 and #71*
+
+"All merged "veto?" items and the overnight R-204 applications stand. #70 item 2 accepted. #71 items 1 and 6 accepted;
+item 12 accepted once code's re-check agrees."
+
+*Applied:* the items stand as merged on #54, #59, #68, #72 and #75, and so do the overnight R-204 applications: RQ-162
+(#63) and RQ-168 (the stand-in soak installs Mesa, #71's item 13). PR #70's item 2 (`SetField` edits only `SimConfig`
+and `RenderState`, and `Snapshot` leaves `ViewUI` out) is accepted. So are PR #71's item 1 (golden opens its own wgpu
+device, with its backend rule kept in step with the harness's by a test) and item 6 (repro reports every line a case
+declares, and refuses a case that declares none). Item 12 (what `golden --list` checks) is accepted once the code
+reviewer's re-check at 76fd151 agrees.
+
+## R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend
+*30 Sep 2026 · applied in REQ-VAL-138; the measurement runs on a `measure/` branch (R-272)*
+
+"REQ-VAL-138: throwaway measure/ branches are allowed (push, measure, delete). Get the lavapipe max-step. If 0: zero
+steps across backends for M1 goldens. If not: one reference per backend."
+
+*Applied:* the values between 8-bit levels that PR #71's Metal check rendered (Metal max step 0 between two renders)
+are rendered on lavapipe on a `measure/` branch and compared with Metal's. If the max step is 0, REQ-VAL-138's 0 steps
+holds across backends for the M1 goldens, against one reference. If it isn't, each golden case keeps one reference per
+backend, and the runner picks the one for the backend it renders on. The result and the branch's deletion are recorded
+under this ruling.
+
+## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
+*30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
+
+"#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
+copy, and cache the pool on CI. Targets: CI job no slower than before (~10.5 min), local pool ~5 GB."
+
+*Applied:* qa may modify `crates/validation/tests/qa_TASK-M0-33.rs` in one commit, which fixes the test that misses
+cargo's coloured output. The orchestrator's R-237 check accepts `M` on that one file, once. Fixture copies share one
+build directory per fixture type, not per copy, and CI caches the pool between runs. PR #74 shows two measurements:
+the `ci` job's wall time is no slower than before (~10.5 min), and the local pool is ~5 GB. REQ-VAL-165's "a warm second
+run … rebuilds nothing" is read per fixture type.
+
+## R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*
+*30 Sep 2026 · applied in docs/design/principia_dd_simstate_payload.md §1, TASK-M0-10*
+
+"RQ-163: d_min's unset value is +inf (the minimum of an empty set); stored values clamp to f16's smallest positive
+subnormal, so 0.0 never appears; readers treat +inf as unset."
+
+*Applied:* a failed sample's `d_min` half, and any sample's before its first step, holds f16 +inf (bits `0x7C00`). A
+valid `d_min` below f16's smallest positive subnormal (2⁻²⁴ ≈ 5.96e-8) is stored as that subnormal. `dE_max` and
+`dLz_max` keep their 0.0 failed-state value (payload §1), which is the maximum of an empty set of magnitudes.
+*Applied per R-204 — veto? (mechanical consequences, found in payload §1):* WGSL makes `pack2x16float` indeterminate
+outside binary16's finite range and lets it flush subnormals to zero. So the `d_min` packer writes the +inf and
+subnormal bit patterns itself, not through `pack2x16float`. Readers test the unset value by its bits (`0x7C00` in bits
+16–31 of `packed_a`), not by a float comparison, which WGSL's finite-math rules would leave indeterminate. A GPU reader
+that flushes a stored subnormal on unpack sees 0 for display only; the unset test never confuses the two.
+
+## R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
+*30 Sep 2026 · applied in TASK-M0-23 (PR #65)*
+
+"RQ-164: covered by the measure/ branch rule; run the ubuntu mutants timing."
+
+*Applied:* a `measure/<what>` branch may be pushed so that CI takes a measurement, and is deleted right after. No PR is
+opened from it, and the number is recorded in the PR or here. TASK-M0-23 takes REQ-VAL-149's ubuntu timings this way.
+
+## R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*
+*30 Sep 2026 · applied in REQ-VAL-168, TASK-M0-05, TASK-M3-34*
+
+"RQ-165: the region minimum is calibrated at M3; the runner prints "not yet calibrated" until then."
+
+*Applied:* REQ-VAL-168 moves to M3. TASK-M3-34, which proposes the convergence gate's threshold (REQ-VAL-135), also
+proposes the region minimum with its evidence, and the human confirms it at the M3 gate. Until then the gate prints the
+count it saw and "minimum not yet calibrated", which TASK-M0-05 (merged) already does.
+
+## R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*
+*30 Sep 2026 · applied in systems_architecture §7.1, a new GUI requirement, TASK-M6-22*
+
+"RQ-166: gui gets a headless capture mode, spawned by the runner (no crate edge)."
+
+*Applied:* `gui` ships a headless capture mode. The screenshot runner spawns it as a separate process, which renders a
+named window offscreen and writes the PNG and the AccessKit names. The runner compares or checks presence, as `cargo
+xtask gate` spawns validation's binary. No crate depends on `gui` (§7.1 unchanged). A case's `surface` field names the
+kind (`data` today, `gui` for these). TASK-M6-22, the first task with a GUI screenshot requirement, builds the mode.
+
+## R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*
+*30 Sep 2026 · applied in REQ-TOOL-134, TASK-M0-40*
+
+"RQ-167: a control clipped out of the visible surface isn't present."
+
+*Applied:* a presence check counts a control only if it is in egui's tree and its rect intersects the visible surface.
+A case that needs a control below the fold scrolls to it first. TASK-M0-40 changes the runner (PR #72 merged the
+tree-only check).
+
+## R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
+*30 Sep 2026 · applied in TASK-M0-39 and TASK-M0-40 (new), TASK-M0-06, plan/HUMAN_SETUP.md §2*
+
+"Yes: the qa_r217 flake task (proper process group, not perl setpgrp), the M0-06 wording fix, conversation resolution
+in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-runs on each review."
+
+*Applied:*
+- **TASK-M0-39 (new).** It fixes `qa_TASK-M0-26_r217.rs`'s two controls, which flake under CI load: the out-of-group
+  grandchild leaves the process group only when perl runs `setpgrp`, and the 1 s timeout can fire first. The
+  grandchild is put in its own process group at spawn, not by perl.
+- **TASK-M0-06.** "through the harness" becomes "on its own headless wgpu device": §7.1 lets xtask reach `validation`
+  only as a dev-dependency (R-268 accepts #71's item 1).
+- **HUMAN_SETUP §2.** It records "Require conversation resolution before merging", which is on.
+- **Reviews re-run.** *Flagged:* `reviews.yml` already triggers on `pull_request_review`. What blocks a merge is the
+  earlier `pull_request`-event run: it fails before any review and stays a separate failed check suite (R-266's
+  no-bypass). *Applied per R-204 — veto?:* TASK-M0-40 has the `pull_request_review` run re-run that stale
+  `pull_request` run for the same head, so one review turns both green.
+
+## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
+*30 Sep 2026 · applied in the orchestrator's loop*
+
+"Two agents while memory pressure sits at warning; three at normal."
+
+*Applied:* at `kern.memorystatus_vm_pressure_level` 2 (warning), at most two agents run; at 1 (normal), three. At 4
+(critical), only running work finishes (R-252).

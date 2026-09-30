@@ -4982,14 +4982,15 @@
   milestone: M3
 - id: REQ-PAY-041
   area: PAY
-  statement: "The f16 scalars must pack d_min in the high 16 bits of packed_a and dE_max (low) / dLz_max (high) in packed_b, read with unpack2x16float, and the pack side must clamp to the binary16 finite range first, packing 0.0 for failed states."
+  statement: "The f16 scalars must pack d_min in the high 16 bits of packed_a and dE_max (low) / dLz_max (high) in packed_b, read with unpack2x16float, and the pack side must clamp to the binary16 finite range first, packing 0.0 in dE_max/dLz_max and f16 +inf (bits 0x7C00, d_min's unset value) in d_min for failed states (R-271)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Unpack layer (generated, one accessor per named field)
   verify:
     method: unit test
-    detail: "pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values and 0.0 respectively"
-  rulings: []
+    detail: "pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values, 0.0 in dE_max/dLz_max, and d_min's bits are 0x7C00 (R-271)"
+  rulings:
+  - R-271
   milestone: M3
 - id: REQ-PAY-042
   area: PAY
@@ -5040,14 +5041,15 @@
   milestone: M3
 - id: REQ-PAY-045
   area: PAY
-  statement: "Before packing to f16, valid-state values must be clamped to ±65504, and for `sim_failed`/`decode_failed` samples the `d_min`, `dE_max` and `dLz_max` halves must hold 0.0."
+  statement: "Before packing to f16, valid-state values must be clamped to ±65504, and for `sim_failed`/`decode_failed` samples the `dE_max` and `dLz_max` halves must hold 0.0 and the `d_min` half f16 +inf, its unset value (R-271)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
   verify:
     method: property test
-    detail: "fuzz inputs incl. ±1e6, ±Inf: packed halves are finite and clamped; failed-state samples unpack to exactly 0.0"
-  rulings: []
+    detail: "fuzz inputs incl. ±1e6, ±Inf: packed halves are finite and clamped; failed-state samples unpack to exactly 0.0 in dE_max/dLz_max, and their d_min bits are 0x7C00 (R-271)"
+  rulings:
+  - R-271
   milestone: M3
 - id: REQ-PAY-046
   area: PAY
@@ -5817,6 +5819,20 @@
     detail: "generated WGSL struct layouts compared field-by-field against the ledger tables"
   rulings:
   - R-256
+  milestone: M0
+- id: REQ-PAY-092
+  area: PAY
+  statement: "d_min's unset value must be f16 +inf (bits 0x7C00), the minimum of an empty set, stored for a failed sample and for any sample before its first step; a valid d_min below f16's smallest positive subnormal (2^-24) must be stored as that subnormal, so 0.0 never appears; the packer must write the +inf and subnormal bit patterns itself, not through pack2x16float, and readers must test the unset value by its bits (R-271)."
+  source:
+  - file: decisions.md
+    section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 1. `SimState` — the hot struct
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel dmin_unset: a failed sample's and an unstepped sample's d_min bits are 0x7C00; 1e-9 packs to the smallest positive subnormal (bits 0x0001); no valid input packs to 0x0000; the unset test reads bits; the ledger declares d_min's sentinel as +inf"
+  rulings:
+  - R-271
   milestone: M0
 - id: REQ-GEN-001
   area: GEN
@@ -13422,6 +13438,20 @@
   - R-113
   milestone: M8
   note: "R-113 (RQ-95 M2-G5) places the controls; no artboard shows them."
+- id: REQ-GUI-162
+  area: GUI
+  statement: "`gui` must ship a headless capture mode that `cargo xtask screenshot` spawns as a separate process: it renders a named window offscreen and writes the PNG and the AccessKit names, with no crate depending on `gui` (R-274)."
+  source:
+  - file: decisions.md
+    section: "R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*"
+  - file: docs/design/principia_systems_architecture.md
+    section: 7.1 Crate map
+  verify:
+    method: unit test
+    detail: "a screenshot case with surface kind `gui` spawns the capture mode for a named window and gets its PNG and names back; `cargo xtask deps` shows no edge into gui"
+  rulings:
+  - R-274
+  milestone: M6
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -13642,13 +13672,14 @@
     section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: golden image
-    detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min renders as its literal 0.0"
+    detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min (stored +inf, R-271) is read as unset and shown as its literal value, +inf, not hatched"
   rulings:
   - R-79
   - R-136
   - R-245
   - R-253
   - R-254
+  - R-271
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
@@ -15387,6 +15418,8 @@
   - R-113
   - R-129
   - R-183
+  - R-274
+  - R-275
   milestone: M0
 - id: REQ-TOOL-135
   area: TOOL
@@ -15404,6 +15437,18 @@
   rulings:
   - R-207
   milestone: M8
+- id: REQ-TOOL-136
+  area: TOOL
+  statement: "The screenshot runner's presence check must count a control only if it is in egui's tree and its rect intersects the visible surface; a control clipped out of the visible surface isn't present (R-275)."
+  source:
+  - file: decisions.md
+    section: "R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask screenshot: a control laid out below a 120×20 surface fails presence naming it; the same control inside the surface passes"
+  rulings:
+  - R-275
+  milestone: M0
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -17713,10 +17758,11 @@
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
   verify:
     method: review checklist
-    detail: "the proposal states the metric (e.g. per-channel or per-pixel difference) and the default tolerance, shown to pass a re-render on the same backend (native wgpu offscreen, the golden renderer from M1, R-110) and to fail a one-variable change (REQ-VAL-003); recorded in decisions.md"
+    detail: "the proposal states the metric (e.g. per-channel or per-pixel difference) and the default tolerance, shown to pass a re-render on the same backend (native wgpu offscreen, the golden renderer from M1, R-110) and to fail a one-variable change (REQ-VAL-003); lavapipe's max step against Metal on values between 8-bit levels is measured on a measure/ branch (R-269, R-272): at 0, zero steps hold across backends against one reference; otherwise each case keeps one reference per backend; recorded in decisions.md"
   rulings:
   - R-71
   - R-110
+  - R-269
   milestone: M0
 - id: REQ-VAL-139
   area: VAL
@@ -18166,15 +18212,16 @@
   milestone: M0
 - id: REQ-VAL-165
   area: VAL
-  statement: "The test suite must run through `cargo nextest run` in CI and in the documented local run (doctests through `cargo test --doc`); fixture workspaces must be written only when their content changes, each with its own target directory kept across runs; and the spawn helper's grace and timeout must be injectable so its own tests need not wait the calibrated values; no test may be dropped (R-231)."
+  statement: "The test suite must run through `cargo nextest run` in CI and in the documented local run (doctests through `cargo test --doc`); fixture workspaces must be written only when their content changes, with one build directory per fixture type shared by its copies, kept across runs and cached on CI (R-270); and the spawn helper's grace and timeout must be injectable so its own tests use short ones, the calibrated values unchanged (R-231)."
   source:
   - file: decisions.md
     section: "R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings"
   verify:
     method: review checklist
-    detail: "code and qa: the CI test steps use nextest plus `cargo test --doc`, and together list every test `cargo test --workspace -- --list` lists (both feature sets); a warm second run of a fixture test rebuilds nothing; no spawn-helper test waits the calibrated 5 s grace or 300 s timeout; the PR shows the suite's wall time before and after, on the same machine"
+    detail: "code and qa: the CI test steps use nextest plus `cargo test --doc`, and together list every test `cargo test --workspace -- --list` lists (both feature sets); a warm second run of a fixture test rebuilds nothing for its fixture type; the `ci` job is no slower than before (~10.5 min) and the local fixture pool is ~5 GB (R-270); no spawn-helper test waits the calibrated 5 s grace or 300 s timeout; the PR shows the suite's wall time before and after, on the same machine"
   rulings:
   - R-231
+  - R-270
   milestone: M0
 - id: REQ-VAL-166
   area: VAL
@@ -18206,17 +18253,18 @@
 - id: REQ-VAL-168
   area: VAL
   kind: calibration
-  statement: "The minimum number of regions the convergence gate declares, below which its conclusion is flagged, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md; until then the report prints the count it saw and marks the minimum \"not yet calibrated\" (R-258)."
+  statement: "The minimum number of regions the convergence gate declares, below which its conclusion is flagged, must be calibrated: proposed with its evidence by TASK-M3-34, which runs the first real convergence study, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; until then the report prints the count it saw and marks the minimum \"not yet calibrated\" (R-258, R-273)."
   source:
   - file: decisions.md
     section: "R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are \"not recorded\", and scatter is defined *(closes RQ-159)*"
   verify:
     method: review checklist
-    detail: "`cargo xtask gate convergence` prints the region count and \"minimum not yet calibrated\"; the fixtures record their count as \"not recorded\" and a conclusion from an unrecorded count is flagged like one from too few regions (R-258)"
+    detail: "until M3: `cargo xtask gate convergence` prints the region count and \"minimum not yet calibrated\"; the fixtures record their count as \"not recorded\" and a conclusion from an unrecorded count is flagged like one from too few regions (R-258). At M3: the proposal states the minimum with its evidence from the convergence study, and the human confirms it (R-273)"
   rulings:
   - R-71
   - R-258
-  milestone: M0
+  - R-273
+  milestone: M3
 - id: REQ-VAL-169
   area: VAL
   kind: definition
@@ -18306,6 +18354,18 @@
   rulings:
   - R-257
   milestone: M2
+- id: REQ-VAL-175
+  area: VAL
+  statement: "qa_TASK-M0-26_r217's out-of-group grandchild must be put in its own process group at spawn, not by perl's setpgrp, so its two controls trip under CI load (R-276)."
+  source:
+  - file: decisions.md
+    section: "R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review"
+  verify:
+    method: unit test
+    detail: "the two r217 tests and their controls pass `cargo xtask controls` in 50 consecutive runs on ubuntu-latest under the parallel suite, with the run log kept on the PR"
+  rulings:
+  - R-276
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -20787,4 +20847,16 @@
   rulings:
   - R-180
   - R-267
+  milestone: M0
+- id: REQ-SYS-072
+  area: SYS
+  statement: "A `pull_request_review` run of reviews-complete must re-run the stale `pull_request`-event run for the same head, so one passing review turns both check suites green (R-276)."
+  source:
+  - file: decisions.md
+    section: "R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review"
+  verify:
+    method: review checklist
+    detail: "on a PR, after the last named approval, both reviews-complete check runs for the head pass and mergeStateStatus is CLEAN with no manual re-run"
+  rulings:
+  - R-276
   milestone: M0
