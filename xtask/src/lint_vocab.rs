@@ -260,34 +260,32 @@ fn unmark(text: &str) -> (String, Vec<(usize, Found)>) {
     let mut at = 0;
     loop {
         let open = text[at..].find(OPEN).map(|i| at + i);
-        let close = text[at..].find(CLOSE).map(|i| at + i);
-        match (open, close) {
-            (Some(o), Some(c)) if o < c => {
-                read.push_str(&text[at..o]);
-                let end = c + CLOSE.len();
-                // Byte for byte, so every offset, and so every line, stays that of `text`.
-                read.extend(
-                    text[o..end]
-                        .bytes()
-                        .map(|x| if x == b'\n' { '\n' } else { ' ' }),
-                );
-                at = end;
-            }
-            (_, Some(c)) => {
-                unpaired.push((c, Found::Unopened));
-                read.push_str(&text[at..c + CLOSE.len()]);
-                at = c + CLOSE.len();
-            }
-            (Some(o), None) => {
-                unpaired.push((o, Found::Unclosed));
-                read.push_str(&text[at..]);
-                break;
-            }
-            (None, None) => {
-                read.push_str(&text[at..]);
-                break;
-            }
+        // A closing marker before the next opening one (or anywhere, if none follows) has no pair.
+        if let Some(i) = text[at..open.unwrap_or(text.len())].find(CLOSE) {
+            let end = at + i + CLOSE.len();
+            unpaired.push((at + i, Found::Unopened));
+            read.push_str(&text[at..end]);
+            at = end;
+            continue;
         }
+        let Some(o) = open else {
+            read.push_str(&text[at..]);
+            break;
+        };
+        let Some(i) = text[o..].find(CLOSE) else {
+            unpaired.push((o, Found::Unclosed));
+            read.push_str(&text[at..]);
+            break;
+        };
+        let end = o + i + CLOSE.len();
+        read.push_str(&text[at..o]);
+        // Byte for byte, so every offset, and so every line, stays that of `text`.
+        read.extend(
+            text[o..end]
+                .bytes()
+                .map(|x| if x == b'\n' { '\n' } else { ' ' }),
+        );
+        at = end;
     }
     (read, unpaired)
 }
