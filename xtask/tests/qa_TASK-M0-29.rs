@@ -526,7 +526,7 @@ fn qa_m0_29_ci_workflow_check_accepts_the_per_push_steps() {
          \x20     - name: Build\n\
          \x20       run: cargo build --workspace\n\
          \x20     - name: Test\n\
-         \x20       run: cargo test --workspace\n\
+         \x20       run: cargo nextest run --workspace\n\
          \x20     - name: Deps\n\
          \x20       run: cargo xtask deps\n\
          \x20     - name: Ci\n\
@@ -544,7 +544,7 @@ negative_control!(
          \x20     - name: Build\n\
          \x20       run: cargo build --workspace\n\
          \x20     - name: Test\n\
-         \x20       run: cargo test --workspace\n\
+         \x20       run: cargo nextest run --workspace\n\
          \x20     - name: Deps\n\
          \x20       # run: cargo xtask deps\n\
          \x20     - name: Ci\n\

@@ -5,6 +5,10 @@
 //! calls stay as they are (R-215).
 
 use std::path::{Path, PathBuf};
+
+// Written only when their content changes, each with its own target directory kept across runs (R-231).
+#[path = "../../../crates/validation/tests/support/fixture_tree.rs"]
+mod fixture_tree;
 use std::process::Command;
 use validation::spawn::Spawn;
 
@@ -42,7 +46,6 @@ pub fn workspace(case: &str, files: &[(String, String)]) -> PathBuf {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("qa_TASK-M0-01_r194")
         .join(case);
-    let _ = std::fs::remove_dir_all(&root);
     let mut all: Vec<(String, String)> = vec![
         (
             "Cargo.toml".into(),
@@ -64,11 +67,7 @@ pub fn workspace(case: &str, files: &[(String, String)]) -> PathBuf {
         ("crates/validation/src/lib.rs".into(), "pub struct Harness;\n".into()),
     ];
     all.extend(files.iter().cloned());
-    for (rel, text) in all {
-        let path = root.join(rel);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, text).unwrap();
-    }
+    fixture_tree::write_tree(&root, &all);
     root
 }
 

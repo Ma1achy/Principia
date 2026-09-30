@@ -1,0 +1,16 @@
+# cargo-nextest's configuration: CI and the documented local run test through nextest (R-231, REQ-VAL-165).
+#
+# nextest runs each test in a process of its own, and tests from every binary at once. A cargo run into the
+# workspace's own target directory replaces the binaries uplifted there (`CARGO_BIN_EXE_xtask`, `qa_child`, `gate`)
+# even when nothing is rebuilt, while other tests spawn them (REQ-VAL-164). Under `cargo test` those runs were kept
+# apart by in-process locks (`WORKSPACE_TARGET` in xtask's `tests/controls.rs`, `WORKSPACE_RUN` in validation's
+# `tests/qa_TASK-M0-24.rs`) and by test binaries running one after another; here each test that runs cargo, or an
+# xtask command that runs cargo, on the workspace's own target directory takes every test thread, so it runs alone.
+[[profile.default.overrides]]
+filter = """
+    binary_id(validation::qa_TASK-M0-24)
+    | (binary_id(xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+    | (binary_id(xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
+    | binary_id(xtask::nextest)
+"""
+threads-required = "num-test-threads"

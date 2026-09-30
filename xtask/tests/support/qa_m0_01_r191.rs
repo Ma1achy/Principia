@@ -4,6 +4,10 @@
 //! used by each file that includes it.
 
 use std::path::{Path, PathBuf};
+
+// Written only when their content changes, each with its own target directory kept across runs (R-231).
+#[path = "../../../crates/validation/tests/support/fixture_tree.rs"]
+mod fixture_tree;
 use std::process::Command;
 use validation::spawn::Spawn;
 
@@ -39,7 +43,6 @@ pub fn workspace(case: &str, files: &[(&str, &str)]) -> PathBuf {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("qa_TASK-M0-01_r191")
         .join(case);
-    let _ = std::fs::remove_dir_all(&root);
     let mut all: Vec<(String, String)> = vec![
         (
             "Cargo.toml".into(),
@@ -61,11 +64,7 @@ pub fn workspace(case: &str, files: &[(&str, &str)]) -> PathBuf {
         ("crates/validation/src/lib.rs".into(), "pub struct Harness;\n".into()),
     ];
     all.extend(files.iter().map(|(p, t)| (p.to_string(), t.to_string())));
-    for (rel, text) in all {
-        let path = root.join(rel);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, text).unwrap();
-    }
+    fixture_tree::write_tree(&root, &all);
     root
 }
 
@@ -162,7 +161,8 @@ pub fn check_lib_test_false_fails(root: &Path) {
     );
 }
 
-/// The target directory cargo reports for the workspace at `root`.
+/// The target directory cargo reports for the workspace at `root`, emptied: a fixture's target directory is kept across
+/// runs (R-231), and the stable-target-directory checks need the check's directory made by their own first run.
 pub fn target_directory(root: &Path) -> PathBuf {
     let out = Command::new(env!("CARGO"))
         .args([
@@ -178,7 +178,9 @@ pub fn target_directory(root: &Path) -> PathBuf {
         .timed_output()
         .expect("run cargo metadata");
     let doc: serde_json::Value = serde_json::from_slice(&out.stdout).expect("metadata JSON");
-    PathBuf::from(doc["target_directory"].as_str().expect("target_directory"))
+    let target = PathBuf::from(doc["target_directory"].as_str().expect("target_directory"));
+    let _ = std::fs::remove_dir_all(&target);
+    target
 }
 
 /// The directories directly under `t`, sorted (none if `t` does not exist).
