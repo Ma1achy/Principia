@@ -46,9 +46,9 @@ fn case(root: &Path, case: &str) -> CaseResult {
         .unwrap_or_else(|| panic!("no case `{case}`"))
 }
 
-/// The layout case under `root` wrote a capture of the surface's size, showing more than one colour, beside a
+/// The layout case's capture under `root`, after checking it is of the surface's size and sits beside a
 /// byte-for-byte copy of the reference it names.
-fn check_capture(root: &Path) {
+fn capture(root: &Path) -> Vec<u8> {
     let result = case(root, "layout");
     let Ok(Outcome::Captured { capture, artboard }) = &result.result else {
         panic!("layout case did not capture: {result}");
@@ -66,23 +66,35 @@ fn check_capture(root: &Path) {
     );
     let (size, rgba) = screenshot::read_png(capture).expect("capture decoded");
     assert_eq!(size, [240, 80], "capture not the surface's size");
-    let first = &rgba[..4];
+    rgba
+}
+
+/// The layout case under `root` wrote its capture beside its reference, and the capture shows the surface's controls:
+/// it differs from the capture under `other`, whose surface lacks one of them. Two captures on one backend are
+/// compared, so the check holds on every backend (an empty panel need not render uniform, as on llvmpipe).
+fn check_capture(root: &Path, other: &Path) {
     assert!(
-        rgba.chunks(4).any(|px| px != first),
-        "capture is uniform: the surface drew nothing"
+        capture(root) != capture(other),
+        "capture is identical to a surface lacking a control: the surface's controls were not drawn"
     );
 }
 
 #[test]
 fn screenshot_selftest_layout_writes_capture_beside_reference() {
-    check_capture(&root("shot_layout", |_| true));
+    check_capture(
+        &root("shot_layout", |_| true),
+        &root("shot_layout_other", |l| l != "Selftest checkbox"),
+    );
 }
 
 negative_control!(
     screenshot_selftest_layout_writes_capture_beside_reference,
-    "a surface with no controls draws a uniform panel, which the capture check must reject",
-    expected = "capture is uniform",
-    check_capture(&root("shot_layout_control", |_| false))
+    "two captures of the same surface are identical, which the capture check must reject",
+    expected = "capture is identical",
+    check_capture(
+        &root("shot_layout_control", |_| true),
+        &root("shot_layout_control_other", |_| true),
+    )
 );
 
 /// The presence-only case under `root` passes, finding both controls.
