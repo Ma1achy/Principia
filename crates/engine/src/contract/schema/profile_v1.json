@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "principia-profile-v1",
   "title": "Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, \"Profiler schema v1: the keys and the nesting\")",
-  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line: its first line against #/$defs/header_line, its last against #/$defs/summary_line, and each line between against #/$defs/frame. The root accepts a line of any of the three places.",
+  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line against the definition for the place each line holds: its first line against #/$defs/header_line, each frame record after it against #/$defs/frame, and the summary line, last, against #/$defs/summary_line. A session that ended before its summary line (R-298) leaves a trace whose last line is a #/$defs/frame, or the #/$defs/header_line when it recorded no frame; that trace is valid. The root accepts a line of any of the three places.",
   "oneOf": [
     { "$ref": "#/$defs/header_line" },
     { "$ref": "#/$defs/frame" },
@@ -20,7 +20,7 @@
       }
     },
     "summary_line": {
-      "$comment": "The last line: the precomputed summaries, after the frames.",
+      "$comment": "The summary line: the precomputed summaries, last, after the frames. A trace whose session ended before it (R-298) has no summary line.",
       "type": "object",
       "additionalProperties": false,
       "required": ["leak_flags", "hot_paths"],
@@ -135,7 +135,7 @@
       }
     },
     "frame": {
-      "$comment": "One line between the header line and the summary line: one frame record. stage_ms.present and stages.present are null together or present together.",
+      "$comment": "One line after the header line, and before the summary line when there is one: one frame record. The last line of a trace without a summary line (R-298) is a frame. stage_ms.present and stages.present are null together or present together.",
       "type": "object",
       "additionalProperties": false,
       "required": [
