@@ -154,7 +154,7 @@
   title: "`prin profile`: a fixed scenario headless, and the regression diff"
   depends_on: [TASK-M0-17]
   needs: []
-  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119]
+  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M0-19
@@ -2151,7 +2151,7 @@
   pitfalls: []
 - id: TASK-M0-43
   milestone: M0
-  title: "One golden reference per GPU backend"
+  title: "Fragment output quantised in the shader; one golden reference across backends"
   depends_on: [TASK-M0-06]
   needs: []
   requirements: [REQ-VAL-176]

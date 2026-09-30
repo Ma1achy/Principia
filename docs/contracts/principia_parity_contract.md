@@ -147,6 +147,8 @@ Therefore Tier-N tolerances are **pinned empirically, not guessed**: **native in
 
 Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0 ~1e-6. These are starting points to be replaced by measured values.
 
+**Golden images are byte-exact across backends by construction (R-287).** Fragment output quantises explicitly in the shader — round half to even, then store — not through a backend's automatic float-to-unorm conversion, which breaks exact half-way ties differently (Metal rounds up, lavapipe to even; R-269's measurement). Every backend then writes identical bytes, and a golden case keeps one reference across backends; a case whose bytes still differ keeps one reference per backend (R-269).
+
 ---
 
 ## 5. The aggregate-survey agreement test (what certifies "the picture is the same")

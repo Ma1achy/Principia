@@ -15172,6 +15172,7 @@
   rulings:
   - R-56
   - R-72
+  - R-286
   milestone: M0
 - id: REQ-TOOL-121
   area: TOOL
@@ -15475,6 +15476,20 @@
     detail: "cargo test -p xtask codegen_unchanged: running codegen twice leaves every generated file's mtime unchanged on the second run; changing one ledger entry rewrites only the files it affects"
   rulings:
   - R-284
+  milestone: M0
+- id: REQ-TOOL-139
+  area: TOOL
+  statement: "`prin profile show PATH --pretty` must print a JSON Lines trace indented for reading, the file itself staying compact (R-286)."
+  source:
+  - file: decisions.md
+    section: "R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  verify:
+    method: unit test
+    detail: "cargo test -p prin profile_show: --pretty prints each line indented and the printed JSON parses to the same values as the file; without --pretty the file's lines print unchanged"
+  rulings:
+  - R-286
   milestone: M0
 - id: REQ-VAL-001
   area: VAL
@@ -18396,7 +18411,7 @@
   milestone: M0
 - id: REQ-VAL-176
   area: VAL
-  statement: "Each golden-image case must keep one reference per GPU backend, and the golden runner must compare a render only with the reference for the backend it rendered on, naming that backend in its report, since lavapipe and Metal break exact half-way rounding ties differently (max step 1, R-269)."
+  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes and each golden-image case keeps one reference across backends; a case whose bytes still differ between backends must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend (R-269, R-287)."
   source:
   - file: decisions.md
     section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
@@ -18404,11 +18419,14 @@
     section: 4. Tolerance — and the cross-backend reality
   - file: docs/contracts/principia_parity_contract.md
     section: 6. The harness
+  - file: decisions.md
+    section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
   verify:
-    method: unit test
-    detail: "cargo test -p xtask golden: a case with Metal and Vulkan references passes on each backend against its own and fails against the other's R269 fixture; a case missing the reference for the running backend fails naming the backend; the self-test cases keep 0 steps per backend"
+    method: golden image
+    detail: "CI on the PR head: R-269's half-way fixture renders identical bytes on gpu-metal and gpu-lavapipe (max step 0) with in-shader quantisation, and max step 1 without it (the control); cargo test -p xtask golden: the per-backend fallback passes against its own backend's reference and fails against the other's, and a missing reference fails naming the backend"
   rulings:
   - R-269
+  - R-287
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

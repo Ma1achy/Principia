@@ -2541,7 +2541,8 @@ to the floor, and each case increments a telemetry counter."
 
 *Applied:* in TASK-M0-10. The `d_min` packer's `debug_assert!` fails on a NaN or a negative input. In release, a NaN
 stores `0x7C00` and a negative value stores the floor, `0x0001`, and each case increments a telemetry counter. The
-counter is defined by that task if the corpus doesn't already name it (R-72).
+corpus names no such counter, and a GPU-side count has to cross the membrane, which the corpus doesn't settle, so the
+counter's definition waits on RQ-171 (filed on PR #78).
 
 ## R-282 — TASK-M0-17's design items accepted
 *30 Sep 2026 · applied in TASK-M0-17 (PR #79)*
@@ -2580,3 +2581,27 @@ under GitHub's 10 GB limit."
 *Applied:* a new task, TASK-M0-42. CI workflows stop caching whole target dirs (`Swatinem/rust-cache` caches `target`
 by default). They cache the cargo registry and the fixture pool (R-270), each under a key naming its job, so the
 repo's Actions cache stays well under GitHub's 10 GB limit.
+
+## R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line
+*30 Sep 2026 · applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18*
+
+"R-286: profiler traces are JSON Lines: the header on the first line, then one compact frame record per line.
+Pretty-printing is on demand (prin profile show --pretty, or jq). This meets §5's "readable" and "bounded size"
+together. Apply it in #79's fix round."
+
+*Applied:* a trace file's first line is the session header and each later line is one compact frame record. The
+writer never pretty-prints. TASK-M0-17 writes the format in telemetry §5 and applies it in PR #79's fix round.
+`prin profile show --pretty` joins TASK-M0-18, which builds `prin profile` (REQ-TOOL-139).
+
+## R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*
+*30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
+
+"R-287: fragment output quantises explicitly in the shader (round half to even, then store), not through the
+backend's automatic float-to-unorm conversion, so every backend writes identical bytes. Once that lands, goldens
+return to one reference across backends (amends R-269; per-backend references stay the fallback if any case still
+differs). Fold it into TASK-M0-43."
+
+*Applied:* TASK-M0-43 now quantises each fragment output channel in the shader, rounding half to even, before the
+store, so no backend's float-to-unorm conversion decides a tie (R-269's measured difference). Each golden case then
+keeps one reference for every backend. A case whose bytes still differ between backends keeps one reference per
+backend, as R-269 ruled, and the PR names it.

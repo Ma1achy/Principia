@@ -619,3 +619,11 @@
   section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
   reason: informative only
   note: applied in REQ-SYS-073 and TASK-M0-42 (new)
+- file: decisions.md
+  section: "R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line"
+  reason: informative only
+  note: applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18
+- file: decisions.md
+  section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
+  reason: informative only
+  note: applied in parity contract §4, REQ-VAL-176 and TASK-M0-43
