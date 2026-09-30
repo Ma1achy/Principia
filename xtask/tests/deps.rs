@@ -5,6 +5,10 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+// Synthetic workspaces are written only when their content changes (R-231).
+#[path = "../../crates/validation/tests/support/fixture_tree.rs"]
+mod fixture_tree;
+
 use validation::spawn::Spawn;
 use xtask::deps::{check, DepKind, Edge, Metadata};
 
@@ -325,12 +329,12 @@ fn deps_missing_targets_are_an_error_for_a_workspace() {
 /// R-191's compile check runs on real cargo workspaces: a synthetic one with ledger, kernel (with a build script that
 /// writes `$OUT_DIR/generated.rs`, and ledger as its build-dependency, R-185) and validation, each tiny. `dev` lists
 /// the crates that take validation as a dev-dependency; `files` (paths relative to the workspace root) are written
-/// last, over the defaults.
+/// last, over the defaults. Only files whose content changed are written, and `<root>/target` is kept across runs, so a
+/// warm run rebuilds nothing of the workspace's own (R-231).
 fn cargo_workspace(case: &str, dev: &[&str], files: &[(&str, &str)]) -> PathBuf {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("deps_r191")
         .join(case);
-    let _ = std::fs::remove_dir_all(&root);
     let package = |name: &str, extra: &str| {
         let dev_dep = if dev.contains(&name) {
             "\n[dev-dependencies]\nvalidation = { path = \"../validation\" }\n"
@@ -357,11 +361,7 @@ fn cargo_workspace(case: &str, dev: &[&str], files: &[(&str, &str)]) -> PathBuf 
         ("crates/validation/src/lib.rs".into(), "pub struct Harness;\n".into()),
     ];
     all.extend(files.iter().map(|(p, t)| (p.to_string(), t.to_string())));
-    for (rel, text) in all {
-        let path = root.join(rel);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, text).unwrap();
-    }
+    fixture_tree::write_tree(&root, &all);
     root
 }
 
@@ -373,7 +373,7 @@ fn build_rs(generated: &str) -> String {
     )
 }
 
-/// Every cargo run on a synthetic workspace at `root` builds in `<root>/target`, its own directory, made fresh with the
+/// Every cargo run on a synthetic workspace at `root` builds in `<root>/target`, its own directory, kept with the
 /// workspace, and never in the outer build's, which an inherited `CARGO_TARGET_DIR` would have every test share (R-208).
 fn own_target<'a>(command: &'a mut Command, root: &std::path::Path) -> &'a mut Command {
     command.env("CARGO_TARGET_DIR", root.join("target"))
@@ -974,16 +974,24 @@ fn deps_the_check_directory_is_keyed_by_the_workspace_root() {
     );
 }
 
-/// A control's case: `<name>_nc_<pid>`, so a control shares no synthetic workspace with a test, nor with itself run
-/// by the `cargo xtask controls` that `controls_on_this_workspace_skips_gui` starts. Dropped as the control panics,
-/// it removes the workspaces `<case>` and `<case>_control` and the temporary directory `<case>`.
+/// A control's case: `<name>_nc`, so a control shares no synthetic workspace, nor its target directory, with a test
+/// (R-224). Its workspaces `<case>` and `<case>_control` are kept across runs, as a test's are (R-231); dropped as the
+/// control panics, it removes its temporary directory, `outside`.
 #[cfg(feature = "controls")]
 struct Case(String);
 
 #[cfg(feature = "controls")]
 impl Case {
     fn new(name: &str) -> Self {
-        Case(format!("{name}_nc_{}", std::process::id()))
+        let case = Case(format!("{name}_nc"));
+        let _ = std::fs::remove_dir_all(case.outside());
+        case
+    }
+
+    /// A target directory outside the workspace and the repository, `<case>-<pid>` in the system's temporary
+    /// directory, which other checkouts share.
+    fn outside(&self) -> PathBuf {
+        std::env::temp_dir().join(format!("{}-{}", self.0, std::process::id()))
     }
 
     fn root(&self, dev: &[&str], files: &[(&str, &str)]) -> PathBuf {
@@ -999,10 +1007,7 @@ impl Case {
 #[cfg(feature = "controls")]
 impl Drop for Case {
     fn drop(&mut self) {
-        let workspaces = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("deps_r191");
-        let _ = std::fs::remove_dir_all(workspaces.join(&self.0));
-        let _ = std::fs::remove_dir_all(workspaces.join(format!("{}_control", self.0)));
-        let _ = std::fs::remove_dir_all(std::env::temp_dir().join(&self.0));
+        let _ = std::fs::remove_dir_all(self.outside());
     }
 }
 
@@ -1353,7 +1358,7 @@ validation::negative_control!(
         let case = Case::new("outside_target");
         let root = case.root(&["kernel"], &[(KERNEL_LIB, UNIT_TEST)]);
         assert!(
-            run_workspace_in(&root, &std::env::temp_dir().join(&case.0)).0,
+            run_workspace_in(&root, &case.outside()).0,
             "control: the unit test that uses validation did not pass xtask deps"
         );
     }
@@ -1367,7 +1372,7 @@ validation::negative_control!(
         let case = Case::new("shared_target");
         let a = case.root(&["kernel"], &[]);
         without_build_script(&a);
-        let (ok, _, stderr) = run_workspace_in(&a, &std::env::temp_dir().join(&case.0));
+        let (ok, _, stderr) = run_workspace_in(&a, &case.outside());
         assert!(
             !ok && stderr.contains("R-191"),
             "control: workspace A without the unit test did not fail:\n{stderr}"
