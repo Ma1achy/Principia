@@ -4,6 +4,7 @@
 //! (REQ-TOOL-008). Each test registers the control that must make it fail (R-176).
 
 use std::collections::BTreeSet;
+use std::io;
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -880,4 +881,112 @@ validation::negative_control!(
     "a written trace's pools add up, so the reader must accept it, failing the check",
     expected = "was accepted by the reader",
     check_sum_rejected(&written(&interactive()), "a trace whose pools add up")
+);
+
+// ----- buffering: a plain `File` is as fast as a buffered one -----
+
+/// Counts the calls that reach the inner writer or reader, and the bytes through them.
+struct Counting<T> {
+    inner: T,
+    calls: usize,
+    bytes: usize,
+}
+
+impl<T> Counting<T> {
+    fn new(inner: T) -> Self {
+        Counting {
+            inner,
+            calls: 0,
+            bytes: 0,
+        }
+    }
+
+    /// Fails unless the calls average at least 1 KiB: serde_json unbuffered makes one call per token or per byte.
+    fn check_buffered(&self, what: &str) {
+        assert!(self.bytes > 0, "nothing was {what}");
+        assert!(
+            self.bytes >= self.calls * 1024,
+            "{what} unbuffered: {} calls for {} bytes",
+            self.calls,
+            self.bytes
+        );
+    }
+}
+
+impl io::Write for Counting<Vec<u8>> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.calls += 1;
+        self.bytes += buf.len();
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl io::Read for Counting<&[u8]> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.calls += 1;
+        let n = self.inner.read(buf)?;
+        self.bytes += n;
+        Ok(n)
+    }
+}
+
+/// An interactive session of 64 frames, some hundreds of KiB when written.
+fn long_session() -> Trace {
+    let mut trace = interactive();
+    trace.frames = (0..64).map(|i| frame(i, 0.125, true)).collect();
+    trace
+}
+
+/// `write_with` writes the long session in large calls, and all of it: the file reads back as the trace.
+fn check_write_buffered(
+    write_with: impl FnOnce(&Trace, &mut Counting<Vec<u8>>) -> Result<(), serde_json::Error>,
+) {
+    let trace = long_session();
+    let mut out = Counting::new(Vec::new());
+    write_with(&trace, &mut out).expect("the writer failed");
+    out.check_buffered("written");
+    check_reads_back(&trace, &out.inner);
+}
+
+/// `read_with` reads the long session in large calls.
+fn check_read_buffered(
+    read_with: impl FnOnce(&mut Counting<&[u8]>) -> Result<Trace, serde_json::Error>,
+) {
+    let trace = long_session();
+    let text = bytes(&trace);
+    let mut input = Counting::new(text.as_slice());
+    let back = read_with(&mut input).expect("the reader failed");
+    input.check_buffered("read");
+    assert!(
+        back == trace,
+        "the file does not read back as the trace written"
+    );
+}
+
+#[test]
+fn profile_v1_write_is_buffered() {
+    check_write_buffered(|trace, out| write(trace, out));
+}
+
+validation::negative_control!(
+    profile_v1_write_is_buffered,
+    "serde_json straight into the counting writer must fail the check",
+    expected = "written unbuffered",
+    check_write_buffered(|trace, out| serde_json::to_writer_pretty(out, trace))
+);
+
+#[test]
+fn profile_v1_read_is_buffered() {
+    check_read_buffered(|input| read(input));
+}
+
+validation::negative_control!(
+    profile_v1_read_is_buffered,
+    "serde_json straight from the counting reader must fail the check",
+    expected = "read unbuffered",
+    check_read_buffered(|input| serde_json::from_reader(input))
 );

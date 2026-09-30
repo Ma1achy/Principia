@@ -8,7 +8,7 @@
 
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::io;
+use std::io::{self, Write};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -414,17 +414,23 @@ where
 /// negative ms, NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the
 /// sum of its `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
 /// `allocations` is an error, and nothing is written.
+///
+/// The writer is buffered here and flushed before `write` returns, so a plain `File` costs no more than a `BufWriter`.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
     check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
-    serde_json::to_writer_pretty(writer, trace)
+    let mut writer = io::BufWriter::new(writer);
+    serde_json::to_writer_pretty(&mut writer, trace)?;
+    writer.flush().map_err(serde_json::Error::io)
 }
 
 /// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a missing
 /// key, even one whose value may be `null`, a value outside its range, a frame with one `present` null and the other
 /// not, a pool whose `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind`
 /// or for one kind and pool in a stage's `allocations`, so what `read` accepts validates against [`SCHEMA_V1`].
+///
+/// The reader is buffered here, so a plain `File` costs no more than a `BufReader`.
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
-    let trace: Trace = serde_json::from_reader(reader)?;
+    let trace: Trace = serde_json::from_reader(io::BufReader::new(reader))?;
     check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
     Ok(trace)
 }
