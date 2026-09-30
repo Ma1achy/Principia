@@ -11,9 +11,11 @@
 //!   the ranges; the three cross-field rules; the writer fails rather than write a value outside the definition; the
 //!   reader rejects it; the four stated reader/schema exceptions.
 //! - R-286: the file is JSON Lines — the header line first, one compact frame record per line, the summary line last;
-//!   a blank line, a misplaced line or a file that ends before its summary line is not v1; a last line without its
-//!   newline is accepted. The JSON Schema checks each line against its place's `$defs` entry: `header_line`, `frame`,
-//!   `summary_line` (§5).
+//!   a blank line or a misplaced line is not v1; a last line without its newline is accepted. The JSON Schema checks
+//!   each line against its place's `$defs` entry: `header_line`, `frame`, `summary_line` (§5).
+//! - R-298 (amends R-286): a trace with no final summary line, a crashed or still-running session, is valid: its last
+//!   line is a frame record, or the header line when no frame was recorded. The reader returns the frames, reports
+//!   `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it (REQ-TOOL-008).
 //! - R-288: the frame record carries `dmin_nan_unset` and `dmin_negative_floored`, each a u32 count (§5's ranges).
 //!
 //! The fixture is hand-written JSON, filled with known values from the §5 definition and laid out as JSON Lines here,
@@ -22,7 +24,7 @@
 
 use std::collections::BTreeSet;
 
-use engine::contract::profile::{read, write, Trace, SCHEMA_ID, SCHEMA_V1};
+use engine::contract::profile::{read, write, Session, Trace, SCHEMA_ID, SCHEMA_V1};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
@@ -160,11 +162,15 @@ fn lines_of(text: &str) -> Vec<&str> {
     body.split('\n').collect()
 }
 
-/// §5's place for line `i` of `n`: the first is the header line, the last the summary line, the rest frame records.
-fn place(i: usize, n: usize) -> &'static str {
+/// §5's place for line `i` of `n`, whose value is `line`: the first is the header line, and one between is a frame
+/// record. The last, after the header, is the summary line, or a frame record in a session that ended before its
+/// summary line (R-298, §5: "Each line is checked against the definition for the place it holds, so the last line is a
+/// `frame` (or the `header_line`)"). A last line that is not a summary line is held to `frame`, so a last line that is
+/// neither fails.
+fn place(i: usize, n: usize, line: &Value) -> &'static str {
     if i == 0 {
         "header_line"
-    } else if i + 1 == n {
+    } else if i + 1 == n && place_validator("summary_line").is_valid(line) {
         "summary_line"
     } else {
         "frame"
@@ -202,18 +208,18 @@ fn schema_accepts(doc: &Value) -> bool {
 }
 
 /// A file's text checked line by line (§5: "the schema checks the file line by line, each line against the
-/// definition for its place"). A line that is not JSON fails.
+/// definition for its place"). A line that is not JSON fails. The header line alone is a file (R-298).
 fn schema_accepts_file(text: &str) -> bool {
     let lines = lines_of(text);
     let n = lines.len();
     let mut parsed = Vec::new();
     for (i, line) in lines.iter().enumerate() {
         match serde_json::from_str::<Value>(line) {
-            Ok(v) => parsed.push((place(i, n), v)),
+            Ok(v) => parsed.push((place(i, n, &v), v)),
             Err(_) => return false,
         }
     }
-    n >= 2 && schema_accepts_lines(&parsed)
+    schema_accepts_lines(&parsed)
 }
 
 fn reader_accepts(text: &str) -> bool {
@@ -317,7 +323,7 @@ fn check_every_scope_under_a_stage(text: &str) {
     let mut found = 0;
     for (i, line) in lines.iter().enumerate() {
         let v: Value = serde_json::from_str(line).expect("a line is not JSON");
-        walk(&v, place(i, n) == "frame", &mut Vec::new(), &mut found);
+        walk(&v, place(i, n, &v) == "frame", &mut Vec::new(), &mut found);
     }
     assert!(
         found > 0,
@@ -1220,8 +1226,10 @@ validation::negative_control!(
     )
 );
 
-/// §5: "A line that is not the object its place calls for, a blank line among them, or a file that ends before its
-/// summary line is not schema v1."
+/// §5: "A line that is not the object its place calls for, or a blank line among them, is not schema v1." A file that
+/// ends before its summary line is not among them since R-298: it is `qa_m017_a_session_without_its_summary_line_reads`'s.
+/// Only the summary line may be missing: a last line that is neither the summary line nor a frame record is still
+/// not v1.
 #[test]
 fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
     let doc = interactive();
@@ -1233,57 +1241,72 @@ fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
     let ls: Vec<String> = placed(&doc).iter().map(|(_, l)| l.to_string()).collect();
     let (head, f0, f1, f2, summary) = (&ls[0], &ls[1], &ls[2], &ls[3], &ls[4]);
     let join = |parts: &[&str]| -> String { parts.iter().map(|p| format!("{p}\n")).collect() };
-    let cases: Vec<(String, &str)> = vec![
-        (String::new(), "an empty file"),
-        (join(&[head]), "a header line alone"),
-        (
-            join(&[head, f0, f1, f2]),
-            "a file ending before its summary line",
-        ),
+    let mut bad_last = frame(2, true, 0.0);
+    bad_last["frame_ms"] = json!(-1.0);
+    let bad_last = bad_last.to_string();
+    // Each case, and whether the schema's per-place check rejects it too: where the lines are single objects in the
+    // wrong place, or a last line that fits no place.
+    let cases: Vec<(String, &str, bool)> = vec![
+        (String::new(), "an empty file", false),
         (
             join(&[f0, head, f1, f2, summary]),
             "a frame before the header line",
+            true,
         ),
         (
             join(&[summary, f0, f1, f2, head]),
             "the summary line first, the header last",
+            true,
         ),
         (
             join(&[head, f0, f1, summary, f2]),
             "a frame after the summary line",
+            true,
         ),
-        (join(&[head, head, f0, f1, f2, summary]), "two header lines"),
+        (
+            join(&[head, head, f0, f1, f2, summary]),
+            "two header lines",
+            true,
+        ),
         (
             join(&[head, f0, f1, f2, summary, summary]),
             "two summary lines",
+            true,
         ),
         (
             join(&[head, "", f0, f1, f2, summary]),
             "a blank line after the header",
+            false,
         ),
         (
             join(&[head, f0, "", f1, f2, summary]),
             "a blank line between frames",
+            false,
         ),
         (
             join(&[head, f0, f1, f2, "   ", summary]),
             "a whitespace-only line before the summary",
+            false,
         ),
         (
             join(&[head, f0, f1, f2, summary, ""]),
             "a blank line after the summary line",
+            false,
         ),
         (
             format!("{}\n", doc),
             "the whole trace as one object on one line",
+            true,
         ),
         (
             format!("{}\n", serde_json::to_string_pretty(&doc).unwrap()),
             "the whole trace as one pretty-printed object",
+            false,
         ),
         (
             join(&[head, &format!("{f0}{f1}"), f2, summary]),
             "two frame records on one line",
+            false,
         ),
         (
             join(&[
@@ -1294,6 +1317,7 @@ fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
                 summary,
             ]),
             "a header line with a frames key",
+            true,
         ),
         (
             join(&[
@@ -1304,23 +1328,51 @@ fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
                 &format!("{{\"schema\":\"principia-profile-v1\",{}", &summary[1..]),
             ]),
             "a summary line with a schema key",
+            true,
+        ),
+        // R-298 makes only the summary line optional; these still are not v1.
+        (
+            join(&[head, f0, f1, ""]),
+            "a blank line where the summary line would be",
+            false,
+        ),
+        (
+            join(&[head, "   "]),
+            "the header line, then a whitespace-only line",
+            false,
+        ),
+        (
+            join(&[f0, f1, f2]),
+            "frame records with no header line",
+            true,
+        ),
+        (join(&[summary]), "a summary line alone", true),
+        (
+            join(&[head, f0, summary, f1]),
+            "the summary line between frames, the file ending on a frame",
+            true,
+        ),
+        (
+            join(&[head, f0, head]),
+            "a second header line where the summary line would be",
+            true,
+        ),
+        (
+            join(&[head, f0, f1, &bad_last]),
+            "a session that ended before its summary line, its last frame's frame_ms negative",
+            true,
         ),
     ];
-    for (t, what) in &cases {
+    for (t, what, _) in &cases {
         check_reader_rejects_file(t, what);
     }
-    // Where the lines are single objects in the wrong place, the schema's per-place check rejects them too.
-    for (t, what) in &cases[3..8] {
-        assert!(
-            !schema_accepts_file(t),
-            "not v1, but the schema accepts {what}"
-        );
-    }
-    for (t, what) in &cases[15..] {
-        assert!(
-            !schema_accepts_file(t),
-            "not v1, but the schema accepts {what}"
-        );
+    for (t, what, schema_too) in &cases {
+        if *schema_too {
+            assert!(
+                !schema_accepts_file(t),
+                "not v1, but the schema accepts {what}"
+            );
+        }
     }
 }
 
@@ -1329,6 +1381,318 @@ validation::negative_control!(
     "a valid JSON Lines file must fail the rejection check",
     expected = "not v1, but the reader accepts",
     check_reader_rejects_file(&jsonl(&interactive()), "a valid file")
+);
+
+// ----- R-298: a session that ended before its summary line -----
+
+/// The interactive fixture with a leak flag and a hot-path summary on its summary line, so that summaries absent for
+/// "session incomplete" cannot pass for `null` ones.
+fn summarised() -> Value {
+    let mut doc = interactive();
+    doc["leak_flags"] = json!([{ "growth_bytes_per_s": 1.5 }]);
+    doc["hot_paths"] = json!([{ "scope": "integrate", "p95_ms": 6.0 }]);
+    doc
+}
+
+/// The first `keep` lines of `text`, each ended by a newline: the file a session leaves when it stops there.
+fn first_lines(text: &str, keep: usize) -> String {
+    lines_of(text)[..keep]
+        .iter()
+        .map(|l| format!("{l}\n"))
+        .collect()
+}
+
+/// `text` without its last line: the file of a session that ended before its summary line.
+fn cut_summary(text: &str) -> String {
+    first_lines(text, lines_of(text).len() - 1)
+}
+
+/// R-298: `text` reads as a session that ended before its summary line, holding the first `frames` of `doc`'s frames.
+/// The reader returns the header and those frames and reports `leak_flags` and `hot_paths` as absent with "session
+/// incomplete"; the schema accepts each line in the place it holds.
+fn check_incomplete(text: &str, doc: &Value, frames: usize, what: &str) {
+    let got = read(text.as_bytes()).unwrap_or_else(|e| panic!("the reader rejects {what}: {e}"));
+    let complete = read_doc(doc);
+    assert!(
+        got.header == complete.header,
+        "{what}: the header read is not the one written"
+    );
+    assert!(
+        got.frames[..] == complete.frames[..frames],
+        "{what}: the frames read are not the first {frames} written"
+    );
+    for (key, absent) in [
+        ("leak_flags", got.leak_flags()),
+        ("hot_paths", got.hot_paths()),
+    ] {
+        match absent {
+            Err(reason) => assert_eq!(
+                reason.to_string(),
+                "session incomplete",
+                "{what}: {key} is absent, but not with \"session incomplete\""
+            ),
+            Ok(entries) => panic!("{what}: {key} is present, with {} entries", entries.len()),
+        }
+    }
+    assert!(
+        got.session == Session::Incomplete,
+        "{what}: the trace does not say its session is incomplete"
+    );
+    assert!(
+        schema_accepts_file(text),
+        "{what}: the schema rejects a line in the place it holds"
+    );
+}
+
+#[test]
+fn qa_m017_a_session_without_its_summary_line_reads() {
+    let doc = summarised();
+    let full = jsonl(&doc);
+    // The complete file keeps its summaries, so the absent ones below are the truncation's doing.
+    let complete = read_doc(&doc);
+    assert!(
+        complete.session == Session::Complete
+            && complete.leak_flags().is_ok_and(|f| f.len() == 1)
+            && complete.hot_paths().is_ok_and(|h| h.len() == 1),
+        "the complete file's summaries are not read"
+    );
+    let cases: Vec<(String, usize, &str)> = vec![
+        (
+            cut_summary(&full),
+            3,
+            "a session that ended before its summary line",
+        ),
+        (
+            first_lines(&full, 2),
+            1,
+            "a session that crashed after its first frame",
+        ),
+        (
+            first_lines(&full, 3),
+            2,
+            "a session that crashed mid-way through its frames",
+        ),
+        (
+            first_lines(&full, 1),
+            0,
+            "a session that ended before its first frame: the header line alone",
+        ),
+    ];
+    for (text, frames, what) in &cases {
+        check_incomplete(text, &doc, *frames, what);
+        // JSON Lines: a last line without its newline, as a still-running session's file can end.
+        check_incomplete(
+            text.strip_suffix('\n').unwrap(),
+            &doc,
+            *frames,
+            &format!("{what}, without its last newline"),
+        );
+    }
+    // A batch render's last frame, its present stage null, is a frame record in the summary line's place too.
+    check_incomplete(
+        &cut_summary(&jsonl(&batch())),
+        &batch(),
+        1,
+        "a batch session that ended before its summary line",
+    );
+    // Summaries written as `null` are absent too, but the session is complete: not "session incomplete".
+    let nulls = read_doc(&interactive());
+    assert!(
+        nulls.session == Session::Complete,
+        "a complete file with null summaries reads as incomplete"
+    );
+    for (key, absent) in [
+        ("leak_flags", nulls.leak_flags()),
+        ("hot_paths", nulls.hot_paths()),
+    ] {
+        let reason = absent
+            .map(|e| e.len())
+            .expect_err("a null summary reads as present");
+        assert_ne!(
+            reason.to_string(),
+            "session incomplete",
+            "a complete file's null {key} is reported as \"session incomplete\""
+        );
+    }
+}
+
+validation::negative_control!(
+    qa_m017_a_session_without_its_summary_line_reads,
+    "the complete file, its summary line in place, must fail the incomplete-session check",
+    expected = "is present",
+    check_incomplete(&jsonl(&summarised()), &summarised(), 3, "the complete file")
+);
+
+/// An incomplete session's last frame, in the summary line's place, is held to every rule a frame record is, the
+/// reader-only ones included (§5's four exceptions: the schema accepts, the reader rejects).
+#[test]
+fn qa_m017_an_incomplete_sessions_last_frame_is_checked() {
+    let text = cut_summary(&jsonl(&interactive()));
+    check_incomplete(&text, &interactive(), 3, "the unedited file, cut");
+    let last = lines_of(&text)[3].to_owned();
+    let in_last = |from: &str, to: &str| -> String {
+        let edited_last = last.replacen(from, to, 1);
+        assert_ne!(edited_last, last, "the edit {from} -> {to} changed nothing");
+        text.replacen(&last, &edited_last, 1)
+    };
+    let cases: Vec<(String, &str)> = vec![
+        (
+            in_last("\"dmin_nan_unset\":5", "\"dmin_nan_unset\":5.0"),
+            "a counter with a zero fraction, in the last frame",
+        ),
+        (
+            in_last("\"frame_ms\":12.5", "\"frame_ms\":12.5,\"frame_ms\":12.5"),
+            "a repeated frame-record key, in the last frame",
+        ),
+        (
+            cut_summary(&jsonl(&edited(
+                "/frames/2/live_memory/heap/bytes",
+                json!(301),
+            ))),
+            "a pool bytes over its by_kind sum, in the last frame",
+        ),
+        (
+            cut_summary(&jsonl(&edited(
+                "/frames/2/live_memory/heap",
+                json!({ "bytes": 300, "by_kind": [
+                    { "kind": "quad", "count": 3, "bytes": 100 },
+                    { "kind": "quad", "count": 2, "bytes": 200 }
+                ] }),
+            ))),
+            "a pool with two entries for one type, in the last frame",
+        ),
+        (
+            cut_summary(&jsonl(&edited(
+                "/frames/2/stages/upload/allocations/1/pool",
+                json!("gpu"),
+            ))),
+            "a stage with two entries for one kind and pool, in the last frame",
+        ),
+    ];
+    for (t, what) in &cases {
+        check_reader_only(t, what);
+    }
+    // And what the schema rejects too: a range fault, a missing key, the present pair split.
+    for (doc, what) in [
+        (
+            edited("/frames/2/frame_ms", json!(-1.0)),
+            "a negative frame_ms, in the last frame",
+        ),
+        (
+            without(interactive(), "/frames/2/leaf_count"),
+            "a last frame without leaf_count",
+        ),
+        (
+            edited("/frames/2/stage_ms/present", Value::Null),
+            "present ms null with present sections, in the last frame",
+        ),
+    ] {
+        let t = cut_summary(&jsonl(&doc));
+        check_reader_rejects_file(&t, what);
+        assert!(
+            !schema_accepts_file(&t),
+            "not v1, but the schema accepts {what}"
+        );
+    }
+}
+
+validation::negative_control!(
+    qa_m017_an_incomplete_sessions_last_frame_is_checked,
+    "an incomplete session with a valid last frame must fail the reader-only check",
+    expected = "not v1, but the reader accepts",
+    check_reader_only(
+        &cut_summary(&jsonl(&interactive())),
+        "a valid incomplete session"
+    )
+);
+
+/// The writer refuses `trace`, an incomplete session with a summary set that has no line to go on, and writes nothing.
+fn check_incomplete_write_refused(trace: &Trace, what: &str) {
+    let mut out = Vec::new();
+    assert!(
+        write(trace, &mut out).is_err(),
+        "the writer wrote an incomplete session with {what}"
+    );
+    assert!(
+        out.is_empty(),
+        "the writer refused an incomplete session with {what} but wrote {} bytes first",
+        out.len()
+    );
+}
+
+fn summary_entries() -> Option<Vec<serde_json::Map<String, Value>>> {
+    Some(vec![json!({ "p95_ms": 6.0 })
+        .as_object()
+        .expect("an object")
+        .clone()])
+}
+
+/// R-298 in the writer: an incomplete session is written as the file it left, the header line and the frame lines
+/// with no summary line, and reads back as the same trace; one whose `leak_flags` or `hot_paths` is set is refused.
+#[test]
+fn qa_m017_writer_writes_an_incomplete_session_as_it_ended() {
+    let full = jsonl(&summarised());
+    for keep in [1, 2, 4] {
+        let text = first_lines(&full, keep);
+        let trace = read(text.as_bytes()).expect("the reader rejects an incomplete session");
+        let out = written(&trace);
+        assert!(
+            out.ends_with('\n'),
+            "the writer did not end the last line with a newline"
+        );
+        let parse = |t: &str| -> Vec<Value> {
+            lines_of(t)
+                .iter()
+                .map(|l| serde_json::from_str(l).expect("a line is not JSON"))
+                .collect()
+        };
+        assert_eq!(
+            parse(&out),
+            parse(&text),
+            "the incomplete session with {} frames is not written as the lines it left",
+            keep - 1
+        );
+        assert!(
+            read(out.as_bytes()).expect("the reader rejects the writer's output") == trace,
+            "the incomplete session does not read back as the same trace"
+        );
+        let edits: Vec<(Edit, &str)> = vec![
+            (
+                Box::new(|t| t.leak_flags = Some(Vec::new())),
+                "an empty leak_flags list",
+            ),
+            (
+                Box::new(|t| t.leak_flags = summary_entries()),
+                "leak_flags set, hot_paths null",
+            ),
+            (
+                Box::new(|t| t.hot_paths = summary_entries()),
+                "hot_paths set, leak_flags null",
+            ),
+            (
+                Box::new(|t| {
+                    t.leak_flags = summary_entries();
+                    t.hot_paths = summary_entries();
+                }),
+                "both summaries set",
+            ),
+        ];
+        for (edit, what) in &edits {
+            let mut t = trace.clone();
+            edit(&mut t);
+            check_incomplete_write_refused(&t, what);
+        }
+    }
+}
+
+validation::negative_control!(
+    qa_m017_writer_writes_an_incomplete_session_as_it_ended,
+    "an incomplete session with both summaries null must fail the refusal check",
+    expected = "the writer wrote an incomplete session",
+    check_incomplete_write_refused(
+        &read(cut_summary(&jsonl(&interactive())).as_bytes()).expect("the reader rejects it"),
+        "no summaries set"
+    )
 );
 
 fn check_reads_as(text: &str, expected: &Trace, what: &str) {
@@ -1592,5 +1956,60 @@ validation::negative_control!(
         let err = read(jsonl(&edited("/frames/2/frame_ms", json!(-1.0))).as_bytes())
             .expect_err("the reader accepted a negative frame_ms");
         check_error_names(&err.to_string(), 2, "frame_ms");
+    }
+);
+
+// ----- R-298 through `Trace`'s own serde form (not the file) -----
+
+/// `Trace`'s own serde form (its doc: "one object with the five keys (and `session` when incomplete)"): a complete
+/// trace is the five keys, and an incomplete one keeps its incompleteness through the form, so a trace passed on in it
+/// still reports its summaries absent with "session incomplete", not as `null` ones (R-298).
+fn check_serde_form_keeps_the_session(complete: &Trace, incomplete: &Trace) {
+    let form = serde_json::to_value(complete).expect("the complete trace does not serialise");
+    assert_eq!(
+        keys(&form),
+        BTreeSet::from(["schema", "header", "frames", "leak_flags", "hot_paths"]),
+        "a complete trace's serde form is not the five keys"
+    );
+    let back: Trace =
+        serde_json::from_value(form).expect("the complete trace's form does not deserialise");
+    assert!(
+        &back == complete,
+        "the complete trace changed through its serde form"
+    );
+    let form = serde_json::to_value(incomplete).expect("the incomplete trace does not serialise");
+    let back: Trace =
+        serde_json::from_value(form).expect("the incomplete trace's form does not deserialise");
+    assert!(
+        back.session == Session::Incomplete
+            && back
+                .leak_flags()
+                .is_err_and(|r| r.to_string() == "session incomplete")
+            && back
+                .hot_paths()
+                .is_err_and(|r| r.to_string() == "session incomplete"),
+        "an incomplete trace lost its incompleteness through its serde form"
+    );
+    assert!(
+        &back == incomplete,
+        "the incomplete trace changed through its serde form"
+    );
+}
+
+#[test]
+fn qa_m017_serde_form_keeps_the_session() {
+    let complete = read_doc(&interactive());
+    let incomplete =
+        read(cut_summary(&jsonl(&interactive())).as_bytes()).expect("the reader rejects it");
+    check_serde_form_keeps_the_session(&complete, &incomplete);
+}
+
+validation::negative_control!(
+    qa_m017_serde_form_keeps_the_session,
+    "a complete trace given as the incomplete one must fail the session check",
+    expected = "lost its incompleteness",
+    {
+        let complete = read_doc(&interactive());
+        check_serde_form_keeps_the_session(&complete, &complete)
     }
 );
