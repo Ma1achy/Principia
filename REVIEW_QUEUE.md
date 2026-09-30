@@ -2881,6 +2881,9 @@ Tick any you don't accept.
   3. **Rely on `state` alone.** The sentinel test also checks `state`, and a valid 0.0 is displayed as 0. The ledger's
      sentinel is then conditional on `state`, which §3.8 has no way to say.
 - **Needed:** a ruling. TASK-M0-10 (pack/unpack) is where option 1 or 2 would be built.
+- **Ruling:** R-271 (30 Sep 2026): `d_min`'s unset value is +inf; a valid value below f16's smallest positive
+  subnormal is stored as that subnormal, so 0.0 never appears; readers treat +inf as unset. Applied in payload §1 and
+  TASK-M0-10.
 
 ## RQ-164: the ubuntu measurement run REQ-VAL-149 needs was blocked; how are the timings gathered? *(process, CI, TASK-M0-23)*
 
@@ -2902,6 +2905,7 @@ Tick any you don't accept.
   3. **Propose from what exists:** a provisional limit from #65's own ubuntu runs scaled by the Mac counts. That falls
      short of the verify line's "over the diffs of the PRs merged so far", so it needs a ruling that it suffices.
 - **Needed:** a decision on how the timings are gathered. TASK-M0-23 (PR #65) waits on it.
+- **Ruling:** R-272 (30 Sep 2026): the ubuntu timings are taken on a throwaway `measure/` branch.
 
 ## RQ-165: REQ-VAL-168's region minimum can't be measured at M0; propose it at M3? *(calibration, TASK-M0-05)*
 
@@ -2917,6 +2921,9 @@ Tick any you don't accept.
      convergence study, and confirmed at the M3 gate; until then the gate keeps printing "not yet calibrated".
   2. **Keep it at M0** with a value from the literature or a stated prior, marked provisional.
 - **Needed:** a ruling on where the value is proposed. Not blocking PR #68, which meets its verify line.
+- **Ruling:** R-273 (30 Sep 2026): option 1. The region minimum is calibrated at M3 (TASK-M3-34), and the gate
+  prints "not yet calibrated" until then.
+
 ## RQ-166: the screenshot runner lives in xtask, but nothing may depend on `gui`, so it has no route to real GUI surfaces *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
 
 - **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map": "`gui` (the dev GUI: depends on
@@ -2945,6 +2952,8 @@ Tick any you don't accept.
      runner change shape.
 - **Needed:** a ruling on the route, before TASK-M6-22 is built. TASK-M0-20 doesn't wait: its runner is the same under
   every option, and option 1 only adds a surface kind.
+- **Ruling:** R-274 (30 Sep 2026): option 1. `gui` gets a headless capture mode, which the runner spawns; there is no
+  crate edge.
 
 ## RQ-167: "presence" has no definition: a control clipped out of view still counts as present *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
 
@@ -2969,6 +2978,8 @@ Tick any you don't accept.
      author has to choose.
 - **Needed:** a definition, before TASK-M6-22. TASK-M0-20 doesn't wait: option 1 is a small change to the runner, made
   by whichever task first needs it, or by a follow-up task.
+- **Ruling:** R-275 (30 Sep 2026): option 1. A control clipped out of the visible surface isn't present.
+
 ## RQ-168: the stand-in soak runs the full `xtask ci`, which now renders golden cases, on a runner with no GPU *(CI, TASK-M0-06, TASK-M0-38)*
 
 - **File, section:** `decisions.md` § "R-110": "native golden suites on every commit"; TASK-M0-06 registers
@@ -2996,3 +3007,4 @@ Tick any you don't accept.
   render (R-110), so the soak job gets what the `ci` and `xtask-ci` jobs already have: Mesa and
   `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
   its veto item 13.
+- **Ruling:** R-268 (30 Sep 2026): the overnight application stands.
