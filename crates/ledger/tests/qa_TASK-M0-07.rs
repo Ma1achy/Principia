@@ -62,6 +62,7 @@ fn complete(
         sentinel: None,
         tier_gate: None,
         overflow: None,
+        floor: None,
         provenance: Some(provenance),
         consumers: Some(consumers.to_vec()),
     }
@@ -489,6 +490,7 @@ fn check_each_kind_carried(mangle: fn(&mut Entry)) {
             sentinel: Some(-(i as f64)),
             tier_gate: Some("qa_gate"),
             overflow: None,
+            floor: None,
             provenance,
             consumers: who.to_vec(),
         };
