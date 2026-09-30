@@ -1,7 +1,8 @@
 //! The Rust emitter (dd_generation_root §1; dd_simstate_payload §1, §2, §6): writes each of
 //! [`crate::payload::structs`] as a `#[repr(C)]`, `no_std`-compatible struct into
 //! `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed words'
-//! pack/unpack/insert code ([`accessors`]). [`check`] holds each member against the ledger entry or word it stores.
+//! pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors and payload §3's frozen continuation
+//! table ([`continuation`]). [`check`] holds each member against the ledger entry or word it stores.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -60,6 +61,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
         out.push_str("}\n");
     }
     out.push_str(&accessors(words, entries));
+    out.push_str(&continuation());
     vec![Generated {
         path: PathBuf::from(PATH),
         contents: out,
@@ -67,8 +69,17 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
 }
 
 /// The accessor prefix of each packed word (payload §6): `pa_`, `pb_` and `tm_`, and `sd_` for the unsigned fields of
-/// `packed_a`, which are the `sample_descriptor`'s.
-pub const PREFIXES: [(&str, &str); 3] = [("packed_a", "pa"), ("packed_b", "pb"), ("times", "tm")];
+/// `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word buffer's `.w` (payload §3), whose accessors
+/// are [`fgw`]'s.
+pub const PREFIXES: [(&str, &str); 4] = [
+    ("packed_a", "pa"),
+    ("packed_b", "pb"),
+    ("times", "tm"),
+    ("fgw_w", "fgw"),
+];
+
+/// The word buffer's `.w`, which [`fgw`] emits for, not the per-field loop of [`accessors`].
+const FGW_WORD: &str = "fgw_w";
 
 /// The accessor prefix of `entry` in `word`, or `None` if the word has none.
 fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
@@ -117,9 +128,15 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 /// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
 ///   zero, so reserved bits are zero; a word holding `d_min` takes the caller's `counters` last and passes them to
 ///   `set_d_min` (R-294).
+///
+/// The word buffer's `.w` (`fgw_w`) is not a `SimState` word: its accessors are [`fgw`]'s.
 pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
     let mut out = helpers();
     for word in words {
+        if word.name == FGW_WORD {
+            out.push_str(&fgw(entries));
+            continue;
+        }
         let mut fields: Vec<(&Entry, u32, u32)> = entries
             .iter()
             .filter_map(|e| match e.location {
@@ -287,6 +304,128 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
         );
     }
     out
+}
+
+/// The word buffer's accessors, emitted from `fgw_w`'s `length` entry (payload §3; R-86's names): `FGW_CAPACITY`, its
+/// range's greatest value, `FGW_LENGTH_SENTINEL`, its sentinel, and `fgw_length_raw`, `fgw_truncated` and
+/// `fgw_retained_prefix_length`. Each takes the whole `vec4<u32>` as `[u32; 4]` and reads element 3, `.w`, as §3's
+/// `fgw_length_raw(w: vec4u)` does. Nothing if the ledger has no such entry, or it has no closed greatest value or no
+/// sentinel.
+pub fn fgw(entries: &[Entry]) -> String {
+    let length = entries.iter().find_map(|e| match e.location {
+        Location::Packed {
+            word,
+            offset,
+            width,
+        } if word == FGW_WORD && e.name == "length" => Some((e, offset, width)),
+        _ => None,
+    });
+    let Some((e, offset, width)) = length else {
+        return String::new();
+    };
+    let (Bound::Closed(capacity), Some(sentinel)) = (e.range.hi, e.sentinel) else {
+        return String::new();
+    };
+    let (capacity, sentinel) = (capacity as u32, sentinel as u32);
+    let bits = format!("bits {offset}–{}", offset + width - 1);
+    format!(
+        r#"
+/// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
+pub const FGW_CAPACITY: u32 = {capacity};
+
+/// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
+pub const FGW_LENGTH_SENTINEL: u32 = {sentinel};
+
+/// `length_raw`: {bits} of the word's `.w`, element 3 of its `vec4<u32>`; 0…{capacity} valid, {sentinel} truncated
+/// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
+#[inline]
+pub fn fgw_length_raw(w: [u32; 4]) -> u32 {{
+    extract(w[3], {offset}, {width})
+}}
+
+/// Whether the word is truncated: `length_raw` is the sentinel (payload §3).
+#[inline]
+pub fn fgw_truncated(w: [u32; 4]) -> bool {{
+    fgw_length_raw(w) == FGW_LENGTH_SENTINEL
+}}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+#[inline]
+pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {{
+    if fgw_truncated(w) {{
+        FGW_CAPACITY
+    }} else {{
+        fgw_length_raw(w)
+    }}
+}}
+"#
+    )
+}
+
+/// `rows` as a Rust array literal, `[[a, b, …], …]`.
+fn array(rows: &[[u32; 4]]) -> String {
+    let rows: Vec<String> = rows
+        .iter()
+        .map(|r| format!("[{}, {}, {}, {}]", r[0], r[1], r[2], r[3]))
+        .collect();
+    format!("[{}]", rows.join(", "))
+}
+
+/// Payload §3's frozen continuation table, from the ledger's ([`crate::payload`]): the arrays `INVERSE`,
+/// `CONT_SYMBOL`, `PREDECESSOR_SYMBOL` and `CONTINUATION_INDEX` (3 in its four `next = inverse(prev)` cells, R-307),
+/// and §3's small tables as functions over them: `inverse`, `continuation_symbol`, `predecessor_symbol` and
+/// `continuation_index`. `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line past 100 columns.
+pub fn continuation() -> String {
+    use crate::payload::{cont_symbol, continuation_index, inverse, predecessor_symbol};
+    let i = inverse();
+    format!(
+        r#"
+/// Payload §3's frozen `inverse` (symbol codes `a = 0, A = 1, b = 2, B = 3`): part of the binary format.
+pub const INVERSE: [u32; 4] = [{}, {}, {}, {}];
+
+/// Payload §3's frozen `cont_symbol`: `next = CONT_SYMBOL[digit][prev]`.
+pub const CONT_SYMBOL: [[u32; 4]; 3] = {};
+
+/// `predecessor_symbol`, `prev = PREDECESSOR_SYMBOL[digit][next]`: `CONT_SYMBOL` inverted, so equal to it (payload §3).
+pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = {};
+
+/// `continuation_index`, `digit = CONTINUATION_INDEX[prev][next]`: `CONT_SYMBOL` inverted, and 3 ("invalid") where
+/// `next = inverse(prev)` (R-307, payload §3).
+pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
+    {};
+
+/// The inverse of symbol `s` (payload §3).
+#[inline]
+pub const fn inverse(s: u32) -> u32 {{
+    INVERSE[s as usize]
+}}
+
+/// The symbol digit `e` continues `prev` with (payload §3).
+#[inline]
+pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {{
+    CONT_SYMBOL[e as usize][prev as usize]
+}}
+
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3).
+#[inline]
+pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {{
+    PREDECESSOR_SYMBOL[e as usize][next as usize]
+}}
+
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307).
+#[inline]
+pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
+    CONTINUATION_INDEX[prev as usize][s as usize]
+}}
+"#,
+        i[0],
+        i[1],
+        i[2],
+        i[3],
+        array(&cont_symbol()),
+        array(&predecessor_symbol()),
+        array(&continuation_index()),
+    )
 }
 
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /

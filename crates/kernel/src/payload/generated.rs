@@ -449,3 +449,70 @@ pub fn pack_times(t_end_step: u32, t_dmin_step: u32) -> u32 {
     let w = set_t_end_step(0, t_end_step);
     set_t_dmin_step(w, t_dmin_step)
 }
+
+/// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
+pub const FGW_CAPACITY: u32 = 76;
+
+/// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
+pub const FGW_LENGTH_SENTINEL: u32 = 127;
+
+/// `length_raw`: bits 25–31 of the word's `.w`, element 3 of its `vec4<u32>`; 0…76 valid, 127 truncated
+/// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
+#[inline]
+pub fn fgw_length_raw(w: [u32; 4]) -> u32 {
+    extract(w[3], 25, 7)
+}
+
+/// Whether the word is truncated: `length_raw` is the sentinel (payload §3).
+#[inline]
+pub fn fgw_truncated(w: [u32; 4]) -> bool {
+    fgw_length_raw(w) == FGW_LENGTH_SENTINEL
+}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+#[inline]
+pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {
+    if fgw_truncated(w) {
+        FGW_CAPACITY
+    } else {
+        fgw_length_raw(w)
+    }
+}
+
+/// Payload §3's frozen `inverse` (symbol codes `a = 0, A = 1, b = 2, B = 3`): part of the binary format.
+pub const INVERSE: [u32; 4] = [1, 0, 3, 2];
+
+/// Payload §3's frozen `cont_symbol`: `next = CONT_SYMBOL[digit][prev]`.
+pub const CONT_SYMBOL: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
+
+/// `predecessor_symbol`, `prev = PREDECESSOR_SYMBOL[digit][next]`: `CONT_SYMBOL` inverted, so equal to it (payload §3).
+pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
+
+/// `continuation_index`, `digit = CONTINUATION_INDEX[prev][next]`: `CONT_SYMBOL` inverted, and 3 ("invalid") where
+/// `next = inverse(prev)` (R-307, payload §3).
+pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
+    [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]];
+
+/// The inverse of symbol `s` (payload §3).
+#[inline]
+pub const fn inverse(s: u32) -> u32 {
+    INVERSE[s as usize]
+}
+
+/// The symbol digit `e` continues `prev` with (payload §3).
+#[inline]
+pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {
+    CONT_SYMBOL[e as usize][prev as usize]
+}
+
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3).
+#[inline]
+pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {
+    PREDECESSOR_SYMBOL[e as usize][next as usize]
+}
+
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307).
+#[inline]
+pub const fn continuation_index(prev: u32, s: u32) -> u32 {
+    CONTINUATION_INDEX[prev as usize][s as usize]
+}
