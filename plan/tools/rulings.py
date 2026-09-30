@@ -3,8 +3,8 @@
 current_rules.py.
 
 decisions.md holds one entry per ruling, headed `## R-n — <title>` (a few entries have other headings, such as
-"Porting rule — …"). When a later ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines or
-extends it), R-n carries the matching forward line directly under its heading, e.g. `*Amended by R-m.*` or
+"Porting rule — …"). When a later ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines,
+extends or withdraws it), R-n carries the matching forward line directly under its heading, e.g. `*Amended by R-m.*` or
 `*Superseded in part by R-m (…).*`. Older entries carry the same words in their date line (`· amended by R-m`); both
 sit in the entry's heading block, the lines from the heading to the first blank line.
 
@@ -38,13 +38,13 @@ RULING_HEAD = re.compile(r"^## (R-\d+)( ✱)? — (.*)$")
 FENCE = re.compile(r"^\s*(```|~~~)")
 # A ruling's claim on an earlier one, and the forward line it needs there.
 VERBS = {"amends": "amended", "supersedes": "superseded", "corrects": "corrected", "replaces": "replaced",
-         "reverses": "reversed", "refines": "refined", "extends": "extended"}
+         "reverses": "reversed", "refines": "refined", "extends": "extended", "withdraws": "withdrawn"}
 LIST = r"R-\d+(?:(?:,\s*|,?\s+and\s+)R-\d+)*"
 CLAIM = re.compile(r"(?i)\b(" + "|".join(VERBS) + r")\s+(" + LIST + r")")
 FORWARD = re.compile(r"(?i)\b(" + "|".join(VERBS.values()) + r")( in part)? by (" + LIST + r")")
 SUBJECT = re.compile(r"(R-\d+),?\s*$")  # "R-14 supersedes R-12": the claim is R-14's, not the entry's
 # A forward line of its own, directly under the heading: "*Amended by R-10.*"
-OWN_LINE = re.compile(r"^\*((?:Amended|Superseded|Corrected|Replaced|Reversed|Refined|Extended)\b.*?)\.?\*$")
+OWN_LINE = re.compile(r"^\*((?:Amended|Superseded|Corrected|Replaced|Reversed|Refined|Extended|Withdrawn)\b.*?)\.?\*$")
 # What of a partly amended ruling still stands; it may wrap, and ends at the first "*" that ends a line (R-293).
 STILL = re.compile(r"^\*Still in force: (.*?)\.?\*$", re.M | re.S)
 RQ_HEAD = re.compile(r"^## (RQ-\d+)\b", re.M)

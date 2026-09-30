@@ -13,8 +13,8 @@ Fails if:
   - the dependency graph names an unknown task, depends forward across milestones, or has a cycle;
   - tasks.yaml and the task files disagree, or a needed requirement's task isn't reachable through depends_on;
   - a reviewer checklist (plan/reviewers/*.md) cites a file or section that doesn't exist, or names an unknown ruling;
-  - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines or extends it), and R-n lacks
-    the matching forward line under its heading (R-292), or "Superseded by" it;
+  - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines, extends or withdraws it), and
+    R-n lacks the matching forward line under its heading (R-292), or "Superseded by" it;
   - a ruling amended in part has no "Still in force: …" line under its heading, or one superseded outright has one,
     or plan/CURRENT_RULES.md lists a ruling superseded outright (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used

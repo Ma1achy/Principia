@@ -123,7 +123,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-90** — The decoder switchover trigger *(closes RQ-41)*
 - **R-91** — The temporal accumulators feed "unresolved" *(closes RQ-42)*
 - **R-92** — What the sim key holds of navigation *(closes RQ-43)*
-- **R-96** — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
+- **R-96** — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*. Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`; the last bullet is withdrawn, the link ids being the chart's link functions (R-106). Withdrawn by R-106.
 - **R-97** — Quad addresses live in the slice plane *(closes RQ-57)*
 - **R-98** — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*
 - **R-99** — The latch is per footprint and lives with the resident quad *(closes RQ-59)*
