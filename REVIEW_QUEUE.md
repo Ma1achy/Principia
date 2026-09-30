@@ -37,3 +37,31 @@ milestone gets its own file after its gate. Ids never change.
   option 1 draws between simulation data and telemetry. TASK-M5-28 now builds that readback (R-294), and TASK-M5-30
   doesn't reach TASK-M5-28 through its Depends on, so under option 2 its membrane audit may run before the counters'
   readback exists.
+
+## RQ-176: the per-PR mutation gate takes over two hours on a quarter of the merged PRs' diffs; is a per-PR limit practical? *(calibration, CI, TASK-M0-23, R-196, REQ-VAL-149)*
+
+- **File, section:** `decisions.md` § "R-196 — Mutation testing joins the QA gate": "per PR, `cargo mutants --in-diff`
+  on the changed code (with a per-PR time limit)" and "If the time limit makes per-PR runs impractical, raise it in
+  REVIEW_QUEUE rather than dropping it." `plan/requirements.yaml` REQ-VAL-149, verify detail: "if no practical limit
+  covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)". `plan/tasks/M0/TASK-M0-23.md` § "Goal": "If no practical
+  limit covers per-PR runs, that goes to REVIEW_QUEUE rather than the run being dropped (R-196)."
+- **What:** R-272's measurement ran the job's own command (`cargo mutants --in-place --in-diff`, PR #65's
+  `.cargo/mutants.toml`, cold target, `ubuntu-latest`) over 13 merged PRs' diffs (run 36724963688; the table is in
+  PR #65's "Calibration proposal: REQ-VAL-149"). Ten finished: two had no mutant in the diff, seven took 4 to 74
+  minutes, and PR #72's took 133 minutes (40 mutants). PR #70's was cut off by a runner shutdown after 38 minutes, 2 of
+  its 69 mutants in; at the 4.4 minutes its first mutant took, all 69 would take about 5 hours, near GitHub's 6-hour
+  job maximum. PR #71's and PR
+  #47's were still running past 2h20m. The time goes on tests, not builds: the unmutated baseline's tests take 3.5 to
+  11 minutes in seven of the nine diffs with mutants, each mutant re-runs its package's tests, and one timed-out mutant costs five baselines (PR #75: one
+  timeout, 53 of its 74 minutes). PR #65 proposes 180 minutes, provisional (R-71, R-182): the longest completed run
+  plus 30%. Under it, at least PR #70's diff, and probably PR #71's and #47's, would fail the gate on time alone. Is
+  that practical as a per-PR gate? The implementer does not decide that (R-196).
+- **Options seen:**
+  1. **Keep 180 minutes, per PR.** A PR whose gate runs over fails; it is split, or its mutants killed faster.
+  2. **Make the gate faster, then re-measure.** Shard the mutants over a job matrix (`cargo mutants --shard k/n`), run
+     the tests through cargo-nextest (`--test-tool nextest`), or lower the timeout multiplier. None is measured yet;
+     each is a later measure/ run (R-272) and a CI change.
+  3. **Change where the gate runs.** For example per PR only on the changed packages' fast tests, with the full
+     in-diff run nightly. A scope change to R-196; the human's alone.
+- **Needed:** which one, and whether 180 minutes stands meanwhile. TASK-M0-23 (PR #65) carries 180 provisionally so
+  its CI runs; REQ-VAL-149 is confirmed at the M0 gate either way.
