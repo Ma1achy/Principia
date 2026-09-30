@@ -1,0 +1,42 @@
+# The stand-in-executable soak (REQ-SYS-070, R-267): the tests that write a stand-in `cargo` or `gh` and run xtask
+# against it, 50 consecutive runs, each test binary's tests in parallel, on ubuntu-latest, where the fork/exec race
+# (ETXTBSY, "Text file busy") shows. Not per-push: it runs on a PR that changes the spawn helper or one of these
+# tests, and on demand.
+name: stand-in-soak
+
+on:
+  pull_request:
+    paths:
+      - crates/validation/src/spawn.rs
+      - crates/validation/tests/stand_in.rs
+      - xtask/tests/qa_TASK-M0-22.rs
+      - xtask/tests/qa_TASK-M0-22_r235.rs
+      - xtask/tests/ci.rs
+      - xtask/tests/qa_TASK-M0-36.rs
+      - xtask/tests/qa_TASK-M0-37.rs
+      - .github/workflows/stand-in-soak.yml
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the stand-in tests
+        run: >-
+          cargo test -p xtask --no-run --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci
+          --test qa_TASK-M0-36 --test qa_TASK-M0-37
+      - name: 50 consecutive parallel runs
+        run: |
+          for run in $(seq 1 50); do
+            echo "::group::run $run of 50"
+            cargo test -p xtask --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci \
+              --test qa_TASK-M0-36 --test qa_TASK-M0-37 || { echo "run $run of 50 failed"; exit 1; }
+            echo "::endgroup::"
+          done
+          echo "stand-in soak: 50 consecutive parallel runs passed"

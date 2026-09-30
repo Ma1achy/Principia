@@ -455,7 +455,7 @@ negative_control!(
 /// and head `HEAD`, and the reviews endpoint with `reviews`. Returns whether it passed, and its stderr.
 #[cfg(unix)]
 fn run_check(tag: &str, title: &str, reviews: &[R]) -> (bool, String) {
-    use std::os::unix::fs::PermissionsExt;
+    use validation::spawn::Spawn;
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa36_gh_{tag}"));
     std::fs::create_dir_all(&dir).expect("stub dir made");
     let pull = serde_json::json!({"number": 57, "title": title, "head": {"sha": HEAD}}).to_string();
@@ -475,9 +475,7 @@ fn run_check(tag: &str, title: &str, reviews: &[R]) -> (bool, String) {
         dir.display()
     );
     let gh = dir.join("gh");
-    std::fs::write(&gh, script).expect("stub gh written");
-    std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755))
-        .expect("stub gh executable");
+    validation::spawn::write_executable(&gh, script).expect("stub gh written");
     let path = format!(
         "{}:{}",
         dir.display(),
@@ -487,7 +485,7 @@ fn run_check(tag: &str, title: &str, reviews: &[R]) -> (bool, String) {
         .args(["reviews-check", "--pr", "57"])
         .env("PATH", path)
         .env_remove("GITHUB_EVENT_PATH")
-        .output()
+        .timed_output()
         .expect("xtask ran");
     (
         out.status.success(),

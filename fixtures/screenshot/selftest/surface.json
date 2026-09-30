@@ -1,0 +1,7 @@
+{
+  "size": [240, 80],
+  "controls": [
+    { "kind": "button", "label": "Selftest button" },
+    { "kind": "checkbox", "label": "Selftest checkbox" }
+  ]
+}
