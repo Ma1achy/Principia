@@ -80,10 +80,21 @@ fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
     })
 }
 
-/// A sentinel as a Rust literal of the field's type: an f32 for an `f16-pair` field, a u32 for unsigned bits.
+/// The f32 bit pattern of `value`, as a Rust hex literal (`0x7f80_0000` for +∞).
+fn f32_bits(value: f64) -> String {
+    let b = (value as f32).to_bits();
+    format!("0x{:04x}_{:04x}", b >> 16, b & 0xffff)
+}
+
+/// A sentinel as a Rust expression of the field's type: an f32 for an `f16-pair` field, a u32 for unsigned bits. A
+/// non-finite f32 is written through its bits, `f32::from_bits(…)`, never as a literal or a named constant such as
+/// `f32::INFINITY`: naga rejects a non-finite float literal (GPU determinism note § "The discipline", rule 4;
+/// integrator contract § "Rules the new kernel must hold by construction", rule 4).
 fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
     match entry.ty {
-        FieldType::F16Pair if value == f64::INFINITY => ("f32", "f32::INFINITY".to_owned()),
+        FieldType::F16Pair if !value.is_finite() => {
+            ("f32", format!("f32::from_bits({})", f32_bits(value)))
+        }
         FieldType::F16Pair => ("f32", format!("{value:?}")),
         _ => ("u32", format!("{}", value as u64)),
     }
@@ -94,10 +105,12 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 /// - an unpack accessor named as payload §6, `<prefix>_f(w)`, reading `extract(w, o, n)`: a `bool` for a flag, an f32
 ///   through the binary16 conversion for an `f16-pair`, else a `u32`;
 /// - a setter `set_f(w, v)` writing `insert(w, v, o, n)`; an `f16-pair` value is clamped to ±65504 first (payload
-///   §1). An `f16-pair` whose sentinel is +∞ is `d_min` under R-271: +∞ writes the unset bits (f16 +∞, `0x7c00`), a
-///   value below f16's smallest positive subnormal writes that subnormal, both as bit patterns, so 0.0 never appears;
-///   `set_f_unset(w)` writes the unset bits and `<prefix>_f_is_unset(w)` tests them by bits (R-271);
-/// - a sentinel constant `<PREFIX>_F_SENTINEL` when the entry has a sentinel;
+///   §1). An `f16-pair` whose sentinel is +∞ is `d_min` under R-271: an input whose f32 bits are +∞'s writes the
+///   unset bits (f16 +∞, `0x7c00`), a value below f16's smallest positive subnormal writes that subnormal, both as bit
+///   patterns, so 0.0 never appears; `set_f_unset(w)` writes the unset bits and `<prefix>_f_is_unset(w)` tests them by
+///   bits (R-271). No float comparison with +∞ and no non-finite literal is emitted (GPU determinism note § "The
+///   discipline", rule 4);
+/// - a sentinel constant `<PREFIX>_F_SENTINEL` when the entry has a sentinel, a non-finite one written by its bits;
 /// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
 ///   zero, so reserved bits are zero.
 pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
@@ -165,11 +178,11 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      #[inline]\npub fn {p}_{f}_is_unset(w: u32) -> bool {{\n    extract(w, {offset}, {width}) == {upper}_UNSET\n}}\n\
                      \n/// `{w}` with `{f}` unset: a failed sample's, and any sample's before its first step (R-271).\n\
                      #[inline]\npub fn set_{f}_unset(w: u32) -> u32 {{\n    insert(w, {upper}_UNSET, {offset}, {width})\n}}\n\
-                     \n/// `{w}` with `{f}` set to `v` (R-271, payload §1): +∞ writes the unset bits; a value below f16's smallest\n\
-                     /// positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both are written as bits,\n\
-                     /// not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
+                     \n/// `{w}` with `{f}` set to `v` (R-271, payload §1): +∞, tested by its f32 bits, writes the unset bits; a value\n\
+                     /// below f16's smallest positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both\n\
+                     /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
                      #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
-                     \x20   let h = if v == f32::INFINITY {{\n\
+                     \x20   let h = if v.to_bits() == {inf} {{\n\
                      \x20       {upper}_UNSET\n\
                      \x20   }} else if v < F16_MIN_SUBNORMAL {{\n\
                      \x20       F16_MIN_SUBNORMAL_BITS\n\
@@ -178,6 +191,7 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      \x20   }};\n\
                      \x20   insert(w, h, {offset}, {width})\n}}\n",
                     upper = format!("{p}_{f}").to_uppercase(),
+                    inf = f32_bits(f64::INFINITY),
                 );
             } else {
                 let clamp = if e.ty == FieldType::F16Pair {

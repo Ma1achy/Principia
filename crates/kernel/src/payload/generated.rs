@@ -291,7 +291,7 @@ pub fn set_last_symbol(w: u32, v: u32) -> u32 {
 }
 
 /// `d_min`'s sentinel in the ledger (dd_generation_root §3.8).
-pub const PA_D_MIN_SENTINEL: f32 = f32::INFINITY;
+pub const PA_D_MIN_SENTINEL: f32 = f32::from_bits(0x7f80_0000);
 
 /// `d_min`: bits 16–31 of `packed_a` (payload §2, §6).
 #[inline]
@@ -314,12 +314,12 @@ pub fn set_d_min_unset(w: u32) -> u32 {
     insert(w, PA_D_MIN_UNSET, 16, 16)
 }
 
-/// `packed_a` with `d_min` set to `v` (R-271, payload §1): +∞ writes the unset bits; a value below f16's smallest
-/// positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both are written as bits,
-/// not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
+/// `packed_a` with `d_min` set to `v` (R-271, payload §1): +∞, tested by its f32 bits, writes the unset bits; a value
+/// below f16's smallest positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both
+/// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
 #[inline]
 pub fn set_d_min(w: u32, v: f32) -> u32 {
-    let h = if v == f32::INFINITY {
+    let h = if v.to_bits() == 0x7f80_0000 {
         PA_D_MIN_UNSET
     } else if v < F16_MIN_SUBNORMAL {
         F16_MIN_SUBNORMAL_BITS

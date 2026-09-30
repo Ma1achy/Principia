@@ -474,8 +474,8 @@ fn check_d_min(cases: &[(&str, u32, u32)]) {
     }
 }
 
-/// A failed sample (sim_failed, written unset); an unstepped sample (running, its f32 latch still +∞, the minimum
-/// of an empty set); 1e-9, 0.0 and 2⁻²⁵ below the smallest subnormal; 2⁻²⁴ itself; and 1.0 and 65504 as normals.
+/// A failed sample (sim_failed, written unset); an f32 +∞ given to the packer, which R-271 makes the unset value and
+/// which is tested by its bits; 1e-9, 0.0 and 2⁻²⁵ below the smallest subnormal; 2⁻²⁴ itself; and 1.0 and 65504 as normals.
 fn d_min_cases() -> Vec<(&'static str, u32, u32)> {
     vec![
         (
@@ -484,7 +484,7 @@ fn d_min_cases() -> Vec<(&'static str, u32, u32)> {
             0x7c00,
         ),
         (
-            "unstepped",
+            "+inf",
             pack_packed_a(3, 0, false, 3, 0, f32::INFINITY),
             0x7c00,
         ),

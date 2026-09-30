@@ -215,3 +215,98 @@ negative_control!(
     expected = "no line `pub const PB_DE_MAX_SENTINEL: f32 = 1.5;`",
     check_f16_sentinel(None, "pub const PB_DE_MAX_SENTINEL: f32 = 1.5;")
 );
+
+/// The non-finite float literals in the Rust source `contents`, comments stripped: each named non-finite constant
+/// (`f32::INFINITY`, `f32::NEG_INFINITY`, `f32::NAN` and their f64 forms) and each decimal float literal that is not
+/// finite as an f32. naga rejects a non-finite float literal in the kernel (GPU determinism note § "The discipline",
+/// rule 4; integrator contract § "Rules the new kernel must hold by construction", rule 4).
+fn non_finite_literals(contents: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    for (n, line) in contents.lines().enumerate() {
+        let code = line.split("//").next().unwrap_or("");
+        for ty in ["f32", "f64"] {
+            for name in ["INFINITY", "NEG_INFINITY", "NAN"] {
+                let named = format!("{ty}::{name}");
+                if code.match_indices(&named).any(|(i, _)| {
+                    !code[i + named.len()..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
+                }) {
+                    found.push(format!("line {}: {named}", n + 1));
+                }
+            }
+        }
+        let chars: Vec<char> = code.chars().collect();
+        let mut i = 0;
+        while i < chars.len() {
+            let starts = chars[i].is_ascii_digit()
+                && (i == 0
+                    || !(chars[i - 1].is_alphanumeric()
+                        || chars[i - 1] == '_'
+                        || chars[i - 1] == '.'));
+            if !starts {
+                i += 1;
+                continue;
+            }
+            let mut j = i;
+            while j < chars.len() {
+                let c = chars[j];
+                let exponent_sign = (c == '+' || c == '-') && matches!(chars[j - 1], 'e' | 'E');
+                let fraction = c == '.' && chars.get(j + 1).is_some_and(char::is_ascii_digit);
+                if c.is_ascii_alphanumeric() || c == '_' || fraction || exponent_sign {
+                    j += 1;
+                } else {
+                    break;
+                }
+            }
+            let token: String = chars[i..j].iter().filter(|&&c| c != '_').collect();
+            i = j;
+            if token.starts_with("0x") || token.starts_with("0b") || token.starts_with("0o") {
+                continue;
+            }
+            let number = token.trim_end_matches("f32").trim_end_matches("f64");
+            if !(number.contains('.') || number.contains(['e', 'E']) || number.len() < token.len())
+            {
+                continue;
+            }
+            match number.parse::<f64>() {
+                Ok(v) if (v as f32).is_finite() => {}
+                _ => found.push(format!("line {}: {token}", n + 1)),
+            }
+        }
+    }
+    found
+}
+
+/// The generated kernel source holds no non-finite float literal, named or numeric.
+fn check_no_non_finite_literal(contents: &str) {
+    let found = non_finite_literals(contents);
+    assert!(
+        found.is_empty(),
+        "non-finite float literal in the generated kernel source: {found:?}"
+    );
+}
+
+#[test]
+fn f16_pairs_generated_source_has_no_named_non_finite_float() {
+    check_no_non_finite_literal(&emitted());
+}
+
+negative_control!(
+    f16_pairs_generated_source_has_no_named_non_finite_float,
+    "the sentinel emitted as `f32::INFINITY`, as before R-271's bit rule was applied, must fail the check",
+    expected = "non-finite float literal in the generated kernel source",
+    check_no_non_finite_literal(
+        &emitted().replace("f32::from_bits(0x7f80_0000)", "f32::INFINITY")
+    )
+);
+
+#[test]
+fn f16_pairs_generated_source_has_no_overflowing_float_literal() {
+    check_no_non_finite_literal(&emitted());
+}
+
+negative_control!(
+    f16_pairs_generated_source_has_no_overflowing_float_literal,
+    "a decimal literal past f32's range, 1e39, is +inf as an f32, so the check must fail",
+    expected = "non-finite float literal in the generated kernel source",
+    check_no_non_finite_literal(&emitted().replace("65504.0", "1e39"))
+);
