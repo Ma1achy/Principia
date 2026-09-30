@@ -2858,3 +2858,4 @@ Tick any you don't accept.
     2. **All of xtask.** `xtask/**`: the job runs no xtask mutants, and xtask's checks are never mutation-tested.
 - **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
   option 1 applied). TASK-M0-23 waits on item 1.
+- **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): item 1 option 1 (the `#[cfg_attr(test, mutants::skip)]` marker), item 2 option 1 (`xtask/src/main.rs` and `xtask/src/codegen.rs` only). Both are the tightest reading, skip nothing R-196 keeps, and are test infrastructure. Recorded in decisions.md under R-196 and in TASK-M0-23.

@@ -27,6 +27,7 @@ Crate names are the plan's layout (`plan/WORKFLOW.md` § "Conventions: crates an
 - [ ] Every march loop has a bound (no bare `loop {`). `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - [ ] No allocation (`Vec`, `Box`, `dyn`, `std`) in the kernel hot path. `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - [ ] The driver layer is written fresh to these rules; only the step / deriv / Hamiltonian physics layer is ported from prin-rs. `docs/contracts/principia_integrator_contract.md` § "The split"
+- [ ] Every item gated on `target_arch = "spirv"` also carries `#[cfg_attr(test, mutants::skip)]`, so mutation testing excludes it (R-196; applied per R-204, RQ-162). `decisions.md` § "R-196 — Mutation testing joins the QA gate"
 
 ## 3. Baked vs uniform (lowering)
 

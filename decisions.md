@@ -1512,6 +1512,11 @@ Standing rule, "so this doesn't recur":
 *Open when recorded:* the per-PR time limit has no value; it becomes a calibration requirement (R-71). The nightly
 workflow is TASK-M0-19's deliverable, so the nightly run cannot land before it. Where R-196's work goes is RQ-135.
 
+*Applied per R-204 — veto? (RQ-162, 30 Sep 2026):* cargo-mutants excludes only by file glob or mutant-name regex, so
+"GPU-only (spirv-gated) paths" is met by a marker: every item gated on `target_arch = "spirv"` also carries
+`#[cfg_attr(test, mutants::skip)]`, and a missing marker fails closed. "xtask's own harness plumbing" is
+`xtask/src/main.rs` and `xtask/src/codegen.rs` only; xtask's checks stay mutated.
+
 ## R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*
 *26 Sep 2026 · applied in TASK-M0-04*
 
