@@ -586,7 +586,8 @@ const NEGATIVES: [u32; 8] = [
     0xff80_0000,
 ];
 
-/// The text a caught panic carries.
+/// The text a caught panic carries. Only the debug-assertion tests use it.
+#[cfg(debug_assertions)]
 fn panic_text(payload: &(dyn std::any::Any + Send)) -> &str {
     payload
         .downcast_ref::<String>()
@@ -595,7 +596,9 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> &str {
         .unwrap_or("")
 }
 
-/// `set` panics on every `d_min` whose f32 bits are in `inputs`, with a message containing `message`.
+/// `set` panics on every `d_min` whose f32 bits are in `inputs`, with a message containing `message`. Only the
+/// debug-assertion tests use it.
+#[cfg(debug_assertions)]
 fn check_trips(set: fn(u32, f32) -> u32, inputs: &[u32], message: &str) {
     for &bits in inputs {
         let v = f32::from_bits(bits);
