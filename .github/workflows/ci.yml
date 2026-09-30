@@ -156,7 +156,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants@27.1.0
+          tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
+      # What the mutated packages' tests need, as in the per-push jobs: Python and PyYAML for xtask's plan_check
+      # tests (TASK-M0-02), cargo-nextest for `xtask/tests/nextest.rs` (R-231), lavapipe for the GPU harness (R-169).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: The gate fires on the fixture (REQ-VAL-148)
