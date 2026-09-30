@@ -179,9 +179,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-281** — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
-- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line
+- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line. Still in force: the header on the first line, then one compact frame record per line, never pretty-printed; pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and makes a trace that lacks it valid. Amended by R-298.
 - **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and `dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by `roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a buffer bound and reset per frame on the GPU (R-294). Amended by R-294.
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
+- **R-298** — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*
 
 ## Values
 
