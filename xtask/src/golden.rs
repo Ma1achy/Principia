@@ -399,9 +399,11 @@ fn parse_lines(value: &Value, config: &Config) -> Result<Vec<Line>, String> {
     let (width, height) = config.size()?;
     let object = value.as_object().ok_or("`lines` is not an object")?;
     let point = |name: &str, v: &Value| -> Result<[u32; 2], String> {
+        // Every element must be a non-negative integer: one that isn't refuses the line, rather than being dropped
+        // and leaving a different pixel behind.
         let p: Vec<u64> = v
             .as_array()
-            .map(|a| a.iter().filter_map(Value::as_u64).collect())
+            .and_then(|a| a.iter().map(Value::as_u64).collect::<Option<_>>())
             .unwrap_or_default();
         match p.as_slice() {
             [x, y] if *x < u64::from(width) && *y < u64::from(height) => Ok([*x as u32, *y as u32]),
@@ -431,12 +433,14 @@ fn parse_symptoms(value: &Value) -> Result<Vec<Symptom>, String> {
             .ok_or("a symptom has no `name`")?
             .to_owned();
         let rgb = || -> Result<[u8; 3], String> {
+            // Every channel must be an integer in 0..=255: one that isn't refuses the symptom, rather than being
+            // dropped and leaving a different colour behind.
             let c: Vec<u8> = s["rgb"]
                 .as_array()
-                .map(|a| {
+                .and_then(|a| {
                     a.iter()
-                        .filter_map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok()))
-                        .collect()
+                        .map(|v| v.as_u64().and_then(|n| u8::try_from(n).ok()))
+                        .collect::<Option<_>>()
                 })
                 .unwrap_or_default();
             <[u8; 3]>::try_from(c)
