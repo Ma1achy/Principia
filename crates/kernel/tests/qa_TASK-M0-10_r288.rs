@@ -10,22 +10,25 @@
 //!   `pack_packed_a` count into the pair their caller passes ("counted in release builds too; that's their purpose",
 //!   R-288); in a debug build they assert first (R-281);
 //! - `roundtrip_ctl`'s repack is an observation, not a store: it counts into no frame (R-288's applied note, R-294);
-//! - the kernel holds no mutable static (R-294).
+//! - the kernel holds no mutable static (R-294);
+//! - the pair's fields are private, reached through its increment, read and reset methods, and workers share
+//!   `&DminCounters` (R-300): a frame's owner that resets its pair and reuses it for the next frame reads back only
+//!   that frame's counts.
 //!
 //! "Negative" is IEEE 754's: a value that compares below zero. −0.0 compares equal to +0.0, so it is a zero distance,
 //! stored as the floor by R-271 and counted by neither. Each test has a registered negative control (R-176).
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
-use std::sync::atomic::Ordering;
 use validation::negative_control;
 
 /// `(dmin_nan_unset, dmin_negative_floored)` as the frame's caller reads them back (R-294), cross-checked against the
-/// two atomics loaded directly, so a `read` that swaps or drops a counter is caught wherever this is called.
+/// two atomics as the pair's `Debug` shows them by name, so a `read` that swaps or drops a counter is caught wherever
+/// this is called. The fields are private (R-300), so `Debug` is the only view of them besides `read`.
 fn pair(c: &DminCounters) -> (u32, u32) {
     let direct = (
-        c.dmin_nan_unset.load(Ordering::SeqCst),
-        c.dmin_negative_floored.load(Ordering::SeqCst),
+        debug_field(c, "dmin_nan_unset"),
+        debug_field(c, "dmin_negative_floored"),
     );
     assert_eq!(
         c.read(),
@@ -33,6 +36,20 @@ fn pair(c: &DminCounters) -> (u32, u32) {
         "DminCounters::read is not (dmin_nan_unset, dmin_negative_floored)"
     );
     direct
+}
+
+/// The value `c`'s `Debug` gives for the field `name`: the digits after `name: `.
+fn debug_field(c: &DminCounters, name: &str) -> u32 {
+    let dbg = format!("{c:?}");
+    let key = format!("{name}: ");
+    let at = dbg
+        .find(&key)
+        .unwrap_or_else(|| panic!("DminCounters' Debug has no field {name}: {dbg}"))
+        + key.len();
+    let digits: String = dbg[at..].chars().take_while(char::is_ascii_digit).collect();
+    digits
+        .parse()
+        .unwrap_or_else(|e| panic!("DminCounters' Debug field {name}: {e}: {dbg}"))
 }
 
 /// The `d_min` half of a `packed_a` word (payload §2: bits 16–31).
@@ -157,9 +174,9 @@ negative_control!(
     check_stream(|w, v, c| {
         let out = set_d_min_release(w, v, &DminCounters::new());
         if v.is_nan() {
-            c.dmin_nan_unset.fetch_add(1, Ordering::SeqCst);
+            c.increment_nan_unset();
         } else if v.is_sign_negative() {
-            c.dmin_negative_floored.fetch_add(1, Ordering::SeqCst);
+            c.increment_negative_floored();
         }
         out
     })
@@ -256,7 +273,7 @@ negative_control!(
     expected = "(dmin_nan_unset, dmin_negative_floored)",
     check_frame_packer_matches_release(
         |w, v, c| {
-            c.dmin_nan_unset.fetch_add(1, Ordering::SeqCst);
+            c.increment_nan_unset();
             set_d_min_release(w, v, &DminCounters::new())
         },
         &ALL_LOWS
@@ -278,7 +295,7 @@ negative_control!(
     expected = "(dmin_nan_unset, dmin_negative_floored)",
     check_frame_packer_matches_release(
         |w, v, c| {
-            c.dmin_negative_floored.fetch_add(1, Ordering::SeqCst);
+            c.increment_negative_floored();
             pack_store(w, v, c)
         },
         &FIELD_LOWS
@@ -554,4 +571,54 @@ negative_control!(
         ));
         check_no_statics(&sources);
     }
+);
+
+/// R-300: the owner of a frame's pair reuses it for the next frame by resetting it. Frame 1 stores two NaNs and one
+/// negative through `set` and reads back `(2, 1)`; after `reset` the pair reads `(0, 0)`; frame 2 stores one NaN and
+/// three negatives and reads back `(1, 3)`, its own counts only, none carried over from frame 1.
+fn check_reset_reuse(set: Counted, reset: fn(&mut DminCounters)) {
+    let mut frame = DminCounters::new();
+    for v in [f32::NAN, -1.0, f32::NAN, 0.5] {
+        set(0, v, &frame);
+    }
+    assert_eq!(pair(&frame), (2, 1), "frame 1's read-back");
+    reset(&mut frame);
+    assert_eq!(
+        pair(&frame),
+        (0, 0),
+        "after reset: (dmin_nan_unset, dmin_negative_floored)"
+    );
+    for v in [-2.0, f32::NAN, 1.0, f32::NEG_INFINITY, -f32::MIN_POSITIVE] {
+        set(0, v, &frame);
+    }
+    assert_eq!(pair(&frame), (1, 3), "frame 2's read-back after reset");
+}
+
+#[test]
+fn dmin_unset_qa_r300_reset_reuses_the_pair_for_the_next_frame() {
+    check_reset_reuse(set_d_min_release, DminCounters::reset);
+    #[cfg(not(debug_assertions))]
+    {
+        check_reset_reuse(set_d_min, DminCounters::reset);
+        check_reset_reuse(pack_store, DminCounters::reset);
+    }
+}
+
+negative_control!(
+    dmin_unset_qa_r300_reset_reuses_the_pair_for_the_next_frame,
+    "a reset that leaves the counts in place, so the after-reset check must fail",
+    expected = "after reset",
+    check_reset_reuse(set_d_min_release, |_| {})
+);
+
+// A second control: a reset that clears only `dmin_nan_unset`.
+negative_control!(
+    dmin_unset_qa_r300_reset_clears_both_counters,
+    "a reset that clears dmin_nan_unset but keeps dmin_negative_floored, so the after-reset check must fail",
+    expected = "after reset",
+    check_reset_reuse(set_d_min_release, |c| {
+        let (_, negs) = c.read();
+        c.reset();
+        (0..negs).for_each(|_| c.increment_negative_floored());
+    })
 );
