@@ -57,12 +57,12 @@ negative_control!(
 
 // --- `cargo xtask ci` holds a golden runner that renders every suite ------------------------------------------------
 
-/// Runs `run` and checks that it passed and (re)wrote the self-test gradient's summary under the golden output
-/// directory after it started: the runner rendered the suites, rather than passing without rendering. Checks are
-/// serialised, so a test and its control, run side by side, never see each other's summary.
 /// Serialises the checks that watch the golden output directory.
 static SERIAL: Mutex<()> = Mutex::new(());
 
+/// Runs `run` and checks that it passed and (re)wrote the self-test gradient's summary under the golden output
+/// directory after it started: the runner rendered the suites, rather than passing without rendering. Checks are
+/// serialised, so a test and its control, run side by side, never see each other's summary.
 fn check_runner_renders(run: fn() -> Result<(), String>) {
     let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let summary = golden::output_dir(&repo_root()).join("selftest/gradient/summary.txt");
