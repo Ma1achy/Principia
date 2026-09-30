@@ -5822,7 +5822,7 @@
   milestone: M0
 - id: REQ-PAY-092
   area: PAY
-  statement: "d_min's unset value must be f16 +inf (bits 0x7C00), the minimum of an empty set, stored for a failed sample and for any sample before its first step; a valid d_min below f16's smallest positive subnormal (2^-24) must be stored as that subnormal, so 0.0 never appears; the packer must write the +inf and subnormal bit patterns itself, not through pack2x16float, and readers must test the unset value by its bits (R-271)."
+  statement: "d_min's unset value must be f16 +inf (bits 0x7C00), the minimum of an empty set, stored for a failed sample and for any sample before its first step; a valid d_min below f16's smallest positive subnormal (2^-24) must be stored as that subnormal, so 0.0 never appears; the packer must write the +inf and subnormal bit patterns itself, not through pack2x16float, and readers must test the unset value by its bits (R-271). The packer never stores NaN (R-79) and never silently rewrites a negative value: both are debug_assert! failures; in release a NaN stores the unset bits and a negative value clamps to the floor, and each case increments a telemetry counter (R-281)."
   source:
   - file: decisions.md
     section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
@@ -5830,12 +5830,14 @@
     section: 1. `SimState` — the hot struct
   verify:
     method: unit test
-    detail: "cargo test -p kernel dmin_unset: a failed sample's and an unstepped sample's d_min bits are 0x7C00; 1e-9 packs to the smallest positive subnormal (bits 0x0001); no valid input packs to 0x0000; the unset test reads bits; the ledger declares d_min's sentinel as +inf"
+    detail: "cargo test -p kernel dmin_unset: a failed sample's and an unstepped sample's d_min bits are 0x7C00; 1e-9 packs to the smallest positive subnormal (bits 0x0001); no valid input packs to 0x0000; the unset test reads bits; the ledger declares d_min's sentinel as +inf; in a debug build a NaN and a negative d_min each trip the packer's debug_assert!; through the release path a NaN stores 0x7C00 and a negative value stores 0x0001, and each increments its telemetry counter"
   rulings:
   - R-271
+  - R-278
+  - R-281
   milestone: M0
   rq:
-  - RQ-169
+  - RQ-171
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."

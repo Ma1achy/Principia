@@ -3039,3 +3039,39 @@ Tick any you don't accept.
      (`0x7c00`, the exponent bias), and §3.8's "The generated files are exempt" is extended to name emitter templates'
      format constants. The reviewer's hash concern then rests on R-271, which already fixes the value.
 - **Needed:** which one. TASK-M0-10 (PR #78) waits on it for finding 2; finding 1 is fixed on the branch.
+- **Ruling:** R-278 (30 Sep 2026): option 1.
+
+## RQ-171: R-281's telemetry counter for `d_min`'s packer is not defined, and the kernel has no way to report one *(telemetry, payload, TASK-M0-10)*
+
+- **File, section:** `decisions.md` § "R-281" (the human's words, PR #78 item 2): "the packer never stores NaN (R-79)
+  and never silently rewrites a negative value. Both are debug_assert! failures; in release, a NaN stores the unset
+  bits and a negative value clamps to the floor, and each case increments a telemetry counter."
+  `docs/design/principia_dd_telemetry_and_tiers.md` § "2. What to record — and the rule that makes it useful": the
+  per-frame record is `frame_ms`, `quads_computed`, `quads_reused`, `samples`, `substeps_total`, `playhead_dt`,
+  `camera_delta`, `tree_depth_max`, `stage_ms`; no counter of packer faults. The same doc, § "5.5 Profiling is
+  FIRST-CLASS, not a debug mode": "a counter that only exists in a debug build measures the debug build"; "A
+  timestamp per stage and a counter increment per frame is nanoseconds against a 16.7 ms budget". § "5. The artefact":
+  "counters as counter events". `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not
+  diminished)": "The CPU/GPU membrane returns only the ~80 B `QuadReduction` automatically and sanctioned tiny pulls
+  otherwise".
+- **What:** R-281's release behaviour is built on PR #78 (`set_d_min_release`: NaN → `0x7c00`, negative → `0x0001`;
+  `set_d_min` debug_asserts on both). The counter is not. The corpus names no counter for it, and doesn't settle:
+  1. its name and grain: one counter or one per case (NaN, negative), and per frame (§2's record) or per session;
+  2. how the kernel increments it. `set_d_min` is `no_std` kernel code that also runs on the GPU (Rust → SPIR-V), where
+     there is no mutable static: a GPU count needs an atomic counter buffer bound to the dispatch, and a way back
+     across the membrane, a `QuadReduction` member or a sanctioned pull. The corpus names neither, and
+     `QuadReduction`'s member list is settled (dd_generation_root §3.7);
+  3. whether `roundtrip_ctl`'s repack counts. It repacks an observed word through the release path, so a contaminated
+     NaN or negative `d_min` it is checking would be counted as a store.
+- **Options seen:**
+  1. **Two per-frame counters in telemetry §2 (recommended):** `dmin_nan_unset` and `dmin_negative_floored`, the
+     number of `d_min` packs in the frame that stored NaN as unset and a negative value as the floor. The packer takes a
+     `&mut` counter pair (`set_d_min_release(w, v, &mut counts)`); the kernel accumulates it in an atomic buffer read
+     back with the frame record as a sanctioned tiny pull; `roundtrip_ctl`'s repack passes a scratch pair and doesn't
+     count. The profiler writes them as counter events (§5).
+  2. **`QuadReduction` members:** the same two counts per quad, returned with the automatic reduction. This changes a
+     settled struct and its size.
+  3. **Host-only:** count in the CPU backend only (a static atomic), leaving the GPU path uncounted until a later task.
+     This fails R-281's "each case increments" on the GPU.
+- **Needed:** which one, or the counter's definition. TASK-M0-10 (PR #78) waits on it for R-281's counter and its tests
+  (NaN and a negative value each increment the counter); the rest of R-281 is built.
