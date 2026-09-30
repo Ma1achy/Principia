@@ -38,7 +38,6 @@ milestone gets its own file after its gate. Ids never change.
   doesn't reach TASK-M5-28 through its Depends on, so under option 2 its membrane audit may run before the counters'
   readback exists.
 
-
 ---
 
 ## RQ-182: how M5 types `QuadReduction`'s f16 members: `f16-pair` at packed 16-bit locations, or a new §3.8 `f16` type *(docs, M5, TASK-M5-01, R-306)*
