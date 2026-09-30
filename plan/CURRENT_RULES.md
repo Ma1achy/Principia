@@ -285,7 +285,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-113** — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*
 - **R-124** — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*
 - **R-132** — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
-- **R-133** — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*
+- **R-133** — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*. Still in force: all seven interpretations, except that "f32 noise" in REQ-COL-006 is read as REQ-DEC-043's calibrated f32 decode factor only until TASK-M2-29 calibrates the agreement presets' tolerance under fragment fast-math, which the agreement gate then uses (REQ-COL-060, R-297). The rest of that interpretation stands: "Tier-N tolerance" in REQ-TOOL-029 is read as REQ-DEC-043's factor until REQ-VAL-064 sets Tier N, and the agreement preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0. Amended by R-297.
 - **R-140** — The four readings are accepted *(closes RQ-118)*
 - **R-147** — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
 - **R-150** — REQ-INT-048's GPU arm leaves M3 *(closes RQ-120)*

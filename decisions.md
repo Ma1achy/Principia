@@ -1001,6 +1001,12 @@ encoder, and MP4/WebM through WebCodecs where supported.
 - REQ-PERF-086: Ultra and Extreme cap N at 16, and scale through E and render scale (the values are calibrated).
 
 ## R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*
+*Amended by R-297.*
+*Still in force: all seven interpretations, except that "f32 noise" in REQ-COL-006 is read as REQ-DEC-043's calibrated
+f32 decode factor only until TASK-M2-29 calibrates the agreement presets' tolerance under fragment fast-math, which the
+agreement gate then uses (REQ-COL-060, R-297). The rest of that interpretation stands: "Tier-N tolerance" in
+REQ-TOOL-029 is read as REQ-DEC-043's factor until REQ-VAL-064 sets Tier N, and the agreement preset compares against
+the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0.*
 *25 Sep 2026 · applied in step 7*
 
 All seven interpretations in RQ-111 are accepted.
@@ -3029,6 +3035,12 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   M8 dev GUI (R-129).
 - Amendment: R-297 amends R-84 (branch decisions are identical only with compute fast-math off) and R-116 (the
   agreement presets compare within a tolerance), and each carries a forward line.
+- Amendment (R-133), a consequence of R-297, not a mechanical one: REQ-COL-006's agreement gate moves, from TASK-M2-29
+  on, off REQ-DEC-043's calibrated f32 decode factor, which R-133 accepted as its tolerance until REQ-VAL-064 sets
+  Tier N, and onto REQ-COL-060's calibrated tolerance. The fragment decode may compile with fast-math and the kernel's
+  decode doesn't, so the agreement presets need the stated tolerance R-297 asks for. REQ-DEC-043's factor stays the
+  tolerance for the fragment decode against the f64 `decodeOnly()` (REQ-TOOL-029). R-133 carries a forward line, and
+  REQ-COL-006's note says the same.
 
 *Flagged, not applied:* `principia_gpu_determinism_note.md` § "The mechanism" records that turning Metal's fast-math off
 did not restore `N_sub`'s determinism (the cause was transcendental latitude, in every math mode), and that the switch

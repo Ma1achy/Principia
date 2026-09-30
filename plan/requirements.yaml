@@ -10143,7 +10143,7 @@
   - R-133
   - R-297
   milestone: M2
-  note: "R-133: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until REQ-VAL-064 sets Tier N (M4)."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
