@@ -12,7 +12,6 @@
 //!   answers `metadata` and listings from canned text and logs each call.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -203,7 +202,7 @@ fn run_listing(case: &str, args: &[&str], listed: &str) -> (bool, String, Vec<St
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("listed.txt"), listed).unwrap();
     let cargo = dir.join("cargo");
-    fs::write(
+    validation::spawn::write_executable(
         &cargo,
         format!(
             r#"#!/bin/sh
@@ -221,7 +220,6 @@ echo 'test qa_r235_t::paired::negative_control - should panic ... ok'
         ),
     )
     .unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(args)
         .env("CARGO", &cargo)

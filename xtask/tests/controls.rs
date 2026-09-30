@@ -474,17 +474,58 @@ fn controls_control_panicking_without_its_message_fails_naming_it() {
     lacks(&v.stderr, "test `doubles`:");
 }
 
-/// libtest's report of two failed controls: `a` did not panic, `b` panicked with the wrong message.
-const WRONG_PANIC_RUN: &str = "---- a::negative_control stdout ----
+/// libtest's note for a control that panicked without its expected message, which it appends to the control's output.
+const B_NOTE: &str = "note: panic did not contain expected string
+      panic message: \"setup failed\"
+ expected substring: \"the check\"";
+
+/// `b`'s panic, as its output shows it before libtest's note.
+const B_PANIC: &str = "thread 'b::negative_control' (7) panicked at tests/b.rs:6:36:
+setup failed";
+
+/// A child's libtest report, as a control that embeds a child's `cargo test` prints it: a header for the child's
+/// test `x`, and the child's own list of failures.
+const CHILD_REPORT: &str = "running 1 test
+test x ... FAILED
+
+failures:
+
+---- x stdout ----
+child output
+
+failures:
+    x
+
+test result: FAILED. 0 passed; 1 failed
+";
+
+/// libtest's report of two failed controls: `a` did not panic, `b` printed `b_output` (its panic and libtest's note).
+fn wrong_panic_run(b_output: &str) -> String {
+    format!(
+        "running 2 tests
+test a::negative_control - should panic ... FAILED
+test b::negative_control - should panic ... FAILED
+
+failures:
+
+---- a::negative_control stdout ----
 note: test did not panic as expected at tests/a.rs:3:60
 ---- b::negative_control stdout ----
+{b_output}
 
-thread 'b::negative_control' (7) panicked at tests/b.rs:6:36:
-setup failed
-note: panic did not contain expected string
-      panic message: \"setup failed\"
- expected substring: \"the check\"
-";
+failures:
+    a::negative_control
+    b::negative_control
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+"
+    )
+}
+
+/// The run in which `b` printed only its panic and its note.
+fn plain_wrong_panic_run() -> String {
+    wrong_panic_run(&format!("\n{B_PANIC}\n{B_NOTE}"))
+}
 
 /// `stdout`'s one wrong panic is `b`'s, and it turns `b`'s `ControlPasses` into `WrongPanic`, leaving `a`'s alone.
 fn check_wrong_panics(stdout: &str) {
@@ -515,7 +556,16 @@ fn check_wrong_panics(stdout: &str) {
 
 #[test]
 fn controls_parse_wrong_panics_reads_libtest_notes() {
-    check_wrong_panics(WRONG_PANIC_RUN);
+    check_wrong_panics(&plain_wrong_panic_run());
+}
+
+/// REQ-SYS-069: `b`'s output embeds a child's report, with its own `---- x stdout ----` header, before `b`'s panic;
+/// `b` keeps its whole note.
+#[test]
+fn controls_parse_wrong_panics_keeps_a_note_after_an_embedded_header() {
+    check_wrong_panics(&wrong_panic_run(&format!(
+        "{CHILD_REPORT}\n{B_PANIC}\n{B_NOTE}"
+    )));
 }
 
 validation::negative_control!(
@@ -532,10 +582,20 @@ validation::negative_control!(
     controls_parse_wrong_panics_reads_libtest_notes,
     "the same run with `b`'s note replaced by a did-not-panic one, required to read a wrong panic",
     expected = "the wrong panic of `b` was not read",
-    check_wrong_panics(&WRONG_PANIC_RUN.replace(
+    check_wrong_panics(&plain_wrong_panic_run().replace(
         "note: panic did not contain expected string",
         "note: test did not panic as expected"
     ))
+);
+
+validation::negative_control!(
+    controls_parse_wrong_panics_keeps_a_note_after_an_embedded_header,
+    "the same run with `b`'s note only inside the child's report it embeds, required to read `b`'s wrong panic",
+    expected = "the wrong panic of `b` was not read",
+    check_wrong_panics(&wrong_panic_run(&format!(
+        "{}\n{B_PANIC}",
+        CHILD_REPORT.replace("child output", B_NOTE)
+    )))
 );
 
 validation::negative_control!(
