@@ -343,6 +343,12 @@ struct Gpu {
 }
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
+/// The offscreen target is drawn to, then copied out. `union`, as the flags are disjoint: `|` and `^` would agree.
+const TARGET_USAGE: wgpu::TextureUsages =
+    wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC);
+/// The readback buffer is copied into, then mapped. `union`, as the flags are disjoint: `|` and `^` would agree.
+const READBACK_USAGE: wgpu::BufferUsages =
+    wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST);
 
 impl Gpu {
     fn new() -> Result<Self, String> {
@@ -392,7 +398,7 @@ impl Gpu {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            usage: TARGET_USAGE,
             view_formats: &[],
         });
         let view = target.create_view(&Default::default());
@@ -400,7 +406,7 @@ impl Gpu {
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("screenshot readback"),
             size: u64::from(row) * u64::from(h),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: READBACK_USAGE,
             mapped_at_creation: false,
         });
         let mut encoder = self.device.create_command_encoder(&Default::default());
@@ -412,8 +418,8 @@ impl Gpu {
             &screen,
         );
         {
+            // No debug label: the pass's is not observable, and the target and buffer are labelled.
             let pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("screenshot"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     depth_slice: None,
@@ -485,8 +491,9 @@ fn write_png(path: &Path, [w, h]: [u32; 2], rgba: &[u8]) -> Result<(), String> {
 pub fn read_png(path: &Path) -> Result<([u32; 2], Vec<u8>), String> {
     let file = fs::File::open(path).map_err(|e| format!("cannot open {}: {e}", path.display()))?;
     let mut decoder = png::Decoder::new(std::io::BufReader::new(file));
+    // `union`, as the flags are disjoint: `|` and `^` would agree.
     decoder.set_transformations(
-        png::Transformations::normalize_to_color8() | png::Transformations::ALPHA,
+        png::Transformations::normalize_to_color8().union(png::Transformations::ALPHA),
     );
     let mut reader = decoder
         .read_info()
