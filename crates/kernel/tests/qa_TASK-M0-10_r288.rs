@@ -203,27 +203,34 @@ negative_control!(
     )
 );
 
+/// Every bit of the low (descriptor) half, reserved bits 10–15 included: `set_d_min` stores only the `d_min` half and
+/// keeps the rest of the word as it was (payload §2).
+const ALL_LOWS: [u32; 3] = [0x0000, 0x03ff, 0xffff];
+
+/// The descriptor halves `pack_packed_a` can produce: it builds the word from its fields and zeroes the reserved bits
+/// 10–15 by design (payload §2), so a `pack_store` round-trip keeps only bits 0–9.
+const FIELD_LOWS: [u32; 2] = [0x0000, 0x03ff];
+
 /// In a release build `set_d_min` and `pack_packed_a` have no assertion and count into the frame pair their caller
 /// passes, exactly as the release packer does (R-288, R-294). In a debug build they assert first, so only their
-/// valid inputs are exercised here, and those leave the frame's pair at zero.
-fn check_frame_packer_matches_release(set: Counted) {
+/// valid inputs are exercised here, and those leave the frame's pair at zero. `lows` are the descriptor halves the
+/// store must keep.
+fn check_frame_packer_matches_release(set: Counted, lows: &[u32]) {
     #[cfg(not(debug_assertions))]
-    check_stream_over(set, &[0x0000, 0x03ff]);
+    check_stream_over(set, lows);
     #[cfg(debug_assertions)]
     {
         let c = DminCounters::new();
-        for &bits in STREAM.iter().filter(|&&b| required(b).1 == (0, 0)) {
-            let w = set(0x03ff, f32::from_bits(bits), &c);
-            assert_eq!(
-                d_min_half(w),
-                required(bits).0,
-                "input {bits:#010x}: stored d_min bits"
-            );
-            assert_eq!(
-                w & 0xffff,
-                0x03ff,
-                "input {bits:#010x}: descriptor half kept"
-            );
+        for &low in lows {
+            for &bits in STREAM.iter().filter(|&&b| required(b).1 == (0, 0)) {
+                let w = set(0x7bff_0000 | low, f32::from_bits(bits), &c);
+                assert_eq!(
+                    d_min_half(w),
+                    required(bits).0,
+                    "input {bits:#010x}: stored d_min bits"
+                );
+                assert_eq!(w & 0xffff, low, "input {bits:#010x}: descriptor half kept");
+            }
         }
         assert_eq!(
             pair(&c),
@@ -235,32 +242,47 @@ fn check_frame_packer_matches_release(set: Counted) {
 
 #[test]
 fn dmin_unset_qa_r288_set_d_min_counts_into_the_callers_frame() {
-    check_frame_packer_matches_release(set_d_min);
+    check_frame_packer_matches_release(set_d_min, &ALL_LOWS);
 }
 
 #[test]
 fn dmin_unset_qa_r288_pack_packed_a_counts_into_the_callers_frame() {
-    check_frame_packer_matches_release(pack_store);
+    check_frame_packer_matches_release(pack_store, &FIELD_LOWS);
 }
 
 negative_control!(
     dmin_unset_qa_r288_set_d_min_counts_into_the_callers_frame,
     "a packer that counts every store as a NaN, so the pair check must fail",
     expected = "(dmin_nan_unset, dmin_negative_floored)",
-    check_frame_packer_matches_release(|w, v, c| {
-        c.dmin_nan_unset.fetch_add(1, Ordering::SeqCst);
-        set_d_min_release(w, v, &DminCounters::new())
-    })
+    check_frame_packer_matches_release(
+        |w, v, c| {
+            c.dmin_nan_unset.fetch_add(1, Ordering::SeqCst);
+            set_d_min_release(w, v, &DminCounters::new())
+        },
+        &ALL_LOWS
+    )
+);
+
+// A second control for `set_d_min`'s check, in both builds: a store that drops the reserved bits 10–15 of the
+// descriptor half, as `pack_packed_a` does, so the full-strength descriptor check must fail.
+negative_control!(
+    dmin_unset_qa_r288_set_d_min_keeps_reserved_bits,
+    "a d_min store that zeroes the reserved bits 10–15, so the descriptor-half check must fail",
+    expected = "descriptor half kept",
+    check_frame_packer_matches_release(|w, v, c| set_d_min(w, v, c) & !0xfc00, &ALL_LOWS)
 );
 
 negative_control!(
     dmin_unset_qa_r288_pack_packed_a_counts_into_the_callers_frame,
     "a word packer that counts every store as negative in the caller's frame, so the pair check must fail",
     expected = "(dmin_nan_unset, dmin_negative_floored)",
-    check_frame_packer_matches_release(|w, v, c| {
-        c.dmin_negative_floored.fetch_add(1, Ordering::SeqCst);
-        pack_store(w, v, c)
-    })
+    check_frame_packer_matches_release(
+        |w, v, c| {
+            c.dmin_negative_floored.fetch_add(1, Ordering::SeqCst);
+            pack_store(w, v, c)
+        },
+        &FIELD_LOWS
+    )
 );
 
 // Release builds only, a second control: a word packer that stores the right bits but counts into a throwaway pair,
@@ -270,7 +292,7 @@ negative_control!(
     dmin_unset_qa_r288_pack_packed_a_counts_into_no_other_pair,
     "a packer that counts into a pair of its own, not the caller's frame, so the tally check must fail",
     expected = "(dmin_nan_unset, dmin_negative_floored)",
-    check_frame_packer_matches_release(|w, v, _| pack_store(w, v, &DminCounters::new()))
+    check_frame_packer_matches_release(|w, v, _| pack_store(w, v, &DminCounters::new()), &FIELD_LOWS)
 );
 
 /// Debug builds: `store` (with the caller's frame pair) trips its `debug_assert!` for a NaN and for a negative `d_min`
