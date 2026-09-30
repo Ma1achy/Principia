@@ -3213,7 +3213,7 @@ after SIGKILL, and its reuse of TASK-M0-26's id and reviewers for a defect fix i
 PR merges once its named reviewers approve its head and CI is green.
 
 ## R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
-*30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/ci.yml` and `plan/HUMAN_SETUP.md` §2*
+*30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
 - Provisional values stand: n = 8 shards, 120 min per shard, confirmed or replaced at the M0 gate.
@@ -3224,7 +3224,7 @@ main's branch protection yourself; I authorise that one settings change.
 - The comment-width nit: fix it in the next PR that touches that file.
 Then merge #65 and resume queued work, TASK-M0-43 first."
 
-*Applied:* REQ-VAL-149's pair, n = 8 shards and 120 minutes per shard, stays in `ci.yml` as proposed and marked
+*Applied:* REQ-VAL-149's pair, n = 8 shards and 120 minutes per shard, stays in `mutants.yml` as proposed and marked
 provisional, until the human confirms or replaces it at the M0 gate (R-71, R-182, R-302). PR #65's "Applied per R-204 —
 veto?" items 10–13 stand: round-robin sharding; one `mutants-check` job over every shard, beside each shard's own check;
 the fixture self-test as its own job, `mutants-fixture`; and `fail-fast: false` on the shard matrix. `mutants-check`
