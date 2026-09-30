@@ -2859,3 +2859,39 @@ Tick any you don't accept.
 - **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
   option 1 applied). TASK-M0-23 waits on item 1.
 - **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): item 1 option 1 (the `#[cfg_attr(test, mutants::skip)]` marker), item 2 option 1 (`xtask/src/main.rs` and `xtask/src/codegen.rs` only). Both are the tightest reading, skip nothing R-196 keeps, and are test infrastructure. Recorded in decisions.md under R-196 and in TASK-M0-23.
+
+## RQ-164: the ubuntu measurement run REQ-VAL-149 needs was blocked; how are the timings gathered? *(process, CI, TASK-M0-23)*
+
+- **File, section:** `plan/requirements.yaml` REQ-VAL-149, verify: "the proposal states the limit with its evidence:
+  the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far,
+  and the headroom the limit leaves". `decisions.md` § "R-196 — Mutation testing joins the QA gate": "If the time
+  limit makes per-PR runs impractical, raise it in REVIEW_QUEUE rather than dropping it."
+- **What:** PR #65 (TASK-M0-23) builds the per-PR `mutants` job, but proposes no limit: the ubuntu evidence doesn't
+  exist. To gather it, the implementer tried to push a throwaway branch, `measure/TASK-M0-23`, whose workflow ran only
+  one matrix job per merged PR's diff at its merge commit. The permission system denied the push ("Interfere With
+  Workloads"), and the orchestrator did not retry it. What exists: this PR's own ubuntu runs (19 mutants, 721 s and
+  826 s), Mac-side counts for all 20 merged task PRs (PR #47's diff has 267 in-diff mutants, 209 in xtask, and decides
+  the case), PR #45's 319 s Mac run, and xtask's ~213 s unmutated baseline. qa's
+  `qa23_mutants_job_runs_under_the_provisional_time_limit` stays red on #65 until a limit is set, so #65 can't merge.
+- **Options seen:**
+  1. **Allow the throwaway measurement branch (recommended).** One push of `measure/TASK-M0-23`, deleted after the
+     run; the limit is then proposed from its timings with headroom, provisional until the M0 gate.
+  2. **The human runs the measurement** (the same branch, or `workflow_dispatch` on a fork) and posts the timings.
+  3. **Propose from what exists:** a provisional limit from #65's own ubuntu runs scaled by the Mac counts. That falls
+     short of the verify line's "over the diffs of the PRs merged so far", so it needs a ruling that it suffices.
+- **Needed:** a decision on how the timings are gathered. TASK-M0-23 (PR #65) waits on it.
+
+## RQ-165: REQ-VAL-168's region minimum can't be measured at M0; propose it at M3? *(calibration, TASK-M0-05)*
+
+- **File, section:** `plan/requirements.yaml` REQ-VAL-168: "must be calibrated: proposed with its evidence by the task
+  that needs it, checked by a reviewer, confirmed by the human at the M0 gate"; milestone M0. `decisions.md` § "R-258".
+- **What:** PR #68 (TASK-M0-05) builds the convergence gate. It prints the region count and "minimum not yet
+  calibrated", and flags an unrecorded count, all as REQ-VAL-168's verify asks. It proposes no value, because M0 runs
+  no physics: no measured region scatter exists to base one on, and inventing a value breaches philosophy §4.2. qa
+  confirms the PR meets the verify line as written; only the statement's "proposed with its evidence … at the M0 gate"
+  can't be met at M0.
+- **Options seen:**
+  1. **Move the proposal to M3 (recommended).** The value is proposed by the first M3 task that runs a real
+     convergence study, and confirmed at the M3 gate; until then the gate keeps printing "not yet calibrated".
+  2. **Keep it at M0** with a value from the literature or a stated prior, marked provisional.
+- **Needed:** a ruling on where the value is proposed. Not blocking PR #68, which meets its verify line.
