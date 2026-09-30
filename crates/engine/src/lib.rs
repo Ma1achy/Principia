@@ -22,6 +22,7 @@ pub mod contract {
 
     #[cfg(test)]
     mod tests {
+        mod canonical;
         mod profile_v1;
     }
 }

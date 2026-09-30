@@ -1728,3 +1728,145 @@ validation::negative_control!(
         write(&trace.clone(), io::sink()).expect("the writer failed");
     })
 );
+
+// ----- TASK-M0-18: the no-GPU header (R-308), config's canonical text (R-309), the percentile -----
+
+/// A session that opened no GPU (R-308): `api` "none", and the GPU's fields `None`.
+fn no_gpu() -> Trace {
+    let mut trace = batch();
+    trace.header.device.gpu = None;
+    trace.header.device.gpu_cores = None;
+    trace.header.device.memory = None;
+    trace.header.backend = Backend {
+        api: Api::None,
+        driver: None,
+    };
+    trace.header.precision = None;
+    trace
+}
+
+/// The reader and the JSON Schema both accept `file`, and it reads back as `trace`.
+fn check_no_gpu_reads(file: &[u8], trace: &Trace) {
+    let lines = lines(file);
+    assert!(
+        line_errors(&lines).is_empty(),
+        "the schema rejects the file"
+    );
+    let got = read(file).expect("the reader rejects the file");
+    assert_eq!(&got, trace, "the file does not read back as the trace");
+}
+
+#[test]
+fn profile_v1_no_gpu_header_reads() {
+    let trace = no_gpu();
+    let file = bytes(&trace);
+    let head: Value = serde_json::from_slice(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
+    for pointer in [
+        "/header/backend/driver",
+        "/header/device/gpu",
+        "/header/device/gpu_cores",
+        "/header/device/memory",
+        "/header/precision",
+    ] {
+        assert_eq!(
+            head.pointer(pointer),
+            Some(&Value::Null),
+            "{pointer} is not null"
+        );
+    }
+    assert_eq!(head["header"]["backend"]["api"], json!("none"));
+    check_no_gpu_reads(&file, &trace);
+}
+
+validation::negative_control!(
+    profile_v1_no_gpu_header_reads,
+    "an api outside the five values must fail the check",
+    expected = "the schema rejects the file",
+    {
+        let trace = no_gpu();
+        let text = String::from_utf8(bytes(&trace)).unwrap().replacen(
+            r#""api":"none""#,
+            r#""api":"opengl""#,
+            1,
+        );
+        check_no_gpu_reads(text.as_bytes(), &trace)
+    }
+);
+
+/// The header line carries `config` as `expected`, its canonical text (gui_state_contract §2).
+fn check_config_text(file: &[u8], expected: &str) {
+    let first = std::str::from_utf8(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
+    assert!(
+        first.ends_with(&format!(r#""config":{expected}}}}}"#)),
+        "the header's config is not its canonical text: {first}"
+    );
+}
+
+const CONFIG_TEXT: &str = r#"{"a":{"b":-0.0,"y":0.1},"z":1e16}"#;
+
+fn with_config() -> Trace {
+    let mut trace = batch();
+    trace.header.config = json!({ "z": 1e16, "a": { "y": 0.1, "b": -0.0 } })
+        .as_object()
+        .unwrap()
+        .clone();
+    trace
+}
+
+#[test]
+fn profile_v1_config_written_canonically() {
+    let trace = with_config();
+    let file = bytes(&trace);
+    check_config_text(&file, CONFIG_TEXT);
+    assert_eq!(
+        read(file.as_slice()).unwrap(),
+        trace,
+        "the config does not read back"
+    );
+}
+
+validation::negative_control!(
+    profile_v1_config_written_canonically,
+    "a config in serde_json's own number text must fail the canonical check",
+    expected = "the header's config is not its canonical text",
+    {
+        let trace = with_config();
+        let file = bytes(&trace);
+        let own = serde_json::to_string(&trace.header.config).unwrap();
+        check_config_text(&file, &own)
+    }
+);
+
+/// `p` computes nearest-rank percentiles: the ⌈percent · n / 100⌉-th smallest, from 1, the smallest for 0.
+fn check_percentile(p: impl Fn(&[f64], u32) -> Option<f64>) {
+    let twenty: Vec<f64> = (1..=20).rev().map(f64::from).collect();
+    let cases: [(&[f64], u32, Option<f64>); 8] = [
+        (&twenty, 95, Some(19.0)),
+        (&twenty, 100, Some(20.0)),
+        (&twenty, 0, Some(1.0)),
+        (&twenty, 50, Some(10.0)),
+        (&twenty, 51, Some(11.0)),
+        (&[3.0, 1.0, 2.0], 95, Some(3.0)),
+        (&[7.0], 95, Some(7.0)),
+        (&[], 95, None),
+    ];
+    for (samples, percent, want) in cases {
+        assert_eq!(
+            p(samples, percent),
+            want,
+            "p{percent} of {samples:?} is not the nearest rank"
+        );
+    }
+}
+
+#[test]
+fn profile_v1_percentile_nearest_rank() {
+    check_percentile(crate::contract::profile::percentile);
+}
+
+validation::negative_control!(
+    profile_v1_percentile_nearest_rank,
+    "the largest sample must fail the nearest-rank check",
+    expected = "is not the nearest rank",
+    check_percentile(|s, _| s.iter().copied().reduce(f64::max))
+);

@@ -300,8 +300,18 @@ impl ser::SerializeTupleVariant for Variant<Array> {
 impl ser::SerializeMap for Object {
     type Ok = String;
     type Error = Error;
+    /// JSON keys are strings: a key must serialise to a string (a string, a char, a unit variant's name), and is held
+    /// unescaped, so the object sorts by the key's own bytes.
     fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), Error> {
-        self.key = Some(key.serialize(Key)?);
+        let text = key.serialize(Canonical)?;
+        let key = if text.starts_with('"') {
+            serde_json::from_str(&text).map_err(|e| Error(e.to_string()))?
+        } else {
+            return Err(Error(format!(
+                "a map key must be a string, not {text}: JSON has no other key"
+            )));
+        };
+        self.key = Some(key);
         Ok(())
     }
     fn serialize_value<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
@@ -346,146 +356,5 @@ impl ser::SerializeStructVariant for Variant<Object> {
     }
     fn end(self) -> Result<String, Error> {
         Ok(tagged(self.name, self.inner.end()?))
-    }
-}
-
-/// A map key: JSON keys are strings, so only a string, a char or a unit variant's name is one.
-struct Key;
-
-fn not_a_key<T>(what: &str) -> Result<T, Error> {
-    Err(Error(format!(
-        "a map key must be a string, not {what}: JSON has no other key"
-    )))
-}
-
-impl ser::Serializer for Key {
-    type Ok = String;
-    type Error = Error;
-    type SerializeSeq = ser::Impossible<String, Error>;
-    type SerializeTuple = ser::Impossible<String, Error>;
-    type SerializeTupleStruct = ser::Impossible<String, Error>;
-    type SerializeTupleVariant = ser::Impossible<String, Error>;
-    type SerializeMap = ser::Impossible<String, Error>;
-    type SerializeStruct = ser::Impossible<String, Error>;
-    type SerializeStructVariant = ser::Impossible<String, Error>;
-
-    fn serialize_str(self, v: &str) -> Result<String, Error> {
-        Ok(v.to_owned())
-    }
-    fn serialize_char(self, v: char) -> Result<String, Error> {
-        Ok(v.to_string())
-    }
-    fn serialize_unit_variant(
-        self,
-        _name: &'static str,
-        _index: u32,
-        variant: &'static str,
-    ) -> Result<String, Error> {
-        Ok(variant.to_owned())
-    }
-    fn serialize_newtype_struct<T: Serialize + ?Sized>(
-        self,
-        _name: &'static str,
-        value: &T,
-    ) -> Result<String, Error> {
-        value.serialize(self)
-    }
-    fn serialize_bool(self, _v: bool) -> Result<String, Error> {
-        not_a_key("a bool")
-    }
-    fn serialize_i8(self, _v: i8) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_i16(self, _v: i16) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_i32(self, _v: i32) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_i64(self, _v: i64) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_u8(self, _v: u8) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_u16(self, _v: u16) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_u32(self, _v: u32) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_u64(self, _v: u64) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_f32(self, _v: f32) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_f64(self, _v: f64) -> Result<String, Error> {
-        not_a_key("a number")
-    }
-    fn serialize_bytes(self, _v: &[u8]) -> Result<String, Error> {
-        not_a_key("bytes")
-    }
-    fn serialize_none(self) -> Result<String, Error> {
-        not_a_key("null")
-    }
-    fn serialize_some<T: Serialize + ?Sized>(self, _value: &T) -> Result<String, Error> {
-        not_a_key("an option")
-    }
-    fn serialize_unit(self) -> Result<String, Error> {
-        not_a_key("null")
-    }
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<String, Error> {
-        not_a_key("null")
-    }
-    fn serialize_newtype_variant<T: Serialize + ?Sized>(
-        self,
-        _name: &'static str,
-        _index: u32,
-        _variant: &'static str,
-        _value: &T,
-    ) -> Result<String, Error> {
-        not_a_key("an object")
-    }
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
-        not_a_key("an array")
-    }
-    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
-        not_a_key("an array")
-    }
-    fn serialize_tuple_struct(
-        self,
-        _name: &'static str,
-        _len: usize,
-    ) -> Result<Self::SerializeTupleStruct, Error> {
-        not_a_key("an array")
-    }
-    fn serialize_tuple_variant(
-        self,
-        _name: &'static str,
-        _index: u32,
-        _variant: &'static str,
-        _len: usize,
-    ) -> Result<Self::SerializeTupleVariant, Error> {
-        not_a_key("an object")
-    }
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
-        not_a_key("an object")
-    }
-    fn serialize_struct(
-        self,
-        _name: &'static str,
-        _len: usize,
-    ) -> Result<Self::SerializeStruct, Error> {
-        not_a_key("an object")
-    }
-    fn serialize_struct_variant(
-        self,
-        _name: &'static str,
-        _index: u32,
-        _variant: &'static str,
-        _len: usize,
-    ) -> Result<Self::SerializeStructVariant, Error> {
-        not_a_key("an object")
     }
 }
