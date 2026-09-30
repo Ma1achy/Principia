@@ -1,7 +1,7 @@
 //! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177); its registry holds
-//! `plan-check` (TASK-M0-02), `controls` (R-198), `lint constants` (TASK-M0-08), `gate` (TASK-M0-05) and `golden`
-//! (TASK-M0-06). `cargo xtask ci --list` runs each runner's listing-only form
-//! alone, which for `controls` runs no control (R-235).
+//! `plan-check` (TASK-M0-02), `controls` (R-198), `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `gate`
+//! (TASK-M0-05) and `golden` (TASK-M0-06). `cargo xtask ci --list` runs each runner's listing-only form alone, which
+//! for `controls` runs no control (R-235).
 
 use std::cell::RefCell;
 use std::fs;
@@ -59,14 +59,14 @@ fn ci_with_no_runners_passes() {
     assert_eq!(run(&[]), Ok(()));
 }
 
-/// The registry's names: `plan-check` (TASK-M0-02), `controls` (TASK-M0-22, R-198), then `lint constants`
-/// (TASK-M0-08), then `gate` (TASK-M0-05), then `golden` (TASK-M0-06, R-110).
+/// The registry's names: `plan-check` (TASK-M0-02), `controls` (TASK-M0-22, R-198), `lint constants` (TASK-M0-08),
+/// `lint vocab` (TASK-M0-16), then `gate` (TASK-M0-05), then `golden` (TASK-M0-06, R-110).
 fn check_the_registry(runners: &[Runner]) {
     let names: Vec<&str> = runners.iter().map(|runner| runner.name).collect();
     assert_eq!(
         names,
-        ["plan-check", "controls", "lint constants", "gate", "golden"],
-        "the ci registry is not `plan-check`, `controls`, `lint constants`, `gate`, then `golden`"
+        ["plan-check", "controls", "lint constants", "lint vocab", "gate", "golden"],
+        "the ci registry is not `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate`, then `golden`"
     );
 }
 
@@ -114,8 +114,8 @@ validation::negative_control!(
 
 validation::negative_control!(
     ci_registry_runs_controls,
-    "a registry holding a runner other than `plan-check`, `controls`, `lint constants`, `gate` and `golden`",
-    expected = "the ci registry is not `plan-check`, `controls`, `lint constants`, `gate`, then `golden`",
+    "a registry holding a runner other than `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate` and `golden`",
+    expected = "the ci registry is not `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate`, then `golden`",
     check_the_registry(&[Runner {
         name: "failing",
         run: failing,

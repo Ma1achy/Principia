@@ -39,6 +39,10 @@ Commands:
                                   symptom per arm (philosophy §4.3a; pitfalls §8)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
+  lint vocab                      fail on a retired term (canonical_spec §8) or an identifier outside the locked
+                                  taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
+                                  .html; not archive/ or reference/, nor passages in `retired-terms` markers),
+                                  naming file, line and term (R-111, R-259)
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
                                   exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
@@ -86,6 +90,7 @@ fn main() -> ExitCode {
         }
         ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {

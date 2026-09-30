@@ -8,6 +8,7 @@ pub mod deps;
 pub mod gate;
 pub mod golden;
 pub mod lint_constants;
+pub mod lint_vocab;
 pub mod plan_check;
 pub mod pr_check;
 pub mod reviews_check;

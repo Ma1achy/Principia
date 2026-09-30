@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use validation::negative_control;
-use validation::spawn::{Spawn, GRACE, TIMEOUT};
+use validation::spawn::{Spawn, GRACE, SPAWN_TIMEOUT};
 
 /// A slack for process start-up and reaping on a loaded machine, on top of the timeout the helper is given.
 const SLACK: Duration = Duration::from_secs(5);
@@ -83,7 +83,7 @@ fn read_pid(file: &Path) -> String {
 
 fn check_timeout_is(want: Duration) {
     assert_eq!(
-        TIMEOUT, want,
+        SPAWN_TIMEOUT, want,
         "the helper's timeout is not the provisional REQ-VAL-156 value"
     );
 }
