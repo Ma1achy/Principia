@@ -39,8 +39,11 @@ Read this first; each rule points at its source.
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by
   the same reviewer stops the loop for the human.
 - QA commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing, check that it made exactly one new
-  commit, and that `git diff --name-status HEAD~1 HEAD` lists only `A` lines under `crates/*/tests/`, `xtask/tests/`
-  or `fixtures/` (R-237). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA.
+  commit, and that `git diff --name-status HEAD~1 HEAD` lists only lines under `crates/*/tests/`, `xtask/tests/` or
+  `fixtures/` (R-237): `A` lines, or `M` and `D` lines on a test file whose every earlier commit, by `git log`, is a qa
+  commit ("qa: tests for …") (R-290). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA. The PR
+  lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
+  ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
 ## Never guess, never defer (`plan/WORKFLOW.md` § "Escalation", § "No deferral")
 - A conflict, silence or missing value in the corpus goes to `REVIEW_QUEUE.md`, with file, section and quoted text.
