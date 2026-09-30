@@ -671,3 +671,7 @@
   section: 'R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand'
   reason: informative only
   note: accepts PR #94's and PR #95's veto items and adds the physics reviewer to TASK-M0-18 (plan/tasks.yaml and the task file); changes no requirement
+- file: decisions.md
+  section: 'R-311 — #97''s "veto?" items stand; #97 merges once CI is green and its reviewer is done'
+  reason: informative only
+  note: accepts PR #97's veto items and records its merge; changes no requirement

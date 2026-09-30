@@ -191,6 +191,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-307** — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*
 - **R-308** — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*
 - **R-309** — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
+- **R-312** — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*
 
 ## Values
 
@@ -333,3 +334,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
 - **R-310** — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
+- **R-311** — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done
