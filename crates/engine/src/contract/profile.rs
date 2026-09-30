@@ -193,7 +193,9 @@ pub struct FrameRecord {
 }
 
 /// The memory live at a frame's end, per pool (render_gui_spec § "Profiler": memory over time, live allocations by
-/// type). A snapshot, not a change, so a downsampled file still shows each kept frame's memory.
+/// type). A snapshot, not a change, so a downsampled file still shows each kept frame's memory. The pools are disjoint:
+/// a tracked allocation counts in exactly one, and the tile cache's bytes count in `tile_cache` only, never also in
+/// `heap` or `gpu`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LiveMemory {
@@ -205,11 +207,11 @@ pub struct LiveMemory {
     pub tile_cache: PoolLive,
 }
 
-/// One pool's live memory.
+/// One pool's live memory: `bytes` is the sum of `by_kind`'s bytes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PoolLive {
-    /// The pool's total live bytes.
+    /// The pool's total live bytes, the sum of `by_kind`'s bytes.
     pub bytes: u64,
     /// One entry for each type with live allocations in the pool.
     pub by_kind: Vec<LiveKind>,
@@ -388,17 +390,17 @@ pub struct Event {
     pub detail: Option<String>,
 }
 
-/// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range — a
-/// negative ms, NaN or an infinity — or a frame with one `present` null and the other not is an error, and nothing is
-/// written.
+/// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range (a
+/// negative ms, NaN or an infinity), a frame with one `present` null and the other not, or a pool whose `bytes` is not
+/// the sum of its `by_kind` bytes is an error, and nothing is written.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
     check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     serde_json::to_writer_pretty(writer, trace)
 }
 
 /// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a value
-/// outside its range and a frame with one `present` null and the other not, so what `read` accepts validates against
-/// [`SCHEMA_V1`].
+/// outside its range, a frame with one `present` null and the other not, and a pool whose `bytes` is not the sum of its
+/// `by_kind` bytes, so what `read` accepts validates against [`SCHEMA_V1`].
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
     let trace: Trace = serde_json::from_reader(reader)?;
     check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
@@ -406,8 +408,8 @@ pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
 }
 
 /// The rules of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
-/// and ≥ 0 except `playhead_dt`; `stage_ms.present` and `stages.present` null together. The integers' widths are the
-/// types'.
+/// and ≥ 0 except `playhead_dt`; `stage_ms.present` and `stages.present` null together; each pool's `bytes` the sum
+/// of its `by_kind` bytes. The integers' widths are the types'.
 fn check_ranges(trace: &Trace) -> Result<(), String> {
     let header = &trace.header;
     if let Some(rate) = header.precision.f64_rate {
@@ -446,6 +448,21 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
         for stage in Stage::ALL {
             if let Some(sections) = frame.stages.get(stage) {
                 check_sections(&at(&format!("stages.{}", stage.key())), sections)?;
+            }
+        }
+        let live = &frame.live_memory;
+        for (pool, name) in [
+            (&live.heap, "heap"),
+            (&live.gpu, "gpu"),
+            (&live.tile_cache, "tile_cache"),
+        ] {
+            let sum: u128 = pool.by_kind.iter().map(|k| u128::from(k.bytes)).sum();
+            if sum != u128::from(pool.bytes) {
+                return Err(format!(
+                    "{} is {}, not the sum of its by_kind bytes ({sum})",
+                    at(&format!("live_memory.{name}.bytes")),
+                    pool.bytes
+                ));
             }
         }
     }

@@ -156,6 +156,7 @@
       }
     },
     "pool_live": {
+      "$comment": "bytes is the sum of by_kind's bytes; JSON Schema cannot express the sum, so the reader alone checks it (dd_telemetry_and_tiers §5).",
       "type": "object",
       "additionalProperties": false,
       "required": ["bytes", "by_kind"],

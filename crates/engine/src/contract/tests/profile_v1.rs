@@ -825,3 +825,59 @@ validation::negative_control!(
     expected = "was accepted by profile_v1.json",
     check_rejected(&written(&batch()), "a batch render")
 );
+
+// ----- the live memory: a pool's bytes is the sum of its by_kind bytes -----
+
+/// A pool whose `bytes` is not its `by_kind` sum: the schema can't see the sum, so it accepts the file (the third
+/// exception in dd_telemetry_and_tiers §5), and the reader rejects it.
+fn check_sum_rejected(doc: &Value, what: &str) {
+    check_validates(doc);
+    let text = serde_json::to_vec(doc).expect("not serialisable");
+    assert!(
+        read(text.as_slice()).is_err(),
+        "{what} was accepted by the reader"
+    );
+}
+
+#[test]
+fn profile_v1_live_memory_bytes_is_the_sum() {
+    check_sum_rejected(
+        &with_value("/frames/0/live_memory/heap/bytes", json!((3u64 << 20) + 1)),
+        "a heap one byte over its by_kind sum",
+    );
+    check_sum_rejected(
+        &with_value("/frames/0/live_memory/tile_cache/bytes", json!(4096)),
+        "a tile cache with bytes and no by_kind",
+    );
+    check_sum_rejected(
+        &with_value(
+            "/frames/0/live_memory/gpu",
+            json!({"bytes": u64::MAX, "by_kind": [
+                {"kind": "a", "count": 1, "bytes": u64::MAX},
+                {"kind": "b", "count": 1, "bytes": 1}
+            ]}),
+        ),
+        "a gpu pool whose by_kind sum overflows u64",
+    );
+    check_write_refuses(
+        &trace_with(|f| f.live_memory.gpu.bytes -= 1),
+        "a gpu pool one byte under its by_kind sum",
+    );
+    check_accepted(
+        &with_value(
+            "/frames/0/live_memory/heap",
+            json!({"bytes": 3, "by_kind": [
+                {"kind": "a", "count": 1, "bytes": 1},
+                {"kind": "b", "count": 2, "bytes": 2}
+            ]}),
+        ),
+        "a heap of two kinds that add up",
+    );
+}
+
+validation::negative_control!(
+    profile_v1_live_memory_bytes_is_the_sum,
+    "a written trace's pools add up, so the reader must accept it, failing the check",
+    expected = "was accepted by the reader",
+    check_sum_rejected(&written(&interactive()), "a trace whose pools add up")
+);
