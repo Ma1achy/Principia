@@ -181,11 +181,14 @@ jobs:
         run: |
           git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
           echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
-      # The per-PR time limit is REQ-VAL-149, a calibration (R-71), provisional until the M0 gate confirms it (R-182).
-      # No value is set yet: it waits for its ubuntu-latest measurements over the merged PRs' diffs (TASK-M0-23's PR).
-      # Until then GitHub's 360-minute job maximum is the only bound.
-      - name: cargo mutants --in-diff (REQ-VAL-149 time limit pending)
+      # The per-PR time limit is REQ-VAL-149, a calibration (R-71): proposed in TASK-M0-23's PR from `cargo mutants
+      # --in-diff` wall-clock times on ubuntu-latest over the merged PRs' diffs, cold target (R-272), as the longest
+      # completed run (133 min) plus 30% headroom, rounded up to 30 minutes. It is on this step, so the report is still
+      # uploaded when it is hit. The larger PRs' runs exceed it: RQ-176.
+      - name: cargo mutants --in-diff (REQ-VAL-149 time limit, provisional)
         id: run
+        # REQ-VAL-149: 180 minutes, provisional until the human confirms it at the M0 gate (R-71, R-182).
+        timeout-minutes: 180
         run: |
           set +e
           start=$(date +%s)
