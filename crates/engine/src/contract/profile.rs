@@ -9,7 +9,7 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
-use std::io::{self, Write};
+use std::io::{self, BufRead, Write};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -27,7 +27,11 @@ pub enum SchemaId {
     V1,
 }
 
-/// One profiler file: the session header, the frame records, then the precomputed summaries (telemetry §5).
+/// One profiler trace: the session header, the frame records, then the precomputed summaries (telemetry §5).
+///
+/// The file is JSON Lines (R-286), which [`write`] writes and [`read`] reads: the header line
+/// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. This
+/// type's own serde form, one object with all five keys, is not the file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trace {
@@ -192,6 +196,10 @@ pub struct FrameRecord {
     pub tree_depth_max: u32,
     /// The quad tree's leaf count.
     pub leaf_count: u64,
+    /// How many `d_min` values the packer received as NaN and stored as unset this frame (R-288).
+    pub dmin_nan_unset: u32,
+    /// How many `d_min` values the packer received negative and clamped to the floor this frame (R-288).
+    pub dmin_negative_floored: u32,
     /// Each stage's ms.
     pub stage_ms: StageMs,
     /// Each stage's nested sections.
@@ -411,131 +419,265 @@ where
     Option::deserialize(deserializer)
 }
 
-/// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range (a
-/// negative ms, NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the
-/// sum of its `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
+/// The header line, as written.
+#[derive(Serialize)]
+struct HeaderLineOut<'a> {
+    schema: SchemaId,
+    header: &'a SessionHeader,
+}
+
+/// The header line, as read: exactly `schema` and `header`.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HeaderLine {
+    schema: SchemaId,
+    header: SessionHeader,
+}
+
+/// The summary line, as written.
+#[derive(Serialize)]
+struct SummaryLineOut<'a> {
+    leak_flags: &'a Option<Vec<Summary>>,
+    hot_paths: &'a Option<Vec<Summary>>,
+}
+
+/// The summary line, as read: exactly `leak_flags` and `hot_paths`, each required.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SummaryLine {
+    #[serde(deserialize_with = "nullable")]
+    leak_flags: Option<Vec<Summary>>,
+    #[serde(deserialize_with = "nullable")]
+    hot_paths: Option<Vec<Summary>>,
+}
+
+/// Writes `trace` as schema v1: JSON Lines (R-286), the header line, one compact frame record per line, then the
+/// summary line, never pretty-printed; pretty-printing is on demand, `prin profile show --pretty` or `jq` (telemetry §5). A value outside its range (a negative ms,
+/// NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the sum of its
+/// `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
 /// `allocations` is an error, and nothing is written.
 ///
 /// The writer is buffered here and flushed before `write` returns, so a plain `File` costs no more than a `BufWriter`.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
     check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     let mut writer = io::BufWriter::new(writer);
-    serde_json::to_writer_pretty(&mut writer, trace)?;
+    write_lines(trace, &mut writer)?;
     writer.flush().map_err(serde_json::Error::io)
 }
 
-/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a missing
-/// key, even one whose value may be `null`, a value outside its range, a frame with one `present` null and the other
-/// not, a pool whose `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind`
-/// or for one kind and pool in a stage's `allocations`, so what `read` accepts validates against [`SCHEMA_V1`].
+/// The lines of a checked trace, each compact and ended by a newline, straight into `writer`.
+pub(crate) fn write_lines<W: io::Write>(
+    trace: &Trace,
+    mut writer: W,
+) -> Result<(), serde_json::Error> {
+    let header = HeaderLineOut {
+        schema: trace.schema,
+        header: &trace.header,
+    };
+    write_line(&mut writer, &header)?;
+    for frame in &trace.frames {
+        write_line(&mut writer, frame)?;
+    }
+    let summary = SummaryLineOut {
+        leak_flags: &trace.leak_flags,
+        hot_paths: &trace.hot_paths,
+    };
+    write_line(&mut writer, &summary)
+}
+
+fn write_line<W: io::Write, T: Serialize>(
+    writer: &mut W,
+    line: &T,
+) -> Result<(), serde_json::Error> {
+    serde_json::to_writer(&mut *writer, line)?;
+    writer.write_all(b"\n").map_err(serde_json::Error::io)
+}
+
+/// Reads a schema v1 file, line by line. A line that is not the object its place calls for — the header line first,
+/// a frame record on each line after it, the summary line last — is an error, and so are a blank line, a file that
+/// ends before its summary line, a key outside v1 (a scope beside the five stages, say), a missing key, even one whose
+/// value may be `null`, a value outside its range, a frame with one `present` null and the other not, a pool whose
+/// `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind` or for one kind and
+/// pool in a stage's `allocations`, so each line `read` accepts validates against [`SCHEMA_V1`]'s definition for its
+/// place. An error names the line, from 1.
 ///
 /// The reader is buffered here, so a plain `File` costs no more than a `BufReader`.
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
-    let trace: Trace = serde_json::from_reader(io::BufReader::new(reader))?;
-    check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
+    read_lines(io::BufReader::new(reader))
+}
+
+/// Reads the lines from `reader`. Each line after the header is held until the next arrives: a line with one after it
+/// is a frame record, and the last is the summary line.
+pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json::Error> {
+    let mut line = String::new();
+    let mut held = String::new();
+    if !next_line(&mut reader, &mut line)? {
+        return Err(de_error("the file is empty: line 1 is not the header line"));
+    }
+    let head: HeaderLine = parse(&line, 1, "the header line")?;
+    check_header(&At::Line(1), &head.header).map_err(de_error)?;
+    let mut trace = Trace {
+        schema: head.schema,
+        header: head.header,
+        frames: Vec::new(),
+        leak_flags: None,
+        hot_paths: None,
+    };
+    if !next_line(&mut reader, &mut held)? {
+        return Err(de_error("the file ends at line 1, before its summary line"));
+    }
+    let mut number = 2;
+    while next_line(&mut reader, &mut line)? {
+        let frame: FrameRecord = parse(&held, number, "a frame record")?;
+        // The sets borrow this frame's kinds, so they are the frame's own; reading allocates per frame regardless.
+        check_frame(&At::Line(number), &frame, &mut Seens::default()).map_err(de_error)?;
+        trace.frames.push(frame);
+        std::mem::swap(&mut line, &mut held);
+        number += 1;
+    }
+    let summary: SummaryLine = parse(&held, number, "the summary line, last")?;
+    trace.leak_flags = summary.leak_flags;
+    trace.hot_paths = summary.hot_paths;
     Ok(trace)
+}
+
+/// Reads the next line into `line`, replacing what it held; `false` at the end of the file.
+fn next_line<R: BufRead>(reader: &mut R, line: &mut String) -> Result<bool, serde_json::Error> {
+    line.clear();
+    let n = reader.read_line(line).map_err(serde_json::Error::io)?;
+    Ok(n > 0)
+}
+
+/// Parses line `number` as `place`, the object its place calls for; a blank line is not one.
+fn parse<'a, T: Deserialize<'a>>(
+    line: &'a str,
+    number: usize,
+    place: &str,
+) -> Result<T, serde_json::Error> {
+    serde_json::from_str(line).map_err(|e| de_error(format!("line {number}, {place}: {e}")))
+}
+
+fn de_error(message: impl fmt::Display) -> serde_json::Error {
+    <serde_json::Error as serde::de::Error>::custom(message)
 }
 
 /// The rules of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
 /// and ≥ 0 except `playhead_dt`; `stage_ms.present` and `stages.present` null together; each pool's `bytes` the sum
 /// of its `by_kind` bytes; one `by_kind` entry per type in a pool, and one `allocations` entry per kind and pool in a
-/// stage. The integers' widths are the types'.
+/// stage. The integers' widths are the types'. A path names the line the value is written on: the header on line 1,
+/// frame `i` on line `i + 2`.
 fn check_ranges(trace: &Trace) -> Result<(), String> {
-    // One set of each for the whole trace, cleared for each list, so its capacity is allocated once, not per frame.
-    let mut kinds = Seen::default();
-    let mut kind_pools = Seen::default();
-    let header = At::Key(&At::Root, "header");
-    if let Some(rate) = trace.header.precision.f64_rate {
-        let precision = At::Key(&header, "precision");
+    check_header(&At::Line(1), &trace.header)?;
+    let mut seen = Seens::default();
+    for (i, frame) in trace.frames.iter().enumerate() {
+        check_frame(&At::Line(i + 2), frame, &mut seen)?;
+    }
+    Ok(())
+}
+
+/// One set of each for the whole trace, cleared for each list, so its capacity is allocated once, not per frame.
+#[derive(Default)]
+struct Seens<'a> {
+    kinds: Seen<&'a str>,
+    kind_pools: Seen<(&'a str, Pool)>,
+}
+
+fn check_header(line: &At, header: &SessionHeader) -> Result<(), String> {
+    let at = At::Key(line, "header");
+    if let Some(rate) = header.precision.f64_rate {
+        let precision = At::Key(&at, "precision");
         non_negative(&At::Key(&precision, "f64_rate"), rate)?;
     }
-    if let Some(display) = &trace.header.display {
-        let at = At::Key(&header, "display");
+    if let Some(display) = &header.display {
+        let at = At::Key(&at, "display");
         non_negative(&At::Key(&at, "refresh_hz"), display.refresh_hz)?;
         non_negative(&At::Key(&at, "dpi_scale"), display.dpi_scale)?;
     }
-    let frames = At::Key(&At::Root, "frames");
-    for (i, frame) in trace.frames.iter().enumerate() {
-        let at = At::Index(&frames, i);
-        non_negative(&At::Key(&at, "frame_ms"), frame.frame_ms)?;
-        if !frame.playhead_dt.is_finite() {
-            return Err(format!(
-                "{} is {}, not a finite number",
-                At::Key(&at, "playhead_dt"),
-                frame.playhead_dt
-            ));
-        }
-        non_negative(&At::Key(&at, "camera_delta"), frame.camera_delta)?;
-        let ms = &frame.stage_ms;
-        let stage_ms = At::Key(&at, "stage_ms");
-        let values = [ms.integrate, ms.reduce, ms.colour, ms.upload];
-        for (stage, value) in Stage::ALL.iter().zip(values) {
-            non_negative(&At::Key(&stage_ms, stage.key()), value)?;
-        }
-        if let Some(present) = ms.present {
-            non_negative(&At::Key(&stage_ms, "present"), present)?;
-        }
-        let stages = At::Key(&at, "stages");
-        if ms.present.is_some() != frame.stages.present.is_some() {
-            return Err(format!(
-                "{} and {} are not both null or both present",
-                At::Key(&stage_ms, "present"),
-                At::Key(&stages, "present")
-            ));
-        }
-        for stage in Stage::ALL {
-            if let Some(sections) = frame.stages.get(stage) {
-                let path = At::Key(&stages, stage.key());
-                check_sections(&path, sections)?;
-                let pairs = sections
-                    .allocations
-                    .iter()
-                    .map(|a| (a.kind.as_str(), a.pool));
-                if let Some(j) = kind_pools.first_repeat(pairs) {
-                    let a = &sections.allocations[j];
-                    return Err(format!(
-                        "{} repeats kind {:?} in pool {}: one entry per kind and pool",
-                        At::Index(&At::Key(&path, "allocations"), j),
-                        a.kind,
-                        serde_json::to_string(&a.pool).unwrap_or_default()
-                    ));
-                }
-            }
-        }
-        let live = &frame.live_memory;
-        let live_at = At::Key(&at, "live_memory");
-        for (pool, name) in [
-            (&live.heap, "heap"),
-            (&live.gpu, "gpu"),
-            (&live.tile_cache, "tile_cache"),
-        ] {
-            let pool_at = At::Key(&live_at, name);
-            let sum: u128 = pool.by_kind.iter().map(|k| u128::from(k.bytes)).sum();
-            if sum != u128::from(pool.bytes) {
+    Ok(())
+}
+
+fn check_frame<'a>(at: &At, frame: &'a FrameRecord, seen: &mut Seens<'a>) -> Result<(), String> {
+    non_negative(&At::Key(at, "frame_ms"), frame.frame_ms)?;
+    if !frame.playhead_dt.is_finite() {
+        return Err(format!(
+            "{} is {}, not a finite number",
+            At::Key(at, "playhead_dt"),
+            frame.playhead_dt
+        ));
+    }
+    non_negative(&At::Key(at, "camera_delta"), frame.camera_delta)?;
+    let ms = &frame.stage_ms;
+    let stage_ms = At::Key(at, "stage_ms");
+    let values = [ms.integrate, ms.reduce, ms.colour, ms.upload];
+    for (stage, value) in Stage::ALL.iter().zip(values) {
+        non_negative(&At::Key(&stage_ms, stage.key()), value)?;
+    }
+    if let Some(present) = ms.present {
+        non_negative(&At::Key(&stage_ms, "present"), present)?;
+    }
+    let stages = At::Key(at, "stages");
+    if ms.present.is_some() != frame.stages.present.is_some() {
+        return Err(format!(
+            "{} and {} are not both null or both present",
+            At::Key(&stage_ms, "present"),
+            At::Key(&stages, "present")
+        ));
+    }
+    for stage in Stage::ALL {
+        if let Some(sections) = frame.stages.get(stage) {
+            let path = At::Key(&stages, stage.key());
+            check_sections(&path, sections)?;
+            let pairs = sections
+                .allocations
+                .iter()
+                .map(|a| (a.kind.as_str(), a.pool));
+            if let Some(j) = seen.kind_pools.first_repeat(pairs) {
+                let a = &sections.allocations[j];
                 return Err(format!(
-                    "{} is {}, not the sum of its by_kind bytes ({sum})",
-                    At::Key(&pool_at, "bytes"),
-                    pool.bytes
+                    "{} repeats kind {:?} in pool {}: one entry per kind and pool",
+                    At::Index(&At::Key(&path, "allocations"), j),
+                    a.kind,
+                    serde_json::to_string(&a.pool).unwrap_or_default()
                 ));
             }
-            if let Some(j) = kinds.first_repeat(pool.by_kind.iter().map(|k| k.kind.as_str())) {
-                return Err(format!(
-                    "{} repeats kind {:?}: one entry for each type",
-                    At::Index(&At::Key(&pool_at, "by_kind"), j),
-                    pool.by_kind[j].kind
-                ));
-            }
+        }
+    }
+    let live = &frame.live_memory;
+    let live_at = At::Key(at, "live_memory");
+    for (pool, name) in [
+        (&live.heap, "heap"),
+        (&live.gpu, "gpu"),
+        (&live.tile_cache, "tile_cache"),
+    ] {
+        let pool_at = At::Key(&live_at, name);
+        let sum: u128 = pool.by_kind.iter().map(|k| u128::from(k.bytes)).sum();
+        if sum != u128::from(pool.bytes) {
+            return Err(format!(
+                "{} is {}, not the sum of its by_kind bytes ({sum})",
+                At::Key(&pool_at, "bytes"),
+                pool.bytes
+            ));
+        }
+        if let Some(j) = seen
+            .kinds
+            .first_repeat(pool.by_kind.iter().map(|k| k.kind.as_str()))
+        {
+            return Err(format!(
+                "{} repeats kind {:?}: one entry for each type",
+                At::Index(&At::Key(&pool_at, "by_kind"), j),
+                pool.by_kind[j].kind
+            ));
         }
     }
     Ok(())
 }
 
-/// A path into the file, `frames[3].stages.reduce.scopes[0].ms` say, built on the stack as the check descends and
+/// A path into the file, `line 5: stages.reduce.scopes[0].ms` say, built on the stack as the check descends and
 /// formatted only when a check fails, so checking a valid file allocates no path.
 #[derive(Clone, Copy)]
 enum At<'a> {
-    /// The file.
-    Root,
+    /// One line of the file, numbered from 1.
+    Line(usize),
     /// A key of the object at the parent path.
     Key(&'a At<'a>, &'static str),
     /// An index into the array at the parent path.
@@ -545,8 +687,8 @@ enum At<'a> {
 impl fmt::Display for At<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            At::Root => Ok(()),
-            At::Key(At::Root, key) => f.write_str(key),
+            At::Line(n) => write!(f, "line {n}"),
+            At::Key(At::Line(n), key) => write!(f, "line {n}: {key}"),
             At::Key(parent, key) => write!(f, "{parent}.{key}"),
             At::Index(parent, i) => write!(f, "{parent}[{i}]"),
         }

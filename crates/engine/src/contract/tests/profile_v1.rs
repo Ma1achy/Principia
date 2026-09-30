@@ -1,7 +1,9 @@
 //! Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting"): a written
 //! trace validates against the checked-in JSON Schema, has exactly the five stages at the top and every scope beneath
 //! one of them (REQ-TOOL-005), and parses as telemetry §2's frame record with the nested sections beneath
-//! (REQ-TOOL-008). Each test registers the control that must make it fail (R-176).
+//! (REQ-TOOL-008). The file is JSON Lines (R-286): the header line, one frame record per line, then the summary line,
+//! each line validated against the schema's definition for its place. Each test registers the control that must make
+//! it fail (R-176).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -20,8 +22,8 @@ use crate::contract::profile::{
 /// The five stages' keys, in telemetry §2's order.
 const FIVE: [&str; 5] = ["integrate", "reduce", "colour", "upload", "present"];
 
-/// A frame record's keys: telemetry §2's, then `stages` and `live_memory`.
-const FRAME_KEYS: [&str; 13] = [
+/// A frame record's keys: telemetry §2's, with R-288's two counters, then `stages` and `live_memory`.
+const FRAME_KEYS: [&str; 15] = [
     "frame",
     "frame_ms",
     "quads_computed",
@@ -32,6 +34,8 @@ const FRAME_KEYS: [&str; 13] = [
     "camera_delta",
     "tree_depth_max",
     "leaf_count",
+    "dmin_nan_unset",
+    "dmin_negative_floored",
     "stage_ms",
     "stages",
     "live_memory",
@@ -122,6 +126,8 @@ fn frame(index: u64, camera_delta: f64, present: bool) -> FrameRecord {
         camera_delta,
         tree_depth_max: 7,
         leaf_count: 64,
+        dmin_nan_unset: 2,
+        dmin_negative_floored: 1,
         stage_ms: StageMs {
             integrate: 6.0,
             reduce: 2.0,
@@ -194,14 +200,120 @@ fn bytes(trace: &Trace) -> Vec<u8> {
     out
 }
 
-/// The trace as the writer writes it, parsed back as plain JSON.
-fn written(trace: &Trace) -> Value {
-    serde_json::from_slice(&bytes(trace)).expect("the writer wrote no JSON")
+/// The file's lines, each parsed as plain JSON.
+fn lines(text: &[u8]) -> Vec<Value> {
+    let text = std::str::from_utf8(text).expect("the file is not UTF-8");
+    text.lines()
+        .enumerate()
+        .map(|(i, line)| {
+            serde_json::from_str(line).unwrap_or_else(|e| panic!("line {} is not JSON: {e}", i + 1))
+        })
+        .collect()
 }
 
-fn validator() -> jsonschema::Validator {
-    let schema: Value = serde_json::from_str(SCHEMA_V1).expect("profile_v1.json is not JSON");
+/// The trace as the writer writes it, its lines gathered into one object for the checks to walk: the header line's
+/// keys, `frames` (the frame lines) and the summary line's keys. [`file_of`] undoes it.
+fn written(trace: &Trace) -> Value {
+    let mut lines = lines(&bytes(trace));
+    assert!(
+        lines.len() >= 2,
+        "the file has no header line or no summary line"
+    );
+    let summary = lines.pop().expect("no summary line");
+    let mut doc = lines.remove(0);
+    let object = doc
+        .as_object_mut()
+        .expect("the header line is not an object");
+    object.insert("frames".to_owned(), Value::Array(lines));
+    for (key, value) in summary
+        .as_object()
+        .expect("the summary line is not an object")
+    {
+        object.insert(key.clone(), value.clone());
+    }
+    doc
+}
+
+/// `doc`'s lines, in their places: `frames` becomes the frame lines, `leak_flags` and `hot_paths` the summary line,
+/// and every other key stays on the header line.
+fn lines_of(doc: &Value) -> Vec<Value> {
+    let mut head = doc.as_object().expect("the file is not an object").clone();
+    let frames = match head.remove("frames") {
+        Some(Value::Array(frames)) => frames,
+        _ => Vec::new(),
+    };
+    let mut summary = serde_json::Map::new();
+    for key in ["leak_flags", "hot_paths"] {
+        if let Some(value) = head.remove(key) {
+            summary.insert(key.to_owned(), value);
+        }
+    }
+    let mut lines = vec![Value::Object(head)];
+    lines.extend(frames);
+    lines.push(Value::Object(summary));
+    lines
+}
+
+/// `lines` as a JSON Lines file, each compact and ended by a newline.
+fn file_from(lines: &[Value]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for line in lines {
+        serde_json::to_writer(&mut out, line).expect("not serialisable");
+        out.push(b'\n');
+    }
+    out
+}
+
+/// `doc` as the JSON Lines file it gathers.
+fn file_of(doc: &Value) -> Vec<u8> {
+    file_from(&lines_of(doc))
+}
+
+/// A validator for one place's line: the schema with its root pointed at `$defs/<place>`.
+fn validator_for(place: &str) -> jsonschema::Validator {
+    let mut schema: Value = serde_json::from_str(SCHEMA_V1).expect("profile_v1.json is not JSON");
+    let root = schema
+        .as_object_mut()
+        .expect("profile_v1.json is not an object");
+    root.remove("oneOf");
+    root.insert("$ref".to_owned(), json!(format!("#/$defs/{place}")));
     jsonschema::validator_for(&schema).expect("profile_v1.json is not a JSON Schema")
+}
+
+/// The schema's errors for a file's lines, each line against the definition for its place (telemetry §5): the first
+/// against `header_line`, the last against `summary_line`, and each between against `frame`.
+fn line_errors(lines: &[Value]) -> Vec<String> {
+    let (header, frame, summary) = (
+        validator_for("header_line"),
+        validator_for("frame"),
+        validator_for("summary_line"),
+    );
+    let last = lines.len().saturating_sub(1);
+    let mut errors = Vec::new();
+    if lines.len() < 2 {
+        errors.push(format!(
+            "{} lines: no header line or no summary line",
+            lines.len()
+        ));
+    }
+    for (i, line) in lines.iter().enumerate() {
+        let (validator, place) = match i {
+            0 => (&header, "header_line"),
+            i if i == last => (&summary, "summary_line"),
+            _ => (&frame, "frame"),
+        };
+        errors.extend(
+            validator
+                .iter_errors(line)
+                .map(|e| format!("line {} ({place}): {e}", i + 1)),
+        );
+    }
+    errors
+}
+
+/// Whether the schema accepts every line of the file `doc` gathers.
+fn schema_accepts(doc: &Value) -> bool {
+    line_errors(&lines_of(doc)).is_empty()
 }
 
 fn frames_mut(doc: &mut Value) -> &mut Vec<Value> {
@@ -218,10 +330,7 @@ fn keys(value: &Value) -> BTreeSet<&str> {
 // ----- the checks -----
 
 fn check_validates(doc: &Value) {
-    let errors: Vec<String> = validator()
-        .iter_errors(doc)
-        .map(|e| e.to_string())
-        .collect();
+    let errors = line_errors(&lines_of(doc));
     assert!(
         errors.is_empty(),
         "the trace does not validate against profile_v1.json: {errors:?}"
@@ -287,10 +396,10 @@ fn check_every_scope_under_a_stage(doc: &Value) {
 
 fn check_rejected(doc: &Value, what: &str) {
     assert!(
-        !validator().is_valid(doc),
+        !schema_accepts(doc),
         "{what} was accepted by profile_v1.json"
     );
-    let text = serde_json::to_vec(doc).expect("not serialisable");
+    let text = file_of(doc);
     assert!(
         read(text.as_slice()).is_err(),
         "{what} was accepted by the reader"
@@ -298,15 +407,12 @@ fn check_rejected(doc: &Value, what: &str) {
 }
 
 fn check_accepted(doc: &Value, what: &str) {
-    let errors: Vec<String> = validator()
-        .iter_errors(doc)
-        .map(|e| e.to_string())
-        .collect();
+    let errors = line_errors(&lines_of(doc));
     assert!(
         errors.is_empty(),
         "{what} was rejected by profile_v1.json: {errors:?}"
     );
-    let text = serde_json::to_vec(doc).expect("not serialisable");
+    let text = file_of(doc);
     if let Err(e) = read(text.as_slice()) {
         panic!("{what} was rejected by the reader: {e}");
     }
@@ -325,6 +431,8 @@ struct TelemetryFrameRecord {
     camera_delta: f64,
     tree_depth_max: u32,
     leaf_count: u64,
+    dmin_nan_unset: u32,
+    dmin_negative_floored: u32,
     stage_ms: TelemetryStageMs,
 }
 
@@ -474,7 +582,10 @@ fn profile_v1_stages_top_level_quadtree_fails() {
     );
     let mut doc = written(&interactive());
     doc["scopes"] = json!([quadtree_scope()]);
-    check_rejected(&doc, "a quadtree scope at the file's top");
+    check_rejected(&doc, "a quadtree scope on the header line");
+    let mut doc = written(&interactive());
+    frames_mut(&mut doc).insert(1, json!({"scopes": [quadtree_scope()]}));
+    check_rejected(&doc, "a quadtree scope on a line of its own");
 }
 
 validation::negative_control!(
@@ -533,6 +644,137 @@ validation::negative_control!(
     "another trace's file must not read back as this one",
     expected = "does not read back as the trace written",
     check_reads_back(&interactive(), &bytes(&batch()))
+);
+
+// ----- JSON Lines (R-286): the header line, one compact frame record per line, the summary line -----
+
+/// The file is the header line, one compact line per frame record, then the summary line, each ended by a newline:
+/// every line is the compact JSON of what its place holds, so nothing is pretty-printed.
+fn check_json_lines(trace: &Trace, text: &[u8]) {
+    let text = std::str::from_utf8(text).expect("the file is not UTF-8");
+    assert!(text.ends_with('\n'), "the file's last line has no newline");
+    let got: Vec<&str> = text.lines().collect();
+    let mut want = vec![format!(
+        "{{\"schema\":\"principia-profile-v1\",\"header\":{}}}",
+        serde_json::to_string(&trace.header).expect("header")
+    )];
+    for frame in &trace.frames {
+        want.push(serde_json::to_string(frame).expect("frame"));
+    }
+    want.push(format!(
+        "{{\"leak_flags\":{},\"hot_paths\":{}}}",
+        serde_json::to_string(&trace.leak_flags).expect("leak_flags"),
+        serde_json::to_string(&trace.hot_paths).expect("hot_paths")
+    ));
+    assert!(
+        got.len() == want.len(),
+        "the file is not JSON Lines of {} lines (a header line, {} frame lines, a summary line): {} lines",
+        want.len(),
+        trace.frames.len(),
+        got.len()
+    );
+    for (i, (got, want)) in got.iter().zip(&want).enumerate() {
+        assert!(
+            got == want,
+            "line {} is not its place's compact record: {got:?}",
+            i + 1
+        );
+    }
+}
+
+#[test]
+fn profile_v1_json_lines() {
+    for trace in [interactive(), batch(), long_session()] {
+        check_json_lines(&trace, &bytes(&trace));
+    }
+}
+
+validation::negative_control!(
+    profile_v1_json_lines,
+    "the trace pretty-printed as one object, ended by a newline, must fail",
+    expected = "is not JSON Lines",
+    check_json_lines(&interactive(), &{
+        let mut pretty = serde_json::to_vec_pretty(&interactive()).expect("pretty");
+        pretty.push(b'\n');
+        pretty
+    })
+);
+
+/// The reader and the schema both reject a file whose lines are out of their places; the reader accepts a file of no
+/// frames, and a last line without its newline, as JSON Lines allows.
+fn check_lines_in_place(file: &[u8]) {
+    let base = lines(file);
+    let n = base.len();
+    let mut cases: Vec<(Vec<u8>, &str)> = vec![
+        (Vec::new(), "an empty file"),
+        (file_from(&base[..1]), "a header line alone"),
+        (file_from(&base[..n - 1]), "a file without its summary line"),
+        (file_from(&base[1..]), "a file without its header line"),
+    ];
+    let mut summary_first = base.clone();
+    let summary = summary_first.pop().expect("summary");
+    summary_first.insert(1, summary);
+    cases.push((
+        file_from(&summary_first),
+        "the summary line before the frames",
+    ));
+    let mut swapped = base.clone();
+    swapped.swap(0, 1);
+    cases.push((file_from(&swapped), "a frame line before the header line"));
+    let mut blank = file_from(&base[..2]);
+    blank.push(b'\n');
+    blank.extend(file_from(&base[2..]));
+    cases.push((blank, "a blank line between the frames"));
+    let mut trailing = file_from(&base);
+    trailing.push(b'\n');
+    cases.push((trailing, "a blank line after the summary line"));
+    for (text, what) in &cases {
+        assert!(
+            read(text.as_slice()).is_err(),
+            "{what} was accepted by the reader"
+        );
+        let schema_ok = std::str::from_utf8(text)
+            .ok()
+            .and_then(|t| {
+                t.lines()
+                    .map(serde_json::from_str::<Value>)
+                    .collect::<Result<Vec<_>, _>>()
+                    .ok()
+            })
+            .is_some_and(|lines| line_errors(&lines).is_empty());
+        assert!(!schema_ok, "{what} was accepted by profile_v1.json");
+    }
+    let no_frames = file_from(&[base[0].clone(), base[n - 1].clone()]);
+    assert!(
+        line_errors(&lines(&no_frames)).is_empty() && read(no_frames.as_slice()).is_ok(),
+        "a file of no frames was rejected"
+    );
+    let mut unterminated = file.to_vec();
+    assert_eq!(
+        unterminated.pop(),
+        Some(b'\n'),
+        "the file has no final newline"
+    );
+    assert!(
+        read(unterminated.as_slice()).is_ok(),
+        "a last line without its newline was rejected by the reader"
+    );
+}
+
+#[test]
+fn profile_v1_lines_in_their_places() {
+    check_lines_in_place(&bytes(&interactive()));
+}
+
+validation::negative_control!(
+    profile_v1_lines_in_their_places,
+    "a file with a frame line after its summary line: without that last line it is valid, which must fail the check",
+    expected = "was accepted by the reader",
+    check_lines_in_place(&{
+        let mut file = bytes(&interactive());
+        file.extend(file_from(&lines(&bytes(&interactive()))[1..2]));
+        file
+    })
 );
 
 // ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----
@@ -600,7 +842,7 @@ fn check_live_memory(doc: &Value) {
             );
         }
     }
-    let text = serde_json::to_vec(doc).expect("not serialisable");
+    let text = file_of(doc);
     let trace = read(text.as_slice()).expect("the reader rejected the file");
     let heap = &trace.frames[0].live_memory.heap;
     assert!(
@@ -761,6 +1003,16 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
             "tree_depth_max past u32",
         ),
         ("/frames/0/samples", json!(-1), "a negative count"),
+        (
+            "/frames/0/dmin_nan_unset",
+            json!(u64::from(u32::MAX) + 1),
+            "dmin_nan_unset past u32",
+        ),
+        (
+            "/frames/0/dmin_negative_floored",
+            json!(-1),
+            "a negative dmin_negative_floored",
+        ),
     ];
     for (pointer, value, what) in rejected {
         check_rejected(&with_value(pointer, value), what);
@@ -777,6 +1029,11 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
             "tree_depth_max at u32::MAX",
         ),
         ("/frames/0/samples", json!(u64::MAX), "samples at u64::MAX"),
+        (
+            "/frames/0/dmin_negative_floored",
+            json!(u32::MAX),
+            "dmin_negative_floored at u32::MAX",
+        ),
         (
             "/frames/0/playhead_dt",
             json!(-3.5),
@@ -835,7 +1092,7 @@ validation::negative_control!(
 /// exception in dd_telemetry_and_tiers §5), and the reader rejects it.
 fn check_sum_rejected(doc: &Value, what: &str) {
     check_validates(doc);
-    let text = serde_json::to_vec(doc).expect("not serialisable");
+    let text = file_of(doc);
     assert!(
         read(text.as_slice()).is_err(),
         "{what} was accepted by the reader"
@@ -976,9 +1233,9 @@ fn profile_v1_write_is_buffered() {
 
 validation::negative_control!(
     profile_v1_write_is_buffered,
-    "serde_json straight into the counting writer must fail the check",
+    "the lines written straight into the counting writer must fail the check",
     expected = "written unbuffered",
-    check_write_buffered(|trace, out| serde_json::to_writer_pretty(out, trace))
+    check_write_buffered(|trace, out| crate::contract::profile::write_lines(trace, out))
 );
 
 #[test]
@@ -988,9 +1245,11 @@ fn profile_v1_read_is_buffered() {
 
 validation::negative_control!(
     profile_v1_read_is_buffered,
-    "serde_json straight from the counting reader must fail the check",
+    "the lines read through a one-byte buffer must fail the check",
     expected = "read unbuffered",
-    check_read_buffered(|input| serde_json::from_reader(input))
+    check_read_buffered(|input| crate::contract::profile::read_lines(
+        io::BufReader::with_capacity(1, input)
+    ))
 );
 
 // ----- the check allocates nothing per frame for a valid trace -----

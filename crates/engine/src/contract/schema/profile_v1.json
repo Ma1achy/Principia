@@ -2,17 +2,33 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "principia-profile-v1",
   "title": "Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, \"Profiler schema v1: the keys and the nesting\")",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema", "header", "frames", "leak_flags", "hot_paths"],
-  "properties": {
-    "schema": { "const": "principia-profile-v1" },
-    "header": { "$ref": "#/$defs/session_header" },
-    "frames": { "type": "array", "items": { "$ref": "#/$defs/frame_record" } },
-    "leak_flags": { "$ref": "#/$defs/summaries" },
-    "hot_paths": { "$ref": "#/$defs/summaries" }
-  },
+  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line: its first line against #/$defs/header_line, its last against #/$defs/summary_line, and each line between against #/$defs/frame. The root accepts a line of any of the three places.",
+  "oneOf": [
+    { "$ref": "#/$defs/header_line" },
+    { "$ref": "#/$defs/frame" },
+    { "$ref": "#/$defs/summary_line" }
+  ],
   "$defs": {
+    "header_line": {
+      "$comment": "The first line: the schema id and the session header.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "header"],
+      "properties": {
+        "schema": { "const": "principia-profile-v1" },
+        "header": { "$ref": "#/$defs/session_header" }
+      }
+    },
+    "summary_line": {
+      "$comment": "The last line: the precomputed summaries, after the frames.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leak_flags", "hot_paths"],
+      "properties": {
+        "leak_flags": { "$ref": "#/$defs/summaries" },
+        "hot_paths": { "$ref": "#/$defs/summaries" }
+      }
+    },
     "summaries": {
       "$comment": "Precomputed leak flags or hot-path summaries; each entry's keys are defined by the task closing REQ-TOOL-100.",
       "oneOf": [{ "type": "null" }, { "type": "array", "items": { "type": "object" } }]
@@ -118,12 +134,14 @@
         "dpi_scale": { "type": "number", "minimum": 0 }
       }
     },
-    "frame_record": {
+    "frame": {
+      "$comment": "One line between the header line and the summary line: one frame record.",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "frame", "frame_ms", "quads_computed", "quads_reused", "samples", "substeps_total", "playhead_dt",
-        "camera_delta", "tree_depth_max", "leaf_count", "stage_ms", "stages", "live_memory"
+        "camera_delta", "tree_depth_max", "leaf_count", "dmin_nan_unset", "dmin_negative_floored", "stage_ms", "stages",
+        "live_memory"
       ],
       "properties": {
         "frame": { "$ref": "#/$defs/count" },
@@ -136,6 +154,8 @@
         "camera_delta": { "type": "number", "minimum": 0 },
         "tree_depth_max": { "$ref": "#/$defs/count32" },
         "leaf_count": { "$ref": "#/$defs/count" },
+        "dmin_nan_unset": { "$ref": "#/$defs/count32" },
+        "dmin_negative_floored": { "$ref": "#/$defs/count32" },
         "stage_ms": { "$ref": "#/$defs/stage_ms" },
         "stages": { "$ref": "#/$defs/stages" },
         "live_memory": { "$ref": "#/$defs/live_memory" }
