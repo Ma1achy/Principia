@@ -242,13 +242,19 @@ negative_control!(
     )
 );
 
-/// The self-test copy with one pixel of the gradient's reference changed by `delta` steps, loaded.
+/// The self-test copy with one pixel of the gradient's reference changed by `delta` steps, loaded. At `delta` 0 the
+/// file's own bytes are written back: re-encoding would change them (another png version compresses differently), and
+/// BASELINES.md records the file's hash, not its pixels'.
 fn load_with_changed_reference(name: &str, delta: u8) -> Result<(), String> {
     let root = selftest_copy(name);
     let path = root.join("fixtures/golden/selftest/gradient/reference.png");
-    let mut image = Image::read_png(&path).unwrap();
-    image.rgb[0] = image.rgb[0].wrapping_add(delta);
-    image.write_png(&path).unwrap();
+    if delta == 0 {
+        fs::write(&path, fs::read(&path).unwrap()).unwrap();
+    } else {
+        let mut image = Image::read_png(&path).unwrap();
+        image.rgb[0] = image.rgb[0].wrapping_add(delta);
+        image.write_png(&path).unwrap();
+    }
     golden::load_suite(&root, "selftest").map(|_| ())
 }
 
