@@ -58,3 +58,24 @@ milestone gets its own file after its gate. Ids never change.
   2. **§3.8 gains a type `f16`** (a docs change to §3.8 first, then the ledger's type set and both emitters), usable at
      a scalar index or a packed 16-bit location.
 - **Needed:** which one, before TASK-M5-01 starts. Nothing in M0 is blocked.
+
+---
+
+## RQ-183: `n_unresolved` is carried by `QuadReduction` but has no §3.7 row or type *(docs, M5, TASK-M5-01, R-142, R-306)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger",
+  "Temporal accumulators": "`QuadReduction` carries only the verdict: the count of the quad's unresolved footprints,
+  latched ones included (policy §1's `n_unresolved`). `QuadReduction` stays the sole automatic return." The same
+  section's "Refinement" row for `alpha_area`: "An empty mask is told from a full one by `n_unresolved`". No §3.7
+  table has an `n_unresolved` row, so §3.7 gives it no type. `decisions.md` § "R-306": "TASK-M0-11 transcribes
+  generation-root §3.7's `QuadReduction` members … each with its name and §3.7 type".
+- **What:** TASK-M0-11 records §3.7's member list as ledger data (R-306). It lists `n_unresolved`, since §3.7 says
+  `QuadReduction` carries it, with its type recorded as not given (`ty: None` in `crates/ledger/src/payload.rs`'s
+  `QUAD_REDUCTION`). TASK-M5-01 builds the struct and writes each member's §3.8 entry, and needs a type for it.
+- **Options seen:**
+  1. **A §3.7 row for `n_unresolved`, typed `u16`,** as `valid_sample_count` ("decoded of N²") is: a count of a quad's
+     footprints is at most N².
+  2. **A §3.7 row with another type** (`u32`, or a width fixed from N).
+  3. **`n_unresolved` is not a member,** and the verdict reaches the CPU some other way; §3.7's sentence changes.
+- **Needed:** which one, before TASK-M5-01 starts. Nothing in M0 is blocked: the M0 list records the member without a
+  type, and REQ-PAY-019's test does not read it.
