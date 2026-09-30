@@ -2726,3 +2726,26 @@ gate. IDs never change. check_plan.py resolves RQ-n and R-n references in the li
 any it can't find.
 6. decisions.md stays whole: it's the law as well as its history. Agents read CURRENT_RULES.md for rules in force, and
 decisions.md only for why. Revisit splitting it per milestone (numbers unchanged) at a gate, if it becomes unwieldy."
+
+*Applied:*
+- Item 1: 38 rulings gain a forward line directly under the heading ("*Amended by R-m.*", or "Superseded in part",
+  "Corrected", "Reversed in part", "Refined" or "Extended by R-m"). The count is 38, not 22: a scan of every
+  ruling's heading and text for "amends", "supersedes", "corrects" and "replaces" R-n finds 33, and "reverses",
+  "refines" and "extends" 3 more (R-156, R-253, R-215); R-7 (its "R-7 amended" entry) and R-237 (R-290) make 38.
+  R-93, R-95, R-104, R-109, R-122 and R-141 already carried theirs in their date line and keep it there.
+- Item 2: `plan/check_plan.py` fails when a ruling says it amends, supersedes, corrects or replaces R-n, and R-n has no
+  matching forward line in its heading block. Reverses, refines and extends are checked the same way (applied per
+  R-204 — veto?). The checks are in `plan/tools/rulings.py`.
+- Items 3 and 6: `plan/tools/current_rules.py` generates `plan/CURRENT_RULES.md` from this file and
+  `plan/rule_groups.yaml`, and `check_plan.py` fails if it is stale. Applied per R-204 — veto?: the groups live in
+  that mapping file rather than in a line under each heading; a sixth group, "Design and architecture", holds the
+  architecture, payload, scheduler, render, colour, GUI and tooling rulings; each ruling's group is a judgement from
+  its text; and the one-off acts are listed last, under "One-off acts (history only)". A ruling superseded outright
+  would be left out; none is today. CLAUDE.md points agents to CURRENT_RULES.md, and to this file for history.
+- Item 4: R-195's Applied note (PR #17).
+- Item 5: `REVIEW_QUEUE.md` keeps RQ-173, the only open entry. The ruled entries moved unchanged to
+  `docs/archive/review_queue/untangling.md` (RQ-1 to RQ-128, tagged "step 1" to "step 7") and `M0.md` (RQ-129 onward,
+  tagged build, plan, calibration and the like from RQ-129's "(build, TASK-M0-01)"). RQ-169 and RQ-171, filed on PR
+  #78 and cited here by R-278 and R-288, were not on main; they are copied into `M0.md` unchanged from that branch.
+  `check_plan.py` resolves every R-n and RQ-n in the live files and the archive, and `coverage.py` takes its RQ ids
+  from the queue and its archive.
