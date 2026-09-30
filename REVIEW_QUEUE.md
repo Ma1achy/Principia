@@ -3041,6 +3041,26 @@ Tick any you don't accept.
 - **Needed:** which one. TASK-M0-10 (PR #78) waits on it for finding 2; finding 1 is fixed on the branch.
 - **Ruling:** R-278 (30 Sep 2026): option 1.
 
+## RQ-170: `d_min`'s unset value is +inf, and a ramp has no place for +inf *(design, GUI, TASK-M1-09)*
+
+- **File, section:** `docs/design/principia_dd_simstate_payload.md` § "Storage never holds NaN (R-79)": "Every
+  colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still
+  goes to the invalid colour." `docs/design/principia_debug_tooling_plan.md` (the `d_min`, `dE_max`, `dLz_max` row):
+  "sentinels shown as their literal values on the ramp, never scaled (R-136)". `plan/requirements.yaml` REQ-TOOL-012:
+  "a stored sentinel shown as its literal value on the ramp (R-136)". `decisions.md` § "R-271": `d_min`'s unset value
+  is f16 +inf, and readers treat +inf as unset.
+- **What:** before R-271, a failed sample's `d_min` was 0.0, which sits on the ramp. Now an unstepped or failed sample
+  holds +inf. Any ramp puts +inf at its top end or off the ramp, and the corpus doesn't say which. TASK-M1-09's
+  golden `m1-numeric` line ("a forced-failure sample's d_min renders as its literal 0.0") can no longer hold.
+- **Options seen:**
+  1. **The invalid colour.** Treat unset `d_min` like the other sentinels in a colouring, and draw it in the invalid
+     pattern, the same pattern NaN gets.
+  2. **The top of the ramp.** Clamp +inf to the ramp's top colour, so it reads "far away", which is what an unset
+     minimum means. A debug field would read "the ramp's top".
+  3. **A distinct "unset" style.** Neither the invalid pattern nor the ramp. This needs its own styling and its own
+     test, the way PIT-8 keeps NaN and −1 distinct.
+- **Needed:** which one. Only TASK-M1-09's one `d_min` golden line waits on it; nothing in M0 does.
+
 ## RQ-171: R-281's telemetry counter for `d_min`'s packer is not defined, and the kernel has no way to report one *(telemetry, payload, TASK-M0-10)*
 
 - **File, section:** `decisions.md` § "R-281" (the human's words, PR #78 item 2): "the packer never stores NaN (R-79)
@@ -3051,9 +3071,9 @@ Tick any you don't accept.
   `camera_delta`, `tree_depth_max`, `stage_ms`; no counter of packer faults. The same doc, § "5.5 Profiling is
   FIRST-CLASS, not a debug mode": "a counter that only exists in a debug build measures the debug build"; "A
   timestamp per stage and a counter increment per frame is nanoseconds against a 16.7 ms budget". § "5. The artefact":
-  "counters as counter events". `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not
-  diminished)": "The CPU/GPU membrane returns only the ~80 B `QuadReduction` automatically and sanctioned tiny pulls
-  otherwise".
+  "counters as counter events". `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment
+  view (demoted, not diminished)": "The CPU/GPU membrane returns only the ~80 B `QuadReduction` automatically and
+  sanctioned tiny pulls otherwise".
 - **What:** R-281's release behaviour is built on PR #78 (`set_d_min_release`: NaN → `0x7c00`, negative → `0x0001`;
   `set_d_min` debug_asserts on both). The counter is not. The corpus names no counter for it, and doesn't settle:
   1. its name and grain: one counter or one per case (NaN, negative), and per frame (§2's record) or per session;
