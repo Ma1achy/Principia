@@ -2270,7 +2270,9 @@ is now a physics definition (the physics reviewer's suggestion).
 #49, then #47."
 
 ## R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
-*Superseded by R-277.*
+*Amended by R-277.*
+*Still in force: log the memory-pressure level, not swap, in summaries (kept by R-295); the dispatch limits are
+R-277's.*
 *29 Sep 2026 · applied in CLAUDE.md*
 
 "R-252, amends R-239: the memory limit uses memory pressure, not swap size. macOS keeps swap allocated after memory
@@ -2849,6 +2851,8 @@ decisions.md only for why. Revisit splitting it per milestone (numbers unchanged
   from the queue and its archive.
 
 ## R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
+*Amended by R-295.*
+*Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277.*
 *30 Sep 2026 · applied in decisions.md, plan/tools/, plan/check_plan.py, plan/CURRENT_RULES.md, CLAUDE.md and
 `.claude/agents/qa-reviewer.md`*
 
@@ -2904,3 +2908,18 @@ readback and the measurement path, and TASK-M6-16 times the GPU with timestamp q
 record (telemetry §2), where the counters belong, so it binds the buffer, reads it back and writes the values into the
 record. Its Depends on reaches TASK-M4-05, the compute kernel whose march packs `d_min`, through TASK-M5-21, so no
 dependency is added.
+
+## R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
+*30 Sep 2026 · applied in decisions.md, plan/CURRENT_RULES.md, CLAUDE.md and `.claude/agents/code-reviewer.md`*
+
+"R-252: "log the pressure level in summaries" stays in CURRENT_RULES.md as its "Still in force" line.
+Instruction files: both edits approved. Add R-290's no-weakened-assertion check to .claude/agents/code-reviewer.md,
+and point CLAUDE.md's memory bullet at the current rule (R-277) instead of R-239 and R-252."
+
+*Applied:* R-293's veto item on R-252 changes. R-252 is amended by R-277, not superseded. Its forward line now reads
+"Amended by R-277", and a "Still in force" line keeps its logging rule: summaries log the memory-pressure level, not
+swap. R-252 returns to the digest with that line. R-239 stays superseded by R-252. `.claude/agents/code-reviewer.md`
+gains R-290's check: where qa's commit modifies or deletes a test file that only qa has committed to, the code reviewer
+confirms that no assertion was weakened, except where a ruling changed the behaviour it tests. CLAUDE.md's
+memory-pressure bullet cites R-277 in place of R-239 and R-252. The same message asked for the full text of #79's
+items 12 and 15 before ruling on them; they stay open.
