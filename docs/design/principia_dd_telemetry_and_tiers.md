@@ -181,6 +181,11 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
   a courtesy and the reason they will actually send it.
 - **Self-contained.** It must carry the build hash and the full config, or it cannot be interpreted
   six weeks later — the same provenance rule that `refine_flagged` propagation made non-negotiable.
+- **The header records the compute fast-math setting and each shader stage's fast-math mode (R-297):** the setting
+  asked for, which is the sim key's, off by default; and the mode of each stage, compute, vertex and fragment, as
+  compiled on the running backend. The two can differ: where a backend's own path compiles without fast-math and
+  offers no switch (Vulkan, on lavapipe), the setting on compiles the compute stage off, and the header shows both. The
+  display stages may keep fast-math on (`principia_parity_contract.md` §4).
 - **Format: JSON Lines, profiler schema v1 (R-56, R-286).** At the top level, §2's frame record and its five stages;
   beneath them, nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and
   write it (`principia_render_gui_spec.md` §G5). JSON Lines is plain text, so the file stays readable by the sender:

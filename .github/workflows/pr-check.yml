@@ -17,5 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: pr-check
+          cache-targets: "false"
+          cache-bin: "false"
       - name: cargo xtask pr-check
         run: cargo xtask pr-check
