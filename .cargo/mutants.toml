@@ -1,5 +1,5 @@
-# cargo-mutants' configuration (R-196; TASK-M0-23): the one exclusion list the per-PR `mutants` job (ci.yml) and the
-# nightly full run (TASK-M0-19, R-198) share. Each exclusion names which of R-196's three categories it falls in:
+# cargo-mutants' configuration (R-196; TASK-M0-23): the one exclusion list the per-PR `mutants` job (mutants.yml) and
+# the nightly full run (TASK-M0-19, R-198) share. Each exclusion names which of R-196's three categories it falls in:
 # generated code, GPU-only (spirv-gated) paths, or xtask's own harness plumbing. Nothing else is excluded; a mutant
 # that survives outside these is a qa finding, killed with a test or listed in `mutants-equivalent.toml` (R-202).
 
