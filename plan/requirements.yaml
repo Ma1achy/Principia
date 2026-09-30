@@ -13672,7 +13672,7 @@
     section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   verify:
     method: golden image
-    detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min (stored +inf, R-271) is read as unset and shown as its literal value, +inf, not hatched"
+    detail: "synthetic payload with NaN-absent ftle and a diffusion with n < 2 renders both hatched (R-245); a forced-failure sample's d_min (stored +inf, R-271) is read as unset by its bits and drawn in the neutral \"not yet\" grey of running samples, not hatched and not on the ramp (R-96, R-280)"
   rulings:
   - R-79
   - R-136
@@ -13680,6 +13680,7 @@
   - R-253
   - R-254
   - R-271
+  - R-280
   milestone: M1
 - id: REQ-TOOL-013
   area: TOOL
@@ -15171,6 +15172,7 @@
   rulings:
   - R-56
   - R-72
+  - R-286
   milestone: M0
 - id: REQ-TOOL-121
   area: TOOL
@@ -15448,6 +15450,46 @@
     detail: "cargo test -p xtask screenshot: a control laid out below a 120×20 surface fails presence naming it; the same control inside the surface passes"
   rulings:
   - R-275
+  milestone: M0
+- id: REQ-TOOL-137
+  area: TOOL
+  statement: "A field view must draw `d_min`'s unset value (f16 +inf, bits 0x7C00, tested by its bits) in the neutral \"not yet\" grey that running samples show (R-96), neither the invalid hatch, which stays NaN's, nor a place on the ramp (R-280)."
+  source:
+  - file: decisions.md
+    section: "R-280 — An unset `d_min` renders in the neutral \"not yet\" grey *(closes RQ-170)*"
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
+  verify:
+    method: golden image
+    detail: "cargo xtask golden m1-numeric: a forced-failure sample and an unstepped sample draw d_min in the running-sample grey; a NaN in the same view is hatched; a valid d_min sits on the ramp"
+  rulings:
+  - R-280
+  milestone: M1
+- id: REQ-TOOL-138
+  area: TOOL
+  statement: "`cargo xtask codegen` must write a generated file only when its content differs from what is on disk, so an unchanged file keeps its modification time and forces no rebuild (R-284)."
+  source:
+  - file: decisions.md
+    section: "R-284 — `cargo xtask codegen` writes a generated file only when its content changes"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask codegen_unchanged: running codegen twice leaves every generated file's mtime unchanged on the second run; changing one ledger entry rewrites only the files it affects"
+  rulings:
+  - R-284
+  milestone: M0
+- id: REQ-TOOL-139
+  area: TOOL
+  statement: "`prin profile show PATH --pretty` must print a JSON Lines trace indented for reading, the file itself staying compact (R-286)."
+  source:
+  - file: decisions.md
+    section: "R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  verify:
+    method: unit test
+    detail: "cargo test -p prin profile_show: --pretty prints each line indented and the printed JSON parses to the same values as the file; without --pretty the file's lines print unchanged"
+  rulings:
+  - R-286
   milestone: M0
 - id: REQ-VAL-001
   area: VAL
@@ -17764,6 +17806,7 @@
   - R-110
   - R-269
   milestone: M0
+  note: "R-269 result (30 Sep 2026, run 36719287172): lavapipe vs Metal max step 1 on exact half-way values (Metal rounds ties up, lavapipe to even), 0 on each backend against itself; each golden case keeps one reference per backend (REQ-VAL-176)."
 - id: REQ-VAL-139
   area: VAL
   kind: calibration
@@ -18365,6 +18408,25 @@
     detail: "the two r217 tests and their controls pass `cargo xtask controls` in 50 consecutive runs on ubuntu-latest under the parallel suite, with the run log kept on the PR"
   rulings:
   - R-276
+  milestone: M0
+- id: REQ-VAL-176
+  area: VAL
+  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes and each golden-image case keeps one reference across backends; a case whose bytes still differ between backends must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend (R-269, R-287)."
+  source:
+  - file: decisions.md
+    section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: docs/contracts/principia_parity_contract.md
+    section: 6. The harness
+  - file: decisions.md
+    section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
+  verify:
+    method: golden image
+    detail: "CI on the PR head: R-269's half-way fixture renders identical bytes on gpu-metal and gpu-lavapipe (max step 0) with in-shader quantisation, and max step 1 without it (the control); cargo test -p xtask golden: the per-backend fallback passes against its own backend's reference and fails against the other's, and a missing reference fails naming the backend"
+  rulings:
+  - R-269
+  - R-287
   milestone: M0
 - id: REQ-PERF-001
   area: PERF
@@ -20859,4 +20921,16 @@
     detail: "on a PR, after the last named approval, both reviews-complete check runs for the head pass and mergeStateStatus is CLEAN with no manual re-run"
   rulings:
   - R-276
+  milestone: M0
+- id: REQ-SYS-073
+  area: SYS
+  statement: "CI must cache only the cargo registry and the fixture pool (R-270), never whole target directories, each under a key naming its job, so the repository's Actions cache stays well under GitHub's 10 GB limit (R-285)."
+  source:
+  - file: decisions.md
+    section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
+  verify:
+    method: review checklist
+    detail: "code and qa: no workflow caches a target directory; every cache key names its job; the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and the `ci` job's wall time against R-270's ~10.5 min"
+  rulings:
+  - R-285
   milestone: M0
