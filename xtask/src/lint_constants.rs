@@ -215,19 +215,24 @@ fn raw_string(c: &[char], i: usize) -> Option<usize> {
     (c.get(i + 1 + hashes) == Some(&'"')).then_some(hashes)
 }
 
-/// Runs the lint over the workspace whose `Cargo.toml` is `manifest`, excluding the register and the files the
-/// generator emits.
-pub fn run(manifest: &Path) -> Result<(), String> {
-    let root = manifest
-        .parent()
-        .ok_or_else(|| format!("{}: no parent directory", manifest.display()))?;
+/// The files the lint skips, relative to the workspace root: the register, and the files the generator emits, whose
+/// numbers are emitted from the ledger (dd_generation_root §3.8).
+pub fn exempt() -> Result<Vec<PathBuf>, String> {
     let mut excluded = ledger::gen::generate(&ledger::layout(), ledger::gen::EMITTERS)
         .map_err(|e| format!("lint constants: {e}"))?
         .into_iter()
         .map(|g| g.path)
         .collect::<Vec<_>>();
     excluded.push(PathBuf::from(REGISTER));
-    let found = check(root, &excluded)?;
+    Ok(excluded)
+}
+
+/// Runs the lint over the workspace whose `Cargo.toml` is `manifest`, excluding the files [`exempt`] names.
+pub fn run(manifest: &Path) -> Result<(), String> {
+    let root = manifest
+        .parent()
+        .ok_or_else(|| format!("{}: no parent directory", manifest.display()))?;
+    let found = check(root, &exempt()?)?;
     for finding in &found {
         eprintln!("xtask lint constants: {finding}");
     }
