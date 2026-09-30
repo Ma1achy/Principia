@@ -144,8 +144,10 @@ jobs:
         run: cargo xtask golden --all
       # R-269's half-way fixture on Metal: the quantise pass's levels are the fragment's f32 output rounded half to
       # even, exact ties included, printed as REQ-VAL-176's evidence (R-296; TASK-M0-43).
-      - name: cargo nextest run -p xtask --features controls --test golden_quantise
-        run: cargo nextest run -p xtask --features controls --test golden_quantise --no-capture
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
+      - name: cargo test -p xtask --features controls golden_halfway --doc
+        run: cargo test -p xtask --features controls golden_halfway --doc
 
   # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
   gpu-lavapipe:
@@ -176,5 +178,7 @@ jobs:
         run: cargo xtask golden --all
       # R-269's half-way fixture on lavapipe: the quantise pass's levels are the fragment's f32 output rounded half to
       # even, exact ties included, and equal its automatic ones, printed as REQ-VAL-176's evidence (R-296; TASK-M0-43).
-      - name: cargo nextest run -p xtask --features controls --test golden_quantise
-        run: cargo nextest run -p xtask --features controls --test golden_quantise --no-capture
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
+      - name: cargo test -p xtask --features controls golden_halfway --doc
+        run: cargo test -p xtask --features controls golden_halfway --doc
