@@ -1,5 +1,17 @@
 //! The engine: chart-aware validation, resolve/lowering, dispatch, navigation, the scheduler, cache and
 //! QuadReduction, the inspector and the animation/export runner (systems_architecture §7.1). Its typed
-//! surface will live in `src/contract/` (R-146, R-172).
+//! surface lives in `src/contract/` (R-146, R-172).
 //!
-//! Stub (TASK-M0-01): no behaviour yet.
+//! Skeleton (TASK-M0-16): the contract surfaces are declared, with no behaviour.
+
+/// The GUI-facing surface, defined once, in the engine crate (gui_state_contract §1): the typed
+/// [`SimConfig`](contract::sim_config::SimConfig), [`RenderState`](contract::render_state::RenderState) and
+/// [`ViewUI`](contract::view_ui::ViewUI) schema, the typed edit [`SetField`](contract::set_field::SetField) and the
+/// GUI-sized [`Snapshot`](contract::snapshot::Snapshot). In: `set_field(path, value)`; out: a snapshot; both plain data.
+pub mod contract {
+    pub mod render_state;
+    pub mod set_field;
+    pub mod sim_config;
+    pub mod snapshot;
+    pub mod view_ui;
+}

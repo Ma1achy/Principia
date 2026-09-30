@@ -11,7 +11,7 @@ use std::sync::{mpsc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
-use validation::spawn::{while_no_spawn, write_executable, Spawn, TIMEOUT};
+use validation::spawn::{while_no_spawn, write_executable, Spawn, SPAWN_TIMEOUT};
 
 /// How long a spawn started during a write is watched: it must not finish while the write lasts. A `true` spawned
 /// with nothing held finishes far within it.
@@ -40,7 +40,9 @@ fn check_spawn_waits(hold: fn(&mut dyn FnMut())) {
         matches!(during, Some(Err(mpsc::RecvTimeoutError::Timeout))),
         "a child was spawned while a stand-in executable was being written: {during:?}"
     );
-    let after = rx.recv_timeout(TIMEOUT).expect("the spawn never finished");
+    let after = rx
+        .recv_timeout(SPAWN_TIMEOUT)
+        .expect("the spawn never finished");
     assert_eq!(after, Ok(true), "the spawn after the write failed");
 }
 

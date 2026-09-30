@@ -18,7 +18,7 @@ use std::process::{Command, Output};
 use std::time::{Duration, Instant, SystemTime};
 
 use validation::negative_control;
-use validation::spawn::{Spawn, GRACE, TIMEOUT};
+use validation::spawn::{Spawn, GRACE, SPAWN_TIMEOUT};
 
 #[path = "support/fixture_tree.rs"]
 mod fixture_tree;
@@ -112,7 +112,7 @@ negative_control!(
 /// The calibrated values stand (REQ-VAL-156, R-231): 300 s timeout, 5 s grace.
 fn check_calibrated(timeout: Duration, grace: Duration) {
     assert_eq!(
-        (TIMEOUT, GRACE),
+        (SPAWN_TIMEOUT, GRACE),
         (timeout, grace),
         "the calibrated timeout and grace changed"
     );

@@ -22,7 +22,7 @@ use std::sync::{mpsc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
-use validation::spawn::{write_executable, Spawn, TIMEOUT};
+use validation::spawn::{write_executable, Spawn, SPAWN_TIMEOUT};
 
 /// How long a spawn started during the write is watched for finishing. `true` spawned with nothing held back finishes
 /// far within it.
@@ -82,7 +82,7 @@ fn check_spawn_held_back(write: fn(&Path, Vec<u8>) -> io::Result<()>) {
         matches!(during, Err(mpsc::RecvTimeoutError::Timeout)),
         "a child was spawned while the stand-in executable was open for writing: {during:?}"
     );
-    let after = rx.recv_timeout(TIMEOUT);
+    let after = rx.recv_timeout(SPAWN_TIMEOUT);
     assert_eq!(
         after,
         Ok(Ok(true)),

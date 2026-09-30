@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 /// How long a child may run before it is killed: the calibration value of REQ-VAL-156 (R-214, R-71). 300 s is the
 /// provisional value, covering cold builds with margin (R-217); the human confirms or changes it at the M0 gate, from
 /// cold and warm measurements on CI and on their Mac (R-182, R-217).
-pub const TIMEOUT: Duration = Duration::from_secs(300);
+pub const SPAWN_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// How long a timed-out child's process group has, after SIGTERM, to exit before it is sent SIGKILL (R-217).
 pub const GRACE: Duration = Duration::from_secs(5);
@@ -38,9 +38,9 @@ pub trait Spawn {
     /// helper's own tests need not wait the calibrated values (R-231). Every other caller keeps [`GRACE`].
     fn output_within_grace(&mut self, timeout: Duration, grace: Duration) -> io::Result<Output>;
 
-    /// [`Spawn::output_within`] the provisional [`TIMEOUT`].
+    /// [`Spawn::output_within`] the provisional [`SPAWN_TIMEOUT`].
     fn timed_output(&mut self) -> io::Result<Output> {
-        self.output_within(TIMEOUT)
+        self.output_within(SPAWN_TIMEOUT)
     }
 }
 
@@ -69,7 +69,7 @@ impl Spawn for Command {
                  REQ-VAL-156)",
                 name(self),
                 timeout.as_secs_f64(),
-                TIMEOUT.as_secs_f64()
+                SPAWN_TIMEOUT.as_secs_f64()
             );
             if let Err(e) = ended {
                 message.push_str(&format!("; {ENDING}: {e}"));

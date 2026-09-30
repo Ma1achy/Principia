@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use validation::negative_control;
-use validation::spawn::{Spawn, TIMEOUT};
+use validation::spawn::{Spawn, SPAWN_TIMEOUT};
 
 #[path = "support/fixture_tree.rs"]
 mod fixture_tree;
@@ -89,7 +89,7 @@ fn read_pid(file: &Path) -> String {
 
 fn check_timeout_is(want: Duration) {
     assert_eq!(
-        TIMEOUT, want,
+        SPAWN_TIMEOUT, want,
         "the helper's timeout is not the provisional REQ-VAL-156 value"
     );
 }
