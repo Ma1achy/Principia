@@ -61,9 +61,11 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
   negative value; each is a `debug_assert!` failure. In release a NaN stores the unset bits and a negative value the
   floor `0x0001`, and each case increments a telemetry counter. The counter's definition waits on RQ-171.
 - R-288 (closes RQ-171): the counters are telemetry §2's per-frame atomic u32s `dmin_nan_unset` and
-  `dmin_negative_floored`, counted in release builds too. `set_d_min_release` and `set_d_min_counted` take the pair;
-  `set_d_min(w, v)` counts into the kernel's crate-level `DMIN_COUNTERS`; `roundtrip_ctl`'s repack passes a scratch
-  pair and doesn't count. Binding them to the GPU dispatch and reading them back on the profiler/telemetry readback
-  belong to the tasks that build those. No task names that work yet: RQ-174 asks which one, and whether the
-  crate-level `DMIN_COUNTERS` stays.
+  `dmin_negative_floored`, counted in release builds too. `roundtrip_ctl`'s repack passes a scratch pair and doesn't
+  count.
+- R-294 (closes RQ-174; PR #78's veto item 10): the counters belong to the frame, never a static, and the kernel holds
+  no mutable static. On the CPU the packer's caller passes in a per-frame `DminCounters` and reads it back:
+  `set_d_min(w, v, counters)`, `set_d_min_release(w, v, counters)` and `pack_packed_a(…, counters)` take it, with no
+  uncounted or global path. The GPU side, an atomic u32 buffer bound and reset per frame and read back with the
+  telemetry readback, is TASK-M5-28's (R-294, REQ-TOOL-140).
 - R-256: TASK-M0-09 transcribed the entries for `packed_a`, the descriptor, `packed_b`, `times` and `total_substeps`; this task keeps only the pack/unpack/insert emitters, the accessors and `roundtrip_ctl` over them.
