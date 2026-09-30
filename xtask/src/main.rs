@@ -28,6 +28,15 @@ Commands:
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none
+  golden (<suite> | --all | --list)
+                                  render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
+                                  offscreen, compare it with its reference to the tolerance its requirement id
+                                  gives, and write the difference image and summary under target/golden/ (R-110);
+                                  --list loads and checks every case and lists it, opening no device
+  golden repro <suite>/<case> --vary <field>=<a>,<b>
+                                  render two arms differing in exactly one field (a pair differing in more is
+                                  refused), and report the RGB values along the case's lines and one column per
+                                  symptom per arm (philosophy §4.3a; pitfalls §8)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
   lint vocab                      fail on a retired term (canonical_spec §8) or an identifier outside the locked
@@ -79,6 +88,7 @@ fn main() -> ExitCode {
                 }
             };
         }
+        ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {

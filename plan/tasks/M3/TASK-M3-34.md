@@ -1,7 +1,7 @@
 # TASK-M3-34 — Escape re-validation: precision, recall and the tau gap
 
 - **Milestone:** M3
-- **Closes:** REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025
+- **Closes:** REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168
 - **Depends on:** TASK-M3-33
 - **Needs (earlier milestones):** REQ-VAL-004, REQ-VAL-006
 - **Reviewers:** code, qa, physics
@@ -27,10 +27,12 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `decisions.md` § "R-166 — The fixtures"
 - `decisions.md` § "R-171 — The convergence gate, defined *(closes A1, A2, T2)*"
 - `decisions.md` § "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*"
+- `decisions.md` § "R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*"
+- `decisions.md` § "R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*"
 
 ## Deliverables
 - `crates/validation/src/gates/escape_revalidation.rs` — precision/recall against both ground truths; `|Δn̂|` distributions for t = 25–30; the gap ratio.
-- `fixtures/gates/convergence/gate.json` — the provisional threshold 0.1 TASK-M0-05 set (R-171), replaced by the proposed REQ-VAL-135 value once the human confirms it.
+- `fixtures/gates/convergence/gate.json` — the provisional threshold 0.1 TASK-M0-05 set (R-171), replaced by the proposed REQ-VAL-135 value once the human confirms it, and the region minimum REQ-VAL-168 proposes (R-273).
 - The chosen tau with its gap evidence, written where integrator contract Part 3 and pitfalls §2.2 state 'to re-measure'; it replaces TASK-M3-12's provisional 1e-3 (R-173).
 
 ## Acceptance tests
@@ -38,6 +40,7 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - `cargo xtask gate tau-gap` — |Δn̂| distributions of escapers and bound trajectories across t = 25–30; the gap ratio recorded (claimed 383×, 7.04e-05 vs 2.70e-02; prin-rs at best 6.8×); the chosen tau lies within the gap and outcomes are unchanged across the middle of the gap (REQ-VAL-051).
 - `cargo xtask gate escape-precision` — on the re-validation set, escape fires whose ground truth is bound are counted; gated at the measured precision (pre-R-29: 100.0%); a criterion variant that fires earlier with any false positives fails (REQ-EVT-019).
 - `cargo xtask gate convergence --propose` — the proposal states the threshold on the finest r_k (R-171), shown to fail the recorded 0.2153 → 0.4423 → 0.5494 → 0.0947 sequence (strides 32, 4, 1, 0) and to pass a converging aggregate from the M3 march; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-VAL-135).
+- Proposal: the convergence gate's region minimum, with its evidence from this task's convergence study (the region counts the M3 march declares and the scatter at which the conclusion stops holding); reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-VAL-168, R-273).
 - Proposal: the confirmed tau, inside the gap `tau-gap` measures, with the gap distributions as evidence and outcomes unchanged across its middle; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-EVT-025).
 
 ## Notes

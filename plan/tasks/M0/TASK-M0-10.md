@@ -1,7 +1,7 @@
 # TASK-M0-10 — Payload ledger II: packed_a, packed_b, times and the descriptor, with Rust pack/unpack
 
 - **Milestone:** M0
-- **Closes:** REQ-PAY-004, REQ-PAY-012, REQ-PAY-013, REQ-PAY-014, REQ-PAY-015, REQ-PAY-018, REQ-GEN-005
+- **Closes:** REQ-PAY-004, REQ-PAY-012, REQ-PAY-013, REQ-PAY-014, REQ-PAY-015, REQ-PAY-018, REQ-GEN-005, REQ-PAY-092
 - **Depends on:** TASK-M0-09
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -30,10 +30,13 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-70 — Where two docs conflict, the later consolidated doc wins"
 - `decisions.md` § "R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*"
+- `decisions.md` § "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
+- `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct"
 
 ## Deliverables
 - `crates/ledger/src/gen/rust.rs` — pack/unpack/insert emitters → `crates/kernel/src/payload/generated.rs` (accessors named as payload §6; f16 via a `no_std` binary16 conversion matching `pack2x16float`, clamping first).
 - `crates/kernel/src/payload/roundtrip.rs` — `roundtrip_ctl`: pack → unpack → repack and compare the full raw u32, never the masked fields.
+- `d_min` per R-271: its unset value is f16 +inf (bits `0x7C00`), written for a failed sample and for any sample before its first step. A valid `d_min` below f16's smallest positive subnormal (2⁻²⁴) is stored as that subnormal, so 0.0 never appears. The packer writes the +inf and subnormal bit patterns itself, not through the `pack2x16float` equivalent, and an unset test (`pa_d_min_is_unset`) reads the bits. `crates/ledger/src/payload.rs` declares `d_min`'s sentinel as +inf in place of 0.0.
 - Tests in `crates/kernel/tests/` and `crates/ledger/tests/`.
 
 ## Acceptance tests
@@ -44,8 +47,10 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
 - `cargo test -p kernel reserved_bits` — with every field packed at its maximum, bits 10–15 are zero; the static disjointness test lists 10–15 as reserved (REQ-PAY-015).
 - `cargo test -p kernel roundtrip_ctl` (property) — flipping each bit of a packed descriptor word in turn makes `roundtrip_ctl` fail for every bit, including bits the unpack masks off; the recorded pitfalls §9 pass on a contaminated value now fails (REQ-PAY-018).
 - `cargo test -p kernel f16_pairs` (property) — f16 pairs round-trip through the Rust `pack2x16float`/`unpack2x16float` equivalents within f16 epsilon over finite values in ±65504 (REQ-GEN-005).
+- `cargo test -p kernel dmin_unset` — a failed sample's and an unstepped sample's `d_min` bits are `0x7C00`; 1e-9 packs to the smallest positive subnormal (`0x0001`); no valid input packs to `0x0000`; `pa_d_min_is_unset` reads bits; the ledger declares `d_min`'s sentinel as +inf (REQ-PAY-092).
 
 ## Notes
+- R-271 changes the `d_min` sentinel that TASK-M0-09 declared (0.0). Where a merged qa file asserts 0.0 for `d_min`, the edit is limited to the new value, under R-227's exception — applied per R-204, veto?, and listed in the PR for qa.
 - The GPU halves of the round trips (the WGSL unpack and the kernel on the GPU) are TASK-M0-15.
 - Dispatch's refusal of ⌈T/dt⌉ > 65535 (R-86) belongs to the dispatch that doesn't exist yet; the limit is in the constants register (TASK-M0-08).
 - Failure `detail` categories follow payload §2; payload §8 says to confirm them against the integrator contract's failure modes when that is finalised (M3).

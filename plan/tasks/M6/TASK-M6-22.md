@@ -1,7 +1,7 @@
 # TASK-M6-22 — Quality in the GUI: the Run window selector, the Custom fields and the arbiter overlay
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058
+- **Closes:** REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058, REQ-GUI-162
 - **Depends on:** TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20
 - **Needs (earlier milestones):** REQ-GUI-001
 - **Reviewers:** code, qa, gui
@@ -19,16 +19,21 @@ The quality selector and Custom fields (under "quality: Custom") edit `SimConfig
 - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar"
 - `decisions.md` § "R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*"
 - `decisions.md` § "R-129 ✱ — Where the surfaces with no artboard live *(closes RQ-105)*"
+- `decisions.md` § "R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*"
+- `decisions.md` § "R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*"
+- `docs/design/principia_systems_architecture.md` § "7.1 Crate map"
 
 ## Deliverables
 - `crates/gui/src/windows/run_quality.rs`: selector, Custom fields (read-only display of auto's values until touched), device-ceiling maxima with tooltip.
 - `crates/gui/src/overlays/arbiter.rs`: the arbiter overlay as the Arbiter tab of a minimal Profiler window shell (`crates/gui/src/windows/profiler.rs`, R-152), which TASK-M8-28 fills in; `ViewUI.arbiter_overlay: bool` in `crates/engine`.
+- `gui`'s headless capture mode (R-274): a `gui` entry point the screenshot runner spawns, which renders a named window offscreen and writes the PNG and its AccessKit names (with rects, for R-275's visibility check); the runner's `gui` surface kind that spawns it. No crate depends on `gui`.
 - Screenshots via `cargo xtask screenshot 04_windows`, presence only — no layout comparison until the M8 dev GUI (R-129).
 
 ## Acceptance tests
 - `cargo test -p engine arbiter_writes_simconfig_quality` — arbiter writes arrive as SimConfig.quality changes in the snapshot; the overlay toggle is a ViewUI field (REQ-GUI-011).
 - `cargo xtask screenshot 04_windows` — presence only (R-129): the Run window's "quality: Custom" section shows each control (REQ-GUI-014).
 - `cargo xtask screenshot 04_windows` — presence only (R-129): the Profiler tab shows the four items (REQ-TOOL-058).
+- `cargo test -p xtask screenshot_gui_surface` — a case with surface kind `gui` spawns the capture mode for a named window and gets its PNG and names back; `cargo xtask deps` shows no edge into `gui` (REQ-GUI-162).
 
 ## Notes
 - RQ-105 ruled: R-129 — the Custom quality fields live in the Run window under "quality: Custom" and the arbiter overlay in a Profiler tab; with no artboard they are checked by presence only until the M8 dev GUI.
