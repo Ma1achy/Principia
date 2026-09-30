@@ -31,15 +31,17 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - `docs/design/principia_core_design.md` § "5. Canonicalisation is the one seam to (m, r, p)"
 - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*"
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
 
 ## Deliverables
 - The ROUNDTRIP preset (`crates/render/src/presets/roundtrip.rs` + WGSL), locked, with the tagged-expected mask (clamp, feasibility edge, mirror tie).
 - Golden suite `fixtures/golden/roundtrip_preset/` (latent and (L_z, E) charts).
 
 ## Acceptance tests
-- `cargo xtask golden roundtrip-preset` — ROUNDTRIP render of the latent and (L_z, E) charts: residual below ε_phys (REQ-ENC-024) except at tagged-expected regions; the kernel variant set is unchanged (exactly the bring-up variant) (REQ-RENDER-025).
+- `cargo xtask golden roundtrip-preset` in `gpu-metal` and `gpu-lavapipe` — ROUNDTRIP render of the latent and (L_z, E) charts, with the fragment compiled as the backend compiles it (fast-math on Metal, R-297): residual below ε_phys (REQ-ENC-024) except at tagged-expected regions; the kernel variant set is unchanged (exactly the bring-up variant) (REQ-RENDER-025).
 - Review (physics + code): every listed host-side consumer calls the one encode entry point; the ROUNDTRIP view is a fragment preset, not a kernel mode (R-75); clicked-pixel locks do not call encode (REQ-ENC-002).
 
 ## Notes
 - Gaps G2 and G15 apply (nonlinear charts, ‖·‖_phys).
 - RQ-84 ruled: R-116 — the WGSL encode the ROUNDTRIP preset calls is generated from the one Rust source (TASK-M2-25), never hand-written; this settles Gap G1 here.
+- R-297: ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys, which R-297's "stated tolerance" names for it; REQ-COL-060 (TASK-M2-29) is the agreement presets' tolerance, fragment against compute, and doesn't apply here. If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?).

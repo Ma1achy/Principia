@@ -2,8 +2,8 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083
-- **Depends on:** TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14
-- **Needs (earlier milestones):** REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027
+- **Depends on:** TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44
+- **Needs (earlier milestones):** REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027, REQ-SYS-074
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
 - **Size:** ~480 lines
@@ -32,10 +32,11 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
 
 ## Deliverables
 - `crates/kernel`: the variant axes as type parameters (chart Φ, link set, occupant, FTLE on/off); the nine appendix rows lowered; the invariant charts write tagged payloads for infeasible pixels in-kernel; the Burrau integer lattice's per-cell dispatch.
-- `crates/engine/src/variants.rs`: the variant key and pipeline table; the copy dispatch loop (copy_index 0..E as a uniform, same pipeline) and the per-copy offsets (copy 0 at the centre, copies 1..E at Halton (2,3) points 1..E minus ½, scaled to the footprint).
+- `crates/engine/src/variants.rs`: the variant key and pipeline table, each pipeline created through TASK-M0-44's compute-pipeline entry point with the compute fast-math setting (R-297); the copy dispatch loop (copy_index 0..E as a uniform, same pipeline) and the per-copy offsets (copy 0 at the centre, copies 1..E at Halton (2,3) points 1..E minus ½, scaled to the footprint).
 - DECODE-preset goldens for the Burrau int lattice and Anosova in `fixtures/golden/decode_preset/`, rendered with native wgpu offscreen (R-110).
 - A per-chart checklist table in the PR mapping each appendix row to its registry entry and kernel variant.
 
@@ -54,3 +55,4 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - RQ-92 ruled: R-124 — the dispatch-shape conflict is settled (copies dispatched again, R-102); this task is unblocked.
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause is REQ-CHART-037's here; REQ-RENDER-027's Burrau int lattice and Anosova half is REQ-RENDER-082, closed here.
 - RQ-98 ruled: R-113 — REQ-INT-072's copy offsets are REQ-INT-083, closed here (H and σ²_T stay in TASK-M5-18); REQ-RENDER-031's verify is parameterised by (E, FTLE on/off), the tier names checked by REQ-PERF-014 in M5.
+- R-297: every compute pipeline is created through TASK-M0-44's entry point, which takes the fast-math setting (off by default); the setting joins the sim key in TASK-M4-08.

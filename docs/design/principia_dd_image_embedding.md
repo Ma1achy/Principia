@@ -107,7 +107,8 @@ slice               chart id + params, z₀ (the 8-D latent), q₁, q₂ (the ba
                     common scale, R-83), slice values, lock flag, z_locked, δ
 sim                 T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close,
                     eps_E, eps_L, tau and the escape window,
-                    the integrator occupant (stepper × REGULARISATION)
+                    the integrator occupant (stepper × REGULARISATION),
+                    the compute shaders' fast-math setting (R-297)
 ensemble            E, N
 colour              mode + every parameter: kernel, temperature, blend space, site set,
                     brightness field AND ITS POLARITY, and THE RAMP WINDOW
