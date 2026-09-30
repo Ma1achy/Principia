@@ -396,7 +396,9 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   and friends: WGSL-decode vs Rust-decode. These simultaneously test **write-addressing** (a dispatch
   scramble shows as spatial disagreement) and are a **live check between two compilation paths of one
   source** — the kernel's rust-gpu build and its SPIR-V → WGSL translation — so they check the translation, not a
-  transcription (R-116), running on every debugged frame.
+  transcription (R-116), running on every debugged frame. The fragment shaders may compile with fast-math and the
+  compute shaders don't, by default (R-297), so an agreement preset, and ROUNDTRIP's residual, compare within a stated
+  tolerance, a calibration requirement (R-71), not bit-exactly.
 
 **Discipline 1 — debug presets ship locked.** Their diagnostic value is that ROUNDTRIP-red means the
 same thing every time. Editing a debug preset **forks it to custom** via the same one-way eject; it
