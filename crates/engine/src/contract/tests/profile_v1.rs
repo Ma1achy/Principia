@@ -3,7 +3,8 @@
 //! one of them (REQ-TOOL-005), and parses as telemetry §2's frame record with the nested sections beneath
 //! (REQ-TOOL-008). The file is JSON Lines (R-286): the header line, one frame record per line, then the summary line,
 //! each line validated against the schema's definition for its place. A session that ended before its summary line
-//! reads, its summaries absent with "session incomplete" (R-298). Each test registers the control that must make it
+//! reads, its summaries absent with "session incomplete" (R-298); a last line cut off before its newline is dropped,
+//! and the bytes dropped are stated (R-299). Each test registers the control that must make it
 //! fail (R-176).
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -182,6 +183,7 @@ fn interactive() -> Trace {
         leak_flags: None,
         hot_paths: None,
         session: Session::Complete,
+        dropped_bytes: 0,
     }
 }
 
@@ -194,6 +196,7 @@ fn batch() -> Trace {
         leak_flags: None,
         hot_paths: None,
         session: Session::Complete,
+        dropped_bytes: 0,
     }
 }
 
@@ -817,7 +820,7 @@ fn incomplete_line_errors(lines: &[Value]) -> Vec<String> {
 /// `read_with` reads `trace`'s file cut before its summary line, as a crashed or still-running session leaves it: the
 /// header and frames come back, the session is incomplete, and both summaries are absent with "session incomplete".
 /// So does the file cut after its first frame, without its last newline, and the header line alone. The writer writes
-/// the incomplete trace back as the same file. A last line cut off inside its object is still rejected.
+/// the incomplete trace back as the same file. A last line cut off inside its object is the `cut_off` tests' (R-299).
 fn check_truncated_trace(
     read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
     trace: &Trace,
@@ -851,6 +854,7 @@ fn check_truncated_trace(
             Session::Incomplete,
             "{what}: not an incomplete session"
         );
+        assert_eq!(got.dropped_bytes, 0, "{what}: bytes were dropped");
         for (key, absent) in [
             ("leak_flags", got.leak_flags()),
             ("hot_paths", got.hot_paths()),
@@ -876,13 +880,6 @@ fn check_truncated_trace(
             "{what}: the incomplete trace is not written back as the same file"
         );
     }
-    let mut partial = file_from(&all[..n - 2]);
-    let last = serde_json::to_vec(&all[n - 2]).expect("frame");
-    partial.extend_from_slice(&last[..last.len() / 2]);
-    assert!(
-        read_with(&partial).is_err(),
-        "a last frame line cut off inside its object was accepted by the reader"
-    );
     let complete = read_with(&bytes(trace)).expect("the reader rejected the complete trace");
     assert!(
         complete.session == Session::Complete
@@ -924,6 +921,253 @@ validation::negative_control!(
             })
         },
         &summarised(),
+    )
+);
+
+// ----- a last line cut off before its newline (R-299) -----
+
+/// The summarised trace, each frame's first event carrying a detail of two-byte characters, so that a cut can fall
+/// inside a character.
+fn with_wide_characters() -> Trace {
+    let mut trace = summarised();
+    for frame in &mut trace.frames {
+        frame.stages.integrate.events[0].detail = Some("ε → δ".to_owned());
+    }
+    trace
+}
+
+/// `file`'s lines, each its range of bytes without its newline.
+fn line_spans(file: &[u8]) -> Vec<std::ops::Range<usize>> {
+    let mut spans = Vec::new();
+    let mut start = 0;
+    for (i, byte) in file.iter().enumerate() {
+        if *byte == b'\n' {
+            spans.push(start..i);
+            start = i + 1;
+        }
+    }
+    assert_eq!(start, file.len(), "the file does not end in a newline");
+    spans
+}
+
+/// Both summaries of `got` are absent with "session incomplete".
+fn check_summaries_incomplete(got: &Trace, what: &str) {
+    for (key, absent) in [
+        ("leak_flags", got.leak_flags()),
+        ("hot_paths", got.hot_paths()),
+    ] {
+        assert!(
+            matches!(absent, Err(reason) if reason == Absent::SessionIncomplete
+                && reason.to_string() == "session incomplete"),
+            "{what}: {key} is not absent with \"session incomplete\""
+        );
+    }
+}
+
+/// `read_with` reads `trace`'s file cut at every byte inside every line after the header, before that line's newline:
+/// the cut part is dropped (R-299), the frames before it come back, the session is incomplete with both summaries
+/// absent as "session incomplete", the trace states the bytes dropped, and it is written back as the lines before the
+/// cut. A file whose only line, the header line, is cut off is rejected, and the error states the bytes.
+fn check_cut_off_last_line_dropped(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let file = bytes(trace);
+    let spans = line_spans(&file);
+    assert!(
+        spans.len() == trace.frames.len() + 2,
+        "the file is not a header, its frames and a summary line"
+    );
+    let mut inside_a_character = 0;
+    for (i, span) in spans.iter().enumerate().skip(1) {
+        let kept = trace.frames.len().min(i - 1);
+        for cut in span.start + 1..span.end {
+            let what = format!(
+                "line {} cut after {} of its {} bytes",
+                i + 1,
+                cut - span.start,
+                span.len()
+            );
+            let got = read_with(&file[..cut])
+                .unwrap_or_else(|e| panic!("the reader rejected the cut-off file, {what}: {e}"));
+            assert!(
+                got.header == trace.header && got.frames[..] == trace.frames[..kept],
+                "{what}: the header and frames read are not the ones before the cut"
+            );
+            assert_eq!(
+                got.session,
+                Session::Incomplete,
+                "{what}: not an incomplete session"
+            );
+            assert_eq!(
+                got.dropped_bytes,
+                (cut - span.start) as u64,
+                "{what}: the bytes dropped are misstated"
+            );
+            check_summaries_incomplete(&got, &what);
+            let mut out = Vec::new();
+            write(&got, &mut out).expect("the writer refused the cut-off trace");
+            assert!(
+                out[..] == file[..span.start],
+                "{what}: the trace is not written back as the lines before the cut"
+            );
+            inside_a_character += usize::from(std::str::from_utf8(&file[..cut]).is_err());
+        }
+    }
+    assert!(inside_a_character > 0, "no cut falls inside a character");
+    for cut in 1..spans[0].end {
+        match read_with(&file[..cut]) {
+            Ok(_) => {
+                panic!("a file whose only line is its header line cut after {cut} bytes was read")
+            }
+            Err(e) => assert!(
+                e.to_string().contains(&format!("{cut} bytes")),
+                "the error for a header line cut after {cut} bytes does not state them: {e}"
+            ),
+        }
+    }
+}
+
+#[test]
+fn profile_v1_superset_cut_off_last_line_dropped() {
+    check_cut_off_last_line_dropped(|file| read(file), &with_wide_characters());
+}
+
+validation::negative_control!(
+    profile_v1_superset_cut_off_last_line_dropped,
+    "a reader that rejects a file ending in a cut-off line must fail",
+    expected = "the reader rejected the cut-off file",
+    check_cut_off_last_line_dropped(
+        |file| {
+            read(file).and_then(|trace| match trace.dropped_bytes {
+                0 => Ok(trace),
+                _ => Err(<serde_json::Error as serde::de::Error>::custom(
+                    "the file ends in a cut-off line",
+                )),
+            })
+        },
+        &with_wide_characters(),
+    )
+);
+
+/// `read_with` reads a last line with no newline after it that is one complete JSON value as any last line: the
+/// summary line of a complete session, the last frame record or the header line of an incomplete one, none of them
+/// dropped. A complete JSON object that is neither, with no newline after it, is not a cut line, and is rejected.
+fn check_unterminated_parsable_last_line_kept(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let file = bytes(trace);
+    let spans = line_spans(&file);
+    let n = spans.len();
+    let cases: [(&[u8], usize, Session, &str); 3] = [
+        (
+            &file[..spans[n - 1].end],
+            trace.frames.len(),
+            Session::Complete,
+            "the summary line without its newline",
+        ),
+        (
+            &file[..spans[n - 2].end],
+            trace.frames.len(),
+            Session::Incomplete,
+            "the last frame line without its newline",
+        ),
+        (
+            &file[..spans[0].end],
+            0,
+            Session::Incomplete,
+            "the header line alone, without its newline",
+        ),
+    ];
+    for (text, frames, session, what) in cases {
+        let got = read_with(text).unwrap_or_else(|e| panic!("{what} was rejected: {e}"));
+        assert!(
+            got.header == trace.header
+                && got.frames[..] == trace.frames[..frames]
+                && got.session == session,
+            "{what} was not read as the line it is"
+        );
+        assert_eq!(got.dropped_bytes, 0, "{what}: bytes were dropped");
+        if session == Session::Complete {
+            assert!(
+                got.leak_flags == trace.leak_flags && got.hot_paths == trace.hot_paths,
+                "{what}: the summaries were not read"
+            );
+        } else {
+            check_summaries_incomplete(&got, what);
+        }
+    }
+    for stray in [&b"{\"frame\":7}"[..], b"{\"leak_flags\":null}", b"[]", b"7"] {
+        let mut text = file[..spans[n - 2].end + 1].to_vec();
+        text.extend_from_slice(stray);
+        assert!(
+            read_with(&text).is_err(),
+            "a last line {:?}, complete JSON but not its place's object, was accepted",
+            String::from_utf8_lossy(stray)
+        );
+    }
+}
+
+#[test]
+fn profile_v1_superset_cut_off_unterminated_parsable_line_kept() {
+    check_unterminated_parsable_last_line_kept(|file| read(file), &with_wide_characters());
+}
+
+validation::negative_control!(
+    profile_v1_superset_cut_off_unterminated_parsable_line_kept,
+    "a reader that drops every last line without its newline must fail",
+    expected = "was not read as the line it is",
+    check_unterminated_parsable_last_line_kept(
+        |file| {
+            let kept = file.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+            read(&file[..kept])
+        },
+        &with_wide_characters(),
+    )
+);
+
+/// `read_with` rejects a line cut off inside its object that ends in a newline, as the last line or with lines after
+/// it: only a last line with no newline after it is dropped (R-299).
+fn check_terminated_malformed_line_rejected(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let file = bytes(trace);
+    let spans = line_spans(&file);
+    for (i, span) in spans.iter().enumerate() {
+        for cut in span.start + 1..span.end {
+            let mut last = file[..cut].to_vec();
+            last.push(b'\n');
+            let mut inner = last.clone();
+            inner.extend_from_slice(&file[span.end + 1..]);
+            for (text, place) in [
+                (last, "the last line"),
+                (inner, "a line with lines after it"),
+            ] {
+                assert!(
+                    read_with(&text).is_err(),
+                    "line {} cut after {} bytes and ended by a newline, {place}, was accepted",
+                    i + 1,
+                    cut - span.start
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn profile_v1_superset_cut_off_terminated_malformed_line_rejected() {
+    check_terminated_malformed_line_rejected(|file| read(file), &with_wide_characters());
+}
+
+validation::negative_control!(
+    profile_v1_superset_cut_off_terminated_malformed_line_rejected,
+    "a reader that drops a malformed last line whatever ends it must fail",
+    expected = "was accepted",
+    check_terminated_malformed_line_rejected(
+        |file| read(file.strip_suffix(b"\n").unwrap_or(file)),
+        &with_wide_characters(),
     )
 );
 

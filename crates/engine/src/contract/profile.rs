@@ -32,7 +32,8 @@ pub enum SchemaId {
 /// The file is JSON Lines (R-286), which [`write`] writes and [`read`] reads: the header line
 /// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. A session
 /// that ended before its summary line, a crash or a session still running, is [`Session::Incomplete`] (R-298). This
-/// type's own serde form, one object with the five keys (and `session` when incomplete), is not the file.
+/// type's own serde form, one object with the five keys (and `session` when incomplete, `dropped_bytes` when not 0),
+/// is not the file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trace {
@@ -53,6 +54,15 @@ pub struct Trace {
     /// [`Trace::hot_paths`] give the reason.
     #[serde(default, skip_serializing_if = "Session::is_complete")]
     pub session: Session,
+    /// The bytes of a last line cut off before its newline, not one complete JSON value, which [`read`] dropped
+    /// (R-299): the part of a line the session was writing when it stopped. 0 when nothing was dropped. Not a key of
+    /// the file; a trace that dropped bytes is [`Session::Incomplete`].
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub dropped_bytes: u64,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 /// Whether a session ended with its summary line (R-298, telemetry §5).
@@ -521,7 +531,8 @@ struct SummaryLine {
 /// NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the sum of its
 /// `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
 /// `allocations` is an error, and nothing is written. An incomplete session (R-298) is written without its summary
-/// line, as a session that ended before it leaves the file, and its `leak_flags` and `hot_paths` must be `None`.
+/// line, as a session that ended before it leaves the file, and its `leak_flags` and `hot_paths` must be `None`; the
+/// bytes a reader dropped (R-299) are gone, so they are not written, and a complete trace must have dropped none.
 ///
 /// The writer is buffered here and flushed before `write` returns, so a plain `File` costs no more than a `BufWriter`.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
@@ -563,8 +574,8 @@ fn write_line<W: io::Write, T: Serialize>(
 }
 
 /// Reads a schema v1 file, line by line. A line that is not the object its place calls for — the header line first,
-/// a frame record on each line after it, the summary line last — is an error, and so are a blank line, a last line
-/// cut off inside its object, a key outside v1 (a scope beside the five stages, say), a missing key, even one whose
+/// a frame record on each line after it, the summary line last — is an error, and so are a blank line, a key outside
+/// v1 (a scope beside the five stages, say), a missing key, even one whose
 /// value may be `null`, a value outside its range, a frame with one `present` null and the other not, a pool whose
 /// `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind` or for one kind and
 /// pool in a stage's `allocations`, so each line `read` accepts validates against [`SCHEMA_V1`]'s definition for its
@@ -574,6 +585,12 @@ fn write_line<W: io::Write, T: Serialize>(
 /// crashed or is still running (R-298). It reads: the header and frames are returned, the trace is
 /// [`Session::Incomplete`], and [`Trace::leak_flags`] and [`Trace::hot_paths`] report "session incomplete".
 ///
+/// A last line with no newline after it that is not one complete JSON value was cut off as the session stopped
+/// (R-299). It is dropped: the lines before it are the trace, the line before it a frame record or the header line;
+/// the trace is [`Session::Incomplete`], and [`Trace::dropped_bytes`] states how many bytes were dropped. A last line
+/// with no newline that is complete JSON is read as any last line is, and a malformed line that ends in a newline is
+/// an error. A file whose only line is cut off has no header line, and is an error that states the bytes.
+///
 /// The reader is buffered here, so a plain `File` costs no more than a `BufReader`.
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
     read_lines(io::BufReader::new(reader))
@@ -582,10 +599,16 @@ pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
 /// Reads the lines from `reader`. Each line after the header is held until the next arrives: a line with one after it
 /// is a frame record, and the last is the summary line or, in an incomplete session, a frame record (R-298).
 pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json::Error> {
-    let mut line = String::new();
-    let mut held = String::new();
+    let mut line = Vec::new();
+    let mut held = Vec::new();
     if !next_line(&mut reader, &mut line)? {
         return Err(de_error("the file is empty: line 1 is not the header line"));
+    }
+    if cut_off(&line) {
+        return Err(de_error(format!(
+            "line 1 is cut off: {} bytes with no newline that are not JSON, so the file has no header line",
+            line.len()
+        )));
     }
     let head: HeaderLine = parse(&line, 1, "the header line")?;
     check_header(&At::Line(1), &head.header).map_err(de_error)?;
@@ -596,6 +619,7 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         leak_flags: None,
         hot_paths: None,
         session: Session::Complete,
+        dropped_bytes: 0,
     };
     if !next_line(&mut reader, &mut held)? {
         // The header line alone: a session that recorded no frame and ended before its summary line (R-298).
@@ -611,14 +635,20 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         std::mem::swap(&mut line, &mut held);
         number += 1;
     }
+    if cut_off(&held) {
+        // The part of a line the session was writing when it stopped (R-299): dropped, the line before it the last.
+        trace.dropped_bytes = held.len() as u64;
+        trace.session = Session::Incomplete;
+        return Ok(trace);
+    }
     // The two are told apart by their keys, which no summary line shares with a frame record.
-    match serde_json::from_str::<SummaryLine>(&held) {
+    match serde_json::from_slice::<SummaryLine>(&held) {
         Ok(summary) => {
             trace.leak_flags = summary.leak_flags;
             trace.hot_paths = summary.hot_paths;
         }
         Err(as_summary) => {
-            let frame: FrameRecord = serde_json::from_str(&held).map_err(|as_frame| {
+            let frame: FrameRecord = serde_json::from_slice(&held).map_err(|as_frame| {
                 de_error(format!(
                     "line {number}, the last: neither the summary line ({as_summary}) nor, for a session that \
                      ended before its summary line, a frame record ({as_frame})"
@@ -632,20 +662,29 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
     Ok(trace)
 }
 
-/// Reads the next line into `line`, replacing what it held; `false` at the end of the file.
-fn next_line<R: BufRead>(reader: &mut R, line: &mut String) -> Result<bool, serde_json::Error> {
+/// Reads the next line into `line`, its newline kept, replacing what it held; `false` at the end of the file. The
+/// bytes are read as they are, so a line cut inside a character is still a line; each parse checks its UTF-8.
+fn next_line<R: BufRead>(reader: &mut R, line: &mut Vec<u8>) -> Result<bool, serde_json::Error> {
     line.clear();
-    let n = reader.read_line(line).map_err(serde_json::Error::io)?;
+    let n = reader
+        .read_until(b'\n', line)
+        .map_err(serde_json::Error::io)?;
     Ok(n > 0)
+}
+
+/// Whether `line` was cut off as its session stopped (R-299): it has no newline after it, so it is the file's last,
+/// and it is not one complete JSON value. A compact JSON object cut anywhere before its closing brace never is.
+fn cut_off(line: &[u8]) -> bool {
+    line.last() != Some(&b'\n') && serde_json::from_slice::<serde_json::Value>(line).is_err()
 }
 
 /// Parses line `number` as `place`, the object its place calls for; a blank line is not one.
 fn parse<'a, T: Deserialize<'a>>(
-    line: &'a str,
+    line: &'a [u8],
     number: usize,
     place: &str,
 ) -> Result<T, serde_json::Error> {
-    serde_json::from_str(line).map_err(|e| de_error(format!("line {number}, {place}: {e}")))
+    serde_json::from_slice(line).map_err(|e| de_error(format!("line {number}, {place}: {e}")))
 }
 
 fn de_error(message: impl fmt::Display) -> serde_json::Error {
@@ -663,6 +702,11 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
         && (trace.leak_flags.is_some() || trace.hot_paths.is_some())
     {
         return Err("an incomplete session has no summary line, so its leak_flags and hot_paths must be null".into());
+    }
+    if trace.session == Session::Complete && trace.dropped_bytes != 0 {
+        return Err(
+            "a trace whose reader dropped a cut-off last line is an incomplete session".into(),
+        );
     }
     let mut seen = Seens::default();
     for (i, frame) in trace.frames.iter().enumerate() {

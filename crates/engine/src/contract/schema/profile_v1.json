@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "principia-profile-v1",
   "title": "Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, \"Profiler schema v1: the keys and the nesting\")",
-  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line against the definition for the place each line holds: its first line against #/$defs/header_line, each frame record after it against #/$defs/frame, and the summary line, last, against #/$defs/summary_line. A session that ended before its summary line (R-298) leaves a trace whose last line is a #/$defs/frame, or the #/$defs/header_line when it recorded no frame; that trace is valid. The root accepts a line of any of the three places.",
+  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line against the definition for the place each line holds: its first line against #/$defs/header_line, each frame record after it against #/$defs/frame, and the summary line, last, against #/$defs/summary_line. A session that ended before its summary line (R-298) leaves a trace whose last line is a #/$defs/frame, or the #/$defs/header_line when it recorded no frame; that trace is valid. A last line with no newline after it that is not one complete JSON value was cut off as its session stopped (R-299): the reader drops it and it is not validated, while a malformed line that ends in a newline is not schema v1. The root accepts a line of any of the three places.",
   "oneOf": [
     { "$ref": "#/$defs/header_line" },
     { "$ref": "#/$defs/frame" },
