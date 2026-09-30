@@ -34,8 +34,9 @@ impl PackedA {
         }
     }
 
-    /// The raw word, by the generated packer (reserved bits zero; `d_min` under R-271).
-    pub fn pack(&self) -> u32 {
+    /// The raw word, by the generated packer (reserved bits zero; `d_min` under R-271), counting into `counters`,
+    /// the caller's frame pair (R-288, R-294).
+    pub fn pack(&self, counters: &DminCounters) -> u32 {
         pack_packed_a(
             self.state,
             self.detail,
@@ -43,6 +44,7 @@ impl PackedA {
             self.dmin_pair,
             self.last_symbol,
             self.d_min,
+            counters,
         )
     }
 
@@ -51,15 +53,14 @@ impl PackedA {
     /// `d_min` is a contaminated value for the check to report, not a store, so the repack must not trip
     /// [`super::set_d_min`]'s debug assertions (R-281). It writes `0x7c00` or `0x0001` there, which differ from the
     /// observed bits, so the check fails. Nor does it count: the repack is an observation, not a store, so it passes
-    /// a scratch counter pair and drops it, and the telemetry counters stay untouched (R-288; RQ-171 option (a)).
-    fn repack(&self) -> u32 {
+    /// a scratch counter pair and drops it, and no frame's counters are touched (R-288; RQ-171 option (a); R-294).
+    fn repack(&self, scratch: &DminCounters) -> u32 {
         let w = set_state(0, self.state);
         let w = set_detail(w, self.detail);
         let w = set_saturated(w, self.saturated);
         let w = set_dmin_pair(w, self.dmin_pair);
         let w = set_last_symbol(w, self.last_symbol);
-        let scratch = DminCounters::new();
-        set_d_min_release(w, self.d_min, &scratch)
+        set_d_min_release(w, self.d_min, scratch)
     }
 }
 
@@ -67,8 +68,12 @@ impl PackedA {
 /// words compared — `observed` against the packing of `expected`, and the repacking against `observed`. A bit of
 /// `observed` that no accessor reads is lost by the repacking, so it fails the second comparison even where the fields
 /// agree (pitfalls §9).
+///
+/// The check is an observation, not a store, so it takes no frame's counters: both packs count into a scratch pair
+/// local to the call, which is dropped (R-288; RQ-171 option (a); R-294).
 pub fn roundtrip_ctl(expected: &PackedA, observed: u32) -> bool {
-    let packed = expected.pack();
-    let repacked = PackedA::unpack(observed).repack();
+    let scratch = DminCounters::new();
+    let packed = expected.pack(&scratch);
+    let repacked = PackedA::unpack(observed).repack(&scratch);
     observed == packed && repacked == observed
 }

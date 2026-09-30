@@ -5,8 +5,35 @@
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
-use std::sync::atomic::Ordering;
 use validation::negative_control;
+
+// The `d_min` packer counts into the caller's frame pair (R-288, R-294). The tests that don't read the counts pass
+// each pack a fresh pair, as a caller starting a frame does, through these two.
+
+/// [`set_d_min`] into a fresh frame pair.
+fn set_d_min_frame(w: u32, v: f32) -> u32 {
+    set_d_min(w, v, &DminCounters::new())
+}
+
+/// [`pack_packed_a`] into a fresh frame pair.
+fn pack_a(
+    state: u32,
+    detail: u32,
+    saturated: bool,
+    dmin_pair: u32,
+    last_symbol: u32,
+    d_min: f32,
+) -> u32 {
+    pack_packed_a(
+        state,
+        detail,
+        saturated,
+        dmin_pair,
+        last_symbol,
+        d_min,
+        &DminCounters::new(),
+    )
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-PAY-004: the `sd_*` accessors, over payload §2's table.
@@ -78,14 +105,14 @@ fn check_all_1024(repack: impl Fn(u32) -> u32) {
 
 #[test]
 fn sd_accessors_round_trip_all_1024_descriptors() {
-    check_all_1024(|w| PackedA::unpack(w).pack());
+    check_all_1024(|w| PackedA::unpack(w).pack(&DminCounters::new()));
 }
 
 negative_control!(
     sd_accessors_round_trip_all_1024_descriptors,
     "a repack that drops `last_symbol` loses bits 8–9, so the round trip must fail",
     expected = "descriptor 0x100 does not round-trip",
-    check_all_1024(|w| set_last_symbol(PackedA::unpack(w).pack(), 0))
+    check_all_1024(|w| set_last_symbol(PackedA::unpack(w).pack(&DminCounters::new()), 0))
 );
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -103,11 +130,7 @@ fn check_raw(cases: &[(&str, u32, u32)]) {
 /// (0x3800); `times` = t_dmin_step 0xabcd | t_end_step 0x1234.
 fn known() -> [(&'static str, u32, u32); 3] {
     [
-        (
-            "packed_a",
-            pack_packed_a(2, 1, true, 2, 3, 1.0),
-            0x3c00_03aa,
-        ),
+        ("packed_a", pack_a(2, 1, true, 2, 3, 1.0), 0x3c00_03aa),
         ("packed_b", pack_packed_b(0.5, 2.0), 0x4000_3800),
         ("times", pack_times(0x1234, 0xabcd), 0xabcd_1234),
     ]
@@ -158,7 +181,7 @@ const CODES: [(u32, bool, bool, bool, bool); 8] = [
 /// Each code decodes, and its predicates are as `codes` says, with every other descriptor field set.
 fn check_codes(codes: &[(u32, bool, bool, bool, bool)]) {
     for &(code, resolved, running, failed, finished) in codes {
-        let w = pack_packed_a(code, 3, true, 3, 3, 1.0);
+        let w = pack_a(code, 3, true, 3, 3, 1.0);
         assert_eq!(sd_state(w), code, "state {code} decodes");
         let got = (
             sd_is_resolved_outcome(w),
@@ -210,7 +233,7 @@ fn check_reserved(w: u32, reserved: &[(u32, u32)]) {
 
 #[test]
 fn reserved_bits_are_zero_with_every_field_at_max() {
-    check_reserved(pack_packed_a(7, 3, true, 3, 3, 65504.0), &PACKED_A_RESERVED);
+    check_reserved(pack_a(7, 3, true, 3, 3, 65504.0), &PACKED_A_RESERVED);
 }
 
 negative_control!(
@@ -218,7 +241,7 @@ negative_control!(
     "a word with bit 12 set has reserved bits written, so the check must fail",
     expected = "reserved bits 10–15",
     check_reserved(
-        pack_packed_a(7, 3, true, 3, 3, 65504.0) | 1 << 12,
+        pack_a(7, 3, true, 3, 3, 65504.0) | 1 << 12,
         &PACKED_A_RESERVED
     )
 );
@@ -228,7 +251,7 @@ negative_control!(
 
 /// `ctl` passes on the clean word and fails on each of its 32 single-bit flips.
 fn check_flips(ctl: fn(&PackedA, u32) -> bool, expected: &PackedA) {
-    let w = expected.pack();
+    let w = expected.pack(&DminCounters::new());
     assert!(
         ctl(expected, w),
         "the ctl fails on the clean word {w:#010x}"
@@ -243,7 +266,10 @@ fn check_flips(ctl: fn(&PackedA, u32) -> bool, expected: &PackedA) {
 
 /// The check pitfalls §9 records, over the unpacked fields: it cannot see a bit no accessor reads.
 fn fields_ctl(expected: &PackedA, observed: u32) -> bool {
-    let (a, b) = (PackedA::unpack(expected.pack()), PackedA::unpack(observed));
+    let (a, b) = (
+        PackedA::unpack(expected.pack(&DminCounters::new())),
+        PackedA::unpack(observed),
+    );
     (
         a.state,
         a.detail,
@@ -263,7 +289,7 @@ fn fields_ctl(expected: &PackedA, observed: u32) -> bool {
 
 /// The recorded check itself: `from_bits` masks to bits 2–4 before comparing.
 fn from_bits_ctl(expected: &PackedA, observed: u32) -> bool {
-    extract(expected.pack(), 2, 3) == extract(observed, 2, 3)
+    extract(expected.pack(&DminCounters::new()), 2, 3) == extract(observed, 2, 3)
 }
 
 fn sample() -> PackedA {
@@ -316,7 +342,7 @@ negative_control!(
 /// `ctl` fails on the contaminated values pitfalls §9 is about: a fork in bits 0–1, which `from_bits` masks off, and
 /// one in the reserved bits 10–15, which no accessor reads.
 fn check_contaminated(ctl: fn(&PackedA, u32) -> bool) {
-    let clean = sample().pack();
+    let clean = sample().pack(&DminCounters::new());
     for contaminated in [
         clean ^ 0b01,
         clean ^ 0b10,
@@ -332,7 +358,7 @@ fn check_contaminated(ctl: fn(&PackedA, u32) -> bool) {
 
 #[test]
 fn roundtrip_ctl_fails_where_the_recorded_check_passed() {
-    let clean = sample().pack();
+    let clean = sample().pack(&DminCounters::new());
     assert!(
         from_bits_ctl(&sample(), clean ^ 0b01),
         "the recorded check passes on the fork in bit 0 (pitfalls §9)"
@@ -482,26 +508,26 @@ fn d_min_cases() -> Vec<(&'static str, u32, u32)> {
     vec![
         (
             "failed",
-            set_d_min_unset(pack_packed_a(4, 0, false, 3, 0, 0.5)),
+            set_d_min_unset(pack_a(4, 0, false, 3, 0, 0.5)),
             0x7c00,
         ),
         (
             "unstepped",
-            set_d_min_unset(pack_packed_a(3, 0, false, 3, 0, 0.5)),
+            set_d_min_unset(pack_a(3, 0, false, 3, 0, 0.5)),
             0x7c00,
         ),
+        ("+inf", pack_a(3, 0, false, 3, 0, f32::INFINITY), 0x7c00),
+        ("1e-9", set_d_min_frame(0, 1.0e-9), 0x0001),
+        ("0.0", set_d_min_frame(0, 0.0), 0x0001),
         (
-            "+inf",
-            pack_packed_a(3, 0, false, 3, 0, f32::INFINITY),
-            0x7c00,
+            "2^-25",
+            set_d_min_frame(0, f32::from_bits(0x3300_0000)),
+            0x0001,
         ),
-        ("1e-9", set_d_min(0, 1.0e-9), 0x0001),
-        ("0.0", set_d_min(0, 0.0), 0x0001),
-        ("2^-25", set_d_min(0, f32::from_bits(0x3300_0000)), 0x0001),
-        ("2^-24", set_d_min(0, F16_MIN_SUBNORMAL), 0x0001),
-        ("1.0", set_d_min(0, 1.0), 0x3c00),
-        ("65504", set_d_min(0, 65504.0), 0x7bff),
-        ("1e6", set_d_min(0, 1.0e6), 0x7bff),
+        ("2^-24", set_d_min_frame(0, F16_MIN_SUBNORMAL), 0x0001),
+        ("1.0", set_d_min_frame(0, 1.0), 0x3c00),
+        ("65504", set_d_min_frame(0, 65504.0), 0x7bff),
+        ("1e6", set_d_min_frame(0, 1.0e6), 0x7bff),
     ]
 }
 
@@ -537,11 +563,11 @@ fn check_never_zero(set: fn(u32, f32) -> u32, bits: u32) {
 #[test]
 fn dmin_unset_property_no_valid_input_packs_to_zero() {
     validation::prop::run(&(0u32..=0x7f80_0000), |bits| {
-        check_never_zero(set_d_min, bits);
+        check_never_zero(set_d_min_frame, bits);
         Ok(())
     });
     for bits in [0, 1, 0x3300_0000, 0x3380_0000, 0x7f80_0000] {
-        check_never_zero(set_d_min, bits);
+        check_never_zero(set_d_min_frame, bits);
     }
 }
 
@@ -620,9 +646,9 @@ fn check_trips(set: fn(u32, f32) -> u32, inputs: &[u32], message: &str) {
 #[cfg(debug_assertions)]
 #[test]
 fn dmin_unset_debug_nan_trips_the_assertion() {
-    check_trips(set_d_min, &NANS, "`d_min` is NaN");
+    check_trips(set_d_min_frame, &NANS, "`d_min` is NaN");
     check_trips(
-        |w, v| pack_packed_a(sd_state(w), 0, false, 3, 0, v),
+        |w, v| pack_a(sd_state(w), 0, false, 3, 0, v),
         &NANS,
         "`d_min` is NaN",
     );
@@ -639,9 +665,9 @@ negative_control!(
 #[cfg(debug_assertions)]
 #[test]
 fn dmin_unset_debug_negative_trips_the_assertion() {
-    check_trips(set_d_min, &NEGATIVES, "`d_min` is negative");
+    check_trips(set_d_min_frame, &NEGATIVES, "`d_min` is negative");
     check_trips(
-        |w, v| pack_packed_a(sd_state(w), 0, false, 3, 0, v),
+        |w, v| pack_a(sd_state(w), 0, false, 3, 0, v),
         &NEGATIVES,
         "`d_min` is negative",
     );
@@ -671,7 +697,7 @@ fn dmin_unset_release_nan_stores_the_unset_bits() {
     check_release(release_scratch, &NANS, 0x7c00);
     // −0.0 is a zero distance, not a negative value: the floor, silently (R-271).
     check_release(release_scratch, &[0x8000_0000], 0x0001);
-    check_release(set_d_min, &[0x8000_0000], 0x0001);
+    check_release(set_d_min_frame, &[0x8000_0000], 0x0001);
 }
 
 negative_control!(
@@ -703,16 +729,22 @@ negative_control!(
 
 // R-288: the counters. `dmin_nan_unset` counts the packs that stored a NaN as unset, `dmin_negative_floored` the packs
 // that clamped a negative value to the floor (telemetry §2), in release builds as well as debug ones; a valid value and
-// `roundtrip_ctl`'s repack count neither (RQ-171 option (a)).
+// `roundtrip_ctl`'s repack count neither (RQ-171 option (a)). R-294: they belong to the frame, never to a static: the
+// packer's caller passes in its frame's pair and reads it back.
 
-/// A counter packer: `set_d_min_release`'s signature.
+/// A counter packer: `set_d_min`'s and `set_d_min_release`'s signature.
 type Counted = fn(u32, f32, &DminCounters) -> u32;
 
-/// `(dmin_nan_unset, dmin_negative_floored)` of `c`.
-fn counts(c: &DminCounters) -> (u32, u32) {
-    (
-        c.dmin_nan_unset.load(Ordering::Relaxed),
-        c.dmin_negative_floored.load(Ordering::Relaxed),
+/// [`pack_packed_a`] as a counter packer: `w`'s descriptor fields, repacked with `d_min` = `v` into `counters`.
+fn pack_counted(w: u32, v: f32, counters: &DminCounters) -> u32 {
+    pack_packed_a(
+        sd_state(w),
+        sd_detail(w),
+        sd_saturated(w),
+        sd_dmin_pair(w),
+        sd_last_symbol(w),
+        v,
+        counters,
     )
 }
 
@@ -727,14 +759,14 @@ fn check_counts(set: Counted, inputs: &[u32], want: u32, per_input: (u32, u32)) 
         assert_eq!(d_min_bits(w), want, "d_min {bits:#010x}: d_min bits");
         assert_eq!(w & 0xffff, 0x03ff, "d_min {bits:#010x}: descriptor kept");
         assert_eq!(
-            counts(&fresh),
+            fresh.read(),
             per_input,
             "d_min {bits:#010x}: counters (dmin_nan_unset, dmin_negative_floored)"
         );
         set(0, v, &shared);
         let n = i as u32 + 1;
         assert_eq!(
-            counts(&shared),
+            shared.read(),
             (per_input.0 * n, per_input.1 * n),
             "after {n} inputs: counters (dmin_nan_unset, dmin_negative_floored)"
         );
@@ -751,9 +783,13 @@ fn uncounted(w: u32, v: f32, _: &DminCounters) -> u32 {
 #[test]
 fn dmin_unset_counter_nan_increments_dmin_nan_unset() {
     check_counts(set_d_min_release, &NANS, 0x7c00, (1, 0));
-    // Release builds pass the pair through the asserting packer too (a debug build's assertion fires first).
+    // Release builds count through the asserting packer and the word packer too (a debug build's assertion fires
+    // first).
     #[cfg(not(debug_assertions))]
-    check_counts(set_d_min_counted, &NANS, 0x7c00, (1, 0));
+    {
+        check_counts(set_d_min, &NANS, 0x7c00, (1, 0));
+        check_counts(pack_counted, &NANS, 0x7c00, (1, 0));
+    }
 }
 
 negative_control!(
@@ -767,7 +803,10 @@ negative_control!(
 fn dmin_unset_counter_negative_increments_dmin_negative_floored() {
     check_counts(set_d_min_release, &NEGATIVES, 0x0001, (0, 1));
     #[cfg(not(debug_assertions))]
-    check_counts(set_d_min_counted, &NEGATIVES, 0x0001, (0, 1));
+    {
+        check_counts(set_d_min, &NEGATIVES, 0x0001, (0, 1));
+        check_counts(pack_counted, &NEGATIVES, 0x0001, (0, 1));
+    }
 }
 
 negative_control!(
@@ -776,7 +815,7 @@ negative_control!(
     expected = "counters (dmin_nan_unset, dmin_negative_floored)",
     check_counts(
         |w, v, c| {
-            c.dmin_nan_unset.fetch_add(1, Ordering::Relaxed);
+            c.dmin_nan_unset.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             release_scratch(w, v)
         },
         &NEGATIVES,
@@ -808,7 +847,7 @@ fn check_valid_uncounted(set: Counted) {
         Ok(())
     });
     assert_eq!(
-        counts(&c),
+        c.read(),
         (0, 0),
         "valid d_min: counters (dmin_nan_unset, dmin_negative_floored)"
     );
@@ -817,7 +856,8 @@ fn check_valid_uncounted(set: Counted) {
 #[test]
 fn dmin_unset_counter_valid_values_count_nothing() {
     check_valid_uncounted(set_d_min_release);
-    check_valid_uncounted(set_d_min_counted);
+    check_valid_uncounted(set_d_min);
+    check_valid_uncounted(pack_counted);
 }
 
 negative_control!(
@@ -825,7 +865,8 @@ negative_control!(
     "a packer that counts every store as a NaN, so the no-count check must fail",
     expected = "counters (dmin_nan_unset, dmin_negative_floored)",
     check_valid_uncounted(|w, v, c| {
-        c.dmin_nan_unset.fetch_add(1, Ordering::Relaxed);
+        c.dmin_nan_unset
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         release_scratch(w, v)
     })
 );
@@ -834,49 +875,79 @@ negative_control!(
 /// either sign, −1.0, −0 with a subnormal (the smallest negative), −65504 and −∞.
 const CONTAMINATED_D_MIN: [u32; 6] = [0x7e00, 0xfe00, 0xbc00, 0x8001, 0xfbff, 0xfc00];
 
-/// `ctl` fails on every contaminated word (its repack writes the unset bits or the floor, not the observed bits), and
-/// leaves `watched` — the pair it could count into — as it found it: the repack observes, it does not store.
-fn check_roundtrip_uncounted(ctl: fn(&PackedA, u32) -> bool, watched: &DminCounters) {
-    let expected = PackedA::unpack(pack_packed_a(2, 1, true, 0, 3, 1.0));
-    let before = counts(watched);
+/// A caller's frame: it packs `expected` into its pair, then runs `ctl` on every contaminated word. `ctl` fails on each
+/// (its repack writes the unset bits or the floor, not the observed bits), and the frame's pair stays as the caller
+/// left it: the check observes, it does not store (R-288; R-294).
+fn check_roundtrip_uncounted(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> bool) {
+    let frame = DminCounters::new();
+    let good = pack_packed_a(2, 1, true, 0, 3, 1.0, &frame);
+    let expected = PackedA::unpack(good);
     for h in CONTAMINATED_D_MIN {
-        let observed = h << 16 | pack_packed_a(2, 1, true, 0, 3, 1.0) & 0xffff;
+        let observed = h << 16 | good & 0xffff;
         assert!(
-            !ctl(&expected, observed),
+            !ctl(&expected, observed, &frame),
             "roundtrip_ctl passed d_min bits {h:#06x}"
         );
     }
     assert_eq!(
-        counts(watched),
-        before,
+        frame.read(),
+        (0, 0),
         "roundtrip_ctl's repack: counters (dmin_nan_unset, dmin_negative_floored)"
     );
 }
 
-/// The pair the control's repack counts into, its own so the control cannot disturb the crate-level pair (compiled
-/// only with the controls).
-#[cfg(feature = "controls")]
-static CONTROL_PAIR: DminCounters = DminCounters::new();
-
 #[test]
 fn dmin_unset_counter_roundtrip_repack_counts_nothing() {
-    // No other test in this binary stores a NaN or negative `d_min` through the crate-level pair, which
-    // `roundtrip_ctl`'s packing of `expected` uses.
-    check_roundtrip_uncounted(roundtrip_ctl, &DMIN_COUNTERS);
+    // `roundtrip_ctl` takes no pair, so it cannot reach the caller's frame (R-294).
+    check_roundtrip_uncounted(&|expected, observed, _| roundtrip_ctl(expected, observed));
 }
 
 negative_control!(
     dmin_unset_counter_roundtrip_repack_counts_nothing,
-    "a parity check whose repack stores through a live pair counts each contaminated value, so the check must fail",
+    "a parity check whose repack stores through the caller's frame pair counts each contaminated value, so the check \
+     must fail",
     expected = "roundtrip_ctl's repack: counters",
-    check_roundtrip_uncounted(
-        |expected, observed| {
-            let d_min = PackedA::unpack(observed).d_min;
-            let repacked = set_d_min_release(observed & 0xffff, d_min, &CONTROL_PAIR);
-            observed == expected.pack() && repacked == observed
-        },
-        &CONTROL_PAIR
-    )
+    check_roundtrip_uncounted(&|expected, observed, frame| {
+        let d_min = PackedA::unpack(observed).d_min;
+        let repacked = set_d_min_release(observed & 0xffff, d_min, frame);
+        observed == expected.pack(frame) && repacked == observed
+    })
+);
+
+/// Two frames, each with its own pair: the stores made in one frame are read back from that frame's pair alone, and
+/// a new frame's pair starts at zero, so no count leaks between frames through shared state (R-294). Each frame's
+/// packs count into its own pair, or into `shared` where one is given (a control's program-wide pair).
+fn check_frames_separate(set: Counted, shared: Option<&DminCounters>) {
+    let frames = [DminCounters::new(), DminCounters::new()];
+    let stores: [&[u32]; 2] = [&[0x7fc0_0000, 0xbf80_0000, 0xbf80_0000], &[0x7fc0_0000]];
+    for (frame, inputs) in frames.iter().zip(stores) {
+        for &bits in inputs {
+            set(0, f32::from_bits(bits), shared.unwrap_or(frame));
+        }
+    }
+    assert_eq!(
+        frames.each_ref().map(DminCounters::read),
+        [(1, 2), (1, 0)],
+        "per-frame read-back: counters (dmin_nan_unset, dmin_negative_floored)"
+    );
+}
+
+#[test]
+fn dmin_unset_counter_frames_are_separate() {
+    check_frames_separate(set_d_min_release, None);
+    #[cfg(not(debug_assertions))]
+    {
+        check_frames_separate(set_d_min, None);
+        check_frames_separate(pack_counted, None);
+    }
+}
+
+negative_control!(
+    dmin_unset_counter_frames_are_separate,
+    "packs that all count into one shared pair, as a program-wide static did, leave each frame's read-back at zero, \
+     so the check must fail",
+    expected = "per-frame read-back",
+    check_frames_separate(set_d_min_release, Some(&DminCounters::new()))
 );
 
 /// `is_unset` holds exactly when `d_min`'s bits are 0x7c00, over all 65536 of them (descriptor bits set too).

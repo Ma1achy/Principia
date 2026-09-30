@@ -319,16 +319,10 @@ pub fn set_d_min_unset(w: u32) -> u32 {
 /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
 ///
 /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a
-/// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s, counting into the crate-level
-/// pair [`super::DMIN_COUNTERS`] (R-288).
+/// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s, counting into `counters`, the
+/// frame's pair that the caller passes in and reads back (R-288, R-294).
 #[inline]
-pub fn set_d_min(w: u32, v: f32) -> u32 {
-    set_d_min_counted(w, v, &super::DMIN_COUNTERS)
-}
-
-/// [`set_d_min`], counting into `counters` (R-281, R-288): its debug assertions, then [`set_d_min_release`].
-#[inline]
-pub fn set_d_min_counted(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
+pub fn set_d_min(w: u32, v: f32, counters: &super::DminCounters) -> u32 {
     debug_assert!(
         !v.is_nan(),
         "`d_min` is NaN: storage never holds NaN (R-79, R-281)"
@@ -340,7 +334,7 @@ pub fn set_d_min_counted(w: u32, v: f32, counters: &super::DminCounters) -> u32 
     set_d_min_release(w, v, counters)
 }
 
-/// [`set_d_min_counted`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset
+/// [`set_d_min`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset
 /// bits (never NaN, R-79) and increments `counters.dmin_nan_unset`; a negative value writes the floor `0x0001`
 /// and increments `counters.dmin_negative_floored`; any other value below 2⁻²⁴, −0.0 included, writes the floor
 /// uncounted. The counts are made in release builds as well as debug ones (R-288; telemetry §2).
@@ -379,13 +373,14 @@ pub fn pack_packed_a(
     dmin_pair: u32,
     last_symbol: u32,
     d_min: f32,
+    counters: &super::DminCounters,
 ) -> u32 {
     let w = set_state(0, state);
     let w = set_detail(w, detail);
     let w = set_saturated(w, saturated);
     let w = set_dmin_pair(w, dmin_pair);
     let w = set_last_symbol(w, last_symbol);
-    set_d_min(w, d_min)
+    set_d_min(w, d_min, counters)
 }
 
 /// `dE_max`: bits 0–15 of `packed_b` (payload §2, §6).

@@ -111,11 +111,12 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 ///   bits (R-271). No float comparison with +∞ and no non-finite literal is emitted (GPU determinism note § "The
 ///   discipline", rule 4). Its release setter `set_f_release(w, v, counters)` stores a NaN as unset and a negative
 ///   value as the floor, incrementing `counters`' `dmin_nan_unset` or `dmin_negative_floored` (R-281, R-288);
-///   `set_f_counted(w, v, counters)` adds R-281's debug assertions, and `set_f(w, v)` counts into the kernel's
-///   crate-level pair, `DMIN_COUNTERS`;
+///   `set_f(w, v, counters)` adds R-281's debug assertions. The counters are the frame's, passed in by the caller
+///   and read back by it; there is no crate-level pair and no mutable static (R-294);
 /// - a sentinel constant `<PREFIX>_F_SENTINEL` when the entry has a sentinel, a non-finite one written by its bits;
 /// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
-///   zero, so reserved bits are zero.
+///   zero, so reserved bits are zero; a word holding `d_min` takes the caller's `counters` last and passes them to
+///   `set_d_min` (R-294).
 pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
     let mut out = helpers();
     for word in words {
@@ -133,6 +134,7 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
         fields.sort_by_key(|&(_, offset, _)| offset);
         let mut params = Vec::new();
         let mut calls = Vec::new();
+        let mut counted = false;
         for &(e, offset, width) in &fields {
             let Some(p) = prefix(word.name, e) else {
                 continue;
@@ -186,12 +188,9 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
                      ///\n\
                      /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a\n\
-                     /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s, counting into the crate-level\n\
-                     /// pair [`super::DMIN_COUNTERS`] (R-288).\n\
-                     #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
-                     \x20   set_{f}_counted(w, v, &super::DMIN_COUNTERS)\n}}\n\
-                     \n/// [`set_{f}`], counting into `counters` (R-281, R-288): its debug assertions, then [`set_{f}_release`].\n\
-                     #[inline]\npub fn set_{f}_counted(w: u32, v: f32, counters: &super::DminCounters) -> u32 {{\n\
+                     /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s, counting into `counters`, the\n\
+                     /// frame's pair that the caller passes in and reads back (R-288, R-294).\n\
+                     #[inline]\npub fn set_{f}(w: u32, v: f32, counters: &super::DminCounters) -> u32 {{\n\
                      \x20   debug_assert!(\n\
                      \x20       !v.is_nan(),\n\
                      \x20       \"`{f}` is NaN: storage never holds NaN (R-79, R-281)\"\n\
@@ -201,7 +200,7 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      \x20       \"`{f}` is negative: it is never silently rewritten (R-281)\"\n\
                      \x20   );\n\
                      \x20   set_{f}_release(w, v, counters)\n}}\n\
-                     \n/// [`set_{f}_counted`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset\n\
+                     \n/// [`set_{f}`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset\n\
                      /// bits (never NaN, R-79) and increments `counters.dmin_nan_unset`; a negative value writes the floor `0x0001`\n\
                      /// and increments `counters.dmin_negative_floored`; any other value below 2⁻²⁴, −0.0 included, writes the floor\n\
                      /// uncounted. The counts are made in release builds as well as debug ones (R-288; telemetry §2).\n\
@@ -240,7 +239,16 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                 );
             }
             params.push(format!("{f}: {ty}"));
-            calls.push(format!("set_{f}({{}}, {f})"));
+            if unset {
+                counted = true;
+                calls.push(format!("set_{f}({{}}, {f}, counters)"));
+            } else {
+                calls.push(format!("set_{f}({{}}, {f})"));
+            }
+        }
+        // The `d_min` setter counts into the frame's pair, so the word's packer takes it from its caller (R-294).
+        if counted {
+            params.push("counters: &super::DminCounters".to_owned());
         }
         let Some(last) = calls.pop() else {
             continue;
