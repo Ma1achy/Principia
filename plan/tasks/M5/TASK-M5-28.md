@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008
 - **Reviewers:** code, qa, perf, physics
 - **Pitfalls:** none
-- **Size:** ~400 lines
+- **Size:** ~520 lines
 
 ## Goal
 Every frame the loop emits a record with frame_ms, quads_computed, quads_reused, samples, substeps_total,
@@ -64,3 +64,6 @@ readback (R-294).
 - R-294 (RQ-174): the GPU binding and readback of R-288's counters are this task's, applied per R-204 — veto?. The
   march that packs `d_min` is TASK-M4-05's, reached through TASK-M5-21. On the CPU, the packer's caller passes in a
   per-frame counters struct (TASK-M0-10); the kernel holds no mutable static.
+- Size, applied per R-264: R-294's scope (the counter buffer and its bind group, the per-frame reset, the non-stalling
+  readback, the record fields, the kernel binding and `dmin_counters.rs`) takes the estimate from ~400 to ~520 lines.
+  The task stays one task: its complexity is one frame record and its readback, and nothing moves elsewhere.
