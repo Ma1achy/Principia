@@ -181,7 +181,8 @@ only.
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
 - **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line
-- **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
+- **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Amended by R-294.
+- **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
 
 ## Values
 
@@ -235,7 +236,8 @@ only.
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
 - **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
-- **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only
+- **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Amended by R-293.
+- **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
 
 ## CI
 

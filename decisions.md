@@ -2652,6 +2652,7 @@ keeps one reference for every backend. A case whose bytes still differ between b
 backend, as R-269 ruled, and the PR names it.
 
 ## R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
+*Amended by R-294.*
 *30 Sep 2026 · applied in telemetry §2 and TASK-M0-10 (PR #78), and profiler schema v1's frame record in TASK-M0-17 (PR #79)*
 
 "RQ-171: option (a), recorded as R-288. Two per-frame atomic u32 counters (NaN d_min stored as unset; negative d_min
@@ -2703,6 +2704,7 @@ change. Test infra: the new tests build their own one-case suite in a temp dir (
 `screenshot --all` in CI is unchanged.
 
 ## R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only
+*Amended by R-293.*
 *30 Sep 2026 · applied in decisions.md, REVIEW_QUEUE.md, docs/archive/review_queue/, plan/check_plan.py, plan/tools/,
 plan/CURRENT_RULES.md and CLAUDE.md*
 
@@ -2749,3 +2751,60 @@ decisions.md only for why. Revisit splitting it per milestone (numbers unchanged
   #78 and cited here by R-278 and R-288, were not on main; they are copied into `M0.md` unchanged from that branch.
   `check_plan.py` resolves every R-n and RQ-n in the live files and the archive, and `coverage.py` takes its RQ ids
   from the queue and its archive.
+
+## R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
+*30 Sep 2026 · applied in decisions.md, plan/tools/, plan/check_plan.py, plan/CURRENT_RULES.md, CLAUDE.md and
+`.claude/agents/qa-reviewer.md`*
+
+"#84: veto items 1–4 stand. Item 5 changes (R-293): CURRENT_RULES.md shows every rule's current form. Audit each
+"Amended by" pair: where the later ruling fully replaces the earlier (e.g. R-239 → R-252 → R-277), mark the earlier
+"Superseded by R-n" and drop it from the digest. Where only part is replaced, the earlier entry carries one line,
+"Still in force: …", drafted by the agent and checked in review. Also update CLAUDE.md's qa paragraph and
+.claude/agents/qa-reviewer.md to R-290. Merge #84 once that's done and green."
+
+*Applied:*
+- PR #84's "applied per R-204 — veto?" items 1 to 4 stand as R-292's Applied note has them: the verb set, the group
+  mapping file, the sixth group and the one-off acts listed last. Item 5 (a ruling is left out only on an outright
+  "Superseded by") changes as below.
+- The audit covers every forward pair: 53, on 46 rulings (the 51 pairs R-292 recorded, and R-288 and R-292's pairs
+  here). Where the later ruling replaces the whole of the earlier, the earlier's forward line now reads "Superseded by
+  R-n", and the ruling leaves CURRENT_RULES.md: R-189 and R-190 (by R-191; R-190 had amended R-189 in part), R-192
+  (by R-194), R-223 (by R-225), R-239 (by R-252), R-252 (by R-277) and R-253 (by R-254). Each of the other 39 carries
+  one line under its forward line (or date line), "*Still in force: ….*", drafted per R-293 and checked in review.
+  The PR lists every pair with its classification.
+- `plan/tools/current_rules.py` gives a partly amended ruling's "Still in force" line in its digest entry, then the
+  rulings that amend it. `plan/check_plan.py` fails if a ruling with a forward line that isn't superseded outright has
+  no "Still in force" line, if one superseded outright has one, or if CURRENT_RULES.md lists a ruling superseded
+  outright. A "Superseded by R-m" line also answers R-m's claim on the ruling, whatever its verb ("amends",
+  "refines").
+- CLAUDE.md's qa paragraph and `.claude/agents/qa-reviewer.md` state R-290's rule, citing it; nothing else in either
+  changes.
+
+*Applied per R-204 — veto?:* R-252 is marked superseded by R-277, as the human's example chain has it. R-277 restates
+R-252's limits (two agents at warning, three at normal, only running work at critical) but not its "Log the pressure
+level instead of swap in summaries", which leaves the digest with R-252. R-253 is marked superseded by R-254, which it
+"refines": `ftle` reads NaN whenever `ftle_valid` is false, which includes `step_count = 0`, so nothing of R-253 stands
+apart from R-254.
+
+## R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
+*30 Sep 2026 · applied in TASK-M5-28 and REQ-TOOL-140; PR #78 (TASK-M0-10) applies the CPU half*
+
+"#78: the program-wide static is vetoed (R-294). R-288's counters belong to the frame, never global state: on the CPU,
+the packer's caller passes in a per-frame counters struct and reads it back; on the GPU, an atomic u32 buffer bound
+per frame and reset each frame, read back asynchronously with the telemetry readback. No mutable statics in the
+kernel. RQ-174 (GPU binding and readback) becomes part of the task that builds the telemetry readback; state which task
+in the ruling."
+
+*Applied:* on the CPU, the `d_min` packer counts into a per-frame counters struct that its caller passes in and reads
+back after the frame. PR #78 (TASK-M0-10) drops its process-wide `DMIN_COUNTERS` static, and the kernel holds no
+mutable static. On the GPU, `dmin_nan_unset` and `dmin_negative_floored` are an atomic u32 storage buffer, bound to
+each frame's dispatch and reset each frame, and read back asynchronously with the telemetry readback (R-288), never
+stalling a frame; their values go into that frame's record. REQ-TOOL-140 (new) carries the GPU half. RQ-174 moves to
+`docs/archive/review_queue/M0.md` with its Ruling line.
+
+*Applied per R-204 — veto? (which task):* TASK-M5-28, the frame record, percentiles and the bounded telemetry file. No
+task builds a GPU telemetry readback under that name: TASK-M5-14 builds only the dispatch queue's `QuadReduction`
+readback and the measurement path, and TASK-M6-16 times the GPU with timestamp queries. TASK-M5-28 builds the frame
+record (telemetry §2), where the counters belong, so it binds the buffer, reads it back and writes the values into the
+record. Its Depends on reaches TASK-M4-05, the compute kernel whose march packs `d_min`, through TASK-M5-21, so no
+dependency is added.

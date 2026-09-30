@@ -30,3 +30,10 @@ milestone gets its own file after its gate. Ids never change.
      verify detail change through `plan/tools/reqio.py`, and TASK-M5-30's checklist line follows.
   2. **Leave it as written.** TASK-M5-30 reconciles it when it builds the membrane audit, citing R-288.
 - **Needed:** which one. Nothing is blocked now: TASK-M5-30 is an M5 task.
+- **See also:** R-294 and RQ-174 (archived, ruled by R-294) concern the same per-frame readback of R-288's counters.
+  R-294 bears on the options but doesn't choose between them. It keeps the counters automatic and per frame (an atomic
+  u32 buffer bound and reset each frame), so TASK-M5-30's checklist line, read literally, still fails on them. It also
+  puts their readback "with the telemetry readback", not on `QuadReduction` or a channel of its own, which is the line
+  option 1 draws between simulation data and telemetry. TASK-M5-28 now builds that readback (R-294), and TASK-M5-30
+  doesn't reach TASK-M5-28 through its Depends on, so under option 2 its membrane audit may run before the counters'
+  readback exists.

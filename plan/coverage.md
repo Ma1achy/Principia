@@ -42,10 +42,10 @@ Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for th
 
 ## Sections
 
-983 sections in 46 files: 835 yield at least one requirement; 148 yield none and are listed below with the reason.
+985 sections in 46 files: 835 yield at least one requirement; 150 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 101 |
+| informative only | 103 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -110,6 +110,8 @@ Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for th
 | R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)* | informative only | process ruling; recorded, for the orchestrator's check on qa's commit |
 | R-291 — TASK-M0-40's three veto items stand | informative only | applied in TASK-M0-40 (PR |
 | R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only | informative only | process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling |
+| R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)* | informative only | process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent |
+| R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)* | informative only | applied in TASK-M5-28 and REQ-TOOL-140 (new); PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
