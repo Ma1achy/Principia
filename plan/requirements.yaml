@@ -9138,14 +9138,17 @@
     section: R-75 — The kernel keeps one debug mode *(closes RQ-26)*
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
   verify:
     method: golden image
-    detail: "ROUNDTRIP preset render of the latent and (L_z, E) charts: residual below ε_phys except at tagged-expected regions; no kernel variant is involved"
+    detail: "ROUNDTRIP preset render of the latent and (L_z, E) charts, in the jobs the goldens run in (gpu-metal and gpu-lavapipe), with the fragment compiled as the backend compiles it (fast-math on Metal, R-297): residual below ε_phys except at tagged-expected regions; no kernel variant is involved"
   rulings:
   - R-41
   - R-75
+  - R-297
   milestone: M2
-  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration)."
+  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?)."
 - id: REQ-RENDER-026
   area: RENDER
   statement: "The shape-sphere chart must default to an equirectangular projection and offer an equal-area alternative (Mollweide or Hammer–Aitoff) for quantitative area comparisons."
@@ -11027,7 +11030,7 @@
 - id: REQ-COL-060
   area: COL
   kind: calibration
-  statement: "The tolerance within which the DECODE and ROUNDTRIP presets' fragment-side recompute is compared — the agreement presets' fragment decode against the compute kernel's values, and ROUNDTRIP's residual — with the fragment shaders compiled with fast-math and the compute shaders not (R-297), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The tolerance within which the agreement presets compare the fragment-side decode against the compute kernel's values (|E(fragment-decode) − E₀| and the like), with the fragment shaders compiled with fast-math and the compute shaders not (R-297), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
@@ -11035,12 +11038,15 @@
     section: 6. Debug views as presets
   - file: docs/contracts/principia_render_contract.md
     section: Cross-check views (the seams)
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)"
   verify:
     method: numerical gate
-    detail: "the proposal measures, in gpu-metal and gpu-lavapipe, the fragment-against-compute differences of the agreement presets (|E(fragment-decode) − E₀| and the like) and ROUNDTRIP's residual over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement and the ROUNDTRIP render use it; recorded in decisions.md"
+    detail: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement uses it; recorded in decisions.md"
   rulings:
   - R-297
   milestone: M2
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204 — veto?, R-297's Applied note)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."

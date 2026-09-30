@@ -631,8 +631,8 @@
   pitfalls: []
 - id: TASK-M2-29
   milestone: M2
-  title: "The DECODE and ROUNDTRIP presets' tolerance under fragment fast-math, calibrated"
-  depends_on: [TASK-M2-26, TASK-M0-44]
+  title: "The agreement presets' tolerance under fragment fast-math, calibrated"
+  depends_on: [TASK-M2-25, TASK-M0-44]
   needs: [REQ-SYS-074]
   requirements: [REQ-COL-060]
   reviewers: [code, qa, physics]

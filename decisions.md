@@ -3011,8 +3011,8 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   benchmark on the human's Mac, R-186) and REQ-VAL-177 (the on-versus-off differences, measured and reported) go to a
   new task, TASK-M4-20. REQ-TOOL-142 (the setting in the embedded record) joins TASK-M7-31, which builds what
   travels. REQ-GUI-163 (the Run window control) and REQ-GUI-164 (the Profiler's per-stage modes) go to a new M8 task,
-  TASK-M8-43. REQ-COL-060, the DECODE and ROUNDTRIP presets' tolerance, is a calibration requirement (R-71), closed
-  by a new task, TASK-M2-29.
+  TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
+  kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
 *Applied per R-204 — veto?:*
 - Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
@@ -3022,7 +3022,13 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
 - Plan (the other placements): the sim key in TASK-M4-08 and the embedded record in TASK-M7-31, the tasks that build
   them; the Run window control and the Profiler line in a new TASK-M8-43, after TASK-M8-24 and TASK-M8-28 (TASK-M8-28
   is already over budget); the benchmark and the difference report together in TASK-M4-20, after TASK-M4-19's
-  kernel benchmarks; the tolerance in TASK-M2-29, after TASK-M2-26 builds the ROUNDTRIP preset.
+  kernel benchmarks; the tolerance in TASK-M2-29, after TASK-M2-25 builds the agreement presets and their gate.
+- Design (ROUNDTRIP's tolerance): ROUNDTRIP's residual is computed wholly in the fragment, `encode(decode(z))` with
+  nothing from the compute shader (colour_composition §6), and it already has a stated tolerance, itself a
+  calibration requirement: ε_phys (REQ-ENC-024; debug_tooling_plan §A; REQ-RENDER-025). So R-297's "stated tolerance"
+  for ROUNDTRIP is ε_phys, checked with the fragment compiled as each backend compiles it, and REQ-COL-060 covers the
+  agreement presets only. A ROUNDTRIP residual above ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a
+  second tolerance.
 - Design (where the setting lives): it is a `SimConfig` field (gui_state_contract §2), since it is on the sim key and
   every Run window field is a `SimConfig` field (render_gui_spec §G5).
 - Design (what is recorded): the header records the mode each stage was compiled with on the running backend, not
