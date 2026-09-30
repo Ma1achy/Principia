@@ -15494,6 +15494,21 @@
   rulings:
   - R-286
   milestone: M0
+- id: REQ-TOOL-140
+  area: TOOL
+  statement: "On the GPU, R-288's `d_min` counters (`dmin_nan_unset`, `dmin_negative_floored`) must be an atomic u32 storage buffer bound to each frame's dispatch and reset each frame, read back asynchronously with the telemetry readback without stalling the frame, and their values written into that frame's record; never a static (R-294)."
+  source:
+  - file: decisions.md
+    section: "R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  verify:
+    method: unit test
+    detail: "cargo test -p engine frame_dmin_counters: a frame whose march packs one NaN and one negative d_min records dmin_nan_unset = 1 and dmin_negative_floored = 1 in that frame's record; the next frame, with neither, records 0 and 0 (the buffer is reset); the frame loop never waits on the counters' readback"
+  rulings:
+  - R-288
+  - R-294
+  milestone: M5
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

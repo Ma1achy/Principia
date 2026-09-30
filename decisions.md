@@ -37,6 +37,9 @@ three-axis `eps` / frame-budget / hard-cap model. Repoint it there. **Don't port
 `sec:quality_tiers`, because it predates the move to `eps`.
 
 ## R-5 — The chart constants go to the decision sheet *(closes RQ-2)*
+*Amended by R-10.*
+*Still in force: `α_min` (0.05 in the LaTeX and B25, 0 in the markdown and the tool) goes to the step-5 decision sheet,
+listed with audit B25; `μ_max` is settled by R-10.*
 *24 Sep 2026 · applied in step 5*
 
 List them with audit B25. `μ_max` is 5 in the LaTeX and 4 in the IC Inspector notes. `α_min` is 0.05 in
@@ -49,6 +52,9 @@ List it with audit B4. It has no LaTeX cross-check. Until it's decided, the mark
 `principia_dd_integrator.md` §3.6 (collision beats escape) stands.
 
 ## R-7 — Step 3's done-check *(closes RQ-6)*
+*Amended by the entry "R-7 amended — part (a)'s grep".*
+*Still in force: part (a)'s scope and expected results, part (b) and the rerun after step 4; only part (a)'s grep
+command is the later entry's.*
 *24 Sep 2026 · applied in step 3*
 
 Step 3 is done when both of these hold:
@@ -110,6 +116,10 @@ The LaTeX's optional per-body cap isn't invertible: capping each body, then re-i
 trip. And `q_max` already bounds the Jacobi momenta. It's recorded under rejected ideas in `principia_00_philosophy.md` §8.
 
 ## R-12 — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*
+*Corrected by R-14 (its premise).*
+*Superseded in part by R-14 (its axis wording; R-184).*
+*Still in force: no polar buffer, the LaTeX's buffer recorded as rejected in chart_reference §3.3; the axes and the
+premise are R-14's.*
 *24 Sep 2026 · applied in step 3*
 
 θ on `v`, no polar buffer. The LaTeX's buffer rests on a wrong premise: the collision points are on the equator,
@@ -168,6 +178,9 @@ The complete Artefact-1 and Artefact-2 map lists go from the retired colour PDF 
 with no source claimed.
 
 ## R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*
+*Amended by R-245.*
+*Still in force: the diffusion value uses the streaming slope the payload ledger and the payload doc define; it is no
+longer a sentinel (R-245).*
 *24 Sep 2026 · applied in step 3*
 
 The streaming slope is the one the payload ledger and the payload doc define. `principia_render_contract.md`:79 is updated to cite it.
@@ -214,6 +227,9 @@ Full sphere; the poles are represented and fenced by the collision detector, the
 reworded. Files: dd_decoder §3, §3.2; chart_reference §0.2; inverse_encode_contract :74–75.
 
 ## R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*
+*Amended by R-62.*
+*Still in force: 0-based body indices and labels, `m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a
+schema event; the Jacobi fields are named by R-62.*
 *24 Sep 2026 · applied in step 5*
 
 0-based throughout: `ICDescriptor` fields `m0 m1 m2`, `rho0_mag` / `rho1_mag`, and 0-based display labels. **Pair id `k` names the side
@@ -263,6 +279,9 @@ lowering_contract :160–162.
 Confirmed as intended (`ic_inspector_scratchpad.md:19`, dd_decoder §3.4). Closes the rest of audit B25.
 
 ## R-29 — The escape criterion's undefined parts *(IE-1, amended)*
+*Amended by R-61.*
+*Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do);
+R-61 defines its "largest separation".*
 *24 Sep 2026 · applied in step 5*
 
 - **`E_rel`** is the relative two-body energy of the escaper `b` about the centre of mass of the other two:
@@ -297,6 +316,9 @@ the R-30 precedence is written with it. The old-data question is closed: no stor
 Files: integrator_contract Part 7 (:388); dd_integrator §3.6 (:161), tests §5; parity_contract :40.
 
 ## R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*
+*Amended by R-265.*
+*Still in force: the independent reference is CPU arbitrary precision with convergence gating, and RK45 stays the
+inspector's reference; that reference also serves as the screen, and double-double is parked (R-265).*
 *24 Sep 2026 · recorded; applied before the integration-floor probe and Burrau ground truth*
 
 CPU arbitrary precision with convergence gating: raise the precision and tighten the tolerance until the result stops changing.
@@ -677,6 +699,8 @@ and systems_architecture.
 
 ## R-93 — The f32 predictability horizon gates the cross-check only *(closes RQ-44)*
 *25 Sep 2026 · applied in step 7 · corrected by R-105 · amended by R-119*
+*Still in force: all of it, as its text now reads: conformed by R-105 (the re-run is R-35's) and R-119 (`t_max(f32)` is
+the GPU measurement).*
 
 §4.1's gate stands: the cross-check runs only for t < t_max(f32). REQ-VAL-070's gate reads the GPU measurement of
 t_max(f32) (REQ-VAL-071); R-35's change-10 re-run supplies the f64 figure and the method. t_max annotates refinement; it
@@ -689,6 +713,8 @@ Throttled (caching Part 6a). egui redraws at frame rate from the latest snapshot
 
 ## R-95 — After escape fires *(closes RQ-48, in part)*
 *25 Sep 2026 · applied in step 7 · amended by R-103*
+*Still in force: all of it, as its text now reads: conformed by R-103 (escape ends the production loop; the §2.4 march
+runs in the harness).*
 
 Once escape fires, `state` reads escape and `t_end` is fixed. Time averages (FTLE's S/T and the like) freeze at t_esc. Any
 march for the pitfall §2.4 checks runs only in the validation harness, on its own state; in production `done` is set when
@@ -698,6 +724,9 @@ independent ground truth, with the legacy t = 30 set kept as a comparison.
 
 ## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
 *25 Sep 2026 · applied in step 7 · last bullet withdrawn by R-106*
+*Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the
+properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`; the last bullet is
+withdrawn, the link ids being the chart's link functions (R-106).*
 
 - Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
   neutral grey; `sim_failed` shows the invalid colour.
@@ -758,6 +787,8 @@ runs only in the validation harness, which keeps its own state; the payload neve
 
 ## R-104 — The new `system_image` value is `DoubleCover` *(closes RQ-64)*
 *25 Sep 2026 · applied in step 7 · corrected by R-141*
+*Still in force: `DoubleCover` and its meaning, each shape covered twice as two labelled systems; its site is the
+full-range Burrau chart (R-157), not the shape sphere (R-141).*
 
 "Covers each shape twice, as two labelled systems." Lowering's shape-sphere row names it.
 
@@ -786,6 +817,8 @@ During a gesture the frame budget governs: ancestors show, so there are never bl
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
 *25 Sep 2026 · applied in step 7 · amended by R-144*
+*Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and
+R-72 requirements, and the rest stays working notes; §3 is normative too (R-144).*
 
 Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
 windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
@@ -796,6 +829,12 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
+*Amended by R-186.*
+*Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
+and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
+GPU gating Paper 2 (R-58); Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from
+M1, checked at M8 by the Playwright suite against the same baselines within tolerance, with no re-baselining without a
+gate decision; the runners and the benchmarks' schedule are R-186's.*
 *25 Sep 2026 · applied in step 7*
 
 - Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
@@ -880,6 +919,7 @@ an allowed optimisation, not a bake tier. Conform render_contract Parts 3 and 4.
 
 ## R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*
 *25 Sep 2026 · applied in step 7 · amended by R-151*
+*Still in force: all of it except cubehelix, whose reference is the analytic form (R-151).*
 
 The two reference HTML files (`docs/gui/reference/principia_colour_explorer.html` and `principia_colour_presets.html`)
 are named the golden oracle in colour_composition §7. Formulas follow the oracle: the explorer's blob weight and its
@@ -977,6 +1017,9 @@ their SimState slices, and writes the footprint resolve and the QuadReduction fi
 balance" subsection keeps its text as a "Was" note (R-102), not deleted.
 
 ## R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*
+*Amended by R-245.*
+*Still in force: `debug_invalid(frag_xy)` draws the hatch, a stored sentinel shows as its value, and only NaN gets the
+hatch; `diffusion` is no longer a sentinel (R-245).*
 *25 Sep 2026 · applied in step 7*
 
 `DEBUG_NAN` becomes a function, `debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`, which draws the hatch from the pixel
@@ -1012,6 +1055,8 @@ All four readings in RQ-118 are accepted.
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
 *25 Sep 2026 · applied in step 7 · amended by R-157*
+*Still in force: the shape sphere is 2-to-1 over its φ hemispheres, and `DoubleCover` is retired for the shape sphere
+only; it stays the full-range Burrau chart's value (R-157).*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
@@ -1101,6 +1146,9 @@ One GIF encoder for both builds: the Rust `gif` crate (MIT or Apache-2.0), with 
 wasm for the browser.
 
 ## R-156 — The plan-pass readings are accepted *(closes RQ-126)*
+*Reversed in part by R-183 (its size exemption).*
+*Still in force: RQ-126's other readings, including removing TASK-M6-13; TASK-M0-06's size exemption is reversed
+(R-183).*
 *25 Sep 2026 · applied in step 7*
 
 All readings in RQ-126 are accepted, including removing TASK-M6-13 and letting TASK-M0-06 run slightly over the size
@@ -1219,6 +1267,10 @@ It isn't retired, and TASK-M3-02 still closes it. integrator_contract Part 2a ke
 not a requirement.
 
 ## R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
+*Amended by R-186.*
+*Still in force: TASK-M0-04's GPU jobs (Metal, and ubuntu with lavapipe), `PRIN_GPU_BACKEND=metal|vulkan`, and an
+install step for every toolchain in the task that first needs it; the Metal job runs on GitHub-hosted `macos-15`, not a
+self-hosted runner (R-186).*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-04 adds the GPU CI jobs: a macOS arm64 self-hosted job (Metal) and an ubuntu job with `mesa-vulkan-drivers`
@@ -1263,6 +1315,11 @@ stale "pending" notes.
 TASK-M3-12's stale note is removed.
 
 ## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
+*Amended by R-186.*
+*Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); the
+fork guard (GPU jobs only for pushes and this repository's PRs, fork PRs getting the CPU and lavapipe jobs) and the
+runner's own macOS user account are dormant while no self-hosted runner exists (R-186), and apply again when one is
+added.*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
 
@@ -1272,6 +1329,10 @@ and lavapipe jobs only. The runner runs under its own macOS user account. Outsid
 workflow runs.
 
 ## R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
+*Amended by R-260 and R-261.*
+*Still in force: the `VERDICT` review headings, `reviews-complete` passing only when every named role has approved on
+the latest commit, and the merge by the human or a bot; R-260 carries an approval over qa's own test commit, and R-261
+passes a PR naming no task.*
 *25 Sep 2026 · applied in step 8*
 
 GitHub won't let one account approve its own PR, so each reviewer posts a PR review headed `VERDICT: APPROVE <role>` or
@@ -1279,6 +1340,10 @@ GitHub won't let one account approve its own PR, so each reviewer posts a PR rev
 on the latest commit. The human merges, or a merge bot does once all the checks are green.
 
 ## R-176 — Controls come before the tests that need them *(closes G3, S2)*
+*Amended by R-199.*
+*Still in force: TASK-M0-02 and TASK-M0-03 depend on TASK-M0-04 and register controls for their xtask tests, controls
+reach xtask tests through a dev-dependency on `crates/validation`, and crates without the `controls` feature are
+skipped; the name matching is R-199's.*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-02 and TASK-M0-03 depend on TASK-M0-04, and register controls for their xtask tests. Controls reach xtask tests
@@ -1392,6 +1457,8 @@ route to `negative_control!`; a crate without the `controls` feature is skipped,
 (line 321) now excludes `prin` as well as `gui`. Line 324 cites "the `validation` row above" rather than a line number.
 
 ## R-188 — TASK-M0-01 is accepted over its size; the source scan also follows `include!`
+*Amended by R-189 (its item 2).*
+*Still in force: item 1, TASK-M0-01's size acceptance; item 2 is gone (R-189, then R-191).*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked in review of PR #16, the human chose:
@@ -1403,6 +1470,7 @@ Asked in review of PR #16, the human chose:
    `#[path]`, and scans the file; a path it can't resolve (built with `concat!`, `env!` and the like) fails the check.
 
 ## R-189 — kernel and ledger `src/` use neither `#[path]` nor `include!` *(amends R-188 item 2)*
+*Amended by R-190; superseded by R-191.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked in review of PR #16 how to close an `include!` or `#[path]` inside a `macro_rules!` body (rustc resolves it at
@@ -1414,6 +1482,7 @@ check that kernel's and ledger's targets sit under `src/` stays. qa gets a one-r
 own tests that expect a `#[path]` or `include!` to be followed.
 
 ## R-190 — kernel `src/` may include the ledger's generated code from `OUT_DIR`; everything else `include`-shaped fails *(amends R-189)*
+*Superseded by R-191.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 R-189 forbade every `include!` in kernel `src/`, which also forbade the usual route by which R-185's generated code
@@ -1450,6 +1519,7 @@ instead: in the temporary copy, kernel's and ledger's integration-test, example 
 the lib and bin unit tests are compiled without `validation`. Which features the check compiles is RQ-131.
 
 ## R-192 — The compile check builds with `--all-features` *(closes RQ-131)*
+*Superseded by R-194.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked which features R-191's compile check builds, the human chose "--all-features": the check runs with
@@ -1483,6 +1553,12 @@ Asked in review of PR #16, the human chose:
 *26 Sep 2026*
 
 "CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
+
+*Applied (PR #17, merged as 1caad55; recorded under R-292):* in `.github/workflows/ci.yml` and REQ-SYS-067. The
+toolchain step installs `rustfmt` and `clippy`, and two steps run before `cargo build --workspace`: `cargo fmt --all
+--check` and `cargo clippy --workspace --all-targets -- -D warnings`. The workflow's header comment cites R-195. One
+`cargo fmt --all` commit formatted the workspace, qa's test files included. Clippy's one finding, a
+`clippy::type_complexity` in `xtask/tests/deps.rs`, became RQ-134, which R-197 rules.
 
 ## R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*
 *26 Sep 2026*
@@ -1532,6 +1608,9 @@ Asked in RQ-135, the human chose "Accept the split":
 - TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04.
 
 ## R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*
+*Amended by R-212.*
+*Still in force: no test-name attribute and no proc-macro crate; `negative_control!` names its test, and `cargo xtask
+controls` pairs tests and controls by that name; R-212 adds the expected panic message.*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-136, the human chose "Name in the macro": there is no test-name attribute and no proc-macro crate.
@@ -1540,6 +1619,9 @@ controls by that name. R-176's "Tests are matched to their controls by a shared 
 this; its dev-dependency route to `crates/validation` and the skipping of crates without the `controls` feature stand.
 
 ## R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*
+*Superseded in part by R-209 (its size acceptance).*
+*Still in force: TASK-M0-16 depends on TASK-M0-22, so TASK-M0-16 to TASK-M0-18 register their own controls; the size
+acceptance gave way to R-209's split.*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-137, the human chose "Accept ~650, mechanical": TASK-M0-22 stays one PR over the size budget, as
@@ -1570,6 +1652,8 @@ closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked s
 changes it at the M0 gate.
 
 ## R-204 — When to ask the human
+*Amended by R-264 (its "exceeding budgets").*
+*Still in force: all of it, except that size and budgets are no longer a question for the human (R-264).*
 *26 Sep 2026 · given as "R-198", which was already taken (the TASK-M0-04 split); recorded as R-204*
 
 "Standing rule: when to ask me.
@@ -1630,6 +1714,11 @@ REQ-SYS-065's statement gains the default. The code, and the merged tests that a
 among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
 
 ## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
+*Amended by R-211 and R-264.*
+*Still in force: TASK-M0-21's size acceptance; the three `cargo xtask controls` rules it confirmed (a doctest counts as
+a test without a control; a control covers exactly one test, and a name with more tests than controls fails naming them;
+`negative_control` is a reserved test name); and the `deps.rs` fix, each test workspace with its own `CARGO_TARGET_DIR`,
+shown to pass with one outside the repo; its split-first rule is R-264's orchestrator choice now.*
 *27 Sep 2026 · applied in TASK-M0-21*
 
 "Merge-level decisions for PR #19:
@@ -1675,6 +1764,10 @@ lists it. The three qa child-mode helpers (`qa_child_open_harness`, `qa_child_fa
 reviewing.
 
 ## R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
+*Amended by R-223 and R-264.*
+*Still in force: the size budget counts implementation code and the implementer's own tests, leaving out qa's commits
+and `negative_control!` blocks, and TASK-M0-24's and TASK-M0-25's sizes stand; which lines count is R-225's, and whether
+to split is the orchestrator's (R-264).*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "Both sizes accepted. From now on the ~500-line budget counts implementation code and the implementer's own tests
@@ -1705,6 +1798,10 @@ exception to edit qa's merged file (`crates/validation/tests/qa_R-206.rs`), with
 so TASK-M0-22 does it.
 
 ## R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*
+*Amended by R-217.*
+*Still in force: one shared spawn helper in `crates/validation`, used by every test that spawns a child, which on
+timeout kills and fails naming the child, its timeout a provisional calibration confirmed at the M0 gate (R-71); the
+kill takes the whole process group and the timeout is 300 s (R-217).*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "One shared spawn helper with a timeout; on timeout it kills the child and fails naming it. 120 s provisional,
@@ -1715,6 +1812,8 @@ merged files, under a one-round exception limited to replacing the spawn call. T
 requirement (R-71), provisional in CI until the human confirms it at the M0 gate (R-182).
 
 ## R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated
+*Extended by R-218.*
+*Still in force: all of it; R-218 extends its shared-module rule to inputs a control shares with its test.*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "All stand. M0-22 also removes the inline controls duplicated by registered ones, and moves checks copied between test
@@ -1823,6 +1922,7 @@ check); `words()` kept as the controls' own input; `metal_hosted_probe`'s contro
 expectation through the test's own check.
 
 ## R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)*
+*Superseded by R-225.*
 *27 Sep 2026 · applied in plan/WORKFLOW.md*
 
 "So size stops needing a ruling every PR: the ~500-line budget counts added and changed lines only. Pure deletions
@@ -1834,6 +1934,9 @@ and counts once, by its `+`), in implementation code and the implementer's own t
 (R-208) only if that count looks set to exceed ~500.
 
 ## R-224 — The two flaky tests are fixed before TASK-M0-29
+*Amended by R-230.*
+*Still in force: both flaky tests fixed at their cause, not by retries, in TASK-M0-31 before TASK-M0-29; the proof is
+R-230's, 5 full runs under normal load and green CI.*
 *27 Sep 2026 · applied in TASK-M0-31*
 
 "Fix both flaky tests next, before TASK-M0-29, as one small follow-up:
@@ -1868,6 +1971,8 @@ Asked whether to stop the suite running every control twice (the survey on 27 Se
 *Applied:* REQ-VAL-163 (new) carries it, closed by TASK-M0-22. The CI step must fail on any finding, so no coverage is lost. qa's merged `qa_TASK-M0-24.rs` changes only as far as this needs, under a one-round exception, with qa reviewing, as R-215's did.
 
 ## R-227 — The two remaining latent races are fixed now, in their own task
+*Amended by R-230.*
+*Still in force: the two remaining latent races fixed at their cause in TASK-M0-32; the proof is R-230's.*
 *27 Sep 2026 · applied in TASK-M0-32*
 
 Asked about three latent races of R-224's kind, none yet seen failing, the human chose "One task now": fixed at their cause, in a small task like TASK-M0-31, with a loaded multi-run proof.
@@ -1905,6 +2010,13 @@ controls machinery, a support module many targets include). An acceptance comman
 with no failures, plus CI green on the head. REQ-VAL-162 and REQ-VAL-164 and the two task files carry it.
 
 ## R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings
+*Amended by R-270.*
+*Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest in CI and locally (doctests through `cargo test
+--doc`, `cargo xtask controls` keeping its own cargo invocations), fixtures written only when changed, a build directory
+never used by a test and its control at once (R-224, read per fixture type under R-270, as TASK-M0-33 applied it),
+injectable spawn-helper timings with the calibrated values (REQ-VAL-156) unchanged, no test dropped, and edits to qa's
+merged files limited to what these need; fixtures share one build directory per fixture type, not per copy, cached on
+CI (R-270).*
 *28 Sep 2026 · applied in TASK-M0-33*
 
 "After TASK-M0-22, one task: cargo-nextest (CI and local), fixtures written only when changed with a target dir per
@@ -1966,6 +2078,9 @@ once per push either way.
 *Also in the same message:* the "veto?" items merged under R-234 on PRs #37 and #38 all stand.
 
 ## R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first
+*Amended by R-244.*
+*Still in force: the `deps.rs:1205` control first asserts the expected compile error, and a failing control's output is
+kept; R-244 keeps it in `xtask/src/controls.rs`'s findings.*
 *29 Sep 2026 · applied in TASK-M0-34*
 
 "R-236: a small task, run in parallel: qa_TASK-M0-24.rs keeps the failing control's output in its message (reworded
@@ -1976,6 +2091,9 @@ from "leaves it passing"), and the deps.rs:1205 control first asserts the expect
 to the message, under a one-round exception, with qa reviewing.
 
 ## R-237 — qa's commit may add files under `xtask/tests/`
+*Amended by R-290.*
+*Still in force: qa's commit touches only `crates/*/tests/`, `xtask/tests/` and `fixtures/`; besides adding files there,
+it may modify or delete a file only qa has committed to (R-290).*
 *29 Sep 2026 · applied in CLAUDE.md and `.claude/agents/qa-reviewer.md`*
 
 "R-237: qa's commit paths are crates/*/tests/ and xtask/tests/."
@@ -1991,6 +2109,7 @@ to the message, under a one-round exception, with qa reviewing.
 *Applied:* `/private/tmp/claude-501/-Users-malachy-src-prin-impl/c1185d1d-…/` (4.6 GB) was deleted. Outside the repo.
 
 ## R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high
+*Superseded by R-252.*
 *29 Sep 2026 · applied in CLAUDE.md*
 
 "R-239: memory limit for parallel work. Don't start a new build or reviewer if swap in use is above 4 GB or memory
@@ -2022,6 +2141,10 @@ the human chose "Add xtask → ledger edge".
 this ruling. `ledger` still depends on nothing.
 
 ## R-242 — The layout check's range and width rules *(closes RQ-151's rules)*
+*Amended by R-247 and R-248.*
+*Still in force: a `Range` end is closed, open or unbounded, the unsigned width rule, the unnamed-entry report,
+`ledger::layout()` empty until transcribed, and a field type the check doesn't recognise failing; the signed rule waits
+for the first signed type (R-247), and floats take exact widths (R-248).*
 *29 Sep 2026 · applied in TASK-M0-07 and TASK-M0-35*
 
 Asked whether to accept the rules the implementer applied where §3.8 and §5 are silent, the human chose "Accept all,
@@ -2147,6 +2270,7 @@ is now a physics definition (the physics reviewer's suggestion).
 #49, then #47."
 
 ## R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
+*Superseded by R-277.*
 *29 Sep 2026 · applied in CLAUDE.md*
 
 "R-252, amends R-239: the memory limit uses memory pressure, not swap size. macOS keeps swap allocated after memory
@@ -2159,6 +2283,7 @@ kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical) with `mem
 alongside free disk. R-239's 4 GB swap limit no longer applies. Process only.
 
 ## R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*
+*Superseded by R-254.*
 *29 Sep 2026 · applied in the docs listed below, REQ-INT-043 and REQ-TOOL-012*
 
 Asked in RQ-154, the human answered: "RQ-154: accepted as recommended. ftle reads NaN, with validity predicate
@@ -2204,6 +2329,9 @@ it for every consumer and REQ-RENDER-015's check covers the fragment side; `plan
 item, so every task that aggregates `ftle` is checked against it.
 
 ## R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack
+*Amended by R-264.*
+*Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084
+counted lines, one PR).*
 *29 Sep 2026 · applied in TASK-M0-09 and TASK-M0-10*
 
 "1. TASK-M0-09 accepted at ~1,000 lines, one PR. Veto items (a) and (b) stand. Update TASK-M0-10's task file so it
@@ -2232,6 +2360,8 @@ reporting, not standing obligations. (5) kernel-build §5's gates are ported, wi
 veto item 1). The ports land in PR #54 (TASK-M0-02), docs first, then the requirements.
 
 ## R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*
+*Amended by R-273.*
+*Still in force: all three items, but the region minimum is calibrated at M3 (R-273), not at the M0 gate.*
 *29 Sep 2026 · applied in TASK-M0-05*
 
 "3. RQ-159: all three as recommended."
@@ -2393,6 +2523,9 @@ declares, and refuses a case that declares none). Item 12 (what `golden --list` 
 reviewer's re-check at 76fd151 agrees.
 
 ## R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend
+*Amended by R-287.*
+*Still in force: its measurement and result, and one reference per backend as the fallback for a case whose bytes still
+differ; otherwise goldens share one reference (R-287).*
 *30 Sep 2026 · applied in REQ-VAL-138; the measurement runs on a `measure/` branch (R-272)*
 
 "REQ-VAL-138: throwaway measure/ branches are allowed (push, measure, delete). Get the lavapipe max-step. If 0: zero
@@ -2607,6 +2740,13 @@ keeps one reference for every backend. A case whose bytes still differ between b
 backend, as R-269 ruled, and the PR names it.
 
 ## R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
+*Amended by R-294.*
+*Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and
+`dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by
+`roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never
+stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record
+carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a
+buffer bound and reset per frame on the GPU (R-294).*
 *30 Sep 2026 · applied in telemetry §2 and TASK-M0-10 (PR #78), and profiler schema v1's frame record in TASK-M0-17 (PR #79)*
 
 "RQ-171: option (a), recorded as R-288. Two per-frame atomic u32 counters (NaN d_min stored as unset; negative d_min
@@ -2632,3 +2772,135 @@ classifier treated them as possible instruction poisoning and blocked the edits,
 change. From now on, a ruling that lands mid-task waits: the agent finishes its current step and stops, and a fresh
 agent is dispatched with the ruling, in the human's words, in its opening prompt. #79's R-286 and R-288 round is
 re-dispatched that way.
+
+## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+*30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
+
+"RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
+log). Every such change is listed in the PR with its reason, and the code reviewer confirms no assertion was weakened
+except where a ruling changed the behaviour it tests. The implementer still never edits qa's files."
+
+*Applied:* besides `A` lines, the orchestrator's check on qa's commit (R-237) accepts `M` and `D` lines on a test file
+whose every earlier commit, by `git log`, is a qa commit ("qa: tests for …"). The PR lists each such change with its
+reason, and the code reviewer confirms that no assertion was weakened, except where a ruling changed the behaviour it
+tests. The implementer still never edits a file of qa's. It is recorded with R-292, which changes nothing else in
+CLAUDE.md: CLAUDE.md's qa paragraph and `.claude/agents/qa-reviewer.md` still state R-237's add-only form.
+
+## R-291 — TASK-M0-40's three veto items stand
+*30 Sep 2026 · applied in TASK-M0-40 (PR #82)*
+
+"#82: all three veto items stand."
+
+*Applied:* PR #82's three "Applied per R-204 — veto?" items stand as the PR wrote them. Design: a named node with no
+bounds counts as clipped, not present, and so does one whose rect only touches the surface edge (R-275). Process: the
+re-run of a stale `reviews` run is a step inside the `reviews-complete` job, so the list of required checks doesn't
+change. Test infra: the new tests build their own one-case suite in a temp dir (`CARGO_TARGET_TMPDIR`), so
+`screenshot --all` in CI is unchanged.
+
+## R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only
+*Amended by R-293.*
+*Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it
+shows the rest (R-293).*
+*30 Sep 2026 · applied in decisions.md, REVIEW_QUEUE.md, docs/archive/review_queue/, plan/check_plan.py, plan/tools/,
+plan/CURRENT_RULES.md and CLAUDE.md*
+
+"decisions.md hygiene (R-292), one small PR, no rulings changed:
+1. Every ruling amended, superseded or corrected by a later one gets an "Amended by R-n" (or "Superseded by R-n") line
+   directly under its heading. There are 22 today, including R-5, R-12, R-17, R-110, R-175, R-176, R-211, R-214,
+   R-223, R-239, R-252 and R-256.
+2. check_plan.py fails if a ruling says it amends/supersedes/corrects/replaces R-n and R-n lacks the matching forward
+   line.
+3. Generate plan/CURRENT_RULES.md from decisions.md: every standing rule as currently in force, grouped (authority,
+   physics conventions, values, process, CI), each citing its ruling. It's generated only, rebuilt by a script, and
+   check_plan fails if it's stale. CLAUDE.md points agents to it for current rules, and to decisions.md for history.
+4. Add R-195's missing "Applied:" note (PR #17).
+Record R-290 (RQ-172) and R-291 (#82's veto items) in the same PR."
+
+The human's addition:
+
+"5. REVIEW_QUEUE.md holds open entries only. Every entry with a ruling moves, unchanged, to docs/archive/review_queue/
+in one file per era: untangling.md (RQ-1 to ~128) and M0.md (the rest); later milestones get their own file after each
+gate. IDs never change. check_plan.py resolves RQ-n and R-n references in the live files and the archive, and fails on
+any it can't find.
+6. decisions.md stays whole: it's the law as well as its history. Agents read CURRENT_RULES.md for rules in force, and
+decisions.md only for why. Revisit splitting it per milestone (numbers unchanged) at a gate, if it becomes unwieldy."
+
+*Applied:*
+- Item 1: 38 rulings gain a forward line directly under the heading ("*Amended by R-m.*", or "Superseded in part",
+  "Corrected", "Reversed in part", "Refined" or "Extended by R-m"). The count is 38, not 22: a scan of every
+  ruling's heading and text for "amends", "supersedes", "corrects" and "replaces" R-n finds 33, and "reverses",
+  "refines" and "extends" 3 more (R-156, R-253, R-215); R-7 (its "R-7 amended" entry) and R-237 (R-290) make 38.
+  R-93, R-95, R-104, R-109, R-122 and R-141 already carried theirs in their date line and keep it there.
+- Item 2: `plan/check_plan.py` fails when a ruling says it amends, supersedes, corrects or replaces R-n, and R-n has no
+  matching forward line in its heading block. Reverses, refines and extends are checked the same way (applied per
+  R-204 — veto?). The checks are in `plan/tools/rulings.py`.
+- Items 3 and 6: `plan/tools/current_rules.py` generates `plan/CURRENT_RULES.md` from this file and
+  `plan/rule_groups.yaml`, and `check_plan.py` fails if it is stale. Applied per R-204 — veto?: the groups live in
+  that mapping file rather than in a line under each heading; a sixth group, "Design and architecture", holds the
+  architecture, payload, scheduler, render, colour, GUI and tooling rulings; each ruling's group is a judgement from
+  its text; and the one-off acts are listed last, under "One-off acts (history only)". A ruling superseded outright
+  would be left out; none is today. CLAUDE.md points agents to CURRENT_RULES.md, and to this file for history.
+- Item 4: R-195's Applied note (PR #17).
+- Item 5: `REVIEW_QUEUE.md` keeps RQ-173, the only open entry. The ruled entries moved unchanged to
+  `docs/archive/review_queue/untangling.md` (RQ-1 to RQ-128, tagged "step 1" to "step 7") and `M0.md` (RQ-129 onward,
+  tagged build, plan, calibration and the like from RQ-129's "(build, TASK-M0-01)"). RQ-169 and RQ-171, filed on PR
+  #78 and cited here by R-278 and R-288, were not on main; they are copied into `M0.md` unchanged from that branch.
+  `check_plan.py` resolves every R-n and RQ-n in the live files and the archive, and `coverage.py` takes its RQ ids
+  from the queue and its archive.
+
+## R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
+*30 Sep 2026 · applied in decisions.md, plan/tools/, plan/check_plan.py, plan/CURRENT_RULES.md, CLAUDE.md and
+`.claude/agents/qa-reviewer.md`*
+
+"#84: veto items 1–4 stand. Item 5 changes (R-293): CURRENT_RULES.md shows every rule's current form. Audit each
+"Amended by" pair: where the later ruling fully replaces the earlier (e.g. R-239 → R-252 → R-277), mark the earlier
+"Superseded by R-n" and drop it from the digest. Where only part is replaced, the earlier entry carries one line,
+"Still in force: …", drafted by the agent and checked in review. Also update CLAUDE.md's qa paragraph and
+.claude/agents/qa-reviewer.md to R-290. Merge #84 once that's done and green."
+
+*Applied:*
+- PR #84's "applied per R-204 — veto?" items 1 to 4 stand as R-292's Applied note has them: the verb set, the group
+  mapping file, the sixth group and the one-off acts listed last. Item 5 (a ruling is left out only on an outright
+  "Superseded by") changes as below.
+- The audit covers every forward pair: 53, on 46 rulings (the 51 pairs R-292 recorded, and R-288 and R-292's pairs
+  here). Where the later ruling replaces the whole of the earlier, the earlier's forward line now reads "Superseded by
+  R-n", and the ruling leaves CURRENT_RULES.md: R-189 and R-190 (by R-191; R-190 had amended R-189 in part), R-192
+  (by R-194), R-223 (by R-225), R-239 (by R-252), R-252 (by R-277) and R-253 (by R-254). Each of the other 39 carries
+  one line under its forward line (or date line), "*Still in force: ….*", drafted per R-293 and checked in review.
+  The PR lists every pair with its classification.
+- `plan/tools/current_rules.py` gives a partly amended ruling's "Still in force" line in its digest entry, then the
+  rulings that amend it. `plan/check_plan.py` fails if a ruling with a forward line that isn't superseded outright has
+  no "Still in force" line, if one superseded outright has one, or if CURRENT_RULES.md lists a ruling superseded
+  outright. A "Superseded by R-m" line also answers R-m's claim on the ruling, whatever its verb ("amends",
+  "refines").
+- CLAUDE.md's qa paragraph and `.claude/agents/qa-reviewer.md` state R-290's rule, citing it; nothing else in either
+  changes.
+
+*Applied per R-204 — veto?:* R-252 is marked superseded by R-277, as the human's example chain has it. R-277 restates
+R-252's limits (two agents at warning, three at normal, only running work at critical) but not its "Log the pressure
+level instead of swap in summaries", which leaves the digest with R-252. R-253 is marked superseded by R-254, which it
+"refines": `ftle` reads NaN whenever `ftle_valid` is false, which includes `step_count = 0`, so nothing of R-253 stands
+apart from R-254.
+
+## R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
+*30 Sep 2026 · applied in TASK-M5-28 and REQ-TOOL-140; PR #78 (TASK-M0-10) applies the CPU half*
+
+"#78: the program-wide static is vetoed (R-294). R-288's counters belong to the frame, never global state: on the CPU,
+the packer's caller passes in a per-frame counters struct and reads it back; on the GPU, an atomic u32 buffer bound
+per frame and reset each frame, read back asynchronously with the telemetry readback. No mutable statics in the
+kernel. RQ-174 (GPU binding and readback) becomes part of the task that builds the telemetry readback; state which task
+in the ruling."
+
+*Applied:* on the CPU, the `d_min` packer counts into a per-frame counters struct that its caller passes in and reads
+back after the frame. PR #78 (TASK-M0-10) drops its process-wide `DMIN_COUNTERS` static, and the kernel holds no
+mutable static. On the GPU, `dmin_nan_unset` and `dmin_negative_floored` are an atomic u32 storage buffer, bound to
+each frame's dispatch and reset each frame, and read back asynchronously with the telemetry readback (R-288), never
+stalling a frame; their values go into that frame's record. REQ-TOOL-140 (new) carries the GPU half. RQ-174 moves to
+`docs/archive/review_queue/M0.md` with its Ruling line.
+
+*Applied per R-204 — veto? (which task):* TASK-M5-28, the frame record, percentiles and the bounded telemetry file. No
+task builds a GPU telemetry readback under that name: TASK-M5-14 builds only the dispatch queue's `QuadReduction`
+readback and the measurement path, and TASK-M6-16 times the GPU with timestamp queries. TASK-M5-28 builds the frame
+record (telemetry §2), where the counters belong, so it binds the buffer, reads it back and writes the values into the
+record. Its Depends on reaches TASK-M4-05, the compute kernel whose march packs `d_min`, through TASK-M5-21, so no
+dependency is added.

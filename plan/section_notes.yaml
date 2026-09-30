@@ -635,3 +635,19 @@
   section: "R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch"
   reason: informative only
   note: process ruling; applied in the orchestrator's loop
+- file: decisions.md
+  section: "R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*"
+  reason: informative only
+  note: process ruling; recorded, for the orchestrator's check on qa's commit
+- file: decisions.md
+  section: "R-291 — TASK-M0-40's three veto items stand"
+  reason: informative only
+  note: applied in TASK-M0-40 (PR #82)
+- file: decisions.md
+  section: "R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only"
+  reason: informative only
+  note: process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling
+- file: decisions.md
+  section: "R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*"
+  reason: informative only
+  note: process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent

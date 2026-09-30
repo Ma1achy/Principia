@@ -1,7 +1,8 @@
 //! The subprocess bodies qa's tests spawn (R-210): not `#[test]`s, so `cargo xtask controls` never lists them. The
 //! first argument names the body; each prints the marker line its parent test reads. Moved from
 //! `tests/qa_TASK-M0-04.rs` (`open_harness`, `failing_property`), `tests/qa_TASK-M0-04_r2.rs` (`count_cases`) and
-//! `tests/qa_R-206.rs` (`r206_opened`, R-213).
+//! `tests/qa_R-206.rs` (`r206_opened`, R-213). `r217_out_of_group` is `tests/qa_TASK-M0-26_r217.rs`'s spawner of a
+//! grandchild in a process group of its own (R-276).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -80,12 +81,39 @@ fn count_cases() {
     );
 }
 
+/// Spawns the command in `args[1..]` in a process group of its own, at spawn (`process_group(0)`: the group is set
+/// before the command runs, so it is never in this process's group), writes its pid to the file `args[0]`, and exits
+/// without waiting for it: the out-of-group grandchild of `qa_TASK-M0-26_r217.rs`'s controls (R-276). It inherits
+/// this process's stdout and stderr, so it holds whatever output they lead to. Not through the spawn helper: the
+/// command is meant to outlive this process, beyond any timeout's reach (the helper is for tests, REQ-VAL-155).
+#[cfg(unix)]
+fn r217_out_of_group(args: &[String]) {
+    use std::os::unix::process::CommandExt;
+    let [pid_file, program, rest @ ..] = args else {
+        panic!("r217_out_of_group: want <pid file> <program> [args]; got {args:?}")
+    };
+    // Suppressed: the lint asks for a `wait()`, but the command is meant to outlive this process, which exits at once;
+    // it is then reparented, and its new parent reaps it, so no zombie is left.
+    #[allow(clippy::zombie_processes)]
+    let child = std::process::Command::new(program)
+        .args(rest)
+        .process_group(0)
+        .spawn()
+        .unwrap_or_else(|e| panic!("r217_out_of_group: {program}: {e}"));
+    std::fs::write(pid_file, child.id().to_string())
+        .unwrap_or_else(|e| panic!("r217_out_of_group: {pid_file}: {e}"));
+}
+
 fn main() {
     match std::env::args().nth(1).as_deref() {
         Some("open_harness") => open_harness(),
         Some("failing_property") => failing_property(),
         Some("count_cases") => count_cases(),
         Some("r206_opened") => r206_opened(),
+        #[cfg(unix)]
+        Some("r217_out_of_group") => {
+            r217_out_of_group(&std::env::args().skip(2).collect::<Vec<_>>())
+        }
         other => panic!("qa_child: unknown body {other:?}"),
     }
 }
