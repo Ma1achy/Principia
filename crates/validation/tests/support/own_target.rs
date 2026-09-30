@@ -7,16 +7,26 @@
 //! builds cold once, not on every run: a cold build per call pushes a nested build past the 300 s timeout under load
 //! (TASK-M0-31). Each lease keeps its copies of the fixtures at paths of its own, written only when they change
 //! (R-231). Included with `#[path]` by `expected_message.rs`, `support/qa_m0_21_fixture.rs` and xtask's
-//! `tests/controls.rs` and `tests/qa_TASK-M0-34.rs`, which share its pool of fixture target directories.
+//! `tests/controls.rs`, `tests/qa_TASK-M0-34.rs` and `tests/qa_TASK-M0-38.rs`, which share its pool of fixture target
+//! directories.
 
 use std::fs::{File, TryLockError};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
+use std::thread::ThreadId;
+use std::time::Duration;
 
 #[path = "fixture_tree.rs"]
 mod fixture_tree;
 
 /// The pool the fixture copies build in.
 pub const FIXTURES: &str = "fixture-targets";
+
+/// How often a lease waiting for one of its copy's own directories tries them again.
+const RETRY: Duration = Duration::from_millis(50);
+
+/// The directories this process holds a lease on, each with the thread that took it.
+static HELD: Mutex<Vec<(PathBuf, ThreadId)>> = Mutex::new(Vec::new());
 
 /// One directory of a pool, leased until dropped.
 pub struct Lease {
@@ -27,11 +37,14 @@ pub struct Lease {
 
 impl Lease {
     /// The first directory of `pool` that no one holds, a new one when all are held: the pool grows only to the
-    /// most leases held at once. With `copy`, a free directory already holding the copy of that name (see
-    /// [`Lease::copy`]) comes first, so a warm run finds the copy's build where it left it (R-231); failing that, a
-    /// directory holding no copy yet, or a new one. A directory holding only other fixtures' copies never takes it,
-    /// so each fixture keeps target directories of its own across runs, as many as its tests ever held at once, and
-    /// a warm run's lease for it never lands where it was not built (REQ-VAL-165).
+    /// most leases held at once.
+    ///
+    /// With `copy`, the lease goes only to a directory that has built the copy of that name (see [`Lease::copy`]),
+    /// so a warm run finds the copy's build where it left it and rebuilds nothing (REQ-VAL-165, R-231). While all of
+    /// those are held by other tests, it waits for one; a directory holding only other fixtures' copies never takes
+    /// it. It takes a directory holding no copy, or a new one, only for the copy's first build, or when this thread
+    /// itself holds every directory that built it, which waiting could never free. So each fixture keeps target
+    /// directories of its own across runs.
     pub fn take(pool: &str, copy: Option<&str>) -> Lease {
         let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(pool);
         std::fs::create_dir_all(&root).unwrap();
@@ -39,32 +52,56 @@ impl Lease {
             .take_while(|n: &u32| root.join(format!("{n}.lock")).exists())
             .filter(|n| copy.is_some_and(|c| root.join(format!("{n}.src")).join(c).exists()))
             .collect::<Vec<_>>();
+        let me = std::thread::current().id();
+        let mine = |n: &u32| {
+            let dir = root.join(n.to_string());
+            HELD.lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .iter()
+                .any(|(held, by)| *held == dir && *by == me)
+        };
+        if !built.iter().all(mine) {
+            loop {
+                if let Some(lease) = built.iter().find_map(|&n| Lease::try_take(&root, n)) {
+                    return lease;
+                }
+                if built.iter().all(mine) {
+                    break;
+                }
+                std::thread::sleep(RETRY);
+            }
+        }
         // A directory with no copies: `<n>.src` absent or empty, as for every directory past the pool's end.
         let unused = |n: &u32| {
             std::fs::read_dir(root.join(format!("{n}.src")))
                 .map_or(true, |mut entries| entries.next().is_none())
         };
-        built
-            .into_iter()
-            .chain((0..).filter(|n| copy.is_none() || unused(n)))
-            .find_map(|n: u32| {
-                let path = root.join(format!("{n}.lock"));
-                let lock = File::options()
-                    .create(true)
-                    .truncate(false)
-                    .write(true)
-                    .open(&path)
-                    .unwrap();
-                match lock.try_lock() {
-                    Ok(()) => Some(Lease {
-                        dir: root.join(n.to_string()),
-                        _lock: lock,
-                    }),
-                    Err(TryLockError::WouldBlock) => None,
-                    Err(TryLockError::Error(e)) => panic!("lock {}: {e}", path.display()),
-                }
-            })
+        (0..)
+            .filter(|n| copy.is_none() || unused(n))
+            .find_map(|n| Lease::try_take(&root, n))
             .unwrap()
+    }
+
+    /// Directory `n` of the pool at `root`, if no one holds it.
+    fn try_take(root: &Path, n: u32) -> Option<Lease> {
+        let path = root.join(format!("{n}.lock"));
+        let lock = File::options()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        match lock.try_lock() {
+            Ok(()) => {
+                let dir = root.join(n.to_string());
+                HELD.lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push((dir.clone(), std::thread::current().id()));
+                Some(Lease { dir, _lock: lock })
+            }
+            Err(TryLockError::WouldBlock) => None,
+            Err(TryLockError::Error(e)) => panic!("lock {}: {e}", path.display()),
+        }
     }
 
     /// The leased directory, for `CARGO_TARGET_DIR`.
@@ -79,6 +116,15 @@ impl Lease {
         let copy = self.dir.with_extension("src").join(name);
         fixture_tree::write_tree(&copy, files);
         copy
+    }
+}
+
+impl Drop for Lease {
+    fn drop(&mut self) {
+        let mut held = HELD.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(i) = held.iter().position(|(dir, _)| *dir == self.dir) {
+            held.remove(i);
+        }
     }
 }
 
