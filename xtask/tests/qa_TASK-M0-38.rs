@@ -22,7 +22,7 @@ use validation::spawn::Spawn;
 
 #[path = "../../crates/validation/tests/support/own_target.rs"]
 mod own_target;
-use own_target::{Lease, FIXTURES};
+use own_target::{fixture_files, Lease, FIXTURES};
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-SYS-069
@@ -44,48 +44,38 @@ struct Verdict {
     stderr: String,
 }
 
-fn copy_dir(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let path = entry.unwrap().path();
-        let dest = to.join(path.file_name().unwrap());
-        if path.is_dir() {
-            copy_dir(&path, &dest);
-        } else {
-            std::fs::copy(&path, &dest).unwrap();
-        }
-    }
-}
-
 /// `xtask controls --manifest-path` on a copy of the fixture, outside the workspace, with the `validation` path made
 /// absolute and a target directory of its own (REQ-VAL-164); run once per process and shared.
 fn verdict() -> &'static Verdict {
     static RUN: OnceLock<Verdict> = OnceLock::new();
     RUN.get_or_init(|| {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        let copy = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-            .join("qa_m0_38")
-            .join(format!("embedded_header-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&copy);
-        copy_dir(
-            &root.join("fixtures/controls_qa_m0_38/embedded_header"),
-            &copy,
-        );
-        let manifest = copy.join("Cargo.toml");
-        let text = std::fs::read_to_string(&manifest).unwrap().replace(
-            "../../../crates/validation",
-            root.join("crates/validation").to_str().unwrap(),
-        );
-        std::fs::write(&manifest, text).unwrap();
-        std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
-        let target = Lease::take(FIXTURES);
+        let mut files = fixture_files(&root.join("fixtures/controls_qa_m0_38/embedded_header"));
+        for (path, bytes) in &mut files {
+            if path == Path::new("Cargo.toml") {
+                *bytes = String::from_utf8_lossy(bytes)
+                    .replace(
+                        "../../../crates/validation",
+                        root.join("crates/validation").to_str().unwrap(),
+                    )
+                    .into_bytes();
+            }
+        }
+        files.push((
+            PathBuf::from("Cargo.lock"),
+            std::fs::read(root.join("Cargo.lock")).unwrap(),
+        ));
+        // The copy is the lease's own, kept across runs and written only where it changed (R-231, REQ-VAL-165).
+        let target = Lease::take(FIXTURES, Some("qa_m0_38-embedded_header"));
+        let manifest = target
+            .copy("qa_m0_38-embedded_header", &files)
+            .join("Cargo.toml");
         let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
             .args(["controls", "--manifest-path"])
             .arg(&manifest)
             .env("CARGO_TARGET_DIR", target.dir())
             .timed_output()
             .expect("run xtask controls");
-        let _ = std::fs::remove_dir_all(&copy);
         Verdict {
             ok: output.status.success(),
             stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
