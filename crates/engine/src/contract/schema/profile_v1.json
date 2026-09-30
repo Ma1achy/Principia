@@ -135,7 +135,7 @@
       }
     },
     "frame": {
-      "$comment": "One line between the header line and the summary line: one frame record.",
+      "$comment": "One line between the header line and the summary line: one frame record. stage_ms.present and stages.present are null together or present together.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -160,7 +160,6 @@
         "stages": { "$ref": "#/$defs/stages" },
         "live_memory": { "$ref": "#/$defs/live_memory" }
       },
-      "$comment": "stage_ms.present and stages.present are null together or present together.",
       "if": { "properties": { "stage_ms": { "properties": { "present": { "type": "null" } } } } },
       "then": { "properties": { "stages": { "properties": { "present": { "type": "null" } } } } },
       "else": { "properties": { "stages": { "properties": { "present": { "not": { "type": "null" } } } } } }
