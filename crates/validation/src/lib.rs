@@ -3,6 +3,8 @@
 //! R-187).
 
 pub mod control;
+pub mod convergence;
+pub mod gate;
 pub mod gpu;
 pub mod prop;
 pub mod spawn;

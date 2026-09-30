@@ -5,6 +5,7 @@ pub mod ci;
 pub mod codegen;
 pub mod controls;
 pub mod deps;
+pub mod gate;
 pub mod lint_constants;
 pub mod plan_check;
 pub mod pr_check;
