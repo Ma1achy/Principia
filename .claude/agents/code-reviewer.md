@@ -21,6 +21,10 @@ without the controls features), and the `cargo xtask` tools; check that CI is gr
 locally only for a cross-cutting change (R-229). If the only new commit since your approval is qa's test-only commit,
 re-check that commit alone (R-229).
 
+**qa's changes to its own files (R-290).** If qa's commit modifies or deletes a test file that only qa has committed to,
+check each change the PR lists, test by test, and confirm that no assertion was weakened, except where a ruling changed
+the behaviour it tests. Name that ruling for each such exception. A weakened assertion with no such ruling is a finding.
+
 **Your own checkout (R-219).** The orchestrator gives you a git worktree at the PR head and a `CARGO_TARGET_DIR`, named
 in your dispatch. Work only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
 Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.

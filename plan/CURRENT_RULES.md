@@ -225,6 +225,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-230** — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*
 - **R-234** — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
 - **R-237** — qa's commit may add files under `xtask/tests/`. Still in force: qa's commit touches only `crates/*/tests/`, `xtask/tests/` and `fixtures/`; besides adding files there, it may modify or delete a file only qa has committed to (R-290). Amended by R-290.
+- **R-252** — The memory limit reads memory pressure, not swap *(amends R-239)*. Still in force: log the memory-pressure level, not swap, in summaries (kept by R-295); the dispatch limits are R-277's. Amended by R-277.
 - **R-260** — qa's approval carries over its own test commit *(amends R-175)*
 - **R-262** — Builds move to the internal disk, three agents at most
 - **R-264** — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
@@ -233,7 +234,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
 - **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
-- **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*
+- **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
+- **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 
 ## CI
 
