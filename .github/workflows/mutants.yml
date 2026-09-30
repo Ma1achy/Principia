@@ -53,8 +53,11 @@ jobs:
             echo "rust=false" >> "$GITHUB_OUTPUT"
             echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs)"
           fi
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
         if: steps.diff.outputs.rust == 'true'
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         if: steps.diff.outputs.rust == 'true'
         with:
@@ -78,6 +81,12 @@ jobs:
       - name: Install Mesa (lavapipe)
         if: steps.diff.outputs.rust == 'true'
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      # The kernel's SPIR-V and WGSL, which the baseline's and each mutant's `toolchain_trivial_kernel` and xtask's
+      # `build_kernel` tests read (TASK-M0-14): `cargo xtask build-kernel`, written as the cargo call the alias expands
+      # to (.cargo/config.toml), since it is setup for the tests, like the Mesa install, not one of the gate's checks.
+      - name: cargo run --quiet --package xtask -- build-kernel
+        if: steps.diff.outputs.rust == 'true'
+        run: cargo run --quiet --package xtask -- build-kernel
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
       # shard's partial report is still uploaded when it is hit, and the step then fails.
@@ -128,7 +137,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
@@ -166,7 +178,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry

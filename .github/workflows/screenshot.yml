@@ -21,7 +21,10 @@ jobs:
       PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
