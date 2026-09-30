@@ -243,8 +243,8 @@ frame's end:
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
 frame_ms        wall clock
 quads_computed  quads_reused  samples  substeps_total
-playhead_dt     how far time moved (signed)
-camera_delta    pan/zoom magnitude, 0 for a static frame
+playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
+camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
 tree_depth_max  leaf_count
 stage_ms        {integrate, reduce, colour, upload, present}: each stage's ms
 stages          {integrate, reduce, colour, upload, present}: each stage's nested sections
@@ -261,6 +261,12 @@ allocations.
 
 `stage_ms` and `stages` have exactly the five stages as keys, written in that order, and nothing else. A batch render
 has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.
+
+`playhead_dt` is the change in the playhead's simulation time `t` over the frame, in the unit of `T_horizon`
+(`principia_integrator_contract.md` Part 3, physical time). It is negative when the playhead moves back and 0 when it
+does not move, and it is not wall-clock time. v1 makes only the sign of `camera_delta` normative: `camera_delta > 0`
+means the camera moved (panned or zoomed) this frame and 0 means it did not, the moving/still discriminator of §3.
+The magnitude's metric is not defined in v1; the task that first consumes the magnitude defines it.
 
 **A stage's nested sections** sit beneath it:
 

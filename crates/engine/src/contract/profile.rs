@@ -174,9 +174,11 @@ pub struct FrameRecord {
     pub samples: u64,
     /// The honest cost measure.
     pub substeps_total: u64,
-    /// How far time moved (signed).
+    /// How far time moved (signed): the change in the playhead's simulation time `t`, in the unit of `T_horizon`;
+    /// negative when the playhead moves back. Not wall-clock time.
     pub playhead_dt: f64,
-    /// Pan/zoom magnitude; 0 for a static frame and for a batch render (telemetry §5.5).
+    /// Pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not (a static frame, a batch render).
+    /// v1 makes only that sign normative; the magnitude's metric is defined by the task that first consumes it.
     pub camera_delta: f64,
     /// The quad tree's maximum depth.
     pub tree_depth_max: u32,
