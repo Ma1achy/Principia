@@ -4569,17 +4569,20 @@
   milestone: M0
 - id: REQ-PAY-016
   area: PAY
-  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side."
+  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 3. The word buffer — `free_group_word`
   - file: docs/design/principia_dd_generation_root.md
     section: "3.3 `free_group_word` (uint4) — mixed-radix packing, **in a separate buffer**"
+  - file: decisions.md
+    section: "R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*"
   verify:
     method: unit test
-    detail: "assert the generated Rust and WGSL tables equal the frozen arrays; assert involution and that no continuation equals inverse(prev)"
+    detail: "assert the generated Rust and WGSL tables equal the frozen arrays, continuation_index included (3 in its four next = inverse(prev) cells, R-307); assert involution and that no continuation equals inverse(prev)"
   rulings:
   - R-63
+  - R-307
   milestone: M0
 - id: REQ-PAY-017
   area: PAY
@@ -4613,11 +4616,14 @@
   source:
   - file: decisions.md
     section: "R-18 — The agreement value is `spread_event` *(closes RQ-16)*"
+  - file: decisions.md
+    section: "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
   verify:
     method: unit test
-    detail: "Generated payload has spread_event: f16 and no ensemble_outcome_agreement; the agreement view computes from spread_event."
+    detail: "The ledger's QuadReduction member list (generation-root §3.7, recorded as ledger data at M0, R-306) has spread_event: f16 and no ensemble_outcome_agreement; the agreement view computes from spread_event. The generated struct is TASK-M5-01's (R-113, R-306)."
   rulings:
   - R-18
+  - R-306
   milestone: M0
 - id: REQ-PAY-020
   area: PAY
@@ -5594,6 +5600,8 @@
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-182
 - id: REQ-PAY-078
   area: PAY
   kind: calibration
@@ -13557,16 +13565,16 @@
     section: 5.5 Profiling is FIRST-CLASS, not a debug mode
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
   verify:
     method: unit test
-    detail: "the file parses as JSON against schema v1; the header holds the build hash and the config as the M0 contract skeleton (TASK-M0-16) serialises it; prin profile reads it"
+    detail: "the file parses as JSON against schema v1; the header holds the build hash and the config as the M0 contract skeleton (TASK-M0-16) serialises it: {\"scenario\", \"frames\", \"sim\", \"render\"}, SimConfig and RenderState in the canonical serialisation (R-309); prin profile reads it"
   rulings:
   - R-56
   - R-113
+  - R-309
   milestone: M0
-  rq:
-  - RQ-180
-  - RQ-181
   note: "R-113 (RQ-93 M0-6): the dev GUI profiler reading the same file, with REQ-GUI-039's provenance object as the header config, is verified by REQ-TOOL-098 (M8)."
 - id: REQ-TOOL-003
   area: TOOL
@@ -13635,9 +13643,8 @@
     detail: "run a registered synthetic scenario that emits frame records for N frames twice: same frame count and the same scope / event sequence; an unregistered NAME is refused"
   rulings:
   - R-113
+  - R-308
   milestone: M0
-  rq:
-  - RQ-180
   note: "R-113 (RQ-93 M0-4): the deep_zoom_03 scenario and its 600-frame run are a separate M5 requirement."
 - id: REQ-TOOL-007
   area: TOOL
@@ -15646,6 +15653,54 @@
     detail: "cargo test -p engine session_header_browser_fast_math: a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a header for a native backend never records \"unknown\"; review checklist (code): the browser entry (`crates/engine/src/wasm/entry.rs`) passes the no-control fast-math capability that the header writer and the Run window read"
   rulings:
   - R-303
+  milestone: M8
+- id: REQ-TOOL-144
+  area: TOOL
+  statement: "A session that opens no GPU must write `backend.api` \"none\" in its header, with `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; schema v1's readers must accept that header; and a run must never open a GPU adapter only to fill the header."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: decisions.md
+    section: "R-308 — A session that opens no GPU writes `api: \"none\"`, its GPU fields null *(closes RQ-180)*"
+  verify:
+    method: unit test
+    detail: "prin profile's synthetic_frames header has backend.api \"none\" and those five fields null, and prin opens no adapter (no wgpu in its dependency tree); the typed form and profile_v1.json both accept that header and still reject an api outside the five values"
+  rulings:
+  - R-308
+  milestone: M0
+- id: REQ-TOOL-145
+  area: TOOL
+  kind: definition
+  statement: "The canonical serialisation of `SimConfig` and `RenderState` — the key order, and the exact formatting of every number so that equal state is equal text and each value reads back exactly — must be defined in `principia_gui_state_contract.md` §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section states the key order and the number formatting; serialising the same state twice gives the same bytes; a written number reads back to the same value; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-309
+  milestone: M0
+- id: REQ-TOOL-146
+  area: TOOL
+  statement: "Snapshot JSON, share links and pxpack must write `SimConfig` and `RenderState` in the one canonical serialisation (`principia_gui_state_contract.md` §2), the same the profiler header's `config` uses."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: decisions.md
+    section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
+  verify:
+    method: unit test
+    detail: "for one state, the SimConfig and RenderState text in the snapshot JSON, in the decoded share link and in the extracted pxpack record is byte-equal to the canonical serialisation"
+  rulings:
+  - R-309
   milestone: M8
 - id: REQ-VAL-001
   area: VAL

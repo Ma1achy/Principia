@@ -26,6 +26,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
 
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), with
@@ -58,3 +59,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the
   unresolved-footprint count in `QuadReduction` (see TASK-M5-19).
 - RQ-93 ruled: R-113, option (b) — QuadReduction's sizing is at M5: REQ-PAY-006 moves here and REQ-PAY-089 (sized from its member list, then aligned) is split from REQ-PAY-001; the member list itself stays at M0 (TASK-M0-11).
+- RQ-178 ruled: R-306 — M0 (TASK-M0-11) records §3.7's member list as ledger data, not emitted; this task builds the
+  generated struct from it, with the members' §3.8 entries and `class_histogram`'s placement (§3.8's vector rule reads
+  a `u-bits` component at a scalar index as a full u32, so `u8 × N` needs a placement here).
+- RQ-182 (open, M5): how the f16 members are typed in §3.8 — `f16-pair` at packed 16-bit locations, or a new §3.8
+  `f16` type. Stable Rust has no `f16` type, so the generated struct stores binary16 bits either way. It needs a
+  ruling before this task starts.

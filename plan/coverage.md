@@ -18,19 +18,19 @@
 | RENDER | 82 |
 | COL | 59 |
 | GUI | 163 |
-| TOOL | 142 |
+| TOOL | 145 |
 | VAL | 176 |
 | PERF | 94 |
 | SYS | 74 |
-| **total** | **1292** |
+| **total** | **1295** |
 
-Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 104 definition, 1089 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 106 |
+| M0 | 108 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -38,14 +38,14 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 | M5 | 161 |
 | M6 | 141 |
 | M7 | 113 |
-| M8 | 233 |
+| M8 | 234 |
 
 ## Sections
 
-996 sections in 46 files: 843 yield at least one requirement; 153 yield none and are listed below with the reason.
+1001 sections in 46 files: 847 yield at least one requirement; 154 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 106 |
+| informative only | 107 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -115,6 +115,7 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 | R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
 | R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs |
 | R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main` | informative only | confirms PR |
+| R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand | informative only | accepts PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
