@@ -135,10 +135,15 @@ fn run(script: &str, timeout: Duration) -> (std::io::Result<Output>, Duration, P
 
 /// A grandchild started by `start` (which writes its pid to `$1/grandchild`), after which the child hangs.
 const IN_GROUP: &str = "sleep 37 & echo $! > \"$1/grandchild\"";
-/// The same grandchild, leaving the child's process group first.
+/// The same grandchild, in a process group of its own from its spawn (`qa_child`'s `r217_out_of_group`, R-276), so it
+/// is out of the child's group before the timeout can fire. SIGTERM is ignored until it is spawned (an ignored signal
+/// stays ignored across exec), so a timeout that fires first cannot end the spawner before it.
 #[cfg(feature = "controls")]
-const OUT_OF_GROUP: &str =
-    "perl -e 'setpgrp(0, 0); exec @ARGV' sleep 37 & echo $! > \"$1/grandchild\"";
+const OUT_OF_GROUP: &str = concat!(
+    "trap '' TERM; \"",
+    env!("CARGO_BIN_EXE_qa_child"),
+    "\" r217_out_of_group \"$1/grandchild\" sleep 37; trap - TERM"
+);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // R-217: a child that starts a grandchild and then hangs. After the timeout, both are gone.
