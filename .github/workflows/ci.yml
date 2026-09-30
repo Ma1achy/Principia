@@ -53,7 +53,8 @@ jobs:
 
   # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask plan-check`, which needs
   # Python and PyYAML (REQ-SYS-007), then `cargo xtask controls`, every control, failing on any finding (R-198,
-  # R-226). The GPU harness's controls run on lavapipe, as its tests do.
+  # R-226). The GPU harness's controls run on lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists
+  # tests through the pinned cargo-nextest (R-231).
   xtask-ci:
     runs-on: ubuntu-latest
     env:
@@ -69,6 +70,9 @@ jobs:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
       - name: cargo xtask ci
         run: cargo xtask ci
 

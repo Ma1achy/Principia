@@ -84,7 +84,8 @@ fn features(args: &[String]) -> &str {
 }
 
 /// The test steps of `workflows`, and the pinned cargo-nextest version they install. Every job with a nextest step
-/// installs cargo-nextest at one exact version, the same in every job; no step runs `cargo test` but for doctests.
+/// installs cargo-nextest at an exact version, and every job that installs it installs the same one; no step runs
+/// `cargo test` but for doctests.
 fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     let mut steps = Vec::new();
     let mut pins: Vec<String> = Vec::new();
@@ -122,17 +123,15 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                     && version.split('.').all(|n| n.parse::<u32>().is_ok());
                 exact.then(|| version.to_owned())
             });
-            if nextest {
-                let pin = pin.unwrap_or_else(|| {
-                    panic!(
-                        "job {} runs nextest without installing cargo-nextest at an exact version",
-                        job[0].trim()
-                    )
-                });
-                pins.push(pin);
-            }
+            assert!(
+                !nextest || pin.is_some(),
+                "job {} runs nextest without installing cargo-nextest at an exact version",
+                job[0].trim()
+            );
+            pins.extend(pin);
         }
     }
+    pins.sort();
     pins.dedup();
     assert_eq!(
         pins.len(),
