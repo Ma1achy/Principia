@@ -274,7 +274,7 @@ fn above(lo: Bound) -> Range {
 fn section_3_4() -> Vec<(&'static str, Scale, Range, Option<f64>)> {
     vec![
         ("t_end_step", Scale::Lin, Range::int(0, 65535), None),
-        ("d_min", Scale::Log, above(Bound::Open(0.0)), None),
+        ("d_min", Scale::Log, above(Bound::Open(0.0)), Some(0.0)),
         ("ftle", Scale::Lin, any(), None),
         ("energy_drift", Scale::Diverging, any(), None),
         ("diffusion", Scale::Lin, any(), None),
