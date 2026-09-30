@@ -10,15 +10,15 @@ use serde_json::{json, Value};
 
 use crate::contract::profile::{
     read, write, Allocation, Api, Backend, Build, Device, Display, Event, FrameRecord, GpuPass,
-    Memory, Pool, Precision, SchemaId, Scope, SessionHeader, Stage, StageMs, StageSections, Stages,
-    Trace, SCHEMA_V1,
+    LiveKind, LiveMemory, Memory, Pool, PoolLive, Precision, SchemaId, Scope, SessionHeader, Stage,
+    StageMs, StageSections, Stages, Trace, SCHEMA_V1,
 };
 
 /// The five stages' keys, in telemetry §2's order.
 const FIVE: [&str; 5] = ["integrate", "reduce", "colour", "upload", "present"];
 
-/// A frame record's keys: telemetry §2's, then `stages`.
-const FRAME_KEYS: [&str; 12] = [
+/// A frame record's keys: telemetry §2's, then `stages` and `live_memory`.
+const FRAME_KEYS: [&str; 13] = [
     "frame",
     "frame_ms",
     "quads_computed",
@@ -31,6 +31,7 @@ const FRAME_KEYS: [&str; 12] = [
     "leaf_count",
     "stage_ms",
     "stages",
+    "live_memory",
 ];
 
 /// Telemetry §2's per-session fields.
@@ -131,6 +132,28 @@ fn frame(index: u64, camera_delta: f64, present: bool) -> FrameRecord {
             colour: sections("colour", "stain + style", 8.0),
             upload: sections("upload", "readback", 9.5),
             present: present.then(|| sections("present", "egui", 10.5)),
+        },
+        live_memory: LiveMemory {
+            heap: PoolLive {
+                bytes: 3 << 20,
+                by_kind: vec![LiveKind {
+                    kind: "quad".to_owned(),
+                    count: 64,
+                    bytes: 3 << 20,
+                }],
+            },
+            gpu: PoolLive {
+                bytes: 5 * 4096,
+                by_kind: vec![LiveKind {
+                    kind: "dispatch buffer".to_owned(),
+                    count: 5,
+                    bytes: 5 * 4096,
+                }],
+            },
+            tile_cache: PoolLive {
+                bytes: 0,
+                by_kind: vec![],
+            },
         },
     }
 }
@@ -544,4 +567,59 @@ validation::negative_control!(
         },
         "a file without hot_paths"
     )
+);
+
+// ----- the live memory (render_gui_spec § "Profiler": memory over time, live allocations by type) -----
+
+/// The three pools.
+const POOLS: [&str; 3] = ["heap", "gpu", "tile_cache"];
+
+/// Every frame carries each pool's live bytes and its live allocations by type, and both the schema and the reader
+/// hold it to that shape.
+fn check_live_memory(doc: &Value) {
+    check_validates(doc);
+    for (i, frame) in doc["frames"]
+        .as_array()
+        .expect("no frames array")
+        .iter()
+        .enumerate()
+    {
+        let live = &frame["live_memory"];
+        assert_eq!(
+            keys(live),
+            BTreeSet::from(POOLS),
+            "frame {i}'s live_memory is not the three pools"
+        );
+        for pool in POOLS {
+            assert!(
+                live[pool]["bytes"].is_u64() && live[pool]["by_kind"].is_array(),
+                "frame {i}'s {pool} lacks its live bytes or its live allocations by type"
+            );
+        }
+    }
+    let text = serde_json::to_vec(doc).expect("not serialisable");
+    let trace = read(text.as_slice()).expect("the reader rejected the file");
+    let heap = &trace.frames[0].live_memory.heap;
+    assert!(
+        heap.by_kind.iter().map(|k| k.bytes).sum::<u64>() == heap.bytes,
+        "the heap's live allocations by type do not add up to its live bytes"
+    );
+}
+
+#[test]
+fn profile_v1_live_memory_per_pool_and_kind() {
+    check_live_memory(&written(&interactive()));
+    check_live_memory(&written(&batch()));
+}
+
+validation::negative_control!(
+    profile_v1_live_memory_per_pool_and_kind,
+    "a frame without its tile cache must fail",
+    expected = "does not validate against profile_v1.json",
+    check_live_memory(&edited_frame(|f| {
+        f["live_memory"]
+            .as_object_mut()
+            .expect("live_memory")
+            .remove("tile_cache");
+    }))
 );

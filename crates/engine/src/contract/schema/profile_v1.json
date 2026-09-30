@@ -122,7 +122,7 @@
       "additionalProperties": false,
       "required": [
         "frame", "frame_ms", "quads_computed", "quads_reused", "samples", "substeps_total", "playhead_dt",
-        "camera_delta", "tree_depth_max", "leaf_count", "stage_ms", "stages"
+        "camera_delta", "tree_depth_max", "leaf_count", "stage_ms", "stages", "live_memory"
       ],
       "properties": {
         "frame": { "$ref": "#/$defs/count" },
@@ -136,7 +136,37 @@
         "tree_depth_max": { "$ref": "#/$defs/count" },
         "leaf_count": { "$ref": "#/$defs/count" },
         "stage_ms": { "$ref": "#/$defs/stage_ms" },
-        "stages": { "$ref": "#/$defs/stages" }
+        "stages": { "$ref": "#/$defs/stages" },
+        "live_memory": { "$ref": "#/$defs/live_memory" }
+      }
+    },
+    "live_memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heap", "gpu", "tile_cache"],
+      "properties": {
+        "heap": { "$ref": "#/$defs/pool_live" },
+        "gpu": { "$ref": "#/$defs/pool_live" },
+        "tile_cache": { "$ref": "#/$defs/pool_live" }
+      }
+    },
+    "pool_live": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "by_kind"],
+      "properties": {
+        "bytes": { "$ref": "#/$defs/count" },
+        "by_kind": { "type": "array", "items": { "$ref": "#/$defs/live_kind" } }
+      }
+    },
+    "live_kind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "count", "bytes"],
+      "properties": {
+        "kind": { "type": "string" },
+        "count": { "$ref": "#/$defs/count" },
+        "bytes": { "$ref": "#/$defs/count" }
       }
     },
     "stage_ms": {

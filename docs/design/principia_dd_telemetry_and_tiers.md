@@ -225,7 +225,8 @@ config     the run's full configuration, a JSON object
 
 Unified memory is its own variant, not a VRAM size of zero (§2).
 
-**The frame record** is §2's, key for key, followed by the five stages' nested sections:
+**The frame record** is §2's, key for key, followed by the five stages' nested sections and the memory live at the
+frame's end:
 
 ```
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
@@ -236,7 +237,16 @@ camera_delta    pan/zoom magnitude, 0 for a static frame
 tree_depth_max  leaf_count
 stage_ms        {integrate, reduce, colour, upload, present}: each stage's ms
 stages          {integrate, reduce, colour, upload, present}: each stage's nested sections
+live_memory     {heap, gpu, tile_cache}: each pool's live memory at the frame's end,
+                {bytes, by_kind: [{kind (the type), count, bytes}, ...]}
 ```
+
+`live_memory` is what `principia_render_gui_spec.md` § "Profiler" draws: memory (heap, GPU, tile cache) over time is
+each pool's `bytes` frame by frame, and live allocations by type, with their change over 60 s, is each pool's
+`by_kind`. A pool's `bytes` is its total live bytes; `by_kind` has one entry for each type with live allocations in the
+pool, its live count and bytes. The leak detector reads the same figures across idle frames. It is a snapshot, not a
+change, so a downsampled file still shows each kept frame's memory. The stages' `allocations` say which stage made the
+allocations.
 
 `stage_ms` and `stages` have exactly the five stages as keys, written in that order, and nothing else. A batch render
 has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.

@@ -186,6 +186,43 @@ pub struct FrameRecord {
     pub stage_ms: StageMs,
     /// Each stage's nested sections.
     pub stages: Stages,
+    /// Each pool's live memory at the frame's end.
+    pub live_memory: LiveMemory,
+}
+
+/// The memory live at a frame's end, per pool (render_gui_spec § "Profiler": memory over time, live allocations by
+/// type). A snapshot, not a change, so a downsampled file still shows each kept frame's memory.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LiveMemory {
+    /// The CPU heap.
+    pub heap: PoolLive,
+    /// GPU memory.
+    pub gpu: PoolLive,
+    /// The tile cache.
+    pub tile_cache: PoolLive,
+}
+
+/// One pool's live memory.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PoolLive {
+    /// The pool's total live bytes.
+    pub bytes: u64,
+    /// One entry for each type with live allocations in the pool.
+    pub by_kind: Vec<LiveKind>,
+}
+
+/// The live allocations of one type in one pool.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LiveKind {
+    /// The type.
+    pub kind: String,
+    /// How many are live.
+    pub count: u64,
+    /// Their total size.
+    pub bytes: u64,
 }
 
 /// The five stages of telemetry §2's `stage_ms`, in its order.
