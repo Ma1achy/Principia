@@ -651,7 +651,3 @@
   section: "R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*"
   reason: informative only
   note: process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent
-- file: decisions.md
-  section: "R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*"
-  reason: informative only
-  note: applied in TASK-M5-28 and REQ-TOOL-140 (new); PR #78 (TASK-M0-10) applies the CPU half

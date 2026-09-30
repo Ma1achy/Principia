@@ -18,13 +18,13 @@
 | RENDER | 82 |
 | COL | 58 |
 | GUI | 161 |
-| TOOL | 138 |
+| TOOL | 139 |
 | VAL | 175 |
 | PERF | 93 |
 | SYS | 73 |
-| **total** | **1281** |
+| **total** | **1282** |
 
-Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 101 calibration, 103 definition, 1078 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -35,17 +35,17 @@ Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for th
 | M2 | 157 |
 | M3 | 193 |
 | M4 | 101 |
-| M5 | 160 |
+| M5 | 161 |
 | M6 | 141 |
 | M7 | 112 |
 | M8 | 230 |
 
 ## Sections
 
-985 sections in 46 files: 835 yield at least one requirement; 150 yield none and are listed below with the reason.
+985 sections in 46 files: 836 yield at least one requirement; 149 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 103 |
+| informative only | 102 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -111,7 +111,6 @@ Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for th
 | R-291 — TASK-M0-40's three veto items stand | informative only | applied in TASK-M0-40 (PR |
 | R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only | informative only | process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling |
 | R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)* | informative only | process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent |
-| R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)* | informative only | applied in TASK-M5-28 and REQ-TOOL-140 (new); PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
