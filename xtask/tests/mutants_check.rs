@@ -151,8 +151,8 @@ fn mutants_check_reads_each_entry() {
     );
 }
 
-/// `cargo xtask mutants-check <dir> --equivalent <list>`: whether it passed, and its stderr.
-fn run_binary(list: &Path) -> (bool, String) {
+/// `cargo xtask mutants-check <dir> --equivalent <list>`: whether it passed, its stdout and its stderr.
+fn run_binary(list: &Path) -> (bool, String, String) {
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("mutants-check")
         .arg(missed_run())
@@ -162,12 +162,13 @@ fn run_binary(list: &Path) -> (bool, String) {
         .expect("xtask ran");
     (
         output.status.success(),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
 }
 
 fn binary_verdict(list: &Path, pass: bool) {
-    let (ok, stderr) = run_binary(list);
+    let (ok, _, stderr) = run_binary(list);
     assert!(
         ok == pass && (pass || SURVIVORS.iter().all(|s| stderr.contains(s))),
         "binary verdict wrong (expected pass: {pass}): {stderr}"
@@ -179,6 +180,38 @@ fn mutants_check_binary_reads_the_run_and_the_list() {
     binary_verdict(&list_file("binary_empty", ""), false);
     binary_verdict(&listed(), true);
 }
+
+/// The log lists each survivor, marked with its label, in order: whether the list names it (the job's log, R-202).
+fn logs_survivors(list: &Path, labels: [&str; 2]) {
+    let (_, stdout, _) = run_binary(list);
+    assert!(
+        SURVIVORS
+            .iter()
+            .zip(labels)
+            .all(|(s, label)| stdout.contains(&format!("mutants-check: survived, {label}: {s}"))),
+        "survivors not logged as {labels:?}: {stdout}"
+    );
+}
+
+#[test]
+fn mutants_check_logs_each_survivor_as_listed_or_not() {
+    logs_survivors(&list_file("log_empty", ""), ["NOT listed", "NOT listed"]);
+    logs_survivors(&listed(), ["listed equivalent", "listed equivalent"]);
+    logs_survivors(
+        &list_file("log_one", &entry(SURVIVORS[0])),
+        ["listed equivalent", "NOT listed"],
+    );
+}
+
+negative_control!(
+    mutants_check_logs_each_survivor_as_listed_or_not,
+    "a survivor the list names is not logged as unlisted",
+    expected = "survivors not logged",
+    logs_survivors(
+        &list_file("control_log_one", &entry(SURVIVORS[0])),
+        ["NOT listed", "NOT listed"]
+    )
+);
 
 negative_control!(
     mutants_check_unlisted_survivors_fail_naming_each,
