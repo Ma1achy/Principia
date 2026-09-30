@@ -242,3 +242,52 @@ negative_control!(
     expected = "is not a usage error",
     check_flag_is_usage_error("no_such_suite")
 );
+
+/// The capture of the selftest surface resized to `size`, under a root of its own named `name`.
+fn capture_at(name: &str, size: [u32; 2]) -> Vec<u8> {
+    let root = root(name, |_| true);
+    let path = root
+        .join(screenshot::SUITES)
+        .join(SUITE)
+        .join("surface.json");
+    let mut surface: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).expect("surface read"))
+            .expect("surface parsed");
+    surface["size"] = serde_json::json!(size);
+    fs::write(&path, surface.to_string()).expect("surface written");
+    let result = case(&root, "layout");
+    let Ok(Outcome::Captured { capture, .. }) = &result.result else {
+        panic!("layout case did not capture: {result}");
+    };
+    let (got, rgba) = screenshot::read_png(capture).expect("capture decoded");
+    assert_eq!(got, size, "capture not the surface's size");
+    rgba
+}
+
+/// The surface's declared size bounds its layout: the capture at `[narrow, 80]` is not the left `narrow` columns of
+/// the capture at `[240, 80]`, since a panel too narrow for its controls lays them out (clips, wraps) within it.
+fn check_size_bounds_layout(narrow: u32) {
+    let wide = capture_at(&format!("shot_size_wide_{narrow}"), [240, 80]);
+    let cut = capture_at(&format!("shot_size_narrow_{narrow}"), [narrow, 80]);
+    let left: Vec<u8> = wide
+        .chunks(240 * 4)
+        .flat_map(|row| &row[..(narrow * 4) as usize])
+        .copied()
+        .collect();
+    assert!(
+        cut != left,
+        "the capture at width {narrow} is the wide one cut down: the surface's size does not bound its layout"
+    );
+}
+
+#[test]
+fn screenshot_surface_size_bounds_layout() {
+    check_size_bounds_layout(60);
+}
+
+negative_control!(
+    screenshot_surface_size_bounds_layout,
+    "at the full width, the capture is the wide one, so the size check must fail",
+    expected = "is the wide one cut down",
+    check_size_bounds_layout(240)
+);
