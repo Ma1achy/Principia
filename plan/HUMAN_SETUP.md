@@ -25,6 +25,8 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included
   (R-266).
+- turn on "require conversation resolution before merging" (R-276): a PR merges only when every review thread on it
+  is resolved.
 
 Leave "require approvals" off: the reviewers are agents posting `VERDICT:` reviews from one account, which GitHub
 doesn't count as approvals, and `reviews-complete` is the check that does (R-175).

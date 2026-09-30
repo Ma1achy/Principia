@@ -70,15 +70,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 97 requirements** (and every earlier gate still green):
+**Exit gate — 100 requirements** (and every earlier gate still green):
 
-- PAY (21): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091
+- PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (11): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
-- TOOL (12): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134
-- VAL (33): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…169
-- SYS (17): REQ-SYS-001…008, REQ-SYS-063…071
+- TOOL (13): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136
+- VAL (33): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175
+- SYS (18): REQ-SYS-001…008, REQ-SYS-063…072
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -160,7 +160,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 192 requirements** (and every earlier gate still green):
+**Exit gate — 193 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - INT (63): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084
@@ -171,7 +171,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
 - TOOL (11): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132
-- VAL (51): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-170…171
+- VAL (52): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->
@@ -248,14 +248,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The refinement policy's open measurements.
 
 <!-- gate:M6 -->
-**Exit gate — 140 requirements** (and every earlier gate still green):
+**Exit gate — 141 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (6): REQ-GUI-010…015
+- GUI (7): REQ-GUI-010…015, REQ-GUI-162
 - TOOL (4): REQ-TOOL-055…058
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090

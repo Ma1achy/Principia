@@ -20,6 +20,7 @@ Mutation testing joins the QA gate (R-196). On every pull request CI runs `cargo
 - `decisions.md` § "R-196 — Mutation testing joins the QA gate"
 - `decisions.md` § "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
 - `decisions.md` § "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
+- `decisions.md` § "R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*"
 
 ## Deliverables
 - `.cargo/mutants.toml` — cargo-mutants' configuration, holding the one exclusion list the per-PR job and TASK-M0-19's nightly run share. Each exclusion is commented with which of R-196's three categories it falls in: generated code (the files `cargo xtask codegen` writes, matched so that a generated file added later is excluded too), GPU-only paths (items gated on `target_arch = "spirv"`) and xtask's own harness plumbing. Applied per R-204 (RQ-162) — veto?: cargo-mutants cannot match an attribute from configuration, so a spirv-gated item is excluded by also carrying `#[cfg_attr(test, mutants::skip)]`, and `.cargo/mutants.toml` names that marker in a comment under the GPU-only category (a missing marker fails closed: the item's mutants survive and the job names them). xtask's harness plumbing is `xtask/src/main.rs` and `xtask/src/codegen.rs` only, in `exclude_globs`; xtask's checks and `ci.rs` stay mutated. An exclusion whose category the code reviewer disputes goes to REVIEW_QUEUE, not into the list.
@@ -40,3 +41,4 @@ Mutation testing joins the QA gate (R-196). On every pull request CI runs `cargo
 - R-196's nightly full run is TASK-M0-19's (R-198), since that task creates `nightly.yml`; it uses this task's exclusion list.
 - The per-PR job runs on `pull_request` events, since `--in-diff` needs a base to diff against; the per-push `ci` job is unchanged (R-177).
 - This task's tests register their controls here (TASK-M0-22 is merged before it).
+- R-272 (closes RQ-164): the ubuntu timings are taken on a throwaway `measure/<what>` branch, pushed so that CI runs the measurement and deleted straight after, with no PR opened from it.
