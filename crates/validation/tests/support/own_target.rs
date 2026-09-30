@@ -28,7 +28,10 @@ pub struct Lease {
 impl Lease {
     /// The first directory of `pool` that no one holds, a new one when all are held: the pool grows only to the
     /// most leases held at once. With `copy`, a free directory already holding the copy of that name (see
-    /// [`Lease::copy`]) comes first, so a warm run finds the copy's build where it left it (R-231).
+    /// [`Lease::copy`]) comes first, so a warm run finds the copy's build where it left it (R-231); failing that, a
+    /// directory holding no copy yet, or a new one. A directory holding only other fixtures' copies never takes it,
+    /// so each fixture keeps target directories of its own across runs, as many as its tests ever held at once, and
+    /// a warm run's lease for it never lands where it was not built (REQ-VAL-165).
     pub fn take(pool: &str, copy: Option<&str>) -> Lease {
         let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(pool);
         std::fs::create_dir_all(&root).unwrap();
@@ -36,9 +39,14 @@ impl Lease {
             .take_while(|n: &u32| root.join(format!("{n}.lock")).exists())
             .filter(|n| copy.is_some_and(|c| root.join(format!("{n}.src")).join(c).exists()))
             .collect::<Vec<_>>();
+        // A directory with no copies: `<n>.src` absent or empty, as for every directory past the pool's end.
+        let unused = |n: &u32| {
+            std::fs::read_dir(root.join(format!("{n}.src")))
+                .map_or(true, |mut entries| entries.next().is_none())
+        };
         built
             .into_iter()
-            .chain(0..)
+            .chain((0..).filter(|n| copy.is_none() || unused(n)))
             .find_map(|n: u32| {
                 let path = root.join(format!("{n}.lock"));
                 let lock = File::options()
