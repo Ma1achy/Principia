@@ -21,12 +21,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # `qa_m022_ci_passes_when_every_control_trips` runs the full `xtask ci`, whose golden runner renders (R-110): Mesa's
+  # lavapipe, as in the ci and xtask-ci jobs (applied per R-204, RQ-168).
   soak:
     runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: Build the stand-in tests
         run: >-
           cargo test -p xtask --no-run --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci

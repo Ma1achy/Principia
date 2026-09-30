@@ -6,6 +6,7 @@ pub mod codegen;
 pub mod controls;
 pub mod deps;
 pub mod gate;
+pub mod golden;
 pub mod lint_constants;
 pub mod plan_check;
 pub mod pr_check;
