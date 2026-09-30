@@ -39,7 +39,12 @@ Commands:
                                   at <file>, or at $GITHUB_EVENT_PATH
   reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
                                   Reviewers field names that has not approved on the head commit; reads PR <N>, or
-                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
+                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`
+  screenshot (<suite> | --all)    run the GUI screenshot suite fixtures/screenshot/<suite>/, or every suite: a layout
+                                  case renders its surface headless (native wgpu offscreen) and writes the capture
+                                  beside a copy of its artboard under target/screenshot/, for layout comparison only
+                                  (R-68); a presence-only case fails naming each listed control its surface lacks
+                                  (R-129). Not in `ci`: GUI PRs and the gates run it (R-110, R-177)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -83,6 +88,12 @@ fn main() -> ExitCode {
             Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),
             Err(_) => Err(format!("reviews-check: --pr takes a PR number, not `{n}`")),
         },
+        ["screenshot", "--all"] => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::All)
+        }
+        ["screenshot", suite] if !suite.starts_with('-') => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::One(suite))
+        }
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),

@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "name": "layout",
+      "surface": "surface.json",
+      "artboard": "fixtures/screenshot/selftest/reference.png"
+    },
+    {
+      "name": "presence",
+      "surface": "surface.json",
+      "controls": ["Selftest button", "Selftest checkbox"]
+    }
+  ]
+}
