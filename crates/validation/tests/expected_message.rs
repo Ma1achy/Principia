@@ -35,9 +35,9 @@ fn fixture_run() -> &'static str {
             PathBuf::from("Cargo.lock"),
             std::fs::read(root.join("Cargo.lock")).unwrap(),
         ));
-        // A target directory of its own: xtask's tests build copies of this fixture too (REQ-VAL-164). The copy is
-        // the lease's own, kept across runs (R-231).
-        let target = Lease::take(FIXTURES, Some("expected_message"));
+        // The `controls` fixture type's directory, held while it runs: xtask's tests build copies of this fixture
+        // there too (REQ-VAL-164, R-270). The copy is kept across runs (R-231).
+        let target = Lease::take(FIXTURES, Some("controls"));
         let copy = target.copy("expected_message", &files);
         let output = Command::new(env!("CARGO"))
             .args([

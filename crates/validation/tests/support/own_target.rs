@@ -1,107 +1,106 @@
-//! A target directory of its own for a test's nested cargo run (REQ-VAL-164; R-227). Parallel copies of one fixture
-//! are one package to cargo, so in a shared target directory each rebuilds the artifacts the others are running; and
-//! every cargo run replaces each binary it uplifts, even when nothing is rebuilt, under any test spawning it.
+//! Target directories for tests' nested cargo runs, kept across runs under `$CARGO_TARGET_TMPDIR` (REQ-VAL-164,
+//! REQ-VAL-165; R-227, R-231, R-270).
 //!
-//! A [`Lease`] holds one directory of a pool under `$CARGO_TARGET_TMPDIR`, by a file lock, so no other test, in this
-//! process or another, uses that directory until the lease is dropped. The directories are kept across runs, so each
-//! builds cold once, not on every run: a cold build per call pushes a nested build past the 300 s timeout under load
-//! (TASK-M0-31). Each lease keeps its copies of the fixtures at paths of its own, written only when they change
-//! (R-231). Included with `#[path]` by `expected_message.rs`, `support/qa_m0_21_fixture.rs` and xtask's
-//! `tests/controls.rs`, `tests/qa_TASK-M0-34.rs` and `tests/qa_TASK-M0-38.rs`, which share its pool of fixture target
-//! directories.
+//! Each fixture type has one build directory, `<pool>/<type>`, shared by all of that type's copies (R-270): its
+//! dependencies build there once, and each copy's own crates once, so a warm run of the type rebuilds nothing. A
+//! [`Lease`] holds the directory by a file lock, `<pool>/<type>.lock`, so only one test at a time, in this process or
+//! another, builds or runs anything in it. A test and its control never use it at once (R-224). Nor do two copies of
+//! one type, so no cargo run in it replaces a binary that another test's run is spawning, and no copy is rewritten
+//! while another test builds it (REQ-VAL-164). A lease for a type waits while another thread or process holds it; a
+//! thread that already holds it shares its lease, since one thread's runs cannot overlap.
+//!
+//! Included with `#[path]` by `expected_message.rs`, `support/qa_m0_21_fixture.rs` and xtask's `tests/controls.rs`,
+//! `tests/qa_TASK-M0-34.rs` and `tests/qa_TASK-M0-38.rs`, which share its pool, [`FIXTURES`].
 
 use std::fs::{File, TryLockError};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread::ThreadId;
-use std::time::Duration;
 
 #[path = "fixture_tree.rs"]
 mod fixture_tree;
 
-/// The pool the fixture copies build in.
+/// The pool the fixture types build in: one directory per type (R-270). CI caches it between runs.
 pub const FIXTURES: &str = "fixture-targets";
 
-/// How often a lease waiting for one of its copy's own directories tries them again.
-const RETRY: Duration = Duration::from_millis(50);
+/// The type directories leased in this process, each with the thread holding it and its lock.
+static HELD: Mutex<Vec<(PathBuf, ThreadId, Weak<File>)>> = Mutex::new(Vec::new());
 
-/// The directories this process holds a lease on, each with the thread that took it.
-static HELD: Mutex<Vec<(PathBuf, ThreadId)>> = Mutex::new(Vec::new());
-
-/// One directory of a pool, leased until dropped.
+/// A directory of a pool, leased until dropped.
 pub struct Lease {
     dir: PathBuf,
-    // Held open for the lease: closing it releases the lock.
-    _lock: File,
+    // Held open for the lease, shared by one thread's leases of a type: closing it releases the lock.
+    _lock: Arc<File>,
 }
 
 impl Lease {
-    /// The first directory of `pool` that no one holds, a new one when all are held: the pool grows only to the
-    /// most leases held at once.
-    ///
-    /// With `copy`, the lease goes only to a directory that has built the copy of that name (see [`Lease::copy`]),
-    /// so a warm run finds the copy's build where it left it and rebuilds nothing (REQ-VAL-165, R-231). While all of
-    /// those are held by other tests, it waits for one; a directory holding only other fixtures' copies never takes
-    /// it. It takes a directory holding no copy, or a new one, only for the copy's first build, or when this thread
-    /// itself holds every directory that built it, which waiting could never free. So each fixture keeps target
-    /// directories of its own across runs.
-    pub fn take(pool: &str, copy: Option<&str>) -> Lease {
+    /// With `Some(kind)`, fixture type `kind`'s one build directory in `pool`, once no other thread or process holds
+    /// it; a thread already holding it gets it at once. With `None`, the first numbered directory of `pool` that no
+    /// one holds, or a new one when all are held, for a build of no fixture type.
+    pub fn take(pool: &str, kind: Option<&str>) -> Lease {
         let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(pool);
         std::fs::create_dir_all(&root).unwrap();
-        let built = (0..)
-            .take_while(|n: &u32| root.join(format!("{n}.lock")).exists())
-            .filter(|n| copy.is_some_and(|c| root.join(format!("{n}.src")).join(c).exists()))
-            .collect::<Vec<_>>();
-        let me = std::thread::current().id();
-        let mine = |n: &u32| {
-            let dir = root.join(n.to_string());
-            HELD.lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .iter()
-                .any(|(held, by)| *held == dir && *by == me)
-        };
-        if !built.iter().all(mine) {
-            loop {
-                if let Some(lease) = built.iter().find_map(|&n| Lease::try_take(&root, n)) {
-                    return lease;
-                }
-                if built.iter().all(mine) {
-                    break;
-                }
-                std::thread::sleep(RETRY);
-            }
+        match kind {
+            Some(kind) => Lease::take_type(&root, kind),
+            None => (0..)
+                .find_map(|n: u32| Lease::try_take(&root, &n.to_string()))
+                .unwrap(),
         }
-        // A directory with no copies: `<n>.src` absent or empty, as for every directory past the pool's end.
-        let unused = |n: &u32| {
-            std::fs::read_dir(root.join(format!("{n}.src")))
-                .map_or(true, |mut entries| entries.next().is_none())
-        };
-        (0..)
-            .filter(|n| copy.is_none() || unused(n))
-            .find_map(|n| Lease::try_take(&root, n))
-            .unwrap()
     }
 
-    /// Directory `n` of the pool at `root`, if no one holds it.
-    fn try_take(root: &Path, n: u32) -> Option<Lease> {
-        let path = root.join(format!("{n}.lock"));
-        let lock = File::options()
+    /// Type `kind`'s directory in the pool at `root`, waiting for any other thread or process holding it.
+    fn take_type(root: &Path, kind: &str) -> Lease {
+        assert!(
+            !kind.is_empty() && !kind.contains(['/', '\\', '.']),
+            "a fixture type names one directory: {kind:?}"
+        );
+        let dir = root.join(kind);
+        let me = std::thread::current().id();
+        {
+            let mut held = HELD.lock().unwrap_or_else(PoisonError::into_inner);
+            held.retain(|(_, _, lock)| lock.strong_count() > 0);
+            let mine = held
+                .iter()
+                .find(|(d, by, _)| *d == dir && *by == me)
+                .and_then(|(_, _, lock)| lock.upgrade());
+            if let Some(lock) = mine {
+                return Lease { dir, _lock: lock };
+            }
+        }
+        let lock = Lease::open(root, kind);
+        lock.lock()
+            .unwrap_or_else(|e| panic!("lock {}: {e}", dir.display()));
+        let lock = Arc::new(lock);
+        HELD.lock().unwrap_or_else(PoisonError::into_inner).push((
+            dir.clone(),
+            me,
+            Arc::downgrade(&lock),
+        ));
+        Lease { dir, _lock: lock }
+    }
+
+    /// Directory `name` of the pool at `root`, if no one holds it.
+    fn try_take(root: &Path, name: &str) -> Option<Lease> {
+        let lock = Lease::open(root, name);
+        match lock.try_lock() {
+            Ok(()) => Some(Lease {
+                dir: root.join(name),
+                _lock: Arc::new(lock),
+            }),
+            Err(TryLockError::WouldBlock) => None,
+            Err(TryLockError::Error(e)) => panic!("lock {}: {e}", root.join(name).display()),
+        }
+    }
+
+    /// The lock file of directory `name` of the pool at `root`.
+    fn open(root: &Path, name: &str) -> File {
+        let path = root.join(format!("{name}.lock"));
+        File::options()
             .create(true)
             .truncate(false)
             .write(true)
             .open(&path)
-            .unwrap();
-        match lock.try_lock() {
-            Ok(()) => {
-                let dir = root.join(n.to_string());
-                HELD.lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .push((dir.clone(), std::thread::current().id()));
-                Some(Lease { dir, _lock: lock })
-            }
-            Err(TryLockError::WouldBlock) => None,
-            Err(TryLockError::Error(e)) => panic!("lock {}: {e}", path.display()),
-        }
+            .unwrap_or_else(|e| panic!("open {}: {e}", path.display()))
     }
 
     /// The leased directory, for `CARGO_TARGET_DIR`.
@@ -109,22 +108,13 @@ impl Lease {
         &self.dir
     }
 
-    /// A copy named `name` holding `files`, at a path of this lease's own that is the same on every run
-    /// (`<pool>/<n>.src/<name>`), written only where its content changed (R-231): a fixture's path is part of its
-    /// package id, so a copy kept at one path, building in the one target directory of the lease, rebuilds nothing.
+    /// A copy named `name` holding `files`, at a path that is the same on every run (`<pool>/<dir>.src/<name>`),
+    /// written only where its content changed (R-231): a fixture's path is part of its package id, so a copy kept at
+    /// one path, building in its type's one directory, rebuilds nothing.
     pub fn copy<B: AsRef<[u8]>>(&self, name: &str, files: &[(PathBuf, B)]) -> PathBuf {
         let copy = self.dir.with_extension("src").join(name);
         fixture_tree::write_tree(&copy, files);
         copy
-    }
-}
-
-impl Drop for Lease {
-    fn drop(&mut self) {
-        let mut held = HELD.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some(i) = held.iter().position(|(dir, _)| *dir == self.dir) {
-            held.remove(i);
-        }
     }
 }
 

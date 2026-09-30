@@ -45,7 +45,8 @@ struct Verdict {
 }
 
 /// `xtask controls --manifest-path` on a copy of the fixture, outside the workspace, with the `validation` path made
-/// absolute and a target directory of its own (REQ-VAL-164); run once per process and shared.
+/// absolute, in its fixture type's directory, held while it runs (REQ-VAL-164, R-270); run once per process and
+/// shared.
 fn verdict() -> &'static Verdict {
     static RUN: OnceLock<Verdict> = OnceLock::new();
     RUN.get_or_init(|| {
@@ -65,11 +66,9 @@ fn verdict() -> &'static Verdict {
             PathBuf::from("Cargo.lock"),
             std::fs::read(root.join("Cargo.lock")).unwrap(),
         ));
-        // The copy is the lease's own, kept across runs and written only where it changed (R-231, REQ-VAL-165).
-        let target = Lease::take(FIXTURES, Some("qa_m0_38-embedded_header"));
-        let manifest = target
-            .copy("qa_m0_38-embedded_header", &files)
-            .join("Cargo.toml");
+        // The copy is kept across runs and written only where it changed (R-231, REQ-VAL-165).
+        let target = Lease::take(FIXTURES, Some("controls_qa_m0_38"));
+        let manifest = target.copy("embedded_header", &files).join("Cargo.toml");
         let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
             .args(["controls", "--manifest-path"])
             .arg(&manifest)

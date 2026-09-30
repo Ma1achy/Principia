@@ -24,12 +24,13 @@ pub fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
 }
 
-/// The `xtask` binary, built once, in a target directory this process holds while it runs: a build into the
-/// workspace's would replace the `xtask` other tests spawn (REQ-VAL-164).
+/// The `xtask` binary, built once, in the pool's `xtask` directory, which this process holds while it runs: a build
+/// into the workspace's would replace the `xtask` other tests spawn, and so would another process's build into that
+/// directory (REQ-VAL-164). One directory, kept across runs, so a warm run rebuilds nothing (R-270).
 fn xtask() -> &'static Path {
     static BIN: OnceLock<(Lease, PathBuf)> = OnceLock::new();
     let (_, bin) = BIN.get_or_init(|| {
-        let target = Lease::take("qa_m0_21-xtask", None);
+        let target = Lease::take(FIXTURES, Some("xtask"));
         let status = Command::new(cargo())
             .args(["build", "-p", "xtask", "--manifest-path"])
             .arg(root().join("Cargo.toml"))
@@ -64,12 +65,14 @@ fn absolutise(text: &str, validation: &str) -> String {
 }
 
 /// A copy of the fixture `name` outside this workspace, with the files `remove` left out, and the target directory it
-/// builds in, its own while the copy is held (REQ-VAL-164). The copy is the lease's own, one per fixture and `remove`,
-/// kept across runs (R-231).
+/// builds in, its fixture type's, held while the copy is (REQ-VAL-164, R-270). The copy is one per fixture and
+/// `remove`, kept across runs (R-231).
 pub struct Copy(PathBuf, Lease);
 
 impl Copy {
     pub fn new(name: &str, remove: &[&str]) -> Copy {
+        // The `xtask` directory first, then the fixture type's, in every process, so no two wait on each other.
+        xtask();
         let validation = root().join("crates/validation");
         let mut files: Vec<(PathBuf, Vec<u8>)> =
             fixture_files(&root().join("fixtures/controls_qa_m0_21").join(name))
@@ -92,8 +95,8 @@ impl Copy {
             .iter()
             .map(|file| format!("-{}", file.replace(['/', '.'], "_")))
             .collect();
-        let copy = format!("qa_m0_21-{name}{removed}");
-        let target = Lease::take(FIXTURES, Some(&copy));
+        let copy = format!("{name}{removed}");
+        let target = Lease::take(FIXTURES, Some("controls_qa_m0_21"));
         let copy = target.copy(&copy, &files);
         Copy(copy, target)
     }

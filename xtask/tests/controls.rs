@@ -37,9 +37,9 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
 }
 
 /// Runs `xtask controls <args>` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile
-/// and the `validation` path made absolute, building in a target directory of its own while it runs, since other
-/// copies of the fixture build at the same time (REQ-VAL-164). `remove` names a file left out of the copy. The copy is
-/// the lease's own, one per fixture and `remove`, kept across runs (R-231).
+/// and the `validation` path made absolute, building in the `controls` fixture type's directory, which it holds while it
+/// runs (REQ-VAL-164, R-270). `remove` names a file left out of the copy. The copy is one per fixture and `remove`,
+/// kept across runs (R-231).
 fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict {
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = xtask.parent().unwrap();
@@ -69,8 +69,8 @@ fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict 
         .read()
         .unwrap_or_else(PoisonError::into_inner);
     // Taken after the read lock, so no copy holds a directory while it waits for the workspace's run.
-    let copy = format!("controls-{name}{removed}");
-    let target = Lease::take(FIXTURES, Some(&copy));
+    let copy = format!("{name}{removed}");
+    let target = Lease::take(FIXTURES, Some("controls"));
     let manifest = target.copy(&copy, &files).join("Cargo.toml");
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("controls")

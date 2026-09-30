@@ -20,9 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        id: toolchain
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
+      # what changed. Keyed on what invalidates its dependencies' builds: the runner, the toolchain and the lockfile.
+      # Listed after rust-cache, so its save runs before rust-cache's post-step clean-up of `target`.
+      - uses: actions/cache@v4
+        with:
+          path: target/tmp/fixture-targets
+          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock') }}
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
@@ -62,7 +70,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        id: toolchain
       - uses: Swatinem/rust-cache@v2
+      # The fixture pool, as in the `ci` job: `cargo xtask controls` runs the fixture tests' controls (R-270).
+      - uses: actions/cache@v4
+        with:
+          path: target/tmp/fixture-targets
+          key: fixture-pool-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock') }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: actions/setup-python@v5
