@@ -26,6 +26,10 @@ Commands:
                                   (the compile check is then skipped)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
+  mutants-check <mutants.out> [--equivalent <file>]
+                                  the per-PR mutation gate (R-196, R-202): list each mutant that survived the
+                                  `cargo mutants` run whose output is <mutants.out>, and fail naming each one not in
+                                  the equivalent-mutants list, .cargo/mutants-equivalent.toml or <file>
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
                                   make mandatory that is missing or empty, and each validation meter or
                                   discriminator line with no statement (R-180); reads the pull_request event JSON
@@ -48,6 +52,13 @@ fn main() -> ExitCode {
             xtask::controls::run(Path::new(path), Mode::List)
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["mutants-check", out] => xtask::mutants_check::run(
+            Path::new(out),
+            &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
+        ),
+        ["mutants-check", out, "--equivalent", list] => {
+            xtask::mutants_check::run(Path::new(out), Path::new(list))
+        }
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {

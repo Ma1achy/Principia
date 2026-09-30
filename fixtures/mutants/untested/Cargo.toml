@@ -1,0 +1,12 @@
+[package]
+name = "mutants_untested"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (the per-PR mutation gate's fixture, TASK-M0-23).
+[workspace]
+
+# `kill` compiles the test that kills the untested branch's mutants (REQ-VAL-148).
+[features]
+kill = []
