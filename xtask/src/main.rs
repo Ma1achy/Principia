@@ -24,6 +24,10 @@ Commands:
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
+  gate (<gate> | --all | --list)  run the numerical gate <gate>, or every registered gate, on its inputs in
+                                  fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
+                                  id, writing each report under target/gates/; fails naming each input whose outcome
+                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
@@ -46,6 +50,11 @@ fn main() -> ExitCode {
         ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
+        }
+        ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
+        ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
+        ["gate", name] if !name.starts_with('-') => {
+            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name))
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {

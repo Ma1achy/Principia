@@ -27,7 +27,22 @@ pub const RUNNERS: &[Runner] = &[
         run: lint_constants,
         list: lint_constants,
     },
+    Runner {
+        name: "gate",
+        run: gate,
+        list: gate_list,
+    },
 ];
+
+/// `cargo xtask gate --all` on this workspace: every registered numerical gate (TASK-M0-05).
+fn gate() -> Result<(), String> {
+    crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::All)
+}
+
+/// `cargo xtask gate --list` on this workspace: the gates listed, none run (R-235).
+fn gate_list() -> Result<(), String> {
+    crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::List)
+}
 
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_constants() -> Result<(), String> {
