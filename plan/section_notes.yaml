@@ -631,3 +631,7 @@
   section: "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
   reason: informative only
   note: applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79)
+- file: decisions.md
+  section: "R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch"
+  reason: informative only
+  note: process ruling; applied in the orchestrator's loop

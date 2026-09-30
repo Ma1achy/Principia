@@ -3030,3 +3030,29 @@ Tick any you don't accept.
 - **Needed:** which one. Only TASK-M1-09's one `d_min` golden line waits on it; nothing in M0 does.
 - **Ruling:** R-280 (30 Sep 2026): option 3. An unset `d_min` renders in the neutral "not yet" grey of `running`
   samples (R-96), not the invalid hatch and not the top of the ramp.
+
+## RQ-172: qa's add-only rule (R-237) keeps needing exceptions when a ruling reverses qa's own tests *(process, R-237, R-283)*
+
+- **File, section:** `decisions.md` § "R-237": a qa commit must list only `A` lines under `crates/*/tests/`,
+  `xtask/tests/` or `fixtures/`. § "R-283": "If qa keeps needing to edit its own files, raise the add-only rule itself
+  in REVIEW_QUEUE rather than exempting it again."
+- **What:** three rounds have needed qa to change a test file it wrote itself, each time because a ruling or a
+  reviewer's finding reversed a premise of its tests:
+  1. PR #74 (TASK-M0-33): R-270 reversed two tests in `qa_TASK-M0-33_lease.rs`, and a colour fix touched
+     `qa_TASK-M0-33.rs`. Exception granted by R-270, and extended per R-204.
+  2. PR #78 (TASK-M0-10): physics and code found a fold seeded from +inf in `qa_TASK-M0-10.rs`, a file added in the
+     same PR. Exception per R-204.
+  3. PR #79 (TASK-M0-17): R-286 makes profiler traces JSON Lines. qa's `qa_TASK-M0-17.rs`, added in the same PR, parses
+     hand-written whole-object JSON in nearly every test, so nearly all of them are reversed.
+
+  Under R-237 as written, qa can only add a new file beside the reversed one, which leaves the old tests failing, or
+  the implementer edits qa's file under R-227's exception, which puts the implementer in charge of qa's tests.
+- **Options seen:**
+  1. **qa may modify its own files (recommended).** A qa commit may carry `M` (and `D`) lines on a test file whose
+     every earlier commit is a qa commit ("qa: tests for …"), besides `A` lines. The orchestrator's R-237 check verifies
+     that authorship with `git log`. qa never touches a file the implementer wrote.
+  2. **Supersede, never modify.** qa adds a replacement file, and the implementer deletes the reversed one in its own
+     commit, with qa's review.
+  3. **Keep R-237 strict.** The implementer edits qa's files under R-227's exception, as a standing rule, with qa
+     re-reviewing each edit.
+- **Needed:** which one. PR #79 needs it now: its fresh R-286 round will reverse qa's tests.

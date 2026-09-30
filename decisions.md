@@ -2619,3 +2619,16 @@ option (a) gave. The `d_min` packer increments them in release builds as well as
 profiler/telemetry readback, asynchronously and a frame or two late, and never stall a frame; `QuadReduction` is
 unchanged (R-142). `roundtrip_ctl`'s repack is an observation, not a store, so it doesn't count (RQ-171 option (a)).
 Profiler schema v1's frame record carries both keys, as §2's superset (R-56).
+
+## R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch
+*30 Sep 2026 · standing practice, applied in the orchestrator's loop*
+
+"Standing practice (R-289): rulings reach agents only in the opening prompt of a fresh dispatch, never as a mid-task
+message. If a ruling lands while an agent is mid-task, let it finish its current step and stop, then re-dispatch fresh
+with the ruling."
+
+*Applied:* on PR #79, rulings R-286 and R-288 were relayed to a running implementer as messages. The permission
+classifier treated them as possible instruction poisoning and blocked the edits, and the agent stopped without a
+change. From now on, a ruling that lands mid-task waits: the agent finishes its current step and stops, and a fresh
+agent is dispatched with the ruling, in the human's words, in its opening prompt. #79's R-286 and R-288 round is
+re-dispatched that way.
