@@ -229,12 +229,20 @@ summary line   {"leak_flags": [leak flag, ...] or null, "hot_paths": [hot-path s
 
 Each line is one object whose keys this section lists: the header line has exactly `schema` and `header`, a frame line
 is exactly a frame record, and the summary line has exactly `leak_flags` and `hot_paths`. A line that is not the object
-its place calls for, a blank line among them, or a file that ends before its summary line is not schema v1. The writer
+its place calls for, or a blank line among them, is not schema v1. The writer
 writes each line compact, buffered, and never pretty-prints; `prin profile show --pretty`, or `jq`, pretty-prints on
 demand (R-286). A writer can stream the frames as the session runs, since nothing before the summary line depends on a
 later frame. The JSON Schema defines one line for each place, in `$defs`: `header_line`, `frame` and `summary_line`.
 A file's lines are not one JSON document, so the schema checks the file line by line, each line against the
 definition for its place.
+
+**A session that ended before its summary line** (R-298), because it crashed or is still running, leaves a trace whose
+last line is a frame record, or the header line when it recorded no frame. That trace is valid schema v1. A reader
+returns its header and frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never
+rejects the file for the missing summary line; `prin profile query --live` reads an in-progress trace this way. Each
+line is checked against the definition for the place it holds, so the last line is a `frame` (or the `header_line`).
+Only the summary line may be missing: a last line cut off inside its JSON object is not the object its place calls
+for, and is not schema v1.
 
 `leak_flags` and `hot_paths` are the precomputed leak flags and hot-path summaries that `principia_render_gui_spec.md`
 § "Profiler" puts in schema v1, so an agent reads conclusions, not raw traces. They summarise the whole session, so

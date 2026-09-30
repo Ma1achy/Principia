@@ -2718,6 +2718,10 @@ by default). They cache the cargo registry and the fixture pool (R-270), each un
 repo's Actions cache stays well under GitHub's 10 GB limit.
 
 ## R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line
+*Amended by R-298.*
+*Still in force: the header on the first line, then one compact frame record per line, never pretty-printed;
+pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and
+makes a trace that lacks it valid.*
 *30 Sep 2026 · applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18*
 
 "R-286: profiler traces are JSON Lines: the header on the first line, then one compact frame record per line.
@@ -2923,3 +2927,28 @@ gains R-290's check: where qa's commit modifies or deletes a test file that only
 confirms that no assertion was weakened, except where a ruling changed the behaviour it tests. CLAUDE.md's
 memory-pressure bullet cites R-277 in place of R-239 and R-252. The same message asked for the full text of #79's
 items 12 and 15 before ruling on them; they stay open.
+
+## R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*
+*30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008, REQ-TOOL-101 and TASK-M0-17 (PR #79)*
+
+"This is from me. #79: items 12 and 15 accepted (R-298), with one
+condition on 15: a trace with no final summary line (a crashed or
+still-running session) is valid. The reader returns the frames, reports
+leak_flags and hot_paths as absent with "session incomplete", and never
+rejects the file for it; prin profile query --live works on an
+in-progress trace. Add a test for a truncated trace."
+
+*Applied:* item 12 stands: two `by_kind` entries in one pool with the same `kind`, or two `allocations` entries in one
+stage with the same `kind` and `pool`, are refused by the writer and rejected by the reader, the fourth reader-only
+exception in telemetry §5. Item 15 stands: `leak_flags` and `hot_paths` take the file's last line, after the frames,
+so R-286's "each later line is one compact frame record" holds for every line but that one. Its condition: telemetry
+§5 now says a trace whose last line is a frame record, or the header line when no frame was recorded, is a session
+that ended before its summary line, and is valid. `engine::contract::profile::read` returns its header and frames, and
+reports `leak_flags` and `hot_paths` as absent, with "session incomplete". REQ-TOOL-008 gains the behaviour and a
+truncated-trace test in TASK-M0-17. REQ-TOOL-101, closed by TASK-M8-28, gains "`prin profile query --live` works on an
+in-progress trace (no summary line yet)".
+
+*Applied per R-204 — veto?:* R-298 is in the "design" group of `plan/rule_groups.yaml`, beside R-282 and R-286. A
+header line alone counts as an incomplete session with no frames, since it too is "a trace with no final summary line".
+A last line cut off inside its JSON object is still rejected: the ruling covers a missing summary line, not a partial
+line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
