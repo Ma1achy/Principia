@@ -5,7 +5,7 @@
     "width": 256,
     "height": 256
   },
-  "reference": "reference.png",
+  "reference": { "metal": "metal.png", "vulkan": "vulkan.png" },
   "tolerance": "REQ-VAL-138",
   "expect": "pass",
   "lines": { "row_0": { "from": [0, 0], "to": [255, 0] } },

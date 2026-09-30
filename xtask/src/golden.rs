@@ -36,15 +36,15 @@
 //! fragment straight into the `Rgba8Unorm` target, leaving the rounding to the backend; such a case has one reference
 //! per backend, since its bytes differ between backends (R-269).
 //!
-//! A case keeps one reference across backends. The fallback, for a case whose bytes still differ between backends
-//! (R-269, R-287), is one reference per backend, named by the backend (`metal`, `vulkan`): the runner compares the
-//! render only with the reference of the backend it rendered on, names that backend, and fails naming it when the case
-//! has no reference for it. The tolerance is a requirement or calibration-requirement id from [`TOLERANCES`]; a bare
-//! number is refused. `expect: "fail"` marks a case that must fail its comparison: the proof that the runner can fire
-//! (pitfalls §3). `lines` and `symptoms` are optional; a repro needs at least one line. Each reference is refused
-//! unless `fixtures/golden/BASELINES.md` holds its hash with the decision that set it (R-110: no re-baselining without a
-//! gate decision): the row is `<suite>/<case>` for a case's one reference, `<suite>/<case>@<backend>` for a per-backend
-//! one.
+//! A case keeps one reference across backends. The fallback, for a case whose bytes still differ between backends, a
+//! golden near a tie among them (R-269, R-287, R-296), is one reference per backend, named by the backend (`metal`,
+//! `vulkan`): the runner compares the render only with the reference of the backend it rendered on, names that
+//! backend, and fails naming it when the case has no reference for it. The tolerance is a requirement or
+//! calibration-requirement id from [`TOLERANCES`]; a bare number is refused. `expect: "fail"` marks a case that must
+//! fail its comparison: the proof that the runner can fire (pitfalls §3). `lines` and `symptoms` are optional; a repro
+//! needs at least one line. Each reference is refused unless `fixtures/golden/BASELINES.md` holds its hash with the
+//! decision that set it (R-110: no re-baselining without a gate decision): the row is `<suite>/<case>` for a case's
+//! one reference, `<suite>/<case>@<backend>` for a per-backend one.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -72,13 +72,15 @@ pub struct Tolerance {
 ///
 /// REQ-VAL-138's default applies to every native backend CI renders a case on (lavapipe, Metal), each compared
 /// against the case's one reference, or, for a case keeping one reference per backend, against the reference of the
-/// backend it rendered on (R-269, R-287). With the output quantised in the shader (R-287), values between 8-bit levels
-/// render to the same bytes on every backend: R-269's half-way fixture (`fixtures/golden/quantise/`) is the evidence.
+/// backend it rendered on (R-269, R-287). With the output quantised in the shader (R-287), every backend rounds an
+/// exact tie to even; a value within an ulp of a tie can still land on the other side of it on a backend whose display
+/// shaders compile with fast-math (Metal via wgpu), so a golden near a tie keeps one reference per backend (R-296), as
+/// R-269's half-way fixture (`fixtures/golden/quantise/halfway`) does.
 pub const TOLERANCES: &[Tolerance] = &[Tolerance {
     id: "REQ-VAL-138",
     max_step: 0,
     status: "proposed by TASK-M0-06, for every native backend against one reference, per backend where a case keeps \
-             one reference per backend (R-269, R-287); confirmed by the human at the M0 gate (R-71)",
+             one reference per backend (R-269, R-287, R-296); confirmed by the human at the M0 gate (R-71)",
 }];
 
 /// The backends a case may keep a reference for, by the name `PRIN_GPU_BACKEND` gives them.
@@ -757,6 +759,38 @@ impl Renderer {
         config: &Config,
         output: Output,
     ) -> Result<Image, String> {
+        let (width, height, bytes) = self.render_raw(dir, config, Readback::Unorm(output))?;
+        let rgb = bytes
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .flat_map(|p| [p[0], p[1], p[2]])
+            .collect();
+        Ok(Image { width, height, rgb })
+    }
+
+    /// Renders `config`'s fragment alone into an `Rgba32Float` target and reads back its RGBA values, rows top to
+    /// bottom: the floats the quantise pass (R-287) reads, so its rounding can be checked against them.
+    pub fn render_float(&self, dir: &Path, config: &Config) -> Result<Vec<[f32; 4]>, String> {
+        let (_, _, bytes) = self.render_raw(dir, config, Readback::Float)?;
+        Ok(bytes
+            .as_chunks::<16>()
+            .0
+            .iter()
+            .map(|p| {
+                let (channels, _) = p.as_chunks::<4>();
+                [0, 1, 2, 3].map(|c| f32::from_le_bytes(channels[c]))
+            })
+            .collect())
+    }
+
+    /// Renders `config` and reads the target back as `readback` says: its width, height and tightly packed pixels.
+    fn render_raw(
+        &self,
+        dir: &Path,
+        config: &Config,
+        readback: Readback,
+    ) -> Result<(u32, u32, Vec<u8>), String> {
         let (width, height) = config.size()?;
         let shader_path = dir.join(config.text("shader")?);
         let source = fs::read_to_string(&shader_path)
@@ -765,11 +799,16 @@ impl Renderer {
         let constants = config.constants()?;
         let constants: Vec<(&str, f64)> = constants.iter().map(|(k, v)| (k.as_str(), *v)).collect();
         let unorm = wgpu::TextureFormat::Rgba8Unorm;
+        let float_format = wgpu::TextureFormat::Rgba32Float;
         // Quantised, the case's fragment writes floats, which the quantise pass rounds; automatic, it writes the
-        // unorm target itself.
-        let case_format = match output {
-            Output::Quantised => wgpu::TextureFormat::Rgba32Float,
-            Output::Automatic => unorm,
+        // unorm target itself; read back as floats, it writes the float target that is read back.
+        let case_format = match readback {
+            Readback::Unorm(Output::Automatic) => unorm,
+            Readback::Unorm(Output::Quantised) | Readback::Float => float_format,
+        };
+        let (target_format, pixel_bytes) = match readback {
+            Readback::Unorm(_) => (unorm, 4),
+            Readback::Float => (float_format, 16),
         };
         let scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
         let module = |label, source: &str| {
@@ -836,11 +875,11 @@ impl Renderer {
         // `union`, as the flags are disjoint: `|` and `^` would agree.
         let texture = target(
             "golden target",
-            unorm,
+            target_format,
             wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
         );
-        let row = (4 * width).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
-        let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let row = (pixel_bytes * width).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("golden readback"),
             size: u64::from(row) * u64::from(height),
             usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
@@ -871,9 +910,11 @@ impl Renderer {
             }
             pass.draw(0..3, 0..1);
         };
-        match output {
-            Output::Automatic => draw(&mut encoder, &view, &case_pipeline, None),
-            Output::Quantised => {
+        match readback {
+            Readback::Unorm(Output::Automatic) | Readback::Float => {
+                draw(&mut encoder, &view, &case_pipeline, None)
+            }
+            Readback::Unorm(Output::Quantised) => {
                 let float = target(
                     "golden float target",
                     case_format,
@@ -933,7 +974,7 @@ impl Renderer {
         encoder.copy_texture_to_buffer(
             texture.as_image_copy(),
             wgpu::TexelCopyBufferInfo {
-                buffer: &readback,
+                buffer: &buffer,
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(row),
@@ -943,7 +984,7 @@ impl Renderer {
             size,
         );
         self.queue.submit([encoder.finish()]);
-        let slice = readback.slice(..);
+        let slice = buffer.slice(..);
         slice.map_async(wgpu::MapMode::Read, |r| {
             r.expect("golden readback map failed")
         });
@@ -953,20 +994,22 @@ impl Renderer {
         let mapped = slice
             .get_mapped_range()
             .map_err(|e| format!("readback: {e:?}"))?;
-        let rgb = mapped
+        let bytes = mapped
             .chunks_exact(row as usize)
-            .flat_map(|r| {
-                r[..4 * width as usize]
-                    .as_chunks::<4>()
-                    .0
-                    .iter()
-                    .flat_map(|p| [p[0], p[1], p[2]])
-            })
+            .flat_map(|r| r[..(pixel_bytes * width) as usize].iter().copied())
             .collect();
         drop(mapped);
-        readback.unmap();
-        Ok(Image { width, height, rgb })
+        buffer.unmap();
+        Ok((width, height, bytes))
     }
+}
+
+/// What a render reads back: the `Rgba8Unorm` target, its output stored as the [`Output`] says, or the case's own
+/// `Rgba32Float` render, before any quantisation.
+#[derive(Clone, Copy, Debug)]
+enum Readback {
+    Unorm(Output),
+    Float,
 }
 
 /// The per-pixel comparison of a render with its reference. It compares RGB only: alpha is dropped on reading and

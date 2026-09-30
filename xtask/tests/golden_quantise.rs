@@ -1,12 +1,14 @@
-//! Golden output quantised in the shader, and the per-backend fallback (TASK-M0-43; REQ-VAL-176; R-269, R-287).
+//! Golden output quantised in the shader, and the per-backend fallback (TASK-M0-43; REQ-VAL-176; R-269, R-287, R-296).
 //!
 //! R-269's half-way fragment, `fixtures/golden/quantise/halfway`, rendered with its output quantised in the runner's
-//! shader matches its one reference across backends; its control, `halfway_automatic`, stored through the backend's
-//! automatic float-to-unorm conversion, keeps one reference per backend, and the two references differ by one step,
-//! in R only. The fallback: a case with Metal and Vulkan references passes a render against the reference of the
-//! backend it rendered on and fails it against the other's; a case with no reference for the backend it rendered on
-//! fails naming that backend; and a case leaving the rounding to the backend with one reference across backends is
-//! refused.
+//! shader, matches its own backend's reference: it keeps one per backend, a golden near a tie (R-296). The evidence
+//! that the quantisation works: on each backend the stored levels are the fragment's own f32 output rounded half to
+//! even, exact ties (R × 255 exactly x + 0.5) included, and lavapipe's quantised bytes equal its automatic ones. Its
+//! control, `halfway_automatic`, stored through the backend's automatic float-to-unorm conversion, keeps one reference
+//! per backend, and the two differ by one step, in R only. The fallback: a case with Metal and Vulkan references passes
+//! a render against the reference of the backend it rendered on and fails it against the other's; a case with no
+//! reference for the backend it rendered on fails naming that backend; and a case leaving the rounding to the backend
+//! with one reference across backends is refused.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -199,60 +201,168 @@ negative_control!(
     check_one_step_in_r("metal", "metal")
 );
 
-// --- On this machine's backend: quantised matches the one reference, automatic matches the backend's own -----------
+// --- Lavapipe's quantised reference is its automatic one --------------------------------------------------------
 
-/// Renders R-269's fragment with `output` on this machine's backend and returns its largest step from the half-way
-/// case's one reference, and from the control's reference for the backend.
-fn render_steps(output: Output) -> (u8, u8) {
+/// Checks the half-way case's reference for `backend`, quantised in the shader, is byte for byte the control's, stored
+/// through the backend's automatic conversion.
+fn check_quantised_equals_automatic(backend: &str) {
+    let quantised = Image::read_png(&quantise_dir().join(format!("halfway/{backend}.png")))
+        .unwrap_or_else(|e| panic!("{e}"));
+    let diff = golden::diff(&quantised, &automatic_reference(backend)).unwrap();
+    assert_eq!(
+        diff.differing, 0,
+        "{backend}'s quantised reference differs from its automatic one on {} pixels (max step {})",
+        diff.differing, diff.max_step
+    );
+}
+
+#[test]
+fn golden_halfway_vulkan_quantised_equals_automatic() {
+    check_quantised_equals_automatic("vulkan");
+}
+
+negative_control!(
+    golden_halfway_vulkan_quantised_equals_automatic,
+    "Metal's references, whose automatic conversion rounds each exact tie up",
+    expected = "metal's quantised reference differs from its automatic one",
+    check_quantised_equals_automatic("metal")
+);
+
+// --- On this machine's backend -------------------------------------------------------------------------------------
+
+/// The backend that is not `backend`: the controls judge a render against its reference.
+#[cfg(feature = "controls")]
+fn other(backend: &str) -> &'static str {
+    match backend {
+        "metal" => "vulkan",
+        _ => "metal",
+    }
+}
+
+/// Renders R-269's fragment with `output` on this machine's backend, and returns its largest step from the reference
+/// `reference(backend)` names, `backend` being the one it rendered on.
+fn render_step(output: Output, reference: impl Fn(&str) -> PathBuf) -> u8 {
     let case = load("halfway");
     let renderer = Renderer::new().unwrap_or_else(|e| panic!("{e}"));
     let render = renderer
         .render_output(&case.dir, &case.config, output)
         .unwrap_or_else(|e| panic!("{e}"));
-    let one = Image::read_png(case.reference_for(renderer.backend).unwrap()).unwrap();
-    let own = automatic_reference(renderer.backend);
-    (
-        golden::diff(&render, &one).unwrap().max_step,
-        golden::diff(&render, &own).unwrap().max_step,
-    )
+    let reference = Image::read_png(&reference(renderer.backend)).unwrap_or_else(|e| panic!("{e}"));
+    golden::diff(&render, &reference).unwrap().max_step
 }
 
-fn check_quantised_matches_one_reference(output: Output) {
-    let (one, _) = render_steps(output);
+/// Checks the quantised render matches the half-way case's reference for the backend `pick` names.
+fn check_quantised_matches_reference(pick: fn(&str) -> &str) {
+    let step = render_step(Output::Quantised, |backend| {
+        load("halfway")
+            .reference_for(pick(backend))
+            .unwrap()
+            .to_path_buf()
+    });
     assert_eq!(
-        one, 0,
-        "the half-way render is {one} step(s) from the one reference"
+        step, 0,
+        "the quantised half-way render is {step} step(s) from the reference"
     );
 }
 
 #[test]
-fn golden_halfway_quantised_matches_one_reference() {
-    check_quantised_matches_one_reference(Output::Quantised);
+fn golden_halfway_quantised_matches_backend_reference() {
+    check_quantised_matches_reference(|backend| backend);
 }
 
 negative_control!(
-    golden_halfway_quantised_matches_one_reference,
-    "the half-way fragment through the backend's automatic conversion",
-    expected = "the half-way render is 1 step(s) from the one reference",
-    check_quantised_matches_one_reference(Output::Automatic)
+    golden_halfway_quantised_matches_backend_reference,
+    "the quantised render judged against the other backend's reference",
+    expected = "the quantised half-way render is 1 step(s) from the reference",
+    check_quantised_matches_reference(other)
 );
 
-fn check_automatic_matches_own_reference(output: Output) {
-    let (_, own) = render_steps(output);
+/// Checks the automatic render matches the control's reference for the backend `pick` names.
+fn check_automatic_matches_reference(pick: fn(&str) -> &str) {
+    let step = render_step(Output::Automatic, |backend| {
+        quantise_dir().join(format!("halfway_automatic/{}.png", pick(backend)))
+    });
     assert_eq!(
-        own, 0,
-        "the automatic render is {own} step(s) from this backend's reference"
+        step, 0,
+        "the automatic half-way render is {step} step(s) from the reference"
     );
 }
 
 #[test]
 fn golden_halfway_automatic_matches_backend_reference() {
-    check_automatic_matches_own_reference(Output::Automatic);
+    check_automatic_matches_reference(|backend| backend);
 }
 
 negative_control!(
     golden_halfway_automatic_matches_backend_reference,
-    "the half-way fragment quantised in the shader",
-    expected = "the automatic render is 1 step(s) from this backend's reference",
-    check_automatic_matches_own_reference(Output::Quantised)
+    "the automatic render judged against the other backend's reference",
+    expected = "the automatic half-way render is 1 step(s) from the reference",
+    check_automatic_matches_reference(other)
+);
+
+// --- The quantise pass rounds the fragment's own output half to even, exact ties included -------------------------
+
+/// Checks every level the quantise pass stores, in R, G and B, is `round` of the fragment's own f32 output scaled to
+/// 0..255, reading those floats back from the device, and that R holds exact f32 ties (R × 255 exactly x + 0.5), so
+/// the check covers the tie-break. Prints the evidence.
+fn check_quantise_rounding(round: fn(f32) -> f32) {
+    let case = load("halfway");
+    let renderer = Renderer::new().unwrap_or_else(|e| panic!("{e}"));
+    let floats = renderer
+        .render_float(&case.dir, &case.config)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let quantised = renderer
+        .render_output(&case.dir, &case.config, Output::Quantised)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let automatic = renderer
+        .render_output(&case.dir, &case.config, Output::Automatic)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        floats.len(),
+        quantised.rgb.len() / 3,
+        "the float render's size"
+    );
+    let width = quantised.width as usize;
+    let mut tie_columns = std::collections::BTreeSet::new();
+    let mut ties = 0;
+    for (i, pixel) in floats.iter().enumerate() {
+        let (x, y) = (i % width, i / width);
+        for c in 0..3 {
+            let v = pixel[c].clamp(0.0, 1.0) * 255.0;
+            let expected = round(v) as u8;
+            let stored = quantised.rgb[3 * i + c];
+            assert_eq!(
+                stored, expected,
+                "the quantised level at ({x}, {y}) channel {c} is {stored}; the rounding gives {expected} (v = {v:?})"
+            );
+            if c == 0 && v.fract() == 0.5 {
+                ties += 1;
+                tie_columns.insert(x);
+            }
+        }
+    }
+    assert!(ties > 0, "the half-way render holds no exact f32 tie in R");
+    let apart = golden::diff(&quantised, &automatic).unwrap();
+    println!(
+        "golden_quantise: {}: every stored level of quantise/halfway is its f32 value x 255 rounded half to even \
+         ({} pixels); {ties} pixels in R, on {} columns, are exact f32 ties (R x 255 = x + 0.5), each stored at the \
+         even level; quantised against automatic: {} pixels differ, max step {}",
+        renderer.backend,
+        floats.len(),
+        tie_columns.len(),
+        apart.differing,
+        apart.max_step
+    );
+}
+
+#[test]
+fn golden_halfway_quantise_rounds_half_to_even() {
+    check_quantise_rounding(f32::round_ties_even);
+}
+
+negative_control!(
+    golden_halfway_quantise_rounds_half_to_even,
+    "the stored levels checked against rounding each tie up",
+    expected = "the rounding gives",
+    check_quantise_rounding(f32::round)
 );
