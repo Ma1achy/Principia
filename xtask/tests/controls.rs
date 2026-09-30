@@ -7,13 +7,12 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{PoisonError, RwLock};
 use validation::spawn::Spawn;
 
 #[path = "../../crates/validation/tests/support/own_target.rs"]
 mod own_target;
-use own_target::{Lease, FIXTURES};
+use own_target::{fixture_files, Lease, FIXTURES};
 
 use xtask::controls::{
     control_of, findings, name_wrong_panics, parse_list, parse_results, parse_wrong_panics, Finding,
@@ -26,22 +25,10 @@ struct Verdict {
     stderr: String,
 }
 
-fn copy_dir(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let path = entry.unwrap().path();
-        let dest = to.join(path.file_name().unwrap());
-        if path.is_dir() {
-            copy_dir(&path, &dest);
-        } else {
-            std::fs::copy(&path, &dest).unwrap();
-        }
-    }
-}
-
 /// Held to write by `controls_on_this_workspace_skips_gui`, whose `xtask controls` runs cargo into the workspace's
 /// target directory, and so replaces the `xtask` there (`CARGO_BIN_EXE_xtask`) each time; held to read by each run of
-/// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164).
+/// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164). Under nextest each test is a
+/// process of its own, and `.config/nextest.toml` runs that test alone instead (R-231).
 static WORKSPACE_TARGET: RwLock<()> = RwLock::new(());
 
 /// Runs `xtask controls` on a copy of the fixture `name`; see [`run_fixture_with`].
@@ -51,33 +38,40 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
 
 /// Runs `xtask controls <args>` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile
 /// and the `validation` path made absolute, building in a target directory of its own while it runs, since other
-/// copies of the fixture build at the same time (REQ-VAL-164). `remove` names a file deleted from the copy first.
+/// copies of the fixture build at the same time (REQ-VAL-164). `remove` names a file left out of the copy. The copy is
+/// the lease's own, one per fixture and `remove`, kept across runs (R-231).
 fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict {
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = xtask.parent().unwrap();
-    let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
-    // One copy per run, removed after it: tests run in parallel, and several run the same fixture.
-    static RUN: AtomicUsize = AtomicUsize::new(0);
-    let run = RUN.fetch_add(1, Ordering::Relaxed);
-    let copy = tmp
-        .join("controls")
-        .join(format!("{name}-{}-{run}", std::process::id()));
-    copy_dir(&xtask.join("tests/fixtures/controls").join(name), &copy);
-    if let Some(file) = remove {
-        std::fs::remove_file(copy.join(file)).unwrap();
+    let mut files: Vec<(PathBuf, Vec<u8>)> =
+        fixture_files(&xtask.join("tests/fixtures/controls").join(name))
+            .into_iter()
+            .filter(|(path, _)| remove.is_none_or(|file| path != Path::new(file)))
+            .collect();
+    for (path, bytes) in &mut files {
+        if path == Path::new("Cargo.toml") {
+            *bytes = String::from_utf8_lossy(bytes)
+                .replace(
+                    "../../../../../crates/validation",
+                    root.join("crates/validation").to_str().unwrap(),
+                )
+                .into_bytes();
+        }
     }
-    let manifest = copy.join("Cargo.toml");
-    let text = std::fs::read_to_string(&manifest).unwrap().replace(
-        "../../../../../crates/validation",
-        root.join("crates/validation").to_str().unwrap(),
-    );
-    std::fs::write(&manifest, text).unwrap();
-    std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+    files.push((
+        PathBuf::from("Cargo.lock"),
+        std::fs::read(root.join("Cargo.lock")).unwrap(),
+    ));
+    let removed = remove.map_or(String::new(), |file| {
+        format!("-{}", file.replace(['/', '.'], "_"))
+    });
     let spawning = WORKSPACE_TARGET
         .read()
         .unwrap_or_else(PoisonError::into_inner);
     // Taken after the read lock, so no copy holds a directory while it waits for the workspace's run.
-    let target = Lease::take(FIXTURES);
+    let copy = format!("controls-{name}{removed}");
+    let target = Lease::take(FIXTURES, Some(&copy));
+    let manifest = target.copy(&copy, &files).join("Cargo.toml");
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("controls")
         .args(args)
@@ -87,7 +81,6 @@ fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict 
         .timed_output()
         .expect("run xtask");
     drop(spawning);
-    std::fs::remove_dir_all(&copy).unwrap();
     Verdict {
         ok: output.status.success(),
         stdout: String::from_utf8_lossy(&output.stdout).into_owned(),

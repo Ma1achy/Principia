@@ -15,6 +15,19 @@ repository.
 - `plan/MILESTONES.md`: the milestones M0 to M8 and each one's exit gate.
 - `plan/BUILD_READINESS.md`: what is ready and what still waits before the build starts.
 
+## Running the tests
+
+The suite runs through [cargo-nextest](https://nexte.st), pinned to the version CI installs, and doctests, which
+nextest does not run, through `cargo test --doc` (R-231):
+
+```sh
+cargo install cargo-nextest --version 0.9.146 --locked
+cargo nextest run --workspace
+cargo test --workspace --doc
+```
+
+`cargo xtask ci` runs every control and the other per-push checks (R-235).
+
 ## What is authoritative
 
 1. The markdown corpus in `docs/` (contracts, design, notes, read_first, gui) is the specification (R-1).

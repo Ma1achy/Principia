@@ -11,7 +11,7 @@ use validation::spawn::Spawn;
 
 #[path = "support/own_target.rs"]
 mod own_target;
-use own_target::{Lease, FIXTURES};
+use own_target::{fixture_files, Lease, FIXTURES};
 
 /// libtest's stdout for `cargo test --features controls` on a copy of the `wrong_message` fixture, run once.
 fn fixture_run() -> &'static str {
@@ -19,22 +19,26 @@ fn fixture_run() -> &'static str {
     RUN.get_or_init(|| {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let fixture = root.join("xtask/tests/fixtures/controls/wrong_message");
-        let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
-        let copy = tmp.join(format!("expected_message-{}", std::process::id()));
-        for file in ["src/lib.rs", "tests/double.rs"] {
-            std::fs::create_dir_all(copy.join(file).parent().unwrap()).unwrap();
-            std::fs::copy(fixture.join(file), copy.join(file)).unwrap();
-        }
         let validation = root.join("crates/validation").canonicalize().unwrap();
-        let manifest = std::fs::read_to_string(fixture.join("Cargo.toml")).unwrap();
-        let manifest = manifest.replace(
-            "../../../../../crates/validation",
-            validation.to_str().unwrap(),
-        );
-        std::fs::write(copy.join("Cargo.toml"), manifest).unwrap();
-        std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
-        // A target directory of its own: xtask's tests build copies of this fixture too (REQ-VAL-164).
-        let target = Lease::take(FIXTURES);
+        let mut files = fixture_files(&fixture);
+        for (path, bytes) in &mut files {
+            if path == Path::new("Cargo.toml") {
+                *bytes = String::from_utf8_lossy(bytes)
+                    .replace(
+                        "../../../../../crates/validation",
+                        validation.to_str().unwrap(),
+                    )
+                    .into_bytes();
+            }
+        }
+        files.push((
+            PathBuf::from("Cargo.lock"),
+            std::fs::read(root.join("Cargo.lock")).unwrap(),
+        ));
+        // A target directory of its own: xtask's tests build copies of this fixture too (REQ-VAL-164). The copy is
+        // the lease's own, kept across runs (R-231).
+        let target = Lease::take(FIXTURES, Some("expected_message"));
+        let copy = target.copy("expected_message", &files);
         let output = Command::new(env!("CARGO"))
             .args([
                 "test",
@@ -48,7 +52,6 @@ fn fixture_run() -> &'static str {
             .env("CARGO_TARGET_DIR", target.dir())
             .timed_output()
             .expect("run cargo test on the fixture");
-        std::fs::remove_dir_all(&copy).unwrap();
         String::from_utf8_lossy(&output.stdout).into_owned()
     })
 }

@@ -30,7 +30,13 @@ pub trait Spawn {
     /// Runs the command as `Command::output` does (stdin closed, stdout and stderr captured) but waits at most
     /// `timeout` for it to exit and close its output. A child still running then is ended with everything it started
     /// (see the module docs) and reaped, and the error, of kind `TimedOut`, names it and its pid.
-    fn output_within(&mut self, timeout: Duration) -> io::Result<Output>;
+    fn output_within(&mut self, timeout: Duration) -> io::Result<Output> {
+        self.output_within_grace(timeout, GRACE)
+    }
+
+    /// [`Spawn::output_within`], with `grace` in place of [`GRACE`] between SIGTERM and SIGKILL: injectable, so the
+    /// helper's own tests need not wait the calibrated values (R-231). Every other caller keeps [`GRACE`].
+    fn output_within_grace(&mut self, timeout: Duration, grace: Duration) -> io::Result<Output>;
 
     /// [`Spawn::output_within`] the provisional [`TIMEOUT`].
     fn timed_output(&mut self) -> io::Result<Output> {
@@ -39,7 +45,7 @@ pub trait Spawn {
 }
 
 impl Spawn for Command {
-    fn output_within(&mut self, timeout: Duration) -> io::Result<Output> {
+    fn output_within_grace(&mut self, timeout: Duration, grace: Duration) -> io::Result<Output> {
         let deadline = Instant::now() + timeout;
         // The child leads a new process group, which everything it starts joins unless it leaves it (R-217).
         #[cfg(unix)]
@@ -72,7 +78,7 @@ impl Spawn for Command {
                 break status;
             }
             if Instant::now() >= deadline {
-                let ended = end(&mut child);
+                let ended = end(&mut child, grace);
                 return Err(timed_out(child.id(), "was killed: it outlived", ended));
             }
             thread::sleep(Duration::from_millis(10));
@@ -83,7 +89,7 @@ impl Spawn for Command {
             let wait = deadline.saturating_duration_since(Instant::now());
             let Ok((stream, bytes)) = rx.recv_timeout(wait) else {
                 // What holds the output open is something the child started: it is ended too (R-217).
-                let ended = end(&mut child);
+                let ended = end(&mut child, grace);
                 return Err(timed_out(
                     child.id(),
                     "exited, but its output stayed open past",
@@ -105,11 +111,11 @@ impl Spawn for Command {
 const ENDING: &str = "ending it and its process group failed";
 
 /// Ends a timed-out child and everything in its process group (R-217): SIGTERM to the group, then, unless the child
-/// has been reaped and nothing in the group can still be signalled within [`GRACE`], SIGKILL to the group. The child
-/// itself is then killed, in case it has left its group, and reaped, whatever the signals to the group met. A signal
-/// the group refused is returned as the error, once the child is reaped.
+/// has been reaped and nothing in the group can still be signalled within `grace` ([`GRACE`] unless injected),
+/// SIGKILL to the group. The child itself is then killed, in case it has left its group, and reaped, whatever the
+/// signals to the group met. A signal the group refused is returned as the error, once the child is reaped.
 #[cfg(unix)]
-fn end(child: &mut Child) -> io::Result<()> {
+fn end(child: &mut Child, grace: Duration) -> io::Result<()> {
     use rustix::io::Errno;
     use rustix::process::{kill_process_group, test_kill_process_group, Pid, Signal};
     // The group's id is the child's pid, and stays taken while the child is unreaped or any member lives.
@@ -124,7 +130,7 @@ fn end(child: &mut Child) -> io::Result<()> {
     // After a refused SIGTERM no member can be signalled, and SIGKILL would be refused too.
     if refusal.is_none() {
         refusal = 'grace: {
-            let grace_ends = Instant::now() + GRACE;
+            let grace_ends = Instant::now() + grace;
             while Instant::now() < grace_ends {
                 // Nothing is left for SIGKILL once the child is reaped and the group is empty or refuses signals.
                 if child.try_wait()?.is_some()
@@ -148,7 +154,7 @@ fn end(child: &mut Child) -> io::Result<()> {
 
 /// Ends a timed-out child. Without process groups, only the child itself is killed and reaped.
 #[cfg(not(unix))]
-fn end(child: &mut Child) -> io::Result<()> {
+fn end(child: &mut Child, _grace: Duration) -> io::Result<()> {
     child.kill()?;
     child.wait()?;
     Ok(())
@@ -179,6 +185,10 @@ fn name(command: &Command) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The grace these tests give a timed-out child's group in place of the calibrated [`GRACE`], so none waits it
+    /// (R-231).
+    const SHORT_GRACE: Duration = Duration::from_secs(2);
 
     /// A child running `sleep 30` under `timeout` is killed: the error names it and its pid, it returns long before
     /// the child would have exited, and the pid no longer names a process.
@@ -281,7 +291,7 @@ mod tests {
         let err = Command::new("sh")
             .args(["-c", &format!("{start}; sleep 30"), "sh"])
             .arg(&pid_file)
-            .output_within(Duration::from_millis(500))
+            .output_within_grace(Duration::from_millis(500), SHORT_GRACE)
             .expect_err("the child was not timed out");
         let child = pid_in(&err);
         let grandchild = std::fs::read_to_string(&pid_file).expect("the grandchild's pid");
@@ -339,7 +349,7 @@ mod tests {
         let err = Command::new("sh")
             .args(["-c", &script, "sh"])
             .arg(&done)
-            .output_within(Duration::from_millis(500))
+            .output_within_grace(Duration::from_millis(500), SHORT_GRACE)
             .expect_err("the child was not timed out");
         let finished = std::fs::read_to_string(&done).unwrap_or_default();
         let _ = std::fs::remove_dir_all(&dir);
@@ -352,14 +362,14 @@ mod tests {
 
     #[test]
     fn spawn_gives_a_timed_out_child_its_grace_after_sigterm() {
-        check_grace("1");
+        check_grace("0.5");
     }
 
     crate::negative_control!(
         spawn_gives_a_timed_out_child_its_grace_after_sigterm,
-        "a SIGTERM handler that takes 7 s, longer than the grace, required to finish",
+        "a SIGTERM handler that takes 4 s, longer than the grace, required to finish",
         expected = "the child's SIGTERM handler was not let finish within the grace",
-        check_grace("7")
+        check_grace("4")
     );
 
     /// `program` runs `sh -c`'s arguments; the child exits at once while a process outside its group, whose pid it
@@ -372,7 +382,7 @@ mod tests {
         let result = Command::new(program)
             .args(["-c", script, "sh"])
             .arg(&pid_file)
-            .output_within(Duration::from_millis(500));
+            .output_within_grace(Duration::from_millis(500), SHORT_GRACE);
         if let Ok(holder) = std::fs::read_to_string(&pid_file) {
             let _ = Command::new("kill")
                 .args(["-9", holder.trim()])
@@ -423,7 +433,7 @@ mod tests {
         let result = Command::new("sh")
             .args(["-c", script, "sh"])
             .arg(&pid_file)
-            .output_within(Duration::from_millis(500));
+            .output_within_grace(Duration::from_millis(500), SHORT_GRACE);
         let took = started.elapsed();
         if let Ok(holder) = std::fs::read_to_string(&pid_file) {
             let _ = Command::new("kill")
@@ -474,7 +484,7 @@ mod tests {
         assert_eq!(err.kind(), io::ErrorKind::TimedOut, "{err}");
         assert!(!err.to_string().contains(ENDING), "{err}");
         assert!(
-            took < Duration::from_millis(500) + GRACE,
+            took < Duration::from_millis(500) + SHORT_GRACE,
             "the helper waited out the grace for a group of zombies: {took:?}"
         );
     }
