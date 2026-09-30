@@ -199,7 +199,10 @@ The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gp
 `tree_depth_max` are at most 2^32 − 1, and every other count or size at most 2^64 − 1. `camera_delta`, `refresh_hz`,
 `dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A writer given a value
 outside its range, NaN or an infinity fails rather than write it, and a reader rejects a value outside its range, so
-a file the reader accepts validates against the JSON Schema, and the reverse.
+a file the reader accepts validates against the JSON Schema. The reverse holds with two exceptions, which the schema
+accepts and the reader rejects: a count or size written with a zero fraction (`"cpu_cores": 4.0`), which JSON
+Schema's `integer` admits, and a key repeated within one object, where the schema sees only the last copy. A writer
+produces neither: it writes every count and size as a JSON integer, and each key once.
 
 **The file** is one JSON object: the session header, the frame records, then the precomputed summaries.
 
