@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "principia-profile-v1",
+  "title": "Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, \"Profiler schema v1: the keys and the nesting\")",
+  "$comment": "A trace is JSON Lines (R-286), not one JSON document, so it validates line by line against the definition for the place each line holds: its first line against #/$defs/header_line, each frame record after it against #/$defs/frame, and the summary line, last, against #/$defs/summary_line. A session that ended before its summary line (R-298) leaves a trace whose last line is a #/$defs/frame, or the #/$defs/header_line when it recorded no frame; that trace is valid. A last line with no newline after it that is not one complete JSON value was cut off as its session stopped (R-299): the reader drops it and it is not validated, while a malformed line that ends in a newline is not schema v1. The root accepts a line of any of the three places.",
+  "oneOf": [
+    { "$ref": "#/$defs/header_line" },
+    { "$ref": "#/$defs/frame" },
+    { "$ref": "#/$defs/summary_line" }
+  ],
+  "$defs": {
+    "header_line": {
+      "$comment": "The first line: the schema id and the session header.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "header"],
+      "properties": {
+        "schema": { "const": "principia-profile-v1" },
+        "header": { "$ref": "#/$defs/session_header" }
+      }
+    },
+    "summary_line": {
+      "$comment": "The summary line: the precomputed summaries, last, after the frames. A trace whose session ended before it (R-298) has no summary line.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leak_flags", "hot_paths"],
+      "properties": {
+        "leak_flags": { "$ref": "#/$defs/summaries" },
+        "hot_paths": { "$ref": "#/$defs/summaries" }
+      }
+    },
+    "summaries": {
+      "$comment": "Precomputed leak flags or hot-path summaries; each entry's keys are defined by the task closing REQ-TOOL-100.",
+      "oneOf": [{ "type": "null" }, { "type": "array", "items": { "type": "object" } }]
+    },
+    "ms": { "type": "number", "minimum": 0 },
+    "count": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
+    "count32": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "session_header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device", "backend", "precision", "build", "display", "config"],
+      "properties": {
+        "device": { "$ref": "#/$defs/device" },
+        "backend": { "$ref": "#/$defs/backend" },
+        "precision": { "$ref": "#/$defs/precision" },
+        "build": { "$ref": "#/$defs/build" },
+        "display": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/display" }] },
+        "config": { "type": "object" }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gpu", "cpu", "cpu_cores", "gpu_cores", "memory"],
+      "properties": {
+        "gpu": { "type": "string" },
+        "cpu": { "type": "string" },
+        "cpu_cores": { "$ref": "#/$defs/count32" },
+        "gpu_cores": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count32" }] },
+        "memory": { "$ref": "#/$defs/memory" }
+      }
+    },
+    "memory": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unified"],
+          "properties": {
+            "unified": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bytes"],
+              "properties": { "bytes": { "$ref": "#/$defs/count" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["discrete"],
+          "properties": {
+            "discrete": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["vram_bytes", "ram_bytes"],
+              "properties": {
+                "vram_bytes": { "$ref": "#/$defs/count" },
+                "ram_bytes": { "$ref": "#/$defs/count" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api", "driver"],
+      "properties": {
+        "api": { "enum": ["metal", "vulkan", "dx12", "webgpu"] },
+        "driver": { "type": "string" }
+      }
+    },
+    "precision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["f32", "f64", "f64_rate"],
+      "properties": {
+        "f32": { "type": "boolean" },
+        "f64": { "type": "boolean" },
+        "f64_rate": { "oneOf": [{ "type": "null" }, { "type": "number", "minimum": 0 }] }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "profile", "features"],
+      "properties": {
+        "commit": { "type": "string" },
+        "profile": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_px", "height_px", "refresh_hz", "dpi_scale"],
+      "properties": {
+        "width_px": { "$ref": "#/$defs/count32" },
+        "height_px": { "$ref": "#/$defs/count32" },
+        "refresh_hz": { "type": "number", "minimum": 0 },
+        "dpi_scale": { "type": "number", "minimum": 0 }
+      }
+    },
+    "frame": {
+      "$comment": "One line after the header line, and before the summary line when there is one: one frame record. The last line of a trace without a summary line (R-298) is a frame. stage_ms.present and stages.present are null together or present together.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame", "frame_ms", "quads_computed", "quads_reused", "samples", "substeps_total", "playhead_dt",
+        "camera_delta", "tree_depth_max", "leaf_count", "dmin_nan_unset", "dmin_negative_floored", "stage_ms", "stages",
+        "live_memory"
+      ],
+      "properties": {
+        "frame": { "$ref": "#/$defs/count" },
+        "frame_ms": { "$ref": "#/$defs/ms" },
+        "quads_computed": { "$ref": "#/$defs/count" },
+        "quads_reused": { "$ref": "#/$defs/count" },
+        "samples": { "$ref": "#/$defs/count" },
+        "substeps_total": { "$ref": "#/$defs/count" },
+        "playhead_dt": { "type": "number" },
+        "camera_delta": { "type": "number", "minimum": 0 },
+        "tree_depth_max": { "$ref": "#/$defs/count32" },
+        "leaf_count": { "$ref": "#/$defs/count" },
+        "dmin_nan_unset": { "$ref": "#/$defs/count32" },
+        "dmin_negative_floored": { "$ref": "#/$defs/count32" },
+        "stage_ms": { "$ref": "#/$defs/stage_ms" },
+        "stages": { "$ref": "#/$defs/stages" },
+        "live_memory": { "$ref": "#/$defs/live_memory" }
+      },
+      "if": { "properties": { "stage_ms": { "properties": { "present": { "type": "null" } } } } },
+      "then": { "properties": { "stages": { "properties": { "present": { "type": "null" } } } } },
+      "else": { "properties": { "stages": { "properties": { "present": { "not": { "type": "null" } } } } } }
+    },
+    "live_memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heap", "gpu", "tile_cache"],
+      "properties": {
+        "heap": { "$ref": "#/$defs/pool_live" },
+        "gpu": { "$ref": "#/$defs/pool_live" },
+        "tile_cache": { "$ref": "#/$defs/pool_live" }
+      }
+    },
+    "pool_live": {
+      "$comment": "bytes is the sum of by_kind's bytes, and by_kind has one entry for each kind; JSON Schema cannot express the sum or uniqueness by a key, so the reader alone checks them (dd_telemetry_and_tiers §5).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "by_kind"],
+      "properties": {
+        "bytes": { "$ref": "#/$defs/count" },
+        "by_kind": { "type": "array", "items": { "$ref": "#/$defs/live_kind" } }
+      }
+    },
+    "live_kind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "count", "bytes"],
+      "properties": {
+        "kind": { "type": "string" },
+        "count": { "$ref": "#/$defs/count" },
+        "bytes": { "$ref": "#/$defs/count" }
+      }
+    },
+    "stage_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integrate", "reduce", "colour", "upload", "present"],
+      "properties": {
+        "integrate": { "$ref": "#/$defs/ms" },
+        "reduce": { "$ref": "#/$defs/ms" },
+        "colour": { "$ref": "#/$defs/ms" },
+        "upload": { "$ref": "#/$defs/ms" },
+        "present": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ms" }] }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integrate", "reduce", "colour", "upload", "present"],
+      "properties": {
+        "integrate": { "$ref": "#/$defs/stage" },
+        "reduce": { "$ref": "#/$defs/stage" },
+        "colour": { "$ref": "#/$defs/stage" },
+        "upload": { "$ref": "#/$defs/stage" },
+        "present": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/stage" }] }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopes", "gpu_passes", "allocations", "events"],
+      "properties": {
+        "scopes": { "type": "array", "items": { "$ref": "#/$defs/scope" } },
+        "gpu_passes": { "type": "array", "items": { "$ref": "#/$defs/gpu_pass" } },
+        "allocations": { "type": "array", "items": { "$ref": "#/$defs/allocation" } },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "start_ms", "ms", "children"],
+      "properties": {
+        "name": { "type": "string" },
+        "start_ms": { "$ref": "#/$defs/ms" },
+        "ms": { "$ref": "#/$defs/ms" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/scope" } }
+      }
+    },
+    "gpu_pass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "start_ms", "ms"],
+      "properties": {
+        "name": { "type": "string" },
+        "start_ms": { "$ref": "#/$defs/ms" },
+        "ms": { "$ref": "#/$defs/ms" }
+      }
+    },
+    "allocation": {
+      "$comment": "A stage's allocations have one entry per kind and pool; JSON Schema cannot express uniqueness by a key, so the reader alone checks it (dd_telemetry_and_tiers §5).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "pool", "count", "bytes"],
+      "properties": {
+        "kind": { "type": "string" },
+        "pool": { "enum": ["heap", "gpu", "tile_cache"] },
+        "count": { "$ref": "#/$defs/count" },
+        "bytes": { "$ref": "#/$defs/count" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "at_ms", "detail"],
+      "properties": {
+        "name": { "type": "string" },
+        "at_ms": { "$ref": "#/$defs/ms" },
+        "detail": { "oneOf": [{ "type": "null" }, { "type": "string" }] }
+      }
+    }
+  }
+}
