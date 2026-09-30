@@ -567,3 +567,67 @@ negative_control!(
     expected = "is_unset on d_min bits 0xfc00",
     check_unset_reads_bits(|w| pa_d_min(w).is_infinite())
 );
+
+/// `to_bits` sends ±∞ and every value past binary16's range to ±∞ (`0x7c00`, `0xfc00`), and keeps NaN a NaN with its
+/// sign and its payload's top ten bits, quieting one whose top ten bits are zero (IEEE 754 binary16; payload §1's
+/// clamp is the packers', not the conversion's).
+fn check_special(to_bits: fn(f32) -> u16) {
+    let cases: [(&str, f32, u16); 10] = [
+        ("+inf", f32::INFINITY, 0x7c00),
+        ("-inf", f32::NEG_INFINITY, 0xfc00),
+        ("65536", 65536.0, 0x7c00),
+        ("-65536", -65536.0, 0xfc00),
+        ("1e10", 1e10, 0x7c00),
+        ("f32::MAX", f32::MAX, 0x7c00),
+        ("quiet NaN", f32::from_bits(0x7fc0_0000), 0x7e00),
+        ("-quiet NaN", f32::from_bits(0xffc0_0000), 0xfe00),
+        ("NaN, all payload bits", f32::from_bits(0x7fff_ffff), 0x7fff),
+        (
+            "NaN, low payload bit only",
+            f32::from_bits(0x7f80_0001),
+            0x7e00,
+        ),
+    ];
+    for (name, x, want) in cases {
+        assert_eq!(to_bits(x), want, "binary16 bits of {name}");
+    }
+}
+
+#[test]
+fn f16_pairs_infinity_overflow_and_nan_bits() {
+    check_special(f32_to_f16_bits);
+}
+
+negative_control!(
+    f16_pairs_infinity_overflow_and_nan_bits,
+    "a conversion that clamps first sends +inf to 65504 (0x7bff), not +inf, so the check must fail",
+    expected = "binary16 bits of +inf",
+    check_special(|x| f32_to_f16_bits(clamp_f16(x)))
+);
+
+/// `fraction(w, 0)` is 0 for any `times` word, and `fraction(w, h)` is `step / h` otherwise (payload §6's guard).
+fn check_fraction(fraction: fn(u32, u32) -> f32, step: fn(u32) -> u32) {
+    for w in [0, 0x0001_0002, 0xffff_ffff, 0x1234_5678] {
+        assert_eq!(fraction(w, 0), 0.0, "fraction of {w:#010x} at horizon 0");
+        for h in [1, 7, 65535] {
+            assert_eq!(
+                fraction(w, h),
+                step(w) as f32 / h as f32,
+                "fraction of {w:#010x} at horizon {h}"
+            );
+        }
+    }
+}
+
+#[test]
+fn packed_words_time_fractions_guard_horizon_zero() {
+    check_fraction(tm_t_end_fraction, tm_t_end_step);
+    check_fraction(tm_t_dmin_fraction, tm_t_dmin_step);
+}
+
+negative_control!(
+    packed_words_time_fractions_guard_horizon_zero,
+    "an unguarded division gives NaN or inf at horizon 0, so the check must fail",
+    expected = "at horizon 0",
+    check_fraction(|w, h| tm_t_dmin_step(w) as f32 / h as f32, tm_t_dmin_step)
+);

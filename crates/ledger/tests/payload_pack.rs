@@ -183,3 +183,35 @@ negative_control!(
     expected = "generation not refused naming `packed_c`",
     check_prefix_refused(&layout(), "packed_c")
 );
+
+/// With `dE_max`'s sentinel set to `value`, the Rust emitter writes it as an f32 constant of that value: an
+/// `f16-pair` sentinel is a float, finite or not.
+fn check_f16_sentinel(value: Option<f64>, line: &str) {
+    let mut l = layout();
+    l.entries
+        .iter_mut()
+        .filter(|e| e.name == Some("dE_max"))
+        .for_each(|e| e.sentinel = value);
+    let files = gen::generate(&l, &[rust::emit]).expect("the ledger generates");
+    let contents = &files
+        .iter()
+        .find(|f| f.path.ends_with(rust::PATH))
+        .expect("the Rust emitter writes generated.rs")
+        .contents;
+    assert!(
+        contents.lines().any(|l| l == line),
+        "no line `{line}` in the generated file"
+    );
+}
+
+#[test]
+fn f16_pairs_finite_sentinel_is_emitted_as_f32() {
+    check_f16_sentinel(Some(1.5), "pub const PB_DE_MAX_SENTINEL: f32 = 1.5;");
+}
+
+negative_control!(
+    f16_pairs_finite_sentinel_is_emitted_as_f32,
+    "the payload ledger gives `dE_max` no sentinel, so no constant is emitted and the check must fail",
+    expected = "no line `pub const PB_DE_MAX_SENTINEL: f32 = 1.5;`",
+    check_f16_sentinel(None, "pub const PB_DE_MAX_SENTINEL: f32 = 1.5;")
+);
