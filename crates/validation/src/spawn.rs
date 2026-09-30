@@ -13,7 +13,7 @@
 
 use std::io::{self, Read};
 use std::process::{Child, Command, Output, Stdio};
-use std::sync::mpsc;
+use std::sync::{mpsc, PoisonError, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -50,11 +50,14 @@ impl Spawn for Command {
         // The child leads a new process group, which everything it starts joins unless it leaves it (R-217).
         #[cfg(unix)]
         std::os::unix::process::CommandExt::process_group(self, 0);
+        // No stand-in executable is being written while the child is forked and exec'd (REQ-SYS-070).
+        let spawning = WRITING.read().unwrap_or_else(PoisonError::into_inner);
         let mut child = self
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
+        drop(spawning);
         // Both pipes are drained while the child runs, so a child filling one never blocks on it.
         let (tx, rx) = mpsc::channel();
         drain(child.stdout.take(), 0, tx.clone());
@@ -180,6 +183,33 @@ fn name(command: &Command) -> String {
         .map(|part| part.to_string_lossy())
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// Held to write while a stand-in executable is written, and to read by each spawn, from its fork to its exec
+/// (REQ-SYS-070). On Linux a child forked while another thread has an executable open for writing inherits that
+/// descriptor until it execs, and an exec of that executable in the meantime fails with ETXTBSY ("Text file busy").
+/// Rust opens every file close-on-exec, so once `spawn` returns the child holds none of them.
+static WRITING: RwLock<()> = RwLock::new(());
+
+/// Runs `write` while no child is being spawned through [`Spawn`], and none starts until it returns (REQ-SYS-070).
+/// `write` itself must not spawn through [`Spawn`], which would wait for it forever.
+pub fn while_no_spawn<T>(write: impl FnOnce() -> T) -> T {
+    let _writing = WRITING.write().unwrap_or_else(PoisonError::into_inner);
+    write()
+}
+
+/// Writes `contents` to `path` as an executable (mode 0755 on Unix), with no child spawned while the file is open
+/// for writing (REQ-SYS-070). Every test that writes a stand-in executable writes it with this.
+pub fn write_executable(path: &std::path::Path, contents: impl AsRef<[u8]>) -> io::Result<()> {
+    while_no_spawn(|| {
+        std::fs::write(path, contents)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))?;
+        }
+        Ok(())
+    })
 }
 
 #[cfg(test)]

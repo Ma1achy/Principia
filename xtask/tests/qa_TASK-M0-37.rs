@@ -421,7 +421,7 @@ negative_control!(
 /// reviews, its commit list (without files) and each commit (with its files). Returns (passed, stdout, stderr).
 #[cfg(unix)]
 fn run_check(tag: &str, title: &str, reviews: Vec<Value>, commits: &[C]) -> (bool, String, String) {
-    use std::os::unix::fs::PermissionsExt;
+    use validation::spawn::Spawn;
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa37_gh_{tag}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("stub dir made");
@@ -447,9 +447,7 @@ fn run_check(tag: &str, title: &str, reviews: Vec<Value>, commits: &[C]) -> (boo
         dir.display()
     );
     let gh = dir.join("gh");
-    std::fs::write(&gh, script).expect("stub gh written");
-    std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755))
-        .expect("stub gh executable");
+    validation::spawn::write_executable(&gh, script).expect("stub gh written");
     let path = format!(
         "{}:{}",
         dir.display(),
@@ -459,7 +457,7 @@ fn run_check(tag: &str, title: &str, reviews: Vec<Value>, commits: &[C]) -> (boo
         .args(["reviews-check", "--pr", "62"])
         .env("PATH", path)
         .env_remove("GITHUB_EVENT_PATH")
-        .output()
+        .timed_output()
         .expect("xtask ran");
     (
         out.status.success(),
