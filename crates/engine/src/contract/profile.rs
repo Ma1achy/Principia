@@ -6,6 +6,8 @@
 //! [`FrameRecord`] is the measurement struct, always compiled: the reporting is toggleable, the measurement is not
 //! (telemetry §5.5). The engine writes it, `prin` reads and writes it, and the dev GUI's profiler reads it.
 
+use std::collections::HashSet;
+use std::hash::Hash;
 use std::io;
 
 use serde::{Deserialize, Deserializer, Serialize};
@@ -374,7 +376,7 @@ pub struct Allocation {
 }
 
 /// The memory pools the profiler tracks: heap, GPU and tile cache (render_gui_spec § "Profiler").
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Pool {
     /// The CPU heap.
@@ -409,17 +411,18 @@ where
 }
 
 /// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range (a
-/// negative ms, NaN or an infinity), a frame with one `present` null and the other not, or a pool whose `bytes` is not
-/// the sum of its `by_kind` bytes is an error, and nothing is written.
+/// negative ms, NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the
+/// sum of its `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
+/// `allocations` is an error, and nothing is written.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
     check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     serde_json::to_writer_pretty(writer, trace)
 }
 
 /// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a missing
-/// key, even one whose value may be `null`, a value
-/// outside its range, a frame with one `present` null and the other not, and a pool whose `bytes` is not the sum of its
-/// `by_kind` bytes, so what `read` accepts validates against [`SCHEMA_V1`].
+/// key, even one whose value may be `null`, a value outside its range, a frame with one `present` null and the other
+/// not, a pool whose `bytes` is not the sum of its `by_kind` bytes, and two entries for one type in a pool's `by_kind`
+/// or for one kind and pool in a stage's `allocations`, so what `read` accepts validates against [`SCHEMA_V1`].
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
     let trace: Trace = serde_json::from_reader(reader)?;
     check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
@@ -428,8 +431,12 @@ pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
 
 /// The rules of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
 /// and ≥ 0 except `playhead_dt`; `stage_ms.present` and `stages.present` null together; each pool's `bytes` the sum
-/// of its `by_kind` bytes. The integers' widths are the types'.
+/// of its `by_kind` bytes; one `by_kind` entry per type in a pool, and one `allocations` entry per kind and pool in a
+/// stage. The integers' widths are the types'.
 fn check_ranges(trace: &Trace) -> Result<(), String> {
+    // One set of each for the whole trace, cleared for each list, so its capacity is allocated once, not per frame.
+    let mut kinds = Seen::default();
+    let mut kind_pools = Seen::default();
     let header = &trace.header;
     if let Some(rate) = header.precision.f64_rate {
         non_negative("header.precision.f64_rate", rate)?;
@@ -466,7 +473,20 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
         }
         for stage in Stage::ALL {
             if let Some(sections) = frame.stages.get(stage) {
-                check_sections(&at(&format!("stages.{}", stage.key())), sections)?;
+                let path = at(&format!("stages.{}", stage.key()));
+                check_sections(&path, sections)?;
+                let pairs = sections
+                    .allocations
+                    .iter()
+                    .map(|a| (a.kind.as_str(), a.pool));
+                if let Some(j) = kind_pools.first_repeat(pairs) {
+                    let a = &sections.allocations[j];
+                    return Err(format!(
+                        "{path}.allocations[{j}] repeats kind {:?} in pool {}: one entry per kind and pool",
+                        a.kind,
+                        serde_json::to_string(&a.pool).unwrap_or_default()
+                    ));
+                }
             }
         }
         let live = &frame.live_memory;
@@ -483,9 +503,36 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
                     pool.bytes
                 ));
             }
+            if let Some(j) = kinds.first_repeat(pool.by_kind.iter().map(|k| k.kind.as_str())) {
+                return Err(format!(
+                    "{}[{j}] repeats kind {:?}: one entry for each type",
+                    at(&format!("live_memory.{name}.by_kind")),
+                    pool.by_kind[j].kind
+                ));
+            }
         }
     }
     Ok(())
+}
+
+/// The keys seen so far in one list, to find a repeat (dd_telemetry_and_tiers §5: one entry per type, or per kind and
+/// pool). JSON Schema can't express uniqueness by a key, so only the reader checks it.
+struct Seen<K>(HashSet<K>);
+
+impl<K> Default for Seen<K> {
+    fn default() -> Self {
+        Seen(HashSet::new())
+    }
+}
+
+impl<K: Eq + Hash> Seen<K> {
+    /// The index of the first key in `keys` that repeats an earlier one, if any.
+    fn first_repeat(&mut self, keys: impl IntoIterator<Item = K>) -> Option<usize> {
+        self.0.clear();
+        keys.into_iter()
+            .enumerate()
+            .find_map(|(j, key)| (!self.0.insert(key)).then_some(j))
+    }
 }
 
 fn check_sections(path: &str, sections: &StageSections) -> Result<(), String> {

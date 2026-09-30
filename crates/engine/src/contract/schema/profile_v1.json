@@ -156,7 +156,7 @@
       }
     },
     "pool_live": {
-      "$comment": "bytes is the sum of by_kind's bytes; JSON Schema cannot express the sum, so the reader alone checks it (dd_telemetry_and_tiers §5).",
+      "$comment": "bytes is the sum of by_kind's bytes, and by_kind has one entry for each kind; JSON Schema cannot express the sum or uniqueness by a key, so the reader alone checks them (dd_telemetry_and_tiers §5).",
       "type": "object",
       "additionalProperties": false,
       "required": ["bytes", "by_kind"],
@@ -232,6 +232,7 @@
       }
     },
     "allocation": {
+      "$comment": "A stage's allocations have one entry per kind and pool; JSON Schema cannot express uniqueness by a key, so the reader alone checks it (dd_telemetry_and_tiers §5).",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "pool", "count", "bytes"],
