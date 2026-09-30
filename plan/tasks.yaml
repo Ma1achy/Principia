@@ -2058,7 +2058,7 @@
   title: "Browser build: the wasm engine in a Web Worker on an OffscreenCanvas, the TS shell, coi-serviceworker"
   depends_on: [TASK-M8-02, TASK-M8-04, TASK-M7-16]
   needs: [REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058]
-  requirements: [REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047]
+  requirements: [REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M8-38

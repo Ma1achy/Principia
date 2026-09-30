@@ -154,6 +154,7 @@ Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 sc
 - **Vertex and fragment shaders (display):** fast-math may stay on.
 - **The exception:** fragment paths that recompute physics to check agreement — the DECODE and ROUNDTRIP presets (R-116; `principia_colour_composition.md` §6) — compare within a stated tolerance, a calibration requirement (R-71), not bit-exactly: the DECODE view's agreement presets, fragment against compute, within a tolerance calibrated for them; ROUNDTRIP, computed wholly in the fragment, within ε_phys (`principia_inverse_encode_contract.md` Part 4).
 - The telemetry header records the compute setting asked for and each stage's mode as compiled — compute, vertex and fragment (`principia_dd_telemetry_and_tiers.md` §5).
+- **In the browser build (R-303):** WebGPU offers no fast-math control, so off can't be guaranteed there: each stage's compiled mode is recorded as "unknown", the Run window's control is disabled, and browser runs are held to the Tier-N tolerances native wgpu sets (R-85), measured, not bit-exact, whatever the setting. The setting itself stays on the sim key and in pxpack.
 
 ---
 
