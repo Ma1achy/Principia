@@ -17,7 +17,8 @@ Fails if:
     the matching forward line under its heading (R-292);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
-and also runs plan/tools/coverage.py, milestones.py and reviewer_lists.py with --check.
+and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
+fails if plan/CURRENT_RULES.md is stale, R-292).
 
 Usage: python3 plan/check_plan.py
 """
@@ -241,7 +242,8 @@ def main():
     errors += missing_forward_lines()
     errors += unresolved_refs()
 
-    for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py"):
+    for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",
+                 "plan/tools/current_rules.py"):
         r = subprocess.run([sys.executable, tool, "--check"], capture_output=True, text=True)
         if r.returncode:
             errors.append(f"{tool} --check failed:\n{r.stdout}{r.stderr}".rstrip())

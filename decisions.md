@@ -50,7 +50,7 @@ List it with audit B4. It has no LaTeX cross-check. Until it's decided, the mark
 `principia_dd_integrator.md` §3.6 (collision beats escape) stands.
 
 ## R-7 — Step 3's done-check *(closes RQ-6)*
-*Amended by the entry "R-7 amended", below.*
+*Amended by the entry "R-7 amended — part (a)'s grep".*
 *24 Sep 2026 · applied in step 3*
 
 Step 3 is done when both of these hold:
