@@ -215,6 +215,10 @@ fn run_case(
                 artboard: beside,
             })
         }
+        (None, Some(controls)) if controls.is_empty() => Err(
+            "presence-only case names no control, so it asserts nothing and can never fail (R-129, PIT-3)"
+                .to_owned(),
+        ),
         (None, Some(controls)) => {
             let missing: Vec<&str> = controls
                 .iter()
