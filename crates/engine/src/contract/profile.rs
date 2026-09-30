@@ -8,7 +8,7 @@
 
 use std::io;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// The JSON Schema of profiler schema v1, checked in beside this module.
 pub const SCHEMA_V1: &str = include_str!("schema/profile_v1.json");
@@ -35,8 +35,10 @@ pub struct Trace {
     /// The frame records.
     pub frames: Vec<FrameRecord>,
     /// The precomputed leak flags; `None` when not precomputed.
+    #[serde(deserialize_with = "nullable")]
     pub leak_flags: Option<Vec<Summary>>,
     /// The precomputed hot-path summaries; `None` when not precomputed.
+    #[serde(deserialize_with = "nullable")]
     pub hot_paths: Option<Vec<Summary>>,
 }
 
@@ -57,6 +59,7 @@ pub struct SessionHeader {
     /// The build's provenance.
     pub build: Build,
     /// The display; `None` for a headless run.
+    #[serde(deserialize_with = "nullable")]
     pub display: Option<Display>,
     /// The run's full configuration, a JSON object (telemetry §5, "Self-contained").
     pub config: serde_json::Map<String, serde_json::Value>,
@@ -73,6 +76,7 @@ pub struct Device {
     /// The CPU's core count.
     pub cpu_cores: u32,
     /// The GPU's core count; `None` when not reported.
+    #[serde(deserialize_with = "nullable")]
     pub gpu_cores: Option<u32>,
     /// VRAM or unified memory.
     pub memory: Memory,
@@ -129,6 +133,7 @@ pub struct Precision {
     /// Whether f64 is supported.
     pub f64: bool,
     /// The reported f64 rate as a fraction of the f32 rate; `None` when not reported.
+    #[serde(deserialize_with = "nullable")]
     pub f64_rate: Option<f64>,
 }
 
@@ -280,6 +285,7 @@ pub struct StageMs {
     /// Upload.
     pub upload: f64,
     /// Present.
+    #[serde(deserialize_with = "nullable")]
     pub present: Option<f64>,
 }
 
@@ -296,6 +302,7 @@ pub struct Stages {
     /// Upload.
     pub upload: StageSections,
     /// Present.
+    #[serde(deserialize_with = "nullable")]
     pub present: Option<StageSections>,
 }
 
@@ -387,7 +394,18 @@ pub struct Event {
     /// When, ms from the start of the frame.
     pub at_ms: f64,
     /// What happened, as text; `None` when the name says it all.
+    #[serde(deserialize_with = "nullable")]
     pub detail: Option<String>,
+}
+
+/// Reads a key §5 lets be `null`: the key must be there (its absence is not `null`, and not v1), and `null` is `None`.
+/// Without it, serde reads a missing `Option` key as `None`.
+fn nullable<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::deserialize(deserializer)
 }
 
 /// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range (a
@@ -398,7 +416,8 @@ pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::E
     serde_json::to_writer_pretty(writer, trace)
 }
 
-/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a value
+/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a missing
+/// key, even one whose value may be `null`, a value
 /// outside its range, a frame with one `present` null and the other not, and a pool whose `bytes` is not the sum of its
 /// `by_kind` bytes, so what `read` accepts validates against [`SCHEMA_V1`].
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
