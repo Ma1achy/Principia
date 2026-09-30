@@ -2917,3 +2917,55 @@ Tick any you don't accept.
      convergence study, and confirmed at the M3 gate; until then the gate keeps printing "not yet calibrated".
   2. **Keep it at M0** with a value from the literature or a stated prior, marked provisional.
 - **Needed:** a ruling on where the value is proposed. Not blocking PR #68, which meets its verify line.
+## RQ-166: the screenshot runner lives in xtask, but nothing may depend on `gui`, so it has no route to real GUI surfaces *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map": "`gui` (the dev GUI: depends on
+  `engine`'s typed surface only; nothing depends on it)", "`xtask` (the runners: reads `cargo metadata`; no crate depends
+  on it)", and "Every other workspace edge is forbidden; … and nothing on `gui`". `plan/tasks/M0/TASK-M0-20.md`
+  § Deliverables: "`xtask/src/screenshot.rs` — `cargo xtask screenshot <suite>`: renders a GUI surface headless (native
+  wgpu offscreen) and writes the capture beside the artboard it names". `plan/tasks/M6/TASK-M6-22.md` § Acceptance
+  tests: "`cargo xtask screenshot 04_windows` — presence only (R-129): the Run window's "quality: Custom" section shows
+  each control (REQ-GUI-014)".
+- **What:** raised by TASK-M0-20's implementer (PR #72) and confirmed by its code reviewer. The runner in PR #72 renders
+  only surfaces described as data in its fixtures (`button`/`checkbox` controls in a panel). From TASK-M6-22 onward, 32
+  task files call `cargo xtask screenshot <suite>` on the real windows (`04_windows`, `01_main`, `02_stain`, …), which
+  are built in `crates/gui`. §7.1 forbids `xtask → gui`, so the runner can't call that code, and the corpus doesn't say
+  how it gets the real surfaces rendered. Nothing is blocked until TASK-M6-22.
+- **Options seen:**
+  1. **`gui` ships a headless capture mode the runner spawns (recommended).** E.g. `gui --screenshot <suite> <case>
+     --out <png>` or a separate `gui` binary target. It renders the named window offscreen and writes the PNG plus the
+     AccessKit names, and the runner compares or checks presence, as `cargo xtask gate` spawns validation's binary
+     (R-187 has the same shape for `prin`). No new edge. `gui` owns which window is which, and the case format's
+     `surface` field names a kind (`data` today, `gui` later).
+  2. **Allow `xtask → gui` as a normal dependency.** It's the simplest code, but it changes §7.1's "nothing depends on
+     `gui`" and puts the whole GUI build under xtask's build, so every `cargo xtask` command compiles egui and the
+     engine.
+  3. **The capture moves into `crates/gui`'s own tests** (`cargo test -p gui screenshot_*`), and `cargo xtask
+     screenshot` only collects and compares their output. No edge, but the 32 task files' commands and REQ-TOOL-134's
+     runner change shape.
+- **Needed:** a ruling on the route, before TASK-M6-22 is built. TASK-M0-20 doesn't wait: its runner is the same under
+  every option, and option 1 only adds a surface kind.
+
+## RQ-167: "presence" has no definition: a control clipped out of view still counts as present *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `decisions.md` § "R-129 — Where the surfaces with no artboard live": "Until the M8 dev GUI they're
+  checked by presence only, not layout." `plan/requirements.yaml` REQ-GUI-014 verify detail: "presence only (R-129 …):
+  the Run window's 'quality: Custom' section shows each control"; REQ-TOOL-058: "… the Profiler tab shows the four
+  items". `plan/tasks/M0/TASK-M0-20.md` § Deliverables: "it lists the controls or items it must contain, and the runner
+  asserts them".
+- **What:** raised by TASK-M0-20's gui reviewer (PR #72). The runner's presence check collects every AccessKit node
+  name egui produced (`xtask/src/screenshot.rs:307-314`) without looking at its bounds. In a probe with a 120×20 surface,
+  the capture shows only button "A", but presence passes for `["A", "Far below"]`. The requirements say "shows", and
+  the corpus doesn't define whether a control laid out but clipped (off the surface, cut by a fixed panel, or scrolled
+  below the fold) is present. A missing definition, R-72. Nothing is affected until the first M6 presence case
+  (TASK-M6-22).
+- **Options seen:**
+  1. **Present = in egui's tree and its rect intersects the visible surface (recommended).** It matches "shows". A
+     control in a scroll area counts only if it is scrolled into view, so a case that needs one below the fold scrolls
+     to it first. The runner already has each node's bounds.
+  2. **Present = in egui's tree, anywhere.** Today's behaviour. It's weaker than "shows": a control cut off by a panel
+     passes.
+  3. **Both, per case.** A case field (`"visible": true`) picks the stricter check. It's more flexible, but every case
+     author has to choose.
+- **Needed:** a definition, before TASK-M6-22. TASK-M0-20 doesn't wait: option 1 is a small change to the runner, made
+  by whichever task first needs it, or by a follow-up task.
