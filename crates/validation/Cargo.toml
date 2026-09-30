@@ -12,6 +12,9 @@ render = { path = "../render" }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 pollster = "1"
 proptest = "1.11"
+# The gate runner reads `fixtures/gates/<gate>/` and writes its reports as JSON (TASK-M0-05).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 # The spawn helper signals a timed-out child's process group (R-217). rustix is already in the build, under tempfile.
 [target.'cfg(unix)'.dependencies]
@@ -24,4 +27,10 @@ controls = []
 # The subprocess bodies qa's tests spawn, out of libtest (R-210).
 [[bin]]
 name = "qa_child"
+test = false
+
+# The numerical-gate runner, which `cargo xtask gate` runs as a separate process: xtask reaches validation only as a
+# dev-dependency (systems_architecture §7.1; R-176, R-187).
+[[bin]]
+name = "gate"
 test = false
