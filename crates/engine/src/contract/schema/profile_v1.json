@@ -37,13 +37,14 @@
     "count": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
     "count32": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
     "session_header": {
+      "$comment": "A session that opens no GPU (R-308) writes backend.api \"none\" and null for backend.driver, device.gpu, device.gpu_cores, device.memory and precision.",
       "type": "object",
       "additionalProperties": false,
       "required": ["device", "backend", "precision", "build", "display", "config"],
       "properties": {
         "device": { "$ref": "#/$defs/device" },
         "backend": { "$ref": "#/$defs/backend" },
-        "precision": { "$ref": "#/$defs/precision" },
+        "precision": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/precision" }] },
         "build": { "$ref": "#/$defs/build" },
         "display": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/display" }] },
         "config": { "type": "object" }
@@ -54,11 +55,11 @@
       "additionalProperties": false,
       "required": ["gpu", "cpu", "cpu_cores", "gpu_cores", "memory"],
       "properties": {
-        "gpu": { "type": "string" },
+        "gpu": { "oneOf": [{ "type": "null" }, { "type": "string" }] },
         "cpu": { "type": "string" },
         "cpu_cores": { "$ref": "#/$defs/count32" },
         "gpu_cores": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count32" }] },
-        "memory": { "$ref": "#/$defs/memory" }
+        "memory": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/memory" }] }
       }
     },
     "memory": {
@@ -99,8 +100,8 @@
       "additionalProperties": false,
       "required": ["api", "driver"],
       "properties": {
-        "api": { "enum": ["metal", "vulkan", "dx12", "webgpu"] },
-        "driver": { "type": "string" }
+        "api": { "enum": ["metal", "vulkan", "dx12", "webgpu", "none"] },
+        "driver": { "oneOf": [{ "type": "null" }, { "type": "string" }] }
       }
     },
     "precision": {

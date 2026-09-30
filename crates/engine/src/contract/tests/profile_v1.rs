@@ -91,21 +91,21 @@ fn header(display: Option<Display>) -> SessionHeader {
     config.insert("n".to_owned(), json!(64));
     SessionHeader {
         device: Device {
-            gpu: "Apple M3".to_owned(),
+            gpu: Some("Apple M3".to_owned()),
             cpu: "Apple M3".to_owned(),
             cpu_cores: 8,
             gpu_cores: Some(10),
-            memory: Memory::Unified { bytes: 18 << 30 },
+            memory: Some(Memory::Unified { bytes: 18 << 30 }),
         },
         backend: Backend {
             api: Api::Metal,
-            driver: "metal 3".to_owned(),
+            driver: Some("metal 3".to_owned()),
         },
-        precision: Precision {
+        precision: Some(Precision {
             f32: true,
             f64: false,
             f64_rate: None,
-        },
+        }),
         build: Build {
             commit: "f8a7f8c".to_owned(),
             profile: "release".to_owned(),
@@ -1306,7 +1306,7 @@ fn profile_v1_ranges_write_refuses_out_of_range() {
         (
             {
                 let mut trace = interactive();
-                trace.header.precision.f64_rate = Some(f64::NAN);
+                trace.header.precision.as_mut().unwrap().f64_rate = Some(f64::NAN);
                 trace
             },
             "a NaN f64_rate",

@@ -10,7 +10,11 @@ kernel = { path = "../kernel" }
 render = { path = "../render" }
 # Profiler schema v1 is typed Rust with serde, written and read as JSON (R-56, TASK-M0-17).
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# `float_roundtrip` reads every float exactly, so a canonical number reads back to the same value; `raw_value` lets the
+# profiler header carry `config` as its canonical text (gui_state_contract §2, R-309; TASK-M0-18).
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
+# The shortest round-trip digits of an f64, for the canonical serialisation's number formatting (REQ-TOOL-145).
+ryu = "1"
 
 # The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
 # so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).
