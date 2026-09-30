@@ -146,6 +146,8 @@ fn interactive() -> Trace {
             dpi_scale: 2.0,
         })),
         frames: vec![frame(0, 0.0, true), frame(1, 0.125, true)],
+        leak_flags: None,
+        hot_paths: None,
     }
 }
 
@@ -155,6 +157,8 @@ fn batch() -> Trace {
         schema: SchemaId::V1,
         header: header(None),
         frames: vec![frame(0, 0.0, false)],
+        leak_flags: None,
+        hot_paths: None,
     }
 }
 
@@ -265,6 +269,21 @@ fn check_rejected(doc: &Value, what: &str) {
         read(text.as_slice()).is_err(),
         "{what} was accepted by the reader"
     );
+}
+
+fn check_accepted(doc: &Value, what: &str) {
+    let errors: Vec<String> = validator()
+        .iter_errors(doc)
+        .map(|e| e.to_string())
+        .collect();
+    assert!(
+        errors.is_empty(),
+        "{what} was rejected by profile_v1.json: {errors:?}"
+    );
+    let text = serde_json::to_vec(doc).expect("not serialisable");
+    if let Err(e) = read(text.as_slice()) {
+        panic!("{what} was rejected by the reader: {e}");
+    }
 }
 
 /// Telemetry §2's frame record, and nothing more: a v1 frame record is a superset of it.
@@ -488,4 +507,41 @@ validation::negative_control!(
     "another trace's file must not read back as this one",
     expected = "does not read back as the trace written",
     check_reads_back(&interactive(), &bytes(&batch()))
+);
+
+// ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----
+
+/// The interactive trace, as written, with a leak flag and a hot-path summary at the file's top.
+fn with_summaries() -> Value {
+    let mut doc = written(&interactive());
+    doc["leak_flags"] = json!([{"kind": "tile", "pool": "tile_cache", "growth_bytes_per_s": 4096}]);
+    doc["hot_paths"] = json!([{"scope": "quadtree", "p95_ms": 1.5}]);
+    doc
+}
+
+#[test]
+fn profile_v1_summaries_have_their_place() {
+    let doc = written(&interactive());
+    assert!(
+        doc["leak_flags"].is_null() && doc["hot_paths"].is_null(),
+        "the writer did not write null summaries"
+    );
+    check_accepted(
+        &with_summaries(),
+        "a file with leak flags and hot-path summaries",
+    );
+}
+
+validation::negative_control!(
+    profile_v1_summaries_have_their_place,
+    "a file whose summaries key is missing must be rejected",
+    expected = "was rejected by profile_v1.json",
+    check_accepted(
+        &{
+            let mut doc = with_summaries();
+            doc.as_object_mut().expect("file").remove("hot_paths");
+            doc
+        },
+        "a file without hot_paths"
+    )
 );

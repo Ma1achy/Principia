@@ -24,7 +24,7 @@ pub enum SchemaId {
     V1,
 }
 
-/// One profiler file: the session header, then the frame records (telemetry §5).
+/// One profiler file: the session header, the frame records, then the precomputed summaries (telemetry §5).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trace {
@@ -34,7 +34,15 @@ pub struct Trace {
     pub header: SessionHeader,
     /// The frame records.
     pub frames: Vec<FrameRecord>,
+    /// The precomputed leak flags; `None` when not precomputed.
+    pub leak_flags: Option<Vec<Summary>>,
+    /// The precomputed hot-path summaries; `None` when not precomputed.
+    pub hot_paths: Option<Vec<Summary>>,
 }
+
+/// One leak flag or hot-path summary (render_gui_spec § "Profiler"): a JSON object whose keys the task closing
+/// REQ-TOOL-100 defines. Until then, any object.
+pub type Summary = serde_json::Map<String, serde_json::Value>;
 
 /// The session header: telemetry §2's per-session fields, and the full config §5 requires.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

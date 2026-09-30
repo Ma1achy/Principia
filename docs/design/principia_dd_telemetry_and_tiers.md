@@ -195,13 +195,20 @@ form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/c
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
 key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 
-**The file** is one JSON object: the session header, then the frame records.
+**The file** is one JSON object: the session header, the frame records, then the precomputed summaries.
 
 ```
 schema     "principia-profile-v1"
 header     the session header, once
 frames     [frame record, ...]
+leak_flags [leak flag, ...], or null when not precomputed
+hot_paths  [hot-path summary, ...], or null when not precomputed
 ```
+
+`leak_flags` and `hot_paths` are the precomputed leak flags and hot-path summaries that `principia_render_gui_spec.md`
+§ "Profiler" puts in schema v1, so an agent reads conclusions, not raw traces. They summarise the whole session, so
+they sit at the file's top, after the frames. Each entry is a JSON object, and the task that closes REQ-TOOL-100 (M8)
+defines its keys; until then, a writer writes `null`, and a reader accepts any object as an entry.
 
 **The session header** carries §2's per-session fields, and the full config that §5 requires:
 

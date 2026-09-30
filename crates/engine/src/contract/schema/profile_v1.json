@@ -4,13 +4,19 @@
   "title": "Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, \"Profiler schema v1: the keys and the nesting\")",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "header", "frames"],
+  "required": ["schema", "header", "frames", "leak_flags", "hot_paths"],
   "properties": {
     "schema": { "const": "principia-profile-v1" },
     "header": { "$ref": "#/$defs/session_header" },
-    "frames": { "type": "array", "items": { "$ref": "#/$defs/frame_record" } }
+    "frames": { "type": "array", "items": { "$ref": "#/$defs/frame_record" } },
+    "leak_flags": { "$ref": "#/$defs/summaries" },
+    "hot_paths": { "$ref": "#/$defs/summaries" }
   },
   "$defs": {
+    "summaries": {
+      "$comment": "Precomputed leak flags or hot-path summaries; each entry's keys are defined by the task closing REQ-TOOL-100.",
+      "oneOf": [{ "type": "null" }, { "type": "array", "items": { "type": "object" } }]
+    },
     "ms": { "type": "number", "minimum": 0 },
     "count": { "type": "integer", "minimum": 0 },
     "session_header": {
