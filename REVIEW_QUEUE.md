@@ -2813,3 +2813,48 @@ Tick any you don't accept.
      the R-33 reference as the exception.
 - **Needed:** a ruling on item 2. TASK-M0-02's REQ-SYS-007 record, and REQ-SYS-007's conformance to R-33, wait on it.
 - **Ruling:** R-265 (decisions.md): option 2, park it. Closed in TASK-M0-02 (REQ-SYS-007) and by the plan port on PR #61.
+
+## RQ-162: cargo-mutants can't exclude spirv-gated items by configuration, and "xtask's own harness plumbing" has no boundary *(plan, TASK-M0-23)*
+
+- **File, section:** `decisions.md` § "R-196 — Mutation testing joins the QA gate": "Excluded: generated code, GPU-only
+  (spirv-gated) paths and xtask's own harness plumbing." `plan/tasks/M0/TASK-M0-23.md` § Deliverables:
+  "`.cargo/mutants.toml` — cargo-mutants' configuration, holding the one exclusion list the per-PR job and TASK-M0-19's
+  nightly run share. Each exclusion is commented with which of R-196's three categories it falls in: generated code (…),
+  GPU-only paths (items gated on `target_arch = "spirv"`) and xtask's own harness plumbing." `plan/requirements.yaml`
+  REQ-VAL-148: "excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing".
+- **What:**
+  1. *spirv-gated items.* cargo-mutants (27.1.0, the current release) can exclude only by file glob (`exclude_globs`)
+     or by a regex over mutant names (`exclude_re`, e.g. `crates/kernel/src/x.rs:9:35: replace gpu::inner -> u32 with
+     0`). Neither sees attributes. It skips an item by attribute only for `#[cfg(test)]`, `#[test]`, `#[mutants::skip]`
+     and `#[cfg_attr(test, mutants::skip)]` (its `visit.rs`, `attrs_excluded`). Checked: `cargo mutants --Zmutate-file`
+     on a file with `#[cfg(target_arch = "spirv")] fn` and `mod` lists all their mutants, and `#[cfg_attr(target_arch =
+     "spirv", mutants::skip)]` is not recognised. A spirv-gated item is compiled out on the host, so every mutant in it
+     builds and passes and is reported missed: the per-PR job would fail on it (R-202). So the deliverable, "items gated
+     on `target_arch = "spirv"`" matched in `.cargo/mutants.toml`, can't be built as written. No spirv-gated item exists
+     yet, so today the exclusion has nothing to match; how it's built decides what the GPU tasks (M1 onward) must do.
+  2. *xtask's harness plumbing.* Nothing says which of xtask's code is "harness plumbing". xtask is the CLI dispatch
+     (`main.rs`, `lib.rs`), the per-push runner list (`ci.rs`), the `codegen` wrapper (`codegen.rs`) and the checks
+     themselves (`controls.rs`, `deps.rs`, `lint_constants.rs`, `pr_check.rs`, `reviews_check.rs`). The choice sets the
+     job's cost: the xtask test suite runs ~213 s unmutated on the human's Mac (measured at PR #39's head), and a missed
+     xtask mutant costs that again. Caught ones cost seconds, because `cargo test` stops at the first failing binary.
+     The merged PRs' diffs hold 0 to 211 xtask mutants each (`cargo mutants --list --in-diff`: #16 95, #19 52, #39 27,
+     #47 211, #50 40, #56 35, #57 37).
+- **Options seen:**
+  - *Item 1:*
+    1. **Marker (recommended).** Every spirv-gated item also carries `#[cfg_attr(test, mutants::skip)]`. cargo-mutants
+       recognises it, and it needs no dependency: the item is compiled out on the host, and on spirv `test` is off.
+       `.cargo/mutants.toml` carries the category as a comment naming the marker. A missing marker fails closed: the
+       item's mutants survive and the job names them.
+    2. **Path convention.** GPU-only items live only in files matching a glob (e.g. `**/spirv/**`), listed in
+       `exclude_globs`. The one list stays in `.cargo/mutants.toml`, but it's a layout rule on every GPU task, and it
+       also fails closed.
+    3. **Computed.** An xtask step parses the sources (a `syn` dependency), finds every item gated on
+       `target_arch = "spirv"` and passes their names as `--exclude-re` to the per-PR and nightly runs. Nothing is
+       asked of the GPU tasks, but the exclusion leaves `.cargo/mutants.toml` and ~100 more lines land in TASK-M0-23.
+  - *Item 2:*
+    1. **The wiring only (recommended, the tightest reading).** `xtask/src/main.rs` (argument dispatch and exit codes)
+       and `xtask/src/codegen.rs` (a wrapper that calls `ledger::gen::run`, whose logic is mutated in `ledger`). The
+       checks, and `ci.rs`'s runner loop, stay mutated.
+    2. **All of xtask.** `xtask/**`: the job runs no xtask mutants, and xtask's checks are never mutation-tested.
+- **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
+  option 1 applied). TASK-M0-23 waits on item 1.
