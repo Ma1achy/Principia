@@ -40,7 +40,7 @@
 - `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007).
 - `cargo test -p prin profile_show` — `prin profile show PATH --pretty` prints each line of a trace indented, and the printed JSON parses to the same values as the file; without `--pretty` it prints the file's lines unchanged (REQ-TOOL-139).
 - Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler" and approved by the physics reviewer (REQ-TOOL-119).
-- `cargo test -p prin profile_no_gpu` — the `synthetic_frames` header has `backend.api` "none" and `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; `prin` has no GPU adapter crate in its dependency tree; the typed form and `profile_v1.json` accept that header and still reject an `api` outside the five values (REQ-TOOL-144, R-308).
+- `cargo test -p prin profile_no_gpu` — the `synthetic_frames` header has `backend.api` "none" and `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; the `synthetic_frames` run requests no GPU adapter; the typed form and `profile_v1.json` accept that header and still reject an `api` outside the five values (REQ-TOOL-144, R-308).
 - Definition: the canonical serialisation's key order and number formatting written into gui_state_contract §2 and approved by the physics reviewer; serialising the same `SimConfig` and `RenderState` twice gives the same bytes, and a written number reads back to the same value (REQ-TOOL-145, R-309).
 
 ## Notes

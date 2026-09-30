@@ -15664,7 +15664,7 @@
     section: "R-308 — A session that opens no GPU writes `api: \"none\"`, its GPU fields null *(closes RQ-180)*"
   verify:
     method: unit test
-    detail: "prin profile's synthetic_frames header has backend.api \"none\" and those five fields null, and prin opens no adapter (no wgpu in its dependency tree); the typed form and profile_v1.json both accept that header and still reject an api outside the five values"
+    detail: "prin profile's synthetic_frames header has backend.api \"none\" and those five fields null, and the synthetic_frames run requests no GPU adapter; the typed form and profile_v1.json both accept that header and still reject an api outside the five values"
   rulings:
   - R-308
   milestone: M0
