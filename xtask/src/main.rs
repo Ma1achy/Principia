@@ -29,6 +29,10 @@ Commands:
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
                                   exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
+  pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
+                                  make mandatory that is missing or empty, and each validation meter or
+                                  discriminator line with no statement (R-180); reads the pull_request event JSON
+                                  at <file>, or at $GITHUB_EVENT_PATH
   reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
                                   Reviewers field names that has not approved on the head commit; reads PR <N>, or
                                   the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
@@ -58,6 +62,13 @@ fn main() -> ExitCode {
             };
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
+            Ok(path) => xtask::pr_check::run(Path::new(&path)),
+            Err(_) => {
+                Err("pr-check: no --event <file>, and $GITHUB_EVENT_PATH is not set".to_owned())
+            }
+        },
+        ["pr-check", "--event", path] => xtask::pr_check::run(Path::new(path)),
         ["reviews-check"] => xtask::reviews_check::run(&workspace_root(), None),
         ["reviews-check", "--pr", n] => match n.parse() {
             Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),

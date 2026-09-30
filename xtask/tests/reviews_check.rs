@@ -1,11 +1,13 @@
 //! `cargo xtask reviews-check`, the `reviews-complete` check (R-175; REQ-SYS-066): all roles approved on the head
 //! passes; an approval on an older commit, an APPROVE superseded by a later CHANGES and a missing role each fail
-//! naming the role.
+//! naming the role. An approval followed only by qa's own test commit counts on the head (R-260); one followed by a
+//! qa-titled commit that modifies a file, adds outside qa's paths, or by any other commit fails naming the role; a title
+//! naming no task passes with "no task, no named reviewers" (R-261; REQ-SYS-068).
 
 use std::path::Path;
 
 use validation::negative_control;
-use xtask::reviews_check::{check, parse_reviews, reviewers, task_file};
+use xtask::reviews_check::{check, parse_reviews, reviewers, task_file, verdict, Pr, NO_TASK};
 
 const HEAD: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -154,5 +156,102 @@ negative_control!(
         ))
         .expect("page parsed");
         assert_eq!(reviews.len(), 2, "pages not joined");
+    }
+);
+
+/// reviews-check's verdict on the PR fixture `name`, against the task files of this workspace.
+fn pr_verdict(name: &str) -> Result<String, String> {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let path = manifest.join(format!("tests/fixtures/{name}.json"));
+    let pr: Pr = serde_json::from_str(&std::fs::read_to_string(path).expect("fixture read"))
+        .expect("fixture parsed");
+    verdict(&manifest.join(".."), &pr)
+}
+
+/// The PR fixture passes.
+fn pr_passes(name: &str) {
+    let found = pr_verdict(name);
+    assert!(found.is_ok(), "PR fixture `{name}` failed: {found:?}");
+}
+
+/// The PR fixture fails naming role `code`, whose APPROVE is on the commit before the head, and not `qa`.
+fn pr_fails_naming_code(name: &str) {
+    let found = pr_verdict(name);
+    assert!(
+        found
+            .as_ref()
+            .is_err_and(|e| e.contains("role `code`") && !e.contains("role `qa`")),
+        "reviews-check did not fail naming `code`: {found:?}"
+    );
+}
+
+#[test]
+fn reviews_check_approval_before_qa_test_commit_counts_on_head() {
+    pr_passes("reviews_qa_commit");
+}
+
+#[test]
+fn reviews_check_qa_titled_commit_modifying_a_file_fails_naming_the_role() {
+    pr_fails_naming_code("reviews_qa_modifies");
+}
+
+#[test]
+fn reviews_check_qa_titled_commit_adding_outside_qa_paths_fails_naming_the_role() {
+    pr_fails_naming_code("reviews_qa_outside");
+}
+
+#[test]
+fn reviews_check_other_commit_after_approval_fails_naming_the_role() {
+    pr_fails_naming_code("reviews_other_commit");
+}
+
+#[test]
+fn reviews_check_title_naming_no_task_passes() {
+    let found = pr_verdict("reviews_no_task");
+    assert!(
+        found.as_ref().is_ok_and(|line| line.contains(NO_TASK)),
+        "no-task title did not pass with `{NO_TASK}`: {found:?}"
+    );
+    assert_eq!(NO_TASK, "no task, no named reviewers");
+}
+
+negative_control!(
+    reviews_check_approval_before_qa_test_commit_counts_on_head,
+    "an approval followed by a non-qa commit must fail the qa-commit check",
+    expected = "PR fixture `reviews_other_commit` failed",
+    pr_passes("reviews_other_commit")
+);
+
+negative_control!(
+    reviews_check_qa_titled_commit_modifying_a_file_fails_naming_the_role,
+    "a qa commit adding only under qa's paths gives no role to name",
+    expected = "reviews-check did not fail naming",
+    pr_fails_naming_code("reviews_qa_commit")
+);
+
+negative_control!(
+    reviews_check_qa_titled_commit_adding_outside_qa_paths_fails_naming_the_role,
+    "a qa commit adding only under qa's paths gives no role to name",
+    expected = "reviews-check did not fail naming",
+    pr_fails_naming_code("reviews_qa_commit")
+);
+
+negative_control!(
+    reviews_check_other_commit_after_approval_fails_naming_the_role,
+    "a qa commit adding only under qa's paths gives no role to name",
+    expected = "reviews-check did not fail naming",
+    pr_fails_naming_code("reviews_qa_commit")
+);
+
+negative_control!(
+    reviews_check_title_naming_no_task_passes,
+    "a title naming a task prints the roles, not the no-task line",
+    expected = "no-task title did not pass",
+    {
+        let found = pr_verdict("reviews_qa_commit");
+        assert!(
+            found.as_ref().is_ok_and(|line| line.contains(NO_TASK)),
+            "no-task title did not pass with `{NO_TASK}`: {found:?}"
+        );
     }
 );
