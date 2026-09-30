@@ -3236,7 +3236,7 @@ The comment-width nit (`xtask/src/mutants_check.rs` line 3, over 120 columns) is
 file.
 
 ## R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*
-*1 Oct 2026 · applied in this rulings PR: TASK-M0-11, TASK-M5-01, REQ-PAY-019, REQ-PAY-077*
+*1 Oct 2026 · applied in PR #97: TASK-M0-11, TASK-M5-01, REQ-PAY-019, REQ-PAY-077*
 
 "RQ-178: as recommended. M0 records §3.7's member list as ledger data and tests REQ-PAY-019 on it; building the struct
 moves to TASK-M5-01 (R-113)."
@@ -3250,7 +3250,7 @@ struct, the members' §3.8 entries and `class_histogram`'s placement are TASK-M5
 block said "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*
-*1 Oct 2026 · applied in this rulings PR: payload §3, generation-root §3.3, REQ-PAY-016, TASK-M0-11, TASK-M0-13*
+*1 Oct 2026 · applied in PR #97: payload §3, generation-root §3.3, REQ-PAY-016, TASK-M0-11, TASK-M0-13*
 
 "RQ-179: the four unset continuation_index cells hold 3 ("invalid"), matching dmin_pair."
 
@@ -3261,7 +3261,7 @@ the 3s: TASK-M0-11 (Rust) and TASK-M0-13 (WGSL, REQ-PAY-016) assert them. Number
 "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-308 — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*
-*1 Oct 2026 · applied in this rulings PR: telemetry §5, REQ-TOOL-144 (new), REQ-TOOL-006, TASK-M0-18*
+*1 Oct 2026 · applied in PR #97: telemetry §5, REQ-TOOL-144 (new), REQ-TOOL-006, TASK-M0-18*
 
 "RQ-180: a session that opens no GPU writes api: "none", with the other GPU fields null. Readers accept that. Never
 open an adapter just to fill the header."
@@ -3274,7 +3274,7 @@ TASK-M0-18 makes that change to TASK-M0-17's files, and M0's `prin profile` open
 Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
-*1 Oct 2026 · applied in this rulings PR: gui_state_contract §2, telemetry §5, render_gui_spec § "Export & share",
+*1 Oct 2026 · applied in PR #97: gui_state_contract §2, telemetry §5, render_gui_spec § "Export & share",
 image_embedding §6, export_animation Part 6, REQ-TOOL-002, REQ-TOOL-145 and REQ-TOOL-146 (new), TASK-M0-18,
 TASK-M8-32*
 
