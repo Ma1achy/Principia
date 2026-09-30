@@ -186,13 +186,14 @@ impl Config {
         Ok(())
     }
 
-    /// The fields in which `self` and `other` differ, in order.
+    /// The fields in which `self` and `other` differ, in order. Numbers are compared by value, so `1` and `1.0` are
+    /// the same.
     pub fn differing(&self, other: &Config) -> Vec<String> {
         let mut keys: Vec<&String> = self.0.keys().chain(other.0.keys()).collect();
         keys.sort();
         keys.dedup();
         keys.into_iter()
-            .filter(|k| self.0.get(*k) != other.0.get(*k))
+            .filter(|k| !same_value(self.0.get(*k), other.0.get(*k)))
             .cloned()
             .collect()
     }
@@ -236,6 +237,21 @@ impl Config {
             .map(|(k, v)| format!("{k}={v}"))
             .collect::<Vec<_>>()
             .join(" ")
+    }
+}
+
+/// Whether two field values are the same: numbers by value (`1` and `1.0` are one number, whatever their spelling),
+/// anything else by equality.
+fn same_value(a: Option<&Value>, b: Option<&Value>) -> bool {
+    match (a, b) {
+        (Some(Value::Number(x)), Some(Value::Number(y))) => match (x.as_i64(), y.as_i64()) {
+            (Some(i), Some(j)) => i == j,
+            _ => match (x.as_u64(), y.as_u64()) {
+                (Some(i), Some(j)) => i == j,
+                _ => x.as_f64() == y.as_f64(),
+            },
+        },
+        _ => a == b,
     }
 }
 

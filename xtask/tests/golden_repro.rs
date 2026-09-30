@@ -189,3 +189,27 @@ negative_control!(
         );
     }
 );
+
+// --- A number spelled two ways is one value: the pair differs in no field ------------------------------------------
+
+/// Arm a keeps the fixture's integer `disc: 0`; arm b sets `disc` to `b`, a float. `0.0` is the same number, so the
+/// pair differs in no field and is refused.
+fn check_same_number_refused(b: f64) {
+    let case = case();
+    let message =
+        golden::single_differing_field(&case.config, &config(&case, &[("constants.disc", b)]))
+            .expect_err("a pair differing only in a number's spelling was not refused");
+    assert!(message.contains("differ in 0 field(s)"), "{message}");
+}
+
+#[test]
+fn golden_repro_refuses_same_number_two_spellings() {
+    check_same_number_refused(0.0);
+}
+
+negative_control!(
+    golden_repro_refuses_same_number_two_spellings,
+    "arm b given a different number (1.0) instead of 0 spelled 0.0",
+    expected = "a pair differing only in a number's spelling was not refused",
+    check_same_number_refused(1.0)
+);
