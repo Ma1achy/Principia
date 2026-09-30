@@ -493,7 +493,9 @@ population = { name, lo, hi, count }
   confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement. A
   settled number or threshold is finite.
 - **`class`**: why the constant is admissible, one of philosophy §4.2's three: bounded by its own achievable maximum,
-  fixed by a conservation law, or expressed in canonical units.
+  fixed by a conservation law, or expressed in canonical units. `achievable-maximum` covers a format's achievable
+  extreme: a value fixed by a number format's limits, its greatest finite value or its smallest positive value
+  (`f16_finite_max`, `f16_min_subnormal`; R-278).
 - **`citation`**: where the value was measured or derived (INDEX, "The evidence base"): a corpus section, named by
   file and heading; a prin-rs `FINDINGS.md`, `README.md` or `results/` path at its prin-rs commit (R-159); or a
   calibration requirement id.
@@ -517,10 +519,11 @@ population = { name, lo, hi, count }
   the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
   and line. The generated files are exempt: their numbers are emitted from the ledger.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
-  into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1)
-  and the f16 pack clamp (payload §1), which today are all four entries below. The canonicalised table the hash covers
-  includes each such entry's value, type and class, not its citation text (R-251): changing a hashed entry's value,
-  type or class changes the schema version, and a citation-only edit does not. Any other register entry, such as a
+  into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
+  the f16 pack clamp (payload §1) and the f16 subnormal floor (R-271), which today are all five entries below. The
+  canonicalised table the hash covers includes each such entry's value, type and class, not its citation text
+  (R-251): changing a hashed entry's value, type or class changes the schema version, and a citation-only edit does
+  not. Any other register entry, such as a
   render or scheduler constant the lint brings into the register, is not hashed into the schema version: changing it
   has the blast radius caching_contract Part 2 gives its knob (render settings and
   scheduler knobs invalidate nothing; canonical_spec §9, invariant 3).
@@ -533,6 +536,7 @@ The register's entries, the constants the payload ledger uses:
 | `fgw_capacity` | 76 symbols, 1 + ⌊(121 − 2)/log₂3⌋ in the 121-bit mixed-radix payload | achievable-maximum | payload §3 |
 | `fgw_length_sentinel` | 127, the greatest value of the 7-bit length field | achievable-maximum | payload §3 |
 | `f16_finite_max` | 65504, binary16's greatest finite value; the pack clamp ±65504 | achievable-maximum | payload §1 |
+| `f16_min_subnormal` | 2⁻²⁴ ≈ 5.96e-8, binary16's smallest positive subnormal; a valid `d_min` below it is stored as it (bits `0x0001`), so 0.0 never appears | achievable-maximum | R-271, R-278 |
 
 `diffusion` has no sentinel in the register: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 

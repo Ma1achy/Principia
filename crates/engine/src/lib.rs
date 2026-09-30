@@ -8,10 +8,18 @@
 /// [`SimConfig`](contract::sim_config::SimConfig), [`RenderState`](contract::render_state::RenderState) and
 /// [`ViewUI`](contract::view_ui::ViewUI) schema, the typed edit [`SetField`](contract::set_field::SetField) and the
 /// GUI-sized [`Snapshot`](contract::snapshot::Snapshot). In: `set_field(path, value)`; out: a snapshot; both plain data.
+/// Beside them, profiler schema v1 ([`profile`](contract::profile), R-56), which the engine writes and `prin` and the
+/// dev GUI read.
 pub mod contract {
+    pub mod profile;
     pub mod render_state;
     pub mod set_field;
     pub mod sim_config;
     pub mod snapshot;
     pub mod view_ui;
+
+    #[cfg(test)]
+    mod tests {
+        mod profile_v1;
+    }
 }

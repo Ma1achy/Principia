@@ -1,8 +1,8 @@
 //! qa's test for TASK-M0-16's surfaces (gui_state_contract §1, §2; R-133; R-71): the five surfaces are declared in
 //! the engine crate, `pub` from its `contract` module, and carry no default: a default would be a value the corpus
-//! does not give (R-71), and the task's Deliverables say "no defaults". The engine crate has no `controls` feature
-//! and no dev-dependency on `validation`, so the control is written here by hand: a type with a default must trip
-//! the same check.
+//! does not give (R-71), and the task's Deliverables say "no defaults". Its control, registered with
+//! `negative_control!` since the engine crate took the `controls` feature (TASK-M0-17, R-176): a type with a default
+//! must trip the same check.
 
 use std::marker::PhantomData;
 
@@ -55,17 +55,22 @@ fn surfaces() -> [(&'static str, bool); 5] {
     ]
 }
 
-#[test]
-fn qa_the_five_surfaces_have_no_default() {
-    check_no_default(&surfaces());
-}
-
 #[derive(Default)]
 struct Defaulted;
 
-/// The hand-written negative control: a type with a default trips the check.
 #[test]
-#[should_panic(expected = "has a default")]
-fn qa_the_five_surfaces_have_no_default_control() {
-    check_no_default(&[("Defaulted", has_default!(Defaulted))]);
+fn qa_the_five_surfaces_have_no_default() {
+    // The probe must see a default where there is one, or its "no default" says nothing.
+    assert!(
+        has_default!(Defaulted),
+        "the probe does not see a type's default"
+    );
+    check_no_default(&surfaces());
 }
+
+validation::negative_control!(
+    qa_the_five_surfaces_have_no_default,
+    "a type with a default must trip the check",
+    expected = "has a default",
+    check_no_default(&[("Defaulted", has_default!(Defaulted))])
+);
