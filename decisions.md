@@ -3000,17 +3000,17 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   ROUNDTRIP presets compare within a stated tolerance. The setting joins the sim key (render contract Part 3) and the
   payload compatibility signature with its blast-radius row (caching contract Parts 1 and 2), the embedded record's
   sim fields (dd_image_embedding §6), and the Profiler and Run window (render_gui_spec §G5). Telemetry §5's header
-  records each stage's mode: compute, vertex and fragment. colour_composition §6 gives the agreement presets their
-  tolerance.
+  records the compute setting asked for and each stage's mode as compiled: compute, vertex and fragment.
+  colour_composition §6 gives the agreement presets their tolerance.
 - R-84 and R-116 carry forward lines: R-84's guarantee holds with compute fast-math off, and the agreement presets
   R-116 describes compare within a tolerance. REQ-INT-057 is qualified: "with the compute shaders' fast-math off, the
   default (R-297)".
 - Plan. REQ-SYS-074 (the explicit setting, default off, and the Metal passthrough for the compute pipelines only) and
-  REQ-TOOL-141 (each stage's mode in the session header) go to a new task, TASK-M0-44. REQ-SCHED-097 (the setting on
+  REQ-TOOL-141 (the compute setting and each stage's compiled mode in the session header) go to a new task, TASK-M0-44. REQ-SCHED-097 (the setting on
   the sim key) joins TASK-M4-08, which builds the sim key. REQ-PERF-094 (the march's speed, on against off, a
   benchmark on the human's Mac, R-186) and REQ-VAL-177 (the on-versus-off differences, measured and reported) go to a
   new task, TASK-M4-20. REQ-TOOL-142 (the setting in the embedded record) joins TASK-M7-31, which builds what
-  travels. REQ-GUI-163 (the Run window control) and REQ-GUI-164 (the Profiler's per-stage modes) go to a new M8 task,
+  travels. REQ-GUI-163 (the Run window control) and REQ-GUI-164 (the Profiler's compute setting) go to a new M8 task,
   TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
   kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
@@ -3031,9 +3031,14 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   second tolerance.
 - Design (where the setting lives): it is a `SimConfig` field (gui_state_contract §2), since it is on the sim key and
   every Run window field is a `SimConfig` field (render_gui_spec §G5).
-- Design (what is recorded): the header records the mode each stage was compiled with on the running backend, not
-  only the setting asked for. Where wgpu's own path compiles without fast-math and offers no switch (Vulkan, on
-  lavapipe in CI), off is that path, and on compiles the same way and is recorded as off.
+- Design (what is recorded): the header records both the compute setting asked for, the sim key's, and the mode each
+  stage was compiled with on the running backend. Where wgpu's own path compiles without fast-math and offers no
+  switch (Vulkan, on lavapipe in CI), off is that path, and on compiles the same way: the header records the setting
+  on and the compute stage compiled off.
+- Design (what the Profiler shows): the compute setting, as R-297 asks, with the compute stage's compiled mode beside
+  it where the two differ, so a run on lavapipe with the setting on doesn't read as fast-math on. The vertex and
+  fragment modes are recorded in the header but not shown in the Profiler, since R-297 asks only that the compute
+  setting be shown there.
 - Design (the difference report): `cargo xtask gate fast-math-diff`, run in the `gpu-metal` job; it reports branch-word
   forks, the largest continuous-word differences and the outcome-class fractions, on against off, and its control is
   off against off, exactly zero.

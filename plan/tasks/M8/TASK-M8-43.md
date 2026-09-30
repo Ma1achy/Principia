@@ -1,4 +1,4 @@
-# TASK-M8-43 — The compute fast-math setting in the GUI: the Run window control and the Profiler's per-stage modes
+# TASK-M8-43 — The compute fast-math setting in the GUI: the Run window control and the Profiler's fast-math line
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-163, REQ-GUI-164
@@ -11,9 +11,9 @@
 ## Goal
 The compute shaders' fast-math setting is on the sim key and shown in the Profiler and the Run window (R-297). The Run
 window shows it as a control under its `SimConfig` name, off by default; changing it is marked as re-integrating, and
-while it is on the window says that parity is measured, not exact. The Profiler shows each shader stage's fast-math
-mode, compute, vertex and fragment, from the session header. Neither has an artboard, so both are checked by presence
-only (R-129).
+while it is on the window says that parity is measured, not exact. The Profiler shows the compute setting from the
+session header, with the compute stage's mode as compiled beside it where the two differ (on lavapipe, on compiles as
+off). Neither has an artboard, so both are checked by presence only (R-129).
 
 ## References
 - `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
@@ -27,14 +27,15 @@ only (R-129).
 ## Deliverables
 - `crates/gui/src/windows/run.rs` — the compute fast-math control, its re-integrate marking and the measured-not-exact
   note.
-- `crates/gui/src/windows/profiler/` — the per-stage fast-math line, read from the session header.
+- `crates/gui/src/windows/profiler/` — the fast-math line (the compute setting, and the compiled compute mode where it
+  differs), read from the session header.
 - Tests `run_fast_math` and `profiler_fast_math`; screenshot cases `04_windows/run_fast_math` and
   `04_windows/profiler_fast_math`.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
 - `cargo xtask screenshot 04_windows` (run_fast_math) and `cargo test -p gui run_fast_math` — the control is present in the Run window, reading off by default (presence only, no artboard, R-129); toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on (REQ-GUI-163).
-- `cargo xtask screenshot 04_windows` (profiler_fast_math) and `cargo test -p gui profiler_fast_math` — the three modes appear in the Profiler (presence only, R-129); a session-header fixture with compute on shows compute on, and one with it off shows it off (REQ-GUI-164).
+- `cargo xtask screenshot 04_windows` (profiler_fast_math) and `cargo test -p gui profiler_fast_math` — the compute setting appears in the Profiler (presence only, R-129); a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both (REQ-GUI-164).
 
 ## Notes
 - TASK-M8-42's screen sweep, which checks every schema field is exposed, depends on this task.

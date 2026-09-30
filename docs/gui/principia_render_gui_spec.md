@@ -177,7 +177,8 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 - a flame chart of nested scopes on the main thread; GPU timestamps per pass;
 - memory (heap, GPU, tile cache) over time; live allocations by type, with their change over 60 s;
 - a **leak detector** that flags steady growth while idle;
-- the fast-math mode of each shader stage — compute, vertex, fragment — from the session header (telemetry §5; R-297).
+- the compute shaders' fast-math setting, from the session header, with the compute stage's mode as compiled beside it
+  where the two differ (telemetry §5; R-297).
 
 **Schema v1 (R-56):** telemetry §2's frame record and its **five stages** (integrate / reduce / colour / upload / present)
 at the top level; nested scopes, GPU passes, allocations and events beneath them. JSON. Leak flags and hot-path summaries

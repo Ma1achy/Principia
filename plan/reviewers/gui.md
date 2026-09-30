@@ -183,7 +183,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-142 — Run window screenshot lists contract parameter names; substep cap default reads 64; palette colours equal corpus hex codes.
 - [ ] REQ-GUI-161 — with the shape-sphere chart, the Chart section shows both controls and each changes the figure; with any other chart neither is shown
 - [ ] REQ-GUI-163 — cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on
-- [ ] REQ-GUI-164 — cargo xtask screenshot 04_windows (profiler_fast_math): the three modes appear in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with compute on shows compute on, and one with it off shows it off
+- [ ] REQ-GUI-164 — cargo xtask screenshot 04_windows (profiler_fast_math): the compute setting appears in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both
 - [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
 - [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->

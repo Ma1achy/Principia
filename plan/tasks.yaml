@@ -2103,7 +2103,7 @@
   pitfalls: []
 - id: TASK-M8-43
   milestone: M8
-  title: "The compute fast-math setting in the GUI: the Run window control and the Profiler's per-stage modes"
+  title: "The compute fast-math setting in the GUI: the Run window control and the Profiler's fast-math line"
   depends_on: [TASK-M8-24, TASK-M8-28, TASK-M4-08]
   needs: [REQ-SCHED-097, REQ-TOOL-141]
   requirements: [REQ-GUI-163, REQ-GUI-164]

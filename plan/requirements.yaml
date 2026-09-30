@@ -13517,7 +13517,7 @@
   milestone: M8
 - id: REQ-GUI-164
   area: GUI
-  statement: "The Profiler window must show each shader stage's fast-math mode — compute, vertex and fragment — from the session header (R-297)."
+  statement: "The Profiler window must show the compute shaders' fast-math setting from the session header, with the compute stage's mode as compiled beside it where the two differ (R-297)."
   source:
   - file: decisions.md
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
@@ -13525,10 +13525,11 @@
     section: Profiler
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot 04_windows (profiler_fast_math): the three modes appear in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with compute on shows compute on, and one with it off shows it off"
+    detail: "cargo xtask screenshot 04_windows (profiler_fast_math): the compute setting appears in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both"
   rulings:
   - R-297
   milestone: M8
+  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204 — veto? (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -15585,7 +15586,7 @@
   milestone: M5
 - id: REQ-TOOL-141
   area: TOOL
-  statement: "The session header of every profiler and benchmark file must record each shader stage's fast-math mode — compute, vertex and fragment — as compiled on the running backend, the compute mode being the setting in effect (R-297)."
+  statement: "The session header of every profiler and benchmark file must record the compute shaders' fast-math setting as asked for (the sim key's) and each shader stage's fast-math mode — compute, vertex and fragment — as compiled on the running backend, so that where the two differ both are recorded (R-297)."
   source:
   - file: decisions.md
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
@@ -15593,7 +15594,7 @@
     section: "5. The artefact: one file, plain text, readable by the sender"
   verify:
     method: unit test
-    detail: "cargo test -p engine session_header_fast_math: the header carries the compute, vertex and fragment modes; on Metal with the default setting it reads compute off and vertex and fragment on; with the setting on it reads compute on; on lavapipe compute reads off whatever the setting (recorded as compiled); a header missing a stage fails to parse"
+    detail: "cargo test -p engine session_header_fast_math: the header carries the compute setting and the compute, vertex and fragment modes as compiled; on Metal with the default setting it reads setting off, compute off, and vertex and fragment on; with the setting on it reads setting on and compute on; on lavapipe with the setting on it reads setting on and compute off (compiled as off); a header missing the setting or a stage fails to parse"
   rulings:
   - R-297
   milestone: M0
