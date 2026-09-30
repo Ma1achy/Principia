@@ -18,10 +18,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use validation::negative_control;
-use validation::spawn::{Spawn, GRACE, TIMEOUT};
+use validation::spawn::{Spawn, SPAWN_TIMEOUT};
+
+#[path = "support/fixture_tree.rs"]
+mod fixture_tree;
 
 /// A slack for process start-up and reaping on a loaded machine, on top of the timeout the helper is given.
 const SLACK: Duration = Duration::from_secs(5);
+
+/// The grace `run_sleeper` gives the helper in place of R-217's 5 s, so no test waits it (R-231).
+const SHORT_GRACE: Duration = Duration::from_secs(2);
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -83,7 +89,7 @@ fn read_pid(file: &Path) -> String {
 
 fn check_timeout_is(want: Duration) {
     assert_eq!(
-        TIMEOUT, want,
+        SPAWN_TIMEOUT, want,
         "the helper's timeout is not the provisional REQ-VAL-156 value"
     );
 }
@@ -112,7 +118,7 @@ fn run_sleeper(timeout: Duration, rest: &str) -> (std::io::Result<Output>, Durat
     let started = Instant::now();
     let result = Command::new("sh")
         .args(["-c", &script, "qa_m0_26_sleeper"])
-        .output_within(timeout);
+        .output_within_grace(timeout, SHORT_GRACE);
     let took = started.elapsed();
     let pid = read_pid(&pid_file);
     let _ = std::fs::remove_dir_all(&dir);
@@ -120,7 +126,7 @@ fn run_sleeper(timeout: Duration, rest: &str) -> (std::io::Result<Output>, Durat
 }
 
 /// The child running `rest` under `timeout` is killed: the error is a timeout that names the child, the helper
-/// returned within the timeout and R-217's grace after SIGTERM (plus start-up slack), and the child's pid no longer
+/// returned within the timeout and the grace after SIGTERM (plus start-up slack), and the child's pid no longer
 /// names a process.
 fn check_killed_named_and_gone(timeout: Duration, rest: &str) {
     let (result, took, pid) = run_sleeper(timeout, rest);
@@ -132,8 +138,8 @@ fn check_killed_named_and_gone(timeout: Duration, rest: &str) {
         "the error does not name the child: {message}"
     );
     assert!(
-        took < timeout + GRACE + SLACK,
-        "the helper waited {took:?}, past the {timeout:?} timeout and the {GRACE:?} grace"
+        took < timeout + SHORT_GRACE + SLACK,
+        "the helper waited {took:?}, past the {timeout:?} timeout and the {SHORT_GRACE:?} grace"
     );
     assert!(!alive(&pid), "the timed-out child {pid} still exists");
 }
@@ -391,35 +397,41 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------------
 // REQ-VAL-154: the macro requires the expected message.
 
-/// Copies `fixtures/qa_m0_26/old_form` to a scratch dir, making its validation path absolute; `add_expected` adds
-/// R-212's `expected = …` to the control. Returns `cargo test --no-run --features controls` on the copy.
+/// Copies `fixtures/qa_m0_26/old_form` to a directory of the test's or the control's own, making its validation path
+/// absolute; `add_expected` adds R-212's `expected = …` to the control. Returns `cargo test --no-run --features
+/// controls` on the copy.
 fn build_old_form(add_expected: bool) -> Output {
     let fixture = root().join("fixtures/qa_m0_26/old_form");
-    let copy = scratch("old_form");
-    for file in ["src/lib.rs", "tests/double.rs"] {
-        std::fs::create_dir_all(copy.join(file).parent().unwrap()).unwrap();
-        std::fs::copy(fixture.join(file), copy.join(file)).unwrap();
-    }
+    let own = if add_expected { "control" } else { "test" };
+    let read = |file: &str| std::fs::read_to_string(fixture.join(file)).unwrap();
     let validation = root().join("crates/validation");
-    let manifest = std::fs::read_to_string(fixture.join("Cargo.toml"))
-        .unwrap()
-        .replace("../../../crates/validation", validation.to_str().unwrap());
-    std::fs::write(copy.join("Cargo.toml"), manifest).unwrap();
-    std::fs::copy(root().join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+    let manifest =
+        read("Cargo.toml").replace("../../../crates/validation", validation.to_str().unwrap());
+    let mut body = read("tests/double.rs");
     if add_expected {
-        let test = copy.join("tests/double.rs");
-        let body = std::fs::read_to_string(&test).unwrap();
         let description = "\"a doubling that adds one must fail the check\",";
         assert!(body.contains(description), "the fixture changed");
-        let body = body.replace(
+        body = body.replace(
             description,
             &format!("{description}\n    expected = \"not the double of 3\","),
         );
-        std::fs::write(&test, body).unwrap();
     }
+    // The copy is kept across runs and written only where it changed, so a warm run rebuilds nothing (R-231).
+    let copy = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m0_26-old_form-{own}-src"));
+    fixture_tree::write_tree(
+        &copy,
+        &[
+            ("src/lib.rs", read("src/lib.rs")),
+            ("tests/double.rs", body),
+            ("Cargo.toml", manifest),
+            (
+                "Cargo.lock",
+                std::fs::read_to_string(root().join("Cargo.lock")).unwrap(),
+            ),
+        ],
+    );
     // A target directory each of the test and its control has to itself, as R-208 gave `deps.rs`'s workspaces: neither
-    // reuses the other's build (R-224). Each keeps its own across runs, so only the fixture is rebuilt.
-    let own = if add_expected { "control" } else { "test" };
+    // reuses the other's build (R-224). Each keeps its own across runs.
     let o = cargo()
         .env(
             "CARGO_TARGET_DIR",
@@ -435,7 +447,6 @@ fn build_old_form(add_expected: bool) -> Output {
         .arg(copy.join("Cargo.toml"))
         .timed_output()
         .expect("run cargo test --no-run on the fixture");
-    let _ = std::fs::remove_dir_all(&copy);
     o
 }
 

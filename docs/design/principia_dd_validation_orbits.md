@@ -148,6 +148,17 @@ the more useful object.
 | Python cross-check | agreement with a second implementation |
 | `error_ratio`, `worst_energy_drift` | **energy** error only |
 
+**The gates and their values (R-257).** Each passes before any output is trusted:
+
+| gate | test | passes when |
+|---|---|---|
+| equations of motion | finite-difference the Hamiltonian and compare against the analytic derivatives | they agree, within a finite-difference step and tolerance that are a calibration (R-71). An energy drift that does not fall as the step shrinks is the wrong-equation signature |
+| two-body radial collision | equal masses from rest, third body far away | passes through `d_min < 1e-10` with `\|dE/E\| < 1e-12` |
+| gauge invariance under rescaling | rescale the ICs by `alpha ∈ {0.25, 1, 4}` and `t` by `alpha^{3/2}` | the `shape_vec` spread (`spread_shape`) is identical to ~10 decimals |
+| energy control | `error_ratio` at `t = 13`, `near-field` | `1.0000` |
+| Burrau constants | the Burrau rest start | `M = 12`, `R = 2.2361`, `E = −12.8167` |
+| Python cross-check | against the Python reference at f64 | agreement to `~1e-10` on a small grid |
+
 **None of them sees phase error.** §0 is the proof: energy at 1e-12 while the orbit misses by 6e-3.
 
 **And closure needs no second implementation** — which matters because the Python reference shares

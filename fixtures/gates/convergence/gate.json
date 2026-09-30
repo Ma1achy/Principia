@@ -1,0 +1,6 @@
+{
+  "gate": "convergence",
+  "inputs": ["pitfall_escape_fraction.json", "converging.json", "wrong_order.json"],
+  "threshold": { "value": 0.1, "requirement": "REQ-VAL-135", "status": "provisional", "ruling": "R-171" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-168" }
+}

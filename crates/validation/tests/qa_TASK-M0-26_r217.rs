@@ -25,6 +25,9 @@ use validation::spawn::{Spawn, GRACE};
 /// A slack for process start-up, signalling and reaping on a loaded machine.
 const SLACK: Duration = Duration::from_secs(5);
 
+/// The grace these tests give the helper in place of R-217's 5 s ([`GRACE`]), so none waits it (R-231).
+const SHORT_GRACE: Duration = Duration::from_secs(2);
+
 /// A fresh scratch directory under the target's tmp dir.
 fn scratch(tag: &str) -> PathBuf {
     static N: AtomicUsize = AtomicUsize::new(0);
@@ -114,8 +117,8 @@ fn reap_leftovers(pids: &[&str]) {
     }
 }
 
-/// Runs `sh -c <script> qa_r217_child <dir>` under `timeout`. The script writes its own pid to `$1/child` and may write
-/// others to `$1`. Returns the helper's result, the time it took, and the scratch dir.
+/// Runs `sh -c <script> qa_r217_child <dir>` under `timeout`, with [`SHORT_GRACE`]. The script writes its own pid to
+/// `$1/child` and may write others to `$1`. Returns the helper's result, the time it took, and the scratch dir.
 fn run(script: &str, timeout: Duration) -> (std::io::Result<Output>, Duration, PathBuf) {
     let dir = scratch("run");
     let started = Instant::now();
@@ -126,7 +129,7 @@ fn run(script: &str, timeout: Duration) -> (std::io::Result<Output>, Duration, P
             "qa_r217_child",
         ])
         .arg(&dir)
-        .output_within(timeout);
+        .output_within_grace(timeout, SHORT_GRACE);
     (result, started.elapsed(), dir)
 }
 
@@ -264,14 +267,14 @@ fn check_sigterm_then_grace(cleanup: &str) {
 
 #[test]
 fn qa_r217_a_timed_out_child_gets_sigterm_and_the_grace() {
-    check_sigterm_then_grace("2");
+    check_sigterm_then_grace("0.5");
 }
 
 negative_control!(
     qa_r217_a_timed_out_child_gets_sigterm_and_the_grace,
-    "a SIGTERM handler taking 8 s, past the grace, required to run to its end",
+    "a SIGTERM handler taking 4 s, past the grace, required to run to its end",
     expected = "the child's SIGTERM handler did not run to its end before SIGKILL",
-    check_sigterm_then_grace("8")
+    check_sigterm_then_grace("4")
 );
 
 /// A child and grandchild running `script` under a 1 s timeout: the helper returns no sooner than the timeout plus the
@@ -289,11 +292,11 @@ fn check_killed_after_the_grace(script: &str) {
         ErrorKind::TimedOut
     );
     assert!(
-        took >= timeout + GRACE,
-        "the group was ended after {took:?}, before the {timeout:?} timeout and the {GRACE:?} grace ran out"
+        took >= timeout + SHORT_GRACE,
+        "the group was ended after {took:?}, before the {timeout:?} timeout and the {SHORT_GRACE:?} grace ran out"
     );
     assert!(
-        took < timeout + GRACE + SLACK,
+        took < timeout + SHORT_GRACE + SLACK,
         "the helper waited {took:?}, past the timeout and the grace"
     );
     assert!(!exists(&child), "the timed-out child {child} still exists");
@@ -311,7 +314,7 @@ fn qa_r217_a_group_ignoring_sigterm_is_killed_when_the_grace_runs_out() {
 negative_control!(
     qa_r217_a_group_ignoring_sigterm_is_killed_when_the_grace_runs_out,
     "the same group without the trap, which SIGTERM ends at once, required to last the whole grace",
-    expected = "before the 1s timeout and the 5s grace ran out",
+    expected = "before the 1s timeout and the 2s grace ran out",
     check_killed_after_the_grace(&format!("{IN_GROUP}; wait"))
 );
 

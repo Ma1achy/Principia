@@ -3,7 +3,7 @@
 //! in a job of its own, in parallel with the tests, failing on any finding (R-235)."
 //!
 //! - CI's workflow (`.github/workflows/ci.yml`) runs bare `cargo xtask ci` (every control, not `--list`) in a job
-//!   other than the one running `cargo test --workspace`; neither job waits on the other (`needs:`), and the controls
+//!   other than the one running `cargo nextest run --workspace` (R-231); neither job waits on the other (`needs:`), and the controls
 //!   job is neither skipped (`if:`) nor allowed to fail (`continue-on-error`). Its GPU controls run where the GPU
 //!   tests do: the same `PRIN_GPU_BACKEND` and the lavapipe install (TASK-M0-22 § Notes, "A GPU test's control runs
 //!   where the test does").
@@ -12,7 +12,6 @@
 //!   answers `metadata` and listings from canned text and logs each call.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -77,12 +76,16 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
     );
     let tests: Vec<&(String, Vec<String>)> = jobs
         .iter()
-        .filter(|(_, lines)| runs(lines).iter().any(|r| r == "cargo test --workspace"))
+        .filter(|(_, lines)| {
+            runs(lines)
+                .iter()
+                .any(|r| r == "cargo nextest run --workspace")
+        })
         .collect();
     assert_eq!(
         tests.len(),
         1,
-        "no single job runs `cargo test --workspace`"
+        "no single job runs `cargo nextest run --workspace`"
     );
     let (test_job, test_lines) = tests[0];
     let controls: Vec<&(String, Vec<String>)> = jobs
@@ -142,7 +145,7 @@ validation::negative_control!(
     "the pre-R-235 workflow, with the `cargo xtask ci` step in the tests' job",
     expected = "`cargo xtask ci` runs in the tests' job",
     check_controls_job_beside_the_tests(
-        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo test --workspace\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo test --workspace\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci\n"
+        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo nextest run --workspace\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo nextest run --workspace\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci\n"
     )
 );
 
@@ -203,7 +206,7 @@ fn run_listing(case: &str, args: &[&str], listed: &str) -> (bool, String, Vec<St
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("listed.txt"), listed).unwrap();
     let cargo = dir.join("cargo");
-    fs::write(
+    validation::spawn::write_executable(
         &cargo,
         format!(
             r#"#!/bin/sh
@@ -221,7 +224,6 @@ echo 'test qa_r235_t::paired::negative_control - should panic ... ok'
         ),
     )
     .unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(args)
         .env("CARGO", &cargo)

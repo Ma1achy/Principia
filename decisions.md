@@ -2345,3 +2345,290 @@ experiments/results/findings.md and the spike brief.
 source as the survey. Why it waits: R-33's independent reference covers extended precision. It returns only if a
 precision question needs it and the Brutus-style reference is too slow. Recorded here, since philosophy §7.1 and §7.7
 stay as they are (§7.1 already parks extended precision; this is its kernel-instantiation row).
+
+## R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+*30 Sep 2026 · applied in plan/HUMAN_SETUP.md §2*
+
+"R-266: "Require branches to be up to date" stays off: CI runs on each PR merged with main, and every push to main runs
+CI again. Amend HUMAN_SETUP.md §2 to match. I'm turning on "Do not allow bypassing", so the required checks bind every
+merge, including yours."
+
+*Applied:* HUMAN_SETUP §2 now says the up-to-date requirement stays off, with the reason, and that bypassing is not
+allowed. The required checks on `main` are `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and
+`gpu-lavapipe`. From this ruling on, no merge, the orchestrator's included, lands with a required check red.
+
+## R-267 — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
+*30 Sep 2026 · applied in TASK-M0-38 (new), REQ-SYS-069 to REQ-SYS-071*
+
+"All merged "veto?" items stand, including #37, #38, #50, #56, #57 and #62, and your own applications on #61 and #63.
+The two #38 flake fixes are already done by TASK-M0-34 (#50); close that item. The three queued follow-ups
+(parse_wrong_panics with an embedded header, the "Text file busy" failure, pr-check passing a nameless meter line)
+become one small low-priority task. Check whether "Text file busy" has the same cause as the earlier
+executable-replacement race."
+
+*Applied:* the items stand as merged: PR #37's four, #38's two, #50's two, #56's five, #57's two, #62's five, #61's
+three R-265 applications and #63's two RQ-162 applications. The #38 `deps.rs` control-flake item is closed by
+TASK-M0-34 (R-236, REQ-VAL-167). TASK-M0-38 is new: code and qa, low priority, depending only on merged tasks.
+
+*The "Text file busy" check (orchestrator's diagnosis, recorded for TASK-M0-38):* not the same cause. CI run
+36634340042 attempt 1 (PR #56, ubuntu): `qa_m022_list_runs_no_control` failed with "xtask: cannot run cargo metadata:
+Text file busy (os error 26)". Each `qa_TASK-M0-22.rs` test writes its own stand-in `cargo` script and runs xtask
+against it, four at once. That is the Linux fork/exec race: while one thread has its script open for writing, another
+thread forks to spawn a child, which inherits the write descriptor until it execs, and an exec of the first script in
+that window fails with ETXTBSY. The #38 race was different: tests shared one binary (`debug/xtask`) that one of them
+rewrote while others ran it, fixed by the `WORKSPACE_RUN` Mutex. Nothing is shared here, so that Mutex cannot cover it;
+it shows on Linux only.
+
+## R-268 — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
+*30 Sep 2026 · applied in PRs #70 and #71*
+
+"All merged "veto?" items and the overnight R-204 applications stand. #70 item 2 accepted. #71 items 1 and 6 accepted;
+item 12 accepted once code's re-check agrees."
+
+*Applied:* the items stand as merged on #54, #59, #68, #72 and #75, and so do the overnight R-204 applications: RQ-162
+(#63) and RQ-168 (the stand-in soak installs Mesa, #71's item 13). PR #70's item 2 (`SetField` edits only `SimConfig`
+and `RenderState`, and `Snapshot` leaves `ViewUI` out) is accepted. So are PR #71's item 1 (golden opens its own wgpu
+device, with its backend rule kept in step with the harness's by a test) and item 6 (repro reports every line a case
+declares, and refuses a case that declares none). Item 12 (what `golden --list` checks) is accepted once the code
+reviewer's re-check at 76fd151 agrees.
+
+## R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend
+*30 Sep 2026 · applied in REQ-VAL-138; the measurement runs on a `measure/` branch (R-272)*
+
+"REQ-VAL-138: throwaway measure/ branches are allowed (push, measure, delete). Get the lavapipe max-step. If 0: zero
+steps across backends for M1 goldens. If not: one reference per backend."
+
+*Applied:* the values between 8-bit levels that PR #71's Metal check rendered (Metal max step 0 between two renders)
+are rendered on lavapipe on a `measure/` branch and compared with Metal's. If the max step is 0, REQ-VAL-138's 0 steps
+holds across backends for the M1 goldens, against one reference. If it isn't, each golden case keeps one reference per
+backend, and the runner picks the one for the backend it renders on. The result and the branch's deletion are recorded
+under this ruling.
+
+*Result (30 Sep 2026, CI run 36719287172, branch `measure/r269-lavapipe-step`, deleted afterwards, no PR):* PR #71's
+fragment (R = (x+0.5)/255, exactly half-way between levels; G = exp(−y/40); B = ((x+y)/510)^2.2; 256×256, Rgba8Unorm)
+rendered through the golden runner. Lavapipe against itself over two renders: max step 0. Metal against itself: 0, and
+the hosted Metal render matches a local M3 Pro byte for byte. Lavapipe against Metal: max step 1, in R only, on 32768
+of 65536 pixels (every even x); G and B are identical. Metal rounds each exact tie up, and lavapipe rounds it to even.
+The max step isn't 0, so under this ruling each golden case keeps one reference per backend, and the runner picks the
+one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
+
+## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
+*30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
+
+"#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
+copy, and cache the pool on CI. Targets: CI job no slower than before (~10.5 min), local pool ~5 GB."
+
+*Applied:* qa may modify `crates/validation/tests/qa_TASK-M0-33.rs` in one commit, which fixes the test that misses
+cargo's coloured output. The orchestrator's R-237 check accepts `M` on that one file, once. Fixture copies share one
+build directory per fixture type, not per copy, and CI caches the pool between runs. PR #74 shows two measurements:
+the `ci` job's wall time is no slower than before (~10.5 min), and the local pool is ~5 GB. REQ-VAL-165's "a warm second
+run … rebuilds nothing" is read per fixture type.
+
+## R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*
+*30 Sep 2026 · applied in docs/design/principia_dd_simstate_payload.md §1, TASK-M0-10*
+
+"RQ-163: d_min's unset value is +inf (the minimum of an empty set); stored values clamp to f16's smallest positive
+subnormal, so 0.0 never appears; readers treat +inf as unset."
+
+*Applied:* a failed sample's `d_min` half, and any sample's before its first step, holds f16 +inf (bits `0x7C00`). A
+valid `d_min` below f16's smallest positive subnormal (2⁻²⁴ ≈ 5.96e-8) is stored as that subnormal. `dE_max` and
+`dLz_max` keep their 0.0 failed-state value (payload §1), which is the maximum of an empty set of magnitudes.
+*Applied per R-204 — veto? (mechanical consequences, found in payload §1):* WGSL makes `pack2x16float` indeterminate
+outside binary16's finite range and lets it flush subnormals to zero. So the `d_min` packer writes the +inf and
+subnormal bit patterns itself, not through `pack2x16float`. Readers test the unset value by its bits (`0x7C00` in bits
+16–31 of `packed_a`), not by a float comparison, which WGSL's finite-math rules would leave indeterminate. A GPU reader
+that flushes a stored subnormal on unpack sees 0 for display only; the unset test never confuses the two.
+
+## R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
+*30 Sep 2026 · applied in TASK-M0-23 (PR #65)*
+
+"RQ-164: covered by the measure/ branch rule; run the ubuntu mutants timing."
+
+*Applied:* a `measure/<what>` branch may be pushed so that CI takes a measurement, and is deleted right after. No PR is
+opened from it, and the number is recorded in the PR or here. TASK-M0-23 takes REQ-VAL-149's ubuntu timings this way.
+
+## R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*
+*30 Sep 2026 · applied in REQ-VAL-168, TASK-M0-05, TASK-M3-34*
+
+"RQ-165: the region minimum is calibrated at M3; the runner prints "not yet calibrated" until then."
+
+*Applied:* REQ-VAL-168 moves to M3. TASK-M3-34, which proposes the convergence gate's threshold (REQ-VAL-135), also
+proposes the region minimum with its evidence, and the human confirms it at the M3 gate. Until then the gate prints the
+count it saw and "minimum not yet calibrated", which TASK-M0-05 (merged) already does.
+
+## R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*
+*30 Sep 2026 · applied in systems_architecture §7.1, a new GUI requirement, TASK-M6-22*
+
+"RQ-166: gui gets a headless capture mode, spawned by the runner (no crate edge)."
+
+*Applied:* `gui` ships a headless capture mode. The screenshot runner spawns it as a separate process, which renders a
+named window offscreen and writes the PNG and the AccessKit names. The runner compares or checks presence, as `cargo
+xtask gate` spawns validation's binary. No crate depends on `gui` (§7.1 unchanged). A case's `surface` field names the
+kind (`data` today, `gui` for these). TASK-M6-22, the first task with a GUI screenshot requirement, builds the mode.
+
+## R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*
+*30 Sep 2026 · applied in REQ-TOOL-134, TASK-M0-40*
+
+"RQ-167: a control clipped out of the visible surface isn't present."
+
+*Applied:* a presence check counts a control only if it is in egui's tree and its rect intersects the visible surface.
+A case that needs a control below the fold scrolls to it first. TASK-M0-40 changes the runner (PR #72 merged the
+tree-only check).
+
+## R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
+*30 Sep 2026 · applied in TASK-M0-39 and TASK-M0-40 (new), TASK-M0-06, plan/HUMAN_SETUP.md §2*
+
+"Yes: the qa_r217 flake task (proper process group, not perl setpgrp), the M0-06 wording fix, conversation resolution
+in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-runs on each review."
+
+*Applied:*
+- **TASK-M0-39 (new).** It fixes `qa_TASK-M0-26_r217.rs`'s two controls, which flake under CI load: the out-of-group
+  grandchild leaves the process group only when perl runs `setpgrp`, and the 1 s timeout can fire first. The
+  grandchild is put in its own process group at spawn, not by perl.
+- **TASK-M0-06.** "through the harness" becomes "on its own headless wgpu device": §7.1 lets xtask reach `validation`
+  only as a dev-dependency (R-268 accepts #71's item 1).
+- **HUMAN_SETUP §2.** It records "Require conversation resolution before merging", which is on.
+- **Reviews re-run.** *Flagged:* `reviews.yml` already triggers on `pull_request_review`. What blocks a merge is the
+  earlier `pull_request`-event run: it fails before any review and stays a separate failed check suite (R-266's
+  no-bypass). *Applied per R-204 — veto?:* TASK-M0-40 has the `pull_request_review` run re-run that stale
+  `pull_request` run for the same head, so one review turns both green.
+
+## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
+*30 Sep 2026 · applied in the orchestrator's loop*
+
+"Two agents while memory pressure sits at warning; three at normal."
+
+*Applied:* at `kern.memorystatus_vm_pressure_level` 2 (warning), at most two agents run; at 1 (normal), three. At 4
+(critical), only running work finishes (R-252).
+
+## R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*
+*30 Sep 2026 · applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register, REQ-PAY-092*
+
+The human's rulings message of 30 Sep said "Rulings (R-272 onward)"; R-272 to R-277 were already taken, so its rulings
+are recorded here as R-278 to R-285, in the message's order.
+
+"RQ-169: option 1. The f16 subnormal floor joins the register as an achievable maximum ("the format's achievable
+extreme"), beside f16_finite_max; update §3.8's class wording, hash sentence and schema version accordingly."
+
+*Applied:* in TASK-M0-10. §3.8's `achievable-maximum` class also covers a number format's achievable extreme. An
+`f16_min_subnormal` row (2⁻²⁴) sits beside `f16_finite_max`. The hash sentence names the floor and counts five
+entries, and the schema version changes with the hashed ledger. The emitter reads the floor from the register.
+
+## R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
+*30 Sep 2026 · applied in TASK-M0-33 (PR #74, merged)*
+
+"#74 item 11: accepted. Merge #74."
+
+*Applied:* #74 merged at 08999ec. The fixture pool keeps one build directory per fixture source set, and the `xtask`
+build is one of them (R-270).
+
+## R-280 — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*
+*30 Sep 2026 · applied in payload §1, debug_tooling_plan §B, REQ-TOOL-012, REQ-TOOL-137 and TASK-M1-09*
+
+"RQ-170: option 3: an unset d_min renders in the neutral "not yet" style, the same grey as running samples (R-96).
+Not the invalid hatch, not the top of the ramp."
+
+*Applied:* a field view that reads `d_min`'s unset bits (`0x7C00`, R-271) draws the neutral grey that `running`
+samples show (R-96). It doesn't draw the invalid hatch, which stays NaN's (PIT-8), and it doesn't place +inf on the
+ramp. The other sentinels still show as their literal values on the ramp (R-136).
+
+## R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
+*30 Sep 2026 · applied in TASK-M0-10 (PR #78) and REQ-PAY-092*
+
+"#78: items 1 and 7 accepted. Item 2 vetoed in part: the packer never stores NaN (R-79) and never silently rewrites a
+negative value. Both are debug_assert! failures; in release, a NaN stores the unset bits and a negative value clamps
+to the floor, and each case increments a telemetry counter."
+
+*Applied:* in TASK-M0-10. The `d_min` packer's `debug_assert!` fails on a NaN or a negative input. In release, a NaN
+stores `0x7C00` and a negative value stores the floor, `0x0001`, and each case increments a telemetry counter. The
+corpus names no such counter, and a GPU-side count has to cross the membrane, which the corpus doesn't settle, so the
+counter's definition waited on RQ-171 (filed on PR #78), and R-288 settles it.
+
+## R-282 — TASK-M0-17's design items accepted
+*30 Sep 2026 · applied in TASK-M0-17 (PR #79)*
+
+"#79: items 3, 4, 5, 6, 10, 11, F1 and F2 accepted."
+
+*Applied:* profiler schema v1 keeps them as PR #79 wrote them. Item 3: a batch render's `present` is null, in both
+places. Item 4: the header shapes. Item 5: the `frame` index key. Item 6: the nested section shapes. Item 10: only
+`camera_delta > 0` is normative. Item 11: the three memory pools are disjoint. F1: `leak_flags` and `hot_paths`,
+null until M8. F2: `live_memory`, a per-frame snapshot of each pool by type.
+
+## R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
+*30 Sep 2026 · applied in the orchestrator's loop*
+
+"Process choices: all stand (physics on #79, qa's edits on #74/#78, the renumbering). If qa keeps needing to edit its
+own files, raise the add-only rule itself in REVIEW_QUEUE rather than exempting it again." "#80: merge it."
+
+*Applied:* physics stays a reviewer of TASK-M0-17. qa's `M` lines on #74 and #78 stand, and the queue renumbering
+(RQ-169 → RQ-170) stands. The next time qa needs to change a file of its own, the orchestrator doesn't grant another
+exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e5526a.
+
+## R-284 — `cargo xtask codegen` writes a generated file only when its content changes
+*30 Sep 2026 · applied in REQ-TOOL-138 and TASK-M0-41 (new)*
+
+"codegen rewriting unchanged files: small task, medium priority. Write generated.rs only when its content changes."
+
+*Applied:* a new task, TASK-M0-41. `cargo xtask codegen` compares each generated file with what's on disk and writes
+it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
+
+## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
+*30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
+
+"CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
+under GitHub's 10 GB limit."
+
+*Applied:* a new task, TASK-M0-42. CI workflows stop caching whole target dirs (`Swatinem/rust-cache` caches `target`
+by default). They cache the cargo registry and the fixture pool (R-270), each under a key naming its job, so the
+repo's Actions cache stays well under GitHub's 10 GB limit.
+
+## R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line
+*30 Sep 2026 · applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18*
+
+"R-286: profiler traces are JSON Lines: the header on the first line, then one compact frame record per line.
+Pretty-printing is on demand (prin profile show --pretty, or jq). This meets §5's "readable" and "bounded size"
+together. Apply it in #79's fix round."
+
+*Applied:* a trace file's first line is the session header and each later line is one compact frame record. The
+writer never pretty-prints. TASK-M0-17 writes the format in telemetry §5 and applies it in PR #79's fix round.
+`prin profile show --pretty` joins TASK-M0-18, which builds `prin profile` (REQ-TOOL-139).
+
+## R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*
+*30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
+
+"R-287: fragment output quantises explicitly in the shader (round half to even, then store), not through the
+backend's automatic float-to-unorm conversion, so every backend writes identical bytes. Once that lands, goldens
+return to one reference across backends (amends R-269; per-backend references stay the fallback if any case still
+differs). Fold it into TASK-M0-43."
+
+*Applied:* TASK-M0-43 now quantises each fragment output channel in the shader, rounding half to even, before the
+store, so no backend's float-to-unorm conversion decides a tie (R-269's measured difference). Each golden case then
+keeps one reference for every backend. A case whose bytes still differ between backends keeps one reference per
+backend, as R-269 ruled, and the PR names it.
+
+## R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
+*30 Sep 2026 · applied in telemetry §2 and TASK-M0-10 (PR #78), and profiler schema v1's frame record in TASK-M0-17 (PR #79)*
+
+"RQ-171: option (a), recorded as R-288. Two per-frame atomic u32 counters (NaN d_min stored as unset; negative d_min
+clamped) in telemetry §2. They ride on the existing profiler/telemetry readback, not a new GPU→CPU channel
+(QuadReduction stays the sole automatic return of simulation data, R-142), and are read back asynchronously with a
+frame or two of latency, never stalling the frame. They're counted in release builds too; that's their purpose."
+
+*Applied:* telemetry §2 gains `dmin_nan_unset` and `dmin_negative_floored`, u32 counts per frame, the names RQ-171's
+option (a) gave. The `d_min` packer increments them in release builds as well as debug ones. They come back on the
+profiler/telemetry readback, asynchronously and a frame or two late, and never stall a frame; `QuadReduction` is
+unchanged (R-142). `roundtrip_ctl`'s repack is an observation, not a store, so it doesn't count (RQ-171 option (a)).
+Profiler schema v1's frame record carries both keys, as §2's superset (R-56).
+
+## R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch
+*30 Sep 2026 · standing practice, applied in the orchestrator's loop*
+
+"Standing practice (R-289): rulings reach agents only in the opening prompt of a fresh dispatch, never as a mid-task
+message. If a ruling lands while an agent is mid-task, let it finish its current step and stop, then re-dispatch fresh
+with the ruling."
+
+*Applied:* on PR #79, rulings R-286 and R-288 were relayed to a running implementer as messages. The permission
+classifier treated them as possible instruction poisoning and blocked the edits, and the agent stopped without a
+change. From now on, a ruling that lands mid-task waits: the agent finishes its current step and stops, and a fresh
+agent is dispatched with the ruling, in the human's words, in its opening prompt. #79's R-286 and R-288 round is
+re-dispatched that way.

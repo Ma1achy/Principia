@@ -8,10 +8,11 @@
 pub mod check;
 pub mod constants;
 pub mod gen;
+pub mod payload;
 pub mod schema;
 
-/// The layout table `cargo xtask codegen` generates from. Its §3 entries are not transcribed yet: this crate so far
-/// holds the schema and the driver (TASK-M0-07 Deliverables), so the table is empty (R-242).
+/// The layout table `cargo xtask codegen` generates from: so far the payload's (dd_simstate_payload §0–§1;
+/// dd_generation_root §3.1, §3.3a–§3.6).
 pub fn layout() -> schema::Ledger {
-    schema::Ledger::default()
+    payload::ledger()
 }

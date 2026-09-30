@@ -7,13 +7,12 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{PoisonError, RwLock};
 use validation::spawn::Spawn;
 
 #[path = "../../crates/validation/tests/support/own_target.rs"]
 mod own_target;
-use own_target::{Lease, FIXTURES};
+use own_target::{fixture_files, Lease, FIXTURES};
 
 use xtask::controls::{
     control_of, findings, name_wrong_panics, parse_list, parse_results, parse_wrong_panics, Finding,
@@ -26,22 +25,10 @@ struct Verdict {
     stderr: String,
 }
 
-fn copy_dir(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let path = entry.unwrap().path();
-        let dest = to.join(path.file_name().unwrap());
-        if path.is_dir() {
-            copy_dir(&path, &dest);
-        } else {
-            std::fs::copy(&path, &dest).unwrap();
-        }
-    }
-}
-
 /// Held to write by `controls_on_this_workspace_skips_gui`, whose `xtask controls` runs cargo into the workspace's
 /// target directory, and so replaces the `xtask` there (`CARGO_BIN_EXE_xtask`) each time; held to read by each run of
-/// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164).
+/// that `xtask` beside it, so none spawns it while it is being replaced (REQ-VAL-164). Under nextest each test is a
+/// process of its own, and `.config/nextest.toml` runs that test alone instead (R-231).
 static WORKSPACE_TARGET: RwLock<()> = RwLock::new(());
 
 /// Runs `xtask controls` on a copy of the fixture `name`; see [`run_fixture_with`].
@@ -50,34 +37,41 @@ fn run_fixture(name: &str, remove: Option<&str>) -> Verdict {
 }
 
 /// Runs `xtask controls <args>` on a copy of the fixture `name`, outside this workspace, with the workspace's lockfile
-/// and the `validation` path made absolute, building in a target directory of its own while it runs, since other
-/// copies of the fixture build at the same time (REQ-VAL-164). `remove` names a file deleted from the copy first.
+/// and the `validation` path made absolute, building in the `controls` fixture type's directory, which it holds while it
+/// runs (REQ-VAL-164, R-270). `remove` names a file left out of the copy. The copy is one per fixture and `remove`,
+/// kept across runs (R-231).
 fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict {
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = xtask.parent().unwrap();
-    let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
-    // One copy per run, removed after it: tests run in parallel, and several run the same fixture.
-    static RUN: AtomicUsize = AtomicUsize::new(0);
-    let run = RUN.fetch_add(1, Ordering::Relaxed);
-    let copy = tmp
-        .join("controls")
-        .join(format!("{name}-{}-{run}", std::process::id()));
-    copy_dir(&xtask.join("tests/fixtures/controls").join(name), &copy);
-    if let Some(file) = remove {
-        std::fs::remove_file(copy.join(file)).unwrap();
+    let mut files: Vec<(PathBuf, Vec<u8>)> =
+        fixture_files(&xtask.join("tests/fixtures/controls").join(name))
+            .into_iter()
+            .filter(|(path, _)| remove.is_none_or(|file| path != Path::new(file)))
+            .collect();
+    for (path, bytes) in &mut files {
+        if path == Path::new("Cargo.toml") {
+            *bytes = String::from_utf8_lossy(bytes)
+                .replace(
+                    "../../../../../crates/validation",
+                    root.join("crates/validation").to_str().unwrap(),
+                )
+                .into_bytes();
+        }
     }
-    let manifest = copy.join("Cargo.toml");
-    let text = std::fs::read_to_string(&manifest).unwrap().replace(
-        "../../../../../crates/validation",
-        root.join("crates/validation").to_str().unwrap(),
-    );
-    std::fs::write(&manifest, text).unwrap();
-    std::fs::copy(root.join("Cargo.lock"), copy.join("Cargo.lock")).unwrap();
+    files.push((
+        PathBuf::from("Cargo.lock"),
+        std::fs::read(root.join("Cargo.lock")).unwrap(),
+    ));
+    let removed = remove.map_or(String::new(), |file| {
+        format!("-{}", file.replace(['/', '.'], "_"))
+    });
     let spawning = WORKSPACE_TARGET
         .read()
         .unwrap_or_else(PoisonError::into_inner);
     // Taken after the read lock, so no copy holds a directory while it waits for the workspace's run.
-    let target = Lease::take(FIXTURES);
+    let copy = format!("{name}{removed}");
+    let target = Lease::take(FIXTURES, Some("controls"));
+    let manifest = target.copy(&copy, &files).join("Cargo.toml");
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("controls")
         .args(args)
@@ -87,7 +81,6 @@ fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict 
         .timed_output()
         .expect("run xtask");
     drop(spawning);
-    std::fs::remove_dir_all(&copy).unwrap();
     Verdict {
         ok: output.status.success(),
         stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
@@ -474,17 +467,58 @@ fn controls_control_panicking_without_its_message_fails_naming_it() {
     lacks(&v.stderr, "test `doubles`:");
 }
 
-/// libtest's report of two failed controls: `a` did not panic, `b` panicked with the wrong message.
-const WRONG_PANIC_RUN: &str = "---- a::negative_control stdout ----
+/// libtest's note for a control that panicked without its expected message, which it appends to the control's output.
+const B_NOTE: &str = "note: panic did not contain expected string
+      panic message: \"setup failed\"
+ expected substring: \"the check\"";
+
+/// `b`'s panic, as its output shows it before libtest's note.
+const B_PANIC: &str = "thread 'b::negative_control' (7) panicked at tests/b.rs:6:36:
+setup failed";
+
+/// A child's libtest report, as a control that embeds a child's `cargo test` prints it: a header for the child's
+/// test `x`, and the child's own list of failures.
+const CHILD_REPORT: &str = "running 1 test
+test x ... FAILED
+
+failures:
+
+---- x stdout ----
+child output
+
+failures:
+    x
+
+test result: FAILED. 0 passed; 1 failed
+";
+
+/// libtest's report of two failed controls: `a` did not panic, `b` printed `b_output` (its panic and libtest's note).
+fn wrong_panic_run(b_output: &str) -> String {
+    format!(
+        "running 2 tests
+test a::negative_control - should panic ... FAILED
+test b::negative_control - should panic ... FAILED
+
+failures:
+
+---- a::negative_control stdout ----
 note: test did not panic as expected at tests/a.rs:3:60
 ---- b::negative_control stdout ----
+{b_output}
 
-thread 'b::negative_control' (7) panicked at tests/b.rs:6:36:
-setup failed
-note: panic did not contain expected string
-      panic message: \"setup failed\"
- expected substring: \"the check\"
-";
+failures:
+    a::negative_control
+    b::negative_control
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+"
+    )
+}
+
+/// The run in which `b` printed only its panic and its note.
+fn plain_wrong_panic_run() -> String {
+    wrong_panic_run(&format!("\n{B_PANIC}\n{B_NOTE}"))
+}
 
 /// `stdout`'s one wrong panic is `b`'s, and it turns `b`'s `ControlPasses` into `WrongPanic`, leaving `a`'s alone.
 fn check_wrong_panics(stdout: &str) {
@@ -515,7 +549,16 @@ fn check_wrong_panics(stdout: &str) {
 
 #[test]
 fn controls_parse_wrong_panics_reads_libtest_notes() {
-    check_wrong_panics(WRONG_PANIC_RUN);
+    check_wrong_panics(&plain_wrong_panic_run());
+}
+
+/// REQ-SYS-069: `b`'s output embeds a child's report, with its own `---- x stdout ----` header, before `b`'s panic;
+/// `b` keeps its whole note.
+#[test]
+fn controls_parse_wrong_panics_keeps_a_note_after_an_embedded_header() {
+    check_wrong_panics(&wrong_panic_run(&format!(
+        "{CHILD_REPORT}\n{B_PANIC}\n{B_NOTE}"
+    )));
 }
 
 validation::negative_control!(
@@ -532,10 +575,20 @@ validation::negative_control!(
     controls_parse_wrong_panics_reads_libtest_notes,
     "the same run with `b`'s note replaced by a did-not-panic one, required to read a wrong panic",
     expected = "the wrong panic of `b` was not read",
-    check_wrong_panics(&WRONG_PANIC_RUN.replace(
+    check_wrong_panics(&plain_wrong_panic_run().replace(
         "note: panic did not contain expected string",
         "note: test did not panic as expected"
     ))
+);
+
+validation::negative_control!(
+    controls_parse_wrong_panics_keeps_a_note_after_an_embedded_header,
+    "the same run with `b`'s note only inside the child's report it embeds, required to read `b`'s wrong panic",
+    expected = "the wrong panic of `b` was not read",
+    check_wrong_panics(&wrong_panic_run(&format!(
+        "{}\n{B_PANIC}",
+        CHILD_REPORT.replace("child output", B_NOTE)
+    )))
 );
 
 validation::negative_control!(

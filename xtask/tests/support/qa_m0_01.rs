@@ -521,7 +521,7 @@ pub fn check_the_ci_workflow(yml: &str) {
     let pos = |cmd: &str| runs.iter().position(|r| *r == cmd);
     for cmd in [
         "cargo build --workspace",
-        "cargo test --workspace",
+        "cargo nextest run --workspace",
         "cargo xtask deps",
         "cargo xtask ci",
     ] {

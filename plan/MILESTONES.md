@@ -70,15 +70,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 94 requirements** (and every earlier gate still green):
+**Exit gate — 104 requirements** (and every earlier gate still green):
 
-- PAY (21): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091
+- PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (11): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029
 - SCHED (1): REQ-SCHED-001
 - RENDER (2): REQ-RENDER-001…002
-- TOOL (12): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134
-- VAL (33): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…169
-- SYS (14): REQ-SYS-001…008, REQ-SYS-063…068
+- TOOL (15): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139
+- VAL (34): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176
+- SYS (19): REQ-SYS-001…008, REQ-SYS-063…073
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -98,7 +98,7 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - The baseline outcome palette that the field views need, pinned by golden images.
 
 <!-- gate:M1 -->
-**Exit gate — 82 requirements** (and every earlier gate still green):
+**Exit gate — 83 requirements** (and every earlier gate still green):
 
 - INT (1): REQ-INT-001
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
@@ -106,7 +106,7 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
 - COL (8): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056
 - GUI (1): REQ-GUI-001
-- TOOL (24): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131
+- TOOL (25): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137
 - VAL (4): REQ-VAL-010…012, REQ-VAL-122
 - SYS (1): REQ-SYS-009
 <!-- /gate:M1 -->
@@ -124,7 +124,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 156 requirements** (and every earlier gate still green):
+**Exit gate — 157 requirements** (and every earlier gate still green):
 
 - DEC (36): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…044
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
@@ -136,7 +136,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - COL (2): REQ-COL-006, REQ-COL-057
 - GUI (6): REQ-GUI-002…007
 - TOOL (2): REQ-TOOL-029…030
-- VAL (15): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121
+- VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
 - SYS (7): REQ-SYS-010…016
 <!-- /gate:M2 -->
 
@@ -160,7 +160,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 190 requirements** (and every earlier gate still green):
+**Exit gate — 193 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - INT (63): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084
@@ -171,7 +171,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
 - TOOL (11): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132
-- VAL (49): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146
+- VAL (52): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->
@@ -215,7 +215,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 158 requirements** (and every earlier gate still green):
+**Exit gate — 160 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -229,7 +229,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009
 - TOOL (13): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133
-- VAL (4): REQ-VAL-080…083
+- VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
 - PERF (23): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093
 - SYS (8): REQ-SYS-030…037
 <!-- /gate:M5 -->
@@ -248,14 +248,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The refinement policy's open measurements.
 
 <!-- gate:M6 -->
-**Exit gate — 134 requirements** (and every earlier gate still green):
+**Exit gate — 141 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
-- SCHED (23): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…090
+- SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (6): REQ-GUI-010…015
+- GUI (7): REQ-GUI-010…015, REQ-GUI-162
 - TOOL (4): REQ-TOOL-055…058
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090

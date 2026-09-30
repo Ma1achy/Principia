@@ -7,3 +7,12 @@ publish.workspace = true
 # systems_architecture §7.1: kernel -> ledger is a build-dependency only (R-185).
 [build-dependencies]
 ledger = { path = "../ledger" }
+
+# Controls reach kernel's tests through a dev-dependency on validation; they are integration tests in `tests/` (R-176,
+# R-187).
+[dev-dependencies]
+validation = { path = "../validation" }
+
+# Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
+[features]
+controls = []

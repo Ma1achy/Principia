@@ -143,20 +143,23 @@ pub fn parse_results(stdout: &str) -> BTreeMap<String, Vec<bool>> {
 
 /// The controls libtest reports in `stdout` as panicking without their expected message (R-212), each with libtest's
 /// note: the panic message and the expected substring, on one line.
+///
+/// libtest appends that note to the end of the failing test's output, so a control's note is the last three lines of
+/// its output as [`parse_outputs`] reads it: its section runs only to libtest's own next header, and a `---- x stdout
+/// ----` line, or a note, inside the control's output (a child's report it embeds) stays in that control's section
+/// (REQ-SYS-069).
 pub fn parse_wrong_panics(stdout: &str) -> BTreeMap<String, String> {
     let mut found = BTreeMap::new();
-    let mut current = None;
-    let mut lines = stdout.lines();
-    while let Some(line) = lines.next() {
-        if let Some(name) = line
-            .strip_prefix("---- ")
-            .and_then(|rest| rest.strip_suffix(" stdout ----"))
-        {
-            current = Some(name);
-        } else if line == "note: panic did not contain expected string" {
-            if let Some(name) = current {
-                let note = lines.by_ref().take(2).map(str::trim).collect::<Vec<_>>();
-                found.insert(name.to_owned(), note.join(" "));
+    for (name, outputs) in parse_outputs(stdout) {
+        for output in outputs {
+            let lines: Vec<&str> = output.lines().collect();
+            if let [.., note, message, expected] = lines[..] {
+                if note == "note: panic did not contain expected string" {
+                    found.insert(
+                        name.clone(),
+                        format!("{} {}", message.trim(), expected.trim()),
+                    );
+                }
             }
         }
     }

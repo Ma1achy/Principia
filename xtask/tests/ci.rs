@@ -1,10 +1,10 @@
 //! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177); its registry holds
-//! `controls` (R-198) and `lint constants` (TASK-M0-08). `cargo xtask ci --list` runs each runner's listing-only form
-//! alone, which for `controls` runs no control (R-235).
+//! `plan-check` (TASK-M0-02), `controls` (R-198), `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `gate`
+//! (TASK-M0-05) and `golden` (TASK-M0-06). `cargo xtask ci --list` runs each runner's listing-only form alone, which
+//! for `controls` runs no control (R-235).
 
 use std::cell::RefCell;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
@@ -59,13 +59,14 @@ fn ci_with_no_runners_passes() {
     assert_eq!(run(&[]), Ok(()));
 }
 
-/// The registry's names: `controls` (TASK-M0-22, R-198), then `lint constants` (TASK-M0-08).
+/// The registry's names: `plan-check` (TASK-M0-02), `controls` (TASK-M0-22, R-198), `lint constants` (TASK-M0-08),
+/// `lint vocab` (TASK-M0-16), then `gate` (TASK-M0-05), then `golden` (TASK-M0-06, R-110).
 fn check_the_registry(runners: &[Runner]) {
     let names: Vec<&str> = runners.iter().map(|runner| runner.name).collect();
     assert_eq!(
         names,
-        ["controls", "lint constants"],
-        "the ci registry is not `controls` then `lint constants`"
+        ["plan-check", "controls", "lint constants", "lint vocab", "gate", "golden"],
+        "the ci registry is not `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate`, then `golden`"
     );
 }
 
@@ -113,8 +114,8 @@ validation::negative_control!(
 
 validation::negative_control!(
     ci_registry_runs_controls,
-    "a registry holding a runner other than `controls` and `lint constants`",
-    expected = "the ci registry is not `controls` then `lint constants`",
+    "a registry holding a runner other than `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate` and `golden`",
+    expected = "the ci registry is not `plan-check`, `controls`, `lint constants`, `lint vocab`, `gate`, then `golden`",
     check_the_registry(&[Runner {
         name: "failing",
         run: failing,
@@ -192,7 +193,7 @@ fn run_with_stand_in_cargo(case: &str, args: &[&str]) -> (bool, Vec<String>) {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let cargo = dir.join("cargo");
-    fs::write(
+    validation::spawn::write_executable(
         &cargo,
         format!(
             r#"#!/bin/sh
@@ -210,7 +211,6 @@ echo 'test pairs::negative_control - should panic ... ok'
         ),
     )
     .unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(args)
         .env("CARGO", &cargo)

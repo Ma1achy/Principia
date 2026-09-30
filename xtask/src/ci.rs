@@ -1,5 +1,6 @@
 //! `cargo xtask ci` — the single per-push entry point (R-177). Every later per-commit runner (plan-check,
-//! controls, gate, golden, codegen, lint constants) registers in [`RUNNERS`]; `ci` runs them in registration order.
+//! controls, gate, golden, codegen, lint constants, lint vocab) registers in [`RUNNERS`]; `ci` runs them in
+//! registration order.
 //! `cargo xtask ci --list` runs each runner's listing-only form instead, which runs no control (R-235).
 
 /// A runner's check, or its listing-only form; `Err` carries the failure message.
@@ -18,6 +19,11 @@ pub struct Runner {
 /// The registered runners, in the order `cargo xtask ci` runs them.
 pub const RUNNERS: &[Runner] = &[
     Runner {
+        name: "plan-check",
+        run: plan_check,
+        list: plan_check,
+    },
+    Runner {
         name: "controls",
         run: controls,
         list: controls_list,
@@ -27,11 +33,59 @@ pub const RUNNERS: &[Runner] = &[
         run: lint_constants,
         list: lint_constants,
     },
+    Runner {
+        name: "lint vocab",
+        run: lint_vocab,
+        list: lint_vocab,
+    },
+    Runner {
+        name: "gate",
+        run: gate,
+        list: gate_list,
+    },
+    Runner {
+        name: "golden",
+        run: golden,
+        list: golden_list,
+    },
 ];
+
+/// `cargo xtask gate --all` on this workspace: every registered numerical gate (TASK-M0-05).
+fn gate() -> Result<(), String> {
+    crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::All)
+}
+
+/// `cargo xtask gate --list` on this workspace: the gates listed, none run (R-235).
+fn gate_list() -> Result<(), String> {
+    crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::List)
+}
+
+/// `cargo xtask plan-check` on this repo; it runs no control, so it is its own listing-only form (R-235).
+fn plan_check() -> Result<(), String> {
+    crate::plan_check::run(&crate::plan_check::repo_root())
+}
 
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_constants() -> Result<(), String> {
     crate::lint_constants::run(&crate::workspace_manifest())
+}
+
+/// `cargo xtask lint vocab` on this workspace; it runs no control, so it is its own listing-only form (R-235).
+fn lint_vocab() -> Result<(), String> {
+    crate::lint_vocab::run(&crate::workspace_manifest())
+}
+
+/// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit).
+fn golden() -> Result<(), String> {
+    let root = crate::plan_check::repo_root();
+    crate::golden::cli(&root, &["--all"])
+}
+
+/// `cargo xtask golden --list` on this workspace: every case loaded and checked, none rendered, no device opened
+/// (R-235).
+fn golden_list() -> Result<(), String> {
+    let root = crate::plan_check::repo_root();
+    crate::golden::cli(&root, &["--list"])
 }
 
 /// `cargo xtask controls` on this workspace: every control run, failing on any finding (R-198, R-226).

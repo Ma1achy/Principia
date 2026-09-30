@@ -9,7 +9,7 @@
 - **Size:** ~250 lines
 
 ## Goal
-`d_min = min_t |separation|`, `dE_max = max_t |ΔE|` and `dLz_max = max_t |ΔL_z|` are absolute monotone latches held in local f32 during the march and packed to f16 only when persistent state is written (semantics (a)): clamped to ±65504 first, 0.0 for failed states, `d_min` in the high half of `packed_a`, `dE_max`/`dLz_max` in `packed_b`. Every threshold and suspect decision reads the live f32, never an unpacked f16.
+`d_min = min_t |separation|`, `dE_max = max_t |ΔE|` and `dLz_max = max_t |ΔL_z|` are absolute monotone latches held in local f32 during the march and packed to f16 only when persistent state is written (semantics (a)): clamped to ±65504 first, 0.0 in `dE_max`/`dLz_max` and `d_min`'s unset value f16 +inf (bits `0x7C00`) for failed states (R-271), `d_min` in the high half of `packed_a`, `dE_max`/`dLz_max` in `packed_b`. Every threshold and suspect decision reads the live f32, never an unpacked f16.
 
 ## References
 - `docs/contracts/principia_render_contract.md` § "Unpack layer (generated, one accessor per named field)"
@@ -24,11 +24,12 @@
 - Resume path: the latches reload from the payload across persist boundaries.
 
 ## Acceptance tests
-- `cargo test -p kernel f16_pack_clamp` — pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values and 0.0 respectively (REQ-PAY-041).
+- `cargo test -p kernel f16_pack_clamp` — pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values, and for failed states 0.0 in `dE_max`/`dLz_max` and bits `0x7C00` in `d_min` (R-271) (REQ-PAY-041).
 - `cargo test -p kernel latch_across_persist` — resume a sample across many persist boundaries; the packed latch equals the f16 of a single f32 latch over the whole run (REQ-PAY-044).
-- `cargo test -p kernel f16_clamp_fuzz` — property test with inputs incl. ±1e6, ±Inf: packed halves finite and clamped; failed-state samples unpack to exactly 0.0 (REQ-PAY-045).
+- `cargo test -p kernel f16_clamp_fuzz` — property test with inputs incl. ±1e6, ±Inf: packed halves finite and clamped; failed-state samples unpack to exactly 0.0 in `dE_max`/`dLz_max` and to bits `0x7C00` in `d_min`, tested by bits (R-271) (REQ-PAY-045).
 - `cargo test -p kernel latches_vs_offline` — property test: latches equal offline max/min over a fixture trajectory (within f16 packing) (REQ-PAY-050).
 - Review (code): every control-flow comparison on drift/d_min reads the live f32 value; grep the kernel for `unpack2x16float` feeding a branch — none (REQ-INT-045).
 
 ## Notes
-- None.
+- Applied per R-271 (30 Sep 2026): the failed-state value of `d_min` is its unset value f16 +inf (bits `0x7C00`), not 0.0; readers test the bits.
+- TASK-M0-09's generated struct derives `Default`, which gives `packed_a = 0` and so `d_min` bits `0x0000`, a value R-271 says never appears. The latch's initial and failed-state writes set `d_min` unset explicitly and never rely on `Default` (found in PR #78's review).

@@ -24,19 +24,44 @@ Commands:
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
+  gate (<gate> | --all | --list)  run the numerical gate <gate>, or every registered gate, on its inputs in
+                                  fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
+                                  id, writing each report under target/gates/; fails naming each input whose outcome
+                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none
+  golden (<suite> | --all | --list)
+                                  render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
+                                  offscreen, compare it with its reference to the tolerance its requirement id
+                                  gives, and write the difference image and summary under target/golden/ (R-110);
+                                  --list loads and checks every case and lists it, opening no device
+  golden repro <suite>/<case> --vary <field>=<a>,<b>
+                                  render two arms differing in exactly one field (a pair differing in more is
+                                  refused), and report the RGB values along the case's lines and one column per
+                                  symptom per arm (philosophy §4.3a; pitfalls §8)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
+  lint vocab                      fail on a retired term (canonical_spec §8) or an identifier outside the locked
+                                  taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
+                                  .html; not archive/ or reference/, nor passages in `retired-terms` markers),
+                                  naming file, line and term (R-111, R-259)
   mutants-check <mutants.out> [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, and fail naming each one not in
                                   the equivalent-mutants list, .cargo/mutants-equivalent.toml or <file>
+  plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
+                                  milestones.py and reviewer_lists.py with --check), streaming its output and
+                                  exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
                                   make mandatory that is missing or empty, and each validation meter or
                                   discriminator line with no statement (R-180); reads the pull_request event JSON
                                   at <file>, or at $GITHUB_EVENT_PATH
   reviews-check [--pr <N>]        the reviews-complete check (R-175): fail naming each role the task file's
                                   Reviewers field names that has not approved on the head commit; reads PR <N>, or
-                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`";
+                                  the PR of the event at $GITHUB_EVENT_PATH, through `gh api`
+  screenshot (<suite> | --all)    run the GUI screenshot suite fixtures/screenshot/<suite>/, or every suite: a layout
+                                  case renders its surface headless (native wgpu offscreen) and writes the capture
+                                  beside a copy of its artboard under target/screenshot/, for layout comparison only
+                                  (R-68); a presence-only case fails naming each listed control its surface lacks
+                                  (R-129). Not in `ci`: GUI PRs and the gates run it (R-110, R-177)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -51,7 +76,25 @@ fn main() -> ExitCode {
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
         }
+        ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
+        ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
+        ["gate", name] if !name.starts_with('-') => {
+            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name))
+        }
+        ["plan-check"] => {
+            return match xtask::plan_check::status(&xtask::plan_check::repo_root()) {
+                Ok(status) => {
+                    ExitCode::from(status.code().map_or(1, |code| code.clamp(0, 255) as u8))
+                }
+                Err(message) => {
+                    eprintln!("xtask plan-check: {message}");
+                    ExitCode::FAILURE
+                }
+            };
+        }
+        ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["mutants-check", out] => xtask::mutants_check::run(
             Path::new(out),
             &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
@@ -71,6 +114,12 @@ fn main() -> ExitCode {
             Ok(n) => xtask::reviews_check::run(&workspace_root(), Some(n)),
             Err(_) => Err(format!("reviews-check: --pr takes a PR number, not `{n}`")),
         },
+        ["screenshot", "--all"] => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::All)
+        }
+        ["screenshot", suite] if !suite.starts_with('-') => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::One(suite))
+        }
         ["deps"] => run_deps(Source::Workspace(None)),
         ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),

@@ -539,3 +539,99 @@
   section: R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
   reason: informative only
   note: size ruling; applied in plan/WORKFLOW.md § "Task files"; no requirement changes
+- file: decisions.md
+  section: R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+  reason: informative only
+  note: process ruling; repository settings, applied in plan/HUMAN_SETUP.md §2
+- file: decisions.md
+  section: 'R-267 — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task'
+  reason: informative only
+  note: process ruling; the task it creates is TASK-M0-38 (REQ-SYS-069 to REQ-SYS-071)
+- file: decisions.md
+  section: 'R-268 — The overnight "veto?" items stand; #70''s item 2 and #71''s items 1, 6 and 12 are accepted'
+  reason: informative only
+  note: process ruling; it accepts veto items on PRs #70 and #71 and changes no requirement
+- file: decisions.md
+  section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
+  reason: informative only
+  note: applied in REQ-VAL-138's verify detail; result (max step 1) applied in REQ-VAL-176 (new) and TASK-M0-43 (new)
+- file: decisions.md
+  section: "R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*"
+  reason: informative only
+  note: applied in REQ-VAL-165 and TASK-M0-33
+- file: decisions.md
+  section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
+  reason: informative only
+  note: applied in REQ-PAY-092 (new), REQ-PAY-041, REQ-PAY-045, REQ-TOOL-012 and TASK-M0-10
+- file: decisions.md
+  section: "R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*"
+  reason: informative only
+  note: process ruling; applied in TASK-M0-23 and REQ-VAL-138's verify detail
+- file: decisions.md
+  section: "R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*"
+  reason: informative only
+  note: applied in REQ-VAL-168 (moved to M3), TASK-M0-05 and TASK-M3-34
+- file: decisions.md
+  section: "R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*"
+  reason: informative only
+  note: applied in REQ-GUI-162 (new), systems_architecture §7.1 and TASK-M6-22
+- file: decisions.md
+  section: "R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*"
+  reason: informative only
+  note: applied in REQ-TOOL-136 (new) and TASK-M0-40
+- file: decisions.md
+  section: "R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review"
+  reason: informative only
+  note: applied in REQ-VAL-175 and REQ-SYS-072 (new), TASK-M0-39 and TASK-M0-40 (new), TASK-M0-06 and plan/HUMAN_SETUP.md §2
+- file: decisions.md
+  section: "R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*"
+  reason: informative only
+  note: process ruling; applied in the orchestrator's loop
+- file: decisions.md
+  section: "R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*"
+  reason: informative only
+  note: applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register and REQ-PAY-092
+- file: decisions.md
+  section: "R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*"
+  reason: informative only
+  note: applied in TASK-M0-33 (PR #74, merged)
+- file: decisions.md
+  section: "R-280 — An unset `d_min` renders in the neutral \"not yet\" grey *(closes RQ-170)*"
+  reason: informative only
+  note: applied in payload §1, debug_tooling_plan §B, REQ-TOOL-012, REQ-TOOL-137 (new) and TASK-M1-09
+- file: decisions.md
+  section: "R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part"
+  reason: informative only
+  note: applied in TASK-M0-10 (PR #78) and REQ-PAY-092
+- file: decisions.md
+  section: "R-282 — TASK-M0-17's design items accepted"
+  reason: informative only
+  note: applied in TASK-M0-17 (PR #79)
+- file: decisions.md
+  section: "R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges"
+  reason: informative only
+  note: process ruling; applied in the orchestrator's loop
+- file: decisions.md
+  section: "R-284 — `cargo xtask codegen` writes a generated file only when its content changes"
+  reason: informative only
+  note: applied in REQ-TOOL-138 and TASK-M0-41 (new)
+- file: decisions.md
+  section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
+  reason: informative only
+  note: applied in REQ-SYS-073 and TASK-M0-42 (new)
+- file: decisions.md
+  section: "R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line"
+  reason: informative only
+  note: applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18
+- file: decisions.md
+  section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
+  reason: informative only
+  note: applied in parity contract §4, REQ-VAL-176 and TASK-M0-43
+- file: decisions.md
+  section: "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
+  reason: informative only
+  note: applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79)
+- file: decisions.md
+  section: "R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch"
+  reason: informative only
+  note: process ruling; applied in the orchestrator's loop

@@ -5,10 +5,15 @@ pub mod ci;
 pub mod codegen;
 pub mod controls;
 pub mod deps;
+pub mod gate;
+pub mod golden;
 pub mod lint_constants;
+pub mod lint_vocab;
 pub mod mutants_check;
+pub mod plan_check;
 pub mod pr_check;
 pub mod reviews_check;
+pub mod screenshot;
 
 use std::path::{Path, PathBuf};
 

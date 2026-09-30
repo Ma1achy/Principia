@@ -1,12 +1,12 @@
 # TASK-M2-20 — Ground-truth ingestion: residual, κ(z) and the literature imports
 
 - **Milestone:** M2
-- **Closes:** REQ-VAL-014, REQ-ENC-025, REQ-VAL-019, REQ-VAL-120
+- **Closes:** REQ-VAL-014, REQ-ENC-025, REQ-VAL-019, REQ-VAL-120, REQ-VAL-174
 - **Depends on:** TASK-M2-19, TASK-M0-05
 - **Needs (earlier milestones):** REQ-VAL-002, REQ-VAL-007
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-5, PIT-3
-- **Size:** ~420 lines
+- **Size:** ~440 lines
 
 ## Goal
 Encode serves the validation programme's harder demand: foreign physical ICs are canonicalised and encoded, and the result exposes, beside z, the physical-space residual ‖D(z) − C(x)‖_phys (the bug signal) and a conditioning number κ(z), defined in inverse_encode Part 4 by this task. Anosova region-D and Burrau rest starts are imported through this door and their invariants match the papers' stated values after the recorded rescale; the reference values and the match tolerance are proposed with evidence.
@@ -23,6 +23,8 @@ Encode serves the validation programme's harder demand: foreign physical ICs are
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/design/principia_dd_validation_orbits.md` § "1.2 Figure-eight — the canonical closure test"
 - `docs/design/principia_dd_validation_orbits.md` § "1.3 Lagrange and Euler central configurations — the only analytic ones"
+- `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not"
+- `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 
 ## Deliverables
 - `crates/kernel/src/encode/ingest.rs` (z, residual, κ) and `crates/validation/src/import.rs` (the literature-IC import, tagged report per IC).
@@ -34,7 +36,9 @@ Encode serves the validation programme's harder demand: foreign physical ICs are
 - Doc review (physics): Part 4 gives κ(z) as a formula (building on d logit/ds = 1/(s(1−s))) that bounds the T2 residual; physics reviewer approved (REQ-ENC-025).
 - `cargo xtask gate literature-import` — import the literature ICs; E and L_z, multiplied back by the recorded rescale, match the papers' values within REQ-VAL-120's tolerance (REQ-VAL-019).
 - Calibration: the proposal cites each paper's stated values, the recorded rescale and the measured import residuals, and states the tolerance; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-VAL-120).
+- `cargo xtask gate literature-import` — the imported Burrau rest start, multiplied back by the recorded rescale, gives M = 12, R = 2.2361 and E = −12.8167 (dd_validation_orbits §2, R-257) (REQ-VAL-174).
 
 ## Notes
 - Gap G15 (‖·‖_phys) applies to the residual.
 - The papers' values are not in the corpus; they enter through REQ-VAL-120's proposal, with citations.
+- R-257 (closes RQ-157) ported the Burrau constants into dd_validation_orbits §2 (REQ-VAL-174); the other papers' values still enter through REQ-VAL-120's proposal.

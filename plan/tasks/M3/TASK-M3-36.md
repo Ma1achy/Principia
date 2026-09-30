@@ -27,6 +27,8 @@ The BodyPlane chart (today's slice) is kept and reproduces the Python reference'
 - `decisions.md` § "R-166 — The fixtures"
 - `decisions.md` § "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
 - `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
+- `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not"
+- `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 
 ## Deliverables
 - Doc change: `docs/design/principia_chart_reference.md` §5.1 — BodyPlane's Φ, the recorded reference dump and the Python cross-check (REQ-VAL-119).
@@ -35,7 +37,7 @@ The BodyPlane chart (today's slice) is kept and reproduces the Python reference'
 - `xtask gate change10-rerun` driving `workbench/tb_az.py` with the overshoot patch against the Rust AZ; the regenerated (or retired) table in `docs/design/principia_dd_predictability_horizon.md`.
 
 ## Acceptance tests
-- `cargo xtask golden bodyplane` — the BodyPlane render/dump against the fixture recorded from the Python reference: bit-exact where the operation order is identical (parity_contract), otherwise within the calibrated tolerance (REQ-VAL-146); the Python cross-check passes (REQ-VAL-028).
+- `cargo xtask golden bodyplane` — the BodyPlane render/dump against the fixture recorded from the Python reference: bit-exact where the operation order is identical (parity_contract), otherwise within the calibrated tolerance (REQ-VAL-146); the Python cross-check passes, agreeing with the Python reference at f64 to ~1e-10 on a small grid (dd_validation_orbits §2, R-257) (REQ-VAL-028).
 - `cargo xtask golden bodyplane --propose` — the operations whose order differs from the Python reference listed, BodyPlane's difference against the fixture measured and the tolerance stated; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-146).
 - chart_reference §5.1 gives BodyPlane's Φ and names the reference it matches, the Python reference's output recorded at M3 as a fixture (R-166); physics reviewer approved (REQ-VAL-119).
 - `cargo xtask gate change10-rerun` — re-run outputs recorded; the divergence-vs-horizon table regenerated or marked retired; the f64 horizon figure and the measurement method REQ-VAL-071 applies to the GPU kernel are recorded (R-119) (REQ-VAL-036).
