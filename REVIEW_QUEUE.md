@@ -2969,3 +2969,30 @@ Tick any you don't accept.
      author has to choose.
 - **Needed:** a definition, before TASK-M6-22. TASK-M0-20 doesn't wait: option 1 is a small change to the runner, made
   by whichever task first needs it, or by a follow-up task.
+## RQ-168: the stand-in soak runs the full `xtask ci`, which now renders golden cases, on a runner with no GPU *(CI, TASK-M0-06, TASK-M0-38)*
+
+- **File, section:** `decisions.md` § "R-110": "native golden suites on every commit"; TASK-M0-06 registers
+  `golden --all` in `cargo xtask ci` under it. `.github/workflows/stand-in-soak.yml` (TASK-M0-38, REQ-SYS-070, R-267):
+  "the tests that write a stand-in `cargo` or `gh` and run xtask against it, 50 consecutive runs … on ubuntu-latest".
+  The job installs no Mesa and sets no `PRIN_GPU_BACKEND`.
+- **What:** `xtask/tests/qa_TASK-M0-22.rs`, `qa_m022_ci_passes_when_every_control_trips`, runs the full `xtask ci`
+  with a stand-in cargo and requires it to pass. With TASK-M0-06 the full `ci` ends in the golden runner, which opens a
+  wgpu device. On the soak runner there is none, so the test fails: "golden FAILED: … no vulkan adapter
+  (PRIN_GPU_BACKEND)". Seen on PR #71 at `ea9b18f`, run 36679159178. The review's F1 fixed `ci --list`, whose golden
+  form now opens no device. The full form must render (R-110), so no change to the golden runner removes this.
+  Every other job that runs `xtask ci` or the xtask tests (`ci`, `xtask-ci`) installs Mesa and sets
+  `PRIN_GPU_BACKEND=vulkan`.
+- **Options seen:**
+  1. **Mesa in the soak job (recommended).** Add `mesa-vulkan-drivers` and `PRIN_GPU_BACKEND: vulkan` to
+     `stand-in-soak.yml`, as `ci` and `xtask-ci` have. Each of the 50 runs renders the two 256×256 self-test cases on
+     lavapipe, which takes seconds. The orchestrator ruled this out for F1, where it would only have moved the listing
+     form's dependency.
+  2. **Pass the stand-in `ci` a runner list.** The test runs `ci` with its golden step skipped, through a new
+     environment variable or argument. This changes a merged test and adds a way to skip a CI runner.
+  3. **Keep the soak to listing-only forms.** Drop `qa_m022_ci_passes_when_every_control_trips` from the soak. That
+     narrows what REQ-SYS-070 soaks.
+- **Needed:** which one. TASK-M0-06 (PR #71) waits on it, because its soak check is red.
+- **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): option 1. The full `xtask ci` has to
+  render (R-110), so the soak job gets what the `ci` and `xtask-ci` jobs already have: Mesa and
+  `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
+  its veto item 13.
