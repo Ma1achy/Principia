@@ -293,6 +293,15 @@ fn golden_refuses_unrecorded_decision() {
         load_with_decision("unnamed", "re-made"),
         "names no decision",
     );
+    // `R-` with no number, or with letters after it, names no decision either.
+    check_refused(
+        load_with_decision("bare_prefix", "R- re-made"),
+        "names no decision",
+    );
+    check_refused(
+        load_with_decision("lettered", "R-1a re-made"),
+        "names no decision",
+    );
 }
 
 negative_control!(
