@@ -21098,7 +21098,7 @@
     section: "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
   verify:
     method: unit test
-    detail: "cargo test -p validation compute_fast_math in the gpu-metal and gpu-lavapipe jobs: a probe compute shader computing (x + 0.5) / 255.0 for every x in 0..256, and a fuzzed set of f32 divisions, matches the CPU's correctly rounded f32 division bit for bit with the setting off, on both backends; on Metal with the setting on it differs on at least one input (R-296's Result's 94 columns), so the switch is shown to act; the setting defaults to off; a lint finds no compute pipeline created outside the entry point and no vertex or fragment pipeline created through the passthrough"
+    detail: "cargo test -p validation compute_fast_math in the gpu-metal and gpu-lavapipe jobs, the task's own measurement: with the setting off, a probe compute shader computes (x + 0.5) / 255.0 for every x in 0..256 and a fuzzed set of f32 divisions, compares each bit for bit with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either backend (only the 256 inputs of (x + 0.5) / 255.0 have been measured, and on Metal only under wgpu's fast-math compile, R-296's Result; a mismatch with the setting off is a REVIEW_QUEUE entry); on Metal with the setting on it differs on at least one input (R-296's Result's 94 columns), so the switch is shown to act; the setting defaults to off; a lint finds no compute pipeline created outside the entry point and no vertex or fragment pipeline created through the passthrough"
   rulings:
   - R-296
   - R-297
