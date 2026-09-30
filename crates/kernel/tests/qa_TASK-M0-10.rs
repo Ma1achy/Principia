@@ -564,20 +564,32 @@ negative_control!(
 
 type SetDMin = fn(u32, f32) -> u32;
 
-/// A failed sample (states 4, 5; `set_d_min_unset`, and a packed +inf) and an unstepped one (the march latch still
-/// at the minimum of an empty set, +inf) store 0x7c00, the descriptor half untouched. Through the clamping
-/// conversion payload §1 requires of valid values, +inf would store 0x7bff: so `set` writes the unset bits itself.
+/// Three named cases store 0x7c00 with the descriptor half untouched (R-271):
+/// - a failed sample (states 4, 5), written unset by bits with `set_d_min_unset`;
+/// - an unstepped sample (state 3, before its first step), written unset by bits with `set_d_min_unset`. R-271's
+///   +inf is a stored value written by its bits, not a fold seed (integrator contract § "Rules the new kernel must
+///   hold by construction", rule 4; PIT-9), so no latch value is modelled here;
+/// - an f32 +inf given to the packer `set` (a plain `f32::INFINITY` input). Through the clamping conversion payload
+///   §1 requires of valid values, +inf would store 0x7bff: so `set` writes the unset bits itself.
 fn check_unset_written(set: SetDMin) {
-    let empty_min = std::iter::empty::<f32>().fold(f32::INFINITY, f32::min);
-    for state in [3u32, 4, 5] {
-        let w = set(pack_packed_a(state, 2, true, 3, 1, 0.5), empty_min);
-        assert_eq!(w >> 16, 0x7c00, "state {state}: d_min bits");
+    for state in [4u32, 5] {
+        let w = set_d_min_unset(pack_packed_a(state, 2, true, 3, 1, 0.5));
+        assert_eq!(w >> 16, 0x7c00, "failed state {state}: d_min bits");
         assert_eq!(
             w & 0xffff,
             pack_packed_a(state, 2, true, 3, 1, 0.5) & 0xffff,
-            "state {state}: descriptor kept"
+            "failed state {state}: descriptor kept"
         );
+        assert!(pa_d_min_is_unset(w), "failed state {state} reads unset");
     }
+    let unstepped = set_d_min_unset(pack_packed_a(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5));
+    assert_eq!(unstepped >> 16, 0x7c00, "unstepped: d_min bits");
+    assert_eq!(
+        unstepped & 0xffff,
+        pack_packed_a(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, 0.5) & 0xffff,
+        "unstepped: descriptor kept"
+    );
+    assert!(pa_d_min_is_unset(unstepped), "unstepped sample reads unset");
     for low in [0u32, 0x03ff, 0xffff] {
         assert_eq!(
             set_d_min_unset(0x3c00_0000 | low),
@@ -585,8 +597,19 @@ fn check_unset_written(set: SetDMin) {
             "set_d_min_unset"
         );
     }
-    let unstepped = pack_packed_a(3, 0, false, SD_DMIN_PAIR_SENTINEL, 0, empty_min);
-    assert!(pa_d_min_is_unset(unstepped), "unstepped sample reads unset");
+    for state in [3u32, 4, 5] {
+        let w = set(pack_packed_a(state, 2, true, 3, 1, 0.5), f32::INFINITY);
+        assert_eq!(
+            w >> 16,
+            0x7c00,
+            "+inf to the packer, state {state}: d_min bits"
+        );
+        assert_eq!(
+            w & 0xffff,
+            pack_packed_a(state, 2, true, 3, 1, 0.5) & 0xffff,
+            "+inf to the packer, state {state}: descriptor kept"
+        );
+    }
 }
 
 #[test]
@@ -694,9 +717,9 @@ fn check_unset_bits(is_unset: fn(u32) -> bool) {
 fn dmin_unset_qa_test_reads_bits() {
     check_unset_bits(pa_d_min_is_unset);
     assert_eq!(
-        PA_D_MIN_SENTINEL,
-        f32::INFINITY,
-        "the emitted sentinel is +inf"
+        PA_D_MIN_SENTINEL.to_bits(),
+        0x7f80_0000,
+        "the emitted sentinel is +inf, by its bits"
     );
 }
 
@@ -707,7 +730,7 @@ negative_control!(
     check_unset_bits(|w| pa_d_min(w).is_infinite())
 );
 
-/// The unset `d_min` reads back as +inf, the minimum of an empty set (R-271), and −inf and NaN halves read back as
+/// The unset `d_min` (f16 +inf, 0x7c00, stored by bits under R-271) reads back as f32 +inf, and −inf and NaN halves read back as
 /// themselves: `unpack2x16float` converts every binary16 pattern exactly.
 fn check_non_finite_unpack(unpack: fn(u32) -> [f32; 2]) {
     assert_eq!(
