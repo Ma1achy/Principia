@@ -26,6 +26,10 @@ Commands:
                                   (the compile check is then skipped)
   lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
                                   from the constants register, naming file and line (dd_generation_root §3.8)
+  lint vocab                      fail on a retired term (canonical_spec §8) or an identifier outside the locked
+                                  taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
+                                  .html; not archive/ or reference/, nor passages in `retired-terms` markers),
+                                  naming file, line and term (R-111, R-259)
   pr-check [--event <file>]       fail naming each section the PR's labels (design, investigation, validation)
                                   make mandatory that is missing or empty, and each validation meter or
                                   discriminator line with no statement (R-180); reads the pull_request event JSON
@@ -48,6 +52,7 @@ fn main() -> ExitCode {
             xtask::controls::run(Path::new(path), Mode::List)
         }
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {

@@ -1,5 +1,5 @@
 //! `cargo xtask ci` — the single per-push entry point (R-177). Every later per-commit runner (plan-check,
-//! controls, gate, golden, codegen, lint constants) registers in [`RUNNERS`]; `ci` runs them in registration order.
+//! controls, gate, golden, codegen, lint constants, lint vocab) registers in [`RUNNERS`]; `ci` runs them in registration order.
 //! `cargo xtask ci --list` runs each runner's listing-only form instead, which runs no control (R-235).
 
 /// A runner's check, or its listing-only form; `Err` carries the failure message.
@@ -27,11 +27,21 @@ pub const RUNNERS: &[Runner] = &[
         run: lint_constants,
         list: lint_constants,
     },
+    Runner {
+        name: "lint vocab",
+        run: lint_vocab,
+        list: lint_vocab,
+    },
 ];
 
 /// `cargo xtask lint constants` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_constants() -> Result<(), String> {
     crate::lint_constants::run(&crate::workspace_manifest())
+}
+
+/// `cargo xtask lint vocab` on this workspace; it runs no control, so it is its own listing-only form (R-235).
+fn lint_vocab() -> Result<(), String> {
+    crate::lint_vocab::run(&crate::workspace_manifest())
 }
 
 /// `cargo xtask controls` on this workspace: every control run, failing on any finding (R-198, R-226).
