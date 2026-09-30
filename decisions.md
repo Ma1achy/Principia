@@ -2632,3 +2632,52 @@ classifier treated them as possible instruction poisoning and blocked the edits,
 change. From now on, a ruling that lands mid-task waits: the agent finishes its current step and stops, and a fresh
 agent is dispatched with the ruling, in the human's words, in its opening prompt. #79's R-286 and R-288 round is
 re-dispatched that way.
+
+## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+*30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
+
+"RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
+log). Every such change is listed in the PR with its reason, and the code reviewer confirms no assertion was weakened
+except where a ruling changed the behaviour it tests. The implementer still never edits qa's files."
+
+*Applied:* besides `A` lines, the orchestrator's check on qa's commit (R-237) accepts `M` and `D` lines on a test file
+whose every earlier commit, by `git log`, is a qa commit ("qa: tests for …"). The PR lists each such change with its
+reason, and the code reviewer confirms that no assertion was weakened, except where a ruling changed the behaviour it
+tests. The implementer still never edits a file of qa's. It is recorded with R-292, which changes nothing else in
+CLAUDE.md: CLAUDE.md's qa paragraph and `.claude/agents/qa-reviewer.md` still state R-237's add-only form.
+
+## R-291 — TASK-M0-40's three veto items stand
+*30 Sep 2026 · applied in TASK-M0-40 (PR #82)*
+
+"#82: all three veto items stand."
+
+*Applied:* PR #82's three "Applied per R-204 — veto?" items stand as the PR wrote them. Design: a named node with no
+bounds counts as clipped, not present, and so does one whose rect only touches the surface edge (R-275). Process: the
+re-run of a stale `reviews` run is a step inside the `reviews-complete` job, so the list of required checks doesn't
+change. Test infra: the new tests build their own one-case suite in a temp dir (`CARGO_TARGET_TMPDIR`), so
+`screenshot --all` in CI is unchanged.
+
+## R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only
+*30 Sep 2026 · applied in decisions.md, REVIEW_QUEUE.md, docs/archive/review_queue/, plan/check_plan.py, plan/tools/,
+plan/CURRENT_RULES.md and CLAUDE.md*
+
+"decisions.md hygiene (R-292), one small PR, no rulings changed:
+1. Every ruling amended, superseded or corrected by a later one gets an "Amended by R-n" (or "Superseded by R-n") line
+   directly under its heading. There are 22 today, including R-5, R-12, R-17, R-110, R-175, R-176, R-211, R-214,
+   R-223, R-239, R-252 and R-256.
+2. check_plan.py fails if a ruling says it amends/supersedes/corrects/replaces R-n and R-n lacks the matching forward
+   line.
+3. Generate plan/CURRENT_RULES.md from decisions.md: every standing rule as currently in force, grouped (authority,
+   physics conventions, values, process, CI), each citing its ruling. It's generated only, rebuilt by a script, and
+   check_plan fails if it's stale. CLAUDE.md points agents to it for current rules, and to decisions.md for history.
+4. Add R-195's missing "Applied:" note (PR #17).
+Record R-290 (RQ-172) and R-291 (#82's veto items) in the same PR."
+
+The human's addition:
+
+"5. REVIEW_QUEUE.md holds open entries only. Every entry with a ruling moves, unchanged, to docs/archive/review_queue/
+in one file per era: untangling.md (RQ-1 to ~128) and M0.md (the rest); later milestones get their own file after each
+gate. IDs never change. check_plan.py resolves RQ-n and R-n references in the live files and the archive, and fails on
+any it can't find.
+6. decisions.md stays whole: it's the law as well as its history. Agents read CURRENT_RULES.md for rules in force, and
+decisions.md only for why. Revisit splitting it per milestone (numbers unchanged) at a gate, if it becomes unwieldy."

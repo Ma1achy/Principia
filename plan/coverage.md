@@ -11,44 +11,44 @@
 | CHART | 52 |
 | INT | 84 |
 | EVT | 26 |
-| PAY | 89 |
+| PAY | 90 |
 | GEN | 29 |
-| SCHED | 88 |
+| SCHED | 94 |
 | REF | 49 |
 | RENDER | 82 |
 | COL | 58 |
-| GUI | 160 |
-| TOOL | 134 |
-| VAL | 168 |
+| GUI | 161 |
+| TOOL | 138 |
+| VAL | 175 |
 | PERF | 93 |
-| SYS | 68 |
-| **total** | **1257** |
+| SYS | 73 |
+| **total** | **1281** |
 
-Of these: 98 calibration, 102 definition, 1057 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 101 calibration, 103 definition, 1077 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 94 |
-| M1 | 82 |
-| M2 | 156 |
-| M3 | 190 |
+| M0 | 104 |
+| M1 | 83 |
+| M2 | 157 |
+| M3 | 193 |
 | M4 | 101 |
-| M5 | 158 |
-| M6 | 134 |
+| M5 | 160 |
+| M6 | 141 |
 | M7 | 112 |
 | M8 | 230 |
 
 ## Sections
 
-954 sections in 46 files: 821 yield at least one requirement; 133 yield none and are listed below with the reason.
+983 sections in 46 files: 835 yield at least one requirement; 148 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 85 |
+| informative only | 101 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
-| rationale | 11 |
+| rationale | 10 |
 | superseded (kept for the record) | 3 |
 
 
@@ -92,8 +92,24 @@ Of these: 98 calibration, 102 definition, 1057 obligation. Retired (kept for the
 | R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR | informative only | size acceptance for one PR |
 | R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class | informative only | size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR |
 | R-252 — The memory limit reads memory pressure, not swap *(amends R-239)* | informative only | process ruling; the memory limit on dispatch (recorded in CLAUDE.md) |
-| R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)* | informative only | rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR |
 | R-262 — Builds move to the internal disk, three agents at most | informative only | process ruling; where builds run |
+| R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)* | informative only | size ruling; applied in plan/WORKFLOW.md § "Task files"; no requirement changes |
+| R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)* | informative only | process ruling; repository settings, applied in plan/HUMAN_SETUP.md §2 |
+| R-268 — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted | informative only | process ruling; it accepts veto items on PRs |
+| R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)* | informative only | applied in REQ-VAL-165 and TASK-M0-33 |
+| R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)* | informative only | process ruling; applied in TASK-M0-23 and REQ-VAL-138's verify detail |
+| R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)* | informative only | applied in REQ-VAL-168 (moved to M3), TASK-M0-05 and TASK-M3-34 |
+| R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)* | informative only | process ruling; applied in the orchestrator's loop |
+| R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)* | informative only | applied in TASK-M0-10 (PR |
+| R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)* | informative only | applied in TASK-M0-33 (PR |
+| R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part | informative only | applied in TASK-M0-10 (PR |
+| R-282 — TASK-M0-17's design items accepted | informative only | applied in TASK-M0-17 (PR |
+| R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges | informative only | process ruling; applied in the orchestrator's loop |
+| R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)* | informative only | applied in telemetry §2 and TASK-M0-10 (PR |
+| R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch | informative only | process ruling; applied in the orchestrator's loop |
+| R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)* | informative only | process ruling; recorded, for the orchestrator's check on qa's commit |
+| R-291 — TASK-M0-40's three veto items stand | informative only | applied in TASK-M0-40 (PR |
+| R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only | informative only | process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -266,7 +282,6 @@ Of these: 98 calibration, 102 definition, 1057 obligation. Retired (kept for the
 | Known-solution validation orbits | rationale | why periodic orbits are self-referencing tests |
 | 0. The headline: the figure-eight already found a first-order error | informative only | measurement narrative of the pre-fix AZ+RK4 closure error; the fix and gates are in §0.1, §3, §5 |
 | 1. The families, and what each is good for | parent heading (obligations are in its subsections) |  |
-| 2. What the suite tests that the current gates do not | rationale | why closure catches phase error that energy gates miss |
 | 6.2 Stability is in the gradient, not the value | informative only | research proposals (alpha on the closure field, well-width Lyapunov reading), not obligations |
 | 6.3 The Burrau connection | informative only | research question (is Burrau on an unstable manifold of a nearby periodic orbit) |
 

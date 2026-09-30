@@ -3056,3 +3056,5 @@ Tick any you don't accept.
   3. **Keep R-237 strict.** The implementer edits qa's files under R-227's exception, as a standing rule, with qa
      re-reviewing each edit.
 - **Needed:** which one. PR #79 needs it now: its fresh R-286 round will reverse qa's tests.
+- **Ruling:** R-290 (30 Sep 2026): option 1. qa may modify or delete test files that only qa has ever committed to
+  (checked with `git log`).
