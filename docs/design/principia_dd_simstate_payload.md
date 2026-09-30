@@ -260,7 +260,7 @@ Multiply-add (`3W+e`) push / div-mod pop. Detection of a crossing runs per accep
 
 **Decode (at resolve/inspect — cold path):** O(length) sequential — pop the base-3 tail (`while depth: e = W mod 3; W = W div 3`), the residue is `d₀`, replay forward via `continuation_symbol`. Not random-access, but consumers read the whole word anyway.
 
-**Small fixed shader tables:** `inverse(s)`; `continuation_index(prev,s)→{0,1,2}`; `continuation_symbol(prev,e)→s`; **`predecessor_symbol(next,e)→prev`** (the reverse table — mandatory for O(1) cancellation-pop).
+**Small fixed shader tables:** `inverse(s)`; `continuation_index(prev,s)→{0,1,2}`, and 3 where `s = inverse(prev)` (R-307); `continuation_symbol(prev,e)→s`; **`predecessor_symbol(next,e)→prev`** (the reverse table — mandatory for O(1) cancellation-pop).
 
 **NORMATIVE continuation table (FROZEN — part of the binary format; changing it changes the meaning of every stored word).** Symbol codes `a=0, A=1, b=2, B=3`; `inverse = [1,0,3,2]`. The three digit-maps are permutations of the symbol set that each exclude the inverse of `prev` (verified: no continuation equals `inverse(prev)`; each digit is a permutation ⇒ `predecessor` is well-defined; the 3 digits cover exactly the 3 legal continuations):
 
@@ -279,6 +279,14 @@ cont_symbol[1]= [2,3,0,1]   // digit 1
 cont_symbol[2]= [3,2,1,0]   // digit 2
 ```
 **Each permutation is self-inverse** (an involution), so `predecessor_symbol[e] == cont_symbol[e]` — the *same* table serves both forward (`prev,digit→next`) and reverse (`next,digit→prev`), and `continuation_index` is derived by inverting `cont_symbol` (`continuation_index[prev][next]` = the digit `e` with `cont_symbol[e][prev]==next`). **The Rust kernel/host and the WGSL fragment side MUST use this identical generated table** — it is frozen in the Rust layout definition (emitted to both targets) and any change is a binary-format version change: the table is hashed with the ledger (R-36), so the change is automatic.
+
+**`continuation_index` at the inverse holds 3 (R-307).** Of its 16 cells, the derivation fills 12; the four where `next = inverse(prev)` have no digit, since no continuation equals the inverse, and the append never reads them (it pops before it pushes). They hold **3 ("invalid")**, which is no digit, as `dmin_pair`'s 3 means unset/invalid (§2). The whole table, frozen with the rest (`continuation_index[prev][next]`, derived from `cont_symbol` above):
+```
+continuation_index[0]= [0,3,1,2]   // prev a: a→0, A (inverse)→3, b→1, B→2
+continuation_index[1]= [3,0,2,1]   // prev A: a (inverse)→3, A→0, b→2, B→1
+continuation_index[2]= [1,2,0,3]   // prev b: a→1, A→2, b→0, B (inverse)→3
+continuation_index[3]= [2,1,3,0]   // prev B: a→2, A→1, b (inverse)→3, B→0
+```
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```

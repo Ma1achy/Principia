@@ -187,6 +187,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
 - **R-300** — #78's items 11–13 are accepted; `DminCounters`' fields are private
 - **R-303** — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
+- **R-306** — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*
+- **R-307** — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*
+- **R-308** — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*
+- **R-309** — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
 
 ## Values
 
@@ -328,3 +332,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
+- **R-310** — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand

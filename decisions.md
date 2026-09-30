@@ -3234,3 +3234,74 @@ rulings PR) or changes Rust source with nothing to mutate. Once #65 merges, the 
 `main`'s branch protection, the one settings change the human authorised here, and `plan/HUMAN_SETUP.md` §2 lists it.
 The comment-width nit (`xtask/src/mutants_check.rs` line 3, over 120 columns) is fixed by the next PR that touches that
 file.
+
+## R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*
+*1 Oct 2026 · applied in this rulings PR: TASK-M0-11, TASK-M5-01, REQ-PAY-019, REQ-PAY-077*
+
+"RQ-178: as recommended. M0 records §3.7's member list as ledger data and tests REQ-PAY-019 on it; building the struct
+moves to TASK-M5-01 (R-113)."
+
+*Applied:* RQ-178's option 1. TASK-M0-11 transcribes generation-root §3.7's `QuadReduction` members into
+`crates/ledger/src/payload.rs` as ledger data, each with its name and §3.7 type, not as §3.8 entries and not emitted;
+its REQ-PAY-019 test checks that list (`spread_event` is f16; there is no `ensemble_outcome_agreement`). The generated
+struct, the members' §3.8 entries and `class_histogram`'s placement are TASK-M5-01's, with REQ-PAY-075 and REQ-PAY-077
+(R-113). RQ-178's sub-question, how M5 types the f16 members (`f16-pair` at packed 16-bit locations, or a new §3.8
+`f16` type), was not ruled; it is filed as RQ-182 for M5 and blocks nothing in M0. Numbered from R-306: the ruling
+block said "R-299 onward", but R-299 to R-305 were already taken.
+
+## R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*
+*1 Oct 2026 · applied in this rulings PR: payload §3, generation-root §3.3, REQ-PAY-016, TASK-M0-11, TASK-M0-13*
+
+"RQ-179: the four unset continuation_index cells hold 3 ("invalid"), matching dmin_pair."
+
+*Applied:* payload §3 states that the four cells of `continuation_index[prev][next]` where `next = inverse(prev)` hold
+3, which is no digit, as `dmin_pair`'s 3 means unset/invalid (payload §2), and gives the whole 4 × 4 table derived from
+`cont_symbol`. The table is frozen and hashed with the ledger (R-36, R-63), so its Rust and WGSL emissions both carry
+the 3s: TASK-M0-11 (Rust) and TASK-M0-13 (WGSL, REQ-PAY-016) assert them. Numbered from R-306: the ruling block said
+"R-299 onward", but R-299 to R-305 were already taken.
+
+## R-308 — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*
+*1 Oct 2026 · applied in this rulings PR: telemetry §5, REQ-TOOL-144 (new), REQ-TOOL-006, TASK-M0-18*
+
+"RQ-180: a session that opens no GPU writes api: "none", with the other GPU fields null. Readers accept that. Never
+open an adapter just to fill the header."
+
+*Applied:* telemetry §5 adds "none" to `backend.api`'s values. A session that opens no GPU writes `backend.api` "none"
+and `null` for `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`, the fields RQ-180
+names as the GPU's (its model, its driver, its memory split and its f32/f64 support); `device.cpu` and
+`device.cpu_cores` are written as always. The typed form (`engine::contract::profile`) and `profile_v1.json` accept it;
+TASK-M0-18 makes that change to TASK-M0-17's files, and M0's `prin profile` opens no adapter. REQ-TOOL-144 holds it.
+Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
+
+## R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
+*1 Oct 2026 · applied in this rulings PR: gui_state_contract §2, telemetry §5, render_gui_spec § "Export & share",
+image_embedding §6, export_animation Part 6, REQ-TOOL-002, REQ-TOOL-145 and REQ-TOOL-146 (new), TASK-M0-18,
+TASK-M8-32*
+
+"RQ-181: as recommended (SimConfig and RenderState serialisable; config = {"scenario", "frames", "sim", "render"}),
+with a canonical serialisation: stable key order and exact number formatting, shared with snapshot JSON, share links
+and pxpack."
+
+*Applied:* RQ-181's option 1. TASK-M0-18 makes the M0 skeleton's `SimConfig`, `RenderState` and their groups
+serialisable (its Deliverables gain `crates/engine/src/contract/{sim_config,render_state}.rs`), and `prin profile`
+writes the header's `config` as `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`.
+gui_state_contract §2 states that the two structs have one canonical serialisation, with a stable key order and exact
+number formatting, shared by the profiler header's `config`, snapshot JSON, share links and pxpack. The corpus doesn't
+say what that key order and number formatting are, so they are a definition requirement (R-72), REQ-TOOL-145: TASK-M0-18,
+the first task that writes the serialisation, writes the definition into gui_state_contract §2, reviewed by the physics
+reviewer (applied per R-72 — veto?). REQ-TOOL-146 (M8, TASK-M8-32) holds snapshot JSON, share links and pxpack to it.
+Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
+
+## R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
+*1 Oct 2026 · applied in PRs #94 and #95 and in TASK-M0-18's Reviewers*
+
+"#94: both veto items stand. Merge #94.
+#95's check in ledger::gen, and physics on TASK-M0-18: both stand."
+
+*Applied:* PR #94's two items stand: the self-test cases keep their one analytic reference on lavapipe too (R-287), and
+`screenshot.rs` is untouched, since no M1 renderer exists and it isn't on the golden path. #94 was merged
+(7b935c2) before this entry was written, on the human's instruction. PR #95's item stands: the write-only-when-changed
+compare lives in `ledger::gen::run_with_register`, so `.cargo/mutants.toml`'s reason for excluding
+`xtask/src/codegen.rs` holds; #95 merged as 842012f. TASK-M0-18's Reviewers gain physics, because REQ-TOOL-119's
+acceptance line and R-72 ask the physics reviewer to approve its definition (and, now, REQ-TOOL-145's). Numbered from
+R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.

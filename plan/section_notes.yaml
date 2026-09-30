@@ -667,3 +667,7 @@
   section: "R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`"
   reason: informative only
   note: confirms PR #65's provisional REQ-VAL-149 pair and its veto items 10–13, and makes `mutants-check` a required check on main (a repository setting, plan/HUMAN_SETUP.md §2); REQ-VAL-148 already requires the per-PR job on every pull request, and TASK-M0-23 builds it
+- file: decisions.md
+  section: 'R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand'
+  reason: informative only
+  note: accepts PR #94's and PR #95's veto items and adds the physics reviewer to TASK-M0-18 (plan/tasks.yaml and the task file); changes no requirement

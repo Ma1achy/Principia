@@ -70,7 +70,7 @@ Frame-loop speed settings do not affect exported content — export ignores wall
 
 ## Part 6 — Sharing: the spec is the object, the video is its shadow
 
-Unchanged in principle, sharpened by lockstep: since there is no stored temporal data at all, **the only complete description of an animation is its spec** — `ViewState + sim key + render state + transport/keyframe spec`. Sharing ships that object (URL-encodable); receiving it re-renders bit-comparable playback (Part 5). Exported videos embed (or link) the spec so provenance travels with the pixels.
+Unchanged in principle, sharpened by lockstep: since there is no stored temporal data at all, **the only complete description of an animation is its spec** — `ViewState + sim key + render state + transport/keyframe spec`. Sharing ships that object (URL-encodable), its `SimConfig` and `RenderState` in their one canonical serialisation (`principia_gui_state_contract.md` §2, R-309); receiving it re-renders bit-comparable playback (Part 5). Exported videos embed (or link) the spec so provenance travels with the pixels.
 
 ---
 

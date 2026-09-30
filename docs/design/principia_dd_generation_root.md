@@ -81,7 +81,7 @@ A **multiply-add** (`W*3+e`) replaces the flat **shift-or** — 2–3 extra ALU 
 
 **Decode (at resolve / inspect — a *cold* path):** O(length) sequential — pop the base-3 tail by depth, not by magnitude (`while depth: e = W mod 3; W = W div 3`, `length − 1` times — payload §3), the residue is `d₀`, then replay forward through the continuation table. **Not random-access** — but the consumers (symbolic-spread reduction comparing whole words, inspection display) read the *entire* word anyway, so O(length) sequential *is* their access pattern. No practical loss.
 
-**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}` and its inverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order); and the reverse `predecessor_symbol(next,e)→prev`, mandatory for the O(1) pop (payload §3's frozen table).
+**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}`, 3 where `s = inverse(prev)` (R-307), and its inverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order); and the reverse `predecessor_symbol(next,e)→prev`, mandatory for the O(1) pop (payload §3's frozen table).
 
 **Layout in `.w`:** payload high bits in `.w[0:24]` (25 bits — part of the 121-bit budget); `length` **7 bits** at `.w[25:31]`, values 0…76, with **`length = 127` = the truncation sentinel** (NO separate flag bit — the sentinel reclaims it; payload §3). **Truncation is the length cap:** a push onto a word already at 76 symbols sets `length_raw = 127` and stops growing (payload §3 — a 77-symbol word can have a small numeric `W`, so bit occupancy cannot define capacity).
 
