@@ -289,11 +289,11 @@ pub struct Symptom {
 impl Symptom {
     /// The metric on `image`.
     pub fn measure(&self, image: &Image) -> f64 {
-        let pixels = image.rgb.chunks_exact(3);
+        let pixels = image.rgb.as_chunks::<3>().0.iter();
         let n = pixels.len() as f64;
         match self.kind {
-            SymptomKind::Count(c) => pixels.filter(|p| *p == c).count() as f64,
-            SymptomKind::Fraction(c) => pixels.filter(|p| *p == c).count() as f64 / n,
+            SymptomKind::Count(c) => pixels.filter(|p| **p == c).count() as f64,
+            SymptomKind::Fraction(c) => pixels.filter(|p| **p == c).count() as f64 / n,
             SymptomKind::Mean(ch) => pixels.map(|p| f64::from(p[ch])).sum::<f64>() / n,
         }
     }
@@ -691,7 +691,9 @@ impl Renderer {
             .chunks_exact(row as usize)
             .flat_map(|r| {
                 r[..4 * width as usize]
-                    .chunks_exact(4)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
                     .flat_map(|p| [p[0], p[1], p[2]])
             })
             .collect();
@@ -733,7 +735,9 @@ pub fn diff(render: &Image, reference: &Image) -> Result<Diff, String> {
         .collect();
     let pixels = rgb.len() / 3;
     let differing_at: Vec<usize> = rgb
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .enumerate()
         .filter(|(_, p)| p.iter().any(|&d| d != 0))
         .map(|(i, _)| i)
