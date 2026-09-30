@@ -5,15 +5,20 @@
 //!   (integrate / reduce / colour / upload / present); every other scope has one of them as its ancestor; the finer
 //!   categories (quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five, and a scope beside
 //!   them is not v1.
-//! - REQ-TOOL-008: a profiler dump parses as telemetry §2's frame record (read here into qa's own §2-only struct) and
-//!   contains the nested sections: scopes, GPU passes, allocations, events.
+//! - REQ-TOOL-008: a profiler dump parses as telemetry §2's frame record (read here into qa's own §2-only struct, with
+//!   R-288's two counters) and contains the nested sections: scopes, GPU passes, allocations, events.
 //! - REQ-TOOL-120: the §5 key names and nesting; "exactly the keys listed, all required: an absent value is `null`";
-//!   the ranges; the two cross-field rules; the writer fails rather than write a value outside the definition; the
-//!   reader rejects it; the three stated reader/schema exceptions; "one entry for each type" in `by_kind`, and "one
-//!   entry per kind and pool" in a stage's `allocations`.
+//!   the ranges; the three cross-field rules; the writer fails rather than write a value outside the definition; the
+//!   reader rejects it; the four stated reader/schema exceptions.
+//! - R-286: the file is JSON Lines — the header line first, one compact frame record per line, the summary line last;
+//!   a blank line, a misplaced line or a file that ends before its summary line is not v1; a last line without its
+//!   newline is accepted. The JSON Schema checks each line against its place's `$defs` entry: `header_line`, `frame`,
+//!   `summary_line` (§5).
+//! - R-288: the frame record carries `dmin_nan_unset` and `dmin_negative_floored`, each a u32 count (§5's ranges).
 //!
-//! The fixture is hand-written JSON, filled with known values from the §5 definition, so the reader and the schema are
-//! both tested against a file the writer did not produce. Each test registers its control (R-176).
+//! The fixture is hand-written JSON, filled with known values from the §5 definition and laid out as JSON Lines here,
+//! so the reader and the schema are both tested against a file the writer did not produce. Each test registers its
+//! control (R-176).
 
 use std::collections::BTreeSet;
 
@@ -56,6 +61,8 @@ fn frame(index: u64, present: bool, camera_delta: f64) -> Value {
         "camera_delta": camera_delta,
         "tree_depth_max": 7,
         "leaf_count": 64,
+        "dmin_nan_unset": 3 + index,
+        "dmin_negative_floored": 5 + 2 * index,
         "stage_ms": {
             "integrate": 6.0, "reduce": 2.0, "colour": 1.5, "upload": 1.0,
             "present": if present { json!(2.0) } else { Value::Null }
@@ -78,6 +85,8 @@ fn frame(index: u64, present: bool, camera_delta: f64) -> Value {
     })
 }
 
+/// The trace as one logical object (edited by JSON pointer), which [`jsonl`] lays out as §5's lines. It is not the
+/// file: the file is JSON Lines (R-286).
 fn interactive() -> Value {
     json!({
         "schema": "principia-profile-v1",
@@ -92,7 +101,7 @@ fn interactive() -> Value {
             "display": { "width_px": 3024, "height_px": 1964, "refresh_hz": 120.0, "dpi_scale": 2.0 },
             "config": { "n": 64, "nested": { "a": [1, 2] } }
         },
-        "frames": [frame(0, true, 0.0), frame(1, true, 0.125)],
+        "frames": [frame(0, true, 0.0), frame(1, true, 0.125), frame(2, true, 0.0)],
         "leak_flags": null,
         "hot_paths": null
     })
@@ -115,32 +124,121 @@ fn edited(pointer: &str, value: Value) -> Value {
     doc
 }
 
+// ----- the file's lines (R-286; §5 "The file") -----
+
+/// §5's places: the header line `{schema, header}`, one frame record per line, the summary line
+/// `{leak_flags, hot_paths}`. Each is paired with the `$defs` entry §5 names for its place. A key the logical object
+/// lacks is missing from its line too, so a removed key stays removed.
+fn placed(doc: &Value) -> Vec<(&'static str, Value)> {
+    let o = doc.as_object().expect("the fixture is not an object");
+    let pick = |keys: &[&str]| -> Value {
+        Value::Object(
+            keys.iter()
+                .filter_map(|k| o.get(*k).map(|v| ((*k).to_owned(), v.clone())))
+                .collect(),
+        )
+    };
+    let mut lines = vec![("header_line", pick(&["schema", "header"]))];
+    for f in o["frames"].as_array().expect("no frames") {
+        lines.push(("frame", f.clone()));
+    }
+    lines.push(("summary_line", pick(&["leak_flags", "hot_paths"])));
+    lines
+}
+
+/// The logical trace as a JSON Lines file, each line compact and ended by a newline.
+fn jsonl(doc: &Value) -> String {
+    placed(doc)
+        .iter()
+        .map(|(_, line)| format!("{line}\n"))
+        .collect()
+}
+
+/// The file's lines: split at each newline, the empty piece after a final newline dropped (JSON Lines).
+fn lines_of(text: &str) -> Vec<&str> {
+    let body = text.strip_suffix('\n').unwrap_or(text);
+    body.split('\n').collect()
+}
+
+/// §5's place for line `i` of `n`: the first is the header line, the last the summary line, the rest frame records.
+fn place(i: usize, n: usize) -> &'static str {
+    if i == 0 {
+        "header_line"
+    } else if i + 1 == n {
+        "summary_line"
+    } else {
+        "frame"
+    }
+}
+
+fn schema() -> Value {
+    serde_json::from_str(SCHEMA_V1).expect("the schema is not JSON")
+}
+
+/// The schema, rooted at the `$defs` entry for `place` (§5: "The JSON Schema defines one line for each place, in
+/// `$defs`: `header_line`, `frame` and `summary_line`").
+fn place_validator(place: &str) -> jsonschema::Validator {
+    let mut s = schema();
+    let root = s.as_object_mut().expect("the schema is not an object");
+    assert!(
+        root.get("$defs").and_then(|d| d.get(place)).is_some(),
+        "the schema's $defs has no {place}"
+    );
+    root.retain(|k, _| k == "$schema" || k == "$id" || k == "$defs");
+    root.insert("$ref".to_owned(), json!(format!("#/$defs/{place}")));
+    jsonschema::validator_for(&s).expect("the schema is not a JSON Schema")
+}
+
+/// Each line validates against its place's definition, and against the schema's root.
+fn schema_accepts_lines(lines: &[(&str, Value)]) -> bool {
+    let root = jsonschema::validator_for(&schema()).expect("the schema is not a JSON Schema");
+    lines
+        .iter()
+        .all(|(place, line)| place_validator(place).is_valid(line) && root.is_valid(line))
+}
+
 fn schema_accepts(doc: &Value) -> bool {
-    let schema: Value = serde_json::from_str(SCHEMA_V1).expect("the schema is not JSON");
-    jsonschema::validator_for(&schema)
-        .expect("the schema is not a JSON Schema")
-        .is_valid(doc)
+    schema_accepts_lines(&placed(doc))
+}
+
+/// A file's text checked line by line (§5: "the schema checks the file line by line, each line against the
+/// definition for its place"). A line that is not JSON fails.
+fn schema_accepts_file(text: &str) -> bool {
+    let lines = lines_of(text);
+    let n = lines.len();
+    let mut parsed = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        match serde_json::from_str::<Value>(line) {
+            Ok(v) => parsed.push((place(i, n), v)),
+            Err(_) => return false,
+        }
+    }
+    n >= 2 && schema_accepts_lines(&parsed)
 }
 
 fn reader_accepts(text: &str) -> bool {
     read(text.as_bytes()).is_ok()
 }
 
-fn written_text(doc: &Value) -> String {
-    let trace: Trace = read(doc.to_string().as_bytes()).expect("the reader rejected the fixture");
+fn read_doc(doc: &Value) -> Trace {
+    read(jsonl(doc).as_bytes()).expect("the reader rejected the fixture")
+}
+
+fn written(trace: &Trace) -> String {
     let mut out = Vec::new();
-    write(&trace, &mut out).expect("the writer refused the fixture");
+    write(trace, &mut out).expect("the writer refused the trace");
     String::from_utf8(out).expect("the writer wrote no UTF-8")
+}
+
+fn written_text(doc: &Value) -> String {
+    written(&read_doc(doc))
 }
 
 // ----- the checks -----
 
 fn check_accepted(doc: &Value, what: &str) {
     assert!(schema_accepts(doc), "the schema rejects {what}");
-    assert!(
-        reader_accepts(&doc.to_string()),
-        "the reader rejects {what}"
-    );
+    assert!(reader_accepts(&jsonl(doc)), "the reader rejects {what}");
 }
 
 fn check_rejected(doc: &Value, what: &str) {
@@ -149,16 +247,21 @@ fn check_rejected(doc: &Value, what: &str) {
         "not v1, but the schema accepts {what}"
     );
     assert!(
-        !reader_accepts(&doc.to_string()),
+        !reader_accepts(&jsonl(doc)),
         "not v1, but the reader accepts {what}"
     );
 }
 
-/// Only the reader can reject these (§5's three exceptions): the schema accepts, the reader rejects.
+/// The unedited fixtures are v1, so a rejection of an edit is the edit's doing, not the base's.
+fn check_bases_accepted() {
+    check_accepted(&interactive(), "the unedited interactive fixture");
+    check_accepted(&batch(), "the unedited batch fixture");
+}
+
+/// Only the reader can reject these (§5's four exceptions): the schema accepts, the reader rejects.
 fn check_reader_only(text: &str, what: &str) {
-    let doc: Value = serde_json::from_str(text).expect("not JSON");
     assert!(
-        schema_accepts(&doc),
+        schema_accepts_file(text),
         "§5 says the schema accepts {what}, but it rejects it"
     );
     assert!(
@@ -167,17 +270,26 @@ fn check_reader_only(text: &str, what: &str) {
     );
 }
 
-/// Every scope object in `doc` (anything with a `children` array) must sit under `frames[i].stages.<one of five>`.
-fn check_every_scope_under_a_stage(doc: &Value) {
-    fn walk(v: &Value, path: &mut Vec<String>, found: &mut usize) {
+/// Only the reader sees these, the file's layout (R-286): its lines' places, blank lines, the newline.
+fn check_reader_rejects_file(text: &str, what: &str) {
+    assert!(
+        !reader_accepts(text),
+        "not v1, but the reader accepts {what}"
+    );
+}
+
+/// Every scope object in the file (anything with `name` and a `children` array) must sit on a frame line, under
+/// `stages.<one of five>`.
+fn check_every_scope_under_a_stage(text: &str) {
+    fn walk(v: &Value, frame_line: bool, path: &mut Vec<String>, found: &mut usize) {
         match v {
             Value::Object(o) => {
                 if o.contains_key("children") && o.contains_key("name") {
                     *found += 1;
-                    let under = path.len() >= 4
-                        && path[0] == "frames"
-                        && path[2] == "stages"
-                        && FIVE.contains(&path[3].as_str());
+                    let under = frame_line
+                        && path.len() >= 2
+                        && path[0] == "stages"
+                        && FIVE.contains(&path[1].as_str());
                     assert!(
                         under,
                         "a scope at {} has none of the five stages as its ancestor",
@@ -186,32 +298,43 @@ fn check_every_scope_under_a_stage(doc: &Value) {
                 }
                 for (k, c) in o {
                     path.push(k.clone());
-                    walk(c, path, found);
+                    walk(c, frame_line, path, found);
                     path.pop();
                 }
             }
             Value::Array(a) => {
                 for (i, c) in a.iter().enumerate() {
                     path.push(i.to_string());
-                    walk(c, path, found);
+                    walk(c, frame_line, path, found);
                     path.pop();
                 }
             }
             _ => {}
         }
     }
+    let lines = lines_of(text);
+    let n = lines.len();
     let mut found = 0;
-    walk(doc, &mut Vec::new(), &mut found);
+    for (i, line) in lines.iter().enumerate() {
+        let v: Value = serde_json::from_str(line).expect("a line is not JSON");
+        walk(&v, place(i, n) == "frame", &mut Vec::new(), &mut found);
+    }
     assert!(
         found > 0,
         "the trace has no scopes, so the check says nothing"
     );
 }
 
-/// The frame's `stage_ms` and `stages` have exactly the five keys, and the writer writes them in §2's order.
+/// Each frame line's `stage_ms` and `stages` have exactly the five keys, and the writer writes them in §2's order.
 fn check_five_in_order(text: &str) {
-    let doc: Value = serde_json::from_str(text).expect("not JSON");
-    for f in doc["frames"].as_array().expect("no frames") {
+    let lines = lines_of(text);
+    let n = lines.len();
+    assert!(
+        n > 2,
+        "the file has no frame line, so the check says nothing"
+    );
+    for line in &lines[1..n - 1] {
+        let f: Value = serde_json::from_str(line).expect("a frame line is not JSON");
         for key in ["stage_ms", "stages"] {
             let keys: BTreeSet<&str> = f[key]
                 .as_object()
@@ -225,26 +348,27 @@ fn check_five_in_order(text: &str) {
                 "{key} is not exactly the five stages"
             );
         }
-    }
-    // Order, in the text: within the first `stage_ms` object, each stage key after the one before.
-    let at = text.find("\"stage_ms\"").expect("no stage_ms in the text");
-    let tail = &text[at..];
-    let end = tail.find('}').expect("stage_ms is not closed");
-    let body = &tail[..end];
-    let mut last = 0;
-    for stage in FIVE {
-        let pos = body
-            .find(&format!("\"{stage}\""))
-            .unwrap_or_else(|| panic!("stage_ms has no {stage}"));
-        assert!(
-            pos >= last,
-            "stage_ms's stages are not written in §2's order"
-        );
-        last = pos;
+        // Order, in the text: within this line's `stage_ms` object, each stage key after the one before.
+        let at = line.find("\"stage_ms\"").expect("no stage_ms in the line");
+        let tail = &line[at..];
+        let end = tail.find('}').expect("stage_ms is not closed");
+        let body = &tail[..end];
+        let mut last = 0;
+        for stage in FIVE {
+            let pos = body
+                .find(&format!("\"{stage}\""))
+                .unwrap_or_else(|| panic!("stage_ms has no {stage}"));
+            assert!(
+                pos >= last,
+                "stage_ms's stages are not written in §2's order"
+            );
+            last = pos;
+        }
     }
 }
 
-/// qa's own telemetry §2 frame record: only the §2 fields, and whatever else the dump carries is ignored.
+/// qa's own telemetry §2 frame record: only the §2 fields, with R-288's two counters, and whatever else the dump
+/// carries is ignored.
 #[derive(Deserialize)]
 struct S2Frame {
     frame_ms: f64,
@@ -256,6 +380,8 @@ struct S2Frame {
     camera_delta: f64,
     tree_depth_max: u64,
     leaf_count: u64,
+    dmin_nan_unset: u32,
+    dmin_negative_floored: u32,
     stage_ms: S2StageMs,
 }
 
@@ -278,55 +404,61 @@ struct S2Session {
 }
 
 #[derive(Deserialize)]
-struct S2Dump {
+struct S2HeaderLine {
     header: S2Session,
-    frames: Vec<S2Frame>,
 }
 
-fn check_superset(text: &str) {
-    let dump: S2Dump =
-        serde_json::from_str(text).expect("the dump does not parse as telemetry §2's records");
-    assert!(!dump.frames.is_empty(), "the dump has no frame record");
-    for f in &dump.frames {
-        let s = &f.stage_ms;
-        let total = s.integrate + s.reduce + s.colour + s.upload + s.present.unwrap_or(0.0);
-        assert!(
-            total > 0.0 && f.frame_ms > 0.0,
-            "the §2 values did not come through"
-        );
-        let _ = (
-            f.quads_computed,
-            f.quads_reused,
-            f.samples,
-            f.substeps_total,
-            f.playhead_dt,
-        );
-        let _ = (f.camera_delta, f.tree_depth_max, f.leaf_count);
-    }
+/// The dump `text` parses as §2's records, and each frame's §2 values are the fixture's (known answers), then each
+/// present stage has all four nested sections, non-empty.
+fn check_superset(text: &str, fixture: &Value) {
+    let lines = lines_of(text);
+    let n = lines.len();
+    let head: S2HeaderLine =
+        serde_json::from_str(lines[0]).expect("the header line does not parse as §2's session");
     for v in [
-        &dump.header.device,
-        &dump.header.backend,
-        &dump.header.precision,
-        &dump.header.build,
+        &head.header.device,
+        &head.header.backend,
+        &head.header.precision,
+        &head.header.build,
     ] {
         assert!(v.is_object(), "a §2 per-session field is not an object");
     }
-    let _ = &dump.header.display;
-    // The nested sections beneath each present stage.
-    let doc: Value = serde_json::from_str(text).expect("not JSON");
-    for f in doc["frames"].as_array().expect("no frames") {
+    assert_eq!(
+        head.header.display, fixture["header"]["display"],
+        "§2's display did not come through"
+    );
+    let expected = fixture["frames"].as_array().expect("no frames");
+    assert!(n >= 2, "the dump has no summary line");
+    assert_eq!(n - 2, expected.len(), "the dump has the wrong frame count");
+    assert!(!expected.is_empty(), "the dump has no frame record");
+    for (line, e) in lines[1..n - 1].iter().zip(expected) {
+        let f: S2Frame = serde_json::from_str(line)
+            .expect("the dump does not parse as telemetry §2's frame record");
+        let s = &f.stage_ms;
+        let got = json!({
+            "frame_ms": f.frame_ms, "quads_computed": f.quads_computed, "quads_reused": f.quads_reused,
+            "samples": f.samples, "substeps_total": f.substeps_total, "playhead_dt": f.playhead_dt,
+            "camera_delta": f.camera_delta, "tree_depth_max": f.tree_depth_max, "leaf_count": f.leaf_count,
+            "dmin_nan_unset": f.dmin_nan_unset, "dmin_negative_floored": f.dmin_negative_floored,
+            "stage_ms": { "integrate": s.integrate, "reduce": s.reduce, "colour": s.colour, "upload": s.upload,
+                          "present": s.present },
+        });
+        for (key, value) in got.as_object().unwrap() {
+            assert_eq!(value, &e[key], "§2's {key} did not come through");
+        }
+        let doc: Value = serde_json::from_str(line).expect("not JSON");
         for stage in FIVE {
-            let s = &f["stages"][stage];
-            if s.is_null() {
+            let st = &doc["stages"][stage];
+            if st.is_null() {
                 assert!(
-                    f["stage_ms"][stage].is_null(),
+                    doc["stage_ms"][stage].is_null(),
                     "{stage} has a time and no sections"
                 );
                 continue;
             }
             for section in ["scopes", "gpu_passes", "allocations", "events"] {
                 assert!(
-                    s[section].as_array().is_some_and(|a| !a.is_empty()),
+                    st[section].as_array().is_some_and(|a| !a.is_empty()),
                     "stage {stage} has no {section}"
                 );
             }
@@ -350,18 +482,47 @@ fn check_write_refuses(doc: &Value, what: &str) {
     );
 }
 
+/// No whitespace outside a JSON string: the line is compact, not pretty-printed (R-286).
+fn is_compact(line: &str) -> bool {
+    let (mut in_str, mut esc) = (false, false);
+    for c in line.chars() {
+        if in_str {
+            if esc {
+                esc = false;
+            } else if c == '\\' {
+                esc = true;
+            } else if c == '"' {
+                in_str = false;
+            }
+        } else if c == '"' {
+            in_str = true;
+        } else if c.is_whitespace() {
+            return false;
+        }
+    }
+    true
+}
+
+fn keys(v: &Value) -> BTreeSet<&str> {
+    v.as_object()
+        .expect("a line is not an object")
+        .keys()
+        .map(String::as_str)
+        .collect()
+}
+
 // ----- REQ-TOOL-005 -----
 
 #[test]
 fn qa_m017_hand_written_trace_validates() {
-    check_accepted(&interactive(), "a hand-written interactive trace");
-    check_accepted(&batch(), "a hand-written batch trace");
-    let text = written_text(&interactive());
-    let doc: Value = serde_json::from_str(&text).expect("not JSON");
-    assert!(
-        schema_accepts(&doc),
-        "the writer's output does not validate against the schema"
-    );
+    check_bases_accepted();
+    for doc in [interactive(), batch()] {
+        let text = written_text(&doc);
+        assert!(
+            schema_accepts_file(&text),
+            "the writer's output does not validate, line by line, against the schema"
+        );
+    }
 }
 
 validation::negative_control!(
@@ -369,12 +530,12 @@ validation::negative_control!(
     "a quadtree scope beside the five stages must fail validation",
     expected = "the schema rejects a top-level quadtree scope",
     check_accepted(
-        &{
-            let mut doc = interactive();
-            doc["frames"][0]["quadtree"] =
+        &edited("/frames/0", {
+            let mut f = frame(0, true, 0.0);
+            f["quadtree"] =
                 json!({ "name": "quadtree", "start_ms": 0.0, "ms": 1.0, "children": [] });
-            doc
-        },
+            f
+        }),
         "a top-level quadtree scope"
     )
 );
@@ -389,33 +550,36 @@ validation::negative_control!(
     qa_m017_exactly_the_five_at_the_top_in_order,
     "stage_ms with present written before integrate must fail the order check",
     expected = "not written in §2's order",
-    check_five_in_order(
-        r#"{"frames":[{"stage_ms":{"present":1,"integrate":1,"reduce":1,"colour":1,"upload":1},
-            "stages":{"integrate":0,"reduce":0,"colour":0,"upload":0,"present":0}}]}"#
-    )
+    check_five_in_order(concat!(
+        "{}\n",
+        r#"{"stage_ms":{"present":1,"integrate":1,"reduce":1,"colour":1,"upload":1},"#,
+        r#""stages":{"integrate":0,"reduce":0,"colour":0,"upload":0,"present":0}}"#,
+        "\n{}\n"
+    ))
 );
 
 #[test]
 fn qa_m017_every_scope_under_a_stage() {
-    let text = written_text(&interactive());
-    check_every_scope_under_a_stage(&serde_json::from_str(&text).expect("not JSON"));
+    check_every_scope_under_a_stage(&written_text(&interactive()));
+    check_every_scope_under_a_stage(&written_text(&batch()));
 }
 
 validation::negative_control!(
     qa_m017_every_scope_under_a_stage,
     "a scope beside the stages must be found without a stage ancestor",
     expected = "has none of the five stages as its ancestor",
-    check_every_scope_under_a_stage(&{
+    check_every_scope_under_a_stage(&jsonl(&{
         let mut doc = interactive();
         doc["frames"][0]["quadtree"] =
             json!({ "name": "quadtree", "start_ms": 0.0, "ms": 1.0, "children": [] });
         doc
-    })
+    }))
 );
 
 /// Every shape §5 says "is not schema v1" is rejected by both the reader and the schema.
 #[test]
 fn qa_m017_not_v1_is_rejected_by_both() {
+    check_bases_accepted();
     let scope = json!({ "name": "quadtree", "start_ms": 0.0, "ms": 1.0, "children": [] });
     let cases: Vec<(Value, &str)> = vec![
         (
@@ -661,84 +825,147 @@ validation::negative_control!(
 
 #[test]
 fn qa_m017_dump_parses_as_telemetry_s2_with_the_nested_sections() {
-    check_superset(&written_text(&interactive()));
-    check_superset(&written_text(&batch()));
+    check_superset(&written_text(&interactive()), &interactive());
+    check_superset(&written_text(&batch()), &batch());
 }
 
 validation::negative_control!(
     qa_m017_dump_parses_as_telemetry_s2_with_the_nested_sections,
     "a dump without stage_ms must not parse as §2's frame record",
-    expected = "does not parse as telemetry §2's records",
-    check_superset(&{
-        let mut doc = interactive();
-        doc["frames"][0].as_object_mut().unwrap().remove("stage_ms");
-        doc.to_string()
-    })
+    expected = "does not parse as telemetry §2's frame record",
+    check_superset(
+        &{
+            let mut doc = interactive();
+            doc["frames"][0].as_object_mut().unwrap().remove("stage_ms");
+            jsonl(&doc)
+        },
+        &interactive()
+    )
 );
 
-// ----- REQ-TOOL-120: the three stated exceptions, and the config's repeated keys -----
+// ----- REQ-TOOL-120: the four stated exceptions, and the repeated keys that keep the last copy -----
 
 #[test]
-fn qa_m017_the_three_reader_only_exceptions() {
-    let text = interactive().to_string();
-    check_reader_only(
-        &text.replacen("\"cpu_cores\":8", "\"cpu_cores\":8.0", 1),
-        "a count with a zero fraction",
+fn qa_m017_the_four_reader_only_exceptions() {
+    let text = jsonl(&interactive());
+    assert!(
+        schema_accepts_file(&text) && reader_accepts(&text),
+        "the unedited fixture is not accepted by both"
     );
-    check_reader_only(
-        &text.replacen(
-            "\"frame_ms\":12.5",
-            "\"frame_ms\":12.5,\"frame_ms\":12.5",
-            1,
+    let cases: Vec<(String, &str)> = vec![
+        // 1. a count or size written with a zero fraction
+        (
+            text.replacen("\"cpu_cores\":8", "\"cpu_cores\":8.0", 1),
+            "a count with a zero fraction",
         ),
-        "a repeated frame-record key",
-    );
-    check_reader_only(
-        &edited("/frames/1/live_memory/heap/bytes", json!(301)).to_string(),
-        "a pool bytes over its by_kind sum",
-    );
-    check_reader_only(
-        &edited("/frames/0/live_memory/tile_cache/bytes", json!(1)).to_string(),
-        "an empty pool with bytes",
-    );
+        (
+            text.replacen("\"dmin_nan_unset\":3", "\"dmin_nan_unset\":3.0", 1),
+            "a d_min counter with a zero fraction",
+        ),
+        // 2. a key repeated within an object whose keys §5 lists, on each of the three lines
+        (
+            text.replacen(
+                "\"frame_ms\":12.5",
+                "\"frame_ms\":12.5,\"frame_ms\":12.5",
+                1,
+            ),
+            "a repeated frame-record key",
+        ),
+        (
+            text.replacen(
+                "\"schema\":\"principia-profile-v1\"",
+                "\"schema\":\"principia-profile-v1\",\"schema\":\"principia-profile-v1\"",
+                1,
+            ),
+            "a repeated header-line key",
+        ),
+        (
+            text.replacen(
+                "\"hot_paths\":null",
+                "\"hot_paths\":null,\"hot_paths\":null",
+                1,
+            ),
+            "a repeated summary-line key",
+        ),
+        // 3. a pool whose bytes is not the sum of its by_kind bytes
+        (
+            jsonl(&edited("/frames/1/live_memory/heap/bytes", json!(301))),
+            "a pool bytes over its by_kind sum",
+        ),
+        (
+            jsonl(&edited("/frames/0/live_memory/tile_cache/bytes", json!(1))),
+            "an empty pool with bytes",
+        ),
+        // 4. two by_kind entries for one kind in a pool; two allocations for one kind and pool in a stage
+        (
+            jsonl(&edited(
+                "/frames/0/live_memory/heap",
+                json!({ "bytes": 300, "by_kind": [
+                    { "kind": "quad", "count": 3, "bytes": 100 },
+                    { "kind": "quad", "count": 2, "bytes": 200 }
+                ] }),
+            )),
+            "a pool with two entries for one type",
+        ),
+        (
+            jsonl(&edited(
+                "/frames/2/stages/present/allocations",
+                json!([
+                    { "kind": "quad", "pool": "gpu", "count": 1, "bytes": 64 },
+                    { "kind": "quad", "pool": "gpu", "count": 2, "bytes": 128 }
+                ]),
+            )),
+            "a stage with two entries for one kind and pool",
+        ),
+    ];
+    for (t, what) in &cases {
+        assert_ne!(t, &text, "the edit for {what} changed nothing");
+        check_reader_only(t, what);
+    }
 }
 
 validation::negative_control!(
-    qa_m017_the_three_reader_only_exceptions,
+    qa_m017_the_four_reader_only_exceptions,
     "a valid trace must fail the reader-only check",
     expected = "not v1, but the reader accepts",
-    check_reader_only(&interactive().to_string(), "a valid trace")
+    check_reader_only(&jsonl(&interactive()), "a valid trace")
 );
 
-fn check_config_keeps_last(text: &str) {
+fn check_repeats_keep_last(text: &str) {
     let trace = read(text.as_bytes()).expect("the reader rejected a repeated config key");
     assert_eq!(
         trace.header.config.get("n"),
         Some(&json!(2)),
         "the reader did not keep the last copy of config.n"
     );
+    let flags = trace.leak_flags.expect("the leak flags were lost");
+    assert_eq!(
+        flags[0].get("a"),
+        Some(&json!(2)),
+        "the reader did not keep the last copy of a leak flag's key"
+    );
 }
 
 #[test]
-fn qa_m017_config_repeated_key_keeps_the_last_copy() {
-    let text = interactive()
-        .to_string()
-        .replacen("\"n\":64", "\"n\":1,\"n\":2", 1);
+fn qa_m017_config_and_summary_repeated_key_keeps_the_last_copy() {
+    let text = jsonl(&edited("/leak_flags", json!([{ "a": 0 }])))
+        .replacen("\"n\":64", "\"n\":1,\"n\":2", 1)
+        .replacen("\"a\":0", "\"a\":1,\"a\":2", 1);
     assert!(
-        schema_accepts(&serde_json::from_str(&text).expect("not JSON")),
-        "the schema rejects a repeated config key"
+        schema_accepts_file(&text),
+        "the schema rejects a repeated config or leak-flag key"
     );
-    check_config_keeps_last(&text);
+    check_repeats_keep_last(&text);
 }
 
 validation::negative_control!(
-    qa_m017_config_repeated_key_keeps_the_last_copy,
+    qa_m017_config_and_summary_repeated_key_keeps_the_last_copy,
     "a config whose last n is not 2 must fail",
     expected = "did not keep the last copy",
-    check_config_keeps_last(
-        &interactive()
-            .to_string()
+    check_repeats_keep_last(
+        &jsonl(&edited("/leak_flags", json!([{ "a": 0 }])))
             .replacen("\"n\":64", "\"n\":2,\"n\":1", 1)
+            .replacen("\"a\":0", "\"a\":1,\"a\":2", 1)
     )
 );
 
@@ -773,6 +1000,20 @@ fn qa_m017_writer_refuses_what_v1_excludes() {
         (
             edited("/header/display/dpi_scale", json!(-1.0)),
             "a negative dpi_scale",
+        ),
+        (
+            edited(
+                "/frames/2/live_memory/gpu/by_kind",
+                json!([
+                    { "kind": "quad", "count": 1, "bytes": 4000 },
+                    { "kind": "quad", "count": 1, "bytes": 96 }
+                ]),
+            ),
+            "a pool with two entries for one type, in the last frame",
+        ),
+        (
+            edited("/frames/2/stages/upload/allocations/1/pool", json!("gpu")),
+            "a stage with two entries for one kind and pool, in the last frame",
         ),
     ];
     for (doc, what) in &cases {
@@ -814,6 +1055,10 @@ fn qa_m017_writer_refuses_what_v1_excludes() {
             Box::new(|t| t.header.display.as_mut().unwrap().refresh_hz = f64::INFINITY),
             "an infinite refresh_hz",
         ),
+        (
+            Box::new(|t| t.frames[2].frame_ms = f64::NAN),
+            "a NaN frame_ms in the last frame",
+        ),
     ];
     for (edit, what) in &non_finite {
         let mut t = base.clone();
@@ -844,50 +1089,64 @@ validation::negative_control!(
     check_write_refuses(&interactive(), "a valid trace")
 );
 
-/// What the writer writes: the file's keys in §5's order, every key present (an absent value is `null`), and each
-/// count as a JSON integer.
-fn check_written_shape(text: &str) {
-    let order = [
-        "\"schema\"",
-        "\"header\"",
-        "\"frames\"",
-        "\"leak_flags\"",
-        "\"hot_paths\"",
-    ];
-    let positions: Vec<usize> = order
-        .iter()
-        .map(|k| {
-            text.find(k)
-                .unwrap_or_else(|| panic!("the file has no {k}"))
-        })
-        .collect();
+// ----- R-286: the file is JSON Lines -----
+
+/// What the writer writes (§5 "The file", R-286): every line compact and ended by a newline; the header line first,
+/// exactly `schema` and `header`; one frame record per line, in the session's order; the summary line last, exactly
+/// `leak_flags` and `hot_paths`; every nullable key present; each count a JSON integer.
+fn check_written_shape(text: &str, frames: usize) {
     assert!(
-        positions.windows(2).all(|w| w[0] < w[1]),
-        "the file's keys are not header, frames, then summaries"
+        text.ends_with('\n'),
+        "the writer did not end the last line with a newline"
     );
-    let doc: Value = serde_json::from_str(text).expect("not JSON");
-    assert_eq!(doc["schema"], json!(SCHEMA_ID));
-    assert!(
-        doc.as_object().unwrap().contains_key("leak_flags"),
-        "leak_flags is missing, not null"
+    let lines = lines_of(text);
+    assert_eq!(
+        lines.len(),
+        frames + 2,
+        "the file is not one header line, one line per frame and one summary line"
     );
-    let header = doc["header"].as_object().unwrap();
+    for line in &lines {
+        assert!(
+            !line.is_empty() && is_compact(line),
+            "a line is blank or not compact: {line}"
+        );
+    }
+    let head: Value = serde_json::from_str(lines[0]).expect("line 1 is not JSON");
+    assert_eq!(
+        keys(&head),
+        BTreeSet::from(["schema", "header"]),
+        "line 1 is not exactly schema and header"
+    );
+    assert_eq!(head["schema"], json!(SCHEMA_ID));
+    let header = &head["header"];
     assert!(
-        header.contains_key("display"),
+        header.as_object().unwrap().contains_key("display"),
         "a headless run's display is missing, not null"
     );
     assert!(
-        doc["header"]["device"]
+        header["device"]
             .as_object()
             .unwrap()
             .contains_key("gpu_cores"),
         "gpu_cores is missing, not null"
     );
     assert!(
-        doc["header"]["device"]["cpu_cores"].is_u64(),
+        header["device"]["cpu_cores"].is_u64(),
         "cpu_cores is not written as an integer"
     );
-    for f in doc["frames"].as_array().unwrap() {
+    let last: Value = serde_json::from_str(lines[frames + 1]).expect("the last line is not JSON");
+    assert_eq!(
+        keys(&last),
+        BTreeSet::from(["leak_flags", "hot_paths"]),
+        "the last line is not exactly leak_flags and hot_paths"
+    );
+    for (i, line) in lines[1..=frames].iter().enumerate() {
+        let f: Value = serde_json::from_str(line).expect("a frame line is not JSON");
+        assert_eq!(
+            f["frame"],
+            json!(i),
+            "the frame lines are not in the session's order"
+        );
         for key in ["stage_ms", "stages"] {
             assert!(
                 f[key].as_object().unwrap().contains_key("present"),
@@ -900,6 +1159,8 @@ fn check_written_shape(text: &str) {
             "samples",
             "leaf_count",
             "tree_depth_max",
+            "dmin_nan_unset",
+            "dmin_negative_floored",
         ] {
             assert!(f[key].is_u64(), "{key} is not written as an integer");
         }
@@ -907,17 +1168,272 @@ fn check_written_shape(text: &str) {
 }
 
 #[test]
-fn qa_m017_writer_writes_every_key_in_order() {
-    check_written_shape(&written_text(&batch()));
-    check_written_shape(&written_text(&interactive()));
+fn qa_m017_writer_writes_json_lines() {
+    check_written_shape(&written_text(&batch()), 1);
+    check_written_shape(&written_text(&interactive()), 3);
+    // A session that recorded no frame: the header line, then the summary line.
+    let mut empty = interactive();
+    empty["frames"] = json!([]);
+    let text = written_text(&empty);
+    check_written_shape(&text, 0);
+    assert!(
+        schema_accepts_file(&text),
+        "the schema rejects a file with no frame"
+    );
 }
 
 validation::negative_control!(
-    qa_m017_writer_writes_every_key_in_order,
-    "a file with the header missing must fail the shape check",
-    expected = "the file has no \"header\"",
-    check_written_shape(
-        r#"{"schema":"principia-profile-v1","frames":[],"leak_flags":null,"hot_paths":null}"#
+    qa_m017_writer_writes_json_lines,
+    "the old one-object form must fail the JSON Lines shape check",
+    expected = "the file is not one header line",
+    check_written_shape(&format!("{}\n", interactive()), 3)
+);
+
+/// Each line of the writer's output is compact: R-286's "one compact frame record per line", never pretty-printed.
+fn check_compact(text: &str) {
+    for line in lines_of(text) {
+        assert!(is_compact(line), "a line is not compact: {line}");
+    }
+}
+
+#[test]
+fn qa_m017_written_lines_are_compact() {
+    // Text with spaces inside strings stays compact: only whitespace outside a string counts.
+    let mut doc = interactive();
+    doc["header"]["build"]["commit"] = json!("a b\" c");
+    check_compact(&written_text(&doc));
+    check_compact(&written_text(&batch()));
+}
+
+validation::negative_control!(
+    qa_m017_written_lines_are_compact,
+    "a pretty-printed line, its newlines removed, must fail the compact check",
+    expected = "not compact",
+    check_compact(
+        &placed(&interactive())
+            .iter()
+            .map(|(_, l)| format!(
+                "{}\n",
+                serde_json::to_string_pretty(l).unwrap().replace('\n', "")
+            ))
+            .collect::<String>()
+    )
+);
+
+/// §5: "A line that is not the object its place calls for, a blank line among them, or a file that ends before its
+/// summary line is not schema v1."
+#[test]
+fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
+    let doc = interactive();
+    let text = jsonl(&doc);
+    assert!(
+        reader_accepts(&text),
+        "the reader rejects the unedited file"
+    );
+    let ls: Vec<String> = placed(&doc).iter().map(|(_, l)| l.to_string()).collect();
+    let (head, f0, f1, f2, summary) = (&ls[0], &ls[1], &ls[2], &ls[3], &ls[4]);
+    let join = |parts: &[&str]| -> String { parts.iter().map(|p| format!("{p}\n")).collect() };
+    let cases: Vec<(String, &str)> = vec![
+        (String::new(), "an empty file"),
+        (join(&[head]), "a header line alone"),
+        (
+            join(&[head, f0, f1, f2]),
+            "a file ending before its summary line",
+        ),
+        (
+            join(&[f0, head, f1, f2, summary]),
+            "a frame before the header line",
+        ),
+        (
+            join(&[summary, f0, f1, f2, head]),
+            "the summary line first, the header last",
+        ),
+        (
+            join(&[head, f0, f1, summary, f2]),
+            "a frame after the summary line",
+        ),
+        (join(&[head, head, f0, f1, f2, summary]), "two header lines"),
+        (
+            join(&[head, f0, f1, f2, summary, summary]),
+            "two summary lines",
+        ),
+        (
+            join(&[head, "", f0, f1, f2, summary]),
+            "a blank line after the header",
+        ),
+        (
+            join(&[head, f0, "", f1, f2, summary]),
+            "a blank line between frames",
+        ),
+        (
+            join(&[head, f0, f1, f2, "   ", summary]),
+            "a whitespace-only line before the summary",
+        ),
+        (
+            join(&[head, f0, f1, f2, summary, ""]),
+            "a blank line after the summary line",
+        ),
+        (
+            format!("{}\n", doc),
+            "the whole trace as one object on one line",
+        ),
+        (
+            format!("{}\n", serde_json::to_string_pretty(&doc).unwrap()),
+            "the whole trace as one pretty-printed object",
+        ),
+        (
+            join(&[head, &format!("{f0}{f1}"), f2, summary]),
+            "two frame records on one line",
+        ),
+        (
+            join(&[
+                &format!("{{\"frames\":[],{}", &head[1..]),
+                f0,
+                f1,
+                f2,
+                summary,
+            ]),
+            "a header line with a frames key",
+        ),
+        (
+            join(&[
+                head,
+                f0,
+                f1,
+                f2,
+                &format!("{{\"schema\":\"principia-profile-v1\",{}", &summary[1..]),
+            ]),
+            "a summary line with a schema key",
+        ),
+    ];
+    for (t, what) in &cases {
+        check_reader_rejects_file(t, what);
+    }
+    // Where the lines are single objects in the wrong place, the schema's per-place check rejects them too.
+    for (t, what) in &cases[3..8] {
+        assert!(
+            !schema_accepts_file(t),
+            "not v1, but the schema accepts {what}"
+        );
+    }
+    for (t, what) in &cases[15..] {
+        assert!(
+            !schema_accepts_file(t),
+            "not v1, but the schema accepts {what}"
+        );
+    }
+}
+
+validation::negative_control!(
+    qa_m017_reader_rejects_a_misplaced_blank_or_missing_line,
+    "a valid JSON Lines file must fail the rejection check",
+    expected = "not v1, but the reader accepts",
+    check_reader_rejects_file(&jsonl(&interactive()), "a valid file")
+);
+
+fn check_reads_as(text: &str, expected: &Trace, what: &str) {
+    let got = read(text.as_bytes()).unwrap_or_else(|e| panic!("the reader rejects {what}: {e}"));
+    assert_eq!(&got, expected, "the reader read {what} differently");
+}
+
+/// §5 (R-286): "a reader also accepts a last line without [its newline], as JSON Lines allows"; a session with no
+/// frame is the header line then the summary line; frames read in the session's order.
+#[test]
+fn qa_m017_reader_accepts_what_json_lines_allows() {
+    let doc = interactive();
+    let text = jsonl(&doc);
+    let expected = read_doc(&doc);
+    assert_eq!(
+        expected
+            .frames
+            .iter()
+            .map(|f| (f.frame, f.dmin_nan_unset, f.dmin_negative_floored))
+            .collect::<Vec<_>>(),
+        vec![(0, 3, 5), (1, 4, 7), (2, 5, 9)],
+        "the frames were not read in the session's order with their values"
+    );
+    let unterminated = text.strip_suffix('\n').unwrap();
+    check_reads_as(unterminated, &expected, "a last line without its newline");
+    assert!(
+        schema_accepts_file(unterminated),
+        "the schema rejects a last line without its newline"
+    );
+    // The writer's own output reads back as the same trace.
+    check_reads_as(&written(&expected), &expected, "the writer's output");
+    // No frame recorded.
+    let mut empty = interactive();
+    empty["frames"] = json!([]);
+    let empty_text = jsonl(&empty);
+    assert_eq!(lines_of(&empty_text).len(), 2);
+    let read_empty =
+        read(empty_text.as_bytes()).expect("the reader rejects a session with no frame");
+    assert!(read_empty.frames.is_empty(), "frames appeared from nowhere");
+    check_reads_as(
+        empty_text.strip_suffix('\n').unwrap(),
+        &read_empty,
+        "a session with no frame, without the last newline",
+    );
+}
+
+validation::negative_control!(
+    qa_m017_reader_accepts_what_json_lines_allows,
+    "a file with a trailing blank line must fail the accepted check",
+    expected = "the reader rejects",
+    check_reads_as(
+        &format!("{}\n", jsonl(&interactive())),
+        &read_doc(&interactive()),
+        "a trailing blank line"
+    )
+);
+
+// ----- R-288: the two d_min counters -----
+
+#[test]
+fn qa_m017_frame_record_carries_the_dmin_counters() {
+    check_bases_accepted();
+    for key in ["dmin_nan_unset", "dmin_negative_floored"] {
+        let mut missing = interactive();
+        missing["frames"][1].as_object_mut().unwrap().remove(key);
+        check_rejected(&missing, &format!("a frame without {key}"));
+        for (value, what) in [
+            (json!(1u64 << 32), "at 2^32"),
+            (json!(-1), "negative"),
+            (json!(1.5), "fractional"),
+            (Value::Null, "null"),
+            (json!("3"), "text"),
+        ] {
+            check_rejected(
+                &edited(&format!("/frames/1/{key}"), value),
+                &format!("{key} {what}"),
+            );
+        }
+        check_accepted(
+            &edited(&format!("/frames/1/{key}"), json!(u32::MAX)),
+            &format!("{key} at 2^32 - 1"),
+        );
+        check_accepted(
+            &edited(&format!("/frames/1/{key}"), json!(0)),
+            &format!("{key} at 0"),
+        );
+        // The edge value survives the writer, as an integer.
+        let trace = read_doc(&edited(&format!("/frames/1/{key}"), json!(u32::MAX)));
+        let text = written(&trace);
+        let line: Value = serde_json::from_str(lines_of(&text)[2]).unwrap();
+        assert_eq!(
+            line[key],
+            json!(u32::MAX),
+            "the writer did not write {key} at 2^32 - 1"
+        );
+    }
+}
+
+validation::negative_control!(
+    qa_m017_frame_record_carries_the_dmin_counters,
+    "a counter at 2^32 must fail the accepted check",
+    expected = "the schema rejects",
+    check_accepted(
+        &edited("/frames/1/dmin_negative_floored", json!(1u64 << 32)),
+        "dmin_negative_floored at 2^32"
     )
 );
 
@@ -925,7 +1441,7 @@ validation::negative_control!(
 
 fn check_duplicate_refused(doc: &Value, what: &str) {
     assert!(
-        !reader_accepts(&doc.to_string()),
+        !reader_accepts(&jsonl(doc)),
         "not v1, but the reader accepts {what}"
     );
     check_write_refuses(doc, what);
@@ -979,9 +1495,14 @@ validation::negative_control!(
 /// Removes the key at `pointer` (its last segment) from its parent object.
 fn without(mut doc: Value, pointer: &str) -> Value {
     let (parent, key) = pointer.rsplit_once('/').expect("not a pointer");
-    doc.pointer_mut(parent)
+    let parent = if parent.is_empty() {
+        Some(&mut doc)
+    } else {
+        doc.pointer_mut(parent)
+    };
+    parent
         .and_then(Value::as_object_mut)
-        .unwrap_or_else(|| panic!("the fixture has no {parent}"))
+        .unwrap_or_else(|| panic!("the fixture has no parent for {pointer}"))
         .remove(key)
         .unwrap_or_else(|| panic!("the fixture has no {pointer}"));
     doc
@@ -989,6 +1510,7 @@ fn without(mut doc: Value, pointer: &str) -> Value {
 
 #[test]
 fn qa_m017_a_nullable_key_missing_is_not_v1() {
+    check_bases_accepted();
     // Each key §5 allows to be null, removed instead: the schema requires it, and so must the reader, or a file the
     // reader accepts does not validate against the schema.
     let cases: Vec<(Value, &str)> = vec![
@@ -1004,8 +1526,14 @@ fn qa_m017_a_nullable_key_missing_is_not_v1() {
             without(interactive(), "/header/precision/f64_rate"),
             "precision.f64_rate missing",
         ),
-        (without(interactive(), "/leak_flags"), "leak_flags missing"),
-        (without(interactive(), "/hot_paths"), "hot_paths missing"),
+        (
+            without(interactive(), "/leak_flags"),
+            "the summary line's leak_flags missing",
+        ),
+        (
+            without(interactive(), "/hot_paths"),
+            "the summary line's hot_paths missing",
+        ),
         (
             without(interactive(), "/frames/0/stages/colour/events/0/detail"),
             "an event's detail missing",
@@ -1028,4 +1556,41 @@ validation::negative_control!(
     "a valid batch trace, every null key present, must fail the rejected check",
     expected = "not v1, but the schema accepts",
     check_rejected(&batch(), "a valid batch trace")
+);
+
+// ----- `read` and `write`'s documented contract: "An error names the line, from 1" -----
+
+/// The error for a file whose only fault is on line `line` names that line and the key at fault.
+fn check_error_names(message: &str, line: usize, key: &str) {
+    assert!(
+        message.contains(&format!("line {line}")) && message.contains(key),
+        "the error does not name line {line} and {key}: {message:?}"
+    );
+}
+
+#[test]
+fn qa_m017_an_error_names_the_line() {
+    // The reader: a range fault, and a missing key, each in the third frame record, line 4 of the file.
+    let err = read(jsonl(&edited("/frames/2/frame_ms", json!(-1.0))).as_bytes())
+        .expect_err("the reader accepted a negative frame_ms");
+    check_error_names(&err.to_string(), 4, "frame_ms");
+    let err = read(jsonl(&without(interactive(), "/frames/2/leaf_count")).as_bytes())
+        .expect_err("the reader accepted a frame without leaf_count");
+    check_error_names(&err.to_string(), 4, "leaf_count");
+    // The writer: a fault in the second frame record, which it would write on line 3.
+    let mut trace = read_doc(&interactive());
+    trace.frames[1].frame_ms = f64::NAN;
+    let err = write(&trace, &mut Vec::new()).expect_err("the writer wrote a NaN frame_ms");
+    check_error_names(&err.to_string(), 3, "frame_ms");
+}
+
+validation::negative_control!(
+    qa_m017_an_error_names_the_line,
+    "a fault on line 4 must not be reported as line 2",
+    expected = "the error does not name line 2",
+    {
+        let err = read(jsonl(&edited("/frames/2/frame_ms", json!(-1.0))).as_bytes())
+            .expect_err("the reader accepted a negative frame_ms");
+        check_error_names(&err.to_string(), 2, "frame_ms");
+    }
 );
