@@ -37,6 +37,7 @@ three-axis `eps` / frame-budget / hard-cap model. Repoint it there. **Don't port
 `sec:quality_tiers`, because it predates the move to `eps`.
 
 ## R-5 — The chart constants go to the decision sheet *(closes RQ-2)*
+*Amended by R-10.*
 *24 Sep 2026 · applied in step 5*
 
 List them with audit B25. `μ_max` is 5 in the LaTeX and 4 in the IC Inspector notes. `α_min` is 0.05 in
@@ -49,6 +50,7 @@ List it with audit B4. It has no LaTeX cross-check. Until it's decided, the mark
 `principia_dd_integrator.md` §3.6 (collision beats escape) stands.
 
 ## R-7 — Step 3's done-check *(closes RQ-6)*
+*Amended by the entry "R-7 amended", below.*
 *24 Sep 2026 · applied in step 3*
 
 Step 3 is done when both of these hold:
@@ -110,6 +112,8 @@ The LaTeX's optional per-body cap isn't invertible: capping each body, then re-i
 trip. And `q_max` already bounds the Jacobi momenta. It's recorded under rejected ideas in `principia_00_philosophy.md` §8.
 
 ## R-12 — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*
+*Corrected by R-14 (its premise).*
+*Superseded in part by R-14 (its axis wording; R-184).*
 *24 Sep 2026 · applied in step 3*
 
 θ on `v`, no polar buffer. The LaTeX's buffer rests on a wrong premise: the collision points are on the equator,
@@ -168,6 +172,7 @@ The complete Artefact-1 and Artefact-2 map lists go from the retired colour PDF 
 with no source claimed.
 
 ## R-17 — The diffusion sentinel uses the streaming slope *(closes RQ-15)*
+*Amended by R-245.*
 *24 Sep 2026 · applied in step 3*
 
 The streaming slope is the one the payload ledger and the payload doc define. `principia_render_contract.md`:79 is updated to cite it.
@@ -214,6 +219,7 @@ Full sphere; the poles are represented and fenced by the collision detector, the
 reworded. Files: dd_decoder §3, §3.2; chart_reference §0.2; inverse_encode_contract :74–75.
 
 ## R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*
+*Amended by R-62.*
 *24 Sep 2026 · applied in step 5*
 
 0-based throughout: `ICDescriptor` fields `m0 m1 m2`, `rho0_mag` / `rho1_mag`, and 0-based display labels. **Pair id `k` names the side
@@ -263,6 +269,7 @@ lowering_contract :160–162.
 Confirmed as intended (`ic_inspector_scratchpad.md:19`, dd_decoder §3.4). Closes the rest of audit B25.
 
 ## R-29 — The escape criterion's undefined parts *(IE-1, amended)*
+*Amended by R-61.*
 *24 Sep 2026 · applied in step 5*
 
 - **`E_rel`** is the relative two-body energy of the escaper `b` about the centre of mass of the other two:
@@ -297,6 +304,7 @@ the R-30 precedence is written with it. The old-data question is closed: no stor
 Files: integrator_contract Part 7 (:388); dd_integrator §3.6 (:161), tests §5; parity_contract :40.
 
 ## R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*
+*Amended by R-265.*
 *24 Sep 2026 · recorded; applied before the integration-floor probe and Burrau ground truth*
 
 CPU arbitrary precision with convergence gating: raise the precision and tighten the tolerance until the result stops changing.
@@ -796,6 +804,7 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
+*Amended by R-186.*
 *25 Sep 2026 · applied in step 7*
 
 - Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
@@ -977,6 +986,7 @@ their SimState slices, and writes the footprint resolve and the QuadReduction fi
 balance" subsection keeps its text as a "Was" note (R-102), not deleted.
 
 ## R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*
+*Amended by R-245.*
 *25 Sep 2026 · applied in step 7*
 
 `DEBUG_NAN` becomes a function, `debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`, which draws the hatch from the pixel
@@ -1101,6 +1111,7 @@ One GIF encoder for both builds: the Rust `gif` crate (MIT or Apache-2.0), with 
 wasm for the browser.
 
 ## R-156 — The plan-pass readings are accepted *(closes RQ-126)*
+*Reversed in part by R-183 (its size exemption).*
 *25 Sep 2026 · applied in step 7*
 
 All readings in RQ-126 are accepted, including removing TASK-M6-13 and letting TASK-M0-06 run slightly over the size
@@ -1219,6 +1230,7 @@ It isn't retired, and TASK-M3-02 still closes it. integrator_contract Part 2a ke
 not a requirement.
 
 ## R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
+*Amended by R-186.*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-04 adds the GPU CI jobs: a macOS arm64 self-hosted job (Metal) and an ubuntu job with `mesa-vulkan-drivers`
@@ -1263,6 +1275,7 @@ stale "pending" notes.
 TASK-M3-12's stale note is removed.
 
 ## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
+*Amended by R-186.*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
 
@@ -1272,6 +1285,7 @@ and lavapipe jobs only. The runner runs under its own macOS user account. Outsid
 workflow runs.
 
 ## R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
+*Amended by R-260 and R-261.*
 *25 Sep 2026 · applied in step 8*
 
 GitHub won't let one account approve its own PR, so each reviewer posts a PR review headed `VERDICT: APPROVE <role>` or
@@ -1279,6 +1293,7 @@ GitHub won't let one account approve its own PR, so each reviewer posts a PR rev
 on the latest commit. The human merges, or a merge bot does once all the checks are green.
 
 ## R-176 — Controls come before the tests that need them *(closes G3, S2)*
+*Amended by R-199.*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-02 and TASK-M0-03 depend on TASK-M0-04, and register controls for their xtask tests. Controls reach xtask tests
@@ -1392,6 +1407,7 @@ route to `negative_control!`; a crate without the `controls` feature is skipped,
 (line 321) now excludes `prin` as well as `gui`. Line 324 cites "the `validation` row above" rather than a line number.
 
 ## R-188 — TASK-M0-01 is accepted over its size; the source scan also follows `include!`
+*Amended by R-189 (its item 2).*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked in review of PR #16, the human chose:
@@ -1403,6 +1419,7 @@ Asked in review of PR #16, the human chose:
    `#[path]`, and scans the file; a path it can't resolve (built with `concat!`, `env!` and the like) fails the check.
 
 ## R-189 — kernel and ledger `src/` use neither `#[path]` nor `include!` *(amends R-188 item 2)*
+*Amended by R-190 and R-191.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked in review of PR #16 how to close an `include!` or `#[path]` inside a `macro_rules!` body (rustc resolves it at
@@ -1414,6 +1431,7 @@ check that kernel's and ledger's targets sit under `src/` stays. qa gets a one-r
 own tests that expect a `#[path]` or `include!` to be followed.
 
 ## R-190 — kernel `src/` may include the ledger's generated code from `OUT_DIR`; everything else `include`-shaped fails *(amends R-189)*
+*Amended by R-191.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 R-189 forbade every `include!` in kernel `src/`, which also forbade the usual route by which R-185's generated code
@@ -1450,6 +1468,7 @@ instead: in the temporary copy, kernel's and ledger's integration-test, example 
 the lib and bin unit tests are compiled without `validation`. Which features the check compiles is RQ-131.
 
 ## R-192 — The compile check builds with `--all-features` *(closes RQ-131)*
+*Amended by R-194.*
 *26 Sep 2026 · applied in TASK-M0-01 (PR #16)*
 
 Asked which features R-191's compile check builds, the human chose "--all-features": the check runs with
@@ -1538,6 +1557,7 @@ Asked in RQ-135, the human chose "Accept the split":
 - TASK-M0-02 and TASK-M0-03 depend on TASK-M0-22 instead of TASK-M0-04.
 
 ## R-199 — A test is matched to its control by name in the macro call *(amends R-176; closes RQ-136)*
+*Amended by R-212.*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-136, the human chose "Name in the macro": there is no test-name attribute and no proc-macro crate.
@@ -1546,6 +1566,7 @@ controls by that name. R-176's "Tests are matched to their controls by a shared 
 this; its dev-dependency route to `crates/validation` and the skipping of crates without the `controls` feature stand.
 
 ## R-200 — TASK-M0-22 is accepted at ~650 lines; TASK-M0-16 depends on it *(closes RQ-137)*
+*Superseded in part by R-209 (its size acceptance).*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-137, the human chose "Accept ~650, mechanical": TASK-M0-22 stays one PR over the size budget, as
@@ -1576,6 +1597,7 @@ closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked s
 changes it at the M0 gate.
 
 ## R-204 — When to ask the human
+*Amended by R-264 (its "exceeding budgets").*
 *26 Sep 2026 · given as "R-198", which was already taken (the TASK-M0-04 split); recorded as R-204*
 
 "Standing rule: when to ask me.
@@ -1636,6 +1658,7 @@ REQ-SYS-065's statement gains the default. The code, and the merged tests that a
 among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
 
 ## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
+*Amended by R-211 and R-264.*
 *27 Sep 2026 · applied in TASK-M0-21*
 
 "Merge-level decisions for PR #19:
@@ -1681,6 +1704,7 @@ lists it. The three qa child-mode helpers (`qa_child_open_harness`, `qa_child_fa
 reviewing.
 
 ## R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
+*Amended by R-223 and R-264.*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "Both sizes accepted. From now on the ~500-line budget counts implementation code and the implementer's own tests
@@ -1711,6 +1735,7 @@ exception to edit qa's merged file (`crates/validation/tests/qa_R-206.rs`), with
 so TASK-M0-22 does it.
 
 ## R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*
+*Amended by R-217.*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "One shared spawn helper with a timeout; on timeout it kills the child and fails naming it. 120 s provisional,
@@ -1721,6 +1746,7 @@ merged files, under a one-round exception limited to replacing the spawn call. T
 requirement (R-71), provisional in CI until the human confirms it at the M0 gate (R-182).
 
 ## R-215 — The veto items on PRs #23 and #24 stand; duplicated controls and copied checks are consolidated
+*Extended by R-218.*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "All stand. M0-22 also removes the inline controls duplicated by registered ones, and moves checks copied between test
@@ -1829,6 +1855,7 @@ check); `words()` kept as the controls' own input; `metal_hosted_probe`'s contro
 expectation through the test's own check.
 
 ## R-223 — The size budget counts added and changed lines, not pure deletions *(amends R-211)*
+*Amended by R-225.*
 *27 Sep 2026 · applied in plan/WORKFLOW.md*
 
 "So size stops needing a ruling every PR: the ~500-line budget counts added and changed lines only. Pure deletions
@@ -1840,6 +1867,7 @@ and counts once, by its `+`), in implementation code and the implementer's own t
 (R-208) only if that count looks set to exceed ~500.
 
 ## R-224 — The two flaky tests are fixed before TASK-M0-29
+*Amended by R-230.*
 *27 Sep 2026 · applied in TASK-M0-31*
 
 "Fix both flaky tests next, before TASK-M0-29, as one small follow-up:
@@ -1874,6 +1902,7 @@ Asked whether to stop the suite running every control twice (the survey on 27 Se
 *Applied:* REQ-VAL-163 (new) carries it, closed by TASK-M0-22. The CI step must fail on any finding, so no coverage is lost. qa's merged `qa_TASK-M0-24.rs` changes only as far as this needs, under a one-round exception, with qa reviewing, as R-215's did.
 
 ## R-227 — The two remaining latent races are fixed now, in their own task
+*Amended by R-230.*
 *27 Sep 2026 · applied in TASK-M0-32*
 
 Asked about three latent races of R-224's kind, none yet seen failing, the human chose "One task now": fixed at their cause, in a small task like TASK-M0-31, with a loaded multi-run proof.
@@ -1911,6 +1940,7 @@ controls machinery, a support module many targets include). An acceptance comman
 with no failures, plus CI green on the head. REQ-VAL-162 and REQ-VAL-164 and the two task files carry it.
 
 ## R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings
+*Amended by R-270.*
 *28 Sep 2026 · applied in TASK-M0-33*
 
 "After TASK-M0-22, one task: cargo-nextest (CI and local), fixtures written only when changed with a target dir per
@@ -1972,6 +2002,7 @@ once per push either way.
 *Also in the same message:* the "veto?" items merged under R-234 on PRs #37 and #38 all stand.
 
 ## R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first
+*Amended by R-244.*
 *29 Sep 2026 · applied in TASK-M0-34*
 
 "R-236: a small task, run in parallel: qa_TASK-M0-24.rs keeps the failing control's output in its message (reworded
@@ -1982,6 +2013,7 @@ from "leaves it passing"), and the deps.rs:1205 control first asserts the expect
 to the message, under a one-round exception, with qa reviewing.
 
 ## R-237 — qa's commit may add files under `xtask/tests/`
+*Amended by R-290.*
 *29 Sep 2026 · applied in CLAUDE.md and `.claude/agents/qa-reviewer.md`*
 
 "R-237: qa's commit paths are crates/*/tests/ and xtask/tests/."
@@ -1997,6 +2029,7 @@ to the message, under a one-round exception, with qa reviewing.
 *Applied:* `/private/tmp/claude-501/-Users-malachy-src-prin-impl/c1185d1d-…/` (4.6 GB) was deleted. Outside the repo.
 
 ## R-239 — Parallel work waits while swap is above 4 GB or memory pressure is high
+*Amended by R-252.*
 *29 Sep 2026 · applied in CLAUDE.md*
 
 "R-239: memory limit for parallel work. Don't start a new build or reviewer if swap in use is above 4 GB or memory
@@ -2028,6 +2061,7 @@ the human chose "Add xtask → ledger edge".
 this ruling. `ledger` still depends on nothing.
 
 ## R-242 — The layout check's range and width rules *(closes RQ-151's rules)*
+*Amended by R-247 and R-248.*
 *29 Sep 2026 · applied in TASK-M0-07 and TASK-M0-35*
 
 Asked whether to accept the rules the implementer applied where §3.8 and §5 are silent, the human chose "Accept all,
@@ -2153,6 +2187,7 @@ is now a physics definition (the physics reviewer's suggestion).
 #49, then #47."
 
 ## R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
+*Amended by R-277.*
 *29 Sep 2026 · applied in CLAUDE.md*
 
 "R-252, amends R-239: the memory limit uses memory pressure, not swap size. macOS keeps swap allocated after memory
@@ -2165,6 +2200,7 @@ kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical) with `mem
 alongside free disk. R-239's 4 GB swap limit no longer applies. Process only.
 
 ## R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*
+*Refined by R-254.*
 *29 Sep 2026 · applied in the docs listed below, REQ-INT-043 and REQ-TOOL-012*
 
 Asked in RQ-154, the human answered: "RQ-154: accepted as recommended. ftle reads NaN, with validity predicate
@@ -2210,6 +2246,7 @@ it for every consumer and REQ-RENDER-015's check covers the fragment side; `plan
 item, so every task that aggregates `ftle` is checked against it.
 
 ## R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack
+*Amended by R-264.*
 *29 Sep 2026 · applied in TASK-M0-09 and TASK-M0-10*
 
 "1. TASK-M0-09 accepted at ~1,000 lines, one PR. Veto items (a) and (b) stand. Update TASK-M0-10's task file so it
@@ -2238,6 +2275,7 @@ reporting, not standing obligations. (5) kernel-build §5's gates are ported, wi
 veto item 1). The ports land in PR #54 (TASK-M0-02), docs first, then the requirements.
 
 ## R-258 — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*
+*Amended by R-273.*
 *29 Sep 2026 · applied in TASK-M0-05*
 
 "3. RQ-159: all three as recommended."
@@ -2399,6 +2437,7 @@ declares, and refuses a case that declares none). Item 12 (what `golden --list` 
 reviewer's re-check at 76fd151 agrees.
 
 ## R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend
+*Amended by R-287.*
 *30 Sep 2026 · applied in REQ-VAL-138; the measurement runs on a `measure/` branch (R-272)*
 
 "REQ-VAL-138: throwaway measure/ branches are allowed (push, measure, delete). Get the lavapipe max-step. If 0: zero
