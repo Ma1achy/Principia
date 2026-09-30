@@ -627,3 +627,7 @@
   section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
   reason: informative only
   note: applied in parity contract §4, REQ-VAL-176 and TASK-M0-43
+- file: decisions.md
+  section: "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
+  reason: informative only
+  note: applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79)

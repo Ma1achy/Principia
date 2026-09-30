@@ -2542,7 +2542,7 @@ to the floor, and each case increments a telemetry counter."
 *Applied:* in TASK-M0-10. The `d_min` packer's `debug_assert!` fails on a NaN or a negative input. In release, a NaN
 stores `0x7C00` and a negative value stores the floor, `0x0001`, and each case increments a telemetry counter. The
 corpus names no such counter, and a GPU-side count has to cross the membrane, which the corpus doesn't settle, so the
-counter's definition waits on RQ-171 (filed on PR #78).
+counter's definition waited on RQ-171 (filed on PR #78), and R-288 settles it.
 
 ## R-282 — TASK-M0-17's design items accepted
 *30 Sep 2026 · applied in TASK-M0-17 (PR #79)*
@@ -2605,3 +2605,17 @@ differs). Fold it into TASK-M0-43."
 store, so no backend's float-to-unorm conversion decides a tie (R-269's measured difference). Each golden case then
 keeps one reference for every backend. A case whose bytes still differ between backends keeps one reference per
 backend, as R-269 ruled, and the PR names it.
+
+## R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*
+*30 Sep 2026 · applied in telemetry §2 and TASK-M0-10 (PR #78), and profiler schema v1's frame record in TASK-M0-17 (PR #79)*
+
+"RQ-171: option (a), recorded as R-288. Two per-frame atomic u32 counters (NaN d_min stored as unset; negative d_min
+clamped) in telemetry §2. They ride on the existing profiler/telemetry readback, not a new GPU→CPU channel
+(QuadReduction stays the sole automatic return of simulation data, R-142), and are read back asynchronously with a
+frame or two of latency, never stalling the frame. They're counted in release builds too; that's their purpose."
+
+*Applied:* telemetry §2 gains `dmin_nan_unset` and `dmin_negative_floored`, u32 counts per frame, the names RQ-171's
+option (a) gave. The `d_min` packer increments them in release builds as well as debug ones. They come back on the
+profiler/telemetry readback, asynchronously and a frame or two late, and never stall a frame; `QuadReduction` is
+unchanged (R-142). `roundtrip_ctl`'s repack is an observation, not a store, so it doesn't count (RQ-171 option (a)).
+Profiler schema v1's frame record carries both keys, as §2's superset (R-56).
