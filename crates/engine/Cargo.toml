@@ -8,3 +8,16 @@ publish.workspace = true
 ledger = { path = "../ledger" }
 kernel = { path = "../kernel" }
 render = { path = "../render" }
+# Profiler schema v1 is typed Rust with serde, written and read as JSON (R-56, TASK-M0-17).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
+# so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).
+[dev-dependencies]
+jsonschema = { version = "0.58", default-features = false }
+validation = { path = "../validation" }
+
+# Under `controls`, each `negative_control!` in engine's tests compiles as a test (R-176).
+[features]
+controls = []

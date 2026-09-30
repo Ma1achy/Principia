@@ -179,10 +179,14 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-281** — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
-- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line
+- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line. Still in force: the header on the first line, then one compact frame record per line, never pretty-printed; pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and makes a trace that lacks it valid. Amended by R-298.
 - **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and `dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by `roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a buffer bound and reset per frame on the GPU (R-294). Amended by R-294.
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
-- **R-297** — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
+- **R-297** — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*. Still in force: all of it on native backends. In the browser build: the compute setting stays explicit, off by default, on the sim key, in pxpack and recorded in the header as asked for, and display stages may keep fast-math on; bit-identity with the setting off no longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to R-85's Tier-N tolerances (R-303). Amended by R-303.
+- **R-298** — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*. Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299 replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected. Amended by R-299.
+- **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
+- **R-300** — #78's items 11–13 are accepted; `DminCounters`' fields are private
+- **R-303** — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
 
 ## Values
 
@@ -255,7 +259,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-193** — The compile check is host-only; that is its known limit *(closes RQ-132)*
 - **R-194** — The compile check builds three feature sets in two profiles; doctests may use validation *(amends R-192; closes RQ-133)*
 - **R-195** — CI checks formatting and lints
-- **R-196** — Mutation testing joins the QA gate
+- **R-196** — Mutation testing joins the QA gate. Still in force: per PR, `cargo mutants --in-diff` on the changed code, sharded across parallel CI jobs under R-302; nightly, a full run written as a report; every surviving mutant in a PR's diff is a qa finding; the three exclusions; a REVIEW_QUEUE entry, not a dropped run, if per-PR runs prove impractical. Amended by R-302.
 - **R-202** — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*
 - **R-226** — The suite stops re-running every control; folded into TASK-M0-22
 - **R-235** — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
@@ -269,6 +273,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys
 - **R-287** — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*. Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a tie, so a golden near a tie keeps one reference per backend (R-296). Amended by R-296.
 - **R-296** — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
+- **R-301** — TASK-M0-42's CI cost is accepted *(amends R-270)*
+- **R-302** — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
 
 ## One-off acts (history only)
 
@@ -317,6 +323,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084 counted lines, one PR). Amended by R-264.
 - **R-267** — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
 - **R-268** — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
-- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
+- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The "~10.5 min" `ci` target gives way to R-301's accepted cost, about 10m28.5s per warm `ci` run as PR #85 measured it. Amended by R-301.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
+- **R-304** — The "veto?" items on #78, #79, #89 and #90 stand

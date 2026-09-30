@@ -655,3 +655,11 @@
   section: "R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*"
   reason: informative only
   note: process ruling; applied in decisions.md's R-252 and R-293 lines, CURRENT_RULES.md, CLAUDE.md and the code reviewer agent
+- file: decisions.md
+  section: "R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private"
+  reason: informative only
+  note: accepts PR #78's veto items on the CPU counters' API; applied in TASK-M0-10's code, under R-294's requirement
+- file: decisions.md
+  section: 'R-304 — The "veto?" items on #78, #79, #89 and #90 stand'
+  reason: informative only
+  note: process ruling; it accepts veto items on PRs #78, #79, #89 and #90 and changes no requirement
