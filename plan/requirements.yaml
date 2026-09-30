@@ -5834,6 +5834,8 @@
   rulings:
   - R-271
   milestone: M0
+  rq:
+  - RQ-169
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."

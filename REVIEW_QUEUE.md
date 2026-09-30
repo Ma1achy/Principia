@@ -3008,3 +3008,34 @@ Tick any you don't accept.
   `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
   its veto item 13.
 - **Ruling:** R-268 (30 Sep 2026): the overnight application stands.
+
+## RQ-169: f16's smallest positive subnormal, R-271's floor, fits none of §3.8's three admissibility classes *(ledger, payload, TASK-M0-10)*
+
+- **File, section:** `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
+  carry)", "The constants register": "Every settled constant, default or threshold is declared once, in the constants
+  register"; "`class: achievable-maximum | conservation-law | canonical-units`"; "**`class`**: why the constant is
+  admissible, one of philosophy §4.2's three: bounded by its own achievable maximum, fixed by a conservation law, or
+  expressed in canonical units." The same section, "The hash": the entries "that decide what the payload's stored bits
+  mean are part of the ledger hashed into the schema version (R-36): the word's capacity and length sentinel (§3.3), the
+  `horizon_steps` limit (§3.1) and the f16 pack clamp (payload §1), which today are all four entries below."
+  `docs/read_first/principia_00_philosophy.md` § "4.2 Every constant must be derived or absent": "A quantity is
+  admissible if it is bounded by its own achievable maximum, fixed by a conservation law, or expressed in canonical
+  units." `decisions.md` § "R-271": "A valid `d_min` below f16's smallest positive subnormal (2⁻²⁴ ≈ 5.96e-8) is stored
+  as that subnormal."
+- **What:** raised by the code reviewer on PR #78 (finding 2). TASK-M0-10's emitter writes
+  `pub const F16_MIN_SUBNORMAL: f32 = 5.9604645e-8;` into its helper template (`crates/ledger/src/gen/rust.rs`), not
+  from the register, though it decides stored bits (`0x0001` rather than `0x0000`). The fix is a register row
+  `f16_min_subnormal` (2⁻²⁴, citing R-271 and payload §1), emitted as `F16_FINITE_MAX` is. But the row needs a class,
+  and 2⁻²⁴ is binary16's smallest positive value: a format minimum, not an achievable maximum, a conservation law or a
+  canonical unit. Filing it as `achievable-maximum` would stretch that class's meaning, which is a decision. The hash
+  sentence also counts "all four entries below", so adding a hashed fifth needs that sentence to change.
+- **Options seen:**
+  1. **Read `achievable-maximum` as the format's achievable extreme (recommended).** The row goes in as
+     `achievable-maximum`; §3.8's class definition gains "or, for a format limit, its achievable minimum". The hash
+     sentence names the floor beside the pack clamp and counts five entries. The schema version changes.
+  2. **A fourth class, `format-limit`,** for a value fixed by a number format (binary16's 65504 and 2⁻²⁴). `f16_finite_max`
+     moves to it too. This changes philosophy §4.2's list of three.
+  3. **Keep the floor out of the register.** It is fixed by IEEE binary16 like the conversion's other bit constants
+     (`0x7c00`, the exponent bias), and §3.8's "The generated files are exempt" is extended to name emitter templates'
+     format constants. The reviewer's hash concern then rests on R-271, which already fixes the value.
+- **Needed:** which one. TASK-M0-10 (PR #78) waits on it for finding 2; finding 1 is fixed on the branch.
