@@ -2345,3 +2345,14 @@ experiments/results/findings.md and the spike brief.
 source as the survey. Why it waits: R-33's independent reference covers extended precision. It returns only if a
 precision question needs it and the Brutus-style reference is too slow. Recorded here, since philosophy §7.1 and §7.7
 stay as they are (§7.1 already parks extended precision; this is its kernel-instantiation row).
+
+## R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+*30 Sep 2026 · applied in plan/HUMAN_SETUP.md §2*
+
+"R-266: "Require branches to be up to date" stays off: CI runs on each PR merged with main, and every push to main runs
+CI again. Amend HUMAN_SETUP.md §2 to match. I'm turning on "Do not allow bypassing", so the required checks bind every
+merge, including yours."
+
+*Applied:* HUMAN_SETUP §2 now says the up-to-date requirement stays off, with the reason, and that bypassing is not
+allowed. The required checks on `main` are `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and
+`gpu-lavapipe`. From this ruling on, no merge, the orchestrator's included, lands with a required check red.

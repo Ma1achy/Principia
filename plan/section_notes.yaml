@@ -539,3 +539,7 @@
   section: R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
   reason: informative only
   note: size ruling; applied in plan/WORKFLOW.md § "Task files"; no requirement changes
+- file: decisions.md
+  section: R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+  reason: informative only
+  note: process ruling; repository settings, applied in plan/HUMAN_SETUP.md §2
