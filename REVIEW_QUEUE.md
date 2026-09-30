@@ -3124,3 +3124,43 @@ Tick any you don't accept.
   3. **Keep R-237 strict.** The implementer edits qa's files under R-227's exception, as a standing rule, with qa
      re-reviewing each edit.
 - **Needed:** which one. PR #79 needs it now: its fresh R-286 round will reverse qa's tests.
+
+## RQ-174: No task binds R-288's `d_min` counters to the GPU dispatch or reads them back *(telemetry, payload, TASK-M0-10, TASK-M4-05, TASK-M5-28)*
+
+- **File, section:** `decisions.md` § "R-288": "Two per-frame atomic u32 counters (NaN d_min stored as unset; negative
+  d_min clamped) in telemetry §2. They ride on the existing profiler/telemetry readback, not a new GPU→CPU channel
+  (QuadReduction stays the sole automatic return of simulation data, R-142), and are read back asynchronously with a
+  frame or two of latency, never stalling the frame. They're counted in release builds too; that's their purpose."
+  `plan/tasks/M0/TASK-M0-10.md:63-67` (Notes, R-288): "`set_d_min(w, v)` counts into the kernel's crate-level
+  `DMIN_COUNTERS`; `roundtrip_ctl`'s repack passes a scratch pair and doesn't count. Binding them to the GPU dispatch
+  and reading them back on the profiler/telemetry readback belong to the tasks that build those."
+- **What:** no task in `plan/` names that work. `git grep dmin_nan_unset -- plan` finds only TASK-M0-10 and the
+  requirements it closes. TASK-M0-10 (PR #78) builds the counter pair (`DminCounters`, two `AtomicU32`s), the counted
+  packers (`set_d_min_release`, `set_d_min_counted`, taking `&DminCounters`) and telemetry §2's two lines. Nothing
+  binds a `DminCounters` to a GPU storage buffer that the march's packs count into, nothing reads it back on the
+  profiler/telemetry readback, and nothing resets it per frame. R-288 puts both keys in profiler schema v1's frame record
+  (TASK-M0-17, PR #79): the schema, not their source.
+  Today the only live pair behind `set_d_min(w, v)`, and so `pack_packed_a`, is a CPU process static,
+  `pub static DMIN_COUNTERS` (`crates/kernel/src/payload/counters.rs:30`, counted at
+  `crates/kernel/src/payload/generated.rs:325-326`). It is process-wide and never reset, so it is not per-frame. The
+  kernel crate is `no_std` and compiled to SPIR-V too (R-185); on the GPU a module static is not a bound storage
+  buffer, so a pack that goes through `set_d_min` there would not reach any readback. That static is PR #78's own
+  design choice, listed there as "applied per R-204 — veto?".
+- **Options seen:**
+  1. **Split across the existing tasks (recommended).** TASK-M4-05 (flat-grid compute, the first GPU march that packs
+     `packed_a`) binds a `DminCounters` storage buffer to its dispatch and packs through `set_d_min_counted` with it,
+     never through the static. TASK-M5-28 (the frame record, percentiles and the telemetry file) reads the pair back on
+     the profiler/telemetry readback a frame or two late, resets it per frame, and writes `dmin_nan_unset` and
+     `dmin_negative_floored` into the frame record. The CPU backend passes its own per-frame pair the same way.
+     `DMIN_COUNTERS` stays only as the sink for callers outside a frame (tests, `prin` tools), or goes, per the
+     sub-question below.
+  2. **One new task** in M5, after TASK-M4-05 and TASK-M5-28, that does both the binding and the readback, with its
+     own acceptance test (a forced NaN and a forced negative `d_min` in one frame each show up as one count in that
+     frame's record).
+  3. **Put both in TASK-M5-14** (dispatch queue, positional readback and the measurement path), as part of the
+     measurement path's readback.
+- **Sub-question, the static:** keep `set_d_min(w, v)` counting into the process static (as PR #78 has it), or drop
+  the uncounted-argument form so every caller passes a pair, and a GPU entry point cannot count into a static by
+  mistake. Recommended: keep it until the binding task, which then removes it or fences it off the GPU path.
+- **Needed:** which option, and the ruling on the static. TASK-M0-10 (PR #78) does not wait on it: the pair and the
+  counted packers are built. The binding and the readback wait.
