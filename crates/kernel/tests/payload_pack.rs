@@ -738,7 +738,9 @@ fn check_counts(set: Counted, inputs: &[u32], want: u32, per_input: (u32, u32)) 
     }
 }
 
-/// The release packer storing the right bits but counting into a pair of its own, which the caller never sees.
+/// The release packer storing the right bits but counting into a pair of its own, which the caller never sees (a
+/// control's packer, so compiled only with them).
+#[cfg(feature = "controls")]
 fn uncounted(w: u32, v: f32, _: &DminCounters) -> u32 {
     release_scratch(w, v)
 }
@@ -848,7 +850,9 @@ fn check_roundtrip_uncounted(ctl: fn(&PackedA, u32) -> bool, watched: &DminCount
     );
 }
 
-/// The pair the control's repack counts into, its own so the control cannot disturb the crate-level pair.
+/// The pair the control's repack counts into, its own so the control cannot disturb the crate-level pair (compiled
+/// only with the controls).
+#[cfg(feature = "controls")]
 static CONTROL_PAIR: DminCounters = DminCounters::new();
 
 #[test]
