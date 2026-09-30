@@ -1,0 +1,57 @@
+# The group each decisions.md entry falls under in plan/CURRENT_RULES.md (R-292). plan/tools/current_rules.py reads
+# this file with decisions.md and rebuilds CURRENT_RULES.md; `python3 plan/check_plan.py` fails if an entry is in no
+# group or in two, if a group names an entry decisions.md lacks, or if CURRENT_RULES.md is stale.
+#
+# A new ruling is added to one group here, in the same commit that records it. The groups, in the order the file
+# lists them:
+#   authority  — what the corpus is, what wins, how a gap is filled
+#   physics    — physics and mathematical conventions: charts, encode and decode, the integrator, events, fixtures'
+#                physics
+#   design     — architecture, payload, scheduler and refinement, render, colour, GUI and tooling design
+#   values     — numeric values, tolerances and gates
+#   process    — how agents, reviewers and the human work: tasks, reviews, tests and controls, sizes, machines
+#   ci         — what CI runs and checks
+#   one_off    — acts rather than standing rules (a split, an acceptance, a merge, a one-time fix): history only
+# `not_rules` lists entry headings that aren't rulings: a section introduction, and "R-7 amended", which R-7's
+# forward line points at.
+
+groups:
+  authority:
+    title: Authority
+    rules: [Porting rule, R-1, R-3, R-4, R-8, R-70, R-71, R-72, R-112, R-159, R-257]
+  physics:
+    title: Physics conventions
+    rules: [R-11, R-12, R-13, R-14, R-17, R-18, R-22, R-23, R-24, R-25, R-26, R-27, R-28, R-29, R-30, R-31, R-32, R-33,
+            R-34, R-35, R-37, R-47, R-50, R-57, R-60, R-61, R-62, R-82, R-83, R-84, R-93, R-95, R-103, R-104, R-105,
+            R-117, R-118, R-119, R-125, R-126, R-127, R-141, R-157, R-160, R-161, R-162, R-163, R-164, R-168, R-178,
+            R-245, R-253, R-254, R-255, R-265]
+  design:
+    title: Design and architecture
+    rules: [R-15, R-20, R-36, R-38, R-39, R-40, R-41, R-42, R-43, R-44, R-45, R-46, R-48, R-49, R-51, R-52, R-53, R-54,
+            R-55, R-56, R-63, R-64, R-65, R-66, R-67, R-68, R-69, R-74, R-75, R-76, R-77, R-78, R-79, R-80, R-81, R-86,
+            R-87, R-88, R-89, R-90, R-91, R-92, R-96, R-97, R-98, R-99, R-100, R-101, R-102, R-106, R-108, R-109,
+            R-114, R-115, R-116, R-120, R-121, R-122, R-123, R-128, R-129, R-130, R-131, R-135, R-136, R-138, R-139,
+            R-142, R-143, R-144, R-145, R-146, R-148, R-151, R-152, R-155, R-170, R-172, R-179, R-185, R-187, R-206,
+            R-207, R-241, R-242, R-246, R-247, R-248, R-251, R-263, R-271, R-274, R-275, R-278, R-280, R-281, R-282,
+            R-284, R-286, R-288, R-294]
+  values:
+    title: Values
+    rules: [R-10, R-21, R-94, R-137, R-165, R-166, R-171, R-173, R-181, R-182, R-203, R-250, R-258, R-273]
+  process:
+    title: Process
+    rules: [R-175, R-176, R-177, R-180, R-197, R-199, R-201, R-204, R-208, R-210, R-211, R-212, R-214, R-215, R-217,
+            R-218, R-219, R-223, R-225, R-228, R-229, R-230, R-234, R-237, R-239, R-252, R-260, R-262, R-264, R-272,
+            R-277, R-289, R-290, R-292, R-293]
+  ci:
+    title: CI
+    rules: [R-58, R-85, R-110, R-111, R-134, R-149, R-153, R-169, R-174, R-186, R-188, R-189, R-190, R-191, R-192,
+            R-193, R-194, R-195, R-196, R-202, R-226, R-235, R-236, R-259, R-261, R-266, R-269, R-276, R-279, R-285,
+            R-287]
+  one_off:
+    title: One-off acts (history only)
+    rules: [R-2, R-5, R-6, R-7, R-9, R-16, R-19, R-59, R-73, R-107, R-113, R-124, R-132, R-133, R-140, R-147, R-150,
+            R-154, R-156, R-158, R-167, R-183, R-184, R-198, R-200, R-205, R-209, R-213, R-216, R-220, R-221, R-222,
+            R-224, R-227, R-231, R-232, R-233, R-238, R-240, R-243, R-244, R-249, R-256, R-267, R-268, R-270, R-283,
+            R-291]
+
+not_rules: ["R-7 amended", "Rulings on the decision sheet (step 5, PR #6)"]
