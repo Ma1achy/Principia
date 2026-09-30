@@ -15,12 +15,13 @@ import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sections import citable_index, corpus_files, section_index, RULINGS_FILE  # noqa: E402
+from rulings import rq_ids  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REQS = "plan/requirements.yaml"
 NOTES = "plan/section_notes.yaml"
 OUT = "plan/coverage.md"
-QUEUE = "REVIEW_QUEUE.md"
+QUEUE = "REVIEW_QUEUE.md or docs/archive/review_queue/"  # an RQ entry, open or ruled (R-292)
 AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "RENDER", "COL", "GUI", "TOOL", "VAL",
          "PERF", "SYS"]
 
@@ -35,7 +36,7 @@ def main():
     citable = citable_index()
 
     errors = []
-    queue = set(re.findall(r"^## (RQ-\d+)\b", open(QUEUE, encoding="utf-8").read(), re.M))
+    queue = set(rq_ids()[0])
     for r in reqs:
         for q in r.get("rq") or []:
             if q not in queue:

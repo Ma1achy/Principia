@@ -1290,7 +1290,7 @@
   title: The frame record, percentiles and the bounded telemetry file
   depends_on: [TASK-M5-21]
   needs: [REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008]
-  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130]
+  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140]
   reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M5-29
