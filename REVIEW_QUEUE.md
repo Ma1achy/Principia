@@ -3008,3 +3008,51 @@ Tick any you don't accept.
   `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
   its veto item 13.
 - **Ruling:** R-268 (30 Sep 2026): the overnight application stands.
+
+## RQ-170: `d_min`'s unset value is +inf, and a ramp has no place for +inf *(design, GUI, TASK-M1-09)*
+
+- **File, section:** `docs/design/principia_dd_simstate_payload.md` § "Storage never holds NaN (R-79)": "Every
+  colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still
+  goes to the invalid colour." `docs/design/principia_debug_tooling_plan.md` (the `d_min`, `dE_max`, `dLz_max` row):
+  "sentinels shown as their literal values on the ramp, never scaled (R-136)". `plan/requirements.yaml` REQ-TOOL-012:
+  "a stored sentinel shown as its literal value on the ramp (R-136)". `decisions.md` § "R-271": `d_min`'s unset value
+  is f16 +inf, and readers treat +inf as unset.
+- **What:** before R-271, a failed sample's `d_min` was 0.0, which sits on the ramp. Now an unstepped or failed sample
+  holds +inf. Any ramp puts +inf at its top end or off the ramp, and the corpus doesn't say which. TASK-M1-09's
+  golden `m1-numeric` line ("a forced-failure sample's d_min renders as its literal 0.0") can no longer hold.
+- **Options seen:**
+  1. **The invalid colour.** Treat unset `d_min` like the other sentinels in a colouring, and draw it in the invalid
+     pattern, the same pattern NaN gets.
+  2. **The top of the ramp.** Clamp +inf to the ramp's top colour, so it reads "far away", which is what an unset
+     minimum means. A debug field would read "the ramp's top".
+  3. **A distinct "unset" style.** Neither the invalid pattern nor the ramp. This needs its own styling and its own
+     test, the way PIT-8 keeps NaN and −1 distinct.
+- **Needed:** which one. Only TASK-M1-09's one `d_min` golden line waits on it; nothing in M0 does.
+- **Ruling:** R-280 (30 Sep 2026): option 3. An unset `d_min` renders in the neutral "not yet" grey of `running`
+  samples (R-96), not the invalid hatch and not the top of the ramp.
+
+## RQ-172: qa's add-only rule (R-237) keeps needing exceptions when a ruling reverses qa's own tests *(process, R-237, R-283)*
+
+- **File, section:** `decisions.md` § "R-237": a qa commit must list only `A` lines under `crates/*/tests/`,
+  `xtask/tests/` or `fixtures/`. § "R-283": "If qa keeps needing to edit its own files, raise the add-only rule itself
+  in REVIEW_QUEUE rather than exempting it again."
+- **What:** three rounds have needed qa to change a test file it wrote itself, each time because a ruling or a
+  reviewer's finding reversed a premise of its tests:
+  1. PR #74 (TASK-M0-33): R-270 reversed two tests in `qa_TASK-M0-33_lease.rs`, and a colour fix touched
+     `qa_TASK-M0-33.rs`. Exception granted by R-270, and extended per R-204.
+  2. PR #78 (TASK-M0-10): physics and code found a fold seeded from +inf in `qa_TASK-M0-10.rs`, a file added in the
+     same PR. Exception per R-204.
+  3. PR #79 (TASK-M0-17): R-286 makes profiler traces JSON Lines. qa's `qa_TASK-M0-17.rs`, added in the same PR, parses
+     hand-written whole-object JSON in nearly every test, so nearly all of them are reversed.
+
+  Under R-237 as written, qa can only add a new file beside the reversed one, which leaves the old tests failing, or
+  the implementer edits qa's file under R-227's exception, which puts the implementer in charge of qa's tests.
+- **Options seen:**
+  1. **qa may modify its own files (recommended).** A qa commit may carry `M` (and `D`) lines on a test file whose
+     every earlier commit is a qa commit ("qa: tests for …"), besides `A` lines. The orchestrator's R-237 check verifies
+     that authorship with `git log`. qa never touches a file the implementer wrote.
+  2. **Supersede, never modify.** qa adds a replacement file, and the implementer deletes the reversed one in its own
+     commit, with qa's review.
+  3. **Keep R-237 strict.** The implementer edits qa's files under R-227's exception, as a standing rule, with qa
+     re-reviewing each edit.
+- **Needed:** which one. PR #79 needs it now: its fresh R-286 round will reverse qa's tests.

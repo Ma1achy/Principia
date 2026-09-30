@@ -154,7 +154,7 @@
   title: "`prin profile`: a fixed scenario headless, and the regression diff"
   depends_on: [TASK-M0-17]
   needs: []
-  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119]
+  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M0-19
@@ -354,7 +354,7 @@
   title: "Numeric field views: the two-line template, raw debug fields and sentinel styling"
   depends_on: [TASK-M1-08]
   needs: [REQ-GEN-001, REQ-GEN-005, REQ-PAY-011]
-  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001]
+  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-8, PIT-3]
 - id: TASK-M1-10
@@ -2132,4 +2132,28 @@
   needs: []
   requirements: [REQ-TOOL-136, REQ-SYS-072]
   reviewers: [code, qa, gui]
+  pitfalls: [PIT-3]
+- id: TASK-M0-41
+  milestone: M0
+  title: "`cargo xtask codegen` writes a generated file only when its content changes"
+  depends_on: [TASK-M0-07, TASK-M0-10]
+  needs: []
+  requirements: [REQ-TOOL-138]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-42
+  milestone: M0
+  title: "CI caches only the cargo registry and the fixture pool, with per-job keys"
+  depends_on: [TASK-M0-33]
+  needs: []
+  requirements: [REQ-SYS-073]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-43
+  milestone: M0
+  title: "Fragment output quantised in the shader; one golden reference across backends"
+  depends_on: [TASK-M0-06]
+  needs: []
+  requirements: [REQ-VAL-176]
+  reviewers: [code, qa]
   pitfalls: [PIT-3]
