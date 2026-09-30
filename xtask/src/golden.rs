@@ -943,8 +943,10 @@ pub fn single_differing_field(a: &Config, b: &Config) -> Result<String, String> 
     }
 }
 
-/// Renders the two arms `configs` of `case`, refusing unless they differ in exactly one field, and measures each.
-pub fn repro(case: &Case, configs: [Config; 2], renderer: &Renderer) -> Result<Repro, String> {
+/// Checks the two arms `configs` of `case` before anything is rendered: they differ in exactly one field, the case
+/// names a line, and every line lies inside each arm's image (a `width` or `height` arm may shrink the target past
+/// it). Returns the differing field.
+pub fn check_arms(case: &Case, configs: &[Config; 2]) -> Result<String, String> {
     let field = single_differing_field(&configs[0], &configs[1])?;
     if case.lines.is_empty() {
         return Err(format!(
@@ -952,6 +954,26 @@ pub fn repro(case: &Case, configs: [Config; 2], renderer: &Renderer) -> Result<R
             case.name
         ));
     }
+    for (config, tag) in configs.iter().zip(["a", "b"]) {
+        let (width, height) = config
+            .size()
+            .map_err(|e| format!("repro refused: arm {tag}: {e}"))?;
+        for line in &case.lines {
+            let inside = |[x, y]: [u32; 2]| x < width && y < height;
+            if !(inside(line.from) && inside(line.to)) {
+                return Err(format!(
+                    "repro refused: line {:?} ({:?} to {:?}) falls outside arm {tag}'s {width}x{height} image",
+                    line.name, line.from, line.to
+                ));
+            }
+        }
+    }
+    Ok(field)
+}
+
+/// Renders the two arms `configs` of `case`, refusing them as [`check_arms`] does, and measures each.
+pub fn repro(case: &Case, configs: [Config; 2], renderer: &Renderer) -> Result<Repro, String> {
+    let field = check_arms(case, &configs)?;
     let [a, b] = configs;
     let arm = |config: Config| -> Result<ArmResult, String> {
         let image = renderer.render(&case.dir, &config)?;
@@ -1128,6 +1150,7 @@ pub fn cli(root: &Path, args: &[&str]) -> Result<(), String> {
             if !rest.is_empty() {
                 return Err(format!("repro: unrecognised arguments: {}", rest.join(" ")));
             }
+            check_arms(&case, &arms)?;
             let repro = repro(&case, arms, &Renderer::new()?)?;
             let report = repro.report();
             let dir = out.join("repro").join(&case.name);

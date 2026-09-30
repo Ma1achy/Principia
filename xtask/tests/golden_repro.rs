@@ -213,3 +213,31 @@ negative_control!(
     expected = "a pair differing only in a number's spelling was not refused",
     check_same_number_refused(1.0)
 );
+
+// --- A size arm that leaves a line outside its image is refused, naming the line and the arm ------------------------
+
+/// Arm b sets `height` to `height`; the fixture's `row_32` lies inside a 64-pixel-high image and outside a 16-pixel
+/// one. The pair is refused before rendering, naming the line and the arm, rather than read out of bounds.
+fn check_line_outside_arm_refused(height: u32) {
+    let case = case();
+    let mut b = case.config.clone();
+    b.set("height", json!(height)).unwrap();
+    let message = golden::check_arms(&case, &[case.config.clone(), b])
+        .expect_err("a line outside an arm's image was not refused");
+    assert!(
+        message.contains("line \"row_32\"") && message.contains("arm b"),
+        "refused without naming the line and the arm: {message}"
+    );
+}
+
+#[test]
+fn golden_repro_refuses_line_outside_arm() {
+    check_line_outside_arm_refused(16);
+}
+
+negative_control!(
+    golden_repro_refuses_line_outside_arm,
+    "arm b's height set to 48, which still holds row_32",
+    expected = "a line outside an arm's image was not refused",
+    check_line_outside_arm_refused(48)
+);
