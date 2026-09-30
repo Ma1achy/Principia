@@ -40,7 +40,7 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-176: what R-297's compute fast-math setting means in the browser build, where WebGPU offers no fast-math control *(design, M8, R-297)*
+## RQ-177: what R-297's compute fast-math setting means in the browser build, where WebGPU offers no fast-math control *(design, M8, R-297)*
 
 - **File, section:** `docs/notes/principia_gpu_determinism_note.md` § "The mechanism (measured, not inferred — the
   attribution was overturned by a controlled test)": "\"turn off fast-math\" is not a fix (and is not available in a
