@@ -2859,3 +2859,32 @@ Tick any you don't accept.
 - **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
   option 1 applied). TASK-M0-23 waits on item 1.
 - **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): item 1 option 1 (the `#[cfg_attr(test, mutants::skip)]` marker), item 2 option 1 (`xtask/src/main.rs` and `xtask/src/codegen.rs` only). Both are the tightest reading, skip nothing R-196 keeps, and are test infrastructure. Recorded in decisions.md under R-196 and in TASK-M0-23.
+
+## RQ-166: the screenshot runner lives in xtask, but nothing may depend on `gui`, so it has no route to real GUI surfaces *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map": "`gui` (the dev GUI: depends on
+  `engine`'s typed surface only; nothing depends on it)", "`xtask` (the runners: reads `cargo metadata`; no crate depends
+  on it)", and "Every other workspace edge is forbidden; … and nothing on `gui`". `plan/tasks/M0/TASK-M0-20.md`
+  § Deliverables: "`xtask/src/screenshot.rs` — `cargo xtask screenshot <suite>`: renders a GUI surface headless (native
+  wgpu offscreen) and writes the capture beside the artboard it names". `plan/tasks/M6/TASK-M6-22.md` § Acceptance
+  tests: "`cargo xtask screenshot 04_windows` — presence only (R-129): the Run window's "quality: Custom" section shows
+  each control (REQ-GUI-014)".
+- **What:** raised by TASK-M0-20's implementer (PR #72) and confirmed by its code reviewer. The runner in PR #72 renders
+  only surfaces described as data in its fixtures (`button`/`checkbox` controls in a panel). From TASK-M6-22 onward, 32
+  task files call `cargo xtask screenshot <suite>` on the real windows (`04_windows`, `01_main`, `02_stain`, …), which
+  are built in `crates/gui`. §7.1 forbids `xtask → gui`, so the runner can't call that code, and the corpus doesn't say
+  how it gets the real surfaces rendered. Nothing is blocked until TASK-M6-22.
+- **Options seen:**
+  1. **`gui` ships a headless capture mode the runner spawns (recommended).** E.g. `gui --screenshot <suite> <case>
+     --out <png>` or a separate `gui` binary target. It renders the named window offscreen and writes the PNG plus the
+     AccessKit names, and the runner compares or checks presence, as `cargo xtask gate` spawns validation's binary
+     (R-187 has the same shape for `prin`). No new edge. `gui` owns which window is which, and the case format's
+     `surface` field names a kind (`data` today, `gui` later).
+  2. **Allow `xtask → gui` as a normal dependency.** It's the simplest code, but it changes §7.1's "nothing depends on
+     `gui`" and puts the whole GUI build under xtask's build, so every `cargo xtask` command compiles egui and the
+     engine.
+  3. **The capture moves into `crates/gui`'s own tests** (`cargo test -p gui screenshot_*`), and `cargo xtask
+     screenshot` only collects and compares their output. No edge, but the 32 task files' commands and REQ-TOOL-134's
+     runner change shape.
+- **Needed:** a ruling on the route, before TASK-M6-22 is built. TASK-M0-20 doesn't wait: its runner is the same under
+  every option, and option 1 only adds a surface kind.
