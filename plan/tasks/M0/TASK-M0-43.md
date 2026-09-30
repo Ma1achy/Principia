@@ -15,7 +15,7 @@ per backend, and the runner compares a render only with the reference for the ba
 R-287 amends that: fragment output quantises explicitly in the shader (round half to even, then store), so every
 backend writes identical bytes and each golden case keeps one reference across backends. Per-backend references stay
 the fallback for any case whose bytes still differ.
-R-296 amends R-287 (RQ-175's measurement): explicit quantisation makes exact ties identical, but a value within an ulp
+R-296 amends R-287 (R-296's Result): explicit quantisation makes exact ties identical, but a value within an ulp
 of a tie can differ on a backend whose display shaders compile with fast-math (Metal via wgpu), so a golden near a tie
 keeps one reference per backend. R-269's half-way fixture is such a case: it keeps one reference per backend, and the
 PR names it.

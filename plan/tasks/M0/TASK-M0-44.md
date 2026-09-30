@@ -11,7 +11,7 @@
 ## Goal
 Compute shaders, the simulation, compile under an explicit fast-math setting that the project sets and records: off by
 default, on only as an opt-in optimisation, never inherited silently from a backend (R-297). wgpu 30 compiles MSL with
-the default `MTLCompileOptions`, which has fast-math on, and offers no switch for it (RQ-175's measurement). So on
+the default `MTLCompileOptions`, which has fast-math on, and offers no switch for it (R-296's Result). So on
 Metal, off means the project compiles its own MSL with fast-math off and loads it through wgpu's passthrough, for the
 compute pipelines only; vertex and fragment pipelines, the display, keep wgpu's own path and may keep fast-math on.
 Every compute pipeline is created through one entry point that takes the setting, so the harness's dispatches now and
@@ -26,6 +26,8 @@ backend, so where the two differ (on lavapipe, on compiles as off) both are reco
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 - `docs/notes/principia_gpu_determinism_note.md` § "The one-line law"
 - `decisions.md` § "R-84 — Branch decisions across precisions *(closes RQ-35)*"
+- `decisions.md` § "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
+- `docs/notes/principia_gpu_determinism_note.md` § "The mechanism (measured, not inferred — the attribution was overturned by a controlled test)"
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 
 ## Deliverables
@@ -44,14 +46,14 @@ backend, so where the two differ (on lavapipe, on compiles as off) both are reco
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
-- `cargo test -p validation compute_fast_math` in the `gpu-metal` and `gpu-lavapipe` jobs — the probe computing `(x + 0.5) / 255.0` for every x in 0..256, and a fuzzed set of f32 divisions, matches the CPU's correctly rounded f32 division bit for bit with the setting off, on both backends; on Metal with the setting on, it differs on at least one input (RQ-175's columns), so the switch is shown to act; the setting defaults to off (REQ-SYS-074).
+- `cargo test -p validation compute_fast_math` in the `gpu-metal` and `gpu-lavapipe` jobs — the probe computing `(x + 0.5) / 255.0` for every x in 0..256, and a fuzzed set of f32 divisions, matches the CPU's correctly rounded f32 division bit for bit with the setting off, on both backends; on Metal with the setting on, it differs on at least one input (R-296's Result's 94 columns), so the switch is shown to act; the setting defaults to off (REQ-SYS-074).
 - `cargo xtask lint compute-pipelines` — no compute pipeline is created outside the entry point, and no vertex or fragment pipeline goes through the passthrough; a seeded violation of each fails it (REQ-SYS-074).
 - `cargo test -p engine session_header_fast_math` — the header carries the compute setting and the compute, vertex and fragment modes as compiled; on Metal with the default setting it reads setting off, compute off, and vertex and fragment on; with the setting on it reads setting on and compute on; on lavapipe with the setting on it reads setting on and compute off (compiled as off), so both appear; a header missing the setting or a stage fails to parse (REQ-TOOL-141).
 
 ## Notes
-- The probe is RQ-175's measurement turned into a test: on hosted Metal, `(x + 0.5) / 255.0` matched `(x + 0.5) ×
+- The probe is R-296's Result turned into a test: on hosted Metal, `(x + 0.5) / 255.0` matched `(x + 0.5) ×
   f32(1/255)` under wgpu's default compile, one ulp from correctly rounded division on 94 of 256 columns.
 - If wgpu 30's passthrough can't load compute MSL with fast-math off on the hosted `macos-15` runner, that is a
   REVIEW_QUEUE entry, not a workaround.
 - Fast-math off doesn't remove cross-implementation transcendental latitude; branch inputs stay comparison-only
-  (`principia_gpu_determinism_note.md`), whatever the math mode.
+  (`principia_gpu_determinism_note.md` § "The mechanism (measured, not inferred — the attribution was overturned by a controlled test)"), whatever the math mode.

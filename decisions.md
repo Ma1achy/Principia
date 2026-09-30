@@ -2967,6 +2967,20 @@ bytes at exact ties, and a case whose bytes still differ, a golden near a tie am
 backend. TASK-M0-43's last acceptance line (`cargo xtask golden --all`) reads "against one reference per case, or one
 per backend for a case the PR names", since the half-way fixture is now such a case. Its title is unchanged.
 
+*Result (the measurement RQ-175 reported, recorded here so the corpus can cite it; 30 Sep 2026, CI run 36736481929,
+branch `measure/m043-lavapipe-halfway`, deleted afterwards, no PR):* R-269's fragment rendered through TASK-M0-43's
+runner on hosted Metal and lavapipe, the runner's own shader scaling each channel to 0..255, rounding half to even and
+storing `k / 255` in the `Rgba8Unorm` target. With the automatic conversion (the control), Metal against lavapipe is max
+step 1 on 32768 of 65536 pixels, every even x, in R only: R-269's result, reproduced. Quantised in the shader, Metal
+against lavapipe is still max step 1, on 24064 of 65536 pixels (94 of the 256 columns, all even x), in R only; G and B
+are identical. The rounding itself agrees: lavapipe's quantised render is byte-identical to its automatic one, and at
+the columns where both backends' f32 `R × 255` is exactly x + 0.5, both round to even. Hosted Metal matches a local
+M3 Pro byte for byte. The cause is the fragment's own arithmetic, before any rounding: on lavapipe, R =
+`(x + 0.5) / 255.0` matches correctly rounded f32 division; on Metal, it matches `(x + 0.5) × f32(1/255)`, because
+wgpu 30 compiles MSL with the default `MTLCompileOptions`, which has fast-math on, and offers no switch to turn it off.
+On those 94 columns the two values are one ulp apart, on opposite sides of x + 0.5, so the rounded levels differ by
+one.
+
 ## R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
 *30 Sep 2026 · applied in parity contract §4, render contract Part 3, caching contract Parts 1 and 2, gui_state_contract
 §2, dd_image_embedding §6, telemetry §5, render_gui_spec §G5 and colour_composition §6; REQ-INT-057; REQ-SYS-074 and
@@ -3053,7 +3067,8 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   tolerance for the fragment decode against the f64 `decodeOnly()` (REQ-TOOL-029). R-133 carries a forward line, and
   REQ-COL-006's note says the same.
 
-*Flagged, not applied:* `principia_gpu_determinism_note.md` § "The mechanism" records that turning Metal's fast-math off
+*Flagged, not applied:* `principia_gpu_determinism_note.md` § "The mechanism (measured, not inferred — the
+attribution was overturned by a controlled test)" records that turning Metal's fast-math off
 did not restore `N_sub`'s determinism (the cause was transcendental latitude, in every math mode), and that the switch
 "is not available in a browser regardless". R-297 leaves the first as it stands: branch decisions stay comparison-only
 (Tier B), whatever the math mode. The second is open: what the compute
