@@ -795,3 +795,33 @@ validation::negative_control!(
         "cpu_cores at u32::MAX"
     )
 );
+
+// ----- the present stage: null in both places or in neither -----
+
+#[test]
+fn profile_v1_present_null_together() {
+    let mut time_only = written(&batch());
+    frames_mut(&mut time_only)[0]["stage_ms"]["present"] = json!(2.0);
+    check_rejected(&time_only, "a present time without present sections");
+    check_rejected(
+        &edited_frame(|f| f["stages"]["present"] = Value::Null),
+        "present sections set to null beside a present time",
+    );
+    check_write_refuses(
+        &trace_with(|f| f.stage_ms.present = None),
+        "a frame with present sections and no present time",
+    );
+    check_write_refuses(
+        &trace_with(|f| f.stages.present = None),
+        "a frame with a present time and no present sections",
+    );
+    check_accepted(&written(&interactive()), "an interactive frame");
+    check_accepted(&written(&batch()), "a batch render");
+}
+
+validation::negative_control!(
+    profile_v1_present_null_together,
+    "a batch render has both present keys null, so rejecting it must fail",
+    expected = "was accepted by profile_v1.json",
+    check_rejected(&written(&batch()), "a batch render")
+);

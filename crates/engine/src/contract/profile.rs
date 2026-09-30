@@ -389,22 +389,25 @@ pub struct Event {
 }
 
 /// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range — a
-/// negative ms, NaN or an infinity — is an error, and nothing is written.
+/// negative ms, NaN or an infinity — or a frame with one `present` null and the other not is an error, and nothing is
+/// written.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
     check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     serde_json::to_writer_pretty(writer, trace)
 }
 
-/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so is a value
-/// outside its range, so what `read` accepts validates against [`SCHEMA_V1`].
+/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so are a value
+/// outside its range and a frame with one `present` null and the other not, so what `read` accepts validates against
+/// [`SCHEMA_V1`].
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
     let trace: Trace = serde_json::from_reader(reader)?;
     check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
     Ok(trace)
 }
 
-/// The ranges of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
-/// and ≥ 0 except `playhead_dt`. The integers' widths are the types'.
+/// The rules of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
+/// and ≥ 0 except `playhead_dt`; `stage_ms.present` and `stages.present` null together. The integers' widths are the
+/// types'.
 fn check_ranges(trace: &Trace) -> Result<(), String> {
     let header = &trace.header;
     if let Some(rate) = header.precision.f64_rate {
@@ -432,6 +435,13 @@ fn check_ranges(trace: &Trace) -> Result<(), String> {
         }
         if let Some(present) = ms.present {
             non_negative(&at("stage_ms.present"), present)?;
+        }
+        if ms.present.is_some() != frame.stages.present.is_some() {
+            return Err(format!(
+                "{} and {} are not both null or both present",
+                at("stage_ms.present"),
+                at("stages.present")
+            ));
         }
         for stage in Stage::ALL {
             if let Some(sections) = frame.stages.get(stage) {

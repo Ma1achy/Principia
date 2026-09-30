@@ -197,9 +197,10 @@ key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number �
 
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gpu_cores`, `width_px`, `height_px` and
 `tree_depth_max` are at most 2^32 − 1, and every other count or size at most 2^64 − 1. `camera_delta`, `refresh_hz`,
-`dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A writer given a value
-outside its range, NaN or an infinity fails rather than write it, and a reader rejects a value outside its range, so
-a file the reader accepts validates against the JSON Schema. The reverse holds with two exceptions, which the schema
+`dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A frame's `stage_ms.present`
+and `stages.present` are both `null` or both present (below). A writer given a value outside its range, NaN or an
+infinity, or a frame with one `present` null and the other not, fails rather than write it, and a reader rejects all
+of them, so a file the reader accepts validates against the JSON Schema. The reverse holds with two exceptions, which the schema
 accepts and the reader rejects: a count or size written with a zero fraction (`"cpu_cores": 4.0`), which JSON
 Schema's `integer` admits, and a key repeated within an object whose keys this section lists, where the schema sees
 only the last copy. A key repeated anywhere inside `config` or inside a leak-flag or hot-path entry is not an
@@ -261,6 +262,8 @@ allocations.
 
 `stage_ms` and `stages` have exactly the five stages as keys, written in that order, and nothing else. A batch render
 has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.
+The two are `null` together or present together: a frame with a present time and no present sections, or the reverse,
+is neither a batch render nor an interactive frame, and is not schema v1.
 
 `playhead_dt` is the change in the playhead's simulation time `t` over the frame, in the unit of `T_horizon`
 (`principia_integrator_contract.md` Part 3, physical time). It is negative when the playhead moves back and 0 when it
