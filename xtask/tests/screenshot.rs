@@ -1,6 +1,8 @@
 //! `cargo xtask screenshot selftest` (REQ-TOOL-134): the layout case writes its capture beside its reference; the
 //! presence-only case passes, and fails naming the control when one control is removed (R-68, R-129). Each test runs
 //! on a copy of `fixtures/screenshot/selftest/` under its own root, so the captures land in that root's `target/`.
+//! A control laid out below a 120×20 surface fails presence, named as clipped; inside it, it passes (REQ-TOOL-136,
+//! R-275).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -290,4 +292,78 @@ negative_control!(
     "at the full width, the capture is the wide one, so the size check must fail",
     expected = "is the wide one cut down",
     check_size_bounds_layout(240)
+);
+
+/// A root holding a one-case presence suite over a 120×20 surface of the buttons `labels`, in order, whose case lists
+/// `Clip target` (R-275). The panel lays its controls out top-down, so a control after the first sits below the
+/// surface.
+fn clip_root(name: &str, labels: &[&str]) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = fs::remove_dir_all(&root);
+    let dir = root.join(screenshot::SUITES).join(SUITE);
+    fs::create_dir_all(&dir).expect("suite dir created");
+    let controls: Vec<_> = labels
+        .iter()
+        .map(|l| serde_json::json!({ "kind": "button", "label": l }))
+        .collect();
+    let surface = serde_json::json!({ "size": [120, 20], "controls": controls });
+    fs::write(dir.join("surface.json"), surface.to_string()).expect("surface written");
+    let cases = serde_json::json!({ "cases": [
+        { "name": "presence", "surface": "surface.json", "controls": ["Clip target"] }
+    ] });
+    fs::write(dir.join("cases.json"), cases.to_string()).expect("cases written");
+    root
+}
+
+/// The presence case under `root` fails, naming `Clip target` as clipped, not as absent.
+fn check_clipped_fails(root: &Path) {
+    let result = case(root, "presence");
+    let Err(message) = &result.result else {
+        panic!("presence case with the control below the surface did not fail: {result}");
+    };
+    assert!(
+        message.contains("clipped out of surface")
+            && message.contains("`Clip target`")
+            && !message.contains("absent"),
+        "failure does not name `Clip target` as clipped: {message}"
+    );
+}
+
+#[test]
+fn screenshot_presence_fails_naming_clipped_control() {
+    check_clipped_fails(&clip_root("shot_clipped", &["Clip filler", "Clip target"]));
+}
+
+negative_control!(
+    screenshot_presence_fails_naming_clipped_control,
+    "the same control laid out first, inside the surface, is present, so the clipped check must fail",
+    expected = "did not fail",
+    check_clipped_fails(&clip_root("shot_clipped_control", &["Clip target", "Clip filler"]))
+);
+
+/// The presence case under `root` passes, finding `Clip target`.
+fn check_inside_passes(root: &Path) {
+    let result = case(root, "presence");
+    assert_eq!(
+        result.result,
+        Ok(Outcome::Present {
+            controls: vec!["Clip target".into()]
+        }),
+        "presence case with the control inside the surface failed: {result}"
+    );
+}
+
+#[test]
+fn screenshot_presence_passes_control_inside_surface() {
+    check_inside_passes(&clip_root("shot_inside", &["Clip target", "Clip filler"]));
+}
+
+negative_control!(
+    screenshot_presence_passes_control_inside_surface,
+    "the same control laid out below the surface is clipped, so the inside check must fail",
+    expected = "inside the surface failed",
+    check_inside_passes(&clip_root(
+        "shot_inside_control",
+        &["Clip filler", "Clip target"]
+    ))
 );
