@@ -42,6 +42,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - Review checklist (code reviewer) — deployment contains the script; no CDN (REQ-SYS-042).
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
 - `cargo test -p engine session_header_browser_fast_math` — a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the compute setting as asked for, off and on, and the compute, vertex and fragment modes as "unknown"; a native header never records "unknown" (REQ-TOOL-143).
+- Review checklist (code reviewer) — the browser entry (`crates/engine/src/wasm/entry.rs`) passes the no-control fast-math capability that the header writer and the Run window read (REQ-TOOL-143).
 
 ## Notes
 - R-303 (closes RQ-177): in the browser build each shader stage's compiled fast-math mode is recorded as "unknown", since WebGPU offers no fast-math control (REQ-TOOL-143).

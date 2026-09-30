@@ -15625,7 +15625,7 @@
     section: "5. The artefact: one file, plain text, readable by the sender"
   verify:
     method: unit test
-    detail: "cargo test -p engine session_header_browser_fast_math: a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a header for a native backend never records \"unknown\""
+    detail: "cargo test -p engine session_header_browser_fast_math: a header written for a backend with no fast-math control, as the browser build's WebGPU is, records the setting as asked for, off and on, and the compute, vertex and fragment modes as \"unknown\"; a header for a native backend never records \"unknown\"; review checklist (code): the browser entry (`crates/engine/src/wasm/entry.rs`) passes the no-control fast-math capability that the header writer and the Run window read"
   rulings:
   - R-303
   milestone: M8
