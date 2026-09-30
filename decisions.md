@@ -636,6 +636,9 @@ among seeds with ‖w⁽²⁾‖²_m > ε_w, take the largest norm; break ties b
 The scale lives in `q` (a common zoom). chart_reference drops `s_u` and `s_v`.
 
 ## R-84 — Branch decisions across precisions *(closes RQ-35)*
+*Amended by R-297.*
+*Still in force: all of it with the compute shaders' fast-math off, the default; with it on, an opt-in, parity is
+measured, not exact (R-297).*
 *25 Sep 2026 · applied in step 7*
 
 `parity_contract` governs. Branch decisions are identical on identical inputs, per step. Labels on chaotic trajectories may
@@ -882,6 +885,9 @@ The raw `state` debug view keeps a six-colour `dbg_cat` palette. R-77 governs th
 only.
 
 ## R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*
+*Amended by R-297.*
+*Still in force: all of it; the agreement presets compare within a stated tolerance, a calibration requirement, not
+bit-exactly (R-297).*
 *25 Sep 2026 · applied in step 7*
 
 The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
@@ -2729,6 +2735,10 @@ writer never pretty-prints. TASK-M0-17 writes the format in telemetry §5 and ap
 `prin profile show --pretty` joins TASK-M0-18, which builds `prin profile` (REQ-TOOL-139).
 
 ## R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*
+*Amended by R-296.*
+*Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree
+across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a
+tie, so a golden near a tie keeps one reference per backend (R-296).*
 *30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
 
 "R-287: fragment output quantises explicitly in the shader (round half to even, then store), not through the
@@ -2923,3 +2933,105 @@ gains R-290's check: where qa's commit modifies or deletes a test file that only
 confirms that no assertion was weakened, except where a ruling changed the behaviour it tests. CLAUDE.md's
 memory-pressure bullet cites R-277 in place of R-239 and R-252. The same message asked for the full text of #79's
 items 12 and 15 before ruling on them; they stay open.
+
+## R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
+*30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
+
+"R-296 (closes RQ-175): option 1. R-269's fixture keeps one reference
+image per backend, R-287's own fallback. Reword TASK-M0-43's acceptance
+line and REQ-VAL-176: the evidence is that lavapipe's quantised bytes
+equal its automatic ones, and that both backends round exact ties to
+even. Qualify parity contract §4: explicit quantisation makes exact ties
+identical, but values within an ulp of a tie can differ on backends
+whose display shaders compile with fast-math (Metal via wgpu), so
+goldens near a tie use per-backend references."
+
+*Applied:* RQ-175's option 1. R-269's half-way fixture keeps one reference per backend, the fallback R-287 names, and
+TASK-M0-43's PR names it. TASK-M0-43's first acceptance line and REQ-VAL-176's verify detail now take as the evidence
+that lavapipe's quantised bytes equal its automatic ones, and that at exact f32 ties both backends round to even; the
+fixture renders max step 0 on each backend against its own reference, and the control still shows max step 1 between
+the backends. Parity contract §4 qualifies "byte-exact across backends by construction": explicit quantisation makes
+exact ties identical, but a value within an ulp of a tie can differ on a backend whose display shaders compile with
+fast-math (Metal via wgpu), so a golden near a tie keeps one reference per backend. The rest of R-287 stands: fragment
+output quantises in the shader, and a golden case whose bytes agree across backends keeps one reference. RQ-175 moves
+unchanged to `docs/archive/review_queue/M0.md`, with its Ruling line.
+
+*Applied per R-204 — veto? (plan):* REQ-VAL-176's statement is qualified the same way: every backend writes identical
+bytes at exact ties, and a case whose bytes still differ, a golden near a tie among them, keeps one reference per
+backend. TASK-M0-43's last acceptance line (`cargo xtask golden --all`) reads "against one reference per case, or one
+per backend for a case the PR names", since the half-way fixture is now such a case. Its title is unchanged.
+
+## R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
+*30 Sep 2026 · applied in parity contract §4, render contract Part 3, caching contract Parts 1 and 2, gui_state_contract
+§2, dd_image_embedding §6, telemetry §5, render_gui_spec §G5 and colour_composition §6; REQ-INT-057; REQ-SYS-074 and
+REQ-TOOL-141 in TASK-M0-44 (new), REQ-COL-060 in TASK-M2-29 (new), REQ-SCHED-097 in TASK-M4-08, REQ-PERF-094 and
+REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and REQ-GUI-164 in TASK-M8-43 (new)*
+
+"R-297 (fast-math, per shader stage):
+- Compute shaders (the simulation): fast-math is an explicit, recorded
+  setting, off by default and on as an opt-in optimisation; the project
+  never inherits it silently. Off: bit-identity and identical branch
+  decisions hold (R-84, REQ-INT-057). On Metal that means compiling our
+  own MSL with fast-math off and loading it through wgpu's passthrough,
+  for the compute pipelines only. On: allowed for speed; parity becomes
+  "measured, not exact", with on-versus-off differences measured and
+  reported. The compute setting is part of the sim key, recorded in
+  pxpack, and shown in the profiler and the Run window.
+- Vertex and fragment shaders (display): fast-math may stay on.
+- Exception: fragment paths that recompute physics to check agreement
+  (the DECODE/ROUNDTRIP presets, R-116) compare within a stated
+  tolerance, a calibration requirement, not bit-exactly.
+- Record the per-stage mode in the telemetry header. File the work as
+  tasks where it belongs (the compute passthrough path in M0/M4, the Run
+  window control in M8), and measure the performance difference so
+  turning it on is an informed choice."
+
+*Applied:*
+- Docs. Parity contract §4 states the per-stage rule: compute fast-math is off by default, an explicit setting that
+  is recorded and never inherited; off, bit-identity and identical branch decisions hold (R-84, REQ-INT-057); on,
+  parity is measured, not exact. On Metal, off is the project's own MSL compiled with fast-math off and loaded through
+  wgpu's passthrough, for the compute pipelines only. The display stages may keep fast-math on; the DECODE and
+  ROUNDTRIP presets compare within a stated tolerance. The setting joins the sim key (render contract Part 3) and the
+  payload compatibility signature with its blast-radius row (caching contract Parts 1 and 2), the embedded record's
+  sim fields (dd_image_embedding §6), and the Profiler and Run window (render_gui_spec §G5). Telemetry §5's header
+  records each stage's mode: compute, vertex and fragment. colour_composition §6 gives the agreement presets their
+  tolerance.
+- R-84 and R-116 carry forward lines: R-84's guarantee holds with compute fast-math off, and the agreement presets
+  R-116 describes compare within a tolerance. REQ-INT-057 is qualified: "with the compute shaders' fast-math off, the
+  default (R-297)".
+- Plan. REQ-SYS-074 (the explicit setting, default off, and the Metal passthrough for the compute pipelines only) and
+  REQ-TOOL-141 (each stage's mode in the session header) go to a new task, TASK-M0-44. REQ-SCHED-097 (the setting on
+  the sim key) joins TASK-M4-08, which builds the sim key. REQ-PERF-094 (the march's speed, on against off, a
+  benchmark on the human's Mac, R-186) and REQ-VAL-177 (the on-versus-off differences, measured and reported) go to a
+  new task, TASK-M4-20. REQ-TOOL-142 (the setting in the embedded record) joins TASK-M7-31, which builds what
+  travels. REQ-GUI-163 (the Run window control) and REQ-GUI-164 (the Profiler's per-stage modes) go to a new M8 task,
+  TASK-M8-43. REQ-COL-060, the DECODE and ROUNDTRIP presets' tolerance, is a calibration requirement (R-71), closed
+  by a new task, TASK-M2-29.
+
+*Applied per R-204 — veto?:*
+- Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
+  GPU) and TASK-M0-19 (the session header), so every compute pipeline from M0 on is built through it. No existing
+  task takes it: TASK-M0-14 is ~450 lines already, and TASK-M4-01 and TASK-M4-06 come after M0's compute dispatches.
+  TASK-M4-06's variant table builds its pipelines through TASK-M0-44's entry point.
+- Plan (the other placements): the sim key in TASK-M4-08 and the embedded record in TASK-M7-31, the tasks that build
+  them; the Run window control and the Profiler line in a new TASK-M8-43, after TASK-M8-24 and TASK-M8-28 (TASK-M8-28
+  is already over budget); the benchmark and the difference report together in TASK-M4-20, after TASK-M4-19's
+  kernel benchmarks; the tolerance in TASK-M2-29, after TASK-M2-26 builds the ROUNDTRIP preset.
+- Design (where the setting lives): it is a `SimConfig` field (gui_state_contract §2), since it is on the sim key and
+  every Run window field is a `SimConfig` field (render_gui_spec §G5).
+- Design (what is recorded): the header records the mode each stage was compiled with on the running backend, not
+  only the setting asked for. Where wgpu's own path compiles without fast-math and offers no switch (Vulkan, on
+  lavapipe in CI), off is that path, and on compiles the same way and is recorded as off.
+- Design (the difference report): `cargo xtask gate fast-math-diff`, run in the `gpu-metal` job; it reports branch-word
+  forks, the largest continuous-word differences and the outcome-class fractions, on against off, and its control is
+  off against off, exactly zero.
+- GUI: the Run window control and the Profiler line have no artboard, so they are checked by presence only until the
+  M8 dev GUI (R-129).
+- Amendment: R-297 amends R-84 (branch decisions are identical only with compute fast-math off) and R-116 (the
+  agreement presets compare within a tolerance), and each carries a forward line.
+
+*Flagged, not applied:* `principia_gpu_determinism_note.md` § "The mechanism" records that turning Metal's fast-math off
+did not restore `N_sub`'s determinism (the cause was transcendental latitude, in every math mode), and that the switch
+"is not available in a browser regardless". R-297 leaves the first as it stands: branch decisions stay comparison-only
+(Tier B), whatever the math mode. The second is open: what the compute
+setting means in the browser build (M8), where WebGPU gives no fast-math control, isn't settled; it is asked in the PR.
