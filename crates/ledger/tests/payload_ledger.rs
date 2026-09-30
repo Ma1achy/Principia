@@ -59,7 +59,7 @@ fn check_fields(structs: &[Struct]) {
         expected,
         "generated structs differ from the ledger's"
     );
-    let found = rust::check(structs, &layout().words, &entries(), &["free_group_word"]);
+    let found = rust::check(structs, &layout().words, &entries(), payload::PENDING);
     assert!(
         found.is_empty(),
         "structs differ from the ledger: {found:?}"
@@ -87,7 +87,7 @@ negative_control!(
 fn check_swapped(i: usize, count: usize) {
     let mut s = payload::structs();
     s[0].members.swap(i, i + 1);
-    let found = rust::check(&s, &layout().words, &entries(), &["free_group_word"]);
+    let found = rust::check(&s, &layout().words, &entries(), payload::PENDING);
     assert_eq!(found.len(), count, "members off the ledger: {found:?}");
 }
 
@@ -101,6 +101,61 @@ negative_control!(
     "swapping S and theta moves both, so the check must fail on a count of none",
     expected = "members off the ledger",
     check_swapped(4, 0)
+);
+
+/// The payload ledger with `mean_y` at scalar slot `slot`, or without its entry if `slot` is `None`; generation from it
+/// is refused, naming each of `names` (dd_generation_root §3.8: "A field without a complete entry fails generation
+/// loudly").
+fn check_mean_y_refused(slot: Option<u32>, names: &[&str]) {
+    let mut ledger = layout();
+    match slot {
+        Some(slot) => {
+            let e = ledger
+                .entries
+                .iter_mut()
+                .find(|e| e.name == Some("mean_y"))
+                .expect("the payload ledger has `mean_y`");
+            e.location = Some(ledger::schema::Location::Scalar(slot));
+        }
+        None => ledger.entries.retain(|e| e.name != Some("mean_y")),
+    }
+    check_refused_naming(&ledger, names);
+}
+
+#[test]
+fn payload_fields_generation_refuses_a_member_off_its_slot() {
+    check_mean_y_refused(
+        Some(36),
+        &["`SimStateFTLE.mean_y` is at byte 104, not slot 36"],
+    );
+}
+
+negative_control!(
+    payload_fields_generation_refuses_a_member_off_its_slot,
+    "mean_y at its own slot 26 is where SimStateFTLE stores it, so generation must not be refused",
+    expected = "generation was not refused",
+    check_mean_y_refused(Some(26), &["`SimStateFTLE.mean_y`"])
+);
+
+#[test]
+fn payload_fields_generation_refuses_a_member_with_no_entry() {
+    check_mean_y_refused(
+        None,
+        &[
+            "`SimStateFTLE.mean_y` has no ledger entry or word",
+            "`SimStateBase.mean_y` has no ledger entry or word",
+        ],
+    );
+}
+
+negative_control!(
+    payload_fields_generation_refuses_a_member_with_no_entry,
+    "with its entry kept at its own slot, mean_y is tied to the ledger, so generation must not be refused",
+    expected = "generation was not refused",
+    check_mean_y_refused(
+        Some(26),
+        &["`SimStateFTLE.mean_y` has no ledger entry or word"]
+    )
 );
 
 /// Render contract Part 1's `SimState` and `ICDescriptor` field lists, each a ledger entry, word or member.

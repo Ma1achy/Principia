@@ -209,6 +209,11 @@ fn simstate(ftle: bool) -> Struct {
     }
 }
 
+/// Struct members with no ledger entry or word yet, which the struct check ([`crate::gen::rust::check`]) exempts:
+/// `free_group_word`, the word buffer's one `vec4<u32>`, whose interior layout (dd_generation_root §3.3) is not
+/// transcribed in this task, so it has no entry to be checked against.
+pub const PENDING: &[&str] = &["free_group_word"];
+
 /// The structs the Rust emitter writes: `SimState`'s two variants, the word buffer's element (one `vec4<u32>`, whose
 /// layout, §3.3, is not transcribed here) and `ICDescriptor` (64 B: twelve f32s and 16 B of declared padding, R-86).
 pub fn structs() -> Vec<Struct> {

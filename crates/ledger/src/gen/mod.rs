@@ -1,7 +1,7 @@
 //! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
-//! entry is incomplete, naming each field and the missing key, or when the layout check finds anything. The emitters
-//! are registered in [`EMITTERS`].
+//! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
+//! payload struct member the Rust emitter would write is off the ledger ([`rust::check`]). The emitters are registered in [`EMITTERS`].
 
 pub mod rust;
 
@@ -35,6 +35,10 @@ pub enum GenError {
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),
+    /// Struct members off the ledger: stored as other than their entry's type or word's width, off their entry's
+    /// scalar slot, or with no entry or word, each naming the member ([`rust::check`]; dd_generation_root §3.8: "A
+    /// field without a complete entry fails generation loudly").
+    Structs(Vec<String>),
     /// Constants-register entries missing a value, class or citation, or thresholds without an admissible relative
     /// basis, each naming the constant ([`crate::constants::gate`]; REQ-SYS-001, REQ-SYS-005, REQ-VAL-006).
     Constants(Vec<String>),
@@ -44,7 +48,9 @@ impl fmt::Display for GenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let lines: Vec<String> = match self {
             GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
-            GenError::Malformed(lines) | GenError::Constants(lines) => lines.clone(),
+            GenError::Malformed(lines) | GenError::Structs(lines) | GenError::Constants(lines) => {
+                lines.clone()
+            }
             GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
         };
         write!(
@@ -182,13 +188,25 @@ fn is_name(s: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
-/// Validates `ledger` and runs the static layout check over it, then runs `emitters` over it; the files they
-/// generate, or why not.
+/// Validates `ledger` and runs the static layout check over it; if `emitters` include the Rust struct emitter
+/// ([`rust::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
+/// ([`rust::check`], exempting [`crate::payload::PENDING`]); then runs `emitters` over it. The files they generate, or
+/// why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
     let findings = check::check(&ledger.words, &entries);
     if !findings.is_empty() {
         return Err(GenError::Layout(findings));
+    }
+    let structs = crate::payload::structs();
+    let writes_structs = emitters
+        .iter()
+        .any(|&e| std::ptr::fn_addr_eq(e, rust::emit as Emitter));
+    if writes_structs && rust::declares(&structs, &ledger.words, &entries) {
+        let found = rust::check(&structs, &ledger.words, &entries, crate::payload::PENDING);
+        if !found.is_empty() {
+            return Err(GenError::Structs(found));
+        }
     }
     Ok(emitters
         .iter()
