@@ -11,7 +11,7 @@ use std::process::Command;
 
 use validation::negative_control;
 use validation::spawn::Spawn;
-use xtask::build_kernel::{check_channel, pinned_channel, to_wgsl, SPV, WGSL};
+use xtask::build_kernel::{check_channel, pinned_channel, run, to_wgsl, SPV, WGSL};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -71,6 +71,58 @@ negative_control!(
     "the pinned nightly itself, which must be accepted",
     expected = "a backend on another nightly was accepted",
     check_refused("nightly-2026-04-11", "nightly-2026-04-11")
+);
+
+/// A workspace under the test's temporary directory holding only `files`, and its `Cargo.toml`'s path.
+fn workspace(case: &str, files: &[(&str, &str)]) -> PathBuf {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_ws_{case}"));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    for (name, text) in files {
+        fs::write(dir.join(name), text).unwrap();
+    }
+    dir.join("Cargo.toml")
+}
+
+/// build-kernel on the workspace of `manifest` fails, naming `what`, and writes nothing.
+fn check_refused_naming(manifest: &Path, what: &str) {
+    let err = run(manifest).expect_err("build-kernel passed on a workspace it cannot build");
+    assert!(
+        err.contains(what),
+        "build-kernel's failure does not name {what}: {err}"
+    );
+    let root = manifest.parent().unwrap();
+    assert!(
+        !root.join(SPV).exists() && !root.join(WGSL).exists(),
+        "build-kernel wrote output on failure"
+    );
+}
+
+#[test]
+fn build_kernel_refuses_a_workspace_without_a_pin() {
+    check_refused_naming(
+        &workspace("unpinned", &[("Cargo.toml", "[workspace]\n")]),
+        "rust-toolchain.toml",
+    );
+}
+
+negative_control!(
+    build_kernel_refuses_a_workspace_without_a_pin,
+    "a pinned workspace with no kernel, which fails on the kernel, not the pin",
+    expected = "build-kernel's failure does not name rust-toolchain.toml",
+    check_refused_naming(
+        &workspace(
+            "pinned",
+            &[
+                ("Cargo.toml", "[workspace]\n"),
+                (
+                    "rust-toolchain.toml",
+                    "[toolchain]\nchannel = \"nightly-2026-04-11\"\n"
+                ),
+            ],
+        ),
+        "rust-toolchain.toml"
+    )
 );
 
 /// naga's WGSL for `spv` holds the kernel's entry point at the harness's workgroup size.
