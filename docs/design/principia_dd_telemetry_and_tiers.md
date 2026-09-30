@@ -195,6 +195,12 @@ form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/c
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
 key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 
+The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gpu_cores`, `width_px`, `height_px` and
+`tree_depth_max` are at most 2^32 − 1, and every other count or size at most 2^64 − 1. `camera_delta`, `refresh_hz`,
+`dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A writer given a value
+outside its range, NaN or an infinity fails rather than write it, and a reader rejects a value outside its range, so
+a file the reader accepts validates against the JSON Schema, and the reverse.
+
 **The file** is one JSON object: the session header, the frame records, then the precomputed summaries.
 
 ```

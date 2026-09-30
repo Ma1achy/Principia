@@ -386,12 +386,85 @@ pub struct Event {
     pub detail: Option<String>,
 }
 
-/// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5).
+/// Writes `trace` as schema v1: indented JSON, readable by the sender (telemetry §5). A value outside its range — a
+/// negative ms, NaN or an infinity — is an error, and nothing is written.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
+    check_ranges(trace).map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     serde_json::to_writer_pretty(writer, trace)
 }
 
-/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error.
+/// Reads a schema v1 file. A key outside v1 — a scope beside the five stages, say — is an error, and so is a value
+/// outside its range, so what `read` accepts validates against [`SCHEMA_V1`].
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
-    serde_json::from_reader(reader)
+    let trace: Trace = serde_json::from_reader(reader)?;
+    check_ranges(&trace).map_err(<serde_json::Error as serde::de::Error>::custom)?;
+    Ok(trace)
+}
+
+/// The ranges of dd_telemetry_and_tiers §5's definition that the Rust types don't already hold: every number finite,
+/// and ≥ 0 except `playhead_dt`. The integers' widths are the types'.
+fn check_ranges(trace: &Trace) -> Result<(), String> {
+    let header = &trace.header;
+    if let Some(rate) = header.precision.f64_rate {
+        non_negative("header.precision.f64_rate", rate)?;
+    }
+    if let Some(display) = &header.display {
+        non_negative("header.display.refresh_hz", display.refresh_hz)?;
+        non_negative("header.display.dpi_scale", display.dpi_scale)?;
+    }
+    for (i, frame) in trace.frames.iter().enumerate() {
+        let at = |key: &str| format!("frames[{i}].{key}");
+        non_negative(&at("frame_ms"), frame.frame_ms)?;
+        if !frame.playhead_dt.is_finite() {
+            return Err(format!(
+                "{} is {}, not a finite number",
+                at("playhead_dt"),
+                frame.playhead_dt
+            ));
+        }
+        non_negative(&at("camera_delta"), frame.camera_delta)?;
+        let ms = &frame.stage_ms;
+        let stage_ms = [ms.integrate, ms.reduce, ms.colour, ms.upload];
+        for (stage, value) in Stage::ALL.iter().zip(stage_ms) {
+            non_negative(&at(&format!("stage_ms.{}", stage.key())), value)?;
+        }
+        if let Some(present) = ms.present {
+            non_negative(&at("stage_ms.present"), present)?;
+        }
+        for stage in Stage::ALL {
+            if let Some(sections) = frame.stages.get(stage) {
+                check_sections(&at(&format!("stages.{}", stage.key())), sections)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn check_sections(path: &str, sections: &StageSections) -> Result<(), String> {
+    fn check_scopes(path: &str, scopes: &[Scope]) -> Result<(), String> {
+        for (i, scope) in scopes.iter().enumerate() {
+            let at = format!("{path}[{i}]");
+            non_negative(&format!("{at}.start_ms"), scope.start_ms)?;
+            non_negative(&format!("{at}.ms"), scope.ms)?;
+            check_scopes(&format!("{at}.children"), &scope.children)?;
+        }
+        Ok(())
+    }
+    check_scopes(&format!("{path}.scopes"), &sections.scopes)?;
+    for (i, pass) in sections.gpu_passes.iter().enumerate() {
+        non_negative(&format!("{path}.gpu_passes[{i}].start_ms"), pass.start_ms)?;
+        non_negative(&format!("{path}.gpu_passes[{i}].ms"), pass.ms)?;
+    }
+    for (i, event) in sections.events.iter().enumerate() {
+        non_negative(&format!("{path}.events[{i}].at_ms"), event.at_ms)?;
+    }
+    Ok(())
+}
+
+fn non_negative(path: &str, value: f64) -> Result<(), String> {
+    if value.is_finite() && value >= 0.0 {
+        Ok(())
+    } else {
+        Err(format!("{path} is {value}, not a finite number >= 0"))
+    }
 }

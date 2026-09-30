@@ -18,7 +18,8 @@
       "oneOf": [{ "type": "null" }, { "type": "array", "items": { "type": "object" } }]
     },
     "ms": { "type": "number", "minimum": 0 },
-    "count": { "type": "integer", "minimum": 0 },
+    "count": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
+    "count32": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
     "session_header": {
       "type": "object",
       "additionalProperties": false,
@@ -39,8 +40,8 @@
       "properties": {
         "gpu": { "type": "string" },
         "cpu": { "type": "string" },
-        "cpu_cores": { "$ref": "#/$defs/count" },
-        "gpu_cores": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count" }] },
+        "cpu_cores": { "$ref": "#/$defs/count32" },
+        "gpu_cores": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count32" }] },
         "memory": { "$ref": "#/$defs/memory" }
       }
     },
@@ -111,8 +112,8 @@
       "additionalProperties": false,
       "required": ["width_px", "height_px", "refresh_hz", "dpi_scale"],
       "properties": {
-        "width_px": { "$ref": "#/$defs/count" },
-        "height_px": { "$ref": "#/$defs/count" },
+        "width_px": { "$ref": "#/$defs/count32" },
+        "height_px": { "$ref": "#/$defs/count32" },
         "refresh_hz": { "type": "number", "minimum": 0 },
         "dpi_scale": { "type": "number", "minimum": 0 }
       }
@@ -133,7 +134,7 @@
         "substeps_total": { "$ref": "#/$defs/count" },
         "playhead_dt": { "type": "number" },
         "camera_delta": { "type": "number", "minimum": 0 },
-        "tree_depth_max": { "$ref": "#/$defs/count" },
+        "tree_depth_max": { "$ref": "#/$defs/count32" },
         "leaf_count": { "$ref": "#/$defs/count" },
         "stage_ms": { "$ref": "#/$defs/stage_ms" },
         "stages": { "$ref": "#/$defs/stages" },

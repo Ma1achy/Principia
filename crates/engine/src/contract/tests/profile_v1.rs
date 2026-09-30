@@ -623,3 +623,175 @@ validation::negative_control!(
             .remove("tile_cache");
     }))
 );
+
+// ----- the ranges: the writer, the reader and the JSON Schema agree -----
+
+fn check_write_refuses(trace: &Trace, what: &str) {
+    let mut out = Vec::new();
+    assert!(
+        write(trace, &mut out).is_err(),
+        "{what} was written: {}",
+        String::from_utf8_lossy(&out)
+    );
+    assert!(out.is_empty(), "{what} was partly written");
+}
+
+/// The interactive trace with `edit` applied to its first frame.
+fn trace_with(edit: impl FnOnce(&mut FrameRecord)) -> Trace {
+    let mut trace = interactive();
+    edit(&mut trace.frames[0]);
+    trace
+}
+
+#[test]
+fn profile_v1_ranges_write_refuses_out_of_range() {
+    let cases: [(Trace, &str); 8] = [
+        (trace_with(|f| f.frame_ms = -1.0), "a negative frame_ms"),
+        (trace_with(|f| f.frame_ms = f64::NAN), "a NaN frame_ms"),
+        (
+            trace_with(|f| f.playhead_dt = f64::NAN),
+            "a NaN playhead_dt",
+        ),
+        (
+            trace_with(|f| f.camera_delta = -0.5),
+            "a negative camera_delta",
+        ),
+        (
+            trace_with(|f| f.stage_ms.present = Some(f64::INFINITY)),
+            "an infinite present ms",
+        ),
+        (
+            trace_with(|f| f.stages.reduce.scopes[0].children[0].ms = f64::NEG_INFINITY),
+            "an infinite nested scope ms",
+        ),
+        (
+            {
+                let mut trace = interactive();
+                trace.header.precision.f64_rate = Some(f64::NAN);
+                trace
+            },
+            "a NaN f64_rate",
+        ),
+        (
+            {
+                let mut trace = interactive();
+                if let Some(display) = trace.header.display.as_mut() {
+                    display.refresh_hz = -60.0;
+                }
+                trace
+            },
+            "a negative refresh_hz",
+        ),
+    ];
+    for (trace, what) in &cases {
+        check_write_refuses(trace, what);
+    }
+}
+
+validation::negative_control!(
+    profile_v1_ranges_write_refuses_out_of_range,
+    "a trace in range must be written, failing the check",
+    expected = "was written",
+    check_write_refuses(&interactive(), "a trace in range")
+);
+
+/// The interactive trace, as written, with the value at `pointer` replaced.
+fn with_value(pointer: &str, value: Value) -> Value {
+    let mut doc = written(&interactive());
+    *doc.pointer_mut(pointer).expect("no such key") = value;
+    doc
+}
+
+#[test]
+fn profile_v1_ranges_reader_agrees_with_schema() {
+    let scope = "/frames/0/stages/reduce/scopes/0";
+    let rejected = [
+        ("/frames/0/frame_ms", json!(-1.0), "a negative frame_ms"),
+        (
+            "/frames/0/camera_delta",
+            json!(-0.5),
+            "a negative camera_delta",
+        ),
+        (
+            "/frames/0/stage_ms/integrate",
+            json!(-2.0),
+            "a negative stage ms",
+        ),
+        (
+            &format!("{scope}/children/0/start_ms")[..],
+            json!(-0.25),
+            "a negative nested start_ms",
+        ),
+        (
+            "/frames/0/stages/colour/events/0/at_ms",
+            json!(-1.0),
+            "a negative event at_ms",
+        ),
+        (
+            "/frames/0/stages/upload/gpu_passes/0/ms",
+            json!(-1.0),
+            "a negative GPU pass ms",
+        ),
+        (
+            "/header/display/dpi_scale",
+            json!(-2.0),
+            "a negative dpi_scale",
+        ),
+        (
+            "/header/device/cpu_cores",
+            json!(u64::from(u32::MAX) + 1),
+            "cpu_cores past u32",
+        ),
+        (
+            "/header/device/gpu_cores",
+            json!(u64::from(u32::MAX) + 1),
+            "gpu_cores past u32",
+        ),
+        (
+            "/header/display/width_px",
+            json!(u64::from(u32::MAX) + 1),
+            "width_px past u32",
+        ),
+        (
+            "/frames/0/tree_depth_max",
+            json!(u64::from(u32::MAX) + 1),
+            "tree_depth_max past u32",
+        ),
+        ("/frames/0/samples", json!(-1), "a negative count"),
+    ];
+    for (pointer, value, what) in rejected {
+        check_rejected(&with_value(pointer, value), what);
+    }
+    let accepted = [
+        (
+            "/header/device/cpu_cores",
+            json!(u32::MAX),
+            "cpu_cores at u32::MAX",
+        ),
+        (
+            "/frames/0/tree_depth_max",
+            json!(u32::MAX),
+            "tree_depth_max at u32::MAX",
+        ),
+        ("/frames/0/samples", json!(u64::MAX), "samples at u64::MAX"),
+        (
+            "/frames/0/playhead_dt",
+            json!(-3.5),
+            "a negative playhead_dt",
+        ),
+        ("/frames/0/frame_ms", json!(0.0), "a zero frame_ms"),
+    ];
+    for (pointer, value, what) in accepted {
+        check_accepted(&with_value(pointer, value), what);
+    }
+}
+
+validation::negative_control!(
+    profile_v1_ranges_reader_agrees_with_schema,
+    "cpu_cores at u32::MAX is in range, so rejecting it must fail",
+    expected = "was accepted by profile_v1.json",
+    check_rejected(
+        &with_value("/header/device/cpu_cores", json!(u32::MAX)),
+        "cpu_cores at u32::MAX"
+    )
+);
