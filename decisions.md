@@ -2929,6 +2929,11 @@ memory-pressure bullet cites R-277 in place of R-239 and R-252. The same message
 items 12 and 15 before ruling on them; they stay open.
 
 ## R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*
+*Amended by R-299.*
+*Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the
+header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session
+incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299
+replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected.*
 *30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008, REQ-TOOL-101 and TASK-M0-17 (PR #79)*
 
 "This is from me. #79: items 12 and 15 accepted (R-298), with one
@@ -2952,3 +2957,27 @@ in-progress trace (no summary line yet)".
 header line alone counts as an incomplete session with no frames, since it too is "a trace with no final summary line".
 A last line cut off inside its JSON object is still rejected: the ruling covers a missing summary line, not a partial
 line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
+
+## R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
+*30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008 and TASK-M0-17 (PR #79)*
+
+"#79 item b (R-299): the reader drops an unterminated final line that doesn't parse, reports the session incomplete,
+and states how many bytes it dropped. A malformed line ending in a newline stays an error. Implementer change plus
+re-checks, then merge."
+
+*Applied:* PR #79's veto item b (R-298's Applied note: "A last line cut off inside its JSON object is still rejected")
+changes. Telemetry §5 now says a last line with no newline after it that is not one complete JSON value is the part of
+a line a session was writing when it stopped: the reader drops it, reads the lines before it as the trace, reports the
+session incomplete ("session incomplete", R-298), and states the number of bytes it dropped. A last line with no
+newline that is complete JSON is read as before, R-298's rules unchanged: a summary line or a frame record, or an
+error. A line that ends in a newline and is not the object its place calls for stays an error, wherever it is.
+`engine::contract::profile::read` gives the count as `Trace::dropped_bytes`; REQ-TOOL-008 gains the behaviour and its
+test in TASK-M0-17.
+
+*Applied per R-204 — veto?:* "doesn't parse" is read as "is not one complete JSON value": a compact JSON object cut
+anywhere before its closing brace never is, while a complete JSON object with no newline after it, whatever its keys, is
+a written line and not a cut one, so it is read as it is today. Because the dropped line held the last place, the line
+before it keeps a frame's place: a summary line followed by a cut-off line is an error, since the writer writes nothing
+after the summary line. A file whose only line is a cut-off header line has no header line to read, and stays an error,
+as an empty file is; the error states the bytes. R-299 is in the "design" group of `plan/rule_groups.yaml`, beside
+R-286 and R-298.
