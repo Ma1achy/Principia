@@ -18,7 +18,8 @@
 //! {
 //!   "render": { "shader": "gradient.wgsl", "fragment": "fs_main", "width": 256, "height": 256,
 //!               "constants": { "<override>": <number>, ... } },
-//!   "reference": "reference.png",
+//!   "reference": "reference.png" | { "metal": "metal.png", "vulkan": "vulkan.png" },
+//!   "output": "quantised" | "automatic",
 //!   "tolerance": "REQ-VAL-138",
 //!   "expect": "pass" | "fail",
 //!   "lines": { "<name>": { "from": [x, y], "to": [x, y] }, ... },
@@ -27,12 +28,23 @@
 //! }
 //! ```
 //!
-//! The shader is a WGSL fragment module, drawn over the whole target by a full-screen triangle the runner supplies,
-//! into an `Rgba8Unorm` texture; `constants` set its `override` declarations. The tolerance is a requirement or
-//! calibration-requirement id from [`TOLERANCES`]; a bare number is refused. `expect: "fail"` marks a case that must
-//! fail its comparison: the proof that the runner can fire (pitfalls §3). `lines` and `symptoms` are optional; a repro
-//! needs at least one line. The reference is refused unless `fixtures/golden/BASELINES.md` holds its hash with the
-//! decision that set it (R-110: no re-baselining without a gate decision).
+//! The shader is a WGSL fragment module, drawn over the whole target by a full-screen triangle the runner supplies;
+//! `constants` set its `override` declarations. Its output is quantised in the runner's own shader (R-287): the case's
+//! fragment writes an `Rgba32Float` target, and the runner's quantise pass scales each channel to 0..255, rounds it
+//! half to even and stores the exact level `k / 255` in the `Rgba8Unorm` target, so no backend's float-to-unorm
+//! conversion has a tie to break (parity_contract §4). `output: "automatic"` (R-287's control only) draws the case's
+//! fragment straight into the `Rgba8Unorm` target, leaving the rounding to the backend; such a case has one reference
+//! per backend, since its bytes differ between backends (R-269).
+//!
+//! A case keeps one reference across backends. The fallback, for a case whose bytes still differ between backends
+//! (R-269, R-287), is one reference per backend, named by the backend (`metal`, `vulkan`): the runner compares the
+//! render only with the reference of the backend it rendered on, names that backend, and fails naming it when the case
+//! has no reference for it. The tolerance is a requirement or calibration-requirement id from [`TOLERANCES`]; a bare
+//! number is refused. `expect: "fail"` marks a case that must fail its comparison: the proof that the runner can fire
+//! (pitfalls §3). `lines` and `symptoms` are optional; a repro needs at least one line. Each reference is refused
+//! unless `fixtures/golden/BASELINES.md` holds its hash with the decision that set it (R-110: no re-baselining without a
+//! gate decision): the row is `<suite>/<case>` for a case's one reference, `<suite>/<case>@<backend>` for a per-backend
+//! one.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -58,18 +70,51 @@ pub struct Tolerance {
 /// The tolerances a case may name. The metric is the largest per-channel absolute difference over all pixels, in
 /// 8-bit steps.
 ///
-/// REQ-VAL-138's default applies to every native backend CI renders a case on (lavapipe in `xtask-ci`, Metal in
-/// `gpu-metal`), each compared against the case's one stored reference: it is a cross-backend tolerance, not a
-/// same-backend one. The evidence for 0 covers only channel values that are exactly representable in 8 bits (the
-/// self-test's k/255), where a correct renderer has nothing to round. Whether 0 across backends, per-backend
-/// baselines, or a revisit when the first golden with values between 8-bit levels lands holds for the M1 goldens
-/// (REQ-RENDER-024 onward) is the human's choice at the M0 gate (R-71).
+/// REQ-VAL-138's default applies to every native backend CI renders a case on (lavapipe, Metal), each compared
+/// against the case's one reference, or, for a case keeping one reference per backend, against the reference of the
+/// backend it rendered on (R-269, R-287). With the output quantised in the shader (R-287), values between 8-bit levels
+/// render to the same bytes on every backend: R-269's half-way fixture (`fixtures/golden/quantise/`) is the evidence.
 pub const TOLERANCES: &[Tolerance] = &[Tolerance {
     id: "REQ-VAL-138",
     max_step: 0,
-    status: "proposed by TASK-M0-06, for every native backend against one reference; evidence covers exact 8-bit \
-             values only; confirmed by the human at the M0 gate (R-71)",
+    status: "proposed by TASK-M0-06, for every native backend against one reference, per backend where a case keeps \
+             one reference per backend (R-269, R-287); confirmed by the human at the M0 gate (R-71)",
 }];
+
+/// The backends a case may keep a reference for, by the name `PRIN_GPU_BACKEND` gives them.
+pub const BACKENDS: [&str; 2] = ["metal", "vulkan"];
+
+/// A case's reference images.
+#[derive(Clone, Debug)]
+pub enum References {
+    /// One reference across backends (R-287).
+    Shared(PathBuf),
+    /// One reference per backend, by backend name: the fallback for a case whose bytes differ between backends
+    /// (R-269, R-287).
+    PerBackend(BTreeMap<String, PathBuf>),
+}
+
+impl References {
+    /// Each reference with its BASELINES.md row name: `<case>` for the shared one, `<case>@<backend>` per backend.
+    pub fn rows(&self, case: &str) -> Vec<(String, &Path)> {
+        match self {
+            References::Shared(path) => vec![(case.to_owned(), path.as_path())],
+            References::PerBackend(map) => map
+                .iter()
+                .map(|(backend, path)| (format!("{case}@{backend}"), path.as_path()))
+                .collect(),
+        }
+    }
+}
+
+/// How a case's fragment output reaches the `Rgba8Unorm` target.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Output {
+    /// Quantised in the runner's shader, rounding half to even, before the store (R-287): the golden path.
+    Quantised,
+    /// Stored through the backend's automatic float-to-unorm conversion: R-287's control only.
+    Automatic,
+}
 
 /// The environment variable naming the backend (R-169), as `validation::gpu` reads it.
 pub const BACKEND_VAR: &str = "PRIN_GPU_BACKEND";
@@ -330,7 +375,9 @@ pub struct Case {
     pub name: String,
     pub dir: PathBuf,
     pub config: Config,
-    pub reference: PathBuf,
+    pub references: References,
+    /// How the fragment output is stored (R-287).
+    pub output: Output,
     pub tolerance: &'static Tolerance,
     /// Whether the case must pass its comparison (`false`: a can-fire case, which must fail it).
     pub expect_pass: bool,
@@ -347,9 +394,23 @@ impl Case {
             serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
         let fail = |message: String| format!("golden case {name}: {message}");
         let config = Config::from_render(&json["render"]).map_err(fail)?;
-        let reference = json["reference"]
-            .as_str()
-            .ok_or_else(|| fail("`reference` is not a file name".to_owned()))?;
+        let references = parse_references(&json["reference"], dir).map_err(fail)?;
+        let output = match json.get("output").map(|v| v.as_str()) {
+            None | Some(Some("quantised")) => Output::Quantised,
+            Some(Some("automatic")) => Output::Automatic,
+            Some(_) => {
+                return Err(fail(
+                    "`output` is neither \"quantised\" nor \"automatic\"".to_owned(),
+                ))
+            }
+        };
+        if output == Output::Automatic && matches!(references, References::Shared(_)) {
+            return Err(fail(
+                "`output: \"automatic\"` leaves the rounding to the backend, whose bytes differ between backends \
+                 (R-269); such a case keeps one reference per backend"
+                    .to_owned(),
+            ));
+        }
         let tolerance = tolerance(&json["tolerance"]).map_err(fail)?;
         let expect_pass = match json.get("expect").map(|v| v.as_str()) {
             None | Some(Some("pass")) => true,
@@ -368,12 +429,55 @@ impl Case {
             name: name.to_owned(),
             dir: dir.to_path_buf(),
             config,
-            reference: dir.join(reference),
+            references,
+            output,
             tolerance,
             expect_pass,
             lines,
             symptoms,
         })
+    }
+}
+
+impl Case {
+    /// The reference the render on `backend` is compared with: the case's one reference, or its reference for
+    /// `backend`. A case keeping one reference per backend with none for `backend` is an error naming the backend.
+    pub fn reference_for(&self, backend: &str) -> Result<&Path, String> {
+        match &self.references {
+            References::Shared(path) => Ok(path),
+            References::PerBackend(map) => map.get(backend).map(PathBuf::as_path).ok_or(format!(
+                "golden case {}: no reference for backend {backend}, the backend it rendered on ({BACKEND_VAR}); \
+                 it keeps one per backend, and has one for {}",
+                self.name,
+                map.keys().cloned().collect::<Vec<_>>().join(", ")
+            )),
+        }
+    }
+}
+
+/// A case's `reference`: a file name (one reference across backends), or an object naming one file per backend.
+fn parse_references(value: &Value, dir: &Path) -> Result<References, String> {
+    match value {
+        Value::String(name) => Ok(References::Shared(dir.join(name))),
+        Value::Object(map) if !map.is_empty() => map
+            .iter()
+            .map(|(backend, name)| {
+                if !BACKENDS.contains(&backend.as_str()) {
+                    return Err(format!(
+                        "`reference.{backend}` names no backend; the backends are {}",
+                        BACKENDS.join(", ")
+                    ));
+                }
+                name.as_str()
+                    .map(|name| (backend.clone(), dir.join(name)))
+                    .ok_or(format!("`reference.{backend}` is not a file name"))
+            })
+            .collect::<Result<_, _>>()
+            .map(References::PerBackend),
+        _ => Err(
+            "`reference` is neither a file name nor an object naming one file per backend"
+                .to_owned(),
+        ),
     }
 }
 
@@ -477,19 +581,23 @@ fn parse_symptoms(value: &Value) -> Result<Vec<Symptom>, String> {
     Ok(symptoms)
 }
 
-/// Checks the reference's SHA-256 against its entry in `fixtures/golden/BASELINES.md`, which must name a decision
+/// Checks each reference's SHA-256 against its entry in `fixtures/golden/BASELINES.md`, which must name a decision
 /// that `decisions.md` records (R-110). A reference with no entry, a different hash or no recorded decision is
-/// refused.
+/// refused. The entry is `<suite>/<case>` for a case's one reference, `<suite>/<case>@<backend>` for a per-backend one.
 pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     let path = root.join("fixtures/golden/BASELINES.md");
     let baselines = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let bytes = fs::read(&case.reference).map_err(|e| {
-        format!(
-            "golden case {}: {}: {e}",
-            case.name,
-            case.reference.display()
-        )
-    })?;
+    let decisions =
+        fs::read_to_string(root.join("decisions.md")).map_err(|e| format!("decisions.md: {e}"))?;
+    for (row, reference) in case.references.rows(&case.name) {
+        check_row(&baselines, &decisions, &row, reference)?;
+    }
+    Ok(())
+}
+
+fn check_row(baselines: &str, decisions: &str, row: &str, reference: &Path) -> Result<(), String> {
+    let bytes = fs::read(reference)
+        .map_err(|e| format!("golden case {row}: {}: {e}", reference.display()))?;
     let hash = format!("{:x}", Sha256::digest(&bytes));
     let entry = baselines.lines().find_map(|line| {
         let cells: Vec<&str> = line
@@ -499,7 +607,7 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
             .map(str::trim)
             .collect();
         match cells.as_slice() {
-            [name, sha, decision] if name.trim_matches('`') == case.name => {
+            [name, sha, decision] if name.trim_matches('`') == row => {
                 Some((sha.trim_matches('`').to_owned(), decision.to_string()))
             }
             _ => None,
@@ -507,21 +615,17 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     });
     let Some((sha, decision)) = entry else {
         return Err(format!(
-            "golden case {}: fixtures/golden/BASELINES.md has no entry for its reference; a baseline changes only \
-             with a recorded gate decision (R-110)",
-            case.name
+            "golden case {row}: fixtures/golden/BASELINES.md has no entry for its reference; a baseline changes only \
+             with a recorded gate decision (R-110)"
         ));
     };
     if sha != hash {
         return Err(format!(
-            "golden case {}: reference {} changed without a BASELINES.md entry naming the decision (its SHA-256 is \
+            "golden case {row}: reference {} changed without a BASELINES.md entry naming the decision (its SHA-256 is \
              {hash}; the entry records {sha}); a baseline changes only with a recorded gate decision (R-110)",
-            case.name,
-            case.reference.display()
+            reference.display()
         ));
     }
-    let decisions =
-        fs::read_to_string(root.join("decisions.md")).map_err(|e| format!("decisions.md: {e}"))?;
     let named: Vec<&str> = decision
         .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
         .filter(|w| {
@@ -531,8 +635,7 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
         .collect();
     if named.is_empty() {
         return Err(format!(
-            "golden case {}: its BASELINES.md entry names no decision (R-n)",
-            case.name
+            "golden case {row}: its BASELINES.md entry names no decision (R-n)"
         ));
     }
     for r in named {
@@ -541,8 +644,7 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
             .any(|l| l.starts_with(&format!("## {r} ")))
         {
             return Err(format!(
-                "golden case {}: its BASELINES.md entry names {r}, which decisions.md does not record",
-                case.name
+                "golden case {row}: its BASELINES.md entry names {r}, which decisions.md does not record"
             ));
         }
     }
@@ -553,25 +655,60 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
 /// (metal on macOS, vulkan elsewhere); anything else is an error naming the variable. The same rule as
 /// `validation::gpu::backend_choice` (R-169, R-206), which xtask may not depend on (systems_architecture §7.1); a test
 /// keeps the two in step.
-pub fn backend_from(value: Option<&str>) -> Result<(&str, wgpu::Backends), String> {
+pub fn backend_from(value: Option<&str>) -> Result<(&'static str, wgpu::Backends), String> {
     let name = value.unwrap_or(if cfg!(target_os = "macos") {
         "metal"
     } else {
         "vulkan"
     });
     match name {
-        "metal" => Ok((name, wgpu::Backends::METAL)),
-        "vulkan" => Ok((name, wgpu::Backends::VULKAN)),
+        "metal" => Ok(("metal", wgpu::Backends::METAL)),
+        "vulkan" => Ok(("vulkan", wgpu::Backends::VULKAN)),
         other => Err(format!(
             "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
         )),
     }
 }
 
+/// The runner's quantise pass (R-287): reads the case's `Rgba32Float` render at each pixel, clamps each channel to
+/// 0..1, scales it to 0..255, rounds it half to even, and returns the exact level `k / 255`, which the `Rgba8Unorm`
+/// store converts back to `k` with no tie to break. The rounding is written out, not left to `round`, so no shader
+/// translation decides the tie.
+const QUANTISE_FS: &str = r"
+@group(0) @binding(0) var golden_float: texture_2d<f32>;
+
+fn golden_round_half_even(x: f32) -> f32 {
+    let f = floor(x);
+    let d = x - f;
+    if d > 0.5 {
+        return f + 1.0;
+    }
+    if d < 0.5 {
+        return f;
+    }
+    // A tie: up only from an odd floor.
+    return f + (f - 2.0 * floor(0.5 * f));
+}
+
+@fragment
+fn golden_quantise(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+    let v = clamp(textureLoad(golden_float, vec2<i32>(pos.xy), 0), vec4<f32>(0.0), vec4<f32>(1.0)) * 255.0;
+    let k = vec4<f32>(
+        golden_round_half_even(v.x),
+        golden_round_half_even(v.y),
+        golden_round_half_even(v.z),
+        golden_round_half_even(v.w),
+    );
+    return k / 255.0;
+}
+";
+
 /// A headless device that renders golden cases offscreen.
 pub struct Renderer {
     device: wgpu::Device,
     queue: wgpu::Queue,
+    /// The backend it renders on: `metal` or `vulkan`.
+    pub backend: &'static str,
     /// The adapter, for the summaries.
     pub adapter: String,
 }
@@ -601,12 +738,25 @@ impl Renderer {
         Ok(Renderer {
             device,
             queue,
+            backend: name,
             adapter,
         })
     }
 
-    /// Renders `config`, its shader path relative to `dir`, and reads the image back.
+    /// Renders `config`, its shader path relative to `dir`, with the output quantised in the shader (R-287), and
+    /// reads the image back.
     pub fn render(&self, dir: &Path, config: &Config) -> Result<Image, String> {
+        self.render_output(dir, config, Output::Quantised)
+    }
+
+    /// Renders `config`, its shader path relative to `dir`, storing the output as `output` says, and reads the image
+    /// back.
+    pub fn render_output(
+        &self,
+        dir: &Path,
+        config: &Config,
+        output: Output,
+    ) -> Result<Image, String> {
         let (width, height) = config.size()?;
         let shader_path = dir.join(config.text("shader")?);
         let source = fs::read_to_string(&shader_path)
@@ -614,7 +764,13 @@ impl Renderer {
         let fragment = config.text("fragment")?;
         let constants = config.constants()?;
         let constants: Vec<(&str, f64)> = constants.iter().map(|(k, v)| (k.as_str(), *v)).collect();
-        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let unorm = wgpu::TextureFormat::Rgba8Unorm;
+        // Quantised, the case's fragment writes floats, which the quantise pass rounds; automatic, it writes the
+        // unorm target itself.
+        let case_format = match output {
+            Output::Quantised => wgpu::TextureFormat::Rgba32Float,
+            Output::Automatic => unorm,
+        };
         let scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
         let module = |label, source: &str| {
             self.device
@@ -625,50 +781,64 @@ impl Renderer {
         };
         let vs = module("golden_vs", FULL_SCREEN_VS);
         let fs_module = module(fragment, &source);
-        let pipeline = self
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("golden"),
-                layout: None,
-                vertex: wgpu::VertexState {
-                    module: &vs,
-                    entry_point: Some("golden_vs"),
-                    compilation_options: Default::default(),
-                    buffers: &[],
-                },
-                primitive: Default::default(),
-                depth_stencil: None,
-                multisample: Default::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &fs_module,
-                    entry_point: Some(fragment),
-                    compilation_options: wgpu::PipelineCompilationOptions {
-                        constants: &constants,
-                        ..Default::default()
+        let pipeline = |layout: Option<&wgpu::PipelineLayout>,
+                        fs: &wgpu::ShaderModule,
+                        entry: &str,
+                        constants: &[(&str, f64)],
+                        format: wgpu::TextureFormat| {
+            self.device
+                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("golden"),
+                    layout,
+                    vertex: wgpu::VertexState {
+                        module: &vs,
+                        entry_point: Some("golden_vs"),
+                        compilation_options: Default::default(),
+                        buffers: &[],
                     },
-                    targets: &[Some(format.into())],
-                }),
-                multiview_mask: None,
-                cache: None,
-            });
+                    primitive: Default::default(),
+                    depth_stencil: None,
+                    multisample: Default::default(),
+                    fragment: Some(wgpu::FragmentState {
+                        module: fs,
+                        entry_point: Some(entry),
+                        compilation_options: wgpu::PipelineCompilationOptions {
+                            constants,
+                            ..Default::default()
+                        },
+                        targets: &[Some(format.into())],
+                    }),
+                    multiview_mask: None,
+                    cache: None,
+                })
+        };
+        let case_pipeline = pipeline(None, &fs_module, fragment, &constants, case_format);
         if let Some(error) = pollster::block_on(scope.pop()) {
             return Err(format!("{}: {error}", shader_path.display()));
         }
-        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("golden target"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            // `union`, as the flags are disjoint: `|` and `^` would agree.
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
-            view_formats: &[],
-        });
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+        let target = |label, format, usage| {
+            self.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(label),
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage,
+                view_formats: &[],
+            })
+        };
+        // `union`, as the flags are disjoint: `|` and `^` would agree.
+        let texture = target(
+            "golden target",
+            unorm,
+            wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
+        );
         let row = (4 * width).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("golden readback"),
@@ -678,11 +848,14 @@ impl Renderer {
         });
         let view = texture.create_view(&Default::default());
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        {
+        let draw = |encoder: &mut wgpu::CommandEncoder,
+                    view: &wgpu::TextureView,
+                    pipeline: &wgpu::RenderPipeline,
+                    bind_group: Option<&wgpu::BindGroup>| {
             // No pass label: it is for debuggers only, and nothing reads it.
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view,
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
@@ -692,8 +865,70 @@ impl Renderer {
                 })],
                 ..Default::default()
             });
-            pass.set_pipeline(&pipeline);
+            pass.set_pipeline(pipeline);
+            if let Some(bind_group) = bind_group {
+                pass.set_bind_group(0, bind_group, &[]);
+            }
             pass.draw(0..3, 0..1);
+        };
+        match output {
+            Output::Automatic => draw(&mut encoder, &view, &case_pipeline, None),
+            Output::Quantised => {
+                let float = target(
+                    "golden float target",
+                    case_format,
+                    wgpu::TextureUsages::RENDER_ATTACHMENT
+                        .union(wgpu::TextureUsages::TEXTURE_BINDING),
+                );
+                let float_view = float.create_view(&Default::default());
+                let scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+                // An explicit layout: `Rgba32Float` is unfilterable, and `textureLoad` needs no sampler.
+                let bind_layout =
+                    self.device
+                        .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                            label: Some("golden quantise"),
+                            entries: &[wgpu::BindGroupLayoutEntry {
+                                binding: 0,
+                                visibility: wgpu::ShaderStages::FRAGMENT,
+                                ty: wgpu::BindingType::Texture {
+                                    sample_type: wgpu::TextureSampleType::Float {
+                                        filterable: false,
+                                    },
+                                    view_dimension: wgpu::TextureViewDimension::D2,
+                                    multisampled: false,
+                                },
+                                count: None,
+                            }],
+                        });
+                let layout = self
+                    .device
+                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                        label: Some("golden quantise"),
+                        bind_group_layouts: &[Some(&bind_layout)],
+                        immediate_size: 0,
+                    });
+                let quantise_module = module("golden_quantise", QUANTISE_FS);
+                let quantise = pipeline(
+                    Some(&layout),
+                    &quantise_module,
+                    "golden_quantise",
+                    &[],
+                    unorm,
+                );
+                let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("golden quantise"),
+                    layout: &bind_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&float_view),
+                    }],
+                });
+                if let Some(error) = pollster::block_on(scope.pop()) {
+                    return Err(format!("golden quantise pass: {error}"));
+                }
+                draw(&mut encoder, &float_view, &case_pipeline, None);
+                draw(&mut encoder, &view, &quantise, Some(&bind_group));
+            }
         }
         encoder.copy_texture_to_buffer(
             texture.as_image_copy(),
@@ -705,11 +940,7 @@ impl Renderer {
                     rows_per_image: Some(height),
                 },
             },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
+            size,
         );
         self.queue.submit([encoder.finish()]);
         let slice = readback.slice(..);
@@ -799,11 +1030,57 @@ pub fn diff(render: &Image, reference: &Image) -> Result<Diff, String> {
 #[derive(Debug)]
 pub struct Outcome {
     pub case: String,
+    /// The backend the render was made on, whose reference it was compared with.
+    pub backend: String,
+    /// The reference it was compared with.
+    pub reference: PathBuf,
     pub diff: Diff,
     /// Whether the diff is within the case's tolerance.
     pub within: bool,
     /// Whether that is what the case expects.
     pub ok: bool,
+}
+
+/// Compares `render`, made on `backend`, with the case's reference for that backend (its one reference, or its
+/// per-backend one, R-269, R-287), to the case's tolerance. A case with no reference for `backend` is an error naming
+/// it.
+pub fn judge(case: &Case, backend: &str, render: &Image) -> Result<Outcome, String> {
+    let reference = case.reference_for(backend)?;
+    let image = Image::read_png(reference)?;
+    let diff = diff(render, &image).map_err(|e| format!("golden case {}: {e}", case.name))?;
+    let within = diff.max_step <= case.tolerance.max_step;
+    Ok(Outcome {
+        case: case.name.clone(),
+        backend: backend.to_owned(),
+        reference: reference.to_path_buf(),
+        diff,
+        within,
+        ok: within == case.expect_pass,
+    })
+}
+
+/// For a case keeping one reference per backend, the comparison of its references with each other, as a line of
+/// the summary: how far apart the backends' bytes are (R-269). `None` for a case with one reference.
+fn cross_backend(case: &Case) -> Result<Option<String>, String> {
+    let References::PerBackend(map) = &case.references else {
+        return Ok(None);
+    };
+    let images = map
+        .iter()
+        .map(|(backend, path)| Ok((backend, Image::read_png(path)?)))
+        .collect::<Result<Vec<_>, String>>()?;
+    let mut lines = Vec::new();
+    for (i, (a, image_a)) in images.iter().enumerate() {
+        for (b, image_b) in &images[i + 1..] {
+            let d =
+                diff(image_a, image_b).map_err(|e| format!("golden case {}: {e}", case.name))?;
+            lines.push(format!(
+                "references {a} and {b} differ by max step {} on {} of {} pixels",
+                d.max_step, d.differing, d.pixels
+            ));
+        }
+    }
+    Ok(Some(lines.join("; ")))
 }
 
 /// The directory `target/golden/` output goes under: `$CARGO_TARGET_DIR/golden`, or `<root>/target/golden`.
@@ -851,8 +1128,15 @@ pub fn load_suite(root: &Path, suite: &str) -> Result<Vec<Case>, String> {
 /// each; it opens no device and renders nothing, so it is golden's listing-only form (R-235).
 pub fn list_suite(root: &Path, suite: &str) -> Result<(), String> {
     for case in load_suite(root, suite)? {
+        let references = match &case.references {
+            References::Shared(_) => "one across backends".to_owned(),
+            References::PerBackend(map) => format!(
+                "one per backend ({})",
+                map.keys().cloned().collect::<Vec<_>>().join(", ")
+            ),
+        };
         println!(
-            "xtask golden: {}: tolerance {} (max step {}), expect {}",
+            "xtask golden: {}: tolerance {} (max step {}), expect {}, reference {references}",
             case.name,
             case.tolerance.id,
             case.tolerance.max_step,
@@ -863,31 +1147,45 @@ pub fn list_suite(root: &Path, suite: &str) -> Result<(), String> {
 }
 
 /// Runs `suite` under `root`, writing each case's render, difference image and summary under `out/<suite>/<case>/`.
-/// `Err` names each case that did not do what it expects.
+/// Each render is compared with the case's reference for the backend it rendered on ([`judge`]). `Err` names each case
+/// that did not do what it expects.
 pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, String> {
     let cases = load_suite(root, suite)?;
     let renderer = Renderer::new()?;
     println!("xtask golden: {suite}: {}", renderer.adapter);
     let mut outcomes = Vec::new();
     for case in &cases {
-        let render = renderer.render(&case.dir, &case.config)?;
-        let reference = Image::read_png(&case.reference)?;
-        let diff =
-            diff(&render, &reference).map_err(|e| format!("golden case {}: {e}", case.name))?;
-        let within = diff.max_step <= case.tolerance.max_step;
-        let ok = within == case.expect_pass;
-        let verdict = match (case.expect_pass, within) {
+        let render = renderer.render_output(&case.dir, &case.config, case.output)?;
+        let outcome = judge(case, renderer.backend, &render)?;
+        let diff = &outcome.diff;
+        let verdict = match (case.expect_pass, outcome.within) {
             (true, true) => "pass",
             (true, false) => "FAIL",
             (false, false) => "fails as expected (the runner can fire)",
             (false, true) => "FAIL: a can-fire case passed, so the runner cannot fire",
         };
+        let output = match case.output {
+            Output::Quantised => "quantised in the shader, half to even (R-287)",
+            Output::Automatic => "the backend's automatic conversion (R-287's control)",
+        };
+        let reference = match &case.references {
+            References::Shared(_) => "the case's one reference, across backends".to_owned(),
+            References::PerBackend(_) => format!(
+                "the case's {} reference (one per backend)",
+                renderer.backend
+            ),
+        };
+        let cross = cross_backend(case)?;
+        let render_sha = format!("{:x}", Sha256::digest(&render.rgb));
         let summary = format!(
-            "case: {}\n{}\nverdict: {verdict}\nmetric: largest per-channel absolute difference, 8-bit steps\n\
+            "case: {}\n{}\nbackend: {}\noutput: {output}\nreference: {reference}: {}\nrender RGB sha256: {render_sha}\n\
+             verdict: {verdict}\nmetric: largest per-channel absolute difference, 8-bit steps\n\
              max step: {}\ntolerance: {} (max step {}; {})\ndiffering pixels: {} of {}\nmean step: {:.6}\n\
-             first differing pixel: {}\n",
+             first differing pixel: {}\n{}",
             case.name,
             renderer.adapter,
+            renderer.backend,
+            outcome.reference.display(),
             diff.max_step,
             case.tolerance.id,
             case.tolerance.max_step,
@@ -897,6 +1195,7 @@ pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, S
             diff.mean_step,
             diff.first
                 .map_or("none".to_owned(), |(x, y)| format!("({x}, {y})")),
+            cross.as_ref().map_or(String::new(), |c| format!("{c}\n")),
         );
         let dir = out.join(&case.name);
         fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
@@ -905,8 +1204,10 @@ pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, S
         fs::write(dir.join("summary.txt"), &summary)
             .map_err(|e| format!("{}: {e}", dir.display()))?;
         println!(
-            "xtask golden: {}: {verdict} (max step {}, {} of {} pixels differ; tolerance {}: max step {}) -> {}",
+            "xtask golden: {}: {verdict} on {} against {reference} (max step {}, {} of {} pixels differ; tolerance {}: \
+             max step {}; output {output}; render RGB sha256 {render_sha}) -> {}",
             case.name,
+            renderer.backend,
             diff.max_step,
             diff.differing,
             diff.pixels,
@@ -914,12 +1215,10 @@ pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, S
             case.tolerance.max_step,
             dir.display()
         );
-        outcomes.push(Outcome {
-            case: case.name.clone(),
-            diff,
-            within,
-            ok,
-        });
+        if let Some(cross) = cross {
+            println!("xtask golden: {}: {cross}", case.name);
+        }
+        outcomes.push(outcome);
     }
     let failed: Vec<&str> = outcomes
         .iter()
@@ -1011,7 +1310,7 @@ pub fn repro(case: &Case, configs: [Config; 2], renderer: &Renderer) -> Result<R
     let field = check_arms(case, &configs)?;
     let [a, b] = configs;
     let arm = |config: Config| -> Result<ArmResult, String> {
-        let image = renderer.render(&case.dir, &config)?;
+        let image = renderer.render_output(&case.dir, &config, case.output)?;
         let profiles = case
             .lines
             .iter()
