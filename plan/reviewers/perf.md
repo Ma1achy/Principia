@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*35 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*36 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -114,6 +114,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 **M4**
 - [ ] REQ-PERF-009 — profile the march kernel at production dispatch granularity; record bound type and spill counts
 - [ ] REQ-PERF-011 — profile N = 8 vs N = 16 on a WebGPU target and record the result; a validation check asserts N² ≤ maxComputeInvocationsPerWorkgroup for every tier and Custom value
+- [ ] REQ-PERF-094 — cargo xtask bench fast-math, run on the human's Mac (R-186): the march kernel at production dispatch granularity on the same fixture survey, fast-math off and on; each run's frame time and march throughput and their ratio, recorded in the PR through prin profile diff
 
 **M5**
 - [ ] REQ-SCHED-023 — deep-zoom gesture landing with dozens of Jacobian quads: frame time stays within budget

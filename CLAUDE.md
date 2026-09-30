@@ -32,8 +32,8 @@ Read this first; each rule points at its source.
   touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
   commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
 - Before starting a build or reviewer, check free disk and memory pressure (`sysctl kern.memorystatus_vm_pressure_level`
-  or `memory_pressure`), not swap, which macOS keeps allocated. Start one only at normal pressure; at warning, hold new
-  work; at critical, only finish the running work (R-239, R-252).
+  or `memory_pressure`), not swap, which macOS keeps allocated. At normal pressure (1), three agents may run; at
+  warning (2), two; at critical (4), only finish the running work (R-277).
 - Reviewers' read-only is enforced, not just instructed. After each reviewer returns, run `git status --porcelain`
   and check that HEAD hasn't moved. If anything changed, discard it (`git restore` / `git clean` on the affected paths,
   `git reset --hard` to the prior HEAD), re-run that reviewer, and note the violation on the PR. A second violation by
