@@ -181,8 +181,18 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                      \n/// `{w}` with `{f}` set to `v` (R-271, payload §1): +∞, tested by its f32 bits, writes the unset bits; a value\n\
                      /// below f16's smallest positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both\n\
                      /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.\n\
+                     ///\n\
+                     /// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a\n\
+                     /// `debug_assert!` failure. The release behaviour is [`set_{f}_release`]'s.\n\
                      #[inline]\npub fn set_{f}(w: u32, v: f32) -> u32 {{\n\
-                     \x20   let h = if v.to_bits() == {inf} {{\n\
+                     \x20   debug_assert!(!v.is_nan(), \"`{f}` is NaN: storage never holds NaN (R-79, R-281)\");\n\
+                     \x20   debug_assert!(v.is_nan() || v >= 0.0, \"`{f}` is negative: it is never silently rewritten (R-281)\");\n\
+                     \x20   set_{f}_release(w, v)\n}}\n\
+                     \n/// [`set_{f}`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset bits\n\
+                     /// (never NaN, R-79) and a negative value writes the floor `0x0001`, as does any value below 2⁻²⁴. R-281 also\n\
+                     /// has each case increment a telemetry counter; the corpus does not yet define that counter (RQ-171).\n\
+                     #[inline]\npub fn set_{f}_release(w: u32, v: f32) -> u32 {{\n\
+                     \x20   let h = if v.is_nan() || v.to_bits() == {inf} {{\n\
                      \x20       {upper}_UNSET\n\
                      \x20   }} else if v < F16_MIN_SUBNORMAL {{\n\
                      \x20       F16_MIN_SUBNORMAL_BITS\n\
@@ -251,19 +261,21 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
 }
 
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /
-/// `unpack2x16float` equivalents, the ±65504 clamp (the register's `f16_finite_max`), and payload §6's accessors that
+/// `unpack2x16float` equivalents, the ±65504 clamp (the register's `f16_finite_max`), the subnormal floor 2⁻²⁴ (the
+/// register's `f16_min_subnormal`, R-278), and payload §6's accessors that
 /// no single entry determines: the state predicates, `sd_last_symbol_valid` (the register's `fgw_length_sentinel`),
 /// `total_substeps_log2` and the `times` fractions.
 fn helpers() -> String {
     let f16_max = crate::constants::F16_FINITE_MAX.number();
+    let f16_floor = crate::constants::F16_MIN_SUBNORMAL.number() as f32;
     let truncated = crate::constants::FGW_LENGTH_SENTINEL.number();
     format!(
         r#"
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = {f16_max:?};
 
-/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271).
-pub const F16_MIN_SUBNORMAL: f32 = 5.9604645e-8;
+/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271; the register's `f16_min_subnormal`, R-278).
+pub const F16_MIN_SUBNORMAL: f32 = {f16_floor:?};
 pub const F16_MIN_SUBNORMAL_BITS: u32 = 0x0001;
 
 /// Bits `offset .. offset + width` of `w`, `width` in 1..=32 (the u32 `extractBits`, payload §6).

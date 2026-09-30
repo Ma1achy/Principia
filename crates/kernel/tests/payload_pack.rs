@@ -554,6 +554,144 @@ negative_control!(
     )
 );
 
+// R-281: the packer never stores NaN (R-79) and never silently rewrites a negative value. Each is a `debug_assert!`
+// failure; in release a NaN stores the unset bits and a negative value clamps to the floor. (Each case's telemetry
+// counter waits on RQ-171.)
+
+/// NaNs of either sign, quiet and signalling, with and without payload bits.
+const NANS: [u32; 5] = [
+    0x7fc0_0000,
+    0x7f80_0001,
+    0x7fff_ffff,
+    0xffc0_0000,
+    0xff80_0001,
+];
+
+/// Negative values: the smallest-magnitude f32 subnormal, one below the f16 floor, −2⁻²⁴, −1, −65504, past −65504,
+/// −f32::MAX and −∞.
+const NEGATIVES: [u32; 8] = [
+    0x8000_0001,
+    0xb300_0000,
+    0xb380_0000,
+    0xbf80_0000,
+    0xc77f_e000,
+    0xd000_0000,
+    0xff7f_ffff,
+    0xff80_0000,
+];
+
+/// The text a caught panic carries.
+fn panic_text(payload: &(dyn std::any::Any + Send)) -> &str {
+    payload
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| payload.downcast_ref::<&str>().copied())
+        .unwrap_or("")
+}
+
+/// `set` panics on every `d_min` whose f32 bits are in `inputs`, with a message containing `message`.
+fn check_trips(set: fn(u32, f32) -> u32, inputs: &[u32], message: &str) {
+    for &bits in inputs {
+        let v = f32::from_bits(bits);
+        match std::panic::catch_unwind(|| set(0x0000_03ff, v)) {
+            Ok(w) => {
+                panic!("d_min {bits:#010x} did not trip the debug assertion: stored {w:#010x}")
+            }
+            Err(payload) => {
+                let text = panic_text(payload.as_ref());
+                assert!(
+                    text.contains(message),
+                    "d_min {bits:#010x} tripped with {text:?}, not {message:?}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+fn dmin_unset_debug_nan_trips_the_assertion() {
+    check_trips(set_d_min, &NANS, "`d_min` is NaN");
+    check_trips(
+        |w, v| pack_packed_a(sd_state(w), 0, false, 3, 0, v),
+        &NANS,
+        "`d_min` is NaN",
+    );
+}
+
+#[cfg(debug_assertions)]
+negative_control!(
+    dmin_unset_debug_nan_trips_the_assertion,
+    "the release path has no assertion, so the trip check must fail on NaN",
+    expected = "did not trip the debug assertion",
+    check_trips(set_d_min_release, &NANS, "`d_min` is NaN")
+);
+
+#[cfg(debug_assertions)]
+#[test]
+fn dmin_unset_debug_negative_trips_the_assertion() {
+    check_trips(set_d_min, &NEGATIVES, "`d_min` is negative");
+    check_trips(
+        |w, v| pack_packed_a(sd_state(w), 0, false, 3, 0, v),
+        &NEGATIVES,
+        "`d_min` is negative",
+    );
+}
+
+#[cfg(debug_assertions)]
+negative_control!(
+    dmin_unset_debug_negative_trips_the_assertion,
+    "the release path has no assertion, so the trip check must fail on a negative value",
+    expected = "did not trip the debug assertion",
+    check_trips(set_d_min_release, &NEGATIVES, "`d_min` is negative")
+);
+
+/// `set` stores `want` as `d_min` for every input whose f32 bits are in `inputs`, keeping the descriptor half.
+fn check_release(set: fn(u32, f32) -> u32, inputs: &[u32], want: u32) {
+    for &bits in inputs {
+        for low in [0u32, 0x03ff, 0xffff] {
+            let w = set(0x3c00_0000 | low, f32::from_bits(bits));
+            assert_eq!(d_min_bits(w), want, "d_min {bits:#010x}: d_min bits");
+            assert_eq!(w & 0xffff, low, "d_min {bits:#010x}: descriptor kept");
+        }
+    }
+}
+
+#[test]
+fn dmin_unset_release_nan_stores_the_unset_bits() {
+    check_release(set_d_min_release, &NANS, 0x7c00);
+    // −0.0 is a zero distance, not a negative value: the floor, silently (R-271).
+    check_release(set_d_min_release, &[0x8000_0000], 0x0001);
+    check_release(set_d_min, &[0x8000_0000], 0x0001);
+}
+
+negative_control!(
+    dmin_unset_release_nan_stores_the_unset_bits,
+    "through the conversion a NaN stays NaN, so the unset check must fail",
+    expected = "d_min bits",
+    check_release(
+        |w, v| insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 16, 16),
+        &NANS,
+        0x7c00
+    )
+);
+
+#[test]
+fn dmin_unset_release_negative_stores_the_floor() {
+    check_release(set_d_min_release, &NEGATIVES, 0x0001);
+}
+
+negative_control!(
+    dmin_unset_release_negative_stores_the_floor,
+    "through the conversion a negative value keeps its sign, so the floor check must fail",
+    expected = "d_min bits",
+    check_release(
+        |w, v| insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 16, 16),
+        &NEGATIVES,
+        0x0001
+    )
+);
+
 /// `is_unset` holds exactly when `d_min`'s bits are 0x7c00, over all 65536 of them (descriptor bits set too).
 fn check_unset_reads_bits(is_unset: fn(u32) -> bool) {
     for h in 0..=u16::MAX as u32 {

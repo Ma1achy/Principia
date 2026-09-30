@@ -73,7 +73,7 @@ pub struct ICDescriptor {
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;
 
-/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271).
+/// binary16's smallest positive subnormal, 2⁻²⁴, and its bits (R-271; the register's `f16_min_subnormal`, R-278).
 pub const F16_MIN_SUBNORMAL: f32 = 5.9604645e-8;
 pub const F16_MIN_SUBNORMAL_BITS: u32 = 0x0001;
 
@@ -317,9 +317,22 @@ pub fn set_d_min_unset(w: u32) -> u32 {
 /// `packed_a` with `d_min` set to `v` (R-271, payload §1): +∞, tested by its f32 bits, writes the unset bits; a value
 /// below f16's smallest positive subnormal, 2⁻²⁴, writes that subnormal (`0x0001`), so 0.0 never appears; both
 /// are written as bits, not through the conversion. Otherwise `v` is clamped to ±65504 and converted.
+///
+/// Storage never holds NaN (R-79) and a negative value is never silently rewritten (R-281): each is a
+/// `debug_assert!` failure. The release behaviour is [`set_d_min_release`]'s.
 #[inline]
 pub fn set_d_min(w: u32, v: f32) -> u32 {
-    let h = if v.to_bits() == 0x7f80_0000 {
+    debug_assert!(!v.is_nan(), "`d_min` is NaN: storage never holds NaN (R-79, R-281)");
+    debug_assert!(v.is_nan() || v >= 0.0, "`d_min` is negative: it is never silently rewritten (R-281)");
+    set_d_min_release(w, v)
+}
+
+/// [`set_d_min`] without its debug assertions, as a release build runs it (R-281): NaN writes the unset bits
+/// (never NaN, R-79) and a negative value writes the floor `0x0001`, as does any value below 2⁻²⁴. R-281 also
+/// has each case increment a telemetry counter; the corpus does not yet define that counter (RQ-171).
+#[inline]
+pub fn set_d_min_release(w: u32, v: f32) -> u32 {
+    let h = if v.is_nan() || v.to_bits() == 0x7f80_0000 {
         PA_D_MIN_UNSET
     } else if v < F16_MIN_SUBNORMAL {
         F16_MIN_SUBNORMAL_BITS
