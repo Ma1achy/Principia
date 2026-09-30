@@ -17,6 +17,7 @@ The suite runs much faster without losing a test (R-231). `cargo test` runs test
 - `decisions.md` § "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
 - `decisions.md` § "R-224 — The two flaky tests are fixed before TASK-M0-29"
 - `decisions.md` § "R-231 — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings"
+- `decisions.md` § "R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*"
 
 ## Deliverables
 - CI's test steps (`.github/workflows/`) and the documented local run use `cargo nextest run` (pinned version), with doctests through `cargo test --doc`, for both feature sets the jobs run today. `cargo xtask controls` keeps its own cargo invocations.
@@ -27,8 +28,10 @@ The suite runs much faster without losing a test (R-231). `cargo test` runs test
 ## Acceptance tests
 - A check that the CI test steps together list every test `cargo test --workspace -- --list` lists, in both feature sets, plus the doctests (REQ-VAL-165).
 - The whole suite's wall time before and after, on the same machine, shown in the PR (REQ-VAL-165).
-- Review checklist (code and qa): a warm second run of each fixture test rebuilds nothing; no spawn-helper test waits the calibrated values; every control still trips its test (`cargo xtask controls`) (REQ-VAL-165).
+- The `ci` job's wall time is no slower than before (~10.5 min), and the local fixture pool is ~5 GB, both shown in the PR (REQ-VAL-165, R-270).
+- Review checklist (code and qa): a warm second run of each fixture test rebuilds nothing for its fixture type; no spawn-helper test waits the calibrated values; every control still trips its test (`cargo xtask controls`) (REQ-VAL-165).
 
 ## Notes
 - R-231: the human's list of 28 Sep. After TASK-M0-22, since both change how the suite and its controls run.
 - The survey (27 Sep) measured about 250 s of fixture rebuilds and about 55 s of spawn-timing waits, serial, under load.
+- R-270 (amends R-231): fixture copies share one build directory per fixture type, not per copy, and CI caches the pool between runs; targets are the `ci` job no slower than ~10.5 min and a local pool of ~5 GB. The "its own target directory" wording above is read per fixture type. qa gets a one-round exception to modify `crates/validation/tests/qa_TASK-M0-33.rs`.

@@ -2859,3 +2859,152 @@ Tick any you don't accept.
 - **Needed:** a ruling on item 1, and on item 2 (or leave item 2 to the code reviewer as the task already says, with
   option 1 applied). TASK-M0-23 waits on item 1.
 - **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): item 1 option 1 (the `#[cfg_attr(test, mutants::skip)]` marker), item 2 option 1 (`xtask/src/main.rs` and `xtask/src/codegen.rs` only). Both are the tightest reading, skip nothing R-196 keeps, and are test infrastructure. Recorded in decisions.md under R-196 and in TASK-M0-23.
+
+## RQ-163: an f16 `d_min` below ~6.1e-5 can flush to 0.0, its failed-state sentinel *(physics, payload, TASK-M0-09, TASK-M0-10)*
+
+- **File, section:** `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct": "`packed_a :
+  u32, // sample_descriptor[…] | d_min:f16[high 16]`"; "for `sim_failed`/`decode_failed` samples, `d_min`/`dE_max`/`dLz_max`
+  halves hold **0.0** (a canonical sentinel — the `state` field already marks the sample untrusted …)"; "WGSL permits
+  … binary16 subnormal flushing". `decisions.md` § "R-248 — Float types at a packed location: exact width; an f16
+  range lies within f16's finite range *(amends R-242; closes RQ-156)*" rules on overflow (±65504) only.
+- **What:** raised by the physics reviewer on PR #59. `d_min`'s range is "> 0", and PR #59 declares `sentinel: 0.0`
+  as payload §1 requires. binary16's smallest normal is ~6.1e-5, and WGSL may flush subnormals to zero. So a valid
+  sample whose true `d_min` is below ~6.1e-5 can be stored as 0.0 and read as the sentinel: the colour path would show
+  it as invalid, though `state` says it is valid. It can happen only when a sim key's `r_coll` (the collision radius
+  below which the march stops) is itself that small. Underflow has no ruling. Not blocking: every current key's
+  `r_coll` is far above 6.1e-5, and `state` still separates failed samples from valid ones.
+- **Options seen:**
+  1. **Clamp at the floor (recommended).** A valid `d_min` is clamped up to f16's smallest normal (6.1035e-5) before
+     packing, mirroring R-248's clamp at ±65504, so 0.0 is reached only by failed samples. A display value near the
+     floor reads "≤ 6.1e-5".
+  2. **Constrain the key.** `r_coll` must be ≥ 6.1035e-5 in every sim key; generation refuses a smaller one.
+  3. **Rely on `state` alone.** The sentinel test also checks `state`, and a valid 0.0 is displayed as 0. The ledger's
+     sentinel is then conditional on `state`, which §3.8 has no way to say.
+- **Needed:** a ruling. TASK-M0-10 (pack/unpack) is where option 1 or 2 would be built.
+- **Ruling:** R-271 (30 Sep 2026): `d_min`'s unset value is +inf; a valid value below f16's smallest positive
+  subnormal is stored as that subnormal, so 0.0 never appears; readers treat +inf as unset. Applied in payload §1 and
+  TASK-M0-10.
+
+## RQ-164: the ubuntu measurement run REQ-VAL-149 needs was blocked; how are the timings gathered? *(process, CI, TASK-M0-23)*
+
+- **File, section:** `plan/requirements.yaml` REQ-VAL-149, verify: "the proposal states the limit with its evidence:
+  the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far,
+  and the headroom the limit leaves". `decisions.md` § "R-196 — Mutation testing joins the QA gate": "If the time
+  limit makes per-PR runs impractical, raise it in REVIEW_QUEUE rather than dropping it."
+- **What:** PR #65 (TASK-M0-23) builds the per-PR `mutants` job, but proposes no limit: the ubuntu evidence doesn't
+  exist. To gather it, the implementer tried to push a throwaway branch, `measure/TASK-M0-23`, whose workflow ran only
+  one matrix job per merged PR's diff at its merge commit. The permission system denied the push ("Interfere With
+  Workloads"), and the orchestrator did not retry it. What exists: this PR's own ubuntu runs (19 mutants, 721 s and
+  826 s), Mac-side counts for all 20 merged task PRs (PR #47's diff has 267 in-diff mutants, 209 in xtask, and decides
+  the case), PR #45's 319 s Mac run, and xtask's ~213 s unmutated baseline. qa's
+  `qa23_mutants_job_runs_under_the_provisional_time_limit` stays red on #65 until a limit is set, so #65 can't merge.
+- **Options seen:**
+  1. **Allow the throwaway measurement branch (recommended).** One push of `measure/TASK-M0-23`, deleted after the
+     run; the limit is then proposed from its timings with headroom, provisional until the M0 gate.
+  2. **The human runs the measurement** (the same branch, or `workflow_dispatch` on a fork) and posts the timings.
+  3. **Propose from what exists:** a provisional limit from #65's own ubuntu runs scaled by the Mac counts. That falls
+     short of the verify line's "over the diffs of the PRs merged so far", so it needs a ruling that it suffices.
+- **Needed:** a decision on how the timings are gathered. TASK-M0-23 (PR #65) waits on it.
+- **Ruling:** R-272 (30 Sep 2026): the ubuntu timings are taken on a throwaway `measure/` branch.
+
+## RQ-165: REQ-VAL-168's region minimum can't be measured at M0; propose it at M3? *(calibration, TASK-M0-05)*
+
+- **File, section:** `plan/requirements.yaml` REQ-VAL-168: "must be calibrated: proposed with its evidence by the task
+  that needs it, checked by a reviewer, confirmed by the human at the M0 gate"; milestone M0. `decisions.md` § "R-258".
+- **What:** PR #68 (TASK-M0-05) builds the convergence gate. It prints the region count and "minimum not yet
+  calibrated", and flags an unrecorded count, all as REQ-VAL-168's verify asks. It proposes no value, because M0 runs
+  no physics: no measured region scatter exists to base one on, and inventing a value breaches philosophy §4.2. qa
+  confirms the PR meets the verify line as written; only the statement's "proposed with its evidence … at the M0 gate"
+  can't be met at M0.
+- **Options seen:**
+  1. **Move the proposal to M3 (recommended).** The value is proposed by the first M3 task that runs a real
+     convergence study, and confirmed at the M3 gate; until then the gate keeps printing "not yet calibrated".
+  2. **Keep it at M0** with a value from the literature or a stated prior, marked provisional.
+- **Needed:** a ruling on where the value is proposed. Not blocking PR #68, which meets its verify line.
+- **Ruling:** R-273 (30 Sep 2026): option 1. The region minimum is calibrated at M3 (TASK-M3-34), and the gate
+  prints "not yet calibrated" until then.
+
+## RQ-166: the screenshot runner lives in xtask, but nothing may depend on `gui`, so it has no route to real GUI surfaces *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `docs/design/principia_systems_architecture.md` § "7.1 Crate map": "`gui` (the dev GUI: depends on
+  `engine`'s typed surface only; nothing depends on it)", "`xtask` (the runners: reads `cargo metadata`; no crate depends
+  on it)", and "Every other workspace edge is forbidden; … and nothing on `gui`". `plan/tasks/M0/TASK-M0-20.md`
+  § Deliverables: "`xtask/src/screenshot.rs` — `cargo xtask screenshot <suite>`: renders a GUI surface headless (native
+  wgpu offscreen) and writes the capture beside the artboard it names". `plan/tasks/M6/TASK-M6-22.md` § Acceptance
+  tests: "`cargo xtask screenshot 04_windows` — presence only (R-129): the Run window's "quality: Custom" section shows
+  each control (REQ-GUI-014)".
+- **What:** raised by TASK-M0-20's implementer (PR #72) and confirmed by its code reviewer. The runner in PR #72 renders
+  only surfaces described as data in its fixtures (`button`/`checkbox` controls in a panel). From TASK-M6-22 onward, 32
+  task files call `cargo xtask screenshot <suite>` on the real windows (`04_windows`, `01_main`, `02_stain`, …), which
+  are built in `crates/gui`. §7.1 forbids `xtask → gui`, so the runner can't call that code, and the corpus doesn't say
+  how it gets the real surfaces rendered. Nothing is blocked until TASK-M6-22.
+- **Options seen:**
+  1. **`gui` ships a headless capture mode the runner spawns (recommended).** E.g. `gui --screenshot <suite> <case>
+     --out <png>` or a separate `gui` binary target. It renders the named window offscreen and writes the PNG plus the
+     AccessKit names, and the runner compares or checks presence, as `cargo xtask gate` spawns validation's binary
+     (R-187 has the same shape for `prin`). No new edge. `gui` owns which window is which, and the case format's
+     `surface` field names a kind (`data` today, `gui` later).
+  2. **Allow `xtask → gui` as a normal dependency.** It's the simplest code, but it changes §7.1's "nothing depends on
+     `gui`" and puts the whole GUI build under xtask's build, so every `cargo xtask` command compiles egui and the
+     engine.
+  3. **The capture moves into `crates/gui`'s own tests** (`cargo test -p gui screenshot_*`), and `cargo xtask
+     screenshot` only collects and compares their output. No edge, but the 32 task files' commands and REQ-TOOL-134's
+     runner change shape.
+- **Needed:** a ruling on the route, before TASK-M6-22 is built. TASK-M0-20 doesn't wait: its runner is the same under
+  every option, and option 1 only adds a surface kind.
+- **Ruling:** R-274 (30 Sep 2026): option 1. `gui` gets a headless capture mode, which the runner spawns; there is no
+  crate edge.
+
+## RQ-167: "presence" has no definition: a control clipped out of view still counts as present *(plan, design, TASK-M0-20, TASK-M6-22 onward)*
+
+- **File, section:** `decisions.md` § "R-129 — Where the surfaces with no artboard live": "Until the M8 dev GUI they're
+  checked by presence only, not layout." `plan/requirements.yaml` REQ-GUI-014 verify detail: "presence only (R-129 …):
+  the Run window's 'quality: Custom' section shows each control"; REQ-TOOL-058: "… the Profiler tab shows the four
+  items". `plan/tasks/M0/TASK-M0-20.md` § Deliverables: "it lists the controls or items it must contain, and the runner
+  asserts them".
+- **What:** raised by TASK-M0-20's gui reviewer (PR #72). The runner's presence check collects every AccessKit node
+  name egui produced (`xtask/src/screenshot.rs:307-314`) without looking at its bounds. In a probe with a 120×20 surface,
+  the capture shows only button "A", but presence passes for `["A", "Far below"]`. The requirements say "shows", and
+  the corpus doesn't define whether a control laid out but clipped (off the surface, cut by a fixed panel, or scrolled
+  below the fold) is present. A missing definition, R-72. Nothing is affected until the first M6 presence case
+  (TASK-M6-22).
+- **Options seen:**
+  1. **Present = in egui's tree and its rect intersects the visible surface (recommended).** It matches "shows". A
+     control in a scroll area counts only if it is scrolled into view, so a case that needs one below the fold scrolls
+     to it first. The runner already has each node's bounds.
+  2. **Present = in egui's tree, anywhere.** Today's behaviour. It's weaker than "shows": a control cut off by a panel
+     passes.
+  3. **Both, per case.** A case field (`"visible": true`) picks the stricter check. It's more flexible, but every case
+     author has to choose.
+- **Needed:** a definition, before TASK-M6-22. TASK-M0-20 doesn't wait: option 1 is a small change to the runner, made
+  by whichever task first needs it, or by a follow-up task.
+- **Ruling:** R-275 (30 Sep 2026): option 1. A control clipped out of the visible surface isn't present.
+
+## RQ-168: the stand-in soak runs the full `xtask ci`, which now renders golden cases, on a runner with no GPU *(CI, TASK-M0-06, TASK-M0-38)*
+
+- **File, section:** `decisions.md` § "R-110": "native golden suites on every commit"; TASK-M0-06 registers
+  `golden --all` in `cargo xtask ci` under it. `.github/workflows/stand-in-soak.yml` (TASK-M0-38, REQ-SYS-070, R-267):
+  "the tests that write a stand-in `cargo` or `gh` and run xtask against it, 50 consecutive runs … on ubuntu-latest".
+  The job installs no Mesa and sets no `PRIN_GPU_BACKEND`.
+- **What:** `xtask/tests/qa_TASK-M0-22.rs`, `qa_m022_ci_passes_when_every_control_trips`, runs the full `xtask ci`
+  with a stand-in cargo and requires it to pass. With TASK-M0-06 the full `ci` ends in the golden runner, which opens a
+  wgpu device. On the soak runner there is none, so the test fails: "golden FAILED: … no vulkan adapter
+  (PRIN_GPU_BACKEND)". Seen on PR #71 at `ea9b18f`, run 36679159178. The review's F1 fixed `ci --list`, whose golden
+  form now opens no device. The full form must render (R-110), so no change to the golden runner removes this.
+  Every other job that runs `xtask ci` or the xtask tests (`ci`, `xtask-ci`) installs Mesa and sets
+  `PRIN_GPU_BACKEND=vulkan`.
+- **Options seen:**
+  1. **Mesa in the soak job (recommended).** Add `mesa-vulkan-drivers` and `PRIN_GPU_BACKEND: vulkan` to
+     `stand-in-soak.yml`, as `ci` and `xtask-ci` have. Each of the 50 runs renders the two 256×256 self-test cases on
+     lavapipe, which takes seconds. The orchestrator ruled this out for F1, where it would only have moved the listing
+     form's dependency.
+  2. **Pass the stand-in `ci` a runner list.** The test runs `ci` with its golden step skipped, through a new
+     environment variable or argument. This changes a merged test and adds a way to skip a CI runner.
+  3. **Keep the soak to listing-only forms.** Drop `qa_m022_ci_passes_when_every_control_trips` from the soak. That
+     narrows what REQ-SYS-070 soaks.
+- **Needed:** which one. TASK-M0-06 (PR #71) waits on it, because its soak check is red.
+- **Ruling:** none needed — applied per R-204 — veto? (30 Sep 2026, overnight): option 1. The full `xtask ci` has to
+  render (R-110), so the soak job gets what the `ci` and `xtask-ci` jobs already have: Mesa and
+  `PRIN_GPU_BACKEND=vulkan`. It's CI plumbing that changes no test and narrows no soak. Applied in TASK-M0-06 (PR #71) as
+  its veto item 13.
+- **Ruling:** R-268 (30 Sep 2026): the overnight application stands.

@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-`cargo xtask golden <suite>` renders each case of a suite headless through the harness, compares it with the reference image in `fixtures/golden/<suite>/` to the tolerance its requirement gives, and writes a diff report. It also has the reproduction mode an image artefact is diagnosed with (philosophy §4.3a; pitfalls §1.3): `cargo xtask golden repro <case> --vary <field>=<a>,<b>` renders two arms whose configurations differ in exactly one field — a pair differing in more is refused — and reports, per arm, the RGB values along a named line (to tell a structure from the ~3-step 8-bit staircase) and each named symptom in its own column, so a fix is closed only against the symptom columns it moved (pitfalls §8). Goldens render with native wgpu offscreen, from M1 on; the M8 Playwright browser suite later checks against the same baselines, and no baseline is re-made without a gate decision (R-110). The screenshot runner, once built here too, is TASK-M0-20 (R-183).
+`cargo xtask golden <suite>` renders each case of a suite headless on its own wgpu device (§7.1 lets xtask reach the harness only as a dev-dependency; R-268, R-276), compares it with the reference image in `fixtures/golden/<suite>/` to the tolerance its requirement gives, and writes a diff report. It also has the reproduction mode an image artefact is diagnosed with (philosophy §4.3a; pitfalls §1.3): `cargo xtask golden repro <case> --vary <field>=<a>,<b>` renders two arms whose configurations differ in exactly one field — a pair differing in more is refused — and reports, per arm, the RGB values along a named line (to tell a structure from the ~3-step 8-bit staircase) and each named symptom in its own column, so a fix is closed only against the symptom columns it moved (pitfalls §8). Goldens render with native wgpu offscreen, from M1 on; the M8 Playwright browser suite later checks against the same baselines, and no baseline is re-made without a gate decision (R-110). The screenshot runner, once built here too, is TASK-M0-20 (R-183).
 
 ## References
 - `docs/read_first/principia_00_philosophy.md` § "4.3a Do not reason about an image — reproduce it"
@@ -41,7 +41,7 @@
 - Proposal: the golden-image diff metric and default tolerance with evidence (same-backend re-render on native wgpu offscreen passes, a one-variable change fails); the human confirms it at the M0 gate (REQ-VAL-138).
 
 ## Notes
-- Depends on TASK-M0-04 for the harness it renders through, and on TASK-M0-22 (R-198 split TASK-M0-04) because its tests register negative controls, which come before the tests that need them (R-176).
+- Depends on TASK-M0-04 for the harness whose backend rule its device follows (R-268), and on TASK-M0-22 (R-198 split TASK-M0-04) because its tests register negative controls, which come before the tests that need them (R-176).
 - No golden-image requirement exists before M1 (REQ-RENDER-024 is the first); the runner is built before them (MILESTONES M0: every verify method has its runner first).
 - RQ-79 ruled: R-110 — native golden suites run on every commit, GUI screenshots on GUI PRs and at the gates; goldens render with native wgpu offscreen from M1, and M8's Playwright suite reuses the baselines.
 - RQ-93 ruled: R-113 — the screenshot runner was built here, beside the golden-image runner; R-183 splits it into TASK-M0-20.

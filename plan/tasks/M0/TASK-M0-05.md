@@ -1,7 +1,7 @@
 # TASK-M0-05 — The numerical-gate runner, and the convergence-under-refinement gate
 
 - **Milestone:** M0
-- **Closes:** REQ-VAL-002, REQ-VAL-004, REQ-VAL-168, REQ-VAL-169
+- **Closes:** REQ-VAL-002, REQ-VAL-004, REQ-VAL-169
 - **Depends on:** TASK-M0-01, TASK-M0-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -40,3 +40,4 @@
 - No physics runs in M0; the gate is exercised on recorded sequences. Its first physical use is M3 (escape fraction and the other aggregate quantities).
 - RQ-93 ruled: R-113 — REQ-VAL-135 moves to M3 (TASK-M3-34 proposes it on a real converging aggregate); the runner and the gate stay here with the provisional threshold 0.1 (R-171).
 - R-258 (closes RQ-159): the region minimum is a calibration requirement (REQ-VAL-168, confirmed at the M0 gate), the fixtures' counts are "not recorded", and scatter is defined (REQ-VAL-169). The local RQ commit b01bb83 on this branch is superseded by RQ-159 on main; drop it.
+- R-273 (closes RQ-165): REQ-VAL-168 moves to M3 and is closed by TASK-M3-34, which proposes the region minimum. This task built the report's "minimum not yet calibrated" line, which stays until then.

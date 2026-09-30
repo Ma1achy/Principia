@@ -50,7 +50,7 @@
   title: The numerical-gate runner, and the convergence-under-refinement gate
   depends_on: [TASK-M0-01, TASK-M0-22]
   needs: []
-  requirements: [REQ-VAL-002, REQ-VAL-004, REQ-VAL-168, REQ-VAL-169]
+  requirements: [REQ-VAL-002, REQ-VAL-004, REQ-VAL-169]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M0-06
@@ -90,7 +90,7 @@
   title: "Payload ledger II: packed_a, packed_b, times and the descriptor, with Rust pack/unpack"
   depends_on: [TASK-M0-09]
   needs: []
-  requirements: [REQ-PAY-004, REQ-PAY-012, REQ-PAY-013, REQ-PAY-014, REQ-PAY-015, REQ-PAY-018, REQ-GEN-005]
+  requirements: [REQ-PAY-004, REQ-PAY-012, REQ-PAY-013, REQ-PAY-014, REQ-PAY-015, REQ-PAY-018, REQ-GEN-005, REQ-PAY-092]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M0-11
@@ -898,7 +898,7 @@
   title: "Escape re-validation: precision, recall and the tau gap"
   depends_on: [TASK-M3-33]
   needs: [REQ-VAL-004, REQ-VAL-006]
-  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025]
+  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2.2, PIT-2.3, PIT-3]
 - id: TASK-M3-35
@@ -1474,7 +1474,7 @@
   title: "Quality in the GUI: the Run window selector, the Custom fields and the arbiter overlay"
   depends_on: [TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20]
   needs: [REQ-GUI-001]
-  requirements: [REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058]
+  requirements: [REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058, REQ-GUI-162]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M6-23
@@ -2117,3 +2117,19 @@
   requirements: [REQ-SYS-069, REQ-SYS-070, REQ-SYS-071]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-39
+  milestone: M0
+  title: "The r217 controls stop flaking: the grandchild gets its own process group at spawn"
+  depends_on: [TASK-M0-26, TASK-M0-33]
+  needs: []
+  requirements: [REQ-VAL-175]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-40
+  milestone: M0
+  title: "Presence means visible, and a review re-runs the stale reviews check"
+  depends_on: [TASK-M0-20, TASK-M0-37]
+  needs: []
+  requirements: [REQ-TOOL-136, REQ-SYS-072]
+  reviewers: [code, qa, gui]
+  pitfalls: [PIT-3]
