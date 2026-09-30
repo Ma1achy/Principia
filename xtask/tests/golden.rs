@@ -304,3 +304,52 @@ negative_control!(
         "which decisions.md does not record"
     )
 );
+
+// --- The runner's backend rule stays in step with the harness's (R-169, R-206) -------------------------------------
+
+/// The values of `PRIN_GPU_BACKEND` the rules are compared on: unset, each backend, and values that are none.
+const BACKEND_VALUES: [Option<&str>; 6] = [
+    None,
+    Some("metal"),
+    Some("vulkan"),
+    Some("dx12"),
+    Some(""),
+    Some("METAL"),
+];
+
+/// `rule` selects, for each of [`BACKEND_VALUES`], the backend `validation::gpu::backend_from` selects, and refuses
+/// the values it refuses. xtask duplicates the rule because it may reach validation only as a dev-dependency
+/// (systems_architecture §7.1).
+fn check_backend_rule(rule: fn(Option<&str>) -> Option<u32>) {
+    for value in BACKEND_VALUES {
+        let harness = validation::gpu::backend_from(value).ok().map(|b| b.bits());
+        assert_eq!(
+            rule(value),
+            harness,
+            "the golden runner's backend rule differs from the harness's for {value:?}"
+        );
+    }
+}
+
+fn golden_rule(value: Option<&str>) -> Option<u32> {
+    golden::backend_from(value).ok().map(|(_, b)| b.bits())
+}
+
+#[test]
+fn golden_backend_rule_matches_harness() {
+    check_backend_rule(golden_rule);
+}
+
+negative_control!(
+    golden_backend_rule_matches_harness,
+    "a rule that swaps metal and vulkan",
+    expected = "the golden runner's backend rule differs from the harness's",
+    check_backend_rule(|value| {
+        let swapped = match value {
+            Some("metal") => Some("vulkan"),
+            Some("vulkan") => Some("metal"),
+            other => other,
+        };
+        golden_rule(swapped)
+    })
+);

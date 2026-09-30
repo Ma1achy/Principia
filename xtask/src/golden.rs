@@ -537,6 +537,25 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     Ok(())
 }
 
+/// The backend a value of `PRIN_GPU_BACKEND` selects, with its name: `metal` or `vulkan`, or unset for the platform's
+/// (metal on macOS, vulkan elsewhere); anything else is an error naming the variable. The same rule as
+/// `validation::gpu::backend_choice` (R-169, R-206), which xtask may not depend on (systems_architecture §7.1); a test
+/// keeps the two in step.
+pub fn backend_from(value: Option<&str>) -> Result<(&str, wgpu::Backends), String> {
+    let name = value.unwrap_or(if cfg!(target_os = "macos") {
+        "metal"
+    } else {
+        "vulkan"
+    });
+    match name {
+        "metal" => Ok((name, wgpu::Backends::METAL)),
+        "vulkan" => Ok((name, wgpu::Backends::VULKAN)),
+        other => Err(format!(
+            "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
+        )),
+    }
+}
+
 /// A headless device that renders golden cases offscreen.
 pub struct Renderer {
     device: wgpu::Device,
@@ -550,20 +569,7 @@ impl Renderer {
     /// macOS, vulkan elsewhere) when it is unset, as the harness does (R-169, R-206).
     pub fn new() -> Result<Renderer, String> {
         let value = std::env::var(BACKEND_VAR).ok();
-        let name = value.as_deref().unwrap_or(if cfg!(target_os = "macos") {
-            "metal"
-        } else {
-            "vulkan"
-        });
-        let backends = match name {
-            "metal" => wgpu::Backends::METAL,
-            "vulkan" => wgpu::Backends::VULKAN,
-            other => {
-                return Err(format!(
-                    "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
-                ))
-            }
-        };
+        let (name, backends) = backend_from(value.as_deref())?;
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends,
             ..wgpu::InstanceDescriptor::new_without_display_handle()
