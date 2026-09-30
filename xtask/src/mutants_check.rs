@@ -1,6 +1,6 @@
-//! `cargo xtask mutants-check <mutants.out> [--equivalent <file>]` — the per-PR mutation gate's verdict (R-196,
-//! R-202): reads the `outcomes.json` that `cargo mutants` writes, lists each surviving (missed) mutant, and fails
-//! naming each one that is not in the checked-in equivalent-mutants list. Each entry of that list names one mutant, as
+//! `cargo xtask mutants-check <mutants.out>... [--equivalent <file>]` — the per-PR mutation gate's verdict (R-196,
+//! R-202): reads the `outcomes.json` that `cargo mutants` writes, one per shard of the sharded run (R-302), lists each
+//! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each entry of that list names one mutant, as
 //! cargo-mutants prints it, and carries a one-line justification the code and qa reviewers approve (R-202).
 
 use std::path::Path;
@@ -110,10 +110,27 @@ pub fn unlisted<'a>(found: &'a Outcomes, list: &[Equivalent]) -> Vec<&'a str> {
 /// Checks the run whose output directory is `out` (holding `outcomes.json`) against the list at `list_path`,
 /// printing every surviving and timed-out mutant; `Err` names each survivor not listed.
 pub fn run(out: &Path, list_path: &Path) -> Result<(), String> {
+    run_shards(&[out], list_path)
+}
+
+/// Checks the sharded run whose shards' output directories are `outs` (each holding its `outcomes.json`, R-302)
+/// against the list at `list_path`, as one run: every shard's survivors and timeouts are printed, and `Err` names each
+/// survivor, in any shard, not listed. A shard directory without `outcomes.json`, or with a failed baseline, is
+/// refused: that shard's mutants are untested.
+pub fn run_shards(outs: &[&Path], list_path: &Path) -> Result<(), String> {
     let read = |path: &Path| {
         std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))
     };
-    let found = outcomes(&read(&out.join("outcomes.json"))?)?;
+    if outs.is_empty() {
+        return Err("mutants-check: no `cargo mutants` output directory given".to_owned());
+    }
+    let mut found = Outcomes::default();
+    for out in outs {
+        let shard = outcomes(&read(&out.join("outcomes.json"))?)
+            .map_err(|e| format!("{}: {e}", out.display()))?;
+        found.missed.extend(shard.missed);
+        found.timeouts.extend(shard.timeouts);
+    }
     let list = equivalents(&read(list_path)?)?;
     for name in &found.timeouts {
         println!("mutants-check: timed out (not a survivor): {name}");
@@ -130,8 +147,9 @@ pub fn run(out: &Path, list_path: &Path) -> Result<(), String> {
     let findings = unlisted(&found, &list);
     if findings.is_empty() {
         println!(
-            "mutants-check: {} surviving mutant(s), all listed in {} (R-202)",
+            "mutants-check: {} surviving mutant(s) over {} shard(s), all listed in {} (R-202)",
             found.missed.len(),
+            outs.len(),
             list_path.display()
         );
         return Ok(());

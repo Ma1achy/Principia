@@ -1,13 +1,14 @@
 //! `cargo xtask mutants-check` (REQ-VAL-148; R-196, R-202): over the outcomes of `cargo mutants --in-diff` on
 //! `fixtures/mutants/untested/` (recorded without its killing test), a surviving mutant not in the equivalent-mutants
-//! list fails the check naming it, and one listed with a one-line justification passes.
+//! list fails the check naming it, and one listed with a one-line justification passes. Over a sharded run (R-302) the
+//! check covers every shard: a survivor in any shard fails it, and a shard with no outcomes is refused.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use validation::negative_control;
 use validation::spawn::Spawn;
-use xtask::mutants_check::{equivalents, outcomes, run, unlisted, Equivalent};
+use xtask::mutants_check::{equivalents, outcomes, run, run_shards, unlisted, Equivalent};
 
 /// The two mutants of the untested branch that survive without the killing test.
 const SURVIVORS: [&str; 2] = [
@@ -202,6 +203,136 @@ fn mutants_check_logs_each_survivor_as_listed_or_not() {
         ["listed equivalent", "NOT listed"],
     );
 }
+
+/// A shard's output directory under this test's scratch directory, holding the recorded outcomes with every
+/// `MissedMutant` turned into `with`; with `None`, a shard that wrote no `outcomes.json`.
+fn shard(name: &str, with: Option<&str>) -> PathBuf {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("mutants_check_shard_{name}"));
+    std::fs::create_dir_all(&dir).expect("shard dir");
+    let outcomes = dir.join("outcomes.json");
+    match with {
+        Some(with) => std::fs::write(&outcomes, recorded(with)).expect("shard outcomes written"),
+        None => {
+            let _ = std::fs::remove_file(&outcomes);
+        }
+    }
+    dir
+}
+
+/// The check over `shards` against `list` fails, naming each of `named`.
+fn shards_fail_naming(shards: &[PathBuf], list: &Path, named: &[&str]) {
+    let shards: Vec<&Path> = shards.iter().map(PathBuf::as_path).collect();
+    let message = run_shards(&shards, list).err().unwrap_or_default();
+    assert!(
+        !named.is_empty() && named.iter().all(|n| message.contains(n)),
+        "sharded check did not fail naming {named:?}: {message:?}"
+    );
+}
+
+#[test]
+fn mutants_check_covers_every_shard() {
+    let empty = list_file("shards_empty", "");
+    // The survivors are in the second shard only; the first caught all of its mutants.
+    let shards = [
+        shard("caught", Some("CaughtMutant")),
+        shard("missed", Some("MissedMutant")),
+    ];
+    shards_fail_naming(&shards, &empty, &SURVIVORS);
+    // A shard that wrote no outcomes (cut off, or never run) is refused, naming it.
+    let cut = shard("cut", None);
+    shards_fail_naming(
+        &[shard("caught2", Some("CaughtMutant")), cut.clone()],
+        &empty,
+        &[&cut.display().to_string()],
+    );
+    // A shard whose baseline failed is refused, naming it.
+    let failed = Path::new(env!("CARGO_TARGET_TMPDIR")).join("mutants_check_shard_failed");
+    std::fs::create_dir_all(&failed).expect("shard dir");
+    std::fs::write(
+        failed.join("outcomes.json"),
+        recorded("CaughtMutant").replacen("\"Success\"", "\"Failure\"", 1),
+    )
+    .expect("shard outcomes written");
+    shards_fail_naming(
+        &[shard("caught3", Some("CaughtMutant")), failed.clone()],
+        &empty,
+        &[&failed.display().to_string(), "baseline did not pass"],
+    );
+    // Both shards' survivors listed: passes.
+    let shards: Vec<&Path> = shards.iter().map(PathBuf::as_path).collect();
+    let listed = run_shards(&shards, &listed());
+    assert!(listed.is_ok(), "sharded check failed: {listed:?}");
+    // No shard at all is no evidence.
+    assert!(
+        run_shards(&[], &empty).is_err(),
+        "sharded check with no shard passed"
+    );
+}
+
+/// `cargo xtask mutants-check <shard>... --equivalent <list>`: whether it passed, and its stderr.
+fn binary_over_shards(shards: &[PathBuf], list: &Path) -> (bool, String) {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("mutants-check")
+        .args(shards)
+        .arg("--equivalent")
+        .arg(list)
+        .timed_output()
+        .expect("xtask ran");
+    (
+        output.status.success(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}
+
+fn binary_shards_verdict(shards: &[PathBuf], pass: bool) {
+    let (ok, stderr) = binary_over_shards(shards, &list_file("binary_shards_empty", ""));
+    assert!(
+        ok == pass && (pass || SURVIVORS.iter().all(|s| stderr.contains(s))),
+        "binary verdict over shards wrong (expected pass: {pass}): {stderr}"
+    );
+}
+
+#[test]
+fn mutants_check_binary_reads_every_shard() {
+    binary_shards_verdict(
+        &[
+            shard("bin_caught", Some("CaughtMutant")),
+            shard("bin_missed", Some("MissedMutant")),
+        ],
+        false,
+    );
+    binary_shards_verdict(
+        &[
+            shard("bin_caught_a", Some("CaughtMutant")),
+            shard("bin_caught_b", Some("CaughtMutant")),
+        ],
+        true,
+    );
+}
+
+negative_control!(
+    mutants_check_covers_every_shard,
+    "with the missed shard left out, no survivor is named",
+    expected = "sharded check did not fail naming",
+    shards_fail_naming(
+        &[shard("control_caught", Some("CaughtMutant"))],
+        &list_file("control_shards_empty", ""),
+        &SURVIVORS
+    )
+);
+
+negative_control!(
+    mutants_check_binary_reads_every_shard,
+    "the binary given the missed shard must fail the passing verdict",
+    expected = "binary verdict over shards wrong",
+    binary_shards_verdict(
+        &[
+            shard("control_bin_caught", Some("CaughtMutant")),
+            shard("control_bin_missed", Some("MissedMutant")),
+        ],
+        true
+    )
+);
 
 negative_control!(
     mutants_check_logs_each_survivor_as_listed_or_not,
