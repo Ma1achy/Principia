@@ -118,6 +118,13 @@ pub fn run(root: &Path, which: Which<'_>) -> Result<(), String> {
         Which::One(name) => vec![name.to_owned()],
         Which::All => list_suites(root)?,
     };
+    if suites.is_empty() {
+        // PIT-3: `--all` over no suite runs nothing, and must not pass.
+        return Err(format!(
+            "screenshot --all: no suite under {} (each is a directory holding cases.json)",
+            root.join(SUITES).display()
+        ));
+    }
     let mut results = Vec::new();
     for suite in &suites {
         results.extend(run_suite(root, suite)?);

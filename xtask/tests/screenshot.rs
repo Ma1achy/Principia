@@ -191,3 +191,28 @@ negative_control!(
         check_listed(&root);
     }
 );
+
+/// `screenshot --all` over `root` fails, naming the missing suites, when it finds no suite: a run of nothing must not
+/// pass (PIT-3).
+fn check_all_with_no_suite_fails(root: &Path) {
+    let outcome = screenshot::run(root, screenshot::Which::All);
+    assert!(
+        outcome.as_ref().is_err_and(|e| e.contains("no suite")),
+        "--all found no suite to run and did not fail: {outcome:?}"
+    );
+}
+
+#[test]
+fn screenshot_all_with_no_suite_fails() {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("shot_all_empty");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join(screenshot::SUITES)).expect("empty suites dir created");
+    check_all_with_no_suite_fails(&root);
+}
+
+negative_control!(
+    screenshot_all_with_no_suite_fails,
+    "with a passing suite present, --all passes, so the no-suite check must fail",
+    expected = "did not fail",
+    check_all_with_no_suite_fails(&root("shot_all_empty_control", |_| true))
+);
