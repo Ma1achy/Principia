@@ -3095,3 +3095,4 @@ Tick any you don't accept.
      This fails R-281's "each case increments" on the GPU.
 - **Needed:** which one, or the counter's definition. TASK-M0-10 (PR #78) waits on it for R-281's counter and its tests
   (NaN and a negative value each increment the counter); the rest of R-281 is built.
+- **Ruling:** R-288 (30 Sep 2026): option (a).

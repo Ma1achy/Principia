@@ -5830,14 +5830,13 @@
     section: 1. `SimState` — the hot struct
   verify:
     method: unit test
-    detail: "cargo test -p kernel dmin_unset: a failed sample's and an unstepped sample's d_min bits are 0x7C00; 1e-9 packs to the smallest positive subnormal (bits 0x0001); no valid input packs to 0x0000; the unset test reads bits; the ledger declares d_min's sentinel as +inf; in a debug build a NaN and a negative d_min each trip the packer's debug_assert!; through the release path a NaN stores 0x7C00 and a negative value stores 0x0001, and each increments its telemetry counter"
+    detail: "cargo test -p kernel dmin_unset: a failed sample's and an unstepped sample's d_min bits are 0x7C00; 1e-9 packs to the smallest positive subnormal (bits 0x0001); no valid input packs to 0x0000; the unset test reads bits; the ledger declares d_min's sentinel as +inf; in a debug build a NaN and a negative d_min each trip the packer's debug_assert!; through the release path a NaN stores 0x7C00 and a negative value stores 0x0001, and each increments its telemetry counter; the counter tests (R-288) dmin_unset_counter_nan_increments_dmin_nan_unset (a NaN increments dmin_nan_unset and stores 0x7C00), dmin_unset_counter_negative_increments_dmin_negative_floored (a negative value increments dmin_negative_floored and stores 0x0001), dmin_unset_counter_valid_values_count_nothing and dmin_unset_counter_roundtrip_repack_counts_nothing (a valid value and roundtrip_ctl's repack increment neither)"
   rulings:
   - R-271
   - R-278
   - R-281
+  - R-288
   milestone: M0
-  rq:
-  - RQ-171
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."

@@ -60,4 +60,9 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
 - R-281 (PR #78's item 2, vetoed in part): the `d_min` packer never stores NaN (R-79) and never silently rewrites a
   negative value; each is a `debug_assert!` failure. In release a NaN stores the unset bits and a negative value the
   floor `0x0001`, and each case increments a telemetry counter. The counter's definition waits on RQ-171.
+- R-288 (closes RQ-171): the counters are telemetry §2's per-frame atomic u32s `dmin_nan_unset` and
+  `dmin_negative_floored`, counted in release builds too. `set_d_min_release` and `set_d_min_counted` take the pair;
+  `set_d_min(w, v)` counts into the kernel's crate-level `DMIN_COUNTERS`; `roundtrip_ctl`'s repack passes a scratch
+  pair and doesn't count. Binding them to the GPU dispatch and reading them back on the profiler/telemetry readback
+  belong to the tasks that build those.
 - R-256: TASK-M0-09 transcribed the entries for `packed_a`, the descriptor, `packed_b`, `times` and `total_substeps`; this task keeps only the pack/unpack/insert emitters, the accessors and `roundtrip_ctl` over them.
