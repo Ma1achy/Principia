@@ -139,6 +139,53 @@ where that bit lives is not yet specified (open-questions).
 - **Storage never holds NaN (R-79).** A blown-up sample stores the defined failed-state values, never the non-finite values that failed it; the failed-state contents of its f32 fields (phase state, shadow, accumulators, drift refs) are defined by the task that writes the failure path (R-72). A tier-absent (derived) field reads NaN at unpack (§5). Every colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still goes to the invalid colour.
 - **bf16:** nowhere — wrong precision/range trade for bounded normalised quantities (bf16 buys exponent range you don't need at the cost of mantissa you do), and not in web WGSL anyway.
 
+**The payload as a function of `Real` (R-72; REQ-PAY-017, REQ-PAY-087).** The payload width is a function of the kernel's `Real`, never hardcoded to f32 (philosophy §7.1, §7.7). The struct
+above is the f32 instantiation, the GPU's (canonical_spec §1 item 3). The one kernel source is instantiated at f32 and
+f64 only (R-265), so the `SimState` structs are generated generic over `Real`, one layout per precision row.
+
+**Which fields follow `Real`.** One rule: every f32 member of `SimState` is a `Real`, and every other member keeps its
+width.
+
+| Member | f32 | at `Real` of `w` bytes |
+|---|---|---|
+| `r`, `p`, `r_sh`, `p_sh` (phase state, shadow) | `array<vec2<f32>, 3>`, 24 B | 6 `Real`s each, `6w` |
+| `S`, `theta`, `mean_y`, `C_ty` (accumulators) | f32 | `Real`, `w` |
+| `E_0`, `Lz_0` (drift references) | f32 | `Real`, `w` |
+| `closure_min` | f32 | `Real`, `w` |
+| `packed_a`, `packed_b` (descriptor and the f16-packed latches `d_min`, `dE_max`, `dLz_max`) | u32 | u32, fixed |
+| `times` (the u16 step indices `t_end_step`, `t_dmin_step`) | u32 | u32, fixed |
+| `total_substeps` | u32 | u32, fixed |
+| `closure_step`, `_reserved` | u16 | u16, fixed |
+
+Why: the phase state and shadow are the integration, and a wider `Real` is the point of the CPU path (canonical_spec
+§1 item 3). The accumulators are sums, and the precision rule above (summing in a narrower type loses the tail) holds at
+every width. `E_0` and `Lz_0` are subtraction operands for the drifts, so an f32 reference would floor the f64 path's
+drift at f32's resolution. `closure_min`'s floor is precision-dependent (~1e-7 at f32, ~1e-16 at f64, above); it follows
+`Real` so that one rule covers every float member. The packed words hold Tier B integer fields and display latches,
+which do not depend on the float type (parity_contract Tier B), so they keep their bits. The word buffer
+(`FreeGroupWord`, integer) and `ICDescriptor` are not `SimState` and are not generic.
+
+**Layout at a `Real` of `w` bytes.** Members in the order above, each at its own alignment (`Real` at its alignment,
+u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. `SimStateFTLE` stores 31 `Real`s and
+`SimStateBase` 19, then 16 B of u32s and 4 B of u16s, so they end at `31w + 20` and `19w + 20`. Rounding up to the
+alignment leaves tail padding at every width but f32; it is declared, never implicit (R-86): a trailing `_tail` of
+`(size − end)/4` u32s, empty at f32.
+
+**The f64 layout** (`w` = 8, aligned to 8):
+- `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
+  `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `closure_min` 256, `closure_step`
+  264, `_reserved` 266, `_tail` 268 (one u32): **272 B**.
+- `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`; `_tail` at 172: **176 B**.
+
+The f64 layout is the CPU kernel's. It never crosses the GPU membrane, since the GPU is f32-locked (canonical_spec §1
+item 3).
+
+**The DoubleF64 stub row.** DoubleF64 is an unevaluated pair (hi, lo) of f64s: 16 B, aligned to 8. It is a precision row
+of the ledger for the width function only. It has no `Real` impl, no kernel instantiation (R-265) and no arithmetic
+(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **520 B** (516 used,
+one u32 of `_tail`) and `SimStateBase` **328 B** (324 used, one u32 of `_tail`), aligned to 8. A new instantiation
+would be one more row, as philosophy §7.1 says, and the generator would not fork.
+
 ---
 
 ## 2. Bit layouts (the packed u32s)
