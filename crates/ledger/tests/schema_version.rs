@@ -89,7 +89,7 @@ const RENDER_KNOB: ConstantBuilder = ConstantBuilder {
 
 // --- REQ-GEN-008: the ledger, the continuation table, stability, the emitted constant -------------------------------
 
-/// Flipping one bit offset: the `Packed` entry with the lowest name, moved one bit.
+/// Flipping one bit offset: the first `Packed` entry in source order, moved one bit.
 fn one_row_moved() -> Owned {
     let mut o = Owned::new();
     let e = o
