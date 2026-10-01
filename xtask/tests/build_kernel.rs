@@ -9,9 +9,9 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, ExitStatus};
 
-use cargo_gpu_install::spirv_source::{CrateMetadata, SpirvSource};
+use cargo_gpu_install::spirv_source::SpirvSource;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::build_kernel::{
@@ -532,6 +532,12 @@ exit {status}
     (dir.join("cargo"), log)
 }
 
+/// Runs `command` through the shared spawn helper (R-214, REQ-SYS-070): what [`build_backend`] and [`ensure_backend`] are
+/// given to run cargo with here, in place of `Command::status`.
+fn spawned(command: &mut Command) -> std::io::Result<ExitStatus> {
+    command.timed_output().map(|output| output.status)
+}
+
 /// The lines of the stand-in cargo's log `log`; none if it never ran.
 fn calls(log: &Path) -> Vec<String> {
     fs::read_to_string(log)
@@ -547,7 +553,7 @@ fn calls(log: &Path) -> Vec<String> {
 fn check_backend_build(case: &str, status: u8) {
     let dir = empty_backend_dir(case);
     let (cargo, log) = stand_in_cargo(case, status);
-    let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo));
+    let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo), spawned);
     let dir_real = dir.canonicalize().unwrap();
     assert_eq!(
         calls(&log),
@@ -587,7 +593,7 @@ negative_control!(
     {
         let dir = empty_backend_dir("ctl_build");
         let (cargo, _) = stand_in_cargo("ctl_build", 1);
-        let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo));
+        let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo), spawned);
         result.unwrap_or_else(|e| panic!("build_backend failed with cargo passing: {e}"));
     }
 );
@@ -595,7 +601,7 @@ negative_control!(
 /// [`ensure_backend`] on `dir` ran the stand-in cargo `builds` times (0 or 1), and leaves the backend built.
 fn check_ensured(case: &str, dir: &Path, builds: usize) {
     let (cargo, log) = stand_in_cargo(case, 0);
-    ensure_backend(dir, "nightly-2026-04-11", Command::new(cargo))
+    ensure_backend(dir, "nightly-2026-04-11", Command::new(cargo), spawned)
         .unwrap_or_else(|e| panic!("ensure_backend failed: {e}"));
     assert_eq!(
         calls(&log).len(),
@@ -651,11 +657,10 @@ negative_control!(
     check_lock_refused(&backend_dir("ctl_locked", BACKEND_LOCK))
 );
 
-/// A crates.io rust-gpu source at `version`, as cargo-gpu's installer names one given a version.
+/// A crates.io rust-gpu source at `version`, as cargo-gpu's installer names one given a version: built directly, so
+/// no `cargo metadata` is run.
 fn crates_io(version: &str) -> SpirvSource {
-    let metadata =
-        CrateMetadata::query(root().join("crates/kernel")).expect("the kernel's metadata");
-    SpirvSource::new(&metadata, None, Some(version)).expect("a crates.io source")
+    SpirvSource::CratesIO(version.parse().expect("a semver version"))
 }
 
 /// `source` is refused, naming crates.io's [`BACKEND_VERSION`].
