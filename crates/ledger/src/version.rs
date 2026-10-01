@@ -299,7 +299,7 @@ pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
 
 /// The 64-bit FNV-1a hash of `bytes`. Its offset basis and prime are the published FNV-1a 64-bit parameters, part of
 /// the algorithm, not register constants. Each step (xor a byte, multiply by the odd prime) is a bijection of the
-/// state, so two inputs of one length that differ in any byte hash differently.
+/// state, so two inputs of one length that differ in any one byte hash differently.
 pub fn fnv1a64(bytes: &[u8]) -> u64 {
     let (basis, prime) = (0xcbf2_9ce4_8422_2325_u64, 0x0000_0100_0000_01b3_u64);
     bytes
