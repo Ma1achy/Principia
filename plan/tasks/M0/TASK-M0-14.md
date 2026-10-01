@@ -1,7 +1,7 @@
 # TASK-M0-14 — The substrate toolchain: one kernel source compiled twice, and the Real-generic payload
 
 - **Milestone:** M0
-- **Closes:** REQ-PAY-017, REQ-PAY-087, REQ-SYS-075
+- **Closes:** REQ-PAY-017, REQ-PAY-087, REQ-SYS-075, REQ-SYS-076
 - **Depends on:** TASK-M0-04, TASK-M0-10
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -28,6 +28,9 @@
 - `decisions.md` § "R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*"
 - `decisions.md` § "R-316 — #96's `closure_min` widening with `Real` stands"
 - `decisions.md` § "R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*"
+- `decisions.md` § "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
+- `decisions.md` § "R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*"
+- `decisions.md` § "R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)"
 
 ## Deliverables
 - `rust-toolchain.toml` — the toolchain pin rust-gpu needs; CI installs it from this file in every job (R-169).
@@ -38,6 +41,8 @@
 - `ICDescriptor` generic over `Real` too, with a layout row per precision; 64 B with declared padding is its f32 instantiation (R-313).
 - `crates/kernel/build.rs` — `cargo::rustc-check-cfg=cfg(target_arch, values("spirv"))`, the lint configuration R-314 accepts; no `allow(unexpected_cfgs)` at any scope.
 - Every workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key naming its job and the pinned toolchain version (R-320, REQ-SYS-075; per-job keys, R-285, REQ-SYS-073).
+- `.github/workflows/ci.yml` — `build-kernel` and the tests that need the built kernel run in a job of their own, in parallel with `ci` (R-325, REQ-SYS-076).
+- Every cache step in every workflow restores in every run and saves only in a run on a push to `main`; a pull-request run restores only. The rust-gpu cache keeps its key (R-326, REQ-SYS-073, REQ-SYS-075).
 
 ## Acceptance tests
 - `cargo xtask build-kernel` — rust-gpu compiles `crates/kernel` to SPIR-V and naga translates it to WGSL, in CI.
@@ -45,6 +50,8 @@
 - `cargo test -p kernel payload_real_generic` — the payload, `SimState` and `ICDescriptor`, instantiated for f32 and f64 (and the DoubleF64 stub row); every width derives from `size_of::<Real>()`; the layout is generated per precision; `ICDescriptor` at f32 is 64 B (REQ-PAY-017, R-313).
 - Definition: the per-field Real dependence, the f64 layout and the DoubleF64 stub written into dd_simstate_payload §1, and `ICDescriptor`'s f64 and DoubleF64 sizes and padding into generation-root §3.6, approved by the physics reviewer (REQ-PAY-087, R-313).
 - Review checklist (code) — each workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key containing its job name and the pinned toolchain channel; the PR shows a warm run's `build-kernel` step time beside a cold one (REQ-SYS-075, REQ-SYS-073, R-320).
+- Review checklist (code, qa) — every cache step in every workflow saves only in a run on a push to `main`, and a pull-request run restores only; the PR shows the Actions cache listing and its total against 10 GB (REQ-SYS-073, REQ-SYS-075, R-326).
+- Review checklist (code) — `ci.yml` runs `build-kernel` and the tests that need the built kernel in their own job, parallel to `ci`; the PR shows each CI job's warm wall time against ~10.5 min, names any job over it, and says the new job needs adding to the required checks (REQ-SYS-076, R-325, R-266).
 
 ## Notes
 - PIT-10: the trivial kernel is stateless. It certifies the toolchain and the compiled pack/unpack, not trajectory parity, which is M4 (REQ-VAL-056, REQ-VAL-057).
@@ -56,3 +63,9 @@
   sentence calling it "not generic" is superseded. R-314 (RQ-184) — the check-cfg declaration in `build.rs` stands, no
   blanket allow. R-316 — `closure_min` widening with `Real` stands. R-320 — the rust-gpu build cache joins this task,
   which brings kernel builds into CI.
+- Rulings of 1 Oct (later): R-325 — the kernel build and its tests move to their own parallel CI job, and ~10.5 min is
+  the target per job (REQ-SYS-076, new; closed here). R-326 — caches are saved only on pushes to `main`; this task
+  makes the change in every workflow, since it already edits their cache steps (REQ-SYS-073 stays closed by
+  TASK-M0-42; its R-326 change is made here). R-331 — #96's veto item 11, `_pad` at 16 B, stands. Applied per
+  R-204 — veto?: R-326 also applies to the workflows TASK-M0-42 and others wrote, all in this PR. Size: the two CI
+  rulings add workflow edits beyond the ~450 lines.

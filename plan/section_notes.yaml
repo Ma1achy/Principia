@@ -683,3 +683,19 @@
   section: "R-316 — #96's `closure_min` widening with `Real` stands"
   reason: informative only
   note: accepts PR #96's veto item; carried by REQ-PAY-087's definition in dd_simstate_payload §1; changes no requirement
+- file: decisions.md
+  section: "R-330 — #99's veto item 5 stands: §3.7's \"f16 × 2\" is `escape_time_min` and `escape_time_max`"
+  reason: informative only
+  note: accepts PR #99's veto item and records its merge; changes no requirement
+- file: decisions.md
+  section: "R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)"
+  reason: informative only
+  note: accepts PR #96's veto item; carried by generation-root §3.6 under REQ-PAY-087 (R-313); changes no requirement
+- file: decisions.md
+  section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
+  reason: informative only
+  note: a test-isolation fix in qa's file, made by qa in a follow-up PR on TASK-M0-06 (noted there); changes no requirement
+- file: decisions.md
+  section: "R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry"
+  reason: informative only
+  note: a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement

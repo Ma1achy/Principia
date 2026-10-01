@@ -449,3 +449,193 @@ pub fn pack_times(t_end_step: u32, t_dmin_step: u32) -> u32 {
     let w = set_t_end_step(0, t_end_step);
     set_t_dmin_step(w, t_dmin_step)
 }
+
+/// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
+pub const FGW_CAPACITY: u32 = 76;
+
+/// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
+pub const FGW_LENGTH_SENTINEL: u32 = 127;
+
+/// `length_raw`: bits 25–31 of the word's `.w`, element 3 of its `vec4<u32>`; 0…76 valid, 127 truncated
+/// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
+#[inline]
+pub fn fgw_length_raw(w: [u32; 4]) -> u32 {
+    extract(w[3], 25, 7)
+}
+
+/// Whether the word is truncated: `length_raw` is the sentinel (payload §3).
+#[inline]
+pub fn fgw_truncated(w: [u32; 4]) -> bool {
+    fgw_length_raw(w) == FGW_LENGTH_SENTINEL
+}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+#[inline]
+pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {
+    if fgw_truncated(w) {
+        FGW_CAPACITY
+    } else {
+        fgw_length_raw(w)
+    }
+}
+
+/// Payload §3's frozen `inverse` (symbol codes `a = 0, A = 1, b = 2, B = 3`): part of the binary format.
+pub const INVERSE: [u32; 4] = [1, 0, 3, 2];
+
+/// Payload §3's frozen `cont_symbol`: `next = CONT_SYMBOL[digit][prev]`.
+pub const CONT_SYMBOL: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
+
+/// `predecessor_symbol`, `prev = PREDECESSOR_SYMBOL[digit][next]`: `CONT_SYMBOL` inverted, so equal to it (payload §3).
+pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
+
+/// `continuation_index`, `digit = CONTINUATION_INDEX[prev][next]`: `CONT_SYMBOL` inverted, and 3 ("invalid") where
+/// `next = inverse(prev)` (R-307, payload §3).
+pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
+    [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]];
+
+/// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
+#[inline]
+pub const fn inverse(s: u32) -> u32 {
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let s = s & 3;
+    if s == 0 {
+        1
+    } else if s == 1 {
+        0
+    } else if s == 2 {
+        3
+    } else {
+        2
+    }
+}
+
+/// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
+/// digit, 0…2: `debug_assert!`ed, then clamped `min(e, 2)` (R-324); `prev` a symbol code, 0…3: `debug_assert!`ed, then
+/// masked `& 3` (R-321).
+#[inline]
+pub fn continuation_symbol(prev: u32, e: u32) -> u32 {
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let prev = prev & 3;
+    let e = e.min(2);
+    if e == 0 {
+        if prev == 0 {
+            0
+        } else if prev == 1 {
+            1
+        } else if prev == 2 {
+            2
+        } else {
+            3
+        }
+    } else if e == 1 {
+        if prev == 0 {
+            2
+        } else if prev == 1 {
+            3
+        } else if prev == 2 {
+            0
+        } else {
+            1
+        }
+    } else if prev == 0 {
+        3
+    } else if prev == 1 {
+        2
+    } else if prev == 2 {
+        1
+    } else {
+        0
+    }
+}
+
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2: `debug_assert!`ed, then clamped
+/// `min(e, 2)` (R-324); `next` a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
+#[inline]
+pub fn predecessor_symbol(next: u32, e: u32) -> u32 {
+    debug_assert!(next < 4, "next is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let next = next & 3;
+    let e = e.min(2);
+    if e == 0 {
+        if next == 0 {
+            0
+        } else if next == 1 {
+            1
+        } else if next == 2 {
+            2
+        } else {
+            3
+        }
+    } else if e == 1 {
+        if next == 0 {
+            2
+        } else if next == 1 {
+            3
+        } else if next == 2 {
+            0
+        } else {
+            1
+        }
+    } else if next == 0 {
+        3
+    } else if next == 1 {
+        2
+    } else if next == 2 {
+        1
+    } else {
+        0
+    }
+}
+
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3: each `debug_assert!`ed,
+/// then masked `& 3` (R-321), so 3 is returned only in the four inverse cells.
+#[inline]
+pub const fn continuation_index(prev: u32, s: u32) -> u32 {
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let prev = prev & 3;
+    let s = s & 3;
+    if prev == 0 {
+        if s == 0 {
+            0
+        } else if s == 1 {
+            3
+        } else if s == 2 {
+            1
+        } else {
+            2
+        }
+    } else if prev == 1 {
+        if s == 0 {
+            3
+        } else if s == 1 {
+            0
+        } else if s == 2 {
+            2
+        } else {
+            1
+        }
+    } else if prev == 2 {
+        if s == 0 {
+            1
+        } else if s == 1 {
+            2
+        } else if s == 2 {
+            0
+        } else {
+            3
+        }
+    } else if s == 0 {
+        2
+    } else if s == 1 {
+        1
+    } else if s == 2 {
+        3
+    } else {
+        0
+    }
+}

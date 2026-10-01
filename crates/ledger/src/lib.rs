@@ -11,8 +11,8 @@ pub mod gen;
 pub mod payload;
 pub mod schema;
 
-/// The layout table `cargo xtask codegen` generates from: so far the payload's (dd_simstate_payload §0–§1;
-/// dd_generation_root §3.1, §3.3a–§3.6).
+/// The layout table `cargo xtask codegen` generates from: so far the payload's (dd_simstate_payload §0–§3;
+/// dd_generation_root §3.1, §3.3–§3.6).
 pub fn layout() -> schema::Ledger {
     payload::ledger()
 }
