@@ -1,13 +1,17 @@
 //! QA tests for TASK-M0-14's rust-gpu build cache, written from REQ-SYS-075 ("Every CI job that builds the kernel must
-//! restore and save the rust-gpu build cache (`~/.cache/rust-gpu`) under a key naming its job (R-285, REQ-SYS-073) and
-//! the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320)") and
-//! REQ-SYS-073 (every cache key names its job).
+//! restore the rust-gpu build cache (`~/.cache/rust-gpu`), and save it only in a run on a push to `main` (R-326), under
+//! a key naming its job (R-285, REQ-SYS-073) and the pinned toolchain version from `rust-toolchain.toml`, so a
+//! toolchain bump starts a fresh cache (R-320)") and REQ-SYS-073 (every cache key names its job; every cache step saves
+//! only in a run on a push to `main`, and a pull-request run restores only).
 //!
 //! They read every workflow under `.github/workflows/`. A job builds the kernel when a step runs `build-kernel`
 //! (`cargo xtask build-kernel`, or the cargo call the alias expands to) or `cargo xtask ci`, whose registry runs
 //! build-kernel (`xtask/tests/ci.rs`). For each such job:
-//! - an `actions/cache` step restores `~/.cache/rust-gpu` before the first build and one saves it (R-320);
-//! - the cache step runs whenever the build does (no `if:` the build step lacks);
+//! - an `actions/cache/restore` step restores `~/.cache/rust-gpu` before the first build, and runs whenever the build
+//!   does (no `if:` the build step lacks) (R-320, R-326);
+//! - an `actions/cache/save` step after the build saves it under the key the restore reads, only in a run on a push to
+//!   `main`: its `if:` is the build's condition `&&` `github.event_name == 'push'` `&&` `github.ref ==
+//!   'refs/heads/main'`; no `actions/cache@…` step, which saves in every run it restores in (R-326);
 //! - its key names the job, and no two jobs share a key (R-285);
 //! - its key, resolved as the runner would (each `steps.<id>.outputs.<name>` it uses computed by running that step's
 //!   `echo "<name>=…" >> "$GITHUB_OUTPUT"` line in the repository), contains the channel `rust-toolchain.toml` pins, and
@@ -53,6 +57,18 @@ fn edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
     let (_, text) = files.iter_mut().find(|(f, _)| f == file).unwrap();
     assert!(text.contains(from), "{file} has no {from:?} to edit");
     *text = text.replacen(from, to, 1);
+    files
+}
+
+/// The workflows with every `from` replaced by its `to` in the named file, in order. Only the controls use it.
+#[cfg(feature = "controls")]
+fn edited_all(file: &str, edits: &[(&str, &str)]) -> Vec<(String, String)> {
+    let mut files = workflows();
+    let (_, text) = files.iter_mut().find(|(f, _)| f == file).unwrap();
+    for (from, to) in edits {
+        assert!(text.contains(from), "{file} has no {from:?} to edit");
+        *text = text.replace(from, to);
+    }
     files
 }
 
@@ -357,7 +373,30 @@ fn step_output(job: &Job, id: &str, name: &str) -> String {
         .to_owned()
 }
 
-// ---- 1. Every job that builds the kernel restores and saves ~/.cache/rust-gpu --------------------------------------
+// ---- 1. Every job that builds the kernel restores ~/.cache/rust-gpu, and saves it only on a push to main ----------
+
+/// A condition's `&&`-joined terms, `${{ }}` and whitespace stripped; `None` for an empty condition. A term holding
+/// `||` or a `!` other than `!=` is kept whole, so it never matches a plain term.
+fn terms(cond: Option<&str>) -> Vec<String> {
+    let Some(c) = cond else { return Vec::new() };
+    let c = c.trim();
+    let c = c
+        .strip_prefix("${{")
+        .and_then(|c| c.strip_suffix("}}"))
+        .unwrap_or(c);
+    if c.contains("||") || c.replace("!=", "").contains('!') {
+        return vec![c.to_owned()];
+    }
+    let mut t: Vec<String> = c
+        .split("&&")
+        .map(|t| t.chars().filter(|ch| !ch.is_whitespace()).collect())
+        .collect();
+    t.sort();
+    t
+}
+
+const ON_PUSH: &str = "github.event_name=='push'";
+const ON_MAIN: &str = "github.ref=='refs/heads/main'";
 
 fn check_restored_and_saved(jobs: &[Job]) {
     let found = kernel_jobs(jobs);
@@ -374,26 +413,48 @@ fn check_restored_and_saved(jobs: &[Job]) {
             .enumerate()
             .filter(|(_, s)| caches_rust_gpu(s))
             .collect();
-        assert!(
-            steps
-                .iter()
-                .any(|(i, s)| *i < b && cache_kind(s) != Some("save")),
-            "{at}: builds the kernel without restoring {RUST_GPU} before it (R-320)"
-        );
-        assert!(
-            steps.iter().any(|(i, s)| match cache_kind(s) {
-                Some("both") => *i < b,
-                Some("save") => *i > b,
-                _ => false,
-            }),
-            "{at}: builds the kernel without saving {RUST_GPU} (R-320)"
-        );
         for (_, s) in &steps {
-            let cond = s.get("if");
             assert!(
-                cond.is_none() || cond == build_if,
-                "{at}: its {RUST_GPU} cache step runs under `if: {}`, which the build does not ({build_if:?})",
-                cond.unwrap_or("")
+                cache_kind(s) != Some("both"),
+                "{at}: its {RUST_GPU} cache step restores and saves at once, so it saves in every run, a pull-request \
+                 run too (R-326)"
+            );
+        }
+        let restore = steps
+            .iter()
+            .find(|(i, s)| *i < b && cache_kind(s) == Some("restore"))
+            .map(|(_, s)| *s);
+        let Some(restore) = restore else {
+            panic!("{at}: builds the kernel without restoring {RUST_GPU} before it (R-320)");
+        };
+        let cond = restore.get("if");
+        assert!(
+            cond.is_none() || cond == build_if,
+            "{at}: its {RUST_GPU} restore step runs under `if: {}`, which the build does not ({build_if:?})",
+            cond.unwrap_or("")
+        );
+        let saves: Vec<&Step> = steps
+            .iter()
+            .filter(|(i, s)| *i > b && cache_kind(s) == Some("save"))
+            .map(|(_, s)| *s)
+            .collect();
+        assert!(
+            !saves.is_empty(),
+            "{at}: builds the kernel without saving {RUST_GPU} after it (R-320)"
+        );
+        let mut want = terms(build_if);
+        want.extend([ON_PUSH.to_owned(), ON_MAIN.to_owned()]);
+        want.sort();
+        for save in saves {
+            assert_eq!(
+                terms(save.get("if")),
+                want,
+                "{at}: its {RUST_GPU} save step's `if:` is not the build's condition and a push to `main` (R-326)"
+            );
+            assert_eq!(
+                save.input("key"),
+                restore.input("key"),
+                "{at}: its {RUST_GPU} save step saves under another key than the one its restore reads"
             );
         }
     }
@@ -406,7 +467,7 @@ fn qa_m014_kernel_jobs_restore_and_save_the_rust_gpu_build() {
 
 negative_control!(
     qa_m014_kernel_jobs_restore_and_save_the_rust_gpu_build,
-    "mutants.yml with its rust-gpu cache step caching another directory",
+    "mutants.yml with its rust-gpu restore step caching another directory",
     expected = "job `mutants`: builds the kernel without restoring ~/.cache/rust-gpu",
     check_restored_and_saved(&all_jobs(&edited(
         "mutants.yml",
@@ -422,12 +483,12 @@ fn qa_m014_kernel_jobs_save_the_rust_gpu_build() {
 
 negative_control!(
     qa_m014_kernel_jobs_save_the_rust_gpu_build,
-    "ci.yml with the ci job's rust-gpu cache made restore-only",
-    expected = "job `ci`: builds the kernel without saving ~/.cache/rust-gpu",
+    "ci.yml with the gpu-kernel job's rust-gpu save step made restore-only",
+    expected = "job `gpu-kernel`: builds the kernel without saving ~/.cache/rust-gpu",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-ci-",
-        "      - uses: actions/cache/restore@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-ci-"
+        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
     )))
 );
 
@@ -438,12 +499,92 @@ fn qa_m014_the_rust_gpu_cache_runs_whenever_the_build_does() {
 
 negative_control!(
     qa_m014_the_rust_gpu_cache_runs_whenever_the_build_does,
-    "ci.yml with the ci job's rust-gpu cache restricted to pushes, though the kernel is built on every run",
+    "ci.yml with the gpu-kernel job's rust-gpu restore restricted to pushes, though the kernel is built on every run",
     expected = "which the build does not",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-ci-",
-        "      - uses: actions/cache@v4\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-ci-"
+        "      - uses: actions/cache/restore@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
+    )))
+);
+
+#[test]
+fn qa_m014_the_rust_gpu_cache_saves_only_on_a_push_to_main() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_the_rust_gpu_cache_saves_only_on_a_push_to_main,
+    "ci.yml with xtask-ci's rust-gpu save step unconditioned, so a pull-request run saves it",
+    expected = "job `xtask-ci`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
+    check_restored_and_saved(&all_jobs(&edited(
+        "ci.yml",
+        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
+        "      - uses: actions/cache/save@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-"
+    )))
+);
+
+#[test]
+fn qa_m014_the_rust_gpu_save_is_main_not_any_branch() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_the_rust_gpu_save_is_main_not_any_branch,
+    "ci.yml with gpu-kernel's rust-gpu save on a push to any branch or on main by any event (`||`)",
+    expected = "job `gpu-kernel`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
+    check_restored_and_saved(&all_jobs(&edited(
+        "ci.yml",
+        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' || github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
+    )))
+);
+
+#[test]
+fn qa_m014_the_rust_gpu_save_keeps_the_builds_condition() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_the_rust_gpu_save_keeps_the_builds_condition,
+    "mutants.yml with its rust-gpu save dropping the build's own condition, so it saves when no kernel was built",
+    expected = "job `mutants`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
+    check_restored_and_saved(&all_jobs(&edited(
+        "mutants.yml",
+        "        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'\n",
+        "        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n"
+    )))
+);
+
+#[test]
+fn qa_m014_no_rust_gpu_step_restores_and_saves_at_once() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_no_rust_gpu_step_restores_and_saves_at_once,
+    "mutants.yml with its rust-gpu restore turned back into `actions/cache@v4`, which saves in every run",
+    expected = "job `mutants`: its ~/.cache/rust-gpu cache step restores and saves at once",
+    check_restored_and_saved(&all_jobs(&edited(
+        "mutants.yml",
+        "      - uses: actions/cache/restore@v4\n        if: steps.diff.outputs.rust == 'true'\n        with:\n          path: ~/.cache/rust-gpu",
+        "      - uses: actions/cache@v4\n        if: steps.diff.outputs.rust == 'true'\n        with:\n          path: ~/.cache/rust-gpu"
+    )))
+);
+
+#[test]
+fn qa_m014_the_rust_gpu_save_key_is_the_restored_key() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_the_rust_gpu_save_key_is_the_restored_key,
+    "ci.yml with xtask-ci saving the rust-gpu build under a key its restore never reads",
+    expected = "job `xtask-ci`: its ~/.cache/rust-gpu save step saves under another key",
+    check_restored_and_saved(&all_jobs(&edited(
+        "ci.yml",
+        "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-${{ runner.os }}-",
+        "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-${{ runner.os }}-v2-"
     )))
 );
 
@@ -461,8 +602,11 @@ fn check_keys(jobs: &[Job]) {
                 names_job(literal, &job.id),
                 "{at}: rust-gpu cache key {key:?} does not name its job"
             );
-            if let Some((other, _)) = seen.iter().find(|(_, k)| k == key) {
-                panic!("{at}: rust-gpu cache key {key:?} is shared with {other}, so it does not name its job");
+            // A job's restore and save steps share their key (R-326); another job's never does.
+            if let Some((other, _)) = seen.iter().find(|(o, k)| k == key && *o != at) {
+                panic!(
+                    "{at}: rust-gpu cache key {key:?} is shared with {other}, so it does not name its job"
+                );
             }
             seen.push((at.clone(), key.to_owned()));
             let resolved = resolve(job, key);
@@ -530,8 +674,8 @@ negative_control!(
     expected = "falls back across toolchains",
     check_keys(&all_jobs(&edited(
         "ci.yml",
-        "          key: rust-gpu-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n",
-        "          key: rust-gpu-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n          restore-keys: rust-gpu-ci-${{ runner.os }}-\n"
+        "          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n",
+        "          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n          restore-keys: rust-gpu-gpu-kernel-${{ runner.os }}-\n"
     )))
 );
 
@@ -558,12 +702,21 @@ fn qa_m014_no_two_jobs_share_a_rust_gpu_key() {
 
 negative_control!(
     qa_m014_no_two_jobs_share_a_rust_gpu_key,
-    "ci.yml with the ci job's rust-gpu key made xtask-ci's, which contains the word ci but is another job's key",
-    expected = "is shared with ci.yml job `ci`",
-    check_keys(&all_jobs(&edited(
+    "ci.yml with gpu-kernel's and xtask-ci's rust-gpu keys both made `rust-gpu-gpu-kernel-xtask-ci-…`, which names each \
+     job but is shared",
+    expected = "job `xtask-ci`: rust-gpu cache key \"rust-gpu-gpu-kernel-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\" is shared with ci.yml job `gpu-kernel`",
+    check_keys(&all_jobs(&edited_all(
         "ci.yml",
-        "key: rust-gpu-ci-",
-        "key: rust-gpu-xtask-ci-"
+        &[
+            (
+                "key: rust-gpu-xtask-ci-",
+                "key: rust-gpu-gpu-kernel-xtask-ci-"
+            ),
+            (
+                "key: rust-gpu-gpu-kernel-$",
+                "key: rust-gpu-gpu-kernel-xtask-ci-$"
+            ),
+        ]
     )))
 );
 
