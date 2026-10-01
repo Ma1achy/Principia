@@ -3768,5 +3768,5 @@ the physics reviewer. A new task, TASK-M0-46, depending on TASK-M0-12, builds it
 physics reviewer as for TASK-M0-12 (R-251), and tests it over test entries; the registry's own entries are
 TASK-M2-01's, hashed as they land. `PAYLOAD_SCHEMA_VERSION`'s value changes when TASK-M0-46 lands, since the canonical
 serialisation gains the registry's table, and again when TASK-M2-01 adds its entries; under R-36 that is the intent.
-Filed: RQ-188, whether the registry's chart constants that no link entry reads (`δ_λ`, `ε_w`) are hashed too.
+Filed: RQ-189, whether the registry's chart constants that no link entry reads (`δ_λ`, `ε_w`) are hashed too.
 TASK-M0-46 waits for it.

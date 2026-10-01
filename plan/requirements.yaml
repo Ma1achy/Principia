@@ -6375,7 +6375,7 @@
   - R-251
   - R-340
   milestone: M0
-  note: "RQ-188 open: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. The registry's own entries are TASK-M2-01's, hashed as they land."
+  note: "RQ-189 open: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. The registry's own entries are TASK-M2-01's, hashed as they land."
 - id: REQ-GEN-032
   area: GEN
   kind: definition

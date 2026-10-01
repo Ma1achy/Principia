@@ -9,7 +9,7 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-188: Whether the link registry's chart constants that no link reads, `δ_λ` and `ε_w`, are hashed into the schema version with the links *(physics, R-340, TASK-M0-46, TASK-M2-01, REQ-GEN-031)*
+## RQ-189: Whether the link registry's chart constants that no link reads, `δ_λ` and `ε_w`, are hashed into the schema version with the links *(physics, R-340, TASK-M0-46, TASK-M2-01, REQ-GEN-031)*
 
 - **File, section:**
   - `decisions.md` § "R-340 — The schema version hashes each link registry entry's semantic content, not its prose": the

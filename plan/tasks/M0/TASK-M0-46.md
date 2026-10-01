@@ -50,7 +50,7 @@ when this lands, since the canonical serialisation gains the registry's table.
   generation-root §3.9, with no formatting-dependent bytes, approved by the physics reviewer (REQ-GEN-032).
 
 ## Notes
-- Waits for RQ-188: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. Its ruling
+- Waits for RQ-189: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. Its ruling
   is applied here before the task starts.
 - R-340 (applied per R-204 — veto?): the entry's name is hashed, as TASK-M0-12 hashes each layout entry's and register
   constant's name, and every entry is hashed, whether or not a block uses it by default.
