@@ -22,6 +22,9 @@ egui-wgpu = { version = "0.36.2", default-features = false }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 pollster = "1"
 png = "0.18"
+# `cargo xtask lint wgsl` parses and validates the generated WGSL with naga, wgpu's own front end, at wgpu 30's version
+# (REQ-RENDER-001).
+naga = { version = "30", features = ["wgsl-in"] }
 sha2 = "0.10"
 
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).

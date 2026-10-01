@@ -1,10 +1,11 @@
 //! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
-//! payload struct member the Rust emitter would write is off the ledger ([`rust::check`]). The emitters are
-//! registered in [`EMITTERS`].
+//! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]). The emitters are
+//! registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]).
 
 pub mod rust;
+pub mod wgsl;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -23,7 +24,7 @@ pub struct Generated {
 pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
 
 /// The registered emitters, run in order.
-pub const EMITTERS: &[Emitter] = &[rust::emit];
+pub const EMITTERS: &[Emitter] = &[rust::emit, wgsl::emit];
 
 /// Why generation was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -191,8 +192,8 @@ fn is_name(s: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
-/// Validates `ledger` and runs the static layout check over it; if `emitters` include the Rust struct emitter
-/// ([`rust::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
+/// Validates `ledger` and runs the static layout check over it; if `emitters` include a struct emitter
+/// ([`rust::emit`] or [`wgsl::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
 /// ([`rust::check`], exempting [`crate::payload::PENDING`]); then runs `emitters` over it. The files they generate, or
 /// why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
@@ -202,9 +203,10 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
         return Err(GenError::Layout(findings));
     }
     let structs = crate::payload::structs();
-    let writes_structs = emitters
-        .iter()
-        .any(|&e| std::ptr::fn_addr_eq(e, rust::emit as Emitter));
+    let writes_structs = emitters.iter().any(|&e| {
+        std::ptr::fn_addr_eq(e, rust::emit as Emitter)
+            || std::ptr::fn_addr_eq(e, wgsl::emit as Emitter)
+    });
     if writes_structs && rust::declares(&structs, &ledger.words, &entries) {
         let found = rust::check(&structs, &ledger.words, &entries, crate::payload::PENDING);
         if !found.is_empty() {

@@ -762,6 +762,7 @@ dependencies = [
 name = "ledger"
 version = "0.1.0"
 dependencies = [
+ "naga",
  "validation",
 ]
 
@@ -2186,6 +2187,7 @@ dependencies = [
  "egui",
  "egui-wgpu",
  "ledger",
+ "naga",
  "png",
  "pollster",
  "serde",
