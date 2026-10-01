@@ -6,9 +6,18 @@ publish.workspace = true
 
 [dependencies]
 engine = { path = "../engine" }
+# `prin profile`'s subcommands and flags (TASK-M0-18).
+clap = { version = "4", features = ["derive"] }
+serde = "1"
+serde_json = "1"
 
 [dev-dependencies]
 validation = { path = "../validation" }
+# The profile tests validate each written line against profiler schema v1's JSON Schema (TASK-M0-18); no remote
+# references, so no HTTP resolver.
+jsonschema = { version = "0.58", default-features = false }
+# The canonical-serialisation tests serialise a struct of their own (REQ-TOOL-145).
+serde = { version = "1", features = ["derive"] }
 
 # Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-153, R-176).
 [features]

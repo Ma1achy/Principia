@@ -91,21 +91,22 @@ fn header(display: Option<Display>) -> SessionHeader {
     config.insert("n".to_owned(), json!(64));
     SessionHeader {
         device: Device {
-            gpu: "Apple M3".to_owned(),
+            gpu: Some("Apple M3".to_owned()),
             cpu: "Apple M3".to_owned(),
-            cpu_cores: 8,
+            cpu_cores_available: 8,
+            cpu_cores_total: Some(8),
             gpu_cores: Some(10),
-            memory: Memory::Unified { bytes: 18 << 30 },
+            memory: Some(Memory::Unified { bytes: 18 << 30 }),
         },
         backend: Backend {
             api: Api::Metal,
-            driver: "metal 3".to_owned(),
+            driver: Some("metal 3".to_owned()),
         },
-        precision: Precision {
+        precision: Some(Precision {
             f32: true,
             f64: false,
             f64_rate: None,
-        },
+        }),
         build: Build {
             commit: "f8a7f8c".to_owned(),
             profile: "release".to_owned(),
@@ -1306,7 +1307,7 @@ fn profile_v1_ranges_write_refuses_out_of_range() {
         (
             {
                 let mut trace = interactive();
-                trace.header.precision.f64_rate = Some(f64::NAN);
+                trace.header.precision.as_mut().unwrap().f64_rate = Some(f64::NAN);
                 trace
             },
             "a NaN f64_rate",
@@ -1377,9 +1378,14 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
             "a negative dpi_scale",
         ),
         (
-            "/header/device/cpu_cores",
+            "/header/device/cpu_cores_available",
             json!(u64::from(u32::MAX) + 1),
-            "cpu_cores past u32",
+            "cpu_cores_available past u32",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(u64::from(u32::MAX) + 1),
+            "cpu_cores_total past u32",
         ),
         (
             "/header/device/gpu_cores",
@@ -1413,9 +1419,19 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
     }
     let accepted = [
         (
-            "/header/device/cpu_cores",
+            "/header/device/cpu_cores_available",
             json!(u32::MAX),
-            "cpu_cores at u32::MAX",
+            "cpu_cores_available at u32::MAX",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(u32::MAX),
+            "cpu_cores_total at u32::MAX",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(null),
+            "a null cpu_cores_total",
         ),
         (
             "/frames/0/tree_depth_max",
@@ -1442,11 +1458,11 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
 
 validation::negative_control!(
     profile_v1_ranges_reader_agrees_with_schema,
-    "cpu_cores at u32::MAX is in range, so rejecting it must fail",
+    "cpu_cores_available at u32::MAX is in range, so rejecting it must fail",
     expected = "was accepted by profile_v1.json",
     check_rejected(
-        &with_value("/header/device/cpu_cores", json!(u32::MAX)),
-        "cpu_cores at u32::MAX"
+        &with_value("/header/device/cpu_cores_available", json!(u32::MAX)),
+        "cpu_cores_available at u32::MAX"
     )
 );
 
@@ -1727,4 +1743,208 @@ validation::negative_control!(
     check_no_allocation_per_frame(|trace| {
         write(&trace.clone(), io::sink()).expect("the writer failed");
     })
+);
+
+// ----- TASK-M0-18: the no-GPU header (R-308), config's canonical text (R-309), the percentile -----
+
+/// A session that opened no GPU (R-308): `api` "none", and the GPU's fields `None`.
+fn no_gpu() -> Trace {
+    let mut trace = batch();
+    trace.header.device.gpu = None;
+    trace.header.device.gpu_cores = None;
+    trace.header.device.memory = None;
+    trace.header.backend = Backend {
+        api: Api::None,
+        driver: None,
+    };
+    trace.header.precision = None;
+    trace
+}
+
+/// The reader and the JSON Schema both accept `file`, and it reads back as `trace`.
+fn check_no_gpu_reads(file: &[u8], trace: &Trace) {
+    let lines = lines(file);
+    assert!(
+        line_errors(&lines).is_empty(),
+        "the schema rejects the file"
+    );
+    let got = read(file).expect("the reader rejects the file");
+    assert_eq!(&got, trace, "the file does not read back as the trace");
+}
+
+#[test]
+fn profile_v1_no_gpu_header_reads() {
+    let trace = no_gpu();
+    let file = bytes(&trace);
+    let head: Value = serde_json::from_slice(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
+    for pointer in [
+        "/header/backend/driver",
+        "/header/device/gpu",
+        "/header/device/gpu_cores",
+        "/header/device/memory",
+        "/header/precision",
+    ] {
+        assert_eq!(
+            head.pointer(pointer),
+            Some(&Value::Null),
+            "{pointer} is not null"
+        );
+    }
+    assert_eq!(head["header"]["backend"]["api"], json!("none"));
+    check_no_gpu_reads(&file, &trace);
+}
+
+validation::negative_control!(
+    profile_v1_no_gpu_header_reads,
+    "an api outside the five values must fail the check",
+    expected = "the schema rejects the file",
+    {
+        let trace = no_gpu();
+        let text = String::from_utf8(bytes(&trace)).unwrap().replacen(
+            r#""api":"none""#,
+            r#""api":"opengl""#,
+            1,
+        );
+        check_no_gpu_reads(text.as_bytes(), &trace)
+    }
+);
+
+/// The header line carries `config` as `expected`, its canonical text, JCS (gui_state_contract §2, R-318).
+fn check_config_text(file: &[u8], expected: &str) {
+    let first = std::str::from_utf8(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
+    assert!(
+        first.ends_with(&format!(r#""config":{expected}}}}}"#)),
+        "the header's config is not its canonical text: {first}"
+    );
+}
+
+/// JCS's member order and number format (`150000000000000000000`, not serde_json's `1.5e+20`); a u64 written as a
+/// string stays one.
+const CONFIG_TEXT: &str =
+    r#"{"a":{"b":-2.5,"s":"18446744073709551615","y":0.1},"z":150000000000000000000}"#;
+
+fn with_config() -> Trace {
+    let mut trace = batch();
+    trace.header.config =
+        json!({ "z": 1.5e20, "a": { "y": 0.1, "s": "18446744073709551615", "b": -2.5 } })
+            .as_object()
+            .unwrap()
+            .clone();
+    trace
+}
+
+#[test]
+fn profile_v1_config_written_canonically() {
+    let trace = with_config();
+    let file = bytes(&trace);
+    check_config_text(&file, CONFIG_TEXT);
+    assert_eq!(
+        read(file.as_slice()).unwrap(),
+        trace,
+        "the config does not read back"
+    );
+}
+
+validation::negative_control!(
+    profile_v1_config_written_canonically,
+    "a config in serde_json's own number text must fail the canonical check",
+    expected = "the header's config is not its canonical text",
+    {
+        let trace = with_config();
+        let file = bytes(&trace);
+        let own = serde_json::to_string(&trace.header.config).unwrap();
+        check_config_text(&file, &own)
+    }
+);
+
+/// `p` computes nearest-rank percentiles: the ⌈percent · n / 100⌉-th smallest, from 1, the smallest for 0.
+fn check_percentile(p: impl Fn(&[f64], u32) -> Option<f64>) {
+    let twenty: Vec<f64> = (1..=20).rev().map(f64::from).collect();
+    let cases: [(&[f64], u32, Option<f64>); 8] = [
+        (&twenty, 95, Some(19.0)),
+        (&twenty, 100, Some(20.0)),
+        (&twenty, 0, Some(1.0)),
+        (&twenty, 50, Some(10.0)),
+        (&twenty, 51, Some(11.0)),
+        (&[3.0, 1.0, 2.0], 95, Some(3.0)),
+        (&[7.0], 95, Some(7.0)),
+        (&[], 95, None),
+    ];
+    for (samples, percent, want) in cases {
+        assert_eq!(
+            p(samples, percent),
+            want,
+            "p{percent} of {samples:?} is not the nearest rank"
+        );
+    }
+}
+
+#[test]
+fn profile_v1_percentile_nearest_rank() {
+    check_percentile(crate::contract::profile::percentile);
+}
+
+validation::negative_control!(
+    profile_v1_percentile_nearest_rank,
+    "the largest sample must fail the nearest-rank check",
+    expected = "is not the nearest rank",
+    check_percentile(|s, _| s.iter().copied().reduce(f64::max))
+);
+
+// ----- R-329: the core counts, `cpu_cores_available` and `cpu_cores_total` -----
+
+/// `doc`'s device has `cpu_cores_available` and `cpu_cores_total` (as `total`), not `cpu_cores`, and both the reader
+/// and the JSON Schema accept it.
+fn check_core_counts(doc: &Value, total: &Value) {
+    let device = &doc["header"]["device"];
+    assert!(
+        device.get("cpu_cores").is_none(),
+        "the device still has cpu_cores"
+    );
+    assert!(
+        device["cpu_cores_available"].is_u64(),
+        "the device's cpu_cores_available is not a count"
+    );
+    assert_eq!(
+        device.get("cpu_cores_total"),
+        Some(total),
+        "the device's cpu_cores_total is not {total}"
+    );
+    check_accepted(doc, "the R-329 device");
+}
+
+#[test]
+fn profile_v1_core_counts_written() {
+    let mut trace = interactive();
+    check_core_counts(&written(&trace), &json!(8));
+    trace.header.device.cpu_cores_total = None;
+    check_core_counts(&written(&trace), &Value::Null);
+    // The old key is no longer schema v1.
+    let mut doc = written(&interactive());
+    let device = doc
+        .pointer_mut("/header/device")
+        .and_then(Value::as_object_mut)
+        .expect("no device");
+    let cores = device
+        .remove("cpu_cores_available")
+        .expect("no cpu_cores_available");
+    device.insert("cpu_cores".to_owned(), cores);
+    check_rejected(
+        &doc,
+        "a device with cpu_cores in place of cpu_cores_available",
+    );
+}
+
+validation::negative_control!(
+    profile_v1_core_counts_written,
+    "a device with no cpu_cores_total key must fail the check",
+    expected = "cpu_cores_total is not",
+    {
+        let mut doc = written(&interactive());
+        doc.pointer_mut("/header/device")
+            .and_then(Value::as_object_mut)
+            .expect("no device")
+            .remove("cpu_cores_total");
+        check_core_counts(&doc, &Value::Null)
+    }
 );
