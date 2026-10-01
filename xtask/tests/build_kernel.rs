@@ -11,7 +11,10 @@ use std::process::Command;
 
 use validation::negative_control;
 use validation::spawn::Spawn;
-use xtask::build_kernel::{check_channel, pinned_channel, run, to_wgsl, SPV, WGSL};
+use xtask::build_kernel::{
+    backend_built, check_channel, exact_requirement, locked_version, pinned_channel,
+    prepare_backend, run, to_wgsl, BACKEND_LOCK, BACKEND_TOML, BACKEND_VERSION, SPV, WGSL,
+};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -71,6 +74,147 @@ negative_control!(
     "the pinned nightly itself, which must be accepted",
     expected = "a backend on another nightly was accepted",
     check_refused("nightly-2026-04-11", "nightly-2026-04-11")
+);
+
+/// The requirement `toml`'s `[dependencies]` gives `package`.
+fn requirement(toml: &str, package: &str) -> String {
+    let doc: toml_edit::DocumentMut = toml.parse().expect("a manifest");
+    let dep = &doc["dependencies"][package];
+    dep.as_str()
+        .or_else(|| dep.get("version").and_then(|v| v.as_str()))
+        .unwrap_or_else(|| panic!("no {package} dependency"))
+        .to_owned()
+}
+
+/// rust-gpu's backend is pinned exactly at [`BACKEND_VERSION`]: xtask's `cargo-gpu-install`, the kernel's `spirv-std`
+/// and the backend crate's `rustc_codegen_spirv` ([`BACKEND_TOML`]) require exactly it, the workspace's `Cargo.lock`
+/// holds it, and [`BACKEND_LOCK`] pins `rustc_codegen_spirv` at it.
+fn check_pinned_exactly(
+    xtask_toml: &str,
+    kernel_toml: &str,
+    workspace_lock: &str,
+    backend_lock: &str,
+) {
+    for (what, toml, package) in [
+        ("xtask", xtask_toml, "cargo-gpu-install"),
+        ("kernel", kernel_toml, "spirv-std"),
+        ("the rust-gpu backend crate", BACKEND_TOML, "spirv-builder"),
+    ] {
+        let req = requirement(toml, package);
+        let version = exact_requirement(&req).unwrap_or_else(|e| panic!("{what}'s {package}: {e}"));
+        assert_eq!(
+            version, BACKEND_VERSION,
+            "{what}'s {package} is pinned at another version"
+        );
+    }
+    for package in ["cargo-gpu-install", "spirv-std", "spirv-builder"] {
+        assert_eq!(
+            locked_version(workspace_lock, package).as_deref(),
+            Some(BACKEND_VERSION),
+            "Cargo.lock does not hold {package} {BACKEND_VERSION}"
+        );
+    }
+    assert_eq!(
+        locked_version(backend_lock, "rustc_codegen_spirv").as_deref(),
+        Some(BACKEND_VERSION),
+        "rust-gpu-backend.lock does not pin rustc_codegen_spirv {BACKEND_VERSION}"
+    );
+}
+
+fn read(path: &str) -> String {
+    fs::read_to_string(root().join(path)).unwrap_or_else(|e| panic!("{path}: {e}"))
+}
+
+#[test]
+fn build_kernel_pins_the_backend_exactly() {
+    check_pinned_exactly(
+        &read("xtask/Cargo.toml"),
+        &read("crates/kernel/Cargo.toml"),
+        &read("Cargo.lock"),
+        BACKEND_LOCK,
+    );
+}
+
+negative_control!(
+    build_kernel_pins_the_backend_exactly,
+    "the kernel's spirv-std as a caret requirement, which rust-gpu 0.10.0 (another nightly) also meets",
+    expected = "is not an exact requirement",
+    check_pinned_exactly(
+        &read("xtask/Cargo.toml"),
+        &read("crates/kernel/Cargo.toml").replace("spirv-std = \"=", "spirv-std = \""),
+        &read("Cargo.lock"),
+        BACKEND_LOCK,
+    )
+);
+
+/// The backend library's file name on this host.
+fn backend_library() -> String {
+    format!(
+        "{}rustc_codegen_spirv{}",
+        std::env::consts::DLL_PREFIX,
+        std::env::consts::DLL_SUFFIX
+    )
+}
+
+/// A scratch directory standing for cargo-gpu's backend crate, with a backend library and `lock` as its `Cargo.lock`.
+fn backend_dir(case: &str, lock: &str) -> PathBuf {
+    let dir =
+        PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_backend_{case}"));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join(backend_library()), "a stand-in library").unwrap();
+    fs::write(dir.join("Cargo.lock"), lock).unwrap();
+    dir
+}
+
+/// A backend built under `lock` is not taken as built from [`BACKEND_VERSION`]; [`prepare_backend`] then writes the
+/// pinned crate and removes the library.
+fn check_rebuilt(case: &str, lock: &str) {
+    let dir = backend_dir(case, lock);
+    assert!(
+        !backend_built(&dir),
+        "a backend built from rustc_codegen_spirv {:?} was taken as built from {BACKEND_VERSION}",
+        locked_version(lock, "rustc_codegen_spirv")
+    );
+    prepare_backend(&dir).expect("prepare_backend");
+    assert_eq!(
+        fs::read_to_string(dir.join("Cargo.toml")).unwrap(),
+        BACKEND_TOML
+    );
+    assert_eq!(
+        fs::read_to_string(dir.join("Cargo.lock")).unwrap(),
+        BACKEND_LOCK
+    );
+    assert!(
+        !dir.join(backend_library()).exists(),
+        "prepare_backend kept the old library"
+    );
+}
+
+#[test]
+fn build_kernel_rebuilds_a_backend_of_another_version() {
+    let other = BACKEND_LOCK.replacen(
+        &format!("name = \"rustc_codegen_spirv\"\nversion = \"{BACKEND_VERSION}\""),
+        "name = \"rustc_codegen_spirv\"\nversion = \"0.10.0\"",
+        1,
+    );
+    assert_ne!(
+        other, BACKEND_LOCK,
+        "the edit found no rustc_codegen_spirv entry"
+    );
+    check_rebuilt("other", &other);
+    // Built under the pinned lockfile: used as it is. With no library: built.
+    let same = backend_dir("same", BACKEND_LOCK);
+    assert!(backend_built(&same));
+    fs::remove_file(same.join(backend_library())).unwrap();
+    assert!(!backend_built(&same));
+}
+
+negative_control!(
+    build_kernel_rebuilds_a_backend_of_another_version,
+    "a backend built under the pinned lockfile, which is used as it is",
+    expected = "was taken as built from",
+    check_rebuilt("control", BACKEND_LOCK)
 );
 
 /// A workspace under the test's temporary directory holding only `files`, and its `Cargo.toml`'s path.

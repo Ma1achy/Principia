@@ -25,8 +25,10 @@ png = "0.18"
 sha2 = "0.10"
 # `cargo xtask build-kernel` compiles `crates/kernel` to SPIR-V with rust-gpu, through cargo-gpu's installer, which builds
 # the `rustc_codegen_spirv` backend on the pinned nightly (rust-toolchain.toml), and translates it to WGSL with naga,
-# wgpu's own version (canonical_spec §1 item 2; lowering Part 2).
-cargo-gpu-install = "0.10.0-alpha.1"
+# wgpu's own version (canonical_spec §1 item 2; lowering Part 2). Exact: rust-gpu 0.10.0-alpha.1 is the release whose
+# backend builds on the pinned nightly-2026-04-11 (R-169); a caret requirement also admits 0.10.0, which needs another
+# nightly. The backend's own dependencies are pinned by `rust-gpu-backend.lock` (`build_kernel::BACKEND_LOCK`).
+cargo-gpu-install = "=0.10.0-alpha.1"
 naga = { version = "30", features = ["spv-in", "wgsl-out"] }
 
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).
