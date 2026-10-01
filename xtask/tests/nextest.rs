@@ -56,23 +56,45 @@ fn jobs(workflow: &str) -> Vec<Vec<&str>> {
     jobs
 }
 
-/// The commands of a job's `run:` steps.
-fn runs<'a>(job: &[&'a str]) -> Vec<&'a str> {
-    job.iter()
-        .filter_map(|line| {
-            let line = line.trim_start();
-            line.strip_prefix("- run: ")
-                .or_else(|| line.strip_prefix("run: "))
-        })
-        .map(str::trim)
-        .collect()
+/// The commands of a job's `run:` steps, each with the nextest profile it runs under: the `NEXTEST_PROFILE` its step's
+/// `env:` sets, or else the job's, or none (the default profile). CI's `ci` and `gpu-kernel` jobs split the workspace's
+/// tests by profile (R-325, `.config/nextest.toml`).
+fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
+    let mut out = Vec::new();
+    let mut in_steps = false;
+    let (mut job_profile, mut step_profile) = (None, None);
+    for line in job {
+        let line = line.trim_start();
+        if line.trim_end() == "steps:" {
+            in_steps = true;
+        }
+        if line.starts_with("- ") {
+            step_profile = None;
+        }
+        if let Some(profile) = line.strip_prefix("NEXTEST_PROFILE:") {
+            let profile = Some(profile.trim().trim_matches('"'));
+            if in_steps {
+                step_profile = profile;
+            } else {
+                job_profile = profile;
+            }
+        }
+        if let Some(run) = line
+            .strip_prefix("- run: ")
+            .or_else(|| line.strip_prefix("run: "))
+        {
+            out.push((run.trim(), step_profile.or(job_profile)));
+        }
+    }
+    out
 }
 
 /// A CI test step: `cargo nextest run <args>` (`doc` false) or `cargo test <args>` with `--doc` (`doc` true), its
-/// arguments without `--no-capture` and `--doc`.
+/// arguments without `--no-capture` and `--doc`, and the nextest profile it runs under (`None` for the default).
 struct Step {
     doc: bool,
     args: Vec<String>,
+    profile: Option<String>,
 }
 
 /// The value of `--features` in `args`, or "" for the default feature set.
@@ -92,7 +114,7 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     for workflow in workflows {
         for job in jobs(workflow) {
             let mut nextest = false;
-            for run in runs(&job) {
+            for (run, profile) in runs(&job) {
                 let words = |rest: &str| -> Vec<String> {
                     rest.split_whitespace()
                         .filter(|w| !matches!(*w, "--no-capture" | "--nocapture" | "--doc"))
@@ -104,6 +126,7 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                     steps.push(Step {
                         doc: false,
                         args: words(rest),
+                        profile: profile.map(str::to_owned),
                     });
                 } else if let Some(rest) = run.strip_prefix("cargo test") {
                     assert!(
@@ -114,6 +137,7 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                     steps.push(Step {
                         doc: true,
                         args: words(rest),
+                        profile: None,
                     });
                 }
             }
@@ -201,10 +225,12 @@ fn libtest_list(args: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// The names `cargo nextest list <args>` lists, ignored tests included.
-fn nextest_list(args: &[String]) -> Vec<String> {
+/// The names `cargo nextest list <args>` lists under `profile` (`None`: the default profile), ignored tests included.
+/// The profile is always passed, so a NEXTEST_PROFILE this test runs under does not reach the listing.
+fn nextest_list(args: &[String], profile: Option<&str>) -> Vec<String> {
     let mut command: Vec<&str> = vec!["nextest", "list"];
     command.extend(args.iter().map(String::as_str));
+    command.extend(["--profile", profile.unwrap_or("default")]);
     command.extend([
         "--run-ignored",
         "all",
@@ -236,7 +262,7 @@ fn check_no_test_dropped(workflows: &[String]) {
                 args.push("--doc".to_owned());
                 libtest_list(&args)
             } else {
-                nextest_list(&step.args)
+                nextest_list(&step.args, step.profile.as_deref())
             };
             for name in listed {
                 *covered.entry(name).or_default() += 1;
@@ -275,6 +301,26 @@ validation::negative_control!(
                 "run: cargo nextest run --workspace",
                 "run: cargo nextest run -p kernel"
             ))
+            .collect::<Vec<_>>()
+    )
+);
+
+/// The same check, here for its control on the profiles: CI's `ci` and `gpu-kernel` jobs split the workspace's tests by
+/// nextest profile (R-325), and each step is listed under its own.
+#[test]
+fn nextest_ci_steps_list_every_test_under_their_profiles() {
+    check_no_test_dropped(&workflows());
+}
+
+validation::negative_control!(
+    nextest_ci_steps_list_every_test_under_their_profiles,
+    "a CI whose gpu-kernel step runs under the ci profile, whose filter leaves out the tests that need the built \
+     kernel (R-325), required to list every test",
+    expected = "the CI test steps drop tests `cargo test --workspace` lists",
+    check_no_test_dropped(
+        &workflows()
+            .iter()
+            .map(|w| w.replace("NEXTEST_PROFILE: gpu-kernel", "NEXTEST_PROFILE: ci"))
             .collect::<Vec<_>>()
     )
 );

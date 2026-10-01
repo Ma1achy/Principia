@@ -1,7 +1,12 @@
 # Per-push CI (R-177): formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in a job
 # of its own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
-# registers into. The tests run through cargo-nextest, pinned, and doctests, which nextest does not run, through
-# `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test `cargo test` did.
+# registers into. The GPU kernel build, `cargo xtask build-kernel`, and the tests that need the built kernel run in a
+# job of their own, `gpu-kernel`, in parallel with `ci` (R-325, REQ-SYS-076); each CI job's warm wall-clock time is
+# targeted at ~10.5 min (R-270, R-325). The tests run through cargo-nextest, pinned, and doctests, which nextest does
+# not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
+# `cargo test` did. `ci` and `gpu-kernel` split the workspace's tests between them by nextest profile
+# (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `ci` runs every test but the kernel's, `gpu-kernel` the
+# kernel's.
 # The per-PR mutation gate runs on pull requests only, in its own workflow, `mutants.yml` (R-196, R-202, R-302, R-305);
 # the per-push jobs are unchanged by it (R-177). Bench runs nightly and screenshots on GUI PRs, in their own workflows
 # (R-177).
@@ -13,6 +18,16 @@
 # repository's Actions cache stays well under GitHub's 10 GB limit. Every key names its job: rust-cache's `shared-key`
 # is the job id (its key reads `cargo-registry-<job>-…`), and the pool's key names `ci`, the job that saves it. The
 # `cargo-registry` prefix keeps these keys apart from the old `v0-rust-…` ones, which held target directories.
+# Every job that builds the kernel also caches the rust-gpu build, ~/.cache/rust-gpu, under a key naming its job and
+# the pinned toolchain channel (R-320, amending R-285).
+# Every cache restores in every run and is saved only in a run on a push to `main` (R-326, REQ-SYS-073, REQ-SYS-075):
+# rust-cache through its `save-if`, the others as an `actions/cache/restore` step and an `actions/cache/save` step,
+# each under the condition below. A pull-request run, or a push to any other branch, restores what `main` saved and
+# never saves.
+# The workflows that never run on a push to `main` (mutants.yml, pr-check.yml, reviews.yml, screenshot.yml,
+# stand-in-soak.yml) save nothing, and restore, read-only, the keys this workflow's jobs save on `main`: the cargo
+# registry under the `ci` job's key, and the rust-gpu build under the `gpu-kernel` job's (R-337). rust-cache hashes the
+# environment's CARGO_* variables into its key, so each of them sets CARGO_TERM_COLOR as this workflow does.
 name: ci
 
 on:
@@ -27,22 +42,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
+      # pool left this job with 11–24 MB free on ubuntu-latest. Remove the preinstalled toolsets it does not use (.NET,
+      # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
-        with:
-          components: rustfmt, clippy
+        run: |
+          rustup toolchain install
+          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
           shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
       # what changed. Keyed on what invalidates its builds: the runner, the toolchain, the lockfile and the fixtures'
-      # manifests; a new key starts from the latest pool of the same toolchain. Saved only when the job passes, so a
-      # run cut short by a failing test never saves a pool half built. Its key names this job, the only one that
-      # saves it (R-285).
-      - uses: actions/cache@v4
+      # manifests; a new key starts from the latest pool of the same toolchain. Restored here in every run; saved by
+      # the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut short by
+      # a failing test never saves a pool half built. Its key names this job, the only one that saves it (R-285).
+      - uses: actions/cache/restore@v4
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
@@ -66,33 +94,105 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # Every workspace test but those that need the built kernel, which `gpu-kernel` runs (R-325): the `ci` profile's
+      # default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE.
       - name: cargo nextest run --workspace
         env:
           PRIN_GPU_BACKEND: vulkan
+          NEXTEST_PROFILE: ci
         run: cargo nextest run --workspace
       - name: cargo test --workspace --doc
         run: cargo test --workspace --doc
       - name: cargo xtask deps
         run: cargo xtask deps
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: target/tmp/fixture-targets
+          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+
+  # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
+  # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL
+  # (canonical_spec §1 item 2; TASK-M0-14), then the `gpu-kernel` profile runs the tests that read
+  # `target/spirv/kernel.spv` or `kernel.wgsl`: validation's `toolchain_trivial_kernel` dispatches the WGSL on lavapipe
+  # (R-169), xtask's `build_kernel` tests check the SPIR-V and its translation.
+  gpu-kernel:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: gpu-kernel
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
+      # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
+      # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after the build only
+      # on a push to `main` (R-326).
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo xtask build-kernel
+        run: cargo xtask build-kernel
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      # The tests that need the built kernel, all in validation and xtask: the `gpu-kernel` profile's default filter
+      # (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. Their packages' doctests beside them, as beside every
+      # nextest step (R-231).
+      - name: cargo nextest run -p validation -p xtask
+        env:
+          NEXTEST_PROFILE: gpu-kernel
+        run: cargo nextest run -p validation -p xtask
+      - name: cargo test -p validation -p xtask --doc
+        run: cargo test -p validation -p xtask --doc
 
   # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask plan-check`, which needs
-  # Python and PyYAML (REQ-SYS-007), then `cargo xtask controls`, every control, failing on any finding (R-198,
-  # R-226). The GPU harness's controls run on lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists
-  # tests through the pinned cargo-nextest (R-231).
+  # Python and PyYAML (REQ-SYS-007), then `cargo xtask build-kernel`, whose WGSL the toolchain test's control
+  # dispatches, then `cargo xtask controls`, every control, failing on any finding (R-198, R-226). The GPU harness's
+  # controls run on lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists tests through the pinned
+  # cargo-nextest (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests'
+  # controls, which `cargo xtask controls` runs, read its output (R-325 moves it out of `ci`, not out of this job).
   xtask-ci:
     runs-on: ubuntu-latest
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
+        run: |
+          rustup toolchain install
+          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
           shared-key: xtask-ci
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       # The fixture pool the `ci` job saves, restored only, under its key: `cargo xtask controls` runs the fixture tests'
       # controls (R-270, R-285).
       - uses: actions/cache/restore@v4
@@ -100,6 +200,14 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
           restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
+      # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
+      # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
+      # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after `cargo xtask ci`
+      # only on a push to `main` (R-326).
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: actions/setup-python@v5
@@ -112,6 +220,11 @@ jobs:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask ci
         run: cargo xtask ci
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
 
   # GitHub-hosted Apple silicon, paravirtual Metal: the Metal correctness suites only (R-169, R-186).
   gpu-metal:
@@ -120,13 +233,17 @@ jobs:
       PRIN_GPU_BACKEND: metal
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
           shared-key: gpu-metal
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
@@ -156,13 +273,17 @@ jobs:
       PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
           shared-key: gpu-lavapipe
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@v2

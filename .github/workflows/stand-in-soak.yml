@@ -29,13 +29,19 @@ jobs:
       PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
-          shared-key: soak
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
+          # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It
+          # restores, read-only, the key `ci.yml`'s `ci` job saves on `main`, `cargo-registry-ci-…` (R-337).
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: Build the stand-in tests
