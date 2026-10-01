@@ -699,3 +699,11 @@
   section: "R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry"
   reason: informative only
   note: a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement
+- file: decisions.md
+  section: "R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*"
+  reason: informative only
+  note: a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR #96); REQ-VAL-166 is unchanged; changes no requirement
+- file: decisions.md
+  section: "R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*"
+  reason: informative only
+  note: reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR #106; records #106's D1–D6 veto item as not vetoed; changes no requirement

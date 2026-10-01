@@ -2567,10 +2567,11 @@ The max step isn't 0, so under this ruling each golden case keeps one reference 
 one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
 
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
-*Amended by R-301 and R-325.*
+*Amended by R-301, R-325 and R-336.*
 *Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the
 pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325);
-R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record.*
+R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. R-336 accepts PR
+#96's overrun of it, and TASK-M0-45 brings each job back under it.*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
 "#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
@@ -2811,6 +2812,9 @@ agent is dispatched with the ruling, in the human's words, in its opening prompt
 re-dispatched that way.
 
 ## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+*Amended by R-335 and R-336.*
+*Still in force: all of it; R-335 and R-336 each name test files, with implementer commits, that qa may change
+under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3541,6 +3545,9 @@ job is not a required status check until the human adds it to branch protection 
 so.
 
 ## R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
+*Amended by R-337.*
+*Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a
+workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
 
 "Actions cache: caches are saved only on pushes to main; PR jobs restore only. The rust-gpu cache keeps its own key."
@@ -3644,3 +3651,120 @@ requirement that doesn't exist or is retired, or a REVIEW_QUEUE entry that isn't
 ionisation gate, `δ_dep` and the per-sample departed bit, the change-10 re-runs, the two `alpha_area` defects, the
 camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab transcription checks. It lands in a
 PR of its own, after this one.
+
+## R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"1 yes." (RQ-186's recommended option 1.)
+
+*Applied:* R-326's cache save in the `xtask-ci` job is a step under a step-level `if:`, and
+`check_controls_job_beside_the_tests` in `xtask/tests/qa_TASK-M0-22_r235.rs` (line 115) rejects an `if:` at any indent
+in that job. qa may change that one check so that its `if:` test reads only the job's own `if:` (indent 4), not a
+step's; its `continue-on-error:` test and the rest of the file stay as they are, and the code reviewer confirms that
+nothing else changed. This is a named exception to R-290 for this file, whose history has implementer commits
+(9405734, 3b84aa5), on R-290's own ground: a ruling, R-326, changed the behaviour it tests. qa makes the change in
+PR #96's qa commit, and the orchestrator's R-237 check accepts `M` on this file in that commit. REQ-VAL-166 is
+unchanged: the controls job still cannot be skipped or pass with a finding. RQ-186, filed on PR #96's branch, is
+archived unchanged in `docs/archive/review_queue/M0.md` with this ruling's port, so that its id resolves on `main`;
+#96's next fix pass deletes its open copy from `REVIEW_QUEUE.md`. Changes no requirement.
+
+## R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076, REQ-SYS-077 (new), TASK-M0-14 (PR #96) and TASK-M0-45 (new)*
+
+"2 B: accept the overrun on #96, and make the sharding the next M0 task at high priority. It should also split the
+long single tests (the 257 s one, and the M0-24/25/26 suites), since sharding can't parallelise inside one test."
+
+*Applied:* PR #96's warm wall times, the `ci` job at about 16.5 min (18.7 cold) and `xtask-ci` at 11.7–13.3 min
+(19.5 cold), over R-270's ~10.5 min per job (R-325), are accepted for PR #96: its wall-time checks (REQ-SYS-073,
+REQ-SYS-076) are met by this ruling, not by a run under ~10.5 min. The target stays ~10.5 min for each CI job's warm
+wall-clock time. A new task, TASK-M0-45, depending on TASK-M0-14 and the next M0 task to start, at high priority,
+brings each job back under it:
+- it shards the nextest runs of the `ci` and `xtask-ci` jobs across parallel jobs, the shards together running every
+  test the unsharded run did;
+- it splits the long single tests that bound a job, since a shard cannot run one test in parallel:
+  `qa_cargo_xtask_alias_runs_deps` in `xtask/tests/qa_TASK-M0-01.rs` (257 s on PR #96), and the `qa_TASK-M0-24`,
+  `qa_TASK-M0-25` and `qa_TASK-M0-26` suites in `crates/validation/tests/` (about 100 s each).
+
+REQ-SYS-077 (new) carries it, and qa's finding on PR #96 against REQ-SYS-073 is answered by it. A new job is not a
+required status check until the human adds it to branch protection (R-266); TASK-M0-45's PR names the jobs to add.
+*Applied per R-204 — veto?:* the files holding those tests are qa's, and each has implementer commits, so R-290 bars
+both qa and the implementer from them. qa makes the splits, in TASK-M0-45's qa commit, as a named exception to R-290
+for those files, as R-335 is for `qa_TASK-M0-22_r235.rs`; a split moves tests and their controls without changing an
+assertion, and the code reviewer confirms that none is weakened. The orchestrator's R-237 check accepts `M` on those
+files, and `A` for the files split from them, in that commit.
+
+## R-337 — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
+
+"3 a."
+
+*Applied:* `mutants.yml`, `pr-check.yml`, `reviews.yml`, `screenshot.yml` and `stand-in-soak.yml` never run on a push
+to `main`, so under R-326 they never save a cache, and a restore under a key of their own finds nothing. Each restores,
+read-only, the key a `ci.yml` job saves on `main` for what it needs: the cargo registry under the key a `ci.yml` job
+saves it under, and, in a job that builds the kernel, the rust-gpu build under `gpu-kernel`'s key
+(`rust-gpu-gpu-kernel-<os>-<channel>`, R-320). Each of `mutants.yml`'s 8 shards built the rust-gpu backend cold on
+PR #96, about 4 min each. None of them saves. A cache that is saved still names the job that saves it (R-285); a
+restore-only step names the saving job's key, as `xtask-ci`'s restore of `ci`'s fixture pool does. The comments PR #96
+wrote at `pr-check.yml:28`, `reviews.yml:39`, `screenshot.yml:34` and `stand-in-soak.yml:42`, "it restores what `main`
+saved", were false of a key nothing saves; they are corrected to name the `ci.yml` key each step restores. TASK-M0-14
+(PR #96), which makes R-326's change in every workflow, makes this one. REQ-SYS-073 and REQ-SYS-075 follow.
+
+## R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
+*1 Oct 2026 · applied in `open-questions.md` and `plan/check_plan.py` (PR #106)*
+
+"4 yes. 5 ok."
+
+*Applied:* the items of `open-questions.md`'s "Audit section D — deliberately parked" are decisions to wait, each
+parked with its reason in its owning file (philosophy §7.7). They are not still-open items under R-334: section D is
+marked parked, carries no *Carried by* note, and `plan/check_plan.py`'s R-334 check does not read it. PR #106 (R-334's
+PR) applies it. RQ-187, filed on its branch, is archived unchanged in `docs/archive/review_queue/M0.md` with this
+ruling's port, so that its id resolves on `main`; #106's next fix pass deletes its open copy from `REVIEW_QUEUE.md`.
+Noted with it, not a ruling of its own ("5 ok"): PR #106's veto item, which marks `open-questions.md`'s corpus-defects
+section, D1–D6, "Closed: fixed by R-59" (applied per R-334), stands; the human did not veto it. Changes no requirement.
+
+## R-339 — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
+*1 Oct 2026 · applied in dd_integrator §3.6, §5 test 6, §6 and its closing line, and REQ-EVT-020*
+
+"6 yes: R-30's time ordering wins, so mark the block superseded."
+
+*Applied:* `docs/design/principia_dd_integrator.md` §3.6's block "Terminal taxonomy & priority (pinned here —
+confirm/veto)" ordered SIM_FAILED > COLLISION > ESCAPE > BOUNDED within one `STEP`: the markdown's pin that R-6 kept
+until the order was decided. R-30 decided it by time (REQ-EVT-020): sim_failed first; then whichever event came
+first, a same-time tie going to collision; triple ejection as a detail of escape; then running; then bounded. The
+block stays, marked "superseded by R-30, kept for the record", as change 11's escape gates above it are, and so does
+the paragraph after it that argues for the pin. What R-30 leaves alone still stands: labels are mutually exclusive,
+there is no timeout state, `MAX_SUBSTEPS` is not a terminal condition, and the order is deterministic, identical on
+CPU and GPU and in the shared physics source. §5 test 6's "per §3.6 priority" and the closing line's "Collision beats
+escape" cite R-30's same-time tie, and §6's "Priority-order pin" entry is struck through and marked settled by R-30,
+as R-14's entry there is. REQ-EVT-020 cites this ruling.
+
+## R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*
+*1 Oct 2026 · applied in generation-root §3.8 and §3.9, REQ-GEN-031 and REQ-GEN-032 (new), TASK-M0-46 (new) and
+TASK-M2-01*
+
+"7 hash it, without waiting for an RQ: the link registry's definitions determine how chart coordinates decode, so
+changing them changes what cached and saved results mean. That's exactly what the schema version is for. As with
+R-251, hash each link's semantic content, not its prose."
+
+*Applied:* TASK-M0-12 (merged) computes `PAYLOAD_SCHEMA_VERSION` over the layout entries and words, the continuation
+table, the code assignments, `QuadReduction`'s member list and the register entries that decide stored bits, but not
+the link registry (generation-root §3.9), though §2 names "the canonicalised §3 ledger". The registry joins the hashed
+ledger (R-36). §3.9 says what an entry is: "Each entry ships **forward, inverse, log-det, ε clamps, and the sampling
+note**", under the constraint its row names. The semantic content hashed is:
+- the entry's constraint, the block codomain it maps onto (§3.9's first column);
+- its forward, inverse and log-det;
+- its ε clamps, and each parameter its forward, inverse or log-det reads (`μ_max` in the simplex link, R-10), by value.
+
+Its sampling note is prose: §3.9 gives it to "the robustness-sweep picker", and no decode or encode reads it, so it is
+not hashed, as R-251 leaves out a constant's citation. Changing a hashed member of any entry, or adding or removing an
+entry, changes the schema version; a sampling-note-only edit does not. *Applied per R-204 — veto?:* the entry's name,
+the link id provenance records (chart contract § "Integrity: the link is part of the experiment"), is hashed too, as
+TASK-M0-12 hashes each layout entry's and register constant's name; and every entry is hashed, whether or not a block
+uses it by default, as the human's words are "each link's". How a function is written in the hashed bytes, a canonical
+form with no formatting-dependent bytes, is a definition TASK-M0-46 writes into §3.9 (R-72, REQ-GEN-032), approved by
+the physics reviewer. A new task, TASK-M0-46, depending on TASK-M0-12, builds it in `crates/ledger`, with the
+physics reviewer as for TASK-M0-12 (R-251), and tests it over test entries; the registry's own entries are
+TASK-M2-01's, hashed as they land. `PAYLOAD_SCHEMA_VERSION`'s value changes when TASK-M0-46 lands, since the canonical
+serialisation gains the registry's table, and again when TASK-M2-01 adds its entries; under R-36 that is the intent.
+Filed: RQ-188, whether the registry's chart constants that no link entry reads (`δ_λ`, `ε_w`) are hashed too.
+TASK-M0-46 waits for it.

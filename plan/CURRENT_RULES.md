@@ -78,6 +78,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-254** — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*
 - **R-255** — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*
 - **R-265** — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
+- **R-339** — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
 
 ## Design and architecture
 
@@ -205,6 +206,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-328** — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*
 - **R-329** — The header's core count is `cpu_cores_available`; no `usize` in a serialised type
 - **R-332** — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*
+- **R-340** — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*
 
 ## Values
 
@@ -255,12 +257,14 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-272** — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
-- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335 and R-336 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests). Amended by R-335 and R-336.
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 - **R-314** — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
 - **R-334** — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
+- **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+- **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
 
 ## CI
 
@@ -298,7 +302,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-305** — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
 - **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*. Still in force: the rust-gpu build is cached under a key naming its job and the pinned toolchain version; R-326 saves it only on pushes to `main`. Amended by R-326.
 - **R-325** — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*
-- **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
+- **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*. Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there. Amended by R-337.
+- **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+- **R-337** — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
 
 ## One-off acts (history only)
 
@@ -347,7 +353,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084 counted lines, one PR). Amended by R-264.
 - **R-267** — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
 - **R-268** — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
-- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. Amended by R-301 and R-325.
+- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. R-336 accepts PR #96's overrun of it, and TASK-M0-45 brings each job back under it. Amended by R-301, R-325 and R-336.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
