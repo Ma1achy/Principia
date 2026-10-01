@@ -45,6 +45,8 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - The GPU self-test of this WGSL is TASK-M0-15.
 - R-256's applied note: the WGSL half of REQ-PAY-002 is split off as REQ-PAY-091 and closed here.
 - R-319 (1 Oct): the Rust table functions fail a `debug_assert!` on an out-of-range input and return 3 in release; the
-  WGSL table functions, which have no `debug_assert!`, return 3 (REQ-PAY-016). *Applied per R-204 — veto?*
+  WGSL table functions, which have no `debug_assert!`, return 3 (REQ-PAY-016). Flagged to the human, who ruled R-321.
 - R-321 (1 Oct) amends R-319: the WGSL and Rust table functions mask each input `& 3` (Rust `debug_assert!`s it < 4
   first), so an input ≥ 4 reads the cell at `input & 3`; R-319's "returns 3" is replaced.
+- R-324 (1 Oct) completes R-321: the digit argument of `continuation_symbol` and `predecessor_symbol` is clamped with
+  `min(d, 2)` in WGSL (Rust `debug_assert!`s it < 3 first); no new table row.

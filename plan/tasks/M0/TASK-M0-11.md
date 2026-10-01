@@ -55,5 +55,6 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - R-319 (1 Oct) vetoes PR #99's item 8: an out-of-range input to a table function is a `debug_assert!` failure, and
   returns 3 in release, never the last cell.
 - R-321 (1 Oct) amends R-319: the table functions are total — each input `debug_assert!`-ed < 4, then masked `& 3` —
-  so an input ≥ 4 reads the cell at `input & 3`; R-319's "returns 3" is replaced. The value at a digit of 3 is flagged
-  to the human, not yet ruled.
+  so an input ≥ 4 reads the cell at `input & 3`; R-319's "returns 3" is replaced.
+- R-324 (1 Oct) completes R-321: the digit argument of `continuation_symbol` and `predecessor_symbol` is
+  `debug_assert!`-ed < 3, then clamped with `min(d, 2)`, in Rust and WGSL; no new table row.

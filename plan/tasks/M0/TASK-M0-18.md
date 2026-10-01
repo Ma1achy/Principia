@@ -67,5 +67,7 @@
 - R-322 (1 Oct): R-318's integers rule is per field — a u64 field (a seed) is always a string; every other number is a
   number; a field's type never depends on its value.
 - R-323 (1 Oct): #100's physics findings accepted — the diff threshold compares exactly; a NEW trace with no frames
-  exits 2; a cut-off trace prints "session incomplete" with the dropped bytes. *Applied per R-204 — veto?:* an
-  incomplete NEW's comparison still sets the exit code.
+  exits 2; a cut-off trace prints "session incomplete" with the dropped bytes. The human confirmed: "What matters is
+  the behaviour, and that's unchanged: a cut-off trace is reported as "session incomplete" with its dropped bytes,
+  never silently compared over fewer frames." So an incomplete NEW's comparison still runs and sets the exit code,
+  always with the notice. "Apply R-299": R-298 covers the incomplete session, R-299 the dropped bytes.
