@@ -7,9 +7,12 @@
 //!   sequence; an unregistered name is refused;
 //! - REQ-TOOL-007 and REQ-TOOL-119 (`profile_diff`): a 6% p95 rise in one scope exits non-zero at 5% and zero at 10%,
 //!   for each kind of scope render_gui_spec § "Profiler" puts in the scope set, by its statistic and missing-scope rule;
+//!   and R-323's three rules: the threshold compares exactly (100 -> 107 at 7% is no regression), a NEW with no frame
+//!   records exits 2, and a cut-off or incomplete trace prints "session incomplete" and the bytes dropped (R-298,
+//!   R-299), compared and exiting as usual;
 //! - REQ-TOOL-139 (`profile_show`): `--pretty` prints each line indented, parsing to the file's values; without it the
 //!   file's bytes print unchanged;
-//! - REQ-TOOL-144 (`profile_no_gpu`): the synthetic header's no-GPU form (R-308, R-311), the run reaching no GPU API,
+//! - REQ-TOOL-144 (`profile_no_gpu`): the synthetic header's no-GPU form (R-308, R-311), the run opening no GPU adapter,
 //!   and the typed reader and `profile_v1.json` accepting that header and still rejecting an `api` outside the five.
 //!
 //! Every fixture is built here from telemetry §5's keys, not copied from the implementation's. Each test has its
@@ -22,6 +25,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use engine::contract::profile::{self, SCHEMA_V1};
 use serde_json::{json, Value};
+use validation::spawn::Spawn;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Shared helpers
@@ -29,7 +33,7 @@ use serde_json::{json, Value};
 fn prin(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_prin"))
         .args(args)
-        .output()
+        .timed_output()
         .expect("cannot run prin")
 }
 
@@ -150,9 +154,10 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-TOOL-002: the file (`profile_file`)
 
-/// The text the canonical serialisation gives the M0 skeleton's config for `frames` frames of `synthetic_frames`:
-/// every object's keys in ascending byte order, no whitespace, integers in decimal (gui_state_contract §2). The
-/// groups are §2's, each named and empty at M0 (TASK-M0-16).
+/// The text the canonical serialisation, JCS (R-318), gives the M0 skeleton's config for `frames` frames of
+/// `synthetic_frames`: every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`,
+/// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
+/// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16).
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
@@ -862,6 +867,291 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
+// R-323 (REQ-TOOL-119, `profile_diff`): the threshold compares exactly; a NEW with no frames exits 2; a cut-off or
+// incomplete trace says "session incomplete" with the bytes dropped (R-298, R-299), its comparison unchanged.
+
+/// The base times with the reduce stage's ms `ms` in every frame, so its p95 is exactly `ms`.
+fn reduce_at(ms: f64) -> Times {
+    let mut t = base_times();
+    t.reduce = vec![ms; 20];
+    t
+}
+
+/// The next f64 above `v` (v > 0).
+fn next_up(v: f64) -> f64 {
+    f64::from_bits(v.to_bits() + 1)
+}
+
+/// A p95 rising from `base` to exactly P% above it, P as written, is not a regression at `--threshold P`; one ulp
+/// more is. Decided exactly, not in rounded floating-point arithmetic (R-323).
+fn check_exact(base: f64, new: f64, threshold: &str) {
+    check_passes(
+        &reduce_at(base),
+        &reduce_at(new),
+        threshold,
+        &format!("a p95 of {base} -> {new}"),
+    );
+    check_flags(
+        &reduce_at(base),
+        &reduce_at(next_up(new)),
+        threshold,
+        &format!("a p95 of {base} -> {:e}", next_up(new)),
+    );
+}
+
+#[test]
+fn qa_profile_diff_threshold_is_exact() {
+    // R-323's case: 100 -> 107 is a rise of exactly 7%. In floating point, (107 - 100) / 100 * 100 is
+    // 7.000000000000001, above 7.
+    check_exact(100.0, 107.0, "7%");
+    check_exact(100.0, 107.0, "7");
+    // A decimal threshold, read as the decimal it is written as: 200 -> 215 is exactly 7.5%.
+    check_exact(200.0, 215.0, "7.5%");
+    // The double nearest 3.21 is below 3.21, so 3 -> 3.21 is a rise of less than 7%: no regression, though
+    // (3.21 - 3) / 3 * 100 rounds above 7.
+    check_exact(3.0, 3.21, "7%");
+    // At 0%, an unchanged p95 passes and one ulp more is a regression.
+    check_exact(19.0, 19.0, "0%");
+}
+
+validation::negative_control!(
+    qa_profile_diff_threshold_is_exact,
+    "one ulp above 7% must not pass as exactly 7%",
+    expected = "is called a regression at --threshold 7%",
+    check_passes(
+        &reduce_at(100.0),
+        &reduce_at(next_up(107.0)),
+        "7%",
+        "a p95 of 100 -> 107 + 1 ulp"
+    )
+);
+
+/// The header line, the summary line, and the frame lines of a trace's text.
+fn split_trace(text: &str) -> (String, Vec<String>, String) {
+    let lines: Vec<&str> = text.lines().collect();
+    let (header, rest) = lines.split_first().unwrap();
+    let (summary, frames) = rest.split_last().unwrap();
+    assert!(
+        summary.contains("leak_flags"),
+        "not a summary line: {summary}"
+    );
+    (
+        header.to_string(),
+        frames.iter().map(|s| s.to_string()).collect(),
+        summary.to_string(),
+    )
+}
+
+/// NEW has no frame records: the diff exits 2 and says NEW has no frames (R-323).
+fn check_no_frames_exits_2(new: &str, what: &str) {
+    let out = diff(&trace(&base_times()), new, "5%");
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{what} gives exit {:?}, not 2: {text}",
+        out.status.code()
+    );
+    assert!(
+        text.to_lowercase().contains("no frame"),
+        "{what}: the diff does not say NEW has no frame records: {text}"
+    );
+}
+
+#[test]
+fn qa_profile_diff_new_without_frames_exits_2() {
+    let (header, frames, summary) = split_trace(&trace(&base_times()));
+    check_no_frames_exits_2(
+        &format!("{header}\n{summary}\n"),
+        "a complete NEW with no frame records",
+    );
+    check_no_frames_exits_2(
+        &format!("{header}\n"),
+        "an incomplete NEW, its header line alone",
+    );
+    check_no_frames_exits_2(
+        &format!("{header}\n{}", &frames[0][..frames[0].len() / 2]),
+        "an incomplete NEW whose only frame line is cut off",
+    );
+}
+
+validation::negative_control!(
+    qa_profile_diff_new_without_frames_exits_2,
+    "a NEW with one frame record must not exit 2",
+    expected = "a NEW with one frame record gives exit Some(",
+    {
+        let (header, frames, summary) = split_trace(&trace(&base_times()));
+        check_no_frames_exits_2(
+            &format!("{header}\n{}\n{summary}\n", frames[19]),
+            "a NEW with one frame record",
+        );
+    }
+);
+
+/// The bytes a cut-off last line holds, in the incomplete fixtures: fewer than any frame line's.
+const CUT: usize = 173;
+
+/// A trace's text as a session that ended before its summary line: with `cut`, the next frame's line cut off after
+/// `CUT` bytes follows the last whole frame line, with no newline (R-298, R-299).
+fn incomplete(text: &str, cut: bool) -> String {
+    let (header, frames, _) = split_trace(text);
+    let mut out = format!("{header}\n{}\n", frames.join("\n"));
+    if cut {
+        let next = &frames[0];
+        assert!(next.len() > CUT, "a frame line shorter than the cut");
+        out.push_str(&next[..CUT]);
+    }
+    out
+}
+
+/// Whether some line of `output` says the bytes dropped: the count `n` as a number of its own, and "byte".
+fn says_bytes(output: &str, n: usize) -> bool {
+    output.lines().any(|line| {
+        line.contains("byte")
+            && line
+                .split(|c: char| !c.is_ascii_digit())
+                .any(|tok| tok == n.to_string())
+    })
+}
+
+/// The diff of `base` against `new` at `threshold`: its exit code and whether it prints "session incomplete" with
+/// `dropped` bytes, as `incomplete` says it must, or prints no such notice when the files are complete.
+fn check_incomplete(
+    base: &str,
+    new: &str,
+    threshold: &str,
+    want: i32,
+    dropped: Option<usize>,
+    what: &str,
+) {
+    let out = diff(base, new, threshold);
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(want),
+        "{what} at --threshold {threshold} gives exit {:?}, not {want}: {text}",
+        out.status.code()
+    );
+    match dropped {
+        Some(n) => {
+            assert!(
+                text.contains("session incomplete"),
+                "{what}: the diff does not print \"session incomplete\": {text}"
+            );
+            assert!(
+                says_bytes(&text, n),
+                "{what}: the diff does not state the {n} bytes dropped: {text}"
+            );
+        }
+        None => assert!(
+            !text.contains("session incomplete"),
+            "{what}: a complete trace is called incomplete: {text}"
+        ),
+    }
+}
+
+#[test]
+fn qa_profile_diff_incomplete_trace_says_so_and_compares() {
+    let base = trace(&base_times());
+    let mut raised = base_times();
+    scale(&mut raised.outer, 1.06);
+    let raised = trace(&raised);
+    // Complete files: no notice; the 6% rise exits 1 at 5% and 0 at 10%.
+    check_incomplete(&base, &raised, "5%", 1, None, "a complete NEW");
+    check_incomplete(&base, &raised, "10%", 0, None, "a complete NEW");
+    // NEW with no summary line (0 bytes dropped), and NEW cut off mid-line (CUT bytes dropped): the notice, and the
+    // same exit codes over the whole frames read.
+    for (cut, dropped, what) in [
+        (false, 0, "a NEW with no summary line"),
+        (true, CUT, "a NEW whose last line is cut off"),
+    ] {
+        let new = incomplete(&raised, cut);
+        check_incomplete(&base, &new, "5%", 1, Some(dropped), what);
+        check_incomplete(&base, &new, "10%", 0, Some(dropped), what);
+        let same = incomplete(&base, cut);
+        check_incomplete(&base, &same, "0%", 0, Some(dropped), what);
+    }
+    // Either file (render_gui_spec § "Profiler"): an incomplete BASE says so too, and compares as usual.
+    check_incomplete(
+        &incomplete(&base, true),
+        &raised,
+        "5%",
+        1,
+        Some(CUT),
+        "a BASE whose last line is cut off",
+    );
+}
+
+validation::negative_control!(
+    qa_profile_diff_incomplete_trace_says_so_and_compares,
+    "a complete NEW must not satisfy the incomplete check",
+    expected = "does not print \"session incomplete\"",
+    {
+        let base = trace(&base_times());
+        check_incomplete(&base, &base, "5%", 0, Some(0), "a complete NEW");
+    }
+);
+
+validation::negative_control!(
+    qa_profile_diff_incomplete_trace_says_so_and_compares_bytes,
+    "a wrong dropped-byte count must fail the check",
+    expected = "does not state the 174 bytes dropped",
+    {
+        let base = trace(&base_times());
+        check_incomplete(
+            &base,
+            &incomplete(&base, true),
+            "5%",
+            0,
+            Some(CUT + 1),
+            "a cut-off NEW",
+        );
+    }
+);
+
+#[test]
+fn qa_profile_diff_incomplete_trace_says_so_and_compares_bytes() {
+    let base = trace(&base_times());
+    check_incomplete(
+        &base,
+        &incomplete(&base, true),
+        "5%",
+        0,
+        Some(CUT),
+        "a cut-off NEW",
+    );
+}
+
+/// R-299: a malformed line that ends in a newline stays an error, and so does a cut-off line after the summary line
+/// (the writer writes nothing after it): the diff exits 2.
+#[test]
+fn qa_profile_diff_cut_line_with_newline_is_unreadable() {
+    let base = trace(&base_times());
+    let (header, frames, summary) = split_trace(&base);
+    check_unreadable_refused(&format!("{}\n", incomplete(&base, true)));
+    check_unreadable_refused(&format!(
+        "{header}\n{}\n{summary}\n{}",
+        frames.join("\n"),
+        &frames[0][..CUT]
+    ));
+}
+
+validation::negative_control!(
+    qa_profile_diff_cut_line_with_newline_is_unreadable,
+    "a cut-off last line with no newline is read, so must fail the unreadable check",
+    expected = "gives exit Some(0)",
+    check_unreadable_refused(&incomplete(&trace(&base_times()), true))
+);
+
+// ---------------------------------------------------------------------------------------------------------------
 // REQ-TOOL-139: show (`profile_show`)
 
 /// A trace whose text exercises the printer: strings with escapes and brackets, numbers in exponent form.
@@ -1074,101 +1364,108 @@ fn qa_profile_no_gpu_synthetic_header_missing_key() {
     check_no_gpu(text.lines().next().unwrap());
 }
 
-/// The crates that open a GPU adapter: a GPU API's bindings, or wgpu over them.
-const GPU_API_CRATES: &[&str] = &[
-    "wgpu",
-    "wgpu-core",
-    "wgpu-hal",
-    "metal",
-    "objc2-metal",
-    "ash",
-    "d3d12",
-    "glow",
-    "khronos-egl",
-    "vulkano",
-    "web-sys",
+/// The variable that turns this test binary, run as a child, into a process that opens a GPU adapter: the control's
+/// known-positive for the adapter check.
+#[cfg(feature = "controls")]
+const OPEN_ADAPTER_VAR: &str = "QA_M018_OPEN_ADAPTER";
+
+/// The images a process loads only when it opens a GPU adapter: the GPU's user-space driver. On macOS, Metal's
+/// driver bundles in /System/Library/Extensions (AGXMetal…, a paravirtual GPU's, AMD's, Intel's) and IOGPU, which
+/// creating an MTLDevice loads; the Metal framework itself is linked by system frameworks any process may load, so it
+/// is not one. On Linux, the Vulkan loader and its drivers (lavapipe's libvulkan_lvp, …), EGL / GL and NVIDIA's.
+const GPU_DRIVER_IMAGES: &[&str] = &[
+    "/System/Library/Extensions/",
+    "IOGPU.framework",
+    "libvulkan",
+    "libEGL",
+    "libGLX",
+    "libGL.so",
+    "libnvidia",
 ];
 
-/// The packages `package` links, following normal dependencies only (not dev or build), from `cargo metadata`.
-fn linked(package: &str) -> Vec<String> {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml");
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-    let out = Command::new(cargo)
-        .args(["metadata", "--format-version", "1", "--manifest-path"])
-        .arg(&manifest)
-        .output()
-        .expect("cannot run cargo metadata");
-    assert!(
-        out.status.success(),
-        "cargo metadata failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
-    let names: std::collections::HashMap<&str, &str> = meta["packages"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|p| (p["id"].as_str().unwrap(), p["name"].as_str().unwrap()))
-        .collect();
-    let nodes: std::collections::HashMap<&str, &Value> = meta["resolve"]["nodes"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|n| (n["id"].as_str().unwrap(), n))
-        .collect();
-    let root = names
-        .iter()
-        .find(|(id, name)| **name == package && nodes.contains_key(**id) && id.contains("crates/"))
-        .map(|(id, _)| *id)
-        .unwrap_or_else(|| panic!("no workspace package {package}"));
-    let mut seen = std::collections::BTreeSet::new();
-    let mut todo = vec![root];
-    while let Some(id) = todo.pop() {
-        if !seen.insert(id) {
-            continue;
-        }
-        for dep in nodes[id]["deps"].as_array().unwrap() {
-            let normal = dep["dep_kinds"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|k| k["kind"].is_null());
-            if normal {
-                todo.push(dep["pkg"].as_str().unwrap());
-            }
-        }
+/// Runs `cmd` with the dynamic loader logging every image it loads, at start and later (dlopen), to stderr, and
+/// returns the output: DYLD_PRINT_LIBRARIES on macOS, LD_DEBUG=libs on Linux.
+fn with_load_log(cmd: &mut Command) -> Output {
+    if cfg!(target_os = "macos") {
+        cmd.env("DYLD_PRINT_LIBRARIES", "1");
+    } else if cfg!(target_os = "linux") {
+        cmd.env("LD_DEBUG", "libs");
+    } else {
+        panic!("this platform has no loader log this check reads; add one");
     }
-    seen.iter().map(|id| names[id].to_owned()).collect()
+    cmd.timed_output().expect("the child ran")
 }
 
-/// `package` links no GPU API, so no run of it can request a GPU adapter (R-308: never open an adapter just to fill
-/// the header; M0's `prin profile` opens none).
-fn check_links_no_gpu_api(package: &str) {
-    let linked = linked(package);
+/// `out`'s loader log shows images loaded, and none is a GPU driver's: the process opened no GPU adapter (R-308,
+/// REQ-TOOL-144).
+fn check_opened_no_adapter(out: &Output, what: &str) {
+    let log = String::from_utf8_lossy(&out.stderr);
+    let loaded: Vec<&str> = log
+        .lines()
+        .filter(|l| {
+            l.starts_with("dyld[") || l.contains("calling init:") || l.contains("find library=")
+        })
+        .collect();
     assert!(
-        linked.iter().any(|n| n == "engine") || package != "prin",
-        "the dependency walk missed prin's engine: {linked:?}"
+        loaded.len() > 1,
+        "{what}: the loader logged no image, so the check sees nothing: {log}"
     );
-    let gpu: Vec<&String> = linked
+    let gpu: Vec<&str> = loaded
         .iter()
-        .filter(|n| GPU_API_CRATES.contains(&n.as_str()))
+        .copied()
+        .filter(|l| GPU_DRIVER_IMAGES.iter().any(|g| l.contains(g)))
         .collect();
     assert!(
         gpu.is_empty(),
-        "{package} links a GPU API, so its run can request an adapter: {gpu:?}"
+        "{what} loaded a GPU driver, so it opened a GPU adapter: {gpu:?}"
     );
 }
 
+/// `prin profile --scenario synthetic_frames` runs and writes its trace, and opens no GPU adapter (REQ-TOOL-144:
+/// "the synthetic_frames run requests no GPU adapter").
 #[test]
-fn qa_profile_no_gpu_run_reaches_no_gpu_api() {
-    check_links_no_gpu_api("prin");
+fn qa_profile_no_gpu_run_requests_no_adapter() {
+    let path = scratch("no_adapter.jsonl");
+    let out = with_load_log(Command::new(env!("CARGO_BIN_EXE_prin")).args([
+        "profile",
+        "--scenario",
+        "synthetic_frames",
+        "--frames",
+        "3",
+        "--json",
+        s(&path),
+    ]));
+    assert!(out.status.success(), "prin profile failed: {out:?}");
+    let text = std::fs::read_to_string(&path).expect("prin profile wrote no file");
+    assert_eq!(text.lines().count(), 5, "not a 3-frame trace: {text}");
+    check_opened_no_adapter(&out, "the synthetic_frames run");
 }
 
 validation::negative_control!(
-    qa_profile_no_gpu_run_reaches_no_gpu_api,
-    "validation, which opens adapters through wgpu, must fail the check",
-    expected = "links a GPU API",
-    check_links_no_gpu_api("validation")
+    qa_profile_no_gpu_run_requests_no_adapter,
+    "a process that opens a GPU adapter (this binary, as a child, through the GPU harness) must fail the check",
+    expected = "loaded a GPU driver, so it opened a GPU adapter",
+    {
+        if std::env::var_os(OPEN_ADAPTER_VAR).is_some() {
+            // The child: open an adapter as any GPU run does, then end; the parent reads its loader log.
+            let opened = validation::gpu::GpuHarness::new().map(|h| format!("{:?}", h.adapter_info().backend));
+            println!("QA_M018_OPENED {opened:?}");
+            std::process::exit(0);
+        }
+        let out = with_load_log(
+            Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "qa_profile_no_gpu_run_requests_no_adapter::negative_control",
+                    "--exact",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(OPEN_ADAPTER_VAR, "1"),
+        );
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(stdout.contains("QA_M018_OPENED Ok("), "the child opened no adapter: {stdout}");
+        check_opened_no_adapter(&out, "a child that opened an adapter");
+    }
 );
 
 /// The typed reader and `profile_v1.json` accept a no-GPU header line written by hand from telemetry §5, with each
