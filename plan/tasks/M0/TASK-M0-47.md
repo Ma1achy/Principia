@@ -54,9 +54,9 @@ R-299; telemetry §5).
   (REQ-TOOL-147, R-341).
 
 ## Notes
-- R-341 (1 Oct 2026): the flush is every 60 frames or 1 s, whichever comes first. Applied per R-204 — veto?: the header
-  line is flushed as soon as it is written, so a run killed before its first frame flush still leaves a valid trace (a
-  header line alone, R-298); the memory bound is judged by the perf reviewer on the two measurements, since the corpus
-  gives no number for it.
+- R-341 (1 Oct 2026): the flush is every 60 frames or 1 s, whichever comes first. Applied per R-204, accepted by R-346:
+  the header line is flushed as soon as it is written, so a run killed before its first frame flush still leaves a valid
+  trace (a header line alone, R-298); the memory bound is judged by the perf reviewer on the two measurements, since the
+  corpus gives no number for it.
 - Reviewers as TASK-M0-18's, less physics: no definition changes here.
 - The kill is `std::process::Child::kill`, so the test runs on every CI runner.

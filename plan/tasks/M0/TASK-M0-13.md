@@ -84,4 +84,4 @@ comparison.
   interface left to M1). The "waiting on RQ-188" marks in the generated WGSL go, and REQ-RENDER-001's and
   REQ-PAY-091's `rq: RQ-188` and `REVIEW_QUEUE.md`'s open copy are dropped in #107's fix pass. The constants' names, their
   emission to both targets, and their absence from the schema version hash (a binding number decides no stored bit's
-  meaning, generation-root §3.8 "The hash") are R-343's "applied per R-204 — veto?" items.
+  meaning, generation-root §3.8 "The hash") are R-343's items applied per R-204, accepted by R-346.
