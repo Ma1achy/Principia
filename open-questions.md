@@ -2,6 +2,12 @@
 
 Everything left open, each with its source. Nothing is deferred silently.
 
+A still-open item, a paragraph or list item with a bold run that starts "Open" or "Still open", names what carries it
+in a *Carried by: …* note: a live requirement in `plan/requirements.yaml` (REQ-…) or an open entry in `REVIEW_QUEUE.md`
+(RQ-…). `plan/check_plan.py` fails on a still-open item that names neither, or names a requirement that doesn't exist
+or is retired, or a REVIEW_QUEUE entry that isn't open (R-334). A parked item, such as audit section D's, is a
+decision to wait, not a still-open item, and names no carrier (R-338).
+
 ## Dangling cross-references
 
 ~~**Dangling cross-references**~~ **Closed in step 3** (B5, B8). (step 1, `spec_sources/SECTION_MAP.md`, class D): integrator_contract
@@ -49,6 +55,7 @@ R-18 retires in favour of `spread_event`. Source: rulings R-15 and R-18, step 3.
 1. Resolved (joint grain, dd_generation_root §3.7). The impurity mask's field: ruled by R-20 (RQ-18).
 2. **Open:** which quotient the Burrau survey wants, shape-only (fold the leg swap) or shape × labelling. Stated in
    chart_reference §4.5. It is not in audit section B, so it is a candidate for the step-5 decision sheet.
+   *Ruled by R-27: both charts are kept, each labelled with the quotient it covers. Carried by: REQ-CHART-025.*
 3. Folded in step 3 (inverse_encode_contract Part 5, "encode reuses decode").
 4. Moot: a LaTeX figure caption. No markdown file makes the 5-DOF claim.
 5. **Closed: 0-based throughout; pair `k` is the side opposite body `k` (R-22, applied in step 5).** Was: open, audit decision B1 (body index base).
@@ -56,22 +63,29 @@ R-18 retires in favour of `spread_event`. Source: rulings R-15 and R-18, step 3.
    folded, because R-10 overrides it.
 7. Folded (detectors, payload §2). **Open:** the ionisation gate's definition, and whether the old-data consequence
    (two-pair collisions recorded as binary) applies to any stored outcome data.
+   *Ruled by R-32: the gate is pairwise-unbound, separating and total `E > 0`, with settling; the old-data question is
+   closed there (no stored dump recorded two-pair collisions as binary). Carried by: REQ-EVT-006.*
 8. Folded: landed in full, ruled by R-19 (RQ-17).
 9. Folded: payload memory table recomputed, closure and period in the debug catalogue; the caching signature already
    carries the payload schema version. **Ruled (R-37, applied in step 5):** `t_min` is replaced by a departure threshold `δ_dep` on the
    shape sphere, and the closure fields are in the ledger. **Still open:** the value of `δ_dep` (by measurement), and where
    the per-sample "departed" bit lives. Was open: the stated fraction that defines `t_min` (payload §1, "Define `t_min`
    gauge-covariantly"); and `principia_memory_tiers.md` §4's tier totals, still at the old 136 B width (with audit B10).
+   *Carried by: REQ-VAL-055 (the value of `δ_dep` and where the departed bit lives), with REQ-PAY-056 (the departure
+   latch).*
 10. Folded (validation_orbits §5 item 1). **Open:** its consequences — re-run the Python cross-check and the
     divergence-vs-horizon table, and fix the NumPy reference's matching defect. Whether these were done isn't recorded.
+    *Ruled by R-35. Carried by: REQ-VAL-036.*
 11. Folded (integrator_contract Part 7, dd_integrator §3.6). The window, `E_rel` and the escaper id are ruled by R-29 (applied
     in step 5); termination by R-31 (recorded). Was open: whether escape terminates (pitfalls §2.4, three checks); the
     window length for `|Δn̂|`; which energy `E_rel` is; how the escaping body's id is determined.
     **Still open, from R-29:** (i) re-validate precision and recall with the corrected `E_rel`, and re-measure the `tau`
     gap; (ii) where `n̂` from one window earlier is held (a lagged register at sync boundaries, not yet in `SimState`,
     so the widths in payload §1 don't include it); ~~(iii) RQ-19, no t = 0 escape outcome~~ closed by R-60.
+    *Carried by: REQ-VAL-040 and REQ-VAL-051 for (i); REQ-PAY-059 for (ii).*
 12. Folded (R-15, R-18; scheduler contract Parts 3, 4, 6). **Open, recorded in the policy doc:** the two `alpha_area`
     defects (§2.2), and the camera not wired into priority.
+    *Ruled by R-42 and R-44. Carried by: REQ-REF-040 (the two `alpha_area` defects); REQ-SCHED-071 (the camera).*
 
 Status reconciliation (audit A3): the register's own Status sections say 7, 8 and 10 are "Open", while the banners
 added above them later say "LANDED", and the index agrees with the banners. Step 4 takes the banners as the register's
@@ -81,14 +95,17 @@ last word for 7, 10, 11 and 12; 8 was RQ-17, since ruled by R-19. Source: step 4
 
 **Audit section C — transcription checks, not yet run** (audit, logged in step 5): the Yoshida-6 coefficients against
 Yoshida (1990), Table 1, solution A; the OKLab coefficients against Ottosson's reference implementation. Both come
-before the coefficients enter the shared source.
+before the coefficients enter the shared source. **Open:** both checks. *Carried by: REQ-INT-056 (Yoshida-6, R-57);
+REQ-COL-033 (OKLab, R-51).*
 
 ## Audit section D — deliberately parked
 
 **Audit section D — deliberately parked** (audit, logged in step 5; each is parked with its reason in its owning
 file): `00_philosophy.md` §7 (post-1.0); reversibility replay and KS regularisation (integrator contract Part 6);
 cross-chart payload sharing (caching contract Part 3); quantised checkpoints (moot under lockstep); batch literature
-import (a validation-phase tool); tier-table numbers (guesses by design, calibrated from telemetry).
+import (a validation-phase tool); tier-table numbers (guesses by design, calibrated from telemetry). **Parked, not
+open (R-338):** each item is a decision to wait, with its reason in its owning file (philosophy §7.7), so none is a
+still-open item under R-334 and none names a carrier. Whether they were still-open items was RQ-187, closed by R-338.
 
 ## Corpus defects found while writing the decision sheet
 
@@ -97,6 +114,13 @@ import (a validation-phase tool); tier-table numbers (guesses by design, calibra
 :340, :357; dd_integrator :283); `payload.md:527` conflates `closure_min` with the windowed `|Δn̂|`; the ledger lacks the
 closure fields; the ledger's `alpha` row is from the α era; `inverse_encode_contract.md:199` still uses
 `has_redundant_hemisphere`; the 136/88 B widths in canonical_spec :79 and systems_architecture :63, :163.
+**Closed: fixed by R-59** (its status line: D1–D3 applied in step 5 with R-29 and R-37, D4–D6 with R-42, R-27 and
+R-40). Applied per R-334, checked against the corpus on 1 Oct 2026: the old three-gate detector is kept only under
+"Superseded by change 11" (integrator_contract Part 7, dd_integrator §3.6); payload's "Vertical-slice additions" keep
+`closure_min` apart from the windowed `|Δn̂|`; the ledger has `closure_min` and `closure_step` (generation-root §3.4)
+and `alpha_area` in place of `alpha` (§3.7); `has_redundant_hemisphere` survives only as the name `system_image`
+replaces (chart_decoder_contract Part 5); and canonical_spec and systems_architecture no longer give the 136/88 B
+widths.
 
 ## Every open item is on the decision sheet
 

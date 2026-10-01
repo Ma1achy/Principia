@@ -3,13 +3,14 @@
 //!
 //! The generation root (debug_tooling_plan step 0a): the §3.8 entry schema ([`schema`]), the static layout check
 //! ([`check`]) and the generator driver ([`gen`]), which `cargo xtask codegen` runs (R-241); the constants register
-//! and its generation gate ([`constants`]).
+//! and its generation gate ([`constants`]); the payload schema version, the ledger's content hash ([`version`]).
 
 pub mod check;
 pub mod constants;
 pub mod gen;
 pub mod payload;
 pub mod schema;
+pub mod version;
 
 /// The layout table `cargo xtask codegen` generates from: so far the payload's (dd_simstate_payload §0–§3;
 /// dd_generation_root §3.1, §3.3–§3.6).

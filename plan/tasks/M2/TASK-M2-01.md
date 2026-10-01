@@ -2,8 +2,8 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-032, REQ-CHART-034, REQ-GEN-013, REQ-GEN-014, REQ-GEN-015, REQ-DEC-009, REQ-GEN-025, REQ-GEN-026
-- **Depends on:** TASK-M1-08
-- **Needs (earlier milestones):** REQ-SYS-004, REQ-GEN-010, REQ-SYS-005, REQ-SYS-001
+- **Depends on:** TASK-M1-08, TASK-M0-46
+- **Needs (earlier milestones):** REQ-SYS-004, REQ-GEN-010, REQ-SYS-005, REQ-SYS-001, REQ-GEN-031
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-3
 - **Size:** ~450 lines
@@ -34,6 +34,8 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 2.5 — Link functions & compactification (customisable)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
+- `decisions.md` § "R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*"
 
 ## Deliverables
 - The link registry entries and chart constants in the generation-root ledger source (`crates/ledger/`), each entry with forward, inverse, log-det, ε clamps and sampling note; a missing member fails generation.
@@ -56,3 +58,9 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - Gap G9: generation-root §5 test 8 (c) and (d) give no tolerance for the numeric-Jacobian and C¹ checks.
 - The ε clamps are registry data (dd_encode §2); encode (TASK-M2-15) consumes the registry inverses, never an inline `logit`/`artanh`.
 - Closes, for gaps the corpus leaves open: REQ-GEN-025 (R-71 calibration), REQ-GEN-026 (R-72 definition) (classification accepted by R-132).
+- R-340: the schema version hashes each link registry entry by its semantic content (generation-root §3.9, "The
+  hash"); TASK-M0-46 builds the hashed table, and this task's entries are written in its canonical form (REQ-GEN-032)
+  and enter the hash as they land, which changes `PAYLOAD_SCHEMA_VERSION`'s value.
+- R-344: this task depending on TASK-M0-46 and needing REQ-GEN-031 is accepted. The registry's chart constants,
+  `δ_λ` and `ε_w` among them, are hashed by value whether or not a link reads them, so this task's constants enter the
+  hash as they land, as its entries do.

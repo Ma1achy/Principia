@@ -556,7 +556,8 @@ population = { name, lo, hi, count }
   not. Any other register entry, such as a
   render or scheduler constant the lint brings into the register, is not hashed into the schema version: changing it
   has the blast radius caching_contract Part 2 gives its knob (render settings and
-  scheduler knobs invalidate nothing; canonical_spec §9, invariant 3).
+  scheduler knobs invalidate nothing; canonical_spec §9, invariant 3). The link registry's entries are hashed too, by
+  their semantic content (§3.9, "The hash"; R-340).
 
 The register's entries, the constants the payload ledger uses:
 
@@ -583,6 +584,23 @@ The register's entries, the constants the payload ledger uses:
 
 Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note** — the robustness-sweep picker uses the last to choose alternatives that *disagree where it matters*.
 
+**The hash (R-340).** The link registry is part of the ledger hashed into the schema version (R-36; §2's
+"canonicalised §3 ledger"), since its definitions decide how a chart coordinate decodes, and so what a cached or saved
+result means. Each entry is hashed by its semantic content, not its prose, as a register constant is by its value,
+type and class and not its citation (§3.8, R-251). An entry's hashed members are:
+- its name, the link id provenance records (chart_decoder_contract § "Integrity: the link is part of the experiment");
+- its constraint, the block codomain its row names (the table's first column);
+- its forward, inverse and log-det, each in a canonical form with no formatting-dependent bytes (the form is a
+  definition TASK-M0-46 writes here, R-72, REQ-GEN-032);
+- its ε clamps, and each parameter its forward, inverse or log-det reads (`μ_max`, `q_max`, `α_min`), by value.
+
+Its sampling note is not hashed: it is prose for the robustness-sweep picker, and no decode or encode reads it.
+Changing a hashed member of any entry, or adding or removing an entry, changes the schema version; a sampling-note-only
+edit does not. Every entry is hashed, whether or not a block uses it by default (R-344). The registry's chart
+constants are hashed too, each by value, whether or not a link reads it: those that no link reads, `δ_λ` (decode's
+mirror tie-break) and `ε_w` (its seed-selection floor), change how a chart coordinate decodes, as the links do (R-344,
+closing RQ-189).
+
 ---
 
 ## 4. Seams (obligations → integration tests)
@@ -605,7 +623,7 @@ Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note**
 4. **Exact step indices:** `t_end_step`/`t_dmin_step` (in `times`) round-trip exactly as u16 — no fixed-point, no Q0.16 (R-86); dispatch refuses a configuration with `⌈T/dt⌉ > 65535`; bit-identical CPU/GPU on identical inputs (parity).
 5. **Sentinels:** a stored sentinel survives pack/unpack bit-exact; catalogue styles it, never scales it. (`diffusion` is no longer one: an invalid fit reads NaN, R-245.)
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
-7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.
+7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), §3.9's link registry included (R-340), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.
 8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in range); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
 9. **Union-field semantics:** `detail` renders/decodes per `state` — an escape's detail is a body id, a collision's a pair id; the catalogue's detail view switches legend accordingly.
 

@@ -8,4 +8,3 @@ Only open entries are kept here (R-292). Once an entry has a ruling it moves, un
 milestone gets its own file after its gate. Ids never change.
 
 ---
-

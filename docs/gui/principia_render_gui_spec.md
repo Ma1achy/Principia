@@ -194,6 +194,33 @@ prin profile query "top 10 scopes by p95" --live                        # query 
 Scenarios are deterministic. Buttons: Export trace (JSON; it also writes the Chrome Trace Event format for Perfetto
 and `chrome://tracing`, R-207), Open in Tracy, Headless render….
 
+**What `prin profile diff` compares (REQ-TOOL-119, R-72).** Each scope's p95 in NEW against its p95 in BASE. A scope
+regresses when NEW's p95 is more than P% above BASE's, `(p95_NEW − p95_BASE) / p95_BASE × 100 > P`, or, where BASE's
+p95 is 0, when NEW's is above 0. The diff exits 1 when any scope regresses, 0 when none does, and 2 when it cannot read
+either file as schema v1.
+- **The statistic.** A scope's p95 is the nearest-rank 95th percentile of its per-frame ms over the file's frames: the
+  samples sorted ascending, the ⌈0.95 n⌉-th, counted from 1 (telemetry §3: percentiles, not means). `prin` and the
+  interactive path share the percentile code (telemetry §5.5).
+- **The scope set.** The frame (its `frame_ms`); each of the five stages (its `stage_ms`, in the frames where it is not
+  `null`); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
+  GPU pass, by its stage and name. A scope that occurs more than once in a frame gives that frame the sum of its ms; a
+  frame where it does not occur gives it no sample.
+- **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
+  compared; it does not by itself make the diff exit non-zero. The output names each one, so a scope renamed or gone
+  is shown, not passed over in silence.
+- **The threshold, exactly (R-323).** P is a percentage ≥ 0 written as a plain decimal (`5%`, `5`, `7.5%`), and is
+  read as the decimal it is written as; each p95 is the double the file gives. The test is decided exactly, as
+  `100 × p95_NEW > (100 + P) × p95_BASE` in rationals, not in rounded floating-point arithmetic: a p95 of 100 → 107 is
+  a rise of exactly 7%, so it is not a regression at `--threshold 7%`.
+- **A file with no frames (R-323, R-328).** A NEW trace with no frame records has no p95 to compare,
+  and the diff exits 2, as it does for a file it cannot read, saying that NEW has no frame records (R-323). A BASE
+  trace with no frame records is treated the same way, saying that BASE has no frame records: with nothing in BASE the
+  gate could never fail (R-328, confirming physics's finding 2 on TASK-M0-18).
+- **A cut-off or incomplete trace (R-323, R-298, R-299).** When either file is a session that ended before its summary
+  line, its last line perhaps cut off, the diff first prints, for that file, "session incomplete" and the number of
+  bytes the reader dropped from a cut-off last line (0 when none). It then compares that file's frames and exits as it
+  would for a complete one, so an incomplete trace is never compared over fewer frames in silence.
+
 ### Export & share
 
 - **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
