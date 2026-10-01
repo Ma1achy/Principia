@@ -4231,6 +4231,7 @@ local mutants runs get the timeout only; CI's Linux runners enforce both caps)."
   corpus names 65504 (`f16_finite_max`) but not binary32's largest finite as a sentinel, and the check plan requires no
   definition requirement for a lint's list, so the list lives in REQ-RENDER-083 and TASK-M0-50.
 - **A float compared with itself** is a comparison whose two operands are the same expression: the same naga
-  expression, or structurally equal expressions reading the same `let`, argument, variable or buffer element; a float
-  scalar or vector. Besides `==` and `!=`, the human's words, the lint also fails on `<`, `<=`, `>` and `>=` of an
-  expression with itself, which fast-math may fold just the same (`x <= x` is false only for NaN).
+  expression, or structurally equal expressions reading the same `let`, argument, variable or buffer element, with no
+  store to that variable between the two reads; a float scalar or vector. Besides `==` and `!=`, the human's words,
+  the lint also fails on `<`, `<=`, `>` and `>=` of an expression with itself, which fast-math may fold just the same
+  (`x <= x` is false only for NaN).
