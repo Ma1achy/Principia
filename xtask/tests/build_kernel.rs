@@ -1,6 +1,8 @@
 //! `cargo xtask build-kernel` (canonical_spec §1 item 2; R-169): the pinned channel it reads from
-//! `rust-toolchain.toml`, its refusal of a rust-gpu backend built on another nightly, naga's SPIR-V → WGSL translation
-//! of the kernel it built, and its listing form in `cargo xtask ci --list`, which builds nothing (R-235).
+//! `rust-toolchain.toml`, its refusal of a rust-gpu backend built on another nightly, its exact pin of the backend and
+//! the backend build it makes in a scratch crate through a stand-in cargo (never rust-gpu's real cache), naga's SPIR-V
+//! → WGSL translation of the kernel it built, and its listing form in `cargo xtask ci --list`, which builds nothing
+//! (R-235).
 //!
 //! `build_kernel_translates_the_kernel` reads `target/spirv/kernel.spv`, so `cargo xtask build-kernel` runs first, as
 //! CI runs it before the tests.
@@ -9,11 +11,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use cargo_gpu_install::spirv_source::{CrateMetadata, SpirvSource};
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::build_kernel::{
-    backend_built, check_channel, exact_requirement, locked_version, pinned_channel,
-    prepare_backend, run, to_wgsl, BACKEND_LOCK, BACKEND_TOML, BACKEND_VERSION, SPV, WGSL,
+    backend_built, build_backend, check_channel, check_locked, check_source, ensure_backend,
+    exact_requirement, locked_version, pinned_channel, prepare_backend, run, to_wgsl, BACKEND_LOCK,
+    BACKEND_TOML, BACKEND_VERSION, SPV, WGSL,
 };
 
 fn root() -> PathBuf {
@@ -417,4 +421,266 @@ negative_control!(
     "a failing build-kernel run, given to the check as passing",
     expected = "xtask ci failed with build-kernel passing",
     check_built_in_ci(with_stand_in("ctl_built", &["ci"], 1), 0)
+);
+
+/// `requirement` is refused as not exact.
+fn check_not_exact(requirement: &str) {
+    assert!(
+        exact_requirement(requirement).is_err(),
+        "{requirement:?} was read as an exact requirement"
+    );
+}
+
+#[test]
+fn build_kernel_reads_only_an_exact_requirement() {
+    assert_eq!(
+        exact_requirement(&format!(" = {BACKEND_VERSION} ")),
+        Ok(BACKEND_VERSION)
+    );
+    for requirement in [
+        "=",
+        "= ",
+        "=0.10.0-alpha.1, <0.11",
+        "=0.10.*",
+        "=>0.10",
+        "^0.10.0-alpha.1",
+        "~0.10",
+        "0.10.0-alpha.1",
+        "=0.10.0 alpha",
+    ] {
+        check_not_exact(requirement);
+    }
+}
+
+negative_control!(
+    build_kernel_reads_only_an_exact_requirement,
+    "the exact requirement itself, given to the refusal check",
+    expected = "was read as an exact requirement",
+    check_not_exact("=0.10.0-alpha.1")
+);
+
+/// A scratch directory standing for cargo-gpu's backend crate, holding nothing.
+fn empty_backend_dir(case: &str) -> PathBuf {
+    let dir =
+        PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_backend_{case}"));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+/// [`prepare_backend`] on `dir` writes the pinned crate and leaves no library.
+fn check_prepared(dir: &Path) {
+    prepare_backend(dir).unwrap_or_else(|e| panic!("prepare_backend failed: {e}"));
+    assert_eq!(
+        fs::read_to_string(dir.join("Cargo.toml")).unwrap(),
+        BACKEND_TOML
+    );
+    assert_eq!(
+        fs::read_to_string(dir.join("Cargo.lock")).unwrap(),
+        BACKEND_LOCK
+    );
+    assert_eq!(fs::read_to_string(dir.join("src/lib.rs")).unwrap(), "");
+    assert!(!dir.join(backend_library()).exists());
+}
+
+/// [`prepare_backend`] on `dir`, whose library cannot be removed, fails naming the library.
+fn check_prepare_refused(dir: &Path) {
+    let err = prepare_backend(dir)
+        .expect_err("prepare_backend passed with a library it could not remove");
+    assert!(err.contains(&backend_library()), "{err}");
+}
+
+#[test]
+fn build_kernel_prepares_a_crate_with_no_library() {
+    // No library built there before: nothing to remove, and no error.
+    check_prepared(&empty_backend_dir("prepare_absent"));
+    // A library that cannot be removed (a directory in its place): an error naming it, not one taken as absent.
+    let blocked = empty_backend_dir("prepare_blocked");
+    fs::create_dir_all(blocked.join(backend_library()).join("inside")).unwrap();
+    check_prepare_refused(&blocked);
+}
+
+negative_control!(
+    build_kernel_prepares_a_crate_with_no_library,
+    "a crate with no library at all, whose preparation passes, given to the refusal check",
+    expected = "prepare_backend passed with a library it could not remove",
+    check_prepare_refused(&empty_backend_dir("ctl_prepare_absent"))
+);
+
+/// A stand-in `cargo` in its own scratch directory: it logs its working directory and arguments to `calls.log` there,
+/// writes a library at `target/release/<backend library>` in its working directory, and exits with `status`. Its path
+/// and the log's.
+fn stand_in_cargo(case: &str, status: u8) -> (PathBuf, PathBuf) {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_cargo_{case}"));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let log = dir.join("calls.log");
+    validation::spawn::write_executable(
+        &dir.join("cargo"),
+        format!(
+            r#"#!/bin/sh
+echo "$(pwd -P) $*" >> '{log}'
+mkdir -p target/release
+echo 'a stand-in backend' > 'target/release/{lib}'
+exit {status}
+"#,
+            log = log.display(),
+            lib = backend_library()
+        ),
+    )
+    .unwrap();
+    (dir.join("cargo"), log)
+}
+
+/// The lines of the stand-in cargo's log `log`; none if it never ran.
+fn calls(log: &Path) -> Vec<String> {
+    fs::read_to_string(log)
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect()
+}
+
+/// [`build_backend`] with a stand-in cargo exiting `status`, in an empty crate: it ran cargo once, in the crate, as
+/// `+<channel> build --release --locked` on the pinned crate; on success the library is moved into the crate and
+/// `target` removed, and on failure the build fails naming the backend.
+fn check_backend_build(case: &str, status: u8) {
+    let dir = empty_backend_dir(case);
+    let (cargo, log) = stand_in_cargo(case, status);
+    let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo));
+    let dir_real = dir.canonicalize().unwrap();
+    assert_eq!(
+        calls(&log),
+        [format!(
+            "{} +nightly-2026-04-11 build --release --locked",
+            dir_real.display()
+        )],
+        "build_backend did not run cargo once, in the crate, on the pinned channel under --locked"
+    );
+    assert_eq!(
+        fs::read_to_string(dir.join("Cargo.lock")).unwrap(),
+        BACKEND_LOCK
+    );
+    if status == 0 {
+        result.unwrap_or_else(|e| panic!("build_backend failed with cargo passing: {e}"));
+        assert!(
+            dir.join(backend_library()).is_file() && !dir.join("target").exists(),
+            "build_backend left the library in target"
+        );
+        assert!(backend_built(&dir));
+    } else {
+        let err = result.expect_err("build_backend passed with cargo failing");
+        assert!(err.contains("building rust-gpu's backend failed"), "{err}");
+    }
+}
+
+#[test]
+fn build_kernel_builds_the_backend_locked() {
+    check_backend_build("build_ok", 0);
+    check_backend_build("build_failed", 1);
+}
+
+negative_control!(
+    build_kernel_builds_the_backend_locked,
+    "a failing cargo, given to the check as passing",
+    expected = "build_backend failed with cargo passing",
+    {
+        let dir = empty_backend_dir("ctl_build");
+        let (cargo, _) = stand_in_cargo("ctl_build", 1);
+        let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo));
+        result.unwrap_or_else(|e| panic!("build_backend failed with cargo passing: {e}"));
+    }
+);
+
+/// [`ensure_backend`] on `dir` ran the stand-in cargo `builds` times (0 or 1), and leaves the backend built.
+fn check_ensured(case: &str, dir: &Path, builds: usize) {
+    let (cargo, log) = stand_in_cargo(case, 0);
+    ensure_backend(dir, "nightly-2026-04-11", Command::new(cargo))
+        .unwrap_or_else(|e| panic!("ensure_backend failed: {e}"));
+    assert_eq!(
+        calls(&log).len(),
+        builds,
+        "ensure_backend built the backend a number of times other than {builds}"
+    );
+    assert!(backend_built(dir), "ensure_backend left no backend built");
+}
+
+#[test]
+fn build_kernel_builds_only_a_backend_not_built() {
+    // An empty crate: built.
+    check_ensured("ensure_empty", &empty_backend_dir("ensure_empty"), 1);
+    // Built under the pinned lockfile: used as it is.
+    check_ensured(
+        "ensure_built",
+        &backend_dir("ensure_built", BACKEND_LOCK),
+        0,
+    );
+}
+
+negative_control!(
+    build_kernel_builds_only_a_backend_not_built,
+    "an empty crate, which is built, given to the check as one already built",
+    expected = "ensure_backend built the backend a number of times other than 0",
+    check_ensured("ctl_ensure", &empty_backend_dir("ctl_ensure"), 0)
+);
+
+/// [`check_locked`] refuses the crate at `dir`, naming rust-gpu-backend.lock.
+fn check_lock_refused(dir: &Path) {
+    let err =
+        check_locked(dir).expect_err("a lockfile other than rust-gpu-backend.lock was accepted");
+    assert!(err.contains("rust-gpu-backend.lock"), "{err}");
+}
+
+#[test]
+fn build_kernel_refuses_a_backend_resolved_afresh() {
+    assert_eq!(
+        check_locked(&backend_dir("locked_same", BACKEND_LOCK)),
+        Ok(())
+    );
+    check_lock_refused(&backend_dir(
+        "locked_dependency",
+        &locked_dependency_changed(),
+    ));
+    check_lock_refused(&empty_backend_dir("locked_none"));
+}
+
+negative_control!(
+    build_kernel_refuses_a_backend_resolved_afresh,
+    "a crate locked by rust-gpu-backend.lock itself, given to the refusal check",
+    expected = "a lockfile other than rust-gpu-backend.lock was accepted",
+    check_lock_refused(&backend_dir("ctl_locked", BACKEND_LOCK))
+);
+
+/// A crates.io rust-gpu source at `version`, as cargo-gpu's installer names one given a version.
+fn crates_io(version: &str) -> SpirvSource {
+    let metadata =
+        CrateMetadata::query(root().join("crates/kernel")).expect("the kernel's metadata");
+    SpirvSource::new(&metadata, None, Some(version)).expect("a crates.io source")
+}
+
+/// `source` is refused, naming crates.io's [`BACKEND_VERSION`].
+fn check_source_refused(source: &SpirvSource) {
+    let err = check_source(source)
+        .expect_err("a rust-gpu other than crates.io's pinned release was accepted");
+    assert!(
+        err.contains(&format!("not crates.io {BACKEND_VERSION}")),
+        "{err}"
+    );
+}
+
+#[test]
+fn build_kernel_takes_only_the_pinned_rust_gpu() {
+    assert_eq!(check_source(&crates_io(BACKEND_VERSION)), Ok(()));
+    check_source_refused(&crates_io("0.10.0"));
+    check_source_refused(&SpirvSource::Git {
+        url: "https://github.com/Rust-GPU/rust-gpu".to_owned(),
+        rev: BACKEND_VERSION.to_owned(),
+    });
+}
+
+negative_control!(
+    build_kernel_takes_only_the_pinned_rust_gpu,
+    "crates.io's pinned release itself, given to the refusal check",
+    expected = "a rust-gpu other than crates.io's pinned release was accepted",
+    check_source_refused(&crates_io(BACKEND_VERSION))
 );

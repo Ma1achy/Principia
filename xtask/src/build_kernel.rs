@@ -13,15 +13,16 @@
 //! The backend's version is pinned exactly, [`BACKEND_VERSION`]: cargo-gpu's installer resolves `rustc_codegen_spirv`
 //! at run time, in a crate of its own in its cache, under a caret requirement on the kernel's `spirv-std` version, which
 //! a later rust-gpu release (0.10.0, on another nightly) also meets, and it deletes that crate's lockfile before it
-//! builds. So build-kernel builds the backend itself first ([`build_backend`]), in that crate, with an exact requirement
-//! ([`BACKEND_TOML`]) and [`BACKEND_LOCK`], the lockfile of a backend build on the pinned nightly, under `--locked`; the
-//! installer then finds it built and uses it. The backend and its dependencies are the same on every machine, whatever
-//! rust-gpu has released since.
+//! builds. So build-kernel builds the backend itself first ([`ensure_backend`], [`build_backend`]), in that crate, with
+//! an exact requirement ([`BACKEND_TOML`]) and [`BACKEND_LOCK`], the lockfile of a backend build on the pinned nightly,
+//! under `--locked`; the installer then finds it built and uses it. The backend and its dependencies are the same on
+//! every machine, whatever rust-gpu has released since.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use cargo_gpu_install::install::Install;
+use cargo_gpu_install::spirv_builder::cargo_cmd::CargoCmd;
 use cargo_gpu_install::spirv_source::{CrateMetadata, SpirvSource};
 
 use crate::deps::cargo;
@@ -125,11 +126,11 @@ pub fn prepare_backend(install_dir: &Path) -> Result<(), String> {
 /// Builds the backend in cargo-gpu's crate at `install_dir` on `channel`, as cargo-gpu's installer does, but from
 /// [`BACKEND_LOCK`] under `--locked`: the installer deletes the crate's lockfile and resolves afresh, so a later rust-gpu
 /// release would change what it builds. The library goes where the installer looks for it, so the installer then finds
-/// it built and uses it.
-pub fn build_backend(install_dir: &Path, channel: &str) -> Result<(), String> {
+/// it built and uses it. `cargo` is the command it runs cargo as: [`run`] gives it spirv-builder's `CargoCmd`, the cargo
+/// the installer runs, with the environment that would leak into a nested build removed.
+pub fn build_backend(install_dir: &Path, channel: &str, mut cargo: Command) -> Result<(), String> {
     prepare_backend(install_dir)?;
     println!("build-kernel: building rust-gpu's backend, rustc_codegen_spirv {BACKEND_VERSION}, on {channel}");
-    let mut cargo = cargo_gpu_install::spirv_builder::cargo_cmd::CargoCmd::new();
     cargo.env_remove("CLIPPY_ARGS");
     let status = cargo
         .current_dir(install_dir)
@@ -147,6 +148,39 @@ pub fn build_backend(install_dir: &Path, channel: &str) -> Result<(), String> {
     std::fs::rename(&built, install_dir.join(backend_library()))
         .map_err(|e| format!("{}: {e}", built.display()))?;
     std::fs::remove_dir_all(&target).map_err(|e| format!("{}: {e}", target.display()))
+}
+
+/// Builds the backend at `install_dir` with [`build_backend`], running `cargo`, unless it is [`backend_built`] already.
+pub fn ensure_backend(install_dir: &Path, channel: &str, cargo: Command) -> Result<(), String> {
+    if !backend_built(install_dir) {
+        build_backend(install_dir, channel, cargo)?;
+    }
+    Ok(())
+}
+
+/// Refuses a backend crate at `install_dir` whose lockfile is not [`BACKEND_LOCK`] after cargo-gpu's installer has run:
+/// the installer resolved it afresh.
+pub fn check_locked(install_dir: &Path) -> Result<(), String> {
+    if !locked_as_pinned(install_dir) {
+        let lock = std::fs::read_to_string(install_dir.join("Cargo.lock")).unwrap_or_default();
+        return Err(format!(
+            "build-kernel: rust-gpu's backend was resolved other than rust-gpu-backend.lock pins it \
+             (rustc_codegen_spirv {:?}; the lockfile differs from BACKEND_LOCK)",
+            locked_version(&lock, "rustc_codegen_spirv")
+        ));
+    }
+    Ok(())
+}
+
+/// Refuses a kernel whose rust-gpu, `source`, is other than crates.io's [`BACKEND_VERSION`].
+pub fn check_source(source: &SpirvSource) -> Result<(), String> {
+    match source {
+        SpirvSource::CratesIO(v) if v.to_string() == BACKEND_VERSION => Ok(()),
+        other => Err(format!(
+            "build-kernel: the kernel's spirv-std is {other}, not crates.io {BACKEND_VERSION}, the rust-gpu \
+             release whose backend builds on the pinned nightly"
+        )),
+    }
 }
 
 /// The channel `rust-toolchain.toml` pins, from its text.
@@ -202,32 +236,15 @@ pub fn run(manifest: &Path) -> Result<(), String> {
         .map_err(|e| format!("build-kernel: reading the kernel's metadata: {e:#}"))?;
     let source = SpirvSource::new(&metadata, None, None)
         .map_err(|e| format!("build-kernel: the kernel's rust-gpu: {e:#}"))?;
-    match &source {
-        SpirvSource::CratesIO(v) if v.to_string() == BACKEND_VERSION => {}
-        other => {
-            return Err(format!(
-                "build-kernel: the kernel's spirv-std is {other}, not crates.io {BACKEND_VERSION}, the rust-gpu \
-                 release whose backend builds on the pinned nightly"
-            ))
-        }
-    }
+    check_source(&source)?;
     let install_dir = source
         .install_dir()
         .map_err(|e| format!("build-kernel: rust-gpu's cache: {e:#}"))?;
-    if !backend_built(&install_dir) {
-        build_backend(&install_dir, &pinned)?;
-    }
+    ensure_backend(&install_dir, &pinned, CargoCmd::new().into())?;
     let backend = Install::from_shader_crate(kernel.clone())
         .run()
         .map_err(|e| format!("build-kernel: installing rust-gpu: {e:#}"))?;
-    if !locked_as_pinned(&install_dir) {
-        let lock = std::fs::read_to_string(install_dir.join("Cargo.lock")).unwrap_or_default();
-        return Err(format!(
-            "build-kernel: rust-gpu's backend was resolved other than rust-gpu-backend.lock pins it \
-             (rustc_codegen_spirv {:?}; the lockfile differs from BACKEND_LOCK)",
-            locked_version(&lock, "rustc_codegen_spirv")
-        ));
-    }
+    check_locked(&install_dir)?;
     check_channel(&pinned, &backend.toolchain_channel)?;
     println!(
         "build-kernel: rust-gpu backend rustc_codegen_spirv {BACKEND_VERSION} {} on {}",
