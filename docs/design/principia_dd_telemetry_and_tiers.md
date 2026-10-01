@@ -250,6 +250,14 @@ later frame. The JSON Schema defines one line for each place, in `$defs`: `heade
 A file's lines are not one JSON document, so the schema checks the file line by line, each line against the
 definition for its place.
 
+**`prin profile` streams its trace (R-341).** It writes the header line first, then each frame record as the frame
+completes, and flushes the file at least every 60 frames or every 1 s, whichever comes first, so a run that crashes or
+is killed loses at most the frames written since the last flush. The summary line is appended as the final line when
+the session ends (R-286, R-298). The run's memory does not grow with `--frames` beyond what the summaries themselves
+need: a frame record is not kept once it is written. A run killed mid-session leaves the incomplete session described
+below, which a reader reports as "session incomplete". *Applied per R-204 — veto?:* the header line is flushed as soon
+as it is written, so even a run killed before its first frame leaves a valid trace.
+
 **A session that ended before its summary line** (R-298), because it crashed or is still running, leaves a trace whose
 last line is a frame record, or the header line when it recorded no frame. That trace is valid schema v1. A reader
 returns its header and frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never
@@ -268,7 +276,7 @@ line is cut off has no header line, and a reader rejects it as it does an empty 
 `leak_flags` and `hot_paths` are the precomputed leak flags and hot-path summaries that `principia_render_gui_spec.md`
 § "Profiler" puts in schema v1, so an agent reads conclusions, not raw traces. They summarise the whole session, so
 they sit at the file's top level, on the summary line after the frames, where a writer that streams the frames writes
-them once the session ends. Each entry is a JSON object, and the task that closes REQ-TOOL-100 (M8)
+them once the session ends, as `prin profile` does (R-341). Each entry is a JSON object, and the task that closes REQ-TOOL-100 (M8)
 defines its keys; until then, a writer writes `null`, and a reader accepts any object as an entry.
 
 **The session header** carries §2's per-session fields, and the full config that §5 requires:

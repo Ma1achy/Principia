@@ -5,7 +5,8 @@ Everything left open, each with its source. Nothing is deferred silently.
 A still-open item, a paragraph or list item with a bold run that starts "Open" or "Still open", names what carries it
 in a *Carried by: …* note: a live requirement in `plan/requirements.yaml` (REQ-…) or an open entry in `REVIEW_QUEUE.md`
 (RQ-…). `plan/check_plan.py` fails on a still-open item that names neither, or names a requirement that doesn't exist
-or is retired, or a REVIEW_QUEUE entry that isn't open (R-334).
+or is retired, or a REVIEW_QUEUE entry that isn't open (R-334). A parked item, such as audit section D's, is a
+decision to wait, not a still-open item, and names no carrier (R-338).
 
 ## Dangling cross-references
 
@@ -102,8 +103,9 @@ REQ-COL-033 (OKLab, R-51).*
 **Audit section D — deliberately parked** (audit, logged in step 5; each is parked with its reason in its owning
 file): `00_philosophy.md` §7 (post-1.0); reversibility replay and KS regularisation (integrator contract Part 6);
 cross-chart payload sharing (caching contract Part 3); quantised checkpoints (moot under lockstep); batch literature
-import (a validation-phase tool); tier-table numbers (guesses by design, calibrated from telemetry). **Open:** whether
-these parked items are still-open items under R-334, and if they are, what carries each. *Carried by: RQ-187.*
+import (a validation-phase tool); tier-table numbers (guesses by design, calibrated from telemetry). **Parked, not
+open (R-338):** each item is a decision to wait, with its reason in its owning file (philosophy §7.7), so none is a
+still-open item under R-334 and none names a carrier. Whether they were still-open items was RQ-187, closed by R-338.
 
 ## Corpus defects found while writing the decision sheet
 
