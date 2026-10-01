@@ -3,8 +3,7 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0x52fdd71ae365c6b3). WGSL has no u64: .x is its low 32 bits, .y its high 32 (waiting on
-// RQ-188).
+// PAYLOAD_SCHEMA_VERSION, 0x52fdd71ae365c6b3). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
 const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xe365c6b3u, 0x52fdd71au);
 
 // `SimStateFTLE`: 144 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
@@ -24,7 +23,7 @@ struct SimStateFTLE {
     times: u32,
     total_substeps: u32,
     closure_min: f32,
-    closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; waiting on RQ-188)
+    closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
 }
 
 // `SimStateBase`: 96 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
@@ -42,7 +41,7 @@ struct SimStateBase {
     times: u32,
     total_substeps: u32,
     closure_min: f32,
-    closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; waiting on RQ-188)
+    closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
 }
 
 // `ICDescriptor`: 64 B, aligned to 4 (payload §1; dd_generation_root §3.3a, §3.6).
@@ -62,18 +61,26 @@ struct ICDescriptor {
     _pad: array<u32, 4>,
 }
 
-// `closure_step`: bits 0–15 of `closure_step_reserved` (payload §1; waiting on RQ-188).
+// `closure_step`: bits 0–15 of `closure_step_reserved` (payload §1; R-343).
 fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }
 
-// The two buffers (payload §0), each its own binding; word_buffer[i] is the word of the sample whose state is
-// simstate_buffer[i] (dd_generation_root §3.3a). Group, binding numbers and the bound variant wait on RQ-188.
-@group(0) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
-@group(0) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
+// The two buffers (payload §0), each its own binding (R-343): group 0 is the assembler's per-frame uniforms.
 
-// Sample `i`'s stored state.
+// `simstate_buffer`'s bind group and binding number (R-343).
+const SIMSTATE_GROUP: u32 = 1u;
+const SIMSTATE_BINDING: u32 = 0u;
+
+// `word_buffer`'s bind group and binding number (R-343).
+const WORD_GROUP: u32 = 1u;
+const WORD_BINDING: u32 = 1u;
+
+@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
+@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
+
+// Sample `i`'s stored state; the only read of `simstate_buffer` (R-343).
 fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }
 
-// Sample `i`'s word: the same index as its state, per copy.
+// Sample `i`'s word: the same index as its state, per copy; the only read of `word_buffer` (R-343).
 fn sample_word(i: u32) -> vec4<u32> { return word_buffer[i]; }
 
 // The `state` code of escape (payload §2).

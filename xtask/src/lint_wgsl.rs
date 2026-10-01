@@ -9,7 +9,12 @@
 //!   ([`Rule::Vec2Groups`]);
 //! - a word buffer that is not its own binding: `word_buffer` must be a storage global `array<vec4<u32>>` with a
 //!   binding no other global shares, read only at a per-sample index (a function argument), as the `SimState` buffer
-//!   is; and no `SimState*` struct may hold a `vec4<u32>` ([`Rule::WordBinding`]).
+//!   is; and no `SimState*` struct may hold a `vec4<u32>` ([`Rule::WordBinding`]);
+//! - a buffer off R-343's bindings, the numbers of the ledger's one table ([`ledger::payload::bindings`]):
+//!   `simstate_buffer: array<SimStateFTLE>` at `@group(1) @binding(0)` and `word_buffer: array<vec4<u32>>` at
+//!   `@group(1) @binding(1)`, each attribute equal to the generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING` constants,
+//!   and no binding in group 0, the assembler's per-frame uniforms ([`Rule::Bindings`]);
+//! - a use of either buffer in any function but its one reader, `sample_state` or `sample_word` ([`Rule::SampleOnly`]).
 //!
 //! naga folds a call whose arguments are all constant before the IR is built, so the `extractBits` rule sees only
 //! calls on a runtime value, which every generated accessor's is (a parameter). The `enable` directive is not kept in
@@ -45,6 +50,8 @@ pub enum Rule {
     NoEnableF16,
     Vec2Groups,
     WordBinding,
+    Bindings,
+    SampleOnly,
 }
 
 impl fmt::Display for Rule {
@@ -55,6 +62,8 @@ impl fmt::Display for Rule {
             Rule::NoEnableF16 => "no-enable-f16",
             Rule::Vec2Groups => "vec2-groups",
             Rule::WordBinding => "word-binding",
+            Rule::Bindings => "bindings",
+            Rule::SampleOnly => "sample-only",
         })
     }
 }
@@ -108,6 +117,8 @@ pub fn check(source: &str) -> Result<Vec<Finding>, String> {
     found.extend(enable_f16(source));
     found.extend(vec2_groups(&module));
     found.extend(word_binding(&module));
+    found.extend(bindings(&module));
+    found.extend(sample_only(&module));
     Ok(found)
 }
 
@@ -403,6 +414,120 @@ fn word_binding(module: &Module) -> Vec<Finding> {
                     "`{name}.{}` is a vec4<u32> inside SimState: the word lives in its own buffer",
                     m.name.as_deref().unwrap_or("")
                 ));
+            }
+        }
+    }
+    found
+}
+
+/// The u32 value of the module constant `name`, if it is one.
+fn constant(module: &Module, name: &str) -> Option<u32> {
+    let (_, c) = module
+        .constants
+        .iter()
+        .find(|(_, c)| c.name.as_deref() == Some(name))?;
+    match module.global_expressions[c.init] {
+        Expression::Literal(naga::Literal::U32(v)) => Some(v),
+        _ => None,
+    }
+}
+
+/// R-343's bindings, from the ledger's table: each buffer a storage global of its type at its group and binding, each
+/// number equal to the generated constant, and no global bound in group 0.
+fn bindings(module: &Module) -> Vec<Finding> {
+    let mut found = Vec::new();
+    let mut bad = |what: String| found.push(finding(Rule::Bindings, what));
+    for b in ledger::payload::bindings() {
+        let want = if b.holds == "word" {
+            "array<vec4<u32>>"
+        } else {
+            "array<SimStateFTLE>"
+        };
+        let Some((_, g)) = module
+            .global_variables
+            .iter()
+            .find(|(_, g)| g.name.as_deref() == Some(b.buffer))
+        else {
+            bad(format!("no `{}` global (R-343)", b.buffer));
+            continue;
+        };
+        let ty_ok = match module.types[g.ty].inner {
+            TypeInner::Array {
+                base,
+                size: ArraySize::Dynamic,
+                ..
+            } => {
+                if b.holds == "word" {
+                    is_word_array(module, g.ty)
+                } else {
+                    module.types[base].name.as_deref() == Some("SimStateFTLE")
+                }
+            }
+            _ => false,
+        };
+        if !ty_ok || !matches!(g.space, AddressSpace::Storage { .. }) {
+            bad(format!("`{}` is not a storage `{want}` (R-343)", b.buffer));
+        }
+        match &g.binding {
+            Some(r) if r.group == b.group && r.binding == b.binding => {}
+            Some(r) => bad(format!(
+                "`{}` is at @group({}) @binding({}), not @group({}) @binding({}) (R-343)",
+                b.buffer, r.group, r.binding, b.group, b.binding
+            )),
+            None => bad(format!("`{}` has no binding (R-343)", b.buffer)),
+        }
+        for (suffix, number) in [("GROUP", b.group), ("BINDING", b.binding)] {
+            let name = format!("{}_{suffix}", b.constant);
+            match constant(module, &name) {
+                Some(v) if v == number => {}
+                Some(v) => bad(format!(
+                    "`{name}` is {v}, not the table's {number} that `{}`'s attribute carries (R-343)",
+                    b.buffer
+                )),
+                None => bad(format!("no u32 constant `{name}` (R-343)")),
+            }
+        }
+    }
+    for (_, g) in module.global_variables.iter() {
+        if g.binding.as_ref().is_some_and(|r| r.group == 0) {
+            bad(format!(
+                "`{}` is bound in group 0, the assembler's per-frame uniforms (R-343)",
+                g.name.as_deref().unwrap_or("(unnamed)")
+            ));
+        }
+    }
+    found
+}
+
+/// Each function or entry point but a buffer's one reader that uses the buffer (R-343: both buffers are read only
+/// through `sample_state(i)` and `sample_word(i)`).
+fn sample_only(module: &Module) -> Vec<Finding> {
+    let table = ledger::payload::bindings();
+    let functions = module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|ep| &ep.function));
+    let mut found = Vec::new();
+    for function in functions {
+        let fname = function.name.as_deref().unwrap_or("(unnamed)");
+        let mut used: Vec<&str> = Vec::new();
+        for (_, expr) in function.expressions.iter() {
+            let Expression::GlobalVariable(g) = *expr else {
+                continue;
+            };
+            let gname = module.global_variables[g].name.as_deref().unwrap_or("");
+            if let Some(b) = table.iter().find(|b| b.buffer == gname) {
+                if b.reader != fname && !used.contains(&b.buffer) {
+                    used.push(b.buffer);
+                    found.push(finding(
+                        Rule::SampleOnly,
+                        format!(
+                            "`{fname}` uses `{}`, which only `{}` reads (R-343)",
+                            b.buffer, b.reader
+                        ),
+                    ));
+                }
             }
         }
     }

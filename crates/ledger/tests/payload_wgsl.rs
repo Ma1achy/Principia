@@ -4,7 +4,9 @@
 //!   each WGSL table function, run on the GPU, reads the cell at `input & 3` for a symbol ≥ 4 and the digit-2 cell for a
 //!   digit ≥ 3, as the Rust release build does (R-321, R-324).
 //! - REQ-PAY-091: the generated WGSL struct layouts for `SimState` and `ICDescriptor` match the ledger's field by field,
-//!   and the checked-in WGSL is the emitter's output.
+//!   and the checked-in WGSL is the emitter's output; under R-343, `closure_step_reserved` is a u32 at `closure_step`'s
+//!   byte (140 in `SimStateFTLE`, 92 in `SimStateBase`), `closure_step(w)` reads bits 0–15 on the GPU, the schema version's halves are the Rust `u64`'s, and the
+//!   buffers' `@group`/`@binding` numbers equal the generated constants in both the WGSL and the Rust.
 
 use std::path::Path;
 
@@ -206,7 +208,7 @@ negative_control!(
 // R-321, R-324: the WGSL table functions are total, run on the GPU.
 
 /// The test kernels: each table function of input `a` (and `b`), into `out`. The generated layer's own bindings are
-/// moved to group 1, which these kernels do not use, so the harness's group 0 is theirs alone.
+/// in group 1 (R-343), which these kernels do not use, so the harness's group 0 is theirs alone.
 const KERNELS: &str = r"
 @group(0) @binding(0) var<storage, read> a: array<u32>;
 @group(0) @binding(1) var<storage, read> b: array<u32>;
@@ -236,7 +238,7 @@ fn t_continuation_index(@builtin(global_invocation_id) id: vec3<u32>) {
 /// Each WGSL table function of `generated`, over every pair of inputs 0…15 and a few far past the codes, returns the
 /// Rust release build's value: the cell at each symbol `& 3` and at each digit `min(d, 2)`.
 fn check_total(generated: &str) {
-    let module = format!("{}\n{KERNELS}", generated.replace("@group(0)", "@group(1)"));
+    let module = format!("{generated}\n{KERNELS}");
     let values: Vec<u32> = (0..16)
         .chain([255, 1 << 16, u32::MAX - 1, u32::MAX])
         .collect();
@@ -293,7 +295,7 @@ struct Field {
 }
 
 /// `s`'s members as the ledger lays them out ([`rust::offsets`]): each at its offset, a u16 pair (WGSL has no u16) as
-/// one u32 named `<first>_<second>`, the second's leading `_` dropped (RQ-188, option 2a).
+/// one u32 named `<first>_<second>`, the second's leading `_` dropped (R-343).
 fn ledger_fields(s: &Struct) -> Vec<Field> {
     let (offsets, _) = rust::offsets(s);
     let mut out = Vec::new();
@@ -513,4 +515,169 @@ negative_control!(
         let swapped = format!("{}{hi}, {lo}{}", &wgsl[..start], &wgsl[end..]);
         check_version(&swapped, &checked_in(rust::PATH));
     }
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// R-343: `closure_step`'s WGSL form and the binding constants.
+
+/// `closure_step_reserved` is a u32 at the byte of the stored `closure_step` in both `SimState` variants in `source`:
+/// 140 in `SimStateFTLE` (R-343) and 92 in `SimStateBase`, which drops the 48 B shadow before it (payload §1: "drop
+/// r_sh,p_sh → 96 B"). The task file's "byte 140 of both variants" reads as FTLE's offset; applied per R-204.
+fn check_closure_member(source: &str) {
+    let module = parse(source);
+    for (variant, at) in [("SimStateFTLE", 140), ("SimStateBase", 92)] {
+        let (_, ty) = module
+            .types
+            .iter()
+            .find(|(_, t)| t.name.as_deref() == Some(variant))
+            .unwrap_or_else(|| panic!("the WGSL declares no `{variant}`"));
+        let TypeInner::Struct { members, .. } = &ty.inner else {
+            panic!("`{variant}` is not a struct")
+        };
+        let m = members
+            .iter()
+            .find(|m| m.name.as_deref() == Some("closure_step_reserved"))
+            .unwrap_or_else(|| panic!("`{variant}` has no closure_step_reserved"));
+        assert_eq!(
+            (m.offset, type_name(&module, m.ty).as_str()),
+            (at, "u32"),
+            "`{variant}.closure_step_reserved` is not a u32 at byte {at}"
+        );
+    }
+}
+
+#[test]
+fn wgsl_layouts_closure_step_reserved_is_a_u32_at_closure_steps_byte() {
+    check_closure_member(&generated_wgsl());
+}
+
+negative_control!(
+    wgsl_layouts_closure_step_reserved_is_a_u32_at_closure_steps_byte,
+    "a SimStateBase with closure_min after closure_step_reserved moves it to byte 88 and must fail",
+    expected = "`SimStateBase.closure_step_reserved` is not a u32 at byte 92",
+    {
+        let wgsl = generated_wgsl();
+        let base = wgsl.find("struct SimStateBase").expect("SimStateBase");
+        let (head, tail) = wgsl.split_at(base);
+        let swapped = tail.replacen(
+            "    closure_min: f32,\n    closure_step_reserved: u32,",
+            "    closure_step_reserved: u32,\n    closure_min: f32,",
+            1,
+        );
+        check_closure_member(&format!("{head}{swapped}"));
+    }
+);
+
+/// The kernel that runs the generated `closure_step` on input `a`, into `out`.
+const CLOSURE_KERNEL: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(64)
+fn t_closure_step(@builtin(global_invocation_id) id: vec3<u32>) {
+    if id.x < arrayLength(&a) { out[id.x] = closure_step(a[id.x]); }
+}
+";
+
+/// `closure_step(w)` of `generated`, on the GPU, is bits 0–15 of `w`, bits 16–31 ignored: at `w = 0xffff0000 | k` it
+/// returns `k`.
+fn check_closure_step(generated: &str) {
+    let module = format!("{generated}\n{CLOSURE_KERNEL}");
+    let ks: Vec<u32> = [0, 1, 2, 140, 0x7fff, 0x8000, 0xfffe, 0xffff]
+        .into_iter()
+        .chain((0..16).map(|b| 1 << b))
+        .collect();
+    let w: Vec<u32> = ks.iter().map(|k| 0xffff_0000 | k).collect();
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let got = gpu.run_wgsl(&module, "t_closure_step", &[&w]);
+    for (i, &k) in ks.iter().enumerate() {
+        assert_eq!(
+            got[i], k,
+            "WGSL closure_step({:#010x}) is {:#x}, not {k:#x}",
+            w[i], got[i]
+        );
+    }
+}
+
+#[test]
+fn wgsl_layouts_closure_step_reads_bits_0_to_15() {
+    check_closure_step(&generated_wgsl());
+}
+
+negative_control!(
+    wgsl_layouts_closure_step_reads_bits_0_to_15,
+    "a closure_step that returns the whole word keeps bits 16–31 and must fail",
+    expected = "WGSL closure_step(0xffff0000) is 0xffff0000, not 0x0",
+    check_closure_step(&generated_wgsl().replace(
+        "fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }",
+        "fn closure_step(w: u32) -> u32 { return w; }"
+    ))
+);
+
+/// The Rust `pub const name: u32 = …;`.
+fn rust_u32(source: &str, name: &str) -> u32 {
+    let [v] = rust_table(source, name)[..] else {
+        panic!("the Rust `{name}` is not one number")
+    };
+    v
+}
+
+/// In `wgsl`, each buffer of the ledger's table is bound at `@group(G) @binding(B)` equal to the WGSL constants
+/// `<PREFIX>_GROUP`/`<PREFIX>_BINDING`, which equal the Rust ones in `rust`, which are R-343's: `simstate_buffer` 1/0,
+/// `word_buffer` 1/1.
+fn check_binding_constants(wgsl: &str, rust: &str) {
+    let module = parse(wgsl);
+    let ruled = [
+        ("simstate_buffer", "SIMSTATE", 1, 0),
+        ("word_buffer", "WORD", 1, 1),
+    ];
+    for (buffer, prefix, group, binding) in ruled {
+        let (_, g) = module
+            .global_variables
+            .iter()
+            .find(|(_, g)| g.name.as_deref() == Some(buffer))
+            .unwrap_or_else(|| panic!("the WGSL binds no `{buffer}`"));
+        let r = g.binding.as_ref().expect("a binding");
+        let attrs = [r.group, r.binding];
+        let wgsl_consts = [
+            wgsl_table(&module, &format!("{prefix}_GROUP")),
+            wgsl_table(&module, &format!("{prefix}_BINDING")),
+        ]
+        .map(|v| v[0]);
+        let rust_consts = [
+            rust_u32(rust, &format!("{prefix}_GROUP")),
+            rust_u32(rust, &format!("{prefix}_BINDING")),
+        ];
+        assert_eq!(
+            attrs, wgsl_consts,
+            "`{buffer}`'s attributes differ from the WGSL constants"
+        );
+        assert_eq!(
+            wgsl_consts, rust_consts,
+            "`{buffer}`'s WGSL constants differ from the Rust ones"
+        );
+        assert_eq!(
+            attrs,
+            [group, binding],
+            "`{buffer}` is not where R-343 binds it"
+        );
+    }
+}
+
+#[test]
+fn wgsl_layouts_bindings_are_the_generated_constants() {
+    check_binding_constants(&generated_wgsl(), &checked_in(rust::PATH));
+}
+
+negative_control!(
+    wgsl_layouts_bindings_are_the_generated_constants,
+    "a word buffer bound at 2 while WORD_BINDING stays 1 must fail",
+    expected = "`word_buffer`'s attributes differ from the WGSL constants",
+    check_binding_constants(
+        &generated_wgsl().replace(
+            "@group(1) @binding(1) var<storage, read> word_buffer",
+            "@group(1) @binding(2) var<storage, read> word_buffer"
+        ),
+        &checked_in(rust::PATH)
+    )
 );

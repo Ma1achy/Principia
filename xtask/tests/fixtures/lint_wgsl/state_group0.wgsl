@@ -1,4 +1,4 @@
-// Every rule holds: the base the other fixtures each break once.
+// Breaks bindings: the state buffer is in group 0, the assembler's per-frame uniforms (R-343).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -10,7 +10,7 @@ const SIMSTATE_BINDING: u32 = 0u;
 const WORD_GROUP: u32 = 1u;
 const WORD_BINDING: u32 = 1u;
 
-@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
+@group(0) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
 @group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
 
 fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }

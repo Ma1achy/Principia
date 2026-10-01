@@ -286,6 +286,47 @@ pub fn structs() -> Vec<Struct> {
     ]
 }
 
+/// One stored buffer's binding in the fragment-side unpack layer (R-343).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Binding {
+    /// The WGSL global the buffer is bound to.
+    pub buffer: &'static str,
+    /// The [`Struct::buffer`] whose elements it holds.
+    pub holds: &'static str,
+    /// The one generated function that reads it, by the sample index (R-343).
+    pub reader: &'static str,
+    /// The prefix of its generated constants, `<prefix>_GROUP` and `<prefix>_BINDING`.
+    pub constant: &'static str,
+    pub group: u32,
+    pub binding: u32,
+}
+
+/// The one table of the stored buffers' bindings (R-343), the source of the numbers both emitters write, as the
+/// constants `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING` and as the WGSL `@group`/`@binding`
+/// attributes: `SimStateFTLE` at group 1, binding 0, the word buffer at group 1, binding 1. Group 0 is the
+/// assembler's per-frame uniforms. A binding number decides no stored bit's meaning, so the table is not hashed into
+/// the schema version (R-343's applied note; dd_generation_root §3.8 "The hash").
+pub const fn bindings() -> [Binding; 2] {
+    [
+        Binding {
+            buffer: "simstate_buffer",
+            holds: "SimState",
+            reader: "sample_state",
+            constant: "SIMSTATE",
+            group: 1,
+            binding: 0,
+        },
+        Binding {
+            buffer: "word_buffer",
+            holds: "word",
+            reader: "sample_word",
+            constant: "WORD",
+            group: 1,
+            binding: 1,
+        },
+    ]
+}
+
 /// Payload §3's frozen `inverse`, each symbol's code to its inverse's, the symbol codes `a = 0, A = 1, b = 2, B = 3`.
 /// The table is ledger data written in function bodies, as the words' bits are: it is part of the binary format, not
 /// a register constant (REQ-SYS-001).

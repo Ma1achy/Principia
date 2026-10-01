@@ -1,4 +1,4 @@
-// Breaks word-binding: the word is a SimState member, with no buffer of its own.
+// Breaks word-binding: the word is a SimState member, not only in its own buffer.
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -6,7 +6,14 @@ struct SimStateFTLE {
     word: vec4<u32>,
 }
 
-@group(0) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
+const SIMSTATE_GROUP: u32 = 1u;
+const SIMSTATE_BINDING: u32 = 0u;
+const WORD_GROUP: u32 = 1u;
+const WORD_BINDING: u32 = 1u;
+
+@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
+@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
 
 fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }
+fn sample_word(i: u32) -> vec4<u32> { return word_buffer[i]; }
 fn sd_state(w: u32) -> u32 { return extractBits(w, 0u, 3u); }

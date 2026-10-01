@@ -1,4 +1,4 @@
-// Every rule holds: the base the other fixtures each break once.
+// Breaks bindings: the word buffer is at binding 2, not WORD_BINDING's 1 (R-343).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -11,7 +11,7 @@ const WORD_GROUP: u32 = 1u;
 const WORD_BINDING: u32 = 1u;
 
 @group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
-@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
+@group(1) @binding(2) var<storage, read> word_buffer: array<vec4<u32>>;
 
 fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }
 fn sample_word(i: u32) -> vec4<u32> { return word_buffer[i]; }

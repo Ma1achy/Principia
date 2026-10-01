@@ -9,9 +9,13 @@
 //! `array<vec2<f32>, 3>`, and the word buffer is its own binding, indexed by the sample index the `SimState` buffer is.
 //! `cargo xtask lint wgsl` checks them over naga's IR.
 //!
-//! RQ-188 (open): the corpus gives no binding numbers, nor which `SimState` variant the layer binds, nor the WGSL form
-//! of the u16 `closure_step` and of the u64 schema version. This emitter writes RQ-188's recommended options, marked in
-//! the output as waiting on it.
+//! R-343 (closing RQ-188): `SimStateFTLE` is bound at `@group(1) @binding(0)` and the word buffer at
+//! `@group(1) @binding(1)`, the numbers from the ledger's one binding table ([`crate::payload::bindings`]), also written
+//! as the constants `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING`; both buffers are read only
+//! through `sample_state(i)` and `sample_word(i)`; the u16 `closure_step` and `_reserved` are one u32 member, read
+//! through `closure_step(w)`; the u64 schema version is a `vec2<u32>`, `.x` its low 32 bits. The layer only reads: no
+//! setter is written. An unset value is tested by its bits, never by `isinf`, `isnan` or a float comparison, which
+//! fast-math (R-297) may optimise away.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -60,14 +64,13 @@ fn is_word_buffer(s: &Struct) -> bool {
 }
 
 /// The payload schema version (R-36, R-63) as `vec2<u32>`, `.x` its low 32 bits and `.y` its high 32: WGSL has no u64
-/// (RQ-188, option 3a).
+/// (R-343).
 fn version(words: &[Word], entries: &[Entry], structs: &[Struct]) -> String {
     use crate::version::{schema_version, Hashed};
     match schema_version(&Hashed::payload(words, entries, structs)) {
         Ok(v) => format!(
             "\n// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust\n\
-             // PAYLOAD_SCHEMA_VERSION, {v:#018x}). WGSL has no u64: .x is its low 32 bits, .y its high 32 (waiting on\n\
-             // RQ-188).\n\
+             // PAYLOAD_SCHEMA_VERSION, {v:#018x}). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).\n\
              const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>({:#010x}u, {:#010x}u);\n",
             v & 0xffff_ffff,
             v >> 32,
@@ -87,7 +90,7 @@ pub struct WgslMember {
 
 /// `s`'s members as WGSL writes them. A storage maps to its WGSL type; two u16 members in a row, which WGSL cannot
 /// store apart (it has no u16), are one u32 named `<first>_<second>`, its leading `_` dropped, the first in bits 0–15
-/// (RQ-188, option 2a).
+/// (R-343).
 pub fn members(s: &Struct) -> Vec<WgslMember> {
     let mut out = Vec::new();
     let mut i = 0;
@@ -134,9 +137,9 @@ fn layout(s: &Struct) -> String {
     );
     for m in &ms {
         let note = match m.stores.as_slice() {
-            [a, b] => format!(
-                " // `{a}` in bits 0–15, `{b}` in bits 16–31 (WGSL has no u16; waiting on RQ-188)"
-            ),
+            [a, b] => {
+                format!(" // `{a}` in bits 0–15, `{b}` in bits 16–31 (WGSL has no u16; R-343)")
+            }
             _ => String::new(),
         };
         let _ = writeln!(out, "    {}: {},{note}", m.name, m.ty);
@@ -160,7 +163,7 @@ fn pair_accessors(structs: &[Struct]) -> String {
                 let offset = 16 * half;
                 let _ = write!(
                     out,
-                    "\n// `{name}`: bits {offset}–{} of `{}` (payload §1; waiting on RQ-188).\n\
+                    "\n// `{name}`: bits {offset}–{} of `{}` (payload §1; R-343).\n\
                      fn {name}(w: u32) -> u32 {{ return extractBits(w, {offset}u, 16u); }}\n",
                     offset + 15,
                     m.name,
@@ -171,24 +174,67 @@ fn pair_accessors(structs: &[Struct]) -> String {
     out
 }
 
-/// The `SimState` buffer and the word buffer, each its own binding, and their reads by the sample index `i`: the word
-/// buffer is indexed identically to samples, per copy (render contract Part 5; dd_generation_root §3.3a). The bound
-/// `SimState` element is the indexed variant, `SimStateFTLE`; the bindings and the variant wait on RQ-188 (option 1a).
+/// The `SimState` buffer and the word buffer, each its own binding, from the ledger's one binding table
+/// ([`crate::payload::bindings`], R-343): first the constants `<PREFIX>_GROUP` and `<PREFIX>_BINDING` the Rust emitter
+/// also writes ([`rust::bindings`]), then each buffer at the same numbers, then its one reader by the sample index `i`
+/// (`sample_state`, `sample_word`). The word buffer is indexed identically to samples, per copy (render contract Part
+/// 5; dd_generation_root §3.3a). The `SimState` buffer holds the indexed variant, `SimStateFTLE`, the full tier (R-343).
 fn bindings(structs: &[Struct]) -> String {
-    let state = structs
-        .iter()
-        .find(|s| s.buffer == Some("SimState") && s.indexed)
-        .map_or("SimStateFTLE", |s| s.name);
-    format!(
-        "\n// The two buffers (payload §0), each its own binding; word_buffer[i] is the word of the sample whose state is\n\
-         // simstate_buffer[i] (dd_generation_root §3.3a). Group, binding numbers and the bound variant wait on RQ-188.\n\
-         @group(0) @binding(0) var<storage, read> simstate_buffer: array<{state}>;\n\
-         @group(0) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;\n\
-         \n// Sample `i`'s stored state.\n\
-         fn sample_state(i: u32) -> {state} {{ return simstate_buffer[i]; }}\n\
-         \n// Sample `i`'s word: the same index as its state, per copy.\n\
-         fn sample_word(i: u32) -> vec4<u32> {{ return word_buffer[i]; }}\n"
-    )
+    let element = |holds: &str| {
+        if holds == "word" {
+            return "vec4<u32>".to_owned();
+        }
+        structs
+            .iter()
+            .find(|s| s.buffer == Some(holds) && s.indexed)
+            .map_or_else(
+                || format!("{holds}_has_no_indexed_struct"),
+                |s| s.name.to_owned(),
+            )
+    };
+    let table = crate::payload::bindings();
+    let mut out = String::from(
+        "\n// The two buffers (payload §0), each its own binding (R-343): group 0 is the assembler's per-frame uniforms.\n",
+    );
+    for b in &table {
+        let _ = write!(
+            out,
+            "\n// `{buf}`'s bind group and binding number (R-343).\n\
+             const {c}_GROUP: u32 = {g}u;\n\
+             const {c}_BINDING: u32 = {n}u;\n",
+            buf = b.buffer,
+            c = b.constant,
+            g = b.group,
+            n = b.binding,
+        );
+    }
+    out.push('\n');
+    for b in &table {
+        let _ = writeln!(
+            out,
+            "@group({}) @binding({}) var<storage, read> {}: array<{}>;",
+            b.group,
+            b.binding,
+            b.buffer,
+            element(b.holds)
+        );
+    }
+    for b in &table {
+        let what = if b.holds == "word" {
+            "word: the same index as its state, per copy"
+        } else {
+            "stored state"
+        };
+        let _ = write!(
+            out,
+            "\n// Sample `i`'s {what}; the only read of `{buf}` (R-343).\n\
+             fn {r}(i: u32) -> {e} {{ return {buf}[i]; }}\n",
+            buf = b.buffer,
+            r = b.reader,
+            e = element(b.holds),
+        );
+    }
+    out
 }
 
 /// Payload §2's `state` codes as constants, `STATE_<NAME>`, from the ledger's table ([`crate::payload::states`]).

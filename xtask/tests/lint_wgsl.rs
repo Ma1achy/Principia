@@ -1,6 +1,7 @@
 //! `cargo xtask lint wgsl` (render contract Part 5, "Unpack layer"; REQ-RENDER-001): it passes on the generated WGSL
 //! and on a clean fixture, and each fixture that breaks one rule fails it, naming that rule: an i32 `extractBits`, an
-//! f64, `enable f16`, an `r` not vec2-grouped, and a word inside `SimState` with no buffer of its own.
+//! f64, `enable f16`, an `r` not vec2-grouped, and a word inside `SimState`; and, for R-343's bindings, the state
+//! buffer in group 0, the word buffer at the wrong binding number, and `word_buffer` indexed outside `sample_word`.
 
 use std::path::{Path, PathBuf};
 
@@ -178,4 +179,40 @@ negative_control!(
     "the clean fixture reads the word buffer only at its argument, so the rule must not fire",
     expected = "did not fire",
     check_constant_index_fires(&read(&fixture("clean.wgsl")))
+);
+
+#[test]
+fn lint_wgsl_state_buffer_in_group_0_fails_naming_the_rule() {
+    check_fails_naming(&fixture("state_group0.wgsl"), Rule::Bindings);
+}
+
+negative_control!(
+    lint_wgsl_state_buffer_in_group_0_fails_naming_the_rule,
+    "the clean fixture binds both buffers in group 1 at the table's numbers, so the rule must not fire",
+    expected = "did not fire",
+    check_fails_naming(&fixture("clean.wgsl"), Rule::Bindings)
+);
+
+#[test]
+fn lint_wgsl_word_buffer_wrong_binding_fails_naming_the_rule() {
+    check_fails_naming(&fixture("word_binding_number.wgsl"), Rule::Bindings);
+}
+
+negative_control!(
+    lint_wgsl_word_buffer_wrong_binding_fails_naming_the_rule,
+    "the clean fixture binds the word buffer at WORD_BINDING's 1, so the rule must not fire",
+    expected = "did not fire",
+    check_fails_naming(&fixture("clean.wgsl"), Rule::Bindings)
+);
+
+#[test]
+fn lint_wgsl_word_buffer_outside_sample_word_fails_naming_the_rule() {
+    check_fails_naming(&fixture("word_outside_sample.wgsl"), Rule::SampleOnly);
+}
+
+negative_control!(
+    lint_wgsl_word_buffer_outside_sample_word_fails_naming_the_rule,
+    "the clean fixture reads each buffer only through its sample function, so the rule must not fire",
+    expected = "did not fire",
+    check_fails_naming(&fixture("clean.wgsl"), Rule::SampleOnly)
 );
