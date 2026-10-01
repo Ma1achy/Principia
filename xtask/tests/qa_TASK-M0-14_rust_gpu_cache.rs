@@ -29,6 +29,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use validation::negative_control;
+use validation::spawn::Spawn;
 
 const RUST_GPU: &str = "~/.cache/rust-gpu";
 
@@ -456,14 +457,21 @@ fn step_output(job: &Job, id: &str, name: &str) -> String {
         std::process::id()
     ));
     let _ = std::fs::remove_file(&file);
-    let status = Command::new("bash")
+    // Through the spawn helper (R-214, REQ-VAL-155): bounded by its timeout, and never forked while a stand-in
+    // executable is open for writing (REQ-SYS-070).
+    let out = Command::new("bash")
         .arg("-c")
         .arg(lines.join("\n"))
         .current_dir(root())
         .env("GITHUB_OUTPUT", &file)
-        .status()
+        .timed_output()
         .expect("bash runs");
-    assert!(status.success(), "{}: `{id}`'s output line failed", job.id);
+    assert!(
+        out.status.success(),
+        "{}: `{id}`'s output line failed: {}",
+        job.id,
+        String::from_utf8_lossy(&out.stderr)
+    );
     std::fs::read_to_string(&file)
         .unwrap_or_default()
         .lines()
