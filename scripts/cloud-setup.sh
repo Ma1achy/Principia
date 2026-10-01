@@ -387,7 +387,7 @@ main() {
   fi
 
   # Rust. The runner image has rustup; a machine without it gets it, with no toolchain of its own.
-  export PATH="$HOME/.cargo/bin:$PATH"
+  export PATH="$CARGO_BIN:$PATH"
   if ! command -v rustup >/dev/null 2>&1; then
     say "installing rustup"
     curl --proto '=https' -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain none
@@ -444,7 +444,7 @@ main() {
     export "${pair?}"
     say "exported $pair for this run; to keep it, add to your shell profile: export $pair"
   done
-  say "to keep cargo on PATH, add to your shell profile: export PATH=\"\$HOME/.cargo/bin:\$PATH\""
+  say "to keep cargo on PATH, add to your shell profile: export PATH=\"$CARGO_BIN:\$PATH\""
 
   # The smoke test.
   say "smoke test: python3 plan/check_plan.py"
