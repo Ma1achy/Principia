@@ -12,7 +12,7 @@ use std::path::Path;
 
 use ledger::gen::{self, rust, wgsl};
 use ledger::layout;
-use ledger::schema::{Storage, Struct};
+use ledger::schema::{Entry, Location, Member, Storage, Struct};
 use naga::{ArraySize, Expression, Literal, Module, Scalar, TypeInner};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -680,4 +680,130 @@ negative_control!(
         ),
         &checked_in(rust::PATH)
     )
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The emitter on layouts the payload ledger does not have (R-196's mutation gate).
+
+/// The WGSL members of `T { a: f32, lo: u16, <second>: u16, b: u32 }`, the u16 pair mid-struct.
+fn mid_pair(second: Storage) -> Vec<(String, String)> {
+    let s = Struct {
+        name: "T",
+        align: 4,
+        buffer: None,
+        indexed: false,
+        members: vec![
+            Member {
+                name: "a",
+                storage: Storage::F32,
+            },
+            Member {
+                name: "lo",
+                storage: Storage::U16,
+            },
+            Member {
+                name: "_hi",
+                storage: second,
+            },
+            Member {
+                name: "b",
+                storage: Storage::U32,
+            },
+        ],
+    };
+    wgsl::members(&s)
+        .into_iter()
+        .map(|m| (m.name, m.ty))
+        .collect()
+}
+
+fn check_mid_pair(got: &[(String, String)]) {
+    let want =
+        [("a", "f32"), ("lo_hi", "u32"), ("b", "u32")].map(|(n, t)| (n.to_owned(), t.to_owned()));
+    assert_eq!(got, want, "the WGSL members of a mid-struct u16 pair");
+}
+
+#[test]
+fn wgsl_layouts_u16_pair_mid_struct_is_one_u32_then_the_rest() {
+    check_mid_pair(&mid_pair(Storage::U16));
+}
+
+negative_control!(
+    wgsl_layouts_u16_pair_mid_struct_is_one_u32_then_the_rest,
+    "a u16 with a u32, not a u16, beside it is no pair",
+    expected = "the WGSL members of a mid-struct u16 pair",
+    check_mid_pair(&mid_pair(Storage::U32))
+);
+
+/// The WGSL the emitter writes from the payload ledger with `edit` applied to each validated entry.
+fn emitted_with(edit: impl Fn(&mut Entry)) -> String {
+    let ledger = layout();
+    let mut entries = gen::validate(&ledger).expect("the payload ledger validates");
+    entries.iter_mut().for_each(edit);
+    wgsl::emit(&ledger.words, &entries)
+        .into_iter()
+        .next()
+        .expect("the WGSL emitter writes a file")
+        .contents
+}
+
+const D_MIN_REFUSED: &str =
+    "const_assert false; // `d_min`: an f16 pair is bits 0–15 or 16–31, not bits 8–23";
+
+fn check_refused(wgsl: &str) {
+    assert!(
+        wgsl.contains(D_MIN_REFUSED),
+        "an f16 pair off bits 0–15 and 16–31 is not refused"
+    );
+}
+
+/// `d_min` moved to bits 8–23 of its word.
+fn d_min_at_8(e: &mut Entry) {
+    if e.name == "d_min" {
+        if let Location::Packed { word, .. } = e.location {
+            e.location = Location::Packed {
+                word,
+                offset: 8,
+                width: 16,
+            };
+        }
+    }
+}
+
+#[test]
+fn wgsl_layouts_f16_pair_off_a_half_is_refused() {
+    check_refused(&emitted_with(d_min_at_8));
+}
+
+negative_control!(
+    wgsl_layouts_f16_pair_off_a_half_is_refused,
+    "the payload ledger's d_min is at bits 16–31, which is not refused",
+    expected = "is not refused",
+    check_refused(&generated_wgsl())
+);
+
+fn check_finite_sentinel(wgsl: &str) {
+    assert!(
+        wgsl.contains("const PB_DE_MAX_SENTINEL: f32 = 2.0;") && !wgsl.contains("PB_DE_MAX_UNSET"),
+        "a finite f16-pair sentinel is not written as an f32 constant"
+    );
+}
+
+/// `dE_max` given the finite sentinel 2.0.
+fn de_max_sentinel(e: &mut Entry) {
+    if e.name == "dE_max" {
+        e.sentinel = Some(2.0);
+    }
+}
+
+#[test]
+fn wgsl_layouts_finite_f16_pair_sentinel_is_an_f32_constant() {
+    check_finite_sentinel(&emitted_with(de_max_sentinel));
+}
+
+negative_control!(
+    wgsl_layouts_finite_f16_pair_sentinel_is_an_f32_constant,
+    "the payload ledger's dE_max has no sentinel",
+    expected = "is not written as an f32 constant",
+    check_finite_sentinel(&generated_wgsl())
 );

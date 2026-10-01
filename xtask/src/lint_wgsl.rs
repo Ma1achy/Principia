@@ -195,7 +195,7 @@ fn scalars(module: &Module) -> Vec<Finding> {
 }
 
 /// `source` with its `//` and `/* */` comments blanked.
-fn strip_comments(source: &str) -> String {
+pub fn strip_comments(source: &str) -> String {
     let mut out = String::with_capacity(source.len());
     let mut chars = source.chars().peekable();
     let mut depth = 0u32;
