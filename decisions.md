@@ -2567,10 +2567,10 @@ The max step isn't 0, so under this ruling each golden case keeps one reference 
 one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
 
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
-*Amended by R-301.*
+*Amended by R-301 and R-325.*
 *Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the
-pool between runs; the local pool ~5 GB. The "~10.5 min" `ci` target gives way to R-301's accepted cost, about
-10m28.5s per warm `ci` run as PR #85 measured it.*
+pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325);
+R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record.*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
 "#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
@@ -2731,9 +2731,10 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
-*Amended by R-320.*
+*Amended by R-320 and R-326.*
 *Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
-R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version.*
+R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on
+pushes to `main`, and pull-request runs restore only.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3164,6 +3165,9 @@ through methods that increment, read and reset them. Workers still share one `&D
 the caller owns the counters and no kernel static remains.
 
 ## R-301 — TASK-M0-42's CI cost is accepted *(amends R-270)*
+*Amended by R-325.*
+*Still in force: the measurement, about 10m28.5s per warm `ci` run on PR #85; R-325 makes ~10.5 min the target for
+each CI job again.*
 *30 Sep 2026 · applied in TASK-M0-42 (PR #85) and REQ-SYS-073*
 
 "#85: the ~1.5 min cost is accepted (R-301). You may delete the old v0-rust-* Actions caches."
@@ -3441,6 +3445,9 @@ R-321: the functions are total (each input `debug_assert!`-ed < 4, then masked `
 behaviour for all four.
 
 ## R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
+*Amended by R-326.*
+*Still in force: the rust-gpu build is cached under a key naming its job and the pinned toolchain version; R-326
+saves it only on pushes to `main`.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 (new) and TASK-M0-14 (PR #96)*
 
 "R-285 amended: cache the rust-gpu build (~/.cache/rust-gpu), keyed on the pinned toolchain version."
@@ -3483,6 +3490,9 @@ and TASK-M0-18's `canonical_jcs` line follow (a u64 field of 0 and of 2^53 + 1 b
 field writes a number).
 
 ## R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
+*Amended by R-328.*
+*Still in force: the exact threshold; "session incomplete" with the dropped bytes, still compared; R-328 extends "no
+frame records exits 2" from NEW to either file.*
 *1 Oct 2026 · applied in REQ-TOOL-119 and TASK-M0-18 (PR #100)*
 
 "#100's physics findings accepted: the regression threshold compares exactly (100 → 107 at --threshold 7% is not a
@@ -3514,3 +3524,123 @@ a Rust debug build given a digit ≥ 3 fails a `debug_assert!` first (WGSL has n
 digit ≥ 3 read the digit-2 row. Their symbol argument keeps R-321's rule (`debug_assert!` < 4, then `& 3`). No table
 row is added. Payload §3, REQ-PAY-016, TASK-M0-11's `continuation_table_out_of_range` and TASK-M0-13's
 `continuation_table_wgsl_out_of_range` follow.
+
+## R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076 (new) and TASK-M0-14 (PR #96)*
+
+"CI: move the GPU kernel build and its tests into their own parallel job; target ≤ ~10.5 min wall-clock per job
+(R-270)."
+
+*Applied:* `cargo xtask build-kernel` and the tests that need the built kernel leave the `ci` job for a job of their
+own, which runs in parallel with it. R-270's ~10.5 min is the target again, now for each CI job's warm wall-clock
+time, not for `ci` alone. R-301's measurement stands (about 10m28.5s per warm `ci` run on PR #85), but its "the
+~10.5 min target gives way" no longer does. PR #96 measured the warm `ci` job at 17 min 30 s with the kernel build in
+it, against `main`'s 12 min 51 s. TASK-M0-14 (PR #96) makes the split, and its PR shows every job's warm wall time
+against ~10.5 min. A job still over ~10.5 min after the split is reported to the human, not accepted silently. A new
+job is not a required status check until the human adds it to branch protection (R-266, HUMAN_SETUP §2); the PR says
+so.
+
+## R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
+
+"Actions cache: caches are saved only on pushes to main; PR jobs restore only. The rust-gpu cache keeps its own key."
+
+*Applied:* every cache step in every workflow restores in every run, and saves only in a run triggered by a push to
+`main`. A pull-request run, and a push to any other branch, restores and never saves. GitHub scopes caches by branch,
+and a pull-request run can restore what `main` saved. The rust-gpu cache keeps its own key, `rust-gpu-<job>-<os>-<channel>`
+(R-320). This answers PR #96's measurement that the repository's Actions cache held 11.13 GiB, over GitHub's 10 GB
+limit, most of it fixture-pool entries of about 1 GiB saved per branch. REQ-SYS-073 and REQ-SYS-075 follow.
+*Applied per R-204 — veto?:* the rule reaches every workflow, including the cache steps TASK-M0-42 wrote, and
+TASK-M0-14 (PR #96), which already edits the workflows' cache steps, makes the change in all of them; REQ-SYS-073
+stays closed by TASK-M0-42.
+
+## R-327 — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*
+*1 Oct 2026 · applied in telemetry §5, REQ-TOOL-002 and TASK-M0-18 (PR #100)*
+
+"#100 item 11: the frame count is typed u32, so it serialises as a number under R-322."
+
+*Applied:* the frame count, `prin profile --frames N` and the header's `config.frames`, is typed u32. R-322 makes
+only a u64 field a string, so `frames` is a JSON number. PR #100 typed it u64 and wrote it as a number (its veto item
+11); its fix pass types it u32. Telemetry §5, REQ-TOOL-002 and TASK-M0-18 follow.
+
+## R-328 — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*
+*1 Oct 2026 · applied in REQ-TOOL-119 and TASK-M0-18 (PR #100)*
+
+"#100 item 13 stands: empty BASE or NEW exits 2. Widen the plan text to "either file"."
+
+*Applied:* R-323's "a NEW trace with no frame records exits 2" now covers either file. A BASE with no frame records
+can't be compared either, and a gate that passed on an empty BASE could not fail after a crashed baseline run. PR #100
+applied it for BASE per R-204, following the physics reviewer's finding 2, and this ruling confirms it.
+REQ-TOOL-119's verify detail and TASK-M0-18's `profile_diff` and definition lines read "either file"; render_gui_spec
+§ "Profiler" cites R-328 for it.
+
+## R-329 — The header's core count is `cpu_cores_available`; no `usize` in a serialised type
+*1 Oct 2026 · applied in telemetry §5, gui_state_contract §2, REQ-TOOL-002, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
+
+"#100 item 5: the field is named cpu_cores_available (cores this process may use); add the machine's total if cheap.
+Item 14: no usize in serialised types; use explicit u32/u64."
+
+*Applied:* the session header's `device.cpu_cores` is renamed `device.cpu_cores_available`: the number of cores this
+process may use (`std::thread::available_parallelism`), a count of at most 2^32 − 1. *Applied per R-204 — veto?:* the
+machine's total is a second key, `device.cpu_cores_total`, a count of at most 2^32 − 1, or `null` where the platform
+doesn't report it cheaply. A key that is sometimes missing would break telemetry §5's rule that every key is present,
+an absent value `null`. No serialised type has a `usize` field: a count or size is an explicit u32 or u64, so its
+width, and under R-322 its JSON type, never depends on the platform. PR #100's fix pass renames the key in the typed
+form, the JSON Schema and the tests (TASK-M0-17's files, as R-308's change was). Telemetry §5, gui_state_contract §2,
+REQ-TOOL-002, REQ-TOOL-145 and TASK-M0-18 follow.
+
+## R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max`
+*1 Oct 2026 · applied in TASK-M0-11 (PR #99)*
+
+"#99 item 5 accepted (escape_time_min, escape_time_max)."
+
+*Applied:* §3.7's "f16 × 2" stays two named f16 members, `escape_time_min` and `escape_time_max`, as PR #99 wrote it.
+PR #99 merged on this ruling. Changes no requirement.
+
+## R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"#96 item 11 accepted (16-byte padding; 64/112/208 B)."
+
+*Applied:* `ICDescriptor`'s `_pad` stays 16 B at every `Real` width, so the descriptor is 64 B at f32, 112 B at f64 and
+208 B at DoubleF64 (generation-root §3.6, R-313), as PR #96 wrote it. Changes no requirement.
+
+## R-332 — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*
+*1 Oct 2026 · applied in the render contract Part 1, systems_architecture §3, REQ-SYS-033, REQ-SYS-036 and TASK-M5-30*
+
+"RQ-173: option 1. REQ-SYS-033 reads "the sole automatic return of simulation data"; telemetry readback (R-288) isn't
+simulation data."
+
+*Applied:* REQ-SYS-033's statement reads "the sole automatic GPU-to-CPU return of simulation data", and its verify
+detail admits R-288's per-frame telemetry readback, which is not simulation data. The render contract Part 1 says the
+same. TASK-M5-30's Goal and its REQ-SYS-033 checklist line follow. *Applied per R-332 — veto?:* REQ-SYS-036's audit
+("finds only the reduction readback and the two sanctioned pulls") read the same way as REQ-SYS-033's, so it also
+admits the telemetry readback, and its statement names the `QuadReduction` "the sole automatic GPU→CPU return of
+simulation data"; systems_architecture §3's membrane table, REQ-SYS-036's source, says the same, and TASK-M5-30's
+REQ-SYS-036 checklist line follows. A veto reverts all three together. RQ-173 moves to
+`docs/archive/review_queue/M0.md`.
+
+## R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
+*1 Oct 2026 · applied in a follow-up PR on TASK-M0-06*
+
+"The qa_TASK-M0-06_edges flake: a small fix giving the test and its control separate scratch folders."
+
+*Applied:* `qa_m006_symptom_each_channel_mean` in `xtask/tests/qa_TASK-M0-06_edges.rs` and its negative control each
+get a scratch folder of their own. The test failed once with "copied: NotFound" (seen on PR #96) and passed on three
+re-runs: the two shared a folder. The file is qa's, so qa makes the change (R-290), in a follow-up PR on TASK-M0-06,
+as R-217's was on TASK-M0-26. Changes no requirement.
+
+## R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
+*1 Oct 2026 · applied in `open-questions.md` and `plan/check_plan.py` (a PR of its own)*
+
+"open-questions.md: make check_plan.py prove every still-open item in it maps to a requirement or a REVIEW_QUEUE
+entry (ionisation gate, δ_dep and the departed bit, the change-10 re-runs, alpha_area, camera priority, the Burrau
+quotient, the Yoshida-6/OKLab checks). Anything unmapped is filed, not left as prose."
+
+*Applied:* each still-open item in `open-questions.md` names the requirement or the open REVIEW_QUEUE entry that
+carries it. An item that has neither is filed first, as a requirement through `plan/tools/reqio.py` or as a
+REVIEW_QUEUE entry, and then named. `plan/check_plan.py` fails when a still-open item names neither, or names a
+requirement that doesn't exist or is retired, or a REVIEW_QUEUE entry that isn't open. The items the ruling lists: the
+ionisation gate, `δ_dep` and the per-sample departed bit, the change-10 re-runs, the two `alpha_area` defects, the
+camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab transcription checks. It lands in a
+PR of its own, after this one.
