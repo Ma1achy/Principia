@@ -172,6 +172,21 @@ fields do (dd_simstate_payload §1), so the payload is a function of `Real` thro
 the **f32 instantiation**. The f64 and DoubleF64 sizes and declared padding are part of REQ-PAY-087's definition,
 written here by the task that makes the descriptor generic (R-72).
 
+**Layout at a `Real` of `w` bytes (REQ-PAY-087; R-313).** One rule, dd_simstate_payload §1's: every f32 member is a
+`Real`, and every other member keeps its width. The twelve fields, in the order above, are `Real`s at `k·w` (`k` = 0 …
+11); `_pad`, the declared padding, follows at `12w` as four u32s, 16 B at every width; the struct is aligned to
+`Real`'s alignment (4 at f32). The size is `12w + 16`, a multiple of that alignment at every row below, so no tail
+padding is needed: the declared `_tail` is empty at each row (R-86).
+
+| Row | `w`, alignment | fields | `_pad` | size |
+|---|---|---|---|---|
+| f32 (the GPU's) | 4, 4 | 0 … 44 | 48 | **64 B** (R-86) |
+| f64 (the CPU kernel's) | 8, 8 | 0 … 88 | 96 | **112 B** |
+| DoubleF64 (stub) | 16, 8 | 0 … 176 | 192 | **208 B** |
+
+The DoubleF64 row is a row of the generated layout table only, with no `Real` impl and no instantiation
+(dd_simstate_payload §1, R-265). `E₀ = K_0 + V_0` is formed at `Real` width on every path.
+
 ### 3.7 `QuadReduction` — completed ledger
 
 **Status: complete.** The earlier instruction (to transcribe the remaining members verbatim from an older source) was
