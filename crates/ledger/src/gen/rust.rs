@@ -371,10 +371,53 @@ fn array(rows: &[[u32; 4]]) -> String {
     format!("[{}]", rows.join(", "))
 }
 
+/// `cells` as a comparison chain on `var`, `if var == 0 { cells[0] } else if var == 1 { … } else { cells[n − 1] }`,
+/// each cell's text indented to `depth` levels of four spaces, rustfmt's layout. The last cell is the `else`, so a
+/// `var` past the table's last code reads the last cell; the callers pass codes only. A last cell that is itself a
+/// chain continues this one, `else if …`, clippy's collapsed form of `else { if … }`. No runtime array index is
+/// emitted: rust-gpu lowers one to an implicit bounds check, a compiler-injected multi-level exit (GPU determinism
+/// note § "The discipline", rule 5).
+fn select(var: &str, cells: &[String], depth: usize) -> String {
+    let pad = "    ".repeat(depth);
+    let inner = "    ".repeat(depth + 1);
+    let mut out = String::new();
+    for (i, cell) in cells.iter().enumerate() {
+        if i > 0 && i + 1 == cells.len() && cell.starts_with("if ") {
+            let cell = cell.replace('\n', &format!("\n{pad}"));
+            let _ = write!(out, " else {cell}");
+            continue;
+        }
+        let cell = cell.replace('\n', &format!("\n{inner}"));
+        if i == 0 {
+            let _ = write!(out, "if {var} == {i} {{\n{inner}{cell}\n{pad}}}");
+        } else if i + 1 < cells.len() {
+            let _ = write!(out, " else if {var} == {i} {{\n{inner}{cell}\n{pad}}}");
+        } else {
+            let _ = write!(out, " else {{\n{inner}{cell}\n{pad}}}");
+        }
+    }
+    out
+}
+
+/// `row` as cells: its values as literals.
+fn cells(row: &[u32]) -> Vec<String> {
+    row.iter().map(u32::to_string).collect()
+}
+
+/// `table[outer][inner]` as a comparison chain on `outer`, each cell a chain on `inner` ([`select`]), at one level
+/// of indentation, a function body's.
+fn select2(outer: &str, inner: &str, table: &[[u32; 4]]) -> String {
+    let rows: Vec<String> = table.iter().map(|r| select(inner, &cells(r), 0)).collect();
+    select(outer, &rows, 1)
+}
+
 /// Payload §3's frozen continuation table, from the ledger's ([`crate::payload`]): the arrays `INVERSE`,
 /// `CONT_SYMBOL`, `PREDECESSOR_SYMBOL` and `CONTINUATION_INDEX` (3 in its four `next = inverse(prev)` cells, R-307),
-/// and §3's small tables as functions over them: `inverse`, `continuation_symbol`, `predecessor_symbol` and
-/// `continuation_index`. `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line past 100 columns.
+/// and §3's small tables as functions: `inverse`, `continuation_symbol`, `predecessor_symbol` and
+/// `continuation_index`. The arrays are data, for host code; each function is a comparison chain over the same table's
+/// literals ([`select`]), never a runtime index into an array, which rust-gpu would bounds-check (GPU determinism note
+/// § "The discipline", rule 5). `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line past 100
+/// columns.
 pub fn continuation() -> String {
     use crate::payload::{cont_symbol, continuation_index, inverse, predecessor_symbol};
     let i = inverse();
@@ -394,28 +437,32 @@ pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = {};
 pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
     {};
 
-/// The inverse of symbol `s` (payload §3).
+/// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3.
 #[inline]
 pub const fn inverse(s: u32) -> u32 {{
-    INVERSE[s as usize]
+    {}
 }}
 
-/// The symbol digit `e` continues `prev` with (payload §3).
+/// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
+/// digit, 0…2, and `prev` a symbol code, 0…3.
 #[inline]
 pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {{
-    CONT_SYMBOL[e as usize][prev as usize]
+    {}
 }}
 
-/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3).
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2, and `next` a symbol code, 0…3.
 #[inline]
 pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {{
-    PREDECESSOR_SYMBOL[e as usize][next as usize]
+    {}
 }}
 
-/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307).
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3.
 #[inline]
 pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
-    CONTINUATION_INDEX[prev as usize][s as usize]
+    {}
 }}
 "#,
         i[0],
@@ -425,6 +472,10 @@ pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
         array(&cont_symbol()),
         array(&predecessor_symbol()),
         array(&continuation_index()),
+        select("s", &cells(&i), 1),
+        select2("e", "prev", &cont_symbol()),
+        select2("e", "next", &predecessor_symbol()),
+        select2("prev", "s", &continuation_index()),
     )
 }
 

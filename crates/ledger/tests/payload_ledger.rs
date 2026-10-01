@@ -604,3 +604,44 @@ negative_control!(
         l
     })
 );
+
+/// Each of payload §3's four table functions in `source` is emitted, and its body indexes no array: no `[` in it.
+/// rust-gpu lowers a runtime array index to an implicit bounds check, a compiler-injected multi-level exit (GPU
+/// determinism note § "The discipline", rule 5); the functions are comparison chains over the table's literals.
+fn check_table_functions_index_no_array(source: &str) {
+    for name in [
+        "inverse",
+        "continuation_symbol",
+        "predecessor_symbol",
+        "continuation_index",
+    ] {
+        let start = source
+            .find(&format!("pub const fn {name}("))
+            .unwrap_or_else(|| panic!("`{name}` is not emitted"));
+        let open = start + source[start..].find('{').expect("a body");
+        let end = open + source[open..].find("\n}\n").expect("the body's end");
+        let body = &source[open..end];
+        assert!(
+            !body.contains('['),
+            "`{name}` indexes an array at runtime:\n{body}"
+        );
+    }
+}
+
+#[test]
+fn continuation_table_functions_index_no_array() {
+    check_table_functions_index_no_array(&rust::continuation());
+}
+
+negative_control!(
+    continuation_table_functions_index_no_array,
+    "a table function that reads its array by a runtime index must fail",
+    expected = "`inverse` indexes an array at runtime",
+    check_table_functions_index_no_array(
+        &rust::continuation().replacen(
+            "pub const fn inverse(s: u32) -> u32 {\n",
+            "pub const fn inverse(s: u32) -> u32 {\n    INVERSE[s as usize]\n}\n\nconst fn old(s: u32) -> u32 {\n",
+            1,
+        )
+    )
+);

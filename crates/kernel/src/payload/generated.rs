@@ -493,26 +493,132 @@ pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2
 pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
     [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]];
 
-/// The inverse of symbol `s` (payload §3).
+/// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3.
 #[inline]
 pub const fn inverse(s: u32) -> u32 {
-    INVERSE[s as usize]
+    if s == 0 {
+        1
+    } else if s == 1 {
+        0
+    } else if s == 2 {
+        3
+    } else {
+        2
+    }
 }
 
-/// The symbol digit `e` continues `prev` with (payload §3).
+/// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
+/// digit, 0…2, and `prev` a symbol code, 0…3.
 #[inline]
 pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {
-    CONT_SYMBOL[e as usize][prev as usize]
+    if e == 0 {
+        if prev == 0 {
+            0
+        } else if prev == 1 {
+            1
+        } else if prev == 2 {
+            2
+        } else {
+            3
+        }
+    } else if e == 1 {
+        if prev == 0 {
+            2
+        } else if prev == 1 {
+            3
+        } else if prev == 2 {
+            0
+        } else {
+            1
+        }
+    } else if prev == 0 {
+        3
+    } else if prev == 1 {
+        2
+    } else if prev == 2 {
+        1
+    } else {
+        0
+    }
 }
 
-/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3).
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2, and `next` a symbol code, 0…3.
 #[inline]
 pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {
-    PREDECESSOR_SYMBOL[e as usize][next as usize]
+    if e == 0 {
+        if next == 0 {
+            0
+        } else if next == 1 {
+            1
+        } else if next == 2 {
+            2
+        } else {
+            3
+        }
+    } else if e == 1 {
+        if next == 0 {
+            2
+        } else if next == 1 {
+            3
+        } else if next == 2 {
+            0
+        } else {
+            1
+        }
+    } else if next == 0 {
+        3
+    } else if next == 1 {
+        2
+    } else if next == 2 {
+        1
+    } else {
+        0
+    }
 }
 
-/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307).
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3.
 #[inline]
 pub const fn continuation_index(prev: u32, s: u32) -> u32 {
-    CONTINUATION_INDEX[prev as usize][s as usize]
+    if prev == 0 {
+        if s == 0 {
+            0
+        } else if s == 1 {
+            3
+        } else if s == 2 {
+            1
+        } else {
+            2
+        }
+    } else if prev == 1 {
+        if s == 0 {
+            3
+        } else if s == 1 {
+            0
+        } else if s == 2 {
+            2
+        } else {
+            1
+        }
+    } else if prev == 2 {
+        if s == 0 {
+            1
+        } else if s == 1 {
+            2
+        } else if s == 2 {
+            0
+        } else {
+            3
+        }
+    } else if s == 0 {
+        2
+    } else if s == 1 {
+        1
+    } else if s == 2 {
+        3
+    } else {
+        0
+    }
 }
