@@ -90,21 +90,19 @@ pub struct WgslMember {
 
 /// `s`'s members as WGSL writes them. A storage maps to its WGSL type; two u16 members in a row, which WGSL cannot
 /// store apart (it has no u16), are one u32 named `<first>_<second>`, its leading `_` dropped, the first in bits 0–15
-/// (R-343).
+/// (R-343). The members are walked with an iterator, each pass consuming one or two, so no index arithmetic can stall
+/// the walk (R-196's mutation gate).
 pub fn members(s: &Struct) -> Vec<WgslMember> {
     let mut out = Vec::new();
-    let mut i = 0;
-    while i < s.members.len() {
-        let m = &s.members[i];
-        let next = s.members.get(i + 1);
+    let mut it = s.members.iter().peekable();
+    while let Some(m) = it.next() {
         if m.storage == Storage::U16 {
-            if let Some(n) = next.filter(|n| n.storage == Storage::U16) {
+            if let Some(n) = it.next_if(|n| n.storage == Storage::U16) {
                 out.push(WgslMember {
                     name: format!("{}_{}", m.name, n.name.trim_start_matches('_')),
                     ty: "u32".to_owned(),
                     stores: vec![m.name, n.name],
                 });
-                i += 2;
                 continue;
             }
         }
@@ -122,7 +120,6 @@ pub fn members(s: &Struct) -> Vec<WgslMember> {
             ty,
             stores: vec![m.name],
         });
-        i += 1;
     }
     out
 }
