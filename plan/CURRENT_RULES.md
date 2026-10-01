@@ -38,7 +38,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-27** — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*
 - **R-28** — Momentum decode has no mass unweighting *(CD-8)*
 - **R-29** — The escape criterion's undefined parts *(IE-1, amended)*. Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do); R-61 defines its "largest separation". Amended by R-61.
-- **R-30** — Event precedence is by time *(IE-2)*
+- **R-30** — Event precedence is by time *(IE-2)*. Still in force: all of it; only its date line's "R-6's pin stands until then" is spent (R-339). Amended by R-339.
 - **R-31** — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*
 - **R-32** — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*
 - **R-33** — The independent convergence reference is Brutus-style *(IE-5, amended)*. Still in force: the independent reference is CPU arbitrary precision with convergence gating, and RK45 stays the inspector's reference; that reference also serves as the screen, and double-double is parked (R-265). Amended by R-265.
@@ -260,7 +260,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-272** — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
-- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending veto). Amended by R-335, R-336 and R-342.
+- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346). Amended by R-335, R-336 and R-342.
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
@@ -270,6 +270,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
 - **R-342** — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
 - **R-345** — Merged branches are deleted, with their worktrees and target directories
+- **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Amended by R-347.
+- **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
 
 ## CI
 

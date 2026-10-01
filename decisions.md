@@ -296,6 +296,9 @@ With D1 and D2 (R-59). Files: integrator_contract Parts 3, 4, 5, 7; dd_integrato
 dd_simstate_payload §2, :527.
 
 ## R-30 — Event precedence is by time *(IE-2)*
+*Amended by R-339:* its date line's "R-6's pin stands until then" no longer holds: dd_integrator §3.6's pin is marked
+superseded by this ruling's time ordering.
+*Still in force: all of it; only its date line's "R-6's pin stands until then" is spent (R-339).*
 *24 Sep 2026 · recorded; applied with the label writer (R-6's pin stands until then)*
 
 sim_failed first; then whichever event came first, with a tie going to collision; triple ejection as a detail of escape; then running,
@@ -2816,8 +2819,7 @@ re-dispatched that way.
 *Amended by R-335, R-336 and R-342.*
 *Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change
 under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch
-cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending
-veto).*
+cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3803,11 +3805,13 @@ run that crashes or is killed loses at most the frames since the last flush. The
 left by a killed run is the incomplete session R-298 and R-299 define, and the reader reports it "session incomplete".
 Telemetry §5 says so. REQ-TOOL-147 (new, M0) carries it, closed by a new task, TASK-M0-47, depending on TASK-M0-18,
 with the code, qa and perf reviewers, as TASK-M0-18 has, less physics, since no definition changes. Its test kills a
-run mid-session and reads the partial trace as "session incomplete". *Applied per R-204 — veto?:* the header line is
-flushed as soon as it is written, so a run killed before its first frame flush still leaves a trace R-298 accepts (a
-header line alone), and a crash loses at most the frames, never the header; the memory bound is checked by the perf
-reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no number for
-it.
+run mid-session and reads the partial trace as "session incomplete". *Applied per R-204, accepted by R-346:* the header
+line is flushed as soon as it is written, so a run killed before its first frame flush still leaves a trace R-298
+accepts (a header line alone), and a crash loses at most the frames, never the header; the memory bound is checked by
+the perf reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no
+number for it.
+*Veto not exercised, 1 Oct 2026:* "The five R-204 items on R-341–R-343 stand." (R-346 (C)): the header line flushed as
+soon as it is written; the memory bound judged by the perf reviewer at two frame counts. A note, not a ruling.
 
 ## R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
 *1 Oct 2026 · applied in REQ-VAL-178 (new) and TASK-M0-48 (new)*
@@ -3819,11 +3823,11 @@ them only on failure."
 and a per-process counter (qa's commit dc3afb4). No later run reuses that name, and nothing deletes the folder, so the
 folders pile up under `CARGO_TARGET_TMPDIR` run after run. A test's scratch folder, or scratch file, is deleted when the
 test passes and kept, with its path in the failure output, when the test fails. REQ-VAL-178 (new, M0) carries it, closed
-by a new task, TASK-M0-48, depending on TASK-M0-06, with the code and qa reviewers. *Applied per R-204 — veto?:* the
-task covers each helper that makes a fresh, uniquely named scratch folder or file per call (by process id, counter or
-time), which a later run never reuses: a search of 1 Oct 2026 found them in `xtask/tests/` (`qa_TASK-M0-06_edges`,
-`qa_TASK-M0-23_r305`, `qa_TASK-M0-23_shards`, `qa_TASK-M0-38`, `qa_TASK-M0-40`, `mutants_no_mutant`),
-`crates/prin/tests/` (`profile`, `qa_TASK-M0-18`, `qa_TASK-M0-18_base`, `qa_TASK-M0-18_rulings`),
+by a new task, TASK-M0-48, depending on TASK-M0-06, with the code and qa reviewers. *Applied per R-204, accepted by
+R-346:* the task covers each helper that makes a fresh, uniquely named scratch folder or file per call (by process id,
+counter or time), which a later run never reuses: a search of 1 Oct 2026 found them in `xtask/tests/`
+(`qa_TASK-M0-06_edges`, `qa_TASK-M0-23_r305`, `qa_TASK-M0-23_shards`, `qa_TASK-M0-38`, `qa_TASK-M0-40`,
+`mutants_no_mutant`), `crates/prin/tests/` (`profile`, `qa_TASK-M0-18`, `qa_TASK-M0-18_base`, `qa_TASK-M0-18_rulings`),
 `crates/prin/src/profile/diff.rs`'s unit tests, and `crates/validation/tests/` (`qa_TASK-M0-38`, `qa_TASK-M0-39`,
 `stand_in`). A helper with a fixed name reuses and replaces its folder on the next run, so it does not accumulate and is
 left as it is. qa makes the edits to qa's files in TASK-M0-48's qa commit: R-290 allows it on the files only qa has
@@ -3831,6 +3835,9 @@ committed to, and for the two whose history has implementer commits, `xtask/test
 and `crates/validation/tests/qa_TASK-M0-38.rs` (f7becfc), this is a named exception to R-290, as R-336's is; the change
 alters only where scratch is made and when it is deleted, never an assertion, and the code reviewer confirms that. The
 implementer makes the edits to the rest.
+*Veto not exercised, 1 Oct 2026:* "The five R-204 items on R-341–R-343 stand." (R-346 (C)): the scope limited to the
+helpers that make a uniquely named scratch folder or file per call; the named R-290 exception for the two
+`qa_TASK-M0-38.rs` files. A note, not a ruling.
 
 ## R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
 *1 Oct 2026 · applied in render contract Part 5 "Unpack layer", lowering contract Part 3a, payload §1, REQ-RENDER-001,
@@ -3870,11 +3877,14 @@ bindings, and payload §1's WGSL read view a note on `closure_step`'s WGSL form,
 REQ-PAY-091 cite this ruling, and TASK-M0-13 (PR #107) builds it. RQ-188, filed on #107's branch, is archived unchanged
 in `docs/archive/review_queue/M0.md` with this ruling's port, so its id resolves on `main`; #107's fix pass deletes its
 open copy and drops REQ-RENDER-001's and REQ-PAY-091's `rq: RQ-188`.
-*Applied per R-204 — veto?:* the table's constants are named `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and
-`WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry the same numbers)
-and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two targets). They
-are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root §3.8 "The
-hash").
+*Applied per R-204, accepted by R-346:* the table's constants are named `SIMSTATE_GROUP`, `SIMSTATE_BINDING`,
+`WORD_GROUP` and `WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry
+the same numbers) and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two
+targets). They are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root
+§3.8 "The hash").
+*Veto not exercised, 1 Oct 2026:* "The five R-204 items on R-341–R-343 stand." (R-346 (C)): the binding constants'
+names, `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING`; their emission to the WGSL and the
+generated Rust; and their not being hashed. A note, not a ruling.
 
 ## R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
 *1 Oct 2026 · applied in generation-root §3.9, REQ-GEN-031, TASK-M0-46, TASK-M0-45, TASK-M2-01 and R-336's and R-340's
@@ -3904,3 +3914,120 @@ worktree entries are pruned (`git fetch --prune`, `git worktree prune`). The rul
 into `main`. A branch that is the base of an open PR is not deleted until that child PR is retargeted to `main`, since
 deleting a base branch closes its child PRs (CLAUDE.md § Git, "Merging stacked PRs"). `plan/WORKFLOW.md`'s merge step
 and CLAUDE.md § Git say so. Process only (section_notes); no requirement changes.
+
+## R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
+*Amended by R-347.*
+*Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them
+prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347.*
+*1 Oct 2026 · applied in `plan/OPERATIONS.md`, `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, CLAUDE.md §
+"How work runs", `plan/WORKFLOW.md`, RQ-190 (closed by R-347), and R-341–R-343's notes*
+
+(A) "Before I move work to cloud sessions: write everything your local memory holds that a fresh session needs into
+the repo (CLAUDE.md, plan/WORKFLOW.md, or a new plan/OPERATIONS.md): the overnight rules, merge order, dispatch rule
+(R-289), size practice, disk/memory limits, how to run reviewers, and anything else you'd tell a new orchestrator. Mark
+which parts are Mac-specific (SSD paths, APFS clones, env.sh, memory_pressure) and what a Linux cloud machine should do
+instead. One PR. Then finish the work in flight and stop at a clean point: nothing half-applied, every open question
+recorded in the repo."
+
+(B) "Also add scripts/cloud-setup.sh: installs exactly what CI's Linux jobs install (Rust stable, the pinned rust-gpu
+nightly, Mesa lavapipe, cargo-nextest, cargo-mutants, Python + PyYAML), sets PRIN_GPU_BACKEND=vulkan, and runs
+check_plan.py as a smoke test. Document in plan/OPERATIONS.md that cloud sessions run it first."
+
+(C) "The five R-204 items on R-341–R-343 stand. One change to the handoff PR: scripts/cloud-setup.sh reads every pin
+from the same source CI uses (rust-toolchain file(s), and the workflow files' version pins), never hard-coded copies,
+so it can't drift when #96 changes the nightly. Add a check that the script and CI agree."
+
+(D) "This is from me. I'm moving orchestration to Claude Code cloud sessions. Prepare the repo so a fresh session needs
+nothing from your local memory:
+1. plan/OPERATIONS.md: everything a new orchestrator needs that isn't already in CLAUDE.md, plan/WORKFLOW.md or
+CURRENT_RULES.md: the overnight rules, merge order (retarget before deleting), the dispatch rule (R-289), size practice
+(R-264), the disk/memory limits, reviewer worktrees (R-219), the measure/ branch rule (R-272), and anything else you'd
+tell a new orchestrator. Mark what is Mac-specific (SSD paths, APFS clones, env.sh, memory_pressure, Metal, local perf
+runs) and what a Linux cloud machine does instead.
+2. scripts/cloud-setup.sh: installs exactly what CI's Linux jobs install (Rust stable, the pinned rust-gpu nightly,
+Mesa lavapipe, cargo-nextest, cargo-mutants, Python + PyYAML), sets PRIN_GPU_BACKEND=vulkan, and runs check_plan.py as
+a smoke test.
+3. CLAUDE.md points to OPERATIONS.md.
+Then finish the work in flight and stop at a clean point: nothing half-applied, every open question in REVIEW_QUEUE.
+Report what's open."
+
+*Applied:* four messages of 1 Oct 2026, recorded as one process ruling.
+- **`plan/OPERATIONS.md` (new)** holds what the orchestrator's local memory and session notes held that a new session
+  needs and `CLAUDE.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md` don't say: start-up, dispatch (R-289), reviewer
+  worktrees (R-219) and re-checks (R-229, R-260), the check on qa's commit (R-237, R-290 and its named exceptions),
+  merging and merge order (R-266, R-345), away mode (the human's limits of 27 and 28 Sep 2026, R-234), size (R-264),
+  asking the human (R-204), resources (R-228, R-252, R-262, R-277), paths and warm builds, Metal and perf (R-186),
+  `measure/` branches (R-272), pitfalls and logs. Each rule cites its ruling; a practice with no ruling of its own
+  carries its date and stands under this one. Where memory held a fact a later ruling replaced, the ruling's form is
+  written: the internal disk, not the SSD (R-262); memory pressure, not swap (R-252); three agents at normal pressure
+  and two at warning (R-277); the `measure/` rule as R-272. Mac-only parts are marked, with what a Linux cloud machine
+  does instead.
+- **`scripts/cloud-setup.sh` (new)** installs what CI's Linux jobs (`runs-on: ubuntu-*`) install, and reads each item
+  and version from the files CI reads: the `dtolnay/rust-toolchain@<ref>` steps and their `components:`, the root
+  `rust-toolchain.toml` (or `rust-toolchain`) that CI's bare `rustup toolchain install` steps read, the
+  `taiki-e/install-action` steps' `tool:` pins, the `apt-get install` and `pip install` lines, the `actions/setup-python`
+  steps' `python-version:`, and `PRIN_GPU_BACKEND` from the jobs' `env:`. It holds no version of its own. It refuses to
+  run when a Linux job installs by a means it doesn't know, naming the step. It exports `PRIN_GPU_BACKEND`, prints how to
+  keep it and cargo's PATH, and runs `python3 plan/check_plan.py`; `--dry-run` prints its plan. Running it again skips
+  what is installed; apt runs as root or through sudo.
+- **The check (C) asks for** is `xtask/tests/cloud_setup.rs`, which `cargo nextest run --workspace` runs in CI's `ci`
+  job, each test with its negative control (R-176). It reads CI's Linux jobs and the root toolchain file itself, and
+  fails if the script's dry run names an item CI doesn't install or misses one it does, if any item's version differs,
+  if the script's text holds a version literal or one of CI's pins, if the dry run doesn't follow a changed pin, or if
+  the script accepts an install step it doesn't know.
+- **Pointers:** CLAUDE.md § "How work runs" and `plan/WORKFLOW.md`'s opening point to `plan/OPERATIONS.md` and the
+  script. `plan/HUMAN_SETUP.md` covers repository settings, not a machine's setup, and gains none.
+- **(C)'s first sentence**, "The five R-204 items on R-341–R-343 stand", is applied once `main` (#108) is merged in:
+  R-341, R-342 and R-343 each carry a "*Veto not exercised, 1 Oct 2026:*" note naming their items, and those items'
+  "— veto?" marks become "accepted by R-346" in R-341–R-343's notes, R-290's "Still in force" line, telemetry §5,
+  TASK-M0-13, TASK-M0-47 and TASK-M0-48. No requirement note carried one.
+- **Flagged:** (B) and (D) name "Rust stable" and "the pinned rust-gpu nightly" both. Read from CI's files, as (C) asks,
+  `main`'s Linux jobs install stable (`dtolnay/rust-toolchain@stable`) and pin no nightly, and #96 replaces every such
+  step with `rustup toolchain install`, which installs the nightly its `rust-toolchain.toml` pins. So the script installs
+  stable until #96 merges and the nightly after, and stable then only if a Linux job still asks for it. Checked against
+  #96's workflows and toolchain file as well as `main`'s.
+- *Applied per R-204, ruled by R-347 (RQ-190):* where CI uses an action, the script does the same with rustup, `cargo
+  install --locked <tool>@<version>` (the action downloads a prebuilt binary of that version) and `python3 -m pip
+  install`, falling back to `--user` and then `--break-system-packages` where the system Python refuses; it installs
+  rustup when the machine has none, and requires `git`, `curl` and `cc`, which CI's runner image has; a `python3` of
+  another minor version than CI's warns rather than fails. `plan/OPERATIONS.md`'s Linux readings of memory pressure (PSI
+  or `free`, with thresholds), its cap of `nproc` / 4 agents, its disk thresholds (the Mac's), its log for a cloud
+  session, and its untested sccache note are recommendations, marked so there.
+
+Process only (section_notes); no requirement changes.
+
+## R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
+*1 Oct 2026 · applied in `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, `plan/OPERATIONS.md` and R-346's
+notes*
+
+"RQ-190: items 2–7 accepted as written. Item 1 accepted with one change: install cargo-nextest from its official
+prebuilt installer at the pinned version, and cargo-mutants via cargo-binstall (prebuilt) at the pinned version; fall
+back to cargo install --locked only if a download fails."
+
+*Applied:* RQ-190's items 2–7 stand as R-346 applied them: a `python3` of another minor version than CI's warns; the
+Linux readings of memory pressure (PSI or `free`, with their thresholds); at most `nproc` / 4 agents; the Mac's disk
+thresholds; a cloud session's log in its scratch directory, with its summary as its final message and a PR comment;
+and the untested sccache note. `plan/OPERATIONS.md` drops their *recommended* marks and cites this ruling. Item 1
+stands, rustup, pip and the required `git`, `curl` and `cc` as written, except for the two cargo tools:
+- **cargo-nextest** comes from its official prebuilt installer, `https://get.nexte.st/<version>/<platform>` (`linux` on
+  x86_64, `linux-arm` on aarch64), unpacked into `$CARGO_HOME/bin`.
+- **cargo-mutants** comes through `cargo binstall --no-confirm --disable-strategies compile cargo-mutants@<version>`.
+  cargo-binstall, when the machine has none, is installed first from its official prebuilt installer
+  (`install-from-binstall-release.sh` in `cargo-bins/cargo-binstall`).
+- Each is at the version CI pins, still read from CI's files, never written in the script (R-346 (C)). Each falls
+  back to `cargo install --locked <tool>@<version>` only if its download fails: a failed `curl`, a failed
+  `cargo binstall`, or a platform get.nexte.st has no build for.
+- `scripts/cloud-setup.sh --dry-run` prints each item's install method as a fourth word, the two tools as
+  `prebuilt:get.nexte.st,fallback:cargo-install` and `prebuilt:cargo-binstall,fallback:cargo-install`.
+- `xtask/tests/cloud_setup.rs` gains a test, with its negative control (R-176): the dry run names those routes, and the
+  script's install function, run with `curl`, `tar`, `cargo` and `uname` stubbed, downloads each tool at CI's pin and
+  runs `cargo install --locked` only after a failed download. Sourcing the script defines its functions and installs
+  nothing, so the test can run that function alone.
+- `plan/OPERATIONS.md` § "Start here" says how the two tools are installed, and that a cloud machine needs network
+  access to get.nexte.st and GitHub's releases.
+
+*Applied per R-347:* binstall's own build-from-source strategy is disabled, so a failed download falls back to
+`cargo install --locked` as the ruling says, and not to binstall's unlocked build. CI pins no cargo-binstall version, so
+its installer's current release is used. A cargo tool CI adds later other than these two is built with
+`cargo install --locked`, as item 1 had it. RQ-190 moves to `docs/archive/review_queue/M0.md`. Process only
+(section_notes); no requirement changes.

@@ -51,12 +51,12 @@ output, when the test fails.
   assertion; the PR lists each `M` line of qa's commit with its reason (R-290, R-342).
 
 ## Notes
-- Applied per R-204 — veto?: the fix touches qa's files, so qa makes those edits, in this task's qa commit, and the
-  implementer does not. R-290 allows it on the files only qa has committed to. Two of them have implementer commits,
-  `xtask/tests/qa_TASK-M0-38.rs` (55815e6, 8c22eec) and `crates/validation/tests/qa_TASK-M0-38.rs` (f7becfc), so for
-  those this is a named exception to R-290, as R-336's is. The orchestrator's R-237 check accepts `M` on the qa files
-  named above in that commit.
-- Applied per R-204 — veto?: the scope is the helpers that make a uniquely named folder or file per call; fixed-name
-  helpers do not accumulate and are left alone.
+- Applied per R-204, accepted by R-346: the fix touches qa's files, so qa makes those edits, in this task's qa commit,
+  and the implementer does not. R-290 allows it on the files only qa has committed to. Two of them have implementer
+  commits, `xtask/tests/qa_TASK-M0-38.rs` (55815e6, 8c22eec) and `crates/validation/tests/qa_TASK-M0-38.rs` (f7becfc),
+  so for those this is a named exception to R-290, as R-336's is. The orchestrator's R-237 check accepts `M` on the qa
+  files named above in that commit.
+- Applied per R-204, accepted by R-346: the scope is the helpers that make a uniquely named folder or file per call;
+  fixed-name helpers do not accumulate and are left alone.
 - The guard runs in the qa commit's tests too, so qa's files depend on the implementer's support module; qa's commit
   comes after the implementer's, as usual.

@@ -17,6 +17,8 @@ Read this first; each rule points at its source.
   `VERDICT: CHANGES <role>` (R-175). `reviews-complete` counts them.
 - Stop after each PR until the human merges, unless told otherwise.
 - The PR shows every acceptance command the task lists, with its output. Benchmarks run on the human's Mac (R-186).
+- The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, away mode, resources, and what a
+  Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346).
 
 ## The main session orchestrates; it never implements or reviews
 - The roles are subagents in `.claude/agents/`: `implementer`, `code-reviewer`, `qa-reviewer`, `physics-reviewer`,
