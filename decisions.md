@@ -3450,6 +3450,9 @@ toolchain version (`rust-toolchain.toml`'s channel), so a toolchain bump starts 
 TASK-M0-14 (PR #96), which brings kernel builds into CI, makes the change (REQ-SYS-075).
 
 ## R-321 — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*
+*Amended by R-324.*
+*Still in force: the four functions are total in Rust and WGSL; each symbol input is `debug_assert!`-ed < 4, then
+masked `& 3`; `continuation_index` returns 3 only for its inverse cells (R-307). R-324 sets the digit argument's rule.*
 *1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
 
 "R-319 amended (R-321): the continuation-table functions are total. Each input is debug_assert!-ed to be < 4, then
@@ -3463,9 +3466,9 @@ then reads the table at `input & 3`. A release build, and WGSL, given an input �
 there is no separate out-of-range value. `continuation_index` returns 3 only for its four inverse cells (R-307).
 R-319's release behaviour (return 3) is replaced for all four; its `debug_assert!` and its veto of #99's item 8 stand.
 Payload §3, REQ-PAY-016, TASK-M0-11's `continuation_table_out_of_range` and TASK-M0-13's
-`continuation_table_wgsl_out_of_range` follow. *Flagged to the human, not applied:* the digit argument of
+`continuation_table_wgsl_out_of_range` follow. *Flagged to the human:* the digit argument of
 `continuation_symbol` and `predecessor_symbol` is defined for 0–2 (payload §3); "< 4, then masked & 3" leaves a digit of
-3, for which the tables have no row, so its value is not stated. The task tests leave digit 3 out until it is ruled.
+3, for which the tables have no row. Ruled by R-324: the digit is `debug_assert!`-ed < 3, then clamped with `min(d, 2)`.
 
 ## R-322 — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*
 *1 Oct 2026 · applied in gui_state_contract §2, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
@@ -3492,6 +3495,22 @@ exactly, not by rounded floating-point arithmetic: 100 → 107 at `--threshold 7
 tested. (2) A NEW trace with no frame records exits 2, as an unreadable file does. (3) A cut-off or incomplete trace
 prints "session incomplete" and the bytes dropped. The ruling cites R-298, which makes a trace with no summary line
 valid; the dropped-bytes count is R-299's (the reader drops a cut-off final line and says how many bytes it dropped),
-so both apply. *Applied per R-204 — veto?:* the ruling doesn't say whether an incomplete NEW still sets the exit code
-from its comparison; it does: the notice is printed and the comparison and its exit code are unchanged. REQ-TOOL-119's
+so both apply. *Confirmed by the human* (a later message, 1 Oct 2026): "What matters is the behaviour, and that's unchanged: a
+cut-off trace is reported as "session incomplete" with its dropped bytes, never silently compared over fewer frames."
+So an incomplete NEW is compared and sets the exit code as usual, always with the "session incomplete" notice and the
+dropped bytes, never silently. On the citation, the human wrote: "Right, thanks for catching it. Apply R-299." R-298
+gives the incomplete session; R-299 gives the dropped bytes. REQ-TOOL-119's
 verify detail and TASK-M0-18's `profile_diff` line follow; physics still approves the written definition (R-72).
+
+## R-324 — The digit argument of `continuation_symbol` and `predecessor_symbol` is debug-asserted < 3, then clamped with `min(d, 2)` *(completes R-321)*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
+
+"Digit 3 in continuation_symbol and predecessor_symbol (R-324, completing R-321): the digit is debug_assert!-ed to be
+< 3, then clamped with min(d, 2), in Rust and WGSL. Total and branch-free, no new table row. The debug assertion is the
+protection; the clamp only keeps release builds well-defined."
+
+*Applied:* in Rust and WGSL, `continuation_symbol` and `predecessor_symbol` read their digit argument as `min(d, 2)`;
+a Rust debug build given a digit ≥ 3 fails a `debug_assert!` first (WGSL has none). A release build, and WGSL, given a
+digit ≥ 3 read the digit-2 row. Their symbol argument keeps R-321's rule (`debug_assert!` < 4, then `& 3`). No table
+row is added. Payload §3, REQ-PAY-016, TASK-M0-11's `continuation_table_out_of_range` and TASK-M0-13's
+`continuation_table_wgsl_out_of_range` follow.
