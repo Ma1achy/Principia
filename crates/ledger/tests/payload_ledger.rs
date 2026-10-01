@@ -1,7 +1,8 @@
 //! The payload ledger (dd_simstate_payload §0–§1; dd_generation_root §3.1, §3.3a–§3.6; render contract Part 1): the
 //! generated Rust structs against the ledger, precision, §3.4's catalogue metadata, the two payload buffers, no
 //! per-pair entry, unique names, and the drifts' `floor` (REQ-PAY-002, -005, -007, -010, REQ-GEN-001, REQ-GEN-029,
-//! REQ-RENDER-002).
+//! REQ-RENDER-002); the word buffer's `.w` entries and continuation table (payload §3), and §3.7's `QuadReduction`
+//! member list (REQ-PAY-019, R-306).
 
 mod support;
 
@@ -484,4 +485,212 @@ negative_control!(
     "eps_E is a sim-key parameter, so the gate passes it and the refusal check must fail",
     expected = "generation was not refused",
     check_floor_refused("eps_E", &["floor"])
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// REQ-PAY-019: §3.7's QuadReduction member list, ledger data at M0 (R-306): `spread_event` is stored as f16 and there
+// is no `ensemble_outcome_agreement` (R-18).
+
+/// `members` has `spread_event` typed f16, and no member `ensemble_outcome_agreement`.
+fn check_spread_event(members: &[payload::ReductionMember]) {
+    let types: Vec<Option<&str>> = members
+        .iter()
+        .filter(|m| m.name == "spread_event")
+        .map(|m| m.ty)
+        .collect();
+    assert_eq!(
+        types,
+        [Some("f16")],
+        "QuadReduction has one `spread_event`, typed f16 (R-18)"
+    );
+    assert!(
+        !members
+            .iter()
+            .any(|m| m.name == "ensemble_outcome_agreement"),
+        "QuadReduction has the retired `ensemble_outcome_agreement` (R-18)"
+    );
+}
+
+#[test]
+fn quad_reduction_spread_event_is_f16_and_no_agreement_member() {
+    let listed: Vec<(&str, Option<&str>)> = payload::QUAD_REDUCTION
+        .iter()
+        .map(|m| (m.name, m.ty))
+        .collect();
+    println!("QuadReduction members (§3.7): {listed:?}");
+    check_spread_event(payload::QUAD_REDUCTION);
+}
+
+negative_control!(
+    quad_reduction_spread_event_is_f16_and_no_agreement_member,
+    "the member list with `spread_event` typed f32 must fail the check",
+    expected = "QuadReduction has one `spread_event`, typed f16",
+    check_spread_event(
+        &payload::QUAD_REDUCTION
+            .iter()
+            .map(|&m| match m.name {
+                "spread_event" => payload::ReductionMember {
+                    ty: Some("f32"),
+                    ..m
+                },
+                _ => m,
+            })
+            .collect::<Vec<_>>()
+    )
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Payload §3's `.w` bit map: `payload` in bits 0–24 and `length` in 25–31 of the word `fgw_w`, `length` 0…76 with 127
+// its sentinel; and the ledger's continuation table derives payload §3's `continuation_index` (R-307).
+
+/// `(location, range, sentinel)` of `payload` and `length` in `ledger`, each entry built on its own, so an entry
+/// generation would refuse (a `length` with no sentinel) is still read.
+fn fgw_rows(ledger: &Ledger) -> Vec<(ledger::schema::Location, Range, Option<f64>)> {
+    let entries: Vec<Entry> = ledger
+        .entries
+        .iter()
+        .filter(|e| matches!(e.name, Some("payload" | "length")))
+        .map(|e| e.build().expect("builds"))
+        .collect();
+    ["payload", "length"]
+        .iter()
+        .map(|n| {
+            let e = find(&entries, n);
+            (e.location.clone(), e.range, e.sentinel)
+        })
+        .collect()
+}
+
+fn check_fgw_w(ledger: &Ledger) {
+    use ledger::schema::Location::Packed;
+    let expected = vec![
+        (
+            Packed {
+                word: "fgw_w",
+                offset: 0,
+                width: 25,
+            },
+            Range::int(0, (1 << 25) - 1),
+            None,
+        ),
+        (
+            Packed {
+                word: "fgw_w",
+                offset: 25,
+                width: 7,
+            },
+            Range::int(0, 76),
+            Some(127.0),
+        ),
+    ];
+    assert_eq!(
+        fgw_rows(ledger),
+        expected,
+        "fgw_w's entries differ from payload §3's `.w` bit map"
+    );
+    assert_eq!(
+        payload::continuation_index(),
+        [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]],
+        "the derived continuation_index differs from payload §3's (R-307)"
+    );
+}
+
+#[test]
+fn payload_word_w_bit_map_and_continuation_index_match_payload_section_3() {
+    check_fgw_w(&layout());
+}
+
+negative_control!(
+    payload_word_w_bit_map_and_continuation_index_match_payload_section_3,
+    "a ledger whose `length` has no sentinel must fail the bit-map check",
+    expected = "fgw_w's entries differ from payload §3's `.w` bit map",
+    check_fgw_w(&{
+        let mut l = layout();
+        entry(&mut l, "length").sentinel = None;
+        l
+    })
+);
+
+/// Each of payload §3's four table functions in `source` is emitted, and its body indexes no array: no `[` in it.
+/// rust-gpu lowers a runtime array index to an implicit bounds check, a compiler-injected multi-level exit (GPU
+/// determinism note § "The discipline", rule 5); the functions are comparison chains over the table's literals.
+fn check_table_functions_index_no_array(source: &str) {
+    for name in [
+        "inverse",
+        "continuation_symbol",
+        "predecessor_symbol",
+        "continuation_index",
+    ] {
+        let start = source
+            .find(&format!(" fn {name}("))
+            .unwrap_or_else(|| panic!("`{name}` is not emitted"));
+        let open = start + source[start..].find('{').expect("a body");
+        let end = open + source[open..].find("\n}\n").expect("the body's end");
+        let body = &source[open..end];
+        assert!(
+            !body.contains('['),
+            "`{name}` indexes an array at runtime:\n{body}"
+        );
+    }
+}
+
+#[test]
+fn continuation_table_functions_index_no_array() {
+    check_table_functions_index_no_array(&rust::continuation());
+}
+
+negative_control!(
+    continuation_table_functions_index_no_array,
+    "a table function that reads its array by a runtime index must fail",
+    expected = "`inverse` indexes an array at runtime",
+    check_table_functions_index_no_array(
+        &rust::continuation().replacen(
+            "pub const fn inverse(s: u32) -> u32 {\n",
+            "pub const fn inverse(s: u32) -> u32 {\n    INVERSE[s as usize]\n}\n\nconst fn old(s: u32) -> u32 {\n",
+            1,
+        )
+    )
+);
+
+/// Generation from `ledger` is refused, its message naming `fgw_w.length` and `what` it lacks (dd_generation_root
+/// §3.8: "A field without a complete entry fails generation loudly"), so `FGW_CAPACITY`, `FGW_LENGTH_SENTINEL` and
+/// the `fgw_*` accessors are never silently omitted.
+fn check_fgw_length_refused(ledger: &Ledger, what: &str) {
+    let message = match gen::generate(ledger, gen::EMITTERS) {
+        Ok(_) => panic!("generation was not refused with `fgw_w.length` given {what}"),
+        Err(error) => error.to_string(),
+    };
+    assert!(
+        message.contains("`fgw_w.length`") && message.contains(what),
+        "generation refused `fgw_w.length` given {what}, but its message does not say so: {message}"
+    );
+}
+
+#[test]
+fn payload_fgw_length_incomplete_refuses_generation() {
+    check_generates(&layout());
+    let mut missing = layout();
+    missing.entries.retain(|e| e.name != Some("length"));
+    check_fgw_length_refused(&missing, "has no entry");
+    let mut open = layout();
+    entry(&mut open, "length").range = Some(Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Unbounded,
+    });
+    check_fgw_length_refused(&open, "has no closed greatest value");
+    let mut no_sentinel = layout();
+    entry(&mut no_sentinel, "length").sentinel = None;
+    check_fgw_length_refused(&no_sentinel, "has no sentinel");
+    let direct = rust::fgw(&[]);
+    assert!(
+        direct.contains("compile_error!(") && direct.contains("`fgw_w.length`"),
+        "the fgw emitter, called past the driver without `length`, writes no compile_error naming it: {direct:?}"
+    );
+}
+
+negative_control!(
+    payload_fgw_length_incomplete_refuses_generation,
+    "a complete `length`, which generates, must fail the refusal check",
+    expected = "generation was not refused with `fgw_w.length` given has no sentinel",
+    check_fgw_length_refused(&layout(), "has no sentinel")
 );
