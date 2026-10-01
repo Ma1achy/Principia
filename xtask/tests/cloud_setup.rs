@@ -720,6 +720,45 @@ validation::negative_control!(
     }
 );
 
+/// The dry run of a copy of the tree under a folder whose name has a space, `dir`, exits well and gives CI's plan.
+fn check_runs_under_a_space(dir: &Path) {
+    let output = run_dry(dir);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        dir.to_string_lossy().contains(' ')
+            && output.status.success()
+            && script_plan(dir) == the_ci_plan(),
+        "cloud-setup.sh's dry run fails from a checkout whose path has a space:\n{stderr}"
+    );
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn cloud_setup_runs_from_a_path_with_a_space() {
+    let copy = scratch("sp ace");
+    copy_tree(&copy, str::to_owned, None);
+    check_runs_under_a_space(&copy);
+}
+
+validation::negative_control!(
+    cloud_setup_runs_from_a_path_with_a_space,
+    "a script passing the workflow files to awk word-split, required to run from a path with a space",
+    expected = "cloud-setup.sh's dry run fails from a checkout whose path has a space",
+    {
+        let copy = scratch("sp ace_control");
+        copy_tree(&copy, str::to_owned, None);
+        let quoted = "' \"${files[@]}\" | sort -u";
+        let text = script(&root());
+        assert!(text.contains(quoted), "the script passes the files as `{quoted}`");
+        fs::write(
+            copy.join("scripts/cloud-setup.sh"),
+            text.replace(quoted, "' ${files[*]} | sort -u"),
+        )
+        .unwrap();
+        check_runs_under_a_space(&copy)
+    }
+);
+
 /// The route R-347 gives cargo-nextest: its official prebuilt installer, then `cargo install --locked`.
 const NEXTEST_ROUTE: &str = "prebuilt:get.nexte.st,fallback:cargo-install";
 /// The route R-347 gives cargo-mutants: cargo-binstall (prebuilt), then `cargo install --locked`.

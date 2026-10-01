@@ -59,10 +59,11 @@ die() {
 #                      workflow has a Linux job
 #   U <where>: <text>  a step that installs by a means this script doesn't know
 ci_records() {
-  local files
-  files=$(find "$WORKFLOWS" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
-  [ -n "$files" ] || die "no workflow files under $WORKFLOWS"
-  # shellcheck disable=SC2086 # the workflow paths have no spaces; word splitting passes each as one file
+  local files=() file
+  while IFS= read -r file; do
+    files+=("$file")
+  done < <(find "$WORKFLOWS" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
+  [ "${#files[@]}" -gt 0 ] || die "no workflow files under $WORKFLOWS"
   awk -v q="'" '
     function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
     function unquote(s) { s = trim(s); gsub("^[\"" q "]|[\"" q "]$", "", s); return s }
@@ -168,7 +169,7 @@ ci_records() {
       }
     }
     END { flush_job(); flush_file() }
-  ' $files | sort -u
+  ' "${files[@]}" | sort -u
 }
 
 # The root toolchain file, as records: `channel <c>`, `profile <p>`, `component <c>`, `target <t>`. CI's bare
