@@ -1,7 +1,7 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
 - **Reviewers:** code, qa, physics
@@ -28,6 +28,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
 - `decisions.md` § "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
+- `decisions.md` § "R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*"
+- `decisions.md` § "R-317 — #98's `f16` restriction stands; `f16` is storage-only"
 - `decisions.md` § "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
 
 ## Deliverables
@@ -69,3 +71,5 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   rules; `f16-pair` stays two halves. This task adds `f16` to the ledger's type set, the static check and both
   emitters (REQ-GEN-030), and types `QuadReduction`'s f16 members with it. Stable Rust has no `f16` type, so the
   generated struct stores binary16 bits.
+- RQ-183 ruled: R-315 — `n_unresolved` is a u16 member (§3.7's temporal-accumulators row), the latch's verdict
+  (REQ-REF-052). R-317 — `f16` is storage-only: its accessors widen to f32, and no generated WGSL uses `enable f16`.

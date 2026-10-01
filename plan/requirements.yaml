@@ -4569,7 +4569,7 @@
   milestone: M0
 - id: REQ-PAY-016
   area: PAY
-  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side."
+  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. An out-of-range input to a table function fails a `debug_assert!` in a debug build and returns 3 in release, never a table cell (R-319)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 3. The word buffer — `free_group_word`
@@ -4577,25 +4577,33 @@
     section: "3.3 `free_group_word` (uint4) — mixed-radix packing, **in a separate buffer**"
   - file: decisions.md
     section: "R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*"
+  - file: decisions.md
+    section: "R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*"
   verify:
     method: unit test
-    detail: "assert the generated Rust and WGSL tables equal the frozen arrays, continuation_index included (3 in its four next = inverse(prev) cells, R-307); assert involution and that no continuation equals inverse(prev)"
+    detail: "assert the generated Rust and WGSL tables equal the frozen arrays, continuation_index included (3 in its four next = inverse(prev) cells, R-307); assert involution and that no continuation equals inverse(prev); each Rust table function given an out-of-range input panics in a debug build and returns 3 in a release build (R-319), and each WGSL table function returns 3"
   rulings:
   - R-63
   - R-307
+  - R-319
   milestone: M0
 - id: REQ-PAY-017
   area: PAY
-  statement: "The payload width must be a function of the Real type, never hardcoded to f32."
+  statement: "The payload width must be a function of the Real type, never hardcoded to f32: `SimState` and `ICDescriptor` both (R-313; R-86's 64 B is `ICDescriptor`'s f32 instantiation)."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 7.1 Extended and arbitrary precision
   - file: docs/read_first/principia_00_philosophy.md
     section: 7.7 The rule for this section
+  - file: decisions.md
+    section: "R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.6 `ICDescriptor` (12 × f32)
   verify:
     method: unit test
-    detail: "Instantiate the payload for f32 and f64 (and a DoubleF64 stub row); assert widths derive from size_of::<Real>() and the layout is generated per precision."
-  rulings: []
+    detail: "Instantiate the payload, `SimState` and `ICDescriptor`, for f32 and f64 (and a DoubleF64 stub row); assert widths derive from size_of::<Real>() and the layout is generated per precision; `ICDescriptor` at f32 is 64 B with declared padding (R-86, R-313)."
+  rulings:
+  - R-313
   milestone: M0
   note: The one 'DECIDE NOW, COSTS NOTHING' item in §7 (per §7.7).
 - id: REQ-PAY-018
@@ -5757,7 +5765,7 @@
 - id: REQ-PAY-087
   area: PAY
   kind: definition
-  statement: "The payload layout as a function of the Real type — which SimState fields widen with Real and which keep their fixed width (the f16-packed latches, the packed u32 words, the u16 step indices), the resulting f64 layout, and the shape of the DoubleF64 stub row — must be defined in dd_simstate_payload §1 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The payload layout as a function of the Real type — which SimState fields widen with Real and which keep their fixed width (the f16-packed latches, the packed u32 words, the u16 step indices), the resulting f64 layout, and the shape of the DoubleF64 stub row — must be defined in dd_simstate_payload §1, and `ICDescriptor`'s f64 and DoubleF64 sizes and declared padding (its fields follow Real, R-313) in generation-root §3.6, by the task that needs it and reviewed by the physics reviewer before merge."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 1. `SimState` — the hot struct
@@ -5765,11 +5773,14 @@
     section: 7.1 Extended and arbitrary precision
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.6 `ICDescriptor` (12 × f32)
   verify:
     method: review checklist
-    detail: "§1 states per field whether its width follows Real, gives the f64 layout's size and alignment and the DoubleF64 row; the generated layouts match it; physics reviewer approved"
+    detail: "§1 states per field whether its width follows Real, gives the f64 layout's size and alignment and the DoubleF64 row; §3.6 gives `ICDescriptor`'s f64 and DoubleF64 sizes and declared padding, with 64 B at f32; the generated layouts match them; physics reviewer approved"
   rulings:
   - R-72
+  - R-313
   milestone: M0
 - id: REQ-PAY-088
   area: PAY
@@ -6319,7 +6330,7 @@
   milestone: M0
 - id: REQ-GEN-030
   area: GEN
-  statement: "§3.8's `f16` type (R-312) is one binary16 value at a packed location of exactly 16 bits: the static layout check fails an `f16` field at a packed location not exactly 16 bits wide, at a `scalar-index` location, or as a `vector` component type, naming the field; its declared range must lie within ±65504, and an unbounded end fails unless the entry states its `overflow` (saturate or inf) (R-248). Both emitters generate its read accessor as one binary16 value."
+  statement: "§3.8's `f16` type (R-312) is one binary16 value at a packed location of exactly 16 bits: the static layout check fails an `f16` field at a packed location not exactly 16 bits wide, at a `scalar-index` location, or as a `vector` component type, naming the field; its declared range must lie within ±65504, and an unbounded end fails unless the entry states its `overflow` (saturate or inf) (R-248). `f16` is storage-only (R-317): both emitters generate its read accessor as one binary16 value widened to f32, and no generated WGSL declares `enable f16` or an `f16`-typed value."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.8 Metadata schema (what every entry must carry)
@@ -6327,12 +6338,15 @@
     section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
   - file: decisions.md
     section: "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
+  - file: decisions.md
+    section: "R-317 — #98's `f16` restriction stands; `f16` is storage-only"
   verify:
     method: unit test
-    detail: "cargo test -p ledger layout_static_f16: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value; each has a registered negative control"
+    detail: "cargo test -p ledger layout_static_f16: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value as f32; the generated WGSL contains no `enable f16` and no `f16` type; each has a registered negative control"
   rulings:
   - R-248
   - R-312
+  - R-317
   milestone: M5
 - id: REQ-SCHED-001
   area: SCHED
@@ -8762,6 +8776,21 @@
   - R-143
   - R-158
   milestone: M6
+- id: REQ-REF-052
+  area: REF
+  statement: "`QuadReduction` must carry `n_unresolved` as a u16: the latch's verdict, the count of the quad's unresolved footprints, latched ones included (R-142, R-315)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Temporal accumulators (scheduler Part 8)
+  - file: decisions.md
+    section: "R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*"
+  verify:
+    method: unit test
+    detail: "generated layout member list and types: n_unresolved is u16"
+  rulings:
+  - R-142
+  - R-315
+  milestone: M5
 - id: REQ-RENDER-001
   area: RENDER
   statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing."
@@ -15687,21 +15716,20 @@
   milestone: M0
 - id: REQ-TOOL-145
   area: TOOL
-  kind: definition
-  statement: "The canonical serialisation of `SimConfig` and `RenderState` — the key order, and the exact formatting of every number so that equal state is equal text and each value reads back exactly — must be defined in `principia_gui_state_contract.md` §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "`SimConfig` and `RenderState` must serialise as RFC 8785 JSON Canonicalization Scheme (JCS) text: members sorted by their names' UTF-16 code units, no insignificant whitespace, its string escaping and its number format; −0.0 written `0`; an integer whose magnitude exceeds 2^53 (a seed, say) written as a JSON string of its decimal digits, one within ±2^53 as a number (R-318, `principia_gui_state_contract.md` §2)."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 2. The editable state is the entire coupling surface
   - file: decisions.md
     section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
   - file: decisions.md
-    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+    section: "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
   verify:
-    method: review checklist
-    detail: "the section states the key order and the number formatting; serialising the same state twice gives the same bytes; a written number reads back to the same value; physics reviewer approved"
+    method: unit test
+    detail: "RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; an integer of 2^53 + 1 writes a string and one of 2^53 a number; serialising the same SimConfig and RenderState twice gives the same bytes, and the text reads back to the same values"
   rulings:
-  - R-72
   - R-309
+  - R-318
   milestone: M0
 - id: REQ-TOOL-146
   area: TOOL
@@ -21191,18 +21219,21 @@
   milestone: M0
 - id: REQ-SYS-073
   area: SYS
-  statement: "CI must cache only the cargo registry and the fixture pool (R-270), never whole target directories, each under a key naming its job, so the repository's Actions cache stays well under GitHub's 10 GB limit (R-285)."
+  statement: "CI must cache only the cargo registry, the fixture pool (R-270) and the rust-gpu build (R-320, REQ-SYS-075), never whole target directories, each under a key naming its job, so the repository's Actions cache stays well under GitHub's 10 GB limit (R-285)."
   source:
   - file: decisions.md
     section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
   - file: decisions.md
     section: R-301 — TASK-M0-42's CI cost is accepted *(amends R-270)*
+  - file: decisions.md
+    section: "R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*"
   verify:
     method: review checklist
     detail: "code and qa: no workflow caches a target directory; every cache key names its job; the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and the `ci` job's wall time against R-270's ~10.5 min"
   rulings:
   - R-285
   - R-301
+  - R-320
   milestone: M0
   note: "R-301: the ~1.5 min per warm `ci` run that this caching costs is accepted, and R-270's ~10.5 min target gives way to it; the PR still shows the `ci` wall time."
 - id: REQ-SYS-074
@@ -21221,4 +21252,17 @@
   rulings:
   - R-296
   - R-297
+  milestone: M0
+- id: REQ-SYS-075
+  area: SYS
+  statement: "Every CI job that builds the kernel must restore and save the rust-gpu build cache (`~/.cache/rust-gpu`) under a key naming the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320)."
+  source:
+  - file: decisions.md
+    section: "R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*"
+  verify:
+    method: review checklist
+    detail: "code: each workflow job that runs build-kernel caches ~/.cache/rust-gpu with a key containing the pinned toolchain channel; the PR shows a warm run's build-kernel step time beside a cold one"
+  rulings:
+  - R-285
+  - R-320
   milestone: M0

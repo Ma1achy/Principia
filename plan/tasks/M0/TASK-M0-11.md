@@ -25,6 +25,9 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
 - `decisions.md` § "R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*"
+- `decisions.md` § "R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*"
+- `decisions.md` § "R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*"
+- `decisions.md` § "R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*"
 
 ## Deliverables
 - `crates/ledger/src/payload.rs` — the word `.w` entries, the frozen continuation table as ledger data, and `QuadReduction`'s §3.7 member list as ledger data: each member's name and §3.7 type, not a §3.8 entry and not emitted (R-306).
@@ -32,9 +35,10 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - `crates/kernel/tests/payload_sizes.rs`.
 
 ## Acceptance tests
-- `cargo test -p kernel payload_sizes` — `size_of::<ICDescriptor>() == 64` with the padding a declared member and no stored E₀ field; descriptor bits 10–15 zero (REQ-PAY-001).
+- `cargo test -p kernel payload_sizes` — `size_of::<ICDescriptor>() == 64` (the f32 instantiation, R-313) with the padding a declared member and no stored E₀ field; descriptor bits 10–15 zero (REQ-PAY-001).
 - `cargo test -p ledger spread_event` — the ledger's `QuadReduction` member list has `spread_event` typed f16 and no `ensemble_outcome_agreement` (REQ-PAY-019, R-306).
 - `cargo test -p kernel continuation_table_rust` — the Rust tables equal payload §3's frozen arrays, `continuation_index` included with 3 in its four `next = inverse(prev)` cells (R-307) (the WGSL half and REQ-PAY-016 close in TASK-M0-13).
+- `cargo test -p kernel continuation_table_out_of_range` and `cargo test --release -p kernel continuation_table_out_of_range` — each table function given an out-of-range input fails its `debug_assert!` in the debug build and returns 3 in the release build, never a table cell (R-319).
 
 ## Notes
 - REQ-PAY-019's "the agreement view computes from spread_event" is a view; field views are M1 (REQ-TOOL-009 onward). This task holds the storage half.
@@ -45,3 +49,6 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
   REVIEW_QUEUE. Filed as RQ-178; R-306 moves its placement, with the struct, to TASK-M5-01.
 - RQ-179 ruled: R-307 — the four `next = inverse(prev)` cells of `continuation_index` hold 3 ("invalid"), as
   `dmin_pair`'s 3 does; the WGSL half (TASK-M0-13) carries the same table.
+- RQ-183 ruled: R-315 — `n_unresolved` is u16 (§3.7's temporal-accumulators row), so the member list types it u16.
+- R-319 (1 Oct) vetoes PR #99's item 8: an out-of-range input to a table function is a `debug_assert!` failure, and
+  returns 3 in release, never the last cell.

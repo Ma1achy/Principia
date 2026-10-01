@@ -22,6 +22,7 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-63 — The continuation table is hashed with the ledger *(confirms R-36's application)*"
 - `decisions.md` § "R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*"
+- `decisions.md` § "R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*"
 
 - `decisions.md` § "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
 ## Deliverables
@@ -40,3 +41,5 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - The fragment read side's tier-uniform interface (`has_<feature>` consts, NaN for absent features — lowering Part 3a) is M1's; this task emits the stored layouts only.
 - The GPU self-test of this WGSL is TASK-M0-15.
 - R-256's applied note: the WGSL half of REQ-PAY-002 is split off as REQ-PAY-091 and closed here.
+- R-319 (1 Oct): the Rust table functions fail a `debug_assert!` on an out-of-range input and return 3 in release; the
+  WGSL table functions, which have no `debug_assert!`, return 3 (REQ-PAY-016). *Applied per R-204 — veto?*
