@@ -3644,3 +3644,77 @@ requirement that doesn't exist or is retired, or a REVIEW_QUEUE entry that isn't
 ionisation gate, `δ_dep` and the per-sample departed bit, the change-10 re-runs, the two `alpha_area` defects, the
 camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab transcription checks. It lands in a
 PR of its own, after this one.
+
+## R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
+*1 Oct 2026 · applied in `plan/OPERATIONS.md`, `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, CLAUDE.md §
+"How work runs", `plan/WORKFLOW.md` and REVIEW_QUEUE RQ-190*
+
+(A) "Before I move work to cloud sessions: write everything your local memory holds that a fresh session needs into
+the repo (CLAUDE.md, plan/WORKFLOW.md, or a new plan/OPERATIONS.md): the overnight rules, merge order, dispatch rule
+(R-289), size practice, disk/memory limits, how to run reviewers, and anything else you'd tell a new orchestrator. Mark
+which parts are Mac-specific (SSD paths, APFS clones, env.sh, memory_pressure) and what a Linux cloud machine should do
+instead. One PR. Then finish the work in flight and stop at a clean point: nothing half-applied, every open question
+recorded in the repo."
+
+(B) "Also add scripts/cloud-setup.sh: installs exactly what CI's Linux jobs install (Rust stable, the pinned rust-gpu
+nightly, Mesa lavapipe, cargo-nextest, cargo-mutants, Python + PyYAML), sets PRIN_GPU_BACKEND=vulkan, and runs
+check_plan.py as a smoke test. Document in plan/OPERATIONS.md that cloud sessions run it first."
+
+(C) "The five R-204 items on R-341–R-343 stand. One change to the handoff PR: scripts/cloud-setup.sh reads every pin
+from the same source CI uses (rust-toolchain file(s), and the workflow files' version pins), never hard-coded copies,
+so it can't drift when #96 changes the nightly. Add a check that the script and CI agree."
+
+(D) "This is from me. I'm moving orchestration to Claude Code cloud sessions. Prepare the repo so a fresh session needs
+nothing from your local memory:
+1. plan/OPERATIONS.md: everything a new orchestrator needs that isn't already in CLAUDE.md, plan/WORKFLOW.md or
+CURRENT_RULES.md: the overnight rules, merge order (retarget before deleting), the dispatch rule (R-289), size practice
+(R-264), the disk/memory limits, reviewer worktrees (R-219), the measure/ branch rule (R-272), and anything else you'd
+tell a new orchestrator. Mark what is Mac-specific (SSD paths, APFS clones, env.sh, memory_pressure, Metal, local perf
+runs) and what a Linux cloud machine does instead.
+2. scripts/cloud-setup.sh: installs exactly what CI's Linux jobs install (Rust stable, the pinned rust-gpu nightly,
+Mesa lavapipe, cargo-nextest, cargo-mutants, Python + PyYAML), sets PRIN_GPU_BACKEND=vulkan, and runs check_plan.py as
+a smoke test.
+3. CLAUDE.md points to OPERATIONS.md.
+Then finish the work in flight and stop at a clean point: nothing half-applied, every open question in REVIEW_QUEUE.
+Report what's open."
+
+*Applied:* four messages of 1 Oct 2026, recorded as one process ruling.
+- **`plan/OPERATIONS.md` (new)** holds what the orchestrator's local memory and session notes held that a new session
+  needs and `CLAUDE.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md` don't say: start-up, dispatch (R-289), reviewer
+  worktrees (R-219) and re-checks (R-229, R-260), the check on qa's commit (R-237, R-290 and its named exceptions),
+  merging and merge order (R-266, R-345), away mode (the human's limits of 27 and 28 Sep 2026, R-234), size (R-264),
+  asking the human (R-204), resources (R-228, R-252, R-262, R-277), paths and warm builds, Metal and perf (R-186),
+  `measure/` branches (R-272), pitfalls and logs. Each rule cites its ruling; a practice with no ruling of its own
+  carries its date and stands under this one. Where memory held a fact a later ruling replaced, the ruling's form is
+  written: the internal disk, not the SSD (R-262); memory pressure, not swap (R-252); three agents at normal pressure
+  and two at warning (R-277); the `measure/` rule as R-272. Mac-only parts are marked, with what a Linux cloud machine
+  does instead.
+- **`scripts/cloud-setup.sh` (new)** installs what CI's Linux jobs (`runs-on: ubuntu-*`) install, and reads each item
+  and version from the files CI reads: the `dtolnay/rust-toolchain@<ref>` steps and their `components:`, the root
+  `rust-toolchain.toml` (or `rust-toolchain`) that CI's bare `rustup toolchain install` steps read, the
+  `taiki-e/install-action` steps' `tool:` pins, the `apt-get install` and `pip install` lines, the `actions/setup-python`
+  steps' `python-version:`, and `PRIN_GPU_BACKEND` from the jobs' `env:`. It holds no version of its own. It refuses to
+  run when a Linux job installs by a means it doesn't know, naming the step. It exports `PRIN_GPU_BACKEND`, prints how to
+  keep it and cargo's PATH, and runs `python3 plan/check_plan.py`; `--dry-run` prints its plan. Running it again skips
+  what is installed; apt runs as root or through sudo.
+- **The check (C) asks for** is `xtask/tests/cloud_setup.rs`, which `cargo nextest run --workspace` runs in CI's `ci`
+  job, each test with its negative control (R-176). It reads CI's Linux jobs and the root toolchain file itself, and
+  fails if the script's dry run names an item CI doesn't install or misses one it does, if any item's version differs,
+  if the script's text holds a version literal or one of CI's pins, if the dry run doesn't follow a changed pin, or if
+  the script accepts an install step it doesn't know.
+- **Pointers:** CLAUDE.md § "How work runs" and `plan/WORKFLOW.md`'s opening point to `plan/OPERATIONS.md` and the
+  script. `plan/HUMAN_SETUP.md` covers repository settings, not a machine's setup, and gains none.
+- **Flagged:** (B) and (D) name "Rust stable" and "the pinned rust-gpu nightly" both. Read from CI's files, as (C) asks,
+  `main`'s Linux jobs install stable (`dtolnay/rust-toolchain@stable`) and pin no nightly, and #96 replaces every such
+  step with `rustup toolchain install`, which installs the nightly its `rust-toolchain.toml` pins. So the script installs
+  stable until #96 merges and the nightly after, and stable then only if a Linux job still asks for it. Checked against
+  #96's workflows and toolchain file as well as `main`'s.
+- *Applied per R-204 — veto? (RQ-190):* where CI uses an action, the script does the same with rustup, `cargo install
+  --locked <tool>@<version>` (the action downloads a prebuilt binary of that version) and `python3 -m pip install`,
+  falling back to `--user` and then `--break-system-packages` where the system Python refuses; it installs rustup when
+  the machine has none, and requires `git`, `curl` and `cc`, which CI's runner image has; a `python3` of another minor
+  version than CI's warns rather than fails. `plan/OPERATIONS.md`'s Linux readings of memory pressure (PSI or `free`,
+  with thresholds), its cap of `nproc` / 4 agents, its disk thresholds (the Mac's), its log for a cloud session, and its
+  untested sccache note are recommendations, marked so there.
+
+Process only (section_notes); no requirement changes.

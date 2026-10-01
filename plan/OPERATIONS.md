@@ -1,0 +1,322 @@
+# Operations: the orchestrator's manual
+
+What a new orchestrator session needs to run the build, beyond what `CLAUDE.md`, `plan/WORKFLOW.md` and
+`plan/CURRENT_RULES.md` already say. It holds the rules and lessons that lived only in the orchestrator's local memory
+and its session notes until 1 Oct 2026, so that a fresh session, on the human's Mac or on a Linux cloud machine, needs
+nothing from outside the repository (R-346).
+
+How to read it:
+- A rule with a ruling cites it (R-n), and `decisions.md` holds its words; where this file and a ruling disagree, the
+  ruling wins. A practice with no ruling of its own carries the date it was set, and stands under R-346.
+- **Mac only** marks what holds only on the human's Mac (its paths, APFS clones, `memory_pressure`, Metal, perf runs).
+  **Linux cloud** says what a cloud machine does instead.
+- Items marked *recommended (R-346, applied per R-204)* are the orchestrator's recommendation, not a ruling: REVIEW_QUEUE
+  RQ-190 asks the human to accept or veto them.
+
+## Start here
+
+1. **A cloud session runs `scripts/cloud-setup.sh` first**, from the repository root. It installs exactly what CI's
+   Linux jobs install: the Rust toolchains (the `dtolnay/rust-toolchain` steps' and the root `rust-toolchain.toml`'s,
+   with their components), the apt packages (Mesa's lavapipe), cargo-nextest and cargo-mutants, and Python with its
+   packages (PyYAML). It reads every version from the files CI reads, never from a copy of its own, then exports
+   `PRIN_GPU_BACKEND` as CI's Linux jobs set it (`vulkan`) and runs `python3 plan/check_plan.py` as a smoke test.
+   `scripts/cloud-setup.sh --dry-run` prints what it would install, one item per line. Running it again is safe: it
+   skips what is already installed. Then do what it prints, so the next shell keeps the setup: put `$HOME/.cargo/bin`
+   on PATH and export `PRIN_GPU_BACKEND`.
+   - CI's `xtask/tests/cloud_setup.rs` fails if the script and CI's Linux jobs disagree on any item or version, if CI
+     installs anything by a means the script doesn't know, or if the script holds a version literal (R-346).
+   - When a workflow gains a new kind of install step, the script refuses to run, naming the step. Teach both the
+     script and the test the new step in the same PR.
+   - The script warns, and does not fail, when the machine's `python3` is another minor version than the one CI sets
+     up (*recommended (R-346, applied per R-204)*): `plan/check_plan.py` and the xtask tools need only Python 3 with
+     PyYAML.
+2. **Read** `CLAUDE.md`, `plan/WORKFLOW.md`, `plan/CURRENT_RULES.md`, this file and `REVIEW_QUEUE.md` (everything open).
+   Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight. The loop needs `gh`, signed in to GitHub
+   (`gh auth status`); CI's runner images have it, so the setup script doesn't install it.
+3. **Agent definitions** (`.claude/agents/`) load only when a session starts. After one changes, the session must be
+   restarted (`claude --continue`); `/clear` doesn't reload them (26 Sep 2026).
+4. **The repository** is `Ma1achy/Principia`, public (renamed from `prin-impl` on 25 Sep 2026). On the Mac the
+   checkout is `~/src/Principia`. `main` carries the tag `plan-v1` (a59a772), the plan the build started from: never
+   move it; a plan change that needs a tag gets a new one.
+5. **What is ready.** A task is ready when every task in its Depends on is done. A task is done when its
+   `task/<TASK-id>` PR has merged, or its `plan/tasks.yaml` entry says `status: done`. TASK-M0-00 is done that way
+   (R-185, no task PR), and is never listed as ready (29 Sep 2026).
+
+## Roles and the loop
+
+The roles, the loop and the read-only check are in `CLAUDE.md` § "The main session orchestrates; it never implements
+or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
+- **Run independent work in parallel** (the human, 27 Sep 2026): every ready task starts at once, each in its own
+  worktree and target directory, within the agent cap (§ "Resources"). Never start a task whose dependencies aren't
+  merged, and never stack a task on an unmerged PR (28 Sep 2026).
+- **Every approval sits on the head.** Before a merge, each named reviewer's `VERDICT: APPROVE` is on the latest
+  commit, or carried over to it under R-260 (§ "Reviewers").
+- **A compile check beats a token scan.** Don't enforce a source rule by reading tokens when the compiler can check
+  it: R-187's token scan took six rounds of bypasses before R-191 replaced it with a compile check (PR #16).
+- **The PR description** gives the commit hashes, a summary, and each REVIEW_QUEUE entry or ruling applied. When qa's
+  commit is pushed, update the description, which the implementer wrote before it: its counts and "untouched" claims go
+  stale, and it lists each `M` or `D` line of qa's with its reason (R-290).
+
+## Dispatching
+
+- **Rulings travel only in an opening prompt (R-289).** A ruling reaches an agent only in the opening prompt of a
+  fresh dispatch, in the human's own words. If one lands while an agent is mid-task, let it finish its current step and
+  stop, then dispatch a fresh agent with the ruling. A message to a running agent carries only coordination facts (a
+  path, a merge order, "main moved") or a review finding. Relaying R-286 and R-288 by message on PR #79 got the agent
+  blocked by the permission classifier, even for `git status`. If an agent reports a classifier block, don't retry that
+  path: tell the human.
+- **What every dispatch names:**
+  - the task id, and the PR number for a reviewer or a fix round;
+  - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
+  - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`, and on the Mac the
+    PATH fix (§ "Paths and warm builds");
+  - a private scratch subdirectory for PR bodies and temp files, `<scratchpad>/<pr>-<role>/`. Agents sharing one
+    scratch directory overwrote each other's `body.md`, and PR #54's description briefly showed TASK-M0-09's
+    (30 Sep 2026);
+  - any ruling since the task file was written, verbatim (R-289);
+  - for a reviewer, the request for a class on each veto item (§ "Reviewers");
+  - for a renamed or reused target, what to clean first (§ "Pitfalls").
+- **Fresh or resumed.** A reviewer is always a fresh subagent, never a fork (CLAUDE.md). A fix round with a ruling in
+  it is a fresh dispatch (R-289). A fix round without one may go to the implementer that is still running, by message.
+- **Sizing.** Have the implementer measure a few sample controls before sizing a task: per-control estimates ran ~30%
+  low, since a `negative_control!` call is ~10 lines once formatted, and controls in a new `tests/*.rs` target copy
+  qa's helpers (TASK-M0-24 and TASK-M0-25, RQ-143, RQ-144).
+
+## Reviewers
+
+- **Their own checkout (R-219).** Each reviewer gets its own detached worktree at the PR head
+  (`git worktree add --detach <dir> <head>`) and its own `CARGO_TARGET_DIR`, both named in the dispatch, and both
+  removed when it is done. After it returns, run the read-only check (`git status --porcelain`, HEAD unmoved;
+  CLAUDE.md).
+- **Handing a worktree on.** Never `git worktree move` a worktree, and never rename a target directory between
+  worktrees or roles: compiled test binaries keep the absolute paths of `CARGO_MANIFEST_DIR`, `CARGO_TARGET_TMPDIR` and
+  `CARGO_BIN_EXE_*`, cargo doesn't rebuild them after a move, and the controls then fail falsely (PR #79 and PR #83,
+  30 Sep 2026). Hand the next reviewer the same worktree path, with the new head checked out there, or make a fresh
+  worktree.
+- **Who re-checks what:**
+  - after any commit that is not qa's, every named reviewer posts again on the new head (`plan/WORKFLOW.md` step 5);
+  - after qa's add-only commit, qa's approval carries over to it (R-260), and the code reviewer re-checks that commit
+    alone (R-229);
+  - after a qa commit with any `M` or `D` line, R-260 does not carry qa's approval over. Dispatch qa's re-approval on
+    that head at the same time as the code reviewer's re-check, not after the other approvals land (#78, #79,
+    30 Sep 2026).
+- **Veto items need a class from each reviewer.** R-234 lets a PR with "applied per R-204 — veto?" items merge while
+  the human is away only if every named reviewer accepted each item *and* classed it as test infrastructure, process,
+  sequencing or mechanical. Ask for both in the first dispatch: reviewers otherwise approve without classing (#70
+  needed follow-ups, and was then held when code classed an item "design"). The implementer puts every new veto item in
+  the PR description, not only in a reply: qa may not read the implementer's replies (#72, 30 Sep 2026).
+- **Mutants.** Don't run `cargo mutants` locally; CI's shards do (`mutants.yml`, R-302). If one has to run locally, give
+  it a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats
+  as fresh, and delete it straight after. The `mutants::skip` marker doesn't compile without the `mutants` crate as a
+  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
+  (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+
+## qa commits
+
+qa commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing it, from qa's worktree:
+1. There is exactly one new commit, titled `qa: tests for <TASK-id>`.
+2. `git diff --name-status HEAD~1 HEAD` lists only paths under `crates/*/tests/`, `xtask/tests/` or `fixtures/`
+   (R-237).
+3. Each line is `A`, or `M` or `D` on a file whose every earlier commit, by `git log --format=%s -- <file>`, is a qa
+   commit (R-290), or on a file a ruling names as an exception: R-335 (`xtask/tests/qa_TASK-M0-22_r235.rs`), R-336
+   (TASK-M0-45's test splits) and R-342 (the two `qa_TASK-M0-38.rs` files).
+4. Push with `git push origin HEAD:task/<TASK-id>` and confirm with `git ls-remote`. Add each `M` or `D` line to the
+   PR description, with its reason.
+
+Anything else: reject it (`git reset --hard <head before qa>`) and dispatch qa again. The implementer never edits qa's
+files (R-290). The one-round exceptions on #74 and #78 stand, but there is no next one: when qa next needs to change a
+file the rules above don't open to it, file that in REVIEW_QUEUE and wait for the ruling (R-283).
+
+## Merging
+
+Who merges: the human, unless the human has said otherwise (CLAUDE.md § "How work runs") or the away rules allow it
+(§ "Away mode"). When the orchestrator merges:
+1. Wait until `gh pr view N --json mergeStateStatus` shows `CLEAN`. Every review thread is resolved (R-276).
+2. Check the merged tree: in a scratch detached worktree at `origin/main`, `git merge` the PR branch, and any other PR
+   about to merge, then run `python3 plan/check_plan.py` and `python3 plan/tools/current_rules.py --check`, and the PR's
+   own new checks if `main` has moved since its CI ran. "Require branches to be up to date" is off (R-266), so nothing
+   else catches a clash: #70's CI was green, but `main` had since gained #75's `spawn::TIMEOUT` uses, which #70 renamed,
+   and the merged tree failed to compile (30 Sep 2026).
+3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
+4. Then, as a separate command, never chained after the merge with `;`: delete the remote and local branches, remove
+   the PR's worktrees and their target directories, and prune (`git fetch --prune`, `git worktree prune`) (R-345). A
+   refused merge with chained cleanup once removed #54's worktree.
+5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
+   separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
+
+**Merge order for stacked PRs.** `gh pr merge --delete-branch` deletes the base through the API, and GitHub then
+closes the PR stacked on it rather than retargeting it (PR #2, 25 Sep 2026). So, per PR n: merge n without deleting
+its branch, `gh pr edit n+1 --base main`, then delete n's branch (CLAUDE.md § Git, R-345). To recover a closed child:
+push its branch back at the merged PR's `headRefOid`, `gh pr reopen`, then `gh pr edit --base main`.
+
+**Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
+except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required
+checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
+they can add it back.
+
+**Numbers.**
+- **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
+  branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
+- **An RQ open only on a PR branch.** When a rulings PR rules on it, the rulings PR archives it in
+  `docs/archive/review_queue/`, since `plan/tools/rulings.py` rejects a cited RQ that is neither open nor archived. The
+  task PR's next fix pass deletes its open copy.
+- **Ruling numbers.** The human may number a ruling, and their number wins: renumber any provisional one. If the human
+  numbers a batch from a number already taken, record it from the next free number, in order, and note the shift under
+  the first (R-278).
+
+## Away mode
+
+The human's limits while they are away (given 27 Sep 2026, updated 28 Sep; in force whenever they are away). Keep
+working through the plan under `plan/WORKFLOW.md` and `CLAUDE.md`. Progress is the goal: batch questions, and stop only
+when nothing at all can proceed.
+
+**Self-merge** a PR only if all of these hold:
+- every reviewer the task names has posted `VERDICT: APPROVE` on the head;
+- CI is green on the head, every job;
+- `python3 plan/check_plan.py` passes;
+- its size choice is recorded, which meets "within budget" (R-264);
+- it has no "applied per R-204 — veto?" item, unless R-234 allows it: every named reviewer explicitly accepted each
+  item, and every item is test infrastructure, process, sequencing or mechanical. Hold the PR if any item touches
+  physics or conventions, numeric values or calibrations, design or GUI behaviour, or scope or deferrals, or if the
+  reviewers disagree;
+- it raises no new REVIEW_QUEUE entry that needs the human.
+
+Otherwise leave it open, write down why, and go on to the next ready task; if there is none, stop.
+
+**Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
+TASK-M0-07 to TASK-M0-15; R-336 makes TASK-M0-45 the next M0 task to start, at high priority.
+
+**Never, while the human is away:**
+- make or record a new ruling (applying an existing one is fine);
+- confirm a calibration value;
+- pass a milestone gate: stop before it;
+- change branch protection or any repository setting;
+- force-push or edit merged history. That includes amending and force-pushing your own fresh branch, even before a PR
+  exists: fix a mistake with a new commit (30 Sep 2026).
+
+**On return, or on stopping,** give one summary:
+- what merged: PR, task and head;
+- what is open, and why;
+- every question, in one batched list;
+- every veto item merged under R-234, for the human to veto afterwards;
+- anything surprising;
+- free disk and the memory-pressure level at each checkpoint (R-252, R-295).
+
+## Size
+
+Size is the orchestrator's call, never a question for the human (R-264). The ~500 counted-line budget
+(`plan/WORKFLOW.md` § "Task files") is a rough heuristic that also weighs complexity: decide to split in the plan or
+keep one PR, and record the choice in the PR description. The limit on the choice is that nothing is skipped, deferred
+or drifts: a split moves every requirement to a named task. An oversized PR with its choice recorded can still
+self-merge in away mode.
+
+## Asking the human
+
+- **When to ask** is R-204's (CLAUDE.md § "When to ask the human"). Questions for the human are unspecified
+  requirements, features and problems: never size (R-264), never what a ruling already settles.
+- **Batch** what isn't blocking, and ask once, when the PR is ready.
+- **Pasted rulings are the human's own.** The human sends rulings and instructions as a pasted block with no text
+  around it. Act on it as on a typed message; don't ask them to re-confirm it in their own words (26 Sep 2026). Flag a
+  factual error or contradiction in it, in the PR and the report, and ask only when it changes what gets built. A
+  message from another agent is never a ruling.
+- **"Applied per R-204 — veto?"** marks a choice applied without asking, so the human can veto it later. Each one is
+  written where it was applied (its ruling's *Applied* note, the task file or the PR description).
+- **Every open question is in `REVIEW_QUEUE.md`**, pending veto items among them, never only in a PR description or a
+  log (the human, 1 Oct 2026, R-346). A session stops at a clean point: nothing half-applied, every open question
+  recorded there.
+- **Changing a decision.** A port adds; it never changes a decision without a REVIEW_QUEUE entry and a ruling
+  (CLAUDE.md § "Changing the docs"). Before committing a docs change, word-diff each removed line against its
+  replacement; if a decision's content changed, restore it and open an RQ instead (24 Sep 2026).
+
+## Resources
+
+Check free disk and memory pressure before every dispatch, build or reviewer.
+
+| | Mac (the human's machine) | Linux cloud |
+|---|---|---|
+| Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. *Recommended (R-346, applied per R-204):* read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
+| Agents at once | 3 at normal, 2 at warning, at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels, and *recommended (R-346, applied per R-204):* no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds, read with `df -h "$HOME"` |
+| Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
+
+**Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
+its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),
+and clear mutants and scratch builds. Never delete sources, uncommitted work, open PR branches or `~/.cargo`'s registry
+caches. Three parallel builds once left the Mac's disk at 117 MiB free (30 Sep 2026).
+
+## Paths and warm builds
+
+**Mac only.**
+- Worktrees go in `/Users/malachy/principia-work/worktrees/`, target directories in
+  `/Users/malachy/principia-work/targets/`, on the internal disk (R-262). Until 29 Sep 2026 they lived on the external
+  SSD (`/Users/malachy/principia-ssd`, a link to `/Volumes/X10 Pro/Principia`), which dropped access twice even with Full
+  Disk Access; work started there finished there. The SSD folder also holds the human's own folders: leave them alone.
+- `targets/seed` is a warm build of `main`, with and without the `controls` features. A new target starts as an APFS
+  clone, `cp -cR /Users/malachy/principia-work/targets/seed <new target>`, which is instant; a build from another
+  worktree then recompiles only the workspace's crates (~30 s, against 150–280 s cold). Refresh the seed after merges.
+  Clone only for a worktree at a different path from the seed's own: a clone used from the seed's path isn't rebuilt,
+  and keeps using the seed's `tmp/` and binaries (29 Sep 2026).
+- There is no `env.sh`: each dispatch gives the environment (§ "Dispatching"). Put `$HOME/.cargo/bin` and
+  `$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin` on PATH. `cargo` on PATH is `~/.cargo/bin/cargo`, a
+  standalone binary with no fmt or clippy that shadows rustup's toolchain; the second directory supplies `cargo-fmt`
+  and `clippy-driver`. Before that fix, agents wrongly reported rustfmt and clippy missing (26 Sep 2026). For the
+  pinned nightly (§ "Toolchain"), put that toolchain's `bin` directory first instead.
+- `syspolicyd` can stall the launch of freshly built binaries: a stuck test run sits at 0% CPU. After a long agent run,
+  check `ps` for leftovers.
+- The terminal and Claude Code have Full Disk Access (29 Sep 2026). If "Operation not permitted" failures come back,
+  report them to the human; they are not test findings.
+- sccache was tried and dropped: no hits across target directories, since their paths enter its hash (27 Sep 2026).
+
+**Linux cloud.**
+- Use `$HOME/principia-work/worktrees/` and `$HOME/principia-work/targets/`, with the same rules: one worktree and one
+  target per agent (R-219), never moved or renamed (§ "Reviewers").
+- A warm seed works as on the Mac: copy it with `cp -a --reflink=auto targets/seed <new target>`, which clones on a
+  filesystem that supports it (btrfs, XFS) and copies in full elsewhere, costing disk (§ "Resources").
+- After `scripts/cloud-setup.sh`, `cargo` is rustup's proxy, which reads `rust-toolchain.toml` itself: no PATH fix.
+- *Recommended (R-346, applied per R-204), untested:* sccache may share builds between worktrees only if their paths
+  are kept out of its cache keys (path remapping); the Mac's trial had no hits because they weren't.
+
+## Toolchain
+
+- TASK-M0-14 (#96) pins the whole workspace to rust-gpu's nightly in `rust-toolchain.toml`. Stable clippy fails on
+  `spirv_std` (E0514), so clippy runs on the pinned nightly. On the Mac, put that toolchain's `bin` directory first on
+  PATH; on Linux, rustup's proxy picks it from the file.
+- `scripts/cloud-setup.sh` reads the toolchain from what CI reads. While `main` has no `rust-toolchain.toml`, it
+  installs stable as CI's `dtolnay/rust-toolchain@stable` steps do; once #96 merges, it installs the nightly the file
+  pins, and installs stable only if a Linux job still asks for it.
+
+## Metal and perf (Mac only)
+
+- `gpu-metal` and `metal_hosted_probe` run only on macOS: on CI's `macos-15` runner, or on the Mac. A cloud session
+  runs the GPU suites on lavapipe (`PRIN_GPU_BACKEND=vulkan`, R-169), as CI's Linux jobs do, and leaves Metal to CI.
+- Benchmarks and performance gates run on the human's Mac via `prin profile` (R-186), never on a hosted runner or a
+  cloud machine. A cloud session never reports a performance number of its own: it asks the human for the run, and its
+  PR says it waits for it (`plan/WORKFLOW.md`).
+
+## `measure/` branches (R-272)
+
+A throwaway `measure/<what>` branch may be pushed so that CI takes a measurement (REQ-VAL-138's lavapipe max-step and
+RQ-164's ubuntu mutants timing were taken this way). Record the number in the PR or `decisions.md`, delete the branch
+straight after, and never open a PR from it. If the permission classifier refuses the push, show the human the rule;
+don't route around it.
+
+## Pitfalls
+
+- **A target directory moved or renamed between worktrees** fails tests falsely (§ "Reviewers"). Where one has been
+  moved anyway, before the next run: touch every `crates/*/tests/*.rs` and `xtask/tests/*.rs` (mtime only), run
+  `cargo clean -p xtask` in it, and delete its nested `tmp/qa_TASK-M0-01-alias-target`, which `clean -p` doesn't reach
+  (#79, 30 Sep 2026).
+- **`gh pr edit` outside a git checkout** fails with "not a git repository": run it from the repository, or pass
+  `--repo Ma1achy/Principia`.
+- **Never chain cleanup after `gh pr merge` with `;`** (§ "Merging").
+- **Approvals on an older head** don't count, except as R-260 carries them (§ "Reviewers").
+- **A ruling relayed to a running agent** gets it blocked (R-289).
+
+## Logs
+
+- **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
+- **Linux cloud.** A cloud machine's disk may not outlive the session. *Recommended (R-346, applied per R-204):* keep
+  the running log in the session's scratch directory, and post the away-mode summary as the session's final message and
+  as a comment on each PR it concerns.
+- On either machine, a log is never where a question lives: open questions go in `REVIEW_QUEUE.md`
+  (§ "Asking the human").

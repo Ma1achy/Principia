@@ -699,3 +699,7 @@
   section: "R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry"
   reason: informative only
   note: a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement
+- file: decisions.md
+  section: "R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files"
+  reason: informative only
+  note: process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement

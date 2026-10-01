@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 
 ## Sections
 
-1025 sections in 46 files: 864 yield at least one requirement; 161 yield none and are listed below with the reason.
+1026 sections in 46 files: 864 yield at least one requirement; 162 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 114 |
+| informative only | 115 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -123,6 +123,7 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 | R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR |
 | R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders | informative only | a test-isolation fix in qa's file, made by qa in a follow-up PR on TASK-M0-06 (noted there); changes no requirement |
 | R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
+| R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files | informative only | process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

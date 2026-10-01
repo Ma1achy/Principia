@@ -261,6 +261,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 - **R-314** — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
 - **R-334** — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
+- **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
 
 ## CI
 
