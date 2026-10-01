@@ -199,8 +199,12 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-319** — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*. Still in force: PR #99's item 8 stays vetoed (no input yields "the last cell" as a fallback); each input is `debug_assert!`-ed. R-321 replaces the release behaviour: the functions are total, each input masked to 2 bits. Amended by R-321; replaced in part by R-321 (its release behaviour).
 - **R-321** — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*. Still in force: the four functions are total in Rust and WGSL; each symbol input is `debug_assert!`-ed < 4, then masked `& 3`; `continuation_index` returns 3 only for its inverse cells (R-307). R-324 sets the digit argument's rule. Amended by R-324.
 - **R-322** — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*
-- **R-323** — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
+- **R-323** — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so. Still in force: the exact threshold; "session incomplete" with the dropped bytes, still compared; R-328 extends "no frame records exits 2" from NEW to either file. Amended by R-328.
 - **R-324** — The digit argument of `continuation_symbol` and `predecessor_symbol` is debug-asserted < 3, then clamped with `min(d, 2)` *(completes R-321)*
+- **R-327** — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*
+- **R-328** — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*
+- **R-329** — The header's core count is `cpu_cores_available`; no `usize` in a serialised type
+- **R-332** — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*
 
 ## Values
 
@@ -256,6 +260,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 - **R-314** — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
+- **R-334** — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
 
 ## CI
 
@@ -285,13 +290,15 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-269** — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend. Still in force: its measurement and result, and one reference per backend as the fallback for a case whose bytes still differ; otherwise goldens share one reference (R-287). Amended by R-287.
 - **R-276** — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
 - **R-279** — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
-- **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys. Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached; R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version. Amended by R-320.
+- **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys. Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached; R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on pushes to `main`, and pull-request runs restore only. Amended by R-320 and R-326.
 - **R-287** — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*. Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a tie, so a golden near a tie keeps one reference per backend (R-296). Amended by R-296.
 - **R-296** — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
-- **R-301** — TASK-M0-42's CI cost is accepted *(amends R-270)*
+- **R-301** — TASK-M0-42's CI cost is accepted *(amends R-270)*. Still in force: the measurement, about 10m28.5s per warm `ci` run on PR #85; R-325 makes ~10.5 min the target for each CI job again. Amended by R-325.
 - **R-302** — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
 - **R-305** — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
-- **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
+- **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*. Still in force: the rust-gpu build is cached under a key naming its job and the pinned toolchain version; R-326 saves it only on pushes to `main`. Amended by R-326.
+- **R-325** — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*
+- **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
 
 ## One-off acts (history only)
 
@@ -340,10 +347,13 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084 counted lines, one PR). Amended by R-264.
 - **R-267** — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
 - **R-268** — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
-- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The "~10.5 min" `ci` target gives way to R-301's accepted cost, about 10m28.5s per warm `ci` run as PR #85 measured it. Amended by R-301.
+- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. Amended by R-301 and R-325.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
 - **R-310** — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
 - **R-311** — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done
 - **R-316** — #96's `closure_min` widening with `Real` stands
+- **R-330** — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max`
+- **R-331** — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)
+- **R-333** — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders

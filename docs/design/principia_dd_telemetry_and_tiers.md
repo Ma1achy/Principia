@@ -210,8 +210,10 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
 key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+The typed form gives every count and size an explicit width, u32 or u64, never `usize` (R-329).
 
-The ranges, which the typed form and the JSON Schema both hold: `cpu_cores`, `gpu_cores`, `width_px`, `height_px`,
+The ranges, which the typed form and the JSON Schema both hold: `cpu_cores_available`, `cpu_cores_total`, `gpu_cores`,
+`width_px`, `height_px`,
 `tree_depth_max`, `dmin_nan_unset` and `dmin_negative_floored` are at most 2^32 − 1, and every other count or size at
 most 2^64 − 1. `camera_delta`, `refresh_hz`,
 `dpi_scale` and `f64_rate` are ≥ 0 too; `playhead_dt` is signed. Every number is finite. A frame's `stage_ms.present`
@@ -221,7 +223,7 @@ bytes; and a pool's `by_kind` has at most one entry for each `kind`, and a stage
 breaks any of those three rules, fails rather than write it, and a reader rejects all of them, so every line of a file
 the reader accepts validates against the JSON Schema's definition for its place (below). The reverse holds with four
 exceptions, which the schema accepts and the reader rejects: a count or size written with a zero fraction
-(`"cpu_cores": 4.0`), which JSON Schema's `integer` admits; a key repeated within an object whose keys this section
+(`"cpu_cores_available": 4.0`), which JSON Schema's `integer` admits; a key repeated within an object whose keys this section
 lists, where the schema sees only the last copy; a
 pool whose `bytes` is not the sum of its `by_kind` bytes, a sum JSON Schema cannot express; and two `by_kind` entries
 in one pool with the same `kind`, or two `allocations` entries in one stage with the same `kind` and `pool`, a
@@ -273,7 +275,8 @@ defines its keys; until then, a writer writes `null`, and a reader accepts any o
 **The session header** carries §2's per-session fields, and the full config that §5 requires:
 
 ```
-device     gpu (model), cpu (model), cpu_cores, gpu_cores (null when not reported),
+device     gpu (model), cpu (model), cpu_cores_available (the cores this process may use), cpu_cores_total
+           (the machine's cores; null when not cheaply reported), gpu_cores (null when not reported),
            memory: {"unified": {bytes}} or {"discrete": {vram_bytes, ram_bytes}}
 backend    api ("metal" / "vulkan" / "dx12" / "webgpu" / "none"), driver (its version)
 precision  f32, f64 (supported: true / false), f64_rate (the reported f64 rate as a fraction of the f32 rate;
@@ -284,16 +287,18 @@ config     the run's full configuration, a JSON object, in the canonical seriali
 ```
 
 Unified memory is its own variant, not a VRAM size of zero (§2).
+`device.cpu_cores_available` is what `std::thread::available_parallelism` reports, and `device.cpu_cores_total`
+the machine's own count, `null` where the platform doesn't report it cheaply (R-329).
 
 **A session that opens no GPU (R-308)** writes `backend.api` "none", and `null` for the GPU's own fields:
-`backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`. `device.cpu` and `device.cpu_cores`
-are written as always. Readers accept this header. A run never opens a GPU adapter only to fill the header: `prin
+`backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`. `device.cpu`, `device.cpu_cores_available` and
+`device.cpu_cores_total` are written as always. Readers accept this header. A run never opens a GPU adapter only to fill the header: `prin
 profile` running a scenario that does no GPU work (M0's `synthetic_frames`) writes this form.
 
 **`config` (R-309)** holds `SimConfig` and `RenderState` in their one canonical serialisation, the same text snapshot
 JSON, share links and pxpack carry (`principia_gui_state_contract.md` §2). A `prin profile` run writes it as
 `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`: the scenario it ran, the frame count, and
-the two structs.
+the two structs. The frame count is a u32, so it is a JSON number (R-327, R-322).
 Written canonically (JCS, R-318), the object's members appear sorted: `frames`, `render`, `scenario`, `sim`.
 
 **The frame record** is §2's, key for key, followed by the five stages' nested sections and the memory live at the
