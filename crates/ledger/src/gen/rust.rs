@@ -403,7 +403,7 @@ fn array(rows: &[[u32; 4]]) -> String {
 /// `cells` as a comparison chain on `var`, `if var == 0 { cells[0] } else if var == 1 { … } else { cells[n − 1] }`,
 /// each cell's text indented to `depth` levels of four spaces, rustfmt's layout. The first cell opens the chain, the
 /// middle cells are its `else if` arms, and the last is the `else`, so a `var` past the table's last code reads the
-/// last cell; the callers pass codes only. A last cell that is itself a chain continues this one, `else if …`, clippy's
+/// last cell; the callers pass codes only, each masking or clamping its inputs first (R-321, R-324). A last cell that is itself a chain continues this one, `else if …`, clippy's
 /// collapsed form of `else { if … }`. No runtime array index is emitted: rust-gpu lowers one to an implicit bounds
 /// check, a compiler-injected multi-level exit (GPU determinism note § "The discipline", rule 5).
 fn select(var: &str, cells: &[String], depth: usize) -> String {
@@ -452,8 +452,12 @@ fn select2(outer: &str, inner: &str, table: &[[u32; 4]]) -> String {
 /// and §3's small tables as functions: `inverse`, `continuation_symbol`, `predecessor_symbol` and
 /// `continuation_index`. The arrays are data, for host code; each function is a comparison chain over the same table's
 /// literals ([`select`]), never a runtime index into an array, which rust-gpu would bounds-check (GPU determinism note
-/// § "The discipline", rule 5). `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line past 100
-/// columns.
+/// § "The discipline", rule 5). Each function is total (R-321, R-324): it `debug_assert!`s each symbol input < 4 and
+/// each digit < 3, then reads the table at the symbol masked to 2 bits (`& 3`) and the digit clamped (`min(d, 2)`), so
+/// a release build given an input out of range reads the cell at the masked or clamped input, and
+/// `continuation_index` returns 3 only in its inverse cells (R-307). The two functions that take a digit are not
+/// `const`: `u32::min` is not a `const fn`. `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line
+/// past 100 columns.
 pub fn continuation() -> String {
     use crate::payload::{cont_symbol, continuation_index, inverse, predecessor_symbol};
     let i = inverse();
@@ -474,30 +478,47 @@ pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
     {};
 
 /// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
-/// note § "The discipline", rule 5). `s` is a symbol code, 0…3.
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
 #[inline]
 pub const fn inverse(s: u32) -> u32 {{
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let s = s & 3;
     {}
 }}
 
 /// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
-/// digit, 0…2, and `prev` a symbol code, 0…3.
+/// digit, 0…2: `debug_assert!`ed, then clamped `min(e, 2)` (R-324); `prev` a symbol code, 0…3: `debug_assert!`ed, then
+/// masked `& 3` (R-321).
 #[inline]
-pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {{
+pub fn continuation_symbol(prev: u32, e: u32) -> u32 {{
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let prev = prev & 3;
+    let e = e.min(2);
     {}
 }}
 
 /// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
-/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2, and `next` a symbol code, 0…3.
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2: `debug_assert!`ed, then clamped
+/// `min(e, 2)` (R-324); `next` a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
 #[inline]
-pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {{
+pub fn predecessor_symbol(next: u32, e: u32) -> u32 {{
+    debug_assert!(next < 4, "next is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let next = next & 3;
+    let e = e.min(2);
     {}
 }}
 
 /// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
-/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3.
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3: each `debug_assert!`ed,
+/// then masked `& 3` (R-321), so 3 is returned only in the four inverse cells.
 #[inline]
 pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let prev = prev & 3;
+    let s = s & 3;
     {}
 }}
 "#,

@@ -622,7 +622,7 @@ fn check_table_functions_index_no_array(source: &str) {
         "continuation_index",
     ] {
         let start = source
-            .find(&format!("pub const fn {name}("))
+            .find(&format!(" fn {name}("))
             .unwrap_or_else(|| panic!("`{name}` is not emitted"));
         let open = start + source[start..].find('{').expect("a body");
         let end = open + source[open..].find("\n}\n").expect("the body's end");

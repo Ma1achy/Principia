@@ -494,9 +494,11 @@ pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
     [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]];
 
 /// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
-/// note § "The discipline", rule 5). `s` is a symbol code, 0…3.
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
 #[inline]
 pub const fn inverse(s: u32) -> u32 {
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let s = s & 3;
     if s == 0 {
         1
     } else if s == 1 {
@@ -509,9 +511,14 @@ pub const fn inverse(s: u32) -> u32 {
 }
 
 /// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
-/// digit, 0…2, and `prev` a symbol code, 0…3.
+/// digit, 0…2: `debug_assert!`ed, then clamped `min(e, 2)` (R-324); `prev` a symbol code, 0…3: `debug_assert!`ed, then
+/// masked `& 3` (R-321).
 #[inline]
-pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {
+pub fn continuation_symbol(prev: u32, e: u32) -> u32 {
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let prev = prev & 3;
+    let e = e.min(2);
     if e == 0 {
         if prev == 0 {
             0
@@ -544,9 +551,14 @@ pub const fn continuation_symbol(prev: u32, e: u32) -> u32 {
 }
 
 /// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
-/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2, and `next` a symbol code, 0…3.
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2: `debug_assert!`ed, then clamped
+/// `min(e, 2)` (R-324); `next` a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
 #[inline]
-pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {
+pub fn predecessor_symbol(next: u32, e: u32) -> u32 {
+    debug_assert!(next < 4, "next is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let next = next & 3;
+    let e = e.min(2);
     if e == 0 {
         if next == 0 {
             0
@@ -579,9 +591,14 @@ pub const fn predecessor_symbol(next: u32, e: u32) -> u32 {
 }
 
 /// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
-/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3.
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3: each `debug_assert!`ed,
+/// then masked `& 3` (R-321), so 3 is returned only in the four inverse cells.
 #[inline]
 pub const fn continuation_index(prev: u32, s: u32) -> u32 {
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let prev = prev & 3;
+    let s = s & 3;
     if prev == 0 {
         if s == 0 {
             0

@@ -1,9 +1,12 @@
 //! REQ-PAY-001's size facts on the generated payload: `ICDescriptor` is 64 B with its padding a declared member and no
 //! stored E₀, and descriptor bits 10–15 are zero (dd_generation_root §3.1, §3.6; R-86). With them, the word buffer's
 //! `fgw_*` accessors (payload §3's `.w` bit map) and payload §3's frozen continuation table as emitted to Rust,
-//! `continuation_index` with 3 in its four `next = inverse(prev)` cells (R-307).
+//! `continuation_index` with 3 in its four `next = inverse(prev)` cells (R-307), and total: an input out of range fails
+//! a `debug_assert!` in a debug build and reads the masked (`& 3`, R-321) or clamped (`min(d, 2)`, R-324) cell in a
+//! release build.
 
 use std::mem::{offset_of, size_of, size_of_val};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use kernel::payload::{
     continuation_index, continuation_symbol, extract, fgw_length_raw, fgw_retained_prefix_length,
@@ -233,4 +236,151 @@ negative_control!(
         }
         index
     })
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The table functions are total (R-321, R-324): a symbol input ≥ 4 fails its `debug_assert!` in a debug build and
+// reads the cell at `input & 3` in a release build; a digit ≥ 3 fails its `debug_assert!` and reads the digit-2 cell.
+// `continuation_index` returns 3 only in its four inverse cells (R-307).
+
+/// The four table functions, so a control can substitute one.
+struct Tables {
+    inverse: fn(u32) -> u32,
+    continuation_symbol: fn(u32, u32) -> u32,
+    predecessor_symbol: fn(u32, u32) -> u32,
+    continuation_index: fn(u32, u32) -> u32,
+}
+
+/// The generated functions.
+const GENERATED: Tables = Tables {
+    inverse,
+    continuation_symbol,
+    predecessor_symbol,
+    continuation_index,
+};
+
+/// Symbol inputs past 3, and digits past 2: the first past the end, each masked residue, and the extremes.
+const SYMBOLS_OUT: [u32; 6] = [4, 5, 6, 7, 255, u32::MAX];
+const DIGITS_OUT: [u32; 5] = [3, 4, 7, 255, u32::MAX];
+
+/// `call()` given out-of-range input: in a debug build (`debug`) it fails a `debug_assert!` whose message cites
+/// `ruling`; in a release build it returns `want`.
+fn expect_out_of_range(
+    debug: bool,
+    what: &str,
+    ruling: &str,
+    want: u32,
+    call: impl FnOnce() -> u32,
+) {
+    let got = catch_unwind(AssertUnwindSafe(call));
+    if debug {
+        let payload = got.err().unwrap_or_else(|| {
+            panic!("out of range: {what} did not fail its debug_assert! in the debug build")
+        });
+        let message = payload
+            .downcast_ref::<&str>()
+            .map(|m| m.to_string())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        assert!(
+            message.contains(ruling),
+            "out of range: {what} failed with {message:?}, not its {ruling} debug_assert!"
+        );
+    } else {
+        assert_eq!(
+            got.ok(),
+            Some(want),
+            "out of range: {what} in the release build reads the wrong cell ({ruling})"
+        );
+    }
+}
+
+/// Each function given each out-of-range input, in the build `debug` names; and `continuation_index` returning 3
+/// only in its inverse cells over every pair of symbol inputs this build may call it with.
+fn check_out_of_range(t: &Tables, debug: bool) {
+    for big in SYMBOLS_OUT {
+        let m = (big & 3) as usize;
+        expect_out_of_range(
+            debug,
+            &format!("inverse({big})"),
+            "R-321",
+            INVERSE_3[m],
+            || (t.inverse)(big),
+        );
+        for e in 0..3u32 {
+            let want = CONT_SYMBOL_3[e as usize][m];
+            let what = format!("continuation_symbol({big}, {e})");
+            expect_out_of_range(debug, &what, "R-321", want, || {
+                (t.continuation_symbol)(big, e)
+            });
+            let what = format!("predecessor_symbol({big}, {e})");
+            expect_out_of_range(debug, &what, "R-321", want, || {
+                (t.predecessor_symbol)(big, e)
+            });
+        }
+        for s in 0..4u32 {
+            let what = format!("continuation_index({big}, {s})");
+            let want = CONTINUATION_INDEX_3[m][s as usize];
+            expect_out_of_range(debug, &what, "R-321", want, || {
+                (t.continuation_index)(big, s)
+            });
+            let what = format!("continuation_index({s}, {big})");
+            let want = CONTINUATION_INDEX_3[s as usize][m];
+            expect_out_of_range(debug, &what, "R-321", want, || {
+                (t.continuation_index)(s, big)
+            });
+        }
+    }
+    for d in DIGITS_OUT {
+        for prev in 0..4u32 {
+            let want = CONT_SYMBOL_3[2][prev as usize];
+            let what = format!("continuation_symbol({prev}, {d})");
+            expect_out_of_range(debug, &what, "R-324", want, || {
+                (t.continuation_symbol)(prev, d)
+            });
+            let what = format!("predecessor_symbol({prev}, {d})");
+            expect_out_of_range(debug, &what, "R-324", want, || {
+                (t.predecessor_symbol)(prev, d)
+            });
+        }
+    }
+    let inputs: Vec<u32> = if debug {
+        (0..4).collect()
+    } else {
+        (0..4).chain(SYMBOLS_OUT).collect()
+    };
+    for &prev in &inputs {
+        for &s in &inputs {
+            let inverse_cell = s & 3 == INVERSE_3[(prev & 3) as usize];
+            assert_eq!(
+                (t.continuation_index)(prev, s) == 3,
+                inverse_cell,
+                "out of range: continuation_index({prev}, {s}) returns 3 outside its inverse cells, or not in one (R-307)"
+            );
+        }
+    }
+}
+
+#[test]
+fn continuation_table_out_of_range() {
+    let debug = cfg!(debug_assertions);
+    println!(
+        "checking the {} build",
+        if debug { "debug" } else { "release" }
+    );
+    check_out_of_range(&GENERATED, debug);
+}
+
+negative_control!(
+    continuation_table_out_of_range,
+    "inverse returning the last cell past code 3 without a debug_assert! (#99's vetoed item 8) must fail the check in \
+     either build",
+    expected = "out of range: inverse(4)",
+    check_out_of_range(
+        &Tables {
+            inverse: |s| if s < 4 { inverse(s) } else { INVERSE_3[3] },
+            ..GENERATED
+        },
+        cfg!(debug_assertions)
+    )
 );
