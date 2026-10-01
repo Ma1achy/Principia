@@ -31,6 +31,9 @@
 - `decisions.md` § "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
 - `decisions.md` § "R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*"
 - `decisions.md` § "R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)"
+- `decisions.md` § "R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*"
+- `decisions.md` § "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
+- `decisions.md` § "R-337 — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*"
 
 ## Deliverables
 - `rust-toolchain.toml` — the toolchain pin rust-gpu needs; CI installs it from this file in every job (R-169).
@@ -43,6 +46,8 @@
 - Every workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key naming its job and the pinned toolchain version (R-320, REQ-SYS-075; per-job keys, R-285, REQ-SYS-073).
 - `.github/workflows/ci.yml` — `build-kernel` and the tests that need the built kernel run in a job of their own, in parallel with `ci` (R-325, REQ-SYS-076).
 - Every cache step in every workflow restores in every run and saves only in a run on a push to `main`; a pull-request run restores only. The rust-gpu cache keeps its key (R-326, REQ-SYS-073, REQ-SYS-075).
+- `mutants.yml`, `pr-check.yml`, `reviews.yml`, `screenshot.yml` and `stand-in-soak.yml`, which never run on a push to `main`, restore, read-only, the key a `ci.yml` job saves on `main` (the rust-gpu build under `gpu-kernel`'s key in each job that builds the kernel), and save none; the comments at `pr-check.yml:28`, `reviews.yml:39`, `screenshot.yml:34` and `stand-in-soak.yml:42` name the key each restores (R-337, REQ-SYS-073, REQ-SYS-075).
+- `docs/archive/review_queue/M0.md` already holds RQ-186 (archived with R-335's port); this PR deletes its open copy from `REVIEW_QUEUE.md`.
 
 ## Acceptance tests
 - `cargo xtask build-kernel` — rust-gpu compiles `crates/kernel` to SPIR-V and naga translates it to WGSL, in CI.
@@ -51,7 +56,9 @@
 - Definition: the per-field Real dependence, the f64 layout and the DoubleF64 stub written into dd_simstate_payload §1, and `ICDescriptor`'s f64 and DoubleF64 sizes and padding into generation-root §3.6, approved by the physics reviewer (REQ-PAY-087, R-313).
 - Review checklist (code) — each workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key containing its job name and the pinned toolchain channel; the PR shows a warm run's `build-kernel` step time beside a cold one (REQ-SYS-075, REQ-SYS-073, R-320).
 - Review checklist (code, qa) — every cache step in every workflow saves only in a run on a push to `main`, and a pull-request run restores only; the PR shows the Actions cache listing and its total against 10 GB (REQ-SYS-073, REQ-SYS-075, R-326).
-- Review checklist (code) — `ci.yml` runs `build-kernel` and the tests that need the built kernel in their own job, parallel to `ci`; the PR shows each CI job's warm wall time against ~10.5 min, names any job over it, and says the new job needs adding to the required checks (REQ-SYS-076, R-325, R-266).
+- Review checklist (code) — `ci.yml` runs `build-kernel` and the tests that need the built kernel in their own job, parallel to `ci`; the PR shows each CI job's warm wall time against ~10.5 min, names any job over it, and says the new job needs adding to the required checks (REQ-SYS-076, R-325, R-266). The overrun PR #96 measured is accepted for this PR (R-336).
+- Review checklist (code, qa) — each workflow that never runs on a push to `main` restores a key a `ci.yml` job saves on `main`, read-only, and its comment names that key; no comment says it restores what `main` saved under a key nothing saves (REQ-SYS-073, REQ-SYS-075, R-337).
+- `cargo nextest run -p xtask --test qa_TASK-M0-22_r235` — passes with R-326's step-level `if:` in `xtask-ci`, after qa narrows `check_controls_job_beside_the_tests` to the job's own `if:`; the code reviewer confirms nothing else in the file changed (REQ-VAL-166, R-335).
 
 ## Notes
 - PIT-10: the trivial kernel is stateless. It certifies the toolchain and the compiled pack/unpack, not trajectory parity, which is M4 (REQ-VAL-056, REQ-VAL-057).
@@ -69,3 +76,8 @@
   TASK-M0-42; its R-326 change is made here). R-331 — #96's veto item 11, `_pad` at 16 B, stands. Applied per
   R-204 — veto?: R-326 also applies to the workflows TASK-M0-42 and others wrote, all in this PR. Size: the two CI
   rulings add workflow edits beyond the ~450 lines.
+- Rulings of 1 Oct (R-335 to R-337): R-335 (RQ-186) — qa narrows `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's
+  own `if:`, in this PR's qa commit, a named exception to R-290; the orchestrator's R-237 check accepts `M` on that file.
+  R-336 — the CI overrun this PR measured is accepted here; the sharding and the splits of the long tests are
+  TASK-M0-45's, after this merges. R-337 — the PR-only workflows restore, read-only, keys `ci.yml` saves on `main`,
+  and their false comments are corrected; made here, with R-326's change.

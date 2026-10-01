@@ -12,7 +12,7 @@
 | INT | 84 |
 | EVT | 26 |
 | PAY | 90 |
-| GEN | 30 |
+| GEN | 32 |
 | SCHED | 95 |
 | REF | 50 |
 | RENDER | 82 |
@@ -21,16 +21,16 @@
 | TOOL | 145 |
 | VAL | 176 |
 | PERF | 94 |
-| SYS | 76 |
-| **total** | **1299** |
+| SYS | 77 |
+| **total** | **1302** |
 
-Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 104 definition, 1096 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 110 |
+| M0 | 113 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 
 ## Sections
 
-1025 sections in 46 files: 864 yield at least one requirement; 161 yield none and are listed below with the reason.
+1031 sections in 46 files: 868 yield at least one requirement; 163 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 114 |
+| informative only | 116 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -123,6 +123,8 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 | R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR |
 | R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders | informative only | a test-isolation fix in qa's file, made by qa in a follow-up PR on TASK-M0-06 (noted there); changes no requirement |
 | R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
+| R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)* | informative only | a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR |
+| R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

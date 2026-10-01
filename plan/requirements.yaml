@@ -4182,6 +4182,8 @@
     section: 6. Deferred / flagged
   - file: docs/contracts/principia_parity_contract.md
     section: Tier L — exact, no tolerance (the bulk of the suite)
+  - file: decisions.md
+    section: "R-339 — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering"
   verify:
     method: unit test
     detail: "Fixtures: escape before collision → escape; collision before escape → collision; same-step tie → collision; sim_failed with any other event → sim_failed; triple ejection reported as escape detail; until the label writer lands the R-6 pin (collision beats escape) holds."
@@ -4189,6 +4191,7 @@
   - R-6
   - R-30
   - R-32
+  - R-339
   milestone: M3
   note: "R-30 (recorded; applied with the label writer) replaces dd_integrator §3.6's static SIM_FAILED > COLLISION > ESCAPE > BOUNDED order; until the label writer lands, R-6 says the §3.6 pin stands. Triple collision and ionisation placement: payload §2 and dd_integrator :171."
 - id: REQ-EVT-021
@@ -6354,6 +6357,43 @@
   - R-312
   - R-317
   milestone: M5
+- id: REQ-GEN-031
+  area: GEN
+  statement: "The payload schema version must hash every link registry entry (generation-root §3.9) by its semantic content: its name, its constraint, its forward, inverse and log-det, its ε clamps and each parameter its functions read, by value; not its sampling note, which is prose. Changing a hashed member of any entry, or adding or removing an entry, changes the version; a sampling-note-only edit does not (R-340, R-251, R-36)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: decisions.md
+    section: "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
+  - file: decisions.md
+    section: R-36 — Schema version = content hash of the ledger *(PL-1)*
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger schema_version_links: over test registry entries, editing one entry's name, constraint, forward, inverse, log-det, an ε clamp or a parameter changes the schema version, each separately; adding and removing an entry each change it; a sampling-note-only edit leaves it unchanged; the unchanged registry gives a stable version across two runs; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash; each has a registered negative control"
+  rulings:
+  - R-36
+  - R-251
+  - R-340
+  milestone: M0
+  note: "RQ-188 open: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. The registry's own entries are TASK-M2-01's, hashed as they land."
+- id: REQ-GEN-032
+  area: GEN
+  kind: definition
+  statement: "The canonical form in which a link registry entry's forward, inverse and log-det are written into the schema version's hashed bytes, with no formatting-dependent bytes, so that a change to a function's meaning changes the bytes and a reformatting does not, must be defined in generation-root §3.9 by the task that needs it and reviewed by the physics reviewer before merge (R-340, R-72)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: decisions.md
+    section: "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§3.9 states how each of an entry's forward, inverse and log-det is written in the hashed bytes, and that the form carries no formatting-dependent bytes; TASK-M2-01's entries can be written in it; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-340
+  milestone: M0
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -21250,7 +21290,7 @@
   milestone: M0
 - id: REQ-SYS-073
   area: SYS
-  statement: "CI must cache only the cargo registry, the fixture pool (R-270) and the rust-gpu build (R-320, REQ-SYS-075), never whole target directories, each under a key naming its job, and save every cache only in a run on a push to `main`, a pull-request run restoring only (R-326), so the repository's Actions cache stays well under GitHub's 10 GB limit (R-285)."
+  statement: "CI must cache only the cargo registry, the fixture pool (R-270) and the rust-gpu build (R-320, REQ-SYS-075), never whole target directories, each under a key naming its job, and save every cache only in a run on a push to `main`, a pull-request run restoring only (R-326); a workflow that never runs on a push to `main` restores, read-only, the key a `ci.yml` job saves there, and saves none (R-337); so the repository's Actions cache stays well under GitHub's 10 GB limit (R-285)."
   source:
   - file: decisions.md
     section: "R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys"
@@ -21262,17 +21302,23 @@
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
   - file: decisions.md
     section: "R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*"
+  - file: decisions.md
+    section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
+  - file: decisions.md
+    section: "R-337 — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*"
   verify:
     method: review checklist
-    detail: "code and qa: no workflow caches a target directory; every cache key names its job; every cache step saves only in a run on a push to `main`, and a pull-request run restores only (R-326); the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and each CI job's warm wall time against R-270's ~10.5 min (R-325)"
+    detail: "code and qa: no workflow caches a target directory; every saved cache's key names the job that saves it; every cache step saves only in a run on a push to `main`, and a pull-request run restores only (R-326); each step in mutants.yml, pr-check.yml, reviews.yml, screenshot.yml and stand-in-soak.yml restores a key a `ci.yml` job saves on `main`, and its comment names that key (R-337); the PR shows the Actions cache listing (keys and sizes, and the total) after a run of every workflow, against the 10 GB limit, and each CI job's warm wall time against R-270's ~10.5 min (R-325)"
   rulings:
   - R-285
   - R-301
   - R-320
   - R-325
   - R-326
+  - R-336
+  - R-337
   milestone: M0
-  note: "R-325: R-270's ~10.5 min is the target for each CI job's warm wall time again; R-301's measurement (about 10m28.5s per warm `ci` run, PR #85) stands as a record. R-326's change is made by TASK-M0-14 (PR #96), which already edits the workflows' cache steps."
+  note: "R-325: R-270's ~10.5 min is the target for each CI job's warm wall time again; R-301's measurement (about 10m28.5s per warm `ci` run, PR #85) stands as a record. R-326's and R-337's changes are made by TASK-M0-14 (PR #96), which already edits the workflows' cache steps. R-336: PR #96's overrun of ~10.5 min is accepted for #96; TASK-M0-45 (REQ-SYS-077) brings each job back under it."
 - id: REQ-SYS-074
   area: SYS
   statement: "Compute shaders must compile under an explicit fast-math setting that the project sets and records, off by default and on only as an opt-in optimisation, never inherited silently from a backend's default: every compute pipeline must be created through the one entry point that takes the setting, and on Metal, off must compile the project's own MSL with fast-math off and load it through wgpu's passthrough, for the compute pipelines only, while vertex and fragment pipelines keep wgpu's own path (R-297)."
@@ -21292,19 +21338,22 @@
   milestone: M0
 - id: REQ-SYS-075
   area: SYS
-  statement: "Every CI job that builds the kernel must restore the rust-gpu build cache (`~/.cache/rust-gpu`), and save it only in a run on a push to `main` (R-326), under a key naming its job (R-285, REQ-SYS-073) and the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320)."
+  statement: "Every CI job that builds the kernel must restore the rust-gpu build cache (`~/.cache/rust-gpu`), and save it only in a run on a push to `main` (R-326), under a key naming its job (R-285, REQ-SYS-073) and the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320); a job in a workflow that never runs on a push to `main` (mutants.yml's shards, say) restores, read-only, the key `ci.yml`'s `gpu-kernel` job saves, and saves none (R-337)."
   source:
   - file: decisions.md
     section: "R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*"
   - file: decisions.md
     section: "R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*"
+  - file: decisions.md
+    section: "R-337 — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*"
   verify:
     method: review checklist
-    detail: "code: each workflow job that runs build-kernel restores ~/.cache/rust-gpu under a key containing its job name and the pinned toolchain channel, and saves it only in a run on a push to `main`; the PR shows a warm run's build-kernel step time beside a cold one (PR #96 showed both on 1 Oct 2026, before R-326)"
+    detail: "code: each workflow job that runs build-kernel restores ~/.cache/rust-gpu under a key containing its job name and the pinned toolchain channel, and saves it only in a run on a push to `main`; a job in a workflow that never runs on a push to `main` restores `gpu-kernel`'s key read-only (R-337); the PR shows a warm run's build-kernel step time beside a cold one (PR #96 showed both on 1 Oct 2026, before R-326)"
   rulings:
   - R-285
   - R-320
   - R-326
+  - R-337
   milestone: M0
 - id: REQ-SYS-076
   area: SYS
@@ -21312,6 +21361,8 @@
   source:
   - file: decisions.md
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
+  - file: decisions.md
+    section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
   verify:
     method: review checklist
     detail: "code: `ci.yml` runs build-kernel and the tests that need the built kernel in their own job, not in `ci`; the PR shows each CI job's warm wall time against ~10.5 min and names any job over it; the PR says the new job needs adding to branch protection's required checks (R-266)"
@@ -21319,4 +21370,27 @@
   - R-266
   - R-270
   - R-325
+  - R-336
   milestone: M0
+  note: "R-336: PR #96's warm wall times (`ci` about 16.5 min, `xtask-ci` 11.7–13.3 min) were reported and are accepted for #96; TASK-M0-45 (REQ-SYS-077) shards the tests to bring each job back under ~10.5 min."
+- id: REQ-SYS-077
+  area: SYS
+  statement: "The nextest runs of the `ci` and `xtask-ci` CI jobs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
+  source:
+  - file: decisions.md
+    section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
+  - file: decisions.md
+    section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: `ci.yml` runs the nextest runs of `ci` and `xtask-ci` as parallel shards; the shards' test lists together equal the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
+  rulings:
+  - R-231
+  - R-235
+  - R-266
+  - R-270
+  - R-290
+  - R-325
+  - R-336
+  milestone: M0
+  note: "R-336 (applied per R-204 — veto?): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."

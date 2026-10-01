@@ -32,3 +32,5 @@ The payload schema version is computed at generation as a content hash of the ca
 ## Notes
 - Constants-register entries: TASK-M0-08's R-72 definition (§3.8 "The hash") put the entries that decide stored bits inside the schema hash, and R-251 made it cover their value, type and class, not their citation text. This replaces the earlier "outside the hashed layout table unless ruled otherwise".
 - RQ-93 ruled: R-113 — "caching signature carries it" is dropped from REQ-GEN-008's verify; the compatibility signature carrying the version is REQ-GEN-017 (M5, TASK-M5-06).
+- R-340 (after merge): the link registry (generation-root §3.9) joins the hash, each entry by its semantic content;
+  TASK-M0-46 builds it on this task's serialisation.
