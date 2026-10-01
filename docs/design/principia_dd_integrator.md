@@ -298,7 +298,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 ## 6. Deferred / flagged
 
 <!-- retired-terms -->
-- ~~**Priority-order pin (§3.6)**~~ — **settled by R-30** (by time; REQ-EVT-020): the pin below is superseded and kept in §3.6 for the record (R-339). Was: introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
+- ~~**Priority-order pin (§3.6)**~~ — **settled by R-30** (by time; REQ-EVT-020): the pin above is superseded and kept in §3.6 for the record (R-339). Was: introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).

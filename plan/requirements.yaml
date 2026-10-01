@@ -4186,14 +4186,14 @@
     section: "R-339 — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering"
   verify:
     method: unit test
-    detail: "Fixtures: escape before collision → escape; collision before escape → collision; same-step tie → collision; sim_failed with any other event → sim_failed; triple ejection reported as escape detail; until the label writer lands the R-6 pin (collision beats escape) holds."
+    detail: "Fixtures: escape before collision → escape; collision before escape → collision; same-step tie → collision; sim_failed with any other event → sim_failed; triple ejection reported as escape detail. R-30's time order governs (R-339); superseded per R-339: \"until the label writer lands the R-6 pin (collision beats escape) holds\"."
   rulings:
   - R-6
   - R-30
   - R-32
   - R-339
   milestone: M3
-  note: "R-30 (recorded; applied with the label writer) replaces dd_integrator §3.6's static SIM_FAILED > COLLISION > ESCAPE > BOUNDED order; until the label writer lands, R-6 says the §3.6 pin stands. Triple collision and ionisation placement: payload §2 and dd_integrator :171."
+  note: "R-30 (recorded; applied with the label writer) replaces dd_integrator §3.6's static SIM_FAILED > COLLISION > ESCAPE > BOUNDED order. Applied per R-339: R-30's time order governs, and the §3.6 pin is superseded and kept for the record; superseded per R-339: \"until the label writer lands, R-6 says the §3.6 pin stands\". Triple collision and ionisation placement: payload §2 and dd_integrator :171."
 - id: REQ-EVT-021
   area: EVT
   statement: "Collision must be decided by the comparison d² < r_coll², with d² position-quantised (f32 positions, lone sub/mul, explicit fma)."
@@ -18804,9 +18804,9 @@
   statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342)."
   source:
   - file: decisions.md
-    section: "R-342 — Tests delete their scratch folders on success and keep them only on failure"
-  - file: decisions.md
     section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
+  - file: decisions.md
+    section: "R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*"
   verify:
     method: unit test
     detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."

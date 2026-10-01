@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Closes:** REQ-VAL-178
-- **Depends on:** TASK-M0-06
+- **Depends on:** TASK-M0-06, TASK-M0-17, TASK-M0-18, TASK-M0-23, TASK-M0-38, TASK-M0-39, TASK-M0-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** PIT-3
@@ -16,7 +16,7 @@ test's scratch folder, or scratch file, is deleted when the test passes and kept
 output, when the test fails.
 
 ## References
-- `decisions.md` § "R-342 — Tests delete their scratch folders on success and keep them only on failure"
+- `decisions.md` § "R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*"
 - `decisions.md` § "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
 - `decisions.md` § "R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*"
 - `decisions.md` § "R-237 — qa's commit may add files under `xtask/tests/`"

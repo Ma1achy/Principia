@@ -2216,7 +2216,7 @@
 - id: TASK-M0-48
   milestone: M0
   title: Tests delete their scratch folders on success and keep them only on failure
-  depends_on: [TASK-M0-06]
+  depends_on: [TASK-M0-06, TASK-M0-17, TASK-M0-18, TASK-M0-23, TASK-M0-38, TASK-M0-39, TASK-M0-40]
   needs: []
   requirements: [REQ-VAL-178]
   reviewers: [code, qa]

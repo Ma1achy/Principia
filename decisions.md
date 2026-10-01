@@ -2813,9 +2813,11 @@ agent is dispatched with the ruling, in the human's words, in its opening prompt
 re-dispatched that way.
 
 ## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
-*Amended by R-335 and R-336.*
-*Still in force: all of it; R-335 and R-336 each name test files, with implementer commits, that qa may change
-under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests).*
+*Amended by R-335, R-336 and R-342.*
+*Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change
+under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch
+cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending
+veto).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3807,7 +3809,7 @@ header line alone), and a crash loses at most the frames, never the header; the 
 reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no number for
 it.
 
-## R-342 — Tests delete their scratch folders on success and keep them only on failure
+## R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
 *1 Oct 2026 · applied in REQ-VAL-178 (new) and TASK-M0-48 (new)*
 
 "File the M0-06 scratch-folder accumulation as a small task: tests delete their scratch folders on success and keep

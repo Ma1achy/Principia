@@ -260,7 +260,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-272** — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
-- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335 and R-336 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests). Amended by R-335 and R-336.
+- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending veto). Amended by R-335, R-336 and R-342.
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
@@ -268,7 +268,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-334** — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
 - **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
 - **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
-- **R-342** — Tests delete their scratch folders on success and keep them only on failure
+- **R-342** — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
 - **R-345** — Merged branches are deleted, with their worktrees and target directories
 
 ## CI
