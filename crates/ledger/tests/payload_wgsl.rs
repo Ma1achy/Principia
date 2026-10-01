@@ -807,3 +807,52 @@ negative_control!(
     expected = "is not written as an f32 constant",
     check_finite_sentinel(&generated_wgsl())
 );
+
+/// The payload ledger's structs named in `order`, in that order.
+fn structs_in(order: &[&str]) -> Vec<Struct> {
+    let all = ledger::payload::structs();
+    order
+        .iter()
+        .map(|name| {
+            all.iter()
+                .find(|s| s.name == *name)
+                .unwrap_or_else(|| panic!("the payload ledger has no `{name}`"))
+                .clone()
+        })
+        .collect()
+}
+
+/// With an indexed struct outside the buffer (`ICDescriptor`) or a struct in the buffer that is not indexed
+/// (`SimStateBase`) listed ahead of it, the `SimState` buffer's element is still `SimStateFTLE` (R-343).
+fn check_state_element(orders: &[&[&str]]) {
+    for order in orders {
+        assert_eq!(
+            wgsl::indexed_element(&structs_in(order), "SimState"),
+            Some("SimStateFTLE"),
+            "with the structs in the order {order:?}, SimStateFTLE is not the SimState buffer's element"
+        );
+    }
+}
+
+const ELEMENT_ORDERS: [&[&str]; 3] = [
+    &["ICDescriptor", "SimStateFTLE"],
+    &["SimStateBase", "SimStateFTLE"],
+    &[
+        "FreeGroupWord",
+        "ICDescriptor",
+        "SimStateBase",
+        "SimStateFTLE",
+    ],
+];
+
+#[test]
+fn wgsl_bindings_state_element_is_the_indexed_struct_in_the_buffer() {
+    check_state_element(&ELEMENT_ORDERS);
+}
+
+negative_control!(
+    wgsl_bindings_state_element_is_the_indexed_struct_in_the_buffer,
+    "with no SimStateFTLE listed, neither ICDescriptor nor SimStateBase is taken for the element",
+    expected = "is not the SimState buffer's element",
+    check_state_element(&[&["ICDescriptor", "SimStateBase"]])
+);

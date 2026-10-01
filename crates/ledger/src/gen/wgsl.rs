@@ -171,6 +171,17 @@ fn pair_accessors(structs: &[Struct]) -> String {
     out
 }
 
+/// The name of the struct a buffer that `holds` the given kind is an array of: the first struct in `structs` that both
+/// lives in that buffer and is the indexed variant (R-343: `SimStateFTLE` for the `SimState` buffer). A struct outside
+/// the buffer that is indexed (`ICDescriptor`), or one in the buffer that is not (`SimStateBase`), is not it, wherever
+/// it is listed.
+pub fn indexed_element(structs: &[Struct], holds: &str) -> Option<&'static str> {
+    structs
+        .iter()
+        .find(|s| s.buffer == Some(holds) && s.indexed)
+        .map(|s| s.name)
+}
+
 /// The `SimState` buffer and the word buffer, each its own binding, from the ledger's one binding table
 /// ([`crate::payload::bindings`], R-343): first the constants `<PREFIX>_GROUP` and `<PREFIX>_BINDING` the Rust emitter
 /// also writes ([`rust::bindings`]), then each buffer at the same numbers, then its one reader by the sample index `i`
@@ -181,13 +192,10 @@ fn bindings(structs: &[Struct]) -> String {
         if holds == "word" {
             return "vec4<u32>".to_owned();
         }
-        structs
-            .iter()
-            .find(|s| s.buffer == Some(holds) && s.indexed)
-            .map_or_else(
-                || format!("{holds}_has_no_indexed_struct"),
-                |s| s.name.to_owned(),
-            )
+        indexed_element(structs, holds).map_or_else(
+            || format!("{holds}_has_no_indexed_struct"),
+            ToOwned::to_owned,
+        )
     };
     let table = crate::payload::bindings();
     let mut out = String::from(
