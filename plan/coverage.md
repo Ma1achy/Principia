@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 
 ## Sections
 
-1043 sections in 46 files: 876 yield at least one requirement; 167 yield none and are listed below with the reason.
+1044 sections in 46 files: 876 yield at least one requirement; 168 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 120 |
+| informative only | 121 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -129,6 +129,7 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 | R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)* | informative only | process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement |
 | R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included | informative only | process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement |
 | R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock` | informative only | accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement |
+| R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted | informative only | accepts R-352's items applied per R-204 and the R-204 marks of R-348 and PR #96, and records the deletion of two superseded local branches; REQ-RENDER-083 loses its veto mark; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

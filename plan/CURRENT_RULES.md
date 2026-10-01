@@ -375,3 +375,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-331** — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)
 - **R-333** — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
 - **R-350** — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
+- **R-353** — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted

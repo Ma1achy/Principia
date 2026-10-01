@@ -18,6 +18,7 @@ on `isinf` or `isnan`, on a comparison against an inf or NaN constant, on a floa
 the line and the rule, and naming a bit-pattern test as the fix. The checklist grep stays as a backup.
 
 ## References
+- `decisions.md` § "R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted"
 - `decisions.md` § "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
 - `decisions.md` § "R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL"
 - `decisions.md` § "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
@@ -82,10 +83,10 @@ the line and the rule, and naming a bit-pattern test as the fix. The checklist g
 - Applied per R-204, accepted by R-352 (R-351): "fragment-stage WGSL" is every WGSL file under `crates/render/frag/`;
   the rule joins `cargo xtask lint wgsl` rather than a new subcommand; a constant expression that evaluates to inf or
   NaN counts as a constant.
-- Applied per R-204 — veto? (R-352): the finite-max stand-ins are the list above (65504 and 3.40282347e38, of either
-  sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression); a self-comparison
-  is caught by `<`, `<=`, `>` and `>=` as well as by `==` and `!=`; "the same expression" is read structurally, and
-  covers float vectors.
+- Applied per R-204, accepted by R-353 (R-352): the finite-max stand-ins are the list above (65504 and 3.40282347e38, of
+  either sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression); a
+  self-comparison is caught by `<`, `<=`, `>` and `>=` as well as by `==` and `!=`; "the same expression" is read
+  structurally, and covers float vectors.
 - The lint reads naga's IR, where a literal's spelling is gone, so every spelling of the same value is one check; the
   fixtures spell it several ways to show that. `65504h` is an f16 literal and needs `enable f16`. REQ-RENDER-001's ban
   on `enable f16` (R-317) covers the generated WGSL only, so a hand-written file under `crates/render/frag/` may hold

@@ -10146,7 +10146,7 @@
   note: Split from REQ-RENDER-027 (R-113, RQ-95).
 - id: REQ-RENDER-083
   area: RENDER
-  statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, in fragment-stage WGSL (every WGSL file under `crates/render/frag/`, generated or written by hand) on: any use of `isinf` or `isnan`; any comparison against an inf or NaN constant (a constant expression that evaluates to one included); any comparison of a float scalar or vector expression with itself (the same expression, or structurally equal reads of the same `let`, argument, variable or buffer element with no store between), by `==` or `!=` (R-352) or by `<`, `<=`, `>` or `>=`; and any comparison, in either operand order and by any of those six operators, against a finite-max stand-in used as an inf check: 65504 (f16's largest finite value, `f16_finite_max`) or 3.40282347e38 (f32's), of either sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression that evaluates to it (R-352; the list, the ordered self-comparisons and the structural reading of \"itself\", over float scalars and vectors, applied per R-204 — veto?). Fast-math (R-297) may optimise those away or fold or break them, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343), the fix the lint names. REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
+  statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, in fragment-stage WGSL (every WGSL file under `crates/render/frag/`, generated or written by hand) on: any use of `isinf` or `isnan`; any comparison against an inf or NaN constant (a constant expression that evaluates to one included); any comparison of a float scalar or vector expression with itself (the same expression, or structurally equal reads of the same `let`, argument, variable or buffer element with no store between), by `==` or `!=` (R-352) or by `<`, `<=`, `>` or `>=`; and any comparison, in either operand order and by any of those six operators, against a finite-max stand-in used as an inf check: 65504 (f16's largest finite value, `f16_finite_max`) or 3.40282347e38 (f32's), of either sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression that evaluates to it (R-352; the list, the ordered self-comparisons and the structural reading of \"itself\", over float scalars and vectors, applied per R-204, accepted by R-353). Fast-math (R-297) may optimise those away or fold or break them, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343), the fix the lint names. REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Unpack layer (generated, one accessor per named field)
@@ -10169,6 +10169,7 @@
   - R-343
   - R-351
   - R-352
+  - R-353
   milestone: M0
 - id: REQ-COL-001
   area: COL

@@ -727,3 +727,7 @@
   section: "R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`"
   reason: informative only
   note: "accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement"
+- file: decisions.md
+  section: "R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted"
+  reason: informative only
+  note: "accepts R-352's items applied per R-204 and the R-204 marks of R-348 and PR #96, and records the deletion of two superseded local branches; REQ-RENDER-083 loses its veto mark; changes no requirement"

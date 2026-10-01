@@ -4218,7 +4218,7 @@ local mutants runs get the timeout only; CI's Linux runners enforce both caps)."
   `ulimit -v`.
 - RQ-191 moves to `docs/archive/review_queue/M0.md`.
 
-*Applied per R-204 — veto?:* what the human's words leave open.
+*Applied per R-204, accepted by R-353:* what the human's words leave open.
 - **The finite-max stand-ins** are, as the lint's definite list:
   - binary16's largest finite value, 65504 (generation root §3.8's register entry `f16_finite_max`, payload §1's pack
     clamp), in any spelling: `65504.0`, `65504.`, `6.5504e4`, `65504.0f`, `65504h` among them;
@@ -4235,3 +4235,32 @@ local mutants runs get the timeout only; CI's Linux runners enforce both caps)."
   store to that variable between the two reads; a float scalar or vector. Besides `==` and `!=`, the human's words,
   the lint also fails on `<`, `<=`, `>` and `>=` of an expression with itself, which fast-math may fold just the same
   (`x <= x` is false only for NaN).
+
+## R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted
+*1 Oct 2026 · applied in R-352's note, REQ-RENDER-083, TASK-M0-50 and the render contract's "Unpack layer"*
+
+"All veto items on R-352 and the R-204 marks stand. Delete the local branches backup/m003-17e4570 and rq/rq-175 (both
+superseded)."
+
+*Applied:*
+- **R-352's four items stand**, as R-352's note applied them per R-204. Their "veto?" marks become "accepted by
+  R-353" (in R-352's note, the render contract's "Unpack layer", REQ-RENDER-083 (reqio) and TASK-M0-50's Notes), the
+  wording otherwise unchanged:
+  1. The finite-max stand-ins are a definite list: 65504 and 3.40282347e38 in any spelling, as a `bitcast<f32>` of
+     the bit pattern, or as any other constant expression that evaluates to one, in either operand order and with any
+     comparison operator.
+  2. Either value negated (`-65504.0`, `-3.40282347e38`) is the same stand-in, for −inf.
+  3. A self-comparison fails by `<`, `<=`, `>` and `>=` too, beside the human's `==` and `!=`.
+  4. "Compared with itself" is read structurally: the same expression, or reads of the same `let`, argument, variable
+     or buffer element with no store between them, over float scalars and vectors.
+- **The other R-204 marks stand:**
+  - recording the human's message as R-348 onwards, since R-347 was taken (R-348's numbering note, already accepted
+    by R-352 as its item 1);
+  - PR #96's description stating the byte-for-byte lockfile check: a cached rust-gpu backend is used only if its
+    `Cargo.lock` equals `xtask/rust-gpu-backend.lock` byte for byte (86741e9, R-350).
+- **No other open mark.** decisions.md, CLAUDE.md, `plan/` and `docs/` (outside `docs/archive/`), and the descriptions
+  of PRs #96, #107 and #110, hold no other "veto?" mark added by R-348 to R-352 or by those PRs that is still open.
+- **The branches.** Both were deleted on 1 Oct 2026, before this ruling was recorded: `backup/m003-17e4570` at
+  17e45709fa4e and `rq/rq-175` at 51119600d3a7. They were local only, never on the remote.
+
+Changes no requirement: REQ-RENDER-083 loses its "veto?" mark and lists R-353 among its rulings.
