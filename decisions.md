@@ -3062,7 +3062,9 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
   kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
-*Applied per R-204 — veto?, but for the two Plan bullets (the placements), accepted by R-354 (R-355):*
+*Applied per R-204 — veto?, open for the GUI bullet and the R-133 amendment bullet only (RQ-192); the two Plan
+bullets (the placements) accepted by R-354 (R-355), and the five Design bullets and the R-84 and R-116 amendment bullet
+by R-356:*
 - Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
   GPU) and TASK-M0-19 (the session header), so every compute pipeline from M0 on is built through it. No existing
   task takes it: TASK-M0-14 is ~450 lines already, and TASK-M4-01 and TASK-M4-06 come after M0's compute dispatches.
@@ -3135,12 +3137,17 @@ reports `leak_flags` and `hot_paths` as absent, with "session incomplete". REQ-T
 truncated-trace test in TASK-M0-17. REQ-TOOL-101, closed by TASK-M8-28, gains "`prin profile query --live` works on an
 in-progress trace (no summary line yet)".
 
-*Applied per R-204, accepted by R-355:* R-298 is in the "design" group of `plan/rule_groups.yaml`, beside R-282 and R-286. A
+*Applied per R-204, accepted by R-355 (its sentence on a cut-off last line was replaced by R-299, and R-356 amends
+that):* R-298 is in the "design" group of `plan/rule_groups.yaml`, beside R-282 and R-286. A
 header line alone counts as an incomplete session with no frames, since it too is "a trace with no final summary line".
 A last line cut off inside its JSON object is still rejected: the ruling covers a missing summary line, not a partial
 line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
 
 ## R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
+*Amended by R-356.*
+*Still in force: all of it but its Applied-per-R-204 note's rule that a summary line followed by a cut-off line is an
+error: that line is dropped and its bytes reported, and the summary line and the frames are kept (R-356). A file whose
+only line is a cut-off header line stays an error.*
 *30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008 and TASK-M0-17 (PR #79)*
 
 "#79 item b (R-299): the reader drops an unterminated final line that doesn't parse, reports the session incomplete,
@@ -3220,6 +3227,9 @@ and pxpack keep the setting, so a view made in the browser opens natively with i
 TASK-M8-37 (the browser build), since REQ-TOOL-141 is an M0 requirement on native backends.
 
 ## R-304 — The "veto?" items on #78, #79, #89 and #90 stand
+*Amended by R-356.*
+*Still in force: all of it but #79's item g: a cut-off line after the summary line is valid, the summary line and the
+frames kept and the dropped bytes reported (R-356). Item h stands: a cut-off header as the only line is an error.*
 *30 Sep 2026 · applied in PRs #78, #79, #89 and #90*
 
 "All stand: #78 items 15–16; #79 items f–i; #89's REQ-TOOL-143 (a new M8 requirement closed by TASK-M8-37); #90's 2 s
@@ -4270,7 +4280,8 @@ Changes no requirement: REQ-RENDER-083 loses its "veto?" mark and lists R-353 am
 *Corrected in part by R-355.*
 *Still in force: all of it but item 6's extent: the human's "item 6 stands" covered R-297's placements only (R-355),
 so R-297's other applied-per-R-204 bullets and the five marks copying two of them (REQ-RENDER-025, REQ-COL-060,
-REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192; R-355 accepts the check's design.*
+REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192, where R-356 accepts those bullets but the GUI
+bullet and the R-133 amendment; R-355 accepts the check's design.*
 *1 Oct 2026 · applied in decisions.md, `plan/tasks/`, REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio),
 REVIEW_QUEUE.md (RQ-192), `plan/tools/veto_marks.py`, `plan/check_plan.py` and `plan/OPERATIONS.md`*
 
@@ -4413,3 +4424,64 @@ TASK-M0-49 first."
 
 Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their "veto?" marks
 and list R-355 among their rulings.
+
+## R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*
+*2 Oct 2026 · applied in decisions.md (R-297's, R-298's, R-299's, R-304's and R-354's lines), telemetry §5, REQ-TOOL-008
+and REQ-TOOL-148 (new) (reqio), TASK-M0-51 (new), REVIEW_QUEUE.md (RQ-192) and `plan/OPERATIONS.md`*
+
+"This is from me." "RQ-192:
+A. A cut-off line after the summary line is valid: the summary and frames are kept and the dropped bytes reported. A
+file whose only line is a cut-off header stays an error. A small reader task for the cloud session.
+B. In R-297's re-opened block, these stand, as direct applications of R-297's own text: where the setting lives, the
+session header, the Profiler line, ROUNDTRIP's tolerance (calibration), the difference report, and the R-84 and R-116
+amendments. Hold "GUI presence-only" and the R-133 amendment, and quote both, with the five marks in full, for me to
+rule."
+
+*Applied:*
+- **(A) A cut-off line after the summary line is valid.** RQ-192 (A)'s option 1. R-299's note, accepted by R-304 as PR
+  #79's item g, had it an error, since the line before a cut-off line held a frame's place. Now, when the line before a
+  cut-off last line is the summary line, the reader keeps the header line, the frames and the summary line, drops the
+  cut-off bytes and reports them in `Trace::dropped_bytes`. Item h stands, as the human's words keep it: a file whose
+  only line is a cut-off header line is an error that states its bytes. Every other cut-off case reads as R-299 has it.
+  Telemetry §5 ("A line cut off at the end") says so, R-299 and R-304 carry forward lines, and REQ-TOOL-008's statement
+  gains the case (reqio). R-298's mark gains a note that its sentence on a cut-off last line was replaced by R-299,
+  which R-356 amends in turn (the code review of 61461ae).
+  - *Applied per R-204 — veto?:* the session reads complete, since its summary line is present: `leak_flags` and
+    `hot_paths` are read from it, and the bytes after it are reported as dropped, not as "session incomplete", which
+    R-298 gives to a file missing its summary line. The human's words keep the summary and report the bytes, and don't
+    say which. `Trace`'s rule that a trace with dropped bytes is incomplete gives way: a complete trace may have
+    dropped bytes. `prin profile diff`'s notice for a cut-off trace (render_gui_spec § "Profiler", R-323) is given to
+    a session that ended before its summary line, so it doesn't reach this file, which loses no frame: the diff
+    compares it as a complete trace, and prints no notice for it. Open in RQ-192 (C).
+  - **The task.** Today's reader (`read_lines` in `crates/engine/src/contract/profile.rs`, TASK-M0-17) parses every
+    line that has one after it as a frame record, so the summary line fails and the file is rejected. REQ-TOOL-148
+    (new, M0) carries the change, closed by a new task, TASK-M0-51, the next id after TASK-M0-50, modelled on
+    TASK-M0-46 to TASK-M0-48: its goal is the reader accepting a cut-off last line after the summary line, with a test
+    and a negative control, and the header-only case staying an error, with its test kept. It depends on TASK-M0-17,
+    which is merged, so nothing open; its reviewers are code and qa, as for every task, since it closes no PERF
+    requirement and touches no frame loop or dispatch; its size is ~100 lines. REQ-TOOL-008, closed by TASK-M0-17,
+    states the case and names REQ-TOOL-148; its note says TASK-M0-17's reader rejects that file until TASK-M0-51
+    merges. Two qa assertions test the old behaviour (`qa_TASK-M0-17.rs` and `qa_TASK-M0-18.rs`, both qa-only
+    files): qa changes them in the task's qa commit (R-290), and the task's Notes name them.
+  - **The cloud session.** TASK-M0-51 goes to the cloud session with the seven ready tasks R-355 handed it, and
+    `plan/OPERATIONS.md` § "Away mode", "Order of work", says so. It is not started here.
+- **(B) R-297's block.** These bullets stand, accepted by R-356, as the human named them: Design (where the setting
+  lives), Design (what is recorded: the session header), Design (what the Profiler shows: the Profiler line), Design
+  (ROUNDTRIP's tolerance: ε_phys, itself a calibration requirement), Design (the difference report), and Amendment
+  (R-84 and R-116 carry forward lines). Held, for the human to rule: the GUI bullet (presence only until M8) and
+  Amendment (R-133). The block's mark reads "veto?" still, open for those two bullets only, and names what R-354 and
+  R-356 accepted. RQ-192 (B) quotes both held bullets in full, with the five marks.
+  - **The five marks stay open**, reading "veto?", since the human asked to rule them: REQ-RENDER-025's,
+    REQ-COL-060's and REQ-GUI-164's notes, and TASK-M2-26's and TASK-M2-29's Notes. Each copies a bullet R-356
+    accepts, marks 1, 2, 4 and 5 ROUNDTRIP's tolerance and mark 3 the Profiler line, and none rests on a held bullet.
+    RQ-192 notes that against each and closes none.
+  - R-354's "Still in force" line, which said R-297's other bullets were open again, now says R-356 accepts all of
+    them but the two held.
+- **RQ-192 stays open**, ruled in part again: A and B's accepted bullets read "Ruled by R-356". Its open part holds
+  R-297's two held bullets and the five marks, each quoted in full with its file and line, with what it decides, and
+  this ruling's own mark, as (C). It moves to `docs/archive/review_queue/M0.md` when the rest is ruled (R-292).
+- R-356 is in the "design" group of `plan/rule_groups.yaml`, beside R-298 and R-299, since it changes the trace rule.
+  `plan/section_notes.yaml` needs no line for it: REQ-TOOL-008 and REQ-TOOL-148 cite it, as R-341's and R-342's
+  requirements cite theirs.
+
+Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other requirement.

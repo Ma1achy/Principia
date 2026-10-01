@@ -197,7 +197,7 @@ Otherwise leave it open, write down why, and go on to the next ready task; if th
 **Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
 TASK-M0-07 to TASK-M0-15; R-336 makes TASK-M0-45 the next M0 task to start, at high priority.
 R-355 (2 Oct 2026): the seven ready tasks, TASK-M0-15 and TASK-M0-45 to TASK-M0-50, go to the cloud session,
-TASK-M0-45 and TASK-M0-49 first.
+TASK-M0-45 and TASK-M0-49 first. R-356 (2 Oct 2026) adds TASK-M0-51, the reader task, to them.
 
 **Never, while the human is away:**
 - make or record a new ruling (applying an existing one is fine);
