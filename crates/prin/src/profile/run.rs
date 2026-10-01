@@ -185,10 +185,14 @@ fn build() -> Build {
     }
 }
 
+/// macOS's `sysctl`, by its full path: the header's CPU fields never depend on the run's PATH, which may lack
+/// /usr/sbin (telemetry §5, R-329). Elsewhere the path doesn't exist, and the probes fall through to /proc/cpuinfo.
+const SYSCTL: &str = "/usr/sbin/sysctl";
+
 /// The CPU model, as the operating system names it: macOS's `sysctl machdep.cpu.brand_string`, or Linux's
 /// `model name` in /proc/cpuinfo. Both are asked on every system, and a system without one gives nothing from it.
 fn cpu_model() -> String {
-    let sysctl = std::process::Command::new("sysctl")
+    let sysctl = std::process::Command::new(SYSCTL)
         .args(["-n", "machdep.cpu.brand_string"])
         .output()
         .ok()
@@ -223,7 +227,7 @@ fn cpu_cores_available() -> Result<u32, String> {
 /// system; `None` where neither gives a count. No new dependency and no unsafe code: a platform these don't cover
 /// writes `null` (telemetry §5).
 fn cpu_cores_total() -> Option<u32> {
-    let sysctl = std::process::Command::new("sysctl")
+    let sysctl = std::process::Command::new(SYSCTL)
         .args(["-n", "hw.ncpu"])
         .output()
         .ok()

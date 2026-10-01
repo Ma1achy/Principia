@@ -1371,7 +1371,7 @@ validation::negative_control!(
 /// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` (macOS), else the first `model name` in
 /// /proc/cpuinfo (Linux), else `unknown`.
 fn expected_cpu() -> String {
-    let brand = Command::new("sysctl")
+    let brand = Command::new("/usr/sbin/sysctl")
         .args(["-n", "machdep.cpu.brand_string"])
         .output()
         .ok()
@@ -1555,4 +1555,67 @@ validation::negative_control!(
     "an api among the five values must fail the rejection check",
     expected = "is accepted",
     check_accepts_and_rejects_api(&values_of(&synthetic(1).1)[0], "metal")
+);
+
+/// On macOS the header's `device.cpu` and `device.cpu_cores_total` are filled whatever the run's PATH: `sysctl` is
+/// called by its full path, so a PATH without /usr/sbin still gives both (telemetry §5, R-329).
+#[cfg(target_os = "macos")]
+fn check_cpu_fields_filled(header_line: &str) {
+    let head: Value = serde_json::from_str(header_line).expect("the header line is not JSON");
+    let device = &head["header"]["device"];
+    assert_ne!(
+        device["cpu"],
+        json!("unknown"),
+        "device.cpu is unknown on a Mac that names its CPU"
+    );
+    assert!(
+        device["cpu_cores_total"].as_u64().is_some_and(|n| n >= 1),
+        "device.cpu_cores_total is {}, not the count the Mac reports",
+        device["cpu_cores_total"]
+    );
+}
+
+/// `prin profile` run with a cleared environment and PATH=/usr/bin:/bin, which lacks /usr/sbin; its header line.
+#[cfg(target_os = "macos")]
+fn header_without_usr_sbin() -> String {
+    let path = scratch("minimal_path.jsonl");
+    let out = Command::new(env!("CARGO_BIN_EXE_prin"))
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin")
+        .args([
+            "profile",
+            "--scenario",
+            "synthetic_frames",
+            "--frames",
+            "1",
+            "--json",
+            path_str(&path),
+        ])
+        .output()
+        .expect("prin does not run");
+    assert!(
+        out.status.success(),
+        "prin profile failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = fs::read_to_string(&path).expect("prin profile wrote no file");
+    lines_of(&text)[0].to_owned()
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn profile_file_header_cpu_fields_ignore_path() {
+    check_cpu_fields_filled(&header_without_usr_sbin());
+}
+
+#[cfg(target_os = "macos")]
+validation::negative_control!(
+    profile_file_header_cpu_fields_ignore_path,
+    "a header whose CPU fields fell back for want of sysctl must fail the check",
+    expected = "device.cpu is unknown",
+    check_cpu_fields_filled(&header_without_usr_sbin().replacen(
+        r#""cpu":""#,
+        r#""cpu":"unknown","was":""#,
+        1
+    ))
 );
