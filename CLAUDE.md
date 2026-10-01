@@ -91,4 +91,7 @@ Read this first; each rule points at its source.
 ## Git
 - Merge commits, not squash. Merging stacked PRs: retarget each child PR to `main` before deleting the branch below it,
   because deleting a base branch closes its child PRs.
+- After a PR merges, delete its remote and local branches, remove its worktrees and target directories, and prune
+  stale remote refs and worktree entries (`git fetch --prune`, `git worktree prune`) (R-345). Only a branch fully
+  merged into `main` is deleted; one that is the base of an open PR waits until that PR is retargeted, as above.
 - Commit or push only as the task or the human asks.

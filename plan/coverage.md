@@ -12,25 +12,25 @@
 | INT | 84 |
 | EVT | 26 |
 | PAY | 90 |
-| GEN | 30 |
+| GEN | 32 |
 | SCHED | 95 |
 | REF | 50 |
 | RENDER | 82 |
 | COL | 59 |
 | GUI | 163 |
-| TOOL | 145 |
-| VAL | 176 |
+| TOOL | 146 |
+| VAL | 177 |
 | PERF | 94 |
-| SYS | 76 |
-| **total** | **1299** |
+| SYS | 77 |
+| **total** | **1304** |
 
-Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 110 |
+| M0 | 115 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 
 ## Sections
 
-1026 sections in 46 files: 864 yield at least one requirement; 162 yield none and are listed below with the reason.
+1037 sections in 46 files: 873 yield at least one requirement; 164 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 115 |
+| informative only | 117 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -121,8 +121,10 @@ Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for th
 | R-316 — #96's `closure_min` widening with `Real` stands | informative only | accepts PR |
 | R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max` | informative only | accepts PR |
 | R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR |
-| R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders | informative only | a test-isolation fix in qa's file, made by qa in a follow-up PR on TASK-M0-06 (noted there); changes no requirement |
 | R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
+| R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)* | informative only | a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR |
+| R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR |
+| R-345 — Merged branches are deleted, with their worktrees and target directories | informative only | process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement |
 | R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files | informative only | process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`

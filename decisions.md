@@ -2567,10 +2567,11 @@ The max step isn't 0, so under this ruling each golden case keeps one reference 
 one for the backend it renders on (REQ-VAL-176, TASK-M0-43).
 
 ## R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*
-*Amended by R-301 and R-325.*
+*Amended by R-301, R-325 and R-336.*
 *Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the
 pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325);
-R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record.*
+R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. R-336 accepts PR
+#96's overrun of it, and TASK-M0-45 brings each job back under it.*
 *30 Sep 2026 · applied in TASK-M0-33 (PR #74)*
 
 "#74: one-round exception granted for qa_TASK-M0-33.rs. Cost sent back: share build dirs per fixture type, not per
@@ -2745,10 +2746,11 @@ by default). They cache the cargo registry and the fixture pool (R-270), each un
 repo's Actions cache stays well under GitHub's 10 GB limit.
 
 ## R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line
-*Amended by R-298.*
+*Amended by R-298 and R-341.*
 *Still in force: the header on the first line, then one compact frame record per line, never pretty-printed;
 pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and
-makes a trace that lacks it valid.*
+makes a trace that lacks it valid; R-341 makes `prin profile` stream the file in that order, flushed at least every 60
+frames or 1 s.*
 *30 Sep 2026 · applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18*
 
 "R-286: profiler traces are JSON Lines: the header on the first line, then one compact frame record per line.
@@ -2811,6 +2813,11 @@ agent is dispatched with the ruling, in the human's words, in its opening prompt
 re-dispatched that way.
 
 ## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+*Amended by R-335, R-336 and R-342.*
+*Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change
+under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch
+cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending
+veto).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3100,11 +3107,12 @@ setting means in the browser build (M8), where WebGPU gives no fast-math control
 filed as RQ-177.
 
 ## R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*
-*Amended by R-299.*
+*Amended by R-299 and R-341.*
 *Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the
 header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session
 incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299
-replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected.*
+replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected. R-341 has
+`prin profile` append the summary line as the final line at session end, after frames streamed as they complete.*
 *30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008, REQ-TOOL-101 and TASK-M0-17 (PR #79)*
 
 "This is from me. #79: items 12 and 15 accepted (R-298), with one
@@ -3541,6 +3549,9 @@ job is not a required status check until the human adds it to branch protection 
 so.
 
 ## R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
+*Amended by R-337.*
+*Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a
+workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
 
 "Actions cache: caches are saved only on pushes to main; PR jobs restore only. The rust-gpu cache keeps its own key."
@@ -3553,6 +3564,7 @@ limit, most of it fixture-pool entries of about 1 GiB saved per branch. REQ-SYS-
 *Applied per R-204 — veto?:* the rule reaches every workflow, including the cache steps TASK-M0-42 wrote, and
 TASK-M0-14 (PR #96), which already edits the workflows' cache steps, makes the change in all of them; REQ-SYS-073
 stays closed by TASK-M0-42.
+*Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
 ## R-327 — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*
 *1 Oct 2026 · applied in telemetry §5, REQ-TOOL-002 and TASK-M0-18 (PR #100)*
@@ -3588,6 +3600,7 @@ an absent value `null`. No serialised type has a `usize` field: a count or size 
 width, and under R-322 its JSON type, never depends on the platform. PR #100's fix pass renames the key in the typed
 form, the JSON Schema and the tests (TASK-M0-17's files, as R-308's change was). Telemetry §5, gui_state_contract §2,
 REQ-TOOL-002, REQ-TOOL-145 and TASK-M0-18 follow.
+*Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
 ## R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max`
 *1 Oct 2026 · applied in TASK-M0-11 (PR #99)*
@@ -3619,6 +3632,7 @@ admits the telemetry readback, and its statement names the `QuadReduction` "the 
 simulation data"; systems_architecture §3's membrane table, REQ-SYS-036's source, says the same, and TASK-M5-30's
 REQ-SYS-036 checklist line follows. A veto reverts all three together. RQ-173 moves to
 `docs/archive/review_queue/M0.md`.
+*Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
 ## R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
 *1 Oct 2026 · applied in a follow-up PR on TASK-M0-06*
@@ -3644,6 +3658,252 @@ requirement that doesn't exist or is retired, or a REVIEW_QUEUE entry that isn't
 ionisation gate, `δ_dep` and the per-sample departed bit, the change-10 re-runs, the two `alpha_area` defects, the
 camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab transcription checks. It lands in a
 PR of its own, after this one.
+
+## R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"1 yes." (RQ-186's recommended option 1.)
+
+*Applied:* R-326's cache save in the `xtask-ci` job is a step under a step-level `if:`, and
+`check_controls_job_beside_the_tests` in `xtask/tests/qa_TASK-M0-22_r235.rs` (line 115) rejects an `if:` at any indent
+in that job. qa may change that one check so that its `if:` test reads only the job's own `if:` (indent 4), not a
+step's; its `continue-on-error:` test and the rest of the file stay as they are, and the code reviewer confirms that
+nothing else changed. This is a named exception to R-290 for this file, whose history has implementer commits
+(9405734, 3b84aa5), on R-290's own ground: a ruling, R-326, changed the behaviour it tests. qa makes the change in
+PR #96's qa commit, and the orchestrator's R-237 check accepts `M` on this file in that commit. REQ-VAL-166 is
+unchanged: the controls job still cannot be skipped or pass with a finding. RQ-186, filed on PR #96's branch, is
+archived unchanged in `docs/archive/review_queue/M0.md` with this ruling's port, so that its id resolves on `main`;
+#96's next fix pass deletes its open copy from `REVIEW_QUEUE.md`. Changes no requirement.
+
+## R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076, REQ-SYS-077 (new), TASK-M0-14 (PR #96) and TASK-M0-45 (new)*
+
+"2 B: accept the overrun on #96, and make the sharding the next M0 task at high priority. It should also split the
+long single tests (the 257 s one, and the M0-24/25/26 suites), since sharding can't parallelise inside one test."
+
+*Applied:* PR #96's warm wall times, the `ci` job at about 16.5 min (18.7 cold) and `xtask-ci` at 11.7–13.3 min
+(19.5 cold), over R-270's ~10.5 min per job (R-325), are accepted for PR #96: its wall-time checks (REQ-SYS-073,
+REQ-SYS-076) are met by this ruling, not by a run under ~10.5 min. The target stays ~10.5 min for each CI job's warm
+wall-clock time. A new task, TASK-M0-45, depending on TASK-M0-14 and the next M0 task to start, at high priority,
+brings each job back under it:
+- it shards the nextest runs of the `ci` and `xtask-ci` jobs across parallel jobs, the shards together running every
+  test the unsharded run did;
+- it splits the long single tests that bound a job, since a shard cannot run one test in parallel:
+  `qa_cargo_xtask_alias_runs_deps` in `xtask/tests/qa_TASK-M0-01.rs` (257 s on PR #96), and the `qa_TASK-M0-24`,
+  `qa_TASK-M0-25` and `qa_TASK-M0-26` suites in `crates/validation/tests/` (about 100 s each).
+
+REQ-SYS-077 (new) carries it, and qa's finding on PR #96 against REQ-SYS-073 is answered by it. A new job is not a
+required status check until the human adds it to branch protection (R-266); TASK-M0-45's PR names the jobs to add.
+*Applied per R-204, accepted by R-344:* the files holding those tests are qa's, and each has implementer commits, so
+R-290 bars both qa and the implementer from them. qa makes the splits, in TASK-M0-45's qa commit, as a named exception
+to R-290 for those files, as R-335 is for `qa_TASK-M0-22_r235.rs`; a split moves tests and their controls without
+changing an assertion, and the code reviewer confirms that none is weakened. The orchestrator's R-237 check accepts `M`
+on those files, and `A` for the files split from them, in that commit.
+
+## R-337 — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
+
+"3 a."
+
+*Applied:* `mutants.yml`, `pr-check.yml`, `reviews.yml`, `screenshot.yml` and `stand-in-soak.yml` never run on a push
+to `main`, so under R-326 they never save a cache, and a restore under a key of their own finds nothing. Each restores,
+read-only, the key a `ci.yml` job saves on `main` for what it needs: the cargo registry under the key a `ci.yml` job
+saves it under, and, in a job that builds the kernel, the rust-gpu build under `gpu-kernel`'s key
+(`rust-gpu-gpu-kernel-<os>-<channel>`, R-320). Each of `mutants.yml`'s 8 shards built the rust-gpu backend cold on
+PR #96, about 4 min each. None of them saves. A cache that is saved still names the job that saves it (R-285); a
+restore-only step names the saving job's key, as `xtask-ci`'s restore of `ci`'s fixture pool does. The comments PR #96
+wrote at `pr-check.yml:28`, `reviews.yml:39`, `screenshot.yml:34` and `stand-in-soak.yml:42`, "it restores what `main`
+saved", were false of a key nothing saves; they are corrected to name the `ci.yml` key each step restores. TASK-M0-14
+(PR #96), which makes R-326's change in every workflow, makes this one. REQ-SYS-073 and REQ-SYS-075 follow.
+
+## R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
+*1 Oct 2026 · applied in `open-questions.md` and `plan/check_plan.py` (PR #106), and in `open-questions.md` and `REVIEW_QUEUE.md` (PR #108)*
+
+"4 yes. 5 ok."
+
+*Applied:* the items of `open-questions.md`'s "Audit section D — deliberately parked" are decisions to wait, each
+parked with its reason in its owning file (philosophy §7.7). They are not still-open items under R-334: section D is
+marked parked, carries no *Carried by* note, and `plan/check_plan.py`'s R-334 check does not read it. PR #106 (R-334's
+PR) merged with section D still naming RQ-187 and RQ-187 still open, so PR #108 applies it: section D is marked
+"Parked, not open (R-338)", with no *Carried by* note, `open-questions.md`'s opening note says a parked item names no
+carrier, and RQ-187's open copy is deleted from `REVIEW_QUEUE.md`. RQ-187, filed on #106's branch, is archived unchanged
+in `docs/archive/review_queue/M0.md` with this ruling's port, so that its id resolves on `main`.
+Noted with it, not a ruling of its own ("5 ok"): PR #106's veto item, which marks `open-questions.md`'s corpus-defects
+section, D1–D6, "Closed: fixed by R-59" (applied per R-334), stands; the human did not veto it. Changes no requirement.
+
+## R-339 — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
+*1 Oct 2026 · applied in dd_integrator §3.6, §5 test 6, §6 and its closing line, and REQ-EVT-020*
+
+"6 yes: R-30's time ordering wins, so mark the block superseded."
+
+*Applied:* `docs/design/principia_dd_integrator.md` §3.6's block "Terminal taxonomy & priority (pinned here —
+confirm/veto)" ordered SIM_FAILED > COLLISION > ESCAPE > BOUNDED within one `STEP`: the markdown's pin that R-6 kept
+until the order was decided. R-30 decided it by time (REQ-EVT-020): sim_failed first; then whichever event came
+first, a same-time tie going to collision; triple ejection as a detail of escape; then running; then bounded. The
+block stays, marked "superseded by R-30, kept for the record", as change 11's escape gates above it are, and so does
+the paragraph after it that argues for the pin. What R-30 leaves alone still stands: labels are mutually exclusive,
+there is no timeout state, `MAX_SUBSTEPS` is not a terminal condition, and the order is deterministic, identical on
+CPU and GPU and in the shared physics source. §5 test 6's "per §3.6 priority" and the closing line's "Collision beats
+escape" cite R-30's same-time tie, and §6's "Priority-order pin" entry is struck through and marked settled by R-30,
+as R-14's entry there is. REQ-EVT-020 cites this ruling.
+
+## R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*
+*Amended by R-344.*
+*Still in force: the link registry is hashed into the schema version, each entry by its semantic content (its name,
+constraint, forward, inverse, log-det, ε clamps and the parameters its functions read, by value), not its sampling
+note, and every entry, whether or not a block uses it by default; R-344 hashes the registry's chart constants that no
+link reads (`δ_λ`, `ε_w`) too, by value, and accepts the name and every-entry items.*
+*1 Oct 2026 · applied in generation-root §3.8 and §3.9, REQ-GEN-031 and REQ-GEN-032 (new), TASK-M0-46 (new) and
+TASK-M2-01*
+
+"7 hash it, without waiting for an RQ: the link registry's definitions determine how chart coordinates decode, so
+changing them changes what cached and saved results mean. That's exactly what the schema version is for. As with
+R-251, hash each link's semantic content, not its prose."
+
+*Applied:* TASK-M0-12 (merged) computes `PAYLOAD_SCHEMA_VERSION` over the layout entries and words, the continuation
+table, the code assignments, `QuadReduction`'s member list and the register entries that decide stored bits, but not
+the link registry (generation-root §3.9), though §2 names "the canonicalised §3 ledger". The registry joins the hashed
+ledger (R-36). §3.9 says what an entry is: "Each entry ships **forward, inverse, log-det, ε clamps, and the sampling
+note**", under the constraint its row names. The semantic content hashed is:
+- the entry's constraint, the block codomain it maps onto (§3.9's first column);
+- its forward, inverse and log-det;
+- its ε clamps, and each parameter its forward, inverse or log-det reads (`μ_max` in the simplex link, R-10), by value.
+
+Its sampling note is prose: §3.9 gives it to "the robustness-sweep picker", and no decode or encode reads it, so it is
+not hashed, as R-251 leaves out a constant's citation. Changing a hashed member of any entry, or adding or removing an
+entry, changes the schema version; a sampling-note-only edit does not. *Applied per R-204, accepted by R-344:* the
+entry's name, the link id provenance records (chart contract § "Integrity: the link is part of the experiment"), is
+hashed too, as TASK-M0-12 hashes each layout entry's and register constant's name; and every entry is hashed, whether or
+not a block uses it by default, as the human's words are "each link's". How a function is written in the hashed bytes, a
+canonical form with no formatting-dependent bytes, is a definition TASK-M0-46 writes into §3.9 (R-72, REQ-GEN-032),
+approved by the physics reviewer. A new task, TASK-M0-46, depending on TASK-M0-12, builds it in `crates/ledger`, with
+the physics reviewer as for TASK-M0-12 (R-251), and tests it over test entries; the registry's own entries are
+TASK-M2-01's, hashed as they land. `PAYLOAD_SCHEMA_VERSION`'s value changes when TASK-M0-46 lands, since the canonical
+serialisation gains the registry's table, and again when TASK-M2-01 adds its entries; under R-36 that is the intent.
+Filed: RQ-189, whether the registry's chart constants that no link entry reads (`δ_λ`, `ε_w`) are hashed too.
+TASK-M0-46 waited for it; R-344 closes it: they are hashed.
+
+## R-341 — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*
+*1 Oct 2026 · applied in telemetry §5, REQ-TOOL-147 (new) and TASK-M0-47 (new)*
+
+"R-341: prin profile streams its trace. The header is written first, then each frame record as it completes, flushed at
+least every N frames (or every second) so a crash loses at most that much; leak_flags and hot_paths are appended as the
+final line at session end (R-286, R-298). Memory use must not grow with --frames beyond what the summaries themselves
+need. Add a test that kills a run mid-session and reads the partial trace as "session incomplete"."
+
+"R-341's flush: every 60 frames or 1 s, whichever comes first."
+
+*Applied:* TASK-M0-18 (merged, PR #100) has `prin profile` hold every frame record of the run in memory and write the
+whole trace when the run ends, so a run that dies writes nothing and its memory grows with `--frames`. Telemetry §5
+said only that a writer "can stream the frames". Now `prin profile` writes the header line first, then each frame
+record as the frame completes, and flushes the file at least every 60 frames or every 1 s, whichever comes first, so a
+run that crashes or is killed loses at most the frames since the last flush. The summary line, `leak_flags` and
+`hot_paths`, is appended as the final line when the session ends (R-286, R-298). The run's memory does not grow with
+`--frames` beyond what the summaries themselves need: it keeps no frame record once the record is written. A trace
+left by a killed run is the incomplete session R-298 and R-299 define, and the reader reports it "session incomplete".
+Telemetry §5 says so. REQ-TOOL-147 (new, M0) carries it, closed by a new task, TASK-M0-47, depending on TASK-M0-18,
+with the code, qa and perf reviewers, as TASK-M0-18 has, less physics, since no definition changes. Its test kills a
+run mid-session and reads the partial trace as "session incomplete". *Applied per R-204 — veto?:* the header line is
+flushed as soon as it is written, so a run killed before its first frame flush still leaves a trace R-298 accepts (a
+header line alone), and a crash loses at most the frames, never the header; the memory bound is checked by the perf
+reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no number for
+it.
+
+## R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
+*1 Oct 2026 · applied in REQ-VAL-178 (new) and TASK-M0-48 (new)*
+
+"File the M0-06 scratch-folder accumulation as a small task: tests delete their scratch folders on success and keep
+them only on failure."
+
+*Applied:* R-333 gave `xtask/tests/qa_TASK-M0-06_edges.rs`'s `scratch_dir` a folder per call, named by the process id
+and a per-process counter (qa's commit dc3afb4). No later run reuses that name, and nothing deletes the folder, so the
+folders pile up under `CARGO_TARGET_TMPDIR` run after run. A test's scratch folder, or scratch file, is deleted when the
+test passes and kept, with its path in the failure output, when the test fails. REQ-VAL-178 (new, M0) carries it, closed
+by a new task, TASK-M0-48, depending on TASK-M0-06, with the code and qa reviewers. *Applied per R-204 — veto?:* the
+task covers each helper that makes a fresh, uniquely named scratch folder or file per call (by process id, counter or
+time), which a later run never reuses: a search of 1 Oct 2026 found them in `xtask/tests/` (`qa_TASK-M0-06_edges`,
+`qa_TASK-M0-23_r305`, `qa_TASK-M0-23_shards`, `qa_TASK-M0-38`, `qa_TASK-M0-40`, `mutants_no_mutant`),
+`crates/prin/tests/` (`profile`, `qa_TASK-M0-18`, `qa_TASK-M0-18_base`, `qa_TASK-M0-18_rulings`),
+`crates/prin/src/profile/diff.rs`'s unit tests, and `crates/validation/tests/` (`qa_TASK-M0-38`, `qa_TASK-M0-39`,
+`stand_in`). A helper with a fixed name reuses and replaces its folder on the next run, so it does not accumulate and is
+left as it is. qa makes the edits to qa's files in TASK-M0-48's qa commit: R-290 allows it on the files only qa has
+committed to, and for the two whose history has implementer commits, `xtask/tests/qa_TASK-M0-38.rs` (55815e6, 8c22eec)
+and `crates/validation/tests/qa_TASK-M0-38.rs` (f7becfc), this is a named exception to R-290, as R-336's is; the change
+alters only where scratch is made and when it is deleted, never an assertion, and the code reviewer confirms that. The
+implementer makes the edits to the rest.
+
+## R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
+*1 Oct 2026 · applied in render contract Part 5 "Unpack layer", lowering contract Part 3a, payload §1, REQ-RENDER-001,
+REQ-PAY-091 and TASK-M0-13 (PR #107)*
+
+"RQ-188 (R-343): 1b, not 1a: SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1),
+leaving group 0 for the assembler's per-frame uniforms. Emit the group/binding numbers as generated constants from one
+table. Reading only through sample_state()/sample_word() stands. 2a and 3a accepted. Items 4–6 accepted; for item 5,
+note in the docs that unset-checks on values read in fragment shaders test bit patterns, never isinf/isnan, because
+fast-math (R-297) may optimise those away."
+
+*Applied:* RQ-188's options 1b, 2a and 3a, and PR #107's three items applied per R-204, which are accepted and lose
+their "veto?" marks.
+- **Bindings (1b).** The generated fragment-side unpack layer declares the full tier's stored buffers:
+  `@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;` and
+  `@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;`. Group 0 is left to the assembler's
+  per-frame uniforms. The group and binding numbers are generated constants from one ledger table, the one source of
+  the numbers the WGSL attributes carry. Each buffer is read only through a generated function of the sample index,
+  `sample_state(i)` and `sample_word(i)`, the same `i` for both (per copy); nothing else indexes either buffer. M1's
+  per-tier assembly (lowering Part 3a) owns the feature-off variants (`SimStateBase`, no word binding).
+- **`closure_step` (2a).** WGSL has no u16 and `enable f16` is banned (R-86), so the u16 `closure_step` and u16
+  `_reserved` at byte 140 are one WGSL member, `closure_step_reserved: u32`: `closure_step` in bits 0–15, `_reserved`
+  in bits 16–31, read through `fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }`. The stored layout,
+  and the Rust `closure_step: u16` and `_reserved: u16`, are unchanged.
+- **Schema version (3a).** WGSL has no u64, so the generated WGSL carries `const PAYLOAD_SCHEMA_VERSION: vec2<u32>`,
+  `.x` the low 32 bits of the Rust `u64` and `.y` the high 32, the order `unpack2x16float` uses.
+- **Item 4, accepted:** no WGSL setter is emitted; the fragment side only reads.
+- **Item 5, accepted:** the generated WGSL emits `PA_D_MIN_UNSET = 0x7c00u` and `pa_d_min_is_unset`, so a shader tests
+  `d_min`'s unset value by its bits (R-271). With it, as the human asks, the render contract's WGSL traps say that an
+  unset-check on a value read in a fragment shader tests the bit pattern, never `isinf` or `isnan` (or a float
+  comparison standing in for them), because fast-math (R-297) may optimise those away.
+- **Item 6, accepted:** `fgw_reduced_length_valid` and `fgw_reduced_length` are emitted; `ftle_valid` and the tier
+  interface (`has_<feature>`, lowering Part 3a) are left to M1.
+
+The render contract's "Unpack layer" and its WGSL traps say all of this; lowering Part 3a gains a note on the
+bindings, and payload §1's WGSL read view a note on `closure_step`'s WGSL form, their text kept. REQ-RENDER-001 and
+REQ-PAY-091 cite this ruling, and TASK-M0-13 (PR #107) builds it. RQ-188, filed on #107's branch, is archived unchanged
+in `docs/archive/review_queue/M0.md` with this ruling's port, so its id resolves on `main`; #107's fix pass deletes its
+open copy and drops REQ-RENDER-001's and REQ-PAY-091's `rq: RQ-188`.
+*Applied per R-204 — veto?:* the table's constants are named `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and
+`WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry the same numbers)
+and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two targets). They
+are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root §3.8 "The
+hash").
+
+## R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
+*1 Oct 2026 · applied in generation-root §3.9, REQ-GEN-031, TASK-M0-46, TASK-M0-45, TASK-M2-01 and R-336's and R-340's
+notes*
+
+"#108: RQ-189 yes (δ_λ and ε_w are hashed: they change how coordinates decode). qa making R-336's test splits under a
+named R-290 exception: accepted. R-340 hashing every link and its name: accepted. TASK-M2-01 depending on M0-46:
+accepted."
+
+*Applied:* RQ-189's option 1. The registry's chart constants that no link reads, `δ_λ` (decode's mirror tie-break)
+and `ε_w` (its seed-selection floor), are hashed into the schema version by value, as the links' own parameters are:
+each changes how a chart coordinate decodes, R-340's reason. Every chart constant the registry holds is hashed, whether
+or not a link reads it. Generation-root §3.9's "The hash", REQ-GEN-031 and TASK-M0-46 say so; TASK-M0-46 hashes the
+registry's constants table with its entries and no longer waits. RQ-189 moves to `docs/archive/review_queue/M0.md`.
+PR #108's four items applied per R-204 are accepted, and their "veto?" marks are dropped: qa makes R-336's test splits
+in TASK-M0-45's qa commit, a named exception to R-290; R-340 hashes each entry's name; it hashes every entry, whether
+or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031.
+
+## R-345 — Merged branches are deleted, with their worktrees and target directories
+*1 Oct 2026 · applied in `plan/WORKFLOW.md` § "The review loop" and CLAUDE.md § Git*
+
+"add that to be part of the workflow, merged branches are deleted."
+
+*Applied:* said as every merged branch had just been pruned, remote and local. After a PR merges, its remote branch
+and its local branch are deleted, its worktrees and their target directories are removed, and stale remote refs and
+worktree entries are pruned (`git fetch --prune`, `git worktree prune`). The rule covers only branches fully merged
+into `main`. A branch that is the base of an open PR is not deleted until that child PR is retargeted to `main`, since
+deleting a base branch closes its child PRs (CLAUDE.md § Git, "Merging stacked PRs"). `plan/WORKFLOW.md`'s merge step
+and CLAUDE.md § Git say so. Process only (section_notes); no requirement changes.
 
 ## R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
 *1 Oct 2026 · applied in `plan/OPERATIONS.md`, `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, CLAUDE.md §

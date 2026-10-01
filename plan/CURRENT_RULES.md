@@ -78,6 +78,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-254** — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*
 - **R-255** — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*
 - **R-265** — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
+- **R-339** — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
 
 ## Design and architecture
 
@@ -179,11 +180,11 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-281** — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
-- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line. Still in force: the header on the first line, then one compact frame record per line, never pretty-printed; pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and makes a trace that lacks it valid. Amended by R-298.
+- **R-286** — Profiler traces are JSON Lines: the header, then one compact frame record per line. Still in force: the header on the first line, then one compact frame record per line, never pretty-printed; pretty-printing on demand (`prin profile show --pretty`, or `jq`); R-298 adds the summary line after the frames, and makes a trace that lacks it valid; R-341 makes `prin profile` stream the file in that order, flushed at least every 60 frames or 1 s. Amended by R-298 and R-341.
 - **R-288** — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*. Still in force: two u32 per-frame counters in telemetry §2, `dmin_nan_unset` (a NaN `d_min` stored as unset) and `dmin_negative_floored` (a negative `d_min` clamped), incremented by the `d_min` packer in release builds too, not by `roundtrip_ctl`'s repack; read back asynchronously on the profiler/telemetry readback, a frame or two late and never stalling a frame, on no new GPU→CPU channel (`QuadReduction` unchanged, R-142); and profiler schema v1's frame record carries both keys; they belong to the frame, never a static: a per-frame struct the caller passes in on the CPU, a buffer bound and reset per frame on the GPU (R-294). Amended by R-294.
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
 - **R-297** — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*. Still in force: all of it on native backends. In the browser build: the compute setting stays explicit, off by default, on the sim key, in pxpack and recorded in the header as asked for, and display stages may keep fast-math on; bit-identity with the setting off no longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to R-85's Tier-N tolerances (R-303). Amended by R-303.
-- **R-298** — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*. Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299 replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected. Amended by R-299.
+- **R-298** — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*. Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299 replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected. R-341 has `prin profile` append the summary line as the final line at session end, after frames streamed as they complete. Amended by R-299 and R-341.
 - **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
 - **R-300** — #78's items 11–13 are accepted; `DminCounters`' fields are private
 - **R-303** — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
@@ -205,6 +206,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-328** — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*
 - **R-329** — The header's core count is `cpu_cores_available`; no `usize` in a serialised type
 - **R-332** — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*
+- **R-340** — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*. Still in force: the link registry is hashed into the schema version, each entry by its semantic content (its name, constraint, forward, inverse, log-det, ε clamps and the parameters its functions read, by value), not its sampling note, and every entry, whether or not a block uses it by default; R-344 hashes the registry's chart constants that no link reads (`δ_λ`, `ε_w`) too, by value, and accepts the name and every-entry items. Amended by R-344.
+- **R-341** — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*
+- **R-343** — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
+- **R-344** — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
 
 ## Values
 
@@ -255,12 +260,16 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-272** — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
 - **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
-- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
+- **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, an R-204 item pending veto). Amended by R-335, R-336 and R-342.
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 - **R-314** — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
 - **R-334** — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry
+- **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+- **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
+- **R-342** — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
+- **R-345** — Merged branches are deleted, with their worktrees and target directories
 - **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
 
 ## CI
@@ -299,7 +308,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-305** — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
 - **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*. Still in force: the rust-gpu build is cached under a key naming its job and the pinned toolchain version; R-326 saves it only on pushes to `main`. Amended by R-326.
 - **R-325** — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*
-- **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
+- **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*. Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there. Amended by R-337.
+- **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+- **R-337** — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
 
 ## One-off acts (history only)
 
@@ -348,7 +359,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-256** — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack. Still in force: veto items (a) and (b), and TASK-M0-10 keeps only pack/unpack; TASK-M0-09's size is R-264's (1,084 counted lines, one PR). Amended by R-264.
 - **R-267** — Every merged "veto?" item stands; the #38 flake item is closed; three follow-ups become one task
 - **R-268** — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted
-- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. Amended by R-301 and R-325.
+- **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. R-336 accepts PR #96's overrun of it, and TASK-M0-45 brings each job back under it. Amended by R-301, R-325 and R-336.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
