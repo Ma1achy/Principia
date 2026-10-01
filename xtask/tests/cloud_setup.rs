@@ -784,8 +784,11 @@ fn stubbed_install(
 ) -> (bool, Vec<String>) {
     let log = dir.join("log");
     let _ = fs::remove_file(&log);
-    let body = r#"s=$1 t=$2 v=$3; set --
+    // Sourcing must leave the caller's shell options alone (no errexit, no pipefail), whatever its arguments.
+    let body = r#"s=$1 t=$2 v=$3
 . "$s"
+case $- in *e*) echo "sourcing set errexit" >>"$LOG"; exit 1 ;; esac
+if shopt -oq pipefail; then echo "sourcing set pipefail" >>"$LOG"; exit 1; fi
 uname() { case "$1" in -m) echo x86_64 ;; *) echo Linux ;; esac; }
 curl() { echo "curl $*" >>"$LOG"; [ "$CURL_OK" = 1 ]; }
 tar() { echo "tar $*" >>"$LOG"; cat >/dev/null; }

@@ -24,22 +24,13 @@
 #   scripts/cloud-setup.sh --dry-run  print the plan, one item per line (`<kind> <name> <version> <method>`), install
 #                                     nothing
 #
-# Idempotent: an item already installed at the pinned version is skipped. apt runs as root, or through sudo. Sourced
-# (`. scripts/cloud-setup.sh`), it defines its functions and installs nothing.
-set -euo pipefail
+# Idempotent: an item already installed at the pinned version is skipped. apt runs as root, or through sudo.
+#
+# Sourced (`. scripts/cloud-setup.sh`), it only defines its functions and the variables ROOT, WORKFLOWS and CARGO_BIN:
+# it sets no shell option, reads none of the caller's arguments and installs nothing. Run, `main` does all three.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKFLOWS="$ROOT/.github/workflows"
-
-DRY_RUN=0
-case "${1:-}" in
-  --dry-run) DRY_RUN=1 ;;
-  "") ;;
-  *)
-    echo "usage: scripts/cloud-setup.sh [--dry-run]" >&2
-    exit 2
-    ;;
-esac
 
 say() { echo "cloud-setup: $*" >&2; }
 die() {
@@ -293,7 +284,9 @@ nextest_download() {
   }
   mkdir -p "$CARGO_BIN" || return 1
   say "curl https://get.nexte.st/$version/$platform | tar zxf - -C $CARGO_BIN"
+  # Both ends of the pipe must succeed, whether or not the caller set pipefail.
   curl --proto '=https' -LsSf "https://get.nexte.st/$version/$platform" | tar zxf - -C "$CARGO_BIN"
+  [ "${PIPESTATUS[*]}" = "0 0" ]
 }
 
 # A cargo tool through cargo-binstall, prebuilt only: binstall's own build-from-source strategy is off, so a failed
@@ -304,7 +297,8 @@ binstall_download() {
   if ! command -v cargo-binstall >/dev/null 2>&1; then
     say "installing cargo-binstall from its official prebuilt installer"
     curl --proto '=https' -LsSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh \
-      | bash || return 1
+      | bash
+    [ "${PIPESTATUS[*]}" = "0 0" ] || return 1
   fi
   say "cargo binstall $spec"
   cargo binstall --no-confirm --disable-strategies compile "$spec"
@@ -359,6 +353,17 @@ install_toolchain() {
 }
 
 main() {
+  set -euo pipefail
+  DRY_RUN=0
+  case "${1:-}" in
+    --dry-run) DRY_RUN=1 ;;
+    "") ;;
+    *)
+      echo "usage: scripts/cloud-setup.sh [--dry-run]" >&2
+      exit 2
+      ;;
+  esac
+
   PLAN=$(plan) || exit 1
 
   if [ "$DRY_RUN" = 1 ]; then
@@ -453,5 +458,5 @@ main() {
 
 # Run, unless sourced.
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
-  main
+  main "$@"
 fi
