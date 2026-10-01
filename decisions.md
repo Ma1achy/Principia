@@ -3147,7 +3147,8 @@ line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
 *Amended by R-356.*
 *Still in force: all of it but its Applied-per-R-204 note's rule that a summary line followed by a cut-off line is an
 error: that line is dropped and its bytes reported, and the summary line and the frames are kept (R-356). A file whose
-only line is a cut-off header line stays an error.*
+only line is a cut-off header line stays an error. Whether its ruling's "reports the session incomplete" holds for a
+cut-off line after the summary line is open in RQ-192 (C).*
 *30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008 and TASK-M0-17 (PR #79)*
 
 "#79 item b (R-299): the reader drops an unterminated final line that doesn't parse, reports the session incomplete,
@@ -4452,14 +4453,17 @@ rule."
     say which. `Trace`'s rule that a trace with dropped bytes is incomplete gives way: a complete trace may have
     dropped bytes. `prin profile diff`'s notice for a cut-off trace (render_gui_spec § "Profiler", R-323) is given to
     a session that ended before its summary line, so it doesn't reach this file, which loses no frame: the diff
-    compares it as a complete trace, and prints no notice for it. Open in RQ-192 (C).
+    compares it as a complete trace, and prints no notice for it. `prin profile show`, which today says "session
+    incomplete" whenever bytes were dropped, says so only for an incomplete session; for this file it states the
+    dropped bytes alone. Open in RQ-192 (C).
   - **The task.** Today's reader (`read_lines` in `crates/engine/src/contract/profile.rs`, TASK-M0-17) parses every
     line that has one after it as a frame record, so the summary line fails and the file is rejected. REQ-TOOL-148
     (new, M0) carries the change, closed by a new task, TASK-M0-51, the next id after TASK-M0-50, modelled on
     TASK-M0-46 to TASK-M0-48: its goal is the reader accepting a cut-off last line after the summary line, with a test
-    and a negative control, and the header-only case staying an error, with its test kept. It depends on TASK-M0-17,
+    and a negative control, and the header-only case staying an error, with its test kept; `prin profile show`'s
+    notice follows the applied item above, with its own test (the code review of 2e5d28a). It depends on TASK-M0-17,
     which is merged, so nothing open; its reviewers are code and qa, as for every task, since it closes no PERF
-    requirement and touches no frame loop or dispatch; its size is ~100 lines. REQ-TOOL-008, closed by TASK-M0-17,
+    requirement and touches no frame loop or dispatch; its size is ~150 lines. REQ-TOOL-008, closed by TASK-M0-17,
     states the case and names REQ-TOOL-148; its note says TASK-M0-17's reader rejects that file until TASK-M0-51
     merges. Two qa assertions test the old behaviour (`qa_TASK-M0-17.rs` and `qa_TASK-M0-18.rs`, both qa-only
     files): qa changes them in the task's qa commit (R-290), and the task's Notes name them.

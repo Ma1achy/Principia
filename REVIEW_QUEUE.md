@@ -173,32 +173,41 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
   - **Needed:** accept or veto. Nothing waits on it: TASK-M2-26, TASK-M2-29 and TASK-M8-43 have not started. When
     ruled, each mark names the ruling in place of "veto?".
 - **C. R-356's own mark: a file with a cut-off line after its summary line reads as a complete session** *(R-356 (A),
-  R-298, R-323)*.
+  R-298, R-299, R-323)*.
   - `decisions.md` § "R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and
-    R-116 amendments stand *(amends R-299, R-304)*", `decisions.md:4449-4455`:
+    R-116 amendments stand *(amends R-299, R-304)*", `decisions.md:4450-4458`:
     > *Applied per R-204 — veto?:* the session reads complete, since its summary line is present: `leak_flags` and
     > `hot_paths` are read from it, and the bytes after it are reported as dropped, not as "session incomplete", which
     > R-298 gives to a file missing its summary line. The human's words keep the summary and report the bytes, and
     > don't say which. `Trace`'s rule that a trace with dropped bytes is incomplete gives way: a complete trace may
     > have dropped bytes. `prin profile diff`'s notice for a cut-off trace (render_gui_spec § "Profiler", R-323) is
     > given to a session that ended before its summary line, so it doesn't reach this file, which loses no frame: the
-    > diff compares it as a complete trace, and prints no notice for it. Open in RQ-192 (C).
+    > diff compares it as a complete trace, and prints no notice for it. `prin profile show`, which today says
+    > "session incomplete" whenever bytes were dropped, says so only for an incomplete session; for this file it
+    > states the dropped bytes alone. Open in RQ-192 (C).
     - **Mark:** `decisions.md` — "the session reads complete, since its summary line is present"
   - The same, in `docs/design/principia_dd_telemetry_and_tiers.md` § 5, "A line cut off at the end", `:274-275`:
     "(applied per R-204 — veto?, RQ-192: the bytes after the summary line are reported as dropped, not as "session
     incomplete")".
     - **Mark:** `docs/design/principia_dd_telemetry_and_tiers.md` — "the bytes after the summary line are reported as dropped"
   - *What it decides:* such a file is a complete session: its summaries are read, `Trace::dropped_bytes` gives the
-    bytes, "session incomplete" is not reported, and `prin profile diff` compares it with no notice. R-323's human
-    words, quoted under R-323, read: "a cut-off trace is reported as "session incomplete" with its dropped bytes, never
-    silently compared over fewer frames"; this file loses no frame, but it is a cut-off trace that the diff compares
-    without a notice.
+    bytes, and "session incomplete" is not reported, by the reader or by `prin profile show`, which states the dropped
+    bytes alone; `prin profile diff` compares it with no notice. TASK-M0-51 builds it.
+  - **The rulings it departs from, for this case:**
+    - R-299's own words, `decisions.md:3154-3156`: "#79 item b (R-299): the reader drops an unterminated final line
+      that doesn't parse, reports the session incomplete, and states how many bytes it dropped. A malformed line
+      ending in a newline stays an error. Implementer change plus re-checks, then merge." R-299's "Still in force"
+      line notes that "reports the session incomplete" is open here for this case.
+    - R-323's human words, `decisions.md:3530-3531`, quoted under R-323: "a cut-off trace is reported as "session
+      incomplete" with its dropped bytes, never silently compared over fewer frames". This file loses no frame, but it
+      is a cut-off trace that the diff compares without a notice.
   - **Options seen:**
     1. **(Applied, recommended)** as above.
-    2. As above, but `prin profile diff` prints the dropped bytes for such a file, without "session incomplete"; a
-       few lines in TASK-M0-51.
-    3. Report "session incomplete" for it too: the summaries are kept, so `Session` needs a third state, or the rule
-       that an incomplete session's summaries are absent changes.
+    2. As above, but `prin profile diff` prints the dropped bytes for such a file too, without "session incomplete";
+       a few lines in TASK-M0-51.
+    3. Report "session incomplete" for it too, as R-299's words have it for every dropped line: the summaries are
+       kept, so `Session` needs a third state, or the rule that an incomplete session's summaries are absent changes;
+       `prin profile show` then keeps today's notice.
   - **Needed:** accept or veto. TASK-M0-51 builds option 1 meanwhile; a veto before it merges changes it there.
 
 ---

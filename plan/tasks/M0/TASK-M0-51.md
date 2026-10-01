@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** none
-- **Size:** ~100 lines
+- **Size:** ~150 lines
 
 ## Goal
 Under R-356 a cut-off line after the summary line is valid: the reader keeps the header line, the frames and the
@@ -16,6 +16,8 @@ summary line is present. Today's reader, `engine::contract::profile::read` (`rea
 has one after it as a frame record, so the summary line fails ("line N, a frame record: …") and the file is rejected.
 `engine::contract::profile::read` accepts a cut-off last line after the summary line, with a test and a negative
 control. A file whose only line is a cut-off header line stays an error that states its bytes, and its test is kept.
+`prin profile show` (`crates/prin/src/profile/show.rs`) calls any trace with dropped bytes "session incomplete", so its
+notice changes with the reader, with its own test and negative control.
 
 ## References
 - `decisions.md` § "R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*"
@@ -32,7 +34,12 @@ control. A file whose only line is a cut-off header line stays an error that sta
   is incomplete (its doc comment and `check_ranges`) gives way: a complete trace may have dropped bytes. `read`'s and
   `Trace::dropped_bytes`' doc comments say so. Every other case reads as it does today, a cut-off header as the only
   line included.
-- `crates/engine/src/contract/tests/profile_v1.rs`: the test below, with its registered negative control (R-176).
+- `crates/prin/src/profile/show.rs`: `prin profile show`'s notice, which says "session incomplete; the last line was
+  cut off …" whenever `trace.dropped_bytes > 0`, says "session incomplete" only for an incomplete session; for a
+  complete one with dropped bytes it states the bytes dropped after the summary line, without "session incomplete"
+  (R-356's applied item). The notice for an incomplete session is unchanged.
+- `crates/engine/src/contract/tests/profile_v1.rs` and `crates/prin/tests/profile.rs`: the tests below, each with its
+  registered negative control (R-176).
 
 ## Acceptance tests
 - `cargo test -p engine profile_v1_superset_cut_off_after_summary` — a complete trace (the header line, frame lines,
@@ -43,12 +50,18 @@ control. A file whose only line is a cut-off header line stays an error that sta
   file.
 - `cargo test -p engine profile_v1_superset_cut_off` — a file whose only line is a cut-off header line is still an
   error stating its bytes, and the other cut-off cases read as R-299 has them (REQ-TOOL-148, R-299).
+- `cargo test -p prin profile_show_cut_off_after_summary` — `prin profile show`, plain and `--pretty`, on a complete
+  trace followed by a cut-off line prints the header, frames and summary line, and its notice states the dropped
+  bytes and does not say "session incomplete"; on a trace cut off before its summary line the notice still says
+  "session incomplete" (REQ-TOOL-148, R-356). Its negative control: a notice keyed on `dropped_bytes > 0` alone, as
+  today's, says "session incomplete" for the complete trace and fails the check.
 - `cargo test -p engine profile_v1` and `cargo test -p prin profile` — TASK-M0-17's and TASK-M0-18's tests still pass
   (REQ-TOOL-008), but for the two qa assertions R-356 changes, below.
 
 ## Notes
 - R-356 (2 Oct 2026). That the session reads complete, with the bytes reported as dropped and not as "session
-  incomplete", is R-356's applied-per-R-204 item, open in RQ-192; if the human vetoes it, this task follows the ruling.
+  incomplete", by the reader and by `prin profile show`, is R-356's applied-per-R-204 item, open in RQ-192; if the
+  human vetoes it, this task follows the ruling.
 - Two qa assertions test the behaviour R-356 changes: `crates/engine/tests/qa_TASK-M0-17.rs`'s
   `qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error` asserts that a cut-off frame line after the summary
   line is an error, and `crates/prin/tests/qa_TASK-M0-18.rs`'s `qa_profile_diff_cut_line_with_newline_is_unreadable`
