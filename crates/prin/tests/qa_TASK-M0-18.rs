@@ -238,7 +238,7 @@ fn head_commit() -> Option<String> {
     let out = Command::new("git")
         .args(["rev-parse", "HEAD"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
+        .timed_output()
         .ok()?;
     let commit = String::from_utf8(out.stdout).ok()?.trim().to_owned();
     (out.status.success() && commit.len() == 40).then_some(commit)
