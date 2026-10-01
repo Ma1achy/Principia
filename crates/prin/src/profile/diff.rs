@@ -1,9 +1,9 @@
 //! `prin profile diff BASE NEW --threshold P%` (render_gui_spec § "Profiler", "What `prin profile diff` compares",
 //! REQ-TOOL-119): for each scope, the p95 of its per-frame ms in BASE and in NEW; a regression where NEW's p95 is more
 //! than P% above BASE's, decided exactly (R-323). It exits 1 when any scope regresses, 0 when none does, and 2 when a
-//! file cannot be read or either file has no frame records (R-323; BASE's case applied per R-204). A trace that is an incomplete session, its last line
-//! perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes the reader
-//! dropped (R-323, R-298, R-299).
+//! file cannot be read or either file has no frame records (R-323, R-328). A trace that is an incomplete session, its
+//! last line perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes
+//! the reader dropped (R-323, R-298, R-299).
 //!
 //! The scopes: the frame (`frame_ms`), each stage by its key (`stage_ms`, in the frames where it is not null), each CPU
 //! scope by its stage and the names from the stage down to it, and each GPU pass by its stage and name. A scope that
@@ -270,8 +270,8 @@ fn incomplete(name: &str, trace: &Trace) -> String {
     )
 }
 
-/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323 for NEW; BASE's case
-/// applied per R-204). An incomplete session's notice comes first, as it does before a comparison.
+/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323, R-328). An
+/// incomplete session's notice comes first, as it does before a comparison.
 fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
     if !trace.frames.is_empty() {
         return None;
@@ -288,7 +288,7 @@ fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
 }
 
 /// `prin profile diff BASE NEW --threshold P%`. A BASE or NEW with no frame records has nothing to compare, and is an
-/// error, exit 2 (R-323 for NEW; BASE's case applied per R-204).
+/// error, exit 2 (R-323, R-328).
 pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<ExitCode, String> {
     let (base_trace, new_trace) = (read(base)?, read(new)?);
     if let Some(why) = no_frames("BASE", base, &base_trace) {
@@ -491,7 +491,7 @@ mod tests {
     );
 
     /// A BASE with no frame records is refused, exit 2, as an empty NEW is: with nothing in BASE the gate could never
-    /// fail (R-204, physics's finding 2). Both the header-only (incomplete) and header-plus-summary (complete) cases;
+    /// fail (R-328, physics's finding 2). Both the header-only (incomplete) and header-plus-summary (complete) cases;
     /// an incomplete BASE's notice comes first.
     fn check_no_frames_base(diff: Diff, tag: &str) {
         let lines: Vec<&str> = BASE.lines().collect();

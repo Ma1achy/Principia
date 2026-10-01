@@ -30,7 +30,7 @@ pub(crate) struct Scenario {
     pub(crate) name: &'static str,
     /// Runs `frames` frames. `gpu` is the only way the run can reach a GPU adapter; a scenario with no GPU work never
     /// asks it.
-    run: fn(frames: u64, gpu: &mut AdapterRequest<'_>) -> Result<Run, String>,
+    run: fn(frames: u32, gpu: &mut AdapterRequest<'_>) -> Result<Run, String>,
 }
 
 /// The registered scenarios.
@@ -66,7 +66,7 @@ pub(crate) struct Run {
 }
 
 /// `prin profile --scenario NAME --frames N --json PATH`: runs the scenario and writes its trace.
-pub(crate) fn main(name: &str, frames: u64, path: &Path) -> Result<ExitCode, String> {
+pub(crate) fn main(name: &str, frames: u32, path: &Path) -> Result<ExitCode, String> {
     let scenario = find(name).ok_or_else(|| {
         let names: Vec<&str> = SCENARIOS.iter().map(|s| s.name).collect();
         format!(
@@ -85,7 +85,7 @@ pub(crate) fn main(name: &str, frames: u64, path: &Path) -> Result<ExitCode, Str
 
 /// The trace of a run: the header, the frames and the summary line. The summaries are `null` until the task closing
 /// REQ-TOOL-100 defines them (telemetry §5).
-pub(crate) fn trace_of(scenario: &str, frames: u64, run: Run) -> Result<Trace, String> {
+pub(crate) fn trace_of(scenario: &str, frames: u32, run: Run) -> Result<Trace, String> {
     let header = session_header(run.adapter.as_ref(), config(scenario, frames)?)?;
     Ok(Trace {
         schema: SchemaId::V1,
@@ -99,8 +99,9 @@ pub(crate) fn trace_of(scenario: &str, frames: u64, run: Run) -> Result<Trace, S
 }
 
 /// The run's full configuration (telemetry §5, R-309): `{"scenario": NAME, "frames": N, "sim": SimConfig, "render":
-/// RenderState}`, the two structs as the M0 contract skeleton holds them, each in the canonical serialisation.
-fn config(scenario: &str, frames: u64) -> Result<Map<String, Value>, String> {
+/// RenderState}`, the two structs as the M0 contract skeleton holds them, each in the canonical serialisation. `frames`
+/// is a u32, so it is a JSON number (R-327, R-322).
+fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
     let (sim, render) = skeleton();
     let mut config = Map::new();
     config.insert("scenario".to_owned(), Value::from(scenario));
@@ -154,7 +155,8 @@ pub(crate) fn session_header(
         device: Device {
             gpu: None,
             cpu: cpu_model(),
-            cpu_cores: cpu_cores()?,
+            cpu_cores_available: cpu_cores_available()?,
+            cpu_cores_total: cpu_cores_total(),
             gpu_cores: None,
             memory: None,
         },
@@ -209,11 +211,45 @@ fn cpu_named(sysctl: Option<&[u8]>, cpuinfo: Option<&str>) -> String {
     brand.or_else(model).unwrap_or_else(|| "unknown".to_owned())
 }
 
-/// The CPU cores the process may run on, as the operating system reports them.
-fn cpu_cores() -> Result<u32, String> {
+/// The CPU cores this process may use, as `std::thread::available_parallelism` reports them (R-329).
+fn cpu_cores_available() -> Result<u32, String> {
     let n = std::thread::available_parallelism()
         .map_err(|e| format!("prin profile: the CPU core count is not reported: {e}"))?;
     Ok(u32::try_from(n.get()).unwrap_or(u32::MAX))
+}
+
+/// The machine's own CPU core count (R-329), where the platform reports it cheaply: macOS's `sysctl hw.ncpu`, or the
+/// `processor` entries in Linux's /proc/cpuinfo, the same two sources [`cpu_model`] asks. Both are asked on every
+/// system; `None` where neither gives a count. No new dependency and no unsafe code: a platform these don't cover
+/// writes `null` (telemetry §5).
+fn cpu_cores_total() -> Option<u32> {
+    let sysctl = std::process::Command::new("sysctl")
+        .args(["-n", "hw.ncpu"])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| out.stdout);
+    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
+    cpu_total_from(sysctl.as_deref(), cpuinfo.as_deref())
+}
+
+/// The core count from `sysctl hw.ncpu`'s output, else the number of `processor` entries in /proc/cpuinfo; `None`
+/// where neither gives a count of at least one that fits a u32.
+fn cpu_total_from(sysctl: Option<&[u8]>, cpuinfo: Option<&str>) -> Option<u32> {
+    let counted = |n: u32| Some(n).filter(|n| *n > 0);
+    let ncpu = sysctl.and_then(|out| String::from_utf8_lossy(out).trim().parse::<u32>().ok());
+    let processors = || {
+        let n = cpuinfo?
+            .lines()
+            .filter(|l| {
+                l.split_once(':')
+                    .is_some_and(|(key, _)| key.trim() == "processor")
+            })
+            .count();
+        u32::try_from(n).ok()
+    };
+    ncpu.and_then(counted)
+        .or_else(|| processors().and_then(counted))
 }
 
 /// The four stages a headless run has; a batch render has no present stage (telemetry §5.5).
@@ -231,8 +267,8 @@ const EVENT: &str = "synthetic_frame";
 /// which a profile carries in every scenario (telemetry §5.5: the overhead must be small enough to leave on). Nothing is integrated,
 /// reduced or uploaded, so the counts are 0; the camera and the playhead do not move; and no memory is tracked. A
 /// headless run is a batch render: no present stage (telemetry §5.5). It does no GPU work, so it never asks `gpu`.
-fn synthetic_frames(frames: u64, _gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
-    let records = (0..frames).map(synthetic_frame).collect();
+fn synthetic_frames(frames: u32, _gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
+    let records = (0..u64::from(frames)).map(synthetic_frame).collect();
     Ok(Run {
         frames: records,
         adapter: None,
@@ -329,17 +365,17 @@ mod tests {
 
     /// A scenario that asks for an adapter, as one doing GPU work would; the control's run.
     #[cfg(feature = "controls")]
-    fn asks_for_an_adapter(frames: u64, gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
+    fn asks_for_an_adapter(frames: u32, gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
         let adapter = gpu().ok();
         Ok(Run {
-            frames: (0..frames).map(synthetic_frame).collect(),
+            frames: (0..u64::from(frames)).map(synthetic_frame).collect(),
             adapter,
         })
     }
 
     /// Runs `run` for three frames against a spy: it asks for no GPU adapter, and the header it gets is the no-GPU
     /// form (R-308).
-    fn check_requests_no_adapter(run: fn(u64, &mut AdapterRequest<'_>) -> Result<Run, String>) {
+    fn check_requests_no_adapter(run: fn(u32, &mut AdapterRequest<'_>) -> Result<Run, String>) {
         // A spy for the GPU: it counts the requests, and opens nothing.
         let mut requests = 0u32;
         let done = {
@@ -438,6 +474,43 @@ mod tests {
         "a probe that names no CPU must fail the check",
         expected = "the CPU is misnamed",
         check_cpu_named(|_, _| "unknown".to_owned())
+    );
+
+    /// `sysctl hw.ncpu`'s output, /proc/cpuinfo, and the core count they give.
+    type TotalCase<'a> = (Option<&'a [u8]>, Option<&'a str>, Option<u32>);
+
+    /// `total` reads the machine's core count (R-329): `sysctl hw.ncpu` first, then /proc/cpuinfo's `processor`
+    /// entries, else `None`.
+    fn check_cpu_total(total: fn(Option<&[u8]>, Option<&str>) -> Option<u32>) {
+        let cpuinfo = "processor\t: 0\nmodel name\t: X\n\nprocessor\t: 1\nmodel name\t: X\n";
+        let cases: [TotalCase<'_>; 7] = [
+            (Some(b"10\n"), None, Some(10)),
+            (Some(b"10\n"), Some(cpuinfo), Some(10)),
+            (Some(b""), Some(cpuinfo), Some(2)),
+            (None, Some(cpuinfo), Some(2)),
+            (Some(b"0\n"), Some("model name\t: X\n"), None),
+            (Some(b"4294967296\n"), None, None),
+            (None, None, None),
+        ];
+        for (sysctl, info, want) in cases {
+            assert_eq!(
+                total(sysctl, info),
+                want,
+                "the core total is wrong from {sysctl:?} and {info:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_file_header_cpu_cores_total() {
+        check_cpu_total(cpu_total_from);
+    }
+
+    validation::negative_control!(
+        profile_file_header_cpu_cores_total,
+        "a probe that never reports the total must fail the check",
+        expected = "the core total is wrong",
+        check_cpu_total(|_, _| None)
     );
 
     #[test]

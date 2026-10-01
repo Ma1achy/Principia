@@ -53,11 +53,12 @@
     "device": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["gpu", "cpu", "cpu_cores", "gpu_cores", "memory"],
+      "required": ["gpu", "cpu", "cpu_cores_available", "cpu_cores_total", "gpu_cores", "memory"],
       "properties": {
         "gpu": { "oneOf": [{ "type": "null" }, { "type": "string" }] },
         "cpu": { "type": "string" },
-        "cpu_cores": { "$ref": "#/$defs/count32" },
+        "cpu_cores_available": { "$ref": "#/$defs/count32" },
+        "cpu_cores_total": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count32" }] },
         "gpu_cores": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/count32" }] },
         "memory": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/memory" }] }
       }

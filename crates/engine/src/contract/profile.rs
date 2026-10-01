@@ -178,8 +178,11 @@ pub struct Device {
     pub gpu: Option<String>,
     /// The CPU model.
     pub cpu: String,
-    /// The CPU's core count.
-    pub cpu_cores: u32,
+    /// The CPU cores this process may use, as `std::thread::available_parallelism` reports them (R-329).
+    pub cpu_cores_available: u32,
+    /// The machine's own CPU core count; `None` where the platform doesn't report it cheaply (R-329).
+    #[serde(deserialize_with = "nullable")]
+    pub cpu_cores_total: Option<u32>,
     /// The GPU's core count; `None` when not reported.
     #[serde(deserialize_with = "nullable")]
     pub gpu_cores: Option<u32>,

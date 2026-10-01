@@ -93,7 +93,8 @@ fn header(display: Option<Display>) -> SessionHeader {
         device: Device {
             gpu: Some("Apple M3".to_owned()),
             cpu: "Apple M3".to_owned(),
-            cpu_cores: 8,
+            cpu_cores_available: 8,
+            cpu_cores_total: Some(8),
             gpu_cores: Some(10),
             memory: Some(Memory::Unified { bytes: 18 << 30 }),
         },
@@ -1377,9 +1378,14 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
             "a negative dpi_scale",
         ),
         (
-            "/header/device/cpu_cores",
+            "/header/device/cpu_cores_available",
             json!(u64::from(u32::MAX) + 1),
-            "cpu_cores past u32",
+            "cpu_cores_available past u32",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(u64::from(u32::MAX) + 1),
+            "cpu_cores_total past u32",
         ),
         (
             "/header/device/gpu_cores",
@@ -1413,9 +1419,19 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
     }
     let accepted = [
         (
-            "/header/device/cpu_cores",
+            "/header/device/cpu_cores_available",
             json!(u32::MAX),
-            "cpu_cores at u32::MAX",
+            "cpu_cores_available at u32::MAX",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(u32::MAX),
+            "cpu_cores_total at u32::MAX",
+        ),
+        (
+            "/header/device/cpu_cores_total",
+            json!(null),
+            "a null cpu_cores_total",
         ),
         (
             "/frames/0/tree_depth_max",
@@ -1442,11 +1458,11 @@ fn profile_v1_ranges_reader_agrees_with_schema() {
 
 validation::negative_control!(
     profile_v1_ranges_reader_agrees_with_schema,
-    "cpu_cores at u32::MAX is in range, so rejecting it must fail",
+    "cpu_cores_available at u32::MAX is in range, so rejecting it must fail",
     expected = "was accepted by profile_v1.json",
     check_rejected(
-        &with_value("/header/device/cpu_cores", json!(u32::MAX)),
-        "cpu_cores at u32::MAX"
+        &with_value("/header/device/cpu_cores_available", json!(u32::MAX)),
+        "cpu_cores_available at u32::MAX"
     )
 );
 
@@ -1873,4 +1889,62 @@ validation::negative_control!(
     "the largest sample must fail the nearest-rank check",
     expected = "is not the nearest rank",
     check_percentile(|s, _| s.iter().copied().reduce(f64::max))
+);
+
+// ----- R-329: the core counts, `cpu_cores_available` and `cpu_cores_total` -----
+
+/// `doc`'s device has `cpu_cores_available` and `cpu_cores_total` (as `total`), not `cpu_cores`, and both the reader
+/// and the JSON Schema accept it.
+fn check_core_counts(doc: &Value, total: &Value) {
+    let device = &doc["header"]["device"];
+    assert!(
+        device.get("cpu_cores").is_none(),
+        "the device still has cpu_cores"
+    );
+    assert!(
+        device["cpu_cores_available"].is_u64(),
+        "the device's cpu_cores_available is not a count"
+    );
+    assert_eq!(
+        device.get("cpu_cores_total"),
+        Some(total),
+        "the device's cpu_cores_total is not {total}"
+    );
+    check_accepted(doc, "the R-329 device");
+}
+
+#[test]
+fn profile_v1_core_counts_written() {
+    let mut trace = interactive();
+    check_core_counts(&written(&trace), &json!(8));
+    trace.header.device.cpu_cores_total = None;
+    check_core_counts(&written(&trace), &Value::Null);
+    // The old key is no longer schema v1.
+    let mut doc = written(&interactive());
+    let device = doc
+        .pointer_mut("/header/device")
+        .and_then(Value::as_object_mut)
+        .expect("no device");
+    let cores = device
+        .remove("cpu_cores_available")
+        .expect("no cpu_cores_available");
+    device.insert("cpu_cores".to_owned(), cores);
+    check_rejected(
+        &doc,
+        "a device with cpu_cores in place of cpu_cores_available",
+    );
+}
+
+validation::negative_control!(
+    profile_v1_core_counts_written,
+    "a device with no cpu_cores_total key must fail the check",
+    expected = "cpu_cores_total is not",
+    {
+        let mut doc = written(&interactive());
+        doc.pointer_mut("/header/device")
+            .and_then(Value::as_object_mut)
+            .expect("no device")
+            .remove("cpu_cores_total");
+        check_core_counts(&doc, &Value::Null)
+    }
 );

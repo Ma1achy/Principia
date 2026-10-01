@@ -39,7 +39,7 @@ fn path_str(path: &Path) -> &str {
 }
 
 /// Runs `prin profile --scenario synthetic_frames --frames N --json PATH`; the file's path and text.
-fn synthetic(frames: u64) -> (PathBuf, String) {
+fn synthetic(frames: u32) -> (PathBuf, String) {
     let path = scratch("synthetic.jsonl");
     let out = prin(&[
         "profile",
@@ -226,7 +226,7 @@ fn expected_commit() -> String {
 /// The header line holds the build hash and the config `{"scenario", "frames", "sim", "render"}`, as text in the
 /// canonical serialisation, `SimConfig` and `RenderState` as the M0 skeleton serialises them (R-309); the two read
 /// back to the skeleton.
-fn check_provenance(header_line: &str, frames: u64, commit: &str) {
+fn check_provenance(header_line: &str, frames: u32, commit: &str) {
     let head: Value = serde_json::from_str(header_line).expect("the header line is not JSON");
     let header = &head["header"];
     assert_eq!(
@@ -257,6 +257,11 @@ fn check_provenance(header_line: &str, frames: u64, commit: &str) {
         keys,
         BTreeSet::from(["scenario", "frames", "sim", "render"]),
         "the config's keys are not scenario, frames, sim and render"
+    );
+    assert_eq!(
+        config["frames"],
+        json!(frames),
+        "config.frames is not the frame count as a JSON number (R-327)"
     );
     let (sim, render) = skeleton();
     let expected = format!(
@@ -579,7 +584,7 @@ fn check_measured(text: &str, elapsed_ms: f64) {
 }
 
 /// A run of `frames` frames, and the wall clock it took.
-fn timed(frames: u64) -> (String, f64) {
+fn timed(frames: u32) -> (String, f64) {
     let start = std::time::Instant::now();
     let (_, text) = synthetic(frames);
     (text, start.elapsed().as_secs_f64() * 1000.0)
@@ -1114,7 +1119,7 @@ validation::negative_control!(
 );
 
 /// A NEW with no frame records exits 2, as an unreadable file does, and says why (R-323); so does a BASE with none
-/// (applied per R-204, physics's finding 2).
+/// (R-328, physics's finding 2).
 fn check_no_frames(base: &Path, new: &Path) {
     let out = diff(base, new, "5%");
     assert_eq!(
@@ -1411,13 +1416,84 @@ fn check_no_gpu_header(header_line: &str) {
         json!(expected_cpu()),
         "device.cpu is not the CPU the system names"
     );
+    check_core_counts(&header["device"]);
+}
+
+/// The device's core counts (R-329): `cpu_cores_available` is what `std::thread::available_parallelism` reports;
+/// `cpu_cores_total` is the machine's count, at least that, and is reported on macOS and Linux; `cpu_cores` is gone.
+fn check_core_counts(device: &Value) {
+    assert!(
+        device.get("cpu_cores").is_none(),
+        "device still has cpu_cores"
+    );
     let cores = std::thread::available_parallelism().map_or(0, |n| n.get());
     assert_eq!(
-        header["device"]["cpu_cores"],
+        device["cpu_cores_available"],
         json!(cores),
-        "device.cpu_cores is not the cores the system reports"
+        "device.cpu_cores_available is not the cores the system reports"
+    );
+    let total = device
+        .get("cpu_cores_total")
+        .expect("device has no cpu_cores_total key");
+    match total.as_u64() {
+        Some(n) => assert!(
+            n >= cores as u64 && n <= u64::from(u32::MAX),
+            "device.cpu_cores_total is {n}, below the {cores} available or past u32"
+        ),
+        None => assert!(
+            total.is_null() && !cfg!(any(target_os = "macos", target_os = "linux")),
+            "device.cpu_cores_total is {total}, not a count this platform reports"
+        ),
+    }
+}
+
+#[test]
+fn profile_file_header_core_counts() {
+    let (_, text) = synthetic(1);
+    let head: Value =
+        serde_json::from_str(lines_of(&text)[0]).expect("the header line is not JSON");
+    check_core_counts(&head["header"]["device"]);
+}
+
+validation::negative_control!(
+    profile_file_header_core_counts,
+    "a device with the old cpu_cores key must fail the core-count check",
+    expected = "device still has cpu_cores",
+    check_core_counts(&json!({
+        "cpu_cores": 8, "cpu_cores_available": 8, "cpu_cores_total": 8
+    }))
+);
+
+/// `prin profile --frames N` takes a u32 (R-327): a count past u32 is refused as a usage error.
+fn check_frames_refused(n: &str) {
+    let path = scratch("past_u32.jsonl");
+    let out = prin(&[
+        "profile",
+        "--scenario",
+        "synthetic_frames",
+        "--frames",
+        n,
+        "--json",
+        path_str(&path),
+    ]);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "--frames {n} was not refused as a usage error"
     );
 }
+
+#[test]
+fn profile_file_frames_past_u32_refused() {
+    check_frames_refused(&(u64::from(u32::MAX) + 1).to_string());
+}
+
+validation::negative_control!(
+    profile_file_frames_past_u32_refused,
+    "a frame count within u32 must fail the refusal check",
+    expected = "was not refused",
+    check_frames_refused("1")
+);
 
 #[test]
 fn profile_no_gpu_header_nulls_the_gpu_fields() {
