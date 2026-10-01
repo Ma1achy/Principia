@@ -37,14 +37,14 @@
 - `crates/validation/tests/toolchain.rs` — the trivial kernel on the GPU vs natively.
 - `ICDescriptor` generic over `Real` too, with a layout row per precision; 64 B with declared padding is its f32 instantiation (R-313).
 - `crates/kernel/build.rs` — `cargo::rustc-check-cfg=cfg(target_arch, values("spirv"))`, the lint configuration R-314 accepts; no `allow(unexpected_cfgs)` at any scope.
-- Every workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key naming the pinned toolchain version (R-320, REQ-SYS-075).
+- Every workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key naming its job and the pinned toolchain version (R-320, REQ-SYS-075; per-job keys, R-285, REQ-SYS-073).
 
 ## Acceptance tests
 - `cargo xtask build-kernel` — rust-gpu compiles `crates/kernel` to SPIR-V and naga translates it to WGSL, in CI.
 - `cargo test -p validation toolchain_trivial_kernel` — the same kernel source, run natively and dispatched on the GPU, gives bit-identical packed words over 2¹⁶ inputs (integer-exact); a deliberately mis-built GPU variant (one field's offset shifted) differs (the test can fire).
 - `cargo test -p kernel payload_real_generic` — the payload, `SimState` and `ICDescriptor`, instantiated for f32 and f64 (and the DoubleF64 stub row); every width derives from `size_of::<Real>()`; the layout is generated per precision; `ICDescriptor` at f32 is 64 B (REQ-PAY-017, R-313).
 - Definition: the per-field Real dependence, the f64 layout and the DoubleF64 stub written into dd_simstate_payload §1, and `ICDescriptor`'s f64 and DoubleF64 sizes and padding into generation-root §3.6, approved by the physics reviewer (REQ-PAY-087, R-313).
-- Review checklist (code) — each workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key containing the pinned toolchain channel; the PR shows a warm run's `build-kernel` step time beside a cold one (REQ-SYS-075, R-320).
+- Review checklist (code) — each workflow job that runs `build-kernel` caches `~/.cache/rust-gpu` under a key containing its job name and the pinned toolchain channel; the PR shows a warm run's `build-kernel` step time beside a cold one (REQ-SYS-075, REQ-SYS-073, R-320).
 
 ## Notes
 - PIT-10: the trivial kernel is stateless. It certifies the toolchain and the compiled pack/unpack, not trajectory parity, which is M4 (REQ-VAL-056, REQ-VAL-057).

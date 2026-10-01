@@ -4569,7 +4569,7 @@
   milestone: M0
 - id: REQ-PAY-016
   area: PAY
-  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. An out-of-range input to a table function fails a `debug_assert!` in a debug build and returns 3 in release, never a table cell (R-319)."
+  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. An out-of-range input to a table function fails a `debug_assert!` in a debug build and returns 3 in release, never a table cell (R-319); from `continuation_index` 3 is \"invalid\", and from `inverse`, `continuation_symbol` and `predecessor_symbol` it is the symbol code B (applied literally pending a ruling, R-319). The WGSL table functions return 3 for an out-of-range input."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 3. The word buffer — `free_group_word`
@@ -21255,13 +21255,13 @@
   milestone: M0
 - id: REQ-SYS-075
   area: SYS
-  statement: "Every CI job that builds the kernel must restore and save the rust-gpu build cache (`~/.cache/rust-gpu`) under a key naming the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320)."
+  statement: "Every CI job that builds the kernel must restore and save the rust-gpu build cache (`~/.cache/rust-gpu`) under a key naming its job (R-285, REQ-SYS-073) and the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320)."
   source:
   - file: decisions.md
     section: "R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*"
   verify:
     method: review checklist
-    detail: "code: each workflow job that runs build-kernel caches ~/.cache/rust-gpu with a key containing the pinned toolchain channel; the PR shows a warm run's build-kernel step time beside a cold one"
+    detail: "code: each workflow job that runs build-kernel caches ~/.cache/rust-gpu with a key containing its job name and the pinned toolchain channel; the PR shows a warm run's build-kernel step time beside a cold one"
   rulings:
   - R-285
   - R-320

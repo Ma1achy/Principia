@@ -34,6 +34,7 @@ The same ledger now also emits WGSL (generation-root §1: one source, two langua
 - `cargo xtask lint wgsl` — on the generated WGSL: every `extractBits` argument is u32, no f64, no `enable f16`, `r`/`p`/`r_sh`/`p_sh` are `array<vec2<f32>, 3>`, the word buffer is its own binding indexed per copy; review checklist (code §4) grep of the generated WGSL agrees (REQ-RENDER-001).
 - `cargo test -p xtask lint_wgsl` — a fixture with an i32 `extractBits`, one with an f64 and one with `enable f16` each fail, naming the rule (REQ-RENDER-001; the lint can fire).
 - `cargo test -p ledger continuation_table` — the generated Rust and WGSL tables equal the frozen arrays (`inverse = [1,0,3,2]`, `cont_symbol[0] = [0,1,2,3]`, `[1] = [2,3,0,1]`, `[2] = [3,2,1,0]`, and `continuation_index` with 3 in its four `next = inverse(prev)` cells, R-307); each digit map is an involution; no continuation equals `inverse(prev)` (REQ-PAY-016).
+- `cargo test -p ledger continuation_table_wgsl_out_of_range` — each generated WGSL table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`), given an out-of-range input, returns 3, as the Rust release build does (REQ-PAY-016, R-319).
 - `cargo test -p ledger wgsl_layouts` — the generated WGSL struct layouts for SimState and ICDescriptor match the ledger tables field by field (REQ-PAY-091).
 
 ## Notes
