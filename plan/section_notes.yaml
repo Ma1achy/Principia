@@ -707,3 +707,7 @@
   section: "R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*"
   reason: informative only
   note: reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR #106; records #106's D1–D6 veto item as not vetoed; changes no requirement
+- file: decisions.md
+  section: R-345 — Merged branches are deleted, with their worktrees and target directories
+  reason: informative only
+  note: process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement

@@ -269,6 +269,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
 - **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
 - **R-342** — Tests delete their scratch folders on success and keep them only on failure
+- **R-345** — Merged branches are deleted, with their worktrees and target directories
 
 ## CI
 

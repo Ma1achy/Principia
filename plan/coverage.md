@@ -42,10 +42,10 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 
 ## Sections
 
-1035 sections in 46 files: 873 yield at least one requirement; 162 yield none and are listed below with the reason.
+1036 sections in 46 files: 873 yield at least one requirement; 163 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 115 |
+| informative only | 116 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -124,6 +124,7 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 | R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
 | R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)* | informative only | a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR |
 | R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR |
+| R-345 — Merged branches are deleted, with their worktrees and target directories | informative only | process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

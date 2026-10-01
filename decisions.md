@@ -3890,3 +3890,15 @@ registry's constants table with its entries and no longer waits. RQ-189 moves to
 PR #108's four items applied per R-204 are accepted, and their "veto?" marks are dropped: qa makes R-336's test splits
 in TASK-M0-45's qa commit, a named exception to R-290; R-340 hashes each entry's name; it hashes every entry, whether
 or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031.
+
+## R-345 — Merged branches are deleted, with their worktrees and target directories
+*1 Oct 2026 · applied in `plan/WORKFLOW.md` § "The review loop" and CLAUDE.md § Git*
+
+"add that to be part of the workflow, merged branches are deleted."
+
+*Applied:* said as every merged branch had just been pruned, remote and local. After a PR merges, its remote branch
+and its local branch are deleted, its worktrees and their target directories are removed, and stale remote refs and
+worktree entries are pruned (`git fetch --prune`, `git worktree prune`). The rule covers only branches fully merged
+into `main`. A branch that is the base of an open PR is not deleted until that child PR is retargeted to `main`, since
+deleting a base branch closes its child PRs (CLAUDE.md § Git, "Merging stacked PRs"). `plan/WORKFLOW.md`'s merge step
+and CLAUDE.md § Git say so. Process only (section_notes); no requirement changes.
