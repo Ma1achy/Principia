@@ -42,10 +42,10 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 
 ## Sections
 
-1037 sections in 46 files: 873 yield at least one requirement; 164 yield none and are listed below with the reason.
+1038 sections in 46 files: 873 yield at least one requirement; 165 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 117 |
+| informative only | 118 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -126,6 +126,7 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 | R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR |
 | R-345 — Merged branches are deleted, with their worktrees and target directories | informative only | process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement |
 | R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files | informative only | process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement |
+| R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)* | informative only | process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

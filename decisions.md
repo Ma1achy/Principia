@@ -3918,8 +3918,11 @@ deleting a base branch closes its child PRs (CLAUDE.md § Git, "Merging stacked 
 and CLAUDE.md § Git say so. Process only (section_notes); no requirement changes.
 
 ## R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
+*Amended by R-347.*
+*Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them
+prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347.*
 *1 Oct 2026 · applied in `plan/OPERATIONS.md`, `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, CLAUDE.md §
-"How work runs", `plan/WORKFLOW.md`, REVIEW_QUEUE RQ-190, and R-341–R-343's notes*
+"How work runs", `plan/WORKFLOW.md`, RQ-190 (closed by R-347), and R-341–R-343's notes*
 
 (A) "Before I move work to cloud sessions: write everything your local memory holds that a fresh session needs into
 the repo (CLAUDE.md, plan/WORKFLOW.md, or a new plan/OPERATIONS.md): the overnight rules, merge order, dispatch rule
@@ -3985,12 +3988,48 @@ Report what's open."
   step with `rustup toolchain install`, which installs the nightly its `rust-toolchain.toml` pins. So the script installs
   stable until #96 merges and the nightly after, and stable then only if a Linux job still asks for it. Checked against
   #96's workflows and toolchain file as well as `main`'s.
-- *Applied per R-204 — veto? (RQ-190):* where CI uses an action, the script does the same with rustup, `cargo install
-  --locked <tool>@<version>` (the action downloads a prebuilt binary of that version) and `python3 -m pip install`,
-  falling back to `--user` and then `--break-system-packages` where the system Python refuses; it installs rustup when
-  the machine has none, and requires `git`, `curl` and `cc`, which CI's runner image has; a `python3` of another minor
-  version than CI's warns rather than fails. `plan/OPERATIONS.md`'s Linux readings of memory pressure (PSI or `free`,
-  with thresholds), its cap of `nproc` / 4 agents, its disk thresholds (the Mac's), its log for a cloud session, and its
-  untested sccache note are recommendations, marked so there.
+- *Applied per R-204, ruled by R-347 (RQ-190):* where CI uses an action, the script does the same with rustup, `cargo
+  install --locked <tool>@<version>` (the action downloads a prebuilt binary of that version) and `python3 -m pip
+  install`, falling back to `--user` and then `--break-system-packages` where the system Python refuses; it installs
+  rustup when the machine has none, and requires `git`, `curl` and `cc`, which CI's runner image has; a `python3` of
+  another minor version than CI's warns rather than fails. `plan/OPERATIONS.md`'s Linux readings of memory pressure (PSI
+  or `free`, with thresholds), its cap of `nproc` / 4 agents, its disk thresholds (the Mac's), its log for a cloud
+  session, and its untested sccache note are recommendations, marked so there.
 
 Process only (section_notes); no requirement changes.
+
+## R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
+*1 Oct 2026 · applied in `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, `plan/OPERATIONS.md` and R-346's
+notes*
+
+"RQ-190: items 2–7 accepted as written. Item 1 accepted with one change: install cargo-nextest from its official
+prebuilt installer at the pinned version, and cargo-mutants via cargo-binstall (prebuilt) at the pinned version; fall
+back to cargo install --locked only if a download fails."
+
+*Applied:* RQ-190's items 2–7 stand as R-346 applied them: a `python3` of another minor version than CI's warns; the
+Linux readings of memory pressure (PSI or `free`, with their thresholds); at most `nproc` / 4 agents; the Mac's disk
+thresholds; a cloud session's log in its scratch directory, with its summary as its final message and a PR comment;
+and the untested sccache note. `plan/OPERATIONS.md` drops their *recommended* marks and cites this ruling. Item 1
+stands, rustup, pip and the required `git`, `curl` and `cc` as written, except for the two cargo tools:
+- **cargo-nextest** comes from its official prebuilt installer, `https://get.nexte.st/<version>/<platform>` (`linux` on
+  x86_64, `linux-arm` on aarch64), unpacked into `$CARGO_HOME/bin`.
+- **cargo-mutants** comes through `cargo binstall --no-confirm --disable-strategies compile cargo-mutants@<version>`.
+  cargo-binstall, when the machine has none, is installed first from its official prebuilt installer
+  (`install-from-binstall-release.sh` in `cargo-bins/cargo-binstall`).
+- Each is at the version CI pins, still read from CI's files, never written in the script (R-346 (C)). Each falls
+  back to `cargo install --locked <tool>@<version>` only if its download fails: a failed `curl`, a failed
+  `cargo binstall`, or a platform get.nexte.st has no build for.
+- `scripts/cloud-setup.sh --dry-run` prints each item's install method as a fourth word, the two tools as
+  `prebuilt:get.nexte.st,fallback:cargo-install` and `prebuilt:cargo-binstall,fallback:cargo-install`.
+- `xtask/tests/cloud_setup.rs` gains a test, with its negative control (R-176): the dry run names those routes, and the
+  script's install function, run with `curl`, `tar`, `cargo` and `uname` stubbed, downloads each tool at CI's pin and
+  runs `cargo install --locked` only after a failed download. Sourcing the script defines its functions and installs
+  nothing, so the test can run that function alone.
+- `plan/OPERATIONS.md` § "Start here" says how the two tools are installed, and that a cloud machine needs network
+  access to get.nexte.st and GitHub's releases.
+
+*Applied per R-347:* binstall's own build-from-source strategy is disabled, so a failed download falls back to
+`cargo install --locked` as the ruling says, and not to binstall's unlocked build. CI pins no cargo-binstall version, so
+its installer's current release is used. A cargo tool CI adds later other than these two is built with
+`cargo install --locked`, as item 1 had it. RQ-190 moves to `docs/archive/review_queue/M0.md`. Process only
+(section_notes); no requirement changes.

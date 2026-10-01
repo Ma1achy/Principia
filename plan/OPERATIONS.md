@@ -10,8 +10,7 @@ How to read it:
   ruling wins. A practice with no ruling of its own carries the date it was set, and stands under R-346.
 - **Mac only** marks what holds only on the human's Mac (its paths, APFS clones, `memory_pressure`, Metal, perf runs).
   **Linux cloud** says what a cloud machine does instead.
-- Items marked *recommended (R-346, applied per R-204)* are the orchestrator's recommendation, not a ruling: REVIEW_QUEUE
-  RQ-190 asks the human to accept or veto them.
+- The Linux items R-346 applied per R-204 (RQ-190) are ruled by R-347, which accepted them, and cite it.
 
 ## Start here
 
@@ -24,12 +23,21 @@ How to read it:
    skips what is already installed. Then do what it prints, so the next shell keeps the setup: put `$HOME/.cargo/bin`
    on PATH and export `PRIN_GPU_BACKEND`.
    - CI's `xtask/tests/cloud_setup.rs` fails if the script and CI's Linux jobs disagree on any item or version, if CI
-     installs anything by a means the script doesn't know, or if the script holds a version literal (R-346).
+     installs anything by a means the script doesn't know, or if the script holds a version literal (R-346); and if
+     cargo-nextest and cargo-mutants don't take their prebuilt route, with `cargo install --locked` only after a failed
+     download (R-347).
    - When a workflow gains a new kind of install step, the script refuses to run, naming the step. Teach both the
      script and the test the new step in the same PR.
+   - How it installs (R-346, R-347): the toolchains through rustup, the apt packages through apt-get, the Python
+     packages through pip. cargo-nextest comes from its official prebuilt installer (`get.nexte.st`) and cargo-mutants
+     through cargo-binstall (prebuilt; cargo-binstall itself from its official installer when missing), each at CI's
+     pinned version; each falls back to `cargo install --locked <tool>@<version>` only if its download fails. The dry
+     run prints each item's method as its fourth word.
+   - **The cloud machine needs network access** to `get.nexte.st` and to GitHub's releases (cargo-binstall and the
+     prebuilt tools it fetches), besides crates.io, `sh.rustup.rs` and the apt and PyPI mirrors. Without it, the two
+     tools fall back to building from source, which still needs crates.io.
    - The script warns, and does not fail, when the machine's `python3` is another minor version than the one CI sets
-     up (*recommended (R-346, applied per R-204)*): `plan/check_plan.py` and the xtask tools need only Python 3 with
-     PyYAML.
+     up (R-347): `plan/check_plan.py` and the xtask tools need only Python 3 with PyYAML.
 2. **Read** `CLAUDE.md`, `plan/WORKFLOW.md`, `plan/CURRENT_RULES.md`, this file and `REVIEW_QUEUE.md` (everything open).
    Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight. The loop needs `gh`, signed in to GitHub
    (`gh auth status`); CI's runner images have it, so the setup script doesn't install it.
@@ -234,9 +242,9 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
-| Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. *Recommended (R-346, applied per R-204):* read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | 3 at normal, 2 at warning, at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels, and *recommended (R-346, applied per R-204):* no more agents than `nproc` / 4, since each builds with 4 jobs |
-| Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds, read with `df -h "$HOME"` |
+| Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
+| Agents at once | 3 at normal, 2 at warning, at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels, and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
 
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
@@ -273,8 +281,8 @@ caches. Three parallel builds once left the Mac's disk at 117 MiB free (30 Sep 2
 - A warm seed works as on the Mac: copy it with `cp -a --reflink=auto targets/seed <new target>`, which clones on a
   filesystem that supports it (btrfs, XFS) and copies in full elsewhere, costing disk (§ "Resources").
 - After `scripts/cloud-setup.sh`, `cargo` is rustup's proxy, which reads `rust-toolchain.toml` itself: no PATH fix.
-- *Recommended (R-346, applied per R-204), untested:* sccache may share builds between worktrees only if their paths
-  are kept out of its cache keys (path remapping); the Mac's trial had no hits because they weren't.
+- *Untested* (R-347): sccache may share builds between worktrees only if their paths are kept out of its cache keys
+  (path remapping); the Mac's trial had no hits because they weren't.
 
 ## Toolchain
 
@@ -315,8 +323,8 @@ don't route around it.
 ## Logs
 
 - **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
-- **Linux cloud.** A cloud machine's disk may not outlive the session. *Recommended (R-346, applied per R-204):* keep
-  the running log in the session's scratch directory, and post the away-mode summary as the session's final message and
-  as a comment on each PR it concerns.
+- **Linux cloud.** A cloud machine's disk may not outlive the session. Under R-347,
+  keep the running log in the session's scratch directory, and post the away-mode summary as the session's final
+  message and as a comment on each PR it concerns.
 - On either machine, a log is never where a question lives: open questions go in `REVIEW_QUEUE.md`
   (§ "Asking the human").
