@@ -1,5 +1,6 @@
 //! The payload schema version, the content hash of the ledger (R-36, R-63; dd_generation_root §5 test 7, §6): one
-//! ledger row, one continuation-table entry or one `QuadReduction` member changes it; the unchanged ledger gives the
+//! ledger row, one continuation-table entry, one code assignment (R-22's pair map, payload §2's `state` codes and
+//! `detail` meanings, payload §3's symbol codes) or one `QuadReduction` member changes it; the unchanged ledger gives the
 //! same version on every run, in any source order; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash
 //! (REQ-GEN-008). A hashed register entry's value, type or class changes it, its citation does not, and a register
 //! entry that does not decide stored bits leaves it unchanged (dd_generation_root §3.8, "The hash"; REQ-SYS-063,
@@ -191,6 +192,56 @@ negative_control!(
 fn check_runs_agree(first: u64, second: u64) {
     assert_eq!(first, second, "two runs gave two versions");
 }
+
+/// Each code assignment of `h` edited alone: every symbol code, `state` code, pair-id map entry and `detail` meaning
+/// changes the version (R-22; payload §2, §3).
+fn check_each_assignment_changes(h: Hashed) {
+    for i in 0..4 {
+        let mut e = h;
+        e.symbols.swap(i, (i + 2) % 4);
+        check_changes(&e);
+    }
+    for i in 0..6 {
+        let mut e = h;
+        e.states.swap(i, (i + 1) % 6);
+        check_changes(&e);
+    }
+    for k in 0..3 {
+        for b in 0..2 {
+            let mut e = h;
+            e.pair_bodies[k][b] ^= 3;
+            check_changes(&e);
+        }
+    }
+    for s in 0..4 {
+        let mut e = h;
+        e.detail_meanings[s].0 = "fx_state";
+        check_changes(&e);
+        for code in 0..4 {
+            let mut e = h;
+            e.detail_meanings[s].1[code] = "fx_meaning";
+            check_changes(&e);
+        }
+    }
+}
+
+#[test]
+fn schema_version_changes_with_one_code_assignment() {
+    check_each_assignment_changes(Owned::new().hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_code_assignment,
+    "a swap undone by a second swap restores the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    {
+        let o = Owned::new();
+        let mut h = o.hashed();
+        h.states.swap(0, 3);
+        h.states.swap(0, 3);
+        check_changes(&h);
+    }
+);
 
 #[test]
 fn schema_version_is_stable_across_runs() {

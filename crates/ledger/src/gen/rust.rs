@@ -132,7 +132,8 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 ///
 /// The word buffer's `.w` (`fgw_w`) is not a `SimState` word: its accessors are [`fgw`]'s.
 pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
-    let mut out = helpers();
+    let mut out = state_codes();
+    out.push_str(&helpers());
     for word in words {
         if word.name == FGW_WORD {
             out.push_str(&fgw(entries));
@@ -537,6 +538,20 @@ pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
     )
 }
 
+/// Payload §2's `state` codes as constants, `STATE_<NAME>`, each the state's code in the ledger's table
+/// ([`crate::payload::states`]); the `sd_is_*` predicates read them, never a literal code (W8).
+pub fn state_codes() -> String {
+    let mut out = String::new();
+    for (code, name) in crate::payload::states().iter().enumerate() {
+        let _ = write!(
+            out,
+            "\n/// The `state` code of {name} (payload §2).\npub const STATE_{}: u32 = {code};\n",
+            name.to_uppercase()
+        );
+    }
+    out
+}
+
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /
 /// `unpack2x16float` equivalents, the ±65504 clamp (the register's `f16_finite_max`), the subnormal floor 2⁻²⁴ (the
 /// register's `f16_min_subnormal`, R-278), and payload §6's accessors that
@@ -647,19 +662,21 @@ pub fn unpack2x16float(w: u32) -> [f32; 2] {{
 /// never gate re-dispatch on this (payload §6).
 #[inline]
 pub fn sd_is_resolved_outcome(w: u32) -> bool {{
-    sd_state(w) <= 2
+    let s = sd_state(w);
+    s == STATE_ESCAPE || s == STATE_BOUNDED || s == STATE_COLLISION
 }}
 
-/// Still marching: state 3 (payload §6).
+/// Still marching: `STATE_RUNNING` (payload §6).
 #[inline]
 pub fn sd_is_running(w: u32) -> bool {{
-    sd_state(w) == 3
+    sd_state(w) == STATE_RUNNING
 }}
 
-/// Untrusted: sim_failed or decode_failed, and the reserved codes 6–7 (payload §2, §6).
+/// Untrusted: neither a resolved outcome nor running, so sim_failed, decode_failed and the reserved codes (payload §2,
+/// §6).
 #[inline]
 pub fn sd_is_failed(w: u32) -> bool {{
-    sd_state(w) >= 4
+    !sd_is_resolved_outcome(w) && !sd_is_running(w)
 }}
 
 /// Finished, so the scheduler stops marching it: every state but running, the reserved 6–7 included (payload §2, §6).

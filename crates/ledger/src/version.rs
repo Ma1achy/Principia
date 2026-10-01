@@ -1,9 +1,11 @@
 //! The payload schema version: a content hash of the canonicalised ledger, computed at generation and emitted as
 //! `PAYLOAD_SCHEMA_VERSION` into the generated Rust, never a hand-bumped number (R-36; dd_generation_root §6). The
 //! ledger it covers ([`Hashed`]) is every layout entry and word, the payload structs' member layout, payload §3's
-//! frozen continuation table (R-63), generation-root §3.7's `QuadReduction` member list, and each constants-register
-//! entry that decides what the payload's stored bits mean ([`STORED_BITS`]), by its value, type and class, not its
-//! citation (dd_generation_root §3.8, "The hash"; R-251).
+//! frozen continuation table (R-63), the code assignments that give stored bits their meaning (payload §3's symbol
+//! codes, payload §2's `state` codes, `detail`'s meaning in each state and R-22's pair-id map), generation-root §3.7's
+//! `QuadReduction` member list, and each constants-register entry that decides what the payload's
+//! stored bits mean ([`STORED_BITS`]), by its value, type and class, not its citation (dd_generation_root §3.8, "The
+//! hash"; R-251).
 //!
 //! [`canonical`] serialises it with no formatting-dependent bytes: each item is written field by field in a fixed
 //! order, each string length-prefixed, each number by its bits, big-endian, each enum by its §3.8 spelling. Words,
@@ -44,6 +46,14 @@ pub struct Hashed<'a> {
     pub predecessor_symbol: [[u32; 4]; 3],
     /// Payload §3's `continuation_index[prev][next]`, 3 at the inverse (R-307).
     pub continuation_index: [[u32; 4]; 4],
+    /// Payload §3's symbol codes, each symbol at its code.
+    pub symbols: [&'a str; 4],
+    /// Payload §2's `state` codes, each state at its code.
+    pub states: [&'a str; 6],
+    /// The pair-id map (R-22): pair `k`'s two bodies.
+    pub pair_bodies: [[u32; 2]; 3],
+    /// `detail`'s meaning in each state it is meaningful in, each code's at its code (payload §2).
+    pub detail_meanings: [(&'a str, [&'a str; 4]); 4],
     pub quad_reduction: &'a [ReductionMember],
     /// The constants register; only its [`STORED_BITS`] entries are hashed.
     pub register: &'a [ConstantBuilder],
@@ -53,7 +63,10 @@ impl<'a> Hashed<'a> {
     /// The payload's: `words` and `entries` with the payload structs, payload §3's continuation table, §3.7's
     /// `QuadReduction` and the constants register, as generation emits them.
     pub fn payload(words: &'a [Word], entries: &'a [Entry], structs: &'a [Struct]) -> Self {
-        use crate::payload::{cont_symbol, continuation_index, inverse, predecessor_symbol};
+        use crate::payload::{
+            cont_symbol, continuation_index, detail_meanings, inverse, pair_bodies,
+            predecessor_symbol, states, symbols,
+        };
         Hashed {
             words,
             entries,
@@ -62,6 +75,10 @@ impl<'a> Hashed<'a> {
             cont_symbol: cont_symbol(),
             predecessor_symbol: predecessor_symbol(),
             continuation_index: continuation_index(),
+            symbols: symbols(),
+            states: states(),
+            pair_bodies: pair_bodies(),
+            detail_meanings: detail_meanings(),
             quad_reduction: crate::payload::QUAD_REDUCTION,
             register: crate::constants::REGISTER,
         }
@@ -288,6 +305,13 @@ pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
     c.table(&h.cont_symbol);
     c.table(&h.predecessor_symbol);
     c.table(&h.continuation_index);
+    c.list(&h.symbols, |c, s| c.str(s));
+    c.list(&h.states, |c, s| c.str(s));
+    c.list(&h.pair_bodies, |c, pair| c.list(pair, |c, &b| c.u32(b)));
+    c.list(&h.detail_meanings, |c, (state, codes)| {
+        c.str(state);
+        c.list(codes, |c, m| c.str(m));
+    });
     c.list(h.quad_reduction, |c, m| {
         c.str(m.name);
         c.opt(m.ty, |c, t| c.str(t));

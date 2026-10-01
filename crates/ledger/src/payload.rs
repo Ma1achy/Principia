@@ -341,6 +341,64 @@ pub const fn continuation_index() -> [[u32; 4]; 4] {
     out
 }
 
+/// Payload §3's frozen symbol codes, each symbol at its code: `a = 0, A = 1, b = 2, B = 3` ("part of the binary
+/// format"). `inverse` and the digit maps are over these codes; `last_symbol` stores one (payload §2).
+pub const fn symbols() -> [&'static str; 4] {
+    ["a", "A", "b", "B"]
+}
+
+/// Payload §2's `state` codes, each state at its code: 0 escape · 1 bounded · 2 collision · 3 running ·
+/// 4 sim_failed · 5 decode_failed. Codes 6–7 are reserved and read as finished and untrusted.
+pub const fn states() -> [&'static str; 6] {
+    [
+        "escape",
+        "bounded",
+        "collision",
+        "running",
+        "sim_failed",
+        "decode_failed",
+    ]
+}
+
+/// The pair-id map (R-22; payload §2): pair `k` names the side opposite body `k`, `pair_bodies()[k]` its two bodies,
+/// pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). `detail` under collision and `dmin_pair` use it.
+pub const fn pair_bodies() -> [[u32; 2]; 3] {
+    [[1, 2], [2, 0], [0, 1]]
+}
+
+/// `detail`'s meaning in each state it is meaningful in, each code's at its code (payload §2): escape a body id and
+/// collision a pair id, `3` all three; sim_failed and decode_failed their failure enums.
+pub const fn detail_meanings() -> [(&'static str, [&'static str; 4]); 4] {
+    [
+        (
+            "escape",
+            ["body 0", "body 1", "body 2", "all three: triple ejection"],
+        ),
+        (
+            "collision",
+            ["pair 0", "pair 1", "pair 2", "all three: triple collision"],
+        ),
+        (
+            "sim_failed",
+            [
+                "NaN in state",
+                "Inf/overflow in state",
+                "non-finite derived quantity",
+                "reserved",
+            ],
+        ),
+        (
+            "decode_failed",
+            [
+                "non-finite decode output",
+                "degenerate configuration",
+                "invalid mass construction",
+                "other/reserved",
+            ],
+        ),
+    ]
+}
+
 /// One member of generation-root §3.7's `QuadReduction`: its name, its §3.7 type as written there, and the §3.7
 /// subsection that gives it. Ledger data, not a §3.8 entry, and not emitted: the struct, its members' §3.8 entries and
 /// their placement are TASK-M5-01's (R-306, R-113).

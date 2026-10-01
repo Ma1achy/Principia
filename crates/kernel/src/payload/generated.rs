@@ -2,7 +2,7 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0xbd59c7ec44d0b7d2;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x7d5dd1640899d2a7;
 
 /// `SimStateFTLE`: 144 B, aligned to 8 (dd_simstate_payload §1; dd_generation_root §3.3a, §3.6).
 #[repr(C, align(8))]
@@ -73,6 +73,24 @@ pub struct ICDescriptor {
     pub r_min_pair_0: f32,
     pub _pad: [u32; 4],
 }
+
+/// The `state` code of escape (payload §2).
+pub const STATE_ESCAPE: u32 = 0;
+
+/// The `state` code of bounded (payload §2).
+pub const STATE_BOUNDED: u32 = 1;
+
+/// The `state` code of collision (payload §2).
+pub const STATE_COLLISION: u32 = 2;
+
+/// The `state` code of running (payload §2).
+pub const STATE_RUNNING: u32 = 3;
+
+/// The `state` code of sim_failed (payload §2).
+pub const STATE_SIM_FAILED: u32 = 4;
+
+/// The `state` code of decode_failed (payload §2).
+pub const STATE_DECODE_FAILED: u32 = 5;
 
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;
@@ -173,19 +191,21 @@ pub fn unpack2x16float(w: u32) -> [f32; 2] {
 /// never gate re-dispatch on this (payload §6).
 #[inline]
 pub fn sd_is_resolved_outcome(w: u32) -> bool {
-    sd_state(w) <= 2
+    let s = sd_state(w);
+    s == STATE_ESCAPE || s == STATE_BOUNDED || s == STATE_COLLISION
 }
 
-/// Still marching: state 3 (payload §6).
+/// Still marching: `STATE_RUNNING` (payload §6).
 #[inline]
 pub fn sd_is_running(w: u32) -> bool {
-    sd_state(w) == 3
+    sd_state(w) == STATE_RUNNING
 }
 
-/// Untrusted: sim_failed or decode_failed, and the reserved codes 6–7 (payload §2, §6).
+/// Untrusted: neither a resolved outcome nor running, so sim_failed, decode_failed and the reserved codes (payload §2,
+/// §6).
 #[inline]
 pub fn sd_is_failed(w: u32) -> bool {
-    sd_state(w) >= 4
+    !sd_is_resolved_outcome(w) && !sd_is_running(w)
 }
 
 /// Finished, so the scheduler stops marching it: every state but running, the reserved 6–7 included (payload §2, §6).
