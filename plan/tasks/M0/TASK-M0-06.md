@@ -46,3 +46,6 @@
 - RQ-79 ruled: R-110 — native golden suites run on every commit, GUI screenshots on GUI PRs and at the gates; goldens render with native wgpu offscreen from M1, and M8's Playwright suite reuses the baselines.
 - RQ-93 ruled: R-113 — the screenshot runner was built here, beside the golden-image runner; R-183 splits it into TASK-M0-20.
 - Closes, for gaps the corpus leaves open: REQ-VAL-138 (R-71 calibration) (classification accepted by R-132).
+- R-333 (1 Oct 2026): `qa_m006_symptom_each_channel_mean` in `xtask/tests/qa_TASK-M0-06_edges.rs` and its negative
+  control get separate scratch folders; the shared one made the test flake ("copied: NotFound"). qa makes the change
+  (R-290), in a follow-up PR on this task.

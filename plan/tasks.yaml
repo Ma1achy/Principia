@@ -122,7 +122,7 @@
   title: "The substrate toolchain: one kernel source compiled twice, and the Real-generic payload"
   depends_on: [TASK-M0-04, TASK-M0-10]
   needs: []
-  requirements: [REQ-PAY-017, REQ-PAY-087, REQ-SYS-075]
+  requirements: [REQ-PAY-017, REQ-PAY-087, REQ-SYS-075, REQ-SYS-076]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M0-15

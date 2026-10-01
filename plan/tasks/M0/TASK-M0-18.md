@@ -30,6 +30,9 @@
 - `decisions.md` § "R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so"
 - `decisions.md` § "R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*"
 - `decisions.md` § "R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*"
+- `decisions.md` § "R-327 — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*"
+- `decisions.md` § "R-328 — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*"
+- `decisions.md` § "R-329 — The header's core count is `cpu_cores_available`; no `usize` in a serialised type"
 
 ## Deliverables
 - `crates/prin/src/profile/{mod,run,diff,show}.rs` — the `profile` subcommand (clap), scenario registry, headless run, JSON Lines write; `diff` over per-scope p95; `show --pretty` (R-286).
@@ -40,13 +43,14 @@
 - The canonical serialiser: JCS (RFC 8785) for `SimConfig` and `RenderState`, its test vectors as fixtures; −0.0 written `0`; a u64 field always written as a string, every other number as a number (REQ-TOOL-145, R-318, R-322; gui_state_contract §2).
 
 ## Acceptance tests
-- `cargo test -p prin profile_file` — the written file is JSON Lines, each line parsing against its schema v1 line type (R-286); the header holds the build hash and the config as the M0 contract skeleton (TASK-M0-16) serialises it: `{"scenario", "frames", "sim", "render"}`, `SimConfig` and `RenderState` in the canonical serialisation (R-309); `prin profile` reads it back (REQ-TOOL-002; the dev GUI profiler's read and the provenance-object header are REQ-TOOL-098's verify, M8).
+- `cargo test -p prin profile_file` — the written file is JSON Lines, each line parsing against its schema v1 line type (R-286); the header holds the build hash and the config as the M0 contract skeleton (TASK-M0-16) serialises it: `{"scenario", "frames", "sim", "render"}`, `SimConfig` and `RenderState` in the canonical serialisation (R-309), `frames` a u32 written as a JSON number (R-327); the header's device has `cpu_cores_available` and `cpu_cores_total` (null when not cheaply reported), not `cpu_cores` (R-329); `prin profile` reads it back (REQ-TOOL-002; the dev GUI profiler's read and the provenance-object header are REQ-TOOL-098's verify, M8).
 - `cargo test -p prin profile_scenario` — run the synthetic scenario for N frames twice: the same frame count and the same scope / event sequence; an unregistered scenario name is refused (REQ-TOOL-006).
-- `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007); a p95 of 100 → 107 at `--threshold 7%` is not a regression (the threshold compares exactly, R-323); a NEW trace with no frame records exits 2 (R-323); a cut-off or incomplete NEW prints "session incomplete" and the bytes dropped (R-323, R-298, R-299), its comparison and exit code unchanged.
+- `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007); a p95 of 100 → 107 at `--threshold 7%` is not a regression (the threshold compares exactly, R-323); either file, BASE or NEW, with no frame records exits 2 (R-323, R-328); a cut-off or incomplete BASE or NEW prints "session incomplete" and the bytes dropped (R-323, R-298, R-299), its comparison and exit code unchanged.
 - `cargo test -p prin profile_show` — `prin profile show PATH --pretty` prints each line of a trace indented, and the printed JSON parses to the same values as the file; without `--pretty` it prints the file's lines unchanged (REQ-TOOL-139).
-- Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler", with R-323's three rules (exact threshold, no frames exits 2, "session incomplete" with the dropped bytes), and approved by the physics reviewer (REQ-TOOL-119).
+- Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler", with R-323's three rules as R-328 widens them (exact threshold, either file with no frames exits 2, "session incomplete" with the dropped bytes), and approved by the physics reviewer (REQ-TOOL-119).
 - `cargo test -p prin profile_no_gpu` — the `synthetic_frames` header has `backend.api` "none" and `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; the `synthetic_frames` run requests no GPU adapter; the typed form and `profile_v1.json` accept that header and still reject an `api` outside the five values (REQ-TOOL-144, R-308).
 - `cargo test -p engine canonical_jcs` — RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; a u64 field writes a string at 0 and at 2^53 + 1, and a non-u64 integer field writes a number (R-322); serialising the same `SimConfig` and `RenderState` twice gives the same bytes, and the text reads back to the same values (REQ-TOOL-145, R-318).
+- Review checklist (code) — no type the canonical serialiser or the profiler writes has a `usize` field; each count or size is an explicit u32 or u64 (REQ-TOOL-145, R-329).
 
 ## Notes
 - One format, one parser, one percentile code: `prin` and, later, the interactive path share the frame record (telemetry §5.5).
@@ -71,3 +75,8 @@
   the behaviour, and that's unchanged: a cut-off trace is reported as "session incomplete" with its dropped bytes,
   never silently compared over fewer frames." So an incomplete NEW's comparison still runs and sets the exit code,
   always with the notice. "Apply R-299": R-298 covers the incomplete session, R-299 the dropped bytes.
+- Rulings of 1 Oct (later): R-327 — the frame count is a u32, so `config.frames` is a JSON number (PR #100's veto item
+  11, which typed it u64). R-328 — either file with no frame records exits 2 (PR #100's item 13, applied per R-204,
+  confirmed); render_gui_spec § "Profiler" cites R-328. R-329 — `device.cpu_cores` becomes `cpu_cores_available`, with
+  `cpu_cores_total` (nullable; applied per R-204 — veto?), in TASK-M0-17's typed form, JSON Schema and tests; no
+  `usize` in a serialised type. qa's files from TASK-M0-17 that name `cpu_cores` are qa's to change (R-290).
