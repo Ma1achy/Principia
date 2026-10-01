@@ -81,3 +81,32 @@ milestone gets its own file after its gate. Ids never change.
   2. **A module-level `#![allow(unexpected_cfgs)]` with a reason comment**, which R-197 lets the code reviewer approve
      without a ruling. Broader: it silences every unexpected cfg in that module.
 - **Needed:** which one. Blocks PR #96's merge (TASK-M0-14).
+
+---
+
+## RQ-185: whether `ICDescriptor`'s width follows `Real`, or stays 12 × f32 at every precision *(docs, physics, TASK-M0-14, PR #96, REQ-PAY-017)*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-PAY-017 (closed by TASK-M0-14): "payload width must be a function of the Real type,
+    never hardcoded to f32" (philosophy §7.1).
+  - `docs/design/principia_systems_architecture.md` (lines 23, 63, 302) counts the payload as `SimState` + `ICDescriptor`.
+  - Against that, `decisions.md` § R-86, `docs/design/principia_dd_generation_root.md` §3.6 and
+    `docs/contracts/principia_render_contract.md` (line 14) fix `ICDescriptor` at "64 B … 12 × f32". Nothing says whether
+    that is the f32 instantiation or a fixed width, and no f64 layout is defined.
+  - REQ-PAY-087's definition narrows the generic layout to `SimState` only.
+  - PR #96 adds to `docs/design/principia_dd_simstate_payload.md` §1: "The word buffer (`FreeGroupWord`, integer) and
+    `ICDescriptor` are not `SimState` and are not generic", and keeps `ICDescriptor` f32 in the generated code ("Applied per
+    R-204 — veto?" item 1).
+- **What:** the physics reviewer did not accept that item; it is a physics choice, not a mechanical one. With `ICDescriptor`
+  f32 at f64:
+  - `K_0` and `V_0` are f32-rounded, so R-86's E₀ = K₀ + V₀ is f32-rounded on the f64 path.
+  - REQ-VAL-117 ("|E_0 − (K_0+V_0)| … at each precision") and REQ-VAL-027 would measure f32 rounding at f64.
+  - REQ-DEC-043's f64-vs-f32 decode comparison would read every `ICDescriptor` field through f32 rounding.
+- **Options seen:**
+  1. **`ICDescriptor` follows `Real`; "64 B … 12 × f32" is read as its f32 instantiation (the physics reviewer's
+     recommendation).** At f64 it is 12 × f64 plus declared padding, and its layout row is generated per precision, as
+     `SimState`'s is. TASK-M0-14 (#96) makes it generic and amends §1, R-86's text reading as the f32 case.
+  2. **`ICDescriptor` stays 12 × f32 at every precision.** REQ-PAY-017's "payload" is read as `SimState` alone. The f64
+     checks above (REQ-VAL-117, REQ-VAL-027, REQ-DEC-043) are restated for an f32-rounded E₀ and descriptor.
+- **Needed:** which one, and whether REQ-PAY-017 may close in #96 before the ruling. Blocks PR #96's merge (TASK-M0-14).
+  Until then, #96 marks the §1 sentence as pending RQ-185.
