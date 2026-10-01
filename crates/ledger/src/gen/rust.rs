@@ -401,29 +401,36 @@ fn array(rows: &[[u32; 4]]) -> String {
 }
 
 /// `cells` as a comparison chain on `var`, `if var == 0 { cells[0] } else if var == 1 { … } else { cells[n − 1] }`,
-/// each cell's text indented to `depth` levels of four spaces, rustfmt's layout. The last cell is the `else`, so a
-/// `var` past the table's last code reads the last cell; the callers pass codes only. A last cell that is itself a
-/// chain continues this one, `else if …`, clippy's collapsed form of `else { if … }`. No runtime array index is
-/// emitted: rust-gpu lowers one to an implicit bounds check, a compiler-injected multi-level exit (GPU determinism
-/// note § "The discipline", rule 5).
+/// each cell's text indented to `depth` levels of four spaces, rustfmt's layout. The first cell opens the chain, the
+/// middle cells are its `else if` arms, and the last is the `else`, so a `var` past the table's last code reads the
+/// last cell; the callers pass codes only. A last cell that is itself a chain continues this one, `else if …`, clippy's
+/// collapsed form of `else { if … }`. No runtime array index is emitted: rust-gpu lowers one to an implicit bounds
+/// check, a compiler-injected multi-level exit (GPU determinism note § "The discipline", rule 5).
 fn select(var: &str, cells: &[String], depth: usize) -> String {
     let pad = "    ".repeat(depth);
     let inner = "    ".repeat(depth + 1);
-    let mut out = String::new();
-    for (i, cell) in cells.iter().enumerate() {
-        if i > 0 && i + 1 == cells.len() && cell.starts_with("if ") {
-            let cell = cell.replace('\n', &format!("\n{pad}"));
-            let _ = write!(out, " else {cell}");
-            continue;
-        }
-        let cell = cell.replace('\n', &format!("\n{inner}"));
-        if i == 0 {
-            let _ = write!(out, "if {var} == {i} {{\n{inner}{cell}\n{pad}}}");
-        } else if i + 1 < cells.len() {
-            let _ = write!(out, " else if {var} == {i} {{\n{inner}{cell}\n{pad}}}");
-        } else {
-            let _ = write!(out, " else {{\n{inner}{cell}\n{pad}}}");
-        }
+    let indent = |cell: &str, to: &str| cell.replace('\n', &format!("\n{to}"));
+    let Some((first, rest)) = cells.split_first() else {
+        return String::new();
+    };
+    let mut out = format!(
+        "if {var} == 0 {{\n{inner}{}\n{pad}}}",
+        indent(first, &inner)
+    );
+    let Some((last, middle)) = rest.split_last() else {
+        return out;
+    };
+    for (code, cell) in (1..).zip(middle) {
+        let _ = write!(
+            out,
+            " else if {var} == {code} {{\n{inner}{}\n{pad}}}",
+            indent(cell, &inner)
+        );
+    }
+    if last.starts_with("if ") {
+        let _ = write!(out, " else {}", indent(last, &pad));
+    } else {
+        let _ = write!(out, " else {{\n{inner}{}\n{pad}}}", indent(last, &inner));
     }
     out
 }
