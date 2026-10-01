@@ -74,8 +74,8 @@
   the target per job (REQ-SYS-076, new; closed here). R-326 — caches are saved only on pushes to `main`; this task
   makes the change in every workflow, since it already edits their cache steps (REQ-SYS-073 stays closed by
   TASK-M0-42; its R-326 change is made here). R-331 — #96's veto item 11, `_pad` at 16 B, stands. Applied per
-  R-204 — veto?: R-326 also applies to the workflows TASK-M0-42 and others wrote, all in this PR. Size: the two CI
-  rulings add workflow edits beyond the ~450 lines.
+  R-204, accepted 1 Oct 2026 (R-326's note): R-326 also applies to the workflows TASK-M0-42 and others wrote, all in
+  this PR. Size: the two CI rulings add workflow edits beyond the ~450 lines.
 - Rulings of 1 Oct (R-335 to R-337): R-335 (RQ-186) — qa narrows `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's
   own `if:`, in this PR's qa commit, a named exception to R-290; the orchestrator's R-237 check accepts `M` on that file.
   R-336 — the CI overrun this PR measured is accepted here; the sharding and the splits of the long tests are

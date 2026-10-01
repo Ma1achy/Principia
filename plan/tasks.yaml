@@ -2237,3 +2237,11 @@
   requirements: [REQ-RENDER-083]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-51
+  milestone: M0
+  title: The profile reader accepts a cut-off last line after the summary line
+  depends_on: [TASK-M0-17]
+  needs: []
+  requirements: [REQ-TOOL-148]
+  reviewers: [code, qa]
+  pitfalls: []

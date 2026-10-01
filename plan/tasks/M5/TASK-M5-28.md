@@ -61,9 +61,9 @@ readback (R-294).
 - Definitions (R-72) this task writes: REQ-TOOL-130.
 - R-113 (RQ-93 M0-4): REQ-TOOL-006's deep_zoom_03 scenario and its 600-frame run are split off as REQ-TOOL-130 and closed here; M0 runs a synthetic scenario (TASK-M0-18).
 - REQ-TOOL-117 is an R-71 calibration; the human confirms it at the M5 gate.
-- R-294 (RQ-174): the GPU binding and readback of R-288's counters are this task's, applied per R-204 — veto?. The
-  march that packs `d_min` is TASK-M4-05's, reached through TASK-M5-21. On the CPU, the packer's caller passes in a
-  per-frame counters struct (TASK-M0-10); the kernel holds no mutable static.
+- R-294 (RQ-174): the GPU binding and readback of R-288's counters are this task's, applied per R-204, accepted by
+  R-354. The march that packs `d_min` is TASK-M4-05's, reached through TASK-M5-21. On the CPU, the packer's caller
+  passes in a per-frame counters struct (TASK-M0-10); the kernel holds no mutable static.
 - Size, applied per R-264: R-294's scope (the counter buffer and its bind group, the per-frame reset, the non-stalling
   readback, the record fields, the kernel binding and `dmin_counters.rs`) takes the estimate from ~400 to ~520 lines.
   The task stays one task: its complexity is one frame record and its readback, and nothing moves elsewhere.

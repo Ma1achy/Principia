@@ -265,13 +265,17 @@ rejects the file for the missing summary line; `prin profile query --live` reads
 line is checked against the definition for the place it holds, so the last line is a `frame` (or the `header_line`).
 Only the summary line may be missing, besides the cut-off line below.
 
-**A line cut off at the end** (R-299). A last line with no newline after it that is not one complete JSON value is the
-part of a line the session was writing when it stopped, not a line of the trace. A reader drops it, reads the lines
-before it as the trace (the line before it holds a frame's place, so it is a frame record or the header line), reports
-the session incomplete, with "session incomplete" as above, and states the number of bytes it dropped. A last line with
-no newline that is one complete JSON value is read as any last line is. A line that ends in a newline and is not the
-object its place calls for is not schema v1, wherever it is, and a reader rejects the file for it. A file whose only
-line is cut off has no header line, and a reader rejects it as it does an empty file.
+**A line cut off at the end** (R-299, R-356). A last line with no newline after it that is not one complete JSON value
+is the part of a line the session was writing when it stopped, not a line of the trace. A reader drops it, reads the
+lines before it as the trace, and states the number of bytes it dropped. When the line before it is a frame record or
+the header line, the session ended before its summary line, and the reader reports it incomplete, with "session
+incomplete" as above. When the line before it is the summary line, the reader keeps the summary line and the frames
+(R-356): the session wrote its summary, so `leak_flags` and `hot_paths` are read from it, and the session is complete
+(applied per R-204 — veto?, RQ-192: the bytes after the summary line are reported as dropped, not as "session
+incomplete"). A last line with no newline that is one complete JSON value is read as any last line is. A line that
+ends in a newline and is not the object its place calls for is not schema v1, wherever it is, and a reader rejects the
+file for it. A file whose only line is cut off has no header line, and a reader rejects it as it does an empty file
+(R-299, R-356).
 
 `leak_flags` and `hot_paths` are the precomputed leak flags and hot-path summaries that `principia_render_gui_spec.md`
 § "Profiler" puts in schema v1, so an agent reads conclusions, not raw traces. They summarise the whole session, so

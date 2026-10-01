@@ -185,7 +185,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-294** — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
 - **R-297** — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*. Still in force: all of it on native backends. In the browser build: the compute setting stays explicit, off by default, on the sim key, in pxpack and recorded in the header as asked for, and display stages may keep fast-math on; bit-identity with the setting off no longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to R-85's Tier-N tolerances (R-303). Amended by R-303.
 - **R-298** — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*. Still in force: items 12 and 15 as accepted; a trace with no final summary line, its last line a frame record or the header line, is valid: the reader returns the frames, reports `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it; `prin profile query --live` works on an in-progress trace. R-299 replaces only the Applied note's rule that a last line cut off inside its JSON object is rejected. R-341 has `prin profile` append the summary line as the final line at session end, after frames streamed as they complete. Amended by R-299 and R-341.
-- **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
+- **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*. Still in force: all of it but its Applied-per-R-204 note's rule that a summary line followed by a cut-off line is an error: that line is dropped and its bytes reported, and the summary line and the frames are kept (R-356). A file whose only line is a cut-off header line stays an error. Whether its ruling's "reports the session incomplete" holds for a cut-off line after the summary line is open in RQ-192 (C). Amended by R-356.
 - **R-300** — #78's items 11–13 are accepted; `DminCounters`' fields are private
 - **R-303** — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
 - **R-306** — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*
@@ -210,6 +210,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-341** — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*
 - **R-343** — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
 - **R-344** — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
+- **R-356** — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*
 
 ## Values
 
@@ -273,6 +274,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Amended by R-347.
 - **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
 - **R-349** — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+- **R-354** — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue. Still in force: all of it but item 6's extent: the human's "item 6 stands" covered R-297's placements only (R-355), so R-297's other applied-per-R-204 bullets and the five marks copying two of them (REQ-RENDER-025, REQ-COL-060, REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192, where R-356 accepts those bullets but the GUI bullet and the R-133 amendment; R-355 accepts the check's design. Corrected in part by R-355.
+- **R-355** — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*
 
 ## CI
 
@@ -367,7 +370,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-270** — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)*. Still in force: qa's one-round exception; fixture copies share one build directory per fixture type; CI caches the pool between runs; the local pool ~5 GB. The ~10.5 min target applies to each CI job's warm wall-clock time (R-325); R-301's measurement, about 10m28.5s per warm `ci` run as PR #85 measured it, stands as a record. R-336 accepts PR #96's overrun of it, and TASK-M0-45 brings each job back under it. Amended by R-301, R-325 and R-336.
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
-- **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
+- **R-304** — The "veto?" items on #78, #79, #89 and #90 stand. Still in force: all of it but #79's item g: a cut-off line after the summary line is valid, the summary line and the frames kept and the dropped bytes reported (R-356). Item h stands: a cut-off header as the only line is an error. Amended by R-356.
 - **R-310** — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
 - **R-311** — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done
 - **R-316** — #96's `closure_min` widening with `Real` stands
@@ -375,3 +378,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-331** — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)
 - **R-333** — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
 - **R-350** — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
+- **R-353** — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted

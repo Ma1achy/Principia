@@ -196,6 +196,8 @@ Otherwise leave it open, write down why, and go on to the next ready task; if th
 
 **Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
 TASK-M0-07 to TASK-M0-15; R-336 makes TASK-M0-45 the next M0 task to start, at high priority.
+R-355 (2 Oct 2026): the seven ready tasks, TASK-M0-15 and TASK-M0-45 to TASK-M0-50, go to the cloud session,
+TASK-M0-45 and TASK-M0-49 first. R-356 (2 Oct 2026) adds TASK-M0-51, the reader task, to them.
 
 **Never, while the human is away:**
 - make or record a new ruling (applying an existing one is fine);
@@ -235,6 +237,10 @@ self-merge in away mode.
 - **Every open question is in `REVIEW_QUEUE.md`**, pending veto items among them, never only in a PR description or a
   log (the human, 1 Oct 2026, R-346). A session stops at a clean point: nothing half-applied, every open question
   recorded there.
+- **An open mark is named by its entry** (R-354). Each "veto?" mark in decisions.md, CLAUDE.md, `plan/` or `docs/`
+  has a `**Mark:**` line in its open REVIEW_QUEUE.md entry, giving the file and text near the mark. The ruling that
+  settles it replaces "veto?" with the ruling ("applied per R-204, accepted by R-m") in the commit that archives the
+  entry; `plan/check_plan.py` fails on an open mark no open entry names (`plan/tools/veto_marks.py`).
 - **Changing a decision.** A port adds; it never changes a decision without a REVIEW_QUEUE entry and a ruling
   (CLAUDE.md § "Changing the docs"). Before committing a docs change, word-diff each removed line against its
   replacement; if a decision's content changed, restore it and open an RQ instead (24 Sep 2026).
