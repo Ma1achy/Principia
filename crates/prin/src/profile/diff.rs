@@ -293,3 +293,188 @@ pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<Exi
         ExitCode::SUCCESS
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// `x · 2^k` against `y`, exactly: the zero short-circuit, each length branch, and each tie at equal lengths.
+    fn check_compare_scaled(compare: fn(u128, i32, u128) -> Ordering) {
+        let cases: [(u128, i32, u128, Ordering); 13] = [
+            (0, 0, 0, Ordering::Equal),
+            (0, 10, 1, Ordering::Less),
+            (1, -10, 0, Ordering::Greater),
+            (1, 10, 2, Ordering::Greater),
+            (1 << 9, 3, 1 << 20, Ordering::Less),
+            (1, -127, 1 << 127, Ordering::Less),
+            (3, 1, 6, Ordering::Equal),
+            (3, 1, 5, Ordering::Greater),
+            (3, 1, 7, Ordering::Less),
+            (5, -1, 3, Ordering::Less),
+            (7, -1, 3, Ordering::Greater),
+            (4, -1, 2, Ordering::Equal),
+            (u128::MAX, 0, u128::MAX, Ordering::Equal),
+        ];
+        for (x, k, y, want) in cases {
+            assert_eq!(
+                compare(x, k, y),
+                want,
+                "{x} · 2^{k} against {y} is misordered"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_diff_compare_scaled_is_exact() {
+        check_compare_scaled(compare_scaled);
+    }
+
+    validation::negative_control!(
+        profile_diff_compare_scaled_is_exact,
+        "a comparison that ignores the power of two must fail the check",
+        expected = "is misordered",
+        check_compare_scaled(|x, _, y| x.cmp(&y))
+    );
+
+    /// A double's magnitude as significand and power of two: normal, subnormal and zero.
+    fn check_parts(parts: fn(f64) -> (u128, i32)) {
+        let cases: [(f64, (u128, i32)); 5] = [
+            (0.0, (0, -1074)),
+            (f64::from_bits(1), (1, -1074)),
+            (f64::from_bits((1 << 52) - 1), ((1 << 52) - 1, -1074)),
+            (1.0, (1 << 52, -52)),
+            (f64::MAX, ((1 << 53) - 1, 971)),
+        ];
+        for (x, want) in cases {
+            assert_eq!(parts(x), want, "{x:e} is split wrongly");
+        }
+    }
+
+    #[test]
+    fn profile_diff_parts_are_exact() {
+        check_parts(parts);
+    }
+
+    validation::negative_control!(
+        profile_diff_parts_are_exact,
+        "a split that drops the exponent must fail the check",
+        expected = "is split wrongly",
+        check_parts(|x| (u128::from(x.to_bits()), 0))
+    );
+
+    /// R-323's exact test, at ties, from zero and between subnormal p95s.
+    fn check_regresses(regresses: fn(f64, f64, &Threshold) -> bool) {
+        let cases: [(f64, f64, &str, bool); 9] = [
+            (100.0, 107.0, "7%", false),
+            (100.0, f64::from_bits(107.0f64.to_bits() + 1), "7%", true),
+            (0.0, 0.0, "5%", false),
+            (0.0, f64::from_bits(1), "5%", true),
+            (f64::from_bits(1), f64::from_bits(1), "0%", false),
+            (f64::from_bits(1), f64::from_bits(2024), "5%", true),
+            (1e-300, f64::from_bits(1), "5%", false),
+            (f64::from_bits(1), 1e-300, "5%", true),
+            (f64::from_bits(100), f64::from_bits(105), "5%", false),
+        ];
+        for (base, new, threshold, want) in cases {
+            let p = parse_threshold(threshold).expect("a threshold");
+            assert_eq!(
+                regresses(base, new, &p),
+                want,
+                "{base:e} -> {new:e} at {threshold} is misjudged"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_diff_regresses_is_exact() {
+        check_regresses(regresses);
+    }
+
+    validation::negative_control!(
+        profile_diff_regresses_is_exact,
+        "a test that never finds a regression must fail the check",
+        expected = "is misjudged",
+        check_regresses(|_, _, _| false)
+    );
+
+    /// `--threshold` prints as written, with its `%`.
+    fn check_threshold_shown(show: fn(&Threshold) -> String) {
+        for (text, want) in [("7.5%", "7.5%"), ("5", "5%"), ("0.25", "0.25%")] {
+            let p = parse_threshold(text).expect("a threshold");
+            assert_eq!(show(&p), want, "{text:?} is shown wrongly");
+        }
+    }
+
+    #[test]
+    fn profile_diff_threshold_shown_as_written() {
+        check_threshold_shown(|p| p.to_string());
+    }
+
+    validation::negative_control!(
+        profile_diff_threshold_shown_as_written,
+        "a threshold shown without its % must fail the check",
+        expected = "is shown wrongly",
+        check_threshold_shown(|p| p.text.clone())
+    );
+
+    /// A complete trace of 20 frames.
+    const BASE: &str = include_str!("../../tests/fixtures/profile/base.jsonl");
+
+    fn scratch(name: &str, text: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "prin-diff-unit-{}-{name}.jsonl",
+            std::process::id()
+        ));
+        std::fs::write(&path, text).expect("the scratch file is written");
+        path
+    }
+
+    type Diff = fn(&Path, &Path, &Threshold) -> Result<ExitCode, String>;
+
+    /// A NEW with no frame records is refused; the refusal says "session incomplete" when NEW is an incomplete
+    /// session, and not when it is complete (R-323).
+    fn check_no_frames_notice(diff: Diff, tag: &str) {
+        let lines: Vec<&str> = BASE.lines().collect();
+        let (header, summary) = (lines[0], lines[lines.len() - 1]);
+        let base = scratch(&format!("{tag}-base"), BASE);
+        let threshold = parse_threshold("5%").expect("a threshold");
+        for (name, text, incomplete) in [
+            ("complete", format!("{header}\n{summary}\n"), false),
+            ("incomplete", format!("{header}\n"), true),
+        ] {
+            let new = scratch(&format!("{tag}-{name}"), &text);
+            let refused = diff(&base, &new, &threshold);
+            std::fs::remove_file(&new).ok();
+            let Err(why) = refused else {
+                panic!("a {name} NEW with no frames is not refused");
+            };
+            assert!(
+                why.contains("no frame records"),
+                "the refusal does not say why: {why}"
+            );
+            assert_eq!(
+                why.contains("session incomplete"),
+                incomplete,
+                "a {name} NEW with no frames has the wrong notice: {why}"
+            );
+        }
+        std::fs::remove_file(&base).ok();
+    }
+
+    #[test]
+    fn profile_diff_no_frames_notice() {
+        check_no_frames_notice(main, "test");
+    }
+
+    validation::negative_control!(
+        profile_diff_no_frames_notice,
+        "a refusal that never says session incomplete must fail the check",
+        expected = "has the wrong notice",
+        check_no_frames_notice(
+            |base, new, threshold| main(base, new, threshold)
+                .map_err(|e| e.replace("session incomplete", "")),
+            "control"
+        )
+    );
+}
