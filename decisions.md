@@ -3806,11 +3806,10 @@ left by a killed run is the incomplete session R-298 and R-299 define, and the r
 Telemetry §5 says so. REQ-TOOL-147 (new, M0) carries it, closed by a new task, TASK-M0-47, depending on TASK-M0-18,
 with the code, qa and perf reviewers, as TASK-M0-18 has, less physics, since no definition changes. Its test kills a
 run mid-session and reads the partial trace as "session incomplete". *Applied per R-204, accepted by R-346:* the header
-line is
-flushed as soon as it is written, so a run killed before its first frame flush still leaves a trace R-298 accepts (a
-header line alone), and a crash loses at most the frames, never the header; the memory bound is checked by the perf
-reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no number for
-it.
+line is flushed as soon as it is written, so a run killed before its first frame flush still leaves a trace R-298
+accepts (a header line alone), and a crash loses at most the frames, never the header; the memory bound is checked by
+the perf reviewer against the run's peak memory at two frame counts, which the PR reports, since the corpus gives no
+number for it.
 *Veto not exercised, 1 Oct 2026:* "The five R-204 items on R-341–R-343 stand." (R-346 (C)): the header line flushed as
 soon as it is written; the memory bound judged by the perf reviewer at two frame counts. A note, not a ruling.
 
@@ -3825,11 +3824,10 @@ and a per-process counter (qa's commit dc3afb4). No later run reuses that name, 
 folders pile up under `CARGO_TARGET_TMPDIR` run after run. A test's scratch folder, or scratch file, is deleted when the
 test passes and kept, with its path in the failure output, when the test fails. REQ-VAL-178 (new, M0) carries it, closed
 by a new task, TASK-M0-48, depending on TASK-M0-06, with the code and qa reviewers. *Applied per R-204, accepted by
-R-346:* the
-task covers each helper that makes a fresh, uniquely named scratch folder or file per call (by process id, counter or
-time), which a later run never reuses: a search of 1 Oct 2026 found them in `xtask/tests/` (`qa_TASK-M0-06_edges`,
-`qa_TASK-M0-23_r305`, `qa_TASK-M0-23_shards`, `qa_TASK-M0-38`, `qa_TASK-M0-40`, `mutants_no_mutant`),
-`crates/prin/tests/` (`profile`, `qa_TASK-M0-18`, `qa_TASK-M0-18_base`, `qa_TASK-M0-18_rulings`),
+R-346:* the task covers each helper that makes a fresh, uniquely named scratch folder or file per call (by process id,
+counter or time), which a later run never reuses: a search of 1 Oct 2026 found them in `xtask/tests/`
+(`qa_TASK-M0-06_edges`, `qa_TASK-M0-23_r305`, `qa_TASK-M0-23_shards`, `qa_TASK-M0-38`, `qa_TASK-M0-40`,
+`mutants_no_mutant`), `crates/prin/tests/` (`profile`, `qa_TASK-M0-18`, `qa_TASK-M0-18_base`, `qa_TASK-M0-18_rulings`),
 `crates/prin/src/profile/diff.rs`'s unit tests, and `crates/validation/tests/` (`qa_TASK-M0-38`, `qa_TASK-M0-39`,
 `stand_in`). A helper with a fixed name reuses and replaces its folder on the next run, so it does not accumulate and is
 left as it is. qa makes the edits to qa's files in TASK-M0-48's qa commit: R-290 allows it on the files only qa has
@@ -3880,10 +3878,10 @@ REQ-PAY-091 cite this ruling, and TASK-M0-13 (PR #107) builds it. RQ-188, filed 
 in `docs/archive/review_queue/M0.md` with this ruling's port, so its id resolves on `main`; #107's fix pass deletes its
 open copy and drops REQ-RENDER-001's and REQ-PAY-091's `rq: RQ-188`.
 *Applied per R-204, accepted by R-346:* the table's constants are named `SIMSTATE_GROUP`, `SIMSTATE_BINDING`,
-`WORD_GROUP` and `WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry the same numbers)
-and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two targets). They
-are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root §3.8 "The
-hash").
+`WORD_GROUP` and `WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry
+the same numbers) and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two
+targets). They are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root
+§3.8 "The hash").
 *Veto not exercised, 1 Oct 2026:* "The five R-204 items on R-341–R-343 stand." (R-346 (C)): the binding constants'
 names, `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING`; their emission to the WGSL and the
 generated Rust; and their not being hashed. A note, not a ruling.
