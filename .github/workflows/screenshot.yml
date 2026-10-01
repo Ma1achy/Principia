@@ -28,11 +28,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
-          shared-key: screenshot
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
-          # Saved only in a run on a push to `main`, which this workflow never is: it restores what `main` saved under
-          # its key, and saves nothing (R-326).
+          # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It
+          # restores, read-only, the key `ci.yml`'s `ci` job saves on `main`, `cargo-registry-ci-…` (R-337).
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers

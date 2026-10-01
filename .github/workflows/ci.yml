@@ -24,6 +24,10 @@
 # rust-cache through its `save-if`, the others as an `actions/cache/restore` step and an `actions/cache/save` step,
 # each under the condition below. A pull-request run, or a push to any other branch, restores what `main` saved and
 # never saves.
+# The workflows that never run on a push to `main` (mutants.yml, pr-check.yml, reviews.yml, screenshot.yml,
+# stand-in-soak.yml) save nothing, and restore, read-only, the keys this workflow's jobs save on `main`: the cargo
+# registry under the `ci` job's key, and the rust-gpu build under the `gpu-kernel` job's (R-337). rust-cache hashes the
+# environment's CARGO_* variables into its key, so each of them sets CARGO_TERM_COLOR as this workflow does.
 name: ci
 
 on:

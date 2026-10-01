@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# rust-cache hashes the environment's CARGO_* variables into its key: set as in `ci.yml`, so the `ci` job's key, which
+# this workflow restores (R-337), is the key computed here.
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   pr-check:
     runs-on: ubuntu-latest
@@ -22,11 +27,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
-          shared-key: pr-check
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
-          # Saved only in a run on a push to `main`, which this workflow never is: it restores what `main` saved under
-          # its key, and saves nothing (R-326).
+          # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It
+          # restores, read-only, the key `ci.yml`'s `ci` job saves on `main`, `cargo-registry-ci-…` (R-337).
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: cargo xtask pr-check
         run: cargo xtask pr-check
