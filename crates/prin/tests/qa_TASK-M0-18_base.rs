@@ -3,6 +3,7 @@
 //! `prin profile diff` exits 2, as it does for a file it cannot read, and says that BASE has no frame records. Both a
 //! complete BASE (header and summary) and an incomplete one (header alone, or its only frame line cut off). Each test
 //! has its negative control (R-176).
+// The file name `qa_TASK-M0-18_base` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::PathBuf;
@@ -96,9 +97,10 @@ fn check_base_refused(base: &str, what: &str) {
         "{what} gives exit {:?}, not 2: {text}",
         out.status.code()
     );
+    // The phrase, not the word "base" alone: the BASE path itself contains "base".
     let lower = text.to_lowercase();
     assert!(
-        lower.contains("base") && lower.contains("no frame"),
+        lower.contains("base has no frame"),
         "{what}: the diff does not say BASE has no frame records: {text}"
     );
     // The NEW of this diff has frames; the refusal must not blame NEW.

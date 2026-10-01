@@ -4,6 +4,7 @@
 //! RFC's own published vectors; −0.0 written `0`; a u64 field always a JSON string of its decimal digits, every other
 //! number a JSON number; equal state is equal text and every value reads back exactly. Each test has its negative
 //! control (R-176).
+// The file name `qa_TASK-M0-18` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::collections::{BTreeMap, HashMap};
@@ -98,6 +99,7 @@ validation::negative_control!(
 /// A struct declaring its fields out of byte order, with keys that test the order's edges: a prefix before a longer
 /// key, upper case (0x41–0x5A) before `_` (0x5F) before lower case, and a multi-byte UTF-8 key after every ASCII one.
 #[derive(Serialize)]
+// The field `B` is upper case on purpose: it tests that upper case (0x42) sorts before `_` and lower case.
 #[allow(non_snake_case)]
 struct Shuffled {
     zeta: u8,

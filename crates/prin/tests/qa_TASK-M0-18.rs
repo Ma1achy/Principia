@@ -17,6 +17,7 @@
 //!
 //! Every fixture is built here from telemetry §5's keys, not copied from the implementation's. Each test has its
 //! negative control (R-176).
+// The file name `qa_TASK-M0-18` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::{Path, PathBuf};
