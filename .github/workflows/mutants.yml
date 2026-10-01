@@ -2,7 +2,10 @@
 # sharded, with `mutants-check` its verdict over every shard, a required status check on `main` (R-305). It is a
 # workflow of its own, which only `pull_request` runs: in `ci.yml`, which `push` runs too, the push run would report a
 # skipped `mutants-check`, and GitHub counts a skipped required check as passed. The jobs keep their `if:` on the
-# event, which always holds here. Caches as in every workflow (R-285): the cargo registry only, per-job keys.
+# event, which always holds here. Caches as in every workflow (R-285): the cargo registry, and the `mutants` job's
+# rust-gpu build (R-320), per-job keys, each restored in every run and saved only in a run on a push to `main` (R-326).
+# This workflow runs on pull requests only, so its caches restore only what a push to `main` saved under their keys,
+# and none is saved here.
 name: mutants
 
 on:
@@ -68,10 +71,12 @@ jobs:
           shared-key: mutants
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
       # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
-      # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073).
-      - uses: actions/cache@v4
+      # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run that builds the kernel, saved
+      # after the build only on a push to `main` (R-326).
+      - uses: actions/cache/restore@v4
         if: steps.diff.outputs.rust == 'true'
         with:
           path: ~/.cache/rust-gpu
@@ -98,6 +103,11 @@ jobs:
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
         run: cargo run --quiet --package xtask -- build-kernel
+      - uses: actions/cache/save@v4
+        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-mutants-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
       # shard's partial report is still uploaded when it is hit, and the step then fails.
@@ -158,6 +168,7 @@ jobs:
           shared-key: mutants-fixture
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants@27.1.0
@@ -199,6 +210,7 @@ jobs:
           shared-key: mutants-check
           cache-targets: "false"
           cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - uses: actions/download-artifact@v4
         with:
           pattern: mutants-report-shard-*

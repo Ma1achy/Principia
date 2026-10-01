@@ -31,6 +31,9 @@ jobs:
           shared-key: screenshot
           cache-targets: "false"
           cache-bin: "false"
+          # Saved only in a run on a push to `main`, which this workflow never is: it restores what `main` saved under
+          # its key, and saves nothing (R-326).
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo xtask screenshot --all
