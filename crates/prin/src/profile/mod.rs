@@ -6,7 +6,8 @@
 //!   scope's p95 (REQ-TOOL-119) — [`diff`];
 //! - `prin profile show PATH [--pretty]` prints a trace, each line indented with `--pretty` (R-286) — [`show`].
 //!
-//! Exit status: 0 on success (and on a diff with no regression), 1 on a regression, 2 on a usage or read error.
+//! Exit status: 0 on success (and on a diff with no regression), 1 on a regression, 2 on a usage or read error, or a
+//! diff whose NEW has no frame records (R-323).
 
 mod diff;
 mod run;
@@ -42,9 +43,9 @@ enum ProfileCommand {
         base: PathBuf,
         /// The trace compared against it.
         new: PathBuf,
-        /// The largest rise in a scope's p95 that is not a regression, in percent: `5%` or `5`.
+        /// The largest rise in a scope's p95 that is not a regression, in percent: `5%`, `5` or `7.5%`.
         #[arg(long, value_name = "P%", value_parser = diff::parse_threshold)]
-        threshold: f64,
+        threshold: diff::Threshold,
     },
     /// Print a trace: its lines unchanged, or each indented for reading with --pretty.
     Show {
@@ -63,7 +64,7 @@ pub fn main(args: ProfileArgs) -> ExitCode {
             base,
             new,
             threshold,
-        }) => diff::main(&base, &new, threshold),
+        }) => diff::main(&base, &new, &threshold),
         Some(ProfileCommand::Show { path, pretty }) => show::main(&path, pretty),
         None => match (args.scenario, args.frames, args.json) {
             (Some(scenario), Some(frames), Some(json)) => run::main(&scenario, frames, &json),

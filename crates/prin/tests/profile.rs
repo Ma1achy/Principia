@@ -844,7 +844,8 @@ validation::negative_control!(
     }
 );
 
-/// `--threshold` is a percentage ≥ 0, `P%` or `P`: anything else is a usage error, exit 2.
+/// `--threshold` is a percentage ≥ 0 written as a plain decimal of at most 18 digits, `P%` or `P`: anything else is a
+/// usage error, exit 2.
 fn check_threshold_refused(base: &Path, threshold: &str) {
     let out = diff(base, base, threshold);
     assert_eq!(
@@ -857,12 +858,24 @@ fn check_threshold_refused(base: &Path, threshold: &str) {
 #[test]
 fn profile_diff_threshold_is_a_percentage() {
     let base = write_scratch("base.jsonl", &fixture());
-    for bad in ["-5%", "-1", "nan", "inf%", "five", "5%%"] {
+    for bad in [
+        "-5%",
+        "-1",
+        "nan",
+        "inf%",
+        "five",
+        "5%%",
+        "1e1%",
+        ".5%",
+        "",
+        "1234567890.123456789%",
+    ] {
         check_threshold_refused(&base, bad);
     }
     let new = write_scratch("raised6.jsonl", &raised(&fixture(), 1.06));
     check_flags(&base, &new, "5");
     check_passes(&base, &new, "10");
+    check_passes(&base, &new, "123456789.123456789%");
 }
 
 validation::negative_control!(
@@ -1057,6 +1070,129 @@ validation::negative_control!(
         let p: f64 = t.trim_end_matches('%').parse().unwrap();
         diff(b, n, &format!("{}%", p - 0.001)).status.code()
     })
+);
+
+// ----- profile_diff: R-323's rules -----
+
+/// The threshold compares exactly (R-323): a p95 of 100 → 107 is a rise of exactly 7%, so not a regression at
+/// `--threshold 7%`, though `(107 − 100) / 100 × 100` in doubles is 7.000000000000001; and it is one at 6.99%.
+fn check_exact(code: impl Fn(&Path, &Path, &str) -> Option<i32>) {
+    let (base, new) = (one_frame(100.0, 0.0), one_frame(107.0, 0.0));
+    assert_eq!(
+        code(&base, &new, "7%"),
+        Some(0),
+        "100 -> 107 at --threshold 7% is called a regression"
+    );
+    assert_eq!(
+        code(&base, &new, "6.99%"),
+        Some(1),
+        "100 -> 107 at --threshold 6.99% is not called a regression"
+    );
+    let (small, raised) = (one_frame(0.1, 0.0), one_frame(0.1 * 1.07, 0.0));
+    // 0.1 · 1.07 in doubles is 0.10700000000000001, above 107% of the double 0.1: exactly, a regression at 7%.
+    assert_eq!(
+        code(&small, &raised, "7%"),
+        Some(1),
+        "a rise just over 7%, exactly, is not called a regression at 7%"
+    );
+}
+
+#[test]
+fn profile_diff_threshold_is_exact() {
+    check_exact(|b, n, t| diff(b, n, t).status.code());
+}
+
+validation::negative_control!(
+    profile_diff_threshold_is_exact,
+    "the threshold as rounded floating-point arithmetic would take it must fail the exact check",
+    expected = "100 -> 107 at --threshold 7% is called a regression",
+    check_exact(|b, n, t| {
+        let p: f64 = t.trim_end_matches('%').parse().unwrap();
+        // (107 − 100) / 100 × 100 = 7.000000000000001 in doubles: just over 7, so 7% reads as a slightly lower bar.
+        diff(b, n, &format!("{}%", p - 1e-12)).status.code()
+    })
+);
+
+/// A NEW with no frame records exits 2, as an unreadable file does, and says why (R-323); a BASE with none is
+/// compared, each of NEW's scopes listed as only in NEW.
+fn check_no_frames(base: &Path, new: &Path) {
+    let out = diff(base, new, "5%");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "a NEW with no frame records does not exit 2: {}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("has no frame records"),
+        "the diff does not say NEW has no frame records: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn profile_diff_no_frames_new_exits_2() {
+    let base = write_scratch("base.jsonl", &fixture());
+    let empty = write_scratch("empty.jsonl", &trace_of_frames(&[]));
+    check_no_frames(&base, &empty);
+    // Header only: an incomplete session with no frames, likewise.
+    let header = write_scratch("header.jsonl", &(lines_of(&fixture())[0].to_owned() + "\n"));
+    check_no_frames(&base, &header);
+    let out = diff(&empty, &base, "5%");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "a BASE with no frames is refused"
+    );
+}
+
+validation::negative_control!(
+    profile_diff_no_frames_new_exits_2,
+    "a NEW with frames must fail the no-frames check",
+    expected = "a NEW with no frame records does not exit 2",
+    {
+        let base = write_scratch("base.jsonl", &fixture());
+        check_no_frames(&base, &base)
+    }
+);
+
+/// A cut-off or incomplete NEW (R-323, R-298, R-299): the diff prints "session incomplete" and the bytes dropped, then
+/// compares NEW's frames as usual, so the exit code is the comparison's.
+fn check_incomplete(new_text: &str, dropped: usize) {
+    let base = write_scratch("base.jsonl", &fixture());
+    let new = write_scratch("new.jsonl", new_text);
+    let notice = format!("NEW: session incomplete; {dropped} bytes of a cut-off last line dropped");
+    for (threshold, want) in [("5%", Some(1)), ("10%", Some(0))] {
+        let out = diff(&base, &new, threshold);
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            stdout.starts_with(&notice),
+            "the diff does not print {notice:?} first: {stdout}"
+        );
+        assert_eq!(
+    out.status.code(),
+    want,
+    "an incomplete NEW does not exit as its comparison at --threshold {threshold}: {stdout}"
+);
+    }
+}
+
+/// The fixture's frames, each integrate scope raised 6%, without its summary line.
+fn raised_frames_only() -> String {
+    lines_of(&raised(&fixture(), 1.06))[..21].join("\n") + "\n"
+}
+
+#[test]
+fn profile_diff_incomplete_new() {
+    check_incomplete(&format!("{}{CUT}", raised_frames_only()), CUT.len());
+    check_incomplete(&raised_frames_only(), 0);
+}
+
+validation::negative_control!(
+    profile_diff_incomplete_new,
+    "a complete NEW must fail the session-incomplete check",
+    expected = "the diff does not print",
+    check_incomplete(&raised(&fixture(), 1.06), 0)
 );
 
 /// The report states each compared scope's change: in percent, or "from 0" where BASE's p95 is 0.

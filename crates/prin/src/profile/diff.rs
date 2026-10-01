@@ -1,19 +1,23 @@
 //! `prin profile diff BASE NEW --threshold P%` (render_gui_spec § "Profiler", "What `prin profile diff` compares",
 //! REQ-TOOL-119): for each scope, the p95 of its per-frame ms in BASE and in NEW; a regression where NEW's p95 is more
-//! than P% above BASE's. It exits 1 when any scope regresses, 0 when none does, and 2 when a file cannot be read.
+//! than P% above BASE's, decided exactly (R-323). It exits 1 when any scope regresses, 0 when none does, and 2 when a
+//! file cannot be read or NEW has no frame records (R-323). A trace that is an incomplete session, its last line
+//! perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes the reader
+//! dropped (R-323, R-298, R-299).
 //!
 //! The scopes: the frame (`frame_ms`), each stage by its key (`stage_ms`, in the frames where it is not null), each CPU
 //! scope by its stage and the names from the stage down to it, and each GPU pass by its stage and name. A scope that
 //! occurs more than once in a frame gives that frame the sum of its ms; a frame where it does not occur gives no
 //! sample. A scope in only one file is listed, not compared, and is not a regression.
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
 use std::path::Path;
 use std::process::ExitCode;
 
-use engine::contract::profile::{self, percentile, Scope, Stage, Trace};
+use engine::contract::profile::{self, percentile, Scope, Session, Stage, Trace};
 
 /// A stage, by its place in `stage_ms`'s order, so the report lists the stages in that order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,17 +53,45 @@ impl fmt::Display for Key {
     }
 }
 
-/// Parses `--threshold`: a percentage, `5%` or `5`, finite and ≥ 0.
-pub(crate) fn parse_threshold(text: &str) -> Result<f64, String> {
-    let number = text.strip_suffix('%').unwrap_or(text);
-    let p: f64 = number
-        .parse()
-        .map_err(|_| format!("{text:?} is not a percentage such as 5%"))?;
-    if p.is_finite() && p >= 0.0 {
-        Ok(p)
-    } else {
-        Err(format!("{text:?} is not a percentage ≥ 0"))
+/// `--threshold P%`: P as the decimal written, `numerator / 10^scale`, so the regression test is exact (R-323).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Threshold {
+    /// P's digits, the point dropped.
+    numerator: u128,
+    /// How many of them follow the point.
+    scale: u32,
+    /// P as written, without its `%`.
+    text: String,
+}
+
+impl fmt::Display for Threshold {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}%", self.text)
     }
+}
+
+/// The most digits P may have, so every product [`regresses`] forms fits in a u128: (100 · 10^scale + numerator) is
+/// below 2^67, and a double's significand below 2^53.
+const MAX_DIGITS: usize = 18;
+
+/// Parses `--threshold`: a percentage ≥ 0 written as a plain decimal, `5%`, `5`, `7.5%` or `0.25`, of at most 18
+/// digits.
+pub(crate) fn parse_threshold(text: &str) -> Result<Threshold, String> {
+    let number = text.strip_suffix('%').unwrap_or(text);
+    let (int, frac) = number.split_once('.').unwrap_or((number, ""));
+    let digits = format!("{int}{frac}");
+    if int.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) || digits.len() > MAX_DIGITS {
+        return Err(format!(
+            "{text:?} is not a percentage ≥ 0 such as 5% or 7.5%, of at most {MAX_DIGITS} digits"
+        ));
+    }
+    Ok(Threshold {
+        numerator: digits
+            .parse()
+            .map_err(|_| format!("{text:?} is not a percentage such as 5%"))?,
+        scale: u32::try_from(frac.len()).map_err(|e| e.to_string())?,
+        text: number.to_owned(),
+    })
 }
 
 /// Each scope's samples: one per frame it occurs in.
@@ -124,17 +156,70 @@ pub(crate) struct Report {
     pub(crate) regressed: bool,
 }
 
-/// Whether NEW's p95 `new` regresses on BASE's `base` by more than `threshold` percent. From a BASE p95 of 0, any
-/// rise is one: the rise is +∞ %, above every threshold, and 0 to 0 is NaN, above none.
-fn regresses(base: f64, new: f64, threshold: f64) -> bool {
-    (new - base) / base * 100.0 > threshold
+/// A finite double's magnitude as `significand · 2^exponent`, exactly.
+fn parts(x: f64) -> (u128, i32) {
+    let bits = x.to_bits();
+    let biased = ((bits >> 52) & 0x7ff) as i32;
+    let fraction = u128::from(bits & ((1 << 52) - 1));
+    if biased == 0 {
+        (fraction, -1074)
+    } else {
+        (fraction | (1 << 52), biased - 1075)
+    }
+}
+
+/// Compares `x · 2^k` with `y`, for x and y below 2^128, exactly.
+fn compare_scaled(x: u128, k: i32, y: u128) -> Ordering {
+    if x == 0 || y == 0 {
+        return x.cmp(&y);
+    }
+    let (lx, ly) = (
+        128 - x.leading_zeros() as i32,
+        128 - y.leading_zeros() as i32,
+    );
+    // x · 2^k lies in [2^(lx+k−1), 2^(lx+k)), y in [2^(ly−1), 2^ly).
+    if lx + k > ly {
+        Ordering::Greater
+    } else if lx + k < ly {
+        Ordering::Less
+    } else if k >= 0 {
+        // lx + k = ly ≤ 128, so the shift keeps every bit.
+        (x << k).cmp(&y)
+    } else {
+        // ly − k = lx ≤ 128, likewise.
+        x.cmp(&(y << -k))
+    }
+}
+
+/// Whether NEW's p95 `new` regresses on BASE's `base` by more than the threshold P: `(new − base) / base × 100 > P`,
+/// or, from a BASE of 0, `new > 0` (render_gui_spec § "Profiler"). Decided exactly, not by rounded floating-point
+/// arithmetic (R-323): as `100 · 10^s · new > (100 · 10^s + p) · base`, P being p / 10^s and each p95 the double it
+/// is, so 100 → 107 at 7% is a rise of exactly 7%, and not a regression. Each p95 is a duration, never negative: the
+/// reader refuses a negative ms (telemetry §5).
+fn regresses(base: f64, new: f64, threshold: &Threshold) -> bool {
+    let unit = 100 * 10u128.pow(threshold.scale);
+    let (new_m, new_e) = parts(new);
+    let (base_m, base_e) = parts(base);
+    compare_scaled(
+        unit * new_m,
+        new_e - base_e,
+        (unit + threshold.numerator) * base_m,
+    ) == Ordering::Greater
 }
 
 /// Compares NEW's per-scope p95 with BASE's at `threshold` percent.
-pub(crate) fn compare(base: &Trace, new: &Trace, threshold: f64) -> Report {
+pub(crate) fn compare(base: &Trace, new: &Trace, threshold: &Threshold) -> Report {
+    let mut text = String::new();
+    for (name, trace) in [("BASE", base), ("NEW", new)] {
+        if trace.session == Session::Incomplete {
+            text.push_str(&incomplete(name, trace));
+        }
+    }
     let base = p95s(base);
     let new = p95s(new);
-    let mut text = format!("p95 per scope, ms; a regression is a rise of more than {threshold}%\n");
+    text.push_str(&format!(
+        "p95 per scope, ms; a regression is a rise of more than {threshold}\n"
+    ));
     let mut regressed = false;
     for (key, b) in &base {
         let Some(n) = new.get(key) else {
@@ -176,9 +261,31 @@ fn read(path: &Path) -> Result<Trace, String> {
     })
 }
 
-/// `prin profile diff BASE NEW --threshold P%`.
-pub(crate) fn main(base: &Path, new: &Path, threshold: f64) -> Result<ExitCode, String> {
-    let report = compare(&read(base)?, &read(new)?, threshold);
+/// The notice for a trace that is an incomplete session (R-298): "session incomplete", and the bytes of a cut-off last
+/// line the reader dropped (R-299), 0 when none was. Its frames are still compared (R-323).
+fn incomplete(name: &str, trace: &Trace) -> String {
+    format!(
+        "{name}: session incomplete; {} bytes of a cut-off last line dropped\n",
+        trace.dropped_bytes
+    )
+}
+
+/// `prin profile diff BASE NEW --threshold P%`. A NEW with no frame records has nothing to compare, and is an error,
+/// exit 2 (R-323).
+pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<ExitCode, String> {
+    let (base, new_trace) = (read(base)?, read(new)?);
+    if new_trace.frames.is_empty() {
+        let notice = if new_trace.session == Session::Incomplete {
+            incomplete("NEW", &new_trace)
+        } else {
+            String::new()
+        };
+        return Err(format!(
+            "{notice}prin profile diff: {} has no frame records, so nothing to compare",
+            new.display()
+        ));
+    }
+    let report = compare(&base, &new_trace, threshold);
     print!("{}", report.text);
     Ok(if report.regressed {
         ExitCode::from(1)
