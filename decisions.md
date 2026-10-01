@@ -3549,8 +3549,10 @@ so.
 `main`. A pull-request run, and a push to any other branch, restores and never saves. GitHub scopes caches by branch,
 and a pull-request run can restore what `main` saved. The rust-gpu cache keeps its own key, `rust-gpu-<job>-<os>-<channel>`
 (R-320). This answers PR #96's measurement that the repository's Actions cache held 11.13 GiB, over GitHub's 10 GB
-limit, most of it fixture-pool entries of about 1 GiB saved per branch. TASK-M0-14 (PR #96), which already edits the
-workflows' cache steps, makes the change in every workflow; REQ-SYS-073 and REQ-SYS-075 follow.
+limit, most of it fixture-pool entries of about 1 GiB saved per branch. REQ-SYS-073 and REQ-SYS-075 follow.
+*Applied per R-204 — veto?:* the rule reaches every workflow, including the cache steps TASK-M0-42 wrote, and
+TASK-M0-14 (PR #96), which already edits the workflows' cache steps, makes the change in all of them; REQ-SYS-073
+stays closed by TASK-M0-42.
 
 ## R-327 — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*
 *1 Oct 2026 · applied in telemetry §5, REQ-TOOL-002 and TASK-M0-18 (PR #100)*
@@ -3610,11 +3612,12 @@ PR #99 merged on this ruling. Changes no requirement.
 simulation data."
 
 *Applied:* REQ-SYS-033's statement reads "the sole automatic GPU-to-CPU return of simulation data", and its verify
-detail admits R-288's per-frame telemetry readback, which is not simulation data. The render contract Part 1 and
-systems_architecture §3's membrane table say the same. TASK-M5-30's Goal and its REQ-SYS-033 checklist line follow.
-*Applied per R-332 — veto?:* REQ-SYS-036's audit ("finds only the reduction readback and the two sanctioned pulls")
-read the same way as REQ-SYS-033's, so it also admits the telemetry readback, and its statement names the
-`QuadReduction` "the sole automatic GPU→CPU return of simulation data". RQ-173 moves to
+detail admits R-288's per-frame telemetry readback, which is not simulation data. The render contract Part 1 says the
+same. TASK-M5-30's Goal and its REQ-SYS-033 checklist line follow. *Applied per R-332 — veto?:* REQ-SYS-036's audit
+("finds only the reduction readback and the two sanctioned pulls") read the same way as REQ-SYS-033's, so it also
+admits the telemetry readback, and its statement names the `QuadReduction` "the sole automatic GPU→CPU return of
+simulation data"; systems_architecture §3's membrane table, REQ-SYS-036's source, says the same, and TASK-M5-30's
+REQ-SYS-036 checklist line follows. A veto reverts all three together. RQ-173 moves to
 `docs/archive/review_queue/M0.md`.
 
 ## R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
