@@ -36,4 +36,4 @@ decode); no code path reads the screen texture into data.
 - The lint must be shown to fail on an injected `SimState` readback (pitfalls §9 applies to the lint itself).
 - R-332 (1 Oct 2026, closes RQ-173): `QuadReduction` is the sole automatic return of *simulation data*; R-288's
   telemetry readback is not simulation data. REQ-SYS-036, its source systems_architecture §3 and its checklist line read the same way
-  (applied per R-332 — veto?).
+  (applied per R-332, accepted 1 Oct 2026, R-332's note).

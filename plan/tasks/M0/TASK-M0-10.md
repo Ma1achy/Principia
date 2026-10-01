@@ -50,7 +50,7 @@ Over payload §2's bit layouts, which TASK-M0-09 transcribed into the ledger (R-
 - `cargo test -p kernel dmin_unset` — a failed sample's and an unstepped sample's `d_min` bits are `0x7C00`; 1e-9 packs to the smallest positive subnormal (`0x0001`); no valid input packs to `0x0000`; `pa_d_min_is_unset` reads bits; the ledger declares `d_min`'s sentinel as +inf (REQ-PAY-092).
 
 ## Notes
-- R-271 changes the `d_min` sentinel that TASK-M0-09 declared (0.0). Where a merged qa file asserts 0.0 for `d_min`, the edit is limited to the new value, under R-227's exception — applied per R-204, veto?, and listed in the PR for qa.
+- R-271 changes the `d_min` sentinel that TASK-M0-09 declared (0.0). Where a merged qa file asserts 0.0 for `d_min`, the edit is limited to the new value, under R-227's exception — applied per R-204, accepted by R-283, and listed in the PR for qa.
 - The GPU halves of the round trips (the WGSL unpack and the kernel on the GPU) are TASK-M0-15.
 - Dispatch's refusal of ⌈T/dt⌉ > 65535 (R-86) belongs to the dispatch that doesn't exist yet; the limit is in the constants register (TASK-M0-08).
 - Failure `detail` categories follow payload §2; payload §8 says to confirm them against the integrator contract's failure modes when that is finalised (M3).

@@ -78,5 +78,6 @@
 - Rulings of 1 Oct (later): R-327 — the frame count is a u32, so `config.frames` is a JSON number (PR #100's veto item
   11, which typed it u64). R-328 — either file with no frame records exits 2 (PR #100's item 13, applied per R-204,
   confirmed); render_gui_spec § "Profiler" cites R-328. R-329 — `device.cpu_cores` becomes `cpu_cores_available`, with
-  `cpu_cores_total` (nullable; applied per R-204 — veto?), in TASK-M0-17's typed form, JSON Schema and tests; no
-  `usize` in a serialised type. qa's files from TASK-M0-17 that name `cpu_cores` are qa's to change (R-290).
+  `cpu_cores_total` (nullable; applied per R-204, accepted 1 Oct 2026, R-329's note), in TASK-M0-17's typed form, JSON
+  Schema and tests; no `usize` in a serialised type. qa's files from TASK-M0-17 that name `cpu_cores` are qa's to change
+  (R-290).

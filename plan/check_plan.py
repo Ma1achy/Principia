@@ -22,6 +22,10 @@ Fails if:
   - a still-open item in open-questions.md (a paragraph or list item with a bold run starting "Open" or "Still open")
     has no "Carried by: …" note naming a requirement or an open REVIEW_QUEUE entry, or its note names a requirement
     that doesn't exist or is retired, or an RQ that isn't open in REVIEW_QUEUE.md (R-334);
+  - an "applied per R-n — veto?" mark in decisions.md, CLAUDE.md, plan/ or docs/ (less docs/archive/ and
+    docs/reference/) is still open, reading "veto?", and no open REVIEW_QUEUE.md entry names it on a "**Mark:**" line,
+    or such a line names no open mark; or the check misses one of its built-in bad cases (R-354;
+    plan/tools/veto_marks.py);
   - a value in plan/section_notes.yaml doesn't load in full: an unquoted value whose " #" YAML reads as the start of a
     comment, so the text after it is silently dropped (PR #110's code review);
 and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
@@ -37,6 +41,7 @@ ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
 from rulings import QUEUE, RQ_HEAD, missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
+from veto_marks import errors as veto_mark_errors, self_test as veto_self_test  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -325,6 +330,9 @@ def main():
 
     # open-questions.md: every still-open item names what carries it (R-334)
     errors += open_question_errors(by_req, live)
+
+    # every "applied per R-n — veto?" mark is closed or named by an open REVIEW_QUEUE entry; its negative controls first
+    errors += veto_self_test() + veto_mark_errors()
 
     # section_notes.yaml: every value loads in full, with no " #…" dropped as a comment
     errors += truncated_scalars("plan/section_notes.yaml")

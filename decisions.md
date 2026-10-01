@@ -1610,8 +1610,8 @@ a REVIEW_QUEUE entry, not a dropped run, if per-PR runs prove impractical.*
 *Open when recorded:* the per-PR time limit has no value; it becomes a calibration requirement (R-71). The nightly
 workflow is TASK-M0-19's deliverable, so the nightly run cannot land before it. Where R-196's work goes is RQ-135.
 
-*Applied per R-204 — veto? (RQ-162, 30 Sep 2026):* cargo-mutants excludes only by file glob or mutant-name regex, so
-"GPU-only (spirv-gated) paths" is met by a marker: every item gated on `target_arch = "spirv"` also carries
+*Applied per R-204, accepted by R-267 (RQ-162, 30 Sep 2026):* cargo-mutants excludes only by file glob or mutant-name
+regex, so "GPU-only (spirv-gated) paths" is met by a marker: every item gated on `target_arch = "spirv"` also carries
 `#[cfg_attr(test, mutants::skip)]`, and a missing marker fails closed. "xtask's own harness plumbing" is
 `xtask/src/main.rs` and `xtask/src/codegen.rs` only; xtask's checks stay mutated.
 
@@ -2093,10 +2093,10 @@ qa's explicit word on veto items 4 and 5, then merge #39 under R-234 if everythi
 *Applied:* RQ-150 numbered its options 1–4; "(c)" is read as the third, the listing-only form, which the ruling's own
 text describes. REQ-VAL-166 (new) carries it, closed by TASK-M0-22. qa's merged `qa_TASK-M0-01.rs` (or its support
 module) changes only as far as this needs, under a one-round exception, with qa reviewing, as R-226's did.
-*Applied per R-235 — veto?:* `cargo xtask ci`'s only runner is `controls`, and REQ-VAL-007 requires `controls` to run
-inside `cargo xtask ci` on every push (R-198). So the `cargo xtask ci` step moves out of the `ci` job into a job of its
-own, running beside the tests, rather than a second job running `cargo xtask controls` beside it; the controls run
-once per push either way.
+*Applied per R-235, accepted by R-267:* `cargo xtask ci`'s only runner is `controls`, and REQ-VAL-007 requires
+`controls` to run inside `cargo xtask ci` on every push (R-198). So the `cargo xtask ci` step moves out of the `ci` job
+into a job of its own, running beside the tests, rather than a second job running `cargo xtask controls` beside it; the
+controls run once per push either way.
 *Also in the same message:* the "veto?" items merged under R-234 on PRs #37 and #38 all stand.
 
 ## R-236 — A failing control's output is kept, and the `deps.rs:1205` control checks its compile error first
@@ -2203,9 +2203,9 @@ with qa reviewing.
 Asked in RQ-152, the human chose "Validity predicate": drop the value sentinel; validity is read at derive time from
 `n ≥ 2` (§3.5 already says invalid for `n < 2`), and an invalid fit reads NaN like R-79's tier-absent fields.
 
-*Applied per R-245 — veto? (mechanical consequences):* `diffusion` is derived at read (§3.5 stores only `mean_y`,
-`C_ty`), so storage still never holds NaN (R-79 stands). Every place that named the −1.0 sentinel now names the
-predicate `n ≥ 2` and NaN: generation-root §3.4, §3.5, §3.8's worked entry and §5 item 5; simstate_payload §§ the
+*Applied per R-245, accepted by R-267 (mechanical consequences):* `diffusion` is derived at read (§3.5 stores only
+`mean_y`, `C_ty`), so storage still never holds NaN (R-79 stands). Every place that named the −1.0 sentinel now names
+the predicate `n ≥ 2` and NaN: generation-root §3.4, §3.5, §3.8's worked entry and §5 item 5; simstate_payload §§ the
 `n < 2` guard, the derived table and the WGSL helper's comment; the render contract's sentinel paragraph, generation
 note and field table; debug_tooling_plan's field row; colour_composition's validity lane. R-136's rule stands for any
 stored sentinel; `diffusion` is no longer one, and an invalid fit gets the hatch as NaN. R-17's streaming slope stands.
@@ -2235,10 +2235,10 @@ type.
 else at a packed location still fails. Plus: an f16 field's declared range must lie within f16's finite range
 (±65504). An unbounded end fails unless the ledger entry states its overflow behaviour (saturate or ±inf)."
 
-*Applied per R-248 — veto?:* §3.8 gains an optional key, `overflow: saturate | inf`, where the entry states it. "An
-f16 field" is read as an `f16-pair` field wherever it sits, and each `f16-pair` component of a vector (range applies
-per component, §3.8); `fixed16` is not binary16, so the f16 range rule doesn't apply to it. REQ-GEN-028 carries the
-rules, closed by TASK-M0-35. TASK-M0-09 gains a note: `d_min` (`f16`, range "> 0", §3.4) has an unbounded upper end,
+*Applied per R-248, accepted by R-267:* §3.8 gains an optional key, `overflow: saturate | inf`, where the entry states
+it. "An f16 field" is read as an `f16-pair` field wherever it sits, and each `f16-pair` component of a vector (range
+applies per component, §3.8); `fixed16` is not binary16, so the f16 range rule doesn't apply to it. REQ-GEN-028 carries
+the rules, closed by TASK-M0-35. TASK-M0-09 gains a note: `d_min` (`f16`, range "> 0", §3.4) has an unbounded upper end,
 so its entry must state its overflow behaviour or bound its range.
 
 ## R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR
@@ -2286,8 +2286,8 @@ non-trivial numeric literal in kernel or engine code must be a register constant
   R-72 and REQ-SYS-063, closing the gap its note pointed to).
 - Item 5 (a pending value keeps its class; pending exactly when citing a calibration requirement): accepted.
 - Item 6 (the lint's scope): accepted; `plan/reviewers/physics.md` § 9 gains the item the human worded.
-*Applied per R-204 — veto? (sequencing):* TASK-M0-12's reviewers gain `physics`, since what the schema version covers
-is now a physics definition (the physics reviewer's suggestion).
+*Applied per R-204, accepted 29 Sep, below (sequencing):* TASK-M0-12's reviewers gain `physics`, since what the schema
+version covers is now a physics definition (the physics reviewer's suggestion).
 *Accepted by the human (29 Sep, with R-252):* "#49: accept the veto item (physics as a reviewer on TASK-M0-12). Merge
 #49, then #47."
 
@@ -2331,11 +2331,11 @@ a false validity flag."
 *Applied:* `ftle` reads NaN exactly when `ftle_valid` (payload §6) is false: the tier off (as R-79 already had), a
 failed sample, `step_count = 0`, or no completed renorm. The docs R-253 touched now state the one rule, and the
 lowering contract's `sample.ftle` row says the accessor returns it.
-*Applied per R-204 — veto? (reading of "whenever"):* `ftle_valid` is also false for a failed sample, and the lowering
-contract said per-sample failure surfaces as the defined failed-state values, never NaN (R-79). R-254 is applied as
-worded, so a failed sample's `ftle` reads NaN too; the lowering contract names `ftle` as the one exception. R-79's
-storage rule stands: `ftle` is derived at read, never stored, so storage still never holds NaN, and a failed sample's
-stored fields keep their defined failed-state values.
+*Applied per R-204, accepted 29 Sep, below (reading of "whenever"):* `ftle_valid` is also false for a failed sample, and
+the lowering contract said per-sample failure surfaces as the defined failed-state values, never NaN (R-79). R-254 is
+applied as worded, so a failed sample's `ftle` reads NaN too; the lowering contract names `ftle` as the one exception.
+R-79's storage rule stands: `ftle` is derived at read, never stored, so storage still never holds NaN, and a failed
+sample's stored fields keep their defined failed-state values.
 *Accepted by the human (29 Sep, with R-255):* "The failed-sample item on #53 stands: a failed sample's ftle reads NaN
 (R-254 as applied)."
 
@@ -2489,7 +2489,7 @@ and Brutus is too slow."
 paragraph. REQ-INT-004 and TASK-M3-01 lose the `Dd` instantiation (f32 and f64 only). REQ-SYS-007 names R-33's
 reference (TASK-M3-25) as the one extended-precision build before 1.0, beside §7.1's payload genericity.
 
-*Applied per R-265 — veto?:* R-33's "double-double is a fast screen only" is amended where it is quoted
+*Applied per R-265, accepted by R-267:* R-33's "double-double is a fast screen only" is amended where it is quoted
 (canonical_spec §7 :91 and §11 :153, systems_architecture §1 :45) by an added note that the reference itself serves as
 the screen. systems_architecture :45's inspector witness "(f64 or double-double)" reads "(f64; double-double parked,
 R-265)". Measured records stay as they are: dd_integrator :124's verified bit-identity across CPU-double-double,
@@ -2595,11 +2595,11 @@ subnormal, so 0.0 never appears; readers treat +inf as unset."
 *Applied:* a failed sample's `d_min` half, and any sample's before its first step, holds f16 +inf (bits `0x7C00`). A
 valid `d_min` below f16's smallest positive subnormal (2⁻²⁴ ≈ 5.96e-8) is stored as that subnormal. `dE_max` and
 `dLz_max` keep their 0.0 failed-state value (payload §1), which is the maximum of an empty set of magnitudes.
-*Applied per R-204 — veto? (mechanical consequences, found in payload §1):* WGSL makes `pack2x16float` indeterminate
-outside binary16's finite range and lets it flush subnormals to zero. So the `d_min` packer writes the +inf and
-subnormal bit patterns itself, not through `pack2x16float`. Readers test the unset value by its bits (`0x7C00` in bits
-16–31 of `packed_a`), not by a float comparison, which WGSL's finite-math rules would leave indeterminate. A GPU reader
-that flushes a stored subnormal on unpack sees 0 for display only; the unset test never confuses the two.
+*Applied per R-204, accepted by R-354 (mechanical consequences, found in payload §1):* WGSL makes `pack2x16float`
+indeterminate outside binary16's finite range and lets it flush subnormals to zero. So the `d_min` packer writes the
++inf and subnormal bit patterns itself, not through `pack2x16float`. Readers test the unset value by its bits (`0x7C00`
+in bits 16–31 of `packed_a`), not by a float comparison, which WGSL's finite-math rules would leave indeterminate. A GPU
+reader that flushes a stored subnormal on unpack sees 0 for display only; the unset test never confuses the two.
 
 ## R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
 *30 Sep 2026 · applied in TASK-M0-23 (PR #65)*
@@ -2652,7 +2652,7 @@ in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-run
 - **HUMAN_SETUP §2.** It records "Require conversation resolution before merging", which is on.
 - **Reviews re-run.** *Flagged:* `reviews.yml` already triggers on `pull_request_review`. What blocks a merge is the
   earlier `pull_request`-event run: it fails before any review and stays a separate failed check suite (R-266's
-  no-bypass). *Applied per R-204 — veto?:* TASK-M0-40 has the `pull_request_review` run re-run that stale
+  no-bypass). *Applied per R-204, accepted by R-354:* TASK-M0-40 has the `pull_request_review` run re-run that stale
   `pull_request` run for the same head, so one review turns both green.
 
 ## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
@@ -2879,13 +2879,14 @@ decisions.md only for why. Revisit splitting it per milestone (numbers unchanged
   R-93, R-95, R-104, R-109, R-122 and R-141 already carried theirs in their date line and keep it there.
 - Item 2: `plan/check_plan.py` fails when a ruling says it amends, supersedes, corrects or replaces R-n, and R-n has no
   matching forward line in its heading block. Reverses, refines and extends are checked the same way (applied per
-  R-204 — veto?). The checks are in `plan/tools/rulings.py`.
+  R-204, accepted by R-293). The checks are in `plan/tools/rulings.py`.
 - Items 3 and 6: `plan/tools/current_rules.py` generates `plan/CURRENT_RULES.md` from this file and
-  `plan/rule_groups.yaml`, and `check_plan.py` fails if it is stale. Applied per R-204 — veto?: the groups live in
-  that mapping file rather than in a line under each heading; a sixth group, "Design and architecture", holds the
-  architecture, payload, scheduler, render, colour, GUI and tooling rulings; each ruling's group is a judgement from
-  its text; and the one-off acts are listed last, under "One-off acts (history only)". A ruling superseded outright
-  would be left out; none is today. CLAUDE.md points agents to CURRENT_RULES.md, and to this file for history.
+  `plan/rule_groups.yaml`, and `check_plan.py` fails if it is stale. Applied per R-204, accepted by R-293 (but for item
+  5, which R-293 changes): the groups live in that mapping file rather than in a line under each heading; a sixth group,
+  "Design and architecture", holds the architecture, payload, scheduler, render, colour, GUI and tooling rulings; each
+  ruling's group is a judgement from its text; and the one-off acts are listed last, under "One-off acts (history
+  only)". A ruling superseded outright would be left out; none is today. CLAUDE.md points agents to CURRENT_RULES.md,
+  and to this file for history.
 - Item 4: R-195's Applied note (PR #17).
 - Item 5: `REVIEW_QUEUE.md` keeps RQ-173, the only open entry. The ruled entries moved unchanged to
   `docs/archive/review_queue/untangling.md` (RQ-1 to RQ-128, tagged "step 1" to "step 7") and `M0.md` (RQ-129 onward,
@@ -2924,11 +2925,11 @@ decisions.md only for why. Revisit splitting it per milestone (numbers unchanged
 - CLAUDE.md's qa paragraph and `.claude/agents/qa-reviewer.md` state R-290's rule, citing it; nothing else in either
   changes.
 
-*Applied per R-204 — veto?:* R-252 is marked superseded by R-277, as the human's example chain has it. R-277 restates
-R-252's limits (two agents at warning, three at normal, only running work at critical) but not its "Log the pressure
-level instead of swap in summaries", which leaves the digest with R-252. R-253 is marked superseded by R-254, which it
-"refines": `ftle` reads NaN whenever `ftle_valid` is false, which includes `step_count = 0`, so nothing of R-253 stands
-apart from R-254.
+*Applied per R-204, corrected by R-295, confirmed by R-354:* R-252 is marked superseded by R-277, as the human's example
+chain has it. R-277 restates R-252's limits (two agents at warning, three at normal, only running work at critical) but
+not its "Log the pressure level instead of swap in summaries", which leaves the digest with R-252. R-253 is marked
+superseded by R-254, which it "refines": `ftle` reads NaN whenever `ftle_valid` is false, which includes
+`step_count = 0`, so nothing of R-253 stands apart from R-254.
 
 ## R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*
 *30 Sep 2026 · applied in TASK-M5-28 and REQ-TOOL-140; PR #78 (TASK-M0-10) applies the CPU half*
@@ -2946,12 +2947,12 @@ each frame's dispatch and reset each frame, and read back asynchronously with th
 stalling a frame; their values go into that frame's record. REQ-TOOL-140 (new) carries the GPU half. RQ-174 moves to
 `docs/archive/review_queue/M0.md` with its Ruling line.
 
-*Applied per R-204 — veto? (which task):* TASK-M5-28, the frame record, percentiles and the bounded telemetry file. No
-task builds a GPU telemetry readback under that name: TASK-M5-14 builds only the dispatch queue's `QuadReduction`
-readback and the measurement path, and TASK-M6-16 times the GPU with timestamp queries. TASK-M5-28 builds the frame
-record (telemetry §2), where the counters belong, so it binds the buffer, reads it back and writes the values into the
-record. Its Depends on reaches TASK-M4-05, the compute kernel whose march packs `d_min`, through TASK-M5-21, so no
-dependency is added.
+*Applied per R-204, accepted by R-354 (which task):* TASK-M5-28, the frame record, percentiles and the bounded telemetry
+file. No task builds a GPU telemetry readback under that name: TASK-M5-14 builds only the dispatch queue's
+`QuadReduction` readback and the measurement path, and TASK-M6-16 times the GPU with timestamp queries. TASK-M5-28
+builds the frame record (telemetry §2), where the counters belong, so it binds the buffer, reads it back and writes the
+values into the record. Its Depends on reaches TASK-M4-05, the compute kernel whose march packs `d_min`, through
+TASK-M5-21, so no dependency is added.
 
 ## R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
 *30 Sep 2026 · applied in decisions.md, plan/CURRENT_RULES.md, CLAUDE.md and `.claude/agents/code-reviewer.md`*
@@ -2990,10 +2991,10 @@ fast-math (Metal via wgpu), so a golden near a tie keeps one reference per backe
 output quantises in the shader, and a golden case whose bytes agree across backends keeps one reference. RQ-175 moves
 unchanged to `docs/archive/review_queue/M0.md`, with its Ruling line.
 
-*Applied per R-204 — veto? (plan):* REQ-VAL-176's statement is qualified the same way: every backend writes identical
-bytes at exact ties, and a case whose bytes still differ, a golden near a tie among them, keeps one reference per
-backend. TASK-M0-43's last acceptance line (`cargo xtask golden --all`) reads "against one reference per case, or one
-per backend for a case the PR names", since the half-way fixture is now such a case. Its title is unchanged.
+*Applied per R-204, accepted by R-354 (plan):* REQ-VAL-176's statement is qualified the same way: every backend writes
+identical bytes at exact ties, and a case whose bytes still differ, a golden near a tie among them, keeps one reference
+per backend. TASK-M0-43's last acceptance line (`cargo xtask golden --all`) reads "against one reference per case, or
+one per backend for a case the PR names", since the half-way fixture is now such a case. Its title is unchanged.
 
 *Result (the measurement RQ-175 reported, recorded here so the corpus can cite it; 30 Sep 2026, CI run 36736481929,
 branch `measure/m043-lavapipe-halfway`, deleted afterwards, no PR):* R-269's fragment rendered through TASK-M0-43's
@@ -3061,7 +3062,7 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
   kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
-*Applied per R-204 — veto?:*
+*Applied per R-204, accepted by R-354:*
 - Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
   GPU) and TASK-M0-19 (the session header), so every compute pipeline from M0 on is built through it. No existing
   task takes it: TASK-M0-14 is ~450 lines already, and TASK-M4-01 and TASK-M4-06 come after M0's compute dispatches.
@@ -3155,13 +3156,13 @@ error. A line that ends in a newline and is not the object its place calls for s
 `engine::contract::profile::read` gives the count as `Trace::dropped_bytes`; REQ-TOOL-008 gains the behaviour and its
 test in TASK-M0-17.
 
-*Applied per R-204 — veto?:* "doesn't parse" is read as "is not one complete JSON value": a compact JSON object cut
-anywhere before its closing brace never is, while a complete JSON object with no newline after it, whatever its keys, is
-a written line and not a cut one, so it is read as it is today. Because the dropped line held the last place, the line
-before it keeps a frame's place: a summary line followed by a cut-off line is an error, since the writer writes nothing
-after the summary line. A file whose only line is a cut-off header line has no header line to read, and stays an error,
-as an empty file is; the error states the bytes. R-299 is in the "design" group of `plan/rule_groups.yaml`, beside
-R-286 and R-298.
+*Applied per R-204, accepted by R-304:* "doesn't parse" is read as "is not one complete JSON value": a compact JSON
+object cut anywhere before its closing brace never is, while a complete JSON object with no newline after it, whatever
+its keys, is a written line and not a cut one, so it is read as it is today. Because the dropped line held the last
+place, the line before it keeps a frame's place: a summary line followed by a cut-off line is an error, since the writer
+writes nothing after the summary line. A file whose only line is a cut-off header line has no header line to read, and
+stays an error, as an empty file is; the error states the bytes. R-299 is in the "design" group of
+`plan/rule_groups.yaml`, beside R-286 and R-298.
 
 ## R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private
 *30 Sep 2026 · applied in TASK-M0-10 (PR #78)*
@@ -3313,8 +3314,8 @@ gui_state_contract §2 states that the two structs have one canonical serialisat
 number formatting, shared by the profiler header's `config`, snapshot JSON, share links and pxpack. The corpus doesn't
 say what that key order and number formatting are, so they are a definition requirement (R-72), REQ-TOOL-145: TASK-M0-18,
 the first task that writes the serialisation, writes the definition into gui_state_contract §2, reviewed by the physics
-reviewer (applied per R-72 — veto?). REQ-TOOL-146 (M8, TASK-M8-32) holds snapshot JSON, share links and pxpack to it.
-Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
+reviewer (applied per R-72, accepted by R-311). REQ-TOOL-146 (M8, TASK-M8-32) holds snapshot JSON, share links and
+pxpack to it. Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
 *1 Oct 2026 · applied in PRs #94 and #95 and in TASK-M0-18's Reviewers*
@@ -3354,9 +3355,9 @@ with overflow behaviour stated for unbounded ends."
 fixed16 need exactly 16 bits … an f16 field's declared range must lie within f16's finite range (±65504). An unbounded
 end fails unless the ledger entry states its overflow behaviour"), so R-248 is applied, and the rules are the ones the
 human wrote either way. §3.8's `type` gains `f16`; a paragraph beside R-248's states it. REQ-GEN-030 (M5) carries it,
-closed by TASK-M5-01, which types `QuadReduction`'s f16 members with it. *Applied per R-204 — veto?:* "at a 16-bit
-location" is read as a packed location of exactly 16 bits only: `f16` is not a `scalar-index` type (a scalar index is
-a 32-bit slot) and not a `vector` component type (a vector of halves stays `vector(f16-pair, k)`). R-248's
+closed by TASK-M5-01, which types `QuadReduction`'s f16 members with it. *Applied per R-204, accepted by R-354:* "at a
+16-bit location" is read as a packed location of exactly 16 bits only: `f16` is not a `scalar-index` type (a scalar
+index is a 32-bit slot) and not a `vector` component type (a vector of halves stays `vector(f16-pair, k)`). R-248's
 static-check rules for `f16-pair` (REQ-GEN-028) are unchanged.
 
 ## R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
@@ -3448,10 +3449,10 @@ u64 field is always a string, every other number a number.
 *Applied:* PR #99's item 8 (an input past the last code returns the last cell) is vetoed. Each generated
 continuation-table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) checks its
 inputs with `debug_assert!`; a release build given an out-of-range input returns 3, never a table cell. Payload §3
-states it beside R-307's table, and REQ-PAY-016 tests both builds. *Applied per R-204 — veto?:* the ruling calls 3
-"invalid" (R-307), which holds for `continuation_index` only; symbol codes are a=0, A=1, b=2, B=3 (payload §3), so 3
-from `inverse`, `continuation_symbol` or `predecessor_symbol` is the valid symbol `B`. Flagged to the human, who ruled
-R-321: the functions are total (each input `debug_assert!`-ed < 4, then masked `& 3`), replacing this release
+states it beside R-307's table, and REQ-PAY-016 tests both builds. *Applied per R-204, superseded by R-321:* the ruling
+calls 3 "invalid" (R-307), which holds for `continuation_index` only; symbol codes are a=0, A=1, b=2, B=3 (payload §3),
+so 3 from `inverse`, `continuation_symbol` or `predecessor_symbol` is the valid symbol `B`. Flagged to the human, who
+ruled R-321: the functions are total (each input `debug_assert!`-ed < 4, then masked `& 3`), replacing this release
 behaviour for all four.
 
 ## R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
@@ -3563,9 +3564,9 @@ workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml
 and a pull-request run can restore what `main` saved. The rust-gpu cache keeps its own key, `rust-gpu-<job>-<os>-<channel>`
 (R-320). This answers PR #96's measurement that the repository's Actions cache held 11.13 GiB, over GitHub's 10 GB
 limit, most of it fixture-pool entries of about 1 GiB saved per branch. REQ-SYS-073 and REQ-SYS-075 follow.
-*Applied per R-204 — veto?:* the rule reaches every workflow, including the cache steps TASK-M0-42 wrote, and
-TASK-M0-14 (PR #96), which already edits the workflows' cache steps, makes the change in all of them; REQ-SYS-073
-stays closed by TASK-M0-42.
+*Applied per R-204, accepted 1 Oct 2026, below:* the rule reaches every workflow, including the cache steps TASK-M0-42
+wrote, and TASK-M0-14 (PR #96), which already edits the workflows' cache steps, makes the change in all of them;
+REQ-SYS-073 stays closed by TASK-M0-42.
 *Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
 ## R-327 — The profiler header's frame count is u32, so it is a JSON number *(applies R-322)*
@@ -3595,13 +3596,13 @@ REQ-TOOL-119's verify detail and TASK-M0-18's `profile_diff` and definition line
 Item 14: no usize in serialised types; use explicit u32/u64."
 
 *Applied:* the session header's `device.cpu_cores` is renamed `device.cpu_cores_available`: the number of cores this
-process may use (`std::thread::available_parallelism`), a count of at most 2^32 − 1. *Applied per R-204 — veto?:* the
-machine's total is a second key, `device.cpu_cores_total`, a count of at most 2^32 − 1, or `null` where the platform
-doesn't report it cheaply. A key that is sometimes missing would break telemetry §5's rule that every key is present,
-an absent value `null`. No serialised type has a `usize` field: a count or size is an explicit u32 or u64, so its
-width, and under R-322 its JSON type, never depends on the platform. PR #100's fix pass renames the key in the typed
-form, the JSON Schema and the tests (TASK-M0-17's files, as R-308's change was). Telemetry §5, gui_state_contract §2,
-REQ-TOOL-002, REQ-TOOL-145 and TASK-M0-18 follow.
+process may use (`std::thread::available_parallelism`), a count of at most 2^32 − 1. *Applied per R-204, accepted 1 Oct
+2026, below:* the machine's total is a second key, `device.cpu_cores_total`, a count of at most 2^32 − 1, or
+`null` where the platform doesn't report it cheaply. A key that is sometimes missing would break telemetry §5's rule
+that every key is present, an absent value `null`. No serialised type has a `usize` field: a count or size is an
+explicit u32 or u64, so its width, and under R-322 its JSON type, never depends on the platform. PR #100's fix pass
+renames the key in the typed form, the JSON Schema and the tests (TASK-M0-17's files, as R-308's change was). Telemetry
+§5, gui_state_contract §2, REQ-TOOL-002, REQ-TOOL-145 and TASK-M0-18 follow.
 *Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
 ## R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max`
@@ -3628,11 +3629,11 @@ simulation data."
 
 *Applied:* REQ-SYS-033's statement reads "the sole automatic GPU-to-CPU return of simulation data", and its verify
 detail admits R-288's per-frame telemetry readback, which is not simulation data. The render contract Part 1 says the
-same. TASK-M5-30's Goal and its REQ-SYS-033 checklist line follow. *Applied per R-332 — veto?:* REQ-SYS-036's audit
-("finds only the reduction readback and the two sanctioned pulls") read the same way as REQ-SYS-033's, so it also
-admits the telemetry readback, and its statement names the `QuadReduction` "the sole automatic GPU→CPU return of
-simulation data"; systems_architecture §3's membrane table, REQ-SYS-036's source, says the same, and TASK-M5-30's
-REQ-SYS-036 checklist line follows. A veto reverts all three together. RQ-173 moves to
+same. TASK-M5-30's Goal and its REQ-SYS-033 checklist line follow. *Applied per R-332, accepted 1 Oct 2026, below:*
+REQ-SYS-036's audit ("finds only the reduction readback and the two sanctioned pulls") read the same way as
+REQ-SYS-033's, so it also admits the telemetry readback, and its statement names the `QuadReduction` "the sole automatic
+GPU→CPU return of simulation data"; systems_architecture §3's membrane table, REQ-SYS-036's source, says the same, and
+TASK-M5-30's REQ-SYS-036 checklist line follows. A veto reverts all three together. RQ-173 moves to
 `docs/archive/review_queue/M0.md`.
 *Veto not exercised, 1 Oct 2026:* "The veto marks on R-326, R-329 and R-332 stand." A note, not a ruling.
 
@@ -4264,3 +4265,88 @@ superseded)."
   17e45709fa4e and `rq/rq-175` at 51119600d3a7. They were local only, never on the remote.
 
 Changes no requirement: REQ-RENDER-083 loses its "veto?" mark and lists R-353 among its rulings.
+
+## R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue
+*1 Oct 2026 · applied in decisions.md, `plan/tasks/`, REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio),
+REVIEW_QUEUE.md (RQ-192), `plan/tools/veto_marks.py`, `plan/check_plan.py` and `plan/OPERATIONS.md`*
+
+"This is from me." "The seven open veto items: 1, 2 and 4–7 stand. Item 3 is corrected: R-253 is superseded by R-254
+(stands), but R-252 is only partly superseded by R-277. Its thresholds are replaced, and its "log the pressure level in
+summaries" line stays in force (R-295). Fix the "Superseded by" mark and CURRENT_RULES to match, and add a check_plan
+rule if one would have caught it. Fold all of this into the R-353 PR, and clear the stray "veto?" marks there."
+
+*Applied:*
+- **The seven items**, as the orchestrator listed them to the human:
+  1. R-271's mark (mechanical consequences, found in payload §1): the `d_min` packer writes the +inf and subnormal bit
+     patterns itself, and readers test unset by its bits. Stands.
+  2. R-276's mark: TASK-M0-40 has the `pull_request_review` run re-run the stale `pull_request` `reviews` run. Stands.
+  3. R-293's mark: R-252 marked superseded by R-277, and R-253 by R-254. Corrected: R-253 stays superseded by R-254;
+     R-252 is amended by R-277, not superseded, and its summary logging stays in force.
+  4. R-294's mark (which task): the GPU binding and readback of R-288's counters are TASK-M5-28's. Stands.
+  5. R-296's mark (plan): REQ-VAL-176 qualified the same way, and TASK-M0-43's last acceptance line. Stands.
+  6. R-297's mark: the placements (TASK-M0-44, TASK-M4-08, TASK-M7-31, TASK-M8-43, TASK-M4-20, TASK-M2-29). Stands.
+  7. R-312's mark: `f16` only at a packed location of exactly 16 bits. Stands.
+
+  Each mark now reads "accepted by R-354", and item 3's "corrected by R-295, confirmed by R-354"; the wording is
+  otherwise unchanged. The same marks elsewhere change the same way: item 2's in TASK-M0-40's Notes, item 4's in
+  TASK-M5-28's Notes, and item 6's in TASK-M2-26's and TASK-M2-29's Notes and in REQ-RENDER-025's, REQ-COL-060's and
+  REQ-GUI-164's notes (reqio, with R-354 added to their rulings).
+- *Applied per R-204 — veto? (item 6's extent):* R-297's mark heads one block, and item 6 is read as all of it: beside
+  the placements, its design bullets (ROUNDTRIP's tolerance is ε_phys; the setting is a `SimConfig` field; what the
+  header records; the Profiler's compute line; the difference report), the GUI bullet (presence only until M8) and the
+  amendment bullets (R-84, R-116, R-133). The list named only the placements. REQ-RENDER-025's, REQ-COL-060's and
+  REQ-GUI-164's marks are on two of those design bullets, and TASK-M2-26's and TASK-M2-29's on ROUNDTRIP's tolerance.
+- **Item 3: the state already matched, by R-295; nothing in it changed.** R-252's forward line reads "*Amended by
+  R-277.*", with a "*Still in force:*" line keeping its summary logging (kept by R-295), and `plan/CURRENT_RULES.md`
+  lists R-252 with that line. R-253's reads "*Superseded by R-254.*", and the digest leaves it out. No file outside
+  `docs/archive/` marks R-252 superseded by R-277. `plan/rule_groups.yaml` and `plan/section_notes.yaml` list R-252 as
+  a ruling, CLAUDE.md's memory bullet cites R-277 (R-295), and `plan/OPERATIONS.md` logs the pressure level at each
+  checkpoint (R-252, R-295). Only R-293's Applied note still read "veto?". Its text, the record of what R-293 first
+  applied, is unchanged; its mark reads "corrected by R-295, confirmed by R-354".
+- **The check.** No check would have caught R-252's mark itself: what R-293's note dropped was in its own prose (R-277
+  "restates R-252's limits … but not its 'Log the pressure level'"), and a check that a ruling marked "Superseded by" is
+  named by no later ruling as still in force would rest on reading that prose. R-293's check already fails a ruling
+  superseded outright that carries a "Still in force" line, and R-295's fix holds under it. So that check is not
+  added. What a check would have caught is the stray mark: R-295 settled item 3, and R-293's mark still read "veto?"
+  a day later, as did 20 other marks whose rulings had already settled them. `plan/tools/veto_marks.py`, run by
+  `plan/check_plan.py`, fails on an "applied per R-n — veto?" mark in decisions.md, CLAUDE.md, `plan/` or `docs/` (less
+  `docs/archive/` and `docs/reference/`) that no open REVIEW_QUEUE.md entry names on a "**Mark:**" line, and on a
+  "**Mark:**" line that names no open mark. A mark quoted to name the convention is not a mark. A ruling moves its entry
+  to `docs/archive/review_queue/` (R-292), which the check doesn't read, so a mark the ruling settled but left reading
+  "veto?" fails until it names that ruling. Its negative controls run first, from the tool itself (`--self-test`):
+  a mark no entry names, one wrapped over a line, one written ", veto?", a Mark line whose mark was closed and one
+  naming another file must each fail; a listed mark, a closed mark and the quoted convention must pass. On the tree
+  before these changes it names 36 open marks: the 34 cleared below and the 2 left open.
+- *Applied per R-204 — veto? (the check's design):* the open marks live in REVIEW_QUEUE.md, where R-346 already keeps
+  pending veto items, rather than in a list of their own; an entry names each of its marks by file and nearby text;
+  the scan covers the files above, not PR descriptions; and the negative controls are the tool's own built-in cases,
+  run by `check_plan.py` on every plan check, since this PR leaves `xtask/` untouched (`xtask/tests/plan_check.rs`
+  runs `check_plan.py`, so it runs them too).
+- **The marks cleared**, each now naming the ruling that settled it in place of "veto?":
+  - by R-267 ("All merged "veto?" items … stand"; each merged before it): R-196's (RQ-162, PR #63), R-235's (PR #40),
+    R-245's and R-248's (PR #44), R-265's (PR #61), and TASK-M0-23's RQ-162 deliverable line;
+  - accepted by the human on 29 Sep, as recorded below each: R-251's (sequencing) and R-254's (reading of
+    "whenever");
+  - by R-283 ("qa's edits on #74/#78"): TASK-M0-10's note on qa's `d_min` edit (PR #78's item 8);
+  - by R-293 (PR #84's items 1–4 stand): R-292's two, the verb set and the group file; item 5, which rulings leave
+    the digest, R-293 changed, as the mark now says;
+  - by R-295, confirmed by R-354: R-293's (item 3);
+  - by R-304 (#79's items f–i): R-299's;
+  - by R-311 (#97's items stand): R-309's "applied per R-72" mark, the definition TASK-M0-18 writes with the physics
+    reviewer (R-310 put physics on TASK-M0-18);
+  - superseded by R-321, as its own text records: R-319's;
+  - accepted on 1 Oct 2026, by the "Veto not exercised" note below each ("The veto marks on R-326, R-329 and R-332
+    stand"): R-326's, R-329's and R-332's, and the same marks in TASK-M0-14's, TASK-M0-18's and TASK-M5-30's Notes;
+  - by R-354: the seven items' marks and their copies, as above.
+
+  R-343's and R-344's items were already closed in their own text, and R-253's and R-254's forward lines needed
+  nothing.
+- **Left open, as RQ-192:** two marks no ruling settles that could be found, beside this ruling's two:
+  - R-298's mark, PR #79's items a (the type shape), c (a header line alone is an incomplete session), d (the writer)
+    and e (R-298's group). R-282 accepted #79's numbered items, R-299 ruled item b and R-304 items f–i; none names a,
+    c, d or e.
+  - TASK-M0-23's `mutants.yml` deliverable, PR #65's item 16 (the gate is its own workflow). R-305 accepted items
+    10–13; none names 14–16.
+
+Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 lose their "veto?" marks and
+list R-354 among their rulings.

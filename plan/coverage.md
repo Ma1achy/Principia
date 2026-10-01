@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 
 ## Sections
 
-1044 sections in 46 files: 876 yield at least one requirement; 168 yield none and are listed below with the reason.
+1045 sections in 46 files: 876 yield at least one requirement; 169 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 121 |
+| informative only | 122 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -130,6 +130,7 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 | R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included | informative only | process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement |
 | R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock` | informative only | accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement |
 | R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted | informative only | accepts R-352's items applied per R-204 and the R-204 marks of R-348 and PR #96, and records the deletion of two superseded local branches; REQ-RENDER-083 loses its veto mark; changes no requirement |
+| R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue | informative only | process ruling; accepts the seven veto items listed to the human (item 3 as R-295 corrected it), closes the settled veto marks in decisions.md, plan/tasks/ and three requirement notes, files RQ-192 for the open ones, and adds plan/tools/veto_marks.py to plan/check_plan.py; changes no requirement's statement or verify |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

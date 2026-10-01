@@ -273,6 +273,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Amended by R-347.
 - **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
 - **R-349** — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+- **R-354** — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue
 
 ## CI
 

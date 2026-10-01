@@ -31,4 +31,4 @@ re-run (R-276).
 - On this task's own PR: after the last named approval, both reviews-complete runs for the head pass and mergeStateStatus is CLEAN with no manual re-run (REQ-SYS-072).
 
 ## Notes
-- The reviews change is applied per R-204 — veto?: `reviews.yml` already triggers on `pull_request_review` (R-276's flag); what blocks a merge is the earlier failed `pull_request`-event run, which is a separate check suite.
+- The reviews change is applied per R-204, accepted by R-354: `reviews.yml` already triggers on `pull_request_review` (R-276's flag); what blocks a merge is the earlier failed `pull_request`-event run, which is a separate check suite.

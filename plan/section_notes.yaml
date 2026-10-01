@@ -731,3 +731,7 @@
   section: "R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted"
   reason: informative only
   note: "accepts R-352's items applied per R-204 and the R-204 marks of R-348 and PR #96, and records the deletion of two superseded local branches; REQ-RENDER-083 loses its veto mark; changes no requirement"
+- file: decisions.md
+  section: 'R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue'
+  reason: informative only
+  note: "process ruling; accepts the seven veto items listed to the human (item 3 as R-295 corrected it), closes the settled veto marks in decisions.md, plan/tasks/ and three requirement notes, files RQ-192 for the open ones, and adds plan/tools/veto_marks.py to plan/check_plan.py; changes no requirement's statement or verify"

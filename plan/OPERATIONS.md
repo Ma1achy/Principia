@@ -235,6 +235,10 @@ self-merge in away mode.
 - **Every open question is in `REVIEW_QUEUE.md`**, pending veto items among them, never only in a PR description or a
   log (the human, 1 Oct 2026, R-346). A session stops at a clean point: nothing half-applied, every open question
   recorded there.
+- **An open mark is named by its entry** (R-354). Each "veto?" mark in decisions.md, CLAUDE.md, `plan/` or `docs/`
+  has a `**Mark:**` line in its open REVIEW_QUEUE.md entry, giving the file and text near the mark. The ruling that
+  settles it replaces "veto?" with the ruling ("applied per R-204, accepted by R-m") in the commit that archives the
+  entry; `plan/check_plan.py` fails on an open mark no open entry names (`plan/tools/veto_marks.py`).
 - **Changing a decision.** A port adds; it never changes a decision without a REVIEW_QUEUE entry and a ruling
   (CLAUDE.md § "Changing the docs"). Before committing a docs change, word-diff each removed line against its
   replacement; if a decision's content changed, restore it and open an RQ instead (24 Sep 2026).
