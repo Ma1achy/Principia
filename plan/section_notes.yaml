@@ -735,3 +735,7 @@
   section: 'R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue'
   reason: informative only
   note: "process ruling; accepts the seven veto items listed to the human (item 3 as R-295 corrected it), closes the settled veto marks in decisions.md, plan/tasks/ and three requirement notes, files RQ-192 for the open ones, and adds plan/tools/veto_marks.py to plan/check_plan.py; changes no requirement's statement or verify"
+- file: decisions.md
+  section: "R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*"
+  reason: informative only
+  note: "process ruling; accepts RQ-192's items 1, 2 and 4 (R-298's mark, TASK-M0-23's mutants.yml mark, the veto-mark check's design), corrects R-354's item 6 to the placements only and re-opens the five marks it closed beyond them (and R-297's other bullets) in RQ-192, asks there whether R-299's two cut-off error cases stand, and hands the seven ready tasks to the cloud session; REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their veto marks; changes no requirement's statement or verify"

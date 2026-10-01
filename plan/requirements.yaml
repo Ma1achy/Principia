@@ -9264,8 +9264,9 @@
   - R-75
   - R-297
   - R-354
+  - R-355
   milestone: M2
-  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204, accepted by R-354)."
+  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?)."
 - id: REQ-RENDER-026
   area: RENDER
   statement: "The shape-sphere chart must default to an equirectangular projection and offer an equal-area alternative (Mollweide or Hammer–Aitoff) for quantitative area comparisons."
@@ -11190,8 +11191,9 @@
   rulings:
   - R-297
   - R-354
+  - R-355
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-354; R-297's Applied note)."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204 — veto?, R-297's Applied note)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -13675,8 +13677,9 @@
   rulings:
   - R-297
   - R-354
+  - R-355
   milestone: M8
-  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204, accepted by R-354 (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
+  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204 — veto? (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

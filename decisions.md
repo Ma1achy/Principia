@@ -3062,7 +3062,7 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
   kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
-*Applied per R-204, accepted by R-354:*
+*Applied per R-204 — veto?, but for the two Plan bullets (the placements), accepted by R-354 (R-355):*
 - Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
   GPU) and TASK-M0-19 (the session header), so every compute pipeline from M0 on is built through it. No existing
   task takes it: TASK-M0-14 is ~450 lines already, and TASK-M4-01 and TASK-M4-06 come after M0's compute dispatches.
@@ -3135,7 +3135,7 @@ reports `leak_flags` and `hot_paths` as absent, with "session incomplete". REQ-T
 truncated-trace test in TASK-M0-17. REQ-TOOL-101, closed by TASK-M8-28, gains "`prin profile query --live` works on an
 in-progress trace (no summary line yet)".
 
-*Applied per R-204 — veto?:* R-298 is in the "design" group of `plan/rule_groups.yaml`, beside R-282 and R-286. A
+*Applied per R-204, accepted by R-355:* R-298 is in the "design" group of `plan/rule_groups.yaml`, beside R-282 and R-286. A
 header line alone counts as an incomplete session with no frames, since it too is "a trace with no final summary line".
 A last line cut off inside its JSON object is still rejected: the ruling covers a missing summary line, not a partial
 line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
@@ -4267,6 +4267,10 @@ superseded)."
 Changes no requirement: REQ-RENDER-083 loses its "veto?" mark and lists R-353 among its rulings.
 
 ## R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue
+*Corrected in part by R-355.*
+*Still in force: all of it but item 6's extent: the human's "item 6 stands" covered R-297's placements only (R-355),
+so R-297's other applied-per-R-204 bullets and the five marks copying two of them (REQ-RENDER-025, REQ-COL-060,
+REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192; R-355 accepts the check's design.*
 *1 Oct 2026 · applied in decisions.md, `plan/tasks/`, REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio),
 REVIEW_QUEUE.md (RQ-192), `plan/tools/veto_marks.py`, `plan/check_plan.py` and `plan/OPERATIONS.md`*
 
@@ -4291,7 +4295,7 @@ rule if one would have caught it. Fold all of this into the R-353 PR, and clear 
   otherwise unchanged. The same marks elsewhere change the same way: item 2's in TASK-M0-40's Notes, item 4's in
   TASK-M5-28's Notes, and item 6's in TASK-M2-26's and TASK-M2-29's Notes and in REQ-RENDER-025's, REQ-COL-060's and
   REQ-GUI-164's notes (reqio, with R-354 added to their rulings).
-- *Applied per R-204 — veto? (item 6's extent):* R-297's mark heads one block, and item 6 is read as all of it: beside
+- *Applied per R-204, corrected by R-355 (item 6's extent):* R-297's mark heads one block, and item 6 is read as all of it: beside
   the placements, its design bullets (ROUNDTRIP's tolerance is ε_phys; the setting is a `SimConfig` field; what the
   header records; the Profiler's compute line; the difference report), the GUI bullet (presence only until M8) and the
   amendment bullets (R-84, R-116, R-133). The list named only the placements. REQ-RENDER-025's, REQ-COL-060's and
@@ -4318,7 +4322,7 @@ rule if one would have caught it. Fold all of this into the R-353 PR, and clear 
   whose mark was closed and one naming another file must each fail; a listed mark, a closed mark and the quoted
   convention must pass. On the tree before these changes it names 36 open marks: the 34 cleared below and the 2 left
   open.
-- *Applied per R-204 — veto? (the check's design):* the open marks live in REVIEW_QUEUE.md, where R-346 already keeps
+- *Applied per R-204, accepted by R-355 (the check's design):* the open marks live in REVIEW_QUEUE.md, where R-346 already keeps
   pending veto items, rather than in a list of their own; an entry names each of its marks by file and nearby text;
   the scan covers the files above, not PR descriptions; and the negative controls are the tool's own built-in cases,
   run by `check_plan.py` on every plan check, since this PR leaves `xtask/` untouched (`xtask/tests/plan_check.rs`
@@ -4351,3 +4355,61 @@ rule if one would have caught it. Fold all of this into the R-353 PR, and clear 
 
 Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 lose their "veto?" marks and
 list R-354 among their rulings.
+
+## R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*
+*2 Oct 2026 · applied in decisions.md (R-297's, R-298's and R-354's marks), TASK-M0-23, TASK-M2-26, TASK-M2-29,
+REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio), REVIEW_QUEUE.md (RQ-192) and `plan/OPERATIONS.md`*
+
+"This is from me." "RQ-192:
+a. R-298's items stand, read as: a cut-off last line is dropped and reported as dropped bytes, the file stays valid and
+the complete frames before it are kept (R-298, R-299). The file is never rejected for it. Fix the wording if it says
+otherwise.
+b. mutants.yml as its own workflow stands.
+c. My "item 6 stands" covered the placements only. Put the exact text of the five remaining marks (REQ-RENDER-025,
+REQ-COL-060, REQ-GUI-164, TASK-M2-26, TASK-M2-29) in RQ-192 for me to rule.
+d. The check's design stands.
+Start no new tasks here. Merge #111, then stop: the seven ready tasks go to the cloud session, TASK-M0-45 and
+TASK-M0-49 first."
+
+*Applied:*
+- **(a) R-298's items stand**, PR #79's items a, c, d and e as RQ-192 listed them, read as the human reads them: a
+  cut-off last line is dropped and reported as dropped bytes, the file stays valid and the complete frames before it
+  are kept (R-298, R-299), and the file is never rejected for it. R-298's mark reads "accepted by R-355".
+  - **The wording.** No live statement of the trace rule says a cut-off last line makes the file rejected, so none
+    changed: telemetry §5 ("A line cut off at the end"), REQ-TOOL-008's statement and verify, TASK-M0-17's and
+    TASK-M0-47's acceptance lines, render_gui_spec § "Profiler", and R-298's "Still in force" line (and so
+    `plan/CURRENT_RULES.md`) each have the line dropped with its bytes counted. R-298's Applied note keeps its
+    historical sentence, "A last line cut off inside its JSON object is still rejected"; its "Still in force" line
+    already says R-299 replaced it, and R-299's Applied note quotes it as the item that changed. R-299 has no "Still
+    in force" line, being amended by no later ruling.
+  - **Not settled, asked in RQ-192 (A):** whether "The file is never rejected for it" reaches the two cases that
+    R-299's note, accepted by R-304 (PR #79's items g and h), keeps as errors: a summary line followed by a cut-off
+    line, and a file whose only line is a cut-off header line. Telemetry §5 and the merged reader (TASK-M0-17) treat
+    both as errors, so the answer changes what gets built. Nothing was changed for them; the recommendation is that
+    the first becomes valid and the second stays an error. A change to either needs a follow-up task, added after
+    that ruling, not here.
+- **(b)** TASK-M0-23's `mutants.yml` mark, PR #65's item 16, reads "accepted by R-355".
+- **(c) R-354's item 6 is corrected.** R-354 read "item 6 stands" as all of R-297's "Applied per R-204" block; the
+  human's words covered the placements only. So:
+  - the five marks R-354 closed under item 6 read "applied per R-204 — veto?" again, their wording otherwise
+    unchanged: REQ-RENDER-025's, REQ-COL-060's and REQ-GUI-164's notes (reqio; R-355 joins their rulings, and R-354,
+    which closed them first, stays listed) and TASK-M2-26's and TASK-M2-29's Notes. RQ-192 (B) quotes each in full,
+    with its file and line, and names it on a "**Mark:**" line;
+  - R-297's own block mark reads "veto?" again, but for its two Plan bullets (the placements), which stay accepted by
+    R-354. The five marks copy two of that block's bullets, and its other bullets (where the setting lives, what the
+    header records, the difference report, the GUI's presence check, the R-84, R-116 and R-133 amendments) were
+    closed only by R-354's reading of item 6. The human named the five, not the block; it is re-opened with them and
+    named in RQ-192 (B) too, flagged there, applied per R-355's words;
+  - R-354 gains a forward line, "*Corrected in part by R-355.*", and a "*Still in force*" line. Its text is
+    unchanged; its item-6-extent mark reads "corrected by R-355".
+- **(d)** R-354's mark on the check's design reads "accepted by R-355".
+- **The tasks.** No task starts from this session. The seven ready tasks, TASK-M0-15, TASK-M0-45, TASK-M0-46,
+  TASK-M0-47, TASK-M0-48, TASK-M0-49 and TASK-M0-50, go to the cloud session, TASK-M0-45 and TASK-M0-49 first.
+  `plan/OPERATIONS.md` § "Away mode", "Order of work", records it. No task file, dependency or order changed.
+- **RQ-192 stays open**, holding question A and the marks in B. R-292 moves an entry to the archive, unchanged, once
+  it has a ruling; RQ-192 is ruled only in part, so it stays in the queue whole, its ruled items marked "ruled by
+  R-355" (item 3, "corrected by R-355") and their "**Mark:**" lines closed ("**Mark, closed by R-355:**"), and it
+  moves to `docs/archive/review_queue/M0.md` when the rest is ruled.
+
+Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their "veto?" marks
+and list R-355 among their rulings.
