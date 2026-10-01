@@ -195,8 +195,11 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-313** — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
 - **R-315** — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*
 - **R-317** — #98's `f16` restriction stands; `f16` is storage-only
-- **R-318** — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*
-- **R-319** — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*
+- **R-318** — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*. Still in force: JCS (RFC 8785) — sorted keys, its number format, its test vectors; −0.0 written `0`; R-322 replaces the per-value reading of "integers beyond 2^53" with a per-field rule. Amended by R-322.
+- **R-319** — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*. Still in force: PR #99's item 8 stays vetoed (no input yields "the last cell" as a fallback); each input is `debug_assert!`-ed. R-321 replaces the release behaviour: the functions are total, each input masked to 2 bits. Amended by R-321; replaced in part by R-321 (its release behaviour).
+- **R-321** — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*
+- **R-322** — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*
+- **R-323** — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
 
 ## Values
 

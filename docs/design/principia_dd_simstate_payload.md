@@ -290,7 +290,7 @@ continuation_index[2]= [1,2,0,3]   // prev b: a→1, A→2, b→0, B (inverse)�
 continuation_index[3]= [2,1,3,0]   // prev B: a→2, A→1, b (inverse)→3, B→0
 ```
 
-**An out-of-range input is a `debug_assert!` failure; in release it returns 3 (R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) is defined for symbols 0–3 and digits 0–2. A debug build given anything else fails a `debug_assert!`; a release build returns **3**, never a table cell. From `continuation_index` 3 is R-307's "invalid"; from `inverse`, `continuation_symbol` and `predecessor_symbol` it is the symbol code `B` (a=0, A=1, b=2, B=3), a valid symbol. The ruling's "invalid" fits only `continuation_index`; this is flagged to the human and applied literally pending a ruling (R-319).
+**The table functions are total: each input is `debug_assert!`-ed < 4, then masked to 2 bits (R-321, amending R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`), in Rust and in WGSL, reads its table at `input & 3`; a Rust debug build given an input ≥ 4 fails a `debug_assert!` first (WGSL has none). So no out-of-range return value exists: an input ≥ 4 reads the cell at `input & 3`. `continuation_index` returns 3 ("invalid") only for its four inverse cells (R-307). The digit argument of `continuation_symbol` and `predecessor_symbol` is defined for 0–2; a digit of 3 after the mask has no table row, and its value is flagged to the human, not yet ruled (R-321).
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```
