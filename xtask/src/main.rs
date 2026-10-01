@@ -45,7 +45,11 @@ Commands:
                                   naming file, line and term (R-111, R-259)
   lint wgsl                       parse the generated WGSL with naga and fail, naming the rule, on an extractBits
                                   argument not u32, any f64, `enable f16`, r/p/r_sh/p_sh not array<vec2<f32>, 3>,
-                                  or a word buffer not bound on its own and indexed per copy (REQ-RENDER-001)
+                                  a word buffer not bound on its own and indexed per copy (REQ-RENDER-001), a
+                                  buffer off the ledger's binding table (simstate_buffer @group(1) @binding(0),
+                                  word_buffer @group(1) @binding(1)), a generated SIMSTATE_/WORD_GROUP or _BINDING
+                                  constant unequal to its attribute, a binding in group 0 (bindings, R-343), or
+                                  either buffer used outside sample_state/sample_word (sample-only, R-343)
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
