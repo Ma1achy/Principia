@@ -11,7 +11,7 @@
 ## Goal
 A `cargo mutants` shard has one limit today, R-302's per-shard time limit (REQ-VAL-149). A mutant whose tests hang
 holds its shard until that limit cuts it off, and the shard's remaining mutants go untested; a mutant that allocates
-without bound can take the runner down with it. Under R-348 every `cargo mutants` run in CI gets two caps: a
+without bound can take the runner down with it. Under R-348 every `cargo mutants` run, in CI or local, gets two caps: a
 per-mutant timeout through cargo-mutants' timeout setting, so a hang is recorded as a timeout and the shard finishes,
 and a per-process memory cap on the test processes (`ulimit -v` or `prlimit`), so a runaway allocation kills one test,
 not the runner. Both values are calibration requirements (R-71): this task proposes them with their evidence, and the

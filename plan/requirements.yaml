@@ -18841,7 +18841,7 @@
   milestone: M0
 - id: REQ-VAL-179
   area: VAL
-  statement: "Every `cargo mutants` run in CI, the per-PR shards (REQ-VAL-148) and the nightly full run (REQ-VAL-150), must run under two caps: a per-mutant timeout set through cargo-mutants' timeout setting (REQ-VAL-180), so that a mutant whose tests hang is recorded as a timeout and the shard finishes, never a dead shard; and a per-process memory cap on the test processes, set with `ulimit -v` or `prlimit` (REQ-VAL-181), so that a runaway allocation kills one test process, not cargo-mutants or the runner (R-348)."
+  statement: "Every `cargo mutants` run, the per-PR shards (REQ-VAL-148), the nightly full run (REQ-VAL-150) and a run made locally, must run under two caps: a per-mutant timeout set through cargo-mutants' timeout setting (REQ-VAL-180), so that a mutant whose tests hang is recorded as a timeout and the shard finishes, never a dead shard; and a per-process memory cap on the test processes, set with `ulimit -v` or `prlimit` (REQ-VAL-181), so that a runaway allocation kills one test process, not cargo-mutants or the runner (R-348). A local run applies each cap where its machine enforces it (applied per R-204 — veto?, RQ-191)."
   source:
   - file: decisions.md
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
@@ -18859,7 +18859,7 @@
 - id: REQ-VAL-180
   area: VAL
   kind: calibration
-  statement: "The per-mutant timeout of every `cargo mutants` run in CI (R-348) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  statement: "The per-mutant timeout of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
@@ -18876,7 +18876,7 @@
 - id: REQ-VAL-181
   area: VAL
   kind: calibration
-  statement: "The per-process memory cap on the test processes of every `cargo mutants` run in CI (R-348) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  statement: "The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"

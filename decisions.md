@@ -4043,8 +4043,8 @@ R-204 — veto?
 timeout, not a dead shard), and a per-process memory cap on test processes (ulimit -v or prlimit) so a runaway
 allocation kills one test, not the runner. The values are calibration requirements (R-71)."
 
-*Applied:* every `cargo mutants` run in CI, the per-PR shards (`mutants.yml`, REQ-VAL-148, R-302) and the nightly full
-run (REQ-VAL-150), runs under two caps:
+*Applied:* every `cargo mutants` run, the per-PR shards (`mutants.yml`, REQ-VAL-148, R-302), the nightly full run
+(REQ-VAL-150) and a run made locally (`plan/OPERATIONS.md` § "Reviewers"), runs under two caps:
 - **A per-mutant timeout,** set through cargo-mutants' timeout setting. A mutant whose tests hang past it is recorded
   in the run's `outcomes.json` as a timeout, and the shard goes on to its next mutant and finishes, rather than hanging
   until R-302's per-shard limit cuts it off. `cargo xtask mutants-check` already lists a timed-out mutant as "timed out
@@ -4064,6 +4064,10 @@ run (REQ-VAL-150), runs under two caps:
   the caps are written and measured on the workflow as #96 leaves it, and the two PRs don't clash.
 - The nightly full run does not exist yet: TASK-M0-19 writes it. TASK-M0-19 now depends on TASK-M0-49, and its
   nightly run applies the same two caps at the same values, read from the one place TASK-M0-49 keeps them.
+- **Local runs too.** The human's words say "mutants runs", not CI's alone, so a local run, which
+  `plan/OPERATIONS.md` allows when one has to run, uses the same caps at the same values, read from the same place.
+  macOS is not known to enforce `ulimit -v` (RLIMIT_AS) and has no `prlimit`, so on the Mac a local run may get the
+  timeout without the memory cap; TASK-M0-49 checks this, and its PR says how a local run applies each cap.
 
 ## R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
 *1 Oct 2026 · applied in CLAUDE.md § "How work runs" and `plan/OPERATIONS.md` § "Resources"*
@@ -4083,11 +4087,18 @@ message's first ruling now holds (R-348's note).
   cache (`~/.cache/rust-gpu`, `~/Library/Caches/rust-gpu` on the Mac) and the repository's Actions caches on GitHub;
   and the system temp folder outside the scratch directory, the shell's and git's configuration, and the external
   SSD's folders.
+- **What `plan/OPERATIONS.md` names as the orchestrator's** is inside wherever it lives: the away-mode log on the Mac
+  (`/Users/malachy/principia-ssd/overnight-log.md`, § "Logs"). The SSD's other folders, the human's own, stay
+  outside.
 - **A build's own cache writes** are part of running the build, not an agent's change: cargo filling its registry,
   rustup installing the toolchain `rust-toolchain.toml` pins, and `cargo xtask build-kernel` building rust-gpu's
   backend in cargo-gpu's cache (R-350). An agent's own deletion or edit of a cache asks first, such as emptying the
   rust-gpu cache for a cold run, as PR #96's cold check did, clearing `~/.cargo`, removing a toolchain, or deleting an
   Actions cache entry.
+- **What a build, test or tool writes in its normal course** outside the repository is part of running it, like a
+  build's cache writes: the files and folders tests and tools make through `std::env::temp_dir()` (as
+  `xtask/tests/deps.rs`, `xtask/src/deps.rs`, `crates/validation/src/spawn.rs` and `crates/prin/src/profile/diff.rs`
+  do), and cargo-mutants' temporary copy of the tree. An agent's own deletion or edit there asks first.
 - **`scripts/cloud-setup.sh`** installs toolchains, apt and pip packages and cargo tools outside the repository. A
   cloud session runs it as R-346 and R-347 order, which is the asking for what it installs; anything it does beyond
   them asks first.

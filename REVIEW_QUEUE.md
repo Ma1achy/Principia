@@ -29,21 +29,30 @@ milestone gets its own file after its gate. Ids never change.
   3. R-348: TASK-M0-49 waits for TASK-M0-14 (#96), which rewrites `mutants.yml`.
   4. R-348: TASK-M0-19, which writes the nightly full run, depends on TASK-M0-49 and applies the same caps at the same
      values.
-  5. R-349: what is inside (the checkouts and worktrees, their target directories, the session's scratch directory)
+  5. R-348: "mutants runs" includes a local run, not CI's alone: it uses the same caps at the same values, each where
+     its machine enforces it. macOS is not known to enforce `ulimit -v` and has no `prlimit`, so a local Mac run may
+     have the timeout only; TASK-M0-49 checks. (The other reading: the caps are CI's only.)
+  6. R-349: what is inside (the checkouts and worktrees, their target directories, the session's scratch directory)
      and what is outside (`~/.cargo`, `~/.rustup`, the rust-gpu cache, the repository's Actions caches, the system
      temp folder, shell and git configuration, the SSD's folders).
-  6. R-349: a build's own cache writes (cargo's registry, rustup's pinned toolchain, build-kernel's rust-gpu backend)
+  7. R-349: a file or folder `plan/OPERATIONS.md` names as the orchestrator's is inside wherever it lives: the Mac's
+     away-mode log on the SSD (`/Users/malachy/principia-ssd/overnight-log.md`).
+  8. R-349: a build's own cache writes (cargo's registry, rustup's pinned toolchain, build-kernel's rust-gpu backend)
      are part of the build; an agent's own deletion or edit of a cache asks first.
-  7. R-349: `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
-  8. R-351: "fragment-stage WGSL" is every WGSL file under `crates/render/frag/`.
-  9. R-351: the rule joins `cargo xtask lint wgsl` rather than a new subcommand.
-  10. R-351: an inf or NaN constant includes a constant expression that evaluates to one (a `bitcast<f32>` of an inf
+  9. R-349: what a build, test or tool writes in its normal course outside the repository is part of running it:
+     tests' and tools' files under `std::env::temp_dir()` (`xtask/tests/deps.rs`, `xtask/src/deps.rs`,
+     `crates/validation/src/spawn.rs`, `crates/prin/src/profile/diff.rs`) and cargo-mutants' temporary copy of the
+     tree; an agent's own deletion or edit there asks first.
+  10. R-349: `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
+  11. R-351: "fragment-stage WGSL" is every WGSL file under `crates/render/frag/`.
+  12. R-351: the rule joins `cargo xtask lint wgsl` rather than a new subcommand.
+  13. R-351: an inf or NaN constant includes a constant expression that evaluates to one (a `bitcast<f32>` of an inf
       or NaN bit pattern).
 - **And one question:** the render contract names `x != x` and `x > 65504.0` as float comparisons standing in for
   `isnan` and `isinf`. Neither compares against an inf or NaN constant, so under R-351's words the lint does not cover
   them, and REQ-RENDER-001's checklist grep alone checks them.
 - **Options seen:**
-  1. **Accept items 1–10 (recommended);** veto any by number, saying what replaces it.
+  1. **Accept items 1–13 (recommended);** veto any by number, saying what replaces it.
   2. For the question: (a) the lint covers only R-351's words, the checklist grep the two stand-ins (as applied); or
      (b) the lint also fails on a self-comparison of a float and on a comparison against `65504.0` (f16's largest
      finite value), and REQ-RENDER-083 and TASK-M0-50 widen to match.

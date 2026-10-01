@@ -49,6 +49,6 @@
 - Where the probe lives is a layout choice (engine telemetry, beside the future frame loop); the firewall requirement REQ-SYS-052 (M8) governs what the engine exposes `pub`.
 - See Gaps: the f64 rate, and display fields in a headless run.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-121 (R-72 definition) (classification accepted by R-132).
-- R-348 (1 Oct): every `cargo mutants` run in CI gets a per-mutant timeout and a per-process memory cap on test
+- R-348 (1 Oct): every `cargo mutants` run gets a per-mutant timeout and a per-process memory cap on test
   processes; TASK-M0-49 sets both for the per-PR shards, and this task's nightly run reads the same values. Applied per
   R-204 — veto? (RQ-191): this task depends on TASK-M0-49.

@@ -90,45 +90,45 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 | R-243 — TASK-M0-07 is accepted at ~725 counted lines | informative only | size acceptance for one PR |
 | R-246 — The current drifts are derived at read; the render contract's "stored" means kept *(closes RQ-153)* | informative only | wording ruling; the derived status is already in generation-root §3.1 (recorded in the render contract and §3.5, §3.8) |
 | R-249 — TASK-M0-08 is accepted at ~756 counted lines in one PR | informative only | size acceptance for one PR |
-| R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class | informative only | size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR |
+| R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class | informative only | size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12 |
 | R-252 — The memory limit reads memory pressure, not swap *(amends R-239)* | informative only | process ruling; the memory limit on dispatch (recorded in CLAUDE.md) |
 | R-262 — Builds move to the internal disk, three agents at most | informative only | process ruling; where builds run |
 | R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)* | informative only | size ruling; applied in plan/WORKFLOW.md § "Task files"; no requirement changes |
 | R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)* | informative only | process ruling; repository settings, applied in plan/HUMAN_SETUP.md §2 |
-| R-268 — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted | informative only | process ruling; it accepts veto items on PRs |
+| R-268 — The overnight "veto?" items stand; #70's item 2 and #71's items 1, 6 and 12 are accepted | informative only | process ruling; it accepts veto items on PRs #70 and #71 and changes no requirement |
 | R-270 — TASK-M0-33: qa's one-round exception is granted; the fixture-pool cost is sent back *(amends R-231)* | informative only | applied in REQ-VAL-165 and TASK-M0-33 |
 | R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)* | informative only | process ruling; applied in TASK-M0-23 and REQ-VAL-138's verify detail |
 | R-273 — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)* | informative only | applied in REQ-VAL-168 (moved to M3), TASK-M0-05 and TASK-M3-34 |
 | R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)* | informative only | process ruling; applied in the orchestrator's loop |
-| R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)* | informative only | applied in TASK-M0-10 (PR |
-| R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)* | informative only | applied in TASK-M0-33 (PR |
-| R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part | informative only | applied in TASK-M0-10 (PR |
-| R-282 — TASK-M0-17's design items accepted | informative only | applied in TASK-M0-17 (PR |
+| R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)* | informative only | applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register and REQ-PAY-092 |
+| R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)* | informative only | applied in TASK-M0-33 (PR #74, merged) |
+| R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part | informative only | applied in TASK-M0-10 (PR #78) and REQ-PAY-092 |
+| R-282 — TASK-M0-17's design items accepted | informative only | applied in TASK-M0-17 (PR #79) |
 | R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges | informative only | process ruling; applied in the orchestrator's loop |
-| R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)* | informative only | applied in telemetry §2 and TASK-M0-10 (PR |
+| R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)* | informative only | applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79) |
 | R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch | informative only | process ruling; applied in the orchestrator's loop |
 | R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)* | informative only | process ruling; recorded, for the orchestrator's check on qa's commit |
-| R-291 — TASK-M0-40's three veto items stand | informative only | applied in TASK-M0-40 (PR |
+| R-291 — TASK-M0-40's three veto items stand | informative only | applied in TASK-M0-40 (PR #82) |
 | R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only | informative only | process ruling; applied in decisions.md, the review queue and its archive, and the plan tooling |
 | R-293 — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)* | informative only | process ruling; applied in decisions.md's forward and "Still in force" lines, the plan tooling, CLAUDE.md and the qa agent |
 | R-295 — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)* | informative only | process ruling; applied in decisions.md's R-252 and R-293 lines, CURRENT_RULES.md, CLAUDE.md and the code reviewer agent |
-| R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
-| R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs |
-| R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main` | informative only | confirms PR |
-| R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand | informative only | accepts PR |
-| R-311 — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done | informative only | accepts PR |
-| R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)* | informative only | the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR |
-| R-316 — #96's `closure_min` widening with `Real` stands | informative only | accepts PR |
-| R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max` | informative only | accepts PR |
-| R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR |
+| R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR #78's veto items on the CPU counters' API; applied in TASK-M0-10's code, under R-294's requirement |
+| R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs #78, #79, #89 and #90 and changes no requirement |
+| R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main` | informative only | confirms PR #65's provisional REQ-VAL-149 pair and its veto items 10–13, and makes `mutants-check` a required check on main (a repository setting, plan/HUMAN_SETUP.md §2); REQ-VAL-148 already requires the per-PR job on every pull request, and TASK-M0-23 builds it |
+| R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand | informative only | accepts PR #94's and PR #95's veto items and adds the physics reviewer to TASK-M0-18 (plan/tasks.yaml and the task file); changes no requirement |
+| R-311 — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done | informative only | accepts PR #97's veto items and records its merge; changes no requirement |
+| R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)* | informative only | the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR #96); changes no requirement |
+| R-316 — #96's `closure_min` widening with `Real` stands | informative only | accepts PR #96's veto item; carried by REQ-PAY-087's definition in dd_simstate_payload §1; changes no requirement |
+| R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max` | informative only | accepts PR #99's veto item and records its merge; changes no requirement |
+| R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR #96's veto item; carried by generation-root §3.6 under REQ-PAY-087 (R-313); changes no requirement |
 | R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
-| R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)* | informative only | a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR |
-| R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR |
+| R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)* | informative only | a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR #96); REQ-VAL-166 is unchanged; changes no requirement |
+| R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)* | informative only | reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR #106; records #106's D1–D6 veto item as not vetoed; changes no requirement |
 | R-345 — Merged branches are deleted, with their worktrees and target directories | informative only | process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement |
 | R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files | informative only | process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement |
 | R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)* | informative only | process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement |
 | R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included | informative only | process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement |
-| R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock` | informative only | accepts PR |
+| R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock` | informative only | accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

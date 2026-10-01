@@ -115,9 +115,11 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   the PR description, not only in a reply: qa may not read the implementer's replies (#72, 30 Sep 2026).
 - **Mutants.** Don't run `cargo mutants` locally; CI's shards do (`mutants.yml`, R-302). If one has to run locally, give
   it a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats
-  as fresh, and delete it straight after. The `mutants::skip` marker doesn't compile without the `mutants` crate as a
-  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
-  (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  as fresh, and delete it straight after. A local run uses R-348's two caps, the per-mutant timeout and the memory cap
+  on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the machine enforces them (applied per
+  R-204 — veto?, RQ-191; macOS may not enforce `ulimit -v`). The `mutants::skip` marker doesn't compile without the
+  `mutants` crate as a dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a
+  behaviour-preserving rewrite (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
 
 ## qa commits
 
@@ -258,11 +260,15 @@ anything outside the repository and its build and scratch directories without as
   `<target>-mutants` among them) and the session's scratch directory. Cleaning these, as above, needs no asking.
 - Outside: `~/.cargo` (registry, git checkouts, installed tools), `~/.rustup`, the rust-gpu cache
   (`~/.cache/rust-gpu`; `~/Library/Caches/rust-gpu` on the Mac), the repository's Actions caches on GitHub, the system
-  temp folder outside the scratch directory, shell and git configuration, and the SSD's folders.
+  temp folder outside the scratch directory, shell and git configuration, and the SSD's folders other than the
+  away-mode log (§ "Logs"), which, named here as the orchestrator's, is inside.
 - A build's own writes to its caches are part of the build: cargo filling its registry, rustup installing the pinned
   toolchain, `cargo xtask build-kernel` building rust-gpu's backend in its cache (R-350). An agent's own deletion or
   edit there asks first: emptying the rust-gpu cache for a cold run, clearing `~/.cargo`, removing a toolchain,
   deleting an Actions cache entry.
+- What a build, test or tool writes in its normal course outside the repository is part of running it: tests' and
+  tools' files under `std::env::temp_dir()`, and cargo-mutants' temporary copy of the tree. An agent's own deletion or
+  edit there asks first.
 - `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
 - These readings are R-349's items applied per R-204, open for a veto in RQ-191.
 
