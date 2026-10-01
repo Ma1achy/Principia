@@ -14,8 +14,8 @@ use validation::negative_control;
 // `ensemble_outcome_agreement`, nor any stored agreement value, exists (R-18).
 
 /// Generation-root §3.7's tables, member and type, in order. The `escape_time_min` / `_max` row (`f16 × 2`) is two
-/// f16 members. `n_unresolved` is in no table and has no §3.7 type (RQ-183), so it is not asserted here.
-const SECTION_3_7: [(&str, &str); 23] = [
+/// f16 members. `n_unresolved` is the temporal-accumulators table's u16 row (R-315, closing RQ-183).
+const SECTION_3_7: [(&str, &str); 24] = [
     ("level", "u8"),
     ("class_histogram[N]", "u8 × N"),
     ("dominant_outcome", "packed"),
@@ -31,6 +31,7 @@ const SECTION_3_7: [(&str, &str); 23] = [
     ("worst_energy_drift", "f16"),
     ("running_mean_divergence", "f32"),
     ("first_divergence_t", "f32"),
+    ("n_unresolved", "u16"),
     ("suspect_fraction", "f16"),
     ("saturated_fraction", "f16"),
     ("valid_sample_count", "u16"),
@@ -69,7 +70,6 @@ fn check_members(members: &[ReductionMember]) {
     }
     let listed: Vec<(&str, &str)> = members
         .iter()
-        .filter(|m| m.name != "n_unresolved")
         .map(|m| (m.name, m.ty.unwrap_or("<none>")))
         .collect();
     assert_eq!(
@@ -113,6 +113,23 @@ negative_control!(
                 ty: Some("f32"),
                 section: "Ensemble spread",
             }])
+            .collect::<Vec<_>>()
+    )
+);
+
+negative_control!(
+    qa_spread_event_n_unresolved_untyped,
+    "a member list with n_unresolved untyped (before R-315) must fail the §3.7 comparison",
+    expected = "the member list differs from §3.7's tables",
+    check_members(
+        &payload::QUAD_REDUCTION
+            .iter()
+            .copied()
+            .map(|m| if m.name == "n_unresolved" {
+                ReductionMember { ty: None, ..m }
+            } else {
+                m
+            })
             .collect::<Vec<_>>()
     )
 );
