@@ -208,6 +208,16 @@ either file as schema v1.
 - **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
   compared; it does not by itself make the diff exit non-zero. The output names each one, so a scope renamed or gone
   is shown, not passed over in silence.
+- **The threshold, exactly (R-323).** P is a percentage ≥ 0 written as a plain decimal (`5%`, `5`, `7.5%`), and is
+  read as the decimal it is written as; each p95 is the double the file gives. The test is decided exactly, as
+  `100 × p95_NEW > (100 + P) × p95_BASE` in rationals, not in rounded floating-point arithmetic: a p95 of 100 → 107 is
+  a rise of exactly 7%, so it is not a regression at `--threshold 7%`.
+- **A NEW with no frames (R-323).** A NEW trace with no frame records has no p95 to compare, and the diff exits 2, as
+  it does for a file it cannot read, saying that NEW has no frame records.
+- **A cut-off or incomplete trace (R-323, R-298, R-299).** When either file is a session that ended before its summary
+  line, its last line perhaps cut off, the diff first prints, for that file, "session incomplete" and the number of
+  bytes the reader dropped from a cut-off last line (0 when none). It then compares that file's frames and exits as it
+  would for a complete one, so an incomplete trace is never compared over fewer frames in silence.
 
 ### Export & share
 
