@@ -117,9 +117,10 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   it a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats
   as fresh, and delete it straight after. A local run uses R-348's two caps, the per-mutant timeout and the memory cap
   on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the machine enforces them (applied per
-  R-204 — veto?, RQ-191; macOS may not enforce `ulimit -v`). The `mutants::skip` marker doesn't compile without the
-  `mutants` crate as a dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a
-  behaviour-preserving rewrite (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's Linux runners enforce both caps
+  (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a dependency (E0433) and skips a
+  whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite (R-197), or a justified entry in
+  `.cargo/mutants-equivalent.toml` (R-202).
 
 ## qa commits
 
@@ -270,7 +271,7 @@ anything outside the repository and its build and scratch directories without as
   tools' files under `std::env::temp_dir()`, and cargo-mutants' temporary copy of the tree. An agent's own deletion or
   edit there asks first.
 - `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
-- These readings are R-349's items applied per R-204, open for a veto in RQ-191.
+- These readings are R-349's items applied per R-204, accepted by R-352.
 
 ## Paths and warm builds
 

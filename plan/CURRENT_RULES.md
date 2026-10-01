@@ -313,8 +313,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*. Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there. Amended by R-337.
 - **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
 - **R-337** — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
-- **R-348** — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
-- **R-351** — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL
+- **R-348** — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated. Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. Amended by R-352.
+- **R-351** — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL. Still in force: all of it; R-352 widens the lint to a float compared with itself and to comparisons against finite-max stand-ins used as inf checks, and accepts its items applied per R-204. Amended by R-352.
+- **R-352** — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
 
 ## One-off acts (history only)
 

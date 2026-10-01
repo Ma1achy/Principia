@@ -51,4 +51,4 @@
 - Closes, for gaps the corpus leaves open: REQ-TOOL-121 (R-72 definition) (classification accepted by R-132).
 - R-348 (1 Oct): every `cargo mutants` run gets a per-mutant timeout and a per-process memory cap on test
   processes; TASK-M0-49 sets both for the per-PR shards, and this task's nightly run reads the same values. Applied per
-  R-204 — veto? (RQ-191): this task depends on TASK-M0-49.
+  R-204, accepted by R-352: this task depends on TASK-M0-49.

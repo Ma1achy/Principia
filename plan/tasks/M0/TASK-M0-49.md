@@ -14,11 +14,13 @@ holds its shard until that limit cuts it off, and the shard's remaining mutants 
 without bound can take the runner down with it. Under R-348 every `cargo mutants` run, in CI or local, gets two caps: a
 per-mutant timeout through cargo-mutants' timeout setting, so a hang is recorded as a timeout and the shard finishes,
 and a per-process memory cap on the test processes (`ulimit -v` or `prlimit`), so a runaway allocation kills one test,
-not the runner. Both values are calibration requirements (R-71): this task proposes them with their evidence, and the
-human confirms them at the M0 gate.
+not the runner. CI's Linux runners enforce both caps; on macOS a local run gets the timeout only (R-352). Both values
+are calibration requirements (R-71): this task proposes them with their evidence, and the human confirms them at the
+M0 gate.
 
 ## References
 - `decisions.md` § "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+- `decisions.md` § "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
 - `decisions.md` § "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
 - `decisions.md` § "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
 - `decisions.md` § "R-196 — Mutation testing joins the QA gate"
@@ -60,7 +62,7 @@ human confirms them at the M0 gate.
   confirms it at the M0 gate (REQ-VAL-181, R-71).
 
 ## Notes
-- Applied per R-204 — veto? (R-348, RQ-191): this task waits for TASK-M0-14 (PR #96), which rewrites `mutants.yml`'s
+- Applied per R-204, accepted by R-352 (R-348): this task waits for TASK-M0-14 (PR #96), which rewrites `mutants.yml`'s
   toolchain, cache and kernel-build steps, so the caps are written and measured on the workflow as #96 leaves it.
 - The nightly full run is TASK-M0-19's, which depends on this task and applies the same two caps from the same place
   (R-348).

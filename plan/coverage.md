@@ -42,7 +42,7 @@ Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for th
 
 ## Sections
 
-1042 sections in 46 files: 875 yield at least one requirement; 167 yield none and are listed below with the reason.
+1043 sections in 46 files: 876 yield at least one requirement; 167 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 120 |

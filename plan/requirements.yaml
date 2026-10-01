@@ -10146,7 +10146,7 @@
   note: Split from REQ-RENDER-027 (R-113, RQ-95).
 - id: REQ-RENDER-083
   area: RENDER
-  statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, on any use of `isinf` or `isnan`, or any comparison against an inf or NaN constant (a constant expression that evaluates to one included), in fragment-stage WGSL: every WGSL file under `crates/render/frag/`, generated or written by hand. Fast-math (R-297) may optimise those away, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343). REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
+  statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, in fragment-stage WGSL (every WGSL file under `crates/render/frag/`, generated or written by hand) on: any use of `isinf` or `isnan`; any comparison against an inf or NaN constant (a constant expression that evaluates to one included); any comparison of a float scalar or vector expression with itself, by `==` or `!=` (R-352) or by `<`, `<=`, `>` or `>=`; and any comparison, in either operand order and by any of those six operators, against a finite-max stand-in used as an inf check: 65504 (f16's largest finite value, `f16_finite_max`) or 3.40282347e38 (f32's), of either sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression that evaluates to it (R-352; the list and the ordered self-comparisons applied per R-204 — veto?). Fast-math (R-297) may optimise those away or fold or break them, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343), the fix the lint names. REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Unpack layer (generated, one accessor per named field)
@@ -10156,14 +10156,19 @@
     section: "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
   - file: decisions.md
     section: "R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL"
+  - file: decisions.md
+    section: "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
   verify:
     method: unit test
-    detail: "cargo test -p xtask lint_wgsl_unset: fixtures that call `isinf`, call `isnan`, compare a float against an inf constant (`bitcast<f32>(0x7f800000u)`) and compare one against a NaN constant each fail `cargo xtask lint wgsl`, naming the file, the line and the rule; the clean fixture passes; the generated `payload_unpack.wgsl`, whose `pa_d_min_is_unset` compares bits, passes; a WGSL file added under `crates/render/frag/` outside `generated/` is linted too; each with a registered negative control (R-176, R-351)"
+    detail: "cargo test -p xtask lint_wgsl_unset: fixtures that call `isinf`, call `isnan`, compare a float against an inf constant (`bitcast<f32>(0x7f800000u)`) and compare one against a NaN constant each fail `cargo xtask lint wgsl`, naming the file, the line and the rule; the clean fixture passes; the generated `payload_unpack.wgsl`, whose `pa_d_min_is_unset` compares bits, passes; a WGSL file added under `crates/render/frag/` outside `generated/` is linted too. cargo test -p xtask lint_wgsl_self_compare: fixtures comparing a float with itself by `!=`, `==`, `<`, `<=`, `>` and `>=`, a `let` with itself, a buffer element read twice and a `vec2<f32>` with itself each fail, naming the file, the line, the rule and the bit-pattern fix; a clean fixture comparing two different floats passes. cargo test -p xtask lint_wgsl_finite_max: fixtures comparing a float against 65504 spelled `65504.0`, `65504.`, `6.5504e4`, `65504.0f` and `65504h`, against `-65504.0`, against 3.40282347e38 and its negation, against `bitcast<f32>(0x477fe000u)` and `bitcast<f32>(0x7f7fffffu)`, with the constant on the left, and by each of the six operators each fail, naming the file, the line, the rule and the bit-pattern fix; a clean fixture comparing against 65503.0 and 1.0 and clamping with `min(x, 65504.0)` passes. Each with a registered negative control (R-176, R-351, R-352)"
   rulings:
   - R-176
   - R-297
   - R-343
   - R-351
+  - R-352
   milestone: M0
 - id: REQ-COL-001
   area: COL
@@ -18841,12 +18846,14 @@
   milestone: M0
 - id: REQ-VAL-179
   area: VAL
-  statement: "Every `cargo mutants` run, the per-PR shards (REQ-VAL-148), the nightly full run (REQ-VAL-150) and a run made locally, must run under two caps: a per-mutant timeout set through cargo-mutants' timeout setting (REQ-VAL-180), so that a mutant whose tests hang is recorded as a timeout and the shard finishes, never a dead shard; and a per-process memory cap on the test processes, set with `ulimit -v` or `prlimit` (REQ-VAL-181), so that a runaway allocation kills one test process, not cargo-mutants or the runner (R-348). A local run applies each cap where its machine enforces it (applied per R-204 — veto?, RQ-191)."
+  statement: "Every `cargo mutants` run, the per-PR shards (REQ-VAL-148), the nightly full run (REQ-VAL-150) and a run made locally, must run under two caps: a per-mutant timeout set through cargo-mutants' timeout setting (REQ-VAL-180), so that a mutant whose tests hang is recorded as a timeout and the shard finishes, never a dead shard; and a per-process memory cap on the test processes, set with `ulimit -v` or `prlimit` (REQ-VAL-181), so that a runaway allocation kills one test process, not cargo-mutants or the runner (R-348). A local run applies each cap where its machine enforces it (applied per R-204, accepted by R-352): CI's Linux runners enforce both caps, and on macOS a local run gets the timeout only (R-352)."
   source:
   - file: decisions.md
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   - file: decisions.md
     section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  - file: decisions.md
+    section: "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
   verify:
     method: review checklist
     detail: "the caps fire on a fixture: `cargo mutants` over `fixtures/mutants/caps/`, whose diff yields a mutant that makes its test hang and one that makes its test allocate without bound, run under the caps in CI's `mutants-fixture` job, finishes; `outcomes.json` records the first as a timeout and the second as caught (its test process killed by the cap), and `cargo xtask mutants-check` reports the timeout as not a survivor; each with its negative control (R-176). Review checklist (code): `mutants.yml`'s shards and TASK-M0-19's nightly run pass the timeout at REQ-VAL-180's value and run the test processes under REQ-VAL-181's cap, both read from one place, marked provisional (R-182, R-348)"
@@ -18855,6 +18862,7 @@
   - R-182
   - R-302
   - R-348
+  - R-352
   milestone: M0
 - id: REQ-VAL-180
   area: VAL
@@ -18876,12 +18884,14 @@
 - id: REQ-VAL-181
   area: VAL
   kind: calibration
-  statement: "The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  statement: "The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md. CI's Linux runners enforce it; on macOS a local run gets the timeout only, without this cap (R-352)."
   source:
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  - file: decisions.md
+    section: "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
   verify:
     method: review checklist
     detail: "the proposal states the cap, in the unit `ulimit -v` or `prlimit` takes, and which of the two sets it, with its evidence: the largest peak of the measure the cap limits (virtual size, for `ulimit -v` or `prlimit --as`) over every test process of the unmutated baseline on `ubuntu-latest`, the GPU tests on lavapipe included, and the runner's memory; the baseline passes under it with headroom; every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -18889,6 +18899,7 @@
   - R-71
   - R-182
   - R-348
+  - R-352
   milestone: M0
 - id: REQ-PERF-001
   area: PERF
