@@ -1,16 +1,18 @@
 //! QA tests for TASK-M0-42, written from REQ-SYS-073 and R-285: "CI must cache only the cargo registry and the
 //! fixture pool (R-270), never whole target directories, each under a key naming its job, so the repository's Actions
 //! cache stays well under GitHub's 10 GB limit"; verify: "no workflow caches a target directory; every cache key names
-//! its job". The task adds: "The fixture-pool cache stays, saved only by the job that builds it."
+//! its job". The task adds: "The fixture-pool cache stays, saved only by the job that builds it." R-320 amends R-285:
+//! the rust-gpu build, `~/.cache/rust-gpu`, joins the cached set (REQ-SYS-073, REQ-SYS-075), keyed on its job and the
+//! pinned toolchain; `qa_TASK-M0-14_rust_gpu_cache.rs` checks that key's toolchain part.
 //!
 //! These read every workflow under `.github/workflows/` and check the cache steps themselves:
 //! - a `Swatinem/rust-cache` step turns off its target cache (it caches `target` by default) and its `~/.cargo/bin`
 //!   cache (not the registry), and adds no directory of its own;
-//! - an `actions/cache` step (save, restore or both) caches only the fixture pool or the cargo registry and git
-//!   directories, never a target directory;
+//! - an `actions/cache` step (save, restore or both) caches only the fixture pool, the cargo registry and git
+//!   directories, or the rust-gpu build (R-320), never a target directory;
 //! - no other action caches through a `cache:` input (setup-python's pip cache, for example);
 //! - every cache key names its job: a rust-cache `shared-key` names the job it is in, and no two jobs share one; an
-//!   `actions/cache` key names the one job that saves that path;
+//!   `actions/cache` key that saves names the job it is in, and a restore-only key a job that saves that path;
 //! - the fixture pool is saved by exactly one job, the `ci` job; any other job only restores it.
 //!
 //! Timing and cache sizes are CI evidence, not checked here. Each test registers a negative control (R-176).
@@ -300,11 +302,18 @@ negative_control!(
     )))
 );
 
-// ---- 2. actions/cache caches only the fixture pool or the registry; nothing else caches ---------------------------
+// ---- 2. actions/cache caches only the fixture pool, the registry or the rust-gpu build; nothing else caches -------
+
+/// The rust-gpu build (R-320, amending R-285): cargo-gpu's backend build, the one directory beside the registry and the
+/// pool that CI may cache.
+const RUST_GPU: &str = "~/.cache/rust-gpu";
 
 fn allowed_cache_path(p: &str) -> bool {
     let p = p.trim().trim_end_matches('/');
-    p == FIXTURE_POOL || p.starts_with("~/.cargo/registry") || p.starts_with("~/.cargo/git")
+    p == FIXTURE_POOL
+        || p == RUST_GPU
+        || p.starts_with("~/.cargo/registry")
+        || p.starts_with("~/.cargo/git")
 }
 
 fn check_cache_paths(jobs: &[Job]) {
@@ -320,14 +329,14 @@ fn check_cache_paths(jobs: &[Job]) {
                 for p in path.lines().map(str::trim).filter(|p| !p.is_empty()) {
                     assert!(
                         allowed_cache_path(p),
-                        "{at}: caches {p:?}, which is neither the cargo registry nor the fixture pool"
+                        "{at}: caches {p:?}, which is not the cargo registry, the fixture pool or the rust-gpu build"
                     );
                 }
             } else if !is_rust_cache(step) {
                 if let Some(c) = step.input("cache") {
                     assert!(
                         c.trim().is_empty() || is_false(Some(c)),
-                        "{at}: caches through its `cache: {c}` input, which is neither the cargo registry nor the fixture pool"
+                        "{at}: caches through its `cache: {c}` input, which is not the cargo registry, the fixture pool or the rust-gpu build"
                     );
                 }
             }
@@ -343,11 +352,27 @@ fn qa_m0_42_actions_cache_holds_only_the_pool_or_the_registry() {
 negative_control!(
     qa_m0_42_actions_cache_holds_only_the_pool_or_the_registry,
     "ci.yml with the fixture-pool cache widened to the whole `target` directory",
-    expected = "neither the cargo registry nor the fixture pool",
+    expected = "which is not the cargo registry, the fixture pool or the rust-gpu build",
     check_cache_paths(&all_jobs(&edited(
         "ci.yml",
         "          path: target/tmp/fixture-targets\n          key: fixture-pool-ci-",
         "          path: target\n          key: fixture-pool-ci-"
+    )))
+);
+
+#[test]
+fn qa_m0_42_the_rust_gpu_cache_is_its_directory_alone() {
+    check_cache_paths(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_the_rust_gpu_cache_is_its_directory_alone,
+    "mutants.yml with the rust-gpu cache widened to all of ~/.cache, more than R-320 admits",
+    expected = "caches \"~/.cache\", which is not the cargo registry, the fixture pool or the rust-gpu build",
+    check_cache_paths(&all_jobs(&edited(
+        "mutants.yml",
+        "          path: ~/.cache/rust-gpu\n",
+        "          path: ~/.cache\n"
     )))
 );
 
@@ -418,6 +443,13 @@ fn check_keys_name_their_job(jobs: &[Job]) {
                 "{at}: restores {path:?}, which no job saves"
             );
             let key = step.input("key").unwrap_or("");
+            // A step that saves names its own job (R-320's path is saved by several jobs, each under its own key); a
+            // restore-only step names a job that saves the path.
+            let own = [job.id.as_str()];
+            let owners: Vec<&str> = match actions_cache_kind(step) {
+                Some(kind) if saves(kind) => own.to_vec(),
+                _ => owners,
+            };
             let names = |k: &str| {
                 owners.iter().any(|o| {
                     k.split("${{")
@@ -457,6 +489,22 @@ negative_control!(
         "reviews.yml",
         "shared-key: reviews-complete",
         "shared-key: pr-check"
+    )))
+);
+
+#[test]
+fn qa_m0_42_a_saving_cache_key_names_its_own_job() {
+    check_keys_name_their_job(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_a_saving_cache_key_names_its_own_job,
+    "mutants.yml saving the rust-gpu build under the ci job's key, a path other jobs save too (R-320)",
+    expected = "does not name its job",
+    check_keys_name_their_job(&all_jobs(&edited(
+        "mutants.yml",
+        "key: rust-gpu-mutants-",
+        "key: rust-gpu-ci-"
     )))
 );
 
