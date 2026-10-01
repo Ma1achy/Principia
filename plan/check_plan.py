@@ -22,6 +22,8 @@ Fails if:
   - a still-open item in open-questions.md (a paragraph or list item with a bold run starting "Open" or "Still open")
     has no "Carried by: …" note naming a requirement or an open REVIEW_QUEUE entry, or its note names a requirement
     that doesn't exist or is retired, or an RQ that isn't open in REVIEW_QUEUE.md (R-334);
+  - a value in plan/section_notes.yaml doesn't load in full: an unquoted value whose " #" YAML reads as the start of a
+    comment, so the text after it is silently dropped (PR #110's code review);
 and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
 fails if plan/CURRENT_RULES.md is stale, R-292).
 
@@ -126,6 +128,32 @@ def open_question_errors(by_req, live, path=OPEN_QUESTIONS, queue=QUEUE):
             elif i not in live:
                 errors.append(f"{path}:{n}: still-open item names retired requirement {i}")
     return errors
+
+
+def truncated_scalars(path):
+    """Each scalar value in the YAML file at `path` that a comment cuts short: text from " #" to the end of its line
+    that YAML drops as a comment, though it was meant as part of the value (an unquoted "PR #96")."""
+    text = open(path, encoding="utf-8").read()
+    lines = text.split("\n")
+    out = []
+
+    def walk(node):
+        if isinstance(node, yaml.MappingNode):
+            for k, v in node.value:
+                walk(k)
+                walk(v)
+        elif isinstance(node, yaml.SequenceNode):
+            for v in node.value:
+                walk(v)
+        elif isinstance(node, yaml.ScalarNode) and node.style is None:
+            end = node.end_mark
+            rest = lines[end.line][end.column:]
+            if rest.strip().startswith("#"):
+                out.append(f"{path}:{end.line + 1}: the value {node.value!r} is cut short by {rest.strip()!r}, which "
+                           f"YAML reads as a comment: quote the value")
+
+    walk(yaml.compose(text))
+    return out
 
 
 def cycle(graph):
@@ -297,6 +325,9 @@ def main():
 
     # open-questions.md: every still-open item names what carries it (R-334)
     errors += open_question_errors(by_req, live)
+
+    # section_notes.yaml: every value loads in full, with no " #…" dropped as a comment
+    errors += truncated_scalars("plan/section_notes.yaml")
 
     for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",
                  "plan/tools/current_rules.py"):

@@ -272,6 +272,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-345** — Merged branches are deleted, with their worktrees and target directories
 - **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Amended by R-347.
 - **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
+- **R-349** — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
 
 ## CI
 
@@ -312,6 +313,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*. Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there. Amended by R-337.
 - **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
 - **R-337** — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
+- **R-348** — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated. Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. Amended by R-352.
+- **R-351** — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL. Still in force: all of it; R-352 widens the lint to a float compared with itself and to comparisons against finite-max stand-ins used as inf checks, and accepts its items applied per R-204. Amended by R-352.
+- **R-352** — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
 
 ## One-off acts (history only)
 
@@ -370,3 +374,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-330** — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max`
 - **R-331** — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)
 - **R-333** — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
+- **R-350** — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
