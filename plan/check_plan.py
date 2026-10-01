@@ -19,6 +19,9 @@ Fails if:
     or plan/CURRENT_RULES.md lists a ruling superseded outright (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
+  - a still-open item in open-questions.md (a paragraph or list item with a bold run starting "Open" or "Still open")
+    has no "Carried by: …" note naming a requirement or an open REVIEW_QUEUE entry, or its note names a requirement
+    that doesn't exist or is retired, or an RQ that isn't open in REVIEW_QUEUE.md (R-334);
 and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
 fails if plan/CURRENT_RULES.md is stale, R-292).
 
@@ -31,7 +34,7 @@ import yaml
 ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
-from rulings import missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
+from rulings import QUEUE, RQ_HEAD, missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -42,6 +45,11 @@ MILESTONES = [f"M{i}" for i in range(9)]
 CITE = re.compile(r"`([^`\s]+\.md)` § \"([^\"]+)\"")
 REF = re.compile(r"^- `([^`]+)` § \"(.*)\"\s*$")
 FIELD = re.compile(r"^- \*\*([^*]+):\*\* (.*)$")
+OPEN_QUESTIONS = "open-questions.md"
+OPEN_MARK = re.compile(r"\*\*(?:Still open|Open)\b")  # "**Open:**", "**Still open, from R-29:**"; not "**Every open item"
+CARRIED = re.compile(r"Carried by:([^*]*)")
+CARRIER = re.compile(r"\b(REQ-[A-Z]+-\d+|RQ-\d+)\b")
+ITEM = re.compile(r"^(?:\d+\.|[-*]) ")
 
 
 def archived(path):
@@ -77,6 +85,47 @@ def parse_task(path):
         if section == "References" and line.startswith("- "):
             refs.append(REF.match(line) or line)
     return head, fields, refs, text
+
+
+def items(path):
+    """(line number, text) of each paragraph and each unindented list item in `path`; a heading ends the one before."""
+    out, cur = [], None
+    for n, line in enumerate(open(path, encoding="utf-8"), 1):
+        line = line.rstrip("\n")
+        if not line.strip() or line.startswith("#"):
+            cur = None
+            continue
+        if cur is None or ITEM.match(line):
+            cur = [n, line]
+            out.append(cur)
+        else:
+            cur[1] += " " + line.strip()
+    return [tuple(c) for c in out]
+
+
+def open_question_errors(by_req, live, path=OPEN_QUESTIONS, queue=QUEUE):
+    """One message per still-open item of open-questions.md that names no carrier, or a missing or retired requirement,
+    or an RQ that isn't open (R-334)."""
+    if not os.path.exists(path):
+        return [f"{path}: missing"]
+    open_rqs = set(RQ_HEAD.findall(open(queue, encoding="utf-8").read())) if os.path.exists(queue) else set()
+    errors = []
+    for n, text in items(path):
+        if not OPEN_MARK.search(text):
+            continue
+        named = [i for m in CARRIED.finditer(text) for i in CARRIER.findall(m.group(1))]
+        if not named:
+            errors.append(f"{path}:{n}: still-open item names neither a requirement nor an open REVIEW_QUEUE entry "
+                          f"(a \"Carried by: …\" note, R-334)")
+        for i in named:
+            if i.startswith("RQ-"):
+                if i not in open_rqs:
+                    errors.append(f"{path}:{n}: still-open item names {i}, which is not an open entry in {queue}")
+            elif i not in by_req:
+                errors.append(f"{path}:{n}: still-open item names {i}, which is not a requirement")
+            elif i not in live:
+                errors.append(f"{path}:{n}: still-open item names retired requirement {i}")
+    return errors
 
 
 def cycle(graph):
@@ -245,6 +294,9 @@ def main():
     errors += still_in_force_errors()
     errors += superseded_listed()
     errors += unresolved_refs()
+
+    # open-questions.md: every still-open item names what carries it (R-334)
+    errors += open_question_errors(by_req, live)
 
     for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",
                  "plan/tools/current_rules.py"):

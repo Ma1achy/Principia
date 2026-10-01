@@ -1,6 +1,8 @@
 //! `cargo xtask plan-check` (REQ-SYS-007, REQ-SYS-008): the checker passes on this tree, and fails, naming the fault,
 //! on a copy of `plan/` + the corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`,
-//! or a task reference to an `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist").
+//! or a task reference to an `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a
+//! still-open item of `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a
+//! missing or retired requirement, or an RQ that isn't open (R-334).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -206,5 +208,109 @@ negative_control!(
         let root = copy("plan_check_ctl_reference");
         reference_to(&root, "docs/experiments/briefs/principia_brief_no_such_file.md");
         fails_naming(&root, "reference cites archived file");
+    }
+);
+
+/// Points the "Carried by" note of `open-questions.md`'s change-10 item (REQ-VAL-036) at `to`.
+fn carrier(root: &Path, to: &str) {
+    edit(
+        root,
+        "open-questions.md",
+        "\n10. Folded",
+        "Carried by: REQ-VAL-036.",
+        &format!("Carried by: {to}."),
+    );
+}
+
+const NEITHER: &str = "still-open item names neither a requirement nor an open REVIEW_QUEUE entry";
+
+#[test]
+fn plan_check_fails_on_an_open_item_naming_neither() {
+    let root = copy("plan_check_open_neither");
+    carrier(&root, "nothing yet");
+    fails_naming(&root, NEITHER);
+}
+
+const RETIRED: &str = "REQ-CHART-042";
+
+#[test]
+fn plan_check_fails_on_an_open_item_naming_a_retired_requirement() {
+    let root = copy("plan_check_open_retired");
+    carrier(&root, RETIRED);
+    fails_naming(
+        &root,
+        &format!("still-open item names retired requirement {RETIRED}"),
+    );
+}
+
+#[test]
+fn plan_check_fails_on_an_open_item_naming_a_missing_requirement() {
+    let root = copy("plan_check_open_missing");
+    carrier(&root, "REQ-VAL-999");
+    fails_naming(
+        &root,
+        "still-open item names REQ-VAL-999, which is not a requirement",
+    );
+}
+
+/// RQ-173 has a ruling (R-332), so it is in `docs/archive/review_queue/M0.md`, not open.
+const ARCHIVED_RQ: &str = "RQ-173";
+
+#[test]
+fn plan_check_fails_on_an_open_item_naming_an_rq_that_is_not_open() {
+    let root = copy("plan_check_open_rq");
+    carrier(&root, ARCHIVED_RQ);
+    fails_naming(
+        &root,
+        &format!(
+            "still-open item names {ARCHIVED_RQ}, which is not an open entry in REVIEW_QUEUE.md"
+        ),
+    );
+}
+
+negative_control!(
+    plan_check_fails_on_an_open_item_naming_neither,
+    "an item that names another live requirement passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_open_neither");
+        carrier(&root, "REQ-VAL-040");
+        fails_naming(&root, NEITHER);
+    }
+);
+
+negative_control!(
+    plan_check_fails_on_an_open_item_naming_a_retired_requirement,
+    "an item that names a live requirement passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_open_retired");
+        carrier(&root, "REQ-VAL-040");
+        fails_naming(
+            &root,
+            &format!("still-open item names retired requirement {RETIRED}"),
+        );
+    }
+);
+
+negative_control!(
+    plan_check_fails_on_an_open_item_naming_a_missing_requirement,
+    "an item that names a retired requirement fails as \"retired\", not as missing",
+    expected = "plan-check did not name the fault",
+    {
+        let root = copy("plan_check_ctl_open_missing");
+        carrier(&root, RETIRED);
+        fails_naming(&root, "which is not a requirement");
+    }
+);
+
+negative_control!(
+    plan_check_fails_on_an_open_item_naming_an_rq_that_is_not_open,
+    "an item that names a live requirement in place of the RQ passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_open_rq");
+        carrier(&root, "REQ-VAL-040");
+        fails_naming(&root, "which is not an open entry in REVIEW_QUEUE.md");
     }
 );
