@@ -3,14 +3,16 @@
 //! ledger it covers ([`Hashed`]) is every layout entry and word, the payload structs' member layout, payload §3's
 //! frozen continuation table (R-63), the code assignments that give stored bits their meaning (payload §3's symbol
 //! codes, payload §2's `state` codes, `detail`'s meaning in each state and R-22's pair-id map), generation-root §3.7's
-//! `QuadReduction` member list, and each constants-register entry that decides what the payload's
+//! `QuadReduction` member list by name and type, and each constants-register entry that decides what the payload's
 //! stored bits mean ([`STORED_BITS`]), by its value, type and class, not its citation (dd_generation_root §3.8, "The
 //! hash"; R-251).
 //!
 //! [`canonical`] serialises it with no formatting-dependent bytes: each item is written field by field in a fixed
 //! order, each string length-prefixed, each number by its bits, big-endian, each enum by its §3.8 spelling. Words,
-//! entries and hashed constants are sorted by name, since their order in the source carries no meaning (each has its
-//! own location); everything else keeps its order. [`fnv1a64`] hashes the bytes.
+//! entries and hashed constants are sorted by name, and an entry's `consumers` and derived `from` sorted, since their
+//! order in the source carries no meaning (each has its own location; the two lists are sets); everything else keeps
+//! its order. A citation-like text, a `QuadReduction` member's §3.7 subsection, is left out, as R-251 leaves out a
+//! constant's citation. [`fnv1a64`] hashes the bytes.
 
 use crate::constants::{Admissibility, ConstantBuilder, Value};
 use crate::payload::ReductionMember;
@@ -178,7 +180,9 @@ impl Canon {
             }
             Location::Derived { from } => {
                 self.str("derived");
-                self.list(from, |c, s| c.str(s));
+                let mut from = from.clone();
+                from.sort_unstable();
+                self.list(&from, |c, s| c.str(s));
             }
         }
         self.ty(&e.ty);
@@ -209,14 +213,18 @@ impl Canon {
             Provenance::Reduction => "reduction",
             Provenance::Cpu => "cpu",
         });
-        self.list(&e.consumers, |c, consumer| {
-            c.str(match consumer {
+        let mut consumers: Vec<&str> = e
+            .consumers
+            .iter()
+            .map(|consumer| match consumer {
                 Consumer::Render => "render",
                 Consumer::Export => "export",
                 Consumer::Debug => "debug",
                 Consumer::Scheduler => "scheduler",
             })
-        });
+            .collect();
+        consumers.sort_unstable();
+        self.list(&consumers, |c, s| c.str(s));
     }
 
     fn word(&mut self, w: &Word) {
@@ -315,7 +323,6 @@ pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
     c.list(h.quad_reduction, |c, m| {
         c.str(m.name);
         c.opt(m.ty, |c, t| c.str(t));
-        c.str(m.section);
     });
     c.list(&stored, |c, k| c.constant(k));
     Ok(c.0)
