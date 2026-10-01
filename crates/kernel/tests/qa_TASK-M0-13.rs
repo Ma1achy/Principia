@@ -69,6 +69,8 @@ fn ftle(seed: u32) -> SimStateFTLE {
         closure_min: f(seed + 34),
         closure_step: 0x8000 | (seed as u16 * 7 + 3),
         _reserved: 0xc000 | (seed as u16 * 5 + 1),
+        // the declared tail padding at f32 is [u32; 0] (R-313, R-86)
+        _tail: [],
     }
 }
 
@@ -194,6 +196,7 @@ fn base(seed: u32) -> SimStateBase {
         closure_min: s.closure_min,
         closure_step: s.closure_step,
         _reserved: s._reserved,
+        _tail: [],
     }
 }
 
@@ -272,6 +275,7 @@ fn check_ic(generated: &str) {
         virial_ratio: f(k + 10),
         r_min_pair_0: f(k + 11),
         _pad: [u(k), u(k + 1), u(k + 2), u(k + 3)],
+        _tail: [],
     };
     let ds = [mk(0), mk(20)];
     let input: Vec<u32> = ds
