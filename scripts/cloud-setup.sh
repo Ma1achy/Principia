@@ -8,9 +8,9 @@
 # (or `rust-toolchain`), which CI's bare `rustup toolchain install` step installs; the cargo tools and their versions
 # from the `tool:` lines of the `taiki-e/install-action` steps; the apt packages from the `apt-get install` lines; the
 # Python version from the `actions/setup-python` steps' `python-version:`; the Python packages from the `pip install`
-# lines; and PRIN_GPU_BACKEND from the jobs' `env:`. Only jobs that run on `ubuntu-*` are read. A step that installs
-# something by a means this script doesn't know stops it, naming the step, so CI cannot gain an install the script
-# misses. `xtask/tests/cloud_setup.rs` checks that this script's plan and CI agree, and that this file holds no version.
+# lines, a `\`-ended line read with the next; and PRIN_GPU_BACKEND from the jobs' and steps' `env:`, or the
+# workflow's top-level `env:`. Only jobs that run on `ubuntu-*` are read. A step that installs something by a means
+# this script doesn't know stops it, naming the step, so CI cannot gain an install the script misses. `xtask/tests/cloud_setup.rs` checks that this script's plan and CI agree, and that this file holds no version.
 #
 # How each item is installed (R-346, R-347): the toolchains through rustup, the apt packages through apt-get, the Python
 # packages through pip. cargo-nextest comes from its official prebuilt installer (get.nexte.st) and cargo-mutants through
