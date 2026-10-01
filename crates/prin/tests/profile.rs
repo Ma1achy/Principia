@@ -16,13 +16,14 @@ use engine::contract::sim_config::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use validation::spawn::Spawn;
 
 // ----- helpers -----
 
 fn prin(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_prin"))
         .args(args)
-        .output()
+        .timed_output()
         .expect("prin does not run")
 }
 
@@ -216,7 +217,7 @@ fn expected_commit() -> String {
     Command::new("git")
         .args(["rev-parse", "HEAD"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
+        .timed_output()
         .ok()
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
@@ -1373,7 +1374,7 @@ validation::negative_control!(
 fn expected_cpu() -> String {
     let brand = Command::new("/usr/sbin/sysctl")
         .args(["-n", "machdep.cpu.brand_string"])
-        .output()
+        .timed_output()
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .filter(|n| !n.is_empty());
@@ -1591,7 +1592,7 @@ fn header_without_usr_sbin() -> String {
             "--json",
             path_str(&path),
         ])
-        .output()
+        .timed_output()
         .expect("prin does not run");
     assert!(
         out.status.success(),
