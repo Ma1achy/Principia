@@ -1,12 +1,12 @@
-//! The payload as a function of the `Real` (REQ-PAY-017; philosophy §7.1, §7.7; dd_simstate_payload §1): the
-//! `SimState` structs instantiated at f32 and f64, every width derived from `size_of::<Real>()`, and the layout
-//! generated per precision, the DoubleF64 stub row included.
+//! The payload as a function of the `Real` (REQ-PAY-017; philosophy §7.1, §7.7; dd_simstate_payload §1;
+//! dd_generation_root §3.6; R-313): the `SimState` structs and `ICDescriptor` instantiated at f32 and f64, every width
+//! derived from `size_of::<Real>()`, and the layout generated per precision, the DoubleF64 stub row included.
 
 use std::mem::{align_of, offset_of, size_of, size_of_val};
 
 use kernel::payload::{
-    PayloadLayout, PayloadReal, SimStateBase, SimStateBaseOf, SimStateFTLE, SimStateFTLEOf,
-    PAYLOAD_LAYOUTS,
+    ICDescriptor, ICDescriptorOf, PayloadLayout, PayloadReal, SimStateBase, SimStateBaseOf,
+    SimStateFTLE, SimStateFTLEOf, PAYLOAD_LAYOUTS,
 };
 use validation::negative_control;
 
@@ -23,6 +23,12 @@ fn row(real: &str) -> PayloadLayout {
 /// whole rounded up to 8.
 fn width(reals: usize, w: usize) -> usize {
     (reals * w + 16 + 4).next_multiple_of(8)
+}
+
+/// `ICDescriptor`'s size at a `Real` of `w` bytes aligned to `a`, from dd_generation_root §3.6: twelve `Real`s, then
+/// 16 B of declared padding, the whole rounded up to `a`.
+fn descriptor_width(w: usize, a: usize) -> usize {
+    (12 * w + 16).next_multiple_of(a)
 }
 
 /// `SimStateFTLE` stores 31 `Real`s (four vec2 groups, six accumulators and drift references, `closure_min`),
@@ -94,6 +100,58 @@ fn check_instantiated<R: PayloadReal>(row: &PayloadLayout) {
     );
 }
 
+/// `ICDescriptorOf<R>`'s twelve fields are each one `R`, its declared padding keeps its 16 B, and its size and
+/// alignment are `row`'s `descriptor` and §3.6's width at `size_of::<R>()` (R-313).
+fn check_descriptor<R: PayloadReal>(row: &PayloadLayout) {
+    let w = size_of::<R>();
+    let d = ICDescriptorOf::<R>::default();
+    let fields = [
+        ("m0", size_of_val(&d.m0)),
+        ("m1", size_of_val(&d.m1)),
+        ("m2", size_of_val(&d.m2)),
+        ("q_mass", size_of_val(&d.q_mass)),
+        ("rho_mag", size_of_val(&d.rho_mag)),
+        ("lambda_mag", size_of_val(&d.lambda_mag)),
+        ("rho_ratio", size_of_val(&d.rho_ratio)),
+        ("rho_angle", size_of_val(&d.rho_angle)),
+        ("K_0", size_of_val(&d.K_0)),
+        ("V_0", size_of_val(&d.V_0)),
+        ("virial_ratio", size_of_val(&d.virial_ratio)),
+        ("r_min_pair_0", size_of_val(&d.r_min_pair_0)),
+    ];
+    for (name, size) in fields {
+        assert_eq!(
+            size,
+            w,
+            "ICDescriptor's `{name}` does not widen with {}",
+            R::NAME
+        );
+    }
+    assert_eq!(
+        (size_of_val(&d._pad), offset_of!(ICDescriptorOf<R>, _pad)),
+        (16, 12 * w),
+        "ICDescriptor's declared padding is not 16 B after its twelve fields at {}",
+        R::NAME
+    );
+    let actual = (
+        "ICDescriptor",
+        size_of::<ICDescriptorOf<R>>(),
+        align_of::<ICDescriptorOf<R>>(),
+    );
+    assert_eq!(
+        actual,
+        row.descriptor,
+        "{}'s ICDescriptor differs from its generated row",
+        R::NAME
+    );
+    assert_eq!(
+        actual.1,
+        descriptor_width(w, align_of::<R>()),
+        "{}'s ICDescriptor size does not derive from size_of::<Real>()",
+        R::NAME
+    );
+}
+
 #[test]
 fn payload_real_generic() {
     // The rows, f32 first, and which are instantiated: f32 and f64 only (R-265); DoubleF64 is a stub row.
@@ -144,9 +202,46 @@ fn payload_real_generic() {
     assert_eq!([dd.structs[0].1, dd.structs[1].1], [520, 328]);
 }
 
+/// `ICDescriptor` as a function of the `Real` (R-313; dd_generation_root §3.6), run with `payload_real_generic` by the
+/// acceptance filter: instantiated at f32 and f64, every width from `size_of::<Real>()`, the DoubleF64 stub row by the
+/// width function alone.
+#[test]
+fn payload_real_generic_descriptor() {
+    check_descriptor::<f32>(&row("f32"));
+    check_descriptor::<f64>(&row("f64"));
+    let dd = row("DoubleF64");
+    // ICDescriptor (dd_generation_root §3.6; R-313): 64 B at f32 (R-86), 112 B at f64, 208 B at the DoubleF64 stub.
+    assert_eq!(
+        size_of::<ICDescriptor>(),
+        64,
+        "ICDescriptor at f32 is not 64 B (R-86)"
+    );
+    assert_eq!(
+        [row("f32").descriptor, row("f64").descriptor, dd.descriptor],
+        [
+            ("ICDescriptor", 64, 4),
+            ("ICDescriptor", 112, 8),
+            (
+                "ICDescriptor",
+                descriptor_width(dd.real_size, dd.real_align),
+                8
+            )
+        ],
+        "the ICDescriptor rows differ from dd_generation_root §3.6"
+    );
+    assert_eq!(dd.descriptor.1, 208);
+}
+
 negative_control!(
     payload_real_generic,
     "the f64 instantiation checked against the f32 row must fail",
     expected = "precision row differs from the Real it instantiates",
     check_instantiated::<f64>(&row("f32"))
+);
+
+negative_control!(
+    payload_real_generic_descriptor,
+    "the f64 ICDescriptor checked against the f32 row must fail",
+    expected = "ICDescriptor differs from its generated row",
+    check_descriptor::<f64>(&row("f32"))
 );

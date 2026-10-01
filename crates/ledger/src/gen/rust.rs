@@ -3,10 +3,11 @@
 //! `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed words'
 //! pack/unpack/insert code ([`accessors`]). [`check`] holds each member against the ledger entry or word it stores.
 //!
-//! The `SimState` structs are emitted per precision (philosophy §7.1; dd_simstate_payload §1): generic over the
-//! kernel's `Real`, their f32 members widen to it ([`widens`]) and every other member keeps its width, with the
-//! tail padding each width needs declared, never implicit (R-86). The f32 instantiation keeps the struct's name. Each
-//! row of [`precisions`] gets its layout ([`layout`]) in the generated `PAYLOAD_LAYOUTS` table.
+//! The `SimState` structs and `ICDescriptor` are emitted per precision (philosophy §7.1; dd_simstate_payload §1;
+//! dd_generation_root §3.6; R-313): generic over the kernel's `Real`, their f32 members widen to it ([`widens`]) and
+//! every other member keeps its width, with the tail padding each width needs declared, never implicit (R-86). The f32
+//! instantiation keeps the struct's name. Each row of [`precisions`] gets its layout ([`layout`]) in the generated
+//! `PAYLOAD_LAYOUTS` table.
 
 use std::fmt::Write as _;
 use std::mem::{align_of, size_of};
@@ -49,16 +50,25 @@ pub fn precisions() -> Vec<Precision> {
     ]
 }
 
-/// Whether `m` of `s` widens with the `Real` (dd_simstate_payload §1): an f32 member of a `SimState` struct, a scalar
-/// or a vec2 group. The packed words, the u32 counter and the u16 step index and reserve keep their widths, as do the
-/// word buffer's and `ICDescriptor`'s members.
-pub fn widens(s: &Struct, m: &Member) -> bool {
-    s.buffer == Some("SimState") && matches!(m.storage, Storage::F32 | Storage::Vec2x3)
+/// Whether `m` of `s` widens with the `Real` (dd_simstate_payload §1; dd_generation_root §3.6; R-313): an f32 member,
+/// a scalar or a vec2 group, of any payload struct, so `SimState`'s and `ICDescriptor`'s. The packed words, the u32
+/// counter, the u16 step index and reserve, the word buffer's u32s and `ICDescriptor`'s declared padding keep their
+/// widths.
+pub fn widens(_s: &Struct, m: &Member) -> bool {
+    matches!(m.storage, Storage::F32 | Storage::Vec2x3)
 }
 
-/// Whether `s` has a member that widens with the `Real`, so it is emitted generic over it.
-pub fn is_real(s: &Struct) -> bool {
+/// Whether `s` has a member that widens with the `Real`, so it is emitted generic over it (`SimState`'s two variants
+/// and `ICDescriptor`).
+pub fn is_generic(s: &Struct) -> bool {
     s.members.iter().any(|m| widens(s, m))
+}
+
+/// Whether `s` is a `SimState` struct generic over the `Real`: the structs whose layouts are a precision row's
+/// `structs` in `PAYLOAD_LAYOUTS` (dd_simstate_payload §1). `ICDescriptor`, generic too ([`is_generic`]), is the row's
+/// `descriptor` (dd_generation_root §3.6).
+pub fn is_real(s: &Struct) -> bool {
+    s.buffer == Some("SimState") && is_generic(s)
 }
 
 /// A struct's layout at one precision: each member's byte offset, the end of its last member, its size (the end
@@ -106,9 +116,9 @@ pub fn offsets(s: &Struct) -> (Vec<u32>, u32) {
 }
 
 /// The name `s` is declared under in the generated file: `<name>Of<R: PayloadReal>` for a struct generic over the
-/// `Real` ([`is_real`]), else its name.
+/// `Real` ([`is_generic`]), else its name.
 pub fn declared_name(s: &Struct) -> String {
-    if is_real(s) {
+    if is_generic(s) {
         format!("{}Of<R: PayloadReal>", s.name)
     } else {
         s.name.to_owned()
@@ -136,7 +146,7 @@ pub fn declared_members(s: &Struct) -> Vec<String> {
             format!("{}: {ty}", m.name)
         })
         .collect();
-    if is_real(s) {
+    if is_generic(s) {
         members.push(format!("_tail: R::{}", tail(s)));
     }
     members
@@ -168,15 +178,22 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
         let sizes: Vec<String> = rows
             .iter()
             .filter(|p| p.instantiated)
-            .map(|p| format!("{} B at {}", layout(s, p).size, p.name))
+            .map(|p| {
+                let l = layout(s, p);
+                format!("{} B aligned to {} at {}", l.size, l.align, p.name)
+            })
             .collect();
-        let doc = if is_real(s) {
+        let doc = if is_generic(s) {
+            let source = if is_real(s) {
+                "dd_simstate_payload §1"
+            } else {
+                "dd_generation_root §3.6; R-313"
+            };
             format!(
-                "`{}` at the `Real` `R`: {}, aligned to {}.\n\
-                 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86)",
+                "`{}` at the `Real` `R`: {}.\n\
+                 /// Its f32 members are `R`; `_tail` is its declared tail padding ({source}; philosophy §7.1; R-86)",
                 s.name,
-                sizes.join(", "),
-                s.align
+                sizes.join(", ")
             )
         } else {
             format!(
@@ -194,7 +211,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
             let _ = writeln!(out, "    pub {m},");
         }
         out.push_str("}\n");
-        if is_real(s) {
+        if is_generic(s) {
             let _ = write!(
                 out,
                 "\n/// `{name}` at f32, the GPU's instantiation (canonical_spec §1 item 3): {size} B.\n\
@@ -213,15 +230,21 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
 
 /// The per-precision code: the `PayloadReal` trait, which gives each struct generic over the `Real` its declared tail
 /// padding, `[u32; n]`, implemented for each instantiated row of `rows`, and `PAYLOAD_LAYOUTS`, each row's layout of
-/// those structs, the stub rows included (dd_simstate_payload §1).
+/// those structs, the stub rows included: the `SimState` structs ([`is_real`]) as its `structs`, `ICDescriptor` as its
+/// `descriptor` (dd_simstate_payload §1; dd_generation_root §3.6; R-313).
 fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
+    let generic: Vec<&Struct> = structs.iter().filter(|s| is_generic(s)).collect();
     let real: Vec<&Struct> = structs.iter().filter(|s| is_real(s)).collect();
+    let descriptor = structs
+        .iter()
+        .find(|s| s.name == "ICDescriptor")
+        .expect("the payload structs include ICDescriptor (dd_generation_root §3.6)");
     let mut out = String::from(
         "\n/// A `Real` the payload is instantiated at (R-265), with the declared tail padding (R-86) of each struct generic\n\
          /// over it at its width (dd_simstate_payload §1).\n\
          pub trait PayloadReal: crate::Real {\n",
     );
-    for s in &real {
+    for s in &generic {
         let _ = writeln!(
             out,
             "    type {}: Copy + Default + core::fmt::Debug + PartialEq;",
@@ -231,7 +254,7 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
     out.push_str("}\n");
     for p in rows.iter().filter(|p| p.instantiated) {
         let _ = write!(out, "\nimpl PayloadReal for {} {{\n", p.name);
-        for s in &real {
+        for s in &generic {
             let l = layout(s, p);
             let _ = writeln!(
                 out,
@@ -246,7 +269,8 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
     let _ = write!(
         out,
         "\n/// A precision row of the payload (dd_simstate_payload §1): the float type, its size and alignment in bytes, whether\n\
-         /// the kernel is instantiated at it (R-265), and each struct generic over it as `(name, size, alignment)` at it.\n\
+         /// the kernel is instantiated at it (R-265), and each struct generic over it as `(name, size, alignment)` at it:\n\
+         /// the `SimState` structs as `structs`, `ICDescriptor` as `descriptor` (dd_generation_root §3.6; R-313).\n\
          #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n\
          pub struct PayloadLayout {{\n\
          \x20   pub real: &'static str,\n\
@@ -254,6 +278,7 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
          \x20   pub real_align: usize,\n\
          \x20   pub instantiated: bool,\n\
          \x20   pub structs: [(&'static str, usize, usize); {n}],\n\
+         \x20   pub descriptor: (&'static str, usize, usize),\n\
          }}\n\
          \n/// The payload's layout at each precision row, f32 first; a row not instantiated is a stub for the width function\n\
          /// only (dd_simstate_payload §1; philosophy §7.1).\n\
@@ -285,6 +310,12 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
                 .collect();
             let _ = write!(out, "        structs: [\n{one_per_line}        ],\n");
         }
+        let d = layout(descriptor, p);
+        let _ = writeln!(
+            out,
+            "        descriptor: (\"{}\", {}, {}),",
+            descriptor.name, d.size, d.align
+        );
         out.push_str("    },\n");
     }
     out.push_str("];\n");

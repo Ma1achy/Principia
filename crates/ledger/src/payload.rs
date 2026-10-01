@@ -217,7 +217,8 @@ fn simstate(ftle: bool) -> Struct {
 pub const PENDING: &[&str] = &["free_group_word"];
 
 /// The structs the Rust emitter writes: `SimState`'s two variants, the word buffer's element (one `vec4<u32>`, whose
-/// layout, §3.3, is not transcribed here) and `ICDescriptor` (64 B: twelve f32s and 16 B of declared padding, R-86).
+/// layout, §3.3, is not transcribed here) and `ICDescriptor` (twelve f32s and 16 B of declared padding, 64 B: its f32
+/// instantiation, R-86; its f32s widen with the `Real`, R-313).
 pub fn structs() -> Vec<Struct> {
     let ic = [
         "m0",
