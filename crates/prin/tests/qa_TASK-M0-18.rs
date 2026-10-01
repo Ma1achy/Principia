@@ -494,7 +494,8 @@ fn gpu_header_line() -> Value {
         "schema": "principia-profile-v1",
         "header": {
             "device": {
-                "gpu": "Test GPU", "cpu": "Test CPU", "cpu_cores": 8, "gpu_cores": 10,
+                "gpu": "Test GPU", "cpu": "Test CPU", "cpu_cores_available": 8, "cpu_cores_total": 8,
+                "gpu_cores": 10,
                 "memory": { "unified": { "bytes": 17179869184u64 } }
             },
             "backend": { "api": "metal", "driver": "1.0" },
@@ -1295,8 +1296,8 @@ validation::negative_control!(
 // REQ-TOOL-144: the no-GPU header (`profile_no_gpu`)
 
 /// The synthetic header is the no-GPU form (R-308, R-311): `backend.api` "none"; `backend.driver`, `device.gpu`,
-/// `device.gpu_cores`, `device.memory` and `precision` present and null; `device.cpu` and `device.cpu_cores` written
-/// as always.
+/// `device.gpu_cores`, `device.memory` and `precision` present and null; `device.cpu` and `device.cpu_cores_available`
+/// written as always (R-329).
 fn check_no_gpu(header_line: &str) {
     let line: Value = serde_json::from_str(header_line).unwrap();
     let h = &line["header"];
@@ -1328,10 +1329,10 @@ fn check_no_gpu(header_line: &str) {
         .as_str()
         .expect("device.cpu is not a string");
     assert!(!cpu.trim().is_empty(), "device.cpu is empty");
-    let cores = h["device"]["cpu_cores"]
+    let cores = h["device"]["cpu_cores_available"]
         .as_u64()
-        .expect("device.cpu_cores is not an integer");
-    assert!(cores >= 1, "device.cpu_cores is {cores}");
+        .expect("device.cpu_cores_available is not an integer");
+    assert!(cores >= 1, "device.cpu_cores_available is {cores}");
 }
 
 #[test]
@@ -1475,7 +1476,10 @@ fn no_gpu_line(api: &str) -> Value {
     json!({
         "schema": "principia-profile-v1",
         "header": {
-            "device": { "gpu": null, "cpu": "Test CPU", "cpu_cores": 4, "gpu_cores": null, "memory": null },
+            "device": {
+                "gpu": null, "cpu": "Test CPU", "cpu_cores_available": 4, "cpu_cores_total": 4,
+                "gpu_cores": null, "memory": null
+            },
             "backend": { "api": api, "driver": null },
             "precision": null,
             "build": { "commit": "qa", "profile": "dev", "features": [] },
