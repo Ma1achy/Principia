@@ -108,3 +108,44 @@ fn indent(line: &str, out: &mut String) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A line with an escaped quote, a backslash and brackets inside its strings, an empty object and an empty array.
+    const LINE: &str = r#"{"a":"x\"{y},:[","b":"\\","c":[1,{}],"d":{"e":[]}}"#;
+
+    const PRETTY: &str = r#"{
+  "a": "x\"{y},:[",
+  "b": "\\",
+  "c": [
+    1,
+    {}
+  ],
+  "d": {
+    "e": []
+  }
+}
+"#;
+
+    fn check_layout(indent: fn(&str) -> String) {
+        assert_eq!(
+            indent(LINE),
+            PRETTY,
+            "the line is not laid out two spaces a level"
+        );
+    }
+
+    #[test]
+    fn profile_show_pretty_layout() {
+        check_layout(pretty_lines);
+    }
+
+    validation::negative_control!(
+        profile_show_pretty_layout,
+        "the compact line itself must fail the layout check",
+        expected = "is not laid out two spaces a level",
+        check_layout(|line| format!("{line}\n"))
+    );
+}

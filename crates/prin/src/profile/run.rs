@@ -183,33 +183,30 @@ fn build() -> Build {
     }
 }
 
-/// The CPU model, as the operating system names it; `unknown` where it names none.
+/// The CPU model, as the operating system names it: macOS's `sysctl machdep.cpu.brand_string`, or Linux's
+/// `model name` in /proc/cpuinfo. Both are asked on every system, and a system without one gives nothing from it.
 fn cpu_model() -> String {
-    #[cfg(target_os = "macos")]
-    {
-        let out = std::process::Command::new("sysctl")
-            .args(["-n", "machdep.cpu.brand_string"])
-            .output();
-        if let Ok(out) = out {
-            let name = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-            if out.status.success() && !name.is_empty() {
-                return name;
-            }
-        }
-    }
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(info) = std::fs::read_to_string("/proc/cpuinfo") {
-            let name = info
-                .lines()
-                .find_map(|l| l.strip_prefix("model name")?.split_once(':'))
-                .map(|(_, name)| name.trim().to_owned());
-            if let Some(name) = name.filter(|n| !n.is_empty()) {
-                return name;
-            }
-        }
-    }
-    "unknown".to_owned()
+    let sysctl = std::process::Command::new("sysctl")
+        .args(["-n", "machdep.cpu.brand_string"])
+        .output()
+        .ok()
+        .map(|out| out.stdout);
+    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
+    cpu_named(sysctl.as_deref(), cpuinfo.as_deref())
+}
+
+/// The CPU model from `sysctl`'s output, else from /proc/cpuinfo's first `model name`; `unknown` where neither names
+/// one.
+fn cpu_named(sysctl: Option<&[u8]>, cpuinfo: Option<&str>) -> String {
+    let named = |name: &str| Some(name.trim().to_owned()).filter(|n| !n.is_empty());
+    let brand = sysctl.and_then(|out| named(&String::from_utf8_lossy(out)));
+    let model = || {
+        cpuinfo?
+            .lines()
+            .find_map(|l| l.strip_prefix("model name")?.split_once(':'))
+            .and_then(|(_, name)| named(name))
+    };
+    brand.or_else(model).unwrap_or_else(|| "unknown".to_owned())
 }
 
 /// The CPU cores the process may run on, as the operating system reports them.
@@ -404,6 +401,43 @@ mod tests {
         "a refusal that gives no reason must fail the check",
         expected = "does not say prin links no GPU API",
         check_refuses(|| Err(String::new()))
+    );
+
+    /// `sysctl`'s output, /proc/cpuinfo, and the CPU model they name.
+    type CpuCase<'a> = (Option<&'a [u8]>, Option<&'a str>, &'a str);
+
+    /// `named` reads the CPU model: `sysctl`'s output first, then /proc/cpuinfo's `model name`, else `unknown`.
+    fn check_cpu_named(named: fn(Option<&[u8]>, Option<&str>) -> String) {
+        let cpuinfo =
+            "processor\t: 0\nvendor_id\t: GenuineIntel\nmodel name\t: Intel(R) Xeon(R) CPU\n";
+        let cases: [CpuCase<'_>; 7] = [
+            (Some(b"Apple M3 Pro\n"), None, "Apple M3 Pro"),
+            (Some(b"Apple M3 Pro\n"), Some(cpuinfo), "Apple M3 Pro"),
+            (Some(b""), Some(cpuinfo), "Intel(R) Xeon(R) CPU"),
+            (None, Some(cpuinfo), "Intel(R) Xeon(R) CPU"),
+            (Some(b"  \n"), Some("model name\t: \n"), "unknown"),
+            (None, Some("processor\t: 0\n"), "unknown"),
+            (None, None, "unknown"),
+        ];
+        for (sysctl, info, want) in cases {
+            assert_eq!(
+                named(sysctl, info),
+                want,
+                "the CPU is misnamed from {sysctl:?} and {info:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_no_gpu_header_names_the_cpu() {
+        check_cpu_named(cpu_named);
+    }
+
+    validation::negative_control!(
+        profile_no_gpu_header_names_the_cpu,
+        "a probe that names no CPU must fail the check",
+        expected = "the CPU is misnamed",
+        check_cpu_named(|_, _| "unknown".to_owned())
     );
 
     #[test]

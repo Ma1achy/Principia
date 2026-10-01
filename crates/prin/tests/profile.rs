@@ -1198,6 +1198,40 @@ validation::negative_control!(
     })
 );
 
+/// The report states each compared scope's change: in percent, or "from 0" where BASE's p95 is 0.
+fn check_change_text(plus25: &str, from_zero: &str) {
+    assert!(
+        plus25
+            .lines()
+            .any(|l| l == "frame: 2 -> 2.5 (+25.00%)  REGRESSION"),
+        "a 25% rise is not reported as +25.00%: {plus25}"
+    );
+    assert!(
+        from_zero
+            .lines()
+            .any(|l| l == "stage integrate: 0 -> 1 (from 0)  REGRESSION"),
+        "a rise from 0 is not reported as from 0: {from_zero}"
+    );
+}
+
+#[test]
+fn profile_diff_reports_the_change() {
+    let base = one_frame(2.0, 0.0);
+    let plus25 = diff(&base, &one_frame(2.5, 0.0), "1%");
+    let from_zero = diff(&base, &one_frame(2.0, 1.0), "1%");
+    check_change_text(
+        &String::from_utf8_lossy(&plus25.stdout),
+        &String::from_utf8_lossy(&from_zero.stdout),
+    );
+}
+
+validation::negative_control!(
+    profile_diff_reports_the_change,
+    "a report without the change must fail the check",
+    expected = "is not reported as +25.00%",
+    check_change_text("frame: 2 -> 2.5  REGRESSION", "")
+);
+
 // ----- profile_show (REQ-TOOL-139, R-286) -----
 
 fn show(path: &Path, pretty: bool) -> Output {
@@ -1280,7 +1314,7 @@ validation::negative_control!(
 );
 
 /// A trace whose last line was cut off (R-299): `show` prints the whole file unchanged, and with `--pretty` the lines
-/// before the cut, stating the bytes dropped on stderr.
+/// before the cut, stating the bytes dropped on stderr; for a whole file (`cut` empty), it states nothing.
 fn check_cut_off(file: &str, cut: &str, plain: &Output, pretty: &Output) {
     assert_eq!(
         plain.stdout,
@@ -1288,11 +1322,19 @@ fn check_cut_off(file: &str, cut: &str, plain: &Output, pretty: &Output) {
         "show changed a cut-off file"
     );
     check_pretty(file, &String::from_utf8_lossy(&pretty.stdout));
-    assert!(
-        String::from_utf8_lossy(&pretty.stderr).contains(&format!("its {} bytes", cut.len())),
-        "show --pretty does not state the {} bytes dropped",
-        cut.len()
-    );
+    let note = String::from_utf8_lossy(&pretty.stderr);
+    if cut.is_empty() {
+        assert!(
+            note.is_empty(),
+            "show --pretty reports {note:?} for a whole file"
+        );
+    } else {
+        assert!(
+            note.contains(&format!("its {} bytes", cut.len())),
+            "show --pretty does not state the {} bytes dropped",
+            cut.len()
+        );
+    }
 }
 
 const CUT: &str = r#"{"frame":20,"frame_ms":1"#;
@@ -1307,43 +1349,41 @@ fn profile_show_cut_off_last_line() {
     let file = frames_only();
     let path = write_scratch("cut.jsonl", &format!("{file}{CUT}"));
     check_cut_off(&file, CUT, &show(&path, false), &show(&path, true));
+    let whole = write_scratch("whole.jsonl", &file);
+    check_cut_off(&file, "", &show(&whole, false), &show(&whole, true));
 }
 
 validation::negative_control!(
     profile_show_cut_off_last_line,
-    "a file with no cut-off line must fail the dropped-bytes check",
-    expected = "does not state the",
+    "a whole file taken for a cut-off one must fail the check",
+    expected = "show changed a cut-off file",
     {
         let file = frames_only();
         let path = write_scratch("whole.jsonl", &file);
-        check_cut_off(&file, "", &show(&path, false), &show(&path, true))
+        check_cut_off(&file, CUT, &show(&path, false), &show(&path, true))
     }
 );
 
 // ----- profile_no_gpu (REQ-TOOL-144, R-308) -----
 
-/// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` on macOS, `model name` in /proc/cpuinfo on
-/// Linux, `unknown` where it names none.
+/// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` (macOS), else the first `model name` in
+/// /proc/cpuinfo (Linux), else `unknown`.
 fn expected_cpu() -> String {
-    let named = if cfg!(target_os = "macos") {
-        Command::new("sysctl")
-            .args(["-n", "machdep.cpu.brand_string"])
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-    } else if cfg!(target_os = "linux") {
+    let brand = Command::new("sysctl")
+        .args(["-n", "machdep.cpu.brand_string"])
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .filter(|n| !n.is_empty());
+    let model = || {
         fs::read_to_string("/proc/cpuinfo").ok().and_then(|info| {
             info.lines()
                 .find_map(|l| l.strip_prefix("model name")?.split_once(':'))
                 .map(|(_, name)| name.trim().to_owned())
+                .filter(|n| !n.is_empty())
         })
-    } else {
-        None
     };
-    named
-        .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| "unknown".to_owned())
+    brand.or_else(model).unwrap_or_else(|| "unknown".to_owned())
 }
 
 /// The no-GPU header: `backend.api` "none"; `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and

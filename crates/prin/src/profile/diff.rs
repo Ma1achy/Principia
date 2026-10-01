@@ -125,13 +125,9 @@ pub(crate) struct Report {
 }
 
 /// Whether NEW's p95 `new` regresses on BASE's `base` by more than `threshold` percent. From a BASE p95 of 0, any
-/// rise is one.
+/// rise is one: the rise is +∞ %, above every threshold, and 0 to 0 is NaN, above none.
 fn regresses(base: f64, new: f64, threshold: f64) -> bool {
-    if base > 0.0 {
-        (new - base) / base * 100.0 > threshold
-    } else {
-        new > base
-    }
+    (new - base) / base * 100.0 > threshold
 }
 
 /// Compares NEW's per-scope p95 with BASE's at `threshold` percent.
