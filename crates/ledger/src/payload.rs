@@ -1,13 +1,13 @@
-//! The payload ledger (dd_simstate_payload §0–§1; dd_generation_root §3.1, §3.3a–§3.6): the hot `SimState` in its two
-//! variants, the word buffer, `ICDescriptor`, the packed words of `SimState`, and §3.4's scalars with their
-//! presentation metadata. Where the payload doc and generation-root §3 could drift, the payload doc is canonical
+//! The payload ledger (dd_simstate_payload §0–§3; dd_generation_root §3.1, §3.3–§3.7): the hot `SimState` in its two
+//! variants, the word buffer and its `.w` word, `ICDescriptor`, the packed words of `SimState`, §3.4's scalars with
+//! their presentation metadata, payload §3's frozen continuation table, and §3.7's `QuadReduction` member list. Where the payload doc and generation-root §3 could drift, the payload doc is canonical
 //! (R-70, R-86): §3.4's `delta_E_max_abs` and `delta_Lz_max_abs` are the payload's `dE_max` and `dLz_max`, and §3.8's
 //! `shadow` is the payload's `r_sh` and `p_sh`.
 //!
 //! Where §3 gives a field no scale or range, the entry is `lin` over (−∞, ∞) (or its type's full range), as §3.8's
 //! worked entries do for `n` and `ftle`; §3.6's log fields are > 0. Consumers are render, export and debug, as there.
 
-use crate::constants::HORIZON_STEPS_MAX;
+use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
     Bound, Consumer, EntryBuilder, FieldType, Ledger, Location, Member, Overflow, Provenance,
     Range, Scale, Span, Storage, Struct, Word,
@@ -89,7 +89,8 @@ fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     }
 }
 
-/// The packed words of `SimState` (payload §1; §3.1).
+/// The packed words of `SimState` (payload §1; §3.1), and `fgw_w`, the `.w` of the word buffer's `vec4<u32>` (payload
+/// §3's `.w` bit map), whose fields tile it with nothing reserved.
 fn words() -> Vec<Word> {
     let word = |name, reserved| Word {
         name,
@@ -106,6 +107,7 @@ fn words() -> Vec<Word> {
         ),
         word("packed_b", vec![]),
         word("times", vec![]),
+        word("fgw_w", vec![]),
     ]
 }
 
@@ -173,6 +175,23 @@ fn entries() -> Vec<EntryBuilder> {
         ic("V_0", 9, Scale::Diverging),
         ic("virial_ratio", 10, Scale::Lin),
         ic("r_min_pair_0", 11, Scale::Log),
+        // Payload §3's `.w` bit map: the high 25 bits of the mixed-radix `W` (its low 96 bits fill `x`, `y`, `z`), then
+        // `length`, 0…76 valid (the register's `fgw_capacity`) with 127 the truncation sentinel (`fgw_length_sentinel`).
+        entry(
+            "payload",
+            packed("fgw_w", 0, 25),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(0, (1 << 25) - 1)),
+        entry(
+            "length",
+            packed("fgw_w", 25, 7),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(0, FGW_CAPACITY.number() as i64))
+        .sentinel(FGW_LENGTH_SENTINEL.number()),
     ]
 }
 
@@ -211,13 +230,13 @@ fn simstate(ftle: bool) -> Struct {
     }
 }
 
-/// Struct members with no ledger entry or word yet, which the struct check ([`crate::gen::rust::check`]) exempts:
-/// `free_group_word`, the word buffer's one `vec4<u32>`, whose interior layout (dd_generation_root §3.3) is not
-/// transcribed in this task, so it has no entry to be checked against.
+/// Struct members with no ledger entry or word of their own, which the struct check ([`crate::gen::rust::check`])
+/// exempts: `free_group_word`, the word buffer's one `vec4<u32>`. Its `.w` is the word `fgw_w`, but its `x`, `y` and `z`
+/// hold the low 96 bits of one mixed-radix integer spanning all four (payload §3), which no §3.8 location addresses.
 pub const PENDING: &[&str] = &["free_group_word"];
 
 /// The structs the Rust emitter writes: `SimState`'s two variants, the word buffer's element (one `vec4<u32>`, whose
-/// layout, §3.3, is not transcribed here) and `ICDescriptor` (twelve f32s and 16 B of declared padding, 64 B: its f32
+/// `.w` is the word `fgw_w`, payload §3) and `ICDescriptor` (twelve f32s and 16 B of declared padding, 64 B: its f32
 /// instantiation, R-86; its f32s widen with the `Real`, R-313).
 pub fn structs() -> Vec<Struct> {
     let ic = [
@@ -266,4 +285,111 @@ pub fn structs() -> Vec<Struct> {
             members: ic,
         },
     ]
+}
+
+/// Payload §3's frozen `inverse`, each symbol's code to its inverse's, the symbol codes `a = 0, A = 1, b = 2, B = 3`.
+/// The table is ledger data written in function bodies, as the words' bits are: it is part of the binary format, not
+/// a register constant (REQ-SYS-001).
+pub const fn inverse() -> [u32; 4] {
+    [1, 0, 3, 2]
+}
+
+/// Payload §3's frozen `cont_symbol`: `next = cont_symbol()[digit][prev]`. Each digit's map is a permutation of the
+/// symbols that never gives `inverse(prev)`, and is its own inverse.
+pub const fn cont_symbol() -> [[u32; 4]; 3] {
+    [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]]
+}
+
+/// `continuation_index`'s value where no digit continues `prev`, at `next = inverse(prev)`: 3, "invalid", as
+/// `dmin_pair`'s 3 is (R-307, payload §3).
+pub const fn continuation_invalid() -> u32 {
+    3
+}
+
+/// `predecessor_symbol`, derived from [`cont_symbol`] by inverting each digit's permutation:
+/// `prev = predecessor_symbol()[digit][next]`, the `prev` with `cont_symbol()[digit][prev] == next` (payload §3). Each
+/// map is an involution, so this equals `cont_symbol()`.
+pub const fn predecessor_symbol() -> [[u32; 4]; 3] {
+    let cont = cont_symbol();
+    let mut out = [[0; 4]; 3];
+    let mut e = 0;
+    while e < 3 {
+        let mut prev = 0;
+        while prev < 4 {
+            out[e][cont[e][prev] as usize] = prev as u32;
+            prev += 1;
+        }
+        e += 1;
+    }
+    out
+}
+
+/// `continuation_index`, derived from [`cont_symbol`]: `continuation_index()[prev][next]` is the digit `e` with
+/// `cont_symbol()[e][prev] == next`, and [`continuation_invalid`] in the four cells where no digit gives `next`, those
+/// with `next = inverse(prev)` (R-307, payload §3).
+pub const fn continuation_index() -> [[u32; 4]; 4] {
+    let cont = cont_symbol();
+    let mut out = [[continuation_invalid(); 4]; 4];
+    let mut e = 0;
+    while e < 3 {
+        let mut prev = 0;
+        while prev < 4 {
+            out[prev][cont[e][prev] as usize] = e as u32;
+            prev += 1;
+        }
+        e += 1;
+    }
+    out
+}
+
+/// One member of generation-root §3.7's `QuadReduction`: its name, its §3.7 type as written there, and the §3.7
+/// subsection that gives it. Ledger data, not a §3.8 entry, and not emitted: the struct, its members' §3.8 entries and
+/// their placement are TASK-M5-01's (R-306, R-113).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReductionMember {
+    pub name: &'static str,
+    /// The type column of §3.7, verbatim; `None` where §3.7 gives the member no type.
+    pub ty: Option<&'static str>,
+    pub section: &'static str,
+}
+
+/// Generation-root §3.7's `QuadReduction` members, in its order (R-306). `spread_event` is the stored f16 agreement
+/// value; `ensemble_outcome_agreement` is a retired name and no member (R-18). Not members: `id` (omitted, identity is
+/// positional), the latch `running_max_divergence` (per footprint, R-99) and the conditional `spread_t_end` ("not yet
+/// included"). §3.7's one row `` `escape_time_min` / `_max` ``, typed `f16 × 2`, is its two members, each f16.
+/// `n_unresolved`, the count of the quad's unresolved footprints, latched ones included (the latch's verdict, R-142),
+/// is u16 like `valid_sample_count` (R-315).
+pub const QUAD_REDUCTION: &[ReductionMember] = &[
+    reduction("level", "u8", "Identity"),
+    reduction("class_histogram[N]", "u8 × N", "Outcome"),
+    reduction("dominant_outcome", "packed", "Outcome"),
+    reduction("outcome_impurity", "f16", "Outcome"),
+    reduction("terminated_fraction", "f16", "Outcome"),
+    reduction("spread_shape", "f16", "Ensemble spread"),
+    reduction("spread_event", "f16", "Ensemble spread"),
+    reduction("error_ratio", "f16", "Ensemble spread"),
+    reduction("roundtrip_error", "f16", "Ensemble spread"),
+    reduction("spread_winner", "2 bits", "Ensemble spread"),
+    reduction("alpha_area", "f16", "Refinement"),
+    reduction("alpha_energy", "f16", "Refinement"),
+    reduction("worst_energy_drift", "f16", "Refinement"),
+    reduction("running_mean_divergence", "f32", "Temporal accumulators"),
+    reduction("first_divergence_t", "f32", "Temporal accumulators"),
+    reduction("n_unresolved", "u16", "Temporal accumulators"),
+    reduction("suspect_fraction", "f16", "Validity and diagnostics"),
+    reduction("saturated_fraction", "f16", "Validity and diagnostics"),
+    reduction("valid_sample_count", "u16", "Validity and diagnostics"),
+    reduction("coherence", "f32", "Validity and diagnostics"),
+    reduction("escape_time_min", "f16", "Validity and diagnostics"),
+    reduction("escape_time_max", "f16", "Validity and diagnostics"),
+    reduction("retrograde_fraction", "f16", "Validity and diagnostics"),
+    reduction("mean_orbit_count_spread", "f16", "Validity and diagnostics"),
+];
+
+const fn reduction(name: &'static str, ty: &'static str, section: &'static str) -> ReductionMember {
+    ReductionMember {
+        name,
+        ty: Some(ty),
+        section,
+    }
 }

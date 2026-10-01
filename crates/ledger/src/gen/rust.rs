@@ -1,7 +1,8 @@
 //! The Rust emitter (dd_generation_root §1; dd_simstate_payload §1, §2, §6): writes each of
 //! [`crate::payload::structs`] as a `#[repr(C)]`, `no_std`-compatible struct into
 //! `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed words'
-//! pack/unpack/insert code ([`accessors`]). [`check`] holds each member against the ledger entry or word it stores.
+//! pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors and payload §3's frozen continuation
+//! table ([`continuation`]). [`check`] holds each member against the ledger entry or word it stores.
 //!
 //! The `SimState` structs and `ICDescriptor` are emitted per precision (philosophy §7.1; dd_simstate_payload §1;
 //! dd_generation_root §3.6; R-313): generic over the kernel's `Real`, their f32 members widen to it ([`widens`]) and
@@ -222,6 +223,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
     }
     out.push_str(&precision_code(&structs, &rows));
     out.push_str(&accessors(words, entries));
+    out.push_str(&continuation());
     vec![Generated {
         path: PathBuf::from(PATH),
         contents: out,
@@ -323,8 +325,17 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
 }
 
 /// The accessor prefix of each packed word (payload §6): `pa_`, `pb_` and `tm_`, and `sd_` for the unsigned fields of
-/// `packed_a`, which are the `sample_descriptor`'s.
-pub const PREFIXES: [(&str, &str); 3] = [("packed_a", "pa"), ("packed_b", "pb"), ("times", "tm")];
+/// `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word buffer's `.w` (payload §3), whose accessors
+/// are [`fgw`]'s.
+pub const PREFIXES: [(&str, &str); 4] = [
+    ("packed_a", "pa"),
+    ("packed_b", "pb"),
+    ("times", "tm"),
+    ("fgw_w", "fgw"),
+];
+
+/// The word buffer's `.w`, which [`fgw`] emits for, not the per-field loop of [`accessors`].
+const FGW_WORD: &str = "fgw_w";
 
 /// The accessor prefix of `entry` in `word`, or `None` if the word has none.
 fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
@@ -373,9 +384,15 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 /// - per word, `W_RESERVED`, its reserved spans, and `pack_w(fields…)`, which writes each field in bit order over
 ///   zero, so reserved bits are zero; a word holding `d_min` takes the caller's `counters` last and passes them to
 ///   `set_d_min` (R-294).
+///
+/// The word buffer's `.w` (`fgw_w`) is not a `SimState` word: its accessors are [`fgw`]'s.
 pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
     let mut out = helpers();
     for word in words {
+        if word.name == FGW_WORD {
+            out.push_str(&fgw(entries));
+            continue;
+        }
         let mut fields: Vec<(&Entry, u32, u32)> = entries
             .iter()
             .filter_map(|e| match e.location {
@@ -543,6 +560,236 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
         );
     }
     out
+}
+
+/// `fgw_w`'s `length` entry as [`fgw`] needs it, `(offset, width, capacity, sentinel)`: its bits, its range's closed
+/// greatest value and its sentinel. Otherwise the line naming `fgw_w.length` and what it lacks, which refuses
+/// generation ([`crate::gen::validate`]; dd_generation_root §3.8: "A field without a complete entry fails generation
+/// loudly").
+pub fn fgw_length(entries: &[Entry]) -> Result<(u32, u32, u32, u32), String> {
+    let refuse = |what: &str| {
+        Err(format!(
+            "field `{FGW_WORD}.length` {what}: the word buffer's accessors need it (payload §3; dd_generation_root §3.8)"
+        ))
+    };
+    let length = entries.iter().find_map(|e| match e.location {
+        Location::Packed {
+            word,
+            offset,
+            width,
+        } if word == FGW_WORD && e.name == "length" => Some((e, offset, width)),
+        _ => None,
+    });
+    let Some((e, offset, width)) = length else {
+        return refuse("has no entry");
+    };
+    let Bound::Closed(capacity) = e.range.hi else {
+        return refuse("has no closed greatest value");
+    };
+    let Some(sentinel) = e.sentinel else {
+        return refuse("has no sentinel");
+    };
+    Ok((offset, width, capacity as u32, sentinel as u32))
+}
+
+/// The line refusing generation if `words` declare the word buffer's `.w`, `fgw_w`, and its `length` entry is not as
+/// [`fgw_length`] needs it.
+pub fn fgw_problem(words: &[Word], entries: &[Entry]) -> Option<String> {
+    if words.iter().any(|w| w.name == FGW_WORD) {
+        fgw_length(entries).err()
+    } else {
+        None
+    }
+}
+
+/// The word buffer's accessors, emitted from `fgw_w`'s `length` entry (payload §3; R-86's names): `FGW_CAPACITY`, its
+/// range's greatest value, `FGW_LENGTH_SENTINEL`, its sentinel, and `fgw_length_raw`, `fgw_truncated` and
+/// `fgw_retained_prefix_length`. Each takes the whole `vec4<u32>` as `[u32; 4]` and reads element 3, `.w`, as §3's
+/// `fgw_length_raw(w: vec4u)` does. The driver refuses a ledger whose entry lacks any of them ([`fgw_problem`]); an
+/// emitter called past it writes a `compile_error!` naming `fgw_w.length`, so the file never builds without them.
+pub fn fgw(entries: &[Entry]) -> String {
+    let (offset, width, capacity, sentinel) = match fgw_length(entries) {
+        Ok(length) => length,
+        Err(why) => return format!("\ncompile_error!({why:?});\n"),
+    };
+    let bits = format!("bits {offset}–{}", offset + width - 1);
+    format!(
+        r#"
+/// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
+pub const FGW_CAPACITY: u32 = {capacity};
+
+/// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
+pub const FGW_LENGTH_SENTINEL: u32 = {sentinel};
+
+/// `length_raw`: {bits} of the word's `.w`, element 3 of its `vec4<u32>`; 0…{capacity} valid, {sentinel} truncated
+/// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
+#[inline]
+pub fn fgw_length_raw(w: [u32; 4]) -> u32 {{
+    extract(w[3], {offset}, {width})
+}}
+
+/// Whether the word is truncated: `length_raw` is the sentinel (payload §3).
+#[inline]
+pub fn fgw_truncated(w: [u32; 4]) -> bool {{
+    fgw_length_raw(w) == FGW_LENGTH_SENTINEL
+}}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+#[inline]
+pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {{
+    if fgw_truncated(w) {{
+        FGW_CAPACITY
+    }} else {{
+        fgw_length_raw(w)
+    }}
+}}
+"#
+    )
+}
+
+/// `rows` as a Rust array literal, `[[a, b, …], …]`.
+fn array(rows: &[[u32; 4]]) -> String {
+    let rows: Vec<String> = rows
+        .iter()
+        .map(|r| format!("[{}, {}, {}, {}]", r[0], r[1], r[2], r[3]))
+        .collect();
+    format!("[{}]", rows.join(", "))
+}
+
+/// `cells` as a comparison chain on `var`, `if var == 0 { cells[0] } else if var == 1 { … } else { cells[n − 1] }`,
+/// each cell's text indented to `depth` levels of four spaces, rustfmt's layout. The first cell opens the chain, the
+/// middle cells are its `else if` arms, and the last is the `else`, so a `var` past the table's last code reads the
+/// last cell; the callers pass codes only, each masking or clamping its inputs first (R-321, R-324). A last cell that is itself a chain continues this one, `else if …`, clippy's
+/// collapsed form of `else { if … }`. No runtime array index is emitted: rust-gpu lowers one to an implicit bounds
+/// check, a compiler-injected multi-level exit (GPU determinism note § "The discipline", rule 5).
+fn select(var: &str, cells: &[String], depth: usize) -> String {
+    let pad = "    ".repeat(depth);
+    let inner = "    ".repeat(depth + 1);
+    let indent = |cell: &str, to: &str| cell.replace('\n', &format!("\n{to}"));
+    let Some((first, rest)) = cells.split_first() else {
+        return String::new();
+    };
+    let mut out = format!(
+        "if {var} == 0 {{\n{inner}{}\n{pad}}}",
+        indent(first, &inner)
+    );
+    let Some((last, middle)) = rest.split_last() else {
+        return out;
+    };
+    for (code, cell) in (1..).zip(middle) {
+        let _ = write!(
+            out,
+            " else if {var} == {code} {{\n{inner}{}\n{pad}}}",
+            indent(cell, &inner)
+        );
+    }
+    if last.starts_with("if ") {
+        let _ = write!(out, " else {}", indent(last, &pad));
+    } else {
+        let _ = write!(out, " else {{\n{inner}{}\n{pad}}}", indent(last, &inner));
+    }
+    out
+}
+
+/// `row` as cells: its values as literals.
+fn cells(row: &[u32]) -> Vec<String> {
+    row.iter().map(u32::to_string).collect()
+}
+
+/// `table[outer][inner]` as a comparison chain on `outer`, each cell a chain on `inner` ([`select`]), at one level
+/// of indentation, a function body's.
+fn select2(outer: &str, inner: &str, table: &[[u32; 4]]) -> String {
+    let rows: Vec<String> = table.iter().map(|r| select(inner, &cells(r), 0)).collect();
+    select(outer, &rows, 1)
+}
+
+/// Payload §3's frozen continuation table, from the ledger's ([`crate::payload`]): the arrays `INVERSE`,
+/// `CONT_SYMBOL`, `PREDECESSOR_SYMBOL` and `CONTINUATION_INDEX` (3 in its four `next = inverse(prev)` cells, R-307),
+/// and §3's small tables as functions: `inverse`, `continuation_symbol`, `predecessor_symbol` and
+/// `continuation_index`. The arrays are data, for host code; each function is a comparison chain over the same table's
+/// literals ([`select`]), never a runtime index into an array, which rust-gpu would bounds-check (GPU determinism note
+/// § "The discipline", rule 5). Each function is total (R-321, R-324): it `debug_assert!`s each symbol input < 4 and
+/// each digit < 3, then reads the table at the symbol masked to 2 bits (`& 3`) and the digit clamped (`min(d, 2)`), so
+/// a release build given an input out of range reads the cell at the masked or clamped input, and
+/// `continuation_index` returns 3 only in its inverse cells (R-307). The two functions that take a digit are not
+/// `const`: `u32::min` is not a `const fn`. `CONTINUATION_INDEX`'s array is on its own line, rustfmt's layout for a line
+/// past 100 columns.
+pub fn continuation() -> String {
+    use crate::payload::{cont_symbol, continuation_index, inverse, predecessor_symbol};
+    let i = inverse();
+    format!(
+        r#"
+/// Payload §3's frozen `inverse` (symbol codes `a = 0, A = 1, b = 2, B = 3`): part of the binary format.
+pub const INVERSE: [u32; 4] = [{}, {}, {}, {}];
+
+/// Payload §3's frozen `cont_symbol`: `next = CONT_SYMBOL[digit][prev]`.
+pub const CONT_SYMBOL: [[u32; 4]; 3] = {};
+
+/// `predecessor_symbol`, `prev = PREDECESSOR_SYMBOL[digit][next]`: `CONT_SYMBOL` inverted, so equal to it (payload §3).
+pub const PREDECESSOR_SYMBOL: [[u32; 4]; 3] = {};
+
+/// `continuation_index`, `digit = CONTINUATION_INDEX[prev][next]`: `CONT_SYMBOL` inverted, and 3 ("invalid") where
+/// `next = inverse(prev)` (R-307, payload §3).
+pub const CONTINUATION_INDEX: [[u32; 4]; 4] =
+    {};
+
+/// The inverse of symbol `s` (payload §3): `INVERSE[s]`, as a comparison chain, not an array index (GPU determinism
+/// note § "The discipline", rule 5). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
+#[inline]
+pub const fn inverse(s: u32) -> u32 {{
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let s = s & 3;
+    {}
+}}
+
+/// The symbol digit `e` continues `prev` with (payload §3): `CONT_SYMBOL[e][prev]`, as a comparison chain. `e` is a
+/// digit, 0…2: `debug_assert!`ed, then clamped `min(e, 2)` (R-324); `prev` a symbol code, 0…3: `debug_assert!`ed, then
+/// masked `& 3` (R-321).
+#[inline]
+pub fn continuation_symbol(prev: u32, e: u32) -> u32 {{
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let prev = prev & 3;
+    let e = e.min(2);
+    {}
+}}
+
+/// The `prev` that digit `e` continued to `next`: the reverse table a cancellation-pop reads (payload §3):
+/// `PREDECESSOR_SYMBOL[e][next]`, as a comparison chain. `e` is a digit, 0…2: `debug_assert!`ed, then clamped
+/// `min(e, 2)` (R-324); `next` a symbol code, 0…3: `debug_assert!`ed, then masked `& 3` (R-321).
+#[inline]
+pub fn predecessor_symbol(next: u32, e: u32) -> u32 {{
+    debug_assert!(next < 4, "next is not a symbol code (R-321)");
+    debug_assert!(e < 3, "e is not a digit (R-324)");
+    let next = next & 3;
+    let e = e.min(2);
+    {}
+}}
+
+/// The digit that continues `prev` with `s`; 3 where `s = inverse(prev)`, which the append never reads (R-307):
+/// `CONTINUATION_INDEX[prev][s]`, as a comparison chain. `prev` and `s` are symbol codes, 0…3: each `debug_assert!`ed,
+/// then masked `& 3` (R-321), so 3 is returned only in the four inverse cells.
+#[inline]
+pub const fn continuation_index(prev: u32, s: u32) -> u32 {{
+    debug_assert!(prev < 4, "prev is not a symbol code (R-321)");
+    debug_assert!(s < 4, "s is not a symbol code (R-321)");
+    let prev = prev & 3;
+    let s = s & 3;
+    {}
+}}
+"#,
+        i[0],
+        i[1],
+        i[2],
+        i[3],
+        array(&cont_symbol()),
+        array(&predecessor_symbol()),
+        array(&continuation_index()),
+        select("s", &cells(&i), 1),
+        select2("e", "prev", &cont_symbol()),
+        select2("e", "next", &predecessor_symbol()),
+        select2("prev", "s", &continuation_index()),
+    )
 }
 
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /

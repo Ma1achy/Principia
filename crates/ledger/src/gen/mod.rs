@@ -32,7 +32,8 @@ pub enum GenError {
     Incomplete(Vec<IncompleteEntry>),
     /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
     /// one stored entry, vectors whose component is not a scalar type or whose `k` is below 2, and a `floor` that is
-    /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`).
+    /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`), and a word buffer `.w`
+    /// whose `length` entry is missing or has no closed greatest value or no sentinel ([`rust::fgw_problem`]).
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),
@@ -96,6 +97,7 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
     bad.extend(bad_derived(&entries));
     bad.extend(entries.iter().filter_map(bad_vector));
     bad.extend(bad_floor(&ledger.words, &entries));
+    bad.extend(rust::fgw_problem(&ledger.words, &entries));
     if bad.is_empty() {
         Ok(entries)
     } else {

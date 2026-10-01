@@ -21,16 +21,16 @@
 | TOOL | 145 |
 | VAL | 176 |
 | PERF | 94 |
-| SYS | 75 |
-| **total** | **1298** |
+| SYS | 76 |
+| **total** | **1299** |
 
-Of these: 102 calibration, 103 definition, 1093 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 103 definition, 1094 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 109 |
+| M0 | 110 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -42,10 +42,10 @@ Of these: 102 calibration, 103 definition, 1093 obligation. Retired (kept for th
 
 ## Sections
 
-1015 sections in 46 files: 858 yield at least one requirement; 157 yield none and are listed below with the reason.
+1025 sections in 46 files: 864 yield at least one requirement; 161 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 110 |
+| informative only | 114 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -119,6 +119,10 @@ Of these: 102 calibration, 103 definition, 1093 obligation. Retired (kept for th
 | R-311 — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done | informative only | accepts PR |
 | R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)* | informative only | the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR |
 | R-316 — #96's `closure_min` widening with `Real` stands | informative only | accepts PR |
+| R-330 — #99's veto item 5 stands: §3.7's "f16 × 2" is `escape_time_min` and `escape_time_max` | informative only | accepts PR |
+| R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B) | informative only | accepts PR |
+| R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders | informative only | a test-isolation fix in qa's file, made by qa in a follow-up PR on TASK-M0-06 (noted there); changes no requirement |
+| R-334 — check_plan.py proves every still-open item in `open-questions.md` maps to a requirement or a REVIEW_QUEUE entry | informative only | a plan-tooling rule, applied in open-questions.md and plan/check_plan.py in a PR of its own; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -77,7 +77,7 @@ The membrane is thin, typed, and enumerable — exactly five crossings:
 | **Dispatch** | uniforms (`SimUniforms`, chart params, per-quad `c,h,x₀,J_D,T`, flags) | CPU → GPU | per frame / per quad; the only thing navigation touches |
 | **Render config** | stain-node params · playhead `t` | CPU → GPU | the render key's path; never touches sim buffers |
 | **Bake** | equirect texture | wasm engine → GPU | colour cache tier; chart- and IC-independent |
-| **Reduction** | `QuadReduction` (~80 B/quad) | GPU → CPU | the **sole automatic** return; feeds the Allocation ring only |
+| **Reduction** | `QuadReduction` (~80 B/quad) | GPU → CPU | the **sole automatic** return of simulation data (R-332; R-288's telemetry readback is not simulation data); feeds the Allocation ring only |
 | **Sanctioned pulls** | single-IC f32 GPU trace (click inspector's divergence overlay) · columnar decode (export) | GPU → CPU | user-initiated, tiny, async, latest-wins. (The hover trace is NOT a pull — it re-integrates on the CPU via `computeIC` in the inspector worker and reads no payload; render Part 7) |
 
 The Deployment ring's machinery — `resolve()`, monomorphised compute pipelines (and hand-WGSL fragment assembly — lowering Part 2), the precompile rule — exists to serve this mapping: code differences baked, moving values as uniforms, and *a gesture can never reach the compiler*.
