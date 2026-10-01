@@ -294,6 +294,7 @@ profile` running a scenario that does no GPU work (M0's `synthetic_frames`) writ
 JSON, share links and pxpack carry (`principia_gui_state_contract.md` §2). A `prin profile` run writes it as
 `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`: the scenario it ran, the frame count, and
 the two structs.
+Written canonically (JCS, R-318), the object's members appear sorted: `frames`, `render`, `scenario`, `sim`.
 
 **The frame record** is §2's, key for key, followed by the five stages' nested sections and the memory live at the
 frame's end:

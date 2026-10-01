@@ -652,6 +652,9 @@ Native in-process `wgpu` sets the Tier-N tolerances. Dawn CI is dropped. Real br
 with the browser build (M8).
 
 ## R-86 — The payload doc governs the eight payload items *(closes RQ-37)*
+*Amended by R-313.*
+*Still in force: all eight items; `ICDescriptor`'s 64 B with explicit padding is its f32 instantiation, and its
+width follows `Real` (R-313).*
 *25 Sep 2026 · applied in step 7*
 
 - `times` is exact u16 only; dispatch refuses a configuration with ⌈T/dt⌉ > 65535.
@@ -2728,6 +2731,9 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
+*Amended by R-320.*
+*Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
+R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3274,6 +3280,10 @@ TASK-M0-18 makes that change to TASK-M0-17's files, and M0's `prin profile` open
 Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
+*Amended by R-318.*
+*Still in force: `SimConfig` and `RenderState` are serialisable; the header's `config` is `{"scenario", "frames",
+"sim", "render"}`; one canonical serialisation shared with snapshot JSON, share links and pxpack; R-318 makes it JCS
+(RFC 8785), replacing the definition TASK-M0-18 was to write.*
 *1 Oct 2026 · applied in PR #97: gui_state_contract §2, telemetry §5, render_gui_spec § "Export & share",
 image_embedding §6, export_animation Part 6, REQ-TOOL-002, REQ-TOOL-145 and REQ-TOOL-146 (new), TASK-M0-18,
 TASK-M8-32*
@@ -3334,3 +3344,95 @@ closed by TASK-M5-01, which types `QuadReduction`'s f16 members with it. *Applie
 location" is read as a packed location of exactly 16 bits only: `f16` is not a `scalar-index` type (a scalar index is
 a 32-bit slot) and not a `vector` component type (a vector of halves stays `vector(f16-pair, k)`). R-248's
 static-check rules for `f16-pair` (REQ-GEN-028) are unchanged.
+
+## R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
+*1 Oct 2026 · applied in generation-root §3.6, dd_simstate_payload §1, render contract, REQ-PAY-017, REQ-PAY-087 and
+TASK-M0-14*
+
+"RQ-185: ICDescriptor follows Real. R-86's 64 B is its f32 instantiation."
+
+*Applied:* `ICDescriptor`'s twelve float fields have the width of `Real`, as `SimState`'s widening fields do, so the
+payload (`SimState` + `ICDescriptor`, systems_architecture) is a function of `Real` throughout (REQ-PAY-017). R-86's
+"64 B with explicit padding" (12 × f32 = 48 B plus 16 B declared padding) is the f32 instantiation. The f64 and
+DoubleF64 sizes and padding are not given by the corpus; they join REQ-PAY-087's definition, which TASK-M0-14 writes
+into generation-root §3.6 for the physics reviewer to approve (R-72). `E₀ = K₀ + V₀` is then formed at `Real` width on
+every path. TASK-M0-14 (PR #96) makes `ICDescriptor` generic with a layout row per precision; REQ-PAY-017 stays closed
+by TASK-M0-14. PR #96's §1 sentence "`ICDescriptor` [is] not generic" is superseded. RQ-185 was filed in PR #101.
+
+## R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"RQ-184: accept rustc-check-cfg for spirv in crates/kernel/build.rs (no blanket allow)."
+
+*Applied:* this is the ruling R-197 asks for to change lint configuration. `crates/kernel/build.rs` declares
+`cargo::rustc-check-cfg=cfg(target_arch, values("spirv"))`, naming one expected value and leaving `unexpected_cfgs` on
+for every other cfg. No `#[allow(unexpected_cfgs)]` or `#![allow(unexpected_cfgs)]` is used for it, at any scope.
+RQ-184 was filed in PR #101.
+
+## R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*
+*1 Oct 2026 · applied in generation-root §3.7, REQ-REF-052 (new), TASK-M0-11 and TASK-M5-01*
+
+"RQ-183: n_unresolved is u16, like valid_sample_count."
+
+*Applied:* §3.7's temporal-accumulators table gains the row `n_unresolved` (u16), the latch's verdict (R-142): the
+count of the quad's unresolved footprints, latched ones included, at most N² as `valid_sample_count` is. TASK-M0-11's
+ledger member list (R-306) types it u16; TASK-M5-01 builds it into the struct (REQ-REF-052). RQ-183 was filed on PR
+#99's branch (`task/TASK-M0-11`); it is archived from there, and #99's own REVIEW_QUEUE.md copy goes when #99 next
+merges `main`.
+
+## R-316 — #96's `closure_min` widening with `Real` stands
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"#96: closure_min widening with Real stands."
+
+*Applied:* PR #96's "Applied per R-204 — veto?" item stands: `closure_min` widens with `Real` (f64 at f64), so a
+persisted and resumed `SimState` keeps the running minimum at the march's own width (the physics reviewer's resume
+argument). REQ-PAY-087's definition in dd_simstate_payload §1 carries it.
+
+## R-317 — #98's `f16` restriction stands; `f16` is storage-only
+*1 Oct 2026 · applied in generation-root §3.8 and REQ-GEN-030*
+
+"#98: the f16 restriction (packed 16-bit locations only) stands. f16 arithmetic in WGSL is optional in WebGPU, so f16
+stays storage-only."
+
+*Applied:* R-312's reading stands: `f16` is a type for a packed 16-bit location only, not a `scalar-index` type or a
+`vector` component type (PR #98, merged as 2ade719). `f16` is storage-only: a generated read accessor widens it to f32
+(`unpack2x16float`, core WGSL), and no generated code does arithmetic in binary16 or needs WGSL's optional
+`shader-f16` feature (`enable f16`). §3.8 says so beside R-312's paragraph, and REQ-GEN-030 checks it.
+
+## R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*
+*1 Oct 2026 · applied in gui_state_contract §2, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
+
+"#100: the canonical serialisation is JCS (RFC 8785): sorted keys and its number format, using its test vectors. −0.0
+serialises as 0 (accepted). Integers beyond 2^53 (e.g. seeds) serialise as strings. Supersedes #100's bespoke number
+rules."
+
+*Applied:* `SimConfig` and `RenderState` serialise as RFC 8785 JSON Canonicalization Scheme text: object members sorted
+by their names' UTF-16 code units (RFC 8785 §3.2.3), no insignificant whitespace, strings escaped as §3.2.2.2 gives,
+and numbers in its format (ECMAScript's Number-to-String, §3.2.2.3). RFC 8785's published test vectors are the
+acceptance test. −0.0 is written `0`, as JCS writes it. An integer whose magnitude exceeds 2^53 (a seed, say) is
+written as a JSON string of its decimal digits. REQ-TOOL-145 becomes the ruled definition, so it is no longer a
+definition TASK-M0-18 writes or the physics reviewer approves (REQ-TOOL-119's still is). PR #100's own key order (UTF-8
+bytes) and number layout (ryu, positional for exponents −5 to 15) are superseded; for its ASCII keys the order is the
+same. R-309's other text stands. *Applied per R-204 — veto?:* "integers beyond 2^53" is read per value: an integer
+field writes a number when |n| ≤ 2^53 and a string above it.
+
+## R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016 and TASK-M0-11 (PR #99)*
+
+"#99 item 8 vetoed: an out-of-range input to the continuation tables is a debug_assert! failure; in release it returns 3
+("invalid", R-307), never the last cell."
+
+*Applied:* PR #99's item 8 (an input past the last code returns the last cell) is vetoed. Each generated
+continuation-table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) checks its
+inputs with `debug_assert!`; a release build given an out-of-range input returns 3, R-307's "invalid", never a table
+cell. Payload §3 states it beside R-307's table, and REQ-PAY-016 tests both builds.
+
+## R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 (new) and TASK-M0-14 (PR #96)*
+
+"R-285 amended: cache the rust-gpu build (~/.cache/rust-gpu), keyed on the pinned toolchain version."
+
+*Applied:* every CI job that builds the kernel restores and saves `~/.cache/rust-gpu` under a key naming the pinned
+toolchain version (`rust-toolchain.toml`'s channel), so a toolchain bump starts a fresh cache. The rest of R-285 stands.
+TASK-M0-14 (PR #96), which brings kernel builds into CI, makes the change (REQ-SYS-075).

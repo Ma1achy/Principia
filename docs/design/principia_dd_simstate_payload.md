@@ -139,6 +139,8 @@ where that bit lives is not yet specified (open-questions).
 - **Storage never holds NaN (R-79).** A blown-up sample stores the defined failed-state values, never the non-finite values that failed it; the failed-state contents of its f32 fields (phase state, shadow, accumulators, drift refs) are defined by the task that writes the failure path (R-72). A tier-absent (derived) field reads NaN at unpack (§5). Every colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still goes to the invalid colour.
 - **bf16:** nowhere — wrong precision/range trade for bounded normalised quantities (bf16 buys exponent range you don't need at the cost of mantissa you do), and not in web WGSL anyway.
 
+**`ICDescriptor` follows `Real` too (R-313).** The payload is `SimState` + `ICDescriptor`; the descriptor's float fields have the width of `Real`, and R-86's 64 B is its f32 instantiation (generation-root §3.6). Its f64 and DoubleF64 layouts are part of REQ-PAY-087's definition.
+
 ---
 
 ## 2. Bit layouts (the packed u32s)
@@ -287,6 +289,8 @@ continuation_index[1]= [3,0,2,1]   // prev A: a (inverse)→3, A→0, b→2, B�
 continuation_index[2]= [1,2,0,3]   // prev b: a→1, A→2, b→0, B (inverse)→3
 continuation_index[3]= [2,1,3,0]   // prev B: a→2, A→1, b (inverse)→3, B→0
 ```
+
+**An out-of-range input is a `debug_assert!` failure; in release it returns 3 (R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) is defined for symbols 0–3 and digits 0–2. A debug build given anything else fails a `debug_assert!`; a release build returns **3 ("invalid")**, R-307's code, never a table cell.
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```
