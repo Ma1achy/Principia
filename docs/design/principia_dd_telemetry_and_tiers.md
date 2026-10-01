@@ -255,8 +255,8 @@ completes, and flushes the file at least every 60 frames or every 1 s, whichever
 is killed loses at most the frames written since the last flush. The summary line is appended as the final line when
 the session ends (R-286, R-298). The run's memory does not grow with `--frames` beyond what the summaries themselves
 need: a frame record is not kept once it is written. A run killed mid-session leaves the incomplete session described
-below, which a reader reports as "session incomplete". *Applied per R-204 — veto?:* the header line is flushed as soon
-as it is written, so even a run killed before its first frame leaves a valid trace.
+below, which a reader reports as "session incomplete". *Applied per R-204, accepted by R-346:* the header line is
+flushed as soon as it is written, so even a run killed before its first frame leaves a valid trace.
 
 **A session that ended before its summary line** (R-298), because it crashed or is still running, leaves a trace whose
 last line is a frame record, or the header line when it recorded no frame. That trace is valid schema v1. A reader

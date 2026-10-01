@@ -2,6 +2,8 @@
 
 How the build runs from `plan/`. The docs stay the authority (plan/MILESTONES.md, "Assumptions"); this file says who
 does what, in what order, and what stops the line.
+How the orchestrator runs it day to day (dispatch, merging, away mode, machine resources, and a cloud session's setup
+with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 
 ## The unit: one task, one branch, one PR
 
