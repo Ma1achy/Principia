@@ -58,3 +58,26 @@ milestone gets its own file after its gate. Ids never change.
   2. **§3.8 gains a type `f16`** (a docs change to §3.8 first, then the ledger's type set and both emitters), usable at
      a scalar index or a packed 16-bit location.
 - **Needed:** which one, before TASK-M5-01 starts. Nothing in M0 is blocked.
+
+---
+
+## RQ-184: TASK-M0-14 declares `cfg(target_arch, values("spirv"))` for the `unexpected_cfgs` lint in `crates/kernel/build.rs`, which is lint configuration *(code, TASK-M0-14, PR #96, R-197)*
+
+- **File, section:** `decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*": "Changing
+  lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling." PR #96 (TASK-M0-14), `crates/kernel/build.rs:8`:
+  `cargo::rustc-check-cfg=cfg(target_arch, values("spirv"))`, listed in the PR as "Applied per R-204 — veto?" item 6.
+- **What:** the kernel source is compiled twice, for the host and by rust-gpu for SPIR-V, and refers to
+  `target_arch = "spirv"`, a value rustc doesn't know. Without a declaration, `cargo clippy --workspace --all-targets --
+  -D warnings` fails at `crates/kernel/src/toolchain.rs:47` ("unexpected cfg condition value: spirv"). Cargo documents
+  `cargo::rustc-check-cfg` as setting the expected-cfg list the `unexpected_cfgs` lint checks: the same setting as
+  `[lints.rust] unexpected_cfgs = { check-cfg = [...] }`, which is rust-gpu's documented fix. So the code reviewer reads
+  it as lint configuration that R-197 reserves for a ruling, whichever file it's in. An item-level
+  `#[allow(unexpected_cfgs)]` doesn't silence it (the code reviewer tried it); only a module- or crate-level `#![allow]`
+  does, and that is broader.
+- **Options seen:**
+  1. **Accept the declaration (recommended).** It names exactly one expected value, `spirv`, for `target_arch`, and
+     leaves the lint on for every other cfg. Whether it sits in `build.rs` (as in #96) or a `[lints.rust]` table in
+     `crates/kernel/Cargo.toml` is the human's choice; the effect is the same.
+  2. **A module-level `#![allow(unexpected_cfgs)]` with a reason comment**, which R-197 lets the code reviewer approve
+     without a ruling. Broader: it silences every unexpected cfg in that module.
+- **Needed:** which one. Blocks PR #96's merge (TASK-M0-14).
