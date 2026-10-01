@@ -56,8 +56,11 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
         if: steps.diff.outputs.rust == 'true'
-        run: rustup toolchain install
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         if: steps.diff.outputs.rust == 'true'
         with:
@@ -65,6 +68,14 @@ jobs:
           shared-key: mutants
           cache-targets: "false"
           cache-bin: "false"
+      # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
+      # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
+      # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073).
+      - uses: actions/cache@v4
+        if: steps.diff.outputs.rust == 'true'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-mutants-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - uses: taiki-e/install-action@v2
         if: steps.diff.outputs.rust == 'true'
         with:
