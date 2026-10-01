@@ -7,7 +7,7 @@
 //! - `prin profile show PATH [--pretty]` prints a trace, each line indented with `--pretty` (R-286) — [`show`].
 //!
 //! Exit status: 0 on success (and on a diff with no regression), 1 on a regression, 2 on a usage or read error, or a
-//! diff whose NEW has no frame records (R-323).
+//! diff whose BASE or NEW has no frame records (R-323; BASE's case applied per R-204).
 
 mod diff;
 mod run;

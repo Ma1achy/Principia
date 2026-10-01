@@ -1113,8 +1113,8 @@ validation::negative_control!(
     })
 );
 
-/// A NEW with no frame records exits 2, as an unreadable file does, and says why (R-323); a BASE with none is
-/// compared, each of NEW's scopes listed as only in NEW.
+/// A NEW with no frame records exits 2, as an unreadable file does, and says why (R-323); so does a BASE with none
+/// (applied per R-204, physics's finding 2).
 fn check_no_frames(base: &Path, new: &Path) {
     let out = diff(base, new, "5%");
     assert_eq!(
@@ -1141,8 +1141,8 @@ fn profile_diff_no_frames_new_exits_2() {
     let out = diff(&empty, &base, "5%");
     assert_eq!(
         out.status.code(),
-        Some(0),
-        "a BASE with no frames is refused"
+        Some(2),
+        "a BASE with no frames is not refused"
     );
 }
 

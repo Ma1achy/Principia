@@ -1,7 +1,7 @@
 //! `prin profile diff BASE NEW --threshold P%` (render_gui_spec § "Profiler", "What `prin profile diff` compares",
 //! REQ-TOOL-119): for each scope, the p95 of its per-frame ms in BASE and in NEW; a regression where NEW's p95 is more
 //! than P% above BASE's, decided exactly (R-323). It exits 1 when any scope regresses, 0 when none does, and 2 when a
-//! file cannot be read or NEW has no frame records (R-323). A trace that is an incomplete session, its last line
+//! file cannot be read or either file has no frame records (R-323; BASE's case applied per R-204). A trace that is an incomplete session, its last line
 //! perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes the reader
 //! dropped (R-323, R-298, R-299).
 //!
@@ -270,22 +270,34 @@ fn incomplete(name: &str, trace: &Trace) -> String {
     )
 }
 
-/// `prin profile diff BASE NEW --threshold P%`. A NEW with no frame records has nothing to compare, and is an error,
-/// exit 2 (R-323).
-pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<ExitCode, String> {
-    let (base, new_trace) = (read(base)?, read(new)?);
-    if new_trace.frames.is_empty() {
-        let notice = if new_trace.session == Session::Incomplete {
-            incomplete("NEW", &new_trace)
-        } else {
-            String::new()
-        };
-        return Err(format!(
-            "{notice}prin profile diff: {} has no frame records, so nothing to compare",
-            new.display()
-        ));
+/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323 for NEW; BASE's case
+/// applied per R-204). An incomplete session's notice comes first, as it does before a comparison.
+fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
+    if !trace.frames.is_empty() {
+        return None;
     }
-    let report = compare(&base, &new_trace, threshold);
+    let notice = if trace.session == Session::Incomplete {
+        incomplete(name, trace)
+    } else {
+        String::new()
+    };
+    Some(format!(
+        "{notice}prin profile diff: {name} has no frame records ({}), so nothing to compare",
+        path.display()
+    ))
+}
+
+/// `prin profile diff BASE NEW --threshold P%`. A BASE or NEW with no frame records has nothing to compare, and is an
+/// error, exit 2 (R-323 for NEW; BASE's case applied per R-204).
+pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<ExitCode, String> {
+    let (base_trace, new_trace) = (read(base)?, read(new)?);
+    if let Some(why) = no_frames("BASE", base, &base_trace) {
+        return Err(why);
+    }
+    if let Some(why) = no_frames("NEW", new, &new_trace) {
+        return Err(why);
+    }
+    let report = compare(&base_trace, &new_trace, threshold);
     print!("{}", report.text);
     Ok(if report.regressed {
         ExitCode::from(1)
@@ -475,6 +487,52 @@ mod tests {
             |base, new, threshold| main(base, new, threshold)
                 .map_err(|e| e.replace("session incomplete", "")),
             "control"
+        )
+    );
+
+    /// A BASE with no frame records is refused, exit 2, as an empty NEW is: with nothing in BASE the gate could never
+    /// fail (R-204, physics's finding 2). Both the header-only (incomplete) and header-plus-summary (complete) cases;
+    /// an incomplete BASE's notice comes first.
+    fn check_no_frames_base(diff: Diff, tag: &str) {
+        let lines: Vec<&str> = BASE.lines().collect();
+        let (header, summary) = (lines[0], lines[lines.len() - 1]);
+        let new = scratch(&format!("{tag}-new"), BASE);
+        let threshold = parse_threshold("5%").expect("a threshold");
+        for (name, text, incomplete) in [
+            ("complete", format!("{header}\n{summary}\n"), false),
+            ("incomplete", format!("{header}\n"), true),
+        ] {
+            let base = scratch(&format!("{tag}-base-{name}"), &text);
+            let refused = diff(&base, &new, &threshold);
+            std::fs::remove_file(&base).ok();
+            let Err(why) = refused else {
+                panic!("a {name} BASE with no frames is not refused");
+            };
+            assert!(
+                why.contains("BASE has no frame records"),
+                "the refusal does not say BASE has no frame records: {why}"
+            );
+            assert_eq!(
+                why.starts_with("BASE: session incomplete; 0 bytes"),
+                incomplete,
+                "a {name} BASE with no frames has the wrong notice: {why}"
+            );
+        }
+        std::fs::remove_file(&new).ok();
+    }
+
+    #[test]
+    fn profile_diff_no_frames_base_exits_2() {
+        check_no_frames_base(main, "test-base");
+    }
+
+    validation::negative_control!(
+        profile_diff_no_frames_base_exits_2,
+        "a diff that compares an empty BASE must fail the check",
+        expected = "BASE with no frames is not refused",
+        check_no_frames_base(
+            |_, new, threshold| main(new, new, threshold),
+            "control-base"
         )
     );
 }
