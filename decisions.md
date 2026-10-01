@@ -3710,15 +3710,17 @@ saved", were false of a key nothing saves; they are corrected to name the `ci.ym
 (PR #96), which makes R-326's change in every workflow, makes this one. REQ-SYS-073 and REQ-SYS-075 follow.
 
 ## R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
-*1 Oct 2026 · applied in `open-questions.md` and `plan/check_plan.py` (PR #106)*
+*1 Oct 2026 · applied in `open-questions.md` and `plan/check_plan.py` (PR #106), and in `open-questions.md` and `REVIEW_QUEUE.md` (PR #108)*
 
 "4 yes. 5 ok."
 
 *Applied:* the items of `open-questions.md`'s "Audit section D — deliberately parked" are decisions to wait, each
 parked with its reason in its owning file (philosophy §7.7). They are not still-open items under R-334: section D is
 marked parked, carries no *Carried by* note, and `plan/check_plan.py`'s R-334 check does not read it. PR #106 (R-334's
-PR) applies it. RQ-187, filed on its branch, is archived unchanged in `docs/archive/review_queue/M0.md` with this
-ruling's port, so that its id resolves on `main`; #106's next fix pass deletes its open copy from `REVIEW_QUEUE.md`.
+PR) merged with section D still naming RQ-187 and RQ-187 still open, so PR #108 applies it: section D is marked
+"Parked, not open (R-338)", with no *Carried by* note, `open-questions.md`'s opening note says a parked item names no
+carrier, and RQ-187's open copy is deleted from `REVIEW_QUEUE.md`. RQ-187, filed on #106's branch, is archived unchanged
+in `docs/archive/review_queue/M0.md` with this ruling's port, so that its id resolves on `main`.
 Noted with it, not a ruling of its own ("5 ok"): PR #106's veto item, which marks `open-questions.md`'s corpus-defects
 section, D1–D6, "Closed: fixed by R-59" (applied per R-334), stands; the human did not veto it. Changes no requirement.
 

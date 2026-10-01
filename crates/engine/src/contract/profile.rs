@@ -11,7 +11,9 @@ use std::fmt;
 use std::hash::Hash;
 use std::io::{self, BufRead, Write};
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use super::canonical;
 
 /// The JSON Schema of profiler schema v1, checked in beside this module.
 pub const SCHEMA_V1: &str = include_str!("schema/profile_v1.json");
@@ -129,6 +131,10 @@ impl Trace {
 pub type Summary = serde_json::Map<String, serde_json::Value>;
 
 /// The session header: telemetry §2's per-session fields, and the full config §5 requires.
+///
+/// A session that opens no GPU (R-308) writes [`Api::None`] and `None` for the GPU's own fields: `backend.driver`,
+/// `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`. A run never opens a GPU adapter only to fill the
+/// header.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SessionHeader {
@@ -136,32 +142,53 @@ pub struct SessionHeader {
     pub device: Device,
     /// The graphics API and the driver.
     pub backend: Backend,
-    /// f32 and f64 support, and the reported f64 rate.
-    pub precision: Precision,
+    /// f32 and f64 support, and the reported f64 rate; `None` for a session that opens no GPU (R-308).
+    #[serde(deserialize_with = "nullable")]
+    pub precision: Option<Precision>,
     /// The build's provenance.
     pub build: Build,
     /// The display; `None` for a headless run.
     #[serde(deserialize_with = "nullable")]
     pub display: Option<Display>,
-    /// The run's full configuration, a JSON object (telemetry §5, "Self-contained").
+    /// The run's full configuration, a JSON object (telemetry §5, "Self-contained"), written in the canonical
+    /// serialisation, JCS (gui_state_contract §2, R-309, R-318). A `prin profile` run's is
+    /// `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`.
+    #[serde(serialize_with = "canonical_config")]
     pub config: serde_json::Map<String, serde_json::Value>,
+}
+
+/// Writes the header's `config` as its canonical text, JCS (gui_state_contract §2, R-309, R-318), so the key order and
+/// the number format are JCS's, not the JSON writer's.
+fn canonical_config<S: Serializer>(
+    config: &serde_json::Map<String, serde_json::Value>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let text = canonical::json_to_string(&serde_json::Value::Object(config.clone()))
+        .map_err(serde::ser::Error::custom)?;
+    let raw = serde_json::value::RawValue::from_string(text).map_err(serde::ser::Error::custom)?;
+    raw.serialize(serializer)
 }
 
 /// The device (telemetry §2).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Device {
-    /// The GPU model.
-    pub gpu: String,
+    /// The GPU model; `None` for a session that opens no GPU (R-308).
+    #[serde(deserialize_with = "nullable")]
+    pub gpu: Option<String>,
     /// The CPU model.
     pub cpu: String,
-    /// The CPU's core count.
-    pub cpu_cores: u32,
+    /// The CPU cores this process may use, as `std::thread::available_parallelism` reports them (R-329).
+    pub cpu_cores_available: u32,
+    /// The machine's own CPU core count; `None` where the platform doesn't report it cheaply (R-329).
+    #[serde(deserialize_with = "nullable")]
+    pub cpu_cores_total: Option<u32>,
     /// The GPU's core count; `None` when not reported.
     #[serde(deserialize_with = "nullable")]
     pub gpu_cores: Option<u32>,
-    /// VRAM or unified memory.
-    pub memory: Memory,
+    /// VRAM or unified memory; `None` for a session that opens no GPU (R-308).
+    #[serde(deserialize_with = "nullable")]
+    pub memory: Option<Memory>,
 }
 
 /// The device memory: unified memory is its own field, not a VRAM size of zero (telemetry §2).
@@ -188,11 +215,12 @@ pub enum Memory {
 pub struct Backend {
     /// The graphics API.
     pub api: Api,
-    /// The driver version.
-    pub driver: String,
+    /// The driver version; `None` for a session that opens no GPU (R-308).
+    #[serde(deserialize_with = "nullable")]
+    pub driver: Option<String>,
 }
 
-/// The graphics APIs telemetry §2 names.
+/// The graphics APIs telemetry §2 names, and `none` for a session that opens no GPU (telemetry §5, R-308).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Api {
@@ -204,6 +232,8 @@ pub enum Api {
     Dx12,
     /// WebGPU.
     Webgpu,
+    /// No GPU: the session opened none, and the GPU's fields are `null` (R-308).
+    None,
 }
 
 /// Precision support (telemetry §2).
@@ -724,7 +754,7 @@ struct Seens<'a> {
 
 fn check_header(line: &At, header: &SessionHeader) -> Result<(), String> {
     let at = At::Key(line, "header");
-    if let Some(rate) = header.precision.f64_rate {
+    if let Some(rate) = header.precision.as_ref().and_then(|p| p.f64_rate) {
         let precision = At::Key(&at, "precision");
         non_negative(&At::Key(&precision, "f64_rate"), rate)?;
     }
@@ -885,4 +915,24 @@ fn non_negative(path: &At, value: f64) -> Result<(), String> {
     } else {
         Err(format!("{path} is {value}, not a finite number >= 0"))
     }
+}
+
+/// The `percent`-th percentile of `samples` by nearest rank: the samples sorted ascending, the ⌈percent · n / 100⌉-th,
+/// counted from 1, and the smallest for 0; `None` when there are no samples. Integer arithmetic, so p95 of 20 samples is
+/// exactly the 19th. `prin profile diff` compares per-scope p95 with it (render_gui_spec § "Profiler", REQ-TOOL-119),
+/// and the interactive path's percentiles are to use it too: one percentile code (telemetry §5.5).
+///
+/// # Panics
+///
+/// When `percent` is above 100.
+pub fn percentile(samples: &[f64], percent: u32) -> Option<f64> {
+    assert!(percent <= 100, "a percentile is at most 100, not {percent}");
+    if samples.is_empty() {
+        return None;
+    }
+    let mut sorted = samples.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let n = sorted.len() as u128;
+    let rank = (u128::from(percent) * n).div_ceil(100).max(1);
+    Some(sorted[(rank - 1) as usize])
 }

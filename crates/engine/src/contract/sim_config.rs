@@ -1,8 +1,15 @@
 //! `SimConfig`, the sim key (gui_state_contract §2): a change to it re-integrates. Each field is one group §2
 //! lists; each group's fields come from the contract that owns them, added by the requirements that need them
 //! (R-133). At M0 a group is named and empty.
+//!
+//! `SimConfig` and its groups serialise in the one canonical serialisation, [`canonical`](super::canonical)
+//! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`.
+
+use serde::{Deserialize, Serialize};
 
 /// The sim key (gui_state_contract §2): every sim-side knob, as a typed field.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SimConfig {
     /// Chart id and params.
     pub chart: Chart,
@@ -26,28 +33,46 @@ pub struct SimConfig {
 }
 
 /// Chart id and params (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Chart {}
 
 /// `z₀`, `q₁`, `q₂` (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Plane {}
 
 /// Slice values (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Slice {}
 
 /// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Lock {}
 
 /// Link ids (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Links {}
 
 /// Integrator occupant (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Integrator {}
 
 /// `T`/`dt`/thresholds/`eps` (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Horizon {}
 
 /// Collision radius `r_coll` (gui_state_contract §2).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Collision {}
 
 /// Quality settings (gui_state_contract §2, §6).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Quality {}

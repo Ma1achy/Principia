@@ -98,7 +98,8 @@ fn interactive() -> Value {
         "schema": "principia-profile-v1",
         "header": {
             "device": {
-                "gpu": "Apple M3", "cpu": "Apple M3", "cpu_cores": 8, "gpu_cores": null,
+                "gpu": "Apple M3", "cpu": "Apple M3", "cpu_cores_available": 8, "cpu_cores_total": 8,
+                "gpu_cores": null,
                 "memory": { "unified": { "bytes": 19_327_352_832_u64 } }
             },
             "backend": { "api": "metal", "driver": "3.1" },
@@ -732,8 +733,8 @@ fn qa_m017_not_v1_is_rejected_by_both() {
             "a negative refresh_hz",
         ),
         (
-            edited("/header/device/cpu_cores", json!(1u64 << 32)),
-            "cpu_cores at 2^32",
+            edited("/header/device/cpu_cores_available", json!(1u64 << 32)),
+            "cpu_cores_available at 2^32",
         ),
         (
             edited("/header/device/gpu_cores", json!(1u64 << 32)),
@@ -777,8 +778,8 @@ validation::negative_control!(
 fn qa_m017_range_edges_are_accepted_by_both() {
     let cases: Vec<(Value, &str)> = vec![
         (
-            edited("/header/device/cpu_cores", json!(u32::MAX)),
-            "cpu_cores at 2^32 - 1",
+            edited("/header/device/cpu_cores_available", json!(u32::MAX)),
+            "cpu_cores_available at 2^32 - 1",
         ),
         (
             edited("/header/display/width_px", json!(u32::MAX)),
@@ -823,11 +824,11 @@ fn qa_m017_range_edges_are_accepted_by_both() {
 
 validation::negative_control!(
     qa_m017_range_edges_are_accepted_by_both,
-    "cpu_cores one past its range must fail the accepted check",
+    "cpu_cores_available one past its range must fail the accepted check",
     expected = "the schema rejects",
     check_accepted(
-        &edited("/header/device/cpu_cores", json!(1u64 << 32)),
-        "cpu_cores at 2^32"
+        &edited("/header/device/cpu_cores_available", json!(1u64 << 32)),
+        "cpu_cores_available at 2^32"
     )
 );
 
@@ -865,7 +866,11 @@ fn qa_m017_the_four_reader_only_exceptions() {
     let cases: Vec<(String, &str)> = vec![
         // 1. a count or size written with a zero fraction
         (
-            text.replacen("\"cpu_cores\":8", "\"cpu_cores\":8.0", 1),
+            text.replacen(
+                "\"cpu_cores_available\":8",
+                "\"cpu_cores_available\":8.0",
+                1,
+            ),
             "a count with a zero fraction",
         ),
         (
@@ -1058,7 +1063,7 @@ fn qa_m017_writer_refuses_what_v1_excludes() {
             "an infinite GPU pass ms",
         ),
         (
-            Box::new(|t| t.header.precision.f64_rate = Some(f64::NAN)),
+            Box::new(|t| t.header.precision.as_mut().unwrap().f64_rate = Some(f64::NAN)),
             "a NaN f64_rate",
         ),
         (
@@ -1141,8 +1146,8 @@ fn check_written_shape(text: &str, frames: usize) {
         "gpu_cores is missing, not null"
     );
     assert!(
-        header["device"]["cpu_cores"].is_u64(),
-        "cpu_cores is not written as an integer"
+        header["device"]["cpu_cores_available"].is_u64(),
+        "cpu_cores_available is not written as an integer"
     );
     let last: Value = serde_json::from_str(lines[frames + 1]).expect("the last line is not JSON");
     assert_eq!(
