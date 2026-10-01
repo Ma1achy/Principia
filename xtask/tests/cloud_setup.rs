@@ -7,7 +7,11 @@
 //! - each item at the same version;
 //! - the script's text holds no version literal, and none of CI's pinned versions;
 //! - the script's dry run follows a changed pin in the files it reads;
-//! - the script refuses a CI step that installs by a means it doesn't know, as this check does.
+//! - the script refuses a CI step that installs by a means it doesn't know, as this check does;
+//! - R-347: cargo-nextest comes from its official prebuilt installer (get.nexte.st) and cargo-mutants through
+//!   cargo-binstall, each at CI's pin, and each falls back to `cargo install --locked` only when its download fails. The
+//!   dry run names that route, and the script's install function, run with `curl`, `tar`, `cargo` and `uname` stubbed,
+//!   takes it.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -285,8 +289,9 @@ fn run_dry(root: &Path) -> Output {
         .expect("run bash")
 }
 
-/// The plan the script prints under `--dry-run` in the tree at `root`, which must exit well to give one.
-fn script_plan(root: &Path) -> BTreeSet<Item> {
+/// The lines the script prints under `--dry-run` in the tree at `root`, which must exit well to give them, each as its
+/// item and its install method.
+fn script_lines(root: &Path) -> Vec<(Item, String)> {
     let output = run_dry(root);
     assert!(
         output.status.success(),
@@ -300,15 +305,26 @@ fn script_plan(root: &Path) -> BTreeSet<Item> {
             let words: Vec<&str> = line.split_whitespace().collect();
             assert_eq!(
                 words.len(),
-                3,
-                "a plan line is `<kind> <name> <version>`: `{line}`"
+                4,
+                "a plan line is `<kind> <name> <version> <method>`: `{line}`"
             );
             (
-                words[0].to_owned(),
-                words[1].to_owned(),
-                words[2].to_owned(),
+                (
+                    words[0].to_owned(),
+                    words[1].to_owned(),
+                    words[2].to_owned(),
+                ),
+                words[3].to_owned(),
             )
         })
+        .collect()
+}
+
+/// The plan the script prints under `--dry-run` in the tree at `root`.
+fn script_plan(root: &Path) -> BTreeSet<Item> {
+    script_lines(root)
+        .into_iter()
+        .map(|(item, _)| item)
         .collect()
 }
 
@@ -577,5 +593,204 @@ validation::negative_control!(
         let copy = scratch("refuses_control");
         copy_tree(&copy, str::to_owned, None);
         check_refused(&copy)
+    }
+);
+
+/// The route R-347 gives cargo-nextest: its official prebuilt installer, then `cargo install --locked`.
+const NEXTEST_ROUTE: &str = "prebuilt:get.nexte.st,fallback:cargo-install";
+/// The route R-347 gives cargo-mutants: cargo-binstall (prebuilt), then `cargo install --locked`.
+const MUTANTS_ROUTE: &str = "prebuilt:cargo-binstall,fallback:cargo-install";
+
+/// How one stubbed run of the script's `install_cargo_tool` goes: whether `curl` succeeds, whether `cargo binstall`
+/// succeeds, and whether `cargo-binstall` is on the machine already.
+struct Stubs {
+    curl_ok: bool,
+    binstall_ok: bool,
+    have_binstall: bool,
+}
+
+/// Sources the script at `script` and runs `install_cargo_tool <tool> <version>` with `curl`, `tar`, `cargo`, `uname`
+/// (Linux x86_64) and, if `stubs.have_binstall`, `cargo-binstall` stubbed as shell functions that log their arguments.
+/// PATH is the system's alone, so no real cargo-binstall is found. Returns whether it exited well, and the log.
+fn stubbed_install(
+    script: &Path,
+    dir: &Path,
+    tool: &str,
+    version: &str,
+    stubs: &Stubs,
+) -> (bool, Vec<String>) {
+    let log = dir.join("log");
+    let _ = fs::remove_file(&log);
+    let body = r#"s=$1 t=$2 v=$3; set --
+. "$s"
+uname() { case "$1" in -m) echo x86_64 ;; *) echo Linux ;; esac; }
+curl() { echo "curl $*" >>"$LOG"; [ "$CURL_OK" = 1 ]; }
+tar() { echo "tar $*" >>"$LOG"; cat >/dev/null; }
+cargo() { echo "cargo $*" >>"$LOG"; if [ "$1" = binstall ]; then [ "$BINSTALL_OK" = 1 ]; fi; }
+if [ "$HAVE_BINSTALL" = 1 ]; then cargo-binstall() { :; }; fi
+install_cargo_tool "$t" "$v""#;
+    let flag = |b: bool| if b { "1" } else { "0" };
+    let output = Command::new("bash")
+        .arg("-c")
+        .arg(body)
+        .arg("stubbed")
+        .arg(script)
+        .arg(tool)
+        .arg(version)
+        .env("PATH", "/usr/bin:/bin")
+        .env("CARGO_HOME", dir.join("cargo"))
+        .env("LOG", &log)
+        .env("CURL_OK", flag(stubs.curl_ok))
+        .env("BINSTALL_OK", flag(stubs.binstall_ok))
+        .env("HAVE_BINSTALL", flag(stubs.have_binstall))
+        .timed_output()
+        .expect("run bash");
+    let lines = fs::read_to_string(&log)
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    (output.status.success(), lines)
+}
+
+/// CI's pinned version of cargo tool `tool`.
+fn ci_pin(ci: &BTreeSet<Item>, tool: &str) -> String {
+    ci.iter()
+        .find(|(kind, name, _)| kind == "cargo-tool" && name == tool)
+        .map(|(_, _, version)| version.clone())
+        .unwrap_or_else(|| panic!("CI's Linux jobs install no {tool}"))
+}
+
+/// The tree at `tree` installs cargo-nextest and cargo-mutants by R-347's routes: its dry run names them, and its
+/// `install_cargo_tool` downloads each prebuilt at CI's pin, falling back to `cargo install --locked` only when the
+/// download fails.
+fn check_prebuilt_routes(tree: &Path, scratch_dir: &Path, ci: &BTreeSet<Item>) {
+    let mut wrong: Vec<String> = Vec::new();
+    let methods: BTreeMap<String, String> = script_lines(tree)
+        .into_iter()
+        .filter(|((kind, _, _), _)| kind == "cargo-tool")
+        .map(|((_, name, _), method)| (name, method))
+        .collect();
+    for (tool, route) in [
+        ("cargo-nextest", NEXTEST_ROUTE),
+        ("cargo-mutants", MUTANTS_ROUTE),
+    ] {
+        if methods.get(tool).map(String::as_str) != Some(route) {
+            wrong.push(format!(
+                "the dry run gives {tool} {:?}, not `{route}`",
+                methods.get(tool)
+            ));
+        }
+    }
+    let script = tree.join("scripts/cloud-setup.sh");
+    let mut case = |what: &str, tool: &str, stubs: Stubs, want: &dyn Fn(&[String]) -> bool| {
+        let version = ci_pin(ci, tool);
+        let (ok, log) = stubbed_install(&script, scratch_dir, tool, &version, &stubs);
+        if !ok || !want(&log) {
+            wrong.push(format!("{tool}, {what}: exited well {ok}, ran {log:?}"));
+        }
+    };
+    let nextest = ci_pin(ci, "cargo-nextest");
+    let mutants = ci_pin(ci, "cargo-mutants");
+    let nextest_url = format!("https://get.nexte.st/{nextest}/linux");
+    // The fallback, the last command run, and only after the download failed.
+    let nextest_built = format!("cargo install --locked cargo-nextest@{nextest}");
+    let mutants_built = format!("cargo install --locked cargo-mutants@{mutants}");
+    let binstall =
+        format!("cargo binstall --no-confirm --disable-strategies compile cargo-mutants@{mutants}");
+    case(
+        "the download succeeds",
+        "cargo-nextest",
+        Stubs {
+            curl_ok: true,
+            binstall_ok: true,
+            have_binstall: true,
+        },
+        &|log| {
+            log.iter()
+                .any(|l| l.starts_with("curl ") && l.ends_with(&nextest_url))
+                && log.iter().any(|l| l.starts_with("tar zxf - -C "))
+                && !log.iter().any(|l| l.starts_with("cargo install"))
+        },
+    );
+    case(
+        "the download fails",
+        "cargo-nextest",
+        Stubs {
+            curl_ok: false,
+            binstall_ok: true,
+            have_binstall: true,
+        },
+        &|log| {
+            log.iter()
+                .any(|l| l.starts_with("curl ") && l.ends_with(&nextest_url))
+                && log.last() == Some(&nextest_built)
+        },
+    );
+    case(
+        "cargo-binstall present, the download succeeds",
+        "cargo-mutants",
+        Stubs {
+            curl_ok: true,
+            binstall_ok: true,
+            have_binstall: true,
+        },
+        &|log| log == [binstall.clone()],
+    );
+    case(
+        "cargo-binstall present, the download fails",
+        "cargo-mutants",
+        Stubs {
+            curl_ok: true,
+            binstall_ok: false,
+            have_binstall: true,
+        },
+        &|log| log == [binstall.clone(), mutants_built.clone()],
+    );
+    case(
+        "cargo-binstall missing",
+        "cargo-mutants",
+        Stubs {
+            curl_ok: true,
+            binstall_ok: true,
+            have_binstall: false,
+        },
+        &|log| {
+            log.len() == 2
+                && log[0].starts_with("curl ")
+                && log[0].contains("https://raw.githubusercontent.com/cargo-bins/cargo-binstall/")
+                && log[1] == binstall
+        },
+    );
+    assert!(
+        wrong.is_empty(),
+        "cloud-setup.sh does not install cargo-nextest and cargo-mutants prebuilt, with `cargo install --locked` only \
+         when the download fails: {wrong:#?}"
+    );
+}
+
+#[test]
+fn cloud_setup_downloads_nextest_and_mutants_prebuilt_with_a_cargo_install_fallback() {
+    let dir = scratch("prebuilt");
+    check_prebuilt_routes(&root(), &dir, &the_ci_plan());
+    fs::remove_dir_all(&dir).unwrap();
+}
+
+validation::negative_control!(
+    cloud_setup_downloads_nextest_and_mutants_prebuilt_with_a_cargo_install_fallback,
+    "a script that builds cargo-nextest with `cargo install --locked` straight away, required to download it first",
+    expected = "cloud-setup.sh does not install cargo-nextest and cargo-mutants prebuilt",
+    {
+        let copy = scratch("prebuilt_control");
+        copy_tree(&copy, str::to_owned, None);
+        let route = format!("cargo-nextest) echo \"{NEXTEST_ROUTE}\" ;;");
+        let text = script(&root());
+        assert!(text.contains(&route), "the script names cargo-nextest's route as `{route}`");
+        fs::write(
+            copy.join("scripts/cloud-setup.sh"),
+            text.replace(&route, "cargo-nextest) echo \"cargo-install\" ;;"),
+        )
+        .unwrap();
+        check_prebuilt_routes(&copy, &copy, &the_ci_plan())
     }
 );
