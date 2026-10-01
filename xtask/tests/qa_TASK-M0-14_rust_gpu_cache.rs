@@ -9,10 +9,14 @@
 //! build-kernel (`xtask/tests/ci.rs`). For each such job:
 //! - an `actions/cache/restore` step restores `~/.cache/rust-gpu` before the first build, and runs whenever the build
 //!   does (no `if:` the build step lacks) (R-320, R-326);
-//! - an `actions/cache/save` step after the build saves it under the key the restore reads, only in a run on a push to
-//!   `main`: its `if:` is the build's condition `&&` `github.event_name == 'push'` `&&` `github.ref ==
-//!   'refs/heads/main'`; no `actions/cache@…` step, which saves in every run it restores in (R-326);
-//! - its key names the job, and no two jobs share a key (R-285);
+//! - in a workflow that runs on a push to `main`, an `actions/cache/save` step after the build saves it under the key
+//!   the restore reads, only in a run on a push to `main`: its `if:` is the build's condition `&&`
+//!   `github.event_name == 'push'` `&&` `github.ref == 'refs/heads/main'`; no `actions/cache@…` step, which saves in
+//!   every run it restores in (R-326);
+//! - its key names the job, and no two such jobs share a key (R-285);
+//! - in a workflow that never runs on a push to `main` (R-337 names mutants.yml, pr-check.yml, reviews.yml,
+//!   screenshot.yml and stand-in-soak.yml), the job saves no rust-gpu build, and restores it, read-only, under the key
+//!   `ci.yml`'s `gpu-kernel` job saves on `main`: the same key, resolved as the runner would (R-337, REQ-SYS-075);
 //! - its key, resolved as the runner would (each `steps.<id>.outputs.<name>` it uses computed by running that step's
 //!   `echo "<name>=…" >> "$GITHUB_OUTPUT"` line in the repository), contains the channel `rust-toolchain.toml` pins, and
 //!   so does every restore key: no fallback reaches a cache built by another toolchain.
@@ -103,6 +107,8 @@ impl Step {
 struct Job {
     workflow: String,
     id: String,
+    /// Whether the job's workflow runs on a push to `main`, the one run that saves a cache (R-326).
+    on_main: bool,
     steps: Vec<Step>,
 }
 
@@ -180,8 +186,95 @@ fn split_with(s: &str) -> BTreeMap<String, String> {
         .collect()
 }
 
+/// A `branches:` or `branches-ignore:` filter's patterns, from `lines` (a trigger's body): inline (`[a, b]` or one
+/// value) or a block list of `- ` entries below it. `None` if the filter is absent.
+fn filter_list(lines: &[&str], name: &str) -> Option<Vec<String>> {
+    let at = lines.iter().position(|l| {
+        l.trim()
+            .strip_prefix(name)
+            .is_some_and(|r| r.starts_with(':'))
+    })?;
+    let head = lines[at].trim()[name.len() + 1..].trim();
+    let mut v: Vec<String> = Vec::new();
+    if !head.is_empty() {
+        v.extend(
+            head.trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(unquote)
+                .filter(|p| !p.is_empty()),
+        );
+    } else {
+        let ind = indent(lines[at]);
+        for l in &lines[at + 1..] {
+            let t = l.trim();
+            if t.is_empty() || t.starts_with('#') {
+                continue;
+            }
+            if indent(l) <= ind && !t.starts_with("- ") {
+                break;
+            }
+            match t.strip_prefix("- ") {
+                Some(p) => v.push(unquote(p)),
+                None => break,
+            }
+        }
+    }
+    Some(v)
+}
+
+/// Whether a branch filter pattern matches `main`: `main` itself, or a glob of `*`s alone.
+fn matches_main(p: &str) -> bool {
+    p == "main" || (!p.is_empty() && p.chars().all(|c| c == '*'))
+}
+
+/// Whether the workflow's `on:` runs it on a push to `main`: a `push` trigger (flow or block form) whose `branches`,
+/// if given, match `main`, whose `branches-ignore` does not, and which is not limited to tags.
+fn runs_on_push_to_main(text: &str) -> bool {
+    let lines: Vec<&str> = text.lines().collect();
+    let Some(start) = lines
+        .iter()
+        .position(|l| ["on:", "\"on\":", "'on':"].iter().any(|k| l.starts_with(k)))
+    else {
+        return false;
+    };
+    let head = lines[start].split_once(':').unwrap().1.trim();
+    if !head.is_empty() {
+        return head
+            .trim_start_matches('[')
+            .trim_end_matches(']')
+            .split(',')
+            .any(|e| e.trim() == "push");
+    }
+    let body: Vec<&str> = lines[start + 1..]
+        .iter()
+        .take_while(|l| l.trim().is_empty() || l.trim_start().starts_with('#') || indent(l) > 0)
+        .copied()
+        .collect();
+    let Some(p) = body
+        .iter()
+        .position(|l| indent(l) == 2 && (l.trim() == "push:" || l.trim().starts_with("push: ")))
+    else {
+        return false;
+    };
+    let push: Vec<&str> = body[p + 1..]
+        .iter()
+        .take_while(|l| l.trim().is_empty() || l.trim_start().starts_with('#') || indent(l) > 2)
+        .copied()
+        .collect();
+    let branches = filter_list(&push, "branches");
+    let ignored = filter_list(&push, "branches-ignore");
+    let tags = filter_list(&push, "tags").is_some() || filter_list(&push, "tags-ignore").is_some();
+    if tags && branches.is_none() && ignored.is_none() {
+        return false;
+    }
+    branches.is_none_or(|b| b.iter().any(|p| matches_main(p)))
+        && !ignored.is_some_and(|b| b.iter().any(|p| matches_main(p)))
+}
+
 /// The jobs of one workflow: ids two spaces in under `jobs:`, each `- ` entry under `steps:` a step.
 fn parse_jobs(file: &str, text: &str) -> Vec<Job> {
+    let on_main = runs_on_push_to_main(text);
     let lines: Vec<&str> = text.lines().collect();
     let mut jobs: Vec<Job> = Vec::new();
     let mut in_jobs = false;
@@ -204,6 +297,7 @@ fn parse_jobs(file: &str, text: &str) -> Vec<Job> {
             jobs.push(Job {
                 workflow: file.to_owned(),
                 id: t.trim_end_matches(':').to_owned(),
+                on_main,
                 steps: Vec::new(),
             });
             continue;
@@ -351,10 +445,16 @@ fn step_output(job: &Job, id: &str, name: &str) -> String {
     }
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_m014_rust_gpu_cache");
     std::fs::create_dir_all(&dir).unwrap();
-    // One file per call: the tests run in parallel and resolve the same keys.
+    // One file per call: the tests run in parallel and resolve the same keys, in one process (cargo test) or one
+    // process each (nextest), so the name holds the process id beside the per-process count.
     static CALL: AtomicUsize = AtomicUsize::new(0);
     let n = CALL.fetch_add(1, Ordering::Relaxed);
-    let file = dir.join(format!("{}-{}-{id}-{name}-{n}", job.workflow, job.id));
+    let file = dir.join(format!(
+        "{}-{}-{id}-{name}-{}-{n}",
+        job.workflow,
+        job.id,
+        std::process::id()
+    ));
     let _ = std::fs::remove_file(&file);
     let status = Command::new("bash")
         .arg("-c")
@@ -398,6 +498,22 @@ fn terms(cond: Option<&str>) -> Vec<String> {
 const ON_PUSH: &str = "github.event_name=='push'";
 const ON_MAIN: &str = "github.ref=='refs/heads/main'";
 
+/// `ci.yml`'s `gpu-kernel` job and the key its rust-gpu save step saves under on `main`: the key a job in a workflow
+/// that never runs on a push to `main` restores (R-337).
+fn gpu_kernel_key(jobs: &[Job]) -> (&Job, &str) {
+    let gk = jobs
+        .iter()
+        .find(|j| j.workflow == "ci.yml" && j.id == "gpu-kernel" && j.on_main)
+        .expect("no `gpu-kernel` job in ci.yml running on a push to `main` (R-325, R-337)");
+    let key = gk
+        .steps
+        .iter()
+        .find(|s| caches_rust_gpu(s) && cache_kind(s) == Some("save"))
+        .and_then(|s| s.input("key"))
+        .expect("ci.yml's `gpu-kernel` job saves no rust-gpu build (R-320, R-337)");
+    (gk, key)
+}
+
 fn check_restored_and_saved(jobs: &[Job]) {
     let found = kernel_jobs(jobs);
     assert!(
@@ -433,6 +549,22 @@ fn check_restored_and_saved(jobs: &[Job]) {
             "{at}: its {RUST_GPU} restore step runs under `if: {}`, which the build does not ({build_if:?})",
             cond.unwrap_or("")
         );
+        if !job.on_main {
+            assert!(
+                steps.iter().all(|(_, s)| cache_kind(s) == Some("restore")),
+                "{at}: saves {RUST_GPU}, though {} never runs on a push to `main`; it restores `gpu-kernel`'s key \
+                 read-only and saves none (R-337)",
+                job.workflow
+            );
+            let (gk, gk_key) = gpu_kernel_key(jobs);
+            assert_eq!(
+                resolve(job, restore.input("key").unwrap_or("")),
+                resolve(gk, gk_key),
+                "{at}: restores {RUST_GPU} under a key that is not the one `ci.yml`'s `gpu-kernel` job saves on `main` \
+                 (R-337)"
+            );
+            continue;
+        }
         let saves: Vec<&Step> = steps
             .iter()
             .filter(|(i, s)| *i > b && cache_kind(s) == Some("save"))
@@ -547,12 +679,12 @@ fn qa_m014_the_rust_gpu_save_keeps_the_builds_condition() {
 
 negative_control!(
     qa_m014_the_rust_gpu_save_keeps_the_builds_condition,
-    "mutants.yml with its rust-gpu save dropping the build's own condition, so it saves when no kernel was built",
-    expected = "job `mutants`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
+    "ci.yml with gpu-kernel's build made conditional and its rust-gpu save not, so it saves when no kernel was built",
+    expected = "job `gpu-kernel`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
     check_restored_and_saved(&all_jobs(&edited(
-        "mutants.yml",
-        "        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'\n",
-        "        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n"
+        "ci.yml",
+        "      - name: cargo xtask build-kernel\n        run: cargo xtask build-kernel\n",
+        "      - name: cargo xtask build-kernel\n        if: hashFiles('crates/kernel/**') != ''\n        run: cargo xtask build-kernel\n"
     )))
 );
 
@@ -598,17 +730,26 @@ fn check_keys(jobs: &[Job]) {
         for s in job.steps.iter().filter(|s| caches_rust_gpu(s)) {
             let key = s.input("key").unwrap_or("");
             let literal = key.split("${{").next().unwrap_or("").trim_end_matches('-');
-            assert!(
-                names_job(literal, &job.id),
-                "{at}: rust-gpu cache key {key:?} does not name its job"
-            );
-            // A job's restore and save steps share their key (R-326); another job's never does.
-            if let Some((other, _)) = seen.iter().find(|(o, k)| k == key && *o != at) {
-                panic!(
-                    "{at}: rust-gpu cache key {key:?} is shared with {other}, so it does not name its job"
+            if job.on_main {
+                assert!(
+                    names_job(literal, &job.id),
+                    "{at}: rust-gpu cache key {key:?} does not name its job"
+                );
+                // A job's restore and save steps share their key (R-326); another saving job's never does.
+                if let Some((other, _)) = seen.iter().find(|(o, k)| k == key && *o != at) {
+                    panic!(
+                        "{at}: rust-gpu cache key {key:?} is shared with {other}, so it does not name its job"
+                    );
+                }
+                seen.push((at.clone(), key.to_owned()));
+            } else {
+                // A workflow that never runs on a push to `main` restores the key the saving job names (R-337).
+                assert!(
+                    names_job(literal, "gpu-kernel"),
+                    "{at}: rust-gpu cache key {key:?} does not name `ci.yml`'s `gpu-kernel` job, whose key it restores \
+                     (R-337)"
                 );
             }
-            seen.push((at.clone(), key.to_owned()));
             let resolved = resolve(job, key);
             assert!(
                 resolved.contains(&channel),
@@ -759,4 +900,127 @@ negative_control!(
         "        run: cargo xtask ci\n",
         "        run: cargo xtask controls\n"
     )))
+);
+
+// ---- 4. A workflow that never runs on a push to `main` restores `gpu-kernel`'s key and saves none (R-337) ----------
+
+#[test]
+fn qa_m014_a_pr_only_kernel_job_saves_no_rust_gpu_build() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_a_pr_only_kernel_job_saves_no_rust_gpu_build,
+    "mutants.yml with a rust-gpu save step after its build again, under `gpu-kernel`'s key and on a push to `main`",
+    expected = "job `mutants`: saves ~/.cache/rust-gpu, though mutants.yml never runs on a push to `main`",
+    check_restored_and_saved(&all_jobs(&edited(
+        "mutants.yml",
+        "        run: cargo run --quiet --package xtask -- build-kernel\n",
+        "        run: cargo run --quiet --package xtask -- build-kernel\n      - uses: actions/cache/save@v4\n        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n"
+    )))
+);
+
+#[test]
+fn qa_m014_a_pr_only_kernel_job_restores_gpu_kernels_key() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_a_pr_only_kernel_job_restores_gpu_kernels_key,
+    "mutants.yml restoring the rust-gpu build under its own pre-R-337 key, which nothing saves",
+    expected = "job `mutants`: restores ~/.cache/rust-gpu under a key that is not the one `ci.yml`'s `gpu-kernel` job saves",
+    check_restored_and_saved(&all_jobs(&edited(
+        "mutants.yml",
+        "key: rust-gpu-gpu-kernel-",
+        "key: rust-gpu-mutants-"
+    )))
+);
+
+#[test]
+fn qa_m014_a_pr_only_rust_gpu_key_resolves_as_gpu_kernels() {
+    check_restored_and_saved(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_a_pr_only_rust_gpu_key_resolves_as_gpu_kernels,
+    "mutants.yml's rust-gpu key naming `gpu-kernel` and the channel, but with a word gpu-kernel's key lacks",
+    expected = "job `mutants`: restores ~/.cache/rust-gpu under a key that is not the one `ci.yml`'s `gpu-kernel` job saves",
+    check_restored_and_saved(&all_jobs(&edited(
+        "mutants.yml",
+        "key: rust-gpu-gpu-kernel-${{ runner.os }}-",
+        "key: rust-gpu-gpu-kernel-${{ runner.os }}-v2-"
+    )))
+);
+
+#[test]
+fn qa_m014_a_pr_only_rust_gpu_key_names_gpu_kernel() {
+    check_keys(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m014_a_pr_only_rust_gpu_key_names_gpu_kernel,
+    "mutants.yml restoring the rust-gpu build under its own pre-R-337 key",
+    expected = "job `mutants`: rust-gpu cache key \"rust-gpu-mutants-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\" does not name `ci.yml`'s `gpu-kernel` job",
+    check_keys(&all_jobs(&edited(
+        "mutants.yml",
+        "key: rust-gpu-gpu-kernel-",
+        "key: rust-gpu-mutants-"
+    )))
+);
+
+/// The workflows R-337 names never run on a push to `main`, and `ci.yml`, which saves, does: the parser reads `on:`.
+fn check_pr_only(files: &[(String, String)]) {
+    for (f, t) in files {
+        let pr_only = [
+            "mutants.yml",
+            "pr-check.yml",
+            "reviews.yml",
+            "screenshot.yml",
+            "stand-in-soak.yml",
+        ]
+        .contains(&f.as_str());
+        if pr_only {
+            assert!(
+                !runs_on_push_to_main(t),
+                "{f} runs on a push to `main`, though R-337 names it as never doing so"
+            );
+        } else if f == "ci.yml" {
+            assert!(
+                runs_on_push_to_main(t),
+                "ci.yml does not run on a push to `main`, where its jobs save the caches (R-326)"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_m014_the_parser_reads_which_workflows_run_on_main() {
+    check_pr_only(&workflows());
+}
+
+negative_control!(
+    qa_m014_the_parser_reads_which_workflows_run_on_main,
+    "ci.yml with its push trigger limited to branches other than `main`",
+    expected = "ci.yml does not run on a push to `main`",
+    check_pr_only(&edited(
+        "ci.yml",
+        "on:\n  push:\n",
+        "on:\n  push:\n    branches-ignore:\n      - main\n"
+    ))
+);
+
+#[test]
+fn qa_m014_the_parser_reads_a_push_trigger_on_a_pr_only_workflow() {
+    check_pr_only(&workflows());
+}
+
+negative_control!(
+    qa_m014_the_parser_reads_a_push_trigger_on_a_pr_only_workflow,
+    "mutants.yml with a push trigger on `main` added",
+    expected = "mutants.yml runs on a push to `main`",
+    check_pr_only(&edited(
+        "mutants.yml",
+        "on:\n  pull_request:\n",
+        "on:\n  push:\n    branches: [main]\n  pull_request:\n"
+    ))
 );

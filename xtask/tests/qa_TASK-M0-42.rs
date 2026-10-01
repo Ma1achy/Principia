@@ -5,7 +5,10 @@
 //! the rust-gpu build, `~/.cache/rust-gpu`, joins the cached set (REQ-SYS-073, REQ-SYS-075), keyed on its job and the
 //! pinned toolchain; `qa_TASK-M0-14_rust_gpu_cache.rs` checks that key's toolchain part. R-326 amends R-285 and R-320:
 //! "caches are saved only on pushes to main; PR jobs restore only" (REQ-SYS-073: "every cache step saves only in a run
-//! on a push to `main`, and a pull-request run restores only").
+//! on a push to `main`, and a pull-request run restores only"). R-337 amends R-326: "a workflow that never runs on a
+//! push to `main` restores, read-only, the key a `ci.yml` job saves there, and saves none" (REQ-SYS-073); "each step
+//! in mutants.yml, pr-check.yml, reviews.yml, screenshot.yml and stand-in-soak.yml restores a key a `ci.yml` job saves
+//! on `main`, and its comment names that key".
 //!
 //! These read every workflow under `.github/workflows/` and check the cache steps themselves:
 //! - a `Swatinem/rust-cache` step turns off its target cache (it caches `target` by default) and its `~/.cargo/bin`
@@ -13,8 +16,16 @@
 //! - an `actions/cache` step (save, restore or both) caches only the fixture pool, the cargo registry and git
 //!   directories, or the rust-gpu build (R-320), never a target directory;
 //! - no other action caches through a `cache:` input (setup-python's pip cache, for example);
-//! - every cache key names its job: a rust-cache `shared-key` names the job it is in, and no two jobs share one; an
-//!   `actions/cache` key that saves names the job it is in, and a restore-only key a job that saves that path;
+//! - every cache key names its job: in a workflow that runs on a push to `main`, a rust-cache `shared-key` names the
+//!   job it is in, and no two such jobs share one; an `actions/cache` key that saves names the job it is in, and a
+//!   restore-only key a job that saves that path;
+//! - in a workflow that never runs on a push to `main` (R-337), a rust-cache step's key is a `ci.yml` job's (the same
+//!   `prefix-key` and `shared-key`, the shared-key that job's id), computed in the same environment: rust-cache hashes
+//!   the variables named by its `env-vars` prefixes (default `CARGO CC CFLAGS CXX CMAKE RUST`) into the key, so the
+//!   workflow and job `env:` entries with those prefixes are the `ci.yml` job's; an `actions/cache` step there
+//!   restores a key a `ci.yml` job saves; no step there saves (no `actions/cache/save` or `actions/cache@…`); and a
+//!   comment in the step, directly above it, or in the workflow's header names each key it restores; no comment says
+//!   it restores what `main` saved under its own key;
 //! - the fixture pool is saved by exactly one job, the `ci` job; any other job only restores it;
 //! - every cache step restores in every run and saves only in a run on a push to `main` (R-326): a rust-cache step's
 //!   `save-if` and an `actions/cache/save` step's `if:` each require both `github.event_name == 'push'` and
@@ -49,6 +60,10 @@ impl Step {
 struct Job {
     workflow: String,
     id: String,
+    /// Whether the job's workflow runs on a push to `main`, the one run that saves a cache (R-326).
+    on_main: bool,
+    /// The `env:` entries in force for the job's steps, workflow-level then job-level, as (name, value).
+    env: Vec<(String, String)>,
     steps: Vec<Step>,
 }
 
@@ -91,10 +106,121 @@ fn unquote(v: &str) -> String {
     v.to_owned()
 }
 
+/// A `branches:` or `branches-ignore:` filter's patterns, from `lines` (a trigger's body): inline (`[a, b]` or one
+/// value) or a block list of `- ` entries below it. `None` if the filter is absent.
+fn filter_list(lines: &[&str], name: &str) -> Option<Vec<String>> {
+    let at = lines.iter().position(|l| {
+        l.trim()
+            .strip_prefix(name)
+            .is_some_and(|r| r.starts_with(':'))
+    })?;
+    let head = lines[at].trim()[name.len() + 1..].trim();
+    let mut v: Vec<String> = Vec::new();
+    if !head.is_empty() {
+        v.extend(
+            head.trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(unquote)
+                .filter(|p| !p.is_empty()),
+        );
+    } else {
+        let ind = indent_of(lines[at]);
+        for l in &lines[at + 1..] {
+            let t = l.trim();
+            if t.is_empty() || t.starts_with('#') {
+                continue;
+            }
+            if indent_of(l) <= ind && !t.starts_with("- ") {
+                break;
+            }
+            match t.strip_prefix("- ") {
+                Some(p) => v.push(unquote(p)),
+                None => break,
+            }
+        }
+    }
+    Some(v)
+}
+
+/// Whether a branch filter pattern matches `main`: `main` itself, or a glob of `*`s alone.
+fn matches_main(p: &str) -> bool {
+    p == "main" || (!p.is_empty() && p.chars().all(|c| c == '*'))
+}
+
+/// Whether the workflow's `on:` runs it on a push to `main`: a `push` trigger (flow or block form) whose `branches`,
+/// if given, match `main`, whose `branches-ignore` does not, and which is not limited to tags.
+fn runs_on_push_to_main(text: &str) -> bool {
+    let lines: Vec<&str> = text.lines().collect();
+    let Some(start) = lines
+        .iter()
+        .position(|l| ["on:", "\"on\":", "'on':"].iter().any(|k| l.starts_with(k)))
+    else {
+        return false;
+    };
+    let head = lines[start].split_once(':').unwrap().1.trim();
+    if !head.is_empty() {
+        return head
+            .trim_start_matches('[')
+            .trim_end_matches(']')
+            .split(',')
+            .any(|e| e.trim() == "push");
+    }
+    let body: Vec<&str> = lines[start + 1..]
+        .iter()
+        .take_while(|l| l.trim().is_empty() || l.trim_start().starts_with('#') || indent_of(l) > 0)
+        .copied()
+        .collect();
+    let Some(p) = body
+        .iter()
+        .position(|l| indent_of(l) == 2 && (l.trim() == "push:" || l.trim().starts_with("push: ")))
+    else {
+        return false;
+    };
+    let push: Vec<&str> = body[p + 1..]
+        .iter()
+        .take_while(|l| l.trim().is_empty() || l.trim_start().starts_with('#') || indent_of(l) > 2)
+        .copied()
+        .collect();
+    let branches = filter_list(&push, "branches");
+    let ignored = filter_list(&push, "branches-ignore");
+    let tags = filter_list(&push, "tags").is_some() || filter_list(&push, "tags-ignore").is_some();
+    if tags && branches.is_none() && ignored.is_none() {
+        return false;
+    }
+    branches.is_none_or(|b| b.iter().any(|p| matches_main(p)))
+        && !ignored.is_some_and(|b| b.iter().any(|p| matches_main(p)))
+}
+
+/// The `key: value` entries of the `env:` block that starts at `lines[at]`, whose entries sit deeper than it.
+fn env_block(lines: &[&str], at: usize) -> Vec<(String, String)> {
+    let ind = indent_of(lines[at]);
+    let mut v = Vec::new();
+    for l in &lines[at + 1..] {
+        let t = l.trim();
+        if t.is_empty() || t.starts_with('#') {
+            continue;
+        }
+        if indent_of(l) <= ind {
+            break;
+        }
+        if let Some((k, val)) = t.split_once(':') {
+            v.push((k.trim().to_owned(), unquote(val)));
+        }
+    }
+    v
+}
+
 /// The jobs of one workflow: job ids two spaces in under `jobs:`, steps as `- ` entries under `steps:`, and each
 /// step's `uses:` and `with:` map. A block scalar input (`|`, `>`, `>-`) is read as its lines joined by newlines.
 fn parse_jobs(file: &str, text: &str) -> Vec<Job> {
+    let on_main = runs_on_push_to_main(text);
     let lines: Vec<&str> = text.lines().collect();
+    let workflow_env = lines
+        .iter()
+        .position(|l| l.trim_end() == "env:" && indent_of(l) == 0)
+        .map(|at| env_block(&lines, at))
+        .unwrap_or_default();
     let mut jobs: Vec<Job> = Vec::new();
     let mut in_jobs = false;
     let mut step_indent: Option<usize> = None;
@@ -119,6 +245,8 @@ fn parse_jobs(file: &str, text: &str) -> Vec<Job> {
             jobs.push(Job {
                 workflow: file.to_owned(),
                 id: body.trim_end_matches(':').to_owned(),
+                on_main,
+                env: workflow_env.clone(),
                 steps: Vec::new(),
             });
             step_indent = None;
@@ -126,6 +254,10 @@ fn parse_jobs(file: &str, text: &str) -> Vec<Job> {
             continue;
         }
         let Some(job) = jobs.last_mut() else { continue };
+        if ind == 4 && body.trim_end() == "env:" {
+            job.env.extend(env_block(&lines, i - 1));
+            continue;
+        }
         if body.trim_end() == "steps:" {
             step_indent = None;
             with_indent = None;
@@ -295,7 +427,7 @@ negative_control!(
     expected = "caches a target directory",
     check_rust_cache_caches_no_target(&all_jobs(&edited(
         "screenshot.yml",
-        "      - uses: Swatinem/rust-cache@v2\n        with:\n          prefix-key: cargo-registry\n          shared-key: screenshot\n          cache-targets: \"false\"\n          cache-bin: \"false\"\n",
+        "      - uses: Swatinem/rust-cache@v2\n        with:\n          prefix-key: cargo-registry\n          shared-key: ci\n          cache-targets: \"false\"\n          cache-bin: \"false\"\n",
         "      - uses: Swatinem/rust-cache@v2\n"
     )))
 );
@@ -408,13 +540,84 @@ negative_control!(
 
 // ---- 3. Every cache key names its job ----------------------------------------------------------------------------
 
+/// rust-cache's default `env-vars` prefixes: the variables whose values it hashes into its key.
+const RUST_CACHE_ENV: [&str; 6] = ["CARGO", "CC", "CFLAGS", "CXX", "CMAKE", "RUST"];
+
+/// The `env:` entries in force for `job` that rust-cache hashes into `step`'s key, sorted, a job's entry replacing the
+/// workflow's.
+fn hashed_env(job: &Job, step: &Step) -> Vec<(String, String)> {
+    let extra: Vec<String> = step
+        .input("env-vars")
+        .unwrap_or("")
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect();
+    let mut m = std::collections::BTreeMap::new();
+    for (k, v) in &job.env {
+        if RUST_CACHE_ENV.iter().any(|p| k.starts_with(p))
+            || extra.iter().any(|p| k.starts_with(p.as_str()))
+        {
+            m.insert(k.clone(), v.clone());
+        }
+    }
+    m.into_iter().collect()
+}
+
 fn check_keys_name_their_job(jobs: &[Job]) {
-    // rust-cache: a shared-key names the job it is in; without one, rust-cache keys on the job id itself. No two jobs
-    // share a key.
+    // rust-cache: in a workflow that runs on a push to `main`, a shared-key names the job it is in; without one,
+    // rust-cache keys on the job id itself. No two such jobs share a key. In a workflow that never runs on a push to
+    // `main`, the key is one a `ci.yml` job saves there, computed in the same environment (R-337).
     let mut shared: Vec<(String, String)> = Vec::new();
     for job in jobs {
         for step in job.steps.iter().filter(|s| is_rust_cache(s)) {
             let at = format!("{} job `{}`", job.workflow, job.id);
+            if !job.on_main {
+                let sk = step.input("shared-key").unwrap_or("");
+                let saver = jobs.iter().find(|j| {
+                    j.workflow == "ci.yml"
+                        && j.on_main
+                        && j.id == sk
+                        && j.steps.iter().any(|t| {
+                            is_rust_cache(t)
+                                && t.input("shared-key") == Some(sk)
+                                && t.input("prefix-key") == step.input("prefix-key")
+                        })
+                });
+                let Some(saver) = saver else {
+                    panic!(
+                        "{at}: rust-cache key `{}-{sk}` is one no `ci.yml` job saves on `main`, so it restores nothing \
+                         (R-337)",
+                        step.input("prefix-key").unwrap_or("v0-rust")
+                    );
+                };
+                let theirs = saver
+                    .steps
+                    .iter()
+                    .find(|t| is_rust_cache(t) && t.input("shared-key") == Some(sk))
+                    .unwrap();
+                assert_eq!(
+                    hashed_env(job, step),
+                    hashed_env(saver, theirs),
+                    "{at}: rust-cache hashes another environment into its key than `ci.yml`'s `{}` job does, so it \
+                     computes another key than the one it restores (R-337)",
+                    saver.id
+                );
+                for input in [
+                    "env-vars",
+                    "add-rust-environment-hash-key",
+                    "add-job-id-key",
+                    "key",
+                ] {
+                    assert_eq!(
+                        step.input(input),
+                        theirs.input(input),
+                        "{at}: rust-cache's `{input}` differs from `ci.yml`'s `{}` job's, so it computes another key \
+                         (R-337)",
+                        saver.id
+                    );
+                }
+                continue;
+            }
             if let Some(sk) = step.input("shared-key") {
                 assert!(
                     names_job(sk, &job.id),
@@ -432,12 +635,16 @@ fn check_keys_name_their_job(jobs: &[Job]) {
         }
     }
     // actions/cache: the key (and every restore key) names the one job that saves that path.
-    let mut savers: Vec<(String, String)> = Vec::new(); // (path, job id)
+    let mut savers: Vec<(String, String, bool)> = Vec::new(); // (path, job id, saved by a ci.yml job)
     for job in jobs {
         for step in &job.steps {
             if let Some(kind) = actions_cache_kind(step) {
                 if saves(kind) {
-                    savers.push((step.input("path").unwrap_or("").to_owned(), job.id.clone()));
+                    savers.push((
+                        step.input("path").unwrap_or("").to_owned(),
+                        job.id.clone(),
+                        job.workflow == "ci.yml" && job.on_main,
+                    ));
                 }
             }
         }
@@ -449,10 +656,11 @@ fn check_keys_name_their_job(jobs: &[Job]) {
             }
             let at = format!("{} job `{}` step `{}`", job.workflow, job.id, step.uses);
             let path = step.input("path").unwrap_or("");
+            // A workflow that never runs on a push to `main` restores a key a `ci.yml` job saves there (R-337).
             let owners: Vec<&str> = savers
                 .iter()
-                .filter(|(p, _)| p == path)
-                .map(|(_, j)| j.as_str())
+                .filter(|(p, _, ci)| p == path && (job.on_main || *ci))
+                .map(|(_, j, _)| j.as_str())
                 .collect();
             assert!(
                 !owners.is_empty(),
@@ -504,12 +712,13 @@ fn qa_m0_42_rust_cache_shared_key_names_its_job() {
 
 negative_control!(
     qa_m0_42_rust_cache_shared_key_names_its_job,
-    "reviews.yml with its rust-cache shared-key set to another job's",
-    expected = "does not name its job",
+    "ci.yml with gpu-metal's rust-cache shared-key set to another job's",
+    expected =
+        "ci.yml job `gpu-metal`: rust-cache shared-key \"gpu-lavapipe\" does not name its job",
     check_keys_name_their_job(&all_jobs(&edited(
-        "reviews.yml",
-        "shared-key: reviews-complete",
-        "shared-key: pr-check"
+        "ci.yml",
+        "shared-key: gpu-metal\n",
+        "shared-key: gpu-lavapipe\n"
     )))
 );
 
@@ -520,11 +729,11 @@ fn qa_m0_42_a_saving_cache_key_names_its_own_job() {
 
 negative_control!(
     qa_m0_42_a_saving_cache_key_names_its_own_job,
-    "mutants.yml saving the rust-gpu build under the ci job's key, a path other jobs save too (R-320)",
-    expected = "step `actions/cache/save@v4`: cache key \"rust-gpu-ci-",
+    "ci.yml with xtask-ci saving the rust-gpu build under the ci job's key, a path other jobs save too (R-320)",
+    expected = "job `xtask-ci` step `actions/cache/save@v4`: cache key \"rust-gpu-ci-",
     check_keys_name_their_job(&all_jobs(&edited(
-        "mutants.yml",
-        "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-mutants-",
+        "ci.yml",
+        "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
         "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-ci-"
     )))
 );
@@ -784,6 +993,13 @@ fn check_saved_only_on_main(jobs: &[Job]) {
                 );
                 continue;
             }
+            if !job.on_main && actions_cache_kind(step).is_some_and(saves) {
+                panic!(
+                    "{at}: saves a cache, though {} never runs on a push to `main`; it restores a `ci.yml` job's key \
+                     read-only and saves none (R-337)",
+                    job.workflow
+                );
+            }
             match actions_cache_kind(step) {
                 Some("both") => panic!(
                     "{at}: restores and saves in one step, so it saves in every run it restores in, a pull-request \
@@ -916,4 +1132,217 @@ negative_control!(
         "      - uses: actions/cache/restore@v4\n        with:\n          path: target/tmp/fixture-targets",
         "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets"
     )))
+);
+
+// ---- 6. A workflow that never runs on a push to `main` restores a `ci.yml` key read-only (R-337) --------------------
+
+#[test]
+fn qa_m0_42_a_pr_only_rust_cache_restores_a_ci_yml_key() {
+    check_keys_name_their_job(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_a_pr_only_rust_cache_restores_a_ci_yml_key,
+    "reviews.yml with its pre-R-337 rust-cache key, its own job's, which nothing saves",
+    expected = "reviews.yml job `reviews-complete`: rust-cache key `cargo-registry-reviews-complete` is one no `ci.yml` job saves",
+    check_keys_name_their_job(&all_jobs(&edited(
+        "reviews.yml",
+        "shared-key: ci\n",
+        "shared-key: reviews-complete\n"
+    )))
+);
+
+#[test]
+fn qa_m0_42_a_pr_only_rust_cache_key_is_computed_in_ci_yml_s_environment() {
+    check_keys_name_their_job(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_a_pr_only_rust_cache_key_is_computed_in_ci_yml_s_environment,
+    "pr-check.yml without the CARGO_TERM_COLOR ci.yml sets, which rust-cache hashes into its key",
+    expected = "pr-check.yml job `pr-check`: rust-cache hashes another environment into its key than `ci.yml`'s `ci` job does",
+    check_keys_name_their_job(&all_jobs(&edited(
+        "pr-check.yml",
+        "env:\n  CARGO_TERM_COLOR: always\n",
+        ""
+    )))
+);
+
+#[test]
+fn qa_m0_42_a_pr_only_job_env_enters_the_key_too() {
+    check_keys_name_their_job(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_a_pr_only_job_env_enters_the_key_too,
+    "screenshot.yml's job setting RUSTFLAGS, which ci.yml's `ci` job does not",
+    expected =
+        "screenshot.yml job `screenshot`: rust-cache hashes another environment into its key",
+    check_keys_name_their_job(&all_jobs(&edited(
+        "screenshot.yml",
+        "    env:\n      PRIN_GPU_BACKEND: vulkan\n",
+        "    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUSTFLAGS: -Dwarnings\n"
+    )))
+);
+
+#[test]
+fn qa_m0_42_a_pr_only_restore_reads_a_ci_yml_saved_path() {
+    check_keys_name_their_job(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_a_pr_only_restore_reads_a_ci_yml_saved_path,
+    "mutants.yml restoring the rust-gpu build under its own pre-R-337 key, which no ci.yml job saves",
+    expected = "job `mutants` step `actions/cache/restore@v4`: cache key \"rust-gpu-mutants-",
+    check_keys_name_their_job(&all_jobs(&edited(
+        "mutants.yml",
+        "key: rust-gpu-gpu-kernel-",
+        "key: rust-gpu-mutants-"
+    )))
+);
+
+#[test]
+fn qa_m0_42_no_pr_only_workflow_saves() {
+    check_saved_only_on_main(&all_jobs(&workflows()));
+}
+
+negative_control!(
+    qa_m0_42_no_pr_only_workflow_saves,
+    "stand-in-soak.yml with an actions/cache/save step, conditioned on a push to `main`, after its rust-cache step",
+    expected = "stand-in-soak.yml job `soak` step `actions/cache/save@v4`: saves a cache, though stand-in-soak.yml never runs on a push to `main`",
+    check_saved_only_on_main(&all_jobs(&edited(
+        "stand-in-soak.yml",
+        "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n",
+        "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cargo/registry\n          key: cargo-registry-ci-soak\n"
+    )))
+);
+
+/// The keys a PR-only workflow's cache steps restore, each as the literal the comments are to name: a rust-cache
+/// step's `<prefix-key>-<shared-key>`, an `actions/cache` step's key up to its first `${{`, trailing `-` dropped. Each
+/// with the step's own comments and the comments directly above it.
+fn restored_keys_with_comments(text: &str) -> Vec<(String, Vec<String>)> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut out = Vec::new();
+    for (i, l) in lines.iter().enumerate() {
+        let t = l.trim();
+        let Some(uses) = t.strip_prefix("- uses:").map(str::trim) else {
+            continue;
+        };
+        let rust_cache = uses.starts_with("Swatinem/rust-cache@");
+        if !rust_cache && !uses.starts_with("actions/cache") {
+            continue;
+        }
+        let dash = indent_of(l);
+        let mut comments: Vec<String> = lines[..i]
+            .iter()
+            .rev()
+            .take_while(|p| p.trim_start().starts_with('#'))
+            .map(|p| p.trim().to_owned())
+            .collect();
+        let body: Vec<&str> = lines[i + 1..]
+            .iter()
+            .take_while(|b| {
+                b.trim().is_empty()
+                    || (indent_of(b) > dash && !b.trim().starts_with("- "))
+                    || (b.trim_start().starts_with('#') && indent_of(b) > dash)
+            })
+            .copied()
+            .collect();
+        comments.extend(
+            body.iter()
+                .filter(|b| b.trim_start().starts_with('#'))
+                .map(|b| b.trim().to_owned()),
+        );
+        let input = |k: &str| {
+            body.iter()
+                .find_map(|b| b.trim().strip_prefix(k).and_then(|r| r.strip_prefix(':')))
+                .map(unquote)
+        };
+        let key = if rust_cache {
+            format!(
+                "{}-{}",
+                input("prefix-key").unwrap_or_else(|| "v0-rust".to_owned()),
+                input("shared-key").unwrap_or_default()
+            )
+        } else {
+            input("key")
+                .unwrap_or_default()
+                .split("${{")
+                .next()
+                .unwrap_or("")
+                .trim_end_matches('-')
+                .to_owned()
+        };
+        out.push((key, comments));
+    }
+    out
+}
+
+/// R-337's comment half: in each workflow that never runs on a push to `main`, a comment names each key a cache step
+/// restores, in the step, directly above it or in the workflow's header; no comment says the step restores what `main`
+/// saved under its own key.
+fn check_pr_only_comments(files: &[(String, String)]) {
+    let mut seen = 0;
+    for (f, t) in files.iter().filter(|(_, t)| !runs_on_push_to_main(t)) {
+        let header: Vec<String> = t
+            .lines()
+            .take_while(|l| l.trim_start().starts_with('#') || l.trim().is_empty())
+            .map(|l| l.trim().to_owned())
+            .collect();
+        let joined = t
+            .lines()
+            .filter(|l| l.trim_start().starts_with('#'))
+            .map(|l| l.trim().trim_start_matches('#').trim())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert!(
+            !joined.contains("restores what `main` saved under its key")
+                && !joined.contains("restores what `main` saved under their keys"),
+            "{f}: a comment says it restores what `main` saved under its own key, which nothing saves (R-337)"
+        );
+        for (key, comments) in restored_keys_with_comments(t) {
+            seen += 1;
+            assert!(
+                !key.is_empty(),
+                "{f}: a cache step whose key the check could not read"
+            );
+            assert!(
+                comments.iter().chain(&header).any(|c| c.contains(&key)),
+                "{f}: no comment in its cache step, above it or in its header names the key it restores, `{key}` (R-337)"
+            );
+        }
+    }
+    assert!(seen > 0, "no cache step found in a PR-only workflow");
+}
+
+#[test]
+fn qa_m0_42_a_pr_only_cache_comment_names_its_key() {
+    check_pr_only_comments(&workflows());
+}
+
+negative_control!(
+    qa_m0_42_a_pr_only_cache_comment_names_its_key,
+    "screenshot.yml's comment naming no key",
+    expected = "screenshot.yml: no comment in its cache step, above it or in its header names the key it restores, `cargo-registry-ci`",
+    check_pr_only_comments(&edited(
+        "screenshot.yml",
+        "`cargo-registry-ci-…`",
+        "the `ci` job's"
+    ))
+);
+
+#[test]
+fn qa_m0_42_no_pr_only_comment_says_main_saved_its_key() {
+    check_pr_only_comments(&workflows());
+}
+
+negative_control!(
+    qa_m0_42_no_pr_only_comment_says_main_saved_its_key,
+    "pr-check.yml with its pre-R-337 comment back",
+    expected = "pr-check.yml: a comment says it restores what `main` saved under its own key",
+    check_pr_only_comments(&edited(
+        "pr-check.yml",
+        "which this workflow never is, so it saves nothing (R-326). It",
+        "which this workflow never is: it restores what `main` saved under its key, and saves nothing (R-326). It"
+    ))
 );
