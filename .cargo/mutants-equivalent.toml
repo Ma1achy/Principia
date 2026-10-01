@@ -6,3 +6,15 @@
 # [[equivalent]]
 # mutant = "<file>:<line>:<col>: <mutation>"
 # justification = "<one line>"
+
+[[equivalent]]
+mutant = "crates/engine/src/contract/canonical.rs:119:14: replace < with <= in format_f64"
+justification = "value == 0.0 (and -0.0) has already returned \"0\", so value <= 0.0 and value < 0.0 agree on every value that reaches the sign test"
+
+[[equivalent]]
+mutant = "crates/engine/src/contract/canonical.rs:143:23: replace < with <= in format_f64"
+justification = "the exponent branch needs n outside (-6, 21], and e = n - 1 = 0 means n = 1, which the 0 < n <= 21 branches always take, so e is never 0 there"
+
+[[equivalent]]
+mutant = "crates/prin/src/profile/diff.rs:167:19: replace | with ^ in parts"
+justification = "fraction is masked to bits 0..52, so bit 52 is always clear and fraction ^ (1 << 52) equals fraction | (1 << 52)"
