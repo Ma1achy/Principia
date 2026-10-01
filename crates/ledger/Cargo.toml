@@ -9,6 +9,8 @@ publish.workspace = true
 # unit tests in `src/` (R-176, R-187).
 [dev-dependencies]
 validation = { path = "../validation" }
+# The WGSL emitter's tests parse the generated WGSL with naga, wgpu 30's front end (REQ-PAY-016, REQ-PAY-091).
+naga = { version = "30", features = ["wgsl-in"] }
 
 # Under `controls`, each `negative_control!` in ledger's tests compiles as a test (R-176).
 [features]

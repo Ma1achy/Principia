@@ -1,8 +1,8 @@
 //! The Rust emitter (dd_generation_root §1; dd_simstate_payload §1, §2, §6): writes the payload schema version
 //! ([`crate::version::emit`]), then each of [`crate::payload::structs`] as a `#[repr(C)]`, `no_std`-compatible struct
 //! into `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed
-//! words' pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors and payload §3's frozen
-//! continuation table ([`continuation`]). [`check`] holds each member against the ledger entry or word it stores.
+//! words' pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors, payload §3's frozen
+//! continuation table ([`continuation`]) and the stored buffers' binding constants ([`bindings`], R-343). [`check`] holds each member against the ledger entry or word it stores.
 //!
 //! The `SimState` structs and `ICDescriptor` are emitted per precision (philosophy §7.1; dd_simstate_payload §1;
 //! dd_generation_root §3.6; R-313): generic over the kernel's `Real`, their f32 members widen to it ([`widens`]) and
@@ -225,6 +225,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
     out.push_str(&precision_code(&structs, &rows));
     out.push_str(&accessors(words, entries));
     out.push_str(&continuation());
+    out.push_str(&bindings());
     vec![Generated {
         path: PathBuf::from(PATH),
         contents: out,
@@ -689,6 +690,27 @@ fn select(var: &str, cells: &[String], depth: usize) -> String {
         let _ = write!(out, " else {}", indent(last, &pad));
     } else {
         let _ = write!(out, " else {{\n{inner}{}\n{pad}}}", indent(last, &inner));
+    }
+    out
+}
+
+/// The stored buffers' bindings in the fragment-side unpack layer, from the ledger's one table
+/// ([`crate::payload::bindings`], R-343): `<PREFIX>_GROUP` and `<PREFIX>_BINDING` for each, which the host's bind group
+/// layout reads. The WGSL emitter writes the same constants and numbers ([`super::wgsl`]).
+pub fn bindings() -> String {
+    let mut out = String::new();
+    for b in crate::payload::bindings() {
+        let _ = write!(
+            out,
+            "\n/// `{buf}`'s bind group in the fragment-side unpack layer (R-343).\n\
+             pub const {c}_GROUP: u32 = {g};\n\
+             \n/// `{buf}`'s binding number in its group (R-343).\n\
+             pub const {c}_BINDING: u32 = {n};\n",
+            buf = b.buffer,
+            c = b.constant,
+            g = b.group,
+            n = b.binding,
+        );
     }
     out
 }

@@ -22,6 +22,8 @@ egui-wgpu = { version = "0.36.2", default-features = false }
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 pollster = "1"
 png = "0.18"
+# `cargo xtask lint wgsl` parses and validates the generated WGSL with naga, wgpu's own front end, at wgpu 30's version
+# (REQ-RENDER-001). Its one entry is below, with build-kernel's features.
 sha2 = "0.10"
 # `cargo xtask build-kernel` compiles `crates/kernel` to SPIR-V with rust-gpu, through cargo-gpu's installer, which builds
 # the `rustc_codegen_spirv` backend on the pinned nightly (rust-toolchain.toml), and translates it to WGSL with naga,
@@ -29,7 +31,7 @@ sha2 = "0.10"
 # backend builds on the pinned nightly-2026-04-11 (R-169); a caret requirement also admits 0.10.0, which needs another
 # nightly. The backend's own dependencies are pinned by `rust-gpu-backend.lock` (`build_kernel::BACKEND_LOCK`).
 cargo-gpu-install = "=0.10.0-alpha.1"
-naga = { version = "30", features = ["spv-in", "wgsl-out"] }
+naga = { version = "30", features = ["spv-in", "wgsl-in", "wgsl-out"] }
 
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).
 [dev-dependencies]
