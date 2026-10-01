@@ -4314,9 +4314,10 @@ rule if one would have caught it. Fold all of this into the R-353 PR, and clear 
   "**Mark:**" line that names no open mark. A mark quoted to name the convention is not a mark. A ruling moves its entry
   to `docs/archive/review_queue/` (R-292), which the check doesn't read, so a mark the ruling settled but left reading
   "veto?" fails until it names that ruling. Its negative controls run first, from the tool itself (`--self-test`):
-  a mark no entry names, one wrapped over a line, one written ", veto?", a Mark line whose mark was closed and one
-  naming another file must each fail; a listed mark, a closed mark and the quoted convention must pass. On the tree
-  before these changes it names 36 open marks: the 34 cleared below and the 2 left open.
+  a mark no entry names, one wrapped after "per", one wrapped before its dash, one written ", veto?", a Mark line
+  whose mark was closed and one naming another file must each fail; a listed mark, a closed mark and the quoted
+  convention must pass. On the tree before these changes it names 36 open marks: the 34 cleared below and the 2 left
+  open.
 - *Applied per R-204 — veto? (the check's design):* the open marks live in REVIEW_QUEUE.md, where R-346 already keeps
   pending veto items, rather than in a list of their own; an entry names each of its marks by file and nearby text;
   the scan covers the files above, not PR descriptions; and the negative controls are the tool's own built-in cases,

@@ -113,6 +113,8 @@ def self_test():
     expect("a stray mark no entry names", {"decisions.md": stray}, ruled, "decisions.md:1: an open")
     expect("a stray mark wrapped over a line", {"plan/x.md": "the same way (applied per\n  R-204 — veto?).\n"}, "",
            "plan/x.md:1: an open")
+    expect("a stray mark wrapped before its dash", {"plan/x.md": "x (applied per R-204, R-305\n  — veto?: y)\n"}, "",
+           "plan/x.md:1: an open")
     expect("a stray mark with \", veto?\"", {"plan/x.md": "x, applied per R-204, veto?, and listed\n"}, "",
            "plan/x.md:1: an open")
     expect("a Mark line whose mark was closed", {"decisions.md": closed}, entry, "names no open mark")
