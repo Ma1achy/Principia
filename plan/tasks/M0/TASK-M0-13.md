@@ -65,7 +65,7 @@ comparison.
   wrong number, and one indexing `word_buffer` outside `sample_word` each fail, naming the rule (REQ-RENDER-001, R-343;
   the lint can fire).
 - `cargo test -p ledger wgsl_layouts` — `closure_step_reserved` is a u32 at byte 140 in `SimStateFTLE` and at byte 92
-  in `SimStateBase`, which drops the 48 B shadow (payload §1; applied per R-204 — veto?); `closure_step(w)`
+  in `SimStateBase`, which drops the 48 B shadow (payload §1; ruled by R-351); `closure_step(w)`
   returns bits 0–15 of `w` and ignores bits 16–31 (at `w = 0xffff0000u | k`); the WGSL
   `PAYLOAD_SCHEMA_VERSION`'s `.x` and `.y` equal the Rust `u64`'s low and high 32 bits (REQ-PAY-091, R-343).
 
