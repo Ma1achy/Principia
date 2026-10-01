@@ -719,3 +719,11 @@
   section: "R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*"
   reason: informative only
   note: process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement
+- file: decisions.md
+  section: R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+  reason: informative only
+  note: process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement
+- file: decisions.md
+  section: "R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`"
+  reason: informative only
+  note: accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement

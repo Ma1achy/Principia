@@ -4031,3 +4031,126 @@ stands, rustup, pip and the required `git`, `curl` and `cc` as written, except f
 its installer's current release is used. A cargo tool CI adds later other than these two is built with
 `cargo install --locked`, as item 1 had it. RQ-190 moves to `docs/archive/review_queue/M0.md`. Process only
 (section_notes); no requirement changes.
+
+## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
+*1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
+
+The human's message of 1 Oct 2026 numbered its first two rulings R-347 and R-348. R-347 was already taken (it closes
+RQ-190), so the message's four rulings are recorded here as R-348 to R-351, in the message's order (R-278). Applied per
+R-204 — veto?
+
+"R-347: mutants runs get two caps: a per-mutant timeout via cargo-mutants' timeout setting (a hang is recorded as a
+timeout, not a dead shard), and a per-process memory cap on test processes (ulimit -v or prlimit) so a runaway
+allocation kills one test, not the runner. The values are calibration requirements (R-71)."
+
+*Applied:* every `cargo mutants` run in CI, the per-PR shards (`mutants.yml`, REQ-VAL-148, R-302) and the nightly full
+run (REQ-VAL-150), runs under two caps:
+- **A per-mutant timeout,** set through cargo-mutants' timeout setting. A mutant whose tests hang past it is recorded
+  in the run's `outcomes.json` as a timeout, and the shard goes on to its next mutant and finishes, rather than hanging
+  until R-302's per-shard limit cuts it off. `cargo xtask mutants-check` already lists a timed-out mutant as "timed out
+  (not a survivor)" (R-202).
+- **A per-process memory cap on the test processes,** set with `ulimit -v` or `prlimit`, so a mutant that allocates
+  without bound kills its own test process, not cargo-mutants or the runner. A test the cap kills fails, as any
+  failing test does; the unmutated baseline runs under the same cap.
+- **The values** are calibration requirements (R-71): REQ-VAL-180, the per-mutant timeout, and REQ-VAL-181, the
+  per-process memory cap. The task that needs them proposes each with its evidence, CI uses it provisionally (R-182),
+  and the human confirms it at the M0 gate. REQ-VAL-179 (new, M0) carries the caps themselves. A new task, TASK-M0-49,
+  closes all three, with the code and qa reviewers.
+
+*Applied per R-204 — veto?:*
+- REQ-VAL-179 is a requirement for the caps beside the two calibrations, so that the caps are checked as well as
+  valued, as R-342's REQ-VAL-178 carries its rule.
+- TASK-M0-49 depends on TASK-M0-14 (PR #96), which rewrites `mutants.yml`'s toolchain, cache and kernel-build steps:
+  the caps are written and measured on the workflow as #96 leaves it, and the two PRs don't clash.
+- The nightly full run does not exist yet: TASK-M0-19 writes it. TASK-M0-19 now depends on TASK-M0-49, and its
+  nightly run applies the same two caps at the same values, read from the one place TASK-M0-49 keeps them.
+
+## R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+*1 Oct 2026 · applied in CLAUDE.md § "How work runs" and `plan/OPERATIONS.md` § "Resources"*
+
+"R-348: agents never delete or modify anything outside the repo and its build/scratch directories without asking
+first, caches included. Add it to CLAUDE.md and OPERATIONS.md."
+
+*Applied:* an agent, the orchestrator included, asks the human before it deletes or modifies anything outside the
+repository and its build and scratch directories, and caches are no exception. CLAUDE.md § "How work runs" and
+`plan/OPERATIONS.md` § "Resources" ("Cleaning disk") say so. Numbered R-349: the human numbered it R-348, which this
+message's first ruling now holds (R-348's note).
+
+*Applied per R-204 — veto?:* how the rule is read where the words leave it open.
+- **Inside:** the repository's checkouts (the main checkout and every worktree), their target directories (the
+  seed's and a mutants run's `<target>-mutants` among them) and the session's scratch directory. Everything else is
+  outside: among the caches, `~/.cargo` (its registry, git checkouts and installed tools), `~/.rustup`, the rust-gpu
+  cache (`~/.cache/rust-gpu`, `~/Library/Caches/rust-gpu` on the Mac) and the repository's Actions caches on GitHub;
+  and the system temp folder outside the scratch directory, the shell's and git's configuration, and the external
+  SSD's folders.
+- **A build's own cache writes** are part of running the build, not an agent's change: cargo filling its registry,
+  rustup installing the toolchain `rust-toolchain.toml` pins, and `cargo xtask build-kernel` building rust-gpu's
+  backend in cargo-gpu's cache (R-350). An agent's own deletion or edit of a cache asks first, such as emptying the
+  rust-gpu cache for a cold run, as PR #96's cold check did, clearing `~/.cargo`, removing a toolchain, or deleting an
+  Actions cache entry.
+- **`scripts/cloud-setup.sh`** installs toolchains, apt and pip packages and cargo tools outside the repository. A
+  cloud session runs it as R-346 and R-347 order, which is the asking for what it installs; anything it does beyond
+  them asks first.
+
+## R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"#96's veto items all stand, including the exact rust-gpu pin with the backend built from
+xtask/rust-gpu-backend.lock."
+
+*Applied:* every item PR #96 (TASK-M0-14) applied per R-204 and left open stands as the PR wrote it, and loses its
+"veto?" mark. Items 1, 2, 6 and 11 of its list were ruled before: R-313, R-316, R-314 and R-331.
+- **The list's items 3, 4, 5, 7, 8, 9, 10 and 12:** declared tail padding (`_tail: [u32; n]`, empty at f32) rather
+  than any reordering; the GPU entry point named `toolchain_pack_unpack` in WGSL; the mis-built variant is naga's WGSL
+  with one field's read offset shifted, asserted to exist exactly once; `Cargo.lock` holds glam at 0.32.1; in
+  `cargo xtask ci`, build-kernel runs as its own process through `$CARGO`; in `mutants.yml` the kernel build step is
+  the cargo call the alias expands to; payload §1's new block is a bold paragraph, not a `###` heading; `is_real`
+  keeps naming the `SimState` structs and `is_generic` names every struct generic over `Real`.
+- **The two rust-cache items of its R-337 pass:** `pr-check.yml` and `reviews.yml` set `CARGO_TERM_COLOR: always`, so
+  their rust-cache key matches the `ci` job's; and every PR-only job restores the `ci` job's registry key.
+- **The exact pin (3e2ba72):** `cargo-gpu-install` and `spirv-std` are required at `=0.10.0-alpha.1`, and
+  `cargo xtask build-kernel` builds rust-gpu's backend itself, in cargo-gpu's crate in its cache, from `BACKEND_TOML`
+  (`rustc_codegen_spirv` at `=0.10.0-alpha.1`) and `xtask/rust-gpu-backend.lock`, the lockfile of a backend build on
+  R-169's pinned nightly-2026-04-11. A cold build can no longer resolve rust-gpu 0.10.0, which needs a later nightly;
+  the nightly is not moved.
+- **86741e9:** a cached backend is used only if its crate's `Cargo.lock` equals `xtask/rust-gpu-backend.lock` byte for
+  byte; any other is rebuilt, and after the install build-kernel refuses one that differs.
+
+PR #96's description marks each of these "Ruled, R-350 (stands)". Numbered R-350: the human's message gave this item
+no number (R-348's note). Changes no requirement.
+
+## R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL
+*1 Oct 2026 · applied in TASK-M0-13 (PR #107), REQ-PAY-091, REQ-RENDER-083 (new), TASK-M0-50 (new) and the render
+contract's "Unpack layer"*
+
+"#107's offset correction stands. The bit-pattern unset check becomes an automated lint as a small task: `cargo xtask
+lint` fails on isinf/isnan, or comparisons against inf/NaN constants, in fragment-stage WGSL (R-343, R-297). The
+checklist line stays as a backup."
+
+*Applied:*
+- **The offsets.** PR #107's correction stands: `closure_step_reserved` is at byte 140 in `SimStateFTLE` and at byte
+  92 in `SimStateBase`, which drops the 48 B shadow (payload §1). The 140 that R-343's note and REQ-PAY-091 give is
+  `SimStateFTLE`'s. #107's `wgsl_layouts` test asserts both. REQ-PAY-091's verify line names both offsets. #107's
+  task-file line (de28d04) exists only on its branch, so its "(…; applied per R-204 — veto?)" mark becomes "ruled by
+  R-351" in #107's next fix pass.
+- **The lint.** `cargo xtask lint` fails on `isinf` or `isnan`, or on a comparison against an inf or NaN constant, in
+  fragment-stage WGSL, naming the file, the line and the rule, because fast-math (R-297) may optimise those away and an
+  unset-check tests the bit pattern (R-343). REQ-RENDER-083 (new, M0) carries it. A new task, TASK-M0-50, closes it,
+  depends on TASK-M0-13 (PR #107), which writes the WGSL lint, and has the code and qa reviewers. The review-checklist
+  grep in REQ-RENDER-001's verify line stays, as the backup. The render contract's "Unpack layer" gains a sentence
+  saying so.
+- PR #107's description marks both items ruled. Numbered R-351: the human's message gave this item no number (R-348's
+  note).
+
+*Applied per R-204 — veto?:*
+- "Fragment-stage WGSL" is every WGSL file under `crates/render/frag/`, generated or written by hand. Today that is
+  `crates/render/frag/generated/payload_unpack.wgsl`.
+- The rule joins `cargo xtask lint wgsl`, the WGSL lint TASK-M0-13 writes and `cargo xtask ci` runs, rather than a new
+  subcommand.
+- An inf or NaN constant includes a constant expression that evaluates to one, such as a `bitcast<f32>` of an inf or
+  NaN bit pattern.
+
+*Flagged, not resolved:* the render contract's WGSL traps and REQ-RENDER-001 also name two float comparisons that
+stand in for `isnan` and `isinf`: a self-comparison, `x != x`, and `x > 65504.0`. Neither compares against an inf or
+NaN constant, so under the human's words the lint does not cover them, and the checklist grep alone checks them.
+RQ-191 asks whether the lint should cover them too.

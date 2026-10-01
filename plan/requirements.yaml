@@ -5849,12 +5849,15 @@
     section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
   - file: decisions.md
     section: "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
+  - file: decisions.md
+    section: "R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL"
   verify:
     method: unit test
-    detail: "generated WGSL struct layouts compared field-by-field against the ledger tables; closure_step_reserved is a u32 at closure_step's byte offset (140), closure_step(w) returns its low 16 bits and ignores the high 16; PAYLOAD_SCHEMA_VERSION's .x and .y equal the Rust u64's low and high 32 bits (R-343)"
+    detail: "generated WGSL struct layouts compared field-by-field against the ledger tables; closure_step_reserved is a u32 at closure_step's byte offset, 140 in SimStateFTLE and 92 in SimStateBase, which drops the 48 B shadow (payload §1; R-351), closure_step(w) returns its low 16 bits and ignores the high 16; PAYLOAD_SCHEMA_VERSION's .x and .y equal the Rust u64's low and high 32 bits (R-343)"
   rulings:
   - R-256
   - R-343
+  - R-351
   milestone: M0
 - id: REQ-PAY-092
   area: PAY
@@ -10141,6 +10144,27 @@
   - R-113
   milestone: M4
   note: Split from REQ-RENDER-027 (R-113, RQ-95).
+- id: REQ-RENDER-083
+  area: RENDER
+  statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, on any use of `isinf` or `isnan`, or any comparison against an inf or NaN constant (a constant expression that evaluates to one included), in fragment-stage WGSL: every WGSL file under `crates/render/frag/`, generated or written by hand. Fast-math (R-297) may optimise those away, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343). REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Unpack layer (generated, one accessor per named field)
+  - file: decisions.md
+    section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: decisions.md
+    section: "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
+  - file: decisions.md
+    section: "R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask lint_wgsl_unset: fixtures that call `isinf`, call `isnan`, compare a float against an inf constant (`bitcast<f32>(0x7f800000u)`) and compare one against a NaN constant each fail `cargo xtask lint wgsl`, naming the file, the line and the rule; the clean fixture passes; the generated `payload_unpack.wgsl`, whose `pa_d_min_is_unset` compares bits, passes; a WGSL file added under `crates/render/frag/` outside `generated/` is linted too; each with a registered negative control (R-176, R-351)"
+  rulings:
+  - R-176
+  - R-297
+  - R-343
+  - R-351
+  milestone: M0
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -18814,6 +18838,57 @@
   - R-176
   - R-333
   - R-342
+  milestone: M0
+- id: REQ-VAL-179
+  area: VAL
+  statement: "Every `cargo mutants` run in CI, the per-PR shards (REQ-VAL-148) and the nightly full run (REQ-VAL-150), must run under two caps: a per-mutant timeout set through cargo-mutants' timeout setting (REQ-VAL-180), so that a mutant whose tests hang is recorded as a timeout and the shard finishes, never a dead shard; and a per-process memory cap on the test processes, set with `ulimit -v` or `prlimit` (REQ-VAL-181), so that a runaway allocation kills one test process, not cargo-mutants or the runner (R-348)."
+  source:
+  - file: decisions.md
+    section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
+  - file: decisions.md
+    section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  verify:
+    method: review checklist
+    detail: "the caps fire on a fixture: `cargo mutants` over `fixtures/mutants/caps/`, whose diff yields a mutant that makes its test hang and one that makes its test allocate without bound, run under the caps in CI's `mutants-fixture` job, finishes; `outcomes.json` records the first as a timeout and the second as caught (its test process killed by the cap), and `cargo xtask mutants-check` reports the timeout as not a survivor; each with its negative control (R-176). Review checklist (code): `mutants.yml`'s shards and TASK-M0-19's nightly run pass the timeout at REQ-VAL-180's value and run the test processes under REQ-VAL-181's cap, both read from one place, marked provisional (R-182, R-348)"
+  rulings:
+  - R-176
+  - R-182
+  - R-302
+  - R-348
+  milestone: M0
+- id: REQ-VAL-180
+  area: VAL
+  kind: calibration
+  statement: "The per-mutant timeout of every `cargo mutants` run in CI (R-348) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  verify:
+    method: review checklist
+    detail: "the proposal states the timeout, in the form cargo-mutants' timeout setting takes it (seconds, or a multiple of the baseline's test time with its floor), with its evidence: the unmutated baseline's test time on `ubuntu-latest` in each shard of the PRs merged so far, the slowest caught mutant's test time, and the headroom the value leaves within the per-shard limit (REQ-VAL-149); every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
+  rulings:
+  - R-71
+  - R-182
+  - R-348
+  milestone: M0
+- id: REQ-VAL-181
+  area: VAL
+  kind: calibration
+  statement: "The per-process memory cap on the test processes of every `cargo mutants` run in CI (R-348) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  verify:
+    method: review checklist
+    detail: "the proposal states the cap, in the unit `ulimit -v` or `prlimit` takes, and which of the two sets it, with its evidence: the largest peak of the measure the cap limits (virtual size, for `ulimit -v` or `prlimit --as`) over every test process of the unmutated baseline on `ubuntu-latest`, the GPU tests on lavapipe included, and the runner's memory; the baseline passes under it with headroom; every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
+  rulings:
+  - R-71
+  - R-182
+  - R-348
   milestone: M0
 - id: REQ-PERF-001
   area: PERF

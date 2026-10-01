@@ -252,6 +252,20 @@ its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or aband
 and clear mutants and scratch builds. Never delete sources, uncommitted work, open PR branches or `~/.cargo`'s registry
 caches. Three parallel builds once left the Mac's disk at 117 MiB free (30 Sep 2026).
 
+**Nothing outside the repository without asking (R-349).** No agent, the orchestrator included, deletes or modifies
+anything outside the repository and its build and scratch directories without asking the human first, caches included.
+- Inside: the checkouts (the main checkout and every worktree), their target directories (the seed and a mutants run's
+  `<target>-mutants` among them) and the session's scratch directory. Cleaning these, as above, needs no asking.
+- Outside: `~/.cargo` (registry, git checkouts, installed tools), `~/.rustup`, the rust-gpu cache
+  (`~/.cache/rust-gpu`; `~/Library/Caches/rust-gpu` on the Mac), the repository's Actions caches on GitHub, the system
+  temp folder outside the scratch directory, shell and git configuration, and the SSD's folders.
+- A build's own writes to its caches are part of the build: cargo filling its registry, rustup installing the pinned
+  toolchain, `cargo xtask build-kernel` building rust-gpu's backend in its cache (R-350). An agent's own deletion or
+  edit there asks first: emptying the rust-gpu cache for a cold run, clearing `~/.cargo`, removing a toolchain,
+  deleting an Actions cache entry.
+- `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
+- These readings are R-349's items applied per R-204, open for a veto in RQ-191.
+
 ## Paths and warm builds
 
 **Mac only.**

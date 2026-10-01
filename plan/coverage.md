@@ -15,22 +15,22 @@
 | GEN | 32 |
 | SCHED | 95 |
 | REF | 50 |
-| RENDER | 82 |
+| RENDER | 83 |
 | COL | 59 |
 | GUI | 163 |
 | TOOL | 146 |
-| VAL | 177 |
+| VAL | 180 |
 | PERF | 94 |
 | SYS | 77 |
-| **total** | **1304** |
+| **total** | **1308** |
 
-Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 104 calibration, 104 definition, 1100 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 115 |
+| M0 | 119 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -42,10 +42,10 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 
 ## Sections
 
-1038 sections in 46 files: 873 yield at least one requirement; 165 yield none and are listed below with the reason.
+1042 sections in 46 files: 875 yield at least one requirement; 167 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 118 |
+| informative only | 120 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -127,6 +127,8 @@ Of these: 102 calibration, 104 definition, 1098 obligation. Retired (kept for th
 | R-345 — Merged branches are deleted, with their worktrees and target directories | informative only | process ruling; after a merge the branch, its worktrees and target directories go and stale refs are pruned (recorded in plan/WORKFLOW.md and CLAUDE.md); changes no requirement |
 | R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files | informative only | process ruling; the orchestrator's operating manual (plan/OPERATIONS.md), the cloud setup script and its agreement check with CI (xtask/tests/cloud_setup.rs), with pointers in CLAUDE.md and plan/WORKFLOW.md; changes no requirement |
 | R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)* | informative only | process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement |
+| R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included | informative only | process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement |
+| R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock` | informative only | accepts PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

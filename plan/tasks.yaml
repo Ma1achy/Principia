@@ -160,7 +160,7 @@
 - id: TASK-M0-19
   milestone: M0
   title: The benchmark runner and the session header
-  depends_on: [TASK-M0-04, TASK-M0-14, TASK-M0-18, TASK-M0-05, TASK-M0-06, TASK-M0-20, TASK-M0-23]
+  depends_on: [TASK-M0-04, TASK-M0-14, TASK-M0-18, TASK-M0-05, TASK-M0-06, TASK-M0-20, TASK-M0-23, TASK-M0-49]
   needs: []
   requirements: [REQ-SYS-067, REQ-TOOL-001, REQ-TOOL-121, REQ-VAL-150]
   reviewers: [code, qa, perf]
@@ -2221,3 +2221,19 @@
   requirements: [REQ-VAL-178]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M0-49
+  milestone: M0
+  title: Mutants runs get a per-mutant timeout and a per-process memory cap on test processes
+  depends_on: [TASK-M0-14, TASK-M0-23]
+  needs: []
+  requirements: [REQ-VAL-179, REQ-VAL-180, REQ-VAL-181]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-50
+  milestone: M0
+  title: "`cargo xtask lint wgsl` fails on `isinf`, `isnan` and comparisons against inf or NaN constants in fragment-stage WGSL"
+  depends_on: [TASK-M0-13]
+  needs: []
+  requirements: [REQ-RENDER-083]
+  reviewers: [code, qa]
+  pitfalls: []
