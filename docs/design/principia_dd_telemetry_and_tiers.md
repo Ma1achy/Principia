@@ -275,15 +275,26 @@ defines its keys; until then, a writer writes `null`, and a reader accepts any o
 ```
 device     gpu (model), cpu (model), cpu_cores, gpu_cores (null when not reported),
            memory: {"unified": {bytes}} or {"discrete": {vram_bytes, ram_bytes}}
-backend    api ("metal" / "vulkan" / "dx12" / "webgpu"), driver (its version)
+backend    api ("metal" / "vulkan" / "dx12" / "webgpu" / "none"), driver (its version)
 precision  f32, f64 (supported: true / false), f64_rate (the reported f64 rate as a fraction of the f32 rate;
            null when not reported)
 build      commit (the hash), profile (the release profile), features ([flag, ...])
 display    width_px, height_px, refresh_hz, dpi_scale; null for a headless run
-config     the run's full configuration, a JSON object
+config     the run's full configuration, a JSON object, in the canonical serialisation (R-309)
 ```
 
 Unified memory is its own variant, not a VRAM size of zero (§2).
+
+**A session that opens no GPU (R-308)** writes `backend.api` "none", and `null` for the GPU's own fields:
+`backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`. `device.cpu` and `device.cpu_cores`
+are written as always. Readers accept this header. A run never opens a GPU adapter only to fill the header: `prin
+profile` running a scenario that does no GPU work (M0's `synthetic_frames`) writes this form.
+
+**`config` (R-309)** holds `SimConfig` and `RenderState` in their one canonical serialisation, the same text snapshot
+JSON, share links and pxpack carry (`principia_gui_state_contract.md` §2). A `prin profile` run writes it as
+`{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`: the scenario it ran, the frame count, and
+the two structs.
+Written canonically (JCS, R-318), the object's members appear sorted: `frames`, `render`, `scenario`, `sim`.
 
 **The frame record** is §2's, key for key, followed by the five stages' nested sections and the memory live at the
 frame's end:

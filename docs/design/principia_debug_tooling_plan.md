@@ -92,7 +92,7 @@ Regenerated from the ledger's §3.4 rows (R-86); the storage column is the paylo
 
 ## E. Payload field views — `ICDescriptor` (64 B) & the live-state block
 
-`ICDescriptor` is 64 B: the twelve f32 fields of ledger §3.6 plus explicit padding. `E₀` is derived (`K_0 + V_0`), not stored (R-86).
+`ICDescriptor` is 64 B at f32: the twelve f32 fields of ledger §3.6 plus explicit padding; its width follows `Real` (R-313). `E₀` is derived (`K_0 + V_0`), not stored (R-86).
 
 | Field | Shader | Test |
 |---|---|---|

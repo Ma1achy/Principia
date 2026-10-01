@@ -81,7 +81,7 @@ A **multiply-add** (`W*3+e`) replaces the flat **shift-or** — 2–3 extra ALU 
 
 **Decode (at resolve / inspect — a *cold* path):** O(length) sequential — pop the base-3 tail by depth, not by magnitude (`while depth: e = W mod 3; W = W div 3`, `length − 1` times — payload §3), the residue is `d₀`, then replay forward through the continuation table. **Not random-access** — but the consumers (symbolic-spread reduction comparing whole words, inspection display) read the *entire* word anyway, so O(length) sequential *is* their access pattern. No practical loss.
 
-**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}` and its inverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order); and the reverse `predecessor_symbol(next,e)→prev`, mandatory for the O(1) pop (payload §3's frozen table).
+**Small fixed tables (shader constants):** `inverse(s)` (4 entries); `continuation_index(prev,s)→{0,1,2}`, 3 where `s = inverse(prev)` (R-307), and its inverse `continuation_symbol(prev,e)→s` (the 3 legal continuations per prev, fixed order); and the reverse `predecessor_symbol(next,e)→prev`, mandatory for the O(1) pop (payload §3's frozen table).
 
 **Layout in `.w`:** payload high bits in `.w[0:24]` (25 bits — part of the 121-bit budget); `length` **7 bits** at `.w[25:31]`, values 0…76, with **`length = 127` = the truncation sentinel** (NO separate flag bit — the sentinel reclaims it; payload §3). **Truncation is the length cap:** a push onto a word already at 76 symbols sets `length_raw = 127` and stops growing (payload §3 — a 77-symbol word can have a small numeric `W`, so bit occupancy cannot define capacity).
 
@@ -166,6 +166,11 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 
 **64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
 implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
+
+**`ICDescriptor` follows `Real` (R-313).** Its twelve float fields have the width of `Real`, as `SimState`'s widening
+fields do (dd_simstate_payload §1), so the payload is a function of `Real` throughout (REQ-PAY-017). The 64 B above is
+the **f32 instantiation**. The f64 and DoubleF64 sizes and declared padding are part of REQ-PAY-087's definition,
+written here by the task that makes the descriptor generic (R-72).
 
 ### 3.7 `QuadReduction` — completed ledger
 
@@ -337,6 +342,7 @@ Four properties of this block, all measured:
 |---|---|---|
 | `running_mean_divergence` | f32 | diagnostic, not a split input (R-99) |
 | `first_divergence_t` | f32 | write-once; sentinel until crossed; diagnostic, not a split input (R-99) |
+| `n_unresolved` | u16 | the latch's verdict (R-142, below): the count of the quad's unresolved footprints, latched ones included; at most N², as `valid_sample_count` (R-315). A count, not an accumulator |
 
 **The latch is per footprint, not a `QuadReduction` member (R-99).** `running_max_divergence` (f32, max-updated,
 **latching**) is held per footprint with the resident quad, and goes when the cache evicts or merges the quad, so it
@@ -415,7 +421,7 @@ quad **floors** — correct, since refining does not make a close encounter easi
 
 ```
 { name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
-  type: u-bits | f32 | f16-pair | fixed16 | vector(type, k),
+  type: u-bits | f32 | f16 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
   range, sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
   provenance: kernel | decode | reduction | cpu,
@@ -428,6 +434,15 @@ quad **floors** — correct, since refining does not make a close encounter easi
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is
 allowed only when the entry states `overflow`. At a packed location, `f16-pair` and `fixed16` take exactly 16 bits
 and `f32` exactly 32, with no range-against-width test; any other non-integer type there fails the static check.
+
+`f16` (R-312) is one binary16 value at a packed location of exactly 16 bits; `f16-pair` stays the type of two halves
+sharing a 32-bit word. `f16` follows R-248's rules as `f16-pair` does: exactly 16 bits, a declared range within
+±65504, and an unbounded end allowed only when the entry states `overflow`. It is a type for a packed 16-bit
+location only: not a `scalar-index` location, and not a `vector` component type.
+
+**`f16` is storage-only (R-317).** f16 arithmetic in WGSL is optional in WebGPU (the `shader-f16` feature), so no
+generated code computes in binary16: a read accessor widens an `f16` value to f32 (`unpack2x16float`, core WGSL), and
+no generated WGSL declares `enable f16` or an `f16`-typed value.
 
 `floor` (R-263) names the sim-key parameter a log-magnitude or diverging view floors at: `eps_E` on `energy_drift`,
 `eps_L` on `Lz_drift` (§3.4). The parameter is the same for every sample, so it is named, not stored, and it is

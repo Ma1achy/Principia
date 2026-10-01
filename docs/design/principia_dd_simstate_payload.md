@@ -163,7 +163,7 @@ every width. `E_0` and `Lz_0` are subtraction operands for the drifts, so an f32
 drift at f32's resolution. `closure_min`'s floor is precision-dependent (~1e-7 at f32, ~1e-16 at f64, above); it follows
 `Real` so that one rule covers every float member. The packed words hold Tier B integer fields and display latches,
 which do not depend on the float type (parity_contract Tier B), so they keep their bits. The word buffer
-(`FreeGroupWord`, integer) and `ICDescriptor` are not `SimState` and are not generic.
+(`FreeGroupWord`, integer) is not `SimState` and is not generic.
 
 **Layout at a `Real` of `w` bytes.** Members in the order above, each at its own alignment (`Real` at its alignment,
 u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. `SimStateFTLE` stores 31 `Real`s and
@@ -185,6 +185,8 @@ of the ledger for the width function only. It has no `Real` impl, no kernel inst
 (REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **520 B** (516 used,
 one u32 of `_tail`) and `SimStateBase` **328 B** (324 used, one u32 of `_tail`), aligned to 8. A new instantiation
 would be one more row, as philosophy §7.1 says, and the generator would not fork.
+
+**`ICDescriptor` follows `Real` too (R-313).** The payload is `SimState` + `ICDescriptor`; the descriptor's float fields have the width of `Real`, and R-86's 64 B is its f32 instantiation (generation-root §3.6). Its f64 and DoubleF64 layouts are part of REQ-PAY-087's definition.
 
 ---
 
@@ -307,7 +309,7 @@ Multiply-add (`3W+e`) push / div-mod pop. Detection of a crossing runs per accep
 
 **Decode (at resolve/inspect — cold path):** O(length) sequential — pop the base-3 tail (`while depth: e = W mod 3; W = W div 3`), the residue is `d₀`, replay forward via `continuation_symbol`. Not random-access, but consumers read the whole word anyway.
 
-**Small fixed shader tables:** `inverse(s)`; `continuation_index(prev,s)→{0,1,2}`; `continuation_symbol(prev,e)→s`; **`predecessor_symbol(next,e)→prev`** (the reverse table — mandatory for O(1) cancellation-pop).
+**Small fixed shader tables:** `inverse(s)`; `continuation_index(prev,s)→{0,1,2}`, and 3 where `s = inverse(prev)` (R-307); `continuation_symbol(prev,e)→s`; **`predecessor_symbol(next,e)→prev`** (the reverse table — mandatory for O(1) cancellation-pop).
 
 **NORMATIVE continuation table (FROZEN — part of the binary format; changing it changes the meaning of every stored word).** Symbol codes `a=0, A=1, b=2, B=3`; `inverse = [1,0,3,2]`. The three digit-maps are permutations of the symbol set that each exclude the inverse of `prev` (verified: no continuation equals `inverse(prev)`; each digit is a permutation ⇒ `predecessor` is well-defined; the 3 digits cover exactly the 3 legal continuations):
 
@@ -326,6 +328,16 @@ cont_symbol[1]= [2,3,0,1]   // digit 1
 cont_symbol[2]= [3,2,1,0]   // digit 2
 ```
 **Each permutation is self-inverse** (an involution), so `predecessor_symbol[e] == cont_symbol[e]` — the *same* table serves both forward (`prev,digit→next`) and reverse (`next,digit→prev`), and `continuation_index` is derived by inverting `cont_symbol` (`continuation_index[prev][next]` = the digit `e` with `cont_symbol[e][prev]==next`). **The Rust kernel/host and the WGSL fragment side MUST use this identical generated table** — it is frozen in the Rust layout definition (emitted to both targets) and any change is a binary-format version change: the table is hashed with the ledger (R-36), so the change is automatic.
+
+**`continuation_index` at the inverse holds 3 (R-307).** Of its 16 cells, the derivation fills 12; the four where `next = inverse(prev)` have no digit, since no continuation equals the inverse, and the append never reads them (it pops before it pushes). They hold **3 ("invalid")**, which is no digit, as `dmin_pair`'s 3 means unset/invalid (§2). The whole table, frozen with the rest (`continuation_index[prev][next]`, derived from `cont_symbol` above):
+```
+continuation_index[0]= [0,3,1,2]   // prev a: a→0, A (inverse)→3, b→1, B→2
+continuation_index[1]= [3,0,2,1]   // prev A: a (inverse)→3, A→0, b→2, B→1
+continuation_index[2]= [1,2,0,3]   // prev b: a→1, A→2, b→0, B (inverse)→3
+continuation_index[3]= [2,1,3,0]   // prev B: a→2, A→1, b (inverse)→3, B→0
+```
+
+**The table functions are total: each input is `debug_assert!`-ed < 4, then masked to 2 bits (R-321, amending R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`), in Rust and in WGSL, reads its table at `input & 3`; a Rust debug build given an input ≥ 4 fails a `debug_assert!` first (WGSL has none). So no out-of-range return value exists: an input ≥ 4 reads the cell at `input & 3`. `continuation_index` returns 3 ("invalid") only for its four inverse cells (R-307). The digit argument of `continuation_symbol` and `predecessor_symbol` is defined for 0–2: it is `debug_assert!`-ed < 3, then clamped with `min(d, 2)` (R-324), so a digit ≥ 3 reads the digit-2 row in a release build and in WGSL; no table row is added.
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```

@@ -116,7 +116,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-79** — NaN and sentinels *(closes RQ-30)*
 - **R-80** — Samples per footprint *(closes RQ-31)*
 - **R-81** — The embedded record uses the contract names *(closes RQ-32)*
-- **R-86** — The payload doc governs the eight payload items *(closes RQ-37)*
+- **R-86** — The payload doc governs the eight payload items *(closes RQ-37)*. Still in force: all eight items; `ICDescriptor`'s 64 B with explicit padding is its f32 instantiation, and its width follows `Real` (R-313). Amended by R-313.
 - **R-87** — `failed_fraction` is retired *(closes RQ-38)*
 - **R-88** — What stops in-view refinement *(closes RQ-39)*
 - **R-89** — Depth and E are not on the sim key *(closes RQ-40)*
@@ -187,6 +187,20 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-299** — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
 - **R-300** — #78's items 11–13 are accepted; `DminCounters`' fields are private
 - **R-303** — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*
+- **R-306** — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*
+- **R-307** — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*
+- **R-308** — A session that opens no GPU writes `api: "none"`, its GPU fields null *(closes RQ-180)*
+- **R-309** — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*. Still in force: `SimConfig` and `RenderState` are serialisable; the header's `config` is `{"scenario", "frames", "sim", "render"}`; one canonical serialisation shared with snapshot JSON, share links and pxpack; R-318 makes it JCS (RFC 8785), replacing the definition TASK-M0-18 was to write. Amended by R-318.
+- **R-312** — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*
+- **R-313** — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
+- **R-315** — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*
+- **R-317** — #98's `f16` restriction stands; `f16` is storage-only
+- **R-318** — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*. Still in force: JCS (RFC 8785) — sorted keys, its number format, its test vectors; −0.0 written `0`; R-322 replaces the per-value reading of "integers beyond 2^53" with a per-field rule. Amended by R-322.
+- **R-319** — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*. Still in force: PR #99's item 8 stays vetoed (no input yields "the last cell" as a fallback); each input is `debug_assert!`-ed. R-321 replaces the release behaviour: the functions are total, each input masked to 2 bits. Amended by R-321; replaced in part by R-321 (its release behaviour).
+- **R-321** — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*. Still in force: the four functions are total in Rust and WGSL; each symbol input is `debug_assert!`-ed < 4, then masked `& 3`; `continuation_index` returns 3 only for its inverse cells (R-307). R-324 sets the digit argument's rule. Amended by R-324.
+- **R-322** — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*
+- **R-323** — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
+- **R-324** — The digit argument of `continuation_symbol` and `predecessor_symbol` is debug-asserted < 3, then clamped with `min(d, 2)` *(completes R-321)*
 
 ## Values
 
@@ -241,6 +255,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
 - **R-293** — CURRENT_RULES.md shows each rule's current form: superseded rulings leave it, partly amended ones say what still stands *(amends R-292)*. Still in force: all of it; R-295 changes only its application to R-252, which is amended, not superseded, by R-277. Amended by R-295.
 - **R-295** — R-252's summary logging stays in force; two instruction-file edits *(amends R-293)*
+- **R-314** — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
 
 ## CI
 
@@ -270,12 +285,13 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-269** — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend. Still in force: its measurement and result, and one reference per backend as the fallback for a case whose bytes still differ; otherwise goldens share one reference (R-287). Amended by R-287.
 - **R-276** — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review
 - **R-279** — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*
-- **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys
+- **R-285** — CI caches only the cargo registry and the fixture pool, with per-job keys. Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached; R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version. Amended by R-320.
 - **R-287** — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*. Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a tie, so a golden near a tie keeps one reference per backend (R-296). Amended by R-296.
 - **R-296** — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
 - **R-301** — TASK-M0-42's CI cost is accepted *(amends R-270)*
 - **R-302** — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
 - **R-305** — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
+- **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
 
 ## One-off acts (history only)
 
@@ -328,3 +344,6 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-283** — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
 - **R-291** — TASK-M0-40's three veto items stand
 - **R-304** — The "veto?" items on #78, #79, #89 and #90 stand
+- **R-310** — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand
+- **R-311** — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done
+- **R-316** — #96's `closure_min` widening with `Real` stands

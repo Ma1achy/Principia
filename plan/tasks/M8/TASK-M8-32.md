@@ -1,7 +1,7 @@
 # TASK-M8-32 — Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100
+- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146
 - **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
 - **Reviewers:** code, qa, gui
@@ -12,6 +12,8 @@
 The Export & share window offers image export (size in multiples of the view, format, embed the view as pxpack, optionally the stain's WGSL) so that opening the picture recreates the view exactly; state export (copy snapshot JSON, save snapshot, load, and a `principia://view?…` share link), each recreating the view; and present mode, which hides all chrome until Esc.
 
 ## References
+- `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `decisions.md` § "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
 - `docs/gui/principia_render_gui_spec.md` § "Export & share"
 - `docs/gui/principia_render_gui_spec.md` § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
@@ -25,6 +27,7 @@ The Export & share window offers image export (size in multiples of the view, fo
 ## Acceptance tests
 - `cargo test -p gui png_pxpack_roundtrip` — export a PNG with pxpack, import it: the restored SimConfig + RenderState equal the exported ones field for field (REQ-TOOL-102).
 - `cargo test -p gui state_share_roundtrip` — round-trip each of JSON copy, saved file and share link: the state is equal after load (REQ-TOOL-103).
+- `cargo test -p gui state_canonical_text` — for one state, the `SimConfig` and `RenderState` text in the snapshot JSON, in the decoded share link and in the extracted pxpack record is byte-equal to the canonical serialisation (gui_state_contract §2) (REQ-TOOL-146, R-309).
 - `cargo xtask screenshot 01_main` (present mode; Esc restores the layout) — screenshot in present mode shows only the figure; Esc restores 01_main.png's layout (REQ-GUI-100).
 
 ## Notes

@@ -122,7 +122,7 @@
   title: "The substrate toolchain: one kernel source compiled twice, and the Real-generic payload"
   depends_on: [TASK-M0-04, TASK-M0-10]
   needs: []
-  requirements: [REQ-PAY-017, REQ-PAY-087]
+  requirements: [REQ-PAY-017, REQ-PAY-087, REQ-SYS-075]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M0-15
@@ -154,8 +154,8 @@
   title: "`prin profile`: a fixed scenario headless, and the regression diff"
   depends_on: [TASK-M0-17]
   needs: []
-  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139]
-  reviewers: [code, qa, perf]
+  requirements: [REQ-TOOL-002, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-119, REQ-TOOL-139, REQ-TOOL-144, REQ-TOOL-145]
+  reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M0-19
   milestone: M0
@@ -1090,7 +1090,7 @@
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
   depends_on: [TASK-M1-08]
   needs: [REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010]
-  requirements: [REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089]
+  requirements: [REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-02
@@ -2018,7 +2018,7 @@
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
   depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32]
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
-  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100]
+  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-33

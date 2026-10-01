@@ -154,10 +154,16 @@ jobs:
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
-      # The golden half of R-186's first Metal check: the self-test within REQ-VAL-138's tolerance (TASK-M0-06). On
-      # ubuntu-latest (lavapipe) it runs in `cargo xtask ci`, as `golden --all`.
-      - name: cargo xtask golden selftest
-        run: cargo xtask golden selftest
+      # Every golden suite on Metal (R-186's first Metal check, TASK-M0-06), each case against its one reference
+      # across backends, or its Metal one where it keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
+      - name: cargo xtask golden --all
+        run: cargo xtask golden --all
+      # R-269's half-way fixture on Metal: the quantise pass's levels are the fragment's f32 output rounded half to
+      # even, exact ties included, printed as REQ-VAL-176's evidence (R-296; TASK-M0-43).
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
+      - name: cargo test -p xtask --features controls golden_halfway --doc
+        run: cargo test -p xtask --features controls golden_halfway --doc
 
   # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
   gpu-lavapipe:
@@ -185,3 +191,13 @@ jobs:
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
+      # Every golden suite on lavapipe, each case against its one reference across backends, or its Vulkan one where it
+      # keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
+      - name: cargo xtask golden --all
+        run: cargo xtask golden --all
+      # R-269's half-way fixture on lavapipe: the quantise pass's levels are the fragment's f32 output rounded half to
+      # even, exact ties included, and equal its automatic ones, printed as REQ-VAL-176's evidence (R-296; TASK-M0-43).
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
+      - name: cargo test -p xtask --features controls golden_halfway --doc
+        run: cargo test -p xtask --features controls golden_halfway --doc

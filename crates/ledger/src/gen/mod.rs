@@ -215,9 +215,20 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
         .collect())
 }
 
+/// What a generator run did with each generated file (paths relative to the root), by whether it was written.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Outcome {
+    /// Files absent from disk, or whose content differed from the file on disk: written.
+    pub written: Vec<PathBuf>,
+    /// Files whose content matched the file on disk: left untouched, so their modification time does not move
+    /// (R-284).
+    pub unchanged: Vec<PathBuf>,
+}
+
 /// Passes the constants register ([`crate::constants::REGISTER`]) through its gate, then generates from `ledger` with
-/// `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under `root`; the paths written.
-pub fn run(ledger: &Ledger, emitters: &[Emitter], root: &Path) -> Result<Vec<PathBuf>, String> {
+/// `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under `root` only when its content
+/// differs from the file on disk (R-284); which files were written and which were unchanged.
+pub fn run(ledger: &Ledger, emitters: &[Emitter], root: &Path) -> Result<Outcome, String> {
     run_with_register(crate::constants::REGISTER, ledger, emitters, root)
 }
 
@@ -228,17 +239,22 @@ pub fn run_with_register(
     ledger: &Ledger,
     emitters: &[Emitter],
     root: &Path,
-) -> Result<Vec<PathBuf>, String> {
+) -> Result<Outcome, String> {
     crate::constants::gate(register).map_err(|e| e.to_string())?;
     let files = generate(ledger, emitters).map_err(|e| e.to_string())?;
-    let mut written = Vec::new();
+    let mut outcome = Outcome::default();
     for file in files {
         let path = root.join(&file.path);
+        // A file that cannot be read (absent, or not UTF-8) counts as differing, and is written.
+        if std::fs::read_to_string(&path).is_ok_and(|on_disk| on_disk == file.contents) {
+            outcome.unchanged.push(file.path);
+            continue;
+        }
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
         }
         std::fs::write(&path, &file.contents).map_err(|e| format!("{}: {e}", path.display()))?;
-        written.push(file.path);
+        outcome.written.push(file.path);
     }
-    Ok(written)
+    Ok(outcome)
 }

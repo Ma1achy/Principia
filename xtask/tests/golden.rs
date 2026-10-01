@@ -183,7 +183,7 @@ fn check_change_fails(step: f64) {
         0,
         "a same-backend re-render differs"
     );
-    let reference = Image::read_png(&case.reference).unwrap();
+    let reference = Image::read_png(case.reference_for(renderer.backend).unwrap()).unwrap();
     let diff = golden::diff(&first, &reference).unwrap();
     assert!(
         diff.max_step > case.tolerance.max_step,

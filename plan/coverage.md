@@ -12,40 +12,40 @@
 | INT | 84 |
 | EVT | 26 |
 | PAY | 90 |
-| GEN | 29 |
+| GEN | 30 |
 | SCHED | 95 |
-| REF | 49 |
+| REF | 50 |
 | RENDER | 82 |
 | COL | 59 |
 | GUI | 163 |
-| TOOL | 142 |
+| TOOL | 145 |
 | VAL | 176 |
 | PERF | 94 |
-| SYS | 74 |
-| **total** | **1292** |
+| SYS | 75 |
+| **total** | **1298** |
 
-Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 102 calibration, 103 definition, 1093 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 106 |
+| M0 | 109 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
 | M4 | 104 |
-| M5 | 161 |
+| M5 | 163 |
 | M6 | 141 |
 | M7 | 113 |
-| M8 | 233 |
+| M8 | 234 |
 
 ## Sections
 
-996 sections in 46 files: 843 yield at least one requirement; 153 yield none and are listed below with the reason.
+1015 sections in 46 files: 858 yield at least one requirement; 157 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 106 |
+| informative only | 110 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -115,6 +115,10 @@ Of these: 102 calibration, 103 definition, 1087 obligation. Retired (kept for th
 | R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private | informative only | accepts PR |
 | R-304 — The "veto?" items on #78, #79, #89 and #90 stand | informative only | process ruling; it accepts veto items on PRs |
 | R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main` | informative only | confirms PR |
+| R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand | informative only | accepts PR |
+| R-311 — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done | informative only | accepts PR |
+| R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)* | informative only | the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR |
+| R-316 — #96's `closure_min` widening with `Real` stands | informative only | accepts PR |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
