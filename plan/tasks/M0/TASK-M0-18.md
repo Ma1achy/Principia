@@ -26,6 +26,10 @@
 - `decisions.md` § "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
 - `decisions.md` § "R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand"
 - `decisions.md` § "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
+- `decisions.md` § "R-322 — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*"
+- `decisions.md` § "R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so"
+- `decisions.md` § "R-298 — TASK-M0-17's items 12 and 15 accepted; a trace with no summary line is valid *(amends R-286)*"
+- `decisions.md` § "R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*"
 
 ## Deliverables
 - `crates/prin/src/profile/{mod,run,diff,show}.rs` — the `profile` subcommand (clap), scenario registry, headless run, JSON Lines write; `diff` over per-scope p95; `show --pretty` (R-286).
@@ -33,16 +37,16 @@
 - `crates/prin/tests/profile.rs` and trace fixtures.
 - `crates/engine/src/contract/{sim_config,render_state}.rs` — `SimConfig`, `RenderState` and their groups serialisable, in the canonical serialisation (R-309).
 - `crates/engine/src/contract/profile.rs` and `crates/engine/src/contract/schema/profile_v1.json` (TASK-M0-17's files) — `backend.api` takes "none", and `backend.driver`, `device.gpu`, `device.memory` and `precision` may be null, as telemetry §5 now reads (R-308).
-- The canonical serialiser: JCS (RFC 8785) for `SimConfig` and `RenderState`, its test vectors as fixtures; −0.0 written `0`; an integer beyond ±2^53 written as a string (REQ-TOOL-145, R-318; gui_state_contract §2).
+- The canonical serialiser: JCS (RFC 8785) for `SimConfig` and `RenderState`, its test vectors as fixtures; −0.0 written `0`; a u64 field always written as a string, every other number as a number (REQ-TOOL-145, R-318, R-322; gui_state_contract §2).
 
 ## Acceptance tests
 - `cargo test -p prin profile_file` — the written file is JSON Lines, each line parsing against its schema v1 line type (R-286); the header holds the build hash and the config as the M0 contract skeleton (TASK-M0-16) serialises it: `{"scenario", "frames", "sim", "render"}`, `SimConfig` and `RenderState` in the canonical serialisation (R-309); `prin profile` reads it back (REQ-TOOL-002; the dev GUI profiler's read and the provenance-object header are REQ-TOOL-098's verify, M8).
 - `cargo test -p prin profile_scenario` — run the synthetic scenario for N frames twice: the same frame count and the same scope / event sequence; an unregistered scenario name is refused (REQ-TOOL-006).
-- `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007).
+- `cargo test -p prin profile_diff` — the diff of a trace against a copy with one scope's p95 raised 6% exits non-zero at `--threshold 5%` and zero at `--threshold 10%` (REQ-TOOL-007); a p95 of 100 → 107 at `--threshold 7%` is not a regression (the threshold compares exactly, R-323); a NEW trace with no frame records exits 2 (R-323); a cut-off or incomplete NEW prints "session incomplete" and the bytes dropped (R-323, R-298, R-299), its comparison and exit code unchanged.
 - `cargo test -p prin profile_show` — `prin profile show PATH --pretty` prints each line of a trace indented, and the printed JSON parses to the same values as the file; without `--pretty` it prints the file's lines unchanged (REQ-TOOL-139).
-- Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler" and approved by the physics reviewer (REQ-TOOL-119).
+- Definition: the diff's compared statistic, scope set and missing-scope rule written into render_gui_spec § "Profiler", with R-323's three rules (exact threshold, no frames exits 2, "session incomplete" with the dropped bytes), and approved by the physics reviewer (REQ-TOOL-119).
 - `cargo test -p prin profile_no_gpu` — the `synthetic_frames` header has `backend.api` "none" and `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null; the `synthetic_frames` run requests no GPU adapter; the typed form and `profile_v1.json` accept that header and still reject an `api` outside the five values (REQ-TOOL-144, R-308).
-- `cargo test -p engine canonical_jcs` — RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; an integer of 2^53 + 1 writes a string and one of 2^53 a number; serialising the same `SimConfig` and `RenderState` twice gives the same bytes, and the text reads back to the same values (REQ-TOOL-145, R-318).
+- `cargo test -p engine canonical_jcs` — RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; a u64 field writes a string at 0 and at 2^53 + 1, and a non-u64 integer field writes a number (R-322); serialising the same `SimConfig` and `RenderState` twice gives the same bytes, and the text reads back to the same values (REQ-TOOL-145, R-318).
 
 ## Notes
 - One format, one parser, one percentile code: `prin` and, later, the interactive path share the frame record (telemetry §5.5).
@@ -60,3 +64,8 @@
   layout (ryu, positional for exponents −5 to 15) are superseded.
 - Size: the two rulings add the contract files' serde derives, the header's no-GPU form in TASK-M0-17's files and a
   definition; the ~400-line estimate is the orchestrator's to weigh at the PR (R-264).
+- R-322 (1 Oct): R-318's integers rule is per field — a u64 field (a seed) is always a string; every other number is a
+  number; a field's type never depends on its value.
+- R-323 (1 Oct): #100's physics findings accepted — the diff threshold compares exactly; a NEW trace with no frames
+  exits 2; a cut-off trace prints "session incomplete" with the dropped bytes. *Applied per R-204 — veto?:* an
+  incomplete NEW's comparison still sets the exit code.

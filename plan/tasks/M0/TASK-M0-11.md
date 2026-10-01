@@ -28,6 +28,7 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - `decisions.md` § "R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*"
 - `decisions.md` § "R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*"
 - `decisions.md` § "R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*"
+- `decisions.md` § "R-321 — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*"
 
 ## Deliverables
 - `crates/ledger/src/payload.rs` — the word `.w` entries, the frozen continuation table as ledger data, and `QuadReduction`'s §3.7 member list as ledger data: each member's name and §3.7 type, not a §3.8 entry and not emitted (R-306).
@@ -38,7 +39,7 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - `cargo test -p kernel payload_sizes` — `size_of::<ICDescriptor>() == 64` (the f32 instantiation, R-313) with the padding a declared member and no stored E₀ field; descriptor bits 10–15 zero (REQ-PAY-001).
 - `cargo test -p ledger spread_event` — the ledger's `QuadReduction` member list has `spread_event` typed f16 and no `ensemble_outcome_agreement` (REQ-PAY-019, R-306).
 - `cargo test -p kernel continuation_table_rust` — the Rust tables equal payload §3's frozen arrays, `continuation_index` included with 3 in its four `next = inverse(prev)` cells (R-307) (the WGSL half and REQ-PAY-016 close in TASK-M0-13).
-- `cargo test -p kernel continuation_table_out_of_range` and `cargo test --release -p kernel continuation_table_out_of_range` — each table function given an out-of-range input fails its `debug_assert!` in the debug build and returns 3 in the release build, never a table cell (R-319).
+- `cargo test -p kernel continuation_table_out_of_range` and `cargo test --release -p kernel continuation_table_out_of_range` — each table function given a symbol input ≥ 4 fails its `debug_assert!` in the debug build and in the release build returns the cell at `input & 3` (R-321, amending R-319); `continuation_index` returns 3 only for its four inverse cells (R-307); a digit of 3 is left untested until R-321's digit-3 value is ruled.
 
 ## Notes
 - REQ-PAY-019's "the agreement view computes from spread_event" is a view; field views are M1 (REQ-TOOL-009 onward). This task holds the storage half.
@@ -52,3 +53,6 @@ The ledger completes the M0 payload. The word buffer's `.w` layout (payload bits
 - RQ-183 ruled: R-315 — `n_unresolved` is u16 (§3.7's temporal-accumulators row), so the member list types it u16.
 - R-319 (1 Oct) vetoes PR #99's item 8: an out-of-range input to a table function is a `debug_assert!` failure, and
   returns 3 in release, never the last cell.
+- R-321 (1 Oct) amends R-319: the table functions are total — each input `debug_assert!`-ed < 4, then masked `& 3` —
+  so an input ≥ 4 reads the cell at `input & 3`; R-319's "returns 3" is replaced. The value at a digit of 3 is flagged
+  to the human, not yet ruled.

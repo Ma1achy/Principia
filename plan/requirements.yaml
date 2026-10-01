@@ -4569,7 +4569,7 @@
   milestone: M0
 - id: REQ-PAY-016
   area: PAY
-  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. An out-of-range input to a table function fails a `debug_assert!` in a debug build and returns 3 in release, never a table cell (R-319); from `continuation_index` 3 is \"invalid\", and from `inverse`, `continuation_symbol` and `predecessor_symbol` it is the symbol code B (applied literally pending a ruling, R-319). The WGSL table functions return 3 for an out-of-range input."
+  statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. The table functions are total (R-321, amending R-319): each input is `debug_assert!`-ed < 4 in Rust, then masked to 2 bits (`& 3`) in Rust and WGSL, so an input ≥ 4 reads the cell at `input & 3` and no out-of-range return value exists; `continuation_index` returns 3 only for its four inverse cells. The value at a digit of 3 (after the mask) is not yet ruled (R-321)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 3. The word buffer — `free_group_word`
@@ -4579,13 +4579,16 @@
     section: "R-307 — `continuation_index` holds 3 where `next` is `prev`'s inverse *(closes RQ-179)*"
   - file: decisions.md
     section: "R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*"
+  - file: decisions.md
+    section: "R-321 — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*"
   verify:
     method: unit test
-    detail: "assert the generated Rust and WGSL tables equal the frozen arrays, continuation_index included (3 in its four next = inverse(prev) cells, R-307); assert involution and that no continuation equals inverse(prev); each Rust table function given an out-of-range input panics in a debug build and returns 3 in a release build (R-319), and each WGSL table function returns 3"
+    detail: "assert the generated Rust and WGSL tables equal the frozen arrays, continuation_index included (3 in its four next = inverse(prev) cells, R-307); assert involution and that no continuation equals inverse(prev); each Rust table function given a symbol input ≥ 4 panics in a debug build and in a release build returns the cell at input & 3, and each WGSL table function given a symbol input ≥ 4 returns the cell at input & 3 (R-321); a digit of 3 is left untested until R-321's digit-3 value is ruled"
   rulings:
   - R-63
   - R-307
   - R-319
+  - R-321
   milestone: M0
 - id: REQ-PAY-017
   area: PAY
@@ -15295,11 +15298,14 @@
     section: 3. Percentiles, not means — and the specific thresholds
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so"
   verify:
     method: review checklist
-    detail: "the section states the compared statistic, the scope set and the missing-scope rule, and REQ-TOOL-007's test follows it; physics reviewer approved"
+    detail: "the section states the compared statistic, the scope set and the missing-scope rule, and R-323's three rules: the threshold compares exactly (100 → 107 at --threshold 7% is not a regression, tested in `profile_diff`), a NEW trace with no frame records exits 2, and a cut-off or incomplete trace prints \"session incomplete\" and the bytes dropped (R-298, R-299), its comparison and exit code unchanged; REQ-TOOL-007's test follows it; physics reviewer approved"
   rulings:
   - R-72
+  - R-323
   milestone: M0
 - id: REQ-TOOL-120
   area: TOOL
@@ -15716,7 +15722,7 @@
   milestone: M0
 - id: REQ-TOOL-145
   area: TOOL
-  statement: "`SimConfig` and `RenderState` must serialise as RFC 8785 JSON Canonicalization Scheme (JCS) text: members sorted by their names' UTF-16 code units, no insignificant whitespace, its string escaping and its number format; −0.0 written `0`; an integer whose magnitude exceeds 2^53 (a seed, say) written as a JSON string of its decimal digits, one within ±2^53 as a number (R-318, `principia_gui_state_contract.md` §2)."
+  statement: "`SimConfig` and `RenderState` must serialise as RFC 8785 JSON Canonicalization Scheme (JCS) text: members sorted by their names' UTF-16 code units, no insignificant whitespace, its string escaping and its number format; −0.0 written `0`; a u64 field (a seed, say) always written as a JSON string of its decimal digits, whatever its value, and every other number as a JSON number, so a field's type never depends on its value (R-318, R-322, `principia_gui_state_contract.md` §2)."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 2. The editable state is the entire coupling surface
@@ -15724,12 +15730,15 @@
     section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
   - file: decisions.md
     section: "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
+  - file: decisions.md
+    section: "R-322 — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*"
   verify:
     method: unit test
-    detail: "RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; an integer of 2^53 + 1 writes a string and one of 2^53 a number; serialising the same SimConfig and RenderState twice gives the same bytes, and the text reads back to the same values"
+    detail: "RFC 8785's published test vectors serialise byte-for-byte; −0.0 writes `0`; a u64 field writes a string at 0 and at 2^53 + 1, and a non-u64 integer field writes a number; serialising the same SimConfig and RenderState twice gives the same bytes, and the text reads back to the same values"
   rulings:
   - R-309
   - R-318
+  - R-322
   milestone: M0
 - id: REQ-TOOL-146
   area: TOOL
