@@ -212,8 +212,10 @@ either file as schema v1.
   read as the decimal it is written as; each p95 is the double the file gives. The test is decided exactly, as
   `100 × p95_NEW > (100 + P) × p95_BASE` in rationals, not in rounded floating-point arithmetic: a p95 of 100 → 107 is
   a rise of exactly 7%, so it is not a regression at `--threshold 7%`.
-- **A NEW with no frames (R-323).** A NEW trace with no frame records has no p95 to compare, and the diff exits 2, as
-  it does for a file it cannot read, saying that NEW has no frame records.
+- **A file with no frames (R-323; BASE applied per R-204).** A NEW trace with no frame records has no p95 to compare,
+  and the diff exits 2, as it does for a file it cannot read, saying that NEW has no frame records (R-323). A BASE
+  trace with no frame records is treated the same way, saying that BASE has no frame records: with nothing in BASE the
+  gate could never fail (applied per R-204, physics's finding 2 on TASK-M0-18).
 - **A cut-off or incomplete trace (R-323, R-298, R-299).** When either file is a session that ended before its summary
   line, its last line perhaps cut off, the diff first prints, for that file, "session incomplete" and the number of
   bytes the reader dropped from a cut-off last line (0 when none). It then compares that file's frames and exits as it
