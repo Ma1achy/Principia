@@ -652,6 +652,9 @@ Native in-process `wgpu` sets the Tier-N tolerances. Dawn CI is dropped. Real br
 with the browser build (M8).
 
 ## R-86 — The payload doc governs the eight payload items *(closes RQ-37)*
+*Amended by R-313.*
+*Still in force: all eight items; `ICDescriptor`'s 64 B with explicit padding is its f32 instantiation, and its
+width follows `Real` (R-313).*
 *25 Sep 2026 · applied in step 7*
 
 - `times` is exact u16 only; dispatch refuses a configuration with ⌈T/dt⌉ > 65535.
@@ -2728,6 +2731,9 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
+*Amended by R-320.*
+*Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
+R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3274,6 +3280,10 @@ TASK-M0-18 makes that change to TASK-M0-17's files, and M0's `prin profile` open
 Numbered from R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
 
 ## R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*
+*Amended by R-318.*
+*Still in force: `SimConfig` and `RenderState` are serialisable; the header's `config` is `{"scenario", "frames",
+"sim", "render"}`; one canonical serialisation shared with snapshot JSON, share links and pxpack; R-318 makes it JCS
+(RFC 8785), replacing the definition TASK-M0-18 was to write.*
 *1 Oct 2026 · applied in PR #97: gui_state_contract §2, telemetry §5, render_gui_spec § "Export & share",
 image_embedding §6, export_animation Part 6, REQ-TOOL-002, REQ-TOOL-145 and REQ-TOOL-146 (new), TASK-M0-18,
 TASK-M8-32*
@@ -3334,3 +3344,173 @@ closed by TASK-M5-01, which types `QuadReduction`'s f16 members with it. *Applie
 location" is read as a packed location of exactly 16 bits only: `f16` is not a `scalar-index` type (a scalar index is
 a 32-bit slot) and not a `vector` component type (a vector of halves stays `vector(f16-pair, k)`). R-248's
 static-check rules for `f16-pair` (REQ-GEN-028) are unchanged.
+
+## R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
+*1 Oct 2026 · applied in generation-root §3.6, dd_simstate_payload §1, render contract, debug_tooling_plan §E,
+dd_decoder, REQ-PAY-017, REQ-PAY-087, TASK-M0-14 and TASK-M0-11*
+
+"RQ-185: ICDescriptor follows Real. R-86's 64 B is its f32 instantiation."
+
+*Applied:* `ICDescriptor`'s twelve float fields have the width of `Real`, as `SimState`'s widening fields do, so the
+payload (`SimState` + `ICDescriptor`, systems_architecture) is a function of `Real` throughout (REQ-PAY-017). R-86's
+"64 B with explicit padding" (12 × f32 = 48 B plus 16 B declared padding) is the f32 instantiation. The f64 and
+DoubleF64 sizes and padding are not given by the corpus; they join REQ-PAY-087's definition, which TASK-M0-14 writes
+into generation-root §3.6 for the physics reviewer to approve (R-72). `E₀ = K₀ + V₀` is then formed at `Real` width on
+every path. TASK-M0-14 (PR #96) makes `ICDescriptor` generic with a layout row per precision; REQ-PAY-017 stays closed
+by TASK-M0-14. PR #96's §1 sentence "`ICDescriptor` [is] not generic" is superseded. RQ-185 was filed in PR #101.
+
+## R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"RQ-184: accept rustc-check-cfg for spirv in crates/kernel/build.rs (no blanket allow)."
+
+*Applied:* this is the ruling R-197 asks for to change lint configuration. `crates/kernel/build.rs` declares
+`cargo::rustc-check-cfg=cfg(target_arch, values("spirv"))`, naming one expected value and leaving `unexpected_cfgs` on
+for every other cfg. No `#[allow(unexpected_cfgs)]` or `#![allow(unexpected_cfgs)]` is used for it, at any scope.
+RQ-184 was filed in PR #101.
+
+## R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*
+*1 Oct 2026 · applied in generation-root §3.7, REQ-REF-052 (new), TASK-M0-11 and TASK-M5-01*
+
+"RQ-183: n_unresolved is u16, like valid_sample_count."
+
+*Applied:* §3.7's temporal-accumulators table gains the row `n_unresolved` (u16), the latch's verdict (R-142): the
+count of the quad's unresolved footprints, latched ones included, at most N² as `valid_sample_count` is. TASK-M0-11's
+ledger member list (R-306) types it u16; TASK-M5-01 builds it into the struct (REQ-REF-052). RQ-183 was filed on PR
+#99's branch (`task/TASK-M0-11`); it is archived from there, and #99's own REVIEW_QUEUE.md copy goes when #99 next
+merges `main`.
+
+## R-316 — #96's `closure_min` widening with `Real` stands
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"#96: closure_min widening with Real stands."
+
+*Applied:* PR #96's "Applied per R-204 — veto?" item stands: `closure_min` widens with `Real` (f64 at f64), so a
+persisted and resumed `SimState` keeps the running minimum at the march's own width (the physics reviewer's resume
+argument). REQ-PAY-087's definition in dd_simstate_payload §1 carries it.
+
+## R-317 — #98's `f16` restriction stands; `f16` is storage-only
+*1 Oct 2026 · applied in generation-root §3.8, REQ-GEN-030 and TASK-M5-01*
+
+"#98: the f16 restriction (packed 16-bit locations only) stands. f16 arithmetic in WGSL is optional in WebGPU, so f16
+stays storage-only."
+
+*Applied:* R-312's reading stands: `f16` is a type for a packed 16-bit location only, not a `scalar-index` type or a
+`vector` component type (PR #98, merged as 2ade719). `f16` is storage-only: a generated read accessor widens it to f32
+(`unpack2x16float`, core WGSL), and no generated code does arithmetic in binary16 or needs WGSL's optional
+`shader-f16` feature (`enable f16`). §3.8 says so beside R-312's paragraph, and REQ-GEN-030 checks it.
+
+## R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*
+*Amended by R-322.*
+*Still in force: JCS (RFC 8785) — sorted keys, its number format, its test vectors; −0.0 written `0`; R-322 replaces
+the per-value reading of "integers beyond 2^53" with a per-field rule.*
+*1 Oct 2026 · applied in gui_state_contract §2, telemetry §5, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
+
+"#100: the canonical serialisation is JCS (RFC 8785): sorted keys and its number format, using its test vectors. −0.0
+serialises as 0 (accepted). Integers beyond 2^53 (e.g. seeds) serialise as strings. Supersedes #100's bespoke number
+rules."
+
+*Applied:* `SimConfig` and `RenderState` serialise as RFC 8785 JSON Canonicalization Scheme text: object members sorted
+by their names' UTF-16 code units (RFC 8785 §3.2.3), no insignificant whitespace, strings escaped as §3.2.2.2 gives,
+and numbers in its format (ECMAScript's Number-to-String, §3.2.2.3). RFC 8785's published test vectors are the
+acceptance test. −0.0 is written `0`, as JCS writes it. An integer whose magnitude exceeds 2^53 (a seed, say) is
+written as a JSON string of its decimal digits. REQ-TOOL-145 becomes the ruled definition, so it is no longer a
+definition TASK-M0-18 writes or the physics reviewer approves (REQ-TOOL-119's still is). PR #100's own key order (UTF-8
+bytes) and number layout (ryu, positional for exponents −5 to 15) are superseded; for its ASCII keys the order is the
+same. R-309's other text stands. *Applied per R-204, then ruled by R-322:* "integers beyond 2^53" was first read per
+value (an integer field writing a number when |n| ≤ 2^53 and a string above it); R-322 rules it per field instead: a
+u64 field is always a string, every other number a number.
+
+## R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*
+*Amended by R-321.*
+*Replaced in part by R-321 (its release behaviour).*
+*Still in force: PR #99's item 8 stays vetoed (no input yields "the last cell" as a fallback); each input is
+`debug_assert!`-ed. R-321 replaces the release behaviour: the functions are total, each input masked to 2 bits.*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
+
+"#99 item 8 vetoed: an out-of-range input to the continuation tables is a debug_assert! failure; in release it returns 3
+("invalid", R-307), never the last cell."
+
+*Applied:* PR #99's item 8 (an input past the last code returns the last cell) is vetoed. Each generated
+continuation-table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) checks its
+inputs with `debug_assert!`; a release build given an out-of-range input returns 3, never a table cell. Payload §3
+states it beside R-307's table, and REQ-PAY-016 tests both builds. *Applied per R-204 — veto?:* the ruling calls 3
+"invalid" (R-307), which holds for `continuation_index` only; symbol codes are a=0, A=1, b=2, B=3 (payload §3), so 3
+from `inverse`, `continuation_symbol` or `predecessor_symbol` is the valid symbol `B`. Flagged to the human, who ruled
+R-321: the functions are total (each input `debug_assert!`-ed < 4, then masked `& 3`), replacing this release
+behaviour for all four.
+
+## R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
+*1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 (new) and TASK-M0-14 (PR #96)*
+
+"R-285 amended: cache the rust-gpu build (~/.cache/rust-gpu), keyed on the pinned toolchain version."
+
+*Applied:* every CI job that builds the kernel restores and saves `~/.cache/rust-gpu` under a key naming the pinned
+toolchain version (`rust-toolchain.toml`'s channel), so a toolchain bump starts a fresh cache. The rest of R-285 stands.
+TASK-M0-14 (PR #96), which brings kernel builds into CI, makes the change (REQ-SYS-075).
+
+## R-321 — The continuation-table functions are total: each input is debug-asserted < 4, then masked to 2 bits *(amends R-319)*
+*Amended by R-324.*
+*Still in force: the four functions are total in Rust and WGSL; each symbol input is `debug_assert!`-ed < 4, then
+masked `& 3`; `continuation_index` returns 3 only for its inverse cells (R-307). R-324 sets the digit argument's rule.*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
+
+"R-319 amended (R-321): the continuation-table functions are total. Each input is debug_assert!-ed to be < 4, then
+masked to 2 bits (& 3), in Rust and WGSL, so no out-of-range return value exists and nothing is unspecified.
+continuation_index returns 3 only for its genuine invalid cells (the inverse cases, R-307). This replaces R-319's
+release behaviour for all four functions."
+
+*Applied:* each generated table function (`inverse`, `continuation_symbol`, `predecessor_symbol`,
+`continuation_index`), in Rust and in WGSL, `debug_assert!`s each input < 4 (Rust; WGSL has no `debug_assert!`) and
+then reads the table at `input & 3`. A release build, and WGSL, given an input ≥ 4 return the cell at `input & 3`;
+there is no separate out-of-range value. `continuation_index` returns 3 only for its four inverse cells (R-307).
+R-319's release behaviour (return 3) is replaced for all four; its `debug_assert!` and its veto of #99's item 8 stand.
+Payload §3, REQ-PAY-016, TASK-M0-11's `continuation_table_out_of_range` and TASK-M0-13's
+`continuation_table_wgsl_out_of_range` follow. *Flagged to the human:* the digit argument of
+`continuation_symbol` and `predecessor_symbol` is defined for 0–2 (payload §3); "< 4, then masked & 3" leaves a digit of
+3, for which the tables have no row. Ruled by R-324: the digit is `debug_assert!`-ed < 3, then clamped with `min(d, 2)`.
+
+## R-322 — R-318's integers rule is per field: u64 fields are always strings *(amends R-318)*
+*1 Oct 2026 · applied in gui_state_contract §2, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
+
+"R-318's integers rule is per field (R-322): u64 fields (e.g. seeds) always serialise as strings; all other numbers as
+numbers. A field's type never depends on its value."
+
+*Applied:* in the canonical serialisation (JCS, R-318), a field of type u64 (a seed, say) is always written as a JSON
+string of its decimal digits, whatever its value; every other numeric field is written as a JSON number in JCS's
+format. R-318's per-value reading (number up to 2^53, string above) is replaced. gui_state_contract §2, REQ-TOOL-145
+and TASK-M0-18's `canonical_jcs` line follow (a u64 field of 0 and of 2^53 + 1 both write strings; another integer
+field writes a number).
+
+## R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
+*1 Oct 2026 · applied in REQ-TOOL-119 and TASK-M0-18 (PR #100)*
+
+"#100's physics findings accepted: the regression threshold compares exactly (100 → 107 at --threshold 7% is not a
+regression; add that test); a NEW trace with no frames exits 2; a cut-off trace prints "session incomplete" with the
+dropped bytes (as R-298)."
+
+*Applied:* REQ-TOOL-119's definition, which TASK-M0-18 writes into render_gui_spec § "Profiler" (PR #100; not yet on
+`main`), gains three rules. (1) A scope regresses when its NEW p95 exceeds its BASE p95 by more than P%, compared
+exactly, not by rounded floating-point arithmetic: 100 → 107 at `--threshold 7%` is not a regression, and that case is
+tested. (2) A NEW trace with no frame records exits 2, as an unreadable file does. (3) A cut-off or incomplete trace
+prints "session incomplete" and the bytes dropped. The ruling cites R-298, which makes a trace with no summary line
+valid; the dropped-bytes count is R-299's (the reader drops a cut-off final line and says how many bytes it dropped),
+so both apply. *Confirmed by the human* (a later message, 1 Oct 2026): "What matters is the behaviour, and that's unchanged: a
+cut-off trace is reported as "session incomplete" with its dropped bytes, never silently compared over fewer frames."
+So an incomplete NEW is compared and sets the exit code as usual, always with the "session incomplete" notice and the
+dropped bytes, never silently. On the citation, the human wrote: "Right, thanks for catching it. Apply R-299." R-298
+gives the incomplete session; R-299 gives the dropped bytes. REQ-TOOL-119's
+verify detail and TASK-M0-18's `profile_diff` line follow; physics still approves the written definition (R-72).
+
+## R-324 — The digit argument of `continuation_symbol` and `predecessor_symbol` is debug-asserted < 3, then clamped with `min(d, 2)` *(completes R-321)*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
+
+"Digit 3 in continuation_symbol and predecessor_symbol (R-324, completing R-321): the digit is debug_assert!-ed to be
+< 3, then clamped with min(d, 2), in Rust and WGSL. Total and branch-free, no new table row. The debug assertion is the
+protection; the clamp only keeps release builds well-defined."
+
+*Applied:* in Rust and WGSL, `continuation_symbol` and `predecessor_symbol` read their digit argument as `min(d, 2)`;
+a Rust debug build given a digit ≥ 3 fails a `debug_assert!` first (WGSL has none). A release build, and WGSL, given a
+digit ≥ 3 read the digit-2 row. Their symbol argument keeps R-321's rule (`debug_assert!` < 4, then `& 3`). No table
+row is added. Payload §3, REQ-PAY-016, TASK-M0-11's `continuation_table_out_of_range` and TASK-M0-13's
+`continuation_table_wgsl_out_of_range` follow.

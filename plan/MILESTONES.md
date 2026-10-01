@@ -70,7 +70,7 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 108 requirements** (and every earlier gate still green):
+**Exit gate — 109 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (11): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029
@@ -78,7 +78,7 @@ requirement, the logH falsification check of the re-registration mechanism.
 - RENDER (2): REQ-RENDER-001…002
 - TOOL (18): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145
 - VAL (34): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176
-- SYS (20): REQ-SYS-001…008, REQ-SYS-063…074
+- SYS (21): REQ-SYS-001…008, REQ-SYS-063…075
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -215,7 +215,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 162 requirements** (and every earlier gate still green):
+**Exit gate — 163 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -224,7 +224,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - PAY (16): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089
 - GEN (2): REQ-GEN-017, REQ-GEN-030
 - SCHED (49): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088
-- REF (11): REQ-REF-001…010, REQ-REF-045
+- REF (12): REQ-REF-001…010, REQ-REF-045, REQ-REF-052
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009

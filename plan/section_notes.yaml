@@ -675,3 +675,11 @@
   section: 'R-311 — #97''s "veto?" items stand; #97 merges once CI is green and its reviewer is done'
   reason: informative only
   note: accepts PR #97's veto items and records its merge; changes no requirement
+- file: decisions.md
+  section: "R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*"
+  reason: informative only
+  note: the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR #96); changes no requirement
+- file: decisions.md
+  section: "R-316 — #96's `closure_min` widening with `Real` stands"
+  reason: informative only
+  note: accepts PR #96's veto item; carried by REQ-PAY-087's definition in dd_simstate_payload §1; changes no requirement

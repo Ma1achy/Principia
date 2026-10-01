@@ -167,6 +167,11 @@ Terminal latch: on termination the whole block freezes (state stops advancing, a
 **64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
 implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
 
+**`ICDescriptor` follows `Real` (R-313).** Its twelve float fields have the width of `Real`, as `SimState`'s widening
+fields do (dd_simstate_payload §1), so the payload is a function of `Real` throughout (REQ-PAY-017). The 64 B above is
+the **f32 instantiation**. The f64 and DoubleF64 sizes and declared padding are part of REQ-PAY-087's definition,
+written here by the task that makes the descriptor generic (R-72).
+
 ### 3.7 `QuadReduction` — completed ledger
 
 **Status: complete.** The earlier instruction (to transcribe the remaining members verbatim from an older source) was
@@ -337,6 +342,7 @@ Four properties of this block, all measured:
 |---|---|---|
 | `running_mean_divergence` | f32 | diagnostic, not a split input (R-99) |
 | `first_divergence_t` | f32 | write-once; sentinel until crossed; diagnostic, not a split input (R-99) |
+| `n_unresolved` | u16 | the latch's verdict (R-142, below): the count of the quad's unresolved footprints, latched ones included; at most N², as `valid_sample_count` (R-315). A count, not an accumulator |
 
 **The latch is per footprint, not a `QuadReduction` member (R-99).** `running_max_divergence` (f32, max-updated,
 **latching**) is held per footprint with the resident quad, and goes when the cache evicts or merges the quad, so it
@@ -433,6 +439,10 @@ and `f32` exactly 32, with no range-against-width test; any other non-integer ty
 sharing a 32-bit word. `f16` follows R-248's rules as `f16-pair` does: exactly 16 bits, a declared range within
 ±65504, and an unbounded end allowed only when the entry states `overflow`. It is a type for a packed 16-bit
 location only: not a `scalar-index` location, and not a `vector` component type.
+
+**`f16` is storage-only (R-317).** f16 arithmetic in WGSL is optional in WebGPU (the `shader-f16` feature), so no
+generated code computes in binary16: a read accessor widens an `f16` value to f32 (`unpack2x16float`, core WGSL), and
+no generated WGSL declares `enable f16` or an `f16`-typed value.
 
 `floor` (R-263) names the sim-key parameter a log-magnitude or diverging view floors at: `eps_E` on `energy_drift`,
 `eps_L` on `Lz_drift` (§3.4). The parameter is the same for every sample, so it is named, not stored, and it is
