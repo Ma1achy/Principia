@@ -1058,7 +1058,7 @@ fn qa_m017_writer_refuses_what_v1_excludes() {
             "an infinite GPU pass ms",
         ),
         (
-            Box::new(|t| t.header.precision.f64_rate = Some(f64::NAN)),
+            Box::new(|t| t.header.precision.as_mut().unwrap().f64_rate = Some(f64::NAN)),
             "a NaN f64_rate",
         ),
         (
