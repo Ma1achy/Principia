@@ -4,6 +4,15 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
+# The rust-gpu standard library: the `#[spirv]` attributes and glam's vector types, for both builds (canonical_spec §1
+# item 2).
+[dependencies]
+# Exact: its version is the rust-gpu release cargo-gpu builds the backend from, 0.10.0-alpha.1, whose backend builds
+# on the pinned nightly (R-169); a caret requirement also admits 0.10.0, which needs another nightly.
+spirv-std = "=0.10.0-alpha.1"
+# Cargo.lock holds spirv-std's glam (">=0.30.8") at 0.32: glam 0.33 puts its integer vectors, spirv-std's `UVec3` among
+# them, behind features spirv-std does not enable on the SPIR-V target, so `cargo xtask build-kernel` fails on it.
+
 # systems_architecture §7.1: kernel -> ledger is a build-dependency only (R-185).
 [build-dependencies]
 ledger = { path = "../ledger" }

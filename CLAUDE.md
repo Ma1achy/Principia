@@ -19,6 +19,9 @@ Read this first; each rule points at its source.
 - The PR shows every acceptance command the task lists, with its output. Benchmarks run on the human's Mac (R-186).
 - The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, away mode, resources, and what a
   Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346).
+- Never delete or modify anything outside the repo and its build and scratch directories without asking the human
+  first, caches included: `~/.cargo`, `~/.rustup`, the rust-gpu cache, the Actions caches
+  (R-349; the list is applied per R-204, accepted by R-352).
 
 ## The main session orchestrates; it never implements or reviews
 - The roles are subagents in `.claude/agents/`: `implementer`, `code-reviewer`, `qa-reviewer`, `physics-reviewer`,

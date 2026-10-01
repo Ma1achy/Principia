@@ -144,6 +144,10 @@ fn operand(s: &str, state: &State) -> String {
     if s == "github.event_name" {
         return "pull_request".to_owned();
     }
+    // A pull request's run is on its merge ref, never `refs/heads/main`, so a cache save (R-326) does not run.
+    if s == "github.ref" {
+        return "refs/pull/1/merge".to_owned();
+    }
     let parts: Vec<&str> = s.split('.').collect();
     match parts.as_slice() {
         ["steps", id, "outcome"] => state

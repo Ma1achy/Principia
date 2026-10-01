@@ -11,6 +11,8 @@ use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-PAY-001: ICDescriptor is 64 B, its twelve §3.6 f32 fields then 16 B of declared padding, and E₀ is not stored.
+// R-313 amends §3.6: the fields follow `Real`, `_pad` is 16 B at every width, and the declared `_tail` follows it,
+// empty at each row; at f32 the struct has fourteen members and is 64 B.
 
 /// Generation-root §3.6's twelve fields, in its order.
 const IC_FIELDS: [&str; 12] = [
@@ -37,25 +39,44 @@ fn debug_members(debug: &str) -> Vec<String> {
         .collect()
 }
 
-/// The struct's members are §3.6's twelve fields in order and exactly one more, the declared padding, which is not an
-/// energy; each field is a 4-byte f32 at `4·i`; the padding fills bytes 48..64, and the struct is 64 B.
-fn check_icdescriptor(members: &[String], offsets: &[usize], pad: (usize, usize), size: usize) {
+/// Whether a member name is a stored E₀: `E0`, `E_0`, `e0`, or any name containing "energy".
+fn stores_energy(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    (lower.starts_with('e') && lower.contains('0')) || lower.contains("energy")
+}
+
+/// The struct's members are §3.6's twelve fields in order, then exactly two more, `_pad` and `_tail`, the declared
+/// padding, neither an energy (R-86, R-313); each field is a 4-byte f32 at `4·i`; `_pad` fills bytes 48..64; `_tail`
+/// is empty at f32, at byte 64; and the struct is 64 B.
+fn check_icdescriptor(
+    members: &[String],
+    offsets: &[usize],
+    pad: (usize, usize),
+    tail: (usize, usize),
+    size: usize,
+) {
     assert_eq!(size, 64, "size_of::<ICDescriptor>() is 64 B (R-86)");
     assert_eq!(
         members.len(),
-        13,
-        "ICDescriptor has §3.6's twelve fields and one padding member, nothing else: {members:?}"
+        14,
+        "ICDescriptor has §3.6's twelve fields and two declared padding members, `_pad` and `_tail`, nothing else: \
+         {members:?}"
     );
     assert_eq!(
         &members[..12],
         IC_FIELDS.map(str::to_owned).as_slice(),
         "ICDescriptor's fields are §3.6's, in its order"
     );
-    let pad_name = &members[12];
-    let lower = pad_name.to_lowercase();
-    assert!(
-        !(lower.starts_with('e') && lower.contains('0')) && !lower.contains("energy"),
-        "ICDescriptor stores E₀ as `{pad_name}`; it is derived as K₀ + V₀ (R-86)"
+    for name in &members[12..] {
+        assert!(
+            !stores_energy(name),
+            "ICDescriptor stores E₀ as `{name}`; it is derived as K₀ + V₀ (R-86)"
+        );
+    }
+    assert_eq!(
+        &members[12..],
+        ["_pad", "_tail"].map(str::to_owned).as_slice(),
+        "ICDescriptor's declared padding is §3.6's `_pad` then `_tail` (R-313)"
     );
     for (i, (&o, name)) in offsets.iter().zip(IC_FIELDS).enumerate() {
         assert_eq!(o, 4 * i, "`{name}` sits at byte {}", 4 * i);
@@ -64,6 +85,11 @@ fn check_icdescriptor(members: &[String], offsets: &[usize], pad: (usize, usize)
         pad,
         (48, 16),
         "the declared padding fills bytes 48..64, so no byte of the 64 is implicit"
+    );
+    assert_eq!(
+        tail,
+        (64, 0),
+        "the declared `_tail` is empty at f32, at byte 64 (§3.6, R-313)"
     );
 }
 
@@ -87,6 +113,11 @@ fn ic_offsets() -> Vec<usize> {
 fn ic_pad() -> (usize, usize) {
     let d = ICDescriptor::default();
     (offset_of!(ICDescriptor, _pad), size_of_val_of(&d._pad))
+}
+
+fn ic_tail() -> (usize, usize) {
+    let d = ICDescriptor::default();
+    (offset_of!(ICDescriptor, _tail), size_of_val_of(&d._tail))
 }
 
 fn size_of_val_of<T>(v: &T) -> usize {
@@ -120,28 +151,40 @@ fn qa_payload_sizes_icdescriptor_members_are_section_3_6_and_declared_padding() 
         "ICDescriptor: {} B, members {members:?}",
         size_of::<ICDescriptor>()
     );
-    check_icdescriptor(&members, &ic_offsets(), ic_pad(), size_of::<ICDescriptor>());
+    check_icdescriptor(
+        &members,
+        &ic_offsets(),
+        ic_pad(),
+        ic_tail(),
+        size_of::<ICDescriptor>(),
+    );
 }
 
 negative_control!(
     qa_payload_sizes_icdescriptor_members_are_section_3_6_and_declared_padding,
     "an ICDescriptor with a stored E_0 member beside its padding must fail the member check",
-    expected = "ICDescriptor has §3.6's twelve fields and one padding member, nothing else",
+    expected = "ICDescriptor has §3.6's twelve fields and two declared padding members, `_pad` and `_tail`, nothing else",
     {
         let mut members = ic_members();
         members.insert(12, "E_0".to_owned());
-        check_icdescriptor(&members, &ic_offsets(), ic_pad(), size_of::<ICDescriptor>())
+        check_icdescriptor(&members, &ic_offsets(), ic_pad(), ic_tail(), size_of::<ICDescriptor>())
     }
 );
 
 negative_control!(
     qa_payload_sizes_icdescriptor_e0_in_place_of_padding,
-    "an ICDescriptor whose 16 B tail is an `E0` member, not padding, must fail the E₀ check",
+    "an ICDescriptor whose 16 B `_pad` is an `E0` member, not padding, must fail the E₀ check",
     expected = "ICDescriptor stores E₀ as `E0`",
     {
         let mut members = ic_members();
         members[12] = "E0".to_owned();
-        check_icdescriptor(&members, &ic_offsets(), ic_pad(), size_of::<ICDescriptor>())
+        check_icdescriptor(
+            &members,
+            &ic_offsets(),
+            ic_pad(),
+            ic_tail(),
+            size_of::<ICDescriptor>(),
+        )
     }
 );
 
@@ -149,7 +192,48 @@ negative_control!(
     qa_payload_sizes_icdescriptor_implicit_tail,
     "a 12-byte padding member at 48 leaves 4 implicit bytes and must fail the padding check",
     expected = "the declared padding fills bytes 48..64",
-    check_icdescriptor(&ic_members(), &ic_offsets(), (48, 12), 64)
+    check_icdescriptor(&ic_members(), &ic_offsets(), (48, 12), ic_tail(), 64)
+);
+
+negative_control!(
+    qa_payload_sizes_icdescriptor_e0_in_place_of_tail,
+    "an ICDescriptor whose `_tail` is an `E_0` member, not padding, must fail the E₀ check",
+    expected = "ICDescriptor stores E₀ as `E_0`",
+    {
+        let mut members = ic_members();
+        members[13] = "E_0".to_owned();
+        check_icdescriptor(
+            &members,
+            &ic_offsets(),
+            ic_pad(),
+            ic_tail(),
+            size_of::<ICDescriptor>(),
+        )
+    }
+);
+
+negative_control!(
+    qa_payload_sizes_icdescriptor_padding_misnamed,
+    "an ICDescriptor whose second padding member is not §3.6's `_tail` must fail the name check",
+    expected = "ICDescriptor's declared padding is §3.6's `_pad` then `_tail`",
+    {
+        let mut members = ic_members();
+        members[13] = "_reserved".to_owned();
+        check_icdescriptor(
+            &members,
+            &ic_offsets(),
+            ic_pad(),
+            ic_tail(),
+            size_of::<ICDescriptor>(),
+        )
+    }
+);
+
+negative_control!(
+    qa_payload_sizes_icdescriptor_nonempty_tail,
+    "a 4-byte `_tail` at f32 is tail padding §3.6 says is empty there, and must fail the tail check",
+    expected = "the declared `_tail` is empty at f32",
+    check_icdescriptor(&ic_members(), &ic_offsets(), ic_pad(), (64, 4), 64)
 );
 
 // ---------------------------------------------------------------------------------------------------------------

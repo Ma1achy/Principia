@@ -44,20 +44,25 @@ fn check_fields(structs: &[Struct]) {
         rust::PATH
     ))
     .expect("read the generated file");
+    // A `SimState` struct is declared generic over the `Real`, its f32 members `R` and a declared tail closing it
+    // (dd_simstate_payload §1); the others as the ledger stores them.
     let expected: Vec<(String, Vec<String>)> = structs
         .iter()
         .map(|s| {
-            let fields = s
-                .members
-                .iter()
-                .map(|m| format!("{}: {},", m.name, m.storage.rust()))
+            let fields = rust::declared_members(s)
+                .into_iter()
+                .map(|m| format!("{m},"))
                 .collect();
-            (s.name.to_owned(), fields)
+            (rust::declared_name(s), fields)
         })
         .collect();
+    // `PayloadLayout`, the precision table's row type, is not a payload struct.
+    let on_disk: Vec<_> = parsed(&on_disk)
+        .into_iter()
+        .filter(|(name, _)| name != "PayloadLayout")
+        .collect();
     assert_eq!(
-        parsed(&on_disk),
-        expected,
+        on_disk, expected,
         "generated structs differ from the ledger's"
     );
     let found = rust::check(structs, &layout().words, &entries(), payload::PENDING);

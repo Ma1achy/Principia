@@ -521,7 +521,7 @@
 - file: decisions.md
   section: R-251 — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
   reason: informative only
-  note: size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12
+  note: "size and item acceptance for one PR; the hash rule is carried by generation-root §3.8 (PR #47) and TASK-M0-12"
 - file: decisions.md
   section: R-252 — The memory limit reads memory pressure, not swap *(amends R-239)*
   reason: informative only
@@ -529,7 +529,7 @@
 - file: decisions.md
   section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
   reason: informative only
-  note: rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR #54)
+  note: "rulings on RQ-157; the ports and their requirements land in TASK-M0-02 (PR #54)"
 - file: decisions.md
   section: R-262 — Builds move to the internal disk, three agents at most
   reason: informative only
@@ -550,7 +550,7 @@
 - file: decisions.md
   section: 'R-268 — The overnight "veto?" items stand; #70''s item 2 and #71''s items 1, 6 and 12 are accepted'
   reason: informative only
-  note: process ruling; it accepts veto items on PRs #70 and #71 and changes no requirement
+  note: "process ruling; it accepts veto items on PRs #70 and #71 and changes no requirement"
 - file: decisions.md
   section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
   reason: informative only
@@ -590,11 +590,11 @@
 - file: decisions.md
   section: "R-278 — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*"
   reason: informative only
-  note: applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register and REQ-PAY-092
+  note: "applied in TASK-M0-10 (PR #78): dd_generation_root §3.8, the constants register and REQ-PAY-092"
 - file: decisions.md
   section: "R-279 — A fixture type is a fixture source set; `xtask` is one *(TASK-M0-33, veto item 11)*"
   reason: informative only
-  note: applied in TASK-M0-33 (PR #74, merged)
+  note: "applied in TASK-M0-33 (PR #74, merged)"
 - file: decisions.md
   section: "R-280 — An unset `d_min` renders in the neutral \"not yet\" grey *(closes RQ-170)*"
   reason: informative only
@@ -602,11 +602,11 @@
 - file: decisions.md
   section: "R-281 — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part"
   reason: informative only
-  note: applied in TASK-M0-10 (PR #78) and REQ-PAY-092
+  note: "applied in TASK-M0-10 (PR #78) and REQ-PAY-092"
 - file: decisions.md
   section: "R-282 — TASK-M0-17's design items accepted"
   reason: informative only
-  note: applied in TASK-M0-17 (PR #79)
+  note: "applied in TASK-M0-17 (PR #79)"
 - file: decisions.md
   section: "R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges"
   reason: informative only
@@ -622,7 +622,7 @@
 - file: decisions.md
   section: "R-286 — Profiler traces are JSON Lines: the header, then one compact frame record per line"
   reason: informative only
-  note: applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18
+  note: "applied in telemetry §5 and TASK-M0-17 (PR #79), REQ-TOOL-120, REQ-TOOL-139 (new) and TASK-M0-18"
 - file: decisions.md
   section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
   reason: informative only
@@ -630,7 +630,7 @@
 - file: decisions.md
   section: "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
   reason: informative only
-  note: applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79)
+  note: "applied in telemetry §2 and TASK-M0-10 (PR #78), and TASK-M0-17 (PR #79)"
 - file: decisions.md
   section: "R-289 — Rulings reach agents only in the opening prompt of a fresh dispatch"
   reason: informative only
@@ -642,7 +642,7 @@
 - file: decisions.md
   section: "R-291 — TASK-M0-40's three veto items stand"
   reason: informative only
-  note: applied in TASK-M0-40 (PR #82)
+  note: "applied in TASK-M0-40 (PR #82)"
 - file: decisions.md
   section: "R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only"
   reason: informative only
@@ -658,39 +658,39 @@
 - file: decisions.md
   section: "R-300 — #78's items 11–13 are accepted; `DminCounters`' fields are private"
   reason: informative only
-  note: accepts PR #78's veto items on the CPU counters' API; applied in TASK-M0-10's code, under R-294's requirement
+  note: "accepts PR #78's veto items on the CPU counters' API; applied in TASK-M0-10's code, under R-294's requirement"
 - file: decisions.md
   section: 'R-304 — The "veto?" items on #78, #79, #89 and #90 stand'
   reason: informative only
-  note: process ruling; it accepts veto items on PRs #78, #79, #89 and #90 and changes no requirement
+  note: "process ruling; it accepts veto items on PRs #78, #79, #89 and #90 and changes no requirement"
 - file: decisions.md
   section: "R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`"
   reason: informative only
-  note: confirms PR #65's provisional REQ-VAL-149 pair and its veto items 10–13, and makes `mutants-check` a required check on main (a repository setting, plan/HUMAN_SETUP.md §2); REQ-VAL-148 already requires the per-PR job on every pull request, and TASK-M0-23 builds it
+  note: "confirms PR #65's provisional REQ-VAL-149 pair and its veto items 10–13, and makes `mutants-check` a required check on main (a repository setting, plan/HUMAN_SETUP.md §2); REQ-VAL-148 already requires the per-PR job on every pull request, and TASK-M0-23 builds it"
 - file: decisions.md
   section: 'R-310 — The "veto?" items on #94 and #95, and physics on TASK-M0-18, stand'
   reason: informative only
-  note: accepts PR #94's and PR #95's veto items and adds the physics reviewer to TASK-M0-18 (plan/tasks.yaml and the task file); changes no requirement
+  note: "accepts PR #94's and PR #95's veto items and adds the physics reviewer to TASK-M0-18 (plan/tasks.yaml and the task file); changes no requirement"
 - file: decisions.md
   section: 'R-311 — #97''s "veto?" items stand; #97 merges once CI is green and its reviewer is done'
   reason: informative only
-  note: accepts PR #97's veto items and records its merge; changes no requirement
+  note: "accepts PR #97's veto items and records its merge; changes no requirement"
 - file: decisions.md
   section: "R-314 — The `rustc-check-cfg` declaration for `spirv` in `crates/kernel/build.rs` is accepted *(closes RQ-184)*"
   reason: informative only
-  note: the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR #96); changes no requirement
+  note: "the lint-configuration ruling R-197 asks for; applied in TASK-M0-14's crates/kernel/build.rs (PR #96); changes no requirement"
 - file: decisions.md
   section: "R-316 — #96's `closure_min` widening with `Real` stands"
   reason: informative only
-  note: accepts PR #96's veto item; carried by REQ-PAY-087's definition in dd_simstate_payload §1; changes no requirement
+  note: "accepts PR #96's veto item; carried by REQ-PAY-087's definition in dd_simstate_payload §1; changes no requirement"
 - file: decisions.md
   section: "R-330 — #99's veto item 5 stands: §3.7's \"f16 × 2\" is `escape_time_min` and `escape_time_max`"
   reason: informative only
-  note: accepts PR #99's veto item and records its merge; changes no requirement
+  note: "accepts PR #99's veto item and records its merge; changes no requirement"
 - file: decisions.md
   section: "R-331 — #96's veto item 11 stands: `ICDescriptor`'s `_pad` keeps 16 B (64 / 112 / 208 B)"
   reason: informative only
-  note: accepts PR #96's veto item; carried by generation-root §3.6 under REQ-PAY-087 (R-313); changes no requirement
+  note: "accepts PR #96's veto item; carried by generation-root §3.6 under REQ-PAY-087 (R-313); changes no requirement"
 - file: decisions.md
   section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
   reason: informative only
@@ -702,11 +702,11 @@
 - file: decisions.md
   section: "R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*"
   reason: informative only
-  note: a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR #96); REQ-VAL-166 is unchanged; changes no requirement
+  note: "a named exception to R-290 for one qa file, applied in TASK-M0-14 (PR #96); REQ-VAL-166 is unchanged; changes no requirement"
 - file: decisions.md
   section: "R-338 — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*"
   reason: informative only
-  note: reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR #106; records #106's D1–D6 veto item as not vetoed; changes no requirement
+  note: "reads R-334's scope, applied in open-questions.md and plan/check_plan.py by PR #106; records #106's D1–D6 veto item as not vetoed; changes no requirement"
 - file: decisions.md
   section: R-345 — Merged branches are deleted, with their worktrees and target directories
   reason: informative only
@@ -719,3 +719,11 @@
   section: "R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*"
   reason: informative only
   note: process ruling; accepts R-346's applied-per-R-204 items and changes how scripts/cloud-setup.sh installs cargo-nextest and cargo-mutants (prebuilt, with a cargo install --locked fallback), checked by xtask/tests/cloud_setup.rs and recorded in plan/OPERATIONS.md; changes no requirement
+- file: decisions.md
+  section: R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+  reason: informative only
+  note: process ruling; agents ask the human before deleting or modifying anything outside the repository and its build and scratch directories, caches included (recorded in CLAUDE.md and plan/OPERATIONS.md); changes no requirement
+- file: decisions.md
+  section: "R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`"
+  reason: informative only
+  note: "accepts PR #96's (TASK-M0-14) items applied per R-204, the exact rust-gpu backend pin among them; changes no requirement"

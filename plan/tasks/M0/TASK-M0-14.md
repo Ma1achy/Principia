@@ -81,3 +81,6 @@
   R-336 — the CI overrun this PR measured is accepted here; the sharding and the splits of the long tests are
   TASK-M0-45's, after this merges. R-337 — the PR-only workflows restore, read-only, keys `ci.yml` saves on `main`,
   and their false comments are corrected; made here, with R-326's change.
+- R-350 (1 Oct): #96's veto items all stand: its list's items 3, 4, 5, 7, 8, 9, 10 and 12, the two rust-cache items of
+  its R-337 pass, the exact rust-gpu pin (3e2ba72), with the backend built from `xtask/rust-gpu-backend.lock`, and
+  86741e9's byte-for-byte check of a cached backend's lockfile against it.

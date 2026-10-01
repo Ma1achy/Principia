@@ -1,6 +1,7 @@
 //! `cargo xtask ci` — the single per-push entry point (R-177). Every later per-commit runner (plan-check,
-//! controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl) registers in [`RUNNERS`]; `ci` runs them in
-//! registration order.
+//! build-kernel, controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl) registers in [`RUNNERS`]; `ci`
+//! runs them in registration order. build-kernel runs before controls, whose `toolchain_trivial_kernel` control
+//! dispatches the WGSL it writes.
 //! `cargo xtask ci --list` runs each runner's listing-only form instead, which runs no control (R-235).
 
 /// A runner's check, or its listing-only form; `Err` carries the failure message.
@@ -22,6 +23,11 @@ pub const RUNNERS: &[Runner] = &[
         name: "plan-check",
         run: plan_check,
         list: plan_check,
+    },
+    Runner {
+        name: "build-kernel",
+        run: build_kernel,
+        list: build_kernel_list,
     },
     Runner {
         name: "controls",
@@ -63,6 +69,22 @@ fn gate() -> Result<(), String> {
 /// `cargo xtask gate --list` on this workspace: the gates listed, none run (R-235).
 fn gate_list() -> Result<(), String> {
     crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::List)
+}
+
+/// `cargo xtask build-kernel` on this workspace, as a process of its own: `crates/kernel` to SPIR-V and WGSL
+/// (canonical_spec §1 item 2).
+fn build_kernel() -> Result<(), String> {
+    crate::build_kernel::run_in_ci(&crate::workspace_manifest())
+}
+
+/// build-kernel's listing-only form: the two files it writes, built by none (R-235).
+fn build_kernel_list() -> Result<(), String> {
+    println!(
+        "build-kernel: would write {} and {}",
+        crate::build_kernel::SPV,
+        crate::build_kernel::WGSL
+    );
+    Ok(())
 }
 
 /// `cargo xtask plan-check` on this repo; it runs no control, so it is its own listing-only form (R-235).

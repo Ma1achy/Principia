@@ -4031,3 +4031,207 @@ stands, rustup, pip and the required `git`, `curl` and `cc` as written, except f
 its installer's current release is used. A cargo tool CI adds later other than these two is built with
 `cargo install --locked`, as item 1 had it. RQ-190 moves to `docs/archive/review_queue/M0.md`. Process only
 (section_notes); no requirement changes.
+
+## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
+*Amended by R-352.*
+*Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on
+macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps.*
+*1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
+
+The human's message of 1 Oct 2026 numbered its first two rulings R-347 and R-348. R-347 was already taken (it closes
+RQ-190), so the message's four rulings are recorded here as R-348 to R-351, in the message's order (R-278). Applied per
+R-204, accepted by R-352.
+
+"R-347: mutants runs get two caps: a per-mutant timeout via cargo-mutants' timeout setting (a hang is recorded as a
+timeout, not a dead shard), and a per-process memory cap on test processes (ulimit -v or prlimit) so a runaway
+allocation kills one test, not the runner. The values are calibration requirements (R-71)."
+
+*Applied:* every `cargo mutants` run, the per-PR shards (`mutants.yml`, REQ-VAL-148, R-302), the nightly full run
+(REQ-VAL-150) and a run made locally (`plan/OPERATIONS.md` § "Reviewers"), runs under two caps:
+- **A per-mutant timeout,** set through cargo-mutants' timeout setting. A mutant whose tests hang past it is recorded
+  in the run's `outcomes.json` as a timeout, and the shard goes on to its next mutant and finishes, rather than hanging
+  until R-302's per-shard limit cuts it off. `cargo xtask mutants-check` already lists a timed-out mutant as "timed out
+  (not a survivor)" (R-202).
+- **A per-process memory cap on the test processes,** set with `ulimit -v` or `prlimit`, so a mutant that allocates
+  without bound kills its own test process, not cargo-mutants or the runner. A test the cap kills fails, as any
+  failing test does; the unmutated baseline runs under the same cap.
+- **The values** are calibration requirements (R-71): REQ-VAL-180, the per-mutant timeout, and REQ-VAL-181, the
+  per-process memory cap. The task that needs them proposes each with its evidence, CI uses it provisionally (R-182),
+  and the human confirms it at the M0 gate. REQ-VAL-179 (new, M0) carries the caps themselves. A new task, TASK-M0-49,
+  closes all three, with the code and qa reviewers.
+
+*Applied per R-204, accepted by R-352:*
+- REQ-VAL-179 is a requirement for the caps beside the two calibrations, so that the caps are checked as well as
+  valued, as R-342's REQ-VAL-178 carries its rule.
+- TASK-M0-49 depends on TASK-M0-14 (PR #96), which rewrites `mutants.yml`'s toolchain, cache and kernel-build steps:
+  the caps are written and measured on the workflow as #96 leaves it, and the two PRs don't clash.
+- The nightly full run does not exist yet: TASK-M0-19 writes it. TASK-M0-19 now depends on TASK-M0-49, and its
+  nightly run applies the same two caps at the same values, read from the one place TASK-M0-49 keeps them.
+- **Local runs too.** The human's words say "mutants runs", not CI's alone, so a local run, which
+  `plan/OPERATIONS.md` allows when one has to run, uses the same caps at the same values, read from the same place.
+  macOS is not known to enforce `ulimit -v` (RLIMIT_AS) and has no `prlimit`, so on the Mac a local run gets the
+  timeout only, and CI's Linux runners enforce both caps (R-352); TASK-M0-49's PR says how a local run applies each
+  cap.
+
+## R-349 — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
+*1 Oct 2026 · applied in CLAUDE.md § "How work runs" and `plan/OPERATIONS.md` § "Resources"*
+
+"R-348: agents never delete or modify anything outside the repo and its build/scratch directories without asking
+first, caches included. Add it to CLAUDE.md and OPERATIONS.md."
+
+*Applied:* an agent, the orchestrator included, asks the human before it deletes or modifies anything outside the
+repository and its build and scratch directories, and caches are no exception. CLAUDE.md § "How work runs" and
+`plan/OPERATIONS.md` § "Resources" ("Cleaning disk") say so. Numbered R-349: the human numbered it R-348, which this
+message's first ruling now holds (R-348's note).
+
+*Applied per R-204, accepted by R-352:* how the rule is read where the words leave it open.
+- **Inside:** the repository's checkouts (the main checkout and every worktree), their target directories (the
+  seed's and a mutants run's `<target>-mutants` among them) and the session's scratch directory. Everything else is
+  outside: among the caches, `~/.cargo` (its registry, git checkouts and installed tools), `~/.rustup`, the rust-gpu
+  cache (`~/.cache/rust-gpu`, `~/Library/Caches/rust-gpu` on the Mac) and the repository's Actions caches on GitHub;
+  and the system temp folder outside the scratch directory, the shell's and git's configuration, and the external
+  SSD's folders.
+- **What `plan/OPERATIONS.md` names as the orchestrator's** is inside wherever it lives: the away-mode log on the Mac
+  (`/Users/malachy/principia-ssd/overnight-log.md`, § "Logs"). The SSD's other folders, the human's own, stay
+  outside.
+- **A build's own cache writes** are part of running the build, not an agent's change: cargo filling its registry,
+  rustup installing the toolchain `rust-toolchain.toml` pins, and `cargo xtask build-kernel` building rust-gpu's
+  backend in cargo-gpu's cache (R-350). An agent's own deletion or edit of a cache asks first, such as emptying the
+  rust-gpu cache for a cold run, as PR #96's cold check did, clearing `~/.cargo`, removing a toolchain, or deleting an
+  Actions cache entry.
+- **What a build, test or tool writes in its normal course** outside the repository is part of running it, like a
+  build's cache writes: the files and folders tests and tools make through `std::env::temp_dir()` (as
+  `xtask/tests/deps.rs`, `xtask/src/deps.rs`, `crates/validation/src/spawn.rs` and `crates/prin/src/profile/diff.rs`
+  do), and cargo-mutants' temporary copy of the tree. An agent's own deletion or edit there asks first.
+- **`scripts/cloud-setup.sh`** installs toolchains, apt and pip packages and cargo tools outside the repository. A
+  cloud session runs it as R-346 and R-347 order, which is the asking for what it installs; anything it does beyond
+  them asks first.
+
+## R-350 — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
+*1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
+
+"#96's veto items all stand, including the exact rust-gpu pin with the backend built from
+xtask/rust-gpu-backend.lock."
+
+*Applied:* every item PR #96 (TASK-M0-14) applied per R-204 and left open stands as the PR wrote it, and loses its
+"veto?" mark. Items 1, 2, 6 and 11 of its list were ruled before: R-313, R-316, R-314 and R-331.
+- **The list's items 3, 4, 5, 7, 8, 9, 10 and 12:** declared tail padding (`_tail: [u32; n]`, empty at f32) rather
+  than any reordering; the GPU entry point named `toolchain_pack_unpack` in WGSL; the mis-built variant is naga's WGSL
+  with one field's read offset shifted, asserted to exist exactly once; `Cargo.lock` holds glam at 0.32.1; in
+  `cargo xtask ci`, build-kernel runs as its own process through `$CARGO`; in `mutants.yml` the kernel build step is
+  the cargo call the alias expands to; payload §1's new block is a bold paragraph, not a `###` heading; `is_real`
+  keeps naming the `SimState` structs and `is_generic` names every struct generic over `Real`.
+- **The two rust-cache items of its R-337 pass:** `pr-check.yml` and `reviews.yml` set `CARGO_TERM_COLOR: always`, so
+  their rust-cache key matches the `ci` job's; and every PR-only job restores the `ci` job's registry key.
+- **The exact pin (3e2ba72):** `cargo-gpu-install` and `spirv-std` are required at `=0.10.0-alpha.1`, and
+  `cargo xtask build-kernel` builds rust-gpu's backend itself, in cargo-gpu's crate in its cache, from `BACKEND_TOML`
+  (`rustc_codegen_spirv` at `=0.10.0-alpha.1`) and `xtask/rust-gpu-backend.lock`, the lockfile of a backend build on
+  R-169's pinned nightly-2026-04-11. A cold build can no longer resolve rust-gpu 0.10.0, which needs a later nightly;
+  the nightly is not moved.
+- **86741e9:** a cached backend is used only if its crate's `Cargo.lock` equals `xtask/rust-gpu-backend.lock` byte for
+  byte; any other is rebuilt, and after the install build-kernel refuses one that differs.
+
+PR #96's description marks each of these "Ruled, R-350 (stands)". Numbered R-350: the human's message gave this item
+no number (R-348's note). Changes no requirement.
+
+## R-351 — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL
+*Amended by R-352.*
+*Still in force: all of it; R-352 widens the lint to a float compared with itself and to comparisons against
+finite-max stand-ins used as inf checks, and accepts its items applied per R-204.*
+*1 Oct 2026 · applied in TASK-M0-13 (PR #107), REQ-PAY-091, REQ-RENDER-083 (new), TASK-M0-50 (new) and the render
+contract's "Unpack layer"*
+
+"#107's offset correction stands. The bit-pattern unset check becomes an automated lint as a small task: `cargo xtask
+lint` fails on isinf/isnan, or comparisons against inf/NaN constants, in fragment-stage WGSL (R-343, R-297). The
+checklist line stays as a backup."
+
+*Applied:*
+- **The offsets.** PR #107's correction stands: `closure_step_reserved` is at byte 140 in `SimStateFTLE` and at byte
+  92 in `SimStateBase`, which drops the 48 B shadow (payload §1). The 140 that R-343's note and REQ-PAY-091 give is
+  `SimStateFTLE`'s. #107's `wgsl_layouts` test asserts both. REQ-PAY-091's verify line names both offsets. #107's
+  task-file line (de28d04) exists only on its branch, so its "(…; applied per R-204 — veto?)" mark becomes "ruled by
+  R-351" in #107's next fix pass.
+- **The lint.** `cargo xtask lint` fails on `isinf` or `isnan`, or on a comparison against an inf or NaN constant, in
+  fragment-stage WGSL, naming the file, the line and the rule, because fast-math (R-297) may optimise those away and an
+  unset-check tests the bit pattern (R-343). REQ-RENDER-083 (new, M0) carries it. A new task, TASK-M0-50, closes it,
+  depends on TASK-M0-13 (PR #107), which writes the WGSL lint, and has the code and qa reviewers. The review-checklist
+  grep in REQ-RENDER-001's verify line stays, as the backup. The render contract's "Unpack layer" gains a sentence
+  saying so.
+- PR #107's description marks both items ruled. Numbered R-351: the human's message gave this item no number (R-348's
+  note).
+
+*Applied per R-204, accepted by R-352:*
+- "Fragment-stage WGSL" is every WGSL file under `crates/render/frag/`, generated or written by hand. Today that is
+  `crates/render/frag/generated/payload_unpack.wgsl`.
+- The rule joins `cargo xtask lint wgsl`, the WGSL lint TASK-M0-13 writes and `cargo xtask ci` runs, rather than a new
+  subcommand.
+- An inf or NaN constant includes a constant expression that evaluates to one, such as a `bitcast<f32>` of an inf or
+  NaN bit pattern.
+
+*Flagged, not resolved:* the render contract's WGSL traps and REQ-RENDER-001 also name two float comparisons that
+stand in for `isnan` and `isinf`: a self-comparison, `x != x`, and `x > 65504.0`. Neither compares against an inf or
+NaN constant, so under the human's words the lint does not cover them, and the checklist grep alone checks them.
+RQ-191 asks whether the lint should cover them too. R-352 rules that it does (RQ-191's option (b)).
+
+## R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
+*1 Oct 2026 · applied in REQ-RENDER-083, REQ-VAL-179, REQ-VAL-180, REQ-VAL-181, TASK-M0-50, TASK-M0-49, TASK-M0-19,
+the render contract's "Unpack layer", CLAUDE.md § "How work runs", `plan/OPERATIONS.md` § "Reviewers" and
+§ "Resources", and R-348's, R-349's and R-351's notes*
+
+"RQ-191: (b). The fragment-stage lint also fails on a float compared with itself (x != x, x == x) and on comparisons
+against 65504.0 or other finite-max stand-ins used as inf checks, since fast-math may fold or break them (R-297); the
+fix is a bit-pattern test (R-343). TASK-M0-50 grows to match. All 13 veto items stand, including item 5 (on macOS,
+local mutants runs get the timeout only; CI's Linux runners enforce both caps)."
+
+*Applied:*
+- **Option (b).** R-351's rule in `cargo xtask lint wgsl` also fails, naming the file, the line and the rule, on a float
+  compared with itself (`x != x`, `x == x`) and on a comparison against 65504.0 or another finite-max stand-in used as
+  an inf check, in every WGSL file under `crates/render/frag/`, because fast-math (R-297) may fold or break them. The
+  fix the lint's message names is a bit-pattern test (R-343), as `pa_d_min_is_unset` does. REQ-RENDER-083's statement
+  and verify line widen to match (reqio). TASK-M0-50 grows: its goal, deliverables, fixtures (each new rule's failing
+  fixtures, and clean fixtures as its negative controls), acceptance tests and size. The render contract's "Unpack
+  layer" sentence names what the lint covers, and REQ-RENDER-001's checklist grep stays as the backup.
+- **All 13 items stand**, as RQ-191 listed them. Their "veto?" marks become "accepted by R-352" (in R-348's, R-349's
+  and R-351's notes, CLAUDE.md, `plan/OPERATIONS.md`, the render contract, REQ-VAL-179, TASK-M0-19, TASK-M0-49 and
+  TASK-M0-50), the wording otherwise unchanged:
+  1. The message's rulings are recorded as R-348 to R-351, since R-347 was taken (R-278).
+  2. R-348: REQ-VAL-179 carries the caps themselves, beside the calibrations REQ-VAL-180 and REQ-VAL-181.
+  3. R-348: TASK-M0-49 waits for TASK-M0-14 (#96), which rewrites `mutants.yml`.
+  4. R-348: TASK-M0-19's nightly full run depends on TASK-M0-49 and applies the same caps at the same values.
+  5. R-348: "mutants runs" includes a local run, under the same caps at the same values, each where its machine
+     enforces it.
+  6. R-349: what is inside (the checkouts and worktrees, their target directories, the session's scratch directory)
+     and what is outside (`~/.cargo`, `~/.rustup`, the rust-gpu cache, the Actions caches, the system temp folder,
+     shell and git configuration, the SSD's folders).
+  7. R-349: the away-mode log on the SSD, named in `plan/OPERATIONS.md` as the orchestrator's, is inside.
+  8. R-349: a build's own cache writes are part of the build; an agent's own deletion or edit of a cache asks first.
+  9. R-349: what a build, test or tool writes in its normal course under `std::env::temp_dir()`, and cargo-mutants'
+     temporary copy of the tree, are part of running it; an agent's own deletion or edit there asks first.
+  10. R-349: `scripts/cloud-setup.sh`'s installs are asked for by R-346 and R-347; anything beyond them asks first.
+  11. R-351: "fragment-stage WGSL" is every WGSL file under `crates/render/frag/`.
+  12. R-351: the rule joins `cargo xtask lint wgsl`, not a new subcommand.
+  13. R-351: an inf or NaN constant includes a constant expression that evaluates to one (a `bitcast<f32>` of its bit
+      pattern).
+- **Item 5, as ruled:** on macOS a local mutants run gets the per-mutant timeout only; CI's Linux runners enforce both
+  caps. Where #110 said a Mac run "may" get the timeout only (R-348's note, REQ-VAL-179, `plan/OPERATIONS.md` §
+  "Reviewers"), it now says so as ruled, and TASK-M0-49 no longer has to find out whether the Mac enforces
+  `ulimit -v`.
+- RQ-191 moves to `docs/archive/review_queue/M0.md`.
+
+*Applied per R-204 — veto?:* what the human's words leave open.
+- **The finite-max stand-ins** are, as the lint's definite list:
+  - binary16's largest finite value, 65504 (generation root §3.8's register entry `f16_finite_max`, payload §1's pack
+    clamp), in any spelling: `65504.0`, `65504.`, `6.5504e4`, `65504.0f`, `65504h` among them;
+  - binary32's largest finite value, 3.40282347e38 (`0x7f7fffff`), in any spelling;
+  - either as a `bitcast<f32>` of its bit pattern (`bitcast<f32>(0x477fe000u)`, `bitcast<f32>(0x7f7fffffu)`), or any
+    other constant expression that evaluates to it, as item 13 reads an inf or NaN constant;
+  - either value negated (`-65504.0`, `-3.40282347e38`), the same stand-in for −inf;
+  - a comparison with any of these fails, in either operand order and with any of `<`, `<=`, `>`, `>=`, `==`, `!=`.
+  The lint reads naga's IR, where a literal's spelling is gone, so every spelling of the same value is caught. The
+  corpus names 65504 (`f16_finite_max`) but not binary32's largest finite as a sentinel, and the check plan requires no
+  definition requirement for a lint's list, so the list lives in REQ-RENDER-083 and TASK-M0-50.
+- **A float compared with itself** is a comparison whose two operands are the same expression: the same naga
+  expression, or structurally equal expressions reading the same `let`, argument, variable or buffer element, with no
+  store to that variable between the two reads; a float scalar or vector. Besides `==` and `!=`, the human's words,
+  the lint also fails on `<`, `<=`, `>` and `>=` of an expression with itself, which fast-math may fold just the same
+  (`x <= x` is false only for NaN).

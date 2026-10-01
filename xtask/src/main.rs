@@ -9,6 +9,10 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
+  build-kernel                    compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
+                                  translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
+                                  rust-gpu's backend needs another nightly than rust-toolchain.toml pins
+                                  (canonical_spec §1 item 2)
   ci [--list]                     run every registered per-push runner, in order (R-177); --list runs each
                                   runner's listing-only form, which runs no control (R-235)
   codegen                         regenerate the checked-in generated files from the layout table; refuses when
@@ -75,6 +79,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let result = match args.as_slice() {
+        ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
         ["codegen"] => xtask::codegen::run(&workspace_manifest()),
