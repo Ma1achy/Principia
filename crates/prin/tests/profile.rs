@@ -342,15 +342,19 @@ validation::negative_control!(
     ))
 );
 
-// ----- profile_file: the canonical serialisation (REQ-TOOL-145, R-309) -----
+// ----- profile_file: the canonical serialisation, JCS (REQ-TOOL-145, R-309, R-318, R-322) -----
+//
+// JCS itself (RFC 8785's test vectors, its number format, the refusals) is engine's `canonical_jcs`; here, the
+// config's state serialises to the same bytes each time, in JCS's member order, a seed (u64) as a string.
 
-/// Fields declared out of key order, a map and an optional value, to show the key order and the text.
+/// Fields declared out of key order, a map, an optional value and a seed, to show the key order and the text.
 #[derive(Serialize)]
 struct Knobs {
     zeta: f64,
     alpha: u32,
     map: HashMap<String, i64>,
     mid: Option<String>,
+    seed: u64,
 }
 
 fn knobs(order: &[(&str, i64)]) -> Knobs {
@@ -359,10 +363,12 @@ fn knobs(order: &[(&str, i64)]) -> Knobs {
         alpha: 3,
         map: order.iter().map(|(k, v)| ((*k).to_owned(), *v)).collect(),
         mid: None,
+        seed: 42,
     }
 }
 
-const KNOBS_TEXT: &str = r#"{"alpha":3,"map":{"a":-1,"b":2,"é":0},"mid":null,"zeta":0.5}"#;
+const KNOBS_TEXT: &str =
+    r#"{"alpha":3,"map":{"a":-1,"b":2,"é":0},"mid":null,"seed":"42","zeta":0.5}"#;
 
 /// Two serialisations of equal state are the same bytes, and those bytes are the canonical text `expected`.
 fn check_same_text(first: &str, second: &str, expected: &str) {
@@ -388,7 +394,7 @@ fn profile_file_canonical_same_bytes_twice() {
         &canonical::to_string(&render2).unwrap(),
         r#"{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}}"#,
     );
-    // Keys sort by their UTF-8 bytes at every depth, whatever order the struct declares or the map iterates.
+    // Keys sort by their UTF-16 code units at every depth, whatever order the struct declares or the map iterates.
     check_same_text(
         &canonical::to_string(&knobs(&[("b", 2), ("é", 0), ("a", -1)])).unwrap(),
         &canonical::to_string(&knobs(&[("a", -1), ("é", 0), ("b", 2)])).unwrap(),
@@ -404,151 +410,6 @@ validation::negative_control!(
         let decl = serde_json::to_string(&knobs(&[("a", -1)])).unwrap();
         check_same_text(&decl, &decl, KNOBS_TEXT)
     }
-);
-
-/// Each value, written by `format`, reads back to the same bits, by Rust's parser and by serde_json's; and a float's
-/// text always has a `.` or an `e`, so it never reads as an integer.
-fn check_reads_back_exactly(format: impl Fn(f64) -> String, values: &[f64]) {
-    for &v in values {
-        let text = format(v);
-        let std: f64 = text.parse().expect("the text is not a number");
-        let json: f64 = serde_json::from_str(&text).expect("the text is not a JSON number");
-        assert!(
-            std.to_bits() == v.to_bits() && json.to_bits() == v.to_bits(),
-            "{v:e} is written {text}, which does not read back to it"
-        );
-        assert!(
-            text.contains('.') || text.contains('e'),
-            "{v:e} is written {text}, which reads as an integer"
-        );
-    }
-}
-
-/// Finite f64s: the edges, and 20 000 bit patterns from a fixed generator.
-fn floats() -> Vec<f64> {
-    let mut values = vec![
-        0.0,
-        -0.0,
-        1.0,
-        -1.0,
-        0.1,
-        1.0 / 3.0,
-        2.0f64.powi(60),
-        1e15,
-        1e16,
-        1e-5,
-        1e-6,
-        f64::MAX,
-        f64::MIN,
-        f64::MIN_POSITIVE,
-        f64::EPSILON,
-        5e-324,
-        123_456.789,
-    ];
-    let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
-    while values.len() < 20_000 {
-        state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        let v = f64::from_bits(state);
-        if v.is_finite() {
-            values.push(v);
-        }
-    }
-    values
-}
-
-#[test]
-fn profile_file_canonical_numbers_read_back() {
-    check_reads_back_exactly(|v| canonical::format_f64(v).unwrap(), &floats());
-    // Integers are plain decimal and read back exactly, to the ends of their range.
-    for (value, text) in [
-        (canonical::to_string(&u64::MAX), "18446744073709551615"),
-        (canonical::to_string(&i64::MIN), "-9223372036854775808"),
-        (canonical::to_string(&0u32), "0"),
-    ] {
-        assert_eq!(value.unwrap(), text);
-    }
-    assert_eq!(
-        serde_json::from_str::<u64>("18446744073709551615").unwrap(),
-        u64::MAX
-    );
-}
-
-validation::negative_control!(
-    profile_file_canonical_numbers_read_back,
-    "six significant digits must fail to read back",
-    expected = "which does not read back to it",
-    check_reads_back_exactly(|v| format!("{v:.5e}"), &floats())
-);
-
-/// The layout of gui_state_contract §2: `0.0` and `-0.0`; positional for a decimal exponent from −5 to 15; scientific
-/// outside it, with no `+` and no leading zeros in the exponent.
-const LAYOUT: &[(f64, &str)] = &[
-    (0.0, "0.0"),
-    (-0.0, "-0.0"),
-    (1.0, "1.0"),
-    (-2.5, "-2.5"),
-    (1234.0, "1234.0"),
-    (12.34, "12.34"),
-    (0.001234, "0.001234"),
-    (1e-5, "0.00001"),
-    (1e-6, "1e-6"),
-    (1.5e-7, "1.5e-7"),
-    (1e15, "1000000000000000.0"),
-    (1e16, "1e16"),
-    (1.25e21, "1.25e21"),
-    (0.1, "0.1"),
-    (5e-324, "5e-324"),
-    (f64::MAX, "1.7976931348623157e308"),
-];
-
-fn check_layout(format: impl Fn(f64) -> String) {
-    for (value, text) in LAYOUT {
-        assert_eq!(
-            format(*value),
-            *text,
-            "{value:e} is not written in the canonical layout"
-        );
-    }
-}
-
-#[test]
-fn profile_file_canonical_number_layout() {
-    check_layout(|v| canonical::format_f64(v).unwrap());
-}
-
-validation::negative_control!(
-    profile_file_canonical_number_layout,
-    "Rust's plain Display layout must fail the canonical layout",
-    expected = "is not written in the canonical layout",
-    check_layout(|v| format!("{v}"))
-);
-
-/// NaN and the infinities have no JSON form: serialising one fails, alone or inside a struct.
-fn check_refused(values: &[f64]) {
-    for &v in values {
-        assert!(
-            canonical::format_f64(v).is_err(),
-            "{v} was written, though it has no JSON form"
-        );
-        assert!(
-            canonical::to_string(&[v]).is_err(),
-            "{v} was written inside an array"
-        );
-    }
-}
-
-#[test]
-fn profile_file_canonical_refuses_non_finite() {
-    check_refused(&[f64::NAN, f64::INFINITY, f64::NEG_INFINITY]);
-}
-
-validation::negative_control!(
-    profile_file_canonical_refuses_non_finite,
-    "a finite value must fail the refusal check",
-    expected = "was written, though it has no JSON form",
-    check_refused(&[1.0])
 );
 
 // ----- profile_scenario: the registered synthetic scenario (REQ-TOOL-006, R-113) -----

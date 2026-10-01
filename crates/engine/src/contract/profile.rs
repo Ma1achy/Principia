@@ -151,19 +151,20 @@ pub struct SessionHeader {
     #[serde(deserialize_with = "nullable")]
     pub display: Option<Display>,
     /// The run's full configuration, a JSON object (telemetry §5, "Self-contained"), written in the canonical
-    /// serialisation (gui_state_contract §2, R-309). A `prin profile` run's is
+    /// serialisation, JCS (gui_state_contract §2, R-309, R-318). A `prin profile` run's is
     /// `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`.
     #[serde(serialize_with = "canonical_config")]
     pub config: serde_json::Map<String, serde_json::Value>,
 }
 
-/// Writes the header's `config` as its canonical text (gui_state_contract §2, R-309), so the key order and the number
-/// formatting are the canonical serialisation's, not the JSON writer's.
+/// Writes the header's `config` as its canonical text, JCS (gui_state_contract §2, R-309, R-318), so the key order and
+/// the number format are JCS's, not the JSON writer's.
 fn canonical_config<S: Serializer>(
     config: &serde_json::Map<String, serde_json::Value>,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
-    let text = canonical::to_string(config).map_err(serde::ser::Error::custom)?;
+    let text = canonical::json_to_string(&serde_json::Value::Object(config.clone()))
+        .map_err(serde::ser::Error::custom)?;
     let raw = serde_json::value::RawValue::from_string(text).map_err(serde::ser::Error::custom)?;
     raw.serialize(serializer)
 }

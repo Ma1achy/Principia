@@ -10,7 +10,7 @@
 /// GUI-sized [`Snapshot`](contract::snapshot::Snapshot). In: `set_field(path, value)`; out: a snapshot; both plain data.
 /// Beside them, profiler schema v1 ([`profile`](contract::profile), R-56), which the engine writes and `prin` and the
 /// dev GUI read. [`canonical`](contract::canonical) is the one canonical serialisation of `SimConfig` and
-/// `RenderState` (gui_state_contract §2, R-309).
+/// `RenderState`, JCS (gui_state_contract §2, R-309, R-318).
 pub mod contract {
     pub mod canonical;
     pub mod profile;

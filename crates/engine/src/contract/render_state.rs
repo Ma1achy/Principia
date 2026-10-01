@@ -3,7 +3,7 @@
 //! (R-133). At M0 a group is named and empty.
 //!
 //! `RenderState` and its groups serialise in the one canonical serialisation, [`canonical`](super::canonical)
-//! (gui_state_contract §2, R-309): the struct is written as an object keyed by its field names, an empty group as `{}`.
+//! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`.
 
 use serde::{Deserialize, Serialize};
 

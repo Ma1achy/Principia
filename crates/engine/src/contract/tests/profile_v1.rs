@@ -1793,7 +1793,7 @@ validation::negative_control!(
     }
 );
 
-/// The header line carries `config` as `expected`, its canonical text (gui_state_contract §2).
+/// The header line carries `config` as `expected`, its canonical text, JCS (gui_state_contract §2, R-318).
 fn check_config_text(file: &[u8], expected: &str) {
     let first = std::str::from_utf8(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
     assert!(
@@ -1802,14 +1802,18 @@ fn check_config_text(file: &[u8], expected: &str) {
     );
 }
 
-const CONFIG_TEXT: &str = r#"{"a":{"b":-0.0,"y":0.1},"z":1e16}"#;
+/// JCS's member order and number format (`150000000000000000000`, not serde_json's `1.5e+20`); a u64 written as a
+/// string stays one.
+const CONFIG_TEXT: &str =
+    r#"{"a":{"b":-2.5,"s":"18446744073709551615","y":0.1},"z":150000000000000000000}"#;
 
 fn with_config() -> Trace {
     let mut trace = batch();
-    trace.header.config = json!({ "z": 1e16, "a": { "y": 0.1, "b": -0.0 } })
-        .as_object()
-        .unwrap()
-        .clone();
+    trace.header.config =
+        json!({ "z": 1.5e20, "a": { "y": 0.1, "s": "18446744073709551615", "b": -2.5 } })
+            .as_object()
+            .unwrap()
+            .clone();
     trace
 }
 
