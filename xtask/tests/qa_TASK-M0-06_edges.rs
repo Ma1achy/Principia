@@ -278,6 +278,22 @@ negative_control!(
     check_symptoms_known(vec![255; 12])
 );
 
+// --- Scratch folders ----------------------------------------------------------------------------------------------
+
+/// A fresh, empty scratch folder of this call's own: the process id and a per-process counter make it unique, so a
+/// test and its negative control (or any two calls) running in parallel never share, remove or overwrite one
+/// another's files (R-333).
+fn scratch_dir(name: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let n = NEXT.fetch_add(1, Ordering::Relaxed);
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("qa_m006_{name}_{}_{n}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("scratch created");
+    dir
+}
+
 // --- The case format: a line is two pixels [x, y] inside the image, or the case is refused -------------------------
 
 /// A copy of `selftest/gradient` (256x256) whose one line runs from `from` to `to`, loaded.
@@ -286,9 +302,7 @@ fn load_with_line(
     from: serde_json::Value,
     to: serde_json::Value,
 ) -> Result<Case, String> {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m006_line_{name}"));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("scratch created");
+    let dir = scratch_dir(&format!("line_{name}"));
     let source = repo_root().join("fixtures/golden/selftest/gradient");
     for file in ["gradient.wgsl", "reference.png"] {
         std::fs::copy(source.join(file), dir.join(file)).expect("copied");
@@ -389,9 +403,7 @@ negative_control!(
 
 /// A copy of `selftest/gradient` with `symptoms` replaced, loaded.
 fn load_with_symptoms(name: &str, symptoms: serde_json::Value) -> Result<Case, String> {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m006_symptoms_{name}"));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("scratch created");
+    let dir = scratch_dir(&format!("symptoms_{name}"));
     let source = repo_root().join("fixtures/golden/selftest/gradient");
     for file in ["gradient.wgsl", "reference.png"] {
         std::fs::copy(source.join(file), dir.join(file)).expect("copied");
