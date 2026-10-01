@@ -101,13 +101,13 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   `CARGO_BIN_EXE_*`, cargo doesn't rebuild them after a move, and the controls then fail falsely (PR #79 and PR #83,
   30 Sep 2026). Hand the next reviewer the same worktree path, with the new head checked out there, or make a fresh
   worktree.
-- **Who re-checks what:**
-  - after any commit that is not qa's, every named reviewer posts again on the new head (`plan/WORKFLOW.md` step 5);
-  - after qa's add-only commit, qa's approval carries over to it (R-260), and the code reviewer re-checks that commit
-    alone (R-229);
-  - after a qa commit with any `M` or `D` line, R-260 does not carry qa's approval over. Dispatch qa's re-approval on
-    that head at the same time as the code reviewer's re-check, not after the other approvals land (#78, #79,
-    30 Sep 2026).
+- **Who re-checks what** (R-260, as `xtask/src/reviews_check.rs` checks it):
+  - after qa's add-only commit (`qa: tests for <TASK-id>`, only `A` lines under qa's paths), every named reviewer's
+    approval carries over to it, and the code reviewer re-checks that commit alone (R-229);
+  - after any other commit, a qa commit with any `M` or `D` line or any commit that is not qa's, no approval carries
+    over: every reviewer the task names (qa, code, physics, gui, perf) posts again on the new head (`plan/WORKFLOW.md`
+    steps 5 and 6). After an `M` or `D` qa commit, dispatch all of them at once, qa's re-approval included, not one
+    after another (#78, #79, 30 Sep 2026).
 - **Veto items need a class from each reviewer.** R-234 lets a PR with "applied per R-204 — veto?" items merge while
   the human is away only if every named reviewer accepted each item *and* classed it as test infrastructure, process,
   sequencing or mechanical. Ask for both in the first dispatch: reviewers otherwise approve without classing (#70
