@@ -9,6 +9,7 @@ pub mod gate;
 pub mod golden;
 pub mod lint_constants;
 pub mod lint_vocab;
+pub mod lint_wgsl;
 pub mod mutants_check;
 pub mod plan_check;
 pub mod pr_check;
