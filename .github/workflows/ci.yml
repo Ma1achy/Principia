@@ -42,6 +42,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
+      # pool left this job with 11–24 MB free on ubuntu-latest. Remove the preinstalled toolsets it does not use (.NET,
+      # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
