@@ -290,7 +290,7 @@ continuation_index[2]= [1,2,0,3]   // prev b: a→1, A→2, b→0, B (inverse)�
 continuation_index[3]= [2,1,3,0]   // prev B: a→2, A→1, b (inverse)→3, B→0
 ```
 
-**An out-of-range input is a `debug_assert!` failure; in release it returns 3 (R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) is defined for symbols 0–3 and digits 0–2. A debug build given anything else fails a `debug_assert!`; a release build returns **3 ("invalid")**, R-307's code, never a table cell.
+**An out-of-range input is a `debug_assert!` failure; in release it returns 3 (R-319).** Each table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) is defined for symbols 0–3 and digits 0–2. A debug build given anything else fails a `debug_assert!`; a release build returns **3**, never a table cell. From `continuation_index` 3 is R-307's "invalid"; from `inverse`, `continuation_symbol` and `predecessor_symbol` it is the symbol code `B` (a=0, A=1, b=2, B=3), a valid symbol. The ruling's "invalid" fits only `continuation_index`; this is flagged to the human and applied literally pending a ruling (R-319).
 
 **Length / truncation accessors (do NOT expose 127 as a crossing count):**
 ```

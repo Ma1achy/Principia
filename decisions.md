@@ -3346,8 +3346,8 @@ a 32-bit slot) and not a `vector` component type (a vector of halves stays `vect
 static-check rules for `f16-pair` (REQ-GEN-028) are unchanged.
 
 ## R-313 — `ICDescriptor` follows `Real`; R-86's 64 B is its f32 instantiation *(closes RQ-185; amends R-86)*
-*1 Oct 2026 · applied in generation-root §3.6, dd_simstate_payload §1, render contract, REQ-PAY-017, REQ-PAY-087 and
-TASK-M0-14*
+*1 Oct 2026 · applied in generation-root §3.6, dd_simstate_payload §1, render contract, debug_tooling_plan §E,
+dd_decoder, REQ-PAY-017, REQ-PAY-087, TASK-M0-14 and TASK-M0-11*
 
 "RQ-185: ICDescriptor follows Real. R-86's 64 B is its f32 instantiation."
 
@@ -3390,7 +3390,7 @@ persisted and resumed `SimState` keeps the running minimum at the march's own wi
 argument). REQ-PAY-087's definition in dd_simstate_payload §1 carries it.
 
 ## R-317 — #98's `f16` restriction stands; `f16` is storage-only
-*1 Oct 2026 · applied in generation-root §3.8 and REQ-GEN-030*
+*1 Oct 2026 · applied in generation-root §3.8, REQ-GEN-030 and TASK-M5-01*
 
 "#98: the f16 restriction (packed 16-bit locations only) stands. f16 arithmetic in WGSL is optional in WebGPU, so f16
 stays storage-only."
@@ -3401,7 +3401,7 @@ stays storage-only."
 `shader-f16` feature (`enable f16`). §3.8 says so beside R-312's paragraph, and REQ-GEN-030 checks it.
 
 ## R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*
-*1 Oct 2026 · applied in gui_state_contract §2, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
+*1 Oct 2026 · applied in gui_state_contract §2, telemetry §5, REQ-TOOL-145 and TASK-M0-18 (PR #100)*
 
 "#100: the canonical serialisation is JCS (RFC 8785): sorted keys and its number format, using its test vectors. −0.0
 serialises as 0 (accepted). Integers beyond 2^53 (e.g. seeds) serialise as strings. Supersedes #100's bespoke number
@@ -3418,15 +3418,18 @@ same. R-309's other text stands. *Applied per R-204 — veto?:* "integers beyond
 field writes a number when |n| ≤ 2^53 and a string above it.
 
 ## R-319 — An out-of-range input to the continuation tables is a `debug_assert!` failure; in release it returns 3 *(vetoes #99's item 8)*
-*1 Oct 2026 · applied in payload §3, REQ-PAY-016 and TASK-M0-11 (PR #99)*
+*1 Oct 2026 · applied in payload §3, REQ-PAY-016, TASK-M0-11 (PR #99) and TASK-M0-13*
 
 "#99 item 8 vetoed: an out-of-range input to the continuation tables is a debug_assert! failure; in release it returns 3
 ("invalid", R-307), never the last cell."
 
 *Applied:* PR #99's item 8 (an input past the last code returns the last cell) is vetoed. Each generated
 continuation-table function (`inverse`, `continuation_symbol`, `predecessor_symbol`, `continuation_index`) checks its
-inputs with `debug_assert!`; a release build given an out-of-range input returns 3, R-307's "invalid", never a table
-cell. Payload §3 states it beside R-307's table, and REQ-PAY-016 tests both builds.
+inputs with `debug_assert!`; a release build given an out-of-range input returns 3, never a table cell. Payload §3
+states it beside R-307's table, and REQ-PAY-016 tests both builds. *Applied per R-204 — veto?:* the ruling calls 3
+"invalid" (R-307), which holds for `continuation_index` only; symbol codes are a=0, A=1, b=2, B=3 (payload §3), so 3
+from `inverse`, `continuation_symbol` or `predecessor_symbol` is the valid symbol `B`. Flagged to the human; applied
+literally pending a ruling: all four return 3 in release.
 
 ## R-320 — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 (new) and TASK-M0-14 (PR #96)*
