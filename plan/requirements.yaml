@@ -5843,15 +5843,18 @@
   milestone: M1
 - id: REQ-PAY-091
   area: PAY
-  statement: "The generated WGSL struct layouts for SimState and ICDescriptor must match the ledger tables field by field, as the generated Rust layouts do (split from REQ-PAY-002, R-256's applied note)."
+  statement: "The generated WGSL struct layouts for SimState and ICDescriptor must match the ledger tables field by field, as the generated Rust layouts do (split from REQ-PAY-002, R-256's applied note). WGSL has no u16 and no u64, so closure_step and _reserved are one member, closure_step_reserved: u32 (closure_step in bits 0–15, _reserved in bits 16–31), read through fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }, and the schema version is const PAYLOAD_SCHEMA_VERSION: vec2<u32>, .x the low 32 bits of the Rust u64 and .y the high 32 (R-343)."
   source:
   - file: decisions.md
     section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
+  - file: decisions.md
+    section: "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
   verify:
     method: unit test
-    detail: "generated WGSL struct layouts compared field-by-field against the ledger tables"
+    detail: "generated WGSL struct layouts compared field-by-field against the ledger tables; closure_step_reserved is a u32 at closure_step's byte offset (140), closure_step(w) returns its low 16 bits and ignores the high 16; PAYLOAD_SCHEMA_VERSION's .x and .y equal the Rust u64's low and high 32 bits (R-343)"
   rulings:
   - R-256
+  - R-343
   milestone: M0
 - id: REQ-PAY-092
   area: PAY
@@ -8842,17 +8845,20 @@
   milestone: M5
 - id: REQ-RENDER-001
   area: RENDER
-  statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing."
+  statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing. It must bind SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1), leaving group 0 to the assembler's per-frame uniforms, with the group and binding numbers generated constants from one ledger table; read either buffer only through sample_state(i) and sample_word(i), the same i for both; emit no setter; and test an unset value by its bit pattern (pa_d_min_is_unset against PA_D_MIN_UNSET = 0x7c00u), never by isinf, isnan or a float comparison standing in for them, which fast-math (R-297) may optimise away (R-343)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Unpack layer (generated, one accessor per named field)
   - file: decisions.md
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
+  - file: decisions.md
+    section: "R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*"
   verify:
     method: review checklist
-    detail: "grep generated WGSL: all extractBits args are u32; no f64; no enable f16"
+    detail: "grep generated WGSL: all extractBits args are u32; no f64; no enable f16; cargo xtask lint wgsl: simstate_buffer is array<SimStateFTLE> at @group(1) @binding(0) and word_buffer array<vec4<u32>> at @group(1) @binding(1), nothing in group 0, the numbers equal the generated binding constants, and no function but sample_state and sample_word indexes either buffer; grep: no isinf, isnan or self-comparison, and d_min's unset test is pa_d_min_is_unset's bit comparison (R-343)"
   rulings:
   - R-86
+  - R-343
   milestone: M0
 - id: REQ-RENDER-002
   area: RENDER

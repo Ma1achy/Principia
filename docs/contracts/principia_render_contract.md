@@ -90,6 +90,16 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 
 ```wgsl
 // generated WGSL (fragment-side unpack) — do not edit. source: the Rust layout definition (mirrors payload §2, §6 — R-86)
+// stored buffers (R-343): group 0 is the assembler's per-frame uniforms; the group/binding numbers are generated
+// constants from one ledger table (SIMSTATE_GROUP = 1, SIMSTATE_BINDING = 0, WORD_GROUP = 1, WORD_BINDING = 1)
+@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;  // the full tier; M1's per-tier assembly owns the feature-off variants (lowering Part 3a)
+@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
+fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; } // the ONLY reads of either buffer (R-343)
+fn sample_word(i: u32) -> vec4<u32>     { return word_buffer[i]; }    // the same i as the state, per copy
+// schema version (R-343): WGSL has no u64 — .x the low 32 bits of the Rust u64, .y the high 32 (unpack2x16float's order)
+// const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(<low 32>, <high 32>);
+// closure (R-343): WGSL has no u16 — one member closure_step_reserved: u32, closure_step bits 0–15, _reserved bits 16–31
+fn closure_step(w: u32) -> u32        { return extractBits(w,  0u, 16u); } // w = sample_state(i).closure_step_reserved
 // sample_descriptor (low 16 of packed_a) — 10 bits used (bits 10-15 reserved; total_substeps is a separate exact u32)
 fn sd_state(w: u32) -> u32            { return extractBits(w,  0u, 3u); } // 0 escape,1 bounded,2 collision,3 running,4 sim_failed,5 decode_failed
 fn sd_detail(w: u32) -> u32           { return extractBits(w,  3u, 2u); } // 4-state union (payload §2): escape→body, collision→pair, sim/decode_failed→failure category
@@ -119,6 +129,8 @@ fn tm_t_dmin_step(w: u32) -> u32      { return extractBits(w, 16u, 16u); }  // E
 // packed_a = descriptor(bits 0–9 used, 10–15 reserved) in low 16 + d_min(f16) in high 16  → d_min = unpack2x16float(packed_a).y
 // packed_b = dE_max(f16) low + dLz_max(f16) high
 fn pa_d_min(pa: u32) -> f32           { return unpack2x16float(pa).y; }
+const PA_D_MIN_UNSET: u32 = 0x7c00u;  // d_min's unset value, f16 +inf (R-271)
+fn pa_d_min_is_unset(pa: u32) -> bool { return extractBits(pa, 16u, 16u) == PA_D_MIN_UNSET; } // by its bits, never a float test (R-271, R-343)
 fn pb_dE_max(pb: u32) -> f32          { return unpack2x16float(pb).x; }
 fn pb_dLz_max(pb: u32) -> f32         { return unpack2x16float(pb).y; }
 // NB: descriptor occupies the LOW 16 bits of packed_a; the sd_* accessors above take that same u32 (bits 0–9 used; 10–15 reserved).
@@ -144,6 +156,7 @@ fn fgw_retained_prefix_length(word: vec4u) -> u32 { return select(fgw_length_raw
 ```
 
 **WGSL traps (one line each, they all bite):** use the **u32** overload of `extractBits` — the i32 overload sign-extends. WGSL has **no f64**. f16-packed pairs read via `unpack2x16float`. **`SimState` is now 8-byte aligned** (the `vec4` word moved to its own buffer — largest remaining member is `array<vec2>`); pack the live-state block in vec2 groupings for `r, p` and shadow. The word buffer is separately bound and indexed identically to samples (per-copy).
+**Bindings (R-343):** `SimStateFTLE` at `@group(1) @binding(0)`, the word buffer at `@group(1) @binding(1)`; group 0 is reserved for the assembler's per-frame uniforms. The group and binding numbers are generated constants from one ledger table, never literals written by hand. Both buffers are read only through `sample_state(i)` and `sample_word(i)`, the same `i` for both; no other code indexes either buffer (a `word_buffer[i]` in a comment above reads as `sample_word(i)`). **`closure_step` (R-343):** WGSL has no u16, so `closure_step` and `_reserved` are one member, `closure_step_reserved: u32` (`closure_step` bits 0–15, `_reserved` bits 16–31), read through `closure_step(w)`. **Schema version (R-343):** WGSL has no u64, so it is `const PAYLOAD_SCHEMA_VERSION: vec2<u32>`, `.x` the low 32 bits and `.y` the high 32. The layer only reads: no WGSL setter is emitted (R-343). **Unset-checks test bit patterns (R-343):** an unset-check on a value read in a fragment shader tests its bit pattern (`pa_d_min_is_unset`, against `PA_D_MIN_UNSET = 0x7c00u`, R-271), never `isinf` or `isnan` (nor a float comparison standing in for them, such as `x != x` or `x > 65504.0`), because fast-math (R-297) may optimise those away.
 
 ### Presentation layer (hand-written, small, reused by every debug view)
 

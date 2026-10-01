@@ -3830,6 +3830,50 @@ and `crates/validation/tests/qa_TASK-M0-38.rs` (f7becfc), this is a named except
 alters only where scratch is made and when it is deleted, never an assertion, and the code reviewer confirms that. The
 implementer makes the edits to the rest.
 
+## R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
+*1 Oct 2026 · applied in render contract Part 5 "Unpack layer", lowering contract Part 3a, payload §1, REQ-RENDER-001,
+REQ-PAY-091 and TASK-M0-13 (PR #107)*
+
+"RQ-188 (R-343): 1b, not 1a: SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1),
+leaving group 0 for the assembler's per-frame uniforms. Emit the group/binding numbers as generated constants from one
+table. Reading only through sample_state()/sample_word() stands. 2a and 3a accepted. Items 4–6 accepted; for item 5,
+note in the docs that unset-checks on values read in fragment shaders test bit patterns, never isinf/isnan, because
+fast-math (R-297) may optimise those away."
+
+*Applied:* RQ-188's options 1b, 2a and 3a, and PR #107's three items applied per R-204, which are accepted and lose
+their "veto?" marks.
+- **Bindings (1b).** The generated fragment-side unpack layer declares the full tier's stored buffers:
+  `@group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;` and
+  `@group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;`. Group 0 is left to the assembler's
+  per-frame uniforms. The group and binding numbers are generated constants from one ledger table, the one source of
+  the numbers the WGSL attributes carry. Each buffer is read only through a generated function of the sample index,
+  `sample_state(i)` and `sample_word(i)`, the same `i` for both (per copy); nothing else indexes either buffer. M1's
+  per-tier assembly (lowering Part 3a) owns the feature-off variants (`SimStateBase`, no word binding).
+- **`closure_step` (2a).** WGSL has no u16 and `enable f16` is banned (R-86), so the u16 `closure_step` and u16
+  `_reserved` at byte 140 are one WGSL member, `closure_step_reserved: u32`: `closure_step` in bits 0–15, `_reserved`
+  in bits 16–31, read through `fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }`. The stored layout,
+  and the Rust `closure_step: u16` and `_reserved: u16`, are unchanged.
+- **Schema version (3a).** WGSL has no u64, so the generated WGSL carries `const PAYLOAD_SCHEMA_VERSION: vec2<u32>`,
+  `.x` the low 32 bits of the Rust `u64` and `.y` the high 32, the order `unpack2x16float` uses.
+- **Item 4, accepted:** no WGSL setter is emitted; the fragment side only reads.
+- **Item 5, accepted:** the generated WGSL emits `PA_D_MIN_UNSET = 0x7c00u` and `pa_d_min_is_unset`, so a shader tests
+  `d_min`'s unset value by its bits (R-271). With it, as the human asks, the render contract's WGSL traps say that an
+  unset-check on a value read in a fragment shader tests the bit pattern, never `isinf` or `isnan` (or a float
+  comparison standing in for them), because fast-math (R-297) may optimise those away.
+- **Item 6, accepted:** `fgw_reduced_length_valid` and `fgw_reduced_length` are emitted; `ftle_valid` and the tier
+  interface (`has_<feature>`, lowering Part 3a) are left to M1.
+
+The render contract's "Unpack layer" and its WGSL traps say all of this; lowering Part 3a gains a note on the
+bindings, and payload §1's WGSL read view a note on `closure_step`'s WGSL form, their text kept. REQ-RENDER-001 and
+REQ-PAY-091 cite this ruling, and TASK-M0-13 (PR #107) builds it. RQ-188, filed on #107's branch, is archived unchanged
+in `docs/archive/review_queue/M0.md` with this ruling's port, so its id resolves on `main`; #107's fix pass deletes its
+open copy and drops REQ-RENDER-001's and REQ-PAY-091's `rq: RQ-188`.
+*Applied per R-204 — veto?:* the table's constants are named `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and
+`WORD_BINDING`, and are emitted to both targets, the WGSL (whose `@group`/`@binding` attributes carry the same numbers)
+and the generated Rust, which the host's bind group layout reads (generation-root §1: one source, two targets). They
+are not hashed into the schema version: a binding number decides no stored bit's meaning (generation-root §3.8 "The
+hash").
+
 ## R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
 *1 Oct 2026 · applied in generation-root §3.9, REQ-GEN-031, TASK-M0-46, TASK-M0-45, TASK-M2-01 and R-336's and R-340's
 notes*
@@ -3845,5 +3889,4 @@ or not a link reads it. Generation-root §3.9's "The hash", REQ-GEN-031 and TASK
 registry's constants table with its entries and no longer waits. RQ-189 moves to `docs/archive/review_queue/M0.md`.
 PR #108's four items applied per R-204 are accepted, and their "veto?" marks are dropped: qa makes R-336's test splits
 in TASK-M0-45's qa commit, a named exception to R-290; R-340 hashes each entry's name; it hashes every entry, whether
-or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031. Numbered R-344: the
-number before it is the human's, for another ruling a later pass ports.
+or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031.

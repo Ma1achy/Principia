@@ -208,6 +208,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-332** — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*
 - **R-340** — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*. Still in force: the link registry is hashed into the schema version, each entry by its semantic content (its name, constraint, forward, inverse, log-det, ε clamps and the parameters its functions read, by value), not its sampling note, and every entry, whether or not a block uses it by default; R-344 hashes the registry's chart constants that no link reads (`δ_λ`, `ε_w`) too, by value, and accepts the name and every-entry items. Amended by R-344.
 - **R-341** — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*
+- **R-343** — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
 - **R-344** — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
 
 ## Values

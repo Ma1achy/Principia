@@ -75,6 +75,10 @@ struct SimStateFTLE {
                                   //   convention as t_dmin_step. This is the period label.
     _reserved    : u16,           // free under alignment (4 B and 8 B cost the same); do not spend
                                   //   it without re-checking the alignment argument below.
+    // GENERATED WGSL FORM (R-343): WGSL has no u16, so the generated unpack layer declares closure_step and
+    //   _reserved as ONE member, closure_step_reserved : u32 (closure_step bits 0–15, _reserved bits 16–31),
+    //   read through fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }. The stored bytes and
+    //   the Rust closure_step: u16 / _reserved: u16 are as above.
 }
 // SimStateFTLE: 144 B actual / 144 B effective (8-byte aligned)
 // SimStateBase: drop r_sh,p_sh → 96 B actual / 96 B effective
