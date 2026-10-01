@@ -543,9 +543,15 @@ negative_control!(
 // Payload §3's `.w` bit map: `payload` in bits 0–24 and `length` in 25–31 of the word `fgw_w`, `length` 0…76 with 127
 // its sentinel; and the ledger's continuation table derives payload §3's `continuation_index` (R-307).
 
-/// `(location, range, sentinel)` of `payload` and `length` in `ledger`.
+/// `(location, range, sentinel)` of `payload` and `length` in `ledger`, each entry built on its own, so an entry
+/// generation would refuse (a `length` with no sentinel) is still read.
 fn fgw_rows(ledger: &Ledger) -> Vec<(ledger::schema::Location, Range, Option<f64>)> {
-    let entries = gen::validate(ledger).expect("validates");
+    let entries: Vec<Entry> = ledger
+        .entries
+        .iter()
+        .filter(|e| matches!(e.name, Some("payload" | "length")))
+        .map(|e| e.build().expect("builds"))
+        .collect();
     ["payload", "length"]
         .iter()
         .map(|n| {
@@ -644,4 +650,47 @@ negative_control!(
             1,
         )
     )
+);
+
+/// Generation from `ledger` is refused, its message naming `fgw_w.length` and `what` it lacks (dd_generation_root
+/// §3.8: "A field without a complete entry fails generation loudly"), so `FGW_CAPACITY`, `FGW_LENGTH_SENTINEL` and
+/// the `fgw_*` accessors are never silently omitted.
+fn check_fgw_length_refused(ledger: &Ledger, what: &str) {
+    let message = match gen::generate(ledger, gen::EMITTERS) {
+        Ok(_) => panic!("generation was not refused with `fgw_w.length` given {what}"),
+        Err(error) => error.to_string(),
+    };
+    assert!(
+        message.contains("`fgw_w.length`") && message.contains(what),
+        "generation refused `fgw_w.length` given {what}, but its message does not say so: {message}"
+    );
+}
+
+#[test]
+fn payload_fgw_length_incomplete_refuses_generation() {
+    check_generates(&layout());
+    let mut missing = layout();
+    missing.entries.retain(|e| e.name != Some("length"));
+    check_fgw_length_refused(&missing, "has no entry");
+    let mut open = layout();
+    entry(&mut open, "length").range = Some(Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Unbounded,
+    });
+    check_fgw_length_refused(&open, "has no closed greatest value");
+    let mut no_sentinel = layout();
+    entry(&mut no_sentinel, "length").sentinel = None;
+    check_fgw_length_refused(&no_sentinel, "has no sentinel");
+    let direct = rust::fgw(&[]);
+    assert!(
+        direct.contains("compile_error!(") && direct.contains("`fgw_w.length`"),
+        "the fgw emitter, called past the driver without `length`, writes no compile_error naming it: {direct:?}"
+    );
+}
+
+negative_control!(
+    payload_fgw_length_incomplete_refuses_generation,
+    "a complete `length`, which generates, must fail the refusal check",
+    expected = "generation was not refused with `fgw_w.length` given has no sentinel",
+    check_fgw_length_refused(&layout(), "has no sentinel")
 );

@@ -306,12 +306,16 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
     out
 }
 
-/// The word buffer's accessors, emitted from `fgw_w`'s `length` entry (payload §3; R-86's names): `FGW_CAPACITY`, its
-/// range's greatest value, `FGW_LENGTH_SENTINEL`, its sentinel, and `fgw_length_raw`, `fgw_truncated` and
-/// `fgw_retained_prefix_length`. Each takes the whole `vec4<u32>` as `[u32; 4]` and reads element 3, `.w`, as §3's
-/// `fgw_length_raw(w: vec4u)` does. Nothing if the ledger has no such entry, or it has no closed greatest value or no
-/// sentinel.
-pub fn fgw(entries: &[Entry]) -> String {
+/// `fgw_w`'s `length` entry as [`fgw`] needs it, `(offset, width, capacity, sentinel)`: its bits, its range's closed
+/// greatest value and its sentinel. Otherwise the line naming `fgw_w.length` and what it lacks, which refuses
+/// generation ([`crate::gen::validate`]; dd_generation_root §3.8: "A field without a complete entry fails generation
+/// loudly").
+pub fn fgw_length(entries: &[Entry]) -> Result<(u32, u32, u32, u32), String> {
+    let refuse = |what: &str| {
+        Err(format!(
+            "field `{FGW_WORD}.length` {what}: the word buffer's accessors need it (payload §3; dd_generation_root §3.8)"
+        ))
+    };
     let length = entries.iter().find_map(|e| match e.location {
         Location::Packed {
             word,
@@ -321,12 +325,37 @@ pub fn fgw(entries: &[Entry]) -> String {
         _ => None,
     });
     let Some((e, offset, width)) = length else {
-        return String::new();
+        return refuse("has no entry");
     };
-    let (Bound::Closed(capacity), Some(sentinel)) = (e.range.hi, e.sentinel) else {
-        return String::new();
+    let Bound::Closed(capacity) = e.range.hi else {
+        return refuse("has no closed greatest value");
     };
-    let (capacity, sentinel) = (capacity as u32, sentinel as u32);
+    let Some(sentinel) = e.sentinel else {
+        return refuse("has no sentinel");
+    };
+    Ok((offset, width, capacity as u32, sentinel as u32))
+}
+
+/// The line refusing generation if `words` declare the word buffer's `.w`, `fgw_w`, and its `length` entry is not as
+/// [`fgw_length`] needs it.
+pub fn fgw_problem(words: &[Word], entries: &[Entry]) -> Option<String> {
+    if words.iter().any(|w| w.name == FGW_WORD) {
+        fgw_length(entries).err()
+    } else {
+        None
+    }
+}
+
+/// The word buffer's accessors, emitted from `fgw_w`'s `length` entry (payload §3; R-86's names): `FGW_CAPACITY`, its
+/// range's greatest value, `FGW_LENGTH_SENTINEL`, its sentinel, and `fgw_length_raw`, `fgw_truncated` and
+/// `fgw_retained_prefix_length`. Each takes the whole `vec4<u32>` as `[u32; 4]` and reads element 3, `.w`, as §3's
+/// `fgw_length_raw(w: vec4u)` does. The driver refuses a ledger whose entry lacks any of them ([`fgw_problem`]); an
+/// emitter called past it writes a `compile_error!` naming `fgw_w.length`, so the file never builds without them.
+pub fn fgw(entries: &[Entry]) -> String {
+    let (offset, width, capacity, sentinel) = match fgw_length(entries) {
+        Ok(length) => length,
+        Err(why) => return format!("\ncompile_error!({why:?});\n"),
+    };
     let bits = format!("bits {offset}–{}", offset + width - 1);
     format!(
         r#"
