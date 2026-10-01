@@ -2205,3 +2205,19 @@
   requirements: [REQ-GEN-031, REQ-GEN-032]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M0-47
+  milestone: M0
+  title: "`prin profile` streams its trace: header first, each frame as it completes, flushed every 60 frames or 1 s"
+  depends_on: [TASK-M0-18]
+  needs: []
+  requirements: [REQ-TOOL-147]
+  reviewers: [code, qa, perf]
+  pitfalls: [PIT-3]
+- id: TASK-M0-48
+  milestone: M0
+  title: Tests delete their scratch folders on success and keep them only on failure
+  depends_on: [TASK-M0-06]
+  needs: []
+  requirements: [REQ-VAL-178]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]

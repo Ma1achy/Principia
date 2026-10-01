@@ -35,6 +35,7 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
+- `decisions.md` § "R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*"
 
 ## Deliverables
 - The link registry entries and chart constants in the generation-root ledger source (`crates/ledger/`), each entry with forward, inverse, log-det, ε clamps and sampling note; a missing member fails generation.
@@ -60,3 +61,6 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - R-340: the schema version hashes each link registry entry by its semantic content (generation-root §3.9, "The
   hash"); TASK-M0-46 builds the hashed table, and this task's entries are written in its canonical form (REQ-GEN-032)
   and enter the hash as they land, which changes `PAYLOAD_SCHEMA_VERSION`'s value.
+- R-344: this task depending on TASK-M0-46 and needing REQ-GEN-031 is accepted. The registry's chart constants,
+  `δ_λ` and `ε_w` among them, are hashed by value whether or not a link reads them, so this task's constants enter the
+  hash as they land, as its entries do.

@@ -6359,7 +6359,7 @@
   milestone: M5
 - id: REQ-GEN-031
   area: GEN
-  statement: "The payload schema version must hash every link registry entry (generation-root §3.9) by its semantic content: its name, its constraint, its forward, inverse and log-det, its ε clamps and each parameter its functions read, by value; not its sampling note, which is prose. Changing a hashed member of any entry, or adding or removing an entry, changes the version; a sampling-note-only edit does not (R-340, R-251, R-36)."
+  statement: "The payload schema version must hash every link registry entry (generation-root §3.9) by its semantic content: its name, its constraint, its forward, inverse and log-det, its ε clamps and each parameter its functions read, by value; not its sampling note, which is prose. It must hash every chart constant the registry holds, by value, whether or not a link reads it (`δ_λ`, `ε_w`; R-344). Changing a hashed member of any entry, or a chart constant, or adding or removing an entry, changes the version; a sampling-note-only edit does not (R-340, R-344, R-251, R-36)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
@@ -6367,15 +6367,18 @@
     section: "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
   - file: decisions.md
     section: R-36 — Schema version = content hash of the ledger *(PL-1)*
+  - file: decisions.md
+    section: "R-344 — `δ_λ` and `ε_w` are hashed; #108's four \"veto?\" items are accepted *(closes RQ-189; amends R-340)*"
   verify:
     method: unit test
-    detail: "cargo test -p ledger schema_version_links: over test registry entries, editing one entry's name, constraint, forward, inverse, log-det, an ε clamp or a parameter changes the schema version, each separately; adding and removing an entry each change it; a sampling-note-only edit leaves it unchanged; the unchanged registry gives a stable version across two runs; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash; each has a registered negative control"
+    detail: "cargo test -p ledger schema_version_links: over test registry entries and test chart constants, editing one entry's name, constraint, forward, inverse, log-det, an ε clamp or a parameter changes the schema version, each separately; editing a chart constant no link reads (a test `δ_λ`, a test `ε_w`) changes it, each separately; adding and removing an entry each change it; a sampling-note-only edit leaves it unchanged; the unchanged registry gives a stable version across two runs; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash; each has a registered negative control"
   rulings:
   - R-36
   - R-251
   - R-340
+  - R-344
   milestone: M0
-  note: "RQ-189 open: whether the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. The registry's own entries are TASK-M2-01's, hashed as they land."
+  note: "RQ-189 closed by R-344: the registry's chart constants that no link reads (`δ_λ`, `ε_w`) are hashed too. The name and every-entry items (R-340, applied per R-204) are accepted by R-344. The registry's own entries are TASK-M2-01's, hashed as they land."
 - id: REQ-GEN-032
   area: GEN
   kind: definition
@@ -15811,6 +15814,23 @@
   rulings:
   - R-309
   milestone: M8
+- id: REQ-TOOL-147
+  area: TOOL
+  statement: "`prin profile` must stream its trace: the header line first, then each frame record as the frame completes, the file flushed at least every 60 frames or every 1 s, whichever comes first, so a run that crashes or is killed loses at most the frames since the last flush; the summary line (`leak_flags`, `hot_paths`) appended as the final line at session end. The run's memory must not grow with `--frames` beyond what the summaries themselves need. A trace left by a run killed mid-session reads as \"session incomplete\" (R-341, R-286, R-298, R-299)."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: decisions.md
+    section: "R-341 — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p prin profile_stream_killed: a `prin profile --scenario synthetic_frames` run, given a frame count it cannot finish first, is killed once its trace holds the header and a frame line; the trace grew while the run ran; the engine reader returns its header and its frames from 0 in order and reports the session incomplete, \"session incomplete\" (dropping a cut-off last line with its byte count, R-299). cargo test -p prin profile_stream_flush: over a writer that records its flushes and a clock the test drives, the header line is flushed when written, frame lines are flushed at the 60th frame since the last flush or once 1 s has passed since it, whichever comes first, never later, and the summary line is written last. Each with a registered negative control. Review checklist (perf): the run keeps no frame record once it is written; the PR reports the run's peak memory at two frame counts, one 100 times the other."
+  rulings:
+  - R-286
+  - R-298
+  - R-299
+  - R-341
+  milestone: M0
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -18773,6 +18793,22 @@
   rulings:
   - R-297
   milestone: M4
+- id: REQ-VAL-178
+  area: VAL
+  statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342)."
+  source:
+  - file: decisions.md
+    section: "R-342 — Tests delete their scratch folders on success and keep them only on failure"
+  - file: decisions.md
+    section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."
+  rulings:
+  - R-176
+  - R-333
+  - R-342
+  milestone: M0
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -21392,5 +21428,6 @@
   - R-290
   - R-325
   - R-336
+  - R-344
   milestone: M0
-  note: "R-336 (applied per R-204 — veto?): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."

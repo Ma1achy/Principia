@@ -26,6 +26,7 @@ wall-clock time is ~10.5 min or less.
 - `decisions.md` § "R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*"
 - `decisions.md` § "R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*"
 - `decisions.md` § "R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*"
+- `decisions.md` § "R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*"
 
 ## Deliverables
 - `.github/workflows/ci.yml`: the nextest runs of the `ci` and `xtask-ci` jobs run as parallel shards (nextest's
@@ -54,8 +55,8 @@ wall-clock time is ~10.5 min or less.
 ## Notes
 - High priority: the next M0 task to start once TASK-M0-14 (PR #96) merges (R-336).
 - The long tests' files are qa's, and each has implementer commits, so R-290 alone lets neither qa nor the implementer
-  change them. R-336 lets qa make the splits in this task's qa commit (applied per R-204 — veto?), as R-335 lets qa
-  narrow `qa_TASK-M0-22_r235.rs`. The orchestrator's R-237 check accepts `M` on those files, and `A` for the files
-  split from them, in that commit. The implementer does not edit them.
+  change them. R-336 lets qa make the splits in this task's qa commit (applied per R-204, accepted by R-344), as R-335
+  lets qa narrow `qa_TASK-M0-22_r235.rs`. The orchestrator's R-237 check accepts `M` on those files, and `A` for the
+  files split from them, in that commit. The implementer does not edit them.
 - `qa_TASK-M0-22_r235.rs` reads the `xtask-ci` job's structure, and R-335's exception covers only its `if:` check. If
   sharding would make any other of its checks fail, that goes to REVIEW_QUEUE before the file changes (R-290).

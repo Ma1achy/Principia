@@ -581,8 +581,10 @@ type and class and not its citation (§3.8, R-251). An entry's hashed members ar
 
 Its sampling note is not hashed: it is prose for the robustness-sweep picker, and no decode or encode reads it.
 Changing a hashed member of any entry, or adding or removing an entry, changes the schema version; a sampling-note-only
-edit does not. Every entry is hashed, whether or not a block uses it by default. Whether the registry's chart
-constants that no link reads (`δ_λ`, `ε_w`) are hashed too is open (RQ-189).
+edit does not. Every entry is hashed, whether or not a block uses it by default (R-344). The registry's chart
+constants are hashed too, each by value, whether or not a link reads it: those that no link reads, `δ_λ` (decode's
+mirror tie-break) and `ε_w` (its seed-selection floor), change how a chart coordinate decodes, as the links do (R-344,
+closing RQ-189).
 
 ---
 
