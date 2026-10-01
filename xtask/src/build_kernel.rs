@@ -89,14 +89,17 @@ fn backend_library() -> String {
     )
 }
 
-/// The backend in cargo-gpu's crate at `install_dir` was built from [`BACKEND_VERSION`]: its library is there, and the
-/// lockfile it was built under pins `rustc_codegen_spirv` at that version. Such a backend is used as it is; any other is
-/// rebuilt by [`build_backend`].
+/// The backend in cargo-gpu's crate at `install_dir` was built from [`BACKEND_LOCK`]: its library is there, and the
+/// lockfile it was built under is [`BACKEND_LOCK`], byte for byte, so `rustc_codegen_spirv` is [`BACKEND_VERSION`] and
+/// every dependency is at the version that lockfile pins. Such a backend is used as it is; any other, one whose lockfile
+/// differs in any package, is rebuilt by [`build_backend`].
 pub fn backend_built(install_dir: &Path) -> bool {
-    install_dir.join(backend_library()).is_file()
-        && std::fs::read_to_string(install_dir.join("Cargo.lock")).is_ok_and(|lock| {
-            locked_version(&lock, "rustc_codegen_spirv").as_deref() == Some(BACKEND_VERSION)
-        })
+    install_dir.join(backend_library()).is_file() && locked_as_pinned(install_dir)
+}
+
+/// The lockfile of cargo-gpu's crate at `install_dir` is [`BACKEND_LOCK`], byte for byte.
+fn locked_as_pinned(install_dir: &Path) -> bool {
+    std::fs::read_to_string(install_dir.join("Cargo.lock")).is_ok_and(|lock| lock == BACKEND_LOCK)
 }
 
 /// Writes cargo-gpu's backend crate at `install_dir` with [`BACKEND_TOML`] and [`BACKEND_LOCK`], and removes any backend
@@ -217,11 +220,12 @@ pub fn run(manifest: &Path) -> Result<(), String> {
     let backend = Install::from_shader_crate(kernel.clone())
         .run()
         .map_err(|e| format!("build-kernel: installing rust-gpu: {e:#}"))?;
-    let lock = std::fs::read_to_string(install_dir.join("Cargo.lock")).unwrap_or_default();
-    let built = locked_version(&lock, "rustc_codegen_spirv");
-    if built.as_deref() != Some(BACKEND_VERSION) {
+    if !locked_as_pinned(&install_dir) {
+        let lock = std::fs::read_to_string(install_dir.join("Cargo.lock")).unwrap_or_default();
         return Err(format!(
-            "build-kernel: rust-gpu's backend resolved to rustc_codegen_spirv {built:?}, not {BACKEND_VERSION}"
+            "build-kernel: rust-gpu's backend was resolved other than rust-gpu-backend.lock pins it \
+             (rustc_codegen_spirv {:?}; the lockfile differs from BACKEND_LOCK)",
+            locked_version(&lock, "rustc_codegen_spirv")
         ));
     }
     check_channel(&pinned, &backend.toolchain_channel)?;

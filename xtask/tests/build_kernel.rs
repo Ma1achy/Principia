@@ -167,13 +167,13 @@ fn backend_dir(case: &str, lock: &str) -> PathBuf {
     dir
 }
 
-/// A backend built under `lock` is not taken as built from [`BACKEND_VERSION`]; [`prepare_backend`] then writes the
+/// A backend built under `lock` is not taken as built from [`BACKEND_LOCK`]; [`prepare_backend`] then writes the
 /// pinned crate and removes the library.
 fn check_rebuilt(case: &str, lock: &str) {
     let dir = backend_dir(case, lock);
     assert!(
         !backend_built(&dir),
-        "a backend built from rustc_codegen_spirv {:?} was taken as built from {BACKEND_VERSION}",
+        "a backend built from rustc_codegen_spirv {:?} under another lockfile was taken as built from rust-gpu-backend.lock",
         locked_version(lock, "rustc_codegen_spirv")
     );
     prepare_backend(&dir).expect("prepare_backend");
@@ -203,6 +203,13 @@ fn build_kernel_rebuilds_a_backend_of_another_version() {
         "the edit found no rustc_codegen_spirv entry"
     );
     check_rebuilt("other", &other);
+    // rustc_codegen_spirv at the pinned version, but one of its dependencies at another: rebuilt too.
+    let dependency = locked_dependency_changed();
+    assert_eq!(
+        locked_version(&dependency, "rustc_codegen_spirv").as_deref(),
+        Some(BACKEND_VERSION)
+    );
+    check_rebuilt("dependency", &dependency);
     // Built under the pinned lockfile: used as it is. With no library: built.
     let same = backend_dir("same", BACKEND_LOCK);
     assert!(backend_built(&same));
@@ -210,10 +217,23 @@ fn build_kernel_rebuilds_a_backend_of_another_version() {
     assert!(!backend_built(&same));
 }
 
+/// [`BACKEND_LOCK`] with `spirv-tools`, one of the backend's dependencies, at another version, and
+/// `rustc_codegen_spirv` unchanged.
+fn locked_dependency_changed() -> String {
+    let entry = "name = \"spirv-tools\"\nversion = \"";
+    let at = BACKEND_LOCK
+        .find(entry)
+        .expect("BACKEND_LOCK holds spirv-tools")
+        + entry.len();
+    let end = at + BACKEND_LOCK[at..].find('"').unwrap();
+    format!("{}0.0.1-other{}", &BACKEND_LOCK[..at], &BACKEND_LOCK[end..])
+}
+
 negative_control!(
     build_kernel_rebuilds_a_backend_of_another_version,
-    "a backend built under the pinned lockfile, which is used as it is",
-    expected = "was taken as built from",
+    "a backend built under the pinned lockfile itself, byte for byte, the one lockfile used as it is: the check \
+     that rejects one differing in rustc_codegen_spirv or in any dependency fires on it",
+    expected = "was taken as built from rust-gpu-backend.lock",
     check_rebuilt("control", BACKEND_LOCK)
 );
 
