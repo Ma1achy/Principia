@@ -55,7 +55,8 @@ die() {
 #   A <pkg>            an `apt-get install` package
 #   P <ver>            an `actions/setup-python` step's `python-version:`
 #   Y <pkg>            a `pip install` package
-#   E <var> <value>    PRIN_GPU_BACKEND from an `env:`
+#   E <var> <value>    PRIN_GPU_BACKEND from a job's or step's `env:`, or from the workflow's top-level `env:` when the
+#                      workflow has a Linux job
 #   U <where>: <text>  a step that installs by a means this script doesn't know
 ci_records() {
   local files
@@ -67,7 +68,22 @@ ci_records() {
     function unquote(s) { s = trim(s); gsub("^[\"" q "]|[\"" q "]$", "", s); return s }
     function indent(s,   t) { t = s; sub(/^ +/, "", t); return length(s) - length(t) }
     function emit(s) { buf = buf s "\n" }
-    function flush_job() { if (linux) printf "%s", buf; buf = ""; linux = 0; tc = ""; run_ind = -1 }
+    function flush_job() {
+      flush_run()
+      if (linux) { printf "%s", buf; file_linux = 1 }
+      buf = ""; linux = 0; tc = ""; run_ind = -1
+    }
+    # The workflow-level PRIN_GPU_BACKEND, which its Linux jobs inherit.
+    function flush_file() {
+      if (wf_env != "" && file_linux) print "E PRIN_GPU_BACKEND " wf_env
+      wf_env = ""; file_linux = 0
+    }
+    # A line of a `run:` block. A line ending in `\` continues on the next, so the command is read whole.
+    function run_line(t) {
+      if (t ~ /\\$/) { pend = pend substr(t, 1, length(t) - 1) " "; return }
+      scan_command(pend t); pend = ""
+    }
+    function flush_run() { if (pend != "") scan_command(pend); pend = "" }
     # The words after `key` in `cmd`, up to the end of that command: options are skipped.
     function words_after(cmd, key, kind,   i, n, w, rest) {
       i = index(cmd, key)
@@ -90,18 +106,23 @@ ci_records() {
         emit("U " FILENAME ":" FNR ": " cmd)
       }
     }
-    FNR == 1 { flush_job(); in_jobs = 0 }
+    FNR == 1 { flush_job(); flush_file(); in_jobs = 0; in_wf_env = 0 }
     {
       line = $0
       t = trim(line)
       if (t == "") next
       ind = indent(line)
       if (run_ind >= 0) {
-        if (ind > run_ind) { scan_command(t); next }
-        run_ind = -1
+        if (ind > run_ind) { run_line(t); next }
+        flush_run(); run_ind = -1
       }
       if (substr(t, 1, 1) == "#") next
-      if (ind == 0) { flush_job(); in_jobs = (t == "jobs:"); next }
+      if (ind == 0) {
+        flush_job(); in_jobs = (t == "jobs:"); in_wf_env = (t == "env:")
+        if (t ~ /^env:/ && t != "env:" && index(t, "PRIN_GPU_BACKEND") > 0) print "U " FILENAME ":" FNR ": " t
+        next
+      }
+      if (in_wf_env && t ~ /^PRIN_GPU_BACKEND:/) { wf_env = unquote(substr(t, 18)); next }
       if (!in_jobs) next
       if (ind == 2) { flush_job(); next }
       if (substr(t, 1, 2) == "- ") { tc = ""; t = substr(t, 3); t = trim(t); step_ind = ind }
@@ -141,11 +162,12 @@ ci_records() {
       if (t ~ /^run:/) {
         v = trim(substr(t, 5))
         if (v ~ /^[|>][-+]?$/) run_ind = ind
+        else if (v ~ /\\$/) emit("U " FILENAME ":" FNR ": " t)
         else scan_command(v)
         next
       }
     }
-    END { flush_job() }
+    END { flush_job(); flush_file() }
   ' $files | sort -u
 }
 

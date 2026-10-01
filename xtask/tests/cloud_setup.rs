@@ -99,6 +99,31 @@ fn linux_jobs(file: &str, workflow: &str) -> Vec<Vec<String>> {
         .collect()
 }
 
+/// The workflow's top-level `env:` value of `PRIN_GPU_BACKEND`, which each of its jobs inherits. A top-level `env:`
+/// written inline that names it fails the check, since it is not read.
+fn workflow_backend(file: &str, workflow: &str) -> Option<String> {
+    let mut in_env = false;
+    let mut found = None;
+    for line in workflow.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if indent(line) == 0 {
+            in_env = trimmed == "env:";
+            assert!(
+                in_env || !trimmed.starts_with("env:") || !trimmed.contains("PRIN_GPU_BACKEND"),
+                "{file}: a Linux job installs through a step this check doesn't know: `{trimmed}`"
+            );
+        } else if in_env {
+            if let Some(value) = trimmed.strip_prefix("PRIN_GPU_BACKEND:") {
+                found = Some(unquote(value).to_owned());
+            }
+        }
+    }
+    found
+}
+
 /// The packages a shell command installs after `key` (`apt-get install`, `pip install`): its words up to the end of
 /// the command, less options.
 fn installed_after(command: &str, key: &str) -> Vec<String> {
@@ -175,18 +200,40 @@ fn ci_plan(workflows: &[(String, String)], toolchain: Option<&str>) -> BTreeSet<
         (kind.to_owned(), name.to_owned(), version.to_owned())
     };
     for (file, text) in workflows {
-        for job in linux_jobs(file, text) {
-            // The ref of the `dtolnay/rust-toolchain` step being read, and the indent of the `run:` block being read.
+        let jobs = linux_jobs(file, text);
+        if let Some(backend) = workflow_backend(file, text).filter(|_| !jobs.is_empty()) {
+            plan.insert(item("env", "PRIN_GPU_BACKEND", &backend));
+        }
+        for job in jobs {
+            // The ref of the `dtolnay/rust-toolchain` step being read, the indent of the `run:` block being read, and
+            // the command a `\`-ended line of that block continues.
             let mut action_ref: Option<String> = None;
             let mut run_block: Option<usize> = None;
-            for line in &job {
+            let mut continued = String::new();
+            for line in job.iter().map(String::as_str).chain([""]) {
                 let mut key = line.trim();
                 if let Some(at) = run_block {
-                    if indent(line) > at {
-                        scan_command(file, key, &mut plan);
+                    if !line.is_empty() && indent(line) > at {
+                        match key.strip_suffix('\\') {
+                            Some(head) => {
+                                continued.push_str(head);
+                                continued.push(' ');
+                            }
+                            None => {
+                                scan_command(file, &format!("{continued}{key}"), &mut plan);
+                                continued.clear();
+                            }
+                        }
                         continue;
                     }
+                    if !continued.is_empty() {
+                        scan_command(file, &continued, &mut plan);
+                        continued.clear();
+                    }
                     run_block = None;
+                }
+                if line.is_empty() {
+                    break;
                 }
                 if key.starts_with('#') {
                     continue;
@@ -229,6 +276,10 @@ fn ci_plan(workflows: &[(String, String)], toolchain: Option<&str>) -> BTreeSet<
                     if ["|", ">", "|-", ">-", "|+", ">+"].contains(&command) {
                         run_block = Some(indent(line));
                     } else {
+                        assert!(
+                            !command.ends_with('\\'),
+                            "{file}: a Linux job installs through a step this check doesn't know: `{key}`"
+                        );
                         scan_command(file, command, &mut plan);
                     }
                 }
@@ -593,6 +644,79 @@ validation::negative_control!(
         let copy = scratch("refuses_control");
         copy_tree(&copy, str::to_owned, None);
         check_refused(&copy)
+    }
+);
+
+/// The one-line lavapipe step CI's Linux jobs use, and the same step as a `run: |` block whose `apt-get install`
+/// continues, after a `\`, onto a line naming one more package.
+const LAVAPIPE_LINE: &str =
+    "        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers\n";
+const LAVAPIPE_CONTINUED: &str = "        run: |\n          sudo apt-get update\n          sudo apt-get install -y \\\n            mesa-vulkan-drivers xvfb\n";
+
+/// CI's value of `PRIN_GPU_BACKEND` for its Linux jobs.
+fn ci_backend() -> String {
+    the_ci_plan()
+        .into_iter()
+        .find(|(kind, _, _)| kind == "env")
+        .map(|(_, _, value)| value)
+        .expect("CI's Linux jobs set PRIN_GPU_BACKEND")
+}
+
+/// `text` with its lavapipe step continued onto a second line (`LAVAPIPE_CONTINUED`), and its jobs' and steps'
+/// `PRIN_GPU_BACKEND: <CI's value>` moved to the workflow's top-level `env:`.
+fn continue_and_lift(text: &str) -> String {
+    let backend = format!("PRIN_GPU_BACKEND: {}", ci_backend());
+    let text = text.replace(LAVAPIPE_LINE, LAVAPIPE_CONTINUED);
+    if !text.lines().any(|l| indent(l) > 0 && l.trim() == backend) {
+        return text;
+    }
+    let kept: String = text
+        .lines()
+        .filter(|l| l.trim() != backend)
+        .map(|l| format!("{l}\n"))
+        .collect();
+    match kept.find("\nenv:\n") {
+        Some(at) => format!("{}  {backend}\n{}", &kept[..at + 6], &kept[at + 6..]),
+        None => kept.replacen("\njobs:\n", &format!("\nenv:\n  {backend}\njobs:\n"), 1),
+    }
+}
+
+/// The dry run of the tree at `run_in` installs what the copy at `copy` installs, whose lavapipe step continues onto a
+/// second line and whose PRIN_GPU_BACKEND is set only at its workflows' top level.
+fn check_reads_continued_and_lifted(copy: &Path, run_in: &Path) {
+    let wanted = ci_plan(&workflows(copy), toolchain_file(copy).as_deref());
+    let backend = format!("PRIN_GPU_BACKEND: {}", ci_backend());
+    let job_level = workflows(copy)
+        .iter()
+        .any(|(_, text)| text.lines().any(|l| indent(l) > 2 && l.trim() == backend));
+    assert!(
+        wanted.contains(&("apt".into(), "xvfb".into(), "-".into()))
+            && wanted.contains(&("env".into(), "PRIN_GPU_BACKEND".into(), ci_backend()))
+            && !job_level,
+        "the copy's continued line and top-level PRIN_GPU_BACKEND are not the changed ones"
+    );
+    assert!(
+        script_plan(run_in) == wanted,
+        "cloud-setup.sh's dry run misses a continued install line or the workflow-level PRIN_GPU_BACKEND"
+    );
+    fs::remove_dir_all(copy).unwrap();
+}
+
+#[test]
+fn cloud_setup_reads_continued_lines_and_the_workflow_env() {
+    let copy = scratch("continued");
+    copy_tree(&copy, continue_and_lift, None);
+    check_reads_continued_and_lifted(&copy, &copy);
+}
+
+validation::negative_control!(
+    cloud_setup_reads_continued_lines_and_the_workflow_env,
+    "the repository's own dry run, required to report the copy's continued package",
+    expected = "cloud-setup.sh's dry run misses a continued install line or the workflow-level PRIN_GPU_BACKEND",
+    {
+        let copy = scratch("continued_control");
+        copy_tree(&copy, continue_and_lift, None);
+        check_reads_continued_and_lifted(&copy, &root())
     }
 );
 
