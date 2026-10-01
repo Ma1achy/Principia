@@ -9,7 +9,6 @@
 //! header probe, [`session_header`], takes the adapter the run already opened, if any.
 
 use std::fs::File;
-use std::hint::black_box;
 use std::path::Path;
 use std::process::ExitCode;
 use std::time::Instant;
@@ -230,8 +229,9 @@ const CHILD: &str = "synthetic_step";
 const EVENT: &str = "synthetic_frame";
 
 /// `synthetic_frames` (R-113, REQ-TOOL-006): no physics. Each frame runs the four batch stages; each stage one scope
-/// with one child scope around a fixed, small integer computation, and the integrate stage one event, so every frame
-/// has the same scopes and events in the same order. The times are measured, wall clock. Nothing is integrated,
+/// with one child scope, and the integrate stage one event, so every frame has the same scopes and events in the same
+/// order. The scopes do no work of their own: their times, measured wall clock, are the instrumentation's own cost,
+/// which a profile carries in every scenario (telemetry §5.5: the overhead must be small enough to leave on). Nothing is integrated,
 /// reduced or uploaded, so the counts are 0; the camera and the playhead do not move; and no memory is tracked. A
 /// headless run is a batch render: no present stage (telemetry §5.5). It does no GPU work, so it never asks `gpu`.
 fn synthetic_frames(frames: u64, _gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
@@ -244,13 +244,6 @@ fn synthetic_frames(frames: u64, _gpu: &mut AdapterRequest<'_>) -> Result<Run, S
 
 fn ms_since(start: Instant) -> f64 {
     start.elapsed().as_secs_f64() * 1000.0
-}
-
-/// A fixed amount of integer work, so a scope's time is the time of something.
-fn work(seed: u64) -> u64 {
-    (0..1_000u64).fold(seed, |acc, k| {
-        black_box(acc.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(k))
-    })
 }
 
 fn synthetic_frame(index: u64) -> FrameRecord {
@@ -271,7 +264,6 @@ fn synthetic_frame(index: u64) -> FrameRecord {
         let scope_start = Instant::now();
         let child_start_ms = ms_since(frame_start);
         let child_start = Instant::now();
-        black_box(work(index));
         let child = Scope {
             name: CHILD.to_owned(),
             start_ms: child_start_ms,
@@ -367,6 +359,52 @@ mod tests {
         let trace = trace_of("synthetic_frames", 3, done).expect("no trace");
         assert_eq!(trace.header.backend.api, Api::None);
     }
+
+    /// `ms_since` gives wall-clock milliseconds: a sleep of `ms` reads as at least `ms`, and well under a second more.
+    fn check_milliseconds(ms_since: fn(Instant) -> f64, ms: u64) {
+        let start = Instant::now();
+        std::thread::sleep(std::time::Duration::from_millis(ms));
+        let got = ms_since(start);
+        assert!(
+            got >= ms as f64 && got < ms as f64 + 1000.0,
+            "a {ms} ms sleep reads as {got} ms"
+        );
+    }
+
+    #[test]
+    fn profile_file_times_are_milliseconds() {
+        check_milliseconds(ms_since, 5);
+    }
+
+    validation::negative_control!(
+        profile_file_times_are_milliseconds,
+        "seconds must fail the milliseconds check",
+        expected = "ms sleep reads as",
+        check_milliseconds(|start| start.elapsed().as_secs_f64(), 5)
+    );
+
+    /// M0's GPU refuses every request, saying why: `prin` links no GPU API.
+    fn check_refuses(request: fn() -> Result<OpenAdapter, String>) {
+        match request() {
+            Err(why) => assert!(
+                why.contains("links no GPU API"),
+                "the refusal does not say prin links no GPU API: {why:?}"
+            ),
+            Ok(adapter) => match adapter {},
+        }
+    }
+
+    #[test]
+    fn profile_no_gpu_api_refuses_a_request() {
+        check_refuses(no_gpu_api);
+    }
+
+    validation::negative_control!(
+        profile_no_gpu_api_refuses_a_request,
+        "a refusal that gives no reason must fail the check",
+        expected = "does not say prin links no GPU API",
+        check_refuses(|| Err(String::new()))
+    );
 
     #[test]
     fn profile_no_gpu_synthetic_run_requests_no_adapter() {

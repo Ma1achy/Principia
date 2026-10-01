@@ -15,26 +15,36 @@ use std::process::ExitCode;
 
 use engine::contract::profile::{self, percentile, Scope, Stage, Trace};
 
+/// A stage, by its place in `stage_ms`'s order, so the report lists the stages in that order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct At(usize);
+
+impl At {
+    fn key(self) -> &'static str {
+        Stage::ALL[self.0].key()
+    }
+}
+
 /// One scope of the diff.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Key {
     /// The frame: `frame_ms`.
     Frame,
     /// A stage: its `stage_ms`.
-    Stage(&'static str),
+    Stage(At),
     /// A CPU scope: its stage, then the names from the stage down to it.
-    Scope(&'static str, Vec<String>),
+    Scope(At, Vec<String>),
     /// A GPU pass: its stage and name.
-    GpuPass(&'static str, String),
+    GpuPass(At, String),
 }
 
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Key::Frame => write!(f, "frame"),
-            Key::Stage(stage) => write!(f, "stage {stage}"),
-            Key::Scope(stage, path) => write!(f, "scope {stage}/{}", path.join("/")),
-            Key::GpuPass(stage, name) => write!(f, "gpu pass {stage}/{name}"),
+            Key::Stage(stage) => write!(f, "stage {}", stage.key()),
+            Key::Scope(stage, path) => write!(f, "scope {}/{}", stage.key(), path.join("/")),
+            Key::GpuPass(stage, name) => write!(f, "gpu pass {}/{name}", stage.key()),
         }
     }
 }
@@ -66,18 +76,19 @@ fn samples(trace: &Trace) -> BTreeMap<Key, Vec<f64>> {
             Some(ms.upload),
             ms.present,
         ];
-        for (stage, value) in Stage::ALL.into_iter().zip(stage_ms) {
+        for (i, (stage, value)) in Stage::ALL.into_iter().zip(stage_ms).enumerate() {
+            let at = At(i);
             if let Some(value) = value {
-                this.insert(Key::Stage(stage.key()), value);
+                this.insert(Key::Stage(at), value);
             }
             let Some(sections) = frame.stages.get(stage) else {
                 continue;
             };
             let mut path = Vec::new();
-            add_scopes(stage.key(), &sections.scopes, &mut path, &mut this);
+            add_scopes(at, &sections.scopes, &mut path, &mut this);
             for pass in &sections.gpu_passes {
                 *this
-                    .entry(Key::GpuPass(stage.key(), pass.name.clone()))
+                    .entry(Key::GpuPass(at, pass.name.clone()))
                     .or_insert(0.0) += pass.ms;
             }
         }
@@ -88,12 +99,7 @@ fn samples(trace: &Trace) -> BTreeMap<Key, Vec<f64>> {
     all
 }
 
-fn add_scopes(
-    stage: &'static str,
-    scopes: &[Scope],
-    path: &mut Vec<String>,
-    this: &mut BTreeMap<Key, f64>,
-) {
+fn add_scopes(stage: At, scopes: &[Scope], path: &mut Vec<String>, this: &mut BTreeMap<Key, f64>) {
     for scope in scopes {
         path.push(scope.name.clone());
         *this.entry(Key::Scope(stage, path.clone())).or_insert(0.0) += scope.ms;

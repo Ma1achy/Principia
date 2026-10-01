@@ -234,6 +234,21 @@ fn check_provenance(header_line: &str, frames: u64, commit: &str) {
         json!(commit),
         "the header's build hash is not the build's"
     );
+    let profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+    let features: Vec<&str> = if cfg!(feature = "controls") {
+        vec!["controls"]
+    } else {
+        vec![]
+    };
+    assert_eq!(
+        (&header["build"]["profile"], &header["build"]["features"]),
+        (&json!(profile), &json!(features)),
+        "the header's build profile or features are not the build's"
+    );
     let config = header["config"]
         .as_object()
         .expect("the config is not an object");
@@ -588,6 +603,148 @@ fn check_same_sequence(first: &str, second: &str, frames: usize) {
     assert_eq!(a, b, "the two runs' scope / event sequence differs");
 }
 
+/// Each frame's scopes and events: the four batch stages, each one `synthetic` scope with one `synthetic_step` child,
+/// and the integrate stage's `synthetic_frame` event (synthetic_frames, run.rs).
+const FIXED: [&str; 9] = [
+    "integrate/synthetic",
+    "integrate/synthetic/synthetic_step",
+    "integrate!synthetic_frame",
+    "reduce/synthetic",
+    "reduce/synthetic/synthetic_step",
+    "colour/synthetic",
+    "colour/synthetic/synthetic_step",
+    "upload/synthetic",
+    "upload/synthetic/synthetic_step",
+];
+
+/// Every frame has the fixed sequence.
+fn check_fixed_sequence(text: &str) {
+    for (i, frame) in sequence(text).iter().enumerate() {
+        assert_eq!(
+            frame, &FIXED,
+            "frame {i} is not the fixed scope / event sequence"
+        );
+    }
+}
+
+#[test]
+fn profile_scenario_fixed_sequence() {
+    check_fixed_sequence(&synthetic(4).1);
+}
+
+validation::negative_control!(
+    profile_scenario_fixed_sequence,
+    "an event added to another stage must fail the fixed-sequence check",
+    expected = "is not the fixed scope / event sequence",
+    check_fixed_sequence(&synthetic(4).1.replace(
+        r#""events":[]}"#,
+        r#""events":[{"name":"synthetic_frame","at_ms":0.0,"detail":null}]}"#
+    ))
+);
+
+/// The frames are measured and in place: indexed from 0; frame_ms > 0, and the frames' total at most the run's wall
+/// clock, `elapsed_ms`; the four stages' ms sum to at most frame_ms; a scope's ms at most its stage's, a child's at
+/// most its parent's; each stage's scope starting no earlier than the last's; the event at or before the first scope;
+/// a batch render (no present stage, still camera and playhead), with nothing integrated and no memory tracked.
+fn check_measured(text: &str, elapsed_ms: f64) {
+    let values = values_of(text);
+    let frames = &values[1..values.len() - 1];
+    let mut total = 0.0;
+    for (i, f) in frames.iter().enumerate() {
+        let at = format!("frame {i}");
+        assert_eq!(f["frame"], json!(i), "{at} is not indexed from 0");
+        let frame_ms = f["frame_ms"].as_f64().unwrap();
+        total += frame_ms;
+        assert!(frame_ms > 0.0, "{at}: frame_ms is not measured");
+        let mut stages = 0.0;
+        let mut last_start = 0.0;
+        for stage in ["integrate", "reduce", "colour", "upload"] {
+            let ms = f["stage_ms"][stage].as_f64().unwrap();
+            stages += ms;
+            let scope = &f["stages"][stage]["scopes"][0];
+            let child = &scope["children"][0];
+            let start = scope["start_ms"].as_f64().unwrap();
+            let scope_ms = scope["ms"].as_f64().unwrap();
+            assert!(
+                scope_ms <= ms && child["ms"].as_f64().unwrap() <= scope_ms,
+                "{at}: a scope outlasts its stage, or a child its scope"
+            );
+            assert!(
+                start >= last_start && child["start_ms"].as_f64().unwrap() >= start,
+                "{at}: a scope starts before the one it follows"
+            );
+            last_start = start;
+        }
+        assert!(stages <= frame_ms, "{at}: the stages outlast the frame");
+        let event = f["stages"]["integrate"]["events"][0]["at_ms"]
+            .as_f64()
+            .unwrap();
+        assert!(
+            event
+                <= f["stages"]["integrate"]["scopes"][0]["start_ms"]
+                    .as_f64()
+                    .unwrap(),
+            "{at}: the event is after the first scope"
+        );
+        assert_eq!(
+            (
+                &f["stage_ms"]["present"],
+                &f["stages"]["present"],
+                &f["camera_delta"],
+                &f["playhead_dt"]
+            ),
+            (&Value::Null, &Value::Null, &json!(0.0), &json!(0.0)),
+            "{at} is not a batch render"
+        );
+        for key in [
+            "quads_computed",
+            "quads_reused",
+            "samples",
+            "substeps_total",
+            "leaf_count",
+        ] {
+            assert_eq!(f[key], json!(0), "{at}: {key} is not 0");
+        }
+        assert_eq!(
+            f["live_memory"]["heap"],
+            json!({ "bytes": 0, "by_kind": [] }),
+            "{at}: memory is tracked"
+        );
+    }
+    assert!(
+        total <= elapsed_ms,
+        "the frames' {total} ms exceed the run's {elapsed_ms} ms of wall clock"
+    );
+}
+
+/// A run of `frames` frames, and the wall clock it took.
+fn timed(frames: u64) -> (String, f64) {
+    let start = std::time::Instant::now();
+    let (_, text) = synthetic(frames);
+    (text, start.elapsed().as_secs_f64() * 1000.0)
+}
+
+#[test]
+fn profile_scenario_frames_are_measured() {
+    let (text, elapsed) = timed(20);
+    check_measured(&text, elapsed);
+}
+
+validation::negative_control!(
+    profile_scenario_frames_are_measured,
+    "frames each claiming a second must fail the wall-clock check",
+    expected = "of wall clock",
+    {
+        let (text, elapsed) = timed(3);
+        let mut values = values_of(&text);
+        let n = values.len();
+        for f in &mut values[1..n - 1] {
+            f["frame_ms"] = json!(1000.0);
+        }
+        check_measured(&file_of(&values), elapsed)
+    }
+);
+
 #[test]
 fn profile_scenario_same_sequence_twice() {
     check_same_sequence(&synthetic(6).1, &synthetic(6).1, 6);
@@ -607,6 +764,7 @@ validation::negative_control!(
 /// `prin profile` refuses a scenario name that is not registered: it fails, names the reason, and writes no file.
 fn check_refused_name(out: &Output, path: &Path) {
     assert!(!out.status.success(), "prin profile accepted the scenario");
+    assert_eq!(out.status.code(), Some(2), "a refused run does not exit 2");
     assert!(
         String::from_utf8_lossy(&out.stderr).contains("not a registered scenario"),
         "the refusal does not say the scenario is not registered"
@@ -825,6 +983,221 @@ validation::negative_control!(
     }
 );
 
+/// `--threshold` is a percentage ≥ 0, `P%` or `P`: anything else is a usage error, exit 2.
+fn check_threshold_refused(base: &Path, threshold: &str) {
+    let out = diff(base, base, threshold);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "--threshold {threshold} is not refused"
+    );
+}
+
+#[test]
+fn profile_diff_threshold_is_a_percentage() {
+    let base = write_scratch("base.jsonl", &fixture());
+    for bad in ["-5%", "-1", "nan", "inf%", "five", "5%%"] {
+        check_threshold_refused(&base, bad);
+    }
+    let new = write_scratch("raised6.jsonl", &raised(&fixture(), 1.06));
+    check_flags(&base, &new, "5");
+    check_passes(&base, &new, "10");
+}
+
+validation::negative_control!(
+    profile_diff_threshold_is_a_percentage,
+    "a valid threshold must fail the refusal check",
+    expected = "is not refused",
+    check_threshold_refused(&write_scratch("base.jsonl", &fixture()), "5%")
+);
+
+/// One frame record: `frame_ms`, the five stages' ms (`present` `None` for a batch frame), and each stage's sections
+/// from `sections`, by stage key.
+fn frame_json(
+    index: u64,
+    frame_ms: f64,
+    stage_ms: [Option<f64>; 5],
+    sections: &[(&str, Value)],
+) -> Value {
+    let empty = json!({ "scopes": [], "gpu_passes": [], "allocations": [], "events": [] });
+    let keys = ["integrate", "reduce", "colour", "upload", "present"];
+    let mut ms = serde_json::Map::new();
+    let mut stages = serde_json::Map::new();
+    for (key, value) in keys.iter().zip(stage_ms) {
+        ms.insert((*key).to_owned(), json!(value));
+        let section = sections
+            .iter()
+            .find(|(k, _)| k == key)
+            .map_or(empty.clone(), |(_, v)| v.clone());
+        let section = if value.is_some() {
+            section
+        } else {
+            Value::Null
+        };
+        stages.insert((*key).to_owned(), section);
+    }
+    let pool = json!({ "bytes": 0, "by_kind": [] });
+    json!({
+        "frame": index, "frame_ms": frame_ms, "quads_computed": 0, "quads_reused": 0, "samples": 0,
+        "substeps_total": 0, "playhead_dt": 0.0, "camera_delta": 0.0, "tree_depth_max": 0, "leaf_count": 0,
+        "dmin_nan_unset": 0, "dmin_negative_floored": 0, "stage_ms": ms, "stages": stages,
+        "live_memory": { "heap": pool, "gpu": pool, "tile_cache": pool }
+    })
+}
+
+fn scope_json(name: &str, ms: f64, children: Value) -> Value {
+    json!({ "name": name, "start_ms": 0.0, "ms": ms, "children": children })
+}
+
+/// A trace of `frames`, with the fixture's header.
+fn trace_of_frames(frames: &[Value]) -> String {
+    let mut values = vec![values_of(&fixture())[0].clone()];
+    values.extend_from_slice(frames);
+    values.push(json!({ "leak_flags": null, "hot_paths": null }));
+    file_of(&values)
+}
+
+/// Each compared scope's BASE p95, as the diff prints it.
+fn reported(stdout: &str) -> Vec<(String, f64)> {
+    stdout
+        .lines()
+        .filter_map(|l| {
+            let (key, rest) = l.split_once(": ")?;
+            let base = rest.split(" -> ").next()?.parse().ok()?;
+            Some((key.to_owned(), base))
+        })
+        .collect()
+}
+
+/// Two frames: the first has `A` twice and a GPU pass `P` twice; the second has no present stage, no `A/B` and no
+/// GPU pass.
+fn scope_set_trace() -> String {
+    let a_twice = json!({
+        "scopes": [
+            scope_json("A", 2.5, json!([scope_json("B", 0.5, json!([]))])),
+            scope_json("A", 2.5, json!([]))
+        ],
+        "gpu_passes": [], "allocations": [], "events": []
+    });
+    let p_twice = json!({
+        "scopes": [], "allocations": [], "events": [],
+        "gpu_passes": [
+            { "name": "P", "start_ms": 0.0, "ms": 0.25 },
+            { "name": "P", "start_ms": 0.5, "ms": 0.75 }
+        ]
+    });
+    let a_once = json!({
+        "scopes": [scope_json("A", 4.0, json!([]))], "gpu_passes": [], "allocations": [], "events": []
+    });
+    trace_of_frames(&[
+        frame_json(
+            0,
+            10.0,
+            [Some(4.0), Some(3.0), Some(2.0), Some(1.0), Some(0.5)],
+            &[("integrate", a_twice), ("reduce", p_twice)],
+        ),
+        frame_json(
+            1,
+            20.0,
+            [Some(8.0), Some(6.0), Some(4.0), Some(2.0), None],
+            &[("integrate", a_once)],
+        ),
+    ])
+}
+
+/// The diff's scope set and statistic (render_gui_spec § "Profiler", REQ-TOOL-119): the frame, the five stages (present
+/// only where not null), each CPU scope by its path, each GPU pass; a scope twice in a frame summed; the p95 of two
+/// samples the larger.
+fn check_scope_set(stdout: &str) {
+    let want: Vec<(String, f64)> = [
+        ("frame", 20.0),
+        ("stage integrate", 8.0),
+        ("stage reduce", 6.0),
+        ("stage colour", 4.0),
+        ("stage upload", 2.0),
+        ("stage present", 0.5),
+        ("scope integrate/A", 5.0),
+        ("scope integrate/A/B", 0.5),
+        ("gpu pass reduce/P", 1.0),
+    ]
+    .iter()
+    .map(|(k, v)| ((*k).to_owned(), *v))
+    .collect();
+    assert_eq!(
+        reported(stdout),
+        want,
+        "the diff's scope set or p95s are not the definition's"
+    );
+}
+
+#[test]
+fn profile_diff_scope_set() {
+    let path = write_scratch("scopes.jsonl", &scope_set_trace());
+    let out = diff(&path, &path, "0%");
+    assert_eq!(out.status.code(), Some(0), "a trace regresses on itself");
+    check_scope_set(&String::from_utf8_lossy(&out.stdout));
+}
+
+validation::negative_control!(
+    profile_diff_scope_set,
+    "the fixture's scopes must fail the scope-set check",
+    expected = "are not the definition's",
+    {
+        let path = write_scratch("base.jsonl", &fixture());
+        check_scope_set(&String::from_utf8_lossy(&diff(&path, &path, "0%").stdout))
+    }
+);
+
+/// One batch frame whose `frame_ms` is `frame_ms` and whose integrate stage takes `integrate` ms.
+fn one_frame(frame_ms: f64, integrate: f64) -> PathBuf {
+    let stage_ms = [Some(integrate), Some(0.0), Some(0.0), Some(0.0), None];
+    write_scratch(
+        "one.jsonl",
+        &trace_of_frames(&[frame_json(0, frame_ms, stage_ms, &[])]),
+    )
+}
+
+/// The regression rule at its edges: a rise of exactly P% is not one, and more is; from 0, no rise is not one and any
+/// rise is.
+fn check_edges(code: impl Fn(&Path, &Path, &str) -> Option<i32>) {
+    let (base, plus25) = (one_frame(2.0, 0.0), one_frame(2.5, 0.0));
+    let cases = [
+        (
+            &base,
+            &plus25,
+            "25%",
+            Some(0),
+            "a rise of exactly 25% at 25%",
+        ),
+        (&base, &plus25, "24.9%", Some(1), "a rise of 25% at 24.9%"),
+        (&base, &base, "0%", Some(0), "no rise, from 0 too, at 0%"),
+    ];
+    for (b, n, threshold, want, what) in cases {
+        assert_eq!(code(b, n, threshold), want, "{what}");
+    }
+    let from_zero = one_frame(2.0, 1.0);
+    assert_eq!(
+        code(&base, &from_zero, "1000000%"),
+        Some(1),
+        "a rise from 0 is not a regression"
+    );
+}
+
+#[test]
+fn profile_diff_regression_edges() {
+    check_edges(|b, n, t| diff(b, n, t).status.code());
+}
+
+validation::negative_control!(
+    profile_diff_regression_edges,
+    "a diff that flags a rise equal to the threshold must fail the edge check",
+    expected = "a rise of exactly 25% at 25%",
+    check_edges(|b, n, t| {
+        let p: f64 = t.trim_end_matches('%').parse().unwrap();
+        diff(b, n, &format!("{}%", p - 0.001)).status.code()
+    })
+);
+
 // ----- profile_show (REQ-TOOL-139, R-286) -----
 
 fn show(path: &Path, pretty: bool) -> Output {
@@ -906,7 +1279,72 @@ validation::negative_control!(
     }
 );
 
+/// A trace whose last line was cut off (R-299): `show` prints the whole file unchanged, and with `--pretty` the lines
+/// before the cut, stating the bytes dropped on stderr.
+fn check_cut_off(file: &str, cut: &str, plain: &Output, pretty: &Output) {
+    assert_eq!(
+        plain.stdout,
+        format!("{file}{cut}").into_bytes(),
+        "show changed a cut-off file"
+    );
+    check_pretty(file, &String::from_utf8_lossy(&pretty.stdout));
+    assert!(
+        String::from_utf8_lossy(&pretty.stderr).contains(&format!("its {} bytes", cut.len())),
+        "show --pretty does not state the {} bytes dropped",
+        cut.len()
+    );
+}
+
+const CUT: &str = r#"{"frame":20,"frame_ms":1"#;
+
+/// The fixture's header line and frames, without its summary line.
+fn frames_only() -> String {
+    lines_of(&fixture())[..21].join("\n") + "\n"
+}
+
+#[test]
+fn profile_show_cut_off_last_line() {
+    let file = frames_only();
+    let path = write_scratch("cut.jsonl", &format!("{file}{CUT}"));
+    check_cut_off(&file, CUT, &show(&path, false), &show(&path, true));
+}
+
+validation::negative_control!(
+    profile_show_cut_off_last_line,
+    "a file with no cut-off line must fail the dropped-bytes check",
+    expected = "does not state the",
+    {
+        let file = frames_only();
+        let path = write_scratch("whole.jsonl", &file);
+        check_cut_off(&file, "", &show(&path, false), &show(&path, true))
+    }
+);
+
 // ----- profile_no_gpu (REQ-TOOL-144, R-308) -----
+
+/// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` on macOS, `model name` in /proc/cpuinfo on
+/// Linux, `unknown` where it names none.
+fn expected_cpu() -> String {
+    let named = if cfg!(target_os = "macos") {
+        Command::new("sysctl")
+            .args(["-n", "machdep.cpu.brand_string"])
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+    } else if cfg!(target_os = "linux") {
+        fs::read_to_string("/proc/cpuinfo").ok().and_then(|info| {
+            info.lines()
+                .find_map(|l| l.strip_prefix("model name")?.split_once(':'))
+                .map(|(_, name)| name.trim().to_owned())
+        })
+    } else {
+        None
+    };
+    named
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "unknown".to_owned())
+}
 
 /// The no-GPU header: `backend.api` "none"; `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and
 /// `precision` null; the CPU written as always.
@@ -931,17 +1369,16 @@ fn check_no_gpu_header(header_line: &str) {
             "{pointer} is not null"
         );
     }
-    assert!(
-        header["device"]["cpu"]
-            .as_str()
-            .is_some_and(|c| !c.is_empty()),
-        "device.cpu is not written"
+    assert_eq!(
+        header["device"]["cpu"],
+        json!(expected_cpu()),
+        "device.cpu is not the CPU the system names"
     );
-    assert!(
-        header["device"]["cpu_cores"]
-            .as_u64()
-            .is_some_and(|n| n >= 1),
-        "device.cpu_cores is not written"
+    let cores = std::thread::available_parallelism().map_or(0, |n| n.get());
+    assert_eq!(
+        header["device"]["cpu_cores"],
+        json!(cores),
+        "device.cpu_cores is not the cores the system reports"
     );
 }
 

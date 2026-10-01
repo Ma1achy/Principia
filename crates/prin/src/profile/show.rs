@@ -58,8 +58,9 @@ fn newline(out: &mut String, depth: usize) {
     }
 }
 
-/// One compact JSON line, indented two spaces a level, token by token: the text of each key, string and number is kept
-/// as it is, so the printed JSON is the line's, laid out. An empty object or array stays `{}` or `[]`.
+/// One compact JSON line, as the writer writes it, indented two spaces a level, token by token: the text of each key,
+/// string and number is kept as it is, so the printed JSON is the line's, laid out. An empty object or array stays `{}`
+/// or `[]`.
 fn indent(line: &str, out: &mut String) {
     let mut depth = 0usize;
     let mut in_string = false;
@@ -103,7 +104,6 @@ fn indent(line: &str, out: &mut String) {
                 newline(out, depth);
             }
             ':' => out.push_str(": "),
-            c if c.is_whitespace() => {}
             c => out.push(c),
         }
     }
