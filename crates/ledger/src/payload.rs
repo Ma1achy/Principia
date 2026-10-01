@@ -356,8 +356,8 @@ pub struct ReductionMember {
 /// value; `ensemble_outcome_agreement` is a retired name and no member (R-18). Not members: `id` (omitted, identity is
 /// positional), the latch `running_max_divergence` (per footprint, R-99) and the conditional `spread_t_end` ("not yet
 /// included"). §3.7's one row `` `escape_time_min` / `_max` ``, typed `f16 × 2`, is its two members, each f16.
-/// `n_unresolved`, the count of the quad's unresolved footprints that §3.7 says `QuadReduction` carries as the latch's
-/// verdict (R-142), is in no §3.7 table and has no §3.7 type.
+/// `n_unresolved`, the count of the quad's unresolved footprints, latched ones included (the latch's verdict, R-142),
+/// is u16 like `valid_sample_count` (R-315).
 pub const QUAD_REDUCTION: &[ReductionMember] = &[
     reduction("level", "u8", "Identity"),
     reduction("class_histogram[N]", "u8 × N", "Outcome"),
@@ -374,11 +374,7 @@ pub const QUAD_REDUCTION: &[ReductionMember] = &[
     reduction("worst_energy_drift", "f16", "Refinement"),
     reduction("running_mean_divergence", "f32", "Temporal accumulators"),
     reduction("first_divergence_t", "f32", "Temporal accumulators"),
-    ReductionMember {
-        name: "n_unresolved",
-        ty: None,
-        section: "Temporal accumulators",
-    },
+    reduction("n_unresolved", "u16", "Temporal accumulators"),
     reduction("suspect_fraction", "f16", "Validity and diagnostics"),
     reduction("saturated_fraction", "f16", "Validity and diagnostics"),
     reduction("valid_sample_count", "u16", "Validity and diagnostics"),
