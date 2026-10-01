@@ -1,7 +1,7 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
 - **Reviewers:** code, qa, physics
@@ -27,6 +27,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-142 — The latch is evaluated on the GPU; only its verdict returns *(closes RQ-72)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
+- `decisions.md` § "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
+- `decisions.md` § "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
 
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), with
@@ -48,6 +50,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
+- `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value (REQ-GEN-030).
 
 ## Notes
 - Definitions (R-72) this task writes: REQ-PAY-075, REQ-PAY-076, REQ-PAY-077.
@@ -62,6 +65,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - RQ-178 ruled: R-306 — M0 (TASK-M0-11) records §3.7's member list as ledger data, not emitted; this task builds the
   generated struct from it, with the members' §3.8 entries and `class_histogram`'s placement (§3.8's vector rule reads
   a `u-bits` component at a scalar index as a full u32, so `u8 × N` needs a placement here).
-- RQ-182 (open, M5): how the f16 members are typed in §3.8 — `f16-pair` at packed 16-bit locations, or a new §3.8
-  `f16` type. Stable Rust has no `f16` type, so the generated struct stores binary16 bits either way. It needs a
-  ruling before this task starts.
+- RQ-182 ruled: R-312 — §3.8 gains a single `f16` type, one half-float at a packed 16-bit location, under R-248's
+  rules; `f16-pair` stays two halves. This task adds `f16` to the ledger's type set, the static check and both
+  emitters (REQ-GEN-030), and types `QuadReduction`'s f16 members with it. Stable Rust has no `f16` type, so the
+  generated struct stores binary16 bits.

@@ -3305,3 +3305,32 @@ compare lives in `ledger::gen::run_with_register`, so `.cargo/mutants.toml`'s re
 `xtask/src/codegen.rs` holds; #95 merged as 842012f. TASK-M0-18's Reviewers gain physics, because REQ-TOOL-119's
 acceptance line and R-72 ask the physics reviewer to approve its definition (and, now, REQ-TOOL-145's). Numbered from
 R-306: the ruling block said "R-299 onward", but R-299 to R-305 were already taken.
+
+## R-311 — #97's "veto?" items stand; #97 merges once CI is green and its reviewer is done
+*1 Oct 2026 · applied in PR #97 (merged as 7c3978d)*
+
+"#97: all three veto items stand. Merge overnight once CI is green and the reviewer is done."
+
+*Applied:* PR #97's items stand: R-308's "other GPU fields" are `backend.driver`, `device.gpu`, `device.gpu_cores`,
+`device.memory` and all of `precision`, with `device.cpu` and `device.cpu_cores` still required; TASK-M0-18 writes
+REQ-TOOL-145's definition (key order and number formatting) and the physics reviewer approves it (R-72); REQ-TOOL-146's
+check sits in TASK-M8-32. The fourth "veto?" line, added by #97's review fixes after this ruling was asked for
+(TASK-M0-19's probe fills the GPU fields only from an adapter the run already opened, per R-308), was accepted by the
+code reviewer as a mechanical consequence of R-308 and merged with the rest, under R-234. #97 merged as 7c3978d once
+the code reviewer approved its head (8e5e5e1) and CI was green.
+
+## R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*
+*1 Oct 2026 · applied in generation-root §3.8, REQ-GEN-030 and TASK-M5-01*
+
+"RQ-182 (ruled now, applies at M5): §3.8 gains a single f16 type for one half-float at a 16-bit location. f16-pair
+stays two halves. The f16 type follows R-243's rules: exactly 16 bits, and a declared range within f16's finite range,
+with overflow behaviour stated for unbounded ends."
+
+*Applied:* the ruling cites R-243, which is TASK-M0-07's size acceptance; the rules it quotes are R-248's ("f16-pair and
+fixed16 need exactly 16 bits … an f16 field's declared range must lie within f16's finite range (±65504). An unbounded
+end fails unless the ledger entry states its overflow behaviour"), so R-248 is applied, and the rules are the ones the
+human wrote either way. §3.8's `type` gains `f16`; a paragraph beside R-248's states it. REQ-GEN-030 (M5) carries it,
+closed by TASK-M5-01, which types `QuadReduction`'s f16 members with it. *Applied per R-204 — veto?:* "at a 16-bit
+location" is read as a packed location of exactly 16 bits only: `f16` is not a `scalar-index` type (a scalar index is
+a 32-bit slot) and not a `vector` component type (a vector of halves stays `vector(f16-pair, k)`). R-248's
+static-check rules for `f16-pair` (REQ-GEN-028) are unchanged.

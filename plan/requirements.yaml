@@ -6317,6 +6317,23 @@
   rulings:
   - R-263
   milestone: M0
+- id: REQ-GEN-030
+  area: GEN
+  statement: "§3.8's `f16` type (R-312) is one binary16 value at a packed location of exactly 16 bits: the static layout check fails an `f16` field at a packed location not exactly 16 bits wide, at a `scalar-index` location, or as a `vector` component type, naming the field; its declared range must lie within ±65504, and an unbounded end fails unless the entry states its `overflow` (saturate or inf) (R-248). Both emitters generate its read accessor as one binary16 value."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
+  - file: decisions.md
+    section: "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger layout_static_f16: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value; each has a registered negative control"
+  rulings:
+  - R-248
+  - R-312
+  milestone: M5
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
