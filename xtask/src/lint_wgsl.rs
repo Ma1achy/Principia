@@ -36,8 +36,9 @@
 //! calls on a runtime value, which every generated accessor's is (a parameter). The `enable` directive is not kept in
 //! the IR, so that rule reads the source's directives, comments stripped. A hand-written file is held to the float
 //! rules only: R-317's ban on `enable f16` covers the generated WGSL, so a hand-written file may use f16, and the
-//! validator is built with every capability, `SHADER_FLOAT16` among them. naga does not fold a `bitcast`, so the
-//! float rules evaluate an operand's constant expression themselves ([`constant_floats`]).
+//! validator is built with every capability, `SHADER_FLOAT16` among them. naga does not fold a `bitcast`, nor
+//! any constant expression over one (arithmetic, a math call, a component), so the float rules evaluate an operand's
+//! constant expression themselves, in f32 for f32 ([`constant_floats`]).
 
 use std::collections::HashMap;
 use std::fmt;
@@ -860,75 +861,238 @@ fn is_finite_max(v: f64) -> bool {
     a == F16_FINITE_MAX || a == f64::from(f32::MAX)
 }
 
-/// The float values of `h`, up to sign, if it is a constant expression of floats: a literal, a module constant, a
-/// negation, a splat, a vector built of constants, a conversion, or a `bitcast<f32>` of a constant bit pattern (which
-/// naga does not fold). `None` if it is not constant. naga concretises an abstract literal or constant before the IR,
-/// so no abstract literal reaches here.
+/// The float values of `h`, if it is a constant expression of floats, its components in order; `None` if it is not
+/// constant or holds an integer. naga folds a constant expression before the IR is built unless it holds a `bitcast`,
+/// which it does not fold, so [`evaluate`] evaluates what naga leaves. naga concretises an abstract literal or
+/// constant before the IR, so no abstract literal reaches here.
 pub fn constant_floats(
     module: &Module,
     arena: &Arena<Expression>,
     h: Handle<Expression>,
 ) -> Option<Vec<f64>> {
-    match arena[h] {
-        Expression::Literal(Literal::F64(v)) => Some(vec![v]),
-        Expression::Literal(Literal::F32(v)) => Some(vec![f64::from(v)]),
-        Expression::Literal(Literal::F16(v)) => Some(vec![v.to_f64()]),
-        Expression::Constant(c) => {
-            constant_floats(module, &module.global_expressions, module.constants[c].init)
+    let mut floats = Vec::new();
+    evaluate(module, arena, h)?.floats(&mut floats)?;
+    Some(floats)
+}
+
+/// A constant expression's value: a float of `width` bytes, a 32-bit integer's bit pattern, or a vector, matrix or
+/// array of values.
+#[derive(Clone, Debug)]
+enum Value {
+    Float(f64, u8),
+    Bits(u32),
+    List(Vec<Value>),
+}
+
+impl Value {
+    /// Appends the value's floats to `out`, in order; `None` if it holds an integer.
+    fn floats(&self, out: &mut Vec<f64>) -> Option<()> {
+        match self {
+            Value::Float(v, _) => out.push(*v),
+            Value::Bits(_) => return None,
+            Value::List(items) => {
+                for item in items {
+                    item.floats(out)?;
+                }
+            }
         }
-        // Every rule reading these values is symmetric in sign (an inf, a NaN, ±65504, ±3.40282347e38), so a
-        // negation passes its operand's values through.
+        Some(())
+    }
+
+    /// `f` applied to each scalar of the value; `None` if it is `None` for any.
+    fn map(&self, f: &impl Fn(&Value) -> Option<Value>) -> Option<Value> {
+        match self {
+            Value::List(items) => items
+                .iter()
+                .map(|v| v.map(f))
+                .collect::<Option<_>>()
+                .map(Value::List),
+            scalar => f(scalar),
+        }
+    }
+
+    /// `f` applied to each float of the value, rounded to its width; `None` if it holds an integer.
+    fn map_float(&self, f: &impl Fn(f64) -> f64) -> Option<Value> {
+        self.map(&|scalar| match *scalar {
+            Value::Float(v, width) => Some(Value::Float(round(f(v), width), width)),
+            _ => None,
+        })
+    }
+
+    /// `f` applied component by component to the value and `other`, either of which may be a scalar the other's
+    /// components each meet (WGSL's vector-scalar arithmetic), each result rounded to its width. `None` if either
+    /// holds an integer, or if both are lists, of unequal lengths or of lists (a matrix product is not
+    /// component-wise).
+    fn zip(&self, other: &Value, f: &impl Fn(f64, f64) -> f64) -> Option<Value> {
+        match (self, other) {
+            (&Value::Float(a, width), &Value::Float(b, _)) => {
+                Some(Value::Float(round(f(a, b), width), width))
+            }
+            (Value::List(items), b @ Value::Float(..)) => items
+                .iter()
+                .map(|a| a.zip(b, f))
+                .collect::<Option<_>>()
+                .map(Value::List),
+            (a @ Value::Float(..), Value::List(items)) => items
+                .iter()
+                .map(|b| a.zip(b, f))
+                .collect::<Option<_>>()
+                .map(Value::List),
+            (Value::List(a), Value::List(b))
+                if a.len() == b.len()
+                    && a.iter().chain(b).all(|v| matches!(v, Value::Float(..))) =>
+            {
+                a.iter()
+                    .zip(b)
+                    .map(|(a, b)| a.zip(b, f))
+                    .collect::<Option<_>>()
+                    .map(Value::List)
+            }
+            _ => None,
+        }
+    }
+
+    /// The `i`th component of a vector, matrix or array.
+    fn index(&self, i: usize) -> Option<Value> {
+        match self {
+            Value::List(items) => items.get(i).cloned(),
+            _ => None,
+        }
+    }
+}
+
+/// `v` rounded to a float of `width` bytes: f16 (2), f32 (4) or f64 (8).
+fn round(v: f64, width: u8) -> f64 {
+    match width {
+        // f32 arithmetic done in f64 and rounded once to f32 is exact f32 arithmetic: f64 holds more than twice
+        // f32's 24 significant bits.
+        4 => f64::from(v as f32),
+        2 => round_f16(v),
+        _ => v,
+    }
+}
+
+/// `v` rounded to binary16, ties to even: 11 significant bits, in steps no finer than the subnormals' 2^-24, and ±inf
+/// past 65504, f16's largest finite value (65520, the midpoint to 2^16, rounds to even: up).
+fn round_f16(v: f64) -> f64 {
+    let biased = i32::try_from(v.abs().to_bits() >> 52).unwrap_or(0);
+    let step = 2f64.powi((biased - 1023).max(-14) - 10);
+    let r = (v / step).round_ties_even() * step;
+    if r.abs() > F16_FINITE_MAX {
+        f64::INFINITY.copysign(v)
+    } else {
+        r
+    }
+}
+
+/// The value of `h`, if it is a constant expression: a literal; a module constant; a negation; a splat; a vector,
+/// matrix or array built of constants, one of its components, or a swizzle; `+`, `-`, `*`, `/` or `%` of them; `abs`,
+/// `sign`, `saturate`, `floor`, `ceil`, `trunc`, `round`, `min`, `max` or `clamp` of them; a conversion of floats to
+/// float; or a `bitcast` of 32-bit integers to f32. Float arithmetic is done in the operands' precision, f32 for f32
+/// (WGSL's). `None` otherwise.
+fn evaluate(module: &Module, arena: &Arena<Expression>, h: Handle<Expression>) -> Option<Value> {
+    let value = |e| evaluate(module, arena, e);
+    match arena[h] {
+        Expression::Literal(Literal::F64(v)) => Some(Value::Float(v, 8)),
+        Expression::Literal(Literal::F32(v)) => Some(Value::Float(f64::from(v), 4)),
+        Expression::Literal(Literal::F16(v)) => Some(Value::Float(v.to_f64(), 2)),
+        Expression::Literal(Literal::U32(b)) => Some(Value::Bits(b)),
+        Expression::Literal(Literal::I32(i)) => {
+            Some(Value::Bits(u32::from_ne_bytes(i.to_ne_bytes())))
+        }
+        Expression::Constant(c) => {
+            evaluate(module, &module.global_expressions, module.constants[c].init)
+        }
         Expression::Unary {
             op: UnaryOperator::Negate,
             expr,
-        } => constant_floats(module, arena, expr),
-        Expression::Splat { value, .. } => constant_floats(module, arena, value),
-        Expression::Compose { ref components, .. } => {
-            let mut all = Vec::new();
-            for &c in components {
-                all.extend(constant_floats(module, arena, c)?);
+        } => value(expr)?.map_float(&|v| -v),
+        Expression::Splat { size, value: v } => Some(Value::List(vec![value(v)?; size as usize])),
+        Expression::Compose { ty, ref components } => {
+            let parts = components
+                .iter()
+                .map(|&c| value(c))
+                .collect::<Option<Vec<_>>>()?;
+            if !matches!(module.types[ty].inner, TypeInner::Vector { .. }) {
+                return Some(Value::List(parts));
             }
-            Some(all)
+            // A vector's components may be vectors (`vec4(v, x, y)`); the vector holds theirs.
+            let flat = parts.into_iter().flat_map(|p| match p {
+                Value::List(items) => items,
+                scalar => vec![scalar],
+            });
+            Some(Value::List(flat.collect()))
+        }
+        Expression::AccessIndex { base, index } => value(base)?.index(usize::try_from(index).ok()?),
+        Expression::Access { base, index } => {
+            let Value::Bits(i) = value(index)? else {
+                return None;
+            };
+            value(base)?.index(usize::try_from(i).ok()?)
+        }
+        Expression::Swizzle {
+            size,
+            vector,
+            pattern,
+        } => {
+            let v = value(vector)?;
+            let picks = pattern[..size as usize]
+                .iter()
+                .map(|&c| v.index(c as usize))
+                .collect::<Option<_>>()?;
+            Some(Value::List(picks))
+        }
+        Expression::Binary { op, left, right } => {
+            let f: fn(f64, f64) -> f64 = match op {
+                BinaryOperator::Add => |a, b| a + b,
+                BinaryOperator::Subtract => |a, b| a - b,
+                BinaryOperator::Multiply => |a, b| a * b,
+                BinaryOperator::Divide => |a, b| a / b,
+                BinaryOperator::Modulo => |a, b| a % b,
+                _ => return None,
+            };
+            value(left)?.zip(&value(right)?, &f)
+        }
+        Expression::Math {
+            fun,
+            arg,
+            arg1,
+            arg2,
+            ..
+        } => {
+            let x = value(arg)?;
+            match fun {
+                MathFunction::Abs => x.map_float(&f64::abs),
+                MathFunction::Sign => x.map_float(&|v| if v == 0.0 { v } else { v.signum() }),
+                MathFunction::Saturate => x.map_float(&|v| v.clamp(0.0, 1.0)),
+                MathFunction::Floor => x.map_float(&f64::floor),
+                MathFunction::Ceil => x.map_float(&f64::ceil),
+                MathFunction::Trunc => x.map_float(&f64::trunc),
+                MathFunction::Round => x.map_float(&f64::round_ties_even),
+                MathFunction::Min => x.zip(&value(arg1?)?, &f64::min),
+                MathFunction::Max => x.zip(&value(arg1?)?, &f64::max),
+                MathFunction::Clamp => x
+                    .zip(&value(arg1?)?, &f64::max)?
+                    .zip(&value(arg2?)?, &f64::min),
+                _ => None,
+            }
         }
         Expression::As {
             expr,
             kind: ScalarKind::Float,
             convert: None,
-        } => Some(
-            constant_bits(module, arena, expr)?
-                .into_iter()
-                .map(|b| f64::from(f32::from_bits(b)))
-                .collect(),
-        ),
+        } => value(expr)?.map(&|scalar| match *scalar {
+            Value::Bits(b) => Some(Value::Float(f64::from(f32::from_bits(b)), 4)),
+            _ => None,
+        }),
         Expression::As {
             expr,
             kind: ScalarKind::Float,
-            convert: Some(_),
-        } => constant_floats(module, arena, expr),
-        _ => None,
-    }
-}
-
-/// The 32-bit patterns of `h`, if it is a constant expression of 32-bit integers.
-fn constant_bits(
-    module: &Module,
-    arena: &Arena<Expression>,
-    h: Handle<Expression>,
-) -> Option<Vec<u32>> {
-    match arena[h] {
-        Expression::Literal(Literal::U32(b)) => Some(vec![b]),
-        Expression::Literal(Literal::I32(i)) => Some(vec![u32::from_ne_bytes(i.to_ne_bytes())]),
-        Expression::Constant(c) => {
-            constant_bits(module, &module.global_expressions, module.constants[c].init)
-        }
-        Expression::Splat { value, .. } => constant_bits(module, arena, value),
-        Expression::Compose { ref components, .. } => {
-            let mut all = Vec::new();
-            for &c in components {
-                all.extend(constant_bits(module, arena, c)?);
-            }
-            Some(all)
-        }
+            convert: Some(width),
+        } => value(expr)?.map(&|scalar| match *scalar {
+            Value::Float(v, _) => Some(Value::Float(round(v, width), width)),
+            _ => None,
+        }),
         _ => None,
     }
 }

@@ -11,7 +11,8 @@
 //!   read twice, a `vec2<f32>`, a variable read twice; and the structural reading of "itself", expression by
 //!   expression, with a near miss for each.
 //! - `lint_wgsl_finite_max_*`: 65504 and 3.40282347e38 in each spelling, negated, as a `bitcast<f32>` or a module
-//!   constant, on the left, and by each operator; and the constant expressions that evaluate to a stand-in, inf or NaN.
+//!   constant, on the left, and by each operator; and the constant expressions that evaluate to a stand-in, inf or NaN,
+//!   those over a `bitcast` (which naga does not fold) evaluated in the operands' precision.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -687,6 +688,143 @@ negative_control!(
     "inf and NaN bit patterns are inf and NaN constants",
     expected = "a near miss",
     check_cases(&INF_NAN_EXPRESSIONS, Rule::InfNanConstant, false)
+);
+
+/// Constant expressions over a `bitcast`, which naga leaves unfolded, that evaluate to a finite-max stand-in in the
+/// operands' precision: arithmetic, math calls, components, swizzles, vector arithmetic, and f16 and f64 conversions.
+/// (`0x477fe000u` is 65504's bits, `0x46ffe000u` 32752's, `0x47ffe000u` 131008's, `0x47800000u` 65536's,
+/// `0x483ff800u` 196576's, `0x477fefffu` 65519.996's; `0x7f800000u` and `0xff800000u` are ±inf.)
+const FINITE_MAX_EVALUATED: [&str; 31] = [
+    "x > bitcast<f32>(0x477fc000u) + 32.0",
+    "x > bitcast<f32>(0x47800000u) - 32.0",
+    "x > bitcast<f32>(0x46ffe000u) * 2.0",
+    "x > bitcast<f32>(0x47ffe000u) / 2.0",
+    "x > bitcast<f32>(0x483ff800u) % 131072.0",
+    "x > bitcast<f32>(0x477fe000u) + 0.001",
+    "x > -bitcast<f32>(0x477fe000u) + 131008.0",
+    "x > abs(bitcast<f32>(0xc77fe000u)) - 131008.0",
+    "x > sign(bitcast<f32>(0xff800000u)) * 65504.0",
+    "x > (sign(bitcast<f32>(0u)) + 1.0) * 65504.0",
+    "x > saturate(bitcast<f32>(0x7f800000u)) * 65504.0",
+    "x > floor(bitcast<f32>(0x477fe000u) + 0.5)",
+    "x > ceil(bitcast<f32>(0x477fe000u) - 0.5)",
+    "x > trunc(bitcast<f32>(0x477fe000u) + 0.5)",
+    "x > round(bitcast<f32>(0x477fe000u) + 0.5)",
+    "x > min(bitcast<f32>(0x7f800000u), 65504.0)",
+    "x > max(bitcast<f32>(0xff800000u), 65504.0)",
+    "x > clamp(bitcast<f32>(0x7f800000u), 0.0, 65504.0)",
+    "x > clamp(bitcast<f32>(0xff800000u), 65504.0, 131008.0)",
+    "x > vec2<f32>(1.0, bitcast<f32>(0x477fe000u)).y",
+    "x > array<f32, 2>(1.0, bitcast<f32>(0x477fe000u))[1]",
+    "x > mat2x2<f32>(vec2<f32>(1.0), vec2<f32>(1.0, bitcast<f32>(0x477fe000u)))[1].y",
+    "x > vec2<f32>(1.0, bitcast<f32>(0x477fe000u)).yx.x",
+    "x > vec4<f32>(vec2<f32>(1.0, 2.0), bitcast<f32>(0x477fe000u), 3.0).z",
+    "all(vec2(x, y) < vec2<f32>(bitcast<f32>(0x46ffe000u)) * 2.0)",
+    "all(vec2(x, y) < 2.0 * vec2<f32>(bitcast<f32>(0x46ffe000u)))",
+    "all(vec2(x, y) < vec2<f32>(bitcast<f32>(0x46ffe000u), 1.0) + vec2<f32>(32752.0, 1.0))",
+    "h > f16(bitcast<f32>(0x46ffe000u)) * 2.0h",
+    "h > f16(bitcast<f32>(0x477fefffu))",
+    "h > (f16(bitcast<f32>(0x477fe000u)) * 0.25h) * 4.0h",
+    "w > f64(bitcast<f32>(0x46ffe000u)) * 2.0lf",
+];
+
+/// Each a near miss of a `FINITE_MAX_EVALUATED` case: an operand or a component that moves the value off the stand-in;
+/// a tie f16 rounds to even, down; f64 arithmetic, not rounded to f32; and a matrix product, which is not
+/// component-wise.
+const FINITE_MAX_EVALUATED_NEAR: [&str; 31] = [
+    "x > bitcast<f32>(0x477fc000u) + 16.0",
+    "x > bitcast<f32>(0x47800000u) - 16.0",
+    "x > bitcast<f32>(0x46ffe000u) * 1.5",
+    "x > bitcast<f32>(0x47ffe000u) / 4.0",
+    "x > bitcast<f32>(0x483ff800u) % 131071.0",
+    "x > bitcast<f32>(0x477fe000u) + 0.002",
+    "x > -bitcast<f32>(0x477fe000u) + 65504.0",
+    "x > abs(bitcast<f32>(0xc77fe000u)) - 65504.0",
+    "x > sign(bitcast<f32>(0xff800000u)) * 65503.0",
+    "x > (sign(bitcast<f32>(0u)) + 2.0) * 65504.0",
+    "x > saturate(bitcast<f32>(0x7f800000u)) * 65503.0",
+    "x > floor(bitcast<f32>(0x477fe000u) - 0.5)",
+    "x > ceil(bitcast<f32>(0x477fe000u) + 0.5)",
+    "x > trunc(bitcast<f32>(0x477fe000u) - 0.5)",
+    "x > round(bitcast<f32>(0x477fe000u) + 1.5)",
+    "x > min(bitcast<f32>(0x7f800000u), 65503.0)",
+    "x > max(bitcast<f32>(0xff800000u), 65503.0)",
+    "x > clamp(bitcast<f32>(0x7f800000u), 0.0, 65503.0)",
+    "x > clamp(bitcast<f32>(0xff800000u), 65503.0, 131008.0)",
+    "x > vec2<f32>(bitcast<f32>(0x477fe000u), 1.0).y",
+    "x > array<f32, 2>(bitcast<f32>(0x477fe000u), 1.0)[1]",
+    "x > mat2x2<f32>(vec2<f32>(1.0), vec2<f32>(bitcast<f32>(0x477fe000u), 1.0))[1].y",
+    "x > vec2<f32>(1.0, bitcast<f32>(0x477fe000u)).yx.y",
+    "x > vec4<f32>(vec2<f32>(1.0, 2.0), bitcast<f32>(0x477fe000u), 3.0).w",
+    "all(vec2(x, y) < vec2<f32>(bitcast<f32>(0x46ffe000u)) * 1.5)",
+    "all(vec2(x, y) < 1.5 * vec2<f32>(bitcast<f32>(0x46ffe000u)))",
+    "all(vec2(x, y) < vec2<f32>(bitcast<f32>(0x46ffe000u), 1.0) + vec2<f32>(32751.0, 1.0))",
+    "h > f16(bitcast<f32>(0x477fd000u))",
+    "h > f16(bitcast<f32>(0x477fd000u)) * 1.0h",
+    "all(vec2(x, y) < mat2x2<f32>(vec2<f32>(bitcast<f32>(0x477fe000u), 0.0), \
+     vec2<f32>(-bitcast<f32>(0x477fe000u), 0.0)) * vec2<f32>(1.0, 1.0))",
+    "w > f64(bitcast<f32>(0x477fe000u)) + 0.001lf",
+];
+
+#[test]
+fn lint_wgsl_finite_max_evaluated_expressions_fire() {
+    check_cases(&FINITE_MAX_EVALUATED, Rule::FiniteMax, true);
+}
+
+negative_control!(
+    lint_wgsl_finite_max_evaluated_expressions_fire,
+    "expressions that evaluate off the stand-in are no stand-in",
+    expected = "did not fire",
+    check_cases(&FINITE_MAX_EVALUATED_NEAR, Rule::FiniteMax, true)
+);
+
+#[test]
+fn lint_wgsl_finite_max_evaluated_near_misses_do_not_fire() {
+    check_cases(&FINITE_MAX_EVALUATED_NEAR, Rule::FiniteMax, false);
+}
+
+negative_control!(
+    lint_wgsl_finite_max_evaluated_near_misses_do_not_fire,
+    "expressions that evaluate to the stand-in are a stand-in",
+    expected = "a near miss",
+    check_cases(&FINITE_MAX_EVALUATED, Rule::FiniteMax, false)
+);
+
+/// A component of a constant array at a `let`'s constant index, which naga keeps as an index expression, not a
+/// literal one: by a u32 and by an i32.
+const FINITE_MAX_INDEXED: [&str; 2] = [
+    "let k = 1u; return x > array<f32, 2>(1.0, bitcast<f32>(0x477fe000u))[k];",
+    "let k = 1i; return x > array<f32, 2>(1.0, bitcast<f32>(0x477fe000u))[k];",
+];
+
+/// Each a near miss of a `FINITE_MAX_INDEXED` case: the index picks the other component.
+const FINITE_MAX_INDEXED_NEAR: [&str; 2] = [
+    "let k = 0u; return x > array<f32, 2>(1.0, bitcast<f32>(0x477fe000u))[k];",
+    "let k = 0i; return x > array<f32, 2>(1.0, bitcast<f32>(0x477fe000u))[k];",
+];
+
+#[test]
+fn lint_wgsl_finite_max_indexed_component_fires() {
+    check_bodies(&FINITE_MAX_INDEXED, Rule::FiniteMax, true);
+}
+
+negative_control!(
+    lint_wgsl_finite_max_indexed_component_fires,
+    "the component off the stand-in is no stand-in",
+    expected = "did not fire",
+    check_bodies(&FINITE_MAX_INDEXED_NEAR, Rule::FiniteMax, true)
+);
+
+#[test]
+fn lint_wgsl_finite_max_indexed_near_misses_do_not_fire() {
+    check_bodies(&FINITE_MAX_INDEXED_NEAR, Rule::FiniteMax, false);
+}
+
+negative_control!(
+    lint_wgsl_finite_max_indexed_near_misses_do_not_fire,
+    "the component on the stand-in is a stand-in",
+    expected = "a near miss",
+    check_bodies(&FINITE_MAX_INDEXED, Rule::FiniteMax, false)
 );
 
 /// Calls to `isinf` nested in statements.
