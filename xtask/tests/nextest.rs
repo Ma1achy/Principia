@@ -1,7 +1,7 @@
 //! REQ-VAL-165 (R-231): CI's test steps run through `cargo nextest run`, pinned, with doctests, which nextest does not
 //! run, through `cargo test --doc`, and no test is dropped: in each feature set, the nextest and `--doc` steps
 //! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`); a step
-//! sharded by its job's matrix (`--partition slice:${{ matrix.shard }}/4`, R-336) is listed once per shard. The
+//! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard. The
 //! documented local run (README) installs the same pinned version.
 
 use std::collections::BTreeMap;

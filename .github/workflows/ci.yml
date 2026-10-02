@@ -7,8 +7,8 @@
 # `cargo test` did. `ci` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `ci` runs every test but the kernel's, `gpu-kernel` the
 # kernel's.
-# Sharding (R-336, R-360, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
-# nextest's `--partition slice:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
+# Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
+# nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
 # --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
 # Branch protection requires the checks `ci` and `xtask-ci` (R-266): a matrix job's checks are named for its shards
@@ -46,8 +46,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # The workspace's tests, as 4 parallel shards (R-336, REQ-SYS-077): nextest's `--partition slice:<k>/4` deals the
-  # tests round-robin across the shards, so together they run every test the unsharded run did, once.
+  # The workspace's tests, as 4 parallel shards (R-336, R-366, REQ-SYS-077): nextest's `--partition hash:<k>/4` puts
+  # each test in the shard its name hashes to, a stable assignment, so together they run every test the unsharded run
+  # did, once.
   ci:
     runs-on: ubuntu-latest
     strategy:
@@ -104,11 +105,11 @@ jobs:
           tool: cargo-nextest@0.9.146
       # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
       # (R-325): the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE.
-      - name: cargo nextest run --workspace --partition slice:${{ matrix.shard }}/4
+      - name: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
         env:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci
-        run: cargo nextest run --workspace --partition slice:${{ matrix.shard }}/4
+        run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
       # The doctests, once, in the first shard (R-231).
       - name: cargo test --workspace --doc
         if: matrix.shard == 1
