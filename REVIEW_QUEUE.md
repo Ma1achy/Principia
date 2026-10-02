@@ -212,13 +212,13 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
 
 ---
 
-## RQ-193: R-357's three choices applied per R-204, and the stacked-PR merge order under auto-delete *(R-357, R-345)*
+## RQ-194: R-357's three choices applied per R-204, and the stacked-PR merge order under auto-delete *(R-357, R-345)*
 
 - **File, section:**
   - `decisions.md` § "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete
     *(amends R-345, R-346, R-347, R-355 and R-356)*": its two "Applied per R-204 — veto?" items.
   - `plan/OPERATIONS.md` § "Where the build loop runs (R-357)": "What each would need is applied per R-204 — veto?
-    (RQ-193)".
+    (RQ-194)".
   - CLAUDE.md § Git: "Merging stacked PRs: retarget each child PR to `main` before deleting the branch below it,
     because deleting a base branch closes its child PRs." `plan/OPERATIONS.md` § "Merging", "Merge order for stacked
     PRs".

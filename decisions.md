@@ -4506,7 +4506,7 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
-REVIEW_QUEUE.md (RQ-193)*
+REVIEW_QUEUE.md (RQ-194)*
 
 "This is from me." "The cloud session failed its environment checks: ~30 GB disk (one warm build hit 24 GB), GitHub
 GraphQL blocked (gh pr commands fail; REST works), and branch deletion blocked by its proxy. Work continues here on the
@@ -4542,7 +4542,7 @@ can confirm them in one sitting."
   *Applied per R-204 — veto?:* what each blocker would need, as listed above: ≥ 100 GB of disk or trimmed builds,
   GraphQL allowed through the proxy, ref deletes allowed through the proxy; and the REST equivalents the manual lists.
   `scripts/cloud-setup.sh` and its check stay as R-346 and R-347 made them, for a cloud session's read-and-think work.
-  Open in RQ-193.
+  Open in RQ-194.
 - **(2) Reviews through REST.** The five reviewers' files (`code-reviewer.md`, `qa-reviewer.md`, `physics-reviewer.md`,
   `gui-reviewer.md`, `perf-reviewer.md`) post the verdict with
   `gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@-`, the body
@@ -4558,7 +4558,7 @@ can confirm them in one sitting."
 
   *Applied per R-204 — veto?:* the body goes on standard input (`-F body=@-`), not in a file (`-F body=@<file>`),
   since a reviewer writes no file (its read-only rule); and `gh pr diff` becomes `git diff origin/main...HEAD`, which
-  is the PR's diff while the worktree's HEAD is the PR head. Open in RQ-193.
+  is the PR's diff while the worktree's HEAD is the PR head. Open in RQ-194.
 - **(3) Merged branches auto-delete.** GitHub's "Automatically delete head branches" is on:
   `gh api repos/Ma1achy/Principia --jq .delete_branch_on_merge` returned `true` on 2 Oct 2026. After a merge, the
   orchestrator confirms the remote branch is gone (`git ls-remote --exit-code origin refs/heads/<branch>` exits 2,
@@ -4569,7 +4569,7 @@ can confirm them in one sitting."
   - **Flagged, not resolved:** R-345 and CLAUDE.md § Git have the branch below a stacked PR deleted only after the
     child PR is retargeted to `main`, since deleting a base branch closed its child PR (PR #2). With auto-delete on,
     merging the lower PR deletes its branch at once, before the orchestrator can retarget the child. That rule is
-    kept as written; the order under auto-delete is asked in RQ-193. No PR is stacked meanwhile (§ "Roles and the
+    kept as written; the order under auto-delete is asked in RQ-194. No PR is stacked meanwhile (§ "Roles and the
     loop", 28 Sep 2026).
 - **The work order.** `plan/OPERATIONS.md` § "Away mode", "Order of work", says it: TASK-M0-45 and TASK-M0-49 first;
   then TASK-M0-15, TASK-M0-46, TASK-M0-47, TASK-M0-48, TASK-M0-50 and TASK-M0-51 in parallel within the CPU, memory

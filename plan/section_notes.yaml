@@ -742,4 +742,4 @@
 - file: decisions.md
   section: "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*"
   reason: informative only
-  note: "process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-193; changes no requirement"
+  note: "process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-194; changes no requirement"

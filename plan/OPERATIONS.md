@@ -16,7 +16,7 @@ How to read it:
 
 The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions
 aren't viable for the build loop; they suit read-and-think work: reviews, audits and docs.** A cloud session failed
-its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204 — veto? (RQ-193):
+its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204 — veto? (RQ-194):
 1. **Disk.** The machine had ~30 GB, and one warm build reached 24 GB. It would need a larger disk (≥ 100 GB, for
    three agents' targets and the seed within § "Resources"' thresholds), or builds trimmed to fit.
 2. **GitHub GraphQL is blocked,** so the `gh pr` commands, which use GraphQL, fail; REST works. It would need GraphQL
@@ -203,8 +203,8 @@ Who merges: the human, unless the human has said otherwise (CLAUDE.md § "How wo
 closes the PR stacked on it rather than retargeting it (PR #2, 25 Sep 2026). So, per PR n: merge n without deleting
 its branch, `gh pr edit n+1 --base main`, then delete n's branch (CLAUDE.md § Git, R-345). To recover a closed child:
 push its branch back at the merged PR's `headRefOid`, `gh pr reopen`, then `gh pr edit --base main`. *Open
-(RQ-193):* with auto-delete on (R-357), merging n deletes its branch at once, before n+1 can be retargeted, so this
-order can't be kept as written; until RQ-193 is ruled, stack nothing (§ "Roles and the loop").
+(RQ-194):* with auto-delete on (R-357), merging n deletes its branch at once, before n+1 can be retargeted, so this
+order can't be kept as written; until RQ-194 is ruled, stack nothing (§ "Roles and the loop").
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
 except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required

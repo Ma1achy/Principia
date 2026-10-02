@@ -99,5 +99,5 @@ Read this first; each rule points at its source.
   2): GitHub's "Automatically delete head branches" deletes it, so don't delete it yourself (R-357). Then delete its
   local branch, remove its worktrees and target directories, and prune stale remote refs and worktree entries
   (`git fetch --prune`, `git worktree prune`) (R-345). Only a branch fully merged into `main` is deleted; one that is
-  the base of an open PR waits until that PR is retargeted, as above (under auto-delete, open in RQ-193).
+  the base of an open PR waits until that PR is retargeted, as above (under auto-delete, open in RQ-194).
 - Commit or push only as the task or the human asks.
