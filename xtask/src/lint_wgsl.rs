@@ -756,7 +756,9 @@ fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -
                             }
                         )
                     };
-                    if !float(left) || !float(right) {
+                    // Both operands of a comparison have one type (naga's validator), so the left one's is the
+                    // comparison's.
+                    if !float(left) {
                         continue;
                     }
                     found.extend(
@@ -816,10 +818,11 @@ fn comparison(
             continue;
         };
         if let Some(v) = values.iter().find(|v| !v.is_finite()) {
+            let constant = if v.is_nan() { "a NaN" } else { "an inf" };
             found.push((
                 Rule::InfNanConstant,
                 format!(
-                    "a comparison by `{}` against the constant {v}, which fast-math (R-297) may fold",
+                    "a comparison by `{}` against {constant} constant, which fast-math (R-297) may fold",
                     symbol(op)
                 ),
             ));
@@ -828,9 +831,10 @@ fn comparison(
             found.push((
                 Rule::FiniteMax,
                 format!(
-                    "a comparison by `{}` against {v:e}, a finite-max stand-in for inf, which fast-math (R-297) \
+                    "a comparison by `{}` against ±{:e}, a finite-max stand-in for inf, which fast-math (R-297) \
                      may break",
-                    symbol(op)
+                    symbol(op),
+                    v.abs()
                 ),
             ));
         }
@@ -856,30 +860,28 @@ fn is_finite_max(v: f64) -> bool {
     a == F16_FINITE_MAX || a == f64::from(f32::MAX)
 }
 
-/// The float values of `h`, if it is a constant expression of floats: a literal, a module constant, a negation, a
-/// splat, a vector built of constants, a conversion, or a `bitcast<f32>` of a constant bit pattern (which naga does
-/// not fold). `None` if it is not constant.
+/// The float values of `h`, up to sign, if it is a constant expression of floats: a literal, a module constant, a
+/// negation, a splat, a vector built of constants, a conversion, or a `bitcast<f32>` of a constant bit pattern (which
+/// naga does not fold). `None` if it is not constant. naga concretises an abstract literal or constant before the IR,
+/// so no abstract literal reaches here.
 pub fn constant_floats(
     module: &Module,
     arena: &Arena<Expression>,
     h: Handle<Expression>,
 ) -> Option<Vec<f64>> {
     match arena[h] {
-        Expression::Literal(Literal::F64(v) | Literal::AbstractFloat(v)) => Some(vec![v]),
+        Expression::Literal(Literal::F64(v)) => Some(vec![v]),
         Expression::Literal(Literal::F32(v)) => Some(vec![f64::from(v)]),
         Expression::Literal(Literal::F16(v)) => Some(vec![v.to_f64()]),
         Expression::Constant(c) => {
             constant_floats(module, &module.global_expressions, module.constants[c].init)
         }
+        // Every rule reading these values is symmetric in sign (an inf, a NaN, ±65504, ±3.40282347e38), so a
+        // negation passes its operand's values through.
         Expression::Unary {
             op: UnaryOperator::Negate,
             expr,
-        } => Some(
-            constant_floats(module, arena, expr)?
-                .into_iter()
-                .map(|v| -v)
-                .collect(),
-        ),
+        } => constant_floats(module, arena, expr),
         Expression::Splat { value, .. } => constant_floats(module, arena, value),
         Expression::Compose { ref components, .. } => {
             let mut all = Vec::new();
@@ -916,7 +918,6 @@ fn constant_bits(
     match arena[h] {
         Expression::Literal(Literal::U32(b)) => Some(vec![b]),
         Expression::Literal(Literal::I32(i)) => Some(vec![u32::from_ne_bytes(i.to_ne_bytes())]),
-        Expression::Literal(Literal::AbstractInt(i)) => u32::try_from(i).ok().map(|b| vec![b]),
         Expression::Constant(c) => {
             constant_bits(module, &module.global_expressions, module.constants[c].init)
         }
@@ -1023,7 +1024,10 @@ impl Timeline {
             return true;
         };
         let (lo, hi) = (ta.min(tb), ta.max(tb));
-        self.stores.iter().any(|&(t, s)| s == r && lo < t && t < hi)
+        // Each statement has a step of its own, so a store's step is never `lo` itself.
+        self.stores
+            .iter()
+            .any(|&(t, s)| s == r && (lo..hi).contains(&t))
     }
 }
 

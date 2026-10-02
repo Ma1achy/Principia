@@ -439,27 +439,52 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// The rules expression by expression, on inline sources: each case is one function body's `return` expression.
+// The rules case by case, on inline sources: each case is the body of one function, `f`, on a line of its own.
 
-/// `expr` as the return of a function over floats `x`, `y`, ints `i`, `j`, a vector `p`, a bool `c` and an f16 `h`.
-fn wrap(expr: &str) -> String {
-    format!(
-        "enable f16;\nfn f(x: f32, y: f32, i: i32, j: i32, p: vec4<f32>, c: bool, h: f16) -> bool {{\n    \
-         return {expr};\n}}\n"
-    )
+/// The module each case's body is put in: abstract and typed constants, a private variable, `isinf`, and a function
+/// that writes through its pointer.
+const PREAMBLE: &str = "enable f16;
+const M_ABSTRACT = 65504.0;
+const M_ABSTRACT_NEAR = 65503.0;
+const INF_ABSTRACT = 0x7f800000;
+const ONE_ABSTRACT = 0x3f800000;
+const BITS: u32 = 0x7fc00001u;
+const ONE_BITS: u32 = 0x3f800000u;
+var<private> g: f32;
+fn isinf(x: f32) -> bool { return (bitcast<u32>(x) & 0x7fffffffu) == 0x7f800000u; }
+fn bump(p: ptr<function, f32>) { *p = *p + 1.0; }
+";
+
+/// `body` as the body of `f`, over floats `x`, `y`, ints `i`, `j`, a vector `p`, a bool `c`, an f16 `h`, an f64 `w`
+/// and a pointer `q`; and the body's line.
+fn wrap(body: &str) -> (String, u32) {
+    let line = u32::try_from(PREAMBLE.lines().count() + 2).unwrap();
+    let source = format!(
+        "{PREAMBLE}fn f(x: f32, y: f32, i: i32, j: i32, p: vec4<f32>, c: bool, h: f16, w: f64, \
+         q: ptr<function, f32>) -> bool {{\n    {body}\n}}\n"
+    );
+    (source, line)
 }
 
-/// Each case in `cases` breaks `rule` if `fires`, and does not if not.
-fn check_cases(cases: &[&str], rule: Rule, fires: bool) {
-    for case in cases {
-        let found = check_fragment(&wrap(case)).expect("the case parses and validates");
-        let hit = found.iter().any(|f| f.rule == rule && f.line == Some(3));
+/// Each body in `bodies` breaks `rule` on its line if `fires`, and does not if not.
+fn check_bodies(bodies: &[&str], rule: Rule, fires: bool) {
+    for body in bodies {
+        let (source, line) = wrap(body);
+        let found = check_fragment(&source).expect("the case parses and validates");
+        let hit = found.iter().any(|f| f.rule == rule && f.line == Some(line));
         if fires {
-            assert!(hit, "[{rule}] did not fire on `{case}`: {found:?}");
+            assert!(hit, "[{rule}] did not fire on `{body}`: {found:?}");
         } else {
-            assert!(!hit, "[{rule}] fired on `{case}`, a near miss: {found:?}");
+            assert!(!hit, "[{rule}] fired on `{body}`, a near miss: {found:?}");
         }
     }
+}
+
+/// Each expression in `cases`, returned by `f`, breaks `rule` if `fires`, and does not if not.
+fn check_cases(cases: &[&str], rule: Rule, fires: bool) {
+    let bodies: Vec<String> = cases.iter().map(|e| format!("return {e};")).collect();
+    let bodies: Vec<&str> = bodies.iter().map(String::as_str).collect();
+    check_bodies(&bodies, rule, fires);
 }
 
 /// Structurally equal operands, each built of a different kind of expression.
@@ -478,8 +503,8 @@ const SELF_SAME: [&str; 12] = [
     "select(x, y, c) != select(x, y, c)",
 ];
 
-/// Each a near miss of a `SELF_SAME` case: the operands differ in one part.
-const SELF_DIFFERENT: [&str; 14] = [
+/// Each a near miss of a `SELF_SAME` case: the operands differ in one part; or no comparison.
+const SELF_DIFFERENT: [&str; 16] = [
     "(x + 1.0) != (x + 2.0)",
     "(x + 1.0) != (x - 1.0)",
     "-x != -y",
@@ -493,7 +518,9 @@ const SELF_DIFFERENT: [&str; 14] = [
     "f32(i) != f32(j)",
     "bitcast<f32>(i) != f32(i)",
     "select(x, y, c) != select(y, x, c)",
+    "select(x, y, c) != select(y, y, c)",
     "x < y",
+    "x * x > y",
 ];
 
 #[test]
@@ -520,25 +547,82 @@ negative_control!(
     check_cases(&SELF_SAME, Rule::SelfCompare, false)
 );
 
+/// Reads of one place with no store to it between them, in nested statements and through each kind of place: a
+/// local, the private `g`, the pointer argument `q`, an array element; and a store to another variable between.
+const SELF_READS: [&str; 10] = [
+    "var v = x; { return v != v; }",
+    "var v = x; if c { return v != v; } return false;",
+    "var v = x; if c { return false; } else { return v != v; }",
+    "var v = x; switch i { default: { return v != v; } }",
+    "var v = x; loop { if c { break; } return v != v; } return false;",
+    "var v = x; var r = false; loop { continuing { r = v != v; break if true; } } return r;",
+    "return g != g;",
+    "return *q != *q;",
+    "var a = array<f32, 2>(x, y); return a[i] != a[i];",
+    "var v = x; var u = y; let old = v; bump(&u); return old != v;",
+];
+
+/// Each a near miss of a `SELF_READS` case: a store to the place read, between the two reads.
+const SELF_STORED: [&str; 6] = [
+    "var v = x; let old = v; v = v + 1.0; return old != v;",
+    "var v = x; let old = v; if c { v = 1.0; } return old != v;",
+    "let old = g; g = g + 1.0; return old != g;",
+    "let old = *q; *q = *q + 1.0; return old != *q;",
+    "var a = array<f32, 2>(x, y); let old = a[i]; a[i] = 1.0; return old != a[i];",
+    "var v = x; let old = v; bump(&v); return old != v;",
+];
+
+#[test]
+fn lint_wgsl_self_compare_reads_with_no_store_between_fire() {
+    check_bodies(&SELF_READS, Rule::SelfCompare, true);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_reads_with_no_store_between_fire,
+    "reads with a store between them are no self-comparison",
+    expected = "did not fire",
+    check_bodies(&SELF_STORED, Rule::SelfCompare, true)
+);
+
+#[test]
+fn lint_wgsl_self_compare_reads_with_a_store_between_do_not_fire() {
+    check_bodies(&SELF_STORED, Rule::SelfCompare, false);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_reads_with_a_store_between_do_not_fire,
+    "reads with no store between them are a self-comparison",
+    expected = "a near miss",
+    check_bodies(&SELF_READS, Rule::SelfCompare, false)
+);
+
 /// Constant expressions that evaluate to a finite-max stand-in, beyond the literal spellings of the fixtures.
-const FINITE_MAX_EXPRESSIONS: [&str; 6] = [
+const FINITE_MAX_EXPRESSIONS: [&str; 10] = [
     "all(vec2(x, y) < vec2(65504.0))",
     "all(vec2(x, y) < vec2(1.0, 65504.0))",
     "x < f32(65504h)",
     "h > -(-65504h)",
     "all(vec2(x, y) < bitcast<vec2<f32>>(vec2(0x477fe000u)))",
     "x < bitcast<f32>(2139095039i)",
+    "x < -bitcast<f32>(0x477fe000u)",
+    "h > f16(bitcast<f32>(0x477fe000u))",
+    "w > 65504.0lf",
+    "x > M_ABSTRACT",
 ];
 
 /// Each a near miss of a `FINITE_MAX_EXPRESSIONS` case: a value below the maximum (65472, the f16 below 65504), or no
 /// constant.
-const FINITE_MAX_NEAR: [&str; 6] = [
+const FINITE_MAX_NEAR: [&str; 10] = [
     "all(vec2(x, y) < vec2(65503.0))",
     "all(vec2(x, y) < vec2(1.0, y))",
     "x < f32(65472h)",
     "h > -(-65472h)",
     "all(vec2(x, y) < bitcast<vec2<f32>>(vec2(0x477fdfffu)))",
     "x < bitcast<f32>(i)",
+    "x < -bitcast<f32>(0x477fdfffu)",
+    "h > f16(bitcast<f32>(0x477fc000u))",
+    "w > 65503.0lf",
+    "x > M_ABSTRACT_NEAR",
 ];
 
 #[test]
@@ -565,65 +649,157 @@ negative_control!(
     check_cases(&FINITE_MAX_EXPRESSIONS, Rule::FiniteMax, false)
 );
 
-/// Constant expressions that evaluate to inf or NaN: -inf, a vector, a module constant's bits.
-const INF_NAN_EXPRESSIONS: [&str; 3] = [
+/// Constant expressions that evaluate to inf or NaN: -inf, a vector, a module constant's bits, abstract bits.
+const INF_NAN_EXPRESSIONS: [&str; 4] = [
     "x > bitcast<f32>(0xff800000u)",
     "all(vec2(x, y) != bitcast<vec2<f32>>(vec2(0x7f800000u, 0u)))",
     "x != bitcast<f32>(BITS)",
+    "x != bitcast<f32>(INF_ABSTRACT)",
 ];
 
 /// Each a near miss of an `INF_NAN_EXPRESSIONS` case: a finite bit pattern.
-const INF_NAN_NEAR: [&str; 3] = [
+const INF_NAN_NEAR: [&str; 4] = [
     "x > bitcast<f32>(0xff7fffffu)",
     "all(vec2(x, y) != bitcast<vec2<f32>>(vec2(0x3f800000u, 0u)))",
     "x != bitcast<f32>(ONE_BITS)",
+    "x != bitcast<f32>(ONE_ABSTRACT)",
 ];
-
-/// Each case with the module constants `BITS` (a NaN) and `ONE_BITS` (1.0) declared.
-fn check_inf_nan_cases(cases: &[&str], fires: bool) {
-    for case in cases {
-        let source = format!(
-            "{}const BITS: u32 = 0x7fc00001u;\nconst ONE_BITS: u32 = 0x3f800000u;\n",
-            wrap(case)
-        );
-        let found = check_fragment(&source).expect("the case parses and validates");
-        let hit = found.iter().any(|f| f.rule == Rule::InfNanConstant);
-        if fires {
-            assert!(
-                hit,
-                "[inf-nan-constant] did not fire on `{case}`: {found:?}"
-            );
-        } else {
-            assert!(
-                !hit,
-                "[inf-nan-constant] fired on `{case}`, a near miss: {found:?}"
-            );
-        }
-    }
-}
 
 #[test]
 fn lint_wgsl_unset_inf_nan_constant_expressions_fire() {
-    check_inf_nan_cases(&INF_NAN_EXPRESSIONS, true);
+    check_cases(&INF_NAN_EXPRESSIONS, Rule::InfNanConstant, true);
 }
 
 negative_control!(
     lint_wgsl_unset_inf_nan_constant_expressions_fire,
     "finite bit patterns are no inf or NaN",
     expected = "did not fire",
-    check_inf_nan_cases(&INF_NAN_NEAR, true)
+    check_cases(&INF_NAN_NEAR, Rule::InfNanConstant, true)
 );
 
 #[test]
 fn lint_wgsl_unset_finite_bit_patterns_do_not_fire() {
-    check_inf_nan_cases(&INF_NAN_NEAR, false);
+    check_cases(&INF_NAN_NEAR, Rule::InfNanConstant, false);
 }
 
 negative_control!(
     lint_wgsl_unset_finite_bit_patterns_do_not_fire,
     "inf and NaN bit patterns are inf and NaN constants",
     expected = "a near miss",
-    check_inf_nan_cases(&INF_NAN_EXPRESSIONS, false)
+    check_cases(&INF_NAN_EXPRESSIONS, Rule::InfNanConstant, false)
+);
+
+/// Calls to `isinf` nested in statements.
+const ISINF_CALLS: [&str; 3] = [
+    "if c { return isinf(x); } return false;",
+    "switch i { default: { return isinf(x); } }",
+    "loop { if c { break; } return isinf(x); } return false;",
+];
+
+#[test]
+fn lint_wgsl_unset_nested_isinf_calls_fail() {
+    check_bodies(&ISINF_CALLS, Rule::IsInfNan, true);
+}
+
+negative_control!(
+    lint_wgsl_unset_nested_isinf_calls_fail,
+    "a body with no call to isinf has no isinf-isnan finding",
+    expected = "did not fire",
+    check_bodies(
+        &["if c { return x > 0.0; } return false;"],
+        Rule::IsInfNan,
+        true
+    )
+);
+
+/// Each case's finding of `rule` says `text`: `(body, text)` pairs.
+fn check_messages(cases: &[(&str, &str)], rule: Rule) {
+    for (body, text) in cases {
+        let (source, _) = wrap(body);
+        let found = check_fragment(&source).expect("the case parses and validates");
+        assert!(
+            found
+                .iter()
+                .any(|f| f.rule == rule && f.what.contains(text)),
+            "no [{rule}] finding on `{body}` says {text:?}: {found:?}"
+        );
+    }
+}
+
+/// Each operator compares `x` with itself and with 65504, and each finding names the operator; the inf and NaN
+/// constants are named as such.
+const MESSAGES: [(&str, &str, Rule); 14] = [
+    ("return x == x;", "by `==`", Rule::SelfCompare),
+    ("return x != x;", "by `!=`", Rule::SelfCompare),
+    ("return x < x;", "by `<`", Rule::SelfCompare),
+    ("return x <= x;", "by `<=`", Rule::SelfCompare),
+    ("return x > x;", "by `>`", Rule::SelfCompare),
+    ("return x >= x;", "by `>=`", Rule::SelfCompare),
+    (
+        "return x == 65504.0;",
+        "by `==` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x != -65504.0;",
+        "by `!=` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x < 65504.0;",
+        "by `<` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x <= 65504.0;",
+        "by `<=` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x > 65504.0;",
+        "by `>` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x >= 65504.0;",
+        "by `>=` against ±6.5504e4",
+        Rule::FiniteMax,
+    ),
+    (
+        "return x == bitcast<f32>(0x7f800000u);",
+        "against an inf constant",
+        Rule::InfNanConstant,
+    ),
+    (
+        "return x == bitcast<f32>(0x7fc00000u);",
+        "against a NaN constant",
+        Rule::InfNanConstant,
+    ),
+];
+
+fn check_all_messages(cases: &[(&str, &str, Rule)]) {
+    for (body, text, rule) in cases {
+        check_messages(&[(body, text)], *rule);
+    }
+}
+
+#[test]
+fn lint_wgsl_self_compare_and_finite_max_name_the_operator() {
+    check_all_messages(&MESSAGES);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_and_finite_max_name_the_operator,
+    "`<` is not named `<=`, nor an inf a NaN",
+    expected = "says",
+    check_all_messages(&[
+        ("return x < x;", "by `<=`", Rule::SelfCompare),
+        (
+            "return x == bitcast<f32>(0x7f800000u);",
+            "a NaN",
+            Rule::InfNanConstant
+        ),
+    ])
 );
 
 /// naga's own `IsNan` (as another front end would give it): `!(x > 0.0)` with its negation rewritten to
