@@ -211,3 +211,41 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
   - **Needed:** accept or veto. TASK-M0-51 builds option 1 meanwhile; a veto before it merges changes it there.
 
 ---
+
+## RQ-193: the `xtask-ci` job has no nextest run to shard; its time is `cargo xtask controls`'s own `cargo test` runs *(R-336, R-231, R-235, TASK-M0-45)*
+
+- **File, section:**
+  - `decisions.md` § "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single
+    tests": "it shards the nextest runs of the `ci` and `xtask-ci` jobs across parallel jobs, the shards together
+    running every test the unsharded run did".
+  - `plan/tasks/M0/TASK-M0-45.md` § "Deliverables": "the nextest runs of the `ci` and `xtask-ci` jobs run as parallel
+    shards (nextest's `--partition`)"; `plan/requirements.yaml` REQ-SYS-077 says the same.
+  - `decisions.md` § "R-231 — After TASK-M0-22, one task speeds up the suite": "`cargo xtask controls` keeping its own
+    cargo invocations".
+  - `decisions.md` § "R-235 — … the controls get their own CI job": "`cargo xtask ci`'s only runner is `controls`, and
+    REQ-VAL-007 requires `controls` to run inside `cargo xtask ci` on every push".
+- **What:** the `xtask-ci` job runs one step, `cargo xtask ci`, and no `cargo nextest run`. Its time is the `controls`
+  runner, which runs `cargo test -p <crate> --features controls --tests -- negative_control` crate by crate through
+  libtest (`xtask/src/controls.rs`), as R-231 keeps it. On `main`'s push run of aaa1e40 (run 36942668813) the job
+  took 15m18s; in run 36943602093, on the same tree, it took 15m39s, `cargo xtask ci` 14m25s of it: plan-check 9 s, build-kernel 16 s, then
+  `controls`: kernel 36 s, validation 5m39s, engine, ledger and prin about 1 s each, xtask 6m41s; the rest under 2 s.
+  So there is nothing for nextest's `--partition` to shard in that job, and the deliverable cannot be built as
+  written. Sharding it needs a choice the corpus does not make. (The `ci` job's half is clear: its
+  `cargo nextest run --workspace` took 16m43s, 901 s of tests, the longest `qa_cargo_xtask_alias_runs_deps` at 301 s,
+  `qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test` 155 s, and five M0-24 and M0-26 tests at
+  104–111 s each.)
+- **Options seen:**
+  1. **Shard `cargo xtask ci` itself (recommended):** `cargo xtask ci --partition <k>/<n>` (and `cargo xtask controls
+     --partition <k>/<n>`) runs the `controls` runner on the k-th of n slices of the controls, by crate or by control
+     name, and the other runners in one shard only; `xtask-ci` becomes n parallel jobs, each running its slice, which
+     together run every control once. This edits `xtask/src/ci.rs`, `xtask/src/controls.rs` and `xtask/src/main.rs`,
+     outside the task's Deliverables, and grows the task past ~250 lines; it keeps R-231's own cargo invocations and
+     REQ-VAL-007's "inside `cargo xtask ci`". Needs: by crate or by control name, and n.
+  2. Run the controls through nextest (`cargo nextest run --features controls -E 'test(negative_control)'`,
+     partitioned), parsing nextest's output in `controls`: amends R-231's "keeping its own cargo invocations".
+  3. Shard only the `ci` job here, and leave `xtask-ci` at about 15 min for a later task or ruling (a deferral, the
+     human's call).
+- **Needed:** which option, and for option 1, the slicing and the shard count. TASK-M0-45 waits; REQ-SYS-077 carries
+  `rq: [RQ-193]`.
+
+---
