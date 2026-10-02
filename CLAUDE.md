@@ -30,7 +30,8 @@ Read this first; each rule points at its source.
   `gui-reviewer`, `perf-reviewer`. The main session never implements or reviews a task itself; it only orchestrates.
 - The loop (`plan/WORKFLOW.md` § "The review loop"): dispatch the `implementer` → each reviewer the task names, each a
   fresh subagent (never a fork), given only the task id, PR number, worktree and target directory → the `implementer` for the fixes → every named
-  reviewer re-checks → stop for the human to merge.
+  reviewer re-checks → the orchestrator merges once `ci` and `reviews-complete` are green (`plan/WORKFLOW.md` § "The
+  review loop" step 6; R-369).
 - Reviewers never share a checkout (R-219). Give each reviewer its own git worktree at the PR head
   (`git worktree add --detach <dir> <head>`) and its own `CARGO_TARGET_DIR`, name both in the dispatch, and remove
   both when the reviewer is done (`git worktree remove`, then delete the target directory). The checks below run in
