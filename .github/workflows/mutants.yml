@@ -179,17 +179,21 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants@27.1.0
+      # Both runs read the caps from `.cargo/mutants.toml` (REQ-VAL-179), as every `cargo mutants` run does: with
+      # `--dir`, cargo-mutants would otherwise read the fixture's own `.cargo/mutants.toml`, which does not exist.
       - name: The gate fires on the fixture (REQ-VAL-148)
         run: |
           fixture=fixtures/mutants/untested
-          if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" -o "$RUNNER_TEMP/fixture"; then
+          if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
+            -o "$RUNNER_TEMP/fixture"; then
             echo "::error::without its killing test, no mutant of the untested branch survived"; exit 1
           fi
           if cargo xtask mutants-check "$RUNNER_TEMP/fixture/mutants.out"; then
             echo "::error::mutants-check passed survivors that are not listed"; exit 1
           fi
           cargo xtask mutants-check "$RUNNER_TEMP/fixture/mutants.out" --equivalent "$fixture/equivalent.toml"
-          cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --features kill -o "$RUNNER_TEMP/fixture-kill"
+          cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
+            --features kill -o "$RUNNER_TEMP/fixture-kill"
       # The caps fire on their fixture (REQ-VAL-179, R-348), read from `.cargo/mutants.toml` as the shards read them:
       # the per-mutant timeout (REQ-VAL-180) records the hanging mutant as a timeout, and the run goes on to the next
       # (`--no-shuffle` keeps the source order); the memory cap (REQ-VAL-181) kills the allocating mutant's test
