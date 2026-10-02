@@ -16,8 +16,8 @@ const B: Expr = Expr::Param("b");
 const WIDTH: Expr = Expr::Op(Op::Sub, &[B, A]);
 const SIG: Expr = Expr::Op(Op::Sigmoid, &[X]);
 
-/// A test bounded link: `a + (b − a)·σ(x)`; inverse `logit(clamp((y − a)/(b − a), ε, 1 − ε))`; log-det
-/// `log((b − a)·σ(x)·(1 − σ(x)))`.
+/// A test bounded link: `a + (b − a)·σ(x)`; inverse `logit(clamp((y − a)/(b − a), ε, 1 − ε))`; a test log-det tree,
+/// `log((b − a)·σ(x)·(1 − σ(x)))`, which only gives the hash a tree to cover, not the registry's log-det (TASK-M2-01's).
 const SIGMOID: Link = Link {
     name: "fx_sigmoid",
     constraint: Constraint::Bounded,
@@ -57,7 +57,8 @@ const SIGMOID: Link = Link {
     sampling_note: "centre-heavy vs uniform",
 };
 
-/// A test unbounded link: the identity, log-det 0.
+/// A test unbounded link: the identity, with a test log-det tree `num(0)`, which only gives the hash a tree to cover,
+/// not the registry's identity log-det (TASK-M2-01's).
 const IDENTITY: Link = Link {
     name: "fx_identity",
     constraint: Constraint::Unbounded,

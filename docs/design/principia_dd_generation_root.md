@@ -604,9 +604,9 @@ closing RQ-189).
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:
 - **The functions.** The forward is one tree per physical component, over the control's components; the inverse is
-  one tree per control component, over the physical value's components; the log-det is one tree, `log |det J|` of the
-  forward's Jacobian, over the control's components. A vector map is written out per component: softmax's component
-  `i` is `div(exp(x_i), add(exp(x_0), …))`.
+  one tree per control component, over the physical value's components; the log-det is one tree, the entry's log-det,
+  over the control's components. A vector map is written out per component: softmax's component `i` is
+  `div(exp(x_i), add(exp(x_0), …))`.
 - **The nodes.** `input(i)` is component `i` of the function's argument, counted from 0. `param(name)` reads one of
   the entry's ε clamps or parameters by name; its value is hashed with the entry's clamps and parameters, never inline,
   so a tree naming one the entry does not declare fails generation. `num(v)` is a literal number. An operator node

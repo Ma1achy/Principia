@@ -99,7 +99,7 @@ pub struct Link {
     pub forward: &'static [Expr],
     /// One tree per control component, over the physical value's components.
     pub inverse: &'static [Expr],
-    /// One tree over the control's components: log |det| of the forward's Jacobian.
+    /// One tree over the control's components: the entry's log-det (generation-root §3.9).
     pub log_det: Expr,
     pub clamps: &'static [Param],
     pub params: &'static [Param],
