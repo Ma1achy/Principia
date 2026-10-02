@@ -199,8 +199,8 @@ negative_control!(
 );
 
 /// `run` on a copy of the fixture workspace writes the report, and fails as the report does.
-fn check_run(results: &str) {
-    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("gate_report_run");
+fn check_run(name: &str, results: &str) {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     std::fs::create_dir_all(root.join("plan")).expect("dir");
     for f in ["plan/MILESTONES.md", "plan/requirements.yaml"] {
         std::fs::copy(fixture().join(f), root.join(f)).expect("copy");
@@ -219,7 +219,7 @@ fn check_run(results: &str) {
 
 #[test]
 fn gate_report_run_writes_and_fails() {
-    check_run(&read("results.json"));
+    check_run("gate_report_run", &read("results.json"));
 }
 
 negative_control!(
@@ -227,6 +227,7 @@ negative_control!(
     "a passing gate must not fail",
     expected = "run passed a failed requirement",
     check_run(
+        "gate_report_run_control",
         r#"{"REQ-TOOL-001":"pass","REQ-TOOL-002":"pass","REQ-TOOL-005":"pass","REQ-SYS-067":"pass"}"#
     )
 );
