@@ -91,8 +91,8 @@ opened for its own work, as the harness that opened it reports it; a run never o
   surface.
 - **Memory:** an adapter that shares the machine's RAM, which wgpu reports as an integrated GPU or a CPU (Apple silicon,
   an integrated GPU, lavapipe), records unified memory, its size the machine's physical RAM. A discrete adapter records
-  its VRAM and the RAM; wgpu reports no VRAM size, so where a discrete adapter's VRAM comes from is RQ-201, and until it
-  is ruled the harness refuses to write a header for one rather than give a size it does not know.
+  its VRAM and the RAM; wgpu reports no VRAM size, so the harness refuses to write a header for a discrete adapter rather
+  than give a size it does not know (RQ-201, decided per R-369).
 - **The driver** is the adapter's reported driver name and version. Metal reports none, and its driver ships with
   macOS, so on Metal it is the system's version, `macOS <version> (<build>)`.
 - **The GPU's core count** is `null`: wgpu does not report it.
