@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 
 ## Sections
 
-1048 sections in 46 files: 877 yield at least one requirement; 171 yield none and are listed below with the reason.
+1049 sections in 46 files: 877 yield at least one requirement; 172 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 124 |
+| informative only | 125 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -133,6 +133,7 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 | R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue | informative only | process ruling; accepts the seven veto items listed to the human (item 3 as R-295 corrected it), closes the settled veto marks in decisions.md, plan/tasks/ and three requirement notes, files RQ-192 for the open ones, and adds plan/tools/veto_marks.py to plan/check_plan.py; changes no requirement's statement or verify |
 | R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)* | informative only | process ruling; accepts RQ-192's items 1, 2 and 4 (R-298's mark, TASK-M0-23's mutants.yml mark, the veto-mark check's design), corrects R-354's item 6 to the placements only and re-opens the five marks it closed beyond them (and R-297's other bullets) in RQ-192, asks there whether R-299's two cut-off error cases stand, and hands the seven ready tasks to the cloud session; REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their veto marks; changes no requirement's statement or verify |
 | R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)* | informative only | process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-194; changes no requirement |
+| R-358 — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)* | informative only | accepts RQ-192's B1–B7 (R-297's GUI bullet and R-133 amendment, and the five marks copying R-297's bullets) and rules C: a cut-off tail after the summary line is a complete session whose dropped bytes prin profile show and prin profile diff always report, with no third session state; its rule is stated in telemetry §5 and render_gui_spec § Profiler and built by TASK-M0-51; REQ-TOOL-148, REQ-TOOL-119 and REQ-TOOL-008 change and list it among their rulings, as do five others; archives RQ-192 and adds to RQ-194 |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

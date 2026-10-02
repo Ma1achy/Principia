@@ -40,4 +40,4 @@ fragment, and keeps its own stated tolerance, ε_phys (REQ-RENDER-025, TASK-M2-2
 - REQ-DEC-043's calibrated f32 decode factor stays the tolerance for the fragment decode against the f64
   `decodeOnly()` (TASK-M2-25's `decode_preset_vs_decode_only`, R-133). This task's tolerance is the fragment, compiled
   with fast-math, against the compute kernel, compiled without it; the agreement gate moves to it.
-- ROUNDTRIP is not this task's: its residual is fragment-only, `encode(decode(z))` with nothing from the compute shader, and its stated tolerance is ε_phys (REQ-ENC-024), checked by TASK-M2-26's golden on both backends (applied per R-204 — veto?).
+- ROUNDTRIP is not this task's: its residual is fragment-only, `encode(decode(z))` with nothing from the compute shader, and its stated tolerance is ε_phys (REQ-ENC-024), checked by TASK-M2-26's golden on both backends (applied per R-204, accepted by R-358).

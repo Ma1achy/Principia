@@ -743,3 +743,7 @@
   section: "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*"
   reason: informative only
   note: "process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-194; changes no requirement"
+- file: decisions.md
+  section: "R-358 — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*"
+  reason: informative only
+  note: "accepts RQ-192's B1–B7 (R-297's GUI bullet and R-133 amendment, and the five marks copying R-297's bullets) and rules C: a cut-off tail after the summary line is a complete session whose dropped bytes prin profile show and prin profile diff always report, with no third session state; its rule is stated in telemetry §5 and render_gui_spec § Profiler and built by TASK-M0-51; REQ-TOOL-148, REQ-TOOL-119 and REQ-TOOL-008 change and list it among their rulings, as do five others; archives RQ-192 and adds to RQ-194"

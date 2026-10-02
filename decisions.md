@@ -3062,9 +3062,8 @@ REQ-VAL-177 in TASK-M4-20 (new), REQ-TOOL-142 in TASK-M7-31, and REQ-GUI-163 and
   TASK-M8-43. REQ-COL-060, the agreement presets' tolerance (the DECODE view's fragment decode against the compute
   kernel), is a calibration requirement (R-71), closed by a new task, TASK-M2-29.
 
-*Applied per R-204 — veto?, open for the GUI bullet and the R-133 amendment bullet only (RQ-192); the two Plan
-bullets (the placements) accepted by R-354 (R-355), and the five Design bullets and the R-84 and R-116 amendment bullet
-by R-356:*
+*Applied per R-204, accepted: the two Plan bullets (the placements) by R-354 (R-355), the five Design bullets and the
+R-84 and R-116 amendment bullet by R-356, and the GUI bullet and the R-133 amendment bullet by R-358:*
 - Plan (where the passthrough goes): a new M0 task, TASK-M0-44, after TASK-M0-14 (the first kernel dispatched on the
   GPU) and TASK-M0-19 (the session header), so every compute pipeline from M0 on is built through it. No existing
   task takes it: TASK-M0-14 is ~450 lines already, and TASK-M4-01 and TASK-M4-06 come after M0's compute dispatches.
@@ -3144,11 +3143,12 @@ A last line cut off inside its JSON object is still rejected: the ruling covers 
 line, and §5 doesn't say otherwise. The type shape and the rest are in PR #79.
 
 ## R-299 — The reader drops a cut-off final line and says how many bytes it dropped *(amends R-298)*
-*Amended by R-356.*
+*Amended by R-356 and R-358.*
 *Still in force: all of it but its Applied-per-R-204 note's rule that a summary line followed by a cut-off line is an
 error: that line is dropped and its bytes reported, and the summary line and the frames are kept (R-356). A file whose
-only line is a cut-off header line stays an error. Whether its ruling's "reports the session incomplete" holds for a
-cut-off line after the summary line is open in RQ-192 (C).*
+only line is a cut-off header line stays an error. Its ruling's "reports the session incomplete" no longer holds for a
+cut-off line after the summary line: that session is complete, with no third state, and its dropped bytes are always
+reported, by `prin profile show` and `prin profile diff` alike (R-358). For every other cut-off last line it holds.*
 *30 Sep 2026 · applied in telemetry §5, REQ-TOOL-008 and TASK-M0-17 (PR #79)*
 
 "#79 item b (R-299): the reader drops an unterminated final line that doesn't parse, reports the session incomplete,
@@ -3512,9 +3512,11 @@ and TASK-M0-18's `canonical_jcs` line follow (a u64 field of 0 and of 2^53 + 1 b
 field writes a number).
 
 ## R-323 — #100's physics findings accepted: the diff threshold is exact; no frames exits 2; a cut-off trace says so
-*Amended by R-328.*
-*Still in force: the exact threshold; "session incomplete" with the dropped bytes, still compared; R-328 extends "no
-frame records exits 2" from NEW to either file.*
+*Amended by R-328 and R-358.*
+*Still in force: the exact threshold; "session incomplete" with the dropped bytes, still compared, for a session that
+ended before its summary line; R-328 extends "no frame records exits 2" from NEW to either file. A complete session
+whose cut-off last line follows its summary line is not reported "session incomplete": the diff prints its dropped
+bytes and compares it as a complete trace, so nothing is compared silently (R-358).*
 *1 Oct 2026 · applied in REQ-TOOL-119 and TASK-M0-18 (PR #100)*
 
 "#100's physics findings accepted: the regression threshold compares exactly (100 → 107 at --threshold 7% is not a
@@ -4289,8 +4291,8 @@ Changes no requirement: REQ-RENDER-083 loses its "veto?" mark and lists R-353 am
 *Corrected in part by R-355.*
 *Still in force: all of it but item 6's extent: the human's "item 6 stands" covered R-297's placements only (R-355),
 so R-297's other applied-per-R-204 bullets and the five marks copying two of them (REQ-RENDER-025, REQ-COL-060,
-REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192, where R-356 accepts those bullets but the GUI
-bullet and the R-133 amendment; R-355 accepts the check's design.*
+REQ-GUI-164, TASK-M2-26, TASK-M2-29) were open again, in RQ-192, where R-356 accepts those bullets but the GUI
+bullet and the R-133 amendment, and R-358 accepts those two and the five marks; R-355 accepts the check's design.*
 *1 Oct 2026 · applied in decisions.md, `plan/tasks/`, REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio),
 REVIEW_QUEUE.md (RQ-192), `plan/tools/veto_marks.py`, `plan/check_plan.py` and `plan/OPERATIONS.md`*
 
@@ -4438,8 +4440,11 @@ Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and RE
 and list R-355 among their rulings.
 
 ## R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*
-*Amended by R-357.*
-*Still in force: all of it but where TASK-M0-51 runs: on the Mac, not in a cloud session (R-357).*
+*Amended by R-357 and R-358.*
+*Still in force: all of it but where TASK-M0-51 runs: on the Mac, not in a cloud session (R-357); and, in its
+applied-per-R-204 item, that `prin profile diff` prints no notice for a complete session with a cut-off line after its
+summary line: the diff, like `prin profile show`, reports that file's dropped bytes, without "session incomplete"
+(R-358).*
 *2 Oct 2026 · applied in decisions.md (R-297's, R-298's, R-299's, R-304's and R-354's lines), telemetry §5, REQ-TOOL-008
 and REQ-TOOL-148 (new) (reqio), TASK-M0-51 (new), REVIEW_QUEUE.md (RQ-192) and `plan/OPERATIONS.md`*
 
@@ -4460,7 +4465,8 @@ rule."
   Telemetry §5 ("A line cut off at the end") says so, R-299 and R-304 carry forward lines, and REQ-TOOL-008's statement
   gains the case (reqio). R-298's mark gains a note that its sentence on a cut-off last line was replaced by R-299,
   which R-356 amends in turn (the code review of 61461ae).
-  - *Applied per R-204 — veto?:* the session reads complete, since its summary line is present: `leak_flags` and
+  - *Applied per R-204, accepted by R-358 but for the diff's silence, which R-358 overrules (the diff reports the
+    dropped bytes too):* the session reads complete, since its summary line is present: `leak_flags` and
     `hot_paths` are read from it, and the bytes after it are reported as dropped, not as "session incomplete", which
     R-298 gives to a file missing its summary line. The human's words keep the summary and report the bytes, and don't
     say which. `Trace`'s rule that a trace with dropped bytes is incomplete gives way: a complete trace may have
@@ -4582,3 +4588,79 @@ can confirm them in one sitting."
   dependency or requirement changed.
 
 Process only (section_notes); no requirement changes.
+
+## R-358 — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*
+*2 Oct 2026 · applied in decisions.md (R-297's and R-356's marks; R-299's, R-323's, R-354's and R-356's lines), telemetry
+§5, render_gui_spec § "Profiler", REQ-RENDER-025, REQ-COL-006, REQ-COL-060, REQ-GUI-163, REQ-GUI-164, REQ-TOOL-008,
+REQ-TOOL-119 and REQ-TOOL-148 (reqio), TASK-M0-51, TASK-M2-26, TASK-M2-29 and REVIEW_QUEUE.md (RQ-192 archived,
+RQ-194)*
+
+"This is from me. RQ-192:
+- B1 stands: until the M8 dev GUI, the fast-math control and the
+  Profiler's compute line are checked by presence (as R-129).
+- B2 stands: from TASK-M2-29, REQ-COL-006's agreement gate uses
+  REQ-COL-060's calibrated tolerance (R-297).
+- B3–B7 stand.
+- C: a trace with its summary line and a cut-off tail is a complete
+  session (it did finish), but its dropped bytes are always reported,
+  by prin profile show and diff alike, so nothing is compared silently
+  (R-323). No third session state. TASK-M0-51 builds it this way."
+
+*Applied:*
+- **B1: R-297's GUI bullet stands.** The Run window's compute fast-math control (REQ-GUI-163) and the Profiler's
+  compute line (REQ-GUI-164) are checked by presence only, with no artboard, until the M8 dev GUI (R-129). Both
+  requirements' verify details already say so and are unchanged; R-358 joins their rulings (reqio).
+- **B2: R-297's R-133 amendment bullet stands.** From TASK-M2-29 on, REQ-COL-006's agreement gate uses REQ-COL-060's
+  calibrated tolerance, and REQ-DEC-043's factor stays the tolerance for the fragment decode against the f64
+  `decodeOnly()`. R-133's forward line ("*Amended by R-297.*") and its "Still in force" line, REQ-COL-006's note and
+  verify detail, and TASK-M2-29's Notes already say so and are unchanged; R-358 joins REQ-COL-006's rulings. With B1
+  and B2, every bullet of R-297's "Applied per R-204" block is accepted, and its mark names R-354, R-356 and R-358.
+- **B3–B7: the five marks stand,** each now "accepted by R-358", its wording otherwise unchanged: REQ-RENDER-025's,
+  REQ-COL-060's and REQ-GUI-164's notes (reqio; R-358 joins their rulings), and TASK-M2-26's and TASK-M2-29's Notes.
+- **C: a cut-off tail after the summary line is a complete session, its dropped bytes always reported.** This is RQ-192
+  (C)'s option 2. The reader keeps the header line, the frames and the summary line, reads `leak_flags` and `hot_paths`
+  from it, and gives the cut-off bytes as `Trace::dropped_bytes`; the session is complete. `Session` keeps its two
+  states, complete and incomplete; no third is added. Both `prin profile show` and `prin profile diff` report the
+  dropped bytes of such a file, and neither calls it "session incomplete". The diff prints them, for that file, before
+  it compares it as any complete trace, and before a refusal for no frame records, so the bytes are always reported and
+  nothing is compared silently. A complete trace with no dropped bytes prints no notice, as today. The notice for a
+  session that ended before its summary line is unchanged: "session incomplete" and its dropped bytes (0 when none).
+  - **What it overrides, for this case only:**
+    - R-299's ruling, "reports the session incomplete": for a cut-off line after the summary line it no longer holds,
+      since that session is complete; for every other cut-off last line it holds. R-299's "Still in force" line says so.
+    - R-323's rule (3), "a cut-off or incomplete trace prints "session incomplete" and the bytes dropped", and the
+      human's confirmation quoted under it, "a cut-off trace is reported as "session incomplete" with its dropped
+      bytes, never silently compared over fewer frames": for this file the diff prints the dropped bytes without
+      "session incomplete". What R-323 guards stands, as the human's words cite it: the file is never compared in
+      silence. R-323's "Still in force" line says so.
+    - R-356's applied-per-R-204 item, accepted but for one clause: "the diff compares it as a complete trace, and
+      prints no notice for it" gives way, since the diff now reports the dropped bytes. The rest of the item stands:
+      the session reads complete, `Trace`'s rule that a trace with dropped bytes is incomplete gives way, and
+      `prin profile show` states the dropped bytes without "session incomplete". Its mark names R-358.
+  - **Docs.** Telemetry §5, "A line cut off at the end", closes its mark and says that there is no third session state
+    and that both commands report the bytes. render_gui_spec § "Profiler", "A cut-off or incomplete trace", gains the
+    diff's case.
+  - **Plan.** TASK-M0-51 builds it: `crates/prin/src/profile/diff.rs` joins its deliverables, with a new acceptance
+    test, `profile_diff_cut_off_after_summary`, and its negative control; its size goes from ~150 to ~200 lines; its
+    Notes cite R-358 in place of the open item. REQ-TOOL-148's statement and verify detail gain the diff (reqio), as do
+    REQ-TOOL-119's verify detail and note, and REQ-TOOL-008's statement says the session is complete; R-358 joins the
+    rulings of all three. `qa_TASK-M0-18.rs`'s `qa_profile_diff_cut_line_with_newline_is_unreadable`, already named in
+    TASK-M0-51's Notes, is the qa assertion that this case changes for the diff: that file is now read and compared, not
+    refused.
+  - *Applied per R-204 — veto?:* the notices' words, which the ruling leaves open. The diff prints, for that file,
+    "<BASE|NEW>: <n> bytes of a cut-off line after the summary line dropped"; `prin profile show` prints on stderr
+    "prin profile show: the line after the summary line was cut off, and its <n> bytes are not shown pretty", today's
+    notice less "session incomplete". Neither prints a notice when no bytes were dropped. Open in RQ-194.
+  - *Flagged, not resolved:* REQ-TOOL-119 is a definition requirement (R-72) whose text in render_gui_spec § "Profiler"
+    the physics reviewer approved on TASK-M0-18 (R-323, R-328). The diff's new case is written there by this ruling,
+    and TASK-M0-51's reviewers are code and qa. Whether physics reviews it, or the human's words settle it, is asked
+    in RQ-194.
+- **RQ-192 is closed**: every item of it is ruled (R-355, R-356, R-358). It moves, unchanged, to
+  `docs/archive/review_queue/M0.md` with its Ruling line (R-292). Each of its marks names its ruling in place of
+  "veto?": R-297's block mark, R-356's mark, telemetry §5's, the three requirement notes and the two M2 task Notes.
+  No requirement carried `rq: [RQ-192]`, so none was cleared.
+- R-358 is in the "design" group of `plan/rule_groups.yaml`, beside R-356, since it changes the trace rule;
+  `plan/section_notes.yaml` gives its line, since the requirements list it among their rulings, not their sources.
+
+Changes REQ-TOOL-148's statement and verify detail, REQ-TOOL-119's verify detail and REQ-TOOL-008's statement; the
+other requirements gain R-358 among their rulings, and REQ-RENDER-025's, REQ-COL-060's and REQ-GUI-164's notes name it.

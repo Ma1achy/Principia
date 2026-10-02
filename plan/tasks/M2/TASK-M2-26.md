@@ -44,4 +44,4 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 ## Notes
 - Gaps G2 and G15 apply (nonlinear charts, ‖·‖_phys).
 - RQ-84 ruled: R-116 — the WGSL encode the ROUNDTRIP preset calls is generated from the one Rust source (TASK-M2-25), never hand-written; this settles Gap G1 here.
-- R-297: ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys, which R-297's "stated tolerance" names for it; REQ-COL-060 (TASK-M2-29) is the agreement presets' tolerance, fragment against compute, and doesn't apply here. If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?).
+- R-297: ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys, which R-297's "stated tolerance" names for it; REQ-COL-060 (TASK-M2-29) is the agreement presets' tolerance, fragment against compute, and doesn't apply here. If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204, accepted by R-358).
