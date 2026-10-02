@@ -6,10 +6,11 @@
 # own Mac via `prin profile`, and the report marks each benchmark requirement "awaiting the human's run" until its file
 # is supplied to `gate-report --bench-results <dir>` (R-186).
 #
-# Each requirement's result is its verification method's suites' (RQ-201, applied per R-204 — veto?): a unit test,
-# property test or numerical gate passes when the CPU suites pass; a golden image when both GPU suites pass; a GUI
-# screenshot when the screenshot suite passes. A review-checklist requirement has no hosted result, so the report lists
-# it as missing until RQ-201 rules where its result comes from.
+# Each requirement's result is its verification method's suites' (RQ-201, decided per R-369): a unit test, property
+# test or numerical gate passes when the CPU suites pass; a golden image when both GPU suites pass; a GUI screenshot when
+# the screenshot suite passes. A review-checklist requirement passes when the task that closes it has a merged PR on
+# whose head every reviewer its task file names has approved (R-175, R-260), which `gate-report` reads through `gh`, so
+# the gate-report job reads the repository's pull requests with the workflow's token.
 #
 # Runner disk and caches as in `nightly.yml`: each Linux job that builds the workspace's tests deletes the toolsets it
 # does not use first (TASK-M0-49), and this workflow, never run on a push to `main`, saves no cache and restores
@@ -249,11 +250,15 @@ jobs:
           if-no-files-found: ignore
 
   # The gate report (R-177): after every suite, whatever their results. Each requirement's result is its verification
-  # method's suites' (RQ-201); the report fails when any requirement failed or has no result, and is uploaded either way.
+  # method's suites', or, for a review-checklist requirement, its closing task's merged PR's approvals (RQ-201, decided
+  # per R-369); the report fails when any requirement failed or has no result, and is uploaded either way.
   gate-report:
     if: always()
     needs: [cpu, xtask-ci, gpu-metal, gpu-lavapipe, screenshot]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -290,9 +295,12 @@ jobs:
                   results[req["id"]] = "pass" if os.environ[suite] == "true" else "fail"
           json.dump(results, open(os.path.join(os.environ["RUNNER_TEMP"], "results.json"), "w"), indent=1)
           EOF
+      # `gh`, preinstalled on the runner, lists the PRs and reads each merged task PR's reviews with this token.
       - name: cargo xtask gate-report --milestone <Mn>
         env:
           MILESTONE: ${{ inputs.milestone }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: cargo xtask gate-report --milestone "$MILESTONE" --results "$RUNNER_TEMP/results.json"
       - uses: actions/upload-artifact@v4
         if: always()

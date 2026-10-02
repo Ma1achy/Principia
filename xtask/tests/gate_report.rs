@@ -1,14 +1,18 @@
 //! `cargo xtask gate-report` (REQ-SYS-067; R-177, R-186): on a fixture milestone file, the report names every
 //! requirement of the milestone's gate block and every earlier one, with its pass/fail from the fixture results; it
 //! fails when a requirement failed or has no result; a benchmark requirement is awaiting the human's run until its
-//! `prin profile` file is supplied. And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
+//! `prin profile` file is supplied; a review-checklist requirement passes when its closing task's PR merged with its
+//! reviewers' approvals, read from a fixture in place of `gh` (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
 //! registers the control that must make it fail (R-176).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use validation::negative_control;
-use xtask::gate_report::{benchmark_ids, gate_ids, outcomes, render, run, Outcome};
+use xtask::gate_report::{
+    benchmark_ids, closing_tasks, gate_ids, outcomes, render, review_checklist_ids, review_outcome,
+    run, Outcome, Recorded,
+};
 
 fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gate_report")
@@ -207,7 +211,7 @@ fn check_run(name: &str, results: &str) {
     }
     let file = root.join("results.json");
     std::fs::write(&file, results).expect("write");
-    let got = run(&root, "M0", &file, None);
+    let got = run(&root, "M0", &file, None, &Recorded::default());
     let report =
         std::fs::read_to_string(root.join("target/gate-report/M0.txt")).expect("no report written");
     assert!(
@@ -278,4 +282,156 @@ negative_control!(
         xtask::bench::result_path(Path::new("/w"), "c"),
         Path::new("/w/target/bench/b.jsonl")
     )
+);
+
+/// The review-checklist fixture workspace: tasks TASK-M0-90…93, their task files, and their PRs (`prs.json`).
+fn review_root() -> PathBuf {
+    fixture().join("review")
+}
+
+fn review_prs() -> Recorded {
+    Recorded::from_json(&read("review/prs.json")).expect("fixture PRs")
+}
+
+/// `id`'s outcome on the review fixture, its PRs from `prs`.
+fn review(id: &str, prs: &Recorded) -> Outcome {
+    let closers = closing_tasks(&read("review/plan/tasks.yaml"));
+    review_outcome(&review_root(), &closers, id, prs).expect("review outcome")
+}
+
+/// `id` passes, on PR `pr`, merged with its reviewers' approvals.
+fn check_reviewed(id: &str, pr: u64, prs: &Recorded) {
+    assert_eq!(
+        review(id, prs),
+        Outcome::Reviewed(pr),
+        "the review-checklist requirement did not pass"
+    );
+}
+
+#[test]
+fn gate_report_review_checklist_passes_on_a_merged_approved_pr() {
+    check_reviewed("REQ-VAL-901", 90, &review_prs());
+}
+
+negative_control!(
+    gate_report_review_checklist_passes_on_a_merged_approved_pr,
+    "a task with no PR must not pass",
+    expected = "the review-checklist requirement did not pass",
+    check_reviewed("REQ-VAL-901", 90, &Recorded::default())
+);
+
+/// `id` fails, the reason saying `why`.
+fn check_unreviewed(id: &str, why: &str) {
+    match review(id, &review_prs()) {
+        Outcome::Unreviewed(reason) if reason.contains(why) => {}
+        other => panic!("the requirement did not fail saying `{why}`: {other:?}"),
+    }
+}
+
+#[test]
+fn gate_report_review_checklist_fails_on_an_unmerged_pr() {
+    check_unreviewed("REQ-VAL-902", "TASK-M0-91's PR #91 is not merged");
+}
+
+negative_control!(
+    gate_report_review_checklist_fails_on_an_unmerged_pr,
+    "a merged, approved PR must not be called unmerged",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-901", "is not merged")
+);
+
+#[test]
+fn gate_report_review_checklist_fails_on_a_missing_approval() {
+    check_unreviewed("REQ-VAL-903", "role `qa` has not approved");
+}
+
+negative_control!(
+    gate_report_review_checklist_fails_on_a_missing_approval,
+    "a PR every named reviewer approved must not lack an approval",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-901", "has not approved")
+);
+
+#[test]
+fn gate_report_review_checklist_fails_with_no_pr_or_no_task() {
+    check_unreviewed("REQ-VAL-904", "TASK-M0-93 has no PR");
+    check_unreviewed("REQ-VAL-905", "no task in plan/tasks.yaml closes it");
+}
+
+negative_control!(
+    gate_report_review_checklist_fails_with_no_pr_or_no_task,
+    "a requirement whose task merged with its approvals has a PR and a task",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-901", "has no PR")
+);
+
+/// The fixture's tasks.yaml reads each listed requirement to its task, a trailing comment ignored; its
+/// requirements.yaml gives the five review-checklist ids.
+#[test]
+fn gate_report_reads_closing_tasks_and_checklist_ids() {
+    let closers = closing_tasks(&read("review/plan/tasks.yaml"));
+    assert_eq!(
+        closers.get("REQ-VAL-902").map(String::as_str),
+        Some("TASK-M0-91")
+    );
+    assert_eq!(
+        closers.get("REQ-TOOL-001").map(String::as_str),
+        Some("TASK-M0-92")
+    );
+    assert_eq!(closers.len(), 5, "tasks.yaml's requirements were misread");
+    let ids = review_checklist_ids(&read("review/plan/requirements.yaml"));
+    assert_eq!(ids.len(), 5, "the review-checklist ids were misread");
+    assert!(!ids.contains("REQ-TOOL-001"));
+}
+
+negative_control!(
+    gate_report_reads_closing_tasks_and_checklist_ids,
+    "the gate fixture's tasks are not the review fixture's",
+    expected = "tasks.yaml's requirements were misread",
+    assert_eq!(
+        closing_tasks("- id: TASK-M0-90\n  requirements: [A, B]\n").len(),
+        5,
+        "tasks.yaml's requirements were misread"
+    )
+);
+
+/// `run` on a copy of the review fixture, PRs from `prs`: the report gives REQ-VAL-901 its PR, fails REQ-VAL-902, and
+/// the run fails.
+fn check_run_reviewed(name: &str, prs: &Recorded) {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    std::fs::create_dir_all(root.join("plan/tasks/M0")).expect("dir");
+    for f in [
+        "plan/MILESTONES.md",
+        "plan/requirements.yaml",
+        "plan/tasks.yaml",
+        "plan/tasks/M0/TASK-M0-90.md",
+        "plan/tasks/M0/TASK-M0-91.md",
+        "plan/tasks/M0/TASK-M0-92.md",
+        "plan/tasks/M0/TASK-M0-93.md",
+    ] {
+        std::fs::copy(review_root().join(f), root.join(f)).expect("copy");
+    }
+    let file = root.join("results.json");
+    std::fs::write(&file, r#"{"REQ-TOOL-001":"pass"}"#).expect("write");
+    let got = run(&root, "M0", &file, None, prs);
+    let report =
+        std::fs::read_to_string(root.join("target/gate-report/M0.txt")).expect("no report written");
+    assert!(
+        report.contains("REQ-VAL-901  pass: PR #90 merged"),
+        "the report does not pass REQ-VAL-901 on its merged PR:\n{report}"
+    );
+    assert!(report.contains("REQ-VAL-902  FAIL"), "{report}");
+    assert!(got.is_err(), "run passed an unreviewed requirement");
+}
+
+#[test]
+fn gate_report_run_reads_review_checklist_prs() {
+    check_run_reviewed("gate_report_run_review", &review_prs());
+}
+
+negative_control!(
+    gate_report_run_reads_review_checklist_prs,
+    "with no PRs, no review-checklist requirement passes",
+    expected = "the report does not pass REQ-VAL-901",
+    check_run_reviewed("gate_report_run_review_control", &Recorded::default())
 );

@@ -36,7 +36,7 @@ pub fn find(name: &str) -> Option<&'static Bench> {
 }
 
 /// `trivial-kernel`'s frame count: each frame is one dispatch of the trivial kernel over the harness's 2^16-word
-/// fixture. Applied per R-204 (RQ-201) — veto?
+/// fixture. Decided per R-369 (RQ-201).
 pub const TRIVIAL_KERNEL_FRAMES: u32 = 1000;
 
 /// The WGSL entry point naga names for `kernel::toolchain::pack_unpack`.

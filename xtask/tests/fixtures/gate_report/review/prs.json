@@ -1,0 +1,24 @@
+{
+  "TASK-M0-90": [
+    {"merged": false, "number": 89, "title": "TASK-M0-90: first try, closed", "head": ""},
+    {"merged": true, "number": 90, "title": "TASK-M0-90: the fixture task", "head": "h90",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code\n\nfine", "commit_id": "h90", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h90", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ],
+  "TASK-M0-91": [
+    {"merged": false, "number": 91, "title": "TASK-M0-91: still open", "head": "h91",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h91", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h91", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ],
+  "TASK-M0-92": [
+    {"merged": true, "number": 92, "title": "TASK-M0-92: merged without qa", "head": "h92",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h92", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: CHANGES qa", "commit_id": "h92", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ]
+}

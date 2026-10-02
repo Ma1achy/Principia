@@ -42,8 +42,10 @@ Commands:
                                   list every requirement of <Mn>'s gate block and every earlier one
                                   (plan/MILESTONES.md) with its result from <file> (a JSON object, id to `pass` or
                                   `fail`), a benchmark requirement awaiting the human's run until <dir>/<id>.jsonl,
-                                  its prin profile file, is supplied (R-177, R-186); writes
-                                  target/gate-report/<Mn>.txt; fails on a requirement failed or with no result
+                                  its prin profile file, is supplied (R-177, R-186), and a review-checklist one
+                                  passing when its closing task's PR merged with its reviewers' approvals, read
+                                  through gh (R-369, RQ-201); writes target/gate-report/<Mn>.txt; fails on a
+                                  requirement failed or with no result
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
@@ -107,15 +109,20 @@ fn main() -> ExitCode {
                 !bless.is_empty(),
             )
         }
-        ["gate-report", "--milestone", m, "--results", results] => {
-            xtask::gate_report::run(&workspace_root(), m, Path::new(results), None)
-        }
+        ["gate-report", "--milestone", m, "--results", results] => xtask::gate_report::run(
+            &workspace_root(),
+            m,
+            Path::new(results),
+            None,
+            &xtask::gate_report::Gh::default(),
+        ),
         ["gate-report", "--milestone", m, "--results", results, "--bench-results", dir] => {
             xtask::gate_report::run(
                 &workspace_root(),
                 m,
                 Path::new(results),
                 Some(Path::new(dir)),
+                &xtask::gate_report::Gh::default(),
             )
         }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),

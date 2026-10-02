@@ -1,0 +1,18 @@
+# Fixture: TASK-M0-90 merged with both approvals; TASK-M0-91's PR is open; TASK-M0-92 merged without qa's approval;
+# TASK-M0-93 has no PR; REQ-VAL-905 is closed by no task.
+- id: TASK-M0-90
+  milestone: M0
+  requirements: [REQ-VAL-901]
+  reviewers: [code, qa]
+- id: TASK-M0-91
+  milestone: M0
+  requirements: [REQ-VAL-902]  # a trailing comment
+  reviewers: [code, qa]
+- id: TASK-M0-92
+  milestone: M0
+  requirements: [REQ-VAL-903, REQ-TOOL-001]
+  reviewers: [code, qa]
+- id: TASK-M0-93
+  milestone: M0
+  requirements: [REQ-VAL-904]
+  reviewers: [code]

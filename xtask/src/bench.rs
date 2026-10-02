@@ -8,7 +8,7 @@
 //! `gate`. The kernel is built first, since `trivial-kernel` dispatches the WGSL `cargo xtask build-kernel` writes.
 //!
 //! The diff runs at a threshold of 0%, so every rise in a scope's p95 is listed; a rise is reported, not failed, since
-//! no requirement yet gates a bench (the first is M3's REQ-PERF-004). Applied per R-204 (RQ-201) — veto?
+//! no requirement yet gates a bench (the first is M3's REQ-PERF-004). Decided per R-369 (RQ-201).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -24,7 +24,7 @@ pub enum Which<'a> {
     All,
 }
 
-/// The threshold `prin profile diff` is given: every rise is listed (RQ-201).
+/// The threshold `prin profile diff` is given: every rise is listed (RQ-201, decided per R-369).
 pub const DIFF_THRESHOLD: &str = "0%";
 
 /// Where a bench's trace is written, under the workspace root.
