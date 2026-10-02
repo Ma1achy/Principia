@@ -154,11 +154,14 @@ fn qa_cargo_xtask_alias_runs_deps() {
     // the lock held by the running `cargo test`. Its `cargo xtask deps` run is the test below, split out so that
     // neither holds a CI shard over its target (R-336, REQ-SYS-077); this one keeps the listing-only
     // `cargo xtask ci --list` (R-235, REQ-VAL-166).
-    let out = run_cargo_in_the_workspace(&["xtask", "ci", "--list"]);
-    check_the_alias_runs_ci(&out);
-    // Control: the alias reaches xtask's own argument handling, which refuses an unknown command.
+    // Control, run first: the alias reaches xtask's own argument handling, which refuses an unknown command. Run
+    // first, its child builds xtask (or waits on the lock of `qa_cargo_xtask_alias_runs_the_deps_check`'s child,
+    // building it beside this in the same target dir), so the `ci --list` child below, under its own timeout (R-214),
+    // only lists.
     let out = run_cargo_in_the_workspace(&["xtask", "qa-no-such-command"]);
     check_the_alias_refuses_an_unknown_command(&out);
+    let out = run_cargo_in_the_workspace(&["xtask", "ci", "--list"]);
+    check_the_alias_runs_ci(&out);
 }
 
 /// `qa_cargo_xtask_alias_runs_deps`'s `cargo xtask deps` run, through the alias, as a test of its own (R-336).
