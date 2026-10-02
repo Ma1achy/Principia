@@ -63,6 +63,13 @@ exit {bench_exit}
     (root, cargo)
 }
 
+/// Runs `spawn`, which spawns the stand-in from xtask's own code and so not through `validation::spawn::Spawn`, while
+/// no other test writes a stand-in: a child forked as another thread holds an executable open for writing inherits
+/// that descriptor until it execs, and an exec of that executable meanwhile fails with ETXTBSY (REQ-SYS-070).
+fn no_write<T>(spawn: impl FnOnce() -> T) -> T {
+    validation::spawn::while_no_spawn(spawn)
+}
+
 /// `run_built` on the scratch workspace `case`: its result, and the benches the stand-in was asked to run.
 fn bench(
     case: &str,
@@ -71,7 +78,7 @@ fn bench(
     bless: bool,
 ) -> (Result<(), String>, PathBuf, Vec<String>) {
     let (root, cargo) = stand_in(case, answers);
-    let result = run_built(cargo.as_os_str(), &root.join("Cargo.toml"), which, bless);
+    let result = no_write(|| run_built(cargo.as_os_str(), &root.join("Cargo.toml"), which, bless));
     let ran = fs::read_to_string(root.join("calls.log"))
         .unwrap_or_default()
         .lines()
@@ -224,7 +231,7 @@ negative_control!(
 /// `bench` builds the kernel first: on a workspace with no `rust-toolchain.toml`, that build fails, and so the run.
 fn check_builds_kernel(case: &str, bench: impl Fn(&OsStr, &Path) -> Result<(), String>) {
     let (root, cargo) = stand_in(case, OK);
-    let result = bench(cargo.as_os_str(), &root.join("Cargo.toml"));
+    let result = no_write(|| bench(cargo.as_os_str(), &root.join("Cargo.toml")));
     assert!(
         result
             .as_ref()

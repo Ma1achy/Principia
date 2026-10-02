@@ -697,6 +697,14 @@ esac
     gh
 }
 
+/// Runs `spawn`, which spawns the stand-in `gh` from xtask's own code and so not through `validation::spawn::Spawn`,
+/// while no other test writes a stand-in: a child forked as another thread holds an executable open for writing
+/// inherits that descriptor until it execs, and an exec of that executable meanwhile fails with ETXTBSY (REQ-SYS-070).
+#[cfg(unix)]
+fn no_write<T>(spawn: impl FnOnce() -> T) -> T {
+    validation::spawn::while_no_spawn(spawn)
+}
+
 /// Through `gh` (a stand-in serving `prs`), each review-checklist requirement of the review fixture gets the outcome
 /// it gets from the recorded PRs: a task's merged, approved PR passes it; an unmerged one, or one lacking an approval,
 /// fails it; a ruling's merged PR passes the task it closes, and its unmerged one fails it.
@@ -705,13 +713,15 @@ fn check_gh_outcomes(case: &str, prs: &serde_json::Value) {
     let gh = xtask::gate_report::Gh::new(stand_in_gh(case, prs, false));
     let tasks = read("review/plan/tasks.yaml");
     let outcome = |id: &str| {
-        review_outcome(
-            &review_root(),
-            &closing_tasks(&tasks),
-            &closing_rulings(&tasks),
-            id,
-            &gh,
-        )
+        no_write(|| {
+            review_outcome(
+                &review_root(),
+                &closing_tasks(&tasks),
+                &closing_rulings(&tasks),
+                id,
+                &gh,
+            )
+        })
         .expect("review outcome through gh")
     };
     assert_eq!(
@@ -755,13 +765,15 @@ negative_control!(
 fn check_gh_fails(case: &str, fail: bool) {
     let gh = xtask::gate_report::Gh::new(stand_in_gh(case, &serde_json::json!({}), fail));
     let tasks = read("review/plan/tasks.yaml");
-    let got = review_outcome(
-        &review_root(),
-        &closing_tasks(&tasks),
-        &closing_rulings(&tasks),
-        "REQ-VAL-901",
-        &gh,
-    );
+    let got = no_write(|| {
+        review_outcome(
+            &review_root(),
+            &closing_tasks(&tasks),
+            &closing_rulings(&tasks),
+            "REQ-VAL-901",
+            &gh,
+        )
+    });
     assert!(
         got.as_ref()
             .is_err_and(|e| e.contains("`gh pr list` failed: gh: not logged in")),
