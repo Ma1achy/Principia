@@ -622,3 +622,163 @@ negative_control!(
         "R-907's PRs were misread"
     )
 );
+
+/// A ruling's number is digits only: `u32`'s parser alone would take `R-+5` as R-5.
+#[test]
+fn gate_report_reads_ruling_numbers_as_digits_only() {
+    check_title_rulings("R-+5: signed", &[]);
+    check_title_rulings("R-: none", &[]);
+}
+
+negative_control!(
+    gate_report_reads_ruling_numbers_as_digits_only,
+    "R-5 names a ruling",
+    expected = "were misread",
+    check_title_rulings("R-5: unsigned", &[])
+);
+
+// --- The `gh` source, through a stand-in `gh` ----------------------------------------------------------------------
+
+/// A stand-in `gh` in directory `case` answering, as GitHub does, from `prs` (in `prs.json`'s form): `gh pr list` lists
+/// each PR's number, title and state; `gh api …/pulls/N` gives PR N's title and head, `…/pulls/N/reviews` its
+/// reviews. With `fail`, every call fails.
+#[cfg(unix)]
+fn stand_in_gh(case: &str, prs: &serde_json::Value, fail: bool) -> PathBuf {
+    use serde_json::json;
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("gate_report_gh_{case}"));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("stand-in dir made");
+    let all: Vec<&serde_json::Value> = prs
+        .as_object()
+        .expect("PRs by key")
+        .values()
+        .flat_map(|list| list.as_array().expect("a list of PRs"))
+        .collect();
+    let list: Vec<serde_json::Value> = all
+        .iter()
+        .map(|p| {
+            let state = if p["merged"] == true {
+                "MERGED"
+            } else {
+                "CLOSED"
+            };
+            json!({"number": p["number"], "title": p["title"], "state": state})
+        })
+        .collect();
+    let write = |name: String, v: serde_json::Value| {
+        std::fs::write(dir.join(name), v.to_string()).expect("stand-in answer written")
+    };
+    write("list.json".to_owned(), serde_json::Value::Array(list));
+    for p in &all {
+        let n = &p["number"];
+        write(
+            format!("pull_{n}.json"),
+            json!({"number": n, "title": p["title"], "head": {"sha": p["head"]}}),
+        );
+        write(format!("reviews_{n}.json"), p["reviews"].clone());
+    }
+    let gh = dir.join("gh");
+    let script = if fail {
+        "#!/bin/sh\necho 'gh: not logged in' >&2\nexit 1\n".to_owned()
+    } else {
+        format!(
+            r#"#!/bin/sh
+if [ "$1 $2" = "pr list" ]; then cat '{dir}/list.json'; exit; fi
+case "$2" in
+  */reviews) n=${{2%/reviews}}; cat "{dir}/reviews_${{n##*/}}.json" ;;
+  */pulls/*) cat "{dir}/pull_${{2##*/}}.json" ;;
+  *) echo "unexpected gh $*" >&2; exit 1 ;;
+esac
+"#,
+            dir = dir.display()
+        )
+    };
+    validation::spawn::write_executable(&gh, script).expect("stand-in gh written");
+    gh
+}
+
+/// Through `gh` (a stand-in serving `prs`), each review-checklist requirement of the review fixture gets the outcome
+/// it gets from the recorded PRs: a task's merged, approved PR passes it; an unmerged one, or one lacking an approval,
+/// fails it; a ruling's merged PR passes the task it closes, and its unmerged one fails it.
+#[cfg(unix)]
+fn check_gh_outcomes(case: &str, prs: &serde_json::Value) {
+    let gh = xtask::gate_report::Gh::new(stand_in_gh(case, prs, false));
+    let tasks = read("review/plan/tasks.yaml");
+    let outcome = |id: &str| {
+        review_outcome(
+            &review_root(),
+            &closing_tasks(&tasks),
+            &closing_rulings(&tasks),
+            id,
+            &gh,
+        )
+        .expect("review outcome through gh")
+    };
+    assert_eq!(
+        outcome("REQ-VAL-901"),
+        Outcome::Reviewed(90),
+        "through gh, the task's merged, approved PR did not pass it"
+    );
+    assert_eq!(outcome("REQ-VAL-906"), Outcome::Ruled(101, 901));
+    for (id, why) in [
+        ("REQ-VAL-902", "TASK-M0-91's PR #91 is not merged"),
+        ("REQ-VAL-903", "role `qa` has not approved"),
+        (
+            "REQ-VAL-907",
+            "TASK-M0-95's ruling R-902's PR #102 is not merged",
+        ),
+    ] {
+        match outcome(id) {
+            Outcome::Unreviewed(reason) if reason.contains(why) => {}
+            other => panic!("{id} did not fail saying `{why}`: {other:?}"),
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn gate_report_gh_reads_task_and_ruling_prs() {
+    let prs: serde_json::Value = serde_json::from_str(&read("review/prs.json")).expect("fixture");
+    check_gh_outcomes("reads", &prs);
+}
+
+#[cfg(unix)]
+negative_control!(
+    gate_report_gh_reads_task_and_ruling_prs,
+    "gh lists no PR",
+    expected = "through gh, the task's merged, approved PR did not pass it",
+    check_gh_outcomes("reads_control", &serde_json::json!({}))
+);
+
+/// A `gh` that fails fails the requirement's lookup, naming `gh pr list`.
+#[cfg(unix)]
+fn check_gh_fails(case: &str, fail: bool) {
+    let gh = xtask::gate_report::Gh::new(stand_in_gh(case, &serde_json::json!({}), fail));
+    let tasks = read("review/plan/tasks.yaml");
+    let got = review_outcome(
+        &review_root(),
+        &closing_tasks(&tasks),
+        &closing_rulings(&tasks),
+        "REQ-VAL-901",
+        &gh,
+    );
+    assert!(
+        got.as_ref()
+            .is_err_and(|e| e.contains("`gh pr list` failed: gh: not logged in")),
+        "a failing gh did not fail the lookup: {got:?}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn gate_report_gh_failing_fails_the_lookup() {
+    check_gh_fails("fails", true);
+}
+
+#[cfg(unix)]
+negative_control!(
+    gate_report_gh_failing_fails_the_lookup,
+    "a gh that answers",
+    expected = "a failing gh did not fail the lookup",
+    check_gh_fails("fails_control", false)
+);

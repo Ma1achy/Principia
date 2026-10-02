@@ -114,7 +114,7 @@ fn main() -> ExitCode {
             m,
             Path::new(results),
             None,
-            &xtask::gate_report::Gh::default(),
+            &xtask::gate_report::Gh::new("gh"),
         ),
         ["gate-report", "--milestone", m, "--results", results, "--bench-results", dir] => {
             xtask::gate_report::run(
@@ -122,7 +122,7 @@ fn main() -> ExitCode {
                 m,
                 Path::new(results),
                 Some(Path::new(dir)),
-                &xtask::gate_report::Gh::default(),
+                &xtask::gate_report::Gh::new("gh"),
             )
         }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),

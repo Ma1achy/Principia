@@ -21,6 +21,7 @@
 
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -330,9 +331,10 @@ impl PrSource for Recorded {
 }
 
 /// The PRs of the repository `gh` resolves from the checkout (`$GH_REPO` in a workflow): every PR is listed once, and
-/// each merged PR of a task asked about is then read as `reviews-check` reads it ([`reviews_check::fetch`]).
-#[derive(Debug, Default)]
+/// each merged PR of a task asked about is then read as `reviews-check` reads it ([`reviews_check::fetch_with`]).
+#[derive(Debug)]
 pub struct Gh {
+    program: OsString,
     listed: OnceCell<Vec<Listed>>,
 }
 
@@ -345,11 +347,19 @@ struct Listed {
 }
 
 impl Gh {
+    /// The PRs as `program` (`gh` in a gate run, a stand-in in the tests) gives them.
+    pub fn new(program: impl Into<OsString>) -> Self {
+        Self {
+            program: program.into(),
+            listed: OnceCell::new(),
+        }
+    }
+
     fn listed(&self) -> Result<&[Listed], String> {
         if let Some(listed) = self.listed.get() {
             return Ok(listed);
         }
-        let output = Command::new("gh")
+        let output = Command::new(&self.program)
             .args([
                 "pr",
                 "list",
@@ -399,7 +409,7 @@ impl PrSource for Gh {
                 Ok(if p.state == "MERGED" {
                     TaskPr {
                         merged: true,
-                        pr: reviews_check::fetch(p.number)?,
+                        pr: reviews_check::fetch_with(&self.program, p.number)?,
                     }
                 } else {
                     p.listed_only()

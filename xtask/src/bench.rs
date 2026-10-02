@@ -10,6 +10,7 @@
 //! The diff runs at a threshold of 0%, so every rise in a scope's p95 is listed; a rise is reported, not failed, since
 //! no requirement yet gates a bench (the first is M3's REQ-PERF-004). Decided per R-369 (RQ-201).
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -50,9 +51,9 @@ pub fn diff_outcome(code: Option<i32>) -> Result<&'static str, String> {
     }
 }
 
-/// `cargo run --release --quiet` of `bin` in `package` on the workspace of `manifest`, with `args`.
-fn cargo_run(manifest: &Path, package: &str, bin: &str) -> Command {
-    let mut command = Command::new(cargo());
+/// `<cargo> run --release --quiet` of `bin` in `package` on the workspace of `manifest`.
+fn cargo_run(cargo: &OsStr, manifest: &Path, package: &str, bin: &str) -> Command {
+    let mut command = Command::new(cargo);
     command
         .args(["run", "--release", "--quiet", "--manifest-path"])
         .arg(manifest)
@@ -61,8 +62,8 @@ fn cargo_run(manifest: &Path, package: &str, bin: &str) -> Command {
 }
 
 /// The registered benches, as validation's `bench --list` names them.
-fn registered(manifest: &Path) -> Result<Vec<String>, String> {
-    let out = cargo_run(manifest, "validation", "bench")
+fn registered(cargo: &OsStr, manifest: &Path) -> Result<Vec<String>, String> {
+    let out = cargo_run(cargo, manifest, "validation", "bench")
         .arg("--list")
         .output()
         .map_err(|e| format!("cannot run validation's bench binary: {e}"))?;
@@ -78,18 +79,29 @@ fn registered(manifest: &Path) -> Result<Vec<String>, String> {
         .collect())
 }
 
-/// Runs `which` on the workspace of `manifest`; with `bless`, writes each trace as its bench's baseline first.
+/// Builds the kernel (`cargo xtask build-kernel`), then runs `which` on the workspace of `manifest` ([`run_built`]).
 pub fn run(manifest: &Path, which: Which<'_>, bless: bool) -> Result<(), String> {
-    let root = manifest.parent().unwrap_or(Path::new("."));
     crate::build_kernel::run(manifest)?;
+    run_built(OsStr::new(&cargo()), manifest, which, bless)
+}
+
+/// Runs `which` on the workspace of `manifest`, its kernel already built, through `cargo` (validation's `bench` binary
+/// and `prin profile diff`, each `cargo run --release`); with `bless`, writes each trace as its bench's baseline first.
+pub fn run_built(
+    cargo: &OsStr,
+    manifest: &Path,
+    which: Which<'_>,
+    bless: bool,
+) -> Result<(), String> {
+    let root = manifest.parent().unwrap_or(Path::new("."));
     let names = match which {
         Which::One(name) => vec![name.to_owned()],
-        Which::All => registered(manifest)?,
+        Which::All => registered(cargo, manifest)?,
     };
     std::fs::create_dir_all(root.join("target/bench")).map_err(|e| e.to_string())?;
     for name in &names {
         let result = result_path(root, name);
-        let status = cargo_run(manifest, "validation", "bench")
+        let status = cargo_run(cargo, manifest, "validation", "bench")
             .arg("--root")
             .arg(root)
             .arg(name)
@@ -114,7 +126,7 @@ pub fn run(manifest: &Path, which: Which<'_>, bless: bool) -> Result<(), String>
                 baseline.display()
             ));
         }
-        let status = cargo_run(manifest, "prin", "prin")
+        let status = cargo_run(cargo, manifest, "prin", "prin")
             .args(["profile", "diff"])
             .arg(&baseline)
             .arg(&result)
