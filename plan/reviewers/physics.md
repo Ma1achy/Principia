@@ -99,7 +99,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-PAY-080 — the threshold separates exact-dynamics footprints from integration-error footprints on the measured cases (RC §7.19c), with its false-alarm rate reported
 - [ ] REQ-PAY-082 — a sweep over the pair (the ledger's eta = 0.005 and 0.02 cases included) showing the chosen pair reaches the trust bar
 - [ ] REQ-PAY-084 — the measured crossing distribution and the criterion applied to it
-- [ ] REQ-GEN-018 — compare numeric |det J_D| against the sum of registry log-det Jacobians at sampled points, per link
+- [ ] REQ-GEN-018 — compare numeric log |det J_D|, or log √det(J_DᵀJ_D) where J_D is not square, against the sum of the registry's log-dets, each the log of its link's volume factor (R-368), at sampled points, per link
 - [ ] REQ-SCHED-067 — at depth ≥ 40 (where the global-UV defect shows), P_visible and P_focus match an f64 reference ordering of quads exactly
 - [ ] REQ-SCHED-077 — decisions.md records both with their evidence: suspect_fraction traces on substep-saturated near-collision fixtures, separating floor-limited quads from quads that resolve on refinement
 - [ ] REQ-REF-024 — on a line (shore) fixture across 15 splits, alpha_area lies in [1.00, 1.05] (the one-level form reads 0 for edge cells)

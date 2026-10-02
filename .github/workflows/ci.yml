@@ -236,7 +236,10 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
-        run: rustup toolchain install
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
@@ -244,9 +247,26 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key, at
+      # ~/.cache/rust-gpu. On macOS cargo-gpu's installer builds into ~/Library/Caches/rust-gpu, so that is linked to
+      # it first.
+      - name: Link rust-gpu's macOS cache to ~/.cache/rust-gpu
+        run: mkdir -p ~/.cache/rust-gpu ~/Library/Caches && ln -sfn ~/.cache/rust-gpu ~/Library/Caches/rust-gpu
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-metal-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # The codegen self-test (TASK-M0-15) dispatches the kernel's WGSL, so the kernel is built first (R-110, R-186).
+      - name: cargo xtask build-kernel
+        run: cargo xtask build-kernel
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-metal-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: cargo nextest run -p validation --features controls metal_hosted_probe
         run: cargo nextest run -p validation --features controls metal_hosted_probe --no-capture
       - name: cargo test -p validation --features controls metal_hosted_probe --doc
@@ -255,6 +275,11 @@ jobs:
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
+      # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
+      - name: cargo nextest run -p validation --features controls codegen_selftest
+        run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
+      - name: cargo test -p validation --features controls codegen_selftest --doc
+        run: cargo test -p validation --features controls codegen_selftest --doc
       # Every golden suite on Metal (R-186's first Metal check, TASK-M0-06), each case against its one reference
       # across backends, or its Metal one where it keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all
@@ -276,7 +301,10 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
-        run: rustup toolchain install
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
@@ -284,15 +312,33 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key.
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # The codegen self-test (TASK-M0-15) dispatches the kernel's WGSL, so the kernel is built first (R-110, R-186).
+      - name: cargo xtask build-kernel
+        run: cargo xtask build-kernel
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: cargo nextest run -p validation --features controls gpu_harness
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
+      # The codegen self-test on lavapipe, its controls included (debug_tooling_plan §H; TASK-M0-15).
+      - name: cargo nextest run -p validation --features controls codegen_selftest
+        run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
+      - name: cargo test -p validation --features controls codegen_selftest --doc
+        run: cargo test -p validation --features controls codegen_selftest --doc
       # Every golden suite on lavapipe, each case against its one reference across backends, or its Vulkan one where it
       # keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all

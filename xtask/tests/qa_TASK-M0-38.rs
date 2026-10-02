@@ -14,7 +14,6 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
 
 use validation::negative_control;
@@ -23,6 +22,10 @@ use validation::spawn::Spawn;
 #[path = "../../crates/validation/tests/support/own_target.rs"]
 mod own_target;
 use own_target::{fixture_files, Lease, FIXTURES};
+
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-SYS-069
@@ -168,16 +171,12 @@ negative_control!(
 // REQ-SYS-071
 
 /// `xtask pr-check --event` on a `validation`-labelled PR whose `## Validation record` holds `record`. Returns whether
-/// it passed, and its stderr.
-fn pr_check(record: &str) -> (bool, String) {
-    static RUN: AtomicUsize = AtomicUsize::new(0);
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_m0_38_pr_check");
+/// it passed, its stderr, and the scratch folder holding its event file, for the caller to hold until its test ends:
+/// deleted when the test passes, kept with its path printed when it fails (R-342).
+fn pr_check(record: &str) -> (bool, String, Scratch) {
+    let dir = Scratch::new("qa_m0_38_pr_check");
     std::fs::create_dir_all(&dir).unwrap();
-    let event = dir.join(format!(
-        "event-{}-{}.json",
-        std::process::id(),
-        RUN.fetch_add(1, Ordering::Relaxed)
-    ));
+    let event = dir.join("event.json");
     let body = format!("## Summary\nA change.\n\n## Validation record\n{record}\n");
     let json = serde_json::json!({
         "pull_request": {"body": body, "labels": [{"name": "validation"}]}
@@ -189,16 +188,16 @@ fn pr_check(record: &str) -> (bool, String) {
         .env_remove("GITHUB_EVENT_PATH")
         .timed_output()
         .expect("xtask pr-check ran");
-    let _ = std::fs::remove_file(&event);
     (
         output.status.success(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
+        dir,
     )
 }
 
 /// REQ-SYS-071: the record fails, and a problem quotes `line` (trimmed) and says it names no `kind`.
 fn fails_quoting(record: &str, line: &str, kind: &str) {
-    let (ok, stderr) = pr_check(record);
+    let (ok, stderr, _event) = pr_check(record);
     let quoted = format!("`{}`", line.trim());
     let named = stderr
         .lines()
@@ -211,7 +210,7 @@ fn fails_quoting(record: &str, line: &str, kind: &str) {
 
 /// REQ-SYS-071: the record passes.
 fn passes(record: &str) {
-    let (ok, stderr) = pr_check(record);
+    let (ok, stderr, _event) = pr_check(record);
     assert!(ok, "pr-check refused a record naming its meter:\n{stderr}");
 }
 

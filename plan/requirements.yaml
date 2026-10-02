@@ -1988,7 +1988,7 @@
   note: "R-113 (RQ-95): 'a link swap changes the sim key, recompiles and re-integrates from t = 0' is a separate M4 requirement."
 - id: REQ-CHART-034
   area: CHART
-  statement: "Each link must satisfy: constraint preservation for all inputs incl. saturation; inverse round-trip within ε-clamp tolerance in physical units; analytic log-det matching a numeric Jacobian; C¹ continuity."
+  statement: "Each link must satisfy: constraint preservation for all inputs incl. saturation; inverse round-trip within ε-clamp tolerance in physical units; analytic log-det matching a numeric Jacobian, the log-det being the log of the link's volume factor (log |det J|, or log √det(JᵀJ) for a non-square Jacobian such as the simplex link's 3×2, R-368); C¹ continuity."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 5. Tests (properties any generator must satisfy)
@@ -2002,10 +2002,13 @@
     section: "9. The load-bearing invariants (the walls — the primary comparison checklist)"
   - file: docs/design/principia_systems_architecture.md
     section: 2. Component inventory, by rung
+  - file: decisions.md
+    section: "R-368 — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*"
   verify:
     method: property test
     detail: "per link, fuzz across the domain for (a)–(d) of generation-root §5 test 8"
-  rulings: []
+  rulings:
+  - R-368
   milestone: M2
 - id: REQ-CHART-035
   area: CHART
@@ -6170,10 +6173,13 @@
     section: 4. Seams (its side of each — the integration-test list)
   - file: docs/design/principia_dd_encode.md
     section: 4. Seams (obligations → integration tests)
+  - file: decisions.md
+    section: "R-368 — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*"
   verify:
     method: numerical gate
-    detail: "compare numeric |det J_D| against the sum of registry log-det Jacobians at sampled points, per link"
-  rulings: []
+    detail: "compare numeric log |det J_D|, or log √det(J_DᵀJ_D) where J_D is not square, against the sum of the registry's log-dets, each the log of its link's volume factor (R-368), at sampled points, per link"
+  rulings:
+  - R-368
   milestone: M6
 - id: REQ-GEN-019
   area: GEN
@@ -21563,3 +21569,18 @@
   - R-360
   milestone: M0
   note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."
+- id: REQ-SYS-078
+  area: SYS
+  statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."
+  source:
+  - file: decisions.md
+    section: "R-372 — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*"
+  verify:
+    method: review checklist
+    detail: "code and qa: `ci.yml` builds the archive once per feature set in one job and every `ci` shard runs from it, with no `cargo build` or test compile of its own; the shards' test lists together equal the unsharded run's (the R-231 listing check and `nextest_ci_shards_together_list_every_test` still pass); the doctests still run, in shard 1; the PR shows each `ci` shard's warm wall time, and the archive job's, against ~10.5 min"
+  rulings:
+  - R-231
+  - R-325
+  - R-366
+  - R-372
+  milestone: M0

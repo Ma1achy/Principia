@@ -18,3 +18,7 @@ justification = "the exponent branch needs n outside (-6, 21], and e = n - 1 = 0
 [[equivalent]]
 mutant = "crates/prin/src/profile/diff.rs:167:19: replace | with ^ in parts"
 justification = "fraction is masked to bits 0..52, so bit 52 is always clear and fraction ^ (1 << 52) equals fraction | (1 << 52)"
+
+[[equivalent]]
+mutant = "crates/validation/src/gpu.rs:135:9: replace GpuHarness::features -> wgpu::Features with Default::default()"
+justification = "GpuHarness::new is the only constructor and always requests wgpu::Features::empty(), and wgpu enables exactly the requested features, so device.features() is Features::empty() == Default::default() on every device"
