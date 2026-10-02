@@ -2,8 +2,8 @@
 //! requirement of the milestone's gate block and every earlier one, with its pass/fail from the fixture results; it
 //! fails when a requirement failed or has no result; a benchmark requirement is awaiting the human's run until its
 //! `prin profile` file is supplied; a review-checklist requirement passes when its closing task's PR merged with its
-//! reviewers' approvals, or, for a task closed by a ruling, when that ruling's PR did, read from a fixture in place of `gh`
-//! (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
+//! reviewers' approvals, or, for a task closed by a ruling, when that ruling's PR merged, no approval asked of it, read
+//! from a fixture in place of `gh` (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
 //! registers the control that must make it fail (R-176).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -329,6 +329,15 @@ negative_control!(
     check_reviewed("REQ-VAL-901", 90, &Recorded::default())
 );
 
+/// `id` passes on ruling `ruling`'s PR `pr`, merged.
+fn check_ruled(id: &str, pr: u64, ruling: u32, prs: &Recorded) {
+    assert_eq!(
+        review(id, prs),
+        Outcome::Ruled(pr, ruling),
+        "the review-checklist requirement did not pass"
+    );
+}
+
 /// `id` fails, the reason saying `why`.
 fn check_unreviewed(id: &str, why: &str) {
     match review(id, &review_prs()) {
@@ -435,7 +444,7 @@ fn check_run_reviewed(name: &str, prs: &Recorded) {
     );
     assert!(report.contains("REQ-VAL-902  FAIL"), "{report}");
     assert!(
-        report.contains("REQ-VAL-906  pass: PR #101 merged"),
+        report.contains("REQ-VAL-906  pass: PR #101 merged, closing it by ruling R-901"),
         "the report does not pass REQ-VAL-906 on its ruling's merged PR:\n{report}"
     );
     assert!(got.is_err(), "run passed an unreviewed requirement");
@@ -454,17 +463,17 @@ negative_control!(
 );
 
 /// A task done and closed by a ruling (TASK-M0-94, R-901) passes on that ruling's merged PR, #101, titled
-/// `R-900, R-901: …`, approved by the task file's reviewers.
+/// `R-900, R-901: …`, merged (its approvals are not read).
 #[test]
 fn gate_report_review_checklist_passes_on_a_closing_rulings_pr() {
-    check_reviewed("REQ-VAL-906", 101, &review_prs());
+    check_ruled("REQ-VAL-906", 101, 901, &review_prs());
 }
 
 negative_control!(
     gate_report_review_checklist_passes_on_a_closing_rulings_pr,
     "a ruling with no PR must not pass the task it closes",
     expected = "the review-checklist requirement did not pass",
-    check_reviewed("REQ-VAL-906", 101, &Recorded::default())
+    check_ruled("REQ-VAL-906", 101, 901, &Recorded::default())
 );
 
 #[test]
@@ -482,21 +491,26 @@ negative_control!(
     check_unreviewed("REQ-VAL-906", "is not merged")
 );
 
-/// R-904's PR is titled `R-903 to R-905: …` and merged with code's approval alone; TASK-M0-96 names code and qa.
+/// R-904's PR, #103, is titled `R-903 to R-905: …` and merged with no reviews, though TASK-M0-96 names code and qa:
+/// the ruling is the human's own decision, and so its approval.
 #[test]
-fn gate_report_review_checklist_fails_on_a_rulings_pr_lacking_an_approval() {
-    check_unreviewed(
-        "REQ-VAL-908",
-        "TASK-M0-96's ruling R-904's merged PR lacks an approval",
-    );
-    check_unreviewed("REQ-VAL-908", "role `qa` has not approved");
+fn gate_report_review_checklist_passes_on_a_merged_rulings_pr_with_no_reviews() {
+    check_ruled("REQ-VAL-908", 103, 904, &review_prs());
 }
 
 negative_control!(
-    gate_report_review_checklist_fails_on_a_rulings_pr_lacking_an_approval,
-    "a ruling's PR every named reviewer approved must not lack an approval",
-    expected = "the requirement did not fail saying",
-    check_unreviewed("REQ-VAL-906", "has not approved")
+    gate_report_review_checklist_passes_on_a_merged_rulings_pr_with_no_reviews,
+    "a ruling's PR with no reviews must not pass the task it closes until it is merged",
+    expected = "the review-checklist requirement did not pass",
+    check_ruled(
+        "REQ-VAL-908",
+        103,
+        904,
+        &Recorded::from_json(
+            r#"{"rulings": [{"merged": false, "number": 103, "title": "R-903 to R-905: open", "head": "h103"}]}"#
+        )
+        .expect("control PRs")
+    )
 );
 
 /// A task whose status comment names a ruling but is not `done` (TASK-M0-97, R-906) reads its own PRs, and has none,

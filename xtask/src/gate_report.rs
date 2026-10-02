@@ -10,10 +10,10 @@
 //!   PR, titled `<TASK-id>: …`, on whose head every reviewer its task file names has approved, by the rule
 //!   `reviews-complete` applies (R-175, R-260; [`crate::reviews_check`]); it fails when the task has no merged PR or
 //!   when the merged PR lacks an approval. A task `plan/tasks.yaml` records as `status: done` and closed by a ruling
-//!   (`# closed by R-<n>` on its status line, as TASK-M0-00's R-185) has no task PR: its requirement passes on that
-//!   ruling's merged PR, titled `R-<n>: …` or naming R-<n> in a list or range (`R-<a> to R-<b>: …`), checked by the same
-//!   rule against the reviewers the closing task's file names. The lookup is behind [`PrSource`], so the tests read a
-//!   fixture.
+//!   (`# closed by R-<n>` on its status line, as TASK-M0-00's R-185) has no task PR: it is closed by the human's own
+//!   decision, so its requirement passes when that ruling's PR, titled `R-<n>: …` or naming R-<n> in a list or range
+//!   (`R-<a> to R-<b>: …`), is merged, with no reviewer approval asked of it (the ruling is the approval), and fails
+//!   while it is not. The lookup is behind [`PrSource`], so the tests read a fixture.
 //! - Benchmark requirements (`verify.method: benchmark` in `plan/requirements.yaml`) run on the human's Mac, never on a
 //!   hosted runner (R-186). Each is "awaiting the human's run" until its `prin profile` file, `<dir>/<REQ-id>.jsonl`
 //!   under `--bench-results <dir>`, is supplied; a supplied file must open with a profiler schema v1 header line. An
@@ -43,6 +43,9 @@ pub enum Outcome {
     Supplied(PathBuf),
     /// A review-checklist requirement whose closing task's PR, this one, merged with its reviewers' approvals.
     Reviewed(u64),
+    /// A review-checklist requirement whose closing task was closed by a ruling, `.1`, whose PR, `.0`, merged: the
+    /// ruling is the human's own decision, so no approval is asked of it.
+    Ruled(u64, u32),
     /// A review-checklist requirement whose closing task has no merged PR with its reviewers' approvals, and why.
     Unreviewed(String),
 }
@@ -58,7 +61,10 @@ impl Outcome {
 
     /// Whether this outcome is a pass.
     pub fn passes(&self) -> bool {
-        matches!(self, Outcome::Pass | Outcome::Reviewed(_))
+        matches!(
+            self,
+            Outcome::Pass | Outcome::Reviewed(_) | Outcome::Ruled(..)
+        )
     }
 
     fn text(&self) -> String {
@@ -70,6 +76,11 @@ impl Outcome {
             Outcome::Supplied(path) => format!("supplied: {}", path.display()),
             Outcome::Reviewed(n) => {
                 format!("pass: PR #{n} merged with its reviewers' approvals (R-175)")
+            }
+            Outcome::Ruled(n, r) => {
+                format!(
+                    "pass: PR #{n} merged, closing it by ruling R-{r}, the human's own decision"
+                )
             }
             Outcome::Unreviewed(why) => format!("FAIL: {why}"),
         }
@@ -284,8 +295,8 @@ pub trait PrSource {
     /// off its head, its commits).
     fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String>;
 
-    /// Every PR whose title names ruling `n` ([`names_ruling`]), merged or not; a merged one with its reviews (and,
-    /// when an approval is off its head, its commits).
+    /// Every PR whose title names ruling `n` ([`names_ruling`]), merged or not; its number and title only, as no review
+    /// of it is read.
     fn ruling_prs(&self, n: u32) -> Result<Vec<TaskPr>, String>;
 }
 
@@ -363,52 +374,56 @@ impl Gh {
     }
 }
 
-impl Gh {
-    /// The listed PRs `wanted` picks, each merged one read as `reviews-check` reads it, its reviews read whatever its
-    /// title names.
-    fn read(&self, wanted: impl Fn(&Listed) -> bool) -> Result<Vec<TaskPr>, String> {
-        self.listed()?
-            .iter()
-            .filter(|p| wanted(p))
-            .map(|p| {
-                Ok(if p.state == "MERGED" {
-                    let mut pr = reviews_check::fetch(p.number)?;
-                    if !reviews_check::names_task(&pr.title) {
-                        reviews_check::read_reviews(&mut pr)?;
-                    }
-                    TaskPr { merged: true, pr }
-                } else {
-                    TaskPr {
-                        merged: false,
-                        pr: Pr {
-                            number: p.number,
-                            title: p.title.clone(),
-                            head: String::new(),
-                            reviews: Vec::new(),
-                            commits: Vec::new(),
-                        },
-                    }
-                })
-            })
-            .collect()
+impl Listed {
+    /// The listed PR as it stands, its number and title only.
+    fn listed_only(&self) -> TaskPr {
+        TaskPr {
+            merged: self.state == "MERGED",
+            pr: Pr {
+                number: self.number,
+                title: self.title.clone(),
+                head: String::new(),
+                reviews: Vec::new(),
+                commits: Vec::new(),
+            },
+        }
     }
 }
 
 impl PrSource for Gh {
     fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String> {
-        self.read(|p| p.title.split(':').next().map(str::trim) == Some(task))
+        self.listed()?
+            .iter()
+            .filter(|p| p.title.split(':').next().map(str::trim) == Some(task))
+            .map(|p| {
+                Ok(if p.state == "MERGED" {
+                    TaskPr {
+                        merged: true,
+                        pr: reviews_check::fetch(p.number)?,
+                    }
+                } else {
+                    p.listed_only()
+                })
+            })
+            .collect()
     }
 
     fn ruling_prs(&self, n: u32) -> Result<Vec<TaskPr>, String> {
-        self.read(|p| names_ruling(&p.title, n))
+        Ok(self
+            .listed()?
+            .iter()
+            .filter(|p| names_ruling(&p.title, n))
+            .map(Listed::listed_only)
+            .collect())
     }
 }
 
 /// A review-checklist requirement's outcome (decided per R-369, RQ-201): [`Outcome::Reviewed`] when the task closing it
 /// (`closers`, from [`closing_tasks`]) has a merged PR on whose head every reviewer its task file under `root` names has
 /// approved ([`reviews_check::verdict`], R-175, R-260); else [`Outcome::Unreviewed`], saying why. When the task is
-/// closed by a ruling (`rulings`, from [`closing_rulings`]), the PRs read are that ruling's, and each merged one is
-/// checked as the task's own PR would be, against the reviewers its task file names.
+/// closed by a ruling (`rulings`, from [`closing_rulings`]), the PRs read are that ruling's, and the first merged one
+/// passes it, [`Outcome::Ruled`], with no approval asked of it: the ruling is the human's own decision, and so its
+/// approval.
 pub fn review_outcome(
     root: &Path,
     closers: &BTreeMap<String, String>,
@@ -437,18 +452,12 @@ pub fn review_outcome(
             format!("{whose}'s PRs {} are not merged", unmerged.join(", "))
         }));
     }
+    if let Some(n) = ruling {
+        return Ok(Outcome::Ruled(merged[0].pr.number, *n));
+    }
     let mut why = Vec::new();
     for p in merged {
-        // A ruling's PR is titled `R-<n>: …`, which names no task, so `verdict` would pass it with no reviewers (R-261);
-        // titled as the task's, it is checked against the task file's reviewers, by the same rule.
-        let pr = match ruling {
-            Some(_) => Pr {
-                title: format!("{task}: {}", p.pr.title),
-                ..p.pr.clone()
-            },
-            None => p.pr.clone(),
-        };
-        match reviews_check::verdict(root, &pr) {
+        match reviews_check::verdict(root, &p.pr) {
             Ok(_) => return Ok(Outcome::Reviewed(p.pr.number)),
             Err(e) => why.push(e.split_whitespace().collect::<Vec<_>>().join(" ")),
         }

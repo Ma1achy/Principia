@@ -323,48 +323,39 @@ pub fn fetch(n: u64) -> Result<Pr, String> {
         commits: Vec::new(),
     };
     if names_task(&pr.title) {
-        read_reviews(&mut pr)?;
-    }
-    Ok(pr)
-}
-
-/// Reads `pr`'s reviews through `gh`, and, when some APPROVE is off its head, its commits, with the files of each
-/// `qa: tests for ...` commit: what [`fetch`] reads of a PR whose title names a task, and what `gate-report` reads of a
-/// ruling's PR checked against the reviewers of the task the ruling closes (decided per R-369, RQ-201).
-pub fn read_reviews(pr: &mut Pr) -> Result<(), String> {
-    let n = pr.number;
-    pr.reviews = parse_reviews(&gh_api(
-        &format!("repos/{{owner}}/{{repo}}/pulls/{n}/reviews"),
-        true,
-    )?)?;
-    // The commits matter only when some APPROVE is on an earlier commit, which R-260 may carry over to the head.
-    let off_head = pr.reviews.iter().any(|r| {
-        r.body
-            .as_deref()
-            .unwrap_or_default()
-            .trim_start()
-            .starts_with("VERDICT: APPROVE ")
-            && r.commit_id.as_deref() != Some(pr.head.as_str())
-    });
-    if off_head {
-        pr.commits = parse_pages(
-            &gh_api(&format!("repos/{{owner}}/{{repo}}/pulls/{n}/commits"), true)?,
-            "commit list",
-        )?;
-        // Only a commit titled `qa: tests for ...` can carry an approval over (R-260), so only its files are read.
-        for commit in &mut pr.commits {
-            if commit.commit.message.starts_with("qa: tests for ") {
-                let pages = gh_api(
-                    &format!("repos/{{owner}}/{{repo}}/commits/{}", commit.sha),
-                    true,
-                )?;
-                for page in serde_json::Deserializer::from_str(&pages).into_iter::<Commit>() {
-                    let page =
-                        page.map_err(|e| format!("commit {} is not JSON: {e}", commit.sha))?;
-                    commit.files.extend(page.files);
+        pr.reviews = parse_reviews(&gh_api(
+            &format!("repos/{{owner}}/{{repo}}/pulls/{n}/reviews"),
+            true,
+        )?)?;
+        // The commits matter only when some APPROVE is on an earlier commit, which R-260 may carry over to the head.
+        let off_head = pr.reviews.iter().any(|r| {
+            r.body
+                .as_deref()
+                .unwrap_or_default()
+                .trim_start()
+                .starts_with("VERDICT: APPROVE ")
+                && r.commit_id.as_deref() != Some(pr.head.as_str())
+        });
+        if off_head {
+            pr.commits = parse_pages(
+                &gh_api(&format!("repos/{{owner}}/{{repo}}/pulls/{n}/commits"), true)?,
+                "commit list",
+            )?;
+            // Only a commit titled `qa: tests for ...` can carry an approval over (R-260), so only its files are read.
+            for commit in &mut pr.commits {
+                if commit.commit.message.starts_with("qa: tests for ") {
+                    let pages = gh_api(
+                        &format!("repos/{{owner}}/{{repo}}/commits/{}", commit.sha),
+                        true,
+                    )?;
+                    for page in serde_json::Deserializer::from_str(&pages).into_iter::<Commit>() {
+                        let page =
+                            page.map_err(|e| format!("commit {} is not JSON: {e}", commit.sha))?;
+                        commit.files.extend(page.files);
+                    }
                 }
             }
         }
     }
-    Ok(())
+    Ok(pr)
 }
