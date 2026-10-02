@@ -1,6 +1,22 @@
-//! `cargo xtask lint wgsl` — the WGSL traps of the generated unpack layer (render contract Part 5, "Unpack layer";
-//! payload §6; REQ-RENDER-001), checked over naga's IR. It parses and validates
-//! `crates/render/frag/generated/payload_unpack.wgsl` and fails, naming the rule, on:
+//! `cargo xtask lint wgsl` — the WGSL traps of the fragment stage (render contract Part 5, "Unpack layer"; payload
+//! §6; REQ-RENDER-001, REQ-RENDER-083), checked over naga's IR. It parses and validates every WGSL file under
+//! `crates/render/frag/` ([`FRAG_DIR`]), generated or written by hand (R-351).
+//!
+//! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
+//! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
+//! - any use of `isinf` or `isnan`: naga's `IsInf` and `IsNan`, or a call to a function of either name
+//!   ([`Rule::IsInfNan`]);
+//! - a float comparison one of whose operands is an inf or NaN constant, a constant expression that evaluates to one
+//!   (`bitcast<f32>(0x7f800000u)`) included ([`Rule::InfNanConstant`]);
+//! - a float scalar or vector compared with itself, by any of the six comparison operators: the same expression, or
+//!   structurally equal reads of the same `let`, argument, variable or buffer element with no store to it between the
+//!   two reads ([`Rule::SelfCompare`]);
+//! - a comparison against a finite-max stand-in: ±65504 (`f16_finite_max`) or ±3.40282347e38 (f32's largest finite
+//!   value), in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression
+//!   ([`Rule::FiniteMax`]).
+//!
+//! The generated file, `crates/render/frag/generated/payload_unpack.wgsl`, is also checked against the unpack
+//! layer's own rules:
 //! - an `extractBits` whose argument is not u32: the i32 overload sign-extends ([`Rule::ExtractBitsU32`]);
 //! - any f64 type: WGSL has none ([`Rule::NoF64`]);
 //! - an `enable f16` directive, or any f16 type: f16 pairs are read through core `unpack2x16float`, which needs no
@@ -18,18 +34,31 @@
 //!
 //! naga folds a call whose arguments are all constant before the IR is built, so the `extractBits` rule sees only
 //! calls on a runtime value, which every generated accessor's is (a parameter). The `enable` directive is not kept in
-//! the IR, so that rule reads the source's directives, comments stripped.
+//! the IR, so that rule reads the source's directives, comments stripped. A hand-written file is held to the float
+//! rules only: R-317's ban on `enable f16` covers the generated WGSL, so a hand-written file may use f16, and the
+//! validator is built with every capability, `SHADER_FLOAT16` among them. naga does not fold a `bitcast`, so the
+//! float rules evaluate an operand's constant expression themselves ([`constant_floats`]).
 
+use std::collections::HashMap;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use naga::{
-    AddressSpace, ArraySize, Expression, MathFunction, Module, Scalar, ScalarKind, TypeInner,
-    VectorSize,
+    AddressSpace, Arena, ArraySize, BinaryOperator, Block, Expression, Function, Handle, Literal,
+    MathFunction, Module, RelationalFunction, Scalar, ScalarKind, Span, Statement, TypeInner,
+    UnaryOperator, VectorSize,
 };
 
 /// The generated file the lint checks, relative to the workspace root.
 pub const GENERATED: &str = "crates/render/frag/generated/payload_unpack.wgsl";
+
+/// The fragment stage's WGSL: every `.wgsl` file under this directory, relative to the workspace root (R-351).
+pub const FRAG_DIR: &str = "crates/render/frag";
+
+/// The fix every float-rule finding names (R-343).
+pub const BIT_PATTERN_FIX: &str =
+    "fix: test the bit pattern instead (R-343), as `pa_d_min_is_unset` does: \
+     `extractBits(w, 16u, 16u) == PA_D_MIN_UNSET`";
 
 /// The word buffer's global, and the `SimState` buffer's.
 pub const WORD_BUFFER: &str = "word_buffer";
@@ -52,6 +81,10 @@ pub enum Rule {
     WordBinding,
     Bindings,
     SampleOnly,
+    IsInfNan,
+    InfNanConstant,
+    SelfCompare,
+    FiniteMax,
 }
 
 impl fmt::Display for Rule {
@@ -64,53 +97,162 @@ impl fmt::Display for Rule {
             Rule::WordBinding => "word-binding",
             Rule::Bindings => "bindings",
             Rule::SampleOnly => "sample-only",
+            Rule::IsInfNan => "isinf-isnan",
+            Rule::InfNanConstant => "inf-nan-constant",
+            Rule::SelfCompare => "self-compare",
+            Rule::FiniteMax => "finite-max",
         })
     }
 }
 
-/// One finding: the rule broken and where.
+/// One finding: the rule broken, what breaks it, and its 1-based source line where the rule has one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
     pub rule: Rule,
     pub what: String,
+    pub line: Option<u32>,
 }
 
 impl fmt::Display for Finding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {}", self.rule, self.what)
+        match self.line {
+            Some(line) => write!(f, "line {line}: [{}] {}", self.rule, self.what),
+            None => write!(f, "[{}] {}", self.rule, self.what),
+        }
     }
 }
 
-/// Lints the generated WGSL of the workspace whose `Cargo.toml` is `manifest`.
+impl Finding {
+    /// The finding in `file` (relative to the workspace root): `file:line: [rule] what`, or `file: [rule] what`.
+    pub fn at(&self, file: &str) -> String {
+        match self.line {
+            Some(line) => format!("{file}:{line}: [{}] {}", self.rule, self.what),
+            None => format!("{file}: [{}] {}", self.rule, self.what),
+        }
+    }
+}
+
+/// One linted file: its path relative to the workspace root, `/`-separated, and its findings.
+#[derive(Clone, Debug)]
+pub struct FileReport {
+    pub file: String,
+    pub findings: Vec<Finding>,
+}
+
+/// Lints the fragment-stage WGSL of the workspace whose `Cargo.toml` is `manifest`: every file [`lint`] reads.
 pub fn run(manifest: &Path) -> Result<(), String> {
     let root = manifest
         .parent()
         .ok_or_else(|| format!("{}: no parent directory", manifest.display()))?;
-    let path = root.join(GENERATED);
-    let source = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let found = check(&source).map_err(|e| format!("{GENERATED}: {e}"))?;
-    if found.is_empty() {
-        println!("lint wgsl: {GENERATED}: every rule holds");
+    let reports = lint(root)?;
+    let mut total = 0;
+    for r in &reports {
+        if r.findings.is_empty() {
+            println!("lint wgsl: {}: every rule holds", r.file);
+        }
+        for f in &r.findings {
+            eprintln!("lint wgsl: {}", f.at(&r.file));
+        }
+        total += r.findings.len();
+    }
+    if total == 0 {
         return Ok(());
     }
-    for f in &found {
-        eprintln!("lint wgsl: {GENERATED}: {f}");
-    }
+    let failing: Vec<&str> = reports
+        .iter()
+        .filter(|r| !r.findings.is_empty())
+        .map(|r| r.file.as_str())
+        .collect();
     Err(format!(
-        "lint wgsl: {} finding(s) in {GENERATED}",
-        found.len()
+        "lint wgsl: {total} finding(s) in {}",
+        failing.join(", ")
     ))
 }
 
-/// Every finding in `source`, or why it could not be checked: it does not parse or validate as WGSL.
-pub fn check(source: &str) -> Result<Vec<Finding>, String> {
+/// Every `.wgsl` file under `root`'s [`FRAG_DIR`], linted: [`GENERATED`], which must exist, by [`check`], and every
+/// other file, written by hand, by [`check_fragment`]. A file that does not parse or validate is an error naming it.
+pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
+    let generated = root.join(GENERATED);
+    if !generated.is_file() {
+        return Err(format!("{}: no such file", generated.display()));
+    }
+    let mut files = Vec::new();
+    wgsl_files(&root.join(FRAG_DIR), &mut files)?;
+    files.sort();
+    let mut reports = Vec::new();
+    for path in files {
+        let rel = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/");
+        let source =
+            std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let findings = if rel == GENERATED {
+            check(&source)
+        } else {
+            check_fragment(&source)
+        }
+        .map_err(|e| format!("{rel}: {e}"))?;
+        reports.push(FileReport {
+            file: rel,
+            findings,
+        });
+    }
+    Ok(reports)
+}
+
+/// Each `.wgsl` file under `dir`, recursively, into `out`.
+fn wgsl_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
+    let entries = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    for entry in entries {
+        let path = entry.map_err(|e| format!("{}: {e}", dir.display()))?.path();
+        if path.is_dir() {
+            wgsl_files(&path, out)?;
+        } else if path.extension().is_some_and(|x| x == "wgsl") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// `source` parsed and validated, with every capability (`SHADER_FLOAT16` among them, for a hand-written f16 file).
+fn parse(source: &str) -> Result<(Module, naga::valid::ModuleInfo), String> {
     let module = naga::front::wgsl::parse_str(source).map_err(|e| e.emit_to_string(source))?;
-    let info = naga::valid::Validator::new(
+    let info = validate(&module, source)?;
+    Ok((module, info))
+}
+
+/// `module` validated, with every capability; an error is rendered against `source`.
+fn validate(module: &Module, source: &str) -> Result<naga::valid::ModuleInfo, String> {
+    naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),
     )
-    .validate(&module)
-    .map_err(|e| e.emit_to_string(source))?;
+    .validate(module)
+    .map_err(|e| e.emit_to_string(source))
+}
+
+/// The float rules' findings in a fragment-stage WGSL file written by hand, or why it could not be checked: it does
+/// not parse or validate as WGSL.
+pub fn check_fragment(source: &str) -> Result<Vec<Finding>, String> {
+    let (module, info) = parse(source)?;
+    Ok(float_checks(&module, &info, source))
+}
+
+/// The float rules' findings in `module`, IR from any front end, whose spans index `source`; or why it could not be
+/// checked: it does not validate. naga's `IsInf` and `IsNan` reach the IR only from front ends other than WGSL's.
+pub fn check_fragment_module(module: &Module, source: &str) -> Result<Vec<Finding>, String> {
+    let info = validate(module, source)?;
+    Ok(float_checks(module, &info, source))
+}
+
+/// Every finding in the generated file's `source`, by the unpack layer's rules and the float rules, or why it could
+/// not be checked: it does not parse or validate as WGSL.
+pub fn check(source: &str) -> Result<Vec<Finding>, String> {
+    let (module, info) = parse(source)?;
     let mut found = Vec::new();
     found.extend(extract_bits(&module, &info));
     found.extend(scalars(&module));
@@ -119,11 +261,16 @@ pub fn check(source: &str) -> Result<Vec<Finding>, String> {
     found.extend(word_binding(&module));
     found.extend(bindings(&module));
     found.extend(sample_only(&module));
+    found.extend(float_checks(&module, &info, source));
     Ok(found)
 }
 
 fn finding(rule: Rule, what: String) -> Finding {
-    Finding { rule, what }
+    Finding {
+        rule,
+        what,
+        line: None,
+    }
 }
 
 /// Each `extractBits` whose argument is not u32 (a scalar or a vector of u32), naming its function.
@@ -532,4 +679,478 @@ fn sample_only(module: &Module) -> Vec<Finding> {
         }
     }
     found
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The float rules (R-351, R-352): isinf/isnan, inf or NaN constants, self-comparisons and finite-max stand-ins.
+
+/// binary16's largest finite value (dd_generation_root §3.8's `f16_finite_max`), a stand-in for +inf (R-352).
+const F16_FINITE_MAX: f64 = 65504.0;
+
+/// A float rule's finding at `span`'s line in `source`.
+fn float_finding(rule: Rule, what: String, span: Span, source: &str) -> Finding {
+    Finding {
+        rule,
+        what: format!("{what}; {BIT_PATTERN_FIX}"),
+        line: span.is_defined().then(|| span.location(source).line_number),
+    }
+}
+
+/// Every float-rule finding in `module`, over every function and entry point.
+fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -> Vec<Finding> {
+    let functions = module.functions.iter().map(|(h, f)| (f, &info[h])).chain(
+        module
+            .entry_points
+            .iter()
+            .enumerate()
+            .map(|(i, ep)| (&ep.function, info.get_entry_point(i))),
+    );
+    let mut found = Vec::new();
+    for (function, fi) in functions {
+        let fname = function.name.as_deref().unwrap_or("(unnamed)");
+        let mut statements = Vec::new();
+        flatten(&function.body, &mut statements);
+        for &(statement, span) in &statements {
+            let Statement::Call {
+                function: callee, ..
+            } = *statement
+            else {
+                continue;
+            };
+            let name = module.functions[callee].name.as_deref().unwrap_or("");
+            if is_inf_nan_name(name) {
+                found.push(float_finding(
+                    Rule::IsInfNan,
+                    format!("`{fname}` calls `{name}`, which fast-math (R-297) may optimise away"),
+                    span,
+                    source,
+                ));
+            }
+        }
+        let timeline = Timeline::new(&function.expressions, &statements);
+        for (h, expr) in function.expressions.iter() {
+            let span = function.expressions.get_span(h);
+            match *expr {
+                Expression::Relational {
+                    fun: fun @ (RelationalFunction::IsInf | RelationalFunction::IsNan),
+                    ..
+                } => found.push(float_finding(
+                    Rule::IsInfNan,
+                    format!("`{fname}` uses {fun:?}, which fast-math (R-297) may optimise away"),
+                    span,
+                    source,
+                )),
+                Expression::Binary { op, left, right } if is_comparison(op) => {
+                    let float = |e: Handle<Expression>| {
+                        matches!(
+                            *fi[e].ty.inner_with(&module.types),
+                            TypeInner::Scalar(Scalar {
+                                kind: ScalarKind::Float,
+                                ..
+                            }) | TypeInner::Vector {
+                                scalar: Scalar {
+                                    kind: ScalarKind::Float,
+                                    ..
+                                },
+                                ..
+                            }
+                        )
+                    };
+                    if !float(left) || !float(right) {
+                        continue;
+                    }
+                    found.extend(
+                        comparison(module, function, &timeline, op, left, right)
+                            .into_iter()
+                            .map(|(rule, what)| {
+                                float_finding(rule, format!("`{fname}`: {what}"), span, source)
+                            }),
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    found
+}
+
+/// Whether `name` is `isinf` or `isnan`, in any case (`isInf`, `isNan`).
+fn is_inf_nan_name(name: &str) -> bool {
+    name.eq_ignore_ascii_case("isinf") || name.eq_ignore_ascii_case("isnan")
+}
+
+/// Whether `op` is one of the six comparisons.
+fn is_comparison(op: BinaryOperator) -> bool {
+    matches!(
+        op,
+        BinaryOperator::Equal
+            | BinaryOperator::NotEqual
+            | BinaryOperator::Less
+            | BinaryOperator::LessEqual
+            | BinaryOperator::Greater
+            | BinaryOperator::GreaterEqual
+    )
+}
+
+/// The float rules a float comparison `left op right` breaks, each with what breaks it.
+fn comparison(
+    module: &Module,
+    function: &Function,
+    timeline: &Timeline,
+    op: BinaryOperator,
+    left: Handle<Expression>,
+    right: Handle<Expression>,
+) -> Vec<(Rule, String)> {
+    let mut found = Vec::new();
+    if same(&function.expressions, timeline, left, right) {
+        found.push((
+            Rule::SelfCompare,
+            format!(
+                "a float compared with itself by `{}`, a NaN test fast-math (R-297) may fold",
+                symbol(op)
+            ),
+        ));
+    }
+    for operand in [left, right] {
+        let Some(values) = constant_floats(module, &function.expressions, operand) else {
+            continue;
+        };
+        if let Some(v) = values.iter().find(|v| !v.is_finite()) {
+            found.push((
+                Rule::InfNanConstant,
+                format!(
+                    "a comparison by `{}` against the constant {v}, which fast-math (R-297) may fold",
+                    symbol(op)
+                ),
+            ));
+        }
+        if let Some(v) = values.iter().find(|v| is_finite_max(**v)) {
+            found.push((
+                Rule::FiniteMax,
+                format!(
+                    "a comparison by `{}` against {v:e}, a finite-max stand-in for inf, which fast-math (R-297) \
+                     may break",
+                    symbol(op)
+                ),
+            ));
+        }
+    }
+    found
+}
+
+/// A comparison's WGSL operator.
+fn symbol(op: BinaryOperator) -> &'static str {
+    match op {
+        BinaryOperator::Equal => "==",
+        BinaryOperator::NotEqual => "!=",
+        BinaryOperator::Less => "<",
+        BinaryOperator::LessEqual => "<=",
+        BinaryOperator::Greater => ">",
+        _ => ">=",
+    }
+}
+
+/// Whether `v` is ±65504 (f16's largest finite value) or ±3.40282347e38 (f32's).
+fn is_finite_max(v: f64) -> bool {
+    let a = v.abs();
+    a == F16_FINITE_MAX || a == f64::from(f32::MAX)
+}
+
+/// The float values of `h`, if it is a constant expression of floats: a literal, a module constant, a negation, a
+/// splat, a vector built of constants, a conversion, or a `bitcast<f32>` of a constant bit pattern (which naga does
+/// not fold). `None` if it is not constant.
+pub fn constant_floats(
+    module: &Module,
+    arena: &Arena<Expression>,
+    h: Handle<Expression>,
+) -> Option<Vec<f64>> {
+    match arena[h] {
+        Expression::Literal(Literal::F64(v) | Literal::AbstractFloat(v)) => Some(vec![v]),
+        Expression::Literal(Literal::F32(v)) => Some(vec![f64::from(v)]),
+        Expression::Literal(Literal::F16(v)) => Some(vec![v.to_f64()]),
+        Expression::Constant(c) => {
+            constant_floats(module, &module.global_expressions, module.constants[c].init)
+        }
+        Expression::Unary {
+            op: UnaryOperator::Negate,
+            expr,
+        } => Some(
+            constant_floats(module, arena, expr)?
+                .into_iter()
+                .map(|v| -v)
+                .collect(),
+        ),
+        Expression::Splat { value, .. } => constant_floats(module, arena, value),
+        Expression::Compose { ref components, .. } => {
+            let mut all = Vec::new();
+            for &c in components {
+                all.extend(constant_floats(module, arena, c)?);
+            }
+            Some(all)
+        }
+        Expression::As {
+            expr,
+            kind: ScalarKind::Float,
+            convert: None,
+        } => Some(
+            constant_bits(module, arena, expr)?
+                .into_iter()
+                .map(|b| f64::from(f32::from_bits(b)))
+                .collect(),
+        ),
+        Expression::As {
+            expr,
+            kind: ScalarKind::Float,
+            convert: Some(_),
+        } => constant_floats(module, arena, expr),
+        _ => None,
+    }
+}
+
+/// The 32-bit patterns of `h`, if it is a constant expression of 32-bit integers.
+fn constant_bits(
+    module: &Module,
+    arena: &Arena<Expression>,
+    h: Handle<Expression>,
+) -> Option<Vec<u32>> {
+    match arena[h] {
+        Expression::Literal(Literal::U32(b)) => Some(vec![b]),
+        Expression::Literal(Literal::I32(i)) => Some(vec![u32::from_ne_bytes(i.to_ne_bytes())]),
+        Expression::Literal(Literal::AbstractInt(i)) => u32::try_from(i).ok().map(|b| vec![b]),
+        Expression::Constant(c) => {
+            constant_bits(module, &module.global_expressions, module.constants[c].init)
+        }
+        Expression::Splat { value, .. } => constant_bits(module, arena, value),
+        Expression::Compose { ref components, .. } => {
+            let mut all = Vec::new();
+            for &c in components {
+                all.extend(constant_bits(module, arena, c)?);
+            }
+            Some(all)
+        }
+        _ => None,
+    }
+}
+
+/// `block`'s statements in source order, each compound statement before the statements it holds, with their spans.
+fn flatten<'a>(block: &'a Block, out: &mut Vec<(&'a Statement, Span)>) {
+    for (statement, span) in block.span_iter() {
+        out.push((statement, *span));
+        match *statement {
+            Statement::Block(ref b) => flatten(b, out),
+            Statement::If {
+                ref accept,
+                ref reject,
+                ..
+            } => {
+                flatten(accept, out);
+                flatten(reject, out);
+            }
+            Statement::Switch { ref cases, .. } => {
+                for case in cases {
+                    flatten(&case.body, out);
+                }
+            }
+            Statement::Loop {
+                ref body,
+                ref continuing,
+                ..
+            } => {
+                flatten(body, out);
+                flatten(continuing, out);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// What a pointer expression points into: a local or global variable, or a function argument.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Root {
+    Local(Handle<naga::LocalVariable>),
+    Global(Handle<naga::GlobalVariable>),
+    Argument(u32),
+}
+
+/// The variable a pointer `h` points into, following its accesses.
+fn root(arena: &Arena<Expression>, h: Handle<Expression>) -> Option<Root> {
+    match arena[h] {
+        Expression::LocalVariable(v) => Some(Root::Local(v)),
+        Expression::GlobalVariable(g) => Some(Root::Global(g)),
+        Expression::FunctionArgument(i) => Some(Root::Argument(i)),
+        Expression::Access { base, .. } | Expression::AccessIndex { base, .. } => root(arena, base),
+        _ => None,
+    }
+}
+
+/// A function's statements in order: the step at which each expression is evaluated, and each store with its step
+/// and the variable it writes (a call given a pointer may write through it, so counts as one).
+struct Timeline {
+    at: HashMap<Handle<Expression>, usize>,
+    stores: Vec<(usize, Root)>,
+}
+
+impl Timeline {
+    fn new(arena: &Arena<Expression>, statements: &[(&Statement, Span)]) -> Self {
+        let mut at = HashMap::new();
+        let mut stores = Vec::new();
+        for (step, &(statement, _)) in statements.iter().enumerate() {
+            match *statement {
+                Statement::Emit(ref range) => {
+                    for h in range.clone() {
+                        at.insert(h, step);
+                    }
+                }
+                Statement::Store { pointer, .. } | Statement::Atomic { pointer, .. } => {
+                    stores.extend(root(arena, pointer).map(|r| (step, r)));
+                }
+                Statement::Call { ref arguments, .. } => {
+                    for &a in arguments {
+                        if !matches!(arena[a], Expression::FunctionArgument(_)) {
+                            stores.extend(root(arena, a).map(|r| (step, r)));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Timeline { at, stores }
+    }
+
+    /// Whether `r` is written between the steps that evaluate `a` and `b`; true if either step is unknown.
+    fn stored_between(&self, r: Root, a: Handle<Expression>, b: Handle<Expression>) -> bool {
+        let (Some(&ta), Some(&tb)) = (self.at.get(&a), self.at.get(&b)) else {
+            return true;
+        };
+        let (lo, hi) = (ta.min(tb), ta.max(tb));
+        self.stores.iter().any(|&(t, s)| s == r && lo < t && t < hi)
+    }
+}
+
+/// Whether `a` and `b` are the same value: the same expression, or structurally equal expressions over the same
+/// leaves, each pair of loads reading the same place with no store to its variable between them (R-352).
+fn same(
+    arena: &Arena<Expression>,
+    timeline: &Timeline,
+    a: Handle<Expression>,
+    b: Handle<Expression>,
+) -> bool {
+    if a == b {
+        return true;
+    }
+    let eq = |x, y| same(arena, timeline, x, y);
+    let eq_opt = |x: Option<_>, y: Option<_>| match (x, y) {
+        (Some(x), Some(y)) => eq(x, y),
+        (None, None) => true,
+        _ => false,
+    };
+    match (&arena[a], &arena[b]) {
+        (Expression::Load { pointer: p }, Expression::Load { pointer: q }) => {
+            eq(*p, *q) && root(arena, *p).is_none_or(|r| !timeline.stored_between(r, a, b))
+        }
+        (Expression::Access { base: x, index: i }, Expression::Access { base: y, index: j }) => {
+            eq(*x, *y) && eq(*i, *j)
+        }
+        (
+            Expression::AccessIndex { base: x, index: i },
+            Expression::AccessIndex { base: y, index: j },
+        ) => i == j && eq(*x, *y),
+        (
+            Expression::Swizzle {
+                size: s1,
+                vector: v1,
+                pattern: p1,
+            },
+            Expression::Swizzle {
+                size: s2,
+                vector: v2,
+                pattern: p2,
+            },
+        ) => s1 == s2 && p1 == p2 && eq(*v1, *v2),
+        (
+            Expression::Splat {
+                size: s1,
+                value: v1,
+            },
+            Expression::Splat {
+                size: s2,
+                value: v2,
+            },
+        ) => s1 == s2 && eq(*v1, *v2),
+        (
+            Expression::Compose {
+                ty: t1,
+                components: c1,
+            },
+            Expression::Compose {
+                ty: t2,
+                components: c2,
+            },
+        ) => t1 == t2 && c1.len() == c2.len() && c1.iter().zip(c2).all(|(x, y)| eq(*x, *y)),
+        (Expression::Unary { op: o1, expr: e1 }, Expression::Unary { op: o2, expr: e2 }) => {
+            o1 == o2 && eq(*e1, *e2)
+        }
+        (
+            Expression::Binary {
+                op: o1,
+                left: l1,
+                right: r1,
+            },
+            Expression::Binary {
+                op: o2,
+                left: l2,
+                right: r2,
+            },
+        ) => o1 == o2 && eq(*l1, *l2) && eq(*r1, *r2),
+        (
+            Expression::Select {
+                condition: c1,
+                accept: a1,
+                reject: r1,
+            },
+            Expression::Select {
+                condition: c2,
+                accept: a2,
+                reject: r2,
+            },
+        ) => eq(*c1, *c2) && eq(*a1, *a2) && eq(*r1, *r2),
+        (
+            Expression::Math {
+                fun: f1,
+                arg: a1,
+                arg1: b1,
+                arg2: c1,
+                arg3: d1,
+            },
+            Expression::Math {
+                fun: f2,
+                arg: a2,
+                arg1: b2,
+                arg2: c2,
+                arg3: d2,
+            },
+        ) => f1 == f2 && eq(*a1, *a2) && eq_opt(*b1, *b2) && eq_opt(*c1, *c2) && eq_opt(*d1, *d2),
+        (
+            Expression::As {
+                expr: e1,
+                kind: k1,
+                convert: c1,
+            },
+            Expression::As {
+                expr: e2,
+                kind: k2,
+                convert: c2,
+            },
+        ) => k1 == k2 && c1 == c2 && eq(*e1, *e2),
+        (
+            x @ (Expression::Literal(_)
+            | Expression::Constant(_)
+            | Expression::ZeroValue(_)
+            | Expression::FunctionArgument(_)
+            | Expression::GlobalVariable(_)
+            | Expression::LocalVariable(_)),
+            y,
+        ) => x == y,
+        _ => false,
+    }
 }

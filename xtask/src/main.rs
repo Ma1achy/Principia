@@ -53,7 +53,11 @@ Commands:
                                   buffer off the ledger's binding table (simstate_buffer @group(1) @binding(0),
                                   word_buffer @group(1) @binding(1)), a generated SIMSTATE_/WORD_GROUP or _BINDING
                                   constant unequal to its attribute, a binding in group 0 (bindings, R-343), or
-                                  either buffer used outside sample_state/sample_word (sample-only, R-343)
+                                  either buffer used outside sample_state/sample_word (sample-only, R-343); and,
+                                  in every WGSL file under crates/render/frag/, naming file, line and rule and a
+                                  bit-pattern test as the fix: isinf or isnan, a comparison against an inf or NaN
+                                  constant, a float compared with itself, or a comparison against a finite-max
+                                  stand-in, ±65504 or ±3.40282347e38 (REQ-RENDER-083, R-351, R-352)
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
