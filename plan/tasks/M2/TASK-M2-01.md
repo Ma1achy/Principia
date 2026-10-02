@@ -36,9 +36,11 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-340 — The schema version hashes each link registry entry's semantic content, not its prose *(applies R-251)*"
 - `decisions.md` § "R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*"
+- `decisions.md` § "R-368 — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*"
 
 ## Deliverables
 - The link registry entries and chart constants in the generation-root ledger source (`crates/ledger/`), each entry with forward, inverse, log-det, ε clamps and sampling note; a missing member fails generation.
+- Each entry's log-det is the log of its link's volume factor, as §3.9's log-det column and its paragraph "The log-det column (R-368)" give it: `log |det J|` for a square Jacobian, and for the simplex link, whose forward's Jacobian `J` is 3×2, the log of the area element, `log √det(JᵀJ)`; the identity's is 0.
 - Generator output `crates/kernel/src/generated/links.rs` (Rust, generic over `Real`, `no_std`-clean for the SPIR-V build) and `crates/kernel/src/generated/constants.rs`.
 - The per-block link selection type (codomain-checked at registration; defaults resolve by name), baked as a type parameter so a link change is a different monomorphised variant.
 - Tests: `crates/ledger/tests/link_registry.rs`, `crates/kernel/tests/links.rs` (generation-root §5 test 8 (a)–(d) per link), and a source scan asserting decode/encode formulae name the constants.
@@ -48,6 +50,7 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - `cargo test -p kernel link_properties` — per link, fuzzed across the domain including saturation: (a) constraint preservation (simplex outputs positive and summing to 1, bounded outputs in range); (b) inverse round-trip within the ε-clamp tolerance, asserted in physical units; (c) analytic log-det against a numeric Jacobian; (d) C¹ by central differences, no kinks. Each property is shown able to fail on a deliberately broken link (REQ-CHART-034).
 - `cargo test -p ledger link_codomain_compat` — registering a link whose codomain does not match the block's constraint type is rejected; each block default resolves to the named entry (REQ-GEN-013).
 - Review (physics): for each block the registry holds at least two links whose recorded over/under-sampling regions differ (REQ-GEN-014).
+- Review (physics): §3.9's log-det entries, converted from the factors to their logs by R-368, are the logs of each link's volume factor, the simplex link's `log √det(JᵀJ)` of its 3×2 Jacobian; the registry's log-det trees match them; and `link_properties` (c) compares each with the numeric Jacobian's `log |det J|`, or `log √det(JᵀJ)` for the simplex link (REQ-CHART-034, R-368).
 - Review (code): generator outputs inspected per target — link functions and kernel pack/unpack are generated Rust; fragment accessors and the catalogue are generated WGSL through the fragment assembler; link selection is baked per block (REQ-GEN-015).
 - `cargo test -p kernel chart_constants` — the registry values equal μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹², ε_w = 10⁻¹⁰; a source scan of `crates/kernel/src/{decode,encode}` finds no literal of these values outside the generated constants (REQ-DEC-009).
 - Proposal: the step and tolerances of registry test 8 (c) and (d), with the measured discrepancy per link as evidence; the human confirms them at the M2 gate (REQ-GEN-025).
@@ -64,3 +67,7 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
 - R-344: this task depending on TASK-M0-46 and needing REQ-GEN-031 is accepted. The registry's chart constants,
   `δ_λ` and `ε_w` among them, are hashed by value whether or not a link reads them, so this task's constants enter the
   hash as they land, as its entries do.
+- R-368 (2 Oct 2026, closing RQ-200): a link's log-det is the log of its volume factor, and the simplex link's, with a
+  3×2 Jacobian, is `log √det(JᵀJ)`. The ruling converted §3.9's cells from the factors to their logs ("1" → 0); the
+  physics reviewer checks that conversion in this task, which writes the entries. TASK-M0-46's canonical form hashes
+  whatever tree an entry carries, so it needs no change.
