@@ -331,8 +331,10 @@ pub fn review_outcome(
         let unmerged: Vec<String> = all.iter().map(|p| format!("#{}", p.pr.number)).collect();
         return Ok(Outcome::Unreviewed(if unmerged.is_empty() {
             format!("{task} has no PR")
+        } else if let [one] = unmerged.as_slice() {
+            format!("{task}'s PR {one} is not merged")
         } else {
-            format!("{task}'s PR {} is not merged", unmerged.join(", "))
+            format!("{task}'s PRs {} are not merged", unmerged.join(", "))
         }));
     }
     let mut why = Vec::new();
