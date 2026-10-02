@@ -1,5 +1,11 @@
 //! The headless run: the scenario registry, the frame loop and the JSON Lines write (telemetry §5, R-286).
 //!
+//! The run streams its trace (R-341): the header line first, flushed at once, then each frame record as the scenario
+//! produces it, flushed at the 60th frame since the last flush or once 1 s has passed since it, whichever comes first,
+//! then the summary line when the session ends. It keeps no frame record once the record is written, so its memory
+//! does not grow with `--frames`; a run killed mid-session leaves an incomplete session, which the reader reports
+//! "session incomplete" (R-298, R-299).
+//!
 //! A scenario is fixed and deterministic (render_gui_spec § "Profiler"): the same name and frame count give the same
 //! frame count and the same scope and event sequence. M0 registers `synthetic_frames` (R-113); `deep_zoom_03` is
 //! defined and registered in M5.
@@ -9,14 +15,15 @@
 //! header probe, [`session_header`], takes the adapter the run already opened, if any.
 
 use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::process::ExitCode;
 use std::time::Instant;
 
 use engine::contract::canonical;
 use engine::contract::profile::{
-    self, Api, Backend, Build, Device, Event, FrameRecord, LiveMemory, PoolLive, SchemaId, Scope,
-    Session, SessionHeader, StageMs, StageSections, Stages, Trace,
+    Api, Backend, Build, Device, Event, Flush, FrameRecord, LiveMemory, PoolLive, Scope,
+    SessionHeader, StageMs, StageSections, Stages, Stream,
 };
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
@@ -28,10 +35,15 @@ use serde_json::{Map, Value};
 pub(crate) struct Scenario {
     /// The name `--scenario` takes.
     pub(crate) name: &'static str,
-    /// Runs `frames` frames. `gpu` is the only way the run can reach a GPU adapter; a scenario with no GPU work never
-    /// asks it.
-    run: fn(frames: u32, gpu: &mut AdapterRequest<'_>) -> Result<Run, String>,
+    /// Runs `frames` frames into `out`: [`Out::begin`] once, with the adapter it opened, if any, then [`Out::frame`]
+    /// for each frame as it completes. `gpu` is the only way the run can reach a GPU adapter; a scenario with no GPU
+    /// work never asks it.
+    run: ScenarioRun,
 }
+
+/// A scenario's run: its frame count, its way to a GPU adapter, and where its frames go.
+pub(crate) type ScenarioRun =
+    fn(frames: u32, gpu: &mut AdapterRequest<'_>, out: &mut Out<'_>) -> Result<(), String>;
 
 /// The registered scenarios.
 pub(crate) const SCENARIOS: &[Scenario] = &[Scenario {
@@ -57,15 +69,97 @@ fn no_gpu_api() -> Result<OpenAdapter, String> {
     Err("prin links no GPU API at M0, so it cannot open a GPU adapter".to_owned())
 }
 
-/// What a run produced: its frames, and the adapter it opened, if any.
-pub(crate) struct Run {
-    /// One record per frame, in order.
-    pub(crate) frames: Vec<FrameRecord>,
-    /// The GPU adapter the run opened for its own work; `None` when it did no GPU work.
-    pub(crate) adapter: Option<OpenAdapter>,
+/// Where a run's trace goes, as the run produces it (R-341): the header line when the scenario begins, each frame
+/// record as it completes, and the summary line when the session ends. It holds the writer and the flush state, never
+/// a frame record.
+pub(crate) struct Out<'a> {
+    scenario: &'a str,
+    frames: u32,
+    /// The trace's name in an error: its path.
+    name: String,
+    /// The clock the flush policy reads, the caller's (R-341).
+    clock: &'a mut dyn FnMut() -> Instant,
+    state: OutState<'a>,
 }
 
-/// `prin profile --scenario NAME --frames N --json PATH`: runs the scenario and writes its trace.
+enum OutState<'a> {
+    /// The header line is not written yet.
+    Waiting(Box<dyn Write + 'a>),
+    /// The header line is written; frames follow.
+    Streaming(Stream<Box<dyn Write + 'a>>),
+    /// A write failed, or the session ended.
+    Done,
+}
+
+impl<'a> Out<'a> {
+    /// A trace for `frames` frames of `scenario`, written to `writer` (buffered: [`Stream`] flushes it), the flushes
+    /// timed by `clock`. `name` names the trace in an error.
+    pub(crate) fn new(
+        scenario: &'a str,
+        frames: u32,
+        writer: impl Write + 'a,
+        name: String,
+        clock: &'a mut dyn FnMut() -> Instant,
+    ) -> Self {
+        Out {
+            scenario,
+            frames,
+            name,
+            clock,
+            state: OutState::Waiting(Box::new(writer)),
+        }
+    }
+
+    /// Writes the header line and flushes it. The GPU's fields come only from `adapter`, the one the run opened for
+    /// its own work, if any (R-308). Called once, before any frame.
+    pub(crate) fn begin(&mut self, adapter: Option<&OpenAdapter>) -> Result<(), String> {
+        let OutState::Waiting(writer) = std::mem::replace(&mut self.state, OutState::Done) else {
+            return Err(format!(
+                "prin profile: {}: the header line is written once, before the frames",
+                self.name
+            ));
+        };
+        let header = session_header(adapter, config(self.scenario, self.frames)?)?;
+        let stream = Stream::start(writer, &header, Flush::R341, (self.clock)())
+            .map_err(|e| self.cannot_write(e))?;
+        self.state = OutState::Streaming(stream);
+        Ok(())
+    }
+
+    /// Writes `record` as the next frame line, flushing when R-341's policy says a flush is due. Nothing of the record
+    /// is kept.
+    pub(crate) fn frame(&mut self, record: &FrameRecord) -> Result<(), String> {
+        let OutState::Streaming(stream) = &mut self.state else {
+            return Err(format!(
+                "prin profile: {}: a frame line comes after the header line",
+                self.name
+            ));
+        };
+        let now = (self.clock)();
+        stream.frame(record, now).map_err(|e| self.cannot_write(e))
+    }
+
+    /// Ends the session: the summary line, last, and a flush. The summaries are `null` until the task closing
+    /// REQ-TOOL-100 defines them (telemetry §5).
+    pub(crate) fn finish(mut self) -> Result<(), String> {
+        let OutState::Streaming(stream) = std::mem::replace(&mut self.state, OutState::Done) else {
+            return Err(format!(
+                "prin profile: {}: the session ended before its header line",
+                self.name
+            ));
+        };
+        stream
+            .finish(&None, &None)
+            .map(drop)
+            .map_err(|e| self.cannot_write(e))
+    }
+
+    fn cannot_write(&self, e: serde_json::Error) -> String {
+        format!("prin profile: cannot write {}: {e}", self.name)
+    }
+}
+
+/// `prin profile --scenario NAME --frames N --json PATH`: runs the scenario, streaming its trace to PATH (R-341).
 pub(crate) fn main(name: &str, frames: u32, path: &Path) -> Result<ExitCode, String> {
     let scenario = find(name).ok_or_else(|| {
         let names: Vec<&str> = SCENARIOS.iter().map(|s| s.name).collect();
@@ -74,28 +168,19 @@ pub(crate) fn main(name: &str, frames: u32, path: &Path) -> Result<ExitCode, Str
             names.join(", ")
         )
     })?;
-    let run = (scenario.run)(frames, &mut no_gpu_api)?;
-    let trace = trace_of(scenario.name, frames, run)?;
     let file = File::create(path)
         .map_err(|e| format!("prin profile: cannot create {}: {e}", path.display()))?;
-    profile::write(&trace, file)
-        .map_err(|e| format!("prin profile: cannot write {}: {e}", path.display()))?;
+    let mut clock = Instant::now;
+    let mut out = Out::new(
+        scenario.name,
+        frames,
+        BufWriter::new(file),
+        path.display().to_string(),
+        &mut clock,
+    );
+    (scenario.run)(frames, &mut no_gpu_api, &mut out)?;
+    out.finish()?;
     Ok(ExitCode::SUCCESS)
-}
-
-/// The trace of a run: the header, the frames and the summary line. The summaries are `null` until the task closing
-/// REQ-TOOL-100 defines them (telemetry §5).
-pub(crate) fn trace_of(scenario: &str, frames: u32, run: Run) -> Result<Trace, String> {
-    let header = session_header(run.adapter.as_ref(), config(scenario, frames)?)?;
-    Ok(Trace {
-        schema: SchemaId::V1,
-        header,
-        frames: run.frames,
-        leak_flags: None,
-        hot_paths: None,
-        session: Session::Complete,
-        dropped_bytes: 0,
-    })
 }
 
 /// The run's full configuration (telemetry §5, R-309): `{"scenario": NAME, "frames": N, "sim": SimConfig, "render":
@@ -271,12 +356,17 @@ const EVENT: &str = "synthetic_frame";
 /// which a profile carries in every scenario (telemetry §5.5: the overhead must be small enough to leave on). Nothing is integrated,
 /// reduced or uploaded, so the counts are 0; the camera and the playhead do not move; and no memory is tracked. A
 /// headless run is a batch render: no present stage (telemetry §5.5). It does no GPU work, so it never asks `gpu`.
-fn synthetic_frames(frames: u32, _gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
-    let records = (0..u64::from(frames)).map(synthetic_frame).collect();
-    Ok(Run {
-        frames: records,
-        adapter: None,
-    })
+/// Each frame goes to `out` as it completes, and is not kept (R-341).
+fn synthetic_frames(
+    frames: u32,
+    _gpu: &mut AdapterRequest<'_>,
+    out: &mut Out<'_>,
+) -> Result<(), String> {
+    out.begin(None)?;
+    for index in 0..u64::from(frames) {
+        out.frame(&synthetic_frame(index))?;
+    }
+    Ok(())
 }
 
 fn ms_since(start: Instant) -> f64 {
@@ -369,32 +459,48 @@ mod tests {
 
     /// A scenario that asks for an adapter, as one doing GPU work would; the control's run.
     #[cfg(feature = "controls")]
-    fn asks_for_an_adapter(frames: u32, gpu: &mut AdapterRequest<'_>) -> Result<Run, String> {
+    fn asks_for_an_adapter(
+        frames: u32,
+        gpu: &mut AdapterRequest<'_>,
+        out: &mut Out<'_>,
+    ) -> Result<(), String> {
         let adapter = gpu().ok();
-        Ok(Run {
-            frames: (0..u64::from(frames)).map(synthetic_frame).collect(),
-            adapter,
-        })
+        out.begin(adapter.as_ref())?;
+        for index in 0..u64::from(frames) {
+            out.frame(&synthetic_frame(index))?;
+        }
+        Ok(())
     }
 
-    /// Runs `run` for three frames against a spy: it asks for no GPU adapter, and the header it gets is the no-GPU
+    /// Runs `run` for three frames against a spy: it asks for no GPU adapter, and the header it writes is the no-GPU
     /// form (R-308).
-    fn check_requests_no_adapter(run: fn(u32, &mut AdapterRequest<'_>) -> Result<Run, String>) {
+    fn check_requests_no_adapter(run: ScenarioRun) {
         // A spy for the GPU: it counts the requests, and opens nothing.
         let mut requests = 0u32;
-        let done = {
+        let mut bytes = Vec::new();
+        {
             let mut spy = || -> Result<OpenAdapter, String> {
                 requests += 1;
                 Err("the spy opens no adapter".to_owned())
             };
-            run(3, &mut spy).expect("the run fails")
-        };
+            let mut clock = Instant::now;
+            let mut out = Out::new(
+                "synthetic_frames",
+                3,
+                &mut bytes,
+                "the test's trace".to_owned(),
+                &mut clock,
+            );
+            run(3, &mut spy, &mut out).expect("the run fails");
+            out.finish().expect("the run's trace does not finish");
+        }
         assert_eq!(
             requests, 0,
             "the run requested a GPU adapter {requests} time(s)"
         );
-        let trace = trace_of("synthetic_frames", 3, done).expect("no trace");
+        let trace = engine::contract::profile::read(bytes.as_slice()).expect("no trace");
         assert_eq!(trace.header.backend.api, Api::None);
+        assert_eq!(trace.frames.len(), 3);
     }
 
     /// `ms_since` gives wall-clock milliseconds: a sleep of `ms` reads as at least `ms`, and well under a second more.

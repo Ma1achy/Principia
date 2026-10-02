@@ -15,6 +15,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::canonical;
 
+mod stream;
+pub use stream::{Flush, Stream};
+
 /// The JSON Schema of profiler schema v1, checked in beside this module.
 pub const SCHEMA_V1: &str = include_str!("schema/profile_v1.json");
 
