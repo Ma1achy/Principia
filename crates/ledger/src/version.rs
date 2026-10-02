@@ -5,16 +5,19 @@
 //! codes, payload §2's `state` codes, `detail`'s meaning in each state and R-22's pair-id map), generation-root §3.7's
 //! `QuadReduction` member list by name and type, and each constants-register entry that decides what the payload's
 //! stored bits mean ([`STORED_BITS`]), by its value, type and class, not its citation (dd_generation_root §3.8, "The
-//! hash"; R-251).
+//! hash"; R-251), and the link registry: each entry by its semantic content, not its sampling note, and each chart
+//! constant by value (§3.9, "The hash"; R-340, R-344).
 //!
 //! [`canonical`] serialises it with no formatting-dependent bytes: each item is written field by field in a fixed
 //! order, each string length-prefixed, each number by its bits, big-endian, each enum by its §3.8 spelling. Words,
 //! entries and hashed constants are sorted by name, and an entry's `consumers` and derived `from` sorted, since their
 //! order in the source carries no meaning (each has its own location; the two lists are sets); everything else keeps
-//! its order. A citation-like text, a `QuadReduction` member's §3.7 subsection, is left out, as R-251 leaves out a
+//! its order. Link entries, their clamps and parameters, and the chart constants are sorted by name, and each link
+//! function is written in §3.9's canonical form, an expression tree in prefix order. A citation-like text, a `QuadReduction` member's §3.7 subsection, is left out, as R-251 leaves out a
 //! constant's citation. [`fnv1a64`] hashes the bytes.
 
 use crate::constants::{Admissibility, ConstantBuilder, Value};
+use crate::links::{Expr, Link, Param};
 use crate::payload::ReductionMember;
 use crate::schema::{
     Bound, Consumer, Entry, FieldType, Location, Overflow, Provenance, Range, Scale, Storage,
@@ -59,11 +62,15 @@ pub struct Hashed<'a> {
     pub quad_reduction: &'a [ReductionMember],
     /// The constants register; only its [`STORED_BITS`] entries are hashed.
     pub register: &'a [ConstantBuilder],
+    /// The link registry's entries (§3.9).
+    pub links: &'a [Link],
+    /// The link registry's chart constants, each hashed by value (R-344).
+    pub chart_constants: &'a [Param],
 }
 
 impl<'a> Hashed<'a> {
     /// The payload's: `words` and `entries` with the payload structs, payload §3's continuation table, §3.7's
-    /// `QuadReduction` and the constants register, as generation emits them.
+    /// `QuadReduction`, the constants register and the link registry, as generation emits them.
     pub fn payload(words: &'a [Word], entries: &'a [Entry], structs: &'a [Struct]) -> Self {
         use crate::payload::{
             cont_symbol, continuation_index, detail_meanings, inverse, pair_bodies,
@@ -83,6 +90,8 @@ impl<'a> Hashed<'a> {
             detail_meanings: detail_meanings(),
             quad_reduction: crate::payload::QUAD_REDUCTION,
             register: crate::constants::REGISTER,
+            links: crate::links::REGISTRY,
+            chart_constants: crate::links::CHART_CONSTANTS,
         }
     }
 }
@@ -280,11 +289,115 @@ impl Canon {
             })
         });
     }
+
+    /// A name and its value's bits.
+    fn param(&mut self, p: &Param) {
+        self.str(p.name);
+        self.f64(p.value);
+    }
+
+    /// A link function's tree in prefix order (§3.9): the node's kind, then its index, name, bits or arguments.
+    fn expr(&mut self, e: &Expr) {
+        match e {
+            Expr::Input(i) => {
+                self.str("input");
+                self.u32(*i);
+            }
+            Expr::Param(name) => {
+                self.str("param");
+                self.str(name);
+            }
+            Expr::Num(v) => {
+                self.str("num");
+                self.f64(*v);
+            }
+            Expr::Op(op, args) => {
+                self.str(op.spelling_arity().0);
+                self.list(args, Canon::expr);
+            }
+        }
+    }
+
+    /// A link entry's hashed members (§3.9, "The hash"); never its sampling note (R-340).
+    fn link(&mut self, l: &Link) {
+        self.str(l.name);
+        self.str(l.constraint.spelling());
+        self.list(l.forward, Canon::expr);
+        self.list(l.inverse, Canon::expr);
+        self.expr(&l.log_det);
+        self.list(&sorted(l.clamps), |c, p| c.param(p));
+        self.list(&sorted(l.params), |c, p| c.param(p));
+    }
+}
+
+/// `params` sorted by name.
+fn sorted(params: &[Param]) -> Vec<&Param> {
+    let mut v: Vec<&Param> = params.iter().collect();
+    v.sort_by_key(|p| p.name);
+    v
+}
+
+/// The first name `names` holds twice.
+fn repeated<'n>(names: impl Iterator<Item = &'n str>) -> Option<&'n str> {
+    let mut seen = std::collections::BTreeSet::new();
+    names.into_iter().find(|n| !seen.insert(*n))
+}
+
+/// Refuses a tree of link `link` that reads a parameter in neither `declared` list, or gives an operator another
+/// number of arguments than its arity (§3.9).
+fn check_expr(link: &str, e: &Expr, declared: &[&[Param]]) -> Result<(), String> {
+    match e {
+        Expr::Param(name) if !declared.iter().any(|ps| ps.iter().any(|p| p.name == *name)) => Err(format!(
+            "link `{link}` reads `{name}`, which is not among its ε clamps or parameters, so its value would not be \
+             hashed (dd_generation_root §3.9)"
+        )),
+        Expr::Op(op, args) => {
+            let (spelling, arity) = op.spelling_arity();
+            if arity.map_or(args.len() < 2, |n| args.len() != n) {
+                return Err(format!(
+                    "link `{link}`: `{spelling}` given {} arguments (dd_generation_root §3.9)",
+                    args.len()
+                ));
+            }
+            args.iter().try_for_each(|a| check_expr(link, a, declared))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Refuses a registry with two entries or two chart constants of one name, an entry with two clamps or parameters
+/// of one name, or a tree [`check_expr`] refuses.
+fn check_links(h: &Hashed) -> Result<(), String> {
+    if let Some(n) = repeated(h.links.iter().map(|l| l.name)) {
+        return Err(format!(
+            "two link registry entries are named `{n}` (dd_generation_root §3.9)"
+        ));
+    }
+    if let Some(n) = repeated(h.chart_constants.iter().map(|p| p.name)) {
+        return Err(format!(
+            "two chart constants are named `{n}` (dd_generation_root §3.9)"
+        ));
+    }
+    for l in h.links {
+        if let Some(n) = repeated(l.clamps.iter().chain(l.params).map(|p| p.name)) {
+            return Err(format!(
+                "link `{}` declares `{n}` twice (dd_generation_root §3.9)",
+                l.name
+            ));
+        }
+        let declared = [l.clamps, l.params];
+        let trees = l.forward.iter().chain(l.inverse).chain([&l.log_det]);
+        trees
+            .into_iter()
+            .try_for_each(|e| check_expr(l.name, e, &declared))?;
+    }
+    Ok(())
 }
 
 /// The canonical serialisation of `h`, or a line naming each [`STORED_BITS`] constant its register lacks or holds
-/// more than once.
+/// more than once, or the link registry fault [`check_links`] finds.
 pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
+    check_links(h)?;
     let mut stored = Vec::new();
     for name in STORED_BITS {
         let mut named = h.register.iter().filter(|k| k.name == name);
@@ -325,6 +438,10 @@ pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
         c.opt(m.ty, |c, t| c.str(t));
     });
     c.list(&stored, |c, k| c.constant(k));
+    let mut links: Vec<&Link> = h.links.iter().collect();
+    links.sort_by_key(|l| l.name);
+    c.list(&links, |c, l| c.link(l));
+    c.list(&sorted(h.chart_constants), |c, p| c.param(p));
     Ok(c.0)
 }
 
@@ -344,8 +461,8 @@ pub fn schema_version(h: &Hashed) -> Result<u64, String> {
 }
 
 /// The `PAYLOAD_SCHEMA_VERSION` item of the generated Rust for the payload's `words` and `entries` ([`Hashed::payload`]
-/// with [`crate::payload::structs`]), or, if the register lacks a [`STORED_BITS`] constant, a `compile_error!` naming
-/// it, so the file never builds without its version.
+/// with [`crate::payload::structs`], so with the link registry the ledger holds), or, if [`canonical`] refuses, a
+/// `compile_error!` naming why, so the file never builds without its version.
 pub fn emit(words: &[Word], entries: &[Entry]) -> String {
     let structs = crate::payload::structs();
     match schema_version(&Hashed::payload(words, entries, &structs)) {
