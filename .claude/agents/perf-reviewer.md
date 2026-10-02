@@ -11,7 +11,7 @@ the task and the docs, never the implementer's session, and you don't ask for it
 - your checklist, `plan/reviewers/perf.md`;
 - the task file, `plan/tasks/<Mn>/<TASK-id>.md`;
 - each document the task's References list names, at the cited section;
-- the PR diff (`gh pr diff <N>`);
+- the PR diff (`git diff origin/main...HEAD` in your worktree, after `git fetch origin`; R-357);
 - `CLAUDE.md`.
 
 **You never edit, create or delete a file,** in the working tree or on the branch: no Write, no Edit, and no shell
@@ -33,7 +33,16 @@ Benchmark and performance-gate numbers come from the human's Mac via `prin profi
 **Findings** cite file and line of the diff, or the doc section they rest on (`file` § "section"). A finding without a
 citation isn't actionable. Nothing is waived or deferred by you.
 
-**Verdict:** post exactly one review per round on the head commit:
-`gh pr review <N> --comment --body "VERDICT: APPROVE perf ..."` or `"VERDICT: CHANGES perf ..."`, with the body starting with
-that line and followed by your findings (R-175). On a re-check, review the whole diff again, not only the fix. Report
-the verdict to the orchestrator.
+**Verdict:** post exactly one review per round on the head commit, through GitHub's REST API, never
+`gh pr review`, so it works on the Mac and in a cloud session alike (R-357):
+```
+gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@- <<'EOF'
+VERDICT: APPROVE perf
+<your findings>
+EOF
+```
+with `VERDICT: CHANGES perf` as the first line for changes. `commit_id` is the full SHA of the head you reviewed
+(`git rev-parse HEAD` in your worktree), so the review attaches to it. The body starts with the verdict line and is followed by
+your findings (R-175); `-F body=@-` reads it from standard input, so you write no file. Check CI on the head with
+`gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. On a re-check, review the whole diff again, not only the fix.
+Report the verdict to the orchestrator.

@@ -18,7 +18,8 @@ Read this first; each rule points at its source.
 - Stop after each PR until the human merges, unless told otherwise.
 - The PR shows every acceptance command the task lists, with its output. Benchmarks run on the human's Mac (R-186).
 - The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, away mode, resources, and what a
-  Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346).
+  Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346). The build
+  loop runs on the Mac; cloud sessions suit read-and-think work only: reviews, audits and docs (R-357).
 - Never delete or modify anything outside the repo and its build and scratch directories without asking the human
   first, caches included: `~/.cargo`, `~/.rustup`, the rust-gpu cache, the Actions caches
   (R-349; the list is applied per R-204, accepted by R-352).
@@ -92,9 +93,12 @@ Read this first; each rule points at its source.
 - Changing lint configuration (`clippy.toml`, `[lints]` tables) needs a ruling.
 
 ## Git
-- Merge commits, not squash. Merging stacked PRs: retarget each child PR to `main` before deleting the branch below it,
-  because deleting a base branch closes its child PRs.
-- After a PR merges, delete its remote and local branches, remove its worktrees and target directories, and prune
-  stale remote refs and worktree entries (`git fetch --prune`, `git worktree prune`) (R-345). Only a branch fully
-  merged into `main` is deleted; one that is the base of an open PR waits until that PR is retargeted, as above.
+- Merge commits, not squash. Don't stack PRs. If a stack is ever needed, retarget the child PR to `main` before
+  merging the PR below it, because merging deletes the lower branch at once and deleting a base branch closes its
+  child PRs (R-362).
+- After a PR merges, confirm its remote branch is gone (`git ls-remote --exit-code origin refs/heads/<branch>` exits
+  2): GitHub's "Automatically delete head branches" deletes it, so don't delete it yourself (R-357). Then delete its
+  local branch, remove its worktrees and target directories, and prune stale remote refs and worktree entries
+  (`git fetch --prune`, `git worktree prune`) (R-345). Only a branch fully merged into `main` is deleted; a stacked
+  child is retargeted before its base merges, as above (R-362).
 - Commit or push only as the task or the human asks.

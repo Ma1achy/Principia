@@ -5974,7 +5974,9 @@
   rulings:
   - R-84
   - R-86
+  - R-361
   milestone: M0
+  note: "R-361: the generated WGSL gives the 1 endpoint without dividing, since WGSL's f32 division is not correctly rounded (on Metal f32(n)/f32(n) missed 1.0 for 5658 of 65535 horizons): select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u), with s the step (payload §6; the nesting applied per R-204, RQ-196). The Rust accessors divide, as IEEE division gives exactly 1.0."
 - id: REQ-GEN-007
   area: GEN
   statement: "The codegen self-test must check: pack∘unpack = id property-fuzzed per field in Rust and via a GPU self-test dispatch of the WGSL unpack; no field overlap, reserved bits explicit and widths fitting ranges; f16 pairs round-tripping; and detail decoding per state."
@@ -9265,8 +9267,9 @@
   - R-297
   - R-354
   - R-355
+  - R-358
   milestone: M2
-  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204 — veto?)."
+  note: "The kernel keeps only the bring-up mode (R-75); R-41's baked-variant rule now applies to that mode alone. ε_phys: REQ-ENC-024 (calibration). ε_phys is ROUNDTRIP's stated tolerance under R-297 too: the residual is computed wholly in the fragment, so REQ-COL-060 (the agreement presets, fragment against compute) doesn't apply to it; a residual that exceeds ε_phys under fragment fast-math is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204, accepted by R-358)."
 - id: REQ-RENDER-026
   area: RENDER
   statement: "The shape-sphere chart must default to an equirectangular projection and offer an equal-area alternative (Mollweide or Hammer–Aitoff) for quantitative area comparisons."
@@ -10290,6 +10293,7 @@
   - R-116
   - R-133
   - R-297
+  - R-358
   milestone: M2
   note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says."
 - id: REQ-COL-007
@@ -11192,8 +11196,9 @@
   - R-297
   - R-354
   - R-355
+  - R-358
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204 — veto?, R-297's Applied note)."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -13662,6 +13667,7 @@
   rulings:
   - R-297
   - R-303
+  - R-358
   milestone: M8
 - id: REQ-GUI-164
   area: GUI
@@ -13678,8 +13684,9 @@
   - R-297
   - R-354
   - R-355
+  - R-358
   milestone: M8
-  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204 — veto? (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
+  note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204, accepted by R-358 (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -13804,7 +13811,7 @@
   milestone: M0
 - id: REQ-TOOL-008
   area: TOOL
-  statement: "Profiler schema v1 must be JSON and a superset of telemetry §2: the frame record and its five stages at the top level, with nested scopes, GPU passes, allocations and events beneath. A trace with no final summary line (a crashed or still-running session) must read: the reader returns the frames, reports leak_flags and hot_paths as absent with \"session incomplete\", and never rejects the file for it (R-298). An unterminated final line that doesn't parse is dropped: the reader states how many bytes it dropped and, unless the line before it is the summary line, reports the session incomplete; after the summary line, the summary line and the frames are kept (R-356, REQ-TOOL-148). A file whose only line is cut off stays an error, and a malformed line ending in a newline stays an error (R-299)."
+  statement: "Profiler schema v1 must be JSON and a superset of telemetry §2: the frame record and its five stages at the top level, with nested scopes, GPU passes, allocations and events beneath. A trace with no final summary line (a crashed or still-running session) must read: the reader returns the frames, reports leak_flags and hot_paths as absent with \"session incomplete\", and never rejects the file for it (R-298). An unterminated final line that doesn't parse is dropped: the reader states how many bytes it dropped and, unless the line before it is the summary line, reports the session incomplete; after the summary line, the summary line and the frames are kept and the session is complete, its dropped bytes still stated (R-356, R-358, REQ-TOOL-148). A file whose only line is cut off stays an error, and a malformed line ending in a newline stays an error (R-299)."
   source:
   - file: decisions.md
     section: "R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*"
@@ -13825,6 +13832,7 @@
   - R-298
   - R-299
   - R-356
+  - R-358
   milestone: M0
   note: "R-113 (RQ-93 M0-4): R-56's 'the measurement struct lands with the first frame loop' is a separate M1 requirement. R-356: a cut-off line after the summary line is built by TASK-M0-51 (REQ-TOOL-148); until it merges, TASK-M0-17's reader rejects that file."
 - id: REQ-TOOL-009
@@ -15401,12 +15409,15 @@
     section: "R-328 — `prin profile diff` given a BASE or a NEW with no frame records exits 2 *(amends R-323)*"
   verify:
     method: review checklist
-    detail: "the section states the compared statistic, the scope set and the missing-scope rule, and R-323's three rules as R-328 widens them: the threshold compares exactly (100 → 107 at --threshold 7% is not a regression, tested in `profile_diff`), either file, BASE or NEW, with no frame records exits 2 (R-328), and a cut-off or incomplete trace prints \"session incomplete\" and the bytes dropped (R-298, R-299), its comparison and exit code unchanged; REQ-TOOL-007's test follows it; physics reviewer approved"
+    detail: "the section states the compared statistic, the scope set and the missing-scope rule, and R-323's three rules as R-328 widens them: the threshold compares exactly (100 → 107 at --threshold 7% is not a regression, tested in `profile_diff`), either file, BASE or NEW, with no frame records exits 2 (R-328), and a cut-off or incomplete trace prints \"session incomplete\" and the bytes dropped (R-298, R-299), its comparison and exit code unchanged, and a complete trace whose cut-off last line follows its summary line prints the bytes dropped without \"session incomplete\", then is compared as a complete trace (R-356, R-358); REQ-TOOL-007's test follows it; physics reviewer approved"
   rulings:
   - R-72
   - R-323
   - R-328
+  - R-358
+  - R-363
   milestone: M0
+  note: "R-358: the diff's notice for a complete trace with a cut-off line after its summary line is built by TASK-M0-51 (REQ-TOOL-148). R-363: that case needs no physics review: the human's words settle it, and R-323's physics approval covers the rest of this definition; TASK-M0-51's reviewers are code and qa."
 - id: REQ-TOOL-120
   area: TOOL
   kind: definition
@@ -15878,7 +15889,7 @@
   milestone: M0
 - id: REQ-TOOL-148
   area: TOOL
-  statement: "`engine::contract::profile::read` must accept a cut-off last line after the summary line: a last line with no newline after it that is not one complete JSON value, following the summary line, is dropped and its bytes reported in `Trace::dropped_bytes`; the header line, the frames and the summary line are kept, and the session is complete, `leak_flags` and `hot_paths` read from the summary line. `prin profile show` states those dropped bytes without calling the session incomplete. A file whose only line is a cut-off header line stays an error that states its bytes (R-356, R-299)."
+  statement: "`engine::contract::profile::read` must accept a cut-off last line after the summary line: a last line with no newline after it that is not one complete JSON value, following the summary line, is dropped and its bytes reported in `Trace::dropped_bytes`; the header line, the frames and the summary line are kept, and the session is complete, `leak_flags` and `hot_paths` read from the summary line. `prin profile show` and `prin profile diff` always state those dropped bytes, and neither calls the session incomplete: there is no third session state, and the diff compares the file as a complete trace, stating the bytes first, so nothing is compared silently (R-358). A file whose only line is a cut-off header line stays an error that states its bytes (R-356, R-299)."
   source:
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: "5. The artefact: one file, plain text, readable by the sender"
@@ -15886,10 +15897,11 @@
     section: "R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine profile_v1_superset_cut_off_after_summary: a complete trace (the header line, frame lines, and a summary line with leak_flags and hot_paths set) followed by a last line cut off at several points inside a frame-record-shaped and inside a summary-shaped line reads: the header, every frame and both summaries are returned, the session is complete and dropped_bytes equals the cut-off line's length. Its negative control: a reader that parses every line with one after it as a frame record, as TASK-M0-17's does, rejects that file. cargo test -p engine profile_v1_superset_cut_off: a file whose only line is a cut-off header line is still an error stating its bytes, and the other cut-off cases read as R-299 has them. cargo test -p prin profile_show_cut_off_after_summary: `prin profile show`, plain and --pretty, on that complete trace states the dropped bytes and does not say \"session incomplete\"; on a trace cut off before its summary line it still does. Its negative control: a notice keyed on dropped_bytes > 0 alone fails the check."
+    detail: "cargo test -p engine profile_v1_superset_cut_off_after_summary: a complete trace (the header line, frame lines, and a summary line with leak_flags and hot_paths set) followed by a last line cut off at several points inside a frame-record-shaped and inside a summary-shaped line reads: the header, every frame and both summaries are returned, the session is complete and dropped_bytes equals the cut-off line's length. Its negative control: a reader that parses every line with one after it as a frame record, as TASK-M0-17's does, rejects that file. cargo test -p engine profile_v1_superset_cut_off: a file whose only line is a cut-off header line is still an error stating its bytes, and the other cut-off cases read as R-299 has them. cargo test -p prin profile_show_cut_off_after_summary: `prin profile show`, plain and --pretty, on that complete trace states the dropped bytes and does not say \"session incomplete\"; on a trace cut off before its summary line it still does. Its negative control: a notice keyed on dropped_bytes > 0 alone fails the check. cargo test -p prin profile_diff_cut_off_after_summary: `prin profile diff` with that complete trace as BASE, and again as NEW, prints for that file the bytes dropped after the summary line, without \"session incomplete\", before the comparison, then compares it and exits as for a complete trace; a trace cut off before its summary line still gets \"session incomplete\". Its negative control: a notice keyed on an incomplete session alone, as TASK-M0-18's, prints nothing for that file and fails the check."
   rulings:
   - R-299
   - R-356
+  - R-358
   milestone: M0
 - id: REQ-VAL-001
   area: VAL
@@ -18855,7 +18867,7 @@
   milestone: M4
 - id: REQ-VAL-178
   area: VAL
-  statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342)."
+  statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342). A negative control passes only when it panics with its expected message (R-212): `negative_control!` catches the control's panic, compares the message with its expected one, deletes the control's scratch only on a match, and resumes the panic so libtest's verdict is unchanged; a control that panics with the wrong message keeps its scratch and its path is printed, like any other failure (R-359)."
   source:
   - file: decisions.md
     section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
@@ -18863,11 +18875,13 @@
     section: "R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*"
   verify:
     method: unit test
-    detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."
+    detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). cargo test -p validation --features controls scratch_guard_keeps_a_wrong_message_controls_scratch: a control whose panic does not contain its expected message, run as a child test, keeps its scratch folder and prints its path, and a control whose panic matches leaves none; its registered negative control is a negative_control! that deletes on any panic (R-359). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."
   rulings:
   - R-176
+  - R-212
   - R-333
   - R-342
+  - R-359
   milestone: M0
 - id: REQ-VAL-179
   area: VAL
@@ -21528,7 +21542,7 @@
   note: "R-336: PR #96's warm wall times (`ci` about 16.5 min, `xtask-ci` 11.7–13.3 min) were reported and are accepted for #96; TASK-M0-45 (REQ-SYS-077) shards the tests to bring each job back under ~10.5 min."
 - id: REQ-SYS-077
   area: SYS
-  statement: "The nextest runs of the `ci` and `xtask-ci` CI jobs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
+  statement: "The `ci` CI job's nextest runs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the `xtask-ci` job, which runs no nextest, must run as 4 parallel jobs of `cargo xtask ci --partition <k>/4`, the controls assigned to a shard by a stable hash of the control name, every control run exactly once across the shards (R-360); the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
   source:
   - file: decisions.md
     section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
@@ -21536,7 +21550,7 @@
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
   verify:
     method: review checklist
-    detail: "code and qa: `ci.yml` runs the nextest runs of `ci` and `xtask-ci` as parallel shards; the shards' test lists together equal the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
+    detail: "code and qa: `ci.yml` runs the `ci` job's nextest runs as parallel shards, the shards' test lists together equal to the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); `xtask-ci` runs as 4 jobs of `cargo xtask ci --partition <k>/4`, whose slices are disjoint, together hold every control and give a control the same slice on every run (`cargo nextest run -p xtask controls_partition`, with its negative control), and whose CI logs together run each control once (R-360); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
   rulings:
   - R-231
   - R-235
@@ -21546,5 +21560,6 @@
   - R-325
   - R-336
   - R-344
+  - R-360
   milestone: M0
   note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."

@@ -216,10 +216,14 @@ either file as schema v1.
   and the diff exits 2, as it does for a file it cannot read, saying that NEW has no frame records (R-323). A BASE
   trace with no frame records is treated the same way, saying that BASE has no frame records: with nothing in BASE the
   gate could never fail (R-328, confirming physics's finding 2 on TASK-M0-18).
-- **A cut-off or incomplete trace (R-323, R-298, R-299).** When either file is a session that ended before its summary
-  line, its last line perhaps cut off, the diff first prints, for that file, "session incomplete" and the number of
-  bytes the reader dropped from a cut-off last line (0 when none). It then compares that file's frames and exits as it
-  would for a complete one, so an incomplete trace is never compared over fewer frames in silence.
+- **A cut-off or incomplete trace (R-323, R-298, R-299, R-358).** When either file is a session that ended before its
+  summary line, its last line perhaps cut off, the diff first prints, for that file, "session incomplete" and the number
+  of bytes the reader dropped from a cut-off last line (0 when none). It then compares that file's frames and exits as
+  it would for a complete one, so an incomplete trace is never compared over fewer frames in silence. When either file
+  is a complete session whose last line, after its summary line, was cut off (R-356), the diff first prints, for that
+  file, the number of bytes the reader dropped after the summary line, without "session incomplete", since the session
+  is complete; it then compares the file as any complete trace. The bytes are printed before a refusal for no frame
+  records too, so they are always reported and nothing is compared silently (R-358).
 
 ### Export & share
 

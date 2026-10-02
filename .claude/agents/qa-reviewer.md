@@ -43,7 +43,17 @@ the whole suite locally only for a cross-cutting change (R-229). Check each
 item of your checklist: every closed requirement has its test with its threshold and fixture, and every test can fail.
 Findings cite file and line, or `file` § "section".
 
-**Verdict:** post exactly one review per round on the head commit:
-`gh pr review <N> --comment --body "VERDICT: APPROVE qa ..."` or `"VERDICT: CHANGES qa ..."`, with the body starting with
-that line and followed by your findings (R-175). A failing test of yours is a CHANGES finding. On a re-check, review
+**Verdict:** post exactly one review per round on the head commit, through GitHub's REST API, never
+`gh pr review`, so it works on the Mac and in a cloud session alike (R-357):
+```
+gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@- <<'EOF'
+VERDICT: APPROVE qa
+<your findings>
+EOF
+```
+with `VERDICT: CHANGES qa` as the first line for changes. `commit_id` is the full SHA of the PR head you were given, before your
+own commit (`git rev-parse HEAD~1` once you have committed), since the orchestrator pushes your commit only after
+you return; R-260 says when your approval carries over to it. The body starts with the verdict line and is followed by
+your findings (R-175); `-F body=@-` reads it from standard input, so you write no file. Check CI on the head with
+`gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. A failing test of yours is a CHANGES finding. On a re-check, review
 the whole diff again. Report the verdict to the orchestrator.
