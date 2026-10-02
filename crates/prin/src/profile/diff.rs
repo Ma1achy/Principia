@@ -306,10 +306,15 @@ pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<Exi
     })
 }
 
+/// The tests' scratch guard (R-342), shared with the crate's integration tests.
+#[cfg(test)]
+#[path = "../../../validation/tests/support/scratch.rs"]
+mod scratch;
+
 #[cfg(test)]
 mod tests {
+    use super::scratch::Scratch;
     use super::*;
-    use std::path::PathBuf;
 
     /// `x · 2^k` against `y`, exactly: the zero short-circuit, each length branch, and each tie at equal lengths.
     fn check_compare_scaled(compare: fn(u128, i32, u128) -> Ordering) {
@@ -433,11 +438,10 @@ mod tests {
     /// A complete trace of 20 frames.
     const BASE: &str = include_str!("../../tests/fixtures/profile/base.jsonl");
 
-    fn scratch(name: &str, text: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "prin-diff-unit-{}-{name}.jsonl",
-            std::process::id()
-        ));
+    /// A fresh scratch file holding `text`, under the system temp folder; deleted when the test passes, kept when it
+    /// fails (R-342).
+    fn scratch(name: &str, text: &str) -> Scratch {
+        let path = Scratch::new(&format!("prin-diff-unit-{name}"));
         std::fs::write(&path, text).expect("the scratch file is written");
         path
     }
@@ -457,7 +461,6 @@ mod tests {
         ] {
             let new = scratch(&format!("{tag}-{name}"), &text);
             let refused = diff(&base, &new, &threshold);
-            std::fs::remove_file(&new).ok();
             let Err(why) = refused else {
                 panic!("a {name} NEW with no frames is not refused");
             };
@@ -471,7 +474,6 @@ mod tests {
                 "a {name} NEW with no frames has the wrong notice: {why}"
             );
         }
-        std::fs::remove_file(&base).ok();
     }
 
     #[test]
@@ -504,7 +506,6 @@ mod tests {
         ] {
             let base = scratch(&format!("{tag}-base-{name}"), &text);
             let refused = diff(&base, &new, &threshold);
-            std::fs::remove_file(&base).ok();
             let Err(why) = refused else {
                 panic!("a {name} BASE with no frames is not refused");
             };
@@ -518,7 +519,6 @@ mod tests {
                 "a {name} BASE with no frames has the wrong notice: {why}"
             );
         }
-        std::fs::remove_file(&new).ok();
     }
 
     #[test]

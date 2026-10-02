@@ -21,6 +21,10 @@ use std::process::Command;
 use validation::negative_control;
 use validation::spawn::{write_executable, Spawn};
 
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -33,15 +37,10 @@ fn mutants_yml() -> String {
     std::fs::read_to_string(root().join(".github/workflows/mutants.yml")).expect("mutants.yml")
 }
 
-/// A fresh directory per call, since tests and their controls run in parallel.
-fn scratch(tag: &str) -> PathBuf {
-    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "mutants_no_mutant_{}_{n}_{tag}",
-        std::process::id()
-    ));
-    let _ = std::fs::remove_dir_all(&dir);
+/// A fresh directory per call, since tests and their controls run in parallel; deleted when the test passes, kept
+/// when it fails (R-342).
+fn scratch(tag: &str) -> Scratch {
+    let dir = Scratch::new(&format!("mutants_no_mutant_{tag}"));
     std::fs::create_dir_all(&dir).expect("scratch dir");
     dir
 }
@@ -215,6 +214,8 @@ struct Run {
     log: String,
     used: Vec<String>,
     calls: String,
+    /// The run's scratch directory, kept until the test that made it ends.
+    _scratch: Scratch,
 }
 
 /// Runs job `name` of `yml` on pull request whose diff is `diff`, `needs` giving the result of the job it needs,
@@ -227,7 +228,8 @@ fn run_job(
     needs: &str,
     exprs: &[(&str, &str)],
 ) -> Run {
-    let dir = scratch(tag);
+    let scratch = scratch(tag);
+    let dir = scratch.to_path_buf();
     let bin = stand_ins(&dir);
     let temp = dir.join("runner_temp");
     std::fs::create_dir_all(&temp).expect("runner temp");
@@ -252,6 +254,7 @@ fn run_job(
         log: String::new(),
         used: Vec::new(),
         calls: String::new(),
+        _scratch: scratch,
     };
     if !holds(job_key(&lines, "if").as_deref(), &state) {
         run.log = format!("job `{name}` did not run (needs: {needs})");
