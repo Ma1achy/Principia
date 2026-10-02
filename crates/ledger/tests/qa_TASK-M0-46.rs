@@ -13,9 +13,9 @@
 //! - each arity the closed list fixes, and a parameter read deep in any of the three functions that the entry does not
 //!   declare, is refused.
 //!
-//! Where §3.9's text leaves a byte unstated (a string's length-prefix width; whether the clamp, parameter, entry and
-//! chart-constant lists carry a count), the encoder below writes a big-endian u32, as §3.9 states for every other
-//! count and index; the review records the gap.
+//! The encoder below writes only what §3.9's "The bytes" states: every length prefix and every count a big-endian
+//! u32, every f64's bits big-endian, and the clamp, parameter, entry and chart-constant lists each as their count,
+//! then each item.
 //!
 //! Each test has a registered negative control (R-176).
 
