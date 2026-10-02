@@ -68,6 +68,20 @@ fn edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
     files
 }
 
+/// The workflows with every `from` replaced by `to` in every file that has it, `file` among them: a job running `cargo
+/// xtask ci` is in ci.yml and also in nightly.yml and gate.yml (TASK-M0-19), so renaming it in ci.yml alone leaves
+/// some job running it. Only the controls use it.
+#[cfg(feature = "controls")]
+fn edited_everywhere(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
+    let mut files = workflows();
+    let (_, text) = files.iter().find(|(f, _)| f == file).unwrap();
+    assert!(text.contains(from), "{file} has no {from:?} to edit");
+    for (_, text) in files.iter_mut() {
+        *text = text.replace(from, to);
+    }
+    files
+}
+
 /// The workflows with every `from` replaced by its `to` in the named file, in order. Only the controls use it.
 #[cfg(feature = "controls")]
 fn edited_all(file: &str, edits: &[(&str, &str)]) -> Vec<(String, String)> {
@@ -898,9 +912,9 @@ fn qa_m014_parser_reads_the_kernel_jobs() {
 
 negative_control!(
     qa_m014_parser_reads_the_kernel_jobs,
-    "ci.yml with `cargo xtask ci` renamed, so no job runs it",
+    "every workflow with `cargo xtask ci` renamed, so no job runs it",
     expected = "found no job running `cargo xtask ci`",
-    check_parser(&all_jobs(&edited(
+    check_parser(&all_jobs(&edited_everywhere(
         "ci.yml",
         "        run: cargo xtask ci\n",
         "        run: cargo xtask controls\n"
