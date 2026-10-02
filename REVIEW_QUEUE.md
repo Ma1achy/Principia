@@ -212,7 +212,7 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
 
 ---
 
-## RQ-193: on Metal the generated display fraction is not exactly 1 at its endpoint *(TASK-M0-15, REQ-GEN-006, R-86)*
+## RQ-195: on Metal the generated display fraction is not exactly 1 at its endpoint *(TASK-M0-15, REQ-GEN-006, R-86)*
 
 - **File, section:**
   - `plan/requirements.yaml`, REQ-GEN-006: "the derived display fraction (step / horizon_steps) must have exact
