@@ -16,3 +16,15 @@
 - id: REQ-VAL-905
   verify:
     method: review checklist
+- id: REQ-VAL-906
+  verify:
+    method: review checklist
+- id: REQ-VAL-907
+  verify:
+    method: review checklist
+- id: REQ-VAL-908
+  verify:
+    method: review checklist
+- id: REQ-VAL-909
+  verify:
+    method: review checklist

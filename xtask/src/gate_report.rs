@@ -9,7 +9,11 @@
 //!   through `gh` (decided per R-369, RQ-201): one passes when the task that closes it (`plan/tasks.yaml`) has a merged
 //!   PR, titled `<TASK-id>: …`, on whose head every reviewer its task file names has approved, by the rule
 //!   `reviews-complete` applies (R-175, R-260; [`crate::reviews_check`]); it fails when the task has no merged PR or
-//!   when the merged PR lacks an approval. The lookup is behind [`PrSource`], so the tests read a fixture.
+//!   when the merged PR lacks an approval. A task `plan/tasks.yaml` records as `status: done` and closed by a ruling
+//!   (`# closed by R-<n>` on its status line, as TASK-M0-00's R-185) has no task PR: its requirement passes on that
+//!   ruling's merged PR, titled `R-<n>: …` or naming R-<n> in a list or range (`R-<a> to R-<b>: …`), checked by the same
+//!   rule against the reviewers the closing task's file names. The lookup is behind [`PrSource`], so the tests read a
+//!   fixture.
 //! - Benchmark requirements (`verify.method: benchmark` in `plan/requirements.yaml`) run on the human's Mac, never on a
 //!   hosted runner (R-186). Each is "awaiting the human's run" until its `prin profile` file, `<dir>/<REQ-id>.jsonl`
 //!   under `--bench-results <dir>`, is supplied; a supplied file must open with a profiler schema v1 header line. An
@@ -203,6 +207,66 @@ pub fn closing_tasks(tasks: &str) -> BTreeMap<String, String> {
     closers
 }
 
+/// Each task to the ruling that closed it, from `plan/tasks.yaml`'s text: a task whose status line reads `status: done`
+/// with a comment naming `closed by R-<n>` (decided per R-369, RQ-201).
+pub fn closing_rulings(tasks: &str) -> BTreeMap<String, u32> {
+    let mut task = None;
+    let mut rulings = BTreeMap::new();
+    for line in tasks.lines() {
+        if let Some(rest) = line.strip_prefix("- id: ") {
+            task = Some(rest.trim().to_owned());
+        } else if let (Some(status), Some(task)) = (line.strip_prefix("  status: "), &task) {
+            let (value, comment) = status.split_once('#').unwrap_or((status, ""));
+            let ruling = comment.split_once("closed by R-").and_then(|(_, rest)| {
+                let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+                digits.parse().ok()
+            });
+            if let (Some(n), "done") = (ruling, value.trim()) {
+                rulings.insert(task.clone(), n);
+            }
+        }
+    }
+    rulings
+}
+
+/// The rulings a PR title names, as inclusive ranges, when its text before the first `:` is a list of rulings and
+/// nothing else: `R-185`, `R-353, R-354`, `R-209/R-210`, or ranges `R-366 to R-372`, `R-348–R-352`, `R-268..R-277`. A
+/// title whose prefix is anything else (`TASK-…`, `R-271 follow-ups`, `ops`) names none.
+pub fn title_rulings(title: &str) -> Vec<(u32, u32)> {
+    let Some((prefix, _)) = title.split_once(':') else {
+        return Vec::new();
+    };
+    let one = |text: &str| -> Option<u32> {
+        let digits = text.trim().strip_prefix("R-")?;
+        if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        digits.parse().ok()
+    };
+    let mut ranges = Vec::new();
+    for part in prefix.split([',', '/']) {
+        let range = [" to ", "–", "—", ".."]
+            .iter()
+            .find_map(|sep| part.split_once(sep))
+            .map_or_else(
+                || one(part).map(|n| (n, n)),
+                |(a, b)| Some((one(a)?, one(b)?)).filter(|(a, b)| a <= b),
+            );
+        match range {
+            Some(range) => ranges.push(range),
+            None => return Vec::new(),
+        }
+    }
+    ranges
+}
+
+/// Whether a PR title names ruling `n` ([`title_rulings`]).
+pub fn names_ruling(title: &str, n: u32) -> bool {
+    title_rulings(title)
+        .iter()
+        .any(|&(a, b)| (a..=b).contains(&n))
+}
+
 /// One PR of a task: whether it merged, and what `reviews-check` reads of it ([`reviews_check::Pr`]).
 #[derive(Debug, Clone, Deserialize)]
 pub struct TaskPr {
@@ -219,9 +283,14 @@ pub trait PrSource {
     /// Every PR whose title starts `<task>: `, merged or not; a merged one with its reviews (and, when an approval is
     /// off its head, its commits).
     fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String>;
+
+    /// Every PR whose title names ruling `n` ([`names_ruling`]), merged or not; a merged one with its reviews (and,
+    /// when an approval is off its head, its commits).
+    fn ruling_prs(&self, n: u32) -> Result<Vec<TaskPr>, String>;
 }
 
-/// PRs given by task id, as a JSON object from task id to a list of [`TaskPr`]s.
+/// PRs given by task id, as a JSON object from task id to a list of [`TaskPr`]s. A ruling's PRs are those of any list
+/// whose title names it; their key is free (the fixture files them under `rulings`).
 #[derive(Debug, Default, Deserialize)]
 pub struct Recorded(pub BTreeMap<String, Vec<TaskPr>>);
 
@@ -235,6 +304,17 @@ impl Recorded {
 impl PrSource for Recorded {
     fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String> {
         Ok(self.0.get(task).cloned().unwrap_or_default())
+    }
+
+    fn ruling_prs(&self, n: u32) -> Result<Vec<TaskPr>, String> {
+        let mut seen = BTreeSet::new();
+        Ok(self
+            .0
+            .values()
+            .flatten()
+            .filter(|p| names_ruling(&p.pr.title, n) && seen.insert(p.pr.number))
+            .cloned()
+            .collect())
     }
 }
 
@@ -283,17 +363,20 @@ impl Gh {
     }
 }
 
-impl PrSource for Gh {
-    fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String> {
+impl Gh {
+    /// The listed PRs `wanted` picks, each merged one read as `reviews-check` reads it, its reviews read whatever its
+    /// title names.
+    fn read(&self, wanted: impl Fn(&Listed) -> bool) -> Result<Vec<TaskPr>, String> {
         self.listed()?
             .iter()
-            .filter(|p| p.title.split(':').next().map(str::trim) == Some(task))
+            .filter(|p| wanted(p))
             .map(|p| {
                 Ok(if p.state == "MERGED" {
-                    TaskPr {
-                        merged: true,
-                        pr: reviews_check::fetch(p.number)?,
+                    let mut pr = reviews_check::fetch(p.number)?;
+                    if !reviews_check::names_task(&pr.title) {
+                        reviews_check::read_reviews(&mut pr)?;
                     }
+                    TaskPr { merged: true, pr }
                 } else {
                     TaskPr {
                         merged: false,
@@ -311,12 +394,25 @@ impl PrSource for Gh {
     }
 }
 
+impl PrSource for Gh {
+    fn task_prs(&self, task: &str) -> Result<Vec<TaskPr>, String> {
+        self.read(|p| p.title.split(':').next().map(str::trim) == Some(task))
+    }
+
+    fn ruling_prs(&self, n: u32) -> Result<Vec<TaskPr>, String> {
+        self.read(|p| names_ruling(&p.title, n))
+    }
+}
+
 /// A review-checklist requirement's outcome (decided per R-369, RQ-201): [`Outcome::Reviewed`] when the task closing it
 /// (`closers`, from [`closing_tasks`]) has a merged PR on whose head every reviewer its task file under `root` names has
-/// approved ([`reviews_check::verdict`], R-175, R-260); else [`Outcome::Unreviewed`], saying why.
+/// approved ([`reviews_check::verdict`], R-175, R-260); else [`Outcome::Unreviewed`], saying why. When the task is
+/// closed by a ruling (`rulings`, from [`closing_rulings`]), the PRs read are that ruling's, and each merged one is
+/// checked as the task's own PR would be, against the reviewers its task file names.
 pub fn review_outcome(
     root: &Path,
     closers: &BTreeMap<String, String>,
+    rulings: &BTreeMap<String, u32>,
     id: &str,
     prs: &dyn PrSource,
 ) -> Result<Outcome, String> {
@@ -325,27 +421,40 @@ pub fn review_outcome(
             "no task in plan/tasks.yaml closes it".to_owned(),
         ));
     };
-    let all = prs.task_prs(task)?;
+    let ruling = rulings.get(task);
+    let (all, whose) = match ruling {
+        Some(n) => (prs.ruling_prs(*n)?, format!("{task}'s ruling R-{n}")),
+        None => (prs.task_prs(task)?, task.clone()),
+    };
     let merged: Vec<&TaskPr> = all.iter().filter(|p| p.merged).collect();
     if merged.is_empty() {
         let unmerged: Vec<String> = all.iter().map(|p| format!("#{}", p.pr.number)).collect();
         return Ok(Outcome::Unreviewed(if unmerged.is_empty() {
-            format!("{task} has no PR")
+            format!("{whose} has no PR")
         } else if let [one] = unmerged.as_slice() {
-            format!("{task}'s PR {one} is not merged")
+            format!("{whose}'s PR {one} is not merged")
         } else {
-            format!("{task}'s PRs {} are not merged", unmerged.join(", "))
+            format!("{whose}'s PRs {} are not merged", unmerged.join(", "))
         }));
     }
     let mut why = Vec::new();
     for p in merged {
-        match reviews_check::verdict(root, &p.pr) {
+        // A ruling's PR is titled `R-<n>: …`, which names no task, so `verdict` would pass it with no reviewers (R-261);
+        // titled as the task's, it is checked against the task file's reviewers, by the same rule.
+        let pr = match ruling {
+            Some(_) => Pr {
+                title: format!("{task}: {}", p.pr.title),
+                ..p.pr.clone()
+            },
+            None => p.pr.clone(),
+        };
+        match reviews_check::verdict(root, &pr) {
             Ok(_) => return Ok(Outcome::Reviewed(p.pr.number)),
             Err(e) => why.push(e.split_whitespace().collect::<Vec<_>>().join(" ")),
         }
     }
     Ok(Outcome::Unreviewed(format!(
-        "{task}'s merged PR lacks an approval: {}",
+        "{whose}'s merged PR lacks an approval: {}",
         why.join("; ")
     )))
 }
@@ -435,10 +544,12 @@ pub fn run(
         .map_err(|e| format!("{}: not a JSON object of results: {e}", results.display()))?;
     let mut got = outcomes(&ids, &benchmarks, &results, bench_dir)?;
     if got.iter().any(|(id, _)| checklist.contains(id)) {
-        let closers = closing_tasks(&read(&root.join("plan/tasks.yaml"))?);
+        let tasks = read(&root.join("plan/tasks.yaml"))?;
+        let closers = closing_tasks(&tasks);
+        let rulings = closing_rulings(&tasks);
         for (id, outcome) in &mut got {
             if checklist.contains(id) {
-                *outcome = review_outcome(root, &closers, id, prs)?;
+                *outcome = review_outcome(root, &closers, &rulings, id, prs)?;
             }
         }
     }

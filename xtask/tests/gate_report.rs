@@ -2,7 +2,8 @@
 //! requirement of the milestone's gate block and every earlier one, with its pass/fail from the fixture results; it
 //! fails when a requirement failed or has no result; a benchmark requirement is awaiting the human's run until its
 //! `prin profile` file is supplied; a review-checklist requirement passes when its closing task's PR merged with its
-//! reviewers' approvals, read from a fixture in place of `gh` (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
+//! reviewers' approvals, or, for a task closed by a ruling, when that ruling's PR did, read from a fixture in place of `gh`
+//! (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
 //! registers the control that must make it fail (R-176).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use validation::negative_control;
 use xtask::gate_report::{
-    benchmark_ids, closing_tasks, gate_ids, outcomes, render, review_checklist_ids, review_outcome,
-    run, Outcome, Recorded,
+    benchmark_ids, closing_rulings, closing_tasks, gate_ids, names_ruling, outcomes, render,
+    review_checklist_ids, review_outcome, run, title_rulings, Outcome, PrSource, Recorded,
 };
 
 fn fixture() -> PathBuf {
@@ -284,7 +285,8 @@ negative_control!(
     )
 );
 
-/// The review-checklist fixture workspace: tasks TASK-M0-90…93, their task files, and their PRs (`prs.json`).
+/// The review-checklist fixture workspace: tasks TASK-M0-90…97, their task files, and their PRs and its rulings' PRs
+/// (`prs.json`).
 fn review_root() -> PathBuf {
     fixture().join("review")
 }
@@ -295,8 +297,15 @@ fn review_prs() -> Recorded {
 
 /// `id`'s outcome on the review fixture, its PRs from `prs`.
 fn review(id: &str, prs: &Recorded) -> Outcome {
-    let closers = closing_tasks(&read("review/plan/tasks.yaml"));
-    review_outcome(&review_root(), &closers, id, prs).expect("review outcome")
+    let tasks = read("review/plan/tasks.yaml");
+    review_outcome(
+        &review_root(),
+        &closing_tasks(&tasks),
+        &closing_rulings(&tasks),
+        id,
+        prs,
+    )
+    .expect("review outcome")
 }
 
 /// `id` passes, on PR `pr`, merged with its reviewers' approvals.
@@ -366,7 +375,7 @@ negative_control!(
 );
 
 /// The fixture's tasks.yaml reads each listed requirement to its task, a trailing comment ignored; its
-/// requirements.yaml gives the five review-checklist ids.
+/// requirements.yaml gives the nine review-checklist ids.
 #[test]
 fn gate_report_reads_closing_tasks_and_checklist_ids() {
     let closers = closing_tasks(&read("review/plan/tasks.yaml"));
@@ -378,9 +387,9 @@ fn gate_report_reads_closing_tasks_and_checklist_ids() {
         closers.get("REQ-TOOL-001").map(String::as_str),
         Some("TASK-M0-92")
     );
-    assert_eq!(closers.len(), 5, "tasks.yaml's requirements were misread");
+    assert_eq!(closers.len(), 9, "tasks.yaml's requirements were misread");
     let ids = review_checklist_ids(&read("review/plan/requirements.yaml"));
-    assert_eq!(ids.len(), 5, "the review-checklist ids were misread");
+    assert_eq!(ids.len(), 9, "the review-checklist ids were misread");
     assert!(!ids.contains("REQ-TOOL-001"));
 }
 
@@ -390,7 +399,7 @@ negative_control!(
     expected = "tasks.yaml's requirements were misread",
     assert_eq!(
         closing_tasks("- id: TASK-M0-90\n  requirements: [A, B]\n").len(),
-        5,
+        9,
         "tasks.yaml's requirements were misread"
     )
 );
@@ -408,6 +417,10 @@ fn check_run_reviewed(name: &str, prs: &Recorded) {
         "plan/tasks/M0/TASK-M0-91.md",
         "plan/tasks/M0/TASK-M0-92.md",
         "plan/tasks/M0/TASK-M0-93.md",
+        "plan/tasks/M0/TASK-M0-94.md",
+        "plan/tasks/M0/TASK-M0-95.md",
+        "plan/tasks/M0/TASK-M0-96.md",
+        "plan/tasks/M0/TASK-M0-97.md",
     ] {
         std::fs::copy(review_root().join(f), root.join(f)).expect("copy");
     }
@@ -421,6 +434,10 @@ fn check_run_reviewed(name: &str, prs: &Recorded) {
         "the report does not pass REQ-VAL-901 on its merged PR:\n{report}"
     );
     assert!(report.contains("REQ-VAL-902  FAIL"), "{report}");
+    assert!(
+        report.contains("REQ-VAL-906  pass: PR #101 merged"),
+        "the report does not pass REQ-VAL-906 on its ruling's merged PR:\n{report}"
+    );
     assert!(got.is_err(), "run passed an unreviewed requirement");
 }
 
@@ -434,4 +451,160 @@ negative_control!(
     "with no PRs, no review-checklist requirement passes",
     expected = "the report does not pass REQ-VAL-901",
     check_run_reviewed("gate_report_run_review_control", &Recorded::default())
+);
+
+/// A task done and closed by a ruling (TASK-M0-94, R-901) passes on that ruling's merged PR, #101, titled
+/// `R-900, R-901: …`, approved by the task file's reviewers.
+#[test]
+fn gate_report_review_checklist_passes_on_a_closing_rulings_pr() {
+    check_reviewed("REQ-VAL-906", 101, &review_prs());
+}
+
+negative_control!(
+    gate_report_review_checklist_passes_on_a_closing_rulings_pr,
+    "a ruling with no PR must not pass the task it closes",
+    expected = "the review-checklist requirement did not pass",
+    check_reviewed("REQ-VAL-906", 101, &Recorded::default())
+);
+
+#[test]
+fn gate_report_review_checklist_fails_on_an_unmerged_rulings_pr() {
+    check_unreviewed(
+        "REQ-VAL-907",
+        "TASK-M0-95's ruling R-902's PR #102 is not merged",
+    );
+}
+
+negative_control!(
+    gate_report_review_checklist_fails_on_an_unmerged_rulings_pr,
+    "a ruling's merged, approved PR must not be called unmerged",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-906", "is not merged")
+);
+
+/// R-904's PR is titled `R-903 to R-905: …` and merged with code's approval alone; TASK-M0-96 names code and qa.
+#[test]
+fn gate_report_review_checklist_fails_on_a_rulings_pr_lacking_an_approval() {
+    check_unreviewed(
+        "REQ-VAL-908",
+        "TASK-M0-96's ruling R-904's merged PR lacks an approval",
+    );
+    check_unreviewed("REQ-VAL-908", "role `qa` has not approved");
+}
+
+negative_control!(
+    gate_report_review_checklist_fails_on_a_rulings_pr_lacking_an_approval,
+    "a ruling's PR every named reviewer approved must not lack an approval",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-906", "has not approved")
+);
+
+/// A task whose status comment names a ruling but is not `done` (TASK-M0-97, R-906) reads its own PRs, and has none,
+/// though R-906's PR merged with code's approval.
+#[test]
+fn gate_report_review_checklist_reads_a_ruling_only_for_a_done_task() {
+    check_unreviewed("REQ-VAL-909", "TASK-M0-97 has no PR");
+}
+
+negative_control!(
+    gate_report_review_checklist_reads_a_ruling_only_for_a_done_task,
+    "a done task closed by a ruling reads that ruling's PR, not its own",
+    expected = "the requirement did not fail saying",
+    check_unreviewed("REQ-VAL-907", "TASK-M0-95 has no PR")
+);
+
+/// tasks.yaml's done tasks with `closed by R-<n>` map to their rulings; the not-done TASK-M0-97 does not.
+#[test]
+fn gate_report_reads_closing_rulings() {
+    let rulings = closing_rulings(&read("review/plan/tasks.yaml"));
+    let want: Vec<(String, u32)> = [
+        ("TASK-M0-94", 901),
+        ("TASK-M0-95", 902),
+        ("TASK-M0-96", 904),
+    ]
+    .map(|(t, n)| (t.to_owned(), n))
+    .to_vec();
+    assert_eq!(
+        rulings.into_iter().collect::<Vec<_>>(),
+        want,
+        "tasks.yaml's closing rulings were misread"
+    );
+}
+
+negative_control!(
+    gate_report_reads_closing_rulings,
+    "a task not done names no closing ruling",
+    expected = "tasks.yaml's closing rulings were misread",
+    assert_eq!(
+        closing_rulings("- id: TASK-M0-97\n  status: todo  # closed by R-906\n").len(),
+        1,
+        "tasks.yaml's closing rulings were misread"
+    )
+);
+
+/// The title forms the repository's ruling PRs use name their rulings; a title whose prefix is anything else names
+/// none.
+fn check_title_rulings(title: &str, want: &[(u32, u32)]) {
+    assert_eq!(
+        title_rulings(title),
+        want,
+        "the rulings named by `{title}` were misread"
+    );
+}
+
+#[test]
+fn gate_report_reads_ruling_pr_titles() {
+    check_title_rulings("R-185: crate map confirmed", &[(185, 185)]);
+    check_title_rulings("R-366 to R-372: autonomy rule", &[(366, 372)]);
+    check_title_rulings("R-348–R-352: mutants caps", &[(348, 352)]);
+    check_title_rulings("R-268..R-277: the human's rulings", &[(268, 277)]);
+    check_title_rulings(
+        "R-353, R-354, R-355: veto items",
+        &[(353, 353), (354, 354), (355, 355)],
+    );
+    check_title_rulings("R-209/R-210: split", &[(209, 209), (210, 210)]);
+    check_title_rulings("R-271 follow-ups: d_min", &[]);
+    check_title_rulings("TASK-M0-19: R-185", &[]);
+    check_title_rulings("R-185 no colon", &[]);
+    assert!(names_ruling("R-366 to R-372: x", 369));
+    assert!(!names_ruling("R-366 to R-372: x", 373));
+    assert!(!names_ruling("R-1850: x", 185));
+}
+
+negative_control!(
+    gate_report_reads_ruling_pr_titles,
+    "a follow-ups title names no ruling",
+    expected = "were misread",
+    check_title_rulings("R-271 follow-ups: d_min", &[(271, 271)])
+);
+
+/// The fixture source lists a ruling's PRs from any key, by title, each once.
+#[test]
+fn gate_report_recorded_lists_a_rulings_prs() {
+    let numbers = |n: u32| -> Vec<u64> {
+        review_prs()
+            .ruling_prs(n)
+            .expect("ruling PRs")
+            .iter()
+            .map(|p| p.pr.number)
+            .collect()
+    };
+    assert_eq!(numbers(904), [103], "R-904's PRs were misread");
+    assert_eq!(numbers(901), [101], "R-901's PRs were misread");
+}
+
+negative_control!(
+    gate_report_recorded_lists_a_rulings_prs,
+    "R-907 has no PR",
+    expected = "R-907's PRs were misread",
+    assert_eq!(
+        review_prs()
+            .ruling_prs(907)
+            .expect("ruling PRs")
+            .iter()
+            .map(|p| p.pr.number)
+            .collect::<Vec<_>>(),
+        [103],
+        "R-907's PRs were misread"
+    )
 );

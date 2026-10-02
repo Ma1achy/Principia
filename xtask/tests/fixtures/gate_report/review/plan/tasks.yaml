@@ -1,5 +1,7 @@
 # Fixture: TASK-M0-90 merged with both approvals; TASK-M0-91's PR is open; TASK-M0-92 merged without qa's approval;
-# TASK-M0-93 has no PR; REQ-VAL-905 is closed by no task.
+# TASK-M0-93 has no PR; REQ-VAL-905 is closed by no task. TASK-M0-94, TASK-M0-95 and TASK-M0-96 are done, closed
+# by R-901 (its PR merged with both approvals), R-902 (its PR open) and R-904 (its PR, R-903 to R-905, merged
+# without qa's approval); TASK-M0-97 is closed by R-906 but not done, so it reads its own PR.
 - id: TASK-M0-90
   milestone: M0
   requirements: [REQ-VAL-901]
@@ -16,3 +18,23 @@
   milestone: M0
   requirements: [REQ-VAL-904]
   reviewers: [code]
+- id: TASK-M0-94
+  milestone: M0
+  requirements: [REQ-VAL-906]
+  reviewers: [code, qa]
+  status: done  # closed by R-901 (PR #101), not by a task PR
+- id: TASK-M0-95
+  milestone: M0
+  requirements: [REQ-VAL-907]
+  reviewers: [code, qa]
+  status: done  # closed by R-902, not by a task PR
+- id: TASK-M0-96
+  milestone: M0
+  requirements: [REQ-VAL-908]
+  reviewers: [code, qa]
+  status: done  # closed by R-904, not by a task PR
+- id: TASK-M0-97
+  milestone: M0
+  requirements: [REQ-VAL-909]
+  reviewers: [code]
+  status: todo  # closed by R-906 once ruled
