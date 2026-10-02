@@ -9,6 +9,12 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
+  bench (<bench> | --all) [--bless]
+                                  run a fixed benchmark headless on the GPU (or every registered one), write its
+                                  profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
+                                  fixtures/bench/<bench>/baseline.json through `prin profile diff`, every rise in a
+                                  scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
+                                  Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
   build-kernel                    compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
@@ -32,6 +38,12 @@ Commands:
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none
+  gate-report --milestone <Mn> --results <file> [--bench-results <dir>]
+                                  list every requirement of <Mn>'s gate block and every earlier one
+                                  (plan/MILESTONES.md) with its result from <file> (a JSON object, id to `pass` or
+                                  `fail`), a benchmark requirement awaiting the human's run until <dir>/<id>.jsonl,
+                                  its prin profile file, is supplied (R-177, R-186); writes
+                                  target/gate-report/<Mn>.txt; fails on a requirement failed or with no result
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
@@ -79,6 +91,33 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let result = match args.as_slice() {
+        ["bench", "--all", bless @ ..] if bless.is_empty() || bless == ["--bless"] => {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::All,
+                !bless.is_empty(),
+            )
+        }
+        ["bench", name, bless @ ..]
+            if !name.starts_with('-') && (bless.is_empty() || bless == ["--bless"]) =>
+        {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::One(name),
+                !bless.is_empty(),
+            )
+        }
+        ["gate-report", "--milestone", m, "--results", results] => {
+            xtask::gate_report::run(&workspace_root(), m, Path::new(results), None)
+        }
+        ["gate-report", "--milestone", m, "--results", results, "--bench-results", dir] => {
+            xtask::gate_report::run(
+                &workspace_root(),
+                m,
+                Path::new(results),
+                Some(Path::new(dir)),
+            )
+        }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),

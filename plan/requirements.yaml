@@ -13699,6 +13699,8 @@
   rulings:
   - R-56
   milestone: M0
+  rq:
+  - RQ-201
 - id: REQ-TOOL-002
   area: TOOL
   statement: "The telemetry/profiler artefact must be one self-describing, human-readable plain-text JSON file (profiler schema v1): a session header block then the frame records, carrying the build hash and full config, with telemetry §2's frame record and its five stages at the top level and nested scopes, GPU passes, allocations and events beneath."
@@ -21386,6 +21388,8 @@
   - R-186
   - R-195
   milestone: M0
+  rq:
+  - RQ-201
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."

@@ -5,6 +5,9 @@
 
 use std::fmt;
 
+use engine::contract::profile::Api;
+use engine::telemetry::session;
+
 /// The environment variable naming the backend (R-169).
 pub const BACKEND_VAR: &str = "PRIN_GPU_BACKEND";
 
@@ -85,6 +88,7 @@ pub struct GpuHarness {
     device: wgpu::Device,
     queue: wgpu::Queue,
     info: AdapterInfo,
+    session: Result<session::Adapter, GpuError>,
 }
 
 impl GpuHarness {
@@ -112,6 +116,7 @@ impl GpuHarness {
         let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
             .map_err(|e| GpuError(format!("request_device failed: {e}")))?;
         let raw = adapter.get_info();
+        let session = session_adapter(&raw, adapter.features());
         let info = AdapterInfo {
             name: raw.name,
             backend: raw.backend,
@@ -122,6 +127,7 @@ impl GpuHarness {
             device,
             queue,
             info,
+            session,
         })
     }
 
@@ -129,10 +135,22 @@ impl GpuHarness {
         &self.info
     }
 
+    /// The opened adapter as the session header records it (telemetry §2, §5; TASK-M0-19); `Err` where the adapter
+    /// doesn't report what the header needs.
+    pub fn session_adapter(&self) -> Result<&session::Adapter, &GpuError> {
+        self.session.as_ref()
+    }
+
     /// Compiles `module` and dispatches `entry` once per word of `inputs[0]`. Input `k` is bound read-only at
     /// `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write at the next binding and returned.
     /// A WGSL or validation error panics (wgpu's uncaptured-error handler).
     pub fn run_wgsl(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Vec<u32> {
+        self.prepare(module, entry, inputs).run()
+    }
+
+    /// [`run_wgsl`](Self::run_wgsl)'s pipeline and buffers, built once, so that [`Prepared::run`] times the dispatch
+    /// and readback alone (the benchmark runner, TASK-M0-19).
+    pub fn prepare(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Prepared<'_> {
         use wgpu::util::DeviceExt;
         let len = inputs.first().map_or(0, |i| i.len());
         assert!(len > 0, "run_wgsl needs a non-empty first input");
@@ -189,18 +207,45 @@ impl GpuHarness {
             layout: &pipeline.get_bind_group_layout(0),
             entries: &entries,
         });
-        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let output = buffers.pop().expect("the output buffer");
+        Prepared {
+            harness: self,
+            pipeline,
+            bind_group,
+            output,
+            readback,
+            len,
+        }
+    }
+}
+
+/// A compiled dispatch and its buffers, from [`GpuHarness::prepare`].
+pub struct Prepared<'h> {
+    harness: &'h GpuHarness,
+    pipeline: wgpu::ComputePipeline,
+    bind_group: wgpu::BindGroup,
+    output: wgpu::Buffer,
+    readback: wgpu::Buffer,
+    len: usize,
+}
+
+impl Prepared<'_> {
+    /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
+    pub fn run(&self) -> Vec<u32> {
+        let size = (self.len * 4) as u64;
+        let (device, queue) = (&self.harness.device, &self.harness.queue);
+        let mut encoder = device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&buffers[inputs.len()], 0, &readback, 0, size);
-        self.queue.submit([encoder.finish()]);
-        let slice = readback.slice(..);
+        encoder.copy_buffer_to_buffer(&self.output, 0, &self.readback, 0, size);
+        queue.submit([encoder.finish()]);
+        let slice = self.readback.slice(..);
         slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map failed"));
-        self.device
+        device
             .poll(wgpu::PollType::wait_indefinitely())
             .expect("device poll failed");
         let view = slice.get_mapped_range().expect("readback range");
@@ -211,9 +256,66 @@ impl GpuHarness {
             .map(|b| u32::from_le_bytes(*b))
             .collect();
         drop(view);
-        readback.unmap();
+        self.readback.unmap();
         words
     }
+}
+
+/// Metal's driver ships with macOS, and wgpu reports no version for it, so its version is the system's:
+/// `macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers`; empty where `sw_vers` gives nothing.
+fn metal_driver() -> String {
+    let field = |flag: &str| {
+        std::process::Command::new("/usr/bin/sw_vers")
+            .arg(flag)
+            .output()
+            .ok()
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned())
+            .filter(|v| !v.is_empty())
+    };
+    match (field("-productVersion"), field("-buildVersion")) {
+        (Some(version), Some(build)) => format!("macOS {version} ({build})"),
+        _ => String::new(),
+    }
+}
+
+/// An adapter's report, as the session header records it (telemetry §2, §5): its name, API and driver; unified memory
+/// for an adapter that shares the machine's RAM (an integrated GPU, Apple silicon's included, or a CPU rasteriser such as
+/// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version ([`metal_driver`]). wgpu reports no VRAM size, so a discrete or virtual adapter is refused
+/// rather than given one it doesn't know (RQ-201).
+pub fn session_adapter(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+) -> Result<session::Adapter, GpuError> {
+    let api = match info.backend {
+        wgpu::Backend::Metal => Api::Metal,
+        wgpu::Backend::Vulkan => Api::Vulkan,
+        wgpu::Backend::Dx12 => Api::Dx12,
+        wgpu::Backend::BrowserWebGpu => Api::Webgpu,
+        other => {
+            return Err(GpuError(format!(
+                "{other:?} is not an API the header records"
+            )))
+        }
+    };
+    let memory = match info.device_type {
+        wgpu::DeviceType::IntegratedGpu | wgpu::DeviceType::Cpu => session::AdapterMemory::Unified,
+        other => {
+            return Err(GpuError(format!(
+                "{other:?} adapter {}: wgpu reports no VRAM size for the session header",
+                info.name
+            )))
+        }
+    };
+    Ok(session::Adapter {
+        name: info.name.clone(),
+        api,
+        driver: match format!("{} {}", info.driver, info.driver_info).trim() {
+            "" if api == Api::Metal => metal_driver(),
+            driver => driver.to_owned(),
+        },
+        memory,
+        f64: features.contains(wgpu::Features::SHADER_F64),
+    })
 }
 
 /// The identity kernel: `output[i] = input[i]`. The harness's M0 fixture (R-186's placement note).

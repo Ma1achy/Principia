@@ -26,3 +26,14 @@ pub mod contract {
         mod profile_v1;
     }
 }
+
+/// Telemetry (dd_telemetry_and_tiers): the session-header probe that `prin profile` and the benchmark runner share
+/// (§2, §5; TASK-M0-19).
+pub mod telemetry {
+    pub mod session;
+
+    #[cfg(test)]
+    mod tests {
+        mod session_header;
+    }
+}

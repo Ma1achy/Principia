@@ -15,13 +15,14 @@ use std::time::Instant;
 
 use engine::contract::canonical;
 use engine::contract::profile::{
-    self, Api, Backend, Build, Device, Event, FrameRecord, LiveMemory, PoolLive, SchemaId, Scope,
-    Session, SessionHeader, StageMs, StageSections, Stages, Trace,
+    self, Event, FrameRecord, LiveMemory, PoolLive, SchemaId, Scope, Session, SessionHeader,
+    StageMs, StageSections, Stages, Trace,
 };
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, Links, Lock, Plane, Quality, SimConfig, Slice,
 };
+use engine::telemetry::session;
 use serde_json::{Map, Value};
 
 /// A registered scenario: a name and the run that produces its frames.
@@ -140,10 +141,9 @@ fn canonical_value<T: serde::Serialize>(value: &T) -> Result<Value, String> {
     serde_json::from_str(&text).map_err(|e| format!("prin profile: config: {e}"))
 }
 
-/// The session header (telemetry §5). The GPU's fields come only from `adapter`, the adapter the run already opened
-/// for its own work; with none, the header is the no-GPU form (R-308): `backend.api` "none", and `backend.driver`,
-/// `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null. The CPU is written as always. A headless
-/// run has no display.
+/// The session header (telemetry §5), from the probe `prin profile` shares with the benchmark runner
+/// (`engine::telemetry::session`). The GPU's fields come only from `adapter`, the adapter the run already opened for its
+/// own work; with none, the header is the no-GPU form (R-308). M0's `prin` can open none ([`OpenAdapter`] has no value).
 pub(crate) fn session_header(
     adapter: Option<&OpenAdapter>,
     config: Map<String, Value>,
@@ -151,109 +151,13 @@ pub(crate) fn session_header(
     if let Some(adapter) = adapter {
         match *adapter {}
     }
-    Ok(SessionHeader {
-        device: Device {
-            gpu: None,
-            cpu: cpu_model(),
-            cpu_cores_available: cpu_cores_available()?,
-            cpu_cores_total: cpu_cores_total(),
-            gpu_cores: None,
-            memory: None,
-        },
-        backend: Backend {
-            api: Api::None,
-            driver: None,
-        },
-        precision: None,
-        build: build(),
-        display: None,
-        config,
-    })
-}
-
-/// The build's provenance, stamped by `build.rs`: the commit hash, the cargo profile and the enabled features.
-fn build() -> Build {
-    let features = env!("PRIN_BUILD_FEATURES");
-    Build {
-        commit: env!("PRIN_BUILD_COMMIT").to_owned(),
-        profile: env!("PRIN_BUILD_PROFILE").to_owned(),
-        features: features
-            .split(',')
-            .filter(|f| !f.is_empty())
-            .map(str::to_owned)
-            .collect(),
-    }
-}
-
-/// macOS's `sysctl`, by its full path: the header's CPU fields never depend on the run's PATH, which may lack
-/// /usr/sbin (telemetry §5, R-329). Elsewhere the path doesn't exist, and the probes fall through to /proc/cpuinfo.
-const SYSCTL: &str = "/usr/sbin/sysctl";
-
-/// The CPU model, as the operating system names it: macOS's `sysctl machdep.cpu.brand_string`, or Linux's
-/// `model name` in /proc/cpuinfo. Both are asked on every system, and a system without one gives nothing from it.
-fn cpu_model() -> String {
-    let sysctl = std::process::Command::new(SYSCTL)
-        .args(["-n", "machdep.cpu.brand_string"])
-        .output()
-        .ok()
-        .map(|out| out.stdout);
-    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
-    cpu_named(sysctl.as_deref(), cpuinfo.as_deref())
-}
-
-/// The CPU model from `sysctl`'s output, else from /proc/cpuinfo's first `model name`; `unknown` where neither names
-/// one.
-fn cpu_named(sysctl: Option<&[u8]>, cpuinfo: Option<&str>) -> String {
-    let named = |name: &str| Some(name.trim().to_owned()).filter(|n| !n.is_empty());
-    let brand = sysctl.and_then(|out| named(&String::from_utf8_lossy(out)));
-    let model = || {
-        cpuinfo?
-            .lines()
-            .find_map(|l| l.strip_prefix("model name")?.split_once(':'))
-            .and_then(|(_, name)| named(name))
-    };
-    brand.or_else(model).unwrap_or_else(|| "unknown".to_owned())
-}
-
-/// The CPU cores this process may use, as `std::thread::available_parallelism` reports them (R-329).
-fn cpu_cores_available() -> Result<u32, String> {
-    let n = std::thread::available_parallelism()
-        .map_err(|e| format!("prin profile: the CPU core count is not reported: {e}"))?;
-    Ok(u32::try_from(n.get()).unwrap_or(u32::MAX))
-}
-
-/// The machine's own CPU core count (R-329), where the platform reports it cheaply: macOS's `sysctl hw.ncpu`, or the
-/// `processor` entries in Linux's /proc/cpuinfo, the same two sources [`cpu_model`] asks. Both are asked on every
-/// system; `None` where neither gives a count. No new dependency and no unsafe code: a platform these don't cover
-/// writes `null` (telemetry §5).
-fn cpu_cores_total() -> Option<u32> {
-    let sysctl = std::process::Command::new(SYSCTL)
-        .args(["-n", "hw.ncpu"])
-        .output()
-        .ok()
-        .filter(|out| out.status.success())
-        .map(|out| out.stdout);
-    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok();
-    cpu_total_from(sysctl.as_deref(), cpuinfo.as_deref())
-}
-
-/// The core count from `sysctl hw.ncpu`'s output, else the number of `processor` entries in /proc/cpuinfo; `None`
-/// where neither gives a count of at least one that fits a u32.
-fn cpu_total_from(sysctl: Option<&[u8]>, cpuinfo: Option<&str>) -> Option<u32> {
-    let counted = |n: u32| Some(n).filter(|n| *n > 0);
-    let ncpu = sysctl.and_then(|out| String::from_utf8_lossy(out).trim().parse::<u32>().ok());
-    let processors = || {
-        let n = cpuinfo?
-            .lines()
-            .filter(|l| {
-                l.split_once(':')
-                    .is_some_and(|(key, _)| key.trim() == "processor")
-            })
-            .count();
-        u32::try_from(n).ok()
-    };
-    ncpu.and_then(counted)
-        .or_else(|| processors().and_then(counted))
+    let host = session::host().map_err(|e| format!("prin profile: {e}"))?;
+    let build = session::build(
+        env!("PRIN_BUILD_COMMIT"),
+        env!("PRIN_BUILD_PROFILE"),
+        env!("PRIN_BUILD_FEATURES"),
+    );
+    session::header(None, &host, build, config)
 }
 
 /// The four stages a headless run has; a batch render has no present stage (telemetry §5.5).
@@ -394,7 +298,7 @@ mod tests {
             "the run requested a GPU adapter {requests} time(s)"
         );
         let trace = trace_of("synthetic_frames", 3, done).expect("no trace");
-        assert_eq!(trace.header.backend.api, Api::None);
+        assert_eq!(trace.header.backend.api, profile::Api::None);
     }
 
     /// `ms_since` gives wall-clock milliseconds: a sleep of `ms` reads as at least `ms`, and well under a second more.
@@ -441,80 +345,6 @@ mod tests {
         "a refusal that gives no reason must fail the check",
         expected = "does not say prin links no GPU API",
         check_refuses(|| Err(String::new()))
-    );
-
-    /// `sysctl`'s output, /proc/cpuinfo, and the CPU model they name.
-    type CpuCase<'a> = (Option<&'a [u8]>, Option<&'a str>, &'a str);
-
-    /// `named` reads the CPU model: `sysctl`'s output first, then /proc/cpuinfo's `model name`, else `unknown`.
-    fn check_cpu_named(named: fn(Option<&[u8]>, Option<&str>) -> String) {
-        let cpuinfo =
-            "processor\t: 0\nvendor_id\t: GenuineIntel\nmodel name\t: Intel(R) Xeon(R) CPU\n";
-        let cases: [CpuCase<'_>; 7] = [
-            (Some(b"Apple M3 Pro\n"), None, "Apple M3 Pro"),
-            (Some(b"Apple M3 Pro\n"), Some(cpuinfo), "Apple M3 Pro"),
-            (Some(b""), Some(cpuinfo), "Intel(R) Xeon(R) CPU"),
-            (None, Some(cpuinfo), "Intel(R) Xeon(R) CPU"),
-            (Some(b"  \n"), Some("model name\t: \n"), "unknown"),
-            (None, Some("processor\t: 0\n"), "unknown"),
-            (None, None, "unknown"),
-        ];
-        for (sysctl, info, want) in cases {
-            assert_eq!(
-                named(sysctl, info),
-                want,
-                "the CPU is misnamed from {sysctl:?} and {info:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn profile_no_gpu_header_names_the_cpu() {
-        check_cpu_named(cpu_named);
-    }
-
-    validation::negative_control!(
-        profile_no_gpu_header_names_the_cpu,
-        "a probe that names no CPU must fail the check",
-        expected = "the CPU is misnamed",
-        check_cpu_named(|_, _| "unknown".to_owned())
-    );
-
-    /// `sysctl hw.ncpu`'s output, /proc/cpuinfo, and the core count they give.
-    type TotalCase<'a> = (Option<&'a [u8]>, Option<&'a str>, Option<u32>);
-
-    /// `total` reads the machine's core count (R-329): `sysctl hw.ncpu` first, then /proc/cpuinfo's `processor`
-    /// entries, else `None`.
-    fn check_cpu_total(total: fn(Option<&[u8]>, Option<&str>) -> Option<u32>) {
-        let cpuinfo = "processor\t: 0\nmodel name\t: X\n\nprocessor\t: 1\nmodel name\t: X\n";
-        let cases: [TotalCase<'_>; 7] = [
-            (Some(b"10\n"), None, Some(10)),
-            (Some(b"10\n"), Some(cpuinfo), Some(10)),
-            (Some(b""), Some(cpuinfo), Some(2)),
-            (None, Some(cpuinfo), Some(2)),
-            (Some(b"0\n"), Some("model name\t: X\n"), None),
-            (Some(b"4294967296\n"), None, None),
-            (None, None, None),
-        ];
-        for (sysctl, info, want) in cases {
-            assert_eq!(
-                total(sysctl, info),
-                want,
-                "the core total is wrong from {sysctl:?} and {info:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn profile_file_header_cpu_cores_total() {
-        check_cpu_total(cpu_total_from);
-    }
-
-    validation::negative_control!(
-        profile_file_header_cpu_cores_total,
-        "a probe that never reports the total must fail the check",
-        expected = "the core total is wrong",
-        check_cpu_total(|_, _| None)
     );
 
     #[test]
