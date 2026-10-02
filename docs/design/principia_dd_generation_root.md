@@ -624,7 +624,10 @@ log-det are written as expression trees, never as text:
   parameters, each list sorted by its names' UTF-8 bytes, lexicographically, each item its name and its value's f64
   bits. Entries are sorted by their names' UTF-8 bytes, lexicographically, then the chart constants, sorted by their
   names' UTF-8 bytes, lexicographically, each its name and value's bits. The sampling note is not written. Two entries,
-  two chart constants, or two of one entry's clamps and parameters, of one name fail generation.
+  two chart constants, or two of one entry's clamps and parameters, of one name fail generation. Every length prefix
+  (a string's UTF-8 byte count) and every count is a big-endian u32, and every value's f64 bits are big-endian; an
+  entry's ε clamps, its parameters, the entries and the chart constants are each written as their count, then each
+  item.
 - **No formatting-dependent bytes.** No source text is hashed: whitespace, parentheses, comments and a literal's
   spelling (`1`, `1.0`, `1e0`) are not in the tree, and a literal is its bits. A change of meaning, another operator,
   argument, literal, parameter or argument order, changes the bytes. Two trees equal in algebra but not in structure
