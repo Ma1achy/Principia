@@ -1641,6 +1641,12 @@ mod stream {
         Absent, Flush, FrameRecord, SchemaId, Session, SessionHeader, Stream, Trace,
     };
 
+    /// R-341's flush: every 60 frames or 1 s, whichever comes first.
+    const R341: Flush = Flush {
+        frames: 60,
+        interval: Duration::from_secs(1),
+    };
+
     /// A writer that keeps its bytes and, at each flush, the number of whole lines it held then. A deaf one ignores
     /// its flushes.
     #[derive(Clone, Default)]
@@ -1735,17 +1741,14 @@ mod stream {
 
     #[test]
     fn profile_stream_flush_at_the_60th_frame() {
-        check_sixty_frames(Flush::R341);
+        check_sixty_frames(R341);
     }
 
     validation::negative_control!(
         profile_stream_flush_at_the_60th_frame,
         "a policy that flushes only at 61 frames must fail the check",
         expected = "the flushes fell at lines",
-        check_sixty_frames(Flush {
-            frames: 61,
-            ..Flush::R341
-        })
+        check_sixty_frames(Flush { frames: 61, ..R341 })
     );
 
     /// Frames slower than 60 a second: the clock flushes, at the first frame once 1 s has passed since the last
@@ -1766,7 +1769,7 @@ mod stream {
 
     #[test]
     fn profile_stream_flush_once_1_s_has_passed() {
-        check_one_second(Flush::R341);
+        check_one_second(R341);
     }
 
     validation::negative_control!(
@@ -1775,7 +1778,7 @@ mod stream {
         expected = "the flushes fell at lines",
         check_one_second(Flush {
             interval: Duration::MAX,
-            ..Flush::R341
+            ..R341
         })
     );
 
@@ -1785,8 +1788,8 @@ mod stream {
     fn check_header_and_summary(recorder: Recorder) {
         let (header, frame) = sample();
         let now = Instant::now();
-        let mut stream = Stream::start(recorder.clone(), &header, Flush::R341, now)
-            .expect("the header is refused");
+        let mut stream =
+            Stream::start(recorder.clone(), &header, R341, now).expect("the header is refused");
         assert_eq!(
             recorder.flushes(),
             [1],
@@ -1853,8 +1856,8 @@ mod stream {
         let frame = FrameRecord { frame_ms, ..frame };
         let recorder = Recorder::default();
         let now = Instant::now();
-        let mut stream = Stream::start(recorder.clone(), &header, Flush::R341, now)
-            .expect("the header is refused");
+        let mut stream =
+            Stream::start(recorder.clone(), &header, R341, now).expect("the header is refused");
         let before = recorder.bytes();
         let refused = stream.frame(&frame, now);
         assert!(

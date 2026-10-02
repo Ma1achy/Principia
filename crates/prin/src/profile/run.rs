@@ -18,7 +18,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::process::ExitCode;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use engine::contract::canonical;
 use engine::contract::profile::{
@@ -69,6 +69,14 @@ fn no_gpu_api() -> Result<OpenAdapter, String> {
     Err("prin links no GPU API at M0, so it cannot open a GPU adapter".to_owned())
 }
 
+/// R-341's flush: the frame lines are flushed at the 60th frame since the last flush, or once 1 s has passed since it,
+/// whichever comes first. The header line is flushed as soon as it is written (R-341, applied per R-204, accepted by
+/// R-346), and the summary line when the session ends.
+pub(crate) const FLUSH: Flush = Flush {
+    frames: 60,
+    interval: Duration::from_secs(1),
+};
+
 /// Where a run's trace goes, as the run produces it (R-341): the header line when the scenario begins, each frame
 /// record as it completes, and the summary line when the session ends. It holds the writer and the flush state, never
 /// a frame record.
@@ -79,6 +87,8 @@ pub(crate) struct Out<'a> {
     name: String,
     /// The clock the flush policy reads, the caller's (R-341).
     clock: &'a mut dyn FnMut() -> Instant,
+    /// When the frame lines are flushed: [`FLUSH`].
+    flush: Flush,
     state: OutState<'a>,
 }
 
@@ -106,8 +116,15 @@ impl<'a> Out<'a> {
             frames,
             name,
             clock,
+            flush: FLUSH,
             state: OutState::Waiting(Box::new(writer)),
         }
+    }
+
+    /// The same, flushing by `flush` in place of [`FLUSH`]: the controls' run.
+    #[cfg(all(test, feature = "controls"))]
+    fn flushing(self, flush: Flush) -> Self {
+        Out { flush, ..self }
     }
 
     /// Writes the header line and flushes it. The GPU's fields come only from `adapter`, the one the run opened for
@@ -120,7 +137,7 @@ impl<'a> Out<'a> {
             ));
         };
         let header = session_header(adapter, config(self.scenario, self.frames)?)?;
-        let stream = Stream::start(writer, &header, Flush::R341, (self.clock)())
+        let stream = Stream::start(writer, &header, self.flush, (self.clock)())
             .map_err(|e| self.cannot_write(e))?;
         self.state = OutState::Streaming(stream);
         Ok(())
@@ -621,6 +638,96 @@ mod tests {
         "a probe that never reports the total must fail the check",
         expected = "the core total is wrong",
         check_cpu_total(|_, _| None)
+    );
+
+    /// A writer that keeps, at each flush, the number of whole lines written by then.
+    #[derive(Clone, Default)]
+    struct Recorder(std::rc::Rc<std::cell::RefCell<(usize, Vec<usize>)>>);
+
+    impl Write for Recorder {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.borrow_mut().0 += buf.iter().filter(|b| **b == b'\n').count();
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            let mut recorded = self.0.borrow_mut();
+            let lines = recorded.0;
+            recorded.1.push(lines);
+            Ok(())
+        }
+    }
+
+    /// Runs `synthetic_frames` for `frames` frames into `out`'s trace, by a clock that moves on `tick` at each
+    /// reading; the whole lines written at each flush. `out` builds the run's [`Out`].
+    fn run_flushes(
+        frames: u32,
+        tick: Duration,
+        out: impl for<'a> Fn(Out<'a>) -> Out<'a>,
+    ) -> Vec<usize> {
+        let recorder = Recorder::default();
+        let mut now = Instant::now();
+        let mut clock = || {
+            now += tick;
+            now
+        };
+        let base = Out::new(
+            "synthetic_frames",
+            frames,
+            recorder.clone(),
+            "the test's trace".to_owned(),
+            &mut clock,
+        );
+        let mut out = out(base);
+        let scenario = find("synthetic_frames").expect("synthetic_frames is not registered");
+        (scenario.run)(frames, &mut no_gpu_api, &mut out).expect("the run fails");
+        out.finish().expect("the run's trace does not finish");
+        let flushes = recorder.0.borrow().1.clone();
+        flushes
+    }
+
+    /// The run flushes its frame lines at the 60th frame since the last flush (R-341): 150 frames 1 ms apart flush at
+    /// lines 61 and 121, after the header's flush on line 1; the summary line, line 152, is flushed last.
+    fn check_run_sixty(out: impl for<'a> Fn(Out<'a>) -> Out<'a>) {
+        let got = run_flushes(150, Duration::from_millis(1), out);
+        assert_eq!(got, [1, 61, 121, 152], "the run flushed at lines {got:?}");
+    }
+
+    #[test]
+    fn profile_stream_flush_run_every_60_frames() {
+        check_run_sixty(|out| out);
+    }
+
+    validation::negative_control!(
+        profile_stream_flush_run_every_60_frames,
+        "a run that flushes only at 61 frames must fail the check",
+        expected = "the run flushed at lines",
+        check_run_sixty(|out| out.flushing(Flush {
+            frames: 61,
+            ..FLUSH
+        }))
+    );
+
+    /// The run flushes its frame lines once 1 s has passed since the last flush (R-341): 10 frames 300 ms apart flush
+    /// at the 4th and 8th frames (lines 5 and 9); the summary line, line 12, is flushed last.
+    fn check_run_one_second(out: impl for<'a> Fn(Out<'a>) -> Out<'a>) {
+        let got = run_flushes(10, Duration::from_millis(300), out);
+        assert_eq!(got, [1, 5, 9, 12], "the run flushed at lines {got:?}");
+    }
+
+    #[test]
+    fn profile_stream_flush_run_every_1_s() {
+        check_run_one_second(|out| out);
+    }
+
+    validation::negative_control!(
+        profile_stream_flush_run_every_1_s,
+        "a run whose flushes ignore the clock must fail the check",
+        expected = "the run flushed at lines",
+        check_run_one_second(|out| out.flushing(Flush {
+            interval: Duration::MAX,
+            ..FLUSH
+        }))
     );
 
     #[test]

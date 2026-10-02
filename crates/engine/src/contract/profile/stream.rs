@@ -15,7 +15,8 @@ use super::{
 
 /// When the streaming writer flushes its frame lines: at the `frames`-th frame written since the last flush, or at
 /// the first frame written once `interval` has passed since it, whichever comes first (R-341). The clock is the
-/// caller's: each frame is written with the instant it completed.
+/// caller's: each frame is written with the instant it completed. `prin profile` flushes by R-341's policy, every 60
+/// frames or 1 s; the values are the caller's, so none is a numeric constant of the engine crate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Flush {
     /// The frame lines written since the last flush that make a flush due.
@@ -25,12 +26,6 @@ pub struct Flush {
 }
 
 impl Flush {
-    /// R-341's flush: every 60 frames or 1 s, whichever comes first.
-    pub const R341: Flush = Flush {
-        frames: 60,
-        interval: Duration::from_secs(1),
-    };
-
     /// Whether a flush is due, `frames` frame lines and `elapsed` after the last.
     fn due(&self, frames: u32, elapsed: Duration) -> bool {
         frames >= self.frames || elapsed >= self.interval
