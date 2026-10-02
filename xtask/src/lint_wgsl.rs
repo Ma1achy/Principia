@@ -862,9 +862,12 @@ fn is_finite_max(v: f64) -> bool {
 }
 
 /// The float values of `h`, if it is a constant expression of floats, its components in order; `None` if it is not
-/// constant or holds an integer. naga folds a constant expression before the IR is built unless it holds a `bitcast`,
-/// which it does not fold, so [`evaluate`] evaluates what naga leaves. naga concretises an abstract literal or
-/// constant before the IR, so no abstract literal reaches here.
+/// constant, holds an integer or a bool, or holds a value [`evaluate`] cannot give soundly. naga folds a constant
+/// expression of literals before the IR is built, and rejects one at parse where WGSL makes it an error (the `sqrt` of
+/// a negative literal, an overflowing `exp`), which the lint reports. It leaves unfolded any constant expression over a
+/// `bitcast`, and some built-ins (`ldexp`, `mix`, `smoothstep`, `modf`, `frexp`, the packing built-ins) even over
+/// literals, so [`evaluate`] evaluates what naga leaves, as the shader does at run time. naga concretises an abstract
+/// literal or constant before the IR, so no abstract literal reaches here.
 pub fn constant_floats(
     module: &Module,
     arena: &Arena<Expression>,
@@ -875,97 +878,108 @@ pub fn constant_floats(
     Some(floats)
 }
 
-/// A constant expression's value: a float of `width` bytes, a 32-bit integer's bit pattern, or a vector, matrix or
-/// array of values.
+/// A constant expression's value: a float of `width` bytes, a u32, an i32, a bool, or a vector, matrix (a list of its
+/// columns), array or built-in result struct (`modf`'s, `frexp`'s) of values.
 #[derive(Clone, Debug)]
 enum Value {
     Float(f64, u8),
-    Bits(u32),
+    Uint(u32),
+    Sint(i32),
+    Bool(bool),
     List(Vec<Value>),
 }
 
 impl Value {
-    /// Appends the value's floats to `out`, in order; `None` if it holds an integer.
+    /// Appends the value's floats to `out`, in order; `None` if it holds an integer or a bool.
     fn floats(&self, out: &mut Vec<f64>) -> Option<()> {
         match self {
             Value::Float(v, _) => out.push(*v),
-            Value::Bits(_) => return None,
             Value::List(items) => {
                 for item in items {
                     item.floats(out)?;
                 }
             }
+            _ => return None,
         }
         Some(())
     }
 
-    /// `f` applied to each scalar of the value; `None` if it is `None` for any.
-    fn map(&self, f: &impl Fn(&Value) -> Option<Value>) -> Option<Value> {
-        match self {
-            Value::List(items) => items
-                .iter()
-                .map(|v| v.map(f))
-                .collect::<Option<_>>()
-                .map(Value::List),
-            scalar => f(scalar),
-        }
-    }
-
-    /// `f` applied to each float of the value, rounded to its width; `None` if it holds an integer.
-    fn map_float(&self, f: &impl Fn(f64) -> f64) -> Option<Value> {
-        self.map(&|scalar| match *scalar {
-            Value::Float(v, width) => Some(Value::Float(round(f(v), width), width)),
-            _ => None,
-        })
-    }
-
-    /// `f` applied component by component to the value and `other`, either of which may be a scalar the other's
-    /// components each meet (WGSL's vector-scalar arithmetic), each result rounded to its width. `None` if either
-    /// holds an integer, or if both are lists, of unequal lengths or of lists (a matrix product is not
-    /// component-wise).
-    fn zip(&self, other: &Value, f: &impl Fn(f64, f64) -> f64) -> Option<Value> {
-        match (self, other) {
-            (&Value::Float(a, width), &Value::Float(b, _)) => {
-                Some(Value::Float(round(f(a, b), width), width))
-            }
-            (Value::List(items), b @ Value::Float(..)) => items
-                .iter()
-                .map(|a| a.zip(b, f))
-                .collect::<Option<_>>()
-                .map(Value::List),
-            (a @ Value::Float(..), Value::List(items)) => items
-                .iter()
-                .map(|b| a.zip(b, f))
-                .collect::<Option<_>>()
-                .map(Value::List),
-            (Value::List(a), Value::List(b))
-                if a.len() == b.len()
-                    && a.iter().chain(b).all(|v| matches!(v, Value::Float(..))) =>
-            {
-                a.iter()
-                    .zip(b)
-                    .map(|(a, b)| a.zip(b, f))
-                    .collect::<Option<_>>()
-                    .map(Value::List)
-            }
-            _ => None,
-        }
-    }
-
-    /// The `i`th component of a vector, matrix or array.
+    /// The `i`th component of a vector, matrix, array or struct.
     fn index(&self, i: usize) -> Option<Value> {
         match self {
             Value::List(items) => items.get(i).cloned(),
             _ => None,
         }
     }
+
+    /// A matrix's columns, if the value is a matrix: a list of lists.
+    fn columns(&self) -> Option<&[Value]> {
+        match self {
+            Value::List(items) if matches!(items.first(), Some(Value::List(_))) => Some(items),
+            _ => None,
+        }
+    }
+}
+
+/// `f` applied lane by lane: to `args` themselves if all are scalars, else to the components at each index of the
+/// lists among them, a scalar meeting every lane (WGSL's vector-scalar forms), and recursively, so a matrix's columns
+/// meet column by column. `None` if the lists' lengths differ or `f` is `None` for any lane.
+fn lanes(args: &[Value], f: &dyn Fn(&[Value]) -> Option<Value>) -> Option<Value> {
+    let mut lengths = args.iter().filter_map(|a| match a {
+        Value::List(items) => Some(items.len()),
+        _ => None,
+    });
+    let Some(n) = lengths.next() else {
+        return f(args);
+    };
+    if lengths.any(|m| m != n) {
+        return None;
+    }
+    (0..n)
+        .map(|i| {
+            let lane: Vec<Value> = args
+                .iter()
+                .map(|a| match a {
+                    Value::List(items) => items[i].clone(),
+                    scalar => scalar.clone(),
+                })
+                .collect();
+            lanes(&lane, f)
+        })
+        .collect::<Option<_>>()
+        .map(Value::List)
+}
+
+/// A lane's floats and their width; `None` if it holds anything else.
+fn floats_of(lane: &[Value]) -> Option<(Vec<f64>, u8)> {
+    let Some(&Value::Float(_, width)) = lane.first() else {
+        return None;
+    };
+    let floats = lane
+        .iter()
+        .map(|v| match *v {
+            Value::Float(x, _) => Some(x),
+            _ => None,
+        })
+        .collect::<Option<_>>()?;
+    Some((floats, width))
+}
+
+/// `f` applied lane by lane to float `args` ([`lanes`]), each result rounded to their width; `None` if a lane holds
+/// anything but floats.
+fn float_lanes(args: &[Value], f: &dyn Fn(&[f64]) -> f64) -> Option<Value> {
+    lanes(args, &|lane| {
+        let (x, width) = floats_of(lane)?;
+        Some(Value::Float(round(f(&x), width), width))
+    })
 }
 
 /// `v` rounded to a float of `width` bytes: f16 (2), f32 (4) or f64 (8).
 fn round(v: f64, width: u8) -> f64 {
     match width {
         // f32 arithmetic done in f64 and rounded once to f32 is exact f32 arithmetic: f64 holds more than twice
-        // f32's 24 significant bits.
+        // f32's 24 significant bits. A transcendental function done in f64 and rounded to f32 is within WGSL's
+        // accuracy for it, which is all the float rules need: whether the value is inf, NaN or a stand-in.
         4 => f64::from(v as f32),
         2 => round_f16(v),
         _ => v,
@@ -985,28 +999,699 @@ fn round_f16(v: f64) -> f64 {
     }
 }
 
-/// The value of `h`, if it is a constant expression: a literal; a module constant; a negation; a splat; a vector,
-/// matrix or array built of constants, one of its components, or a swizzle; `+`, `-`, `*`, `/` or `%` of them; `abs`,
-/// `sign`, `saturate`, `floor`, `ceil`, `trunc`, `round`, `min`, `max` or `clamp` of them; a conversion of floats to
-/// float; or a `bitcast` of 32-bit integers to f32. Float arithmetic is done in the operands' precision, f32 for f32
-/// (WGSL's). `None` otherwise.
+/// The binary16 bit pattern of `v`, rounded to binary16 ([`round_f16`]): WGSL's `pack2x16float` of one component.
+fn f16_bits(v: f64) -> u16 {
+    let r = round_f16(v);
+    if r.is_nan() {
+        return 0x7e00;
+    }
+    let a = r.abs();
+    let magnitude = if a == f64::INFINITY {
+        0x7c00
+    } else {
+        // A finite f16 of exponent e (-14 for the subnormals and zero) and significand s/1024 is (e + 14) * 1024 + s.
+        let e = if a == 0.0 { -14 } else { exponent(a).max(-14) };
+        (f64::from(e + 14) * 1024.0 + a * 2f64.powi(10 - e)) as u16
+    };
+    u16::from(r.is_sign_negative()) * 0x8000 + magnitude
+}
+
+/// The value of the binary16 bit pattern `b`: WGSL's `unpack2x16float` of one component.
+fn f16_value(b: u16) -> f64 {
+    let e = (b >> 10) & 0x1f;
+    let s = f64::from(b & 0x3ff);
+    let magnitude = match e {
+        31 if s == 0.0 => f64::INFINITY,
+        31 => f64::NAN,
+        0 => s * 2f64.powi(-24),
+        _ => (s + 1024.0) * 2f64.powi(i32::from(e) - 25),
+    };
+    if b >= 0x8000 {
+        -magnitude
+    } else {
+        magnitude
+    }
+}
+
+/// `a`'s binary exponent, `floor(log2(a))`, for a finite `a > 0`.
+fn exponent(a: f64) -> i32 {
+    let biased = i32::try_from(a.to_bits() >> 52).unwrap_or(0);
+    if biased == 0 {
+        // An f64 subnormal: scaled into the normals first.
+        return exponent(a * 2f64.powi(64)) - 64;
+    }
+    biased - 1023
+}
+
+/// `x * 2^e`, exactly where the result is an f64 normal: WGSL's `ldexp`, before rounding to the operand's width. `e` is
+/// applied in two halves, each clamped to f64's normal exponents, so neither factor overflows nor underflows.
+fn ldexp(x: f64, e: i32) -> f64 {
+    let pow2 = |n: i32| 2f64.powi(n.clamp(-1022, 1023));
+    let half = e / 2;
+    x * pow2(half) * pow2(e - half)
+}
+
+/// WGSL's `frexp` of `x`: `(fract, exp)` with `x = fract * 2^exp` and `fract`'s magnitude in [0.5, 1), or `(x, 0)` for
+/// a zero. `None` for inf or NaN, whose parts WGSL leaves indeterminate.
+fn frexp(x: f64) -> Option<(f64, i32)> {
+    if !x.is_finite() {
+        return None;
+    }
+    if x == 0.0 {
+        return Some((x, 0));
+    }
+    let exp = exponent(x.abs()) + 1;
+    Some((ldexp(x, -exp), exp))
+}
+
+/// `op`'s result on the scalars `x` and `y`, if it is a comparison.
+fn compare<T: PartialOrd>(op: BinaryOperator, x: T, y: T) -> Option<Value> {
+    let r = match op {
+        BinaryOperator::Equal => x == y,
+        BinaryOperator::NotEqual => x != y,
+        BinaryOperator::Less => x < y,
+        BinaryOperator::LessEqual => x <= y,
+        BinaryOperator::Greater => x > y,
+        BinaryOperator::GreaterEqual => x >= y,
+        _ => return None,
+    };
+    Some(Value::Bool(r))
+}
+
+/// The unary `op` on the scalar `v`, as WGSL evaluates it at run time (an i32's negation wraps).
+fn unary(op: UnaryOperator, v: &Value) -> Option<Value> {
+    match (op, v) {
+        (UnaryOperator::Negate, &Value::Float(x, w)) => Some(Value::Float(-x, w)),
+        (UnaryOperator::Negate, &Value::Sint(i)) => Some(Value::Sint(i.wrapping_neg())),
+        (UnaryOperator::LogicalNot, &Value::Bool(b)) => Some(Value::Bool(!b)),
+        (UnaryOperator::BitwiseNot, &Value::Uint(u)) => Some(Value::Uint(!u)),
+        (UnaryOperator::BitwiseNot, &Value::Sint(i)) => Some(Value::Sint(!i)),
+        _ => None,
+    }
+}
+
+/// `a op b`: a matrix product if both are lists and one is a matrix, else lane by lane ([`lanes`]).
+fn binary(op: BinaryOperator, a: Value, b: Value) -> Option<Value> {
+    let lists = matches!((&a, &b), (Value::List(_), Value::List(_)));
+    if op == BinaryOperator::Multiply && lists && (a.columns().is_some() || b.columns().is_some()) {
+        return product(&a, &b);
+    }
+    lanes(&[a, b], &|lane| scalar_binary(op, &lane[0], &lane[1]))
+}
+
+/// `a op b` on scalars, as WGSL evaluates it at run time: float arithmetic rounded to the operands' width; integer
+/// arithmetic wrapping, an integer division by zero giving `a` and a remainder by zero 0 (as do i32's `MIN / -1` and
+/// `MIN % -1`), and shifts by the amount modulo 32; comparisons giving a bool.
+fn scalar_binary(op: BinaryOperator, a: &Value, b: &Value) -> Option<Value> {
+    use BinaryOperator as B;
+    match (a, b) {
+        (&Value::Float(x, w), &Value::Float(y, _)) => {
+            let r = match op {
+                B::Add => x + y,
+                B::Subtract => x - y,
+                B::Multiply => x * y,
+                B::Divide => x / y,
+                B::Modulo => x % y,
+                _ => return compare(op, x, y),
+            };
+            Some(Value::Float(round(r, w), w))
+        }
+        (&Value::Uint(x), &Value::Uint(y)) => {
+            let r = match op {
+                B::Add => x.wrapping_add(y),
+                B::Subtract => x.wrapping_sub(y),
+                B::Multiply => x.wrapping_mul(y),
+                B::Divide => x.checked_div(y).unwrap_or(x),
+                B::Modulo => x.checked_rem(y).unwrap_or(0),
+                B::And => x & y,
+                B::ExclusiveOr => x ^ y,
+                B::InclusiveOr => x | y,
+                B::ShiftLeft => x.wrapping_shl(y),
+                B::ShiftRight => x.wrapping_shr(y),
+                _ => return compare(op, x, y),
+            };
+            Some(Value::Uint(r))
+        }
+        (&Value::Sint(x), &Value::Sint(y)) => {
+            let r = match op {
+                B::Add => x.wrapping_add(y),
+                B::Subtract => x.wrapping_sub(y),
+                B::Multiply => x.wrapping_mul(y),
+                B::Divide => x.checked_div(y).unwrap_or(x),
+                B::Modulo => x.checked_rem(y).unwrap_or(0),
+                B::And => x & y,
+                B::ExclusiveOr => x ^ y,
+                B::InclusiveOr => x | y,
+                _ => return compare(op, x, y),
+            };
+            Some(Value::Sint(r))
+        }
+        (&Value::Sint(x), &Value::Uint(y)) => match op {
+            B::ShiftLeft => Some(Value::Sint(x.wrapping_shl(y))),
+            B::ShiftRight => Some(Value::Sint(x.wrapping_shr(y))),
+            _ => None,
+        },
+        (&Value::Bool(x), &Value::Bool(y)) => match op {
+            B::And => Some(Value::Bool(x & y)),
+            B::InclusiveOr => Some(Value::Bool(x | y)),
+            _ => compare(op, x, y),
+        },
+        _ => None,
+    }
+}
+
+/// The linear-algebra product `a * b`, one a matrix and the other a matrix or a vector, each multiplication and
+/// addition rounded to the operands' width.
+fn product(a: &Value, b: &Value) -> Option<Value> {
+    if let Some(columns) = b.columns() {
+        // Column `j` of `a * B` is `a * B[j]`; component `j` of `v * B` is `dot(v, B[j])`.
+        return columns
+            .iter()
+            .map(|c| {
+                if a.columns().is_some() {
+                    product(a, c)
+                } else {
+                    dot(a, c)
+                }
+            })
+            .collect::<Option<_>>()
+            .map(Value::List);
+    }
+    // `a` is a matrix and `b` a vector: the sum of `a`'s columns, each times its component of `b`.
+    let (Some(columns), Value::List(v)) = (a.columns(), b) else {
+        return None;
+    };
+    columns
+        .iter()
+        .zip(v)
+        .map(|(c, s)| binary(BinaryOperator::Multiply, c.clone(), s.clone()))
+        .reduce(|sum, t| binary(BinaryOperator::Add, sum?, t?))?
+}
+
+/// The dot product of two vectors, each multiplication and addition rounded to the operands' width (integer ones
+/// wrapping).
+fn dot(a: &Value, b: &Value) -> Option<Value> {
+    let (Value::List(x), Value::List(y)) = (a, b) else {
+        return None;
+    };
+    x.iter()
+        .zip(y)
+        .map(|(p, q)| scalar_binary(BinaryOperator::Multiply, p, q))
+        .reduce(|sum, t| scalar_binary(BinaryOperator::Add, &sum?, &t?))?
+}
+
+/// WGSL's `length`: a scalar's magnitude, or a vector's `sqrt(dot(v, v))`.
+fn length(v: &Value) -> Option<Value> {
+    match *v {
+        Value::Float(x, w) => Some(Value::Float(x.abs(), w)),
+        _ => float_lanes(&[dot(v, v)?], &|x| x[0].sqrt()),
+    }
+}
+
+/// The float `x` of width `w`, as a value.
+fn float(x: f64, w: u8) -> Value {
+    Value::Float(x, w)
+}
+
+/// WGSL's `cross` of two 3-vectors.
+fn cross(a: &Value, b: &Value) -> Option<Value> {
+    let m =
+        |i: usize, j: usize| scalar_binary(BinaryOperator::Multiply, &a.index(i)?, &b.index(j)?);
+    let c = |i: usize, j: usize| scalar_binary(BinaryOperator::Subtract, &m(i, j)?, &m(j, i)?);
+    Some(Value::List(vec![c(1, 2)?, c(2, 0)?, c(0, 1)?]))
+}
+
+/// WGSL's `reflect(e1, e2)`: `e1 - 2 * dot(e2, e1) * e2`.
+fn reflect(e1: &Value, e2: &Value) -> Option<Value> {
+    let Value::Float(d, w) = dot(e2, e1)? else {
+        return None;
+    };
+    let scaled = binary(
+        BinaryOperator::Multiply,
+        e2.clone(),
+        float(round(2.0 * d, w), w),
+    )?;
+    binary(BinaryOperator::Subtract, e1.clone(), scaled)
+}
+
+/// WGSL's `refract(e1, e2, eta)`: with `k = 1 - eta^2 * (1 - dot(e2, e1)^2)`, the zero vector if `k < 0`, else
+/// `eta * e1 - (eta * dot(e2, e1) + sqrt(k)) * e2`.
+fn refract(e1: &Value, e2: &Value, eta: &Value) -> Option<Value> {
+    let (Value::Float(d, w), &Value::Float(eta, _)) = (dot(e2, e1)?, eta) else {
+        return None;
+    };
+    let r = |x: f64| round(x, w);
+    let k = r(1.0 - r(r(eta * eta) * r(1.0 - r(d * d))));
+    if k < 0.0 {
+        return lanes(std::slice::from_ref(e1), &|_| Some(float(0.0, w)));
+    }
+    let along = binary(BinaryOperator::Multiply, e1.clone(), float(eta, w))?;
+    let across = binary(
+        BinaryOperator::Multiply,
+        e2.clone(),
+        float(r(r(eta * d) + r(k.sqrt())), w),
+    )?;
+    binary(BinaryOperator::Subtract, along, across)
+}
+
+/// The determinant of the square matrix of `columns`, by cofactor expansion down the first row, each operation
+/// rounded to the entries' width.
+fn determinant(columns: &[Vec<Value>]) -> Option<Value> {
+    if columns.len() == 1 {
+        return columns[0].first().cloned();
+    }
+    let mut sum: Option<Value> = None;
+    for (j, column) in columns.iter().enumerate() {
+        let minor: Vec<Vec<Value>> = columns
+            .iter()
+            .enumerate()
+            .filter(|&(k, _)| k != j)
+            .map(|(_, c)| c[1..].to_vec())
+            .collect();
+        let term = scalar_binary(
+            BinaryOperator::Multiply,
+            column.first()?,
+            &determinant(&minor)?,
+        )?;
+        sum = Some(match sum {
+            None => term,
+            Some(s) if j % 2 == 0 => scalar_binary(BinaryOperator::Add, &s, &term)?,
+            Some(s) => scalar_binary(BinaryOperator::Subtract, &s, &term)?,
+        });
+    }
+    sum
+}
+
+/// A matrix's columns, each as a list of its entries.
+fn matrix(m: &Value) -> Option<Vec<Vec<Value>>> {
+    m.columns()?
+        .iter()
+        .map(|c| match c {
+            Value::List(items) => Some(items.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// `v`'s bits, if it is a u32, an i32 or a non-NaN f32 (a NaN's payload is not kept in an f64).
+fn bits(v: &Value) -> Option<u32> {
+    match *v {
+        Value::Uint(u) => Some(u),
+        Value::Sint(i) => Some(i.cast_unsigned()),
+        Value::Float(x, 4) if !x.is_nan() => Some((x as f32).to_bits()),
+        _ => None,
+    }
+}
+
+/// The scalar `v` converted (`convert: Some(width)`, WGSL's `f32(e)`, `u32(e)`, …) or bitcast (`convert: None`) to
+/// `kind`, as WGSL converts at run time: a float to an integer truncated and saturated, an integer to a float rounded
+/// to its width. `None` for a NaN to an integer, which WGSL leaves indeterminate.
+fn cast(v: &Value, kind: ScalarKind, convert: Option<u8>) -> Option<Value> {
+    use ScalarKind as K;
+    match (kind, convert, v) {
+        (K::Float, Some(w), &Value::Float(x, _)) => Some(float(round(x, w), w)),
+        (K::Float, Some(w), &Value::Uint(u)) => Some(float(round(f64::from(u), w), w)),
+        (K::Float, Some(w), &Value::Sint(i)) => Some(float(round(f64::from(i), w), w)),
+        (K::Float, Some(w), &Value::Bool(b)) => Some(float(f64::from(u8::from(b)), w)),
+        (K::Float, None, &Value::Float(x, 4)) => Some(float(x, 4)),
+        (K::Float, None, v) => Some(float(f64::from(f32::from_bits(bits(v)?)), 4)),
+        (K::Uint, Some(_), &Value::Float(x, _)) => (!x.is_nan()).then_some(Value::Uint(x as u32)),
+        (K::Sint, Some(_), &Value::Float(x, _)) => (!x.is_nan()).then_some(Value::Sint(x as i32)),
+        (K::Uint, Some(_), &Value::Bool(b)) => Some(Value::Uint(u32::from(b))),
+        (K::Sint, Some(_), &Value::Bool(b)) => Some(Value::Sint(i32::from(b))),
+        (K::Uint, _, v) => Some(Value::Uint(bits(v)?)),
+        (K::Sint, _, v) => Some(Value::Sint(bits(v)?.cast_signed())),
+        (K::Bool, Some(_), &Value::Float(x, _)) => Some(Value::Bool(x != 0.0)),
+        (K::Bool, Some(_), &Value::Uint(u)) => Some(Value::Bool(u != 0)),
+        (K::Bool, Some(_), &Value::Sint(i)) => Some(Value::Bool(i != 0)),
+        (K::Bool, Some(_), &Value::Bool(b)) => Some(Value::Bool(b)),
+        _ => None,
+    }
+}
+
+/// The zero value of type `ty`: a scalar, vector, matrix or fixed-size array (WGSL's `T()`).
+fn zero(module: &Module, ty: Handle<naga::Type>) -> Option<Value> {
+    let scalar = |s: Scalar| match s.kind {
+        ScalarKind::Float => Some(float(0.0, s.width)),
+        ScalarKind::Uint => Some(Value::Uint(0)),
+        ScalarKind::Sint => Some(Value::Sint(0)),
+        ScalarKind::Bool => Some(Value::Bool(false)),
+        _ => None,
+    };
+    match module.types[ty].inner {
+        TypeInner::Scalar(s) => scalar(s),
+        TypeInner::Vector { size, scalar: s } => Some(Value::List(vec![scalar(s)?; size as usize])),
+        TypeInner::Matrix {
+            columns,
+            rows,
+            scalar: s,
+        } => Some(Value::List(vec![
+            Value::List(vec![
+                scalar(s)?;
+                rows as usize
+            ]);
+            columns as usize
+        ])),
+        TypeInner::Array {
+            base,
+            size: ArraySize::Constant(n),
+            ..
+        } => Some(Value::List(vec![
+            zero(module, base)?;
+            usize::try_from(n.get()).ok()?
+        ])),
+        _ => None,
+    }
+}
+
+/// WGSL's `extractBits(e, offset, count)` on the scalar `e`: the `count` bits from `offset`, sign-extended for an i32,
+/// with `offset` and `count` clamped to the word.
+fn extract_field(e: &Value, offset: &Value, count: &Value) -> Option<Value> {
+    let (&Value::Uint(o), &Value::Uint(c)) = (offset, count) else {
+        return None;
+    };
+    let o = o.min(32);
+    let c = c.min(32 - o);
+    if c == 0 {
+        return match *e {
+            Value::Uint(_) => Some(Value::Uint(0)),
+            Value::Sint(_) => Some(Value::Sint(0)),
+            _ => None,
+        };
+    }
+    match *e {
+        Value::Uint(u) => Some(Value::Uint((u >> o) & (u32::MAX >> (32 - c)))),
+        Value::Sint(i) => Some(Value::Sint((i << (32 - o - c)) >> (32 - c))),
+        _ => None,
+    }
+}
+
+/// WGSL's `insertBits(e, newbits, offset, count)` on the scalars `e` and `newbits`: `e` with its `count` bits from
+/// `offset` replaced by `newbits`' low bits, `offset` and `count` clamped to the word.
+fn insert_bits(e: &Value, newbits: &Value, offset: &Value, count: &Value) -> Option<Value> {
+    let (&Value::Uint(o), &Value::Uint(c)) = (offset, count) else {
+        return None;
+    };
+    let o = o.min(32);
+    let c = c.min(32 - o);
+    let (x, n) = (bits(e)?, bits(newbits)?);
+    let r = if c == 0 {
+        x
+    } else {
+        let mask = (u32::MAX >> (32 - c)) << o;
+        (x & !mask) + ((n << o) & mask)
+    };
+    match *e {
+        Value::Uint(_) => Some(Value::Uint(r)),
+        _ => Some(Value::Sint(r.cast_signed())),
+    }
+}
+
+/// The u32 whose little-endian bytes are `f` of each component of the vector `v`, in order: WGSL's packing built-ins.
+fn pack(v: &Value, f: &dyn Fn(&Value) -> Option<Vec<u8>>) -> Option<Value> {
+    let Value::List(items) = v else {
+        return None;
+    };
+    let bytes: Vec<u8> = items.iter().map(f).collect::<Option<Vec<_>>>()?.concat();
+    Some(Value::Uint(u32::from_le_bytes(bytes.try_into().ok()?)))
+}
+
+/// A float component's normalised quantisation, `floor(0.5 + scale * min(1, max(low, x)))`: WGSL's `pack*norm`.
+fn quantise(v: &Value, low: f64, scale: f64) -> Option<f64> {
+    let &Value::Float(x, _) = v else {
+        return None;
+    };
+    Some((0.5 + scale * x.max(low).min(1.0)).floor())
+}
+
+/// `f` of each `chunk`-byte group of the u32 `v`'s little-endian bytes, in order: WGSL's unpacking built-ins.
+fn unpack(v: &Value, chunk: usize, f: &dyn Fn(&[u8]) -> Value) -> Option<Value> {
+    let &Value::Uint(u) = v else {
+        return None;
+    };
+    Some(Value::List(u.to_le_bytes().chunks(chunk).map(f).collect()))
+}
+
+/// The i32 of each byte of `u`, sign-extended if `signed`.
+fn byte_values(u: u32, signed: bool) -> [i32; 4] {
+    u.to_le_bytes().map(|b| {
+        if signed {
+            i32::from(b.cast_signed())
+        } else {
+            i32::from(b)
+        }
+    })
+}
+
+/// WGSL's `dot4I8Packed` (`signed`) or `dot4U8Packed` of two u32s: the dot product of their bytes.
+fn packed_dot(a: &Value, b: &Value, signed: bool) -> Option<Value> {
+    let (&Value::Uint(x), &Value::Uint(y)) = (a, b) else {
+        return None;
+    };
+    let sum: i32 = byte_values(x, signed)
+        .iter()
+        .zip(byte_values(y, signed))
+        .map(|(p, q)| p * q)
+        .sum();
+    Some(if signed {
+        Value::Sint(sum)
+    } else {
+        Value::Uint(sum.cast_unsigned())
+    })
+}
+
+/// The bits of each u32 or i32 lane of `args` mapped by `f`, the lane's type kept.
+fn bit_lanes(args: &[Value], f: fn(u32) -> u32) -> Option<Value> {
+    lanes(args, &|lane| match lane[0] {
+        Value::Uint(u) => Some(Value::Uint(f(u))),
+        Value::Sint(i) => Some(Value::Sint(f(i.cast_unsigned()).cast_signed())),
+        _ => None,
+    })
+}
+
+/// The position of `b`'s most significant set bit, or all ones if none is set.
+fn first_leading(b: u32) -> u32 {
+    if b == 0 {
+        u32::MAX
+    } else {
+        31 - b.leading_zeros()
+    }
+}
+
+/// The larger (`max`) or smaller of two scalars of one type (a float's, by `f64::max` and `f64::min`).
+fn min_max(a: &Value, b: &Value, max: bool) -> Option<Value> {
+    match (a, b) {
+        (&Value::Float(x, w), &Value::Float(y, _)) => {
+            Some(float(if max { x.max(y) } else { x.min(y) }, w))
+        }
+        (&Value::Uint(x), &Value::Uint(y)) => {
+            Some(Value::Uint(if max { x.max(y) } else { x.min(y) }))
+        }
+        (&Value::Sint(x), &Value::Sint(y)) => {
+            Some(Value::Sint(if max { x.max(y) } else { x.min(y) }))
+        }
+        _ => None,
+    }
+}
+
+/// The built-in `fun` of `args`, as WGSL evaluates it at run time, over every type WGSL allows it: each built-in
+/// WGSL may call in a constant expression. `None` for naga's `outer` and `inverse`, which WGSL has not, and for a
+/// `smoothstep` whose `low` and `high` are equal, which divides by zero.
+fn math(fun: MathFunction, args: &[Value]) -> Option<Value> {
+    use MathFunction as M;
+    let float1 = |f: fn(f64) -> f64| float_lanes(args, &|x| f(x[0]));
+    let arg = |i: usize| args.get(i);
+    match fun {
+        M::Abs => lanes(args, &|l| match l[0] {
+            Value::Float(x, w) => Some(float(x.abs(), w)),
+            Value::Uint(u) => Some(Value::Uint(u)),
+            Value::Sint(i) => Some(Value::Sint(i.wrapping_abs())),
+            _ => None,
+        }),
+        M::Min => lanes(args, &|l| min_max(&l[0], &l[1], false)),
+        M::Max => lanes(args, &|l| min_max(&l[0], &l[1], true)),
+        M::Clamp => lanes(args, &|l| {
+            min_max(&min_max(&l[0], &l[1], true)?, &l[2], false)
+        }),
+        M::Saturate => float1(|x| x.clamp(0.0, 1.0)),
+        M::Cos => float1(f64::cos),
+        M::Cosh => float1(f64::cosh),
+        M::Sin => float1(f64::sin),
+        M::Sinh => float1(f64::sinh),
+        M::Tan => float1(f64::tan),
+        M::Tanh => float1(f64::tanh),
+        M::Acos => float1(f64::acos),
+        M::Asin => float1(f64::asin),
+        M::Atan => float1(f64::atan),
+        M::Atan2 => float_lanes(args, &|x| x[0].atan2(x[1])),
+        M::Asinh => float1(f64::asinh),
+        M::Acosh => float1(f64::acosh),
+        M::Atanh => float1(f64::atanh),
+        M::Radians => float1(f64::to_radians),
+        M::Degrees => float1(f64::to_degrees),
+        M::Ceil => float1(f64::ceil),
+        M::Floor => float1(f64::floor),
+        M::Round => float1(f64::round_ties_even),
+        M::Fract => float1(|x| x - x.floor()),
+        M::Trunc => float1(f64::trunc),
+        M::Modf => Some(Value::List(vec![
+            float1(|x| x - x.trunc())?,
+            float1(f64::trunc)?,
+        ])),
+        M::Frexp => Some(Value::List(vec![
+            lanes(args, &|l| match l[0] {
+                Value::Float(x, w) => Some(float(frexp(x)?.0, w)),
+                _ => None,
+            })?,
+            lanes(args, &|l| match l[0] {
+                Value::Float(x, _) => Some(Value::Sint(frexp(x)?.1)),
+                _ => None,
+            })?,
+        ])),
+        M::Ldexp => lanes(args, &|l| match (&l[0], &l[1]) {
+            (&Value::Float(x, w), &Value::Sint(e)) => Some(float(round(ldexp(x, e), w), w)),
+            _ => None,
+        }),
+        M::Exp => float1(f64::exp),
+        M::Exp2 => float1(f64::exp2),
+        M::Log => float1(f64::ln),
+        M::Log2 => float1(f64::log2),
+        M::Pow => float_lanes(args, &|x| x[0].powf(x[1])),
+        M::Dot => dot(arg(0)?, arg(1)?),
+        M::Dot4I8Packed => packed_dot(arg(0)?, arg(1)?, true),
+        M::Dot4U8Packed => packed_dot(arg(0)?, arg(1)?, false),
+        M::Cross => cross(arg(0)?, arg(1)?),
+        M::Distance => length(&binary(
+            BinaryOperator::Subtract,
+            arg(0)?.clone(),
+            arg(1)?.clone(),
+        )?),
+        M::Length => length(arg(0)?),
+        M::Normalize => binary(BinaryOperator::Divide, arg(0)?.clone(), length(arg(0)?)?),
+        M::FaceForward => match dot(arg(1)?, arg(2)?)? {
+            Value::Float(d, _) if d < 0.0 => Some(arg(0)?.clone()),
+            _ => lanes(&[arg(0)?.clone()], &|l| unary(UnaryOperator::Negate, &l[0])),
+        },
+        M::Reflect => reflect(arg(0)?, arg(1)?),
+        M::Refract => refract(arg(0)?, arg(1)?, arg(2)?),
+        M::Sign => lanes(args, &|l| match l[0] {
+            Value::Float(x, w) => Some(float(if x == 0.0 { x } else { x.signum() }, w)),
+            Value::Sint(i) => Some(Value::Sint(i.signum())),
+            _ => None,
+        }),
+        M::Fma => float_lanes(args, &|x| x[0].mul_add(x[1], x[2])),
+        M::Mix => float_lanes(args, &|x| x[0] * (1.0 - x[2]) + x[1] * x[2]),
+        M::Step => float_lanes(args, &|x| if x[0] <= x[1] { 1.0 } else { 0.0 }),
+        M::SmoothStep => lanes(args, &|l| {
+            let (x, w) = floats_of(l)?;
+            if x[0] == x[1] {
+                return None;
+            }
+            let t = ((x[2] - x[0]) / (x[1] - x[0])).clamp(0.0, 1.0);
+            Some(float(round(t * t * (3.0 - 2.0 * t), w), w))
+        }),
+        M::Sqrt => float1(f64::sqrt),
+        M::InverseSqrt => float1(|x| 1.0 / x.sqrt()),
+        M::Transpose => {
+            let columns = matrix(arg(0)?)?;
+            let rows = (0..columns.first()?.len())
+                .map(|i| Value::List(columns.iter().map(|c| c[i].clone()).collect()))
+                .collect();
+            Some(Value::List(rows))
+        }
+        M::Determinant => determinant(&matrix(arg(0)?)?),
+        M::QuantizeToF16 => float1(round_f16),
+        M::CountTrailingZeros => bit_lanes(args, u32::trailing_zeros),
+        M::CountLeadingZeros => bit_lanes(args, u32::leading_zeros),
+        M::CountOneBits => bit_lanes(args, u32::count_ones),
+        M::ReverseBits => bit_lanes(args, u32::reverse_bits),
+        M::FirstTrailingBit => {
+            bit_lanes(args, |b| if b == 0 { u32::MAX } else { b.trailing_zeros() })
+        }
+        M::FirstLeadingBit => lanes(args, &|l| match l[0] {
+            Value::Uint(u) => Some(Value::Uint(first_leading(u))),
+            // An i32's highest bit that differs from its sign bit: the highest set bit of it, or of its complement.
+            Value::Sint(i) => {
+                let b = if i < 0 { !i } else { i };
+                Some(Value::Sint(first_leading(b.cast_unsigned()).cast_signed()))
+            }
+            _ => None,
+        }),
+        M::ExtractBits => lanes(args, &|l| extract_field(&l[0], &l[1], &l[2])),
+        M::InsertBits => lanes(args, &|l| insert_bits(&l[0], &l[1], &l[2], &l[3])),
+        M::Pack4x8snorm => pack(arg(0)?, &|v| {
+            Some(vec![(quantise(v, -1.0, 127.0)? as i8).cast_unsigned()])
+        }),
+        M::Pack4x8unorm => pack(arg(0)?, &|v| Some(vec![quantise(v, 0.0, 255.0)? as u8])),
+        M::Pack2x16snorm => pack(arg(0)?, &|v| {
+            Some((quantise(v, -1.0, 32767.0)? as i16).to_le_bytes().to_vec())
+        }),
+        M::Pack2x16unorm => pack(arg(0)?, &|v| {
+            Some((quantise(v, 0.0, 65535.0)? as u16).to_le_bytes().to_vec())
+        }),
+        M::Pack2x16float => pack(arg(0)?, &|v| match *v {
+            Value::Float(x, _) => Some(f16_bits(x).to_le_bytes().to_vec()),
+            _ => None,
+        }),
+        M::Pack4xI8 | M::Pack4xU8 => pack(arg(0)?, &|v| Some(vec![bits(v)?.to_le_bytes()[0]])),
+        M::Pack4xI8Clamp => pack(arg(0)?, &|v| match *v {
+            Value::Sint(i) => Some(vec![(i.clamp(-128, 127) as i8).cast_unsigned()]),
+            _ => None,
+        }),
+        M::Pack4xU8Clamp => pack(arg(0)?, &|v| match *v {
+            Value::Uint(u) => Some(vec![u.min(255) as u8]),
+            _ => None,
+        }),
+        M::Unpack4x8snorm => unpack(arg(0)?, 1, &|b| {
+            float(
+                round((f64::from(b[0].cast_signed()) / 127.0).max(-1.0), 4),
+                4,
+            )
+        }),
+        M::Unpack4x8unorm => unpack(arg(0)?, 1, &|b| float(round(f64::from(b[0]) / 255.0, 4), 4)),
+        M::Unpack2x16snorm => unpack(arg(0)?, 2, &|b| {
+            let s = i16::from_le_bytes([b[0], b[1]]);
+            float(round((f64::from(s) / 32767.0).max(-1.0), 4), 4)
+        }),
+        M::Unpack2x16unorm => unpack(arg(0)?, 2, &|b| {
+            float(
+                round(f64::from(u16::from_le_bytes([b[0], b[1]])) / 65535.0, 4),
+                4,
+            )
+        }),
+        M::Unpack2x16float => unpack(arg(0)?, 2, &|b| {
+            float(f16_value(u16::from_le_bytes([b[0], b[1]])), 4)
+        }),
+        M::Unpack4xI8 => unpack(arg(0)?, 1, &|b| Value::Sint(i32::from(b[0].cast_signed()))),
+        M::Unpack4xU8 => unpack(arg(0)?, 1, &|b| Value::Uint(u32::from(b[0]))),
+        M::Outer | M::Inverse => None,
+    }
+}
+
+/// The value of `h`, if it is a constant expression: a literal (float, u32, i32 or bool); a module constant; a zero
+/// value; a unary or binary operator on constants, a matrix product included; a splat; a vector, matrix or array
+/// built of constants, one of its components, or a swizzle; a `select` or an `all` or `any` of them; any built-in
+/// function WGSL allows in a constant expression ([`math`]); a conversion or a `bitcast` of a constant. Each is
+/// evaluated as WGSL does at run time, float arithmetic in the operands' precision (f32 for f32). `None` otherwise.
+/// A bool `&&` or `||` over a runtime value is no expression in naga's IR: naga lowers it, short-circuiting, to an
+/// `if` that stores to a variable, which is not followed.
 fn evaluate(module: &Module, arena: &Arena<Expression>, h: Handle<Expression>) -> Option<Value> {
     let value = |e| evaluate(module, arena, e);
     match arena[h] {
-        Expression::Literal(Literal::F64(v)) => Some(Value::Float(v, 8)),
-        Expression::Literal(Literal::F32(v)) => Some(Value::Float(f64::from(v), 4)),
-        Expression::Literal(Literal::F16(v)) => Some(Value::Float(v.to_f64(), 2)),
-        Expression::Literal(Literal::U32(b)) => Some(Value::Bits(b)),
-        Expression::Literal(Literal::I32(i)) => {
-            Some(Value::Bits(u32::from_ne_bytes(i.to_ne_bytes())))
-        }
+        Expression::Literal(literal) => match literal {
+            Literal::F64(v) => Some(float(v, 8)),
+            Literal::F32(v) => Some(float(f64::from(v), 4)),
+            Literal::F16(v) => Some(float(v.to_f64(), 2)),
+            Literal::U32(u) => Some(Value::Uint(u)),
+            Literal::I32(i) => Some(Value::Sint(i)),
+            Literal::Bool(b) => Some(Value::Bool(b)),
+            _ => None,
+        },
         Expression::Constant(c) => {
             evaluate(module, &module.global_expressions, module.constants[c].init)
         }
-        Expression::Unary {
-            op: UnaryOperator::Negate,
-            expr,
-        } => value(expr)?.map_float(&|v| -v),
+        Expression::ZeroValue(ty) => zero(module, ty),
+        Expression::Unary { op, expr } => lanes(&[value(expr)?], &|l| unary(op, &l[0])),
         Expression::Splat { size, value: v } => Some(Value::List(vec![value(v)?; size as usize])),
         Expression::Compose { ty, ref components } => {
             let parts = components
@@ -1025,10 +1710,12 @@ fn evaluate(module: &Module, arena: &Arena<Expression>, h: Handle<Expression>) -
         }
         Expression::AccessIndex { base, index } => value(base)?.index(usize::try_from(index).ok()?),
         Expression::Access { base, index } => {
-            let Value::Bits(i) = value(index)? else {
-                return None;
+            let i = match value(index)? {
+                Value::Uint(i) => usize::try_from(i).ok()?,
+                Value::Sint(i) => usize::try_from(i).ok()?,
+                _ => return None,
             };
-            value(base)?.index(usize::try_from(i).ok()?)
+            value(base)?.index(i)
         }
         Expression::Swizzle {
             size,
@@ -1042,57 +1729,59 @@ fn evaluate(module: &Module, arena: &Arena<Expression>, h: Handle<Expression>) -
                 .collect::<Option<_>>()?;
             Some(Value::List(picks))
         }
-        Expression::Binary { op, left, right } => {
-            let f: fn(f64, f64) -> f64 = match op {
-                BinaryOperator::Add => |a, b| a + b,
-                BinaryOperator::Subtract => |a, b| a - b,
-                BinaryOperator::Multiply => |a, b| a * b,
-                BinaryOperator::Divide => |a, b| a / b,
-                BinaryOperator::Modulo => |a, b| a % b,
-                _ => return None,
+        Expression::Binary { op, left, right } => binary(op, value(left)?, value(right)?),
+        Expression::Select {
+            condition,
+            accept,
+            reject,
+        } => lanes(
+            &[value(condition)?, value(accept)?, value(reject)?],
+            &|l| match l[0] {
+                Value::Bool(c) => Some(l[if c { 1 } else { 2 }].clone()),
+                _ => None,
+            },
+        ),
+        Expression::Relational {
+            fun: fun @ (RelationalFunction::All | RelationalFunction::Any),
+            argument,
+        } => {
+            let v = value(argument)?;
+            let items = match &v {
+                Value::List(items) => items.as_slice(),
+                scalar => std::slice::from_ref(scalar),
             };
-            value(left)?.zip(&value(right)?, &f)
+            let bools = items
+                .iter()
+                .map(|b| match *b {
+                    Value::Bool(b) => Some(b),
+                    _ => None,
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(Value::Bool(if fun == RelationalFunction::All {
+                bools.iter().all(|&b| b)
+            } else {
+                bools.iter().any(|&b| b)
+            }))
         }
         Expression::Math {
             fun,
             arg,
             arg1,
             arg2,
-            ..
+            arg3,
         } => {
-            let x = value(arg)?;
-            match fun {
-                MathFunction::Abs => x.map_float(&f64::abs),
-                MathFunction::Sign => x.map_float(&|v| if v == 0.0 { v } else { v.signum() }),
-                MathFunction::Saturate => x.map_float(&|v| v.clamp(0.0, 1.0)),
-                MathFunction::Floor => x.map_float(&f64::floor),
-                MathFunction::Ceil => x.map_float(&f64::ceil),
-                MathFunction::Trunc => x.map_float(&f64::trunc),
-                MathFunction::Round => x.map_float(&f64::round_ties_even),
-                MathFunction::Min => x.zip(&value(arg1?)?, &f64::min),
-                MathFunction::Max => x.zip(&value(arg1?)?, &f64::max),
-                MathFunction::Clamp => x
-                    .zip(&value(arg1?)?, &f64::max)?
-                    .zip(&value(arg2?)?, &f64::min),
-                _ => None,
-            }
+            let args = [Some(arg), arg1, arg2, arg3]
+                .into_iter()
+                .flatten()
+                .map(value)
+                .collect::<Option<Vec<_>>>()?;
+            math(fun, &args)
         }
         Expression::As {
             expr,
-            kind: ScalarKind::Float,
-            convert: None,
-        } => value(expr)?.map(&|scalar| match *scalar {
-            Value::Bits(b) => Some(Value::Float(f64::from(f32::from_bits(b)), 4)),
-            _ => None,
-        }),
-        Expression::As {
-            expr,
-            kind: ScalarKind::Float,
-            convert: Some(width),
-        } => value(expr)?.map(&|scalar| match *scalar {
-            Value::Float(v, _) => Some(Value::Float(round(v, width), width)),
-            _ => None,
-        }),
+            kind,
+            convert,
+        } => lanes(&[value(expr)?], &|l| cast(&l[0], kind, convert)),
         _ => None,
     }
 }
