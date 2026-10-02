@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 
 ## Sections
 
-1056 sections in 46 files: 877 yield at least one requirement; 179 yield none and are listed below with the reason.
+1057 sections in 46 files: 877 yield at least one requirement; 180 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 132 |
+| informative only | 133 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -141,6 +141,7 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 | R-363 — RQ-194's A1–A4 are accepted as built; TASK-M0-51 has no physics review *(closes RQ-194 A and C)* | informative only | process ruling; closes RQ-194 A and C: R-357's, R-358's and R-359's items applied per R-204 (A1–A4) are accepted and their marks name it, and TASK-M0-51 has no physics review for R-358's diff case; REQ-TOOL-119's note names it; archives RQ-194; changes no requirement's statement or verify |
 | R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them | informative only | accepts PR #114's veto items but item 2 (replaced by R-359) and TASK-M0-15's seven items applied per R-204 (PR #116), the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them; changes no requirement |
 | R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)* | informative only | closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement |
+| R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)* | informative only | closes RQ-197 (option 1): a named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit qa changes only the CI step matches in qa_TASK-M0-22_r235.rs and support/qa_m0_01.rs to the exact sharded forms, and the code reviewer confirms nothing else changed; the ci job's nextest shards use --partition hash:<k>/4, not slice:; PR #117's other items stand (4 shards, ci-checks, doctests in shard 1, the gate jobs, shared cache keys); a shard still over ~10.5 min is answered by splitting the long tests, first qa_cargo_xtask_alias_runs_deps, before raising n; its number is open in RQ-198; plan/OPERATIONS.md lists the exception; archives RQ-197; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

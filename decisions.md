@@ -2816,10 +2816,11 @@ agent is dispatched with the ruling, in the human's words, in its opening prompt
 re-dispatched that way.
 
 ## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
-*Amended by R-335, R-336 and R-342.*
-*Still in force: all of it; R-335, R-336 and R-342 each name test files, with implementer commits, that qa may change
-under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch
-cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346).*
+*Amended by R-335, R-336, R-342 and R-366.*
+*Still in force: all of it; R-335, R-336, R-342 and R-366 each name test files, with implementer commits, that qa may
+change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's
+scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346;
+TASK-M0-45's CI step matches in `qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3692,10 +3693,13 @@ archived unchanged in `docs/archive/review_queue/M0.md` with this ruling's port,
 #96's next fix pass deletes its open copy from `REVIEW_QUEUE.md`. Changes no requirement.
 
 ## R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
-*Amended by R-360.*
+*Amended by R-360 and R-366.*
 *Still in force: all of it but how the `xtask-ci` job is sharded: it runs no nextest, so `cargo xtask ci --partition
 k/4` runs it as 4 parallel jobs, the controls assigned by a stable hash of the control name, each control run once
-across them (R-360). The `ci` job's nextest run is sharded as written, and the splits stand.*
+across them (R-360). The `ci` job's nextest run is sharded as written, as 4 shards of `--partition hash:<k>/4`
+(R-366), and the splits stand; a shard still over ~10.5 min is answered by splitting further, first
+`qa_cargo_xtask_alias_runs_deps`, before raising n (R-366). R-366 also lets qa change TASK-M0-45's CI step matches in
+`qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076, REQ-SYS-077 (new), TASK-M0-14 (PR #96) and TASK-M0-45 (new)*
 
 "2 B: accept the overrun on #96, and make the sharding the next M0 task at high priority. It should also split the
@@ -4718,6 +4722,9 @@ folder, and the path is printed, like any other failure (R-342)."
 Changes REQ-VAL-178's statement and verify detail; TASK-M0-48 builds it. PR #114 needs a fix round to build it.
 
 ## R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*
+*Amended by R-366.*
+*Still in force: all of it; R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable
+assignment like the controls' slices, and prefers splitting the long tests to raising n.*
 *2 Oct 2026 · applied in decisions.md (R-336's lines), REQ-SYS-077 (reqio), TASK-M0-45 and REVIEW_QUEUE.md (RQ-193
 archived, RQ-196 filed)*
 
@@ -4917,3 +4924,70 @@ check, as REQ-RENDER-019 says. This also settles #116's veto item. Merge
 - R-365 is in the "one-off" group of `plan/rule_groups.yaml`, beside R-364; `plan/section_notes.yaml` gives its line.
 
 Changes no requirement.
+
+## R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)*
+*2 Oct 2026 · applied in decisions.md (R-290's, R-336's and R-360's lines), TASK-M0-45, `plan/OPERATIONS.md` § "qa
+commits", PR #117 (TASK-M0-45) and REVIEW_QUEUE.md (RQ-197 archived, RQ-198 filed)*
+
+"This is from me. RQ-197: option 1 (R-365). A named R-290 exception: in
+TASK-M0-45's qa commit, qa changes only the CI step matches in
+qa_TASK-M0-22_r235.rs and support/qa_m0_01.rs to the exact sharded
+forms; the code reviewer confirms nothing else changed. #117's veto
+items: 4 shards, ci-checks, doctests in shard 1, the gate jobs and
+shared cache keys stand. nextest uses --partition hash:<k>/4, not
+slice: (stable assignment, consistent with R-360). If shards are still
+over ~10.5 min after qa's commit, prefer splitting the long tests (first
+qa_cargo_xtask_alias_runs_deps) over raising n."
+
+The human's text says R-365, which was already taken by the RQ-196 ruling; recorded as R-366, applied per R-204 — veto?
+Open in RQ-198. That is how R-348's number was handled when the human's message named R-347, already taken.
+
+*Applied:*
+- **What it settles.** "option 1" is RQ-197's first option, its recommended one. Sharding the `ci` and `xtask-ci` jobs
+  (R-336, R-360) leaves no step reading the literal `run: cargo nextest run --workspace` or bare `run: cargo xtask ci`,
+  since nextest takes `--partition` only on its command line, and five qa test files match those lines exactly. Two of
+  them, `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`, have implementer commits, so R-290
+  barred both qa and the implementer from them.
+- **The exception.** A named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit, qa changes only
+  the CI step matches in `xtask/tests/qa_TASK-M0-22_r235.rs` (`check_controls_job_beside_the_tests`'s two single-job
+  matches) and `xtask/tests/support/qa_m0_01.rs` (`check_the_ci_workflow`'s two commands) to the exact sharded forms,
+  `cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4` and
+  `cargo xtask ci --partition ${{ matrix.shard }}/4`, and, as option 1 has it, moves those checks' negative controls'
+  edit targets so they match again. Nothing else in the two files changes, and the code reviewer confirms it. The
+  orchestrator's R-237 check accepts `M` on these two files in that commit. The three qa-only files RQ-197 names
+  (`qa_TASK-M0-14_r335.rs`, `qa_TASK-M0-33.rs`, `qa_TASK-M0-14_rust_gpu_cache.rs`) need no exception: qa changes
+  their step matches the same way under R-290 itself, a ruling having changed the behaviour they test. The implementer
+  still never edits any of them. R-290 gains R-366 in its forward and "Still in force" lines.
+- **nextest's partition.** The `ci` job's sharded nextest runs use `--partition hash:<k>/4`, nextest's hash-based
+  assignment, which gives a test the same shard whatever else is in the list, as R-360 gives a control the same slice;
+  not `slice:<k>/4`, which counts through the list, so adding or removing a test moves others between shards. RQ-197's
+  option 1 quoted the `slice:` form, as the branch then had it; "the exact sharded forms" are the `hash:` ones. R-336
+  ("it shards the nextest runs of the `ci` … job") and R-360 ("sharded with nextest's `--partition`, as R-336 has it")
+  named no form; each gains a forward line and a "Still in force" line naming it. PR #117 already uses `hash:`
+  (53f9ea9).
+- **#117's items applied per R-204.** PR #117's (TASK-M0-45) "Applied per R-204" list is in its PR body only, not on
+  `main` or this branch, so no mark here changes; #117's body names R-366 against each. They stand, but one:
+  1. the `ci` job runs as 4 shards: stands;
+  2. nextest's `slice:` partition: amended, to `hash:<k>/4`, as above;
+  3. fmt, clippy, the build and `cargo xtask deps` run once, in a new job, `ci-checks`: stands;
+  4. the doctests run in `ci` shard 1 only: stands;
+  5. two gate jobs, named `ci` and `xtask-ci` for the required checks they carry (R-266), each passing only when every
+     shard it gathers succeeded: stand;
+  6. a matrix's shards share their job's cache keys, every shard saves on `main` (R-326), and the first save of a key
+     stands: stands. Each key still names its job, the matrix job, as R-285 and TASK-M0-45 ask.
+  Build-kernel in every `xtask-ci` shard was ruled by R-365 (RQ-196 A1). The listing findings reported by shard 1 carry
+  no mark: R-360 leaves that to the implementation.
+- **If a shard is still over ~10.5 min after qa's commit,** the long tests that bound it are split further, first
+  `qa_cargo_xtask_alias_runs_deps` in `xtask/tests/qa_TASK-M0-01.rs`, in preference to raising n above 4. R-336 already
+  asks for the splits; this orders the remedy. Raising n would still need a ruling, since R-360 sets n = 4.
+- **Plan.** TASK-M0-45's `ci.yml` deliverable names `--partition hash:<k>/4`, its Deliverables, acceptance tests and
+  Notes name the exception and the remedy's order, and its Notes say the R-237 check accepts `M` on the two files. `plan/OPERATIONS.md` § "qa
+  commits" lists R-366 among the named exceptions. CLAUDE.md, `plan/WORKFLOW.md` and the agents' files list none, so
+  they are unchanged. REQ-SYS-077's statement and verify name no partition form and stand as written; no requirement
+  carries `rq: [RQ-197]` on `main` (that branch's 8b0d61b cleared it there).
+- **RQ-197** was filed on `task/TASK-M0-45` (c28735b) and removed from that branch's queue by 8b0d61b, so it was never
+  open on `main`. It is archived, as filed, in `docs/archive/review_queue/M0.md` with its Ruling line (R-292), so its id
+  resolves on `main`.
+- R-366 is in the "process" group of `plan/rule_groups.yaml`, beside R-335; `plan/section_notes.yaml` gives its line.
+
+Changes no requirement. TASK-M0-45 builds it.

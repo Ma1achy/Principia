@@ -20,6 +20,7 @@ wall-clock time is then ~10.5 min or less.
 
 ## References
 - `decisions.md` § "R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*"
+- `decisions.md` § "R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)*"
 - `decisions.md` § "R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*"
 - `decisions.md` § "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
 - `decisions.md` § "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
@@ -33,8 +34,8 @@ wall-clock time is then ~10.5 min or less.
 - `decisions.md` § "R-344 — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*"
 
 ## Deliverables
-- `.github/workflows/ci.yml`: the `ci` job's nextest runs run as parallel shards (nextest's `--partition`), the
-  shards together running every test the unsharded run did, in both feature sets. The `xtask-ci` job becomes 4
+- `.github/workflows/ci.yml`: the `ci` job's nextest runs run as 4 parallel shards, each with nextest's
+  `--partition hash:<k>/4`, not `slice:` (R-366), the shards together running every test the unsharded run did, in both feature sets. The `xtask-ci` job becomes 4
   parallel jobs, each running `cargo xtask ci --partition <k>/4` for k = 1 to 4 (R-360). Each shard job keeps its
   job's caches and their R-326 save rule, and its key names the shard's job (R-285).
 - `xtask/src/main.rs`, `xtask/src/ci.rs` and `xtask/src/controls.rs`: `cargo xtask ci --partition <k>/<n>` and
@@ -55,6 +56,13 @@ wall-clock time is then ~10.5 min or less.
   `xtask/tests/qa_TASK-M0-01.rs`, and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites in
   `crates/validation/tests/`, into tests each short enough not to hold a shard over its target. Every assertion and
   its negative control is kept (R-176), and `qa_cargo_xtask_alias_runs_deps`'s listing-only form stays (REQ-VAL-166).
+- The CI step matches, made by qa in this task's qa commit (R-366, a named exception to R-290): in
+  `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`, qa changes only the matches of the
+  unsharded steps to the exact sharded forms, `cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4`
+  and `cargo xtask ci --partition ${{ matrix.shard }}/4`, with their controls' edit targets moved to match; nothing
+  else in the two files changes. The three qa-only files that match those lines (`qa_TASK-M0-14_r335.rs`,
+  `qa_TASK-M0-33.rs`, `qa_TASK-M0-14_rust_gpu_cache.rs`) change the same way under R-290. The implementer does not
+  edit any of them.
 - The PR shows each CI job's warm wall time, and a cold one, against ~10.5 min, and names the new jobs to add to
   branch protection's required checks.
 
@@ -72,8 +80,12 @@ wall-clock time is then ~10.5 min or less.
   with a finding (REQ-VAL-166).
 - Review checklist (code) — each split moves tests and controls without weakening an assertion; the PR lists each `M`
   and `D` line of qa's commit with its reason (R-290, R-336).
+- Review checklist (code) — in `qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`, qa's commit changes only the CI step
+  matches and their controls' edit targets, to the exact sharded forms; nothing else in them changed (R-366).
 - CI log on the PR head — each CI job's warm wall time is ~10.5 min or less; a job still over it is named in the PR
-  and goes back to the human, not accepted silently (REQ-SYS-077, R-325).
+  and goes back to the human, not accepted silently (REQ-SYS-077, R-325). If shards are still over ~10.5 min after
+  qa's commit, the long tests are split further, first `qa_cargo_xtask_alias_runs_deps`, in preference to raising n
+  (R-366).
 
 ## Notes
 - High priority: the next M0 task to start once TASK-M0-14 (PR #96) merges (R-336).
@@ -88,3 +100,11 @@ wall-clock time is then ~10.5 min or less.
   files split from them, in that commit. The implementer does not edit them.
 - `qa_TASK-M0-22_r235.rs` reads the `xtask-ci` job's structure, and R-335's exception covers only its `if:` check. If
   sharding would make any other of its checks fail, that goes to REVIEW_QUEUE before the file changes (R-290).
+- That happened: RQ-197, ruled by R-366 (2 Oct 2026, option 1). qa's commit may change only the CI step matches in
+  `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`, a named exception to R-290 as R-335 and
+  R-336 are, and the code reviewer confirms nothing else in them changed. The orchestrator's R-237 check accepts `M`
+  on those two files in that commit.
+- R-366 also settles PR #117's items applied per R-204: 4 `ci` shards, the `ci-checks` job, the doctests in shard 1,
+  the gate jobs named `ci` and `xtask-ci`, and the shards' shared cache keys stand; nextest's `slice:` partition
+  becomes `hash:<k>/4`. If a shard is still over ~10.5 min after qa's commit, split the long tests further, first
+  `qa_cargo_xtask_alias_runs_deps`, rather than raising n.

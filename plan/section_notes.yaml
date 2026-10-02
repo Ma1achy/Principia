@@ -775,3 +775,7 @@
   section: "R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)*"
   reason: informative only
   note: "closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement"
+- file: decisions.md
+  section: "R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)*"
+  reason: informative only
+  note: "closes RQ-197 (option 1): a named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit qa changes only the CI step matches in qa_TASK-M0-22_r235.rs and support/qa_m0_01.rs to the exact sharded forms, and the code reviewer confirms nothing else changed; the ci job's nextest shards use --partition hash:<k>/4, not slice:; PR #117's other items stand (4 shards, ci-checks, doctests in shard 1, the gate jobs, shared cache keys); a shard still over ~10.5 min is answered by splitting the long tests, first qa_cargo_xtask_alias_runs_deps, before raising n; its number is open in RQ-198; plan/OPERATIONS.md lists the exception; archives RQ-197; changes no requirement"

@@ -171,7 +171,8 @@ qa commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing it
    (R-237).
 3. Each line is `A`, or `M` or `D` on a file whose every earlier commit, by `git log --format=%s -- <file>`, is a qa
    commit (R-290), or on a file a ruling names as an exception: R-335 (`xtask/tests/qa_TASK-M0-22_r235.rs`), R-336
-   (TASK-M0-45's test splits) and R-342 (the two `qa_TASK-M0-38.rs` files).
+   (TASK-M0-45's test splits), R-342 (the two `qa_TASK-M0-38.rs` files) and R-366 (TASK-M0-45's CI step matches in
+   `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`).
 4. Push with `git push origin HEAD:task/<TASK-id>` and confirm with `git ls-remote`. Add each `M` or `D` line to the
    PR description, with its reason.
 
