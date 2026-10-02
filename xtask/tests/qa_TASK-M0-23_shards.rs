@@ -26,6 +26,10 @@ use std::process::Command;
 use validation::negative_control;
 use validation::spawn::{write_executable, Spawn};
 
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -37,13 +41,10 @@ fn mutants_yml() -> String {
     std::fs::read_to_string(root().join(".github/workflows/mutants.yml")).expect("mutants.yml")
 }
 
-/// A fresh directory for one call: tests and their controls run in parallel, so each call gets its own.
-fn scratch(tag: &str) -> PathBuf {
-    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("qa23s_{}_{n}_{tag}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
+/// A fresh directory for one call: tests and their controls run in parallel, so each call gets its own. Deleted when
+/// the test passes, kept with its path printed when it fails (R-342); the callers hold it until their test ends.
+fn scratch(tag: &str) -> Scratch {
+    let dir = Scratch::new(&format!("qa23s_{tag}"));
     std::fs::create_dir_all(&dir).expect("scratch dir");
     dir
 }
@@ -317,7 +318,7 @@ mod no_limit {
 
 /// The shard step's script run with a stand-in `cargo` that exits `code`, having written an `outcomes.json` or not:
 /// whether the step passed, and whether it marked the shard as tested for the check.
-fn run_shard(script: &str, tag: &str, code: i32, writes: bool) -> (bool, bool, String) {
+fn run_shard(script: &str, tag: &str, code: i32, writes: bool) -> (bool, bool, String, Scratch) {
     let dir = scratch(&format!("shard_{tag}"));
     let bin = dir.join("bin");
     std::fs::create_dir_all(&bin).expect("bin");
@@ -344,19 +345,19 @@ fn run_shard(script: &str, tag: &str, code: i32, writes: bool) -> (bool, bool, S
         .unwrap_or_default()
         .lines()
         .any(|l| l.trim() == "tested=true");
-    (ok, tested, log)
+    (ok, tested, log, dir)
 }
 
 /// R-302 / R-202: a shard passes its run step only having tested its mutants (outcomes written, then checked), or on
 /// exit 0 with nothing to test; any other exit, or a survivor exit with no outcomes, fails it.
 fn untested_shard_fails(script: &str) {
-    let (ok, tested, log) = run_shard(script, "shard_none", 0, false);
+    let (ok, tested, log, _dir) = run_shard(script, "shard_none", 0, false);
     assert!(
         ok && !tested,
         "qa23s: a shard with nothing to test failed: {log}"
     );
     for (code, tag) in [(2, "survivors"), (3, "timeouts"), (0, "tested_clean")] {
-        let (ok, tested, log) = run_shard(script, tag, code, true);
+        let (ok, tested, log, _dir) = run_shard(script, tag, code, true);
         assert!(
             ok && tested,
             "qa23s: a shard that tested its mutants (exit {code}) is not passed to the check: {log}"
@@ -368,13 +369,13 @@ fn untested_shard_fails(script: &str) {
         (1, "usage"),
         (4, "baseline"),
     ] {
-        let (ok, _, log) = run_shard(script, tag, code, false);
+        let (ok, _, log, _dir) = run_shard(script, tag, code, false);
         assert!(
             !ok,
             "qa23s: a shard that tested nothing passed (exit {code}): {log}"
         );
     }
-    let (ok, _, log) = run_shard(script, "baseline_written", 4, true);
+    let (ok, _, log, _dir) = run_shard(script, "baseline_written", 4, true);
     assert!(!ok, "qa23s: a shard whose baseline failed passed: {log}");
 }
 
@@ -428,7 +429,7 @@ fn aggregate(
     n: u32,
     result: &str,
     survivors: &[(u32, &str)],
-) -> (bool, String) {
+) -> (bool, String, Scratch) {
     let temp = scratch(&format!("agg_{tag}"));
     for k in 0..n {
         let missed: Vec<&str> = survivors
@@ -440,17 +441,18 @@ fn aggregate(
     }
     let xtask = format!("\"{}\"", env!("CARGO_BIN_EXE_xtask"));
     let script = expand(script, &[("needs.mutants.result", result)]).replace("cargo xtask", &xtask);
-    bash(&script, &[("RUNNER_TEMP", &temp)], None)
+    let (ok, log) = bash(&script, &[("RUNNER_TEMP", &temp)], None);
+    (ok, log, temp)
 }
 
 /// R-302 / R-202: the aggregate passes only when every shard succeeded and no shard's report holds an unlisted
 /// survivor; a shard cut off (the matrix job's result `cancelled` or `failure`) fails it with an error, and survivors
 /// in any shards, the last included, are each named.
 fn aggregate_covers_every_shard(script: &str, n: u32) {
-    let (ok, log) = aggregate(script, "clean", n, "success", &[]);
+    let (ok, log, _dir) = aggregate(script, "clean", n, "success", &[]);
     assert!(ok, "qa23s: the aggregate failed a clean sharded run: {log}");
     for result in ["failure", "cancelled"] {
-        let (ok, log) = aggregate(script, &format!("cut_{result}"), n, result, &[]);
+        let (ok, log, _dir) = aggregate(script, &format!("cut_{result}"), n, result, &[]);
         assert!(
             !ok && log.contains("::error::"),
             "qa23s: the aggregate passed though a shard was cut off or failed ({result}): {log}"
@@ -458,7 +460,7 @@ fn aggregate_covers_every_shard(script: &str, n: u32) {
     }
     let first = "src/b.rs:2:3: replace == with != in g";
     let last = "src/c.rs:4:5: delete ! in h";
-    let (ok, log) = aggregate(
+    let (ok, log, _dir) = aggregate(
         script,
         "survivors",
         n,

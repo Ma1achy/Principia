@@ -35,6 +35,10 @@ use serde_json::Value;
 use validation::negative_control;
 use validation::spawn::{write_executable, Spawn};
 
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -51,13 +55,10 @@ fn mutants_yml() -> String {
     workflow_text("mutants.yml")
 }
 
-/// A fresh directory for one call: tests and their controls run in parallel, so each call gets its own.
-fn scratch(tag: &str) -> PathBuf {
-    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("qa23r_{}_{n}_{tag}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
+/// A fresh directory for one call: tests and their controls run in parallel, so each call gets its own. Deleted when
+/// the test passes, kept with its path printed when it fails (R-342).
+fn scratch(tag: &str) -> Scratch {
+    let dir = Scratch::new(&format!("qa23r_{tag}"));
     std::fs::create_dir_all(&dir).expect("scratch dir");
     dir
 }
@@ -222,6 +223,8 @@ struct Env {
     temp: PathBuf,
     bin: PathBuf,
     calls: PathBuf,
+    /// The scratch folder holding `temp`, `bin` and `calls`, handed to the job's run and held until its test ends.
+    dir: Scratch,
 }
 
 /// A stand-in `cargo` in `bin`: `cargo xtask …` runs the built xtask; anything else is recorded, one call a line,
@@ -262,6 +265,7 @@ fn env(tag: &str, cwd: &Path) -> Env {
         temp,
         bin,
         calls,
+        dir,
     }
 }
 
@@ -270,10 +274,12 @@ struct JobRun {
     success: bool,
     log: String,
     calls: Vec<String>,
+    /// The run's scratch folder, held until the test that made it ends.
+    _scratch: Scratch,
 }
 
 /// Runs job `name` of `wf` as a runner would, under `ctx` (event, matrix shard, needs results).
-fn run_job(wf: &Value, name: &str, mut ctx: Ctx, env: &Env) -> JobRun {
+fn run_job(wf: &Value, name: &str, mut ctx: Ctx, env: Env) -> JobRun {
     let job = &wf["jobs"][name];
     assert!(job.is_object(), "qa23r: no `{name}` job in the workflow");
     if !ctx.job_holds(job.get("if")) {
@@ -282,6 +288,7 @@ fn run_job(wf: &Value, name: &str, mut ctx: Ctx, env: &Env) -> JobRun {
             success: false,
             log: String::new(),
             calls: Vec::new(),
+            _scratch: env.dir,
         };
     }
     let job_env: Vec<(String, String)> = job
@@ -345,6 +352,7 @@ fn run_job(wf: &Value, name: &str, mut ctx: Ctx, env: &Env) -> JobRun {
         success: !ctx.failed,
         log,
         calls,
+        _scratch: env.dir,
     }
 }
 
@@ -383,7 +391,7 @@ fn git(dir: &Path, args: &[&str]) {
 
 /// The PR's repository: a base commit, `refs/remotes/origin/main` at it (unless `with_base` is false), and the PR's
 /// changes committed on top.
-fn pr(tag: &str, ops: &[Op], with_base: bool) -> PathBuf {
+fn pr(tag: &str, ops: &[Op], with_base: bool) -> Scratch {
     let dir = scratch(&format!("repo_{tag}"));
     let put = |rel: &str, body: &str| {
         let p = dir.join(rel);
@@ -444,7 +452,7 @@ fn shards_on(yml: &str, repo: &Path, tag: &str) -> Vec<(String, JobRun)> {
             let mut ctx = Ctx::new("pull_request");
             ctx.shard = Some(k.clone());
             let e = env(&format!("{tag}_shard{k}"), repo);
-            let run = run_job(&wf, "mutants", ctx, &e);
+            let run = run_job(&wf, "mutants", ctx, e);
             (k, run)
         })
         .collect()
@@ -467,7 +475,7 @@ fn aggregate(yml: &str, result: &str, tag: &str, event: &str) -> JobRun {
     let mut ctx = Ctx::new(event);
     ctx.needs.insert("mutants".to_owned(), result.to_owned());
     let e = env(&format!("agg_{tag}"), &root());
-    run_job(&wf, "mutants-check", ctx, &e)
+    run_job(&wf, "mutants-check", ctx, e)
 }
 
 fn no_mutant_passes(yml: &str, tag: &str, ops: &[Op]) {

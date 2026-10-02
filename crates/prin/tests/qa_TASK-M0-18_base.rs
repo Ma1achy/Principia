@@ -6,11 +6,13 @@
 // The file name `qa_TASK-M0-18_base` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
-use std::path::PathBuf;
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use validation::spawn::Spawn;
+
+#[path = "../../validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
 
 fn prin(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_prin"))
@@ -20,14 +22,10 @@ fn prin(args: &[&str]) -> Output {
 }
 
 /// A fresh path in this test target's scratch directory.
-fn scratch(name: &str) -> PathBuf {
-    static N: AtomicU32 = AtomicU32::new(0);
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_TASK-M0-18_base");
-    std::fs::create_dir_all(&dir).expect("cannot create the scratch directory");
-    let n = N.fetch_add(1, Ordering::SeqCst);
-    let path = dir.join(format!("{}-{n}-{name}", std::process::id()));
-    let _ = std::fs::remove_file(&path);
-    path
+/// A fresh scratch file path, one per call (the process id and a per-process count): deleted when the test passes,
+/// kept with its path printed when it fails (R-342).
+fn scratch(name: &str) -> Scratch {
+    Scratch::new(&format!("qa_TASK-M0-18_base_{name}"))
 }
 
 fn path_str(path: &std::path::Path) -> &str {
