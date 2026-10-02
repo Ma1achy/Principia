@@ -1,6 +1,7 @@
 //! REQ-VAL-165 (R-231): CI's test steps run through `cargo nextest run`, pinned, with doctests, which nextest does not
 //! run, through `cargo test --doc`, and no test is dropped: in each feature set, the nextest and `--doc` steps
-//! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`). The
+//! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`); a step
+//! sharded by its job's matrix (`--partition slice:${{ matrix.shard }}/4`, R-336) is listed once per shard. The
 //! documented local run (README) installs the same pinned version.
 
 use std::collections::BTreeMap;
@@ -89,6 +90,31 @@ fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
     out
 }
 
+/// The matrix expression a sharded step names its shard by (R-336, REQ-SYS-077).
+const SHARD: &str = "${{ matrix.shard }}";
+
+/// `run` once for each shard of its job's matrix (`shard: [1, 2, …]`), [`SHARD`] replaced by the shard; or `run`
+/// alone when it names no shard. So a sharded nextest step is listed under each shard's `--partition`.
+fn shards(job: &[&str], run: &str) -> Vec<String> {
+    if !run.contains(SHARD) {
+        return vec![run.to_owned()];
+    }
+    let values = job
+        .iter()
+        .find_map(|line| line.trim().strip_prefix("shard: ["))
+        .and_then(|rest| rest.trim_end().strip_suffix(']'))
+        .unwrap_or_else(|| {
+            panic!(
+                "job {} names {SHARD} but has no `shard: [...]` matrix",
+                job[0].trim()
+            )
+        });
+    values
+        .split(',')
+        .map(|shard| run.replace(SHARD, shard.trim()))
+        .collect()
+}
+
 /// A CI test step: `cargo nextest run <args>` (`doc` false) or `cargo test <args>` with `--doc` (`doc` true), its
 /// arguments without `--no-capture` and `--doc`, and the nextest profile it runs under (`None` for the default).
 struct Step {
@@ -114,7 +140,10 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     for workflow in workflows {
         for job in jobs(workflow) {
             let mut nextest = false;
-            for (run, profile) in runs(&job) {
+            for (run, profile) in runs(&job).into_iter().flat_map(|(run, profile)| {
+                shards(&job, run).into_iter().map(move |run| (run, profile))
+            }) {
+                let run = run.as_str();
                 let words = |rest: &str| -> Vec<String> {
                     rest.split_whitespace()
                         .filter(|w| !matches!(*w, "--no-capture" | "--nocapture" | "--doc"))
@@ -301,6 +330,25 @@ validation::negative_control!(
                 "run: cargo nextest run --workspace",
                 "run: cargo nextest run -p kernel"
             ))
+            .collect::<Vec<_>>()
+    )
+);
+
+/// The same check, here for its control on the shards: the `ci` job's 4 nextest shards together list every test the
+/// unsharded run did (R-336, REQ-SYS-077).
+#[test]
+fn nextest_ci_shards_together_list_every_test() {
+    check_no_test_dropped(&workflows());
+}
+
+validation::negative_control!(
+    nextest_ci_shards_together_list_every_test,
+    "a CI whose `ci` job runs 3 of its 4 shards, required to list every test",
+    expected = "the CI test steps drop tests `cargo test --workspace` lists",
+    check_no_test_dropped(
+        &workflows()
+            .iter()
+            .map(|w| w.replacen("shard: [1, 2, 3, 4]", "shard: [1, 2, 3]", 1))
             .collect::<Vec<_>>()
     )
 );
