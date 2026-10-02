@@ -211,3 +211,64 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
   - **Needed:** accept or veto. TASK-M0-51 builds option 1 meanwhile; a veto before it merges changes it there.
 
 ---
+
+## RQ-197: five qa test files pin the unsharded CI steps that R-336 and the 2 Oct 2026 ruling shard; two have implementer commits *(R-336, R-290, R-335, TASK-M0-45)*
+
+- **File, section:**
+  - The human's ruling of 2 Oct 2026 on `xtask-ci`'s sharding, recorded on PR #113 (`ops/ruling-r357`), not yet on
+    `main`: "`cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the
+    control name"; its Applied text: "`.github/workflows/ci.yml`'s `xtask-ci` becomes 4 parallel jobs, each running
+    `cargo xtask ci --partition <k>/4` for k = 1 to 4", and "The `ci` job's `cargo nextest run --workspace` is sharded
+    with nextest's `--partition`, as R-336 has it".
+  - `plan/tasks/M0/TASK-M0-45.md` § "Notes": "`qa_TASK-M0-22_r235.rs` reads the `xtask-ci` job's structure, and
+    R-335's exception covers only its `if:` check. If sharding would make any other of its checks fail, that goes to
+    REVIEW_QUEUE before the file changes (R-290)."
+  - `decisions.md` § "R-290 — qa may change test files that only qa has committed to": "qa may modify or delete test
+    files that only qa has ever committed to (checked with git log) … The implementer still never edits qa's files."
+  - `xtask/tests/qa_TASK-M0-22_r235.rs`, `check_controls_job_beside_the_tests`: `assert_eq!(tests.len(), 1, "no
+    single job runs `cargo nextest run --workspace`")`, matching `r == "cargo nextest run --workspace"`, and
+    `assert_eq!(controls.len(), 1, "no single job runs bare `cargo xtask ci` (every control)")`, matching
+    `r == "cargo xtask ci"`. History: 422b742 and 0c04a19 (qa), 9405734 and 3b84aa5 (implementer).
+  - `xtask/tests/support/qa_m0_01.rs`, `check_the_ci_workflow` (used by `qa_TASK-M0-01.rs` and
+    `qa_TASK-M0-29.rs`): for `"cargo nextest run --workspace"` and `"cargo xtask ci"`, `assert!(pos(cmd).is_some(),
+    "ci.yml has no step `run: {cmd}`; runs: {runs:?}")`, an exact match. History: qa's 9683052 and 862ca76; the
+    implementer's 6ae5866, 2031584, 4fb48e8, e0bd65f, 10afddc and 9405734.
+- **What:** TASK-M0-45 (PR on `task/TASK-M0-45`) builds that ruling and R-336 as written. The `ci` job's step is now
+  `cargo nextest run --workspace --partition slice:${{ matrix.shard }}/4`, and `xtask-ci`'s is
+  `cargo xtask ci --partition ${{ matrix.shard }}/4`, each in a 4-shard matrix. nextest takes `--partition` only on
+  its command line: no environment variable or profile key sets it (checked on 0.9.146, the pinned version: a
+  profile's `partition` key is "ignoring unknown configuration key"). So no sharded step can keep the literal
+  `run: cargo nextest run --workspace` or bare `run: cargo xtask ci` these checks match. 22 tests and controls fail on
+  the branch, every one on those literal lines:
+  - **Implementer commits, so neither qa (R-290) nor the implementer may change them without a ruling:**
+    - `qa_TASK-M0-22_r235.rs`: its four live-workflow tests, and the controls of three of them, which then panic
+      with the wrong message;
+    - `support/qa_m0_01.rs`: `qa_ci_workflow_runs_the_per_push_steps_and_not_bench` (`qa_TASK-M0-01.rs`) and its
+      control (`qa_TASK-M0-01_controls.rs`), and `qa_m0_29_ci_workflow_check_accepts_the_live_workflow`
+      (`qa_TASK-M0-29.rs`) and its control.
+  - **qa's alone, so qa may change them under R-290, the ruling of 2 Oct 2026 having changed the behaviour they test:**
+    - `qa_TASK-M0-14_r335.rs`: `controls_job` matches `run: cargo xtask ci` exactly; three tests and their controls.
+    - `qa_TASK-M0-33.rs`: `check_nextest_and_doctest_steps` wants a `cargo nextest run --workspace` step, and each
+      nextest step's own arguments, `--partition …` included, on a `cargo test … --doc` step; two tests and their
+      controls.
+    - `qa_TASK-M0-14_rust_gpu_cache.rs`: the control of `qa_m014_parser_reads_the_kernel_jobs` edits
+      `        run: cargo xtask ci\n`, which no longer occurs.
+  - Everything else these files check still holds on the branch: one job of the tests and one of the controls, beside
+    each other (no `needs:`), the controls job not skippable (no job `if:`) and with no `continue-on-error:`, the same
+    `PRIN_GPU_BACKEND`, lavapipe installed, the doctests beside the nextest run, and no `--list` step.
+- **Options seen:**
+  1. **(Recommended)** A named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit, qa changes
+     only those matches in `qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs` to the sharded steps. That is the
+     `ci` job's `cargo nextest run --workspace --partition slice:${{ matrix.shard }}/4`, and `xtask-ci`'s
+     `cargo xtask ci --partition ${{ matrix.shard }}/4`, each in a job whose matrix `shard:` lists 1 to 4. Their
+     controls are kept, with their edit targets moved to match. qa changes the three qa-only files the same way under
+     R-290. The code reviewer confirms that nothing else in them changed. The orchestrator's R-237 check accepts `M` on
+     the two files in that commit.
+  2. The checks accept either form, the unsharded step or the sharded one, so a later unsharding passes too. This is
+     the same exception, with a looser check.
+  3. Shard neither job, so the checks stand as written. This undoes R-336 and the ruling of 2 Oct 2026, and only the
+     human can choose it.
+- **Needed:** which option. TASK-M0-45's PR is open with the branch's CI red on exactly these tests, so its timings can
+  be measured; it waits for this ruling and qa's commit. REQ-SYS-077 carries `rq: [RQ-197]`.
+
+---
