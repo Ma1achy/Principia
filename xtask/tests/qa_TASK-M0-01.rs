@@ -151,15 +151,32 @@ fn qa_xtask_deps_passes_on_the_live_workspace() {
 #[test]
 fn qa_cargo_xtask_alias_runs_deps() {
     // The acceptance command itself, through the `.cargo/config.toml` alias. A separate target dir avoids
-    // the lock held by the running `cargo test`.
-    let out = run_cargo_in_the_workspace(&["xtask", "deps"]);
-    check_the_alias_runs_deps(&out);
+    // the lock held by the running `cargo test`. Its `cargo xtask deps` run is the test below, split out so that
+    // neither holds a CI shard over its target (R-336, REQ-SYS-077); this one keeps the listing-only
+    // `cargo xtask ci --list` (R-235, REQ-VAL-166).
     let out = run_cargo_in_the_workspace(&["xtask", "ci", "--list"]);
     check_the_alias_runs_ci(&out);
     // Control: the alias reaches xtask's own argument handling, which refuses an unknown command.
     let out = run_cargo_in_the_workspace(&["xtask", "qa-no-such-command"]);
     check_the_alias_refuses_an_unknown_command(&out);
 }
+
+/// `qa_cargo_xtask_alias_runs_deps`'s `cargo xtask deps` run, through the alias, as a test of its own (R-336).
+#[test]
+fn qa_cargo_xtask_alias_runs_the_deps_check() {
+    let out = run_cargo_in_the_workspace(&["xtask", "deps"]);
+    check_the_alias_runs_deps(&out);
+}
+
+validation::negative_control!(
+    qa_cargo_xtask_alias_runs_the_deps_check,
+    "the `cargo xtask deps` run replaced by an unknown command's, which fails",
+    expected = "cargo xtask deps: ",
+    check_the_alias_runs_deps(&run_cargo_in_the_workspace(&[
+        "xtask",
+        "m045-no-such-command"
+    ]))
+);
 
 #[test]
 fn qa_kernel_is_no_std() {

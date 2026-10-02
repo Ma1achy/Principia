@@ -47,9 +47,10 @@ fn controls_job(workflow: &str) -> (String, Vec<String>) {
     let found: Vec<(String, Vec<String>)> = jobs
         .into_iter()
         .filter(|(_, lines)| {
-            lines
-                .iter()
-                .any(|l| l.trim().trim_start_matches("- ").trim() == "run: cargo xtask ci")
+            lines.iter().any(|l| {
+                l.trim().trim_start_matches("- ").trim()
+                    == "run: cargo xtask ci --partition ${{ matrix.shard }}/4"
+            })
         })
         .collect();
     assert_eq!(
@@ -115,8 +116,8 @@ negative_control!(
     "the checked-in workflow with `continue-on-error: true` on the `cargo xtask ci` step",
     expected = "can pass with a finding",
     check_controls_job_runs_and_fails(&the_workflow().replacen(
-        "        run: cargo xtask ci\n",
-        "        continue-on-error: true\n        run: cargo xtask ci\n",
+        "        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
+        "        continue-on-error: true\n        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
         1
     ))
 );

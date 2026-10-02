@@ -521,9 +521,9 @@ pub fn check_the_ci_workflow(yml: &str) {
     let pos = |cmd: &str| runs.iter().position(|r| *r == cmd);
     for cmd in [
         "cargo build --workspace",
-        "cargo nextest run --workspace",
+        "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4",
         "cargo xtask deps",
-        "cargo xtask ci",
+        "cargo xtask ci --partition ${{ matrix.shard }}/4",
     ] {
         assert!(
             pos(cmd).is_some(),

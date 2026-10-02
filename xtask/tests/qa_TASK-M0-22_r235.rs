@@ -77,9 +77,9 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
     let tests: Vec<&(String, Vec<String>)> = jobs
         .iter()
         .filter(|(_, lines)| {
-            runs(lines)
-                .iter()
-                .any(|r| r == "cargo nextest run --workspace")
+            runs(lines).iter().any(|r| {
+                r == "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4"
+            })
         })
         .collect();
     assert_eq!(
@@ -90,7 +90,11 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
     let (test_job, test_lines) = tests[0];
     let controls: Vec<&(String, Vec<String>)> = jobs
         .iter()
-        .filter(|(_, lines)| runs(lines).iter().any(|r| r == "cargo xtask ci"))
+        .filter(|(_, lines)| {
+            runs(lines)
+                .iter()
+                .any(|r| r == "cargo xtask ci --partition ${{ matrix.shard }}/4")
+        })
         .collect();
     assert_eq!(
         controls.len(),
@@ -147,7 +151,7 @@ validation::negative_control!(
     "the pre-R-235 workflow, with the `cargo xtask ci` step in the tests' job",
     expected = "`cargo xtask ci` runs in the tests' job",
     check_controls_job_beside_the_tests(
-        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo nextest run --workspace\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo nextest run --workspace\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci\n"
+        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo nextest run --workspace\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n"
     )
 );
 
@@ -177,8 +181,8 @@ validation::negative_control!(
     "the checked-in workflow with a further step running `cargo xtask ci --list`",
     expected = "CI runs the listing-only `cargo xtask ci --list`",
     check_controls_job_beside_the_tests(&the_workflow().replacen(
-        "        run: cargo xtask ci\n",
-        "        run: cargo xtask ci\n      - name: listing\n        run: cargo xtask ci --list\n",
+        "        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
+        "        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n      - name: listing\n        run: cargo xtask ci --list\n",
         1
     ))
 );
