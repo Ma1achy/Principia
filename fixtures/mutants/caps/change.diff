@@ -1,0 +1,20 @@
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -8,6 +8,16 @@
+ //! timeout, and `CAPS_FIXTURE_ALLOC_MIB` ends the allocation after that many MiB, under the cap; either test then
+ //! fails by its own assertion, not by a cap.
+ 
++/// Whether the work has settled: at once.
++pub fn settled() -> bool {
++    true
++}
++
++/// Whether the work has the memory it needs: at once.
++pub fn provisioned() -> bool {
++    true
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::{provisioned, settled};

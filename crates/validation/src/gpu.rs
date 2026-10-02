@@ -129,6 +129,12 @@ impl GpuHarness {
         &self.info
     }
 
+    /// The features the device was opened with: those [`GpuHarness::new`] requested, none, so no `SHADER_F16`
+    /// (payload §1, REQ-PAY-011).
+    pub fn features(&self) -> wgpu::Features {
+        self.device.features()
+    }
+
     /// Compiles `module` and dispatches `entry` once per word of `inputs[0]`. Input `k` is bound read-only at
     /// `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write at the next binding and returned.
     /// A WGSL or validation error panics (wgpu's uncaptured-error handler).
