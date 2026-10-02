@@ -34,7 +34,7 @@ its environment checks on 2 Oct 2026 on three blockers. What each would need is 
    | `gh pr edit --body-file` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -F body=@<file>` |
    | `gh pr reopen` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -f state=open` |
    | `gh pr comment` | `gh api repos/Ma1achy/Principia/issues/N/comments -F body=@<file>` |
-   | `gh pr review --comment` | `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<sha> -F body=@-` |
+   | `gh pr review --comment` | `gh api repos/Ma1achy/Principia/pulls/N/reviews --method POST --input -`, the JSON object `{"event":"COMMENT","commit_id":"<sha>","body":"<body>"}` on standard input (R-373) |
    | `gh pr merge --merge --match-head-commit` | `gh api -X PUT repos/Ma1achy/Principia/pulls/N/merge -f merge_method=merge -f sha=<full head sha>` |
 
    Resolving a review thread (R-276) has no REST call; it waits for GraphQL.
@@ -141,10 +141,16 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     over: every reviewer the task names (qa, code, physics, gui, perf) posts again on the new head (`plan/WORKFLOW.md`
     steps 5 and 6). After an `M` or `D` qa commit, dispatch all of them at once, qa's re-approval included, not one
     after another (#78, #79, 30 Sep 2026).
-- **How they post (R-357).** Each reviewer posts its verdict through REST, never `gh pr review`, so it works on the Mac
-  and in a cloud session alike: `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<head
-  sha> -F body=@-`, the body, headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175), on standard
-  input, since a reviewer writes no file. `event=COMMENT` is what `gh pr review --comment` posted. `commit_id` attaches
+- **How they post (R-357, R-373).** Each reviewer posts its verdict through REST, never `gh pr review`, so it works on
+  the Mac and in a cloud session alike, in one fixed form, path first and flags after:
+  `gh api repos/Ma1achy/Principia/pulls/N/reviews --method POST --input -`. The human's allow rule,
+  `Bash(gh api repos/Ma1achy/Principia/pulls/*/reviews*)`, matches that form only; the permission check blocked the
+  old `-f event=COMMENT -f commit_id=<sha> -F body=@-` form as an external-system write (R-373). Standard input
+  carries the JSON object `{"event":"COMMENT","commit_id":"<head sha>","body":"<review body>"}`, the body headed
+  `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175). Since a reviewer writes no file, one command builds
+  it: a heredoc feeds the body to `python3 -c '…json.dumps(…)…' <head sha>`, whose output is piped to the `gh api`
+  call (the agent files give it in full). A reviewer uses no other form; if the post is blocked, it stops and reports
+  it. `event` `COMMENT` is what `gh pr review --comment` posted. `commit_id` attaches
   the review to the head reviewed, which `reviews-check` compares with the PR head (R-260); qa passes the head it was
   given, before its own unpushed commit. A reviewer reads the diff with `git diff origin/main...HEAD` in its worktree,
   after `git fetch origin`, and checks CI with `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The

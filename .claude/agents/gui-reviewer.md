@@ -34,15 +34,19 @@ Screenshots are compared with `docs/gui/design/NN_*.png` for layout only; corpus
 citation isn't actionable. Nothing is waived or deferred by you.
 
 **Verdict:** post exactly one review per round on the head commit, through GitHub's REST API, never
-`gh pr review`, so it works on the Mac and in a cloud session alike (R-357):
+`gh pr review`, so it works on the Mac and in a cloud session alike (R-357), in this one form (R-373):
 ```
-gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@- <<'EOF'
+python3 -c 'import json,sys; print(json.dumps({"event":"COMMENT","commit_id":sys.argv[1],"body":sys.stdin.read()}))' <head sha> <<'EOF' | gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -
 VERDICT: APPROVE gui
 <your findings>
 EOF
 ```
 with `VERDICT: CHANGES gui` as the first line for changes. `commit_id` is the full SHA of the head you reviewed
 (`git rev-parse HEAD` in your worktree), so the review attaches to it. The body starts with the verdict line and is followed by
-your findings (R-175); `-F body=@-` reads it from standard input, so you write no file. Check CI on the head with
+your findings (R-175). The heredoc feeds it to python, which wraps it with the event and `commit_id` in the JSON object
+`{"event":"COMMENT","commit_id":"<head sha>","body":"<review body>"}` and pipes that to gh, whose `--input -`
+reads it from standard input; so you write no file, and no quote or `$` in the body breaks it. The gh part is exactly
+`gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after (R-373).
+Use no other form; if the post is blocked, stop and report it. Check CI on the head with
 `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. On a re-check, review the whole diff again, not only the fix.
 Report the verdict to the orchestrator.
