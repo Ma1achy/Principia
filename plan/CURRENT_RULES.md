@@ -331,6 +331,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-352** — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
 - **R-360** — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*. Still in force: all of it; R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable assignment like the controls' slices, and prefers splitting the long tests to raising n. Amended by R-366.
 - **R-372** — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*
+- **R-374** — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*
 
 ## One-off acts (history only)
 
@@ -370,7 +371,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-227** — The two remaining latent races are fixed now, in their own task. Still in force: the two remaining latent races fixed at their cause in TASK-M0-32; the proof is R-230's. Amended by R-230.
 - **R-231** — After TASK-M0-22, one task speeds up the suite: nextest, stable fixtures, injectable spawn timings. Still in force: one task, TASK-M0-33, after TASK-M0-22: cargo-nextest in CI and locally (doctests through `cargo test --doc`, `cargo xtask controls` keeping its own cargo invocations), fixtures written only when changed, a build directory never used by a test and its control at once (R-224, read per fixture type under R-270, as TASK-M0-33 applied it), injectable spawn-helper timings with the calibrated values (REQ-VAL-156) unchanged, no test dropped, and edits to qa's merged files limited to what these need; fixtures share one build directory per fixture type, not per copy, cached on CI (R-270). Amended by R-270.
 - **R-232** — TASK-M0-30's veto items stand
-- **R-233** — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
+- **R-233** — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default. Still in force: all of it, its debug-info rule scoped to local builds by R-374: "Leave debug info at the default" governs local builds only (the Mac, with builds on the SSD); every CI job sets `CARGO_PROFILE_DEV_DEBUG` and `CARGO_PROFILE_TEST_DEBUG` to `line-tables-only`. Amended by R-374.
 - **R-238** — The old prin-impl scratch directory is deleted
 - **R-240** — TASK-M0-07 is split in two *(closes RQ-151)*
 - **R-243** — TASK-M0-07 is accepted at ~725 counted lines
