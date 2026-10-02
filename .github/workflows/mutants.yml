@@ -109,6 +109,13 @@ jobs:
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
       # shard's partial report is still uploaded when it is hit, and the step then fails.
+      # The run's two caps (R-348) come from `.cargo/mutants.toml`, which this `cargo mutants` reads, as the nightly
+      # run and a local run do; both are provisional until the human confirms them at the M0 gate (R-71, R-182):
+      # - the per-mutant timeout (REQ-VAL-180), cargo-mutants' `timeout_multiplier` and `minimum_test_timeout`: a
+      #   mutant whose tests hang is recorded as a timeout, and the shard goes on to its next mutant;
+      # - the per-process memory cap (REQ-VAL-181), `prlimit --as` as cargo's runner on Linux: each test process of
+      #   the baseline and of every mutant runs under it, and an allocation past it kills that test, not cargo-mutants,
+      #   cargo or this step.
       - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, provisional)
         id: run
         if: steps.diff.outputs.rust == 'true'
@@ -150,7 +157,8 @@ jobs:
           if-no-files-found: ignore
 
   # The gate fires on the fixture (REQ-VAL-148): without its killing test the untested branch's mutants survive and
-  # mutants-check fails naming them; listed, it passes; with the killing test none survives. Beside the shards.
+  # mutants-check fails naming them; listed, it passes; with the killing test none survives. Beside the shards. Then the
+  # caps (R-348) fire on `fixtures/mutants/caps/` (REQ-VAL-179).
   mutants-fixture:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -182,11 +190,48 @@ jobs:
           fi
           cargo xtask mutants-check "$RUNNER_TEMP/fixture/mutants.out" --equivalent "$fixture/equivalent.toml"
           cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --features kill -o "$RUNNER_TEMP/fixture-kill"
+      # The caps fire on their fixture (REQ-VAL-179, R-348), read from `.cargo/mutants.toml` as the shards read them:
+      # the per-mutant timeout (REQ-VAL-180) records the hanging mutant as a timeout, and the run goes on to the next
+      # (`--no-shuffle` keeps the source order); the memory cap (REQ-VAL-181) kills the allocating mutant's test
+      # process, whose allocation fails, so it is caught. The controls (R-176) bound each under its cap: a 5 s hang under
+      # the 60 s floor is no timeout, and a 256 MiB allocation under the cap is caught by its assertion, not the cap.
+      - name: The caps fire on their fixture (REQ-VAL-179)
+        run: |
+          fixture=fixtures/mutants/caps
+          caps() {
+            code=0
+            cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
+              --no-shuffle -o "$RUNNER_TEMP/$1" || code=$?
+            echo "cargo mutants ($1): exit $code"
+          }
+          field() {
+            jq -r --arg f "$2" ".outcomes[] | select(.scenario.Mutant?.function.function_name == \$f) | .$3" \
+              "$RUNNER_TEMP/$1/mutants.out/outcomes.json"
+          }
+          expect() {
+            got=$(field "$1" "$2" summary); log="$RUNNER_TEMP/$1/mutants.out/$(field "$1" "$2" log_path)"
+            echo "$1: $2: $got"
+            [ "$got" = "$3" ] || { echo "::error::$1: $2's mutant is $got, not $3"; exit 1; }
+            if grep -q "memory allocation of .* failed" "$log"; then killed=yes; else killed=no; fi
+            [ "$killed" = "$4" ] || { echo "::error::$1: $2's test killed by the memory cap: $killed"; exit 1; }
+          }
+          caps caps
+          expect caps settled Timeout no
+          expect caps provisioned CaughtMutant yes
+          cargo xtask mutants-check "$RUNNER_TEMP/caps/mutants.out" | tee "$RUNNER_TEMP/caps-check.log"
+          grep -q "timed out (not a survivor): src/lib.rs:.*settled" "$RUNNER_TEMP/caps-check.log" ||
+            { echo "::error::mutants-check did not list the timeout as not a survivor"; exit 1; }
+          CAPS_FIXTURE_HANG_SECS=5 CAPS_FIXTURE_ALLOC_MIB=256 caps controls
+          expect controls settled CaughtMutant no
+          expect controls provisioned CaughtMutant no
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mutants-report-fixture
-          path: ${{ runner.temp }}/fixture/mutants.out
+          path: |
+            ${{ runner.temp }}/fixture/mutants.out
+            ${{ runner.temp }}/caps/mutants.out
+            ${{ runner.temp }}/controls/mutants.out
           if-no-files-found: ignore
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
