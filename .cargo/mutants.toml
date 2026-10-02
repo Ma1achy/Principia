@@ -37,9 +37,12 @@ minimum_test_timeout = 60
 # M0 gate, R-71, R-182): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. cargo runs
 # each test binary under `prlimit` as its runner, so the cap binds each test process of the baseline and of every
 # mutant, and what that process spawns, but not cargo-mutants, nor cargo and rustc building the tests. A test whose
-# allocation passes the cap fails, as any failing test does. The runner is set for Linux alone: CI's Linux runners
-# enforce the cap, and a run on macOS, which has no `prlimit`, gets the timeout alone (R-352).
+# allocation passes the cap fails, as any failing test does. `--core=1` turns off the process's core dump, which
+# otherwise holds it up: the runners pipe cores to systemd-coredump, which ignores a limit of 0 and reads all 8 GiB
+# (about 45 s on ubuntu-latest, against about 5 s without it); the kernel skips a piped dump when the limit is 1. The
+# runner is set for Linux alone: CI's Linux runners enforce the cap, and a run on macOS, which has no `prlimit`, gets
+# the timeout alone (R-352).
 additional_cargo_test_args = [
     "--config",
-    "target.'cfg(target_os = \"linux\")'.runner = ['prlimit', '--as=8589934592']",
+    "target.'cfg(target_os = \"linux\")'.runner = ['prlimit', '--as=8589934592', '--core=1']",
 ]

@@ -113,9 +113,9 @@ jobs:
       # run and a local run do; both are provisional until the human confirms them at the M0 gate (R-71, R-182):
       # - the per-mutant timeout (REQ-VAL-180), cargo-mutants' `timeout_multiplier` and `minimum_test_timeout`: a
       #   mutant whose tests hang is recorded as a timeout, and the shard goes on to its next mutant;
-      # - the per-process memory cap (REQ-VAL-181), `prlimit --as` as cargo's runner on Linux: each test process of
-      #   the baseline and of every mutant runs under it, and an allocation past it kills that test, not cargo-mutants,
-      #   cargo or this step.
+      # - the per-process memory cap (REQ-VAL-181), `prlimit --as` (core dumps off) as cargo's runner on Linux: each
+      #   test process of the baseline and of every mutant runs under it, and an allocation past it kills that test,
+      #   not cargo-mutants, cargo or this step.
       - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, provisional)
         id: run
         if: steps.diff.outputs.rust == 'true'
