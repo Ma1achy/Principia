@@ -1131,18 +1131,33 @@ fn qa_profile_diff_incomplete_trace_says_so_and_compares_bytes() {
     );
 }
 
-/// R-299: a malformed line that ends in a newline stays an error, and so does a cut-off line after the summary line
-/// (the writer writes nothing after it): the diff exits 2.
+/// R-299: a malformed line that ends in a newline stays an error: the diff exits 2. A cut-off line after the summary
+/// line is not: that file is a complete session, read and compared, its dropped bytes stated without "session
+/// incomplete" (R-356, R-358; changed by qa for TASK-M0-51, R-290).
 #[test]
 fn qa_profile_diff_cut_line_with_newline_is_unreadable() {
     let base = trace(&base_times());
     let (header, frames, summary) = split_trace(&base);
     check_unreadable_refused(&format!("{}\n", incomplete(&base, true)));
-    check_unreadable_refused(&format!(
+    let after = format!(
         "{header}\n{}\n{summary}\n{}",
         frames.join("\n"),
         &frames[0][..CUT]
-    ));
+    );
+    let out = diff(&base, &after, "5%");
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "a NEW with a cut-off line after its summary line, the same times as BASE, gives exit {:?}: {text}",
+        out.status.code()
+    );
+    assert!(
+        text.contains(&format!(
+            "NEW: {CUT} bytes of a cut-off line after the summary line dropped"
+        )) && !text.contains("session incomplete"),
+        "the diff does not state NEW's {CUT} bytes dropped after the summary line, without \"session incomplete\": {text}"
+    );
 }
 
 validation::negative_control!(

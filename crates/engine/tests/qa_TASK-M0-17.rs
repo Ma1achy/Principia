@@ -2260,8 +2260,9 @@ fn check_bytes_rejected(bytes: &[u8], what: &str) {
 }
 
 /// R-299 and telemetry §5: a line ending in a newline that is not the object its place calls for is an error wherever
-/// it is, the same cut-off piece included; the line before a cut-off line holds a frame's place, so a cut-off line after
-/// the summary line is an error; a file whose only line is cut off has no header line, and the error states the bytes.
+/// it is, the same cut-off piece included; a cut-off line after the summary line is dropped, the summary line and the
+/// frames kept and the session complete (R-356, R-358); a file whose only line is cut off has no header line, and the
+/// error states the bytes.
 #[test]
 fn qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error() {
     let doc = summarised();
@@ -2303,10 +2304,19 @@ fn qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error() {
             );
         }
     }
-    // After the summary line nothing is written, so a cut-off line after it is an error.
+    // A cut-off line after the summary line is dropped and its bytes stated; the header line, the frames and the
+    // summary line are kept, and the session is complete (R-356, R-358; changed by qa for TASK-M0-51, R-290).
     let mut after = full.clone().into_bytes();
     after.extend_from_slice(&lines[1].as_bytes()[..20]);
-    check_bytes_rejected(&after, "a cut-off frame line after the summary line");
+    let got = read(&after[..]).unwrap_or_else(|e| {
+        panic!("the reader rejects a cut-off frame line after the summary line: {e}")
+    });
+    let mut whole = got.clone();
+    whole.dropped_bytes = 0;
+    assert!(
+        got.session == Session::Complete && got.dropped_bytes == 20 && whole == read_doc(&doc),
+        "a cut-off frame line after the summary line does not read as the complete trace with its 20 bytes dropped"
+    );
     // The line before a cut-off line holds a frame's place and is held to a frame's rules.
     let mut bad = frame(1, true, 0.0);
     bad["frame_ms"] = json!(-1.0);
