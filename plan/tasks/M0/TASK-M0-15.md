@@ -30,7 +30,7 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 - `crates/validation/tests/codegen_selftest.rs` — the §H suite: the three pack∘unpack paths per field, times, f16 pairs, detail-per-state, static checks; proptest strategies that include every field's top bit.
 - A WGSL self-test entry point wrapping the generated accessors (reads packed words, writes unpacked fields) and the kernel entry from TASK-M0-14.
 - The device for these tests is requested with no optional features (no `SHADER_F16`).
-- `crates/ledger/src/gen/wgsl.rs` — `tm_t_end_fraction` and `tm_t_dmin_fraction` emit payload §6's form, `let s = tm_t_*_step(w);` then `select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u)`, and `crates/render/frag/generated/payload_unpack.wgsl` is regenerated from it (R-361; the guard outermost is applied per R-204 — veto?, R-361: the nesting). The Rust generator is unchanged.
+- `crates/ledger/src/gen/wgsl.rs` — `tm_t_end_fraction` and `tm_t_dmin_fraction` emit payload §6's form, `let s = tm_t_*_step(w);` then `select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u)`, and `crates/render/frag/generated/payload_unpack.wgsl` is regenerated from it (R-361; the guard outermost is applied per R-204, accepted by R-365, R-361: the nesting). The Rust generator is unchanged.
 - `.github/workflows/ci.yml` — the `gpu-metal` job (`macos-15`) and the `gpu-lavapipe` job (`ubuntu-latest`), both on every commit, running this suite (R-110, R-186).
 
 ## Acceptance tests
@@ -44,4 +44,5 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 - Negative controls (registered with TASK-M0-21's `negative_control!`, R-198): a WGSL accessor with a shifted offset; the i32 overload; a mask over bits a round trip compares (pitfalls §9).
 - R-361 (RQ-195, 2 Oct 2026): on Metal `f32(n)/f32(n)` was not 1.0 for 5658 of the 65535 horizons, so the generated fraction now selects 1.0 at the endpoint. `codegen_selftest_times` tests it, every horizon, on both adapters.
 - R-364 (2 Oct 2026): the seven items this task's first implementer applied per R-204 stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them (PR #116's body lists them).
+- R-365 (RQ-196, 2 Oct 2026): PR #116's veto item, the composition with the `horizon_steps > 0u` guard, stands as built: the guard outermost, so `h = 0` gives 0 and `h > 0` is the outer check, as REQ-RENDER-019 says.
 - R-110 (RQ-79), amended by R-186: GPU CI is GitHub-hosted `macos-15` (Metal) plus lavapipe on `ubuntu-latest`, on every commit; the acceptance commands above run on both.

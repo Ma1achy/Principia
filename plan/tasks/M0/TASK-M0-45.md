@@ -46,7 +46,7 @@ wall-clock time is then ~10.5 min or less.
   every test, each finding reported by one shard. The controls keep their own cargo invocations (R-231) and run inside
   `cargo xtask ci` (R-235, REQ-VAL-007). Without `--partition`, both commands run every control, as today, and the
   listing-only form (`--list`, R-235) is unchanged.
-- The other runners under `--partition` (applied per R-204 — veto?, R-360: build-kernel in every shard): build-kernel
+- The other runners under `--partition` (applied per R-204, accepted by R-365, R-360: build-kernel in every shard): build-kernel
   runs in every shard, before its controls, which read its output; plan-check, the three lints, gate and golden run in
   shard 1 only.
 - `.config/nextest.toml` and `xtask/tests/nextest.rs`'s listing check follow the shards, so the CI test steps together

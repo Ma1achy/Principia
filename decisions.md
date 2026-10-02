@@ -4750,11 +4750,11 @@ archived, RQ-196 filed)*
   `cargo xtask ci --partition <k>/4` for k = 1 to 4. Each keeps the job's caches and their R-326 save rule, its key
   naming its shard's job (R-285), as TASK-M0-45's Deliverables already ask. The new jobs are not required checks until
   the human adds them to branch protection (R-266); TASK-M0-45's PR names them.
-- *Applied per R-204 — veto?:* the runners other than `controls` run in shard 1 of n only (plan-check, the three
+- *Applied per R-204, accepted by R-365:* the runners other than `controls` run in shard 1 of n only (plan-check, the three
   lints, gate and golden), as RQ-193's option 1 has it, but for build-kernel, which runs in every shard, before its
   controls: the kernel's controls fall in every slice when sliced by name, and they read build-kernel's output
-  (`ci.rs` runs it before `controls` for that reason). It took 16 s of the job on `main`'s run of aaa1e40. Open in
-  RQ-196.
+  (`ci.rs` runs it before `controls` for that reason). It took 16 s of the job on `main`'s run of aaa1e40. Ruled in
+  RQ-196 (A1).
 - **Plan.** TASK-M0-45 builds it: `xtask/src/ci.rs`, `xtask/src/controls.rs` and `xtask/src/main.rs` join its
   deliverables, beside `ci.yml`'s 4 `xtask-ci` jobs, with an acceptance test that the 4 slices of a list of control
   names are disjoint, together hold every name, and give a fixed name the same slice on every run, with its negative
@@ -4789,10 +4789,10 @@ Changes REQ-SYS-077's statement and verify detail; TASK-M0-45 builds it.
   exactly 1.0; any other step gives the plain quotient. WGSL's `select` evaluates both operands, so the division by a
   zero horizon is still computed and discarded, as today. The 0 endpoint is the division's, `f32(0)/f32(h)`, which
   RQ-195 measured exactly 0 for every horizon on Metal; the ruling changes only the 1 endpoint.
-  *Applied per R-204 — veto?:* the nesting, R-361's form inside the existing `horizon_steps > 0u` guard, the guard
+  *Applied per R-204, accepted by R-365:* the nesting, R-361's form inside the existing `horizon_steps > 0u` guard, the guard
   outermost. RQ-195's option 1 placed it there, but the ruling's words don't settle the case `h = 0` with `s == h`,
-  where the endpoint select outermost would give 1.0 and not 0. PR #116 (TASK-M0-15) builds this nesting. Open in
-  RQ-196.
+  where the endpoint select outermost would give 1.0 and not 0. PR #116 (TASK-M0-15) builds this nesting. Ruled in
+  RQ-196 (A2).
 - **The Rust side is unchanged,** as RQ-195's option 1 says: IEEE division gives exactly 1.0 for every horizon on the
   host (`crates/ledger/src/gen/rust.rs`, `crates/kernel/src/payload/generated.rs`). No shader calls the kernel's copy
   of the fraction today.
@@ -4888,5 +4888,32 @@ Changes no requirement's statement or verify: REQ-TOOL-119's note names it.
   They were marked in PR #116's body only, not on `main` or this branch, so no mark here changes.
 - R-364 is in the "one-off" group of `plan/rule_groups.yaml`, beside R-304, R-310 and R-311; `plan/section_notes.yaml`
   gives its line.
+
+Changes no requirement.
+
+## R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)*
+*2 Oct 2026 · applied in decisions.md (R-360's and R-361's marks), payload §6, TASK-M0-15, TASK-M0-45 and
+REVIEW_QUEUE.md (RQ-196 archived)*
+
+"This is from me. RQ-196: A1 and A2 stand as built. Each xtask-ci shard
+builds the kernel before its controls (the warm rust-gpu cache keeps
+that cheap); an empty horizon (h = 0) gives 0, with h > 0 the outer
+check, as REQ-RENDER-019 says. This also settles #116's veto item. Merge
+#113."
+
+*Applied:*
+- **A1 and A2 stand,** as RQ-196 lists them, and each mark names R-365 in place of "veto?":
+  - A1, build-kernel in every `xtask-ci` shard, before its controls, which read its output; plan-check, the three
+    lints, gate and golden in shard 1 only: R-360's mark, and TASK-M0-45's other-runners bullet. TASK-M0-45 builds it
+    as written.
+  - A2, R-361's endpoint select nested inside the `horizon_steps > 0u` guard, the guard outermost,
+    `select(0.0, select(f32(s) / f32(h), 1.0, s == h), h > 0u)`, so `h = 0` gives 0 even at `s == h == 0`, as
+    REQ-RENDER-019 says ("returning 0 when `horizon_steps` is 0"): R-361's mark, the comment above payload §6's
+    `tm_t_end_fraction`, and TASK-M0-15's `wgsl.rs` bullet. REQ-RENDER-019 stands as written.
+- **#116's veto item** is A2, the composition PR #116 (TASK-M0-15) builds; it stands. TASK-M0-15's Notes say so.
+- **RQ-196 is closed** and moves, unchanged, to `docs/archive/review_queue/M0.md` with its Ruling line (R-292); the
+  review queue is left with no open entry. No requirement carried `rq: [RQ-196]`.
+- "Merge #113." is an instruction to the orchestrator, not a decision: PR #113 carries R-357 to R-365.
+- R-365 is in the "one-off" group of `plan/rule_groups.yaml`, beside R-364; `plan/section_notes.yaml` gives its line.
 
 Changes no requirement.

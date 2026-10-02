@@ -467,7 +467,7 @@ fn pb_dLz_max(pb:u32)->f32            { return unpack2x16float(pb).y; }
 // times — EXACT u16 step indices; fraction derived with a horizon_steps uniform (single format, no Q0.16)
 fn tm_t_end_step(w:u32)->u32          { return extractBits(w,  0u, 16u); }
 fn tm_t_dmin_step(w:u32)->u32         { return extractBits(w, 16u, 16u); }
-// the endpoint is exactly 1.0, not a division, which WGSL need not round correctly (R-361); the guard stays outermost (applied per R-204 — veto?, RQ-196)
+// the endpoint is exactly 1.0, not a division, which WGSL need not round correctly (R-361); the guard stays outermost (applied per R-204, accepted by R-365, RQ-196)
 fn tm_t_end_fraction(w:u32, horizon_steps:u32)->f32  { let s = tm_t_end_step(w);  return select(0.0, select(f32(s)/f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u); }  // guard /0 in generic tooling
 fn tm_t_dmin_fraction(w:u32, horizon_steps:u32)->f32 { let s = tm_t_dmin_step(w); return select(0.0, select(f32(s)/f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u); }
 

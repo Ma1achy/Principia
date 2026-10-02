@@ -771,3 +771,7 @@
   section: "R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them"
   reason: informative only
   note: "accepts PR #114's veto items but item 2 (replaced by R-359) and TASK-M0-15's seven items applied per R-204 (PR #116), the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them; changes no requirement"
+- file: decisions.md
+  section: "R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)*"
+  reason: informative only
+  note: "closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement"

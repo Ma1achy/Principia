@@ -387,3 +387,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-350** — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
 - **R-353** — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted
 - **R-364** — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them
+- **R-365** — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)*

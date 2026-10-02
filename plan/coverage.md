@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 
 ## Sections
 
-1055 sections in 46 files: 877 yield at least one requirement; 178 yield none and are listed below with the reason.
+1056 sections in 46 files: 877 yield at least one requirement; 179 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 131 |
+| informative only | 132 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -140,6 +140,7 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 | R-362 — PRs are not stacked; a needed stack's child is retargeted to `main` before the PR below it merges *(closes RQ-194 B; amends R-345)* | informative only | process ruling; closes RQ-194 B and amends R-345: PRs are not stacked, and a needed stack's child is retargeted to main before the PR below it merges, since auto-delete removes the lower branch at merge (CLAUDE.md § Git, plan/OPERATIONS.md § Merging, plan/WORKFLOW.md); changes no requirement |
 | R-363 — RQ-194's A1–A4 are accepted as built; TASK-M0-51 has no physics review *(closes RQ-194 A and C)* | informative only | process ruling; closes RQ-194 A and C: R-357's, R-358's and R-359's items applied per R-204 (A1–A4) are accepted and their marks name it, and TASK-M0-51 has no physics review for R-358's diff case; REQ-TOOL-119's note names it; archives RQ-194; changes no requirement's statement or verify |
 | R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them | informative only | accepts PR #114's veto items but item 2 (replaced by R-359) and TASK-M0-15's seven items applied per R-204 (PR #116), the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them; changes no requirement |
+| R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)* | informative only | closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
