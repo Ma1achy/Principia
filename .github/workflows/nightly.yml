@@ -236,11 +236,17 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      # Debug info: line tables only on the build-kernel step and the run, as in `mutants.yml`, whose note gives why:
+      # the baseline's full debug info fills the runner's disk (applied per R-369 — veto?).
       - name: cargo run --quiet --package xtask -- build-kernel
+        env:
+          CARGO_PROFILE_DEV_DEBUG: line-tables-only
         run: cargo run --quiet --package xtask -- build-kernel
       # The whole workspace's mutants, this shard's share dealt round-robin, under `.cargo/mutants.toml`'s exclusions
       # and caps. Exit 0: none survived; 2: some survived; 3: some timed out; all three are a finished run, reported.
       - name: cargo mutants --shard ${{ matrix.shard }}/8 (the full run)
+        env:
+          CARGO_PROFILE_DEV_DEBUG: line-tables-only
         run: |
           set +e
           start=$(date +%s)
