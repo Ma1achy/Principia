@@ -5310,7 +5310,9 @@ this form, path first and flags after:
   gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -
 Update .claude/agents and OPERATIONS.md to use it."
 
-(The human's own message of 2 Oct 2026.) Why: the permission check began blocking R-357's form,
+(Message of 2 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+Why: the permission check began blocking R-357's form,
 `gh api repos/…/pulls/<N>/reviews -f event=COMMENT -f commit_id=<sha> -F body=@-`, as an external-system write, and the
 human's allow rule matches only the new form.
 
@@ -5322,7 +5324,7 @@ human's allow rule matches only the new form.
   what they meant under R-357 (the body still headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, R-175;
   qa's `commit_id` still the head it was given, R-260). Each file adds: "Use no other form; if the post is blocked, stop
   and report it."
-- *Applied per R-204 (a mechanical consequence of R-357's "a reviewer writes no file"):* since a reviewer has no Write
+- *Applied per R-369 (a mechanical consequence of R-357's "a reviewer writes no file"):* since a reviewer has no Write
   tool, the agent files build the JSON in the same command: a heredoc feeds the body to
   `python3 -c 'import json,sys; print(json.dumps({"event":"COMMENT","commit_id":sys.argv[1],"body":sys.stdin.read()}))' <head sha>`,
   whose output is piped to the `gh api` call, so no quote, `$` or backslash in the body breaks it. The pattern was run
