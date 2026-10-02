@@ -1347,10 +1347,10 @@ and lavapipe jobs only. The runner runs under its own macOS user account. Outsid
 workflow runs.
 
 ## R-175 — The reviewers are agents, and a CI check counts their verdicts *(closes H3)*
-*Amended by R-260 and R-261.*
-*Still in force: the `VERDICT` review headings, `reviews-complete` passing only when every named role has approved on
-the latest commit, and the merge by the human or a bot; R-260 carries an approval over qa's own test commit, and R-261
-passes a PR naming no task.*
+*Amended by R-260, R-261 and R-369.*
+*Still in force: the `VERDICT` review headings, and `reviews-complete` passing only when every named role has approved
+on the latest commit; R-260 carries an approval over qa's own test commit, and R-261 passes a PR naming no task. Who
+merges is R-369's: the orchestrator merges a PR once its reviews pass and CI is green.*
 *25 Sep 2026 · applied in step 8*
 
 GitHub won't let one account approve its own PR, so each reviewer posts a PR review headed `VERDICT: APPROVE <role>` or
@@ -1674,8 +1674,12 @@ closed by TASK-M0-04. 256 is the proposed value, used provisionally and marked s
 changes it at the M0 gate.
 
 ## R-204 — When to ask the human
-*Amended by R-264 (its "exceeding budgets").*
-*Still in force: all of it, except that size and budgets are no longer a question for the human (R-264).*
+*Amended by R-264 (its "exceeding budgets"); amended by R-369.*
+*Still in force: don't ask what follows from an existing ruling or the docs: apply it and record it. What to ask the
+human is R-369's list (physics where the choice changes results and the docs don't settle it, calibration values,
+passing a milestone gate, dropping or deferring a requirement, anything outside the repo or irreversible); size is
+never asked (R-264, R-369). A choice applied without asking is recorded in the PR and listed in the next summary, and
+no longer holds a merge (R-369).*
 *26 Sep 2026 · given as "R-198", which was already taken (the TASK-M0-04 split); recorded as R-204*
 
 "Standing rule: when to ask me.
@@ -1736,11 +1740,12 @@ REQ-SYS-065's statement gains the default. The code, and the merged tests that a
 among them, under a one-round exception as a mechanical consequence, R-204), change in the same PR.
 
 ## R-208 — TASK-M0-21 is accepted at 762 code lines; later overruns are split first
-*Amended by R-211 and R-264.*
+*Amended by R-211, R-264 and R-369.*
 *Still in force: TASK-M0-21's size acceptance; the three `cargo xtask controls` rules it confirmed (a doctest counts as
 a test without a control; a control covers exactly one test, and a name with more tests than controls fails naming them;
 `negative_control` is a reserved test name); and the `deps.rs` fix, each test workspace with its own `CARGO_TARGET_DIR`,
-shown to pass with one outside the repo; its split-first rule is R-264's orchestrator choice now.*
+shown to pass with one outside the repo. Its split-first rule is gone: size has no budget gate, and whether a task
+splits is judgement, the reviewers judging (R-369).*
 *27 Sep 2026 · applied in TASK-M0-21*
 
 "Merge-level decisions for PR #19:
@@ -1786,10 +1791,11 @@ lists it. The three qa child-mode helpers (`qa_child_open_harness`, `qa_child_fa
 reviewing.
 
 ## R-211 — TASK-M0-24 and TASK-M0-25 accepted; the size budget counts implementation only *(closes RQ-143, RQ-144)*
-*Amended by R-223 and R-264.*
-*Still in force: the size budget counts implementation code and the implementer's own tests, leaving out qa's commits
-and `negative_control!` blocks, and TASK-M0-24's and TASK-M0-25's sizes stand; which lines count is R-225's, and whether
-to split is the orchestrator's (R-264).*
+*Amended by R-223, R-264 and R-369.*
+*Still in force: a task's counted size covers implementation code and the implementer's own tests, leaving out qa's
+commits and `negative_control!` blocks, and TASK-M0-24's and TASK-M0-25's sizes stand; which lines count is R-225's.
+The count is a measure, not a gate: its pre-split rule is gone, and whether to split is judgement, the reviewers judging
+(R-369).*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "Both sizes accepted. From now on the ~500-line budget counts implementation code and the implementer's own tests
@@ -2072,6 +2078,8 @@ applied note leaving out lighter debug info stands. REQ-VAL-156's 300 s is confi
 measurements from PRs #33 and #35.
 
 ## R-234 — A PR with veto items may be merged overnight when each item is accepted and none is a substantive choice
+*Amended by R-367.*
+*Superseded by R-369.*
 *28 Sep 2026 · applied in overnight runs*
 
 "So veto items don't stall overnight runs: you may merge a PR with "applied per R-204 — veto?" items if every named
@@ -2450,6 +2458,11 @@ applied: REQ-PAY-002 keeps the SimState and ICDescriptor part (TASK-M0-09); Rend
 and the WGSL layout comparison to TASK-M0-13, each as a split-off requirement.
 
 ## R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*
+*Amended by R-367 and R-369.*
+*Still in force: its size decisions (PR #59 one PR at 1,084 counted lines; TASK-M3-08 and TASK-M5-18 one task each),
+and that size is never a question for the human. The budget as a gate and the self-merge condition "within budget" are
+gone (R-367, R-369): size is judgement, and the reviewers judge whether a big PR is big because the task is (it merges
+normally) or because the work is sloppy or bloated (it is fixed or split).*
 *30 Sep 2026 · applied to PR #59, TASK-M3-08 and TASK-M5-18*
 
 "yes i accept it being larger"
@@ -2717,6 +2730,10 @@ places. Item 4: the header shapes. Item 5: the `frame` index key. Item 6: the ne
 null until M8. F2: `live_memory`, a per-frame snapshot of each pool by type.
 
 ## R-283 — The process choices stand; the add-only rule is raised, not exempted again; #80 merges
+*Amended by R-369.*
+*Still in force: the process choices it confirmed (physics on #79, qa's edits on #74 and #78, the renumbering) and
+#80's merge. An exception to the qa-file rules where a ruling forces the change is the orchestrator's and the
+reviewers' to decide, recorded in the PR, not a question for the human (R-369).*
 *30 Sep 2026 · applied in the orchestrator's loop*
 
 "Process choices: all stand (physics on #79, qa's edits on #74/#78, the renumbering). If qa keeps needing to edit its
@@ -2816,11 +2833,13 @@ agent is dispatched with the ruling, in the human's words, in its opening prompt
 re-dispatched that way.
 
 ## R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*
-*Amended by R-335, R-336, R-342 and R-366.*
-*Still in force: all of it; R-335, R-336, R-342 and R-366 each name test files, with implementer commits, that qa may
-change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's
-scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346;
-TASK-M0-45's CI step matches in `qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`).*
+*Amended by R-335, R-336, R-342, R-366, R-369 and R-371.*
+*Still in force: all of it; R-335, R-336, R-342, R-366 and R-371 each name test files, with implementer commits, that
+qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests;
+TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted
+by R-346; TASK-M0-45's CI step matches in `qa_TASK-M0-22_r235.rs`, `support/qa_m0_01.rs` and `qa_TASK-M0-29.rs`). An
+exception of that kind, where a ruling forces the change, is now the orchestrator's and the reviewers' to decide,
+recorded in the PR (R-369).*
 *30 Sep 2026 · recorded; the orchestrator's check on qa's commit takes it*
 
 "RQ-172: option 1 (R-290). qa may modify or delete test files that only qa has ever committed to (checked with git
@@ -3693,13 +3712,14 @@ archived unchanged in `docs/archive/review_queue/M0.md` with this ruling's port,
 #96's next fix pass deletes its open copy from `REVIEW_QUEUE.md`. Changes no requirement.
 
 ## R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
-*Amended by R-360 and R-366.*
+*Amended by R-360, R-366 and R-372.*
 *Still in force: all of it but how the `xtask-ci` job is sharded: it runs no nextest, so `cargo xtask ci --partition
 k/4` runs it as 4 parallel jobs, the controls assigned by a stable hash of the control name, each control run once
 across them (R-360). The `ci` job's nextest run is sharded as written, as 4 shards of `--partition hash:<k>/4`
 (R-366), and the splits stand; a shard still over ~10.5 min is answered by splitting further, first
 `qa_cargo_xtask_alias_runs_deps`, before raising n (R-366). R-366 also lets qa change TASK-M0-45's CI step matches in
-`qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`.*
+`qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`, and R-371 those in `qa_TASK-M0-29.rs`. #117's shard times are
+accepted as they are, ~10.5 min staying the target (R-372).*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076, REQ-SYS-077 (new), TASK-M0-14 (PR #96) and TASK-M0-45 (new)*
 
 "2 B: accept the overrun on #96, and make the sharding the next M0 task at high priority. It should also split the
@@ -4523,6 +4543,9 @@ rule."
 Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other requirement.
 
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
+*Amended by R-369.*
+*Still in force: all of it but its merge rule: "Merge only under the overnight rules whenever I'm away" gives way to
+R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away or not.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -4926,6 +4949,10 @@ check, as REQ-RENDER-019 says. This also settles #116's veto item. Merge
 Changes no requirement.
 
 ## R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)*
+*Amended by R-371 and R-372.*
+*Still in force: all of it; R-371 widens its exception to the four unsharded step strings in
+`xtask/tests/qa_TASK-M0-29.rs`, and R-372 accepts #117's shard times, ~10.5 min staying the target, so its
+split-further remedy is not required for #117. Its number stands (R-370).*
 *2 Oct 2026 · applied in decisions.md (R-290's, R-336's and R-360's lines), TASK-M0-45, `plan/OPERATIONS.md` § "qa
 commits", PR #117 (TASK-M0-45) and REVIEW_QUEUE.md (RQ-197 archived, RQ-198 filed)*
 
@@ -4939,8 +4966,8 @@ slice: (stable assignment, consistent with R-360). If shards are still
 over ~10.5 min after qa's commit, prefer splitting the long tests (first
 qa_cargo_xtask_alias_runs_deps) over raising n."
 
-The human's text says R-365, which was already taken by the RQ-196 ruling; recorded as R-366, applied per R-204 — veto?
-Open in RQ-198. That is how R-348's number was handled when the human's message named R-347, already taken.
+The human's text says R-365, which was already taken by the RQ-196 ruling; recorded as R-366, applied per R-204, accepted by R-370
+(RQ-198). That is how R-348's number was handled when the human's message named R-347, already taken.
 
 *Applied:*
 - **What it settles.** "option 1" is RQ-197's first option, its recommended one. Sharding the `ci` and `xtask-ci` jobs
@@ -4991,3 +5018,282 @@ Open in RQ-198. That is how R-348's number was handled when the human's message 
 - R-366 is in the "process" group of `plan/rule_groups.yaml`, beside R-335; `plan/section_notes.yaml` gives its line.
 
 Changes no requirement. TASK-M0-45 builds it.
+
+## R-367 — The overnight self-merge condition "within budget" is dropped; #114 and #116 merge *(amends R-234 and R-264)*
+*Superseded by R-369.*
+*2 Oct 2026 · applied in `plan/OPERATIONS.md` § "Away mode" (with R-369), and R-234's and R-264's forward lines*
+
+"This is from me.
+1. Merge #114 and #116. R-367: the overnight self-merge condition
+   "within budget" is dropped. Size is your judgement (R-264); record the
+   reason in the PR as usual. Update OPERATIONS.md.
+2. RQ-198: R-366 stands.
+3. RQ-199: option 1. R-366's exception extends to those four strings in
+   qa_TASK-M0-29.rs, changed to the exact sharded forms; the code
+   reviewer confirms nothing else changed.
+4. Ruled ahead, for #119's coming question (R-368): a link's "log-det"
+   column holds log of its volume factor. §3.9's factor entries convert
+   to their logs ("1" → 0). For a non-square Jacobian (the simplex link,
+   3×2) the factor is the area element √det(JᵀJ), so the entry is
+   log √det(JᵀJ). Physics reviews the conversion. It applies at
+   TASK-M2-01."
+
+The human sent three messages on 2 Oct 2026, each opening "This is from me.": this one (A), then the standing rule on
+autonomy (B), then a last one (C) that repeats A's items 1 to 3, adds #117's shard times, and restates B; where C
+differs from B, C governs. The human numbered R-367, R-368 and R-369. Their other three rulings are recorded as R-370
+(RQ-198), R-371 (RQ-199) and R-372 (#117's shard times), in the order C gives them, applied per R-369.
+
+*Applied:*
+- **The condition.** `plan/OPERATIONS.md` § "Away mode" listed "its size choice is recorded, which meets 'within
+  budget' (R-264)" among the self-merge conditions. It is dropped: size is judgement, and the PR records the reason for
+  its size as before. R-234's *Applied* note ("within budget") and R-264's last *Applied* note ("The self-merge
+  condition … is met by this recorded choice") carry forward lines; their texts are unchanged.
+- **R-369, the next ruling, supersedes this one.** It removes every size gate, this one among them, and the merge
+  conditions are R-369's. So R-367 leaves `plan/CURRENT_RULES.md`, and § "Away mode" is rewritten to R-369.
+- **#114 and #116.** #116 (TASK-M0-15) merged as 4efa9a5 before this record. #114 (TASK-M0-48) is the orchestrator's
+  to merge, under R-369's conditions.
+
+Changes no requirement.
+
+## R-368 — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*
+*2 Oct 2026 · applied in generation-root §3.9, REQ-CHART-034 and REQ-GEN-018 (reqio), TASK-M2-01 and
+`docs/archive/review_queue/M0.md` (RQ-200 archived)*
+
+"4. Ruled ahead, for #119's coming question (R-368): a link's "log-det"
+   column holds log of its volume factor. §3.9's factor entries convert
+   to their logs ("1" → 0). For a non-square Jacobian (the simplex link,
+   3×2) the factor is the area element √det(JᵀJ), so the entry is
+   log √det(JᵀJ). Physics reviews the conversion. It applies at
+   TASK-M2-01."
+
+(From the human's message A of 2 Oct 2026, quoted in full under R-367.)
+
+*Applied:*
+- **What it settles.** RQ-200, filed on `task/TASK-M0-46` (b738334) by PR #119's physics review, asked two things.
+  Question 1, option 1: the column holds a log, as its header, generation-root §2, canonical_spec §3, REQ-CHART-032 and
+  REQ-GEN-018's "sum of registry log-det Jacobians" already read it. Question 2: the simplex link's 3×2 Jacobian takes
+  the area element `√det(JᵀJ)`, not a 2×2 Jacobian onto two named masses.
+- **generation-root §3.9.** The table's log-det cells become logs: simplex `log √det(JᵀJ)`, `J` the forward's 3×2
+  Jacobian (the cell keeps "softmax Jacobian × sech² factors" as what `J` is); bounded `log((b−a)·σ')`; bounded alt and
+  symmetric `log(c·sech²)`; positive `log σ(x)` / `x`; unbounded `0`. A paragraph under the table, "The log-det column
+  (R-368)", says what the column holds, gives the square and non-square cases, and says that the physics reviewer
+  checks the conversion at TASK-M2-01, which writes the registry's entries. §2's "carries its log-det Jacobian" and
+  canonical_spec §3's "each carrying its log-det Jacobian" already read it as a log and are unchanged.
+- **The plan.** REQ-CHART-034's statement says what its analytic log-det is (the log of the volume factor, the area
+  element for the simplex link) and what the numeric Jacobian is compared through. REQ-GEN-018's verify detail compares
+  numeric `log |det J_D|`, or `log √det(J_DᵀJ_D)` where `J_D` is not square, with the sum of the registry's log-dets, in
+  place of numeric `|det J_D|` against that sum; for a block-diagonal `J_D` the area element is the product of the
+  blocks' factors, so the sum of their logs is its log. Both carry R-368 (reqio). REQ-CHART-032 ("log-det Jacobian") and
+  REQ-GEN-032 (the canonical form, which hashes whatever tree an entry carries) stand as written. TASK-M2-01, which
+  already names physics among its reviewers, gains R-368 in its References, a deliverable and acceptance lines for the
+  converted entries and the physics review of the conversion, and a note.
+- **PR #119 (TASK-M0-46).** Its §3.9 definition reads "the log-det is one tree, the entry's log-det, over the control's
+  components", which holds under this ruling unchanged; the definition and this ruling's paragraph touch different
+  lines of §3.9, so the two merge without a conflict. #119's next fix pass removes RQ-200 from its `REVIEW_QUEUE.md`,
+  since the entry is archived here (`plan/OPERATIONS.md` § "Merging", "An RQ open only on a PR branch"). Its test
+  entries' log-det trees stay test trees only.
+- R-368 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
+*2 Oct 2026 · applied in CLAUDE.md, `plan/OPERATIONS.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md`, and the
+forward lines of the rulings it names*
+
+Message B:
+
+"This is from me. Standing rule on autonomy (R-369). It replaces the
+size rules and the "veto? holds the merge" practice.
+
+1. Size: no budget gate. Use judgement. A PR that's big because the task
+   is big merges normally. A PR that's big because of sloppy or bloated
+   work gets fixed or split. The reviewers judge it. Never ask me about
+   size.
+2. Decide and continue. You and the reviewers decide everything not
+   listed in 3: process, CI, tooling, tests, naming, sizes, mechanical
+   consequences of rulings, and routine design choices. Record each
+   decision in the PR. "Veto?" items no longer block merges: merge when
+   the reviews pass and CI is green, and list the decisions in the next
+   summary. If I veto one later, fix it in a follow-up PR.
+3. Ask me only for:
+   - physics, where the choice changes results and the docs genuinely
+     don't settle it;
+   - calibration values (batched at milestone gates);
+   - passing a milestone gate;
+   - dropping or deferring a requirement;
+   - anything outside the repo or irreversible: repo settings, branch
+     protection, deleting outside the build directories, force-pushing.
+4. When one of those comes up, file it in REVIEW_QUEUE and carry on with
+   other work. Stop only if nothing at all can proceed.
+5. Don't stop just to report. Report at natural points (a stop, a gate,
+   or when I ask) as one batched summary.
+Update CLAUDE.md, OPERATIONS.md and CURRENT_RULES.md, and mark the
+superseded size and veto rules accordingly."
+
+Message C, the latest, which governs where it differs from B:
+
+"This is from me.
+
+Answers:
+1. Merge #114 and #116.
+2. RQ-198: R-366 stands.
+3. RQ-199: option 1. R-366's exception extends to those four strings in
+   qa_TASK-M0-29.rs, changed to the exact sharded forms; the code
+   reviewer confirms nothing else changed.
+4. #117: accept the current shard times and merge it, keeping ~10.5 min
+   as the target. Each shard spends ~5.5 min on setup and compiling, so
+   further splits barely help. Follow-up, your call how and when: build
+   the tests once and share them (nextest archive), so shards stop
+   recompiling.
+
+Standing rule on autonomy (R-369). It replaces the size rules and the
+"veto? holds the merge" practice:
+1. Size: no budget gate. Use judgement. Big because the task is big:
+   merge normally. Big because of sloppy or bloated work: fix it or
+   split it. The reviewers judge it. Never ask me about size.
+2. Decide and continue. You and the reviewers decide everything not
+   listed in 3: process, CI and CI timing, tooling, tests, naming,
+   sizes, mechanical consequences of rulings, exceptions to the
+   qa-file rules where a ruling forces the change, and routine design
+   choices. Record each decision in the PR. "Veto?" items no longer
+   block merges: merge when the reviews pass and CI is green, and list
+   the decisions in the next summary. If I veto one later, fix it in a
+   follow-up PR.
+3. Ask me only for:
+   - physics, where the choice changes results and the docs genuinely
+     don't settle it;
+   - calibration values (batched at milestone gates);
+   - passing a milestone gate;
+   - dropping or deferring a requirement;
+   - anything outside the repo or irreversible: repo settings, branch
+     protection, deleting outside the build directories, force-pushing.
+4. When one of those comes up, file it in REVIEW_QUEUE and carry on with
+   other work. Stop only if nothing at all can proceed.
+5. Don't stop just to report. Report at natural points (a stop, a gate,
+   or when I ask) as one batched summary of what was decided, merged and
+   still open.
+6. Before asking me anything, check it against 3. If it isn't on that
+   list, decide it yourself.
+Update CLAUDE.md, OPERATIONS.md and CURRENT_RULES.md, and mark the
+superseded size and veto rules accordingly."
+
+C differs from B in item 2 (it adds "CI and CI timing" and "exceptions to the qa-file rules where a ruling forces the
+change"), item 5 (the summary gives what was decided, merged and still open) and item 6 (new). C's text is the rule.
+
+*Applied:*
+- **What it replaces.** Each ruling that made size a gate or held a merge for "veto?" items carries a forward line; no
+  ruling's text changed:
+  - superseded outright: R-234 (veto items merged overnight only when every reviewer accepted and classed each one)
+    and R-367 (the "within budget" condition, itself a size gate);
+  - amended: R-175 (who merges: "the human merges, or a merge bot does"), R-204 (what to ask, "exceeding budgets", and
+    the "veto?" mark), R-208 (its split-first rule), R-211 (its pre-split rule), R-264 (the budget, the orchestrator's
+    size call and "within budget"), R-283 (raising the qa-file rule with the human in place of an exception), R-290
+    (which exceptions to the qa-file rules need a ruling) and R-357 ("merge only under the overnight rules whenever
+    I'm away"). Each says what of it is still in force.
+- **CLAUDE.md.** § "How work runs": "Stop after each PR until the human merges, unless told otherwise" gives way to the
+  merge rule and "stop only if nothing at all can proceed". § "When to ask the human" is rewritten to R-369 (its
+  heading names R-369, its bullets are items 2 to 6), and no longer tells an agent to mark anything "veto?". The qa
+  check's bullet adds that an exception a ruling forces is decided in the PR.
+- **`plan/OPERATIONS.md`.** § "Away mode" becomes § "Autonomy (R-369)": a PR merges once every
+  named reviewer approved its head, CI is green on the head, `plan/check_plan.py` passes and it waits on no open
+  REVIEW_QUEUE.md entry; the human away or not. The never-list keeps only R-369's item 3 (and its R-349 reading), and
+  the summary is item 5's. § "Reviewers"' "Veto items need a class from each reviewer" becomes the reviewers' size
+  judgement and decisions in the PR, and § "Dispatching" asks reviewers for those in place of a class. § "Size" and
+  § "Asking the human" are rewritten to items 1 and 2 to 6. § "qa commits" says an exception a ruling forces is
+  decided by the orchestrator and the reviewers. § "Merging"'s steps stand.
+- **`plan/WORKFLOW.md`** § "The unit" and § "Task files" carried the budget as a split trigger ("split in the plan
+  first" past ~500 counted lines; "a task is pre-split only if …"), and § "The review loop" step 6 said who merges.
+  They say R-369's: the ~500 figure is a planning guide for a task file's Size line, not a gate, the count stays as
+  R-211 and R-225 define it, and the orchestrator merges.
+- *Applied per R-369 (the orchestrator's decisions, recorded here as item 2 asks):*
+  1. **The merge.** "merge when the reviews pass and CI is green" is read as the orchestrator merging whenever those
+     hold, the human away or not; `plan/OPERATIONS.md` § "Merging"'s merged-tree check and `check_plan.py` stay part
+     of it, and a PR that waits on an item-3 question in REVIEW_QUEUE.md does not merge until it is answered.
+  2. **The mark.** A decision applied without asking is written "applied per R-369: <what>", in the PR (or in
+     `decisions.md` or a task file where it changes them), with no "veto?", and is listed in the next summary. It is
+     not filed in REVIEW_QUEUE.md, which holds item 3's questions only (item 4).
+  3. **The veto-mark check stays as it is.** `plan/tools/veto_marks.py` (R-354, R-355), run by `check_plan.py`, fails
+     on an open "applied per R-n — veto?" mark that no open REVIEW_QUEUE.md entry names. Under item 2 such a mark no
+     longer has to wait in the queue for a merge, but new decisions no longer carry "veto?" (decision 2), so the check
+     never meets one: it keeps guarding the old form, an open mark left reading "veto?" with nothing to settle it, and
+     needs no change. Every mark is closed after this commit (RQ-198's by R-370). No tooling changes.
+  4. **The reviewers judge size** in their verdicts: the code reviewer says whether the PR's size is the task's or
+     the work's, and a "the work's" finding is fixed or split like any other.
+  5. **The remaining "Never" items** of the old away rules (no new ruling, no calibration value, no gate, no repository
+     setting or branch protection, no force-push or edited history, nothing outside the repository without asking)
+     are item 3's and R-349's, and hold whether the human is away or not.
+  6. **The porting rule and `plan/WORKFLOW.md` § "Escalation" stand as written,** as does CLAUDE.md § "Never guess,
+     never defer": a conflict or silence in the corpus still goes to REVIEW_QUEUE.md, and a change to a decision in
+     the docs still needs an entry and a ruling. R-369 names the size rules and the veto practice, not these; under its
+     item 4, work carries on with whatever doesn't wait on the entry.
+- R-369 is in the "process" group of `plan/rule_groups.yaml`, with R-367 (left out of `CURRENT_RULES.md` as
+  superseded).
+
+Changes no requirement.
+
+## R-370 — R-366's number stands *(closes RQ-198)*
+*2 Oct 2026 · applied in decisions.md (R-366's numbering note) and `docs/archive/review_queue/M0.md` (RQ-198 archived)*
+
+"2. RQ-198: R-366 stands."
+
+(Messages A and C of 2 Oct 2026, item 2 of each; numbered by the orchestrator, applied per R-369.)
+
+*Applied:* RQ-198's option 1. R-366's numbering note reads "applied per R-204, accepted by R-370" in place of "veto?",
+and R-366 carries a "Still in force" line that says so. RQ-198 is archived with its Ruling line (R-292). R-370 is in the
+"one-off" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
+*2 Oct 2026 · applied in `plan/OPERATIONS.md` § "qa commits", TASK-M0-45 and `docs/archive/review_queue/M0.md` (RQ-199
+archived)*
+
+"3. RQ-199: option 1. R-366's exception extends to those four strings in
+   qa_TASK-M0-29.rs, changed to the exact sharded forms; the code
+   reviewer confirms nothing else changed."
+
+(Messages A and C of 2 Oct 2026, item 3 of each; numbered by the orchestrator, applied per R-369.)
+
+*Applied:*
+- **The exception.** In a qa commit on TASK-M0-45 (qa's follow-up `qa: tests for TASK-M0-45`), qa changes only the four
+  synthetic workflow strings in `xtask/tests/qa_TASK-M0-29.rs` that RQ-199 names (lines 529, 533, 547 and 551 on
+  `origin/task/TASK-M0-45`, in `qa_m0_29_ci_workflow_check_accepts_the_per_push_steps` and its negative control), to
+  the exact sharded forms, `run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4` and
+  `run: cargo xtask ci --partition ${{ matrix.shard }}/4`. Nothing else in the file changes, and the code reviewer
+  confirms it. The orchestrator's R-237 check accepts `M` on that file in that commit. The implementer still never edits
+  it.
+- **The plan.** `plan/OPERATIONS.md` § "qa commits" lists R-371 among the named exceptions. TASK-M0-45 names it in its
+  References, the step-match deliverable, the code reviewer's checklist line and its Notes. R-290 and R-366 carry
+  forward lines.
+- R-371 is in the "process" group of `plan/rule_groups.yaml`, beside R-366. Changes no requirement.
+
+## R-372 — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*
+*2 Oct 2026 · applied in TASK-M0-45, TASK-M0-52 (new), REQ-SYS-078 (new, reqio), `plan/tasks.yaml` and
+`plan/OPERATIONS.md` § "Autonomy (R-369)"*
+
+"4. #117: accept the current shard times and merge it, keeping ~10.5 min
+   as the target. Each shard spends ~5.5 min on setup and compiling, so
+   further splits barely help. Follow-up, your call how and when: build
+   the tests once and share them (nextest archive), so shards stop
+   recompiling."
+
+(Message C of 2 Oct 2026, item 4; numbered by the orchestrator, applied per R-369.)
+
+*Applied:*
+- **The times.** PR #117's (TASK-M0-45) shard times are accepted as they stand when it merges. The last it reported,
+  on 64aa46b, had `ci (1)` at 14.5 and 15.4 min, `ci (2)` 11.2 and 11.7, `ci (4)` 12.5 and 12.9 and `xtask-ci (2)` 11.3
+  and 12.0, against ~10.5 min (R-325). TASK-M0-45's wall-time acceptance line ("a job still over it is named in the PR
+  and goes back to the human") is met by this ruling, as R-336 met #96's. R-366's remedy, splitting the long tests
+  further before raising n, is not required for #117. ~10.5 min per job stays the target (R-325), REQ-SYS-077's
+  statement among it, unchanged. R-336 and R-366 carry forward lines.
+- *Applied per R-369 (the follow-up, "your call how and when"):*
+  1. **A new task, TASK-M0-52**, "The `ci` shards share one test build": one job builds the workspace's tests once,
+     `cargo nextest archive`, in each feature set the shards run, and uploads the archive; each `ci` shard downloads it
+     and runs its `--partition hash:<k>/4` slice from it (`--archive-file`), compiling no test. The shards together
+     still run every test the unsharded run did (the R-231 listing check and `nextest_ci_shards_together_list_every_test`
+     still pass), and each job's cache keys and R-326 save rule stand. The doctests, which nextest doesn't run, stay in
+     shard 1. The PR shows each `ci` shard's warm time against ~10.5 min.
+  2. It closes a new requirement, REQ-SYS-078 (reqio), milestone M0, verified by review checklist (code and qa).
+  3. It depends on TASK-M0-45, has code and qa as its reviewers, is sized ~200 lines, and runs once #117 merges,
+     beside the M0 tasks still open (R-357's order, `plan/OPERATIONS.md`), before the M0 gate.
+  4. `xtask-ci`'s shards run `cargo xtask controls`, whose `cargo test` builds are not nextest's, so the archive does
+     not cover them; TASK-M0-52 leaves them as they are.
+- R-372 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes no requirement but REQ-SYS-078, which is new.

@@ -21,6 +21,8 @@ wall-clock time is then ~10.5 min or less.
 ## References
 - `decisions.md` § "R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*"
 - `decisions.md` § "R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)*"
+- `decisions.md` § "R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*"
+- `decisions.md` § "R-372 — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*"
 - `decisions.md` § "R-264 — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*"
 - `decisions.md` § "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
 - `decisions.md` § "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
@@ -61,7 +63,9 @@ wall-clock time is then ~10.5 min or less.
   unsharded steps to the exact sharded forms, `cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4`
   and `cargo xtask ci --partition ${{ matrix.shard }}/4`, with their controls' edit targets moved to match; nothing
   else in the two files changes. The three qa-only files that match those lines (`qa_TASK-M0-14_r335.rs`,
-  `qa_TASK-M0-33.rs`, `qa_TASK-M0-14_rust_gpu_cache.rs`) change the same way under R-290. The implementer does not
+  `qa_TASK-M0-33.rs`, `qa_TASK-M0-14_rust_gpu_cache.rs`) change the same way under R-290. In a qa commit on this task,
+  qa also changes the four unsharded step strings in `xtask/tests/qa_TASK-M0-29.rs`'s synthetic workflows (lines 529,
+  533, 547 and 551) to the same exact sharded forms, and nothing else in that file (R-371). The implementer does not
   edit any of them.
 - The PR shows each CI job's warm wall time, and a cold one, against ~10.5 min, and names the new jobs to add to
   branch protection's required checks.
@@ -82,10 +86,13 @@ wall-clock time is then ~10.5 min or less.
   and `D` line of qa's commit with its reason (R-290, R-336).
 - Review checklist (code) — in `qa_TASK-M0-22_r235.rs` and `support/qa_m0_01.rs`, qa's commit changes only the CI step
   matches and their controls' edit targets, to the exact sharded forms; nothing else in them changed (R-366).
+- Review checklist (code) — in `qa_TASK-M0-29.rs`, qa's commit changes only the four unsharded step strings, to the
+  exact sharded forms; nothing else in it changed (R-371).
 - CI log on the PR head — each CI job's warm wall time is ~10.5 min or less; a job still over it is named in the PR
   and goes back to the human, not accepted silently (REQ-SYS-077, R-325). If shards are still over ~10.5 min after
   qa's commit, the long tests are split further, first `qa_cargo_xtask_alias_runs_deps`, in preference to raising n
-  (R-366).
+  (R-366). R-372 accepts #117's shard times as they stand, ~10.5 min staying the target: the jobs still over it are
+  named in the PR, and this line is met by the ruling, as R-336 met #96's.
 
 ## Notes
 - High priority: the next M0 task to start once TASK-M0-14 (PR #96) merges (R-336).
@@ -108,3 +115,10 @@ wall-clock time is then ~10.5 min or less.
   the gate jobs named `ci` and `xtask-ci`, and the shards' shared cache keys stand; nextest's `slice:` partition
   becomes `hash:<k>/4`. If a shard is still over ~10.5 min after qa's commit, split the long tests further, first
   `qa_cargo_xtask_alias_runs_deps`, rather than raising n.
+- RQ-199 (`qa_TASK-M0-29.rs` pinning the unsharded steps) is ruled by R-371 (2 Oct 2026, option 1): R-366's exception
+  covers its four strings, changed to the exact sharded forms; the code reviewer confirms nothing else changed. The
+  orchestrator's R-237 check accepts `M` on that file in qa's commit. The branch's open copy of RQ-199, if any, goes in
+  its next fix pass; this ruling's PR archived the entry.
+- R-372 (2 Oct 2026): #117's shard times are accepted and it merges, ~10.5 min staying the target. Each shard spends
+  ~5.5 min on setup and compiling, so further splits barely help; TASK-M0-52 (new) builds the tests once, as a nextest
+  archive the shards share. R-366's split-further remedy is not required here.

@@ -115,7 +115,7 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     scratch directory overwrote each other's `body.md`, and PR #54's description briefly showed TASK-M0-09's
     (30 Sep 2026);
   - any ruling since the task file was written, verbatim (R-289);
-  - for a reviewer, the request for a class on each veto item (§ "Reviewers");
+  - for a reviewer, the request to judge the PR's size and to name each decision it made (§ "Reviewers", R-369);
   - for a renamed or reused target, what to clean first (§ "Pitfalls").
 - **Fresh or resumed.** A reviewer is always a fresh subagent, never a fork (CLAUDE.md). A fix round with a ruling in
   it is a fresh dispatch (R-289). A fix round without one may go to the implementer that is still running, by message.
@@ -149,11 +149,12 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   given, before its own unpushed commit. A reviewer reads the diff with `git diff origin/main...HEAD` in its worktree,
   after `git fetch origin`, and checks CI with `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The
   agent files say so (`.claude/agents/`).
-- **Veto items need a class from each reviewer.** R-234 lets a PR with "applied per R-204 — veto?" items merge while
-  the human is away only if every named reviewer accepted each item *and* classed it as test infrastructure, process,
-  sequencing or mechanical. Ask for both in the first dispatch: reviewers otherwise approve without classing (#70
-  needed follow-ups, and was then held when code classed an item "design"). The implementer puts every new veto item in
-  the PR description, not only in a reply: qa may not read the implementer's replies (#72, 30 Sep 2026).
+- **Size and decisions (R-369).** Each reviewer judges the PR's size: big because the task is big merges normally; big
+  because the work is sloppy or bloated is a finding, fixed or split. The implementer and the reviewers decide what
+  isn't on R-369's list of questions for the human (§ "Asking the human"), and each decision goes in the PR
+  description, "applied per R-369: <what>", not only in a reply: qa may not read the implementer's replies (#72,
+  30 Sep 2026). Ask for both in the first dispatch. Reviewers no longer class "veto?" items: R-234's classes went with
+  it (R-369).
 - **Mutants.** Don't run `cargo mutants` locally; CI's shards do (`mutants.yml`, R-302). If one has to run locally, give
   it a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats
   as fresh, and delete it straight after. A local run uses R-348's two caps, the per-mutant timeout and the memory cap
@@ -171,19 +172,22 @@ qa commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing it
    (R-237).
 3. Each line is `A`, or `M` or `D` on a file whose every earlier commit, by `git log --format=%s -- <file>`, is a qa
    commit (R-290), or on a file a ruling names as an exception: R-335 (`xtask/tests/qa_TASK-M0-22_r235.rs`), R-336
-   (TASK-M0-45's test splits), R-342 (the two `qa_TASK-M0-38.rs` files) and R-366 (TASK-M0-45's CI step matches in
-   `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`).
+   (TASK-M0-45's test splits), R-342 (the two `qa_TASK-M0-38.rs` files), R-366 (TASK-M0-45's CI step matches in
+   `xtask/tests/qa_TASK-M0-22_r235.rs` and `xtask/tests/support/qa_m0_01.rs`) and R-371 (the four unsharded step strings
+   in `xtask/tests/qa_TASK-M0-29.rs`), or one the PR records under R-369 (below).
 4. Push with `git push origin HEAD:task/<TASK-id>` and confirm with `git ls-remote`. Add each `M` or `D` line to the
    PR description, with its reason.
 
 Anything else: reject it (`git reset --hard <head before qa>`) and dispatch qa again. The implementer never edits qa's
-files (R-290). The one-round exceptions on #74 and #78 stand, but there is no next one: when qa next needs to change a
-file the rules above don't open to it, file that in REVIEW_QUEUE and wait for the ruling (R-283).
+files (R-290). The one-round exceptions on #74 and #78 stand. When a ruling forces a change to a file the rules above
+don't open to qa, the orchestrator and the reviewers decide the exception and record it in the PR, naming the file and
+what may change: qa changes only that, and the code reviewer confirms nothing else changed. It is not a question for
+the human, and it is not filed in REVIEW_QUEUE (R-369).
 
 ## Merging
 
-Who merges: the human, unless the human has said otherwise (CLAUDE.md § "How work runs") or the away rules allow it
-(§ "Away mode"). When the orchestrator merges:
+Who merges: the orchestrator, once § "Autonomy (R-369)"'s conditions hold, whether the human is away or not. To
+merge:
 1. Wait until `gh pr view N --json mergeStateStatus` shows `CLEAN`. Every review thread is resolved (R-276).
 2. Check the merged tree: in a scratch detached worktree at `origin/main`, `git merge` the PR branch, and any other PR
    about to merge, then run `python3 plan/check_plan.py` and `python3 plan/tools/current_rules.py --check`, and the PR's
@@ -221,24 +225,21 @@ they can add it back.
   numbers a batch from a number already taken, record it from the next free number, in order, and note the shift under
   the first (R-278).
 
-## Away mode
+## Autonomy (R-369)
 
-The human's limits while they are away (given 27 Sep 2026, updated 28 Sep; in force whenever they are away). Keep
-working through the plan under `plan/WORKFLOW.md` and `CLAUDE.md`. Progress is the goal: batch questions, and stop only
-when nothing at all can proceed.
+The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
+practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
 
-**Self-merge** a PR only if all of these hold:
+**Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;
 - CI is green on the head, every job;
-- `python3 plan/check_plan.py` passes;
-- its size choice is recorded, which meets "within budget" (R-264);
-- it has no "applied per R-204 — veto?" item, unless R-234 allows it: every named reviewer explicitly accepted each
-  item, and every item is test infrastructure, process, sequencing or mechanical. Hold the PR if any item touches
-  physics or conventions, numeric values or calibrations, design or GUI behaviour, or scope or deferrals, or if the
-  reviewers disagree;
-- it raises no new REVIEW_QUEUE entry that needs the human.
+- `python3 plan/check_plan.py` passes, and so does § "Merging"'s check of the merged tree;
+- it waits on no open `REVIEW_QUEUE.md` entry.
 
-Otherwise leave it open, write down why, and go on to the next ready task; if there is none, stop.
+Its size and its decisions don't hold it: the reviewers judge size (§ "Reviewers", § "Size"), and each decision made
+without asking is in the PR and goes in the next summary. If the human vetoes one later, fix it in a follow-up PR.
+A PR that waits on a question stays open, with the reason written down; go on to the next ready task.
 
 **Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
 TASK-M0-07 to TASK-M0-15; R-336 makes TASK-M0-45 the next M0 task to start, at high priority.
@@ -246,57 +247,70 @@ R-355 and R-356 (2 Oct 2026) named the eight tasks, TASK-M0-15, TASK-M0-45 to TA
 task. R-357 (2 Oct 2026): they run on the Mac, not in a cloud session, and M0 finishes in this order:
 1. TASK-M0-45 and TASK-M0-49 first (both make CI cheaper);
 2. then TASK-M0-15, TASK-M0-46, TASK-M0-47, TASK-M0-48, TASK-M0-50 and TASK-M0-51, in parallel within the CPU, memory
-   and disk limits (§ "Resources");
+   and disk limits (§ "Resources"), and TASK-M0-52, the `ci` shards' shared test build, once TASK-M0-45 merges
+   (R-372, applied per R-369);
 3. then TASK-M0-19, with its benchmarks run on the Mac (R-186), and TASK-M0-44;
 4. stop before the M0 gate, and lay out its six calibrations together (REQ-VAL-138, REQ-VAL-149, REQ-VAL-151,
    REQ-VAL-156, REQ-VAL-180 and REQ-VAL-181), each with its measurements and proposed value, so the human can confirm
    them in one sitting.
 
-Merge only under the overnight rules (§ "Away mode") whenever the human is away, and batch every question for the
-human in `REVIEW_QUEUE.md`.
+Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
-**Never, while the human is away:**
+**Never, without the human** (R-369's list; R-349):
 - make or record a new ruling (applying an existing one is fine);
 - confirm a calibration value;
 - pass a milestone gate: stop before it;
+- drop or defer a requirement;
 - change branch protection or any repository setting;
 - force-push or edit merged history. That includes amending and force-pushing your own fresh branch, even before a PR
-  exists: fix a mistake with a new commit (30 Sep 2026).
+  exists: fix a mistake with a new commit (30 Sep 2026);
+- delete or modify anything outside the repository and its build and scratch directories (§ "Resources").
 
-**On return, or on stopping,** give one summary:
+A physics choice that changes results, where the docs genuinely don't settle it, is the human's too. When one of these
+comes up, file it in `REVIEW_QUEUE.md` and carry on with other work.
+
+**Reporting.** Don't stop just to report. At a natural point (a stop, a gate, or when the human asks) give one batched
+summary:
+- what was decided: each "applied per R-369" decision, with its PR, for the human to veto afterwards;
 - what merged: PR, task and head;
-- what is open, and why;
-- every question, in one batched list;
-- every veto item merged under R-234, for the human to veto afterwards;
+- what is still open, and why;
+- every question in `REVIEW_QUEUE.md`, in one list;
 - anything surprising;
 - free disk and the memory-pressure level at each checkpoint (R-252, R-295).
 
 ## Size
 
-Size is the orchestrator's call, never a question for the human (R-264). The ~500 counted-line budget
-(`plan/WORKFLOW.md` § "Task files") is a rough heuristic that also weighs complexity: decide to split in the plan or
-keep one PR, and record the choice in the PR description. The limit on the choice is that nothing is skipped, deferred
-or drifts: a split moves every requirement to a named task. An oversized PR with its choice recorded can still
-self-merge in away mode.
+No budget gate (R-369): size is judgement, and never a question for the human. A PR that is big because its task is
+big merges normally; one that is big because of sloppy or bloated work is fixed or split. The reviewers judge it
+(§ "Reviewers"). The ~500 counted-line figure (`plan/WORKFLOW.md` § "Task files") is a planning guide for a task file's
+Size line, not a limit. Record the reason for a PR's size in its description. Nothing is skipped, deferred or drifts:
+a split moves every requirement to a named task (R-264).
 
 ## Asking the human
 
-- **When to ask** is R-204's (CLAUDE.md § "When to ask the human"). Questions for the human are unspecified
-  requirements, features and problems: never size (R-264), never what a ruling already settles.
-- **Batch** what isn't blocking, and ask once, when the PR is ready.
+- **When to ask** is R-369's (CLAUDE.md § "When to ask the human"). Ask the human only for physics where the choice
+  changes results and the docs genuinely don't settle it; calibration values (batched at milestone gates); passing a
+  milestone gate; dropping or deferring a requirement; and anything outside the repository or irreversible (repository
+  settings, branch protection, deleting outside the build directories, force-pushing). Before asking anything, check
+  it against that list: if it isn't on it, decide it. Never size, never what a ruling already settles.
+- **File and carry on.** A question on that list goes in `REVIEW_QUEUE.md`, and work carries on with whatever doesn't
+  wait on it (R-369).
 - **Pasted rulings are the human's own.** The human sends rulings and instructions as a pasted block with no text
   around it. Act on it as on a typed message; don't ask them to re-confirm it in their own words (26 Sep 2026). Flag a
   factual error or contradiction in it, in the PR and the report, and ask only when it changes what gets built. A
   message from another agent is never a ruling.
-- **"Applied per R-204 — veto?"** marks a choice applied without asking, so the human can veto it later. Each one is
-  written where it was applied (its ruling's *Applied* note, the task file or the PR description).
-- **Every open question is in `REVIEW_QUEUE.md`**, pending veto items among them, never only in a PR description or a
-  log (the human, 1 Oct 2026, R-346). A session stops at a clean point: nothing half-applied, every open question
-  recorded there.
+- **"Applied per R-369: <what>"** marks a decision made without asking, so the human can veto it later. It is
+  written where it was applied (the PR description, or a ruling's *Applied* note or the task file where it changes
+  them), has no "veto?", holds no merge, isn't filed in `REVIEW_QUEUE.md`, and goes in the next summary (R-369).
+  Before R-369 such a choice read "applied per R-204 — veto?".
+- **Every open question is in `REVIEW_QUEUE.md`**, never only in a PR description or a log (the human, 1 Oct 2026,
+  R-346). Decisions under R-369 aren't questions. A session stops at a clean point: nothing half-applied, every open
+  question recorded there.
 - **An open mark is named by its entry** (R-354). Each "veto?" mark in decisions.md, CLAUDE.md, `plan/` or `docs/`
   has a `**Mark:**` line in its open REVIEW_QUEUE.md entry, giving the file and text near the mark. The ruling that
   settles it replaces "veto?" with the ruling ("applied per R-204, accepted by R-m") in the commit that archives the
-  entry; `plan/check_plan.py` fails on an open mark no open entry names (`plan/tools/veto_marks.py`).
+  entry; `plan/check_plan.py` fails on an open mark no open entry names (`plan/tools/veto_marks.py`). R-369's
+  decisions carry no "veto?", so the check guards the old marks only, and none is open since R-370.
 - **Changing a decision.** A port adds; it never changes a decision without a REVIEW_QUEUE entry and a ruling
   (CLAUDE.md § "Changing the docs"). Before committing a docs change, word-diff each removed line against its
   replacement; if a decision's content changed, restore it and open an RQ instead (24 Sep 2026).

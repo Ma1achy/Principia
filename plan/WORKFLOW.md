@@ -2,7 +2,7 @@
 
 How the build runs from `plan/`. The docs stay the authority (plan/MILESTONES.md, "Assumptions"); this file says who
 does what, in what order, and what stops the line.
-How the orchestrator runs it day to day (dispatch, merging, away mode, machine resources, and a cloud session's setup
+How the orchestrator runs it day to day (dispatch, merging, autonomy, machine resources, and a cloud session's setup
 with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 
 ## The unit: one task, one branch, one PR
@@ -12,8 +12,8 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 - A task starts only when every task in its **Depends on** list is merged.
 - The PR description lists the requirement ids the task closes and, for each, the acceptance command that
   demonstrates it, with its output. It links the task file.
-- A task that turns out bigger than one reviewable PR (roughly 500 counted lines, § "Task files", R-211) is split **in the plan first**:
-  new task files and manifest entries, `plan/check_plan.py` green, then the work.
+- A task that is to be split is split **in the plan first**: new task files and manifest entries, `plan/check_plan.py`
+  green, then the work. Whether to split is judgement, not a line count (§ "Task files", R-369).
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
   (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
   `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
@@ -35,16 +35,14 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 
 Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`; the two agree exactly (checked by
 `plan/check_plan.py`). Task ids are `TASK-<Mn>-<nn>`, in build order within the milestone.
-- **One task is one reviewable PR:** roughly ≤ 500 lines of change.
-- **The budget is a rough heuristic (R-264):** ~500 counted lines is a guide, not a limit. Weigh the task's complexity
-  with its size: a simple task may run over and stay one PR, a subtle one may want splitting under it.
-  The orchestrator makes that call (split in the plan, or keep one PR) and records it in the PR; it is not a question
-  for the human, provided nothing is skipped, deferred or drifts.
+- **One task is one reviewable PR.** ~500 counted lines is a planning guide for a task file's Size line.
+- **No budget gate (R-369):** size is judgement, never a question for the human. A PR that is big because its task is
+  big merges normally; one that is big because of sloppy or bloated work is fixed or split, and the reviewers judge
+  which. The PR records the reason for its size. Nothing is skipped, deferred or drifts: a split moves every
+  requirement to a named task (R-264).
 - **What the budget counts (R-211, R-223, R-225):** added and changed lines (a diff's `+` lines) in implementation code
   and the implementer's own tests. Pure deletions, lines moved verbatim (the same text deleted elsewhere in the same
-  diff), qa's test commits and `negative_control!` blocks don't count. A PR
-  within ~500 on that count raises no size question, and a task is pre-split only if that count looks set to exceed
-  ~500.
+  diff), qa's test commits and `negative_control!` blocks don't count. The count is a measure, not a gate (R-369).
 - **Every live requirement is closed by exactly one task, and every task closes at least one.** A task's milestone
   is never later than the milestones of the requirements it closes.
 - **Calibration requirements** (R-71) are closed by the task that needs the value. Its deliverable is the proposal
@@ -120,7 +118,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 5. **Every reviewer re-checks** — not only the one who raised a finding: a fix can break another reviewer's check.
    Each reviewer approves explicitly, with a new `VERDICT: APPROVE <role>` review on the latest commit.
 6. Merge when `ci` and `reviews-complete` are green: `reviews-complete` (`cargo xtask reviews-check`) passes only when
-   every role the task file names has approved on the latest commit. The human merges, or a merge bot does (R-175).
+   every role the task file names has approved on the latest commit. The orchestrator merges (R-369;
+   `plan/OPERATIONS.md` § "Autonomy (R-369)").
 7. After the merge, the branch is cleaned up (R-345): GitHub's "Automatically delete head branches" deletes its remote
    branch, and the orchestrator confirms it is gone rather than deleting it (R-357); its local branch is deleted, its
    worktrees and their target directories are removed, and stale remote refs and worktree entries are pruned

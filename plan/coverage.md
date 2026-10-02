@@ -21,16 +21,16 @@
 | TOOL | 147 |
 | VAL | 180 |
 | PERF | 94 |
-| SYS | 77 |
-| **total** | **1309** |
+| SYS | 78 |
+| **total** | **1310** |
 
-Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 104 calibration, 104 definition, 1102 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 120 |
+| M0 | 121 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |
@@ -42,14 +42,14 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 
 ## Sections
 
-1057 sections in 46 files: 877 yield at least one requirement; 180 yield none and are listed below with the reason.
+1063 sections in 46 files: 879 yield at least one requirement; 184 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 133 |
+| informative only | 136 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
-| superseded (kept for the record) | 3 |
+| superseded (kept for the record) | 4 |
 
 
 ### `decisions.md`
@@ -142,6 +142,10 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 | R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them | informative only | accepts PR #114's veto items but item 2 (replaced by R-359) and TASK-M0-15's seven items applied per R-204 (PR #116), the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them; changes no requirement |
 | R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)* | informative only | closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement |
 | R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)* | informative only | closes RQ-197 (option 1): a named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit qa changes only the CI step matches in qa_TASK-M0-22_r235.rs and support/qa_m0_01.rs to the exact sharded forms, and the code reviewer confirms nothing else changed; the ci job's nextest shards use --partition hash:<k>/4, not slice:; PR #117's other items stand (4 shards, ci-checks, doctests in shard 1, the gate jobs, shared cache keys); a shard still over ~10.5 min is answered by splitting the long tests, first qa_cargo_xtask_alias_runs_deps, before raising n; its number is open in RQ-198; plan/OPERATIONS.md lists the exception; archives RQ-197; changes no requirement |
+| R-367 — The overnight self-merge condition "within budget" is dropped; #114 and #116 merge *(amends R-234 and R-264)* | superseded (kept for the record) | the overnight self-merge condition "within budget" is dropped (amends R-234 and R-264); #114 and #116 merge; superseded by R-369, the next ruling; records how R-370 to R-372 were numbered; changes no requirement |
+| R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)* | informative only | the standing rule on autonomy (messages B and C, C governing): no size gate, the reviewers judge size; the orchestrator and reviewers decide everything not on its list and record each decision in the PR as "applied per R-369", no "veto?"; a PR merges once its reviews pass and CI is green, the human away or not; ask only for physics that changes results and the docs don't settle, calibration values, passing a gate, dropping or deferring a requirement, and anything outside the repo or irreversible; file those in REVIEW_QUEUE and carry on; report in one batched summary; supersedes R-234 and R-367, amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357; CLAUDE.md, plan/OPERATIONS.md and plan/WORKFLOW.md rewritten to it; the veto-mark check stays as it is; changes no requirement |
+| R-370 — R-366's number stands *(closes RQ-198)* | informative only | closes RQ-198: R-366's number stands; its numbering mark names R-370; archives RQ-198; changes no requirement |
+| R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)* | informative only | closes RQ-199 (option 1): R-366's exception covers the four unsharded step strings in xtask/tests/qa_TASK-M0-29.rs, changed by qa to the exact sharded forms, the code reviewer confirming nothing else changed; plan/OPERATIONS.md lists it; TASK-M0-45 names it; archives RQ-199; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
