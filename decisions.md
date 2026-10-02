@@ -3828,6 +3828,9 @@ number for it.
 soon as it is written; the memory bound judged by the perf reviewer at two frame counts. A note, not a ruling.
 
 ## R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
+*Amended by R-359.*
+*Still in force: all of it; R-359 says how it applies to a negative control, which passes only by panicking with its
+expected message (R-212): its scratch is deleted only on that match, and kept, its path printed, otherwise.*
 *1 Oct 2026 · applied in REQ-VAL-178 (new) and TASK-M0-48 (new)*
 
 "File the M0-06 scratch-folder accumulation as a small task: tests delete their scratch folders on success and keep
@@ -4664,3 +4667,46 @@ RQ-194)*
 
 Changes REQ-TOOL-148's statement and verify detail, REQ-TOOL-119's verify detail and REQ-TOOL-008's statement; the
 other requirements gain R-358 among their rulings, and REQ-RENDER-025's, REQ-COL-060's and REQ-GUI-164's notes name it.
+
+## R-359 — A negative control's scratch is deleted only when its panic message matches *(amends R-342; applies R-212)*
+*2 Oct 2026 · applied in decisions.md (R-342's lines), REQ-VAL-178 (reqio), TASK-M0-48 and REVIEW_QUEUE.md (RQ-194)*
+
+"This is from me. #114's veto item, amended (R-359): the scratch folder of
+a ...::negative_control test is deleted only when its panic message
+matches the control's expected message. negative_control! catches the
+panic, compares the message with its expected one (R-212), deletes the
+folder only on a match, then resumes the panic so libtest's verdict is
+unchanged. A control that panics with the wrong message keeps its
+folder, and the path is printed, like any other failure (R-342)."
+
+*Applied:*
+- **What it amends.** PR #114 (TASK-M0-48, not merged) applied, per R-204 and marked "veto?" in its PR body only, its
+  design item 2: the scratch guard read the libtest thread name and counted any panic in a test whose name ends
+  `::negative_control` as a pass, deleting its folder, so a control that panicked with the wrong message failed with
+  its scratch deleted. R-359 replaces that item. The item was never in the docs on main, so no mark there changes.
+  R-342's rule, deleted on success and kept with its path on failure, now says how it applies to a control: a control
+  passes only when it panics with its expected message (R-212), so its scratch is deleted only then. R-342 gains a
+  forward line and a "Still in force" line saying so.
+- **How `negative_control!` does it.** The control's body runs inside a catch of its panic. The caught message is
+  compared with the control's `expected` message as `#[should_panic(expected = …)]` compares it (R-212): the message
+  contains it. On a match the macro deletes the scratch made in the control; otherwise it keeps it and prints its path
+  as the guard does for any failing test ("scratch kept: <path>", PR #114's item 3). Then it resumes the panic with
+  its original payload, so `#[should_panic(expected = …)]` stays on the control and libtest's verdict is the one it
+  gives today. A panic whose payload is not a string matches nothing, as libtest fails it too. The guard no longer
+  reads the thread name. A guard dropped while its control unwinds cannot yet know whether the message matches, so it
+  leaves its path for the macro to settle; how it hands the path over is the implementation's, as R-212 left the form
+  of the call to it. R-212 itself is unchanged: the control still names the panic it expects, and libtest still
+  judges it.
+- *Applied per R-204 — veto?:* a control that does not panic at all fails ("should panic" did not), so its scratch
+  is kept and its path printed, like a control that panics with the wrong message: the ruling deletes it "only on a
+  match", and there is no message to match. Open in RQ-194 (A4).
+- **Plan.** TASK-M0-48 builds it: `crates/validation/src/control.rs`'s `negative_control!` joins its deliverables; a
+  new acceptance test, `scratch_guard_keeps_a_wrong_message_controls_scratch`, runs a control whose panic does not
+  match as a child test and checks that its folder is kept and its path is in the child's output, with a registered
+  negative control (a macro that deletes on any panic, #114's item 2); and a control whose panic matches leaves no
+  folder. Its size goes from ~200 to ~260 lines. REQ-VAL-178's statement and verify detail gain the control's case,
+  and R-212 and R-359 join its rulings (reqio).
+- R-359 is in the "process" group of `plan/rule_groups.yaml`, beside R-342; `plan/section_notes.yaml` gives its line,
+  since REQ-VAL-178 lists it among its rulings, not its sources.
+
+Changes REQ-VAL-178's statement and verify detail; TASK-M0-48 builds it. PR #114 needs a fix round to build it.

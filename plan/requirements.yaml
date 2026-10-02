@@ -18864,7 +18864,7 @@
   milestone: M4
 - id: REQ-VAL-178
   area: VAL
-  statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342)."
+  statement: "A test's scratch folder or scratch file must be deleted when the test passes and kept, its path in the failure output, when the test fails; no test helper that makes a uniquely named scratch folder or file per call (by process id, counter or time) leaves it behind after a passing run (R-342). A negative control passes only when it panics with its expected message (R-212): `negative_control!` catches the control's panic, compares the message with its expected one, deletes the control's scratch only on a match, and resumes the panic so libtest's verdict is unchanged; a control that panics with the wrong message keeps its scratch and its path is printed, like any other failure (R-359)."
   source:
   - file: decisions.md
     section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
@@ -18872,11 +18872,13 @@
     section: "R-342 — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*"
   verify:
     method: unit test
-    detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."
+    detail: "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation scratch_guard: a scratch folder made for a test body that passes is gone afterwards, and one made for a body that panics is kept and its path printed; each with a registered negative control (a helper that never deletes, and one that always deletes). cargo test -p validation --features controls scratch_guard_keeps_a_wrong_message_controls_scratch: a control whose panic does not contain its expected message, run as a child test, keeps its scratch folder and prints its path, and a control whose panic matches leaves none; its registered negative control is a negative_control! that deletes on any panic (R-359). After a passing run of the tests TASK-M0-48 names, none of their scratch folders or files is left under `CARGO_TARGET_TMPDIR` or the system temp folder."
   rulings:
   - R-176
+  - R-212
   - R-333
   - R-342
+  - R-359
   milestone: M0
 - id: REQ-VAL-179
   area: VAL

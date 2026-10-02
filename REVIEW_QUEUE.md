@@ -9,7 +9,7 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-194: R-357's three choices and R-358's one applied per R-204, the stacked-PR merge order under auto-delete, and who reviews R-358's diff case *(R-357, R-345, R-358)*
+## RQ-194: R-357's three choices, R-358's one and R-359's one applied per R-204, the stacked-PR merge order under auto-delete, and who reviews R-358's diff case *(R-357, R-345, R-358, R-359)*
 
 - **File, section:**
   - `decisions.md` § "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete
@@ -23,6 +23,8 @@ milestone gets its own file after its gate. Ids never change.
     dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*": its "Applied per R-204 — veto?"
     item and its "Flagged, not resolved" item. `plan/tasks/M0/TASK-M0-51.md` § "Deliverables", the `show.rs` and
     `diff.rs` bullets.
+  - `decisions.md` § "R-359 — A negative control's scratch is deleted only when its panic message matches *(amends
+    R-342; applies R-212)*": its "Applied per R-204 — veto?" item. `plan/tasks/M0/TASK-M0-48.md` § "Notes".
 - **What:**
   - **A. Applied without asking (R-204), open for a veto:**
     1. What each cloud blocker would need: a larger disk (≥ 100 GB) or builds trimmed to fit; GraphQL allowed through
@@ -43,6 +45,12 @@ milestone gets its own file after its gate. Ids never change.
        Neither prints a notice when no bytes were dropped. TASK-M0-51 builds them.
        - **Mark:** `decisions.md` — "the notices' words, which the ruling leaves open"
        - **Mark:** `plan/tasks/M0/TASK-M0-51.md` — "R-358: the words"
+    4. R-359: a control that does not panic at all. The ruling settles a control that panics: its scratch is deleted
+       only when the message matches, and kept, its path printed, when it does not. A control that returns without
+       panicking fails ("should panic" did not), and its scratch is kept and its path printed, as for a wrong message,
+       since the ruling deletes it "only on a match" and there is no message to match. TASK-M0-48 builds it.
+       - **Mark:** `decisions.md` — "a control that does not panic at all fails"
+       - **Mark:** `plan/tasks/M0/TASK-M0-48.md` — "R-359: a control that does not panic"
   - **B. A conflict, not resolved:** CLAUDE.md § Git and R-345 have the branch below a stacked PR deleted only after the
     child PR is retargeted to `main`, since deleting a base branch through the API closed PR #2's child. With
     "Automatically delete head branches" on (R-357), merging the lower PR deletes its branch at once, so the child
@@ -56,7 +64,7 @@ milestone gets its own file after its gate. Ids never change.
     section, and REQ-TOOL-119's verify detail names it; TASK-M0-51, which builds it, has code and qa as its reviewers,
     not physics.
 - **Options seen:**
-  1. **Accept A1, A2 and A3 (recommended);** veto any, saying what replaces it.
+  1. **Accept A1, A2, A3 and A4 (recommended);** veto any, saying what replaces it.
   2. For B: **(recommended)** keep not stacking; if a stack is ever needed, retarget the child to `main` before
      merging the lower PR, then merge. CLAUDE.md § Git and `plan/OPERATIONS.md` § "Merging" change to say so.
   3. For B: rely on GitHub's retargeting after an auto-delete, confirming the child's base afterwards.
@@ -64,7 +72,8 @@ milestone gets its own file after its gate. Ids never change.
      only restates them; R-323's physics approval covers the rest of the definition, unchanged.
   5. For C: physics joins TASK-M0-51's reviewers, for the render_gui_spec sentence and the diff's notice.
 - **Needed:** accept or veto A; choose for B and for C. Nothing waits on it: R-357 is applied as written, no PR is
-  stacked, and TASK-M0-51 builds R-358 as written, its reviewers code and qa until C is ruled.
+  stacked, TASK-M0-51 builds R-358 as written, its reviewers code and qa until C is ruled, and TASK-M0-48 builds
+  R-359 with A4 as written.
   When ruled, each mark names the ruling in place of "veto?".
 
 ---

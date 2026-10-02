@@ -747,3 +747,7 @@
   section: "R-358 — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*"
   reason: informative only
   note: "accepts RQ-192's B1–B7 (R-297's GUI bullet and R-133 amendment, and the five marks copying R-297's bullets) and rules C: a cut-off tail after the summary line is a complete session whose dropped bytes prin profile show and prin profile diff always report, with no third session state; its rule is stated in telemetry §5 and render_gui_spec § Profiler and built by TASK-M0-51; REQ-TOOL-148, REQ-TOOL-119 and REQ-TOOL-008 change and list it among their rulings, as do five others; archives RQ-192 and adds to RQ-194"
+- file: decisions.md
+  section: "R-359 — A negative control's scratch is deleted only when its panic message matches *(amends R-342; applies R-212)*"
+  reason: informative only
+  note: "amends R-342 for negative controls, replacing PR #114's design item 2: negative_control! catches the control's panic, compares its message with the expected one (R-212), deletes the control's scratch only on a match and resumes the panic; a control that panics with the wrong message, or does not panic, keeps its scratch and prints its path; built by TASK-M0-48; REQ-VAL-178's statement and verify change and list it among their rulings; adds A4 to RQ-194"
