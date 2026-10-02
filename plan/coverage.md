@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 
 ## Sections
 
-1047 sections in 46 files: 877 yield at least one requirement; 170 yield none and are listed below with the reason.
+1048 sections in 46 files: 877 yield at least one requirement; 171 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 123 |
+| informative only | 124 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -132,6 +132,7 @@ Of these: 104 calibration, 104 definition, 1101 obligation. Retired (kept for th
 | R-353 — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted | informative only | accepts R-352's items applied per R-204 and the R-204 marks of R-348 and PR #96, and records the deletion of two superseded local branches; REQ-RENDER-083 loses its veto mark; changes no requirement |
 | R-354 — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue | informative only | process ruling; accepts the seven veto items listed to the human (item 3 as R-295 corrected it), closes the settled veto marks in decisions.md, plan/tasks/ and three requirement notes, files RQ-192 for the open ones, and adds plan/tools/veto_marks.py to plan/check_plan.py; changes no requirement's statement or verify |
 | R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)* | informative only | process ruling; accepts RQ-192's items 1, 2 and 4 (R-298's mark, TASK-M0-23's mutants.yml mark, the veto-mark check's design), corrects R-354's item 6 to the placements only and re-opens the five marks it closed beyond them (and R-297's other bullets) in RQ-192, asks there whether R-299's two cut-off error cases stand, and hands the seven ready tasks to the cloud session; REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their veto marks; changes no requirement's statement or verify |
+| R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)* | informative only | process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-193; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -210,7 +210,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-341** — `prin profile` streams its trace: the header first, each frame as it completes, flushed every 60 frames or 1 s *(amends R-286, R-298)*
 - **R-343** — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
 - **R-344** — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
-- **R-356** — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*
+- **R-356** — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*. Still in force: all of it but where TASK-M0-51 runs: on the Mac, not in a cloud session (R-357). Amended by R-357.
 
 ## Values
 
@@ -270,12 +270,13 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
 - **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
 - **R-342** — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*
-- **R-345** — Merged branches are deleted, with their worktrees and target directories
-- **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Amended by R-347.
-- **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
+- **R-345** — Merged branches are deleted, with their worktrees and target directories. Still in force: all of it but who deletes a merged PR's remote branch: GitHub's "Automatically delete head branches" setting deletes it, and the orchestrator confirms it is gone instead of deleting it (R-357). The local branch, the worktrees, the target directories and the prunes are as before. Amended by R-357.
+- **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Cloud sessions aren't viable for the build loop and suit read-and-think work only: reviews, audits and docs (R-357). Amended by R-347 and R-357.
+- **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*. Still in force: all of it; R-357 limits cloud sessions to read-and-think work (reviews, audits and docs), not the build loop, so the setup this ruling settles runs only for that. Amended by R-357.
 - **R-349** — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
 - **R-354** — The seven open veto items stand, R-252 stays amended, not superseded; settled "veto?" marks name their ruling, and open ones must be in the review queue. Still in force: all of it but item 6's extent: the human's "item 6 stands" covered R-297's placements only (R-355), so R-297's other applied-per-R-204 bullets and the five marks copying two of them (REQ-RENDER-025, REQ-COL-060, REQ-GUI-164, TASK-M2-26, TASK-M2-29) are open again, in RQ-192, where R-356 accepts those bullets but the GUI bullet and the R-133 amendment; R-355 accepts the check's design. Corrected in part by R-355.
-- **R-355** — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*
+- **R-355** — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*. Still in force: all of it but where the ready tasks run: on the Mac, not in a cloud session, TASK-M0-45 and TASK-M0-49 still first (R-357). Amended by R-357.
+- **R-357** — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 
 ## CI
 

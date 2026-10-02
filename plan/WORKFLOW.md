@@ -121,7 +121,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
    Each reviewer approves explicitly, with a new `VERDICT: APPROVE <role>` review on the latest commit.
 6. Merge when `ci` and `reviews-complete` are green: `reviews-complete` (`cargo xtask reviews-check`) passes only when
    every role the task file names has approved on the latest commit. The human merges, or a merge bot does (R-175).
-7. After the merge, the branch is cleaned up (R-345): its remote branch and its local branch are deleted, its
+7. After the merge, the branch is cleaned up (R-345): GitHub's "Automatically delete head branches" deletes its remote
+   branch, and the orchestrator confirms it is gone rather than deleting it (R-357); its local branch is deleted, its
    worktrees and their target directories are removed, and stale remote refs and worktree entries are pruned
    (`git fetch --prune`, `git worktree prune`). Only a branch fully merged into `main` is deleted. A branch that is the
    base of an open PR is deleted only after that child PR is retargeted to `main`, because deleting a base branch

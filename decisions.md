@@ -3916,6 +3916,10 @@ in TASK-M0-45's qa commit, a named exception to R-290; R-340 hashes each entry's
 or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031.
 
 ## R-345 — Merged branches are deleted, with their worktrees and target directories
+*Amended by R-357.*
+*Still in force: all of it but who deletes a merged PR's remote branch: GitHub's "Automatically delete head branches"
+setting deletes it, and the orchestrator confirms it is gone instead of deleting it (R-357). The local branch, the
+worktrees, the target directories and the prunes are as before.*
 *1 Oct 2026 · applied in `plan/WORKFLOW.md` § "The review loop" and CLAUDE.md § Git*
 
 "add that to be part of the workflow, merged branches are deleted."
@@ -3928,9 +3932,10 @@ deleting a base branch closes its child PRs (CLAUDE.md § Git, "Merging stacked 
 and CLAUDE.md § Git say so. Process only (section_notes); no requirement changes.
 
 ## R-346 — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files
-*Amended by R-347.*
+*Amended by R-347 and R-357.*
 *Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them
-prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347.*
+prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Cloud
+sessions aren't viable for the build loop and suit read-and-think work only: reviews, audits and docs (R-357).*
 *1 Oct 2026 · applied in `plan/OPERATIONS.md`, `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, CLAUDE.md §
 "How work runs", `plan/WORKFLOW.md`, RQ-190 (closed by R-347), and R-341–R-343's notes*
 
@@ -4009,6 +4014,9 @@ Report what's open."
 Process only (section_notes); no requirement changes.
 
 ## R-347 — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*
+*Amended by R-357.*
+*Still in force: all of it; R-357 limits cloud sessions to read-and-think work (reviews, audits and docs), not the
+build loop, so the setup this ruling settles runs only for that.*
 *1 Oct 2026 · applied in `scripts/cloud-setup.sh`, `xtask/tests/cloud_setup.rs`, `plan/OPERATIONS.md` and R-346's
 notes*
 
@@ -4369,6 +4377,9 @@ Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and RE
 list R-354 among their rulings.
 
 ## R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*
+*Amended by R-357.*
+*Still in force: all of it but where the ready tasks run: on the Mac, not in a cloud session, TASK-M0-45 and
+TASK-M0-49 still first (R-357).*
 *2 Oct 2026 · applied in decisions.md (R-297's, R-298's and R-354's marks), TASK-M0-23, TASK-M2-26, TASK-M2-29,
 REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 (reqio), REVIEW_QUEUE.md (RQ-192) and `plan/OPERATIONS.md`*
 
@@ -4427,6 +4438,8 @@ Changes no requirement's statement or verify: REQ-RENDER-025, REQ-COL-060 and RE
 and list R-355 among their rulings.
 
 ## R-356 — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*
+*Amended by R-357.*
+*Still in force: all of it but where TASK-M0-51 runs: on the Mac, not in a cloud session (R-357).*
 *2 Oct 2026 · applied in decisions.md (R-297's, R-298's, R-299's, R-304's and R-354's lines), telemetry §5, REQ-TOOL-008
 and REQ-TOOL-148 (new) (reqio), TASK-M0-51 (new), REVIEW_QUEUE.md (RQ-192) and `plan/OPERATIONS.md`*
 
@@ -4489,3 +4502,83 @@ rule."
   requirements cite theirs.
 
 Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other requirement.
+
+## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
+*2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
+runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
+REVIEW_QUEUE.md (RQ-193)*
+
+"This is from me." "The cloud session failed its environment checks: ~30 GB disk (one warm build hit 24 GB), GitHub
+GraphQL blocked (gh pr commands fail; REST works), and branch deletion blocked by its proxy. Work continues here on the
+Mac.
+
+1. Record it (R-357), in plan/OPERATIONS.md: cloud sessions aren't viable for the build loop; they suit read-and-think
+work (reviews, audits, docs). List the three blockers and what each would need.
+2. Agents post reviews through REST (gh api repos/Ma1achy/Principia/pulls/N/reviews), not gh pr review, so they work in
+either environment. Update .claude/agents and OPERATIONS.md.
+3. I'm turning on GitHub's "Automatically delete head branches", so merged PR branches are deleted server-side. After
+each merge, confirm the branch is gone instead of deleting it; clean up local worktrees as usual.
+
+Then finish M0 as OPERATIONS.md lays out: TASK-M0-45 and TASK-M0-49 first (both make CI cheaper), then M0-15, 46, 47,
+48, 50 and 51, running in parallel within the CPU, memory and disk limits. Then M0-19 (run its benchmarks here; this is
+my Mac) and M0-44. Merge only under the overnight rules whenever I'm away. Batch every question for me in REVIEW_QUEUE.
+Stop before the M0 gate, and lay out its six calibrations together, each with its measurements and proposed value, so I
+can confirm them in one sitting."
+
+*Applied:*
+- **(1) Cloud sessions.** `plan/OPERATIONS.md` § "Where the build loop runs" says that cloud sessions aren't viable for
+  the build loop and suit read-and-think work: reviews, audits and docs. The build loop (implementers, qa's tests,
+  builds, merges) runs on the Mac. It lists the three blockers, each with what it would need:
+  1. **Disk:** ~30 GB, with one warm build at 24 GB. It would need a larger disk (≥ 100 GB, for three agents' targets
+     and the seed under R-262's thresholds), or builds trimmed to fit.
+  2. **GitHub GraphQL blocked:** the `gh pr` commands fail, since they use GraphQL, while REST works. It would need
+     GraphQL allowed through the proxy. Until then, every agent posts through REST (item 2), and a cloud session's
+     orchestrator uses REST for PR create, list, view, checks, edit and merge; the manual lists the `gh api`
+     equivalents. Resolving review threads (R-276) has no REST call, so it waits for GraphQL.
+  3. **Branch deletion blocked by the proxy:** it would need the proxy to allow ref deletes (a `git push --delete` or
+     the REST ref delete). The server-side auto-delete (item 3) covers merged PR branches; other deletions (a
+     `measure/` branch, R-272) still need it.
+
+  *Applied per R-204 — veto?:* what each blocker would need, as listed above: ≥ 100 GB of disk or trimmed builds,
+  GraphQL allowed through the proxy, ref deletes allowed through the proxy; and the REST equivalents the manual lists.
+  `scripts/cloud-setup.sh` and its check stay as R-346 and R-347 made them, for a cloud session's read-and-think work.
+  Open in RQ-193.
+- **(2) Reviews through REST.** The five reviewers' files (`code-reviewer.md`, `qa-reviewer.md`, `physics-reviewer.md`,
+  `gui-reviewer.md`, `perf-reviewer.md`) post the verdict with
+  `gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@-`, the body
+  given on standard input by a heredoc, still headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175).
+  `event=COMMENT` is what `gh pr review --comment` posted. `commit_id` is the full SHA of the head reviewed, so the
+  review attaches to it: `cargo xtask reviews-check` compares each review's `commit_id` with the PR head (R-260). qa
+  passes the head it was given, before its own commit, which the orchestrator pushes only after qa returns: GitHub
+  takes only a commit on the PR, and `gh pr review` attached qa's review to that head too. Their
+  other `gh pr` command, `gh pr diff <N>`, becomes `git diff origin/main...HEAD` in the reviewer's worktree, after
+  `git fetch origin`; checking CI on the head uses `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The
+  "don't use `gh pr checkout`" line stays. `implementer.md` names no `gh` command and is unchanged. `plan/OPERATIONS.md`
+  § "Reviewers" says the same.
+
+  *Applied per R-204 — veto?:* the body goes on standard input (`-F body=@-`), not in a file (`-F body=@<file>`),
+  since a reviewer writes no file (its read-only rule); and `gh pr diff` becomes `git diff origin/main...HEAD`, which
+  is the PR's diff while the worktree's HEAD is the PR head. Open in RQ-193.
+- **(3) Merged branches auto-delete.** GitHub's "Automatically delete head branches" is on:
+  `gh api repos/Ma1achy/Principia --jq .delete_branch_on_merge` returned `true` on 2 Oct 2026. After a merge, the
+  orchestrator confirms the remote branch is gone (`git ls-remote --exit-code origin refs/heads/<branch>` exits 2,
+  finding no such ref) instead of deleting it, and tells the human if it is still there. The local branch, the worktrees, their target directories and the
+  prunes (`git fetch --prune`, `git worktree prune`) are cleaned up as before (R-345). `plan/OPERATIONS.md` §
+  "Merging", `plan/WORKFLOW.md` § "The review loop" step 7 and CLAUDE.md § Git say so; R-345's own text is unchanged
+  and carries a forward line.
+  - **Flagged, not resolved:** R-345 and CLAUDE.md § Git have the branch below a stacked PR deleted only after the
+    child PR is retargeted to `main`, since deleting a base branch closed its child PR (PR #2). With auto-delete on,
+    merging the lower PR deletes its branch at once, before the orchestrator can retarget the child. That rule is
+    kept as written; the order under auto-delete is asked in RQ-193. No PR is stacked meanwhile (§ "Roles and the
+    loop", 28 Sep 2026).
+- **The work order.** `plan/OPERATIONS.md` § "Away mode", "Order of work", says it: TASK-M0-45 and TASK-M0-49 first;
+  then TASK-M0-15, TASK-M0-46, TASK-M0-47, TASK-M0-48, TASK-M0-50 and TASK-M0-51 in parallel within the CPU, memory
+  and disk limits (§ "Resources"); then TASK-M0-19, its benchmarks run on the Mac (R-186), and TASK-M0-44. Stop before
+  the M0 gate, with the gate's six calibrations (REQ-VAL-138, REQ-VAL-149, REQ-VAL-151, REQ-VAL-156, REQ-VAL-180 and
+  REQ-VAL-181) laid out together, each with its measurements and proposed value, for the human to confirm in one
+  sitting. Merge under the overnight rules (§ "Away mode") whenever the human is away, and batch every question in
+  REVIEW_QUEUE.md. The tasks R-355 and R-356 handed to the cloud session run on the Mac; R-355 and R-356 carry
+  forward lines. CLAUDE.md § "How work runs" says cloud sessions suit read-and-think work only. No task file,
+  dependency or requirement changed.
+
+Process only (section_notes); no requirement changes.

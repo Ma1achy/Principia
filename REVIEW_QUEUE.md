@@ -211,3 +211,43 @@ ruled items stay here, marked "ruled by R-355" or "ruled by R-356", their Mark l
   - **Needed:** accept or veto. TASK-M0-51 builds option 1 meanwhile; a veto before it merges changes it there.
 
 ---
+
+## RQ-193: R-357's three choices applied per R-204, and the stacked-PR merge order under auto-delete *(R-357, R-345)*
+
+- **File, section:**
+  - `decisions.md` § "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete
+    *(amends R-345, R-346, R-347, R-355 and R-356)*": its two "Applied per R-204 — veto?" items.
+  - `plan/OPERATIONS.md` § "Where the build loop runs (R-357)": "What each would need is applied per R-204 — veto?
+    (RQ-193)".
+  - CLAUDE.md § Git: "Merging stacked PRs: retarget each child PR to `main` before deleting the branch below it,
+    because deleting a base branch closes its child PRs." `plan/OPERATIONS.md` § "Merging", "Merge order for stacked
+    PRs".
+- **What:**
+  - **A. Applied without asking (R-204), open for a veto:**
+    1. What each cloud blocker would need: a larger disk (≥ 100 GB) or builds trimmed to fit; GraphQL allowed through
+       the proxy, with the orchestrator meanwhile on the REST forms `plan/OPERATIONS.md` lists (PR create, list, view,
+       checks, diff, edit, reopen, comment, review and merge; resolving a review thread has no REST form); ref deletes
+       allowed through the proxy. The human named the blockers and asked what each would need; the needs are inferred.
+       - **Mark:** `decisions.md` — "what each blocker would need, as listed above"
+       - **Mark:** `plan/OPERATIONS.md` — "What each would need is applied per R-204"
+    2. How a reviewer posts through REST: the body on standard input (`-F body=@-`, a heredoc), not in a file, since a
+       reviewer writes no file; `gh pr diff <N>` replaced by `git diff origin/main...HEAD` in the reviewer's worktree,
+       after `git fetch origin`; CI on the head read through `.../commits/<sha>/check-runs`. qa's `commit_id` is the
+       head it was given, before its own unpushed commit.
+       - **Mark:** `decisions.md` — "the body goes on standard input"
+  - **B. A conflict, not resolved:** CLAUDE.md § Git and R-345 have the branch below a stacked PR deleted only after the
+    child PR is retargeted to `main`, since deleting a base branch through the API closed PR #2's child. With
+    "Automatically delete head branches" on (R-357), merging the lower PR deletes its branch at once, so the child
+    can't be retargeted first. GitHub may retarget a PR whose base branch auto-delete removes after a merge to the
+    merged PR's base, which would make the old order unnecessary; that is unverified here, and PR #2's child was
+    closed after a delete through the API. No PR is stacked now, and none is to be stacked meanwhile (`plan/OPERATIONS.md` § "Roles
+    and the loop", 28 Sep 2026).
+- **Options seen:**
+  1. **Accept A1 and A2 (recommended);** veto any, saying what replaces it.
+  2. For B: **(recommended)** keep not stacking; if a stack is ever needed, retarget the child to `main` before
+     merging the lower PR, then merge. CLAUDE.md § Git and `plan/OPERATIONS.md` § "Merging" change to say so.
+  3. For B: rely on GitHub's retargeting after an auto-delete, confirming the child's base afterwards.
+- **Needed:** accept or veto A; choose for B. Nothing waits on it: R-357 is applied as written, and no PR is stacked.
+  When ruled, each mark names the ruling in place of "veto?".
+
+---

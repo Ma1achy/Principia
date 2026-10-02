@@ -12,6 +12,38 @@ How to read it:
   **Linux cloud** says what a cloud machine does instead.
 - The Linux items R-346 applied per R-204 (RQ-190) are ruled by R-347, which accepted them, and cite it.
 
+## Where the build loop runs (R-357)
+
+The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions
+aren't viable for the build loop; they suit read-and-think work: reviews, audits and docs.** A cloud session failed
+its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204 — veto? (RQ-193):
+1. **Disk.** The machine had ~30 GB, and one warm build reached 24 GB. It would need a larger disk (≥ 100 GB, for
+   three agents' targets and the seed within § "Resources"' thresholds), or builds trimmed to fit.
+2. **GitHub GraphQL is blocked,** so the `gh pr` commands, which use GraphQL, fail; REST works. It would need GraphQL
+   allowed through the proxy. Until then every agent posts its review through REST (§ "Reviewers"), and a cloud
+   session's orchestrator uses REST for the rest:
+
+   | `gh pr` command | REST through `gh api` |
+   |---|---|
+   | `gh pr list` | `gh api repos/Ma1achy/Principia/pulls` (open PRs) |
+   | `gh pr create` | `gh api repos/Ma1achy/Principia/pulls -f title=<title> -f head=<branch> -f base=main -F body=@<file>` (POST) |
+   | `gh pr view` | `gh api repos/Ma1achy/Principia/pulls/N`; `--jq .head.sha` for the head, `--jq .mergeable_state` (`clean` is `mergeStateStatus` `CLEAN`) |
+   | `gh pr checks` | `gh api repos/Ma1achy/Principia/commits/<sha>/check-runs` |
+   | `gh pr diff` | `git diff origin/main...<head>`, or `gh api repos/Ma1achy/Principia/pulls/N -H "Accept: application/vnd.github.diff"` |
+   | `gh pr edit --base main` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -f base=main` |
+   | `gh pr edit --body-file` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -F body=@<file>` |
+   | `gh pr reopen` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -f state=open` |
+   | `gh pr comment` | `gh api repos/Ma1achy/Principia/issues/N/comments -F body=@<file>` |
+   | `gh pr review --comment` | `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<sha> -F body=@-` |
+   | `gh pr merge --merge --match-head-commit` | `gh api -X PUT repos/Ma1achy/Principia/pulls/N/merge -f merge_method=merge -f sha=<full head sha>` |
+
+   Resolving a review thread (R-276) has no REST call; it waits for GraphQL.
+3. **Branch deletion is blocked by the proxy.** It would need the proxy to allow ref deletes. GitHub's "Automatically
+   delete head branches" removes merged PR branches server-side (§ "Merging"); any other delete, such as a `measure/`
+   branch's (R-272), still needs it.
+
+The **Linux cloud** notes below, `scripts/cloud-setup.sh` among them, stand for a cloud session's read-and-think work.
+
 ## Start here
 
 1. **A cloud session runs `scripts/cloud-setup.sh` first**, from the repository root. It installs exactly what CI's
@@ -39,7 +71,8 @@ How to read it:
    - The script warns, and does not fail, when the machine's `python3` is another minor version than the one CI sets
      up (R-347): `plan/check_plan.py` and the xtask tools need only Python 3 with PyYAML.
 2. **Read** `CLAUDE.md`, `plan/WORKFLOW.md`, `plan/CURRENT_RULES.md`, this file and `REVIEW_QUEUE.md` (everything open).
-   Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight. The loop needs `gh`, signed in to GitHub
+   Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight (in a cloud session, its REST form, § "Where the
+   build loop runs"). The loop needs `gh`, signed in to GitHub
    (`gh auth status`); CI's runner images have it, so the setup script doesn't install it.
 3. **Agent definitions** (`.claude/agents/`) load only when a session starts. After one changes, the session must be
    restarted (`claude --continue`); `/clear` doesn't reload them (26 Sep 2026).
@@ -108,6 +141,14 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     over: every reviewer the task names (qa, code, physics, gui, perf) posts again on the new head (`plan/WORKFLOW.md`
     steps 5 and 6). After an `M` or `D` qa commit, dispatch all of them at once, qa's re-approval included, not one
     after another (#78, #79, 30 Sep 2026).
+- **How they post (R-357).** Each reviewer posts its verdict through REST, never `gh pr review`, so it works on the Mac
+  and in a cloud session alike: `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<head
+  sha> -F body=@-`, the body, headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175), on standard
+  input, since a reviewer writes no file. `event=COMMENT` is what `gh pr review --comment` posted. `commit_id` attaches
+  the review to the head reviewed, which `reviews-check` compares with the PR head (R-260); qa passes the head it was
+  given, before its own unpushed commit. A reviewer reads the diff with `git diff origin/main...HEAD` in its worktree,
+  after `git fetch origin`, and checks CI with `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The
+  agent files say so (`.claude/agents/`).
 - **Veto items need a class from each reviewer.** R-234 lets a PR with "applied per R-204 — veto?" items merge while
   the human is away only if every named reviewer accepted each item *and* classed it as test infrastructure, process,
   sequencing or mechanical. Ask for both in the first dispatch: reviewers otherwise approve without classing (#70
@@ -149,16 +190,21 @@ Who merges: the human, unless the human has said otherwise (CLAUDE.md § "How wo
    else catches a clash: #70's CI was green, but `main` had since gained #75's `spawn::TIMEOUT` uses, which #70 renamed,
    and the merged tree failed to compile (30 Sep 2026).
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
-4. Then, as a separate command, never chained after the merge with `;`: delete the remote and local branches, remove
-   the PR's worktrees and their target directories, and prune (`git fetch --prune`, `git worktree prune`) (R-345). A
-   refused merge with chained cleanup once removed #54's worktree.
+4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
+   GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
+   refs/heads/<branch>` exits 2, finding no such ref. Don't delete it yourself; if it is still there, tell the human.
+   Then delete the local branch, remove the PR's worktrees and their target directories, and prune
+   (`git fetch --prune`, `git worktree prune`) (R-345). A refused merge with chained cleanup once removed #54's
+   worktree.
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 
 **Merge order for stacked PRs.** `gh pr merge --delete-branch` deletes the base through the API, and GitHub then
 closes the PR stacked on it rather than retargeting it (PR #2, 25 Sep 2026). So, per PR n: merge n without deleting
 its branch, `gh pr edit n+1 --base main`, then delete n's branch (CLAUDE.md § Git, R-345). To recover a closed child:
-push its branch back at the merged PR's `headRefOid`, `gh pr reopen`, then `gh pr edit --base main`.
+push its branch back at the merged PR's `headRefOid`, `gh pr reopen`, then `gh pr edit --base main`. *Open
+(RQ-193):* with auto-delete on (R-357), merging n deletes its branch at once, before n+1 can be retargeted, so this
+order can't be kept as written; until RQ-193 is ruled, stack nothing (§ "Roles and the loop").
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
 except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required
@@ -196,8 +242,18 @@ Otherwise leave it open, write down why, and go on to the next ready task; if th
 
 **Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
 TASK-M0-07 to TASK-M0-15; R-336 makes TASK-M0-45 the next M0 task to start, at high priority.
-R-355 (2 Oct 2026): the seven ready tasks, TASK-M0-15 and TASK-M0-45 to TASK-M0-50, go to the cloud session,
-TASK-M0-45 and TASK-M0-49 first. R-356 (2 Oct 2026) adds TASK-M0-51, the reader task, to them.
+R-355 and R-356 (2 Oct 2026) named the eight tasks, TASK-M0-15, TASK-M0-45 to TASK-M0-50 and TASK-M0-51, the reader
+task. R-357 (2 Oct 2026): they run on the Mac, not in a cloud session, and M0 finishes in this order:
+1. TASK-M0-45 and TASK-M0-49 first (both make CI cheaper);
+2. then TASK-M0-15, TASK-M0-46, TASK-M0-47, TASK-M0-48, TASK-M0-50 and TASK-M0-51, in parallel within the CPU, memory
+   and disk limits (§ "Resources");
+3. then TASK-M0-19, with its benchmarks run on the Mac (R-186), and TASK-M0-44;
+4. stop before the M0 gate, and lay out its six calibrations together (REQ-VAL-138, REQ-VAL-149, REQ-VAL-151,
+   REQ-VAL-156, REQ-VAL-180 and REQ-VAL-181), each with its measurements and proposed value, so the human can confirm
+   them in one sitting.
+
+Merge only under the overnight rules (§ "Away mode") whenever the human is away, and batch every question for the
+human in `REVIEW_QUEUE.md`.
 
 **Never, while the human is away:**
 - make or record a new ruling (applying an existing one is fine);

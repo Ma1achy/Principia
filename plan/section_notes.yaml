@@ -739,3 +739,7 @@
   section: "R-355 — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*"
   reason: informative only
   note: "process ruling; accepts RQ-192's items 1, 2 and 4 (R-298's mark, TASK-M0-23's mutants.yml mark, the veto-mark check's design), corrects R-354's item 6 to the placements only and re-opens the five marks it closed beyond them (and R-297's other bullets) in RQ-192, asks there whether R-299's two cut-off error cases stand, and hands the seven ready tasks to the cloud session; REQ-RENDER-025, REQ-COL-060 and REQ-GUI-164 regain their veto marks; changes no requirement's statement or verify"
+- file: decisions.md
+  section: "R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*"
+  reason: informative only
+  note: "process ruling; cloud sessions suit read-and-think work, not the build loop (plan/OPERATIONS.md lists the three blockers and what each needs); reviewers post through REST (.claude/agents/); merged PR branches auto-delete and the orchestrator confirms they are gone (CLAUDE.md, plan/WORKFLOW.md, plan/OPERATIONS.md); records the order for finishing M0 on the Mac; files RQ-193; changes no requirement"
