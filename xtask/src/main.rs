@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use xtask::controls::Mode;
+use xtask::controls::{Mode, Partition};
 use xtask::deps::{self, CompileCheck, Metadata};
 use xtask::workspace_manifest;
 
@@ -19,15 +19,20 @@ Commands:
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
                                   (canonical_spec §1 item 2)
-  ci [--list]                     run every registered per-push runner, in order (R-177); --list runs each
-                                  runner's listing-only form, which runs no control (R-235)
+  ci [--list | --partition <k>/<n>]
+                                  run every registered per-push runner, in order (R-177); --list runs each
+                                  runner's listing-only form, which runs no control (R-235); --partition runs
+                                  shard k of n: controls on its slice, build-kernel, and the other runners in
+                                  shard 1 only (R-360)
   codegen                         regenerate the checked-in generated files from the layout table; refuses when
                                   an entry lacks a §3.8 key, naming the field and the key (dd_generation_root §3.8)
-  controls [--list] [--manifest-path <Cargo.toml>]
+  controls [--list] [--partition <k>/<n>] [--manifest-path <Cargo.toml>]
                                   check that every test of each crate declaring the `controls` feature has a
                                   negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
                                   workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176);
-                                  --list lists each test's controls and checks the listing, running none (R-226)
+                                  --list lists each test's controls and checks the listing, running none (R-226);
+                                  --partition runs, or lists, only the k-th of n slices of the controls, by a
+                                  stable hash of the control name (R-360)
   deps [--metadata <file> | --manifest-path <Cargo.toml>]
                                   check the workspace crate graph against systems_architecture §7.1, and
                                   that no unit test of kernel or ledger uses validation, by compiling them
@@ -128,6 +133,8 @@ fn main() -> ExitCode {
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
+        ["ci", "--partition", slice] => Partition::parse(slice)
+            .and_then(|slice| xtask::ci::run_partition(xtask::ci::RUNNERS, slice)),
         ["codegen"] => xtask::codegen::run(&workspace_manifest()),
         ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
         ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
@@ -135,6 +142,7 @@ fn main() -> ExitCode {
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
         }
+        ["controls", rest @ ..] if rest.contains(&"--partition") => controls_partition(rest),
         ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
         ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
         ["gate", name] if !name.starts_with('-') => {
@@ -208,6 +216,31 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// `cargo xtask controls` with `--partition <k>/<n>` among `args`, and optionally `--list` and `--manifest-path
+/// <Cargo.toml>`, in any order (R-360).
+fn controls_partition(args: &[&str]) -> Result<(), String> {
+    let (mut mode, mut partition, mut manifest) = (Mode::Run, None, workspace_manifest());
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        match *arg {
+            "--list" => mode = Mode::List,
+            "--partition" => {
+                let slice = args.next().ok_or("controls: --partition takes k/n")?;
+                partition = Some(Partition::parse(slice)?);
+            }
+            "--manifest-path" => {
+                let path = args
+                    .next()
+                    .ok_or("controls: --manifest-path takes a path")?;
+                manifest = PathBuf::from(path);
+            }
+            other => return Err(format!("controls: unrecognised argument `{other}`")),
+        }
+    }
+    let partition = partition.ok_or("controls: --partition takes k/n")?;
+    xtask::controls::run_partition(&manifest, mode, partition)
 }
 
 /// This workspace's root directory.

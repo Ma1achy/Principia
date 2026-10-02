@@ -19,7 +19,9 @@ threads-required = "num-test-threads"
 # which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile, the codegen
 # self-test among them (TASK-M0-15); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in NEXTEST_PROFILE. The two filters are
 # complements, so together the jobs run every test once, as `xtask/tests/nextest.rs` checks. Locally, the default
-# profile runs them all.
+# profile runs them all. The `ci` job runs its profile as 4 parallel shards, each with `--partition hash:<k>/4`, which
+# together run every test the profile selects, once (R-336, R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each
+# shard.
 [profile.ci]
 default-filter = """
     not (

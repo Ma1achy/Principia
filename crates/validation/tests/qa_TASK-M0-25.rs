@@ -118,23 +118,55 @@ fn check_paired(krate: &str, names: &[String], qa: &[&str]) {
     }
 }
 
+/// The qa tests of `krate` in [`QA_TESTS`].
+fn qa_tests(krate: &str) -> &'static [&'static str] {
+    QA_TESTS
+        .iter()
+        .find(|(k, _)| *k == krate)
+        .unwrap_or_else(|| panic!("QA_TESTS has no crate {krate}"))
+        .1
+}
+
 /// REQ-VAL-153: under the `controls` feature, every qa test merged before TASK-M0-22 in validation and prin has a
-/// control registered under its name, and none of R-210's three child bodies is a test.
+/// control registered under its name, and none of R-210's three child bodies is a test. One test per crate, each
+/// listing its own crate, so that neither holds a CI shard over its target (R-336, REQ-SYS-077): this one validation,
+/// the next prin; together they cover every crate of [`QA_TESTS`].
 #[test]
 fn qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test() {
-    for (krate, qa) in QA_TESTS {
-        check_paired(krate, &listed(krate, true), qa);
-    }
+    assert_eq!(
+        QA_TESTS.iter().map(|(k, _)| *k).collect::<Vec<_>>(),
+        ["validation", "prin"],
+        "QA_TESTS names a crate that neither split test lists"
+    );
+    check_paired(
+        "validation",
+        &listed("validation", true),
+        qa_tests("validation"),
+    );
 }
 
 negative_control!(
     qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test,
     "without the feature no control compiles, so the pairing check must fail on that listing",
     expected = "has no registered control",
-    {
-        let (krate, qa) = QA_TESTS[0];
-        check_paired(krate, &listed(krate, false), qa)
-    }
+    check_paired(
+        "validation",
+        &listed("validation", false),
+        qa_tests("validation")
+    )
+);
+
+/// [`qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`] on prin (R-336's split).
+#[test]
+fn qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test() {
+    check_paired("prin", &listed("prin", true), qa_tests("prin"));
+}
+
+negative_control!(
+    qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test,
+    "prin's listing without the feature, where no control compiles, so the pairing check must fail on it",
+    expected = "prin: the qa test qa_prin_help_succeeds_and_prints_usage has no registered control",
+    check_paired("prin", &listed("prin", false), qa_tests("prin"))
 );
 
 /// The first failing draw the `failing_property` body prints, run with `PROPTEST_RNG_SEED=seed`.

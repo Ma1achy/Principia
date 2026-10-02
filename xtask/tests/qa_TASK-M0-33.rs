@@ -50,14 +50,25 @@ fn job_runs(workflow: &str) -> Vec<(String, Vec<String>)> {
     jobs
 }
 
-/// The words of `command` after `prefix`, without the capture flags, sorted; `None` if it does not start so.
+/// The words of `command` after `prefix`, without the capture flags and without nextest's `--partition <shard>`, sorted;
+/// `None` if it does not start so. A shard (R-336, R-366) selects which of the step's tests run, not its packages,
+/// features or filter: the doctest step beside a sharded nextest step covers the same packages, unsharded.
 fn args_after(command: &str, prefix: &str) -> Option<Vec<String>> {
     let rest = command.strip_prefix(prefix)?;
-    let mut words: Vec<String> = rest
-        .split_whitespace()
-        .filter(|w| !matches!(*w, "--no-capture" | "--nocapture" | "--"))
-        .map(str::to_owned)
-        .collect();
+    // `${{ matrix.shard }}` is one word of the command, not three.
+    let rest = rest.replace("${{ matrix.shard }}", "${{matrix.shard}}");
+    let mut words: Vec<String> = Vec::new();
+    let mut partition = false;
+    for w in rest.split_whitespace() {
+        if std::mem::take(&mut partition) {
+            continue;
+        }
+        if w == "--partition" {
+            partition = true;
+        } else if !matches!(w, "--no-capture" | "--nocapture" | "--") {
+            words.push(w.to_owned());
+        }
+    }
     words.sort();
     Some(words)
 }
@@ -67,8 +78,9 @@ fn args_after(command: &str, prefix: &str) -> Option<Vec<String>> {
 fn check_nextest_and_doctest_steps(workflow: &str) {
     let jobs = job_runs(workflow);
     assert!(
-        jobs.iter()
-            .any(|(_, runs)| runs.iter().any(|r| r == "cargo nextest run --workspace")),
+        jobs.iter().any(|(_, runs)| runs
+            .iter()
+            .any(|r| r == "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4")),
         "no CI job runs the workspace suite through `cargo nextest run --workspace`"
     );
     let mut nextest_steps = 0;

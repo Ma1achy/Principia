@@ -1,5 +1,5 @@
-# Per-push CI (R-177): formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in a job
-# of its own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
+# Per-push CI (R-177): formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in jobs
+# of their own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
 # registers into. The GPU kernel build, `cargo xtask build-kernel`, and the tests that need the built kernel run in a
 # job of their own, `gpu-kernel`, in parallel with `ci` (R-325, REQ-SYS-076); each CI job's warm wall-clock time is
 # targeted at ~10.5 min (R-270, R-325). The tests run through cargo-nextest, pinned, and doctests, which nextest does
@@ -7,6 +7,13 @@
 # `cargo test` did. `ci` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `ci` runs every test but the kernel's, `gpu-kernel` the
 # kernel's.
+# Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
+# nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
+# build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
+# --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
+# Branch protection requires the checks `ci` and `xtask-ci` (R-266): a matrix job's checks are named for its shards
+# (`ci (1)` … `ci (4)`), so the jobs `ci-gate` and `xtask-ci-gate`, named `ci` and `xtask-ci`, pass only when every
+# job they gather passed, whatever the others ended in.
 # The per-PR mutation gate runs on pull requests only, in its own workflow, `mutants.yml` (R-196, R-202, R-302, R-305);
 # the per-push jobs are unchanged by it (R-177). Bench runs nightly and screenshots on GUI PRs, in their own workflows
 # (R-177).
@@ -16,7 +23,8 @@
 # Caches (R-285), in every workflow: the cargo registry and git directories, through rust-cache with its target cache
 # and ~/.cargo/bin cache off, and the fixture pool, saved by the `ci` job alone. Never a whole target directory, so the
 # repository's Actions cache stays well under GitHub's 10 GB limit. Every key names its job: rust-cache's `shared-key`
-# is the job id (its key reads `cargo-registry-<job>-…`), and the pool's key names `ci`, the job that saves it. The
+# is the job id (its key reads `cargo-registry-<job>-…`), and the pool's key names `ci`, the job that saves it. A
+# matrix job's shards are one job, sharing its keys; each saves on `main`, and the first save of a key stands. The
 # `cargo-registry` prefix keeps these keys apart from the old `v0-rust-…` ones, which held target directories.
 # Every job that builds the kernel also caches the rust-gpu build, ~/.cache/rust-gpu, under a key naming its job and
 # the pinned toolchain channel (R-320, amending R-285).
@@ -38,8 +46,15 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # The workspace's tests, as 4 parallel shards (R-336, R-366, REQ-SYS-077): nextest's `--partition hash:<k>/4` puts
+  # each test in the shard its name hashes to, a stable assignment, so together they run every test the unsharded run
+  # did, once.
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
@@ -75,12 +90,6 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
           restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
-      - name: cargo fmt --all --check
-        run: cargo fmt --all --check
-      - name: cargo clippy --workspace --all-targets -- -D warnings
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: cargo build --workspace
-        run: cargo build --workspace
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
       - uses: actions/setup-python@v5
         with:
@@ -94,22 +103,69 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      # Every workspace test but those that need the built kernel, which `gpu-kernel` runs (R-325): the `ci` profile's
-      # default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE.
-      - name: cargo nextest run --workspace
+      # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
+      # (R-325): the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE.
+      - name: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
         env:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci
-        run: cargo nextest run --workspace
+        run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
+      # The doctests, once, in the first shard (R-231).
       - name: cargo test --workspace --doc
+        if: matrix.shard == 1
         run: cargo test --workspace --doc
-      - name: cargo xtask deps
-        run: cargo xtask deps
       - uses: actions/cache/save@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+
+  # Formatting, lints, the build and the crate-graph check, once, beside the test shards (R-195, REQ-SYS-004).
+  ci-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
+      # pool left this job with 11–24 MB free on ubuntu-latest. Remove the preinstalled toolsets it does not use (.NET,
+      # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci-checks
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - name: cargo fmt --all --check
+        run: cargo fmt --all --check
+      - name: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo build --workspace
+        run: cargo build --workspace
+      - name: cargo xtask deps
+        run: cargo xtask deps
+
+  # The required check `ci` (R-266): every `ci` shard and `ci-checks` passed. It runs whatever they ended in
+  # (`always()`), so a failed or cancelled job turns it red rather than skipping it.
+  ci-gate:
+    name: ci
+    needs: [ci, ci-checks]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: every job it gathers passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { echo "a job ci gathers ended $r"; exit 1; }; done
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
   # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL
@@ -166,16 +222,22 @@ jobs:
       - name: cargo test -p validation -p xtask --doc
         run: cargo test -p validation -p xtask --doc
 
-  # `cargo xtask ci` in a job of its own, beside the tests (R-235): it runs `cargo xtask plan-check`, which needs
-  # Python and PyYAML (REQ-SYS-007), then `cargo xtask build-kernel`, whose WGSL the toolchain test's control
-  # dispatches, then `cargo xtask controls`, every control, failing on any finding (R-198, R-226). The GPU harness's
-  # controls run on lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists tests through the pinned
-  # cargo-nextest (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests'
-  # controls, which `cargo xtask controls` runs, read its output (R-325 moves it out of `ci`, not out of this job).
+  # `cargo xtask ci` in jobs of their own, beside the tests (R-235), as 4 parallel shards (R-360, REQ-SYS-077):
+  # `cargo xtask ci --partition <k>/4` runs `cargo xtask build-kernel`, whose WGSL the kernel tests' controls dispatch,
+  # in every shard; then `cargo xtask controls` on the controls whose names fall in slice k of 4, failing on any finding
+  # (R-198, R-226); and, in shard 1 only, the other runners, among them `cargo xtask plan-check`, which needs Python
+  # and PyYAML (REQ-SYS-007). Together the 4 shards run every control exactly once. The GPU harness's controls run on
+  # lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists tests through the pinned cargo-nextest
+  # (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
+  # output (R-325 moves it out of `ci`, not out of this job).
   xtask-ci:
     runs-on: ubuntu-latest
     env:
       PRIN_GPU_BACKEND: vulkan
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -218,13 +280,25 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      - name: cargo xtask ci
-        run: cargo xtask ci
+      - name: cargo xtask ci --partition ${{ matrix.shard }}/4
+        run: cargo xtask ci --partition ${{ matrix.shard }}/4
       - uses: actions/cache/save@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+
+  # The required check `xtask-ci` (R-266): every `xtask-ci` shard passed, as `ci-gate` gathers `ci`'s.
+  xtask-ci-gate:
+    name: xtask-ci
+    needs: [xtask-ci]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: every job it gathers passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { echo "a job xtask-ci gathers ended $r"; exit 1; }; done
 
   # GitHub-hosted Apple silicon, paravirtual Metal: the Metal correctness suites only (R-169, R-186).
   gpu-metal:
