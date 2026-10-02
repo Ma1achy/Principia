@@ -5,13 +5,16 @@
 
 #![cfg(unix)]
 
-use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{mpsc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
 use validation::spawn::{while_no_spawn, write_executable, Spawn, SPAWN_TIMEOUT};
+
+#[path = "support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
 
 /// How long a spawn started during a write is watched: it must not finish while the write lasts. A `true` spawned
 /// with nothing held finishes far within it.
@@ -58,20 +61,17 @@ validation::negative_control!(
     check_spawn_waits(|write| write())
 );
 
-/// A fresh file path under the target's tmp; one per call, as a test and its control may run at once.
-fn scratch(name: &str) -> PathBuf {
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("stand_in_{name}_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir.join("stand-in")
+/// A fresh file path under the target's tmp; one per call, as a test and its control may run at once. Deleted when the
+/// test passes, kept when it fails (R-342).
+fn scratch(name: &str) -> Scratch {
+    Scratch::new(&format!("stand_in_{name}"))
 }
 
 /// `write` puts a script printing `ran` at a fresh path, and the script runs.
 fn check_runs(name: &str, write: fn(&std::path::Path, &str) -> std::io::Result<()>) {
     let path = scratch(name);
     write(&path, "#!/bin/sh\necho ran\n").expect("the stand-in was written");
-    let output = Command::new(&path).timed_output();
+    let output = Command::new(&*path).timed_output();
     assert!(
         matches!(&output, Ok(o) if o.status.success() && o.stdout == b"ran\n"),
         "the stand-in did not run: {output:?}"

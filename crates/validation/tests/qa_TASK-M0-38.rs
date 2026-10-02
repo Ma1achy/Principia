@@ -17,12 +17,15 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
 use validation::spawn::{write_executable, Spawn, SPAWN_TIMEOUT};
+
+#[path = "support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
 
 /// How long a spawn started during the write is watched for finishing. `true` spawned with nothing held back finishes
 /// far within it.
@@ -31,15 +34,10 @@ const WATCH: Duration = Duration::from_secs(2);
 /// The stand-in's size: above any pipe's buffer (64 KiB on Linux and macOS), so its write blocks until drained.
 const SIZE: usize = 1 << 20;
 
-/// A fresh FIFO under the target's tmp, one per call.
-fn fifo() -> PathBuf {
-    static CALL: AtomicUsize = AtomicUsize::new(0);
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "qa_m038_fifo_{}_{}",
-        std::process::id(),
-        CALL.fetch_add(1, Ordering::Relaxed)
-    ));
-    let _ = std::fs::remove_dir_all(&dir);
+/// A fresh FIFO under the target's tmp, one per call, with the scratch folder holding it: deleted when the test
+/// passes, kept with its path printed when it fails (R-342).
+fn fifo() -> (Scratch, PathBuf) {
+    let dir = Scratch::new("qa_m038_fifo");
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("stand-in");
     let made = Command::new("mkfifo")
@@ -47,7 +45,7 @@ fn fifo() -> PathBuf {
         .timed_output()
         .expect("mkfifo ran");
     assert!(made.status.success(), "mkfifo failed: {made:?}");
-    path
+    (dir, path)
 }
 
 /// Writes a stand-in with `write` into a FIFO, and spawns `true` through `Spawn` while the writer holds it open for
@@ -56,7 +54,7 @@ fn check_spawn_held_back(write: fn(&Path, Vec<u8>) -> io::Result<()>) {
     // One check at a time: a check's write would hold back the other's spawns.
     static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
     let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(PoisonError::into_inner);
-    let path = fifo();
+    let (_dir, path) = fifo();
     let writer = {
         let path = path.clone();
         thread::spawn(move || write(&path, vec![b'#'; SIZE]))

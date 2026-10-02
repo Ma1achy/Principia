@@ -17,30 +17,30 @@
 #![allow(non_snake_case)]
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::Path;
 
 use serde_json::json;
 use validation::negative_control;
 use xtask::screenshot::{self, Outcome, Which};
 
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 const SUITE: &str = "qa40";
 
 /// A root holding suite `qa40`: one surface of `size` holding the buttons `labels` in order (plus one checkbox
-/// `checkbox`, if given, last), and one presence case `presence` listing `listed`.
+/// `checkbox`, if given, last), and one presence case `presence` listing `listed`. Deleted when the test passes, kept
+/// with its path printed when it fails (R-342).
 fn root(
     name: &str,
     size: [u32; 2],
     labels: &[&str],
     checkbox: Option<&str>,
     listed: &[&str],
-) -> PathBuf {
+) -> Scratch {
     // Unique per call: a test and its control run in parallel with the same `name`.
-    static NEXT: AtomicUsize = AtomicUsize::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("qa_m0_40_{name}_{}_{n}", std::process::id()));
-    let _ = fs::remove_dir_all(&root);
+    let root = Scratch::new(&format!("qa_m0_40_{name}"));
     let dir = root.join(screenshot::SUITES).join(SUITE);
     fs::create_dir_all(&dir).expect("suite dir created");
     let mut controls: Vec<_> = labels

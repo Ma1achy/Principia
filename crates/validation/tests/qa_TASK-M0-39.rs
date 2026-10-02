@@ -14,22 +14,20 @@
 //! elsewhere there are no process groups.
 #![cfg(unix)]
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use validation::negative_control;
 use validation::spawn::Spawn;
 
-/// A fresh scratch directory under the target's tmp dir.
-fn scratch() -> PathBuf {
-    static N: AtomicUsize = AtomicUsize::new(0);
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "qa_m039-{}-{}",
-        std::process::id(),
-        N.fetch_add(1, Ordering::Relaxed)
-    ));
-    let _ = std::fs::remove_dir_all(&dir);
+#[path = "support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
+/// A fresh scratch directory under the target's tmp dir: deleted when the test passes, kept with its path printed when
+/// it fails (R-342).
+fn scratch() -> Scratch {
+    let dir = Scratch::new("qa_m039");
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
@@ -59,8 +57,9 @@ fn group_of(pid: &str) -> String {
 
 /// Runs `sh -c <script> qa_m039_spawner <dir>` through the helper; the script writes its own pid to `$1/spawner` and the
 /// grandchild's to `$1/grandchild`, and sends the grandchild's output to /dev/null, so the helper returns as soon as the
-/// script ends. Returns the grandchild's and the spawner's pids, and the grandchild's group read at once afterwards.
-fn spawn_grandchild(script: &str) -> (String, String, String) {
+/// script ends. Returns the grandchild's and the spawner's pids, the grandchild's group read at once afterwards, and the
+/// scratch directory, for the caller to hold until its test ends.
+fn spawn_grandchild(script: &str) -> (String, String, String, Scratch) {
     let dir = scratch();
     let o = Command::new("sh")
         .args([
@@ -68,7 +67,7 @@ fn spawn_grandchild(script: &str) -> (String, String, String) {
             &format!("echo $$ > \"$1/spawner\"; {script}"),
             "qa_m039_spawner",
         ])
-        .arg(&dir)
+        .arg(&*dir)
         .timed_output()
         .expect("the spawner ran");
     assert!(
@@ -79,14 +78,13 @@ fn spawn_grandchild(script: &str) -> (String, String, String) {
     let grandchild = pid_in(&dir.join("grandchild"));
     let spawner = pid_in(&dir.join("spawner"));
     let group = group_of(&grandchild);
-    let _ = std::fs::remove_dir_all(&dir);
-    (grandchild, spawner, group)
+    (grandchild, spawner, group, dir)
 }
 
 /// The grandchild `script` starts is in a process group of its own (it leads it) and not in its spawner's group, as
 /// soon as its pid is known. The grandchild is killed before the check, so a failing run leaks nothing.
 fn check_own_group_at_spawn(script: &str) {
-    let (grandchild, spawner, group) = spawn_grandchild(script);
+    let (grandchild, spawner, group, _dir) = spawn_grandchild(script);
     let _ = Command::new("kill")
         .args(["-9", &grandchild])
         .timed_output();
