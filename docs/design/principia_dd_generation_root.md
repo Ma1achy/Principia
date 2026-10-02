@@ -575,14 +575,20 @@ The register's entries, the constants the payload ledger uses:
 
 | Constraint | Link (forward) | Inverse | log-det | Sampling note |
 |---|---|---|---|---|
-| Simplex Δ² | softmax ∘ `μ_max·tanh` | log-ratio → `artanh`, clamp `(1−ε_μ)μ_max` | softmax Jacobian × sech² factors | under-samples simplex edges/corners |
-| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `(b−a)·σ'` | centre-heavy vs uniform |
-| Bounded alt | scaled `tanh` | `artanh` | `c·sech²` | interchangeable with σ up to reparam (`tanh x = 2σ(2x)−1`) — differs in slope profile only |
-| Positive (0,∞) | softplus / exp | inverse-softplus / log | `σ(x)` / `eˣ` | exp is heavy-tailed |
-| Symmetric (−c,c) | `c·tanh` | `artanh` | `c·sech²` | as bounded |
-| Unbounded ℝ | identity | identity | 1 | neutral |
+| Simplex Δ² | softmax ∘ `μ_max·tanh` | log-ratio → `artanh`, clamp `(1−ε_μ)μ_max` | `log √det(JᵀJ)`, `J` the forward's 3×2 Jacobian (softmax Jacobian × sech² factors) | under-samples simplex edges/corners |
+| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `log((b−a)·σ')` | centre-heavy vs uniform |
+| Bounded alt | scaled `tanh` | `artanh` | `log(c·sech²)` | interchangeable with σ up to reparam (`tanh x = 2σ(2x)−1`) — differs in slope profile only |
+| Positive (0,∞) | softplus / exp | inverse-softplus / log | `log σ(x)` / `x` | exp is heavy-tailed |
+| Symmetric (−c,c) | `c·tanh` | `artanh` | `log(c·sech²)` | as bounded |
+| Unbounded ℝ | identity | identity | 0 | neutral |
 
 Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note** — the robustness-sweep picker uses the last to choose alternatives that *disagree where it matters*.
+
+**The log-det column (R-368).** An entry's log-det is the log of its link's volume factor: `log |det J|` of the
+forward's Jacobian `J` where `J` is square, and, where it is not, the log of the area element `√det(JᵀJ)`. The simplex
+link's `J` is 3×2 (two controls, the three masses of Δ²), so its entry is `log √det(JᵀJ)`. The other entries are the
+logs of the factors this table held until R-368 (`(b−a)·σ'`, `c·sech²`, `σ(x)` / `eˣ`, and the identity's 1, whose log
+is 0). The physics reviewer checks this conversion at TASK-M2-01, which writes the registry's entries.
 
 **The hash (R-340).** The link registry is part of the ledger hashed into the schema version (R-36; §2's
 "canonicalised §3 ledger"), since its definitions decide how a chart coordinate decodes, and so what a cached or saved

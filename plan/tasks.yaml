@@ -2245,3 +2245,11 @@
   requirements: [REQ-TOOL-148]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-52
+  milestone: M0
+  title: "The `ci` shards share one test build: a nextest archive built once, so no shard recompiles the tests"
+  depends_on: [TASK-M0-45]
+  needs: []
+  requirements: [REQ-SYS-078]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]

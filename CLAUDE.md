@@ -15,9 +15,10 @@ Read this first; each rule points at its source.
   its Depends on is merged.
 - The reviewers are the ones the task file names. Each posts a PR review headed `VERDICT: APPROVE <role>` or
   `VERDICT: CHANGES <role>` (R-175). `reviews-complete` counts them.
-- Stop after each PR until the human merges, unless told otherwise.
+- The orchestrator merges a PR once every named reviewer has approved its head and CI is green, and stops only when
+  nothing at all can proceed (R-369; `plan/OPERATIONS.md` § "Autonomy (R-369)").
 - The PR shows every acceptance command the task lists, with its output. Benchmarks run on the human's Mac (R-186).
-- The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, away mode, resources, and what a
+- The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, autonomy, resources, and what a
   Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346). The build
   loop runs on the Mac; cloud sessions suit read-and-think work only: reviews, audits and docs (R-357).
 - Never delete or modify anything outside the repo and its build and scratch directories without asking the human
@@ -29,7 +30,8 @@ Read this first; each rule points at its source.
   `gui-reviewer`, `perf-reviewer`. The main session never implements or reviews a task itself; it only orchestrates.
 - The loop (`plan/WORKFLOW.md` § "The review loop"): dispatch the `implementer` → each reviewer the task names, each a
   fresh subagent (never a fork), given only the task id, PR number, worktree and target directory → the `implementer` for the fixes → every named
-  reviewer re-checks → stop for the human to merge.
+  reviewer re-checks → the orchestrator merges once `ci` and `reviews-complete` are green (`plan/WORKFLOW.md` § "The
+  review loop" step 6; R-369).
 - Reviewers never share a checkout (R-219). Give each reviewer its own git worktree at the PR head
   (`git worktree add --detach <dir> <head>`) and its own `CARGO_TARGET_DIR`, name both in the dispatch, and remove
   both when the reviewer is done (`git worktree remove`, then delete the target directory). The checks below run in
@@ -47,7 +49,9 @@ Read this first; each rule points at its source.
 - QA commits `qa: tests for <TASK-id>` locally and doesn't push. Before pushing, check that it made exactly one new
   commit, and that `git diff --name-status HEAD~1 HEAD` lists only lines under `crates/*/tests/`, `xtask/tests/` or
   `fixtures/` (R-237): `A` lines, or `M` and `D` lines on a test file whose every earlier commit, by `git log`, is a qa
-  commit ("qa: tests for …") (R-290). Otherwise, reject it (`git reset --hard <head before QA>`) and re-run QA. The PR
+  commit ("qa: tests for …") (R-290), or on a file a ruling or the PR names as an exception, which the orchestrator
+  and the reviewers decide where a ruling forces the change (R-369). Otherwise, reject it
+  (`git reset --hard <head before QA>`) and re-run QA. The PR
   lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
   ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
@@ -73,16 +77,21 @@ Read this first; each rule points at its source.
 - Where a ruling contradicts the corpus or itself, flag it and record what was applied (as with R-171, R-173, R-186's
   placement note); ask only if the contradiction changes what gets built.
 
-## When to ask the human (`decisions.md` § "R-204 — When to ask the human")
-- Don't ask when the answer follows from an existing ruling or the docs: sequencing and dependencies, splits within
-  the size budget, mechanical consequences of a ruling, wording and citation fixes, anything whose recommendation is
-  just "apply R-n". Apply it, and record it in `decisions.md` as "applied per R-n: <what>" (or in the PR
-  description), so the human can see it and veto it later.
-- Ask only for genuine choices: physics or conventions; design and GUI behaviour; numeric values and calibrations;
-  conflicts the rulings don't settle; scope or cost trade-offs (dropping or deferring anything, exceeding budgets);
-  anything irreversible.
-- Batch what isn't blocking: collect those questions and ask them once, when the PR is ready, not one at a time.
-- If unsure which kind it is, apply the recommendation, mark it "applied per R-204 — veto?" in the PR, and carry on.
+## When to ask the human (`decisions.md` § R-369)
+- Ask the human only for: physics, where the choice changes results and the docs genuinely don't settle it;
+  calibration values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement;
+  anything outside the repo or irreversible (repo settings, branch protection, deleting outside the build
+  directories, force-pushing). Before asking anything, check it against this list; if it isn't on it, decide it.
+- Decide and continue: the orchestrator and the reviewers decide everything else (process, CI and CI timing, tooling,
+  tests, naming, sizes, mechanical consequences of rulings, exceptions to the qa-file rules where a ruling forces the
+  change, routine design choices). Record each decision in the PR as "applied per R-369: <what>", with no "veto?".
+  It doesn't hold a merge: merge when the reviews pass and CI is green, and list the decisions in the next summary. If
+  the human vetoes one later, fix it in a follow-up PR.
+- Size has no budget gate: big because the task is big merges normally; big because of sloppy or bloated work is
+  fixed or split. The reviewers judge it. Never ask about size.
+- A question on the list goes in `REVIEW_QUEUE.md`, and work carries on elsewhere; stop only if nothing at all can
+  proceed. Don't stop just to report: report at natural points (a stop, a gate, or when the human asks) as one batched
+  summary of what was decided, merged and still open.
 
 ## Lints (`decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*")
 - CI runs `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push (R-195).
