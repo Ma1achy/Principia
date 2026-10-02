@@ -16,8 +16,8 @@ filter = """
 threads-required = "num-test-threads"
 
 # The CI split (R-325, REQ-SYS-076): the tests that need the built kernel, `target/spirv/kernel.spv` and `kernel.wgsl`,
-# which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile; every other test
-# runs in the `ci` job under the `ci` profile. Each CI step names its profile in NEXTEST_PROFILE. The two filters are
+# which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile, the codegen
+# self-test among them (TASK-M0-15); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in NEXTEST_PROFILE. The two filters are
 # complements, so together the jobs run every test once, as `xtask/tests/nextest.rs` checks. Locally, the default
 # profile runs them all.
 [profile.ci]
@@ -25,6 +25,7 @@ default-filter = """
     not (
         binary_id(=validation::toolchain)
         | binary_id(=validation::qa_TASK-M0-14)
+        | binary_id(=validation::codegen_selftest)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
     )
@@ -34,6 +35,7 @@ default-filter = """
 default-filter = """
     binary_id(=validation::toolchain)
     | binary_id(=validation::qa_TASK-M0-14)
+    | binary_id(=validation::codegen_selftest)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
 """
