@@ -12,7 +12,8 @@
 # build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
 # --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
 # The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
-# archive, and every `ci` shard runs its slice from that archive (`--archive-file`), compiling no test of its own.
+# archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
+# workspace or compiles a test binary, but shard 1's doctests, which nextest does not run.
 # Branch protection requires the checks `ci` and `xtask-ci` (R-266): a matrix job's checks are named for its shards
 # (`ci (1)` … `ci (4)`), so the jobs `ci-gate` and `xtask-ci-gate`, named `ci` and `xtask-ci`, pass only when every
 # job they gather passed, whatever the others ended in.
@@ -86,7 +87,9 @@ jobs:
 
   # The workspace's tests, as 4 parallel shards (R-336, R-366, REQ-SYS-077): nextest's `--partition hash:<k>/4` puts
   # each test in the shard its name hashes to, a stable assignment, so together they run every test the unsharded run
-  # did, once. Each runs its slice from `ci-archive`'s archive (R-372, REQ-SYS-078), building and compiling no test.
+  # did, once. Each runs its slice from `ci-archive`'s archive (R-372, REQ-SYS-078): no step of its own builds the
+  # workspace or compiles a test binary, but shard 1's doctests. Tests that run cargo themselves still build what they
+  # run. With no workspace build here, the shards need no runner-disk step: ubuntu-latest leaves about 86 GB free.
   ci:
     needs: ci-archive
     runs-on: ubuntu-latest
