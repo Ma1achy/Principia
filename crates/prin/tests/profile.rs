@@ -1367,6 +1367,187 @@ validation::negative_control!(
     }
 );
 
+// ----- a cut-off line after the summary line (REQ-TOOL-148, R-356, R-358) -----
+
+/// A summary-shaped line cut off before its end.
+const CUT_SUMMARY: &str = r#"{"leak_flags":null,"hot_pa"#;
+
+/// The notice `show` gives a complete trace whose cut-off last line follows its summary line (R-363's words).
+const SHOW_AFTER_SUMMARY: &str = "prin profile show: the line after the summary line was cut off";
+
+/// `run` (`prin profile show`, plain or `--pretty`) on the fixture, a complete trace, followed by a cut-off frame-shaped
+/// or summary-shaped line: the plain output is the file unchanged, the pretty output the header, frames and summary
+/// line, and the notice states the bytes dropped after the summary line, not "session incomplete". On the fixture cut
+/// off before its summary line, the notice still says "session incomplete" (R-356, R-358).
+fn check_show_after_summary(run: impl Fn(&Path, bool) -> Output) {
+    let file = fixture();
+    for cut in [CUT, CUT_SUMMARY] {
+        let path = write_scratch("after-summary.jsonl", &format!("{file}{cut}"));
+        let (plain, pretty) = (run(&path, false), run(&path, true));
+        assert_eq!(
+            plain.stdout,
+            format!("{file}{cut}").into_bytes(),
+            "show changed the file with a cut-off line after its summary"
+        );
+        check_pretty(&file, &String::from_utf8_lossy(&pretty.stdout));
+        for (mode, out) in [("plain", &plain), ("--pretty", &pretty)] {
+            let note = String::from_utf8_lossy(&out.stderr);
+            assert!(
+                !note.contains("session incomplete"),
+                "show ({mode}) calls a complete trace with a cut-off line after its summary \"session incomplete\": {note}"
+            );
+            assert!(
+                note.contains(SHOW_AFTER_SUMMARY)
+                    && note.contains(&format!("its {} bytes", cut.len())),
+                "show ({mode}) does not state the {} bytes dropped after the summary line: {note}",
+                cut.len()
+            );
+        }
+    }
+    let path = write_scratch("before-summary.jsonl", &format!("{}{CUT}", frames_only()));
+    for pretty in [false, true] {
+        let note = String::from_utf8_lossy(&run(&path, pretty).stderr).into_owned();
+        assert!(
+            note.contains("session incomplete") && note.contains(&format!("its {} bytes", CUT.len())),
+            "show does not call a trace cut off before its summary line \"session incomplete\": {note}"
+        );
+    }
+}
+
+#[test]
+fn profile_show_cut_off_after_summary() {
+    check_show_after_summary(show);
+}
+
+validation::negative_control!(
+    profile_show_cut_off_after_summary,
+    "a notice keyed on dropped bytes alone must fail the check",
+    expected = "calls a complete trace with a cut-off line after its summary",
+    {
+        /// `prin profile show` with TASK-M0-18's notice: "session incomplete" whenever the reader dropped bytes.
+        fn show_keyed_on_dropped_bytes(path: &Path, pretty: bool) -> Output {
+            let mut out = show(path, pretty);
+            let trace = profile::read(
+                fs::read(path)
+                    .expect("cannot read a scratch file")
+                    .as_slice(),
+            )
+            .expect("the scratch file is not a trace");
+            if trace.dropped_bytes > 0 {
+                out.stderr = format!(
+                    "prin profile show: session incomplete; the last line was cut off, and its {} bytes are not shown pretty\n",
+                    trace.dropped_bytes
+                )
+                .into_bytes();
+            }
+            out
+        }
+        check_show_after_summary(show_keyed_on_dropped_bytes)
+    }
+);
+
+/// The diff's notice for a complete trace whose cut-off last line follows its summary line (R-363's words).
+fn after_summary_notice(name: &str, dropped: usize) -> String {
+    format!("{name}: {dropped} bytes of a cut-off line after the summary line dropped\n")
+}
+
+/// `run` (`prin profile diff`) with the fixture raised 6%, a complete trace, followed by a cut-off line, as NEW and
+/// again (BASE and NEW swapped) as BASE: for that file, the bytes dropped after the summary line come first, without
+/// "session incomplete", then the same comparison and exit code as for the uncut file. With no frame records, the
+/// bytes come before the refusal, exit 2. A trace cut off before its summary line still gets "session incomplete" and
+/// its bytes (R-358, R-323).
+fn check_diff_after_summary(run: impl Fn(&Path, &Path, &str) -> Output) {
+    let base = write_scratch("base.jsonl", &fixture());
+    let whole = raised(&fixture(), 1.06);
+    let uncut = write_scratch("raised.jsonl", &whole);
+    for cut in [CUT, CUT_SUMMARY] {
+        let cut_path = write_scratch("raised-cut.jsonl", &format!("{whole}{cut}"));
+        for threshold in ["5%", "10%"] {
+            for (name, (b, n), (ub, un)) in [
+                ("NEW", (&base, &cut_path), (&base, &uncut)),
+                ("BASE", (&cut_path, &base), (&uncut, &base)),
+            ] {
+                let (got, want) = (run(b, n, threshold), run(ub, un, threshold));
+                let stdout = String::from_utf8_lossy(&got.stdout);
+                assert!(
+                    !stdout.contains("session incomplete"),
+                    "the diff calls a complete {name} with a cut-off line after its summary \"session incomplete\": {stdout}"
+                );
+                let expected =
+                    after_summary_notice(name, cut.len()) + &String::from_utf8_lossy(&want.stdout);
+                assert_eq!(
+                    stdout, expected,
+                    "the diff does not state {name}'s {} bytes dropped after the summary line, then compare it as the uncut file, at --threshold {threshold}",
+                    cut.len()
+                );
+                assert_eq!(
+                    got.status.code(),
+                    want.status.code(),
+                    "a complete {name} with a cut-off line after its summary does not exit as the uncut file at --threshold {threshold}"
+                );
+            }
+        }
+    }
+    let empty = write_scratch("empty-cut.jsonl", &format!("{}{CUT}", trace_of_frames(&[])));
+    for (name, (b, n)) in [("NEW", (&base, &empty)), ("BASE", (&empty, &base))] {
+        let out = run(b, n, "5%");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "a {name} with no frame records and a cut-off line after its summary does not exit 2: {stderr}"
+        );
+        let notice = after_summary_notice(name, CUT.len());
+        assert!(
+            stderr.starts_with(&notice) && stderr.contains("has no frame records"),
+            "the diff does not state {name}'s {} bytes dropped after the summary line before its refusal: {stderr}",
+            CUT.len()
+        );
+    }
+    let before = write_scratch(
+        "before-cut.jsonl",
+        &format!("{}{CUT}", raised_frames_only()),
+    );
+    let out = run(&base, &before, "5%");
+    let notice = format!(
+        "NEW: session incomplete; {} bytes of a cut-off last line dropped",
+        CUT.len()
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stdout).starts_with(&notice),
+        "a NEW cut off before its summary line does not print {notice:?} first"
+    );
+}
+
+#[test]
+fn profile_diff_cut_off_after_summary() {
+    check_diff_after_summary(diff);
+}
+
+validation::negative_control!(
+    profile_diff_cut_off_after_summary,
+    "a notice keyed on an incomplete session alone must fail the check",
+    expected = "the diff does not state NEW's",
+    {
+        /// `prin profile diff` with TASK-M0-18's notices: printed for an incomplete session alone, so none for a complete trace
+        /// with a cut-off line after its summary.
+        fn diff_notice_keyed_on_incomplete(base: &Path, new: &Path, threshold: &str) -> Output {
+            let drop_after_summary = |text: &[u8]| -> Vec<u8> {
+                String::from_utf8_lossy(text)
+                    .split_inclusive('\n')
+                    .filter(|l| !l.contains("after the summary line dropped"))
+                    .collect::<String>()
+                    .into_bytes()
+            };
+            let mut out = diff(base, new, threshold);
+            out.stdout = drop_after_summary(&out.stdout);
+            out.stderr = drop_after_summary(&out.stderr);
+            out
+        }
+        check_diff_after_summary(diff_notice_keyed_on_incomplete)
+    }
+);
+
 // ----- profile_no_gpu (REQ-TOOL-144, R-308) -----
 
 /// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` (macOS), else the first `model name` in

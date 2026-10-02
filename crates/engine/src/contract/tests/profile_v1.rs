@@ -4,7 +4,8 @@
 //! (REQ-TOOL-008). The file is JSON Lines (R-286): the header line, one frame record per line, then the summary line,
 //! each line validated against the schema's definition for its place. A session that ended before its summary line
 //! reads, its summaries absent with "session incomplete" (R-298); a last line cut off before its newline is dropped,
-//! and the bytes dropped are stated (R-299). Each test registers the control that must make it
+//! and the bytes dropped are stated (R-299); after the summary line, the session is complete, with its bytes dropped
+//! (R-356, R-358). Each test registers the control that must make it
 //! fail (R-176).
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -1170,6 +1171,101 @@ validation::negative_control!(
         |file| read(file.strip_suffix(b"\n").unwrap_or(file)),
         &with_wide_characters(),
     )
+);
+
+// ----- a cut-off last line after the summary line (R-356, R-358) -----
+
+/// `read_with` reads `trace`'s whole file followed by a last line cut off at every byte inside a frame-record-shaped
+/// line and inside a summary-shaped line: the cut part is dropped, the header, every frame and both summaries come
+/// back, the session is complete, the trace states the bytes dropped, and it is written back as the whole file
+/// (R-356, R-358). The header-only cut and every other cut-off case are the tests above (R-299).
+fn check_cut_off_after_summary(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let file = bytes(trace);
+    let spans = line_spans(&file);
+    assert!(
+        trace.leak_flags.as_ref().is_some_and(|f| !f.is_empty())
+            && trace.hot_paths.as_ref().is_some_and(|h| !h.is_empty()),
+        "the trace's summaries are not both set"
+    );
+    let shapes = [
+        (&spans[1], "a frame-record-shaped line"),
+        (&spans[spans.len() - 1], "a summary-shaped line"),
+    ];
+    let mut inside_a_character = 0;
+    for (span, shape) in shapes {
+        for cut in span.start + 1..span.end {
+            let tail = &file[span.start..cut];
+            let what = format!(
+                "{shape} cut after {} bytes, after the summary line",
+                tail.len()
+            );
+            let mut text = file.clone();
+            text.extend_from_slice(tail);
+            let got = read_with(&text).unwrap_or_else(|e| {
+                panic!("the reader rejected the file with a cut-off line after its summary, {what}: {e}")
+            });
+            assert!(
+                got.header == trace.header && got.frames == trace.frames,
+                "{what}: the header and frames read are not the ones written"
+            );
+            assert!(
+                got.leak_flags == trace.leak_flags
+                    && got.hot_paths == trace.hot_paths
+                    && got.leak_flags().is_ok()
+                    && got.hot_paths().is_ok(),
+                "{what}: the summaries were not read"
+            );
+            assert_eq!(
+                got.session,
+                Session::Complete,
+                "{what}: not a complete session"
+            );
+            assert_eq!(
+                got.dropped_bytes,
+                tail.len() as u64,
+                "{what}: the bytes dropped are misstated"
+            );
+            let mut out = Vec::new();
+            write(&got, &mut out)
+                .expect("the writer refused the complete trace with dropped bytes");
+            assert!(
+                out == file,
+                "{what}: the trace is not written back as the whole file"
+            );
+            inside_a_character += usize::from(std::str::from_utf8(tail).is_err());
+        }
+    }
+    assert!(inside_a_character > 0, "no cut falls inside a character");
+}
+
+#[test]
+fn profile_v1_superset_cut_off_after_summary() {
+    check_cut_off_after_summary(|file| read(file), &with_wide_characters());
+}
+
+validation::negative_control!(
+    profile_v1_superset_cut_off_after_summary,
+    "a reader that parses every line with one after it as a frame record must fail",
+    expected = "the reader rejected the file with a cut-off line after its summary",
+    {
+        /// TASK-M0-17's reader: every line after the header with one after it parsed as a frame record, then the file read.
+        fn every_line_before_the_last_a_frame(file: &[u8]) -> Result<Trace, serde_json::Error> {
+            let lines: Vec<&[u8]> = file.split_inclusive(|b| *b == b'\n').collect();
+            for (i, line) in lines.iter().enumerate().take(lines.len() - 1).skip(1) {
+                serde_json::from_slice::<FrameRecord>(line).map_err(|e| {
+                    <serde_json::Error as serde::de::Error>::custom(format!(
+                        "line {}, a frame record: {e}",
+                        i + 1
+                    ))
+                })?;
+            }
+            read(file)
+        }
+        check_cut_off_after_summary(every_line_before_the_last_a_frame, &with_wide_characters())
+    }
 );
 
 // ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----
