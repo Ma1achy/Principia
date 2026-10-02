@@ -3692,6 +3692,10 @@ archived unchanged in `docs/archive/review_queue/M0.md` with this ruling's port,
 #96's next fix pass deletes its open copy from `REVIEW_QUEUE.md`. Changes no requirement.
 
 ## R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+*Amended by R-360.*
+*Still in force: all of it but how the `xtask-ci` job is sharded: it runs no nextest, so `cargo xtask ci --partition
+k/4` runs it as 4 parallel jobs, the controls assigned by a stable hash of the control name, each control run once
+across them (R-360). The `ci` job's nextest run is sharded as written, and the splits stand.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-076, REQ-SYS-077 (new), TASK-M0-14 (PR #96) and TASK-M0-45 (new)*
 
 "2 B: accept the overrun on #96, and make the sharding the next M0 task at high priority. It should also split the
@@ -3921,10 +3925,12 @@ in TASK-M0-45's qa commit, a named exception to R-290; R-340 hashes each entry's
 or not a block uses it by default; and TASK-M2-01 depends on TASK-M0-46 and needs REQ-GEN-031.
 
 ## R-345 — Merged branches are deleted, with their worktrees and target directories
-*Amended by R-357.*
+*Amended by R-357 and R-362.*
 *Still in force: all of it but who deletes a merged PR's remote branch: GitHub's "Automatically delete head branches"
 setting deletes it, and the orchestrator confirms it is gone instead of deleting it (R-357). The local branch, the
-worktrees, the target directories and the prunes are as before.*
+worktrees, the target directories and the prunes are as before. PRs are not stacked; if a stack is ever needed, the
+child PR is retargeted to `main` before the PR below it merges, since merging deletes the lower branch at once
+(R-362).*
 *1 Oct 2026 · applied in `plan/WORKFLOW.md` § "The review loop" and CLAUDE.md § Git*
 
 "add that to be part of the workflow, merged branches are deleted."
@@ -4548,10 +4554,10 @@ can confirm them in one sitting."
      the REST ref delete). The server-side auto-delete (item 3) covers merged PR branches; other deletions (a
      `measure/` branch, R-272) still need it.
 
-  *Applied per R-204 — veto?:* what each blocker would need, as listed above: ≥ 100 GB of disk or trimmed builds,
+  *Applied per R-204, accepted by R-363:* what each blocker would need, as listed above: ≥ 100 GB of disk or trimmed builds,
   GraphQL allowed through the proxy, ref deletes allowed through the proxy; and the REST equivalents the manual lists.
   `scripts/cloud-setup.sh` and its check stay as R-346 and R-347 made them, for a cloud session's read-and-think work.
-  Open in RQ-194.
+  Ruled in RQ-194 (A1).
 - **(2) Reviews through REST.** The five reviewers' files (`code-reviewer.md`, `qa-reviewer.md`, `physics-reviewer.md`,
   `gui-reviewer.md`, `perf-reviewer.md`) post the verdict with
   `gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@-`, the body
@@ -4565,9 +4571,9 @@ can confirm them in one sitting."
   "don't use `gh pr checkout`" line stays. `implementer.md` names no `gh` command and is unchanged. `plan/OPERATIONS.md`
   § "Reviewers" says the same.
 
-  *Applied per R-204 — veto?:* the body goes on standard input (`-F body=@-`), not in a file (`-F body=@<file>`),
+  *Applied per R-204, accepted by R-363:* the body goes on standard input (`-F body=@-`), not in a file (`-F body=@<file>`),
   since a reviewer writes no file (its read-only rule); and `gh pr diff` becomes `git diff origin/main...HEAD`, which
-  is the PR's diff while the worktree's HEAD is the PR head. Open in RQ-194.
+  is the PR's diff while the worktree's HEAD is the PR head. Ruled in RQ-194 (A2).
 - **(3) Merged branches auto-delete.** GitHub's "Automatically delete head branches" is on:
   `gh api repos/Ma1achy/Principia --jq .delete_branch_on_merge` returned `true` on 2 Oct 2026. After a merge, the
   orchestrator confirms the remote branch is gone (`git ls-remote --exit-code origin refs/heads/<branch>` exits 2,
@@ -4650,10 +4656,10 @@ RQ-194)*
     rulings of all three. `qa_TASK-M0-18.rs`'s `qa_profile_diff_cut_line_with_newline_is_unreadable`, already named in
     TASK-M0-51's Notes, is the qa assertion that this case changes for the diff: that file is now read and compared, not
     refused.
-  - *Applied per R-204 — veto?:* the notices' words, which the ruling leaves open. The diff prints, for that file,
+  - *Applied per R-204, accepted by R-363:* the notices' words, which the ruling leaves open. The diff prints, for that file,
     "<BASE|NEW>: <n> bytes of a cut-off line after the summary line dropped"; `prin profile show` prints on stderr
     "prin profile show: the line after the summary line was cut off, and its <n> bytes are not shown pretty", today's
-    notice less "session incomplete". Neither prints a notice when no bytes were dropped. Open in RQ-194.
+    notice less "session incomplete". Neither prints a notice when no bytes were dropped. Ruled in RQ-194 (A3).
   - *Flagged, not resolved:* REQ-TOOL-119 is a definition requirement (R-72) whose text in render_gui_spec § "Profiler"
     the physics reviewer approved on TASK-M0-18 (R-323, R-328). The diff's new case is written there by this ruling,
     and TASK-M0-51's reviewers are code and qa. Whether physics reviews it, or the human's words settle it, is asked
@@ -4697,9 +4703,9 @@ folder, and the path is printed, like any other failure (R-342)."
   leaves its path for the macro to settle; how it hands the path over is the implementation's, as R-212 left the form
   of the call to it. R-212 itself is unchanged: the control still names the panic it expects, and libtest still
   judges it.
-- *Applied per R-204 — veto?:* a control that does not panic at all fails ("should panic" did not), so its scratch
+- *Applied per R-204, accepted by R-363:* a control that does not panic at all fails ("should panic" did not), so its scratch
   is kept and its path printed, like a control that panics with the wrong message: the ruling deletes it "only on a
-  match", and there is no message to match. Open in RQ-194 (A4).
+  match", and there is no message to match. Ruled in RQ-194 (A4).
 - **Plan.** TASK-M0-48 builds it: `crates/validation/src/control.rs`'s `negative_control!` joins its deliverables; a
   new acceptance test, `scratch_guard_keeps_a_wrong_message_controls_scratch`, runs a control whose panic does not
   match as a child test and checks that its folder is kept and its path is in the child's output, with a registered
@@ -4710,3 +4716,177 @@ folder, and the path is printed, like any other failure (R-342)."
   since REQ-VAL-178 lists it among its rulings, not its sources.
 
 Changes REQ-VAL-178's statement and verify detail; TASK-M0-48 builds it. PR #114 needs a fix round to build it.
+
+## R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*
+*2 Oct 2026 · applied in decisions.md (R-336's lines), REQ-SYS-077 (reqio), TASK-M0-45 and REVIEW_QUEUE.md (RQ-193
+archived, RQ-196 filed)*
+
+"This is from me. Rulings (R-360 onward):
+1. RQ-193: (a). cargo xtask ci --partition k/n splits the controls into
+   n parallel jobs, assigned by a stable hash of the control name (not by
+   crate), n = 4. Size is your call (R-264)."
+
+*Applied:*
+- **What it settles.** "(a)" is RQ-193's first option, its recommended one: shard `cargo xtask ci` itself, since the
+  `xtask-ci` job runs no `cargo nextest run` for nextest's `--partition` to shard; its time is the `controls` runner's
+  own `cargo test` runs (R-231). The option left two choices open, which the ruling makes: the controls are sliced by
+  control name, not by crate, and n = 4. R-336's "it shards the nextest runs of the `ci` and `xtask-ci` jobs" is
+  amended for `xtask-ci` only; R-336 gains a forward line and a "Still in force" line. The `ci` job's
+  `cargo nextest run --workspace` is sharded with nextest's `--partition`, as R-336 has it, and the splits stand.
+- **How.** `cargo xtask ci --partition <k>/<n>` and `cargo xtask controls --partition <k>/<n>` (`xtask/src/main.rs`
+  parses the flag, `xtask/src/ci.rs` passes it to the `controls` runner, `xtask/src/controls.rs` selects the slice)
+  run the controls whose names fall in slice k of n. A control's name is its libtest name, as `--list` prints it and
+  `controls.rs` already pairs it with its test (`<path>::<test>::negative_control`). Its slice is a stable hash of that
+  name modulo n: the same on every run, machine and toolchain, so a hash written in xtask's source, not std's
+  `DefaultHasher`, whose algorithm may change between Rust releases. A name that runs in several test targets of a
+  crate runs in all of them in its one slice. The n slices are disjoint and together hold every control, so every
+  control runs exactly once across the shards, and the findings check (REQ-VAL-147: a control that leaves its test
+  passing, a test with no control, a doctest) still covers every test, each finding reported by one shard; how a test
+  with no control and the doctest findings are assigned to a shard is the implementation's, as R-212 left the form of
+  the call to it. The controls still run through `cargo xtask controls`'s own cargo invocations (R-231), inside
+  `cargo xtask ci` (R-235, REQ-VAL-007). Without `--partition`, `cargo xtask ci` and `cargo xtask controls` run as
+  today, every control; the listing-only form (`--list`, R-235) is unchanged.
+- **The workflow.** `.github/workflows/ci.yml`'s `xtask-ci` becomes 4 parallel jobs, each running
+  `cargo xtask ci --partition <k>/4` for k = 1 to 4. Each keeps the job's caches and their R-326 save rule, its key
+  naming its shard's job (R-285), as TASK-M0-45's Deliverables already ask. The new jobs are not required checks until
+  the human adds them to branch protection (R-266); TASK-M0-45's PR names them.
+- *Applied per R-204 — veto?:* the runners other than `controls` run in shard 1 of n only (plan-check, the three
+  lints, gate and golden), as RQ-193's option 1 has it, but for build-kernel, which runs in every shard, before its
+  controls: the kernel's controls fall in every slice when sliced by name, and they read build-kernel's output
+  (`ci.rs` runs it before `controls` for that reason). It took 16 s of the job on `main`'s run of aaa1e40. Open in
+  RQ-196.
+- **Plan.** TASK-M0-45 builds it: `xtask/src/ci.rs`, `xtask/src/controls.rs` and `xtask/src/main.rs` join its
+  deliverables, beside `ci.yml`'s 4 `xtask-ci` jobs, with an acceptance test that the 4 slices of a list of control
+  names are disjoint, together hold every name, and give a fixed name the same slice on every run, with its negative
+  control (a partition that drops a name, or slices by crate). Its size goes from ~250 to ~400 lines, past the budget;
+  it stays one task, the orchestrator's call under R-264 ("Size is your call"), recorded in its Notes. REQ-SYS-077's
+  statement and verify detail say how `xtask-ci` is sharded, and R-360 joins its rulings (reqio). REQ-SYS-077 carries
+  `rq: [RQ-193]` only on `task/TASK-M0-45`, not on `main` or this branch, so nothing is cleared here; that branch's
+  next fix pass drops it and its open copy of RQ-193, which this commit archives (`plan/OPERATIONS.md` § "Merging",
+  "An RQ open only on a PR branch").
+- R-360 is in the "ci" group of `plan/rule_groups.yaml`, beside R-336; `plan/section_notes.yaml` gives its line, since
+  REQ-SYS-077 lists it among its rulings, not its sources.
+
+Changes REQ-SYS-077's statement and verify detail; TASK-M0-45 builds it.
+
+## R-361 — The generated display fraction is exactly 1 at its endpoint: `select(f32(s)/f32(h), 1.0, s == h)` *(closes RQ-195)*
+*2 Oct 2026 · applied in payload §6 and the `times` section, REQ-GEN-006 (reqio), TASK-M0-15 and REVIEW_QUEUE.md
+(RQ-195 archived, RQ-196)*
+
+"This is from me. Rulings (R-360 onward):
+2. RQ-195: (a). The generator emits select(f32(s)/f32(h), 1.0, s == h),
+   and payload §6 states the same form. Widen TASK-M0-15 to include it."
+
+*Applied:*
+- **What it settles.** "(a)" is RQ-195's first option, its recommended one. On Metal, WGSL's f32 division is not
+  correctly rounded, so `f32(n)/f32(n)` was 0.99999994 or 1.0000001 for 5658 of the 65535 horizons, and the generated
+  fraction missed REQ-GEN-006's exact endpoint of 1. The generator now gives 1.0 at the endpoint without dividing.
+  REQ-GEN-006 stands as written: the endpoints are exact on the CPU and the GPU.
+- **The composed form.** For both fractions, with `s` the step (`tm_t_end_step(w)` or `tm_t_dmin_step(w)`, bound by
+  `let s = …;`) and `h` `horizon_steps`, the generated WGSL is
+  `select(0.0, select(f32(s) / f32(h), 1.0, s == h), h > 0u)`.
+  A zero horizon gives 0, as payload §6's guard gave it (REQ-RENDER-019), `s == h == 0` included; `s == h > 0` gives
+  exactly 1.0; any other step gives the plain quotient. WGSL's `select` evaluates both operands, so the division by a
+  zero horizon is still computed and discarded, as today. The 0 endpoint is the division's, `f32(0)/f32(h)`, which
+  RQ-195 measured exactly 0 for every horizon on Metal; the ruling changes only the 1 endpoint.
+  *Applied per R-204 — veto?:* the nesting, R-361's form inside the existing `horizon_steps > 0u` guard, the guard
+  outermost. RQ-195's option 1 placed it there, but the ruling's words don't settle the case `h = 0` with `s == h`,
+  where the endpoint select outermost would give 1.0 and not 0. PR #116 (TASK-M0-15) builds this nesting. Open in
+  RQ-196.
+- **The Rust side is unchanged,** as RQ-195's option 1 says: IEEE division gives exactly 1.0 for every horizon on the
+  host (`crates/ledger/src/gen/rust.rs`, `crates/kernel/src/payload/generated.rs`). No shader calls the kernel's copy
+  of the fraction today.
+- **Docs.** payload §6's two accessor lines (`tm_t_end_fraction`, `tm_t_dmin_fraction`) state the composed form, and
+  the `times` section's "Display fraction derived" sentence says the endpoint is exactly 1, citing §6.
+- **Plan.** TASK-M0-15 is widened to carry it: `crates/ledger/src/gen/wgsl.rs` emits the composed form for both
+  fractions, and `crates/render/frag/generated/payload_unpack.wgsl` is regenerated from it. Its
+  `codegen_selftest_times` is the test, as written; its size goes from ~400 to ~425 lines. PR #116 builds it.
+  REQ-GEN-006's note names the form and R-361 joins its rulings (reqio); its statement and verify are unchanged. No
+  requirement carried `rq: [RQ-195]`, so none was cleared.
+- R-361 is in the "design" group of `plan/rule_groups.yaml`, beside R-86; `plan/section_notes.yaml` gives its line,
+  since REQ-GEN-006 lists it among its rulings, not its sources.
+
+Changes no requirement's statement or verify: REQ-GEN-006's note names the form. TASK-M0-15 builds it.
+
+## R-362 — PRs are not stacked; a needed stack's child is retargeted to `main` before the PR below it merges *(closes RQ-194 B; amends R-345)*
+*2 Oct 2026 · applied in decisions.md (R-345's lines), CLAUDE.md § Git, `plan/OPERATIONS.md` § "Roles and the loop"
+and § "Merging", `plan/WORKFLOW.md` § "The review loop" and REVIEW_QUEUE.md (RQ-194 archived)*
+
+"This is from me. Rulings (R-360 onward):
+3. RQ-194 B: (a). Keep not stacking; if a stack is ever needed, point the
+   child at main before merging the lower PR. Update CLAUDE.md and
+   OPERATIONS.md."
+
+*Applied:*
+- **What it settles.** "(a)" is RQ-194's first option for B, its option 2, the recommended one. With GitHub's
+  "Automatically delete head branches" on (R-357), merging a PR deletes its branch at once, so R-345's order, retarget
+  the child to `main` before the branch below it is deleted, can only be kept by retargeting before the merge.
+- **The rule.** No PR is stacked on an unmerged PR. If a stack is ever needed, the child PR is retargeted to `main`
+  (`gh pr edit <child> --base main`) before the PR below it merges, and then the lower PR merges. R-345's rule that a
+  base branch is deleted only after its child is retargeted holds in that order. R-345 gains a forward line and its
+  "Still in force" line says so. CLAUDE.md § Git, `plan/OPERATIONS.md` § "Merging" ("Merge order for stacked PRs") and
+  § "Roles and the loop", and `plan/WORKFLOW.md` § "The review loop" step 7, which held the same rule, say so; the
+  recovery of a closed child in `plan/OPERATIONS.md` stays.
+- R-362 is in the "process" group of `plan/rule_groups.yaml`, beside R-345; `plan/section_notes.yaml` gives its line.
+
+Process only (section_notes); no requirement changes.
+
+## R-363 — RQ-194's A1–A4 are accepted as built; TASK-M0-51 has no physics review *(closes RQ-194 A and C)*
+*2 Oct 2026 · applied in decisions.md (R-357's, R-358's and R-359's marks), `plan/OPERATIONS.md`, REQ-TOOL-119
+(reqio), TASK-M0-48, TASK-M0-51 and REVIEW_QUEUE.md (RQ-194 archived)*
+
+"This is from me. Rulings (R-360 onward):
+4. RQ-194 A1–A4 accepted as built. C: (a), no physics review for
+   TASK-M0-51."
+
+*Applied:*
+- **A1–A4 stand,** as RQ-194 lists them, and each mark names R-363 in place of "veto?":
+  - A1, what each cloud blocker would need: R-357's mark, and `plan/OPERATIONS.md` § "Where the build loop runs".
+  - A2, how a reviewer posts through REST: R-357's mark.
+  - A3, the notices' words for a complete session with a cut-off tail: R-358's mark, and TASK-M0-51's `show.rs`
+    bullet and its Notes.
+  - A4, a control that does not panic at all keeps its scratch and prints its path: R-359's mark, and TASK-M0-48's
+    Notes.
+- **C: no physics review for TASK-M0-51.** "(a)" is RQ-194's first option for C, its option 4: the human's words
+  settle the diff's behaviour, and the case R-358 adds to render_gui_spec § "Profiler" only restates them; the physics
+  reviewer's approval of REQ-TOOL-119's definition on TASK-M0-18 (R-323) covers the rest of it, unchanged. TASK-M0-51's
+  reviewers stay code and qa. REQ-TOOL-119's statement asks that its definition be reviewed by the physics reviewer
+  before merge; its note now says that R-363 exempts the case R-358 adds, and R-363 joins its rulings (reqio).
+- **RQ-194 is closed**: B is ruled by R-362, and A and C here. It moves, unchanged, to
+  `docs/archive/review_queue/M0.md` with its Ruling line (R-292). No requirement carried `rq: [RQ-194]`.
+- R-363 is in the "process" group of `plan/rule_groups.yaml`; `plan/section_notes.yaml` gives its line.
+
+Changes no requirement's statement or verify: REQ-TOOL-119's note names it.
+
+## R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them
+*2 Oct 2026 · applied in PR #114 (TASK-M0-48) and PR #116 (TASK-M0-15)*
+
+"This is from me. Rulings (R-360 onward):
+5. #114's remaining veto items and TASK-M0-15's seven items stand,
+   including the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴)."
+
+*Applied:*
+- **#114's items.** Every item of PR #114's (TASK-M0-48) "Applied per R-204 — veto?" list stands but item 2, which
+  R-359 replaced: items 1 (one shared source for the guard and its tests, included by `#[path]`, and the PR's size), 3
+  (the "scratch kept: <path>" line on stderr), 4 (`Scratch::new` clears its path first; a failed removal on success
+  panics), 5 (the guard held until the test ends), 6 (`qa_TASK-M0-14_rust_gpu_cache.rs` in scope, with its `M` line
+  accepted by the R-237 check), 7 (the hand-over through `validation::control`'s thread-local list), 8 (every guard
+  dropped on a control's thread is handed over) and 9 (`validation::control`'s public items). The marks are in #114's
+  PR body only, not on `main` or this branch, so no mark here changes; #114's body names R-364 in place of "veto?".
+- **TASK-M0-15's seven items** stand, as PR #116's body lists them (its "Accepted by R-364" section), the items its
+  first implementer applied per R-204:
+  1. the kernel's GPU path covers the descriptor fields and `times`, not the f16 pairs;
+  2. the 25-bit payload field is checked statically only, and its length is packed with the generic insert;
+  3. f16 eps is `|x − y| ≤ 2⁻¹⁰ · max(|x|, 2⁻¹⁴)`: relative, and absolute below f16's least normal; the GPU unpack is
+     bit-identical to the host's, and a NaN matches any NaN;
+  4. `d_min` is fuzzed over (0, 65504] and +inf; its sign bit is tested only through the exhaustive unpack;
+  5. `times` and the fractions are enumerated exhaustively; the other properties run in batches of 64 per proptest
+     case;
+  6. the `extractbits` and `unpack_without_shader_f16` tests carry the `codegen_selftest_` prefix;
+  7. the `gpu-metal` job links `~/Library/Caches/rust-gpu` to `~/.cache/rust-gpu`, and the rust-gpu cache keys are per
+     job.
+  They were marked in PR #116's body only, not on `main` or this branch, so no mark here changes.
+- R-364 is in the "one-off" group of `plan/rule_groups.yaml`, beside R-304, R-310 and R-311; `plan/section_notes.yaml`
+  gives its line.
+
+Changes no requirement.

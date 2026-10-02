@@ -45,8 +45,8 @@ test and negative control.
   cut off …" whenever `trace.dropped_bytes > 0`, says "session incomplete" only for an incomplete session; for a
   complete one with dropped bytes it states the bytes dropped after the summary line, without "session incomplete"
   (R-356's applied item, accepted by R-358): "prin profile show: the line after the summary line was cut off, and its
-  <n> bytes are not shown pretty" (applied per R-204 — veto?, R-358: the words). The notice for an incomplete session
-  is unchanged.
+  <n> bytes are not shown pretty" (applied per R-204, accepted by R-363, R-358: the words). The notice for an
+  incomplete session is unchanged.
 - `crates/prin/src/profile/diff.rs`: `prin profile diff`'s notice, which today is printed only for an incomplete
   session, is printed too, for that file, for a complete session with dropped bytes: "<BASE|NEW>: <n> bytes of a
   cut-off line after the summary line dropped", without "session incomplete" (R-358; the words as above). It comes
@@ -83,8 +83,8 @@ test and negative control.
 - R-356 (2 Oct 2026). That the session reads complete, with the bytes reported as dropped and not as "session
   incomplete", by the reader and by `prin profile show`, is R-356's applied-per-R-204 item, accepted by R-358 (2 Oct
   2026) but for the diff's silence: under R-358 the diff reports that file's dropped bytes too, there is no third
-  session state, and nothing is compared silently. The notices' words are R-358's applied-per-R-204 item, open in
-  RQ-194; if the human vetoes them, this task follows the ruling.
+  session state, and nothing is compared silently. The notices' words are R-358's applied-per-R-204 item, accepted by
+  R-363 (2 Oct 2026).
 - Two qa assertions test the behaviour R-356 changes: `crates/engine/tests/qa_TASK-M0-17.rs`'s
   `qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error` asserts that a cut-off frame line after the summary
   line is an error, and `crates/prin/tests/qa_TASK-M0-18.rs`'s `qa_profile_diff_cut_line_with_newline_is_unreadable`
@@ -92,5 +92,7 @@ test and negative control.
   assertions in this task's qa commit (R-290), and the implementer does not; the PR lists each `M` line with its
   reason, and the code reviewer confirms that they are the only assertions changed, and that the cut-off header case
   and the malformed-line cases beside them are kept.
-- Reviewers: code and qa, as for every task; it closes no PERF requirement and touches no frame loop or dispatch.
+- Reviewers: code and qa, as for every task; it closes no PERF requirement and touches no frame loop or dispatch. No
+  physics review for the diff's case R-358 adds to REQ-TOOL-119's definition (R-363): the human's words settle it, and
+  R-323's physics approval covers the rest of the definition.
 - Goes to the cloud session with the ready tasks R-355 handed it (R-356, `plan/OPERATIONS.md` § "Away mode").

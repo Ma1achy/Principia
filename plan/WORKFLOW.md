@@ -124,9 +124,9 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 7. After the merge, the branch is cleaned up (R-345): GitHub's "Automatically delete head branches" deletes its remote
    branch, and the orchestrator confirms it is gone rather than deleting it (R-357); its local branch is deleted, its
    worktrees and their target directories are removed, and stale remote refs and worktree entries are pruned
-   (`git fetch --prune`, `git worktree prune`). Only a branch fully merged into `main` is deleted. A branch that is the
-   base of an open PR is deleted only after that child PR is retargeted to `main`, because deleting a base branch
-   closes its child PRs (CLAUDE.md § Git).
+   (`git fetch --prune`, `git worktree prune`). Only a branch fully merged into `main` is deleted. PRs are not
+   stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
+   merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
 ## Human checkpoints: the milestone gates
 

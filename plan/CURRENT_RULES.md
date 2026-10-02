@@ -212,6 +212,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-344** — `δ_λ` and `ε_w` are hashed; #108's four "veto?" items are accepted *(closes RQ-189; amends R-340)*
 - **R-356** — A cut-off line after the summary line is valid; R-297's design bullets and its R-84 and R-116 amendments stand *(amends R-299, R-304)*. Still in force: all of it but where TASK-M0-51 runs: on the Mac, not in a cloud session (R-357); and, in its applied-per-R-204 item, that `prin profile diff` prints no notice for a complete session with a cut-off line after its summary line: the diff, like `prin profile show`, reports that file's dropped bytes, without "session incomplete" (R-358). Amended by R-357 and R-358.
 - **R-358** — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*
+- **R-361** — The generated display fraction is exactly 1 at its endpoint: `select(f32(s)/f32(h), 1.0, s == h)` *(closes RQ-195)*
 
 ## Values
 
@@ -271,7 +272,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-335** — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
 - **R-338** — Parked is not open: `open-questions.md`'s audit section D needs no mapping *(closes RQ-187)*
 - **R-342** — Tests delete their scratch folders on success and keep them only on failure *(amends R-290)*. Still in force: all of it; R-359 says how it applies to a negative control, which passes only by panicking with its expected message (R-212): its scratch is deleted only on that match, and kept, its path printed, otherwise. Amended by R-359.
-- **R-345** — Merged branches are deleted, with their worktrees and target directories. Still in force: all of it but who deletes a merged PR's remote branch: GitHub's "Automatically delete head branches" setting deletes it, and the orchestrator confirms it is gone instead of deleting it (R-357). The local branch, the worktrees, the target directories and the prunes are as before. Amended by R-357.
+- **R-345** — Merged branches are deleted, with their worktrees and target directories. Still in force: all of it but who deletes a merged PR's remote branch: GitHub's "Automatically delete head branches" setting deletes it, and the orchestrator confirms it is gone instead of deleting it (R-357). The local branch, the worktrees, the target directories and the prunes are as before. PRs are not stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, since merging deletes the lower branch at once (R-362). Amended by R-357 and R-362.
 - **R-346** — The orchestrator's manual is `plan/OPERATIONS.md`; cloud sessions start with `scripts/cloud-setup.sh`, which reads every pin from CI's files. Still in force: all of it, except how the script installs cargo-nextest and cargo-mutants: R-347 downloads them prebuilt, with `cargo install --locked` only as the fallback. Its items applied per R-204 are ruled by R-347. Cloud sessions aren't viable for the build loop and suit read-and-think work only: reviews, audits and docs (R-357). Amended by R-347 and R-357.
 - **R-347** — RQ-190's items stand; cargo-nextest and cargo-mutants are downloaded prebuilt, with `cargo install --locked` only as the fallback *(closes RQ-190; amends R-346)*. Still in force: all of it; R-357 limits cloud sessions to read-and-think work (reviews, audits and docs), not the build loop, so the setup this ruling settles runs only for that. Amended by R-357.
 - **R-349** — Agents never delete or modify anything outside the repository and its build and scratch directories without asking first, caches included
@@ -279,6 +280,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-355** — R-298's items, `mutants.yml` and the veto-mark check stand; R-354's item 6 covered the placements only; the ready tasks go to the cloud session *(corrects R-354)*. Still in force: all of it but where the ready tasks run: on the Mac, not in a cloud session, TASK-M0-45 and TASK-M0-49 still first (R-357). Amended by R-357.
 - **R-357** — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 - **R-359** — A negative control's scratch is deleted only when its panic message matches *(amends R-342; applies R-212)*
+- **R-362** — PRs are not stacked; a needed stack's child is retargeted to `main` before the PR below it merges *(closes RQ-194 B; amends R-345)*
+- **R-363** — RQ-194's A1–A4 are accepted as built; TASK-M0-51 has no physics review *(closes RQ-194 A and C)*
 
 ## CI
 
@@ -317,11 +320,12 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-320** — CI caches the rust-gpu build, keyed on the pinned toolchain version *(amends R-285)*. Still in force: the rust-gpu build is cached under a key naming its job and the pinned toolchain version; R-326 saves it only on pushes to `main`. Amended by R-326.
 - **R-325** — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*
 - **R-326** — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*. Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there. Amended by R-337.
-- **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*
+- **R-336** — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*. Still in force: all of it but how the `xtask-ci` job is sharded: it runs no nextest, so `cargo xtask ci --partition k/4` runs it as 4 parallel jobs, the controls assigned by a stable hash of the control name, each control run once across them (R-360). The `ci` job's nextest run is sharded as written, and the splits stand. Amended by R-360.
 - **R-337** — Workflows that run only on pull requests restore, read-only, the caches a `ci.yml` job saves on `main` *(amends R-326)*
 - **R-348** — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated. Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. Amended by R-352.
 - **R-351** — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL. Still in force: all of it; R-352 widens the lint to a float compared with itself and to comparisons against finite-max stand-ins used as inf checks, and accepts its items applied per R-204. Amended by R-352.
 - **R-352** — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
+- **R-360** — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*
 
 ## One-off acts (history only)
 
@@ -382,3 +386,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-333** — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders
 - **R-350** — #96's veto items stand, the exact rust-gpu pin among them, with the backend built from `xtask/rust-gpu-backend.lock`
 - **R-353** — R-352's veto items and the R-204 marks stand; the superseded local branches are deleted
+- **R-364** — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them

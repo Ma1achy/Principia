@@ -251,7 +251,7 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 - **initial:** 0.
 So Welford `n` (§4), current elapsed time (`step_count · dt_macro`), resume, and termination all read this one self-contained field — consistent with the `f(IC, sim key, t)` lifecycle (the payload carries its own clock, not depending on an external playhead). The bit name stays `t_end_step` for the binary format; the meaning is "completed-step count, latched at termination."
 
-`t_dmin_step` = absolute macro-step index of closest approach (the old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march). Display fraction derived with the `horizon_steps` uniform: `f32(t_end_step)/f32(horizon_steps)`. Exact indices → exact CPU/GPU **binary** parity (no rounding contract). `total_steps` redundant (`step_count` at termination *is* it).
+`t_dmin_step` = absolute macro-step index of closest approach (the old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march). Display fraction derived with the `horizon_steps` uniform: `f32(t_end_step)/f32(horizon_steps)`, exactly 1 when `t_end_step == horizon_steps` and 0 when `horizon_steps` is 0 (§6, R-361). Exact indices → exact CPU/GPU **binary** parity (no rounding contract). `total_steps` redundant (`step_count` at termination *is* it).
 
 > **Enforced dispatch invariant: `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`.** Dispatch **refuses** a configuration with `⌈T/dt_macro⌉ > 65535` (R-86) — **not** a soft fallback. Long integrations that would exceed it must use a **coarser `dt_macro`**, **multiple march epochs**, or a future widened layout — the binary format stays single-meaning. (Schedules can reach ~2×10⁵ macro-steps, so this genuinely constrains `(T, dt_macro)` and the refusal must fire on violation.)
 
@@ -467,8 +467,9 @@ fn pb_dLz_max(pb:u32)->f32            { return unpack2x16float(pb).y; }
 // times — EXACT u16 step indices; fraction derived with a horizon_steps uniform (single format, no Q0.16)
 fn tm_t_end_step(w:u32)->u32          { return extractBits(w,  0u, 16u); }
 fn tm_t_dmin_step(w:u32)->u32         { return extractBits(w, 16u, 16u); }
-fn tm_t_end_fraction(w:u32, horizon_steps:u32)->f32  { return select(0.0, f32(tm_t_end_step(w))/f32(horizon_steps), horizon_steps > 0u); }  // guard /0 in generic tooling
-fn tm_t_dmin_fraction(w:u32, horizon_steps:u32)->f32 { return select(0.0, f32(tm_t_dmin_step(w))/f32(horizon_steps), horizon_steps > 0u); }
+// the endpoint is exactly 1.0, not a division, which WGSL need not round correctly (R-361); the guard stays outermost (applied per R-204 — veto?, RQ-196)
+fn tm_t_end_fraction(w:u32, horizon_steps:u32)->f32  { let s = tm_t_end_step(w);  return select(0.0, select(f32(s)/f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u); }  // guard /0 in generic tooling
+fn tm_t_dmin_fraction(w:u32, horizon_steps:u32)->f32 { let s = tm_t_dmin_step(w); return select(0.0, select(f32(s)/f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u); }
 
 // validity — DERIVED helpers, no stored bit (ftle_valid is NOT unconditionally true)
 fn ftle_valid(state:u32, ftle_tier_on:bool, n:u32, benettin_renorms:u32)->bool {   // false → ftle reads NaN (R-254)

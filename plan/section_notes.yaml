@@ -751,3 +751,23 @@
   section: "R-359 — A negative control's scratch is deleted only when its panic message matches *(amends R-342; applies R-212)*"
   reason: informative only
   note: "amends R-342 for negative controls, replacing PR #114's design item 2: negative_control! catches the control's panic, compares its message with the expected one (R-212), deletes the control's scratch only on a match and resumes the panic; a control that panics with the wrong message, or does not panic, keeps its scratch and prints its path; built by TASK-M0-48; REQ-VAL-178's statement and verify change and list it among their rulings; adds A4 to RQ-194"
+- file: decisions.md
+  section: "R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*"
+  reason: informative only
+  note: "closes RQ-193 and amends R-336 for the xtask-ci job, which runs no nextest: cargo xtask ci --partition k/n (and cargo xtask controls --partition) runs the controls in slice k of n, by a stable hash of the control name, n = 4, every control run once across the shards; build-kernel runs in every shard and the other runners in shard 1 (applied per R-204, RQ-196); built by TASK-M0-45, whose size is the orchestrator's call (R-264); REQ-SYS-077's statement and verify change and list it among their rulings; archives RQ-193"
+- file: decisions.md
+  section: "R-361 — The generated display fraction is exactly 1 at its endpoint: `select(f32(s)/f32(h), 1.0, s == h)` *(closes RQ-195)*"
+  reason: informative only
+  note: "closes RQ-195: the generated WGSL display fraction selects 1.0 at its endpoint, select(f32(s)/f32(h), 1.0, s == h), inside the horizon_steps > 0u guard (the nesting applied per R-204, RQ-196), since WGSL's f32 division is not correctly rounded on Metal; payload §6 states the form; TASK-M0-15 is widened to emit it; REQ-GEN-006's note names it and lists it among its rulings; archives RQ-195"
+- file: decisions.md
+  section: "R-362 — PRs are not stacked; a needed stack's child is retargeted to `main` before the PR below it merges *(closes RQ-194 B; amends R-345)*"
+  reason: informative only
+  note: "process ruling; closes RQ-194 B and amends R-345: PRs are not stacked, and a needed stack's child is retargeted to main before the PR below it merges, since auto-delete removes the lower branch at merge (CLAUDE.md § Git, plan/OPERATIONS.md § Merging, plan/WORKFLOW.md); changes no requirement"
+- file: decisions.md
+  section: "R-363 — RQ-194's A1–A4 are accepted as built; TASK-M0-51 has no physics review *(closes RQ-194 A and C)*"
+  reason: informative only
+  note: "process ruling; closes RQ-194 A and C: R-357's, R-358's and R-359's items applied per R-204 (A1–A4) are accepted and their marks name it, and TASK-M0-51 has no physics review for R-358's diff case; REQ-TOOL-119's note names it; archives RQ-194; changes no requirement's statement or verify"
+- file: decisions.md
+  section: "R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them"
+  reason: informative only
+  note: "accepts PR #114's veto items but item 2 (replaced by R-359) and TASK-M0-15's seven items applied per R-204 (PR #116), the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them; changes no requirement"

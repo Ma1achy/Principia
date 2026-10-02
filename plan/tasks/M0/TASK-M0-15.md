@@ -6,10 +6,10 @@
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9
-- **Size:** ~400 lines
+- **Size:** ~425 lines
 
 ## Goal
-The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in CI on every commit (parity_contract §6, the codegen row), on the two CI adapters R-110 names, as amended by R-186: GitHub-hosted `macos-15` (Metal) and lavapipe on `ubuntu-latest`. pack∘unpack is the identity per field, property-fuzzed over the full value range with the top bits set, in three places: the host Rust, the kernel's own pack/unpack on the GPU (the rust-gpu build) and a GPU self-test dispatch of the generated WGSL fragment unpack using the u32 `extractBits` overload — on a device requested without `shader-f16`. f16 pairs round-trip; `t_end_step` and `t_dmin_step` round-trip exactly as u16, bit-identical CPU/GPU, with display-fraction endpoints exactly 0 and 1; `detail` decodes per `state`; and the static layout checks pass.
+The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in CI on every commit (parity_contract §6, the codegen row), on the two CI adapters R-110 names, as amended by R-186: GitHub-hosted `macos-15` (Metal) and lavapipe on `ubuntu-latest`. pack∘unpack is the identity per field, property-fuzzed over the full value range with the top bits set, in three places: the host Rust, the kernel's own pack/unpack on the GPU (the rust-gpu build) and a GPU self-test dispatch of the generated WGSL fragment unpack using the u32 `extractBits` overload — on a device requested without `shader-f16`. f16 pairs round-trip; `t_end_step` and `t_dmin_step` round-trip exactly as u16, bit-identical CPU/GPU, with display-fraction endpoints exactly 0 and 1; `detail` decodes per `state`; and the static layout checks pass. The generated WGSL fraction gives its 1 endpoint without dividing, since WGSL's f32 division is not correctly rounded on Metal (R-361).
 
 ## References
 - `docs/design/principia_debug_tooling_plan.md` § "H. Codegen self-test (the tooling that tests the tooling)"
@@ -23,11 +23,14 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+- `decisions.md` § "R-361 — The generated display fraction is exactly 1 at its endpoint: `select(f32(s)/f32(h), 1.0, s == h)` *(closes RQ-195)*"
+- `decisions.md` § "R-364 — #114's remaining veto items and TASK-M0-15's seven items stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them"
 
 ## Deliverables
 - `crates/validation/tests/codegen_selftest.rs` — the §H suite: the three pack∘unpack paths per field, times, f16 pairs, detail-per-state, static checks; proptest strategies that include every field's top bit.
 - A WGSL self-test entry point wrapping the generated accessors (reads packed words, writes unpacked fields) and the kernel entry from TASK-M0-14.
 - The device for these tests is requested with no optional features (no `SHADER_F16`).
+- `crates/ledger/src/gen/wgsl.rs` — `tm_t_end_fraction` and `tm_t_dmin_fraction` emit payload §6's form, `let s = tm_t_*_step(w);` then `select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u)`, and `crates/render/frag/generated/payload_unpack.wgsl` is regenerated from it (R-361; the guard outermost is applied per R-204 — veto?, R-361: the nesting). The Rust generator is unchanged.
 - `.github/workflows/ci.yml` — the `gpu-metal` job (`macos-15`) and the `gpu-lavapipe` job (`ubuntu-latest`), both on every commit, running this suite (R-110, R-186).
 
 ## Acceptance tests
@@ -39,4 +42,6 @@ The codegen self-test of debug_tooling_plan §H and generation-root §5 runs in 
 
 ## Notes
 - Negative controls (registered with TASK-M0-21's `negative_control!`, R-198): a WGSL accessor with a shifted offset; the i32 overload; a mask over bits a round trip compares (pitfalls §9).
+- R-361 (RQ-195, 2 Oct 2026): on Metal `f32(n)/f32(n)` was not 1.0 for 5658 of the 65535 horizons, so the generated fraction now selects 1.0 at the endpoint. `codegen_selftest_times` tests it, every horizon, on both adapters.
+- R-364 (2 Oct 2026): the seven items this task's first implementer applied per R-204 stand, the f16 tolerance |x−y| ≤ 2⁻¹⁰·max(|x|, 2⁻¹⁴) among them (PR #116's body lists them).
 - R-110 (RQ-79), amended by R-186: GPU CI is GitHub-hosted `macos-15` (Metal) plus lavapipe on `ubuntu-latest`, on every commit; the acceptance commands above run on both.

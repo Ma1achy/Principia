@@ -16,7 +16,7 @@ How to read it:
 
 The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions
 aren't viable for the build loop; they suit read-and-think work: reviews, audits and docs.** A cloud session failed
-its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204 — veto? (RQ-194):
+its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204, accepted by R-363:
 1. **Disk.** The machine had ~30 GB, and one warm build reached 24 GB. It would need a larger disk (≥ 100 GB, for
    three agents' targets and the seed within § "Resources"' thresholds), or builds trimmed to fit.
 2. **GitHub GraphQL is blocked,** so the `gh pr` commands, which use GraphQL, fail; REST works. It would need GraphQL
@@ -89,7 +89,7 @@ The roles, the loop and the read-only check are in `CLAUDE.md` § "The main sess
 or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
 - **Run independent work in parallel** (the human, 27 Sep 2026): every ready task starts at once, each in its own
   worktree and target directory, within the agent cap (§ "Resources"). Never start a task whose dependencies aren't
-  merged, and never stack a task on an unmerged PR (28 Sep 2026).
+  merged, and never stack a task on an unmerged PR (28 Sep 2026; R-362).
 - **Every approval sits on the head.** Before a merge, each named reviewer's `VERDICT: APPROVE` is on the latest
   commit, or carried over to it under R-260 (§ "Reviewers").
 - **A compile check beats a token scan.** Don't enforce a source rule by reading tokens when the compiler can check
@@ -199,12 +199,11 @@ Who merges: the human, unless the human has said otherwise (CLAUDE.md § "How wo
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 
-**Merge order for stacked PRs.** `gh pr merge --delete-branch` deletes the base through the API, and GitHub then
-closes the PR stacked on it rather than retargeting it (PR #2, 25 Sep 2026). So, per PR n: merge n without deleting
-its branch, `gh pr edit n+1 --base main`, then delete n's branch (CLAUDE.md § Git, R-345). To recover a closed child:
-push its branch back at the merged PR's `headRefOid`, `gh pr reopen`, then `gh pr edit --base main`. *Open
-(RQ-194):* with auto-delete on (R-357), merging n deletes its branch at once, before n+1 can be retargeted, so this
-order can't be kept as written; until RQ-194 is ruled, stack nothing (§ "Roles and the loop").
+**Merge order for stacked PRs.** Don't stack (R-362, § "Roles and the loop"). Deleting a base branch closes the PR
+stacked on it rather than retargeting it (PR #2, 25 Sep 2026), and with auto-delete on (R-357), merging a PR deletes
+its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --base main` first, then merge n
+(CLAUDE.md § Git, R-345, R-362). To recover a closed child: push its branch back at the merged PR's `headRefOid`,
+`gh pr reopen`, then `gh pr edit --base main`.
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
 except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required

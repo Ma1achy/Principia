@@ -5974,7 +5974,9 @@
   rulings:
   - R-84
   - R-86
+  - R-361
   milestone: M0
+  note: "R-361: the generated WGSL gives the 1 endpoint without dividing, since WGSL's f32 division is not correctly rounded (on Metal f32(n)/f32(n) missed 1.0 for 5658 of 65535 horizons): select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u), with s the step (payload §6; the nesting applied per R-204, RQ-196). The Rust accessors divide, as IEEE division gives exactly 1.0."
 - id: REQ-GEN-007
   area: GEN
   statement: "The codegen self-test must check: pack∘unpack = id property-fuzzed per field in Rust and via a GPU self-test dispatch of the WGSL unpack; no field overlap, reserved bits explicit and widths fitting ranges; f16 pairs round-tripping; and detail decoding per state."
@@ -15413,8 +15415,9 @@
   - R-323
   - R-328
   - R-358
+  - R-363
   milestone: M0
-  note: "R-358: the diff's notice for a complete trace with a cut-off line after its summary line is built by TASK-M0-51 (REQ-TOOL-148)."
+  note: "R-358: the diff's notice for a complete trace with a cut-off line after its summary line is built by TASK-M0-51 (REQ-TOOL-148). R-363: that case needs no physics review: the human's words settle it, and R-323's physics approval covers the rest of this definition; TASK-M0-51's reviewers are code and qa."
 - id: REQ-TOOL-120
   area: TOOL
   kind: definition
@@ -21539,7 +21542,7 @@
   note: "R-336: PR #96's warm wall times (`ci` about 16.5 min, `xtask-ci` 11.7–13.3 min) were reported and are accepted for #96; TASK-M0-45 (REQ-SYS-077) shards the tests to bring each job back under ~10.5 min."
 - id: REQ-SYS-077
   area: SYS
-  statement: "The nextest runs of the `ci` and `xtask-ci` CI jobs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
+  statement: "The `ci` CI job's nextest runs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the `xtask-ci` job, which runs no nextest, must run as 4 parallel jobs of `cargo xtask ci --partition <k>/4`, the controls assigned to a shard by a stable hash of the control name, every control run exactly once across the shards (R-360); the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
   source:
   - file: decisions.md
     section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
@@ -21547,7 +21550,7 @@
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
   verify:
     method: review checklist
-    detail: "code and qa: `ci.yml` runs the nextest runs of `ci` and `xtask-ci` as parallel shards; the shards' test lists together equal the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
+    detail: "code and qa: `ci.yml` runs the `ci` job's nextest runs as parallel shards, the shards' test lists together equal to the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); `xtask-ci` runs as 4 jobs of `cargo xtask ci --partition <k>/4`, whose slices are disjoint, together hold every control and give a control the same slice on every run (`cargo nextest run -p xtask controls_partition`, with its negative control), and whose CI logs together run each control once (R-360); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
   rulings:
   - R-231
   - R-235
@@ -21557,5 +21560,6 @@
   - R-325
   - R-336
   - R-344
+  - R-360
   milestone: M0
   note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."

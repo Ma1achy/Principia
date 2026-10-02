@@ -78,7 +78,7 @@ a match, and resumes the panic, so libtest's verdict is unchanged.
 - R-359 replaces PR #114's design item 2 (applied per R-204 in its PR body: any panic in a `::negative_control` test
   counted as a pass, read from the thread name, and its scratch deleted). A control's scratch is deleted only when its
   panic message matches.
-- Applied per R-204 — veto? (RQ-194, A4) — R-359: a control that does not panic at all fails, so its scratch is kept
+- Applied per R-204, accepted by R-363 (RQ-194, A4) — R-359: a control that does not panic at all fails, so its scratch is kept
   and its path printed, as for a wrong message, since the ruling deletes it only on a match.
 - The guard runs in the qa commit's tests too, so qa's files depend on the implementer's support module; qa's commit
   comes after the implementer's, as usual.
