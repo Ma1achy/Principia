@@ -12,6 +12,10 @@ use serde_json::json;
 use validation::negative_control;
 use xtask::golden::{self, Case, Config, Renderer};
 
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
 }
@@ -282,26 +286,22 @@ negative_control!(
 
 /// A fresh, empty scratch folder of this call's own: the process id and a per-process counter make it unique, so a
 /// test and its negative control (or any two calls) running in parallel never share, remove or overwrite one
-/// another's files (R-333).
-fn scratch_dir(name: &str) -> PathBuf {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static NEXT: AtomicUsize = AtomicUsize::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("qa_m006_{name}_{}_{n}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
+/// another's files (R-333). Deleted when the test passes, kept with its path printed when it fails (R-342).
+fn scratch_dir(name: &str) -> Scratch {
+    let dir = Scratch::new(&format!("qa_m006_{name}"));
     std::fs::create_dir_all(&dir).expect("scratch created");
     dir
 }
 
 // --- The case format: a line is two pixels [x, y] inside the image, or the case is refused -------------------------
 
-/// A copy of `selftest/gradient` (256x256) whose one line runs from `from` to `to`, loaded.
+/// A copy of `selftest/gradient` (256x256) whose one line runs from `from` to `to`, loaded; with its scratch folder,
+/// held until the caller's test ends.
 fn load_with_line(
     name: &str,
     from: serde_json::Value,
     to: serde_json::Value,
-) -> Result<Case, String> {
+) -> (Result<Case, String>, Scratch) {
     let dir = scratch_dir(&format!("line_{name}"));
     let source = repo_root().join("fixtures/golden/selftest/gradient");
     for file in ["gradient.wgsl", "reference.png"] {
@@ -312,14 +312,14 @@ fn load_with_line(
             .expect("case.json parses");
     json["lines"] = json!({ "probe": { "from": from, "to": to } });
     std::fs::write(dir.join("case.json"), json.to_string()).expect("written");
-    Case::load(&dir, "selftest/probe")
+    (Case::load(&dir, "selftest/probe"), dir)
 }
 
 /// Each (from, to) is refused at load: an end on x = 256 or y = 256 (one past a 256-pixel image), or a point that is
 /// not exactly two coordinates, which would otherwise be read as some other pixel.
 fn check_bad_lines_refused(lines: &[(serde_json::Value, serde_json::Value)]) {
     for (i, (from, to)) in lines.iter().enumerate() {
-        if let Ok(case) = load_with_line(&format!("bad{i}"), from.clone(), to.clone()) {
+        if let (Ok(case), _dir) = load_with_line(&format!("bad{i}"), from.clone(), to.clone()) {
             panic!(
                 "a line that is not two pixels inside the image was loaded: {from} to {to} as {:?} to {:?}",
                 case.lines[0].from, case.lines[0].to
@@ -330,8 +330,8 @@ fn check_bad_lines_refused(lines: &[(serde_json::Value, serde_json::Value)]) {
 
 #[test]
 fn qa_m006_case_line_outside_or_malformed_refused() {
-    let edge = load_with_line("edge", json!([255, 255]), json!([0, 255]))
-        .expect("a line on the last row loads");
+    let (edge, _dir) = load_with_line("edge", json!([255, 255]), json!([0, 255]));
+    let edge = edge.expect("a line on the last row loads");
     assert_eq!(
         (edge.lines[0].from, edge.lines[0].to),
         ([255, 255], [0, 255])
@@ -401,8 +401,9 @@ negative_control!(
 
 // --- The case format: symptoms -------------------------------------------------------------------------------------
 
-/// A copy of `selftest/gradient` with `symptoms` replaced, loaded.
-fn load_with_symptoms(name: &str, symptoms: serde_json::Value) -> Result<Case, String> {
+/// A copy of `selftest/gradient` with `symptoms` replaced, loaded; with its scratch folder, held until the caller's
+/// test ends.
+fn load_with_symptoms(name: &str, symptoms: serde_json::Value) -> (Result<Case, String>, Scratch) {
     let dir = scratch_dir(&format!("symptoms_{name}"));
     let source = repo_root().join("fixtures/golden/selftest/gradient");
     for file in ["gradient.wgsl", "reference.png"] {
@@ -413,20 +414,20 @@ fn load_with_symptoms(name: &str, symptoms: serde_json::Value) -> Result<Case, S
             .expect("case.json parses");
     json["symptoms"] = symptoms;
     std::fs::write(dir.join("case.json"), json.to_string()).expect("written");
-    Case::load(&dir, "selftest/symptoms")
+    (Case::load(&dir, "selftest/symptoms"), dir)
 }
 
 /// A mean over each of the three channels, r, g and b, loads, and on a 1x1 image (10, 20, 30) measures 10, 20, 30.
 fn check_channel_means(pixel: [u8; 3]) {
-    let case = load_with_symptoms(
+    let (case, _dir) = load_with_symptoms(
         "means",
         json!([
             { "name": "r", "kind": "mean", "channel": "r" },
             { "name": "g", "kind": "mean", "channel": "g" },
             { "name": "b", "kind": "mean", "channel": "b" }
         ]),
-    )
-    .unwrap_or_else(|e| panic!("a mean over r, g or b was refused: {e}"));
+    );
+    let case = case.unwrap_or_else(|e| panic!("a mean over r, g or b was refused: {e}"));
     let image = golden::Image {
         width: 1,
         height: 1,
@@ -457,7 +458,7 @@ negative_control!(
 fn check_bad_rgb_refused(colours: &[serde_json::Value]) {
     for (i, rgb) in colours.iter().enumerate() {
         let symptoms = json!([{ "name": "c", "kind": "count", "rgb": rgb }]);
-        if let Ok(case) = load_with_symptoms(&format!("bad{i}"), symptoms) {
+        if let (Ok(case), _dir) = load_with_symptoms(&format!("bad{i}"), symptoms) {
             panic!(
                 "a colour that is not three channels in 0..=255 was loaded: {rgb} as {:?}",
                 case.symptoms[0].kind
@@ -468,11 +469,11 @@ fn check_bad_rgb_refused(colours: &[serde_json::Value]) {
 
 #[test]
 fn qa_m006_case_symptom_colour_malformed_refused() {
-    load_with_symptoms(
+    let (case, _dir) = load_with_symptoms(
         "ok",
         json!([{ "name": "c", "kind": "count", "rgb": [255, 0, 255] }]),
-    )
-    .expect("a three-channel colour loads");
+    );
+    case.expect("a three-channel colour loads");
     check_bad_rgb_refused(&[
         json!([255, 0]),
         json!([300, 255, 0, 255]),

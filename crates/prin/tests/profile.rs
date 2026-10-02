@@ -4,9 +4,8 @@
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use engine::contract::canonical;
 use engine::contract::profile::{self, percentile, SCHEMA_V1};
@@ -18,6 +17,10 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use validation::spawn::Spawn;
 
+#[path = "../../validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
+
 // ----- helpers -----
 
 fn prin(args: &[&str]) -> Output {
@@ -27,12 +30,9 @@ fn prin(args: &[&str]) -> Output {
         .expect("prin does not run")
 }
 
-/// A fresh path in the tests' scratch directory.
-fn scratch(name: &str) -> PathBuf {
-    static NEXT: AtomicU32 = AtomicU32::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("profile-{}-{n}-{name}", std::process::id()))
+/// A fresh path in the tests' scratch directory; deleted when the test passes, kept when it fails (R-342).
+fn scratch(name: &str) -> Scratch {
+    Scratch::new(&format!("profile-{name}"))
 }
 
 fn path_str(path: &Path) -> &str {
@@ -40,7 +40,7 @@ fn path_str(path: &Path) -> &str {
 }
 
 /// Runs `prin profile --scenario synthetic_frames --frames N --json PATH`; the file's path and text.
-fn synthetic(frames: u32) -> (PathBuf, String) {
+fn synthetic(frames: u32) -> (Scratch, String) {
     let path = scratch("synthetic.jsonl");
     let out = prin(&[
         "profile",
@@ -60,7 +60,7 @@ fn synthetic(frames: u32) -> (PathBuf, String) {
     (path, text)
 }
 
-fn write_scratch(name: &str, text: &str) -> PathBuf {
+fn write_scratch(name: &str, text: &str) -> Scratch {
     let path = scratch(name);
     fs::write(&path, text).expect("cannot write a scratch file");
     path
@@ -193,9 +193,9 @@ fn check_json_lines(text: &str, frames: usize) {
 
 #[test]
 fn profile_file_is_json_lines_against_schema() {
-    let (_, text) = synthetic(5);
+    let (_file, text) = synthetic(5);
     check_json_lines(&text, 5);
-    let (_, empty) = synthetic(0);
+    let (_file, empty) = synthetic(0);
     check_json_lines(&empty, 0);
 }
 
@@ -290,7 +290,7 @@ fn check_provenance(header_line: &str, frames: u32, commit: &str) {
 
 #[test]
 fn profile_file_header_holds_build_hash_and_config() {
-    let (_, text) = synthetic(4);
+    let (_file, text) = synthetic(4);
     check_provenance(lines_of(&text)[0], 4, &expected_commit());
 }
 
@@ -587,7 +587,7 @@ fn check_measured(text: &str, elapsed_ms: f64) {
 /// A run of `frames` frames, and the wall clock it took.
 fn timed(frames: u32) -> (String, f64) {
     let start = std::time::Instant::now();
-    let (_, text) = synthetic(frames);
+    let (_file, text) = synthetic(frames);
     (text, start.elapsed().as_secs_f64() * 1000.0)
 }
 
@@ -639,7 +639,7 @@ fn check_refused_name(out: &Output, path: &Path) {
     assert!(!path.exists(), "a refused run wrote {}", path.display());
 }
 
-fn run_named(name: &str) -> (Output, PathBuf) {
+fn run_named(name: &str) -> (Output, Scratch) {
     let path = scratch("named.jsonl");
     let out = prin(&[
         "profile",
@@ -1029,7 +1029,7 @@ validation::negative_control!(
 );
 
 /// One batch frame whose `frame_ms` is `frame_ms` and whose integrate stage takes `integrate` ms.
-fn one_frame(frame_ms: f64, integrate: f64) -> PathBuf {
+fn one_frame(frame_ms: f64, integrate: f64) -> Scratch {
     let stage_ms = [Some(integrate), Some(0.0), Some(0.0), Some(0.0), None];
     write_scratch(
         "one.jsonl",
@@ -1450,7 +1450,7 @@ fn check_core_counts(device: &Value) {
 
 #[test]
 fn profile_file_header_core_counts() {
-    let (_, text) = synthetic(1);
+    let (_file, text) = synthetic(1);
     let head: Value =
         serde_json::from_str(lines_of(&text)[0]).expect("the header line is not JSON");
     check_core_counts(&head["header"]["device"]);
@@ -1498,7 +1498,7 @@ validation::negative_control!(
 
 #[test]
 fn profile_no_gpu_header_nulls_the_gpu_fields() {
-    let (_, text) = synthetic(2);
+    let (_file, text) = synthetic(2);
     check_no_gpu_header(lines_of(&text)[0]);
 }
 
@@ -1544,7 +1544,7 @@ fn check_accepts_and_rejects_api(header_line: &Value, api: &str) {
 
 #[test]
 fn profile_no_gpu_typed_and_schema_accept_the_header() {
-    let (_, text) = synthetic(1);
+    let (_file, text) = synthetic(1);
     let header_line = &values_of(&text)[0];
     for api in ["opengl", "None", "", "cpu"] {
         check_accepts_and_rejects_api(header_line, api);

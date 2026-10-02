@@ -416,14 +416,18 @@ fn sd_last_symbol_valid(len: u32) -> bool {{ return len >= 1u && len != {truncat
 // R-86); max() avoids unsigned underflow in the unused branch.
 fn total_substeps_log2(total: u32) -> u32 {{ return select(0u, 31u - countLeadingZeros(max(total, 1u)), total > 1u); }}
 
-// `t_end_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §6).
+// `t_end_step / horizon_steps`, 0 when `horizon_steps` is 0, and exactly 1.0 when the step is the horizon: WGSL's
+// f32 division is not correctly rounded, so `n / n` may miss 1.0 (payload §6, R-361).
 fn tm_t_end_fraction(w: u32, horizon_steps: u32) -> f32 {{
-    return select(0.0, f32(tm_t_end_step(w)) / f32(horizon_steps), horizon_steps > 0u);
+    let s = tm_t_end_step(w);
+    return select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u);
 }}
 
-// `t_dmin_step / horizon_steps`, 0 when `horizon_steps` is 0 (payload §6).
+// `t_dmin_step / horizon_steps`, 0 when `horizon_steps` is 0, and exactly 1.0 when the step is the horizon: WGSL's
+// f32 division is not correctly rounded, so `n / n` may miss 1.0 (payload §6, R-361).
 fn tm_t_dmin_fraction(w: u32, horizon_steps: u32) -> f32 {{
-    return select(0.0, f32(tm_t_dmin_step(w)) / f32(horizon_steps), horizon_steps > 0u);
+    let s = tm_t_dmin_step(w);
+    return select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u);
 }}
 "
     )

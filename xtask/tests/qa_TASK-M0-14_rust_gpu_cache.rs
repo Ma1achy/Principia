@@ -26,10 +26,13 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use validation::negative_control;
 use validation::spawn::Spawn;
+
+#[path = "../../crates/validation/tests/support/scratch.rs"]
+mod scratch;
+use scratch::Scratch;
 
 const RUST_GPU: &str = "~/.cache/rust-gpu";
 
@@ -444,26 +447,20 @@ fn step_output(job: &Job, id: &str, name: &str) -> String {
     if lines.is_empty() {
         return String::new();
     }
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_m014_rust_gpu_cache");
-    std::fs::create_dir_all(&dir).unwrap();
     // One file per call: the tests run in parallel and resolve the same keys, in one process (cargo test) or one
-    // process each (nextest), so the name holds the process id beside the per-process count.
-    static CALL: AtomicUsize = AtomicUsize::new(0);
-    let n = CALL.fetch_add(1, Ordering::Relaxed);
-    let file = dir.join(format!(
-        "{}-{}-{id}-{name}-{}-{n}",
-        job.workflow,
-        job.id,
-        std::process::id()
+    // process each (nextest), so the name holds the process id beside the per-process count. Deleted once its value
+    // is read, kept with its path printed when the step's line fails (R-342); the value it held is returned.
+    let file = Scratch::new(&format!(
+        "qa_m014_rust_gpu_cache-{}-{}-{id}-{name}",
+        job.workflow, job.id
     ));
-    let _ = std::fs::remove_file(&file);
     // Through the spawn helper (R-214, REQ-VAL-155): bounded by its timeout, and never forked while a stand-in
     // executable is open for writing (REQ-SYS-070).
     let out = Command::new("bash")
         .arg("-c")
         .arg(lines.join("\n"))
         .current_dir(root())
-        .env("GITHUB_OUTPUT", &file)
+        .env("GITHUB_OUTPUT", &*file)
         .timed_output()
         .expect("bash runs");
     assert!(
