@@ -36,15 +36,29 @@ hasn't moved. Any change or commit you made is discarded, you are re-run, and th
 citation isn't actionable. Nothing is waived or deferred by you.
 
 **Verdict:** post exactly one review per round on the head commit, through GitHub's REST API, never
-`gh pr review`, so it works on the Mac and in a cloud session alike (R-357):
+`gh pr review`, so it works on the Mac and in a cloud session alike (R-357), in this one form, two steps, each its own
+Bash call (R-373):
+1. Write the JSON object to a file in your scratch folder:
 ```
-gh api repos/Ma1achy/Principia/pulls/<N>/reviews -f event=COMMENT -f commit_id=<head sha> -F body=@- <<'EOF'
+python3 -c 'import json,os,sys; os.makedirs(os.path.dirname(sys.argv[2]),exist_ok=True); open(sys.argv[2],"w").write(json.dumps({"event":"COMMENT","commit_id":sys.argv[1],"body":sys.stdin.read()}))' <head sha> <scratch>/review.json <<'EOF'
 VERDICT: APPROVE code
 <your findings>
 EOF
 ```
+2. Post it, as its own command with nothing before `gh`:
+```
+gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input - < <scratch>/review.json
+```
 with `VERDICT: CHANGES code` as the first line for changes. `commit_id` is the full SHA of the head you reviewed
 (`git rev-parse HEAD` in your worktree), so the review attaches to it. The body starts with the verdict line and is followed by
-your findings (R-175); `-F body=@-` reads it from standard input, so you write no file. Check CI on the head with
+your findings (R-175). The heredoc feeds it to python, which wraps it with the event and `commit_id` in the JSON object
+`{"event":"COMMENT","commit_id":"<head sha>","body":"<review body>"}` and writes it to the file, so no quote,
+`$` or backslash in the body breaks it; gh's `--input -` reads the file from standard input. `<scratch>` is the
+private scratch folder your dispatch names under the session scratchpad (`<scratchpad>/<N>-code/`), or
+`$TMPDIR/<N>-code/` if it names none; spell out the same full path in both steps. It is outside your worktree, so
+the file is no change to the checkout. Step 2 begins with exactly
+`gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, with no
+pipe, `cd`, `&&` or anything else before it: the human's allow rule matches a command by how it begins (R-373).
+Use no other form; if the post is blocked, stop and report it. Check CI on the head with
 `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. On a re-check, review the whole diff again, not only the fix.
 Report the verdict to the orchestrator.

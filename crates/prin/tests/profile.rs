@@ -1367,6 +1367,187 @@ validation::negative_control!(
     }
 );
 
+// ----- a cut-off line after the summary line (REQ-TOOL-148, R-356, R-358) -----
+
+/// A summary-shaped line cut off before its end.
+const CUT_SUMMARY: &str = r#"{"leak_flags":null,"hot_pa"#;
+
+/// The notice `show` gives a complete trace whose cut-off last line follows its summary line (R-363's words).
+const SHOW_AFTER_SUMMARY: &str = "prin profile show: the line after the summary line was cut off";
+
+/// `run` (`prin profile show`, plain or `--pretty`) on the fixture, a complete trace, followed by a cut-off frame-shaped
+/// or summary-shaped line: the plain output is the file unchanged, the pretty output the header, frames and summary
+/// line, and the notice states the bytes dropped after the summary line, not "session incomplete". On the fixture cut
+/// off before its summary line, the notice still says "session incomplete" (R-356, R-358).
+fn check_show_after_summary(run: impl Fn(&Path, bool) -> Output) {
+    let file = fixture();
+    for cut in [CUT, CUT_SUMMARY] {
+        let path = write_scratch("after-summary.jsonl", &format!("{file}{cut}"));
+        let (plain, pretty) = (run(&path, false), run(&path, true));
+        assert_eq!(
+            plain.stdout,
+            format!("{file}{cut}").into_bytes(),
+            "show changed the file with a cut-off line after its summary"
+        );
+        check_pretty(&file, &String::from_utf8_lossy(&pretty.stdout));
+        for (mode, out) in [("plain", &plain), ("--pretty", &pretty)] {
+            let note = String::from_utf8_lossy(&out.stderr);
+            assert!(
+                !note.contains("session incomplete"),
+                "show ({mode}) calls a complete trace with a cut-off line after its summary \"session incomplete\": {note}"
+            );
+            assert!(
+                note.contains(SHOW_AFTER_SUMMARY)
+                    && note.contains(&format!("its {} bytes", cut.len())),
+                "show ({mode}) does not state the {} bytes dropped after the summary line: {note}",
+                cut.len()
+            );
+        }
+    }
+    let path = write_scratch("before-summary.jsonl", &format!("{}{CUT}", frames_only()));
+    for pretty in [false, true] {
+        let note = String::from_utf8_lossy(&run(&path, pretty).stderr).into_owned();
+        assert!(
+            note.contains("session incomplete") && note.contains(&format!("its {} bytes", CUT.len())),
+            "show does not call a trace cut off before its summary line \"session incomplete\": {note}"
+        );
+    }
+}
+
+#[test]
+fn profile_show_cut_off_after_summary() {
+    check_show_after_summary(show);
+}
+
+validation::negative_control!(
+    profile_show_cut_off_after_summary,
+    "a notice keyed on dropped bytes alone must fail the check",
+    expected = "calls a complete trace with a cut-off line after its summary",
+    {
+        /// `prin profile show` with TASK-M0-18's notice: "session incomplete" whenever the reader dropped bytes.
+        fn show_keyed_on_dropped_bytes(path: &Path, pretty: bool) -> Output {
+            let mut out = show(path, pretty);
+            let trace = profile::read(
+                fs::read(path)
+                    .expect("cannot read a scratch file")
+                    .as_slice(),
+            )
+            .expect("the scratch file is not a trace");
+            if trace.dropped_bytes > 0 {
+                out.stderr = format!(
+                    "prin profile show: session incomplete; the last line was cut off, and its {} bytes are not shown pretty\n",
+                    trace.dropped_bytes
+                )
+                .into_bytes();
+            }
+            out
+        }
+        check_show_after_summary(show_keyed_on_dropped_bytes)
+    }
+);
+
+/// The diff's notice for a complete trace whose cut-off last line follows its summary line (R-363's words).
+fn after_summary_notice(name: &str, dropped: usize) -> String {
+    format!("{name}: {dropped} bytes of a cut-off line after the summary line dropped\n")
+}
+
+/// `run` (`prin profile diff`) with the fixture raised 6%, a complete trace, followed by a cut-off line, as NEW and
+/// again (BASE and NEW swapped) as BASE: for that file, the bytes dropped after the summary line come first, without
+/// "session incomplete", then the same comparison and exit code as for the uncut file. With no frame records, the
+/// bytes come before the refusal, exit 2. A trace cut off before its summary line still gets "session incomplete" and
+/// its bytes (R-358, R-323).
+fn check_diff_after_summary(run: impl Fn(&Path, &Path, &str) -> Output) {
+    let base = write_scratch("base.jsonl", &fixture());
+    let whole = raised(&fixture(), 1.06);
+    let uncut = write_scratch("raised.jsonl", &whole);
+    for cut in [CUT, CUT_SUMMARY] {
+        let cut_path = write_scratch("raised-cut.jsonl", &format!("{whole}{cut}"));
+        for threshold in ["5%", "10%"] {
+            for (name, (b, n), (ub, un)) in [
+                ("NEW", (&base, &cut_path), (&base, &uncut)),
+                ("BASE", (&cut_path, &base), (&uncut, &base)),
+            ] {
+                let (got, want) = (run(b, n, threshold), run(ub, un, threshold));
+                let stdout = String::from_utf8_lossy(&got.stdout);
+                assert!(
+                    !stdout.contains("session incomplete"),
+                    "the diff calls a complete {name} with a cut-off line after its summary \"session incomplete\": {stdout}"
+                );
+                let expected =
+                    after_summary_notice(name, cut.len()) + &String::from_utf8_lossy(&want.stdout);
+                assert_eq!(
+                    stdout, expected,
+                    "the diff does not state {name}'s {} bytes dropped after the summary line, then compare it as the uncut file, at --threshold {threshold}",
+                    cut.len()
+                );
+                assert_eq!(
+                    got.status.code(),
+                    want.status.code(),
+                    "a complete {name} with a cut-off line after its summary does not exit as the uncut file at --threshold {threshold}"
+                );
+            }
+        }
+    }
+    let empty = write_scratch("empty-cut.jsonl", &format!("{}{CUT}", trace_of_frames(&[])));
+    for (name, (b, n)) in [("NEW", (&base, &empty)), ("BASE", (&empty, &base))] {
+        let out = run(b, n, "5%");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "a {name} with no frame records and a cut-off line after its summary does not exit 2: {stderr}"
+        );
+        let notice = after_summary_notice(name, CUT.len());
+        assert!(
+            stderr.starts_with(&notice) && stderr.contains("has no frame records"),
+            "the diff does not state {name}'s {} bytes dropped after the summary line before its refusal: {stderr}",
+            CUT.len()
+        );
+    }
+    let before = write_scratch(
+        "before-cut.jsonl",
+        &format!("{}{CUT}", raised_frames_only()),
+    );
+    let out = run(&base, &before, "5%");
+    let notice = format!(
+        "NEW: session incomplete; {} bytes of a cut-off last line dropped",
+        CUT.len()
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stdout).starts_with(&notice),
+        "a NEW cut off before its summary line does not print {notice:?} first"
+    );
+}
+
+#[test]
+fn profile_diff_cut_off_after_summary() {
+    check_diff_after_summary(diff);
+}
+
+validation::negative_control!(
+    profile_diff_cut_off_after_summary,
+    "a notice keyed on an incomplete session alone must fail the check",
+    expected = "the diff does not state NEW's",
+    {
+        /// `prin profile diff` with TASK-M0-18's notices: printed for an incomplete session alone, so none for a complete trace
+        /// with a cut-off line after its summary.
+        fn diff_notice_keyed_on_incomplete(base: &Path, new: &Path, threshold: &str) -> Output {
+            let drop_after_summary = |text: &[u8]| -> Vec<u8> {
+                String::from_utf8_lossy(text)
+                    .split_inclusive('\n')
+                    .filter(|l| !l.contains("after the summary line dropped"))
+                    .collect::<String>()
+                    .into_bytes()
+            };
+            let mut out = diff(base, new, threshold);
+            out.stdout = drop_after_summary(&out.stdout);
+            out.stderr = drop_after_summary(&out.stderr);
+            out
+        }
+        check_diff_after_summary(diff_notice_keyed_on_incomplete)
+    }
+);
+
 // ----- profile_no_gpu (REQ-TOOL-144, R-308) -----
 
 /// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` (macOS), else the first `model name` in
@@ -1620,3 +1801,400 @@ validation::negative_control!(
         1
     ))
 );
+
+// ----- the streamed trace (TASK-M0-47: REQ-TOOL-147, R-341) -----
+
+/// `prin profile` streams its trace (R-341): the header line first, flushed at once, each frame record as it
+/// completes, flushed at the 60th frame since the last flush or once 1 s has passed since it, and the summary line
+/// last; a run killed mid-session leaves a trace the reader reads as "session incomplete" (R-298, R-299).
+mod stream {
+    use super::*;
+
+    use std::cell::RefCell;
+    use std::io::{self, Write};
+    use std::rc::Rc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    use engine::contract::profile::{
+        Absent, Flush, FrameRecord, SchemaId, Session, SessionHeader, Stream, Trace,
+    };
+
+    /// R-341's flush: every 60 frames or 1 s, whichever comes first.
+    const R341: Flush = Flush {
+        frames: 60,
+        interval: Duration::from_secs(1),
+    };
+
+    /// A writer that keeps its bytes and, at each flush, the number of whole lines it held then. A deaf one ignores
+    /// its flushes.
+    #[derive(Clone, Default)]
+    struct Recorder(Rc<RefCell<Recorded>>);
+
+    #[derive(Default)]
+    struct Recorded {
+        bytes: Vec<u8>,
+        flushes: Vec<usize>,
+        deaf: bool,
+    }
+
+    impl Recorder {
+        /// The control's writer.
+        #[cfg(feature = "controls")]
+        fn deaf() -> Self {
+            let recorder = Recorder::default();
+            recorder.0.borrow_mut().deaf = true;
+            recorder
+        }
+
+        fn flushes(&self) -> Vec<usize> {
+            self.0.borrow().flushes.clone()
+        }
+
+        fn bytes(&self) -> Vec<u8> {
+            self.0.borrow().bytes.clone()
+        }
+    }
+
+    impl Write for Recorder {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.borrow_mut().bytes.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            let mut recorded = self.0.borrow_mut();
+            if !recorded.deaf {
+                let lines = recorded.bytes.iter().filter(|b| **b == b'\n').count();
+                recorded.flushes.push(lines);
+            }
+            Ok(())
+        }
+    }
+
+    /// A header and a frame record, from a `prin profile` run of one frame.
+    fn sample() -> (SessionHeader, FrameRecord) {
+        let (_path, text) = synthetic(1);
+        let mut trace = profile::read(text.as_bytes()).expect("the run's trace does not read");
+        let frame = trace.frames.pop().expect("the run wrote no frame");
+        (trace.header, frame)
+    }
+
+    /// Streams one frame after each gap in `gaps`, by a clock the test drives from the header's flush, then the
+    /// summary line; the whole lines the writer held at each flush.
+    fn flushes_of(flush: Flush, gaps: &[Duration]) -> Vec<usize> {
+        let (header, frame) = sample();
+        let recorder = Recorder::default();
+        let mut now = Instant::now();
+        let mut stream =
+            Stream::start(recorder.clone(), &header, flush, now).expect("the header is refused");
+        for (i, gap) in gaps.iter().enumerate() {
+            now += *gap;
+            let frame = FrameRecord {
+                frame: i as u64,
+                ..frame.clone()
+            };
+            stream.frame(&frame, now).expect("a frame is refused");
+        }
+        stream.finish(&None, &None).expect("the summary is refused");
+        recorder.flushes()
+    }
+
+    fn check_flushes(flush: Flush, gaps: &[Duration], want: &[usize]) {
+        let got = flushes_of(flush, gaps);
+        assert_eq!(
+            got, want,
+            "the flushes fell at lines {got:?}, not {want:?} (R-341: every 60 frames or 1 s)"
+        );
+    }
+
+    fn ms(n: u64) -> Duration {
+        Duration::from_millis(n)
+    }
+
+    /// Frames 1 ms apart: the 150 frames take 150 ms, so only the frame count flushes: at the 60th frame since the
+    /// last flush, never later (lines 61 and 121, the header on line 1), then the summary line, line 152, last.
+    fn check_sixty_frames(flush: Flush) {
+        check_flushes(flush, &[ms(1); 150], &[1, 61, 121, 152]);
+    }
+
+    #[test]
+    fn profile_stream_flush_at_the_60th_frame() {
+        check_sixty_frames(R341);
+    }
+
+    validation::negative_control!(
+        profile_stream_flush_at_the_60th_frame,
+        "a policy that flushes only at 61 frames must fail the check",
+        expected = "the flushes fell at lines",
+        check_sixty_frames(Flush { frames: 61, ..R341 })
+    );
+
+    /// Frames slower than 60 a second: the clock flushes, at the first frame once 1 s has passed since the last
+    /// flush, 1 s itself included, never later; and whichever of the two comes first, its count of frames starting
+    /// again from that flush.
+    fn check_one_second(flush: Flush) {
+        // 300 ms apart: 1.2 s at the 4th frame (line 5), 1.2 s more at the 8th (line 9); the summary, line 12.
+        check_flushes(flush, &[ms(300); 10], &[1, 5, 9, 12]);
+        // 250 ms apart: exactly 1 s at the 4th frame and at the 8th; the summary, line 10.
+        check_flushes(flush, &[ms(250); 8], &[1, 5, 9, 10]);
+        // 30 fast frames, then one after a 1 s pause: the clock flushes at the 31st (line 32), and the count of 60
+        // starts there, flushing at the 91st (line 92); the summary, line 93.
+        let mut gaps = vec![ms(1); 30];
+        gaps.push(ms(1000));
+        gaps.extend([ms(1); 60]);
+        check_flushes(flush, &gaps, &[1, 32, 92, 93]);
+    }
+
+    #[test]
+    fn profile_stream_flush_once_1_s_has_passed() {
+        check_one_second(R341);
+    }
+
+    validation::negative_control!(
+        profile_stream_flush_once_1_s_has_passed,
+        "a policy that ignores the clock must fail the check",
+        expected = "the flushes fell at lines",
+        check_one_second(Flush {
+            interval: Duration::MAX,
+            ..R341
+        })
+    );
+
+    /// The header line is flushed as soon as it is written, before any frame (R-341, applied per R-204, accepted by
+    /// R-346); the summary line is written last and flushed; and the finished file is the one `profile::write` writes
+    /// for the same trace, line for line.
+    fn check_header_and_summary(recorder: Recorder) {
+        let (header, frame) = sample();
+        let now = Instant::now();
+        let mut stream =
+            Stream::start(recorder.clone(), &header, R341, now).expect("the header is refused");
+        assert_eq!(
+            recorder.flushes(),
+            [1],
+            "the header line was not flushed when it was written"
+        );
+        let frames: Vec<FrameRecord> = (0..3)
+            .map(|i| FrameRecord {
+                frame: i,
+                ..frame.clone()
+            })
+            .collect();
+        for f in &frames {
+            stream.frame(f, now).expect("a frame is refused");
+        }
+        assert_eq!(recorder.flushes(), [1], "a frame flushed before its time");
+        stream.finish(&None, &None).expect("the summary is refused");
+        assert_eq!(
+            recorder.flushes(),
+            [1, 5],
+            "the summary line was not flushed when the session ended"
+        );
+        let text = String::from_utf8(recorder.bytes()).expect("the stream wrote no UTF-8");
+        let last: Value =
+            serde_json::from_str(lines_of(&text)[4]).expect("the last line is not JSON");
+        assert_eq!(
+            last,
+            json!({"leak_flags": null, "hot_paths": null}),
+            "the last line is not the summary line"
+        );
+        let trace = Trace {
+            schema: SchemaId::V1,
+            header,
+            frames,
+            leak_flags: None,
+            hot_paths: None,
+            session: Session::Complete,
+            dropped_bytes: 0,
+        };
+        let mut written = Vec::new();
+        profile::write(&trace, &mut written).expect("write refuses the trace");
+        assert_eq!(
+            text,
+            String::from_utf8(written).expect("write wrote no UTF-8"),
+            "the streamed file is not the file write writes"
+        );
+    }
+
+    #[test]
+    fn profile_stream_flush_header_first_summary_last() {
+        check_header_and_summary(Recorder::default());
+    }
+
+    validation::negative_control!(
+        profile_stream_flush_header_first_summary_last,
+        "a writer whose flushes never happen must fail the check",
+        expected = "the header line was not flushed",
+        check_header_and_summary(Recorder::deaf())
+    );
+
+    /// A frame `profile::write` refuses (here a negative `frame_ms`), the stream refuses too, and writes nothing of
+    /// it (telemetry §5).
+    fn check_refused(frame_ms: f64) {
+        let (header, frame) = sample();
+        let frame = FrameRecord { frame_ms, ..frame };
+        let recorder = Recorder::default();
+        let now = Instant::now();
+        let mut stream =
+            Stream::start(recorder.clone(), &header, R341, now).expect("the header is refused");
+        let before = recorder.bytes();
+        let refused = stream.frame(&frame, now);
+        assert!(
+            refused.is_err(),
+            "the stream wrote a frame with frame_ms {frame_ms}, which write refuses"
+        );
+        assert_eq!(
+            recorder.bytes(),
+            before,
+            "the stream wrote part of a frame it refused"
+        );
+    }
+
+    #[test]
+    fn profile_stream_refuses_what_write_refuses() {
+        check_refused(-1.0);
+    }
+
+    validation::negative_control!(
+        profile_stream_refuses_what_write_refuses,
+        "a frame write accepts must fail the refusal check",
+        expected = "which write refuses",
+        check_refused(1.0)
+    );
+
+    /// What the watcher saw of the trace while the run ran.
+    #[derive(Default)]
+    struct Seen {
+        /// Each size the file had when sampled, in order, with no repeat.
+        sizes: Vec<u64>,
+        /// Whether the file held the header line and a whole frame line before the run was stopped.
+        frame_line: bool,
+    }
+
+    /// Samples `path` every few milliseconds while `running` holds.
+    fn watch(path: std::path::PathBuf, running: Arc<AtomicBool>) -> thread::JoinHandle<Seen> {
+        thread::spawn(move || {
+            let mut seen = Seen::default();
+            while running.load(Ordering::SeqCst) {
+                if let Ok(meta) = fs::metadata(&path) {
+                    let size = meta.len();
+                    if seen.sizes.last() != Some(&size) {
+                        seen.sizes.push(size);
+                    }
+                    if !seen.frame_line {
+                        let bytes = fs::read(&path).unwrap_or_default();
+                        seen.frame_line = bytes.iter().filter(|b| **b == b'\n').count() >= 2;
+                    }
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+            seen
+        })
+    }
+
+    /// The frame count no run finishes before it is stopped: u32's largest.
+    const ENDLESS: u32 = u32::MAX;
+
+    /// `prin profile --scenario synthetic_frames` with a frame count it cannot finish, streaming to `path`.
+    fn endless_run(path: &Path) -> Command {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_prin"));
+        command.args([
+            "profile",
+            "--scenario",
+            "synthetic_frames",
+            "--frames",
+            &ENDLESS.to_string(),
+            "--json",
+            path_str(path),
+        ]);
+        command
+    }
+
+    /// A run that writes its trace only at its end: the same endless run writing nowhere, then the trace written in
+    /// one go. The control's run.
+    #[cfg(feature = "controls")]
+    fn run_writing_at_its_end(path: &Path) -> Command {
+        let mut command = Command::new("sh");
+        command.args([
+            "-c",
+            "\"$0\" profile --scenario synthetic_frames --frames \"$1\" --json /dev/null \
+             && \"$0\" profile --scenario synthetic_frames --frames 1 --json \"$2\"",
+            env!("CARGO_BIN_EXE_prin"),
+            &ENDLESS.to_string(),
+            path_str(path),
+        ]);
+        command
+    }
+
+    /// Runs `run` until the spawn helper kills it (R-214: every test's child goes through it), watching its trace,
+    /// and checks what the killed run left: the trace grew while the run ran; the reader returns the header and the
+    /// frames from 0 in order, reports the session incomplete with "session incomplete", and drops a cut-off last line,
+    /// stating its bytes (REQ-TOOL-147, R-341, R-298, R-299). A run is stopped after 0.5 s, then 1 s, then 2 s, until
+    /// its trace held a frame line before it was stopped, so a slow start on a loaded machine is not a failure.
+    fn check_killed(run: impl Fn(&Path) -> Command) {
+        for after in [ms(500), ms(1000), ms(2000)] {
+            let path = scratch("killed.jsonl");
+            let running = Arc::new(AtomicBool::new(true));
+            let watcher = watch(path.to_path_buf(), Arc::clone(&running));
+            let ran = run(&path).output_within(after);
+            running.store(false, Ordering::SeqCst);
+            let seen = watcher.join().expect("the watcher panicked");
+            match ran {
+                Err(e) if e.kind() == io::ErrorKind::TimedOut => {}
+                Err(e) => panic!("the run did not run: {e}"),
+                Ok(out) => panic!(
+                    "the run ended before it was killed: {:?}, {}",
+                    out.status,
+                    String::from_utf8_lossy(&out.stderr)
+                ),
+            }
+            if !seen.frame_line {
+                continue;
+            }
+            assert!(
+                seen.sizes.iter().filter(|s| **s > 0).count() >= 2,
+                "the trace did not grow while the run ran: sizes seen {:?}",
+                seen.sizes
+            );
+            let bytes = fs::read(&path).expect("the killed run left no file");
+            let cut = bytes.len() - bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+            let trace = profile::read(bytes.as_slice()).expect("the reader rejects the trace");
+            assert_eq!(trace.header.config["frames"], json!(ENDLESS));
+            assert!(!trace.frames.is_empty(), "the trace has no frame record");
+            for (i, frame) in trace.frames.iter().enumerate() {
+                assert_eq!(frame.frame, i as u64, "frame {i} is out of order");
+            }
+            assert_eq!(trace.session, Session::Incomplete);
+            assert_eq!(trace.leak_flags(), Err(Absent::SessionIncomplete));
+            assert_eq!(trace.hot_paths(), Err(Absent::SessionIncomplete));
+            assert_eq!(Absent::SessionIncomplete.to_string(), "session incomplete");
+            assert_eq!(
+                trace.dropped_bytes, cut as u64,
+                "the reader did not drop the cut-off last line of {cut} bytes"
+            );
+            eprintln!(
+                "killed after {} s: {} frames read, {} bytes dropped, sizes seen while running: {}",
+                after.as_secs_f64(),
+                trace.frames.len(),
+                trace.dropped_bytes,
+                seen.sizes.len()
+            );
+            return;
+        }
+        panic!("the killed run left no trace to read: no header line and frame line before it was killed");
+    }
+
+    #[test]
+    fn profile_stream_killed_reads_as_session_incomplete() {
+        check_killed(endless_run);
+    }
+
+    validation::negative_control!(
+        profile_stream_killed_reads_as_session_incomplete,
+        "a run that writes its trace only at its end must leave no trace to read",
+        expected = "the killed run left no trace to read",
+        check_killed(run_writing_at_its_end)
+    );
+}

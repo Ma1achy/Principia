@@ -3,7 +3,9 @@
 //! than P% above BASE's, decided exactly (R-323). It exits 1 when any scope regresses, 0 when none does, and 2 when a
 //! file cannot be read or either file has no frame records (R-323, R-328). A trace that is an incomplete session, its
 //! last line perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes
-//! the reader dropped (R-323, R-298, R-299).
+//! the reader dropped (R-323, R-298, R-299). A complete trace whose cut-off last line follows its summary line is
+//! compared as any complete trace, and the diff first states the bytes dropped after the summary line, without
+//! "session incomplete" (R-356, R-358), so nothing is compared silently.
 //!
 //! The scopes: the frame (`frame_ms`), each stage by its key (`stage_ms`, in the frames where it is not null), each CPU
 //! scope by its stage and the names from the stage down to it, and each GPU pass by its stage and name. A scope that
@@ -211,9 +213,7 @@ fn regresses(base: f64, new: f64, threshold: &Threshold) -> bool {
 pub(crate) fn compare(base: &Trace, new: &Trace, threshold: &Threshold) -> Report {
     let mut text = String::new();
     for (name, trace) in [("BASE", base), ("NEW", new)] {
-        if trace.session == Session::Incomplete {
-            text.push_str(&incomplete(name, trace));
-        }
+        text.push_str(&notice(name, trace));
     }
     let base = p95s(base);
     let new = p95s(new);
@@ -261,26 +261,29 @@ fn read(path: &Path) -> Result<Trace, String> {
     })
 }
 
-/// The notice for a trace that is an incomplete session (R-298): "session incomplete", and the bytes of a cut-off last
-/// line the reader dropped (R-299), 0 when none was. Its frames are still compared (R-323).
-fn incomplete(name: &str, trace: &Trace) -> String {
-    format!(
-        "{name}: session incomplete; {} bytes of a cut-off last line dropped\n",
-        trace.dropped_bytes
-    )
+/// The notice for a trace, empty when it needs none. An incomplete session (R-298): "session incomplete", and the
+/// bytes of a cut-off last line the reader dropped (R-299), 0 when none was; its frames are still compared (R-323). A
+/// complete session whose cut-off last line follows its summary line: the bytes dropped, without "session incomplete"
+/// (R-356, R-358; the words applied per R-204, accepted by R-363). A complete trace that dropped nothing: none.
+fn notice(name: &str, trace: &Trace) -> String {
+    match (trace.session, trace.dropped_bytes) {
+        (Session::Incomplete, n) => {
+            format!("{name}: session incomplete; {n} bytes of a cut-off last line dropped\n")
+        }
+        (Session::Complete, 0) => String::new(),
+        (Session::Complete, n) => {
+            format!("{name}: {n} bytes of a cut-off line after the summary line dropped\n")
+        }
+    }
 }
 
-/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323, R-328). An
-/// incomplete session's notice comes first, as it does before a comparison.
+/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323, R-328). The trace's
+/// notice comes first, as it does before a comparison, so dropped bytes are always reported (R-358).
 fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
     if !trace.frames.is_empty() {
         return None;
     }
-    let notice = if trace.session == Session::Incomplete {
-        incomplete(name, trace)
-    } else {
-        String::new()
-    };
+    let notice = notice(name, trace);
     Some(format!(
         "{notice}prin profile diff: {name} has no frame records ({}), so nothing to compare",
         path.display()

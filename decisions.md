@@ -4543,9 +4543,12 @@ rule."
 Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other requirement.
 
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
-*Amended by R-369.*
-*Still in force: all of it but its merge rule: "Merge only under the overnight rules whenever I'm away" gives way to
-R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away or not.*
+*Amended by R-369 and R-373.*
+*Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
+I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
+or not; and reviews still post through REST, but in R-373's one form,
+`gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
+place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -5297,3 +5300,49 @@ archived)*
 - R-372 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes no requirement but REQ-SYS-078, which is new.
+
+## R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
+*2 Oct 2026 · applied in the five reviewers' files in `.claude/agents/`, `plan/OPERATIONS.md` (§ "Where the build loop
+runs", its REST table, and § "Reviewers", "How they post") and R-357's forward line*
+
+"I've added an allow rule for Bash(gh api repos/Ma1achy/Principia/pulls/*/reviews*). Every reviewer posts with exactly
+this form, path first and flags after:
+  gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -
+Update .claude/agents and OPERATIONS.md to use it."
+
+(Message of 2 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+Why: the permission check began blocking R-357's form,
+`gh api repos/…/pulls/<N>/reviews -f event=COMMENT -f commit_id=<sha> -F body=@-`, as an external-system write, and the
+human's allow rule matches only the new form.
+
+*Applied:*
+- **The form.** Every reviewer (`code-reviewer.md`, `qa-reviewer.md`, `perf-reviewer.md`, `physics-reviewer.md`,
+  `gui-reviewer.md`) posts its verdict with exactly
+  `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after. Standard input carries the JSON object
+  `{"event":"COMMENT","commit_id":"<full head sha>","body":"<review body>"}`; `event`, `commit_id` and the body mean
+  what they meant under R-357 (the body still headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, R-175;
+  qa's `commit_id` still the head it was given, R-260). Each file adds: "Use no other form; if the post is blocked, stop
+  and report it."
+- *Applied per R-369 (amended 2 Oct 2026; the human's allow rule matches a command only by how it begins):* the post
+  takes two steps, each its own command. First, a heredoc feeds the body to
+  `python3 -c 'import json,os,sys; os.makedirs(os.path.dirname(sys.argv[2]),exist_ok=True); open(sys.argv[2],"w").write(json.dumps({"event":"COMMENT","commit_id":sys.argv[1],"body":sys.stdin.read()}))' <head sha> <file>`,
+  which writes the JSON object to `<file>`, `review.json` in the reviewer's scratch folder: the one its dispatch names
+  under the session scratchpad (`<scratchpad>/<pr>-<role>/`, `plan/OPERATIONS.md` § "Dispatching"), or
+  `$TMPDIR/<pr>-<role>/` if it names none. No quote, `$` or backslash in the body breaks it. Second, with nothing
+  before it, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input - < <file>` posts it. The file
+  is outside the reviewer's worktree, so its read-only rule (R-357's "a reviewer writes no file", checked by
+  `git status --porcelain` and HEAD) still holds; qa, which has a Write tool, uses the same command as the others.
+  This replaces the item's first form, one command in which the python output was piped to the `gh api` call: that
+  command began with `python3`, which the human's allow rule
+  (`Bash(gh api repos/Ma1achy/Principia/pulls/*/reviews*)`, which they approved in their words, "I approve
+  Bash(gh api repos/Ma1achy/Principia/pulls/*/reviews*)") does not match, so the permission check judged each post
+  itself and blocked one on #123. The two-step form posted there (review 5396798807). Both steps were run in bash
+  and zsh against a local stand-in for `gh`, never a real POST, with a body holding quotes, `$`, backticks and a
+  backslash, and gave a valid object with all three fields and the body intact.
+- **The plan.** `plan/OPERATIONS.md`'s REST table (the `gh pr review --comment` row) and § "Reviewers", "How they post",
+  give the new form, the allow rule it matches and why the old form was dropped. R-357 carries a forward line and its
+  "Still in force" line says which of its forms gave way.
+- R-373 is in the "process" group of `plan/rule_groups.yaml`, beside R-357.
+
+Process only; no requirement changes.

@@ -795,3 +795,7 @@
   section: "R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*"
   reason: informative only
   note: "closes RQ-199 (option 1): R-366's exception covers the four unsharded step strings in xtask/tests/qa_TASK-M0-29.rs, changed by qa to the exact sharded forms, the code reviewer confirming nothing else changed; plan/OPERATIONS.md lists it; TASK-M0-45 names it; archives RQ-199; changes no requirement"
+- file: decisions.md
+  section: "R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*"
+  reason: informative only
+  note: "every reviewer posts its verdict with exactly `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, the JSON object {event, commit_id, body} on standard input, written first to a scratch file by its own python3 json.dumps command fed by a heredoc, then posted by a command that begins with `gh api` (applied per R-369; a command beginning with python3 matched no allow rule); the only form the human's allow rule matches; no other form, a blocked post is stopped and reported; amends R-357; the five reviewer files and plan/OPERATIONS.md updated; changes no requirement"
