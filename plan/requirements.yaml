@@ -21547,6 +21547,4 @@
   - R-336
   - R-344
   milestone: M0
-  rq:
-  - RQ-193
   note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."
