@@ -827,6 +827,49 @@ negative_control!(
     check_bodies(&FINITE_MAX_INDEXED, Rule::FiniteMax, false)
 );
 
+/// Constant expressions over a `bitcast` that evaluate to inf or NaN: inf kept by arithmetic, f32 overflow (finite in
+/// f64), inf minus inf, and f16 overflow (65520, the tie at the top, rounds to even, up).
+const INF_NAN_EVALUATED: [&str; 5] = [
+    "x == bitcast<f32>(0x7f800000u) * 1.0",
+    "x > bitcast<f32>(0x7f800000u) + 0.0",
+    "x > bitcast<f32>(0x7f7fffffu) * 2.0",
+    "x != bitcast<f32>(0x7f800000u) - bitcast<f32>(0x7f800000u)",
+    "h > f16(bitcast<f32>(0x477ff000u))",
+];
+
+/// Each a near miss of an `INF_NAN_EVALUATED` case: a finite value.
+const INF_NAN_EVALUATED_NEAR: [&str; 5] = [
+    "x == bitcast<f32>(0x7f7fffffu) * 1.0",
+    "x > bitcast<f32>(0x7f7fffffu) + 0.0",
+    "x > bitcast<f32>(0x7f7fffffu) * 0.5",
+    "x != bitcast<f32>(0x7f7fffffu) - bitcast<f32>(0x7f7fffffu)",
+    "h > f16(bitcast<f32>(0x477fefffu))",
+];
+
+#[test]
+fn lint_wgsl_unset_evaluated_inf_nan_constants_fire() {
+    check_cases(&INF_NAN_EVALUATED, Rule::InfNanConstant, true);
+}
+
+negative_control!(
+    lint_wgsl_unset_evaluated_inf_nan_constants_fire,
+    "expressions that evaluate to finite values are no inf or NaN",
+    expected = "did not fire",
+    check_cases(&INF_NAN_EVALUATED_NEAR, Rule::InfNanConstant, true)
+);
+
+#[test]
+fn lint_wgsl_unset_evaluated_finite_values_do_not_fire() {
+    check_cases(&INF_NAN_EVALUATED_NEAR, Rule::InfNanConstant, false);
+}
+
+negative_control!(
+    lint_wgsl_unset_evaluated_finite_values_do_not_fire,
+    "expressions that evaluate to inf or NaN are inf and NaN constants",
+    expected = "a near miss",
+    check_cases(&INF_NAN_EVALUATED, Rule::InfNanConstant, false)
+);
+
 /// Calls to `isinf` nested in statements.
 const ISINF_CALLS: [&str; 3] = [
     "if c { return isinf(x); } return false;",
