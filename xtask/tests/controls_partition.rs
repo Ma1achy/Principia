@@ -4,7 +4,8 @@
 //! kernel controls in any slice read.
 //!
 //! The controls runs go to a stand-in `cargo` (`CARGO`) that answers `metadata` and the listing from canned text,
-//! answers a run as every control it names making its test fail, and logs each call.
+//! answers a run as every control it names making its test fail (and an unpartitioned run, by the `negative_control`
+//! filter, as every listed control making its test fail), and logs each control named.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -68,6 +69,13 @@ for a in "$@"; do
   fi
   if [ "$a" = --exact ]; then exact=1; fi
 done
+if [ -z "$exact" ]; then
+  for a in "$@"; do
+    if [ "$a" = negative_control ]; then
+      sed -n 's/^\(.*::negative_control\): test$/test \1 - should panic ... ok/p' '{dir}/listed.txt'
+    fi
+  done
+fi
 "#,
             dir = dir.display()
         ),
@@ -125,6 +133,61 @@ validation::negative_control!(
     "shard 3/4 run twice and shard 4/4 not at all",
     expected = "not exactly one",
     check_every_control_once("ctl", &["1/4", "2/4", "3/4", "3/4"])
+);
+
+/// How a check runs `xtask controls` as shard `slice` would, in a directory named `case`: its output.
+type RunReport = fn(&str, &str) -> String;
+
+/// The real run: `xtask controls --partition <slice>`.
+fn sharded(case: &str, slice: &str) -> String {
+    run_shard(case, slice).1
+}
+
+/// Each shard of 4 names itself and its slice in its report: how many of the 40 controls are its own, and that each
+/// failed its test; shard 1 adds that every test has its control. The unpartitioned run, `--partition 1/1`, names no
+/// shard, and reports the 40 tests each failed by its control.
+fn check_shard_reports(case: &str, run: RunReport) {
+    for k in 1..=4u64 {
+        let slice = format!("{k}/4");
+        let out = run(&format!("{case}_{k}of4"), &slice);
+        let mine = controls().iter().filter(|c| shard_of(c, 4) == k).count();
+        for line in [
+            format!("partition_fake: shard {slice}: {mine} of 40 control(s)"),
+            format!("partition_fake: shard {slice}'s {mine} control(s) each failed its test"),
+        ] {
+            assert!(
+                out.contains(&line),
+                "shard {slice} did not name its slice: no `{line}` in\n{out}"
+            );
+        }
+        assert_eq!(
+            out.contains("; 40 test(s), each with a control"),
+            k == 1,
+            "shard {slice}: only shard 1 reports the listing\n{out}"
+        );
+    }
+    let out = run(&format!("{case}_1of1"), "1/1");
+    assert!(
+        !out.contains("shard")
+            && out.contains("partition_fake: 40 test(s), each failed by its control"),
+        "the unpartitioned run reported as a shard:\n{out}"
+    );
+}
+
+#[test]
+fn controls_partition_names_the_shard_in_its_report() {
+    check_shard_reports("report", sharded);
+}
+
+validation::negative_control!(
+    controls_partition_names_the_shard_in_its_report,
+    "a report whose partition prints as nothing, so no shard names its slice",
+    expected = "did not name its slice",
+    check_shard_reports("ctl_report", |case, slice| {
+        let report = sharded(case, slice);
+        let shard = format!("shard {slice}");
+        report.replace(&shard, "")
+    })
 );
 
 /// With `listed`, which has a test (`m::alone`) with no control, shard 1 of 4 fails naming it, and shards 2–4 pass:
