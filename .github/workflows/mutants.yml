@@ -58,6 +58,19 @@ jobs:
             echo "rust=false" >> "$GITHUB_OUTPUT"
             echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs)"
           fi
+      # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the rust-gpu build, the workspace's
+      # build and, when the diff mutates xtask, the baseline's fixture targets (each a wgpu build of its own under
+      # target/tmp/fixture-targets) ran ubuntu-latest out of space in the baseline. Remove the preinstalled toolsets
+      # this job does not use (.NET, Android, GHC, the hosted tool cache, the docker images), logging the free space
+      # before and after, as `ci.yml`'s `ci` job does. setup-python, below, fetches its Python afresh. Test
+      # infrastructure only; a shard with no Rust in its diff skips it.
+      - name: Free runner disk
+        if: steps.diff.outputs.rust == 'true'
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
