@@ -601,6 +601,35 @@ constants are hashed too, each by value, whether or not a link reads it: those t
 mirror tie-break) and `ε_w` (its seed-selection floor), change how a chart coordinate decodes, as the links do (R-344,
 closing RQ-189).
 
+**The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
+log-det are written as expression trees, never as text:
+- **The functions.** The forward is one tree per physical component, over the control's components; the inverse is
+  one tree per control component, over the physical value's components; the log-det is one tree, `log |det J|` of the
+  forward's Jacobian, over the control's components. A vector map is written out per component: softmax's component
+  `i` is `div(exp(x_i), add(exp(x_0), …))`.
+- **The nodes.** `input(i)` is component `i` of the function's argument, counted from 0. `param(name)` reads one of
+  the entry's ε clamps or parameters by name; its value is hashed with the entry's clamps and parameters, never inline,
+  so a tree naming one the entry does not declare fails generation. `num(v)` is a literal number. An operator node
+  applies one of a closed list to its arguments, in order: `add`, `mul` (two or more, `x_0 + x_1 + …`,
+  `x_0 · x_1 · …`); `sub`, `div` (two, `x_0 − x_1`, `x_0 / x_1`); `clamp` (three, `min(max(x_0, x_1), x_2)`); and,
+  of one, `neg`, `exp`, `log` (natural), `tanh`, `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
+  σ's inverse), `softplus` (`log(1 + eˣ)`), `inv_softplus` (`log(eˣ − 1)`) and `sech2` (`1/cosh² x`). An operator given
+  another number of arguments fails generation; one outside the list cannot be written, and adding one is an edit to
+  this list.
+- **The bytes.** A tree is written in prefix order: the node's spelling above (`input`, `param`, `num` or the
+  operator's), length-prefixed UTF-8, then `input`'s index as a big-endian u32, `param`'s name length-prefixed, `num`'s
+  value by its f64 bits, big-endian, or an operator's argument count as a big-endian u32 and each argument. A list of
+  trees is its count, then each tree. An entry is written as its name; its constraint, spelled `simplex`, `bounded`,
+  `positive`, `symmetric` or `unbounded`; its forward and inverse lists; its log-det tree; then its ε clamps and its
+  parameters, each list sorted by name, each item its name and its value's f64 bits. Entries are sorted by name, then
+  the chart constants, sorted by name, each its name and value's bits. The sampling note is not written. Two entries,
+  two chart constants, or two of one entry's clamps and parameters, of one name fail generation.
+- **No formatting-dependent bytes.** No source text is hashed: whitespace, parentheses, comments and a literal's
+  spelling (`1`, `1.0`, `1e0`) are not in the tree, and a literal is its bits. A change of meaning, another operator,
+  argument, literal, parameter or argument order, changes the bytes. Two trees equal in algebra but not in structure
+  (`add(a, b)` and `add(b, a)`) hash differently: the tree is the order of evaluation, which can change a float result's
+  bits, and a needless invalidation is safe where a stale one is not.
+
 ---
 
 ## 4. Seams (obligations → integration tests)
