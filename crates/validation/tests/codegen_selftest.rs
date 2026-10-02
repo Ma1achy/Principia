@@ -427,12 +427,58 @@ fn check_times(h: &GpuHarness, module: &str, kernel: &str) {
         i.is_none(),
         "times: a GPU fraction endpoint is not exactly 0 or 1 at job {i:?}"
     );
+    check_zero_horizon(h, module);
+}
+
+/// At `horizon_steps = 0` both display fractions are exactly 0, on the host and on the GPU, whatever the steps: the
+/// `horizon_steps > 0u` guard is outermost, so `s == horizon_steps` at 0 does not give 1 (payload §6; R-365).
+fn check_zero_horizon(h: &GpuHarness, module: &str) {
+    let words = [
+        pack_times(0, 0),
+        pack_times(1, 0xffff),
+        pack_times(0xffff, 1),
+        pack_times(0x1234, 0x5678),
+    ];
+    let zero = 0f32.to_bits();
+    for &w in &words {
+        assert_eq!(
+            [tm_t_end_fraction(w, 0), tm_t_dmin_fraction(w, 0)].map(f32::to_bits),
+            [zero, zero],
+            "times: a host fraction at horizon_steps = 0 is not exactly 0 for {w:#010x}"
+        );
+    }
+    let jobs: Vec<_> = (words.iter())
+        .flat_map(|&w| [(w, T_END_FRACTION, 0), (w, T_DMIN_FRACTION, 0)])
+        .collect();
+    let i = first_mismatch(&vec![zero; jobs.len()], &wgsl_unpack(h, module, &jobs));
+    assert!(
+        i.is_none(),
+        "times: a GPU fraction at horizon_steps = 0 is not exactly 0 at job {i:?}"
+    );
 }
 
 #[test]
 fn codegen_selftest_times() {
     check_times(&harness(), &module(GENERATED), &kernel_wgsl());
 }
+
+#[test]
+fn codegen_selftest_times_zero_horizon() {
+    check_zero_horizon(&harness(), &module(GENERATED));
+}
+
+negative_control!(
+    codegen_selftest_times_zero_horizon,
+    "the guard nested inside the endpoint select must give 1.0, not 0, at `pack_times(0, 0)` with `horizon_steps = 0`",
+    expected = "times: a GPU fraction at horizon_steps = 0 is not exactly 0",
+    check_zero_horizon(
+        &harness(),
+        &altered(
+            "tm_t_end_step(w);\n    return select(0.0, select(f32(s) / f32(horizon_steps), 1.0, s == horizon_steps), horizon_steps > 0u);",
+            "tm_t_end_step(w);\n    return select(select(0.0, f32(s) / f32(horizon_steps), horizon_steps > 0u), 1.0, s == horizon_steps);"
+        )
+    )
+);
 
 negative_control!(
     codegen_selftest_times,
