@@ -1,6 +1,7 @@
 //! REQ-VAL-165 (R-231): CI's test steps run through `cargo nextest run`, pinned, with doctests, which nextest does not
 //! run, through `cargo test --doc`, and no test is dropped: in each feature set, the nextest and `--doc` steps
-//! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`). The
+//! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`); a step
+//! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard. The
 //! documented local run (README) installs the same pinned version.
 
 use std::collections::BTreeMap;
@@ -89,6 +90,31 @@ fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
     out
 }
 
+/// The matrix expression a sharded step names its shard by (R-336, REQ-SYS-077).
+const SHARD: &str = "${{ matrix.shard }}";
+
+/// `run` once for each shard of its job's matrix (`shard: [1, 2, …]`), [`SHARD`] replaced by the shard; or `run`
+/// alone when it names no shard. So a sharded nextest step is listed under each shard's `--partition`.
+fn shards(job: &[&str], run: &str) -> Vec<String> {
+    if !run.contains(SHARD) {
+        return vec![run.to_owned()];
+    }
+    let values = job
+        .iter()
+        .find_map(|line| line.trim().strip_prefix("shard: ["))
+        .and_then(|rest| rest.trim_end().strip_suffix(']'))
+        .unwrap_or_else(|| {
+            panic!(
+                "job {} names {SHARD} but has no `shard: [...]` matrix",
+                job[0].trim()
+            )
+        });
+    values
+        .split(',')
+        .map(|shard| run.replace(SHARD, shard.trim()))
+        .collect()
+}
+
 /// A CI test step: `cargo nextest run <args>` (`doc` false) or `cargo test <args>` with `--doc` (`doc` true), its
 /// arguments without `--no-capture` and `--doc`, and the nextest profile it runs under (`None` for the default).
 struct Step {
@@ -114,7 +140,10 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     for workflow in workflows {
         for job in jobs(workflow) {
             let mut nextest = false;
-            for (run, profile) in runs(&job) {
+            for (run, profile) in runs(&job).into_iter().flat_map(|(run, profile)| {
+                shards(&job, run).into_iter().map(move |run| (run, profile))
+            }) {
+                let run = run.as_str();
                 let words = |rest: &str| -> Vec<String> {
                     rest.split_whitespace()
                         .filter(|w| !matches!(*w, "--no-capture" | "--nocapture" | "--doc"))
@@ -246,11 +275,11 @@ fn nextest_list(args: &[String], profile: Option<&str>) -> Vec<String> {
         .collect()
 }
 
-/// For each of `REPLACED`, the test steps of `workflows` in its feature set together list every test it lists, as
-/// many times.
-fn check_no_test_dropped(workflows: &[String]) {
+/// For each of `replaced` (some of `REPLACED`), the test steps of `workflows` in its feature set together list every
+/// test it lists, as many times.
+fn check_no_test_dropped(workflows: &[String], replaced: &[&str]) {
     let (steps, _) = test_steps(workflows);
-    for replaced in REPLACED {
+    for replaced in replaced {
         let replaced: Vec<String> = replaced.split_whitespace().map(str::to_owned).collect();
         let mut covered: BTreeMap<String, usize> = BTreeMap::new();
         for step in steps
@@ -285,13 +314,18 @@ fn check_no_test_dropped(workflows: &[String]) {
     }
 }
 
+// The check on all of `REPLACED`, split one test per entry, so that no one test holds a `ci` shard (R-366,
+// REQ-SYS-077): each lists the steps of its own feature set. Their names place them by nextest's `hash:` partition:
+// the default feature set's in shard 2; the two `controls` ones in shard 4, beside the two full checks below, which
+// build the same `controls` test binaries first.
+
 #[test]
-fn nextest_ci_steps_list_every_test_cargo_test_listed() {
-    check_no_test_dropped(&workflows());
+fn nextest_ci_steps_list_every_test_cargo_test_listed_without_features() {
+    check_no_test_dropped(&workflows(), &[REPLACED[0]]);
 }
 
 validation::negative_control!(
-    nextest_ci_steps_list_every_test_cargo_test_listed,
+    nextest_ci_steps_list_every_test_cargo_test_listed_without_features,
     "a CI whose workspace nextest step runs only kernel's tests, required to list every test",
     expected = "the CI test steps drop tests `cargo test --workspace` lists",
     check_no_test_dropped(
@@ -301,7 +335,70 @@ validation::negative_control!(
                 "run: cargo nextest run --workspace",
                 "run: cargo nextest run -p kernel"
             ))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
+        &[REPLACED[0]]
+    )
+);
+
+#[test]
+fn nextest_ci_steps_list_every_test_cargo_test_listed_under_metal_hosted_probe() {
+    check_no_test_dropped(&workflows(), &[REPLACED[1]]);
+}
+
+validation::negative_control!(
+    nextest_ci_steps_list_every_test_cargo_test_listed_under_metal_hosted_probe,
+    "a CI whose metal_hosted_probe nextest step filters on a name no test has, required to list every test",
+    expected = "the CI test steps drop tests `cargo test -p validation --features controls metal_hosted_probe` lists",
+    check_no_test_dropped(
+        &workflows()
+            .iter()
+            .map(|w| w.replace(
+                "run: cargo nextest run -p validation --features controls metal_hosted_probe ",
+                "run: cargo nextest run -p validation --features controls no_such_test "
+            ))
+            .collect::<Vec<_>>(),
+        &[REPLACED[1]]
+    )
+);
+
+#[test]
+fn nextest_ci_steps_list_every_gpu_harness_test_cargo_test_listed() {
+    check_no_test_dropped(&workflows(), &[REPLACED[2]]);
+}
+
+validation::negative_control!(
+    nextest_ci_steps_list_every_gpu_harness_test_cargo_test_listed,
+    "a CI whose gpu_harness nextest steps filter on a name no test has, required to list every test",
+    expected = "the CI test steps drop tests `cargo test -p validation --features controls gpu_harness` lists",
+    check_no_test_dropped(
+        &workflows()
+            .iter()
+            .map(|w| w.replace(
+                "run: cargo nextest run -p validation --features controls gpu_harness ",
+                "run: cargo nextest run -p validation --features controls no_such_test "
+            ))
+            .collect::<Vec<_>>(),
+        &[REPLACED[2]]
+    )
+);
+
+/// The same check, here for its control on the shards: the `ci` job's 4 nextest shards together list every test the
+/// unsharded run did (R-336, REQ-SYS-077).
+#[test]
+fn nextest_ci_shards_together_list_every_test() {
+    check_no_test_dropped(&workflows(), REPLACED);
+}
+
+validation::negative_control!(
+    nextest_ci_shards_together_list_every_test,
+    "a CI whose `ci` job runs 3 of its 4 shards, required to list every test",
+    expected = "the CI test steps drop tests `cargo test --workspace` lists",
+    check_no_test_dropped(
+        &workflows()
+            .iter()
+            .map(|w| w.replacen("shard: [1, 2, 3, 4]", "shard: [1, 2, 3]", 1))
+            .collect::<Vec<_>>(),
+        REPLACED
     )
 );
 
@@ -309,7 +406,7 @@ validation::negative_control!(
 /// nextest profile (R-325), and each step is listed under its own.
 #[test]
 fn nextest_ci_steps_list_every_test_under_their_profiles() {
-    check_no_test_dropped(&workflows());
+    check_no_test_dropped(&workflows(), REPLACED);
 }
 
 validation::negative_control!(
@@ -321,6 +418,7 @@ validation::negative_control!(
         &workflows()
             .iter()
             .map(|w| w.replace("NEXTEST_PROFILE: gpu-kernel", "NEXTEST_PROFILE: ci"))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
+        REPLACED
     )
 );
