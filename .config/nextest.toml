@@ -30,7 +30,21 @@ default-filter = """
         | binary_id(=validation::codegen_selftest)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
+        | binary_id(=xtask::nextest)
+        | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+        | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     )
+"""
+
+# The tests that run cargo on the workspace's own target directory from xtask (the override above), which CI's
+# `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
+# archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
+# test thread.
+[profile.ci-workspace]
+default-filter = """
+    binary_id(=xtask::nextest)
+    | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+    | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
 """
 
 [profile.gpu-kernel]

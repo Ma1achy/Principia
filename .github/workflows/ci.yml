@@ -161,6 +161,44 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
 
+  # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
+  # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
+  # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
+  ci-workspace:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci-workspace
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo nextest run -p xtask
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask
+      - name: cargo test -p xtask --doc
+        run: cargo test -p xtask --doc
+
   # Formatting, lints, the build and the crate-graph check, once, beside the test shards (R-195, REQ-SYS-004).
   ci-checks:
     runs-on: ubuntu-latest
@@ -199,7 +237,7 @@ jobs:
   # (`always()`), so a failed or cancelled job turns it red rather than skipping it.
   ci-gate:
     name: ci
-    needs: [ci, ci-checks]
+    needs: [ci, ci-checks, ci-workspace]
     if: always()
     runs-on: ubuntu-latest
     steps:
