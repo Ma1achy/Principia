@@ -1,5 +1,6 @@
 //! A test's scratch folder or file (REQ-VAL-178, R-342): a fresh, uniquely named path per call, deleted when the test
-//! passes, and kept, with its path printed, when the test panics; a control's panic is its passing (R-176). It lies
+//! passes, and kept, with its path printed, when the test panics. A negative control's guard hands its path to
+//! `negative_control!`, which deletes it only when the control panics with its expected message (R-359). It lies
 //! under `CARGO_TARGET_TMPDIR`, or the system temp folder where cargo does not set that (a crate's unit tests).
 //! xtask's, prin's and validation's tests include this file with `#[path]`; every item here is used by each.
 
@@ -11,7 +12,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 pub struct Scratch {
     path: PathBuf,
     /// What is done with the path when the guard drops, given whether the test is panicking: [`settle`].
-    pub settle: fn(&Path, bool),
+    pub settle: validation::control::Settle,
 }
 
 impl Scratch {
@@ -51,11 +52,11 @@ fn remove(path: &Path) {
 
 impl Drop for Scratch {
     fn drop(&mut self) {
-        // A control passes by panicking (`#[should_panic]`, R-176): its panic is not a failure.
-        let control = std::thread::current()
-            .name()
-            .is_some_and(|name| name.ends_with("::negative_control"));
-        (self.settle)(&self.path, std::thread::panicking() && !control);
+        // In a negative control, the control settles the path once it has compared its panic message (R-359).
+        let path = std::mem::take(&mut self.path);
+        if let Some(path) = validation::control::defer(path, self.settle) {
+            (self.settle)(&path, std::thread::panicking());
+        }
     }
 }
 
