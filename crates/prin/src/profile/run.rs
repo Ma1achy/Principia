@@ -121,12 +121,6 @@ impl<'a> Out<'a> {
         }
     }
 
-    /// The same, flushing by `flush` in place of [`FLUSH`]: the controls' run.
-    #[cfg(all(test, feature = "controls"))]
-    fn flushing(self, flush: Flush) -> Self {
-        Out { flush, ..self }
-    }
-
     /// Writes the header line and flushes it. The GPU's fields come only from `adapter`, the one the run opened for
     /// its own work, if any (R-308). Called once, before any frame.
     pub(crate) fn begin(&mut self, adapter: Option<&OpenAdapter>) -> Result<(), String> {
@@ -474,6 +468,12 @@ fn synthetic_frame(index: u64) -> FrameRecord {
 mod tests {
     use super::*;
 
+    /// `out`, flushing by `flush` in place of [`FLUSH`]: the controls' run.
+    #[cfg(feature = "controls")]
+    fn flushing(out: Out<'_>, flush: Flush) -> Out<'_> {
+        Out { flush, ..out }
+    }
+
     /// A scenario that asks for an adapter, as one doing GPU work would; the control's run.
     #[cfg(feature = "controls")]
     fn asks_for_an_adapter(
@@ -702,10 +702,13 @@ mod tests {
         profile_stream_flush_run_every_60_frames,
         "a run that flushes only at 61 frames must fail the check",
         expected = "the run flushed at lines",
-        check_run_sixty(|out| out.flushing(Flush {
-            frames: 61,
-            ..FLUSH
-        }))
+        check_run_sixty(|out| flushing(
+            out,
+            Flush {
+                frames: 61,
+                ..FLUSH
+            }
+        ))
     );
 
     /// The run flushes its frame lines once 1 s has passed since the last flush (R-341): 10 frames 300 ms apart flush
@@ -724,10 +727,13 @@ mod tests {
         profile_stream_flush_run_every_1_s,
         "a run whose flushes ignore the clock must fail the check",
         expected = "the run flushed at lines",
-        check_run_one_second(|out| out.flushing(Flush {
-            interval: Duration::MAX,
-            ..FLUSH
-        }))
+        check_run_one_second(|out| flushing(
+            out,
+            Flush {
+                interval: Duration::MAX,
+                ..FLUSH
+            }
+        ))
     );
 
     #[test]
