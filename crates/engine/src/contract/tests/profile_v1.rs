@@ -1268,6 +1268,52 @@ validation::negative_control!(
     }
 );
 
+/// `read_with` rejects a line after `trace`'s frames that is neither the summary line nor a frame record, the
+/// summary line gone, and the error names its place: "the last" when it is the file's last line, "the last before a
+/// cut-off line" when a cut-off line follows it (R-299, R-356).
+fn check_neither_last_line_place(
+    read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
+    trace: &Trace,
+) {
+    let written = bytes(trace);
+    let spans = line_spans(&written);
+    // The summary line goes, so the line after the frames is the last.
+    let mut file = written[..spans[spans.len() - 1].start].to_vec();
+    file.extend_from_slice(b"{\"neither\":true}\n");
+    let number = line_spans(&file).len();
+    let mut cut = file.clone();
+    cut.extend_from_slice(b"{\"frame\":");
+    for (text, place) in [(file, "the last"), (cut, "the last before a cut-off line")] {
+        let error = match read_with(&text) {
+            Ok(_) => panic!("a last line that is neither, {place}, was accepted"),
+            Err(e) => e.to_string(),
+        };
+        let expected = format!("line {number}, {place}: neither the summary line");
+        assert!(
+            error.contains(&expected),
+            "the error does not name the place {place:?}: {error}"
+        );
+    }
+}
+
+#[test]
+fn profile_v1_superset_neither_last_line_place() {
+    check_neither_last_line_place(|file| read(file), &interactive());
+}
+
+validation::negative_control!(
+    profile_v1_superset_neither_last_line_place,
+    "a reader that drops the cut-off line before reading, so never sees it, must fail",
+    expected = "the error does not name the place \"the last before a cut-off line\"",
+    check_neither_last_line_place(
+        |file| {
+            let end = file.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+            read(&file[..end])
+        },
+        &interactive(),
+    )
+);
+
 // ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----
 
 /// The interactive trace, as written, with a leak flag and a hot-path summary at the file's top.
