@@ -531,9 +531,40 @@ fn check_ci(files: &[(String, String)]) {
         "ci.yml does not run clippy over the workspace's targets at -D warnings"
     );
     assert!(
-        c.lines().any(|l| l.trim().ends_with("cargo xtask ci")),
-        "ci.yml does not run `cargo xtask ci`"
+        jobs(&ci)
+            .iter()
+            .any(|(_, j)| runs_every_slice_of_xtask_ci(j)),
+        "ci.yml does not run `cargo xtask ci`, whole or as every one of its slices"
     );
+}
+
+/// Whether a job runs all of `cargo xtask ci` on each push: unpartitioned, or sharded as R-360 has it, `cargo xtask ci
+/// --partition ${{ matrix.shard }}/<n>` in a job whose `shard` matrix is exactly 1..=n, so that the shards together run
+/// every slice (REQ-SYS-077).
+fn runs_every_slice_of_xtask_ci(job: &str) -> bool {
+    let commands: Vec<&str> = job
+        .lines()
+        .map(|l| {
+            let t = l.trim();
+            let t = t.strip_prefix("- ").unwrap_or(t);
+            t.strip_prefix("run:").unwrap_or(t).trim()
+        })
+        .collect();
+    if commands.contains(&"cargo xtask ci") {
+        return true;
+    }
+    let Some(n) = commands.iter().find_map(|c| {
+        c.strip_prefix("cargo xtask ci --partition ${{ matrix.shard }}/")
+            .and_then(|n| n.parse::<u32>().ok())
+    }) else {
+        return false;
+    };
+    let shards: Option<Vec<u32>> = commands.iter().find_map(|c| {
+        let list = c.strip_prefix("shard:")?.trim();
+        let list = list.strip_prefix('[')?.strip_suffix(']')?;
+        list.split(',').map(|x| x.trim().parse().ok()).collect()
+    });
+    n > 0 && shards == Some((1..=n).collect())
 }
 
 #[test]
@@ -549,6 +580,40 @@ negative_control!(
         "ci.yml",
         "        run: cargo clippy --workspace --all-targets -- -D warnings",
         "        run: cargo clippy --workspace --all-targets"
+    ))
+);
+
+/// The sharded `cargo xtask ci` with one slice dropped from the matrix no longer runs all of it.
+#[test]
+fn qa_m019_ci_runs_every_slice_of_xtask_ci() {
+    check_ci(&workflows());
+}
+
+negative_control!(
+    qa_m019_ci_runs_every_slice_of_xtask_ci,
+    "a ci.yml whose xtask-ci matrix drops slice 4 of 4 must fail",
+    expected = "ci.yml does not run `cargo xtask ci`",
+    check_ci(&edited(
+        "ci.yml",
+        "        shard: [1, 2, 3, 4]\n    steps:\n      - uses: actions/checkout@v4\n      # The toolchain",
+        "        shard: [1, 2, 3]\n    steps:\n      - uses: actions/checkout@v4\n      # The toolchain"
+    ))
+);
+
+/// ci.yml runs `cargo xtask ci` on each push in some form.
+#[test]
+fn qa_m019_ci_runs_xtask_ci() {
+    check_ci(&workflows());
+}
+
+negative_control!(
+    qa_m019_ci_runs_xtask_ci,
+    "a ci.yml with no `cargo xtask ci` at all must fail",
+    expected = "ci.yml does not run `cargo xtask ci`",
+    check_ci(&edited(
+        "ci.yml",
+        "        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
+        "        run: cargo xtask controls --partition ${{ matrix.shard }}/4\n"
     ))
 );
 

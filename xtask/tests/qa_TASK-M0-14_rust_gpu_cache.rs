@@ -916,8 +916,8 @@ negative_control!(
     expected = "found no job running `cargo xtask ci`",
     check_parser(&all_jobs(&edited_everywhere(
         "ci.yml",
-        "        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
-        "        run: cargo xtask controls\n"
+        "run: cargo xtask ci",
+        "run: cargo xtask controls"
     )))
 );
 
