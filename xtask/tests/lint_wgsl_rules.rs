@@ -39,7 +39,7 @@ fn check_fires(source: &str, rule: Rule, what: &str) {
 // ---------------------------------------------------------------------------------------------------------------
 // Each rule's name.
 
-const NAMES: [(Rule, &str); 7] = [
+const NAMES: [(Rule, &str); 11] = [
     (Rule::ExtractBitsU32, "extractBits-u32"),
     (Rule::NoF64, "no-f64"),
     (Rule::NoEnableF16, "no-enable-f16"),
@@ -47,6 +47,10 @@ const NAMES: [(Rule, &str); 7] = [
     (Rule::WordBinding, "word-binding"),
     (Rule::Bindings, "bindings"),
     (Rule::SampleOnly, "sample-only"),
+    (Rule::IsInfNan, "isinf-isnan"),
+    (Rule::InfNanConstant, "inf-nan-constant"),
+    (Rule::SelfCompare, "self-compare"),
+    (Rule::FiniteMax, "finite-max"),
 ];
 
 fn check_names(names: &[(Rule, &str)]) {
