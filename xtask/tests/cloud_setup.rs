@@ -11,7 +11,9 @@
 //! - R-347: cargo-nextest comes from its official prebuilt installer (get.nexte.st) and cargo-mutants through
 //!   cargo-binstall, each at CI's pin, and each falls back to `cargo install --locked` only when its download fails. The
 //!   dry run names that route, and the script's install function, run with `curl`, `tar`, `cargo` and `uname` stubbed,
-//!   takes it.
+//!   takes it;
+//! - under `pipefail`, the script pipes into no reader that can quit before its input ends (`head`, `grep -q`, `-m`,
+//!   `-l`): the writer would die of SIGPIPE and fail the pipeline at random.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -958,5 +960,69 @@ validation::negative_control!(
         )
         .unwrap();
         check_prebuilt_routes(&copy, &copy, &the_ci_plan())
+    }
+);
+
+/// The pipes in `text` whose reader can quit before reading all its input: `head`, or `grep` with `-q`, `-m`, `-l` or
+/// their long forms. Under `pipefail` the writer then dies of SIGPIPE whenever it writes after the reader has gone, and
+/// the pipeline fails at random (seen on Linux bash 5, where `printf` writes line by line).
+fn early_exit_readers(text: &str) -> Vec<String> {
+    let bytes = text.as_bytes();
+    let mut found: Vec<String> = Vec::new();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'|' || (i > 0 && bytes[i - 1] == b'|') || bytes.get(i + 1) == Some(&b'|') {
+            continue;
+        }
+        let rest = text[i + 1..].replace("\\\n", " ");
+        let mut words = rest.split_whitespace();
+        let early = match words.next() {
+            Some("head") => true,
+            Some("grep") => words
+                .take_while(|word| word.starts_with('-'))
+                .any(|option| {
+                    matches!(
+                        option.split('=').next().unwrap(),
+                        "--quiet" | "--silent" | "--max-count" | "--files-with-matches"
+                    ) || (!option.starts_with("--") && option.contains(['q', 'm', 'l']))
+                }),
+            _ => false,
+        };
+        if early {
+            let line = text[..i].lines().count().max(1);
+            found.push(format!(
+                "line {line}: `{}`",
+                text.lines().nth(line - 1).unwrap_or("").trim()
+            ));
+        }
+    }
+    found
+}
+
+fn check_no_early_exit_reader(text: &str) {
+    let found = if text.contains("pipefail") {
+        early_exit_readers(text)
+    } else {
+        Vec::new()
+    };
+    assert!(
+        found.is_empty(),
+        "cloud-setup.sh pipes into a reader that can quit before its input ends, under pipefail: {found:?}"
+    );
+}
+
+#[test]
+fn cloud_setup_pipes_into_no_early_exit_reader_under_pipefail() {
+    check_no_early_exit_reader(&script(&root()));
+}
+
+validation::negative_control!(
+    cloud_setup_pipes_into_no_early_exit_reader_under_pipefail,
+    "a script whose channel check pipes printf into `grep -q`, as it did before, required to use no such pipe",
+    expected = "cloud-setup.sh pipes into a reader that can quit before its input ends",
+    {
+        let here = r#"grep -q '^channel ' <<<"$tc""#;
+        let text = script(&root());
+        assert!(text.contains(here), "the script checks the channel with `{here}`");
+        check_no_early_exit_reader(&text.replace(here, r#"printf '%s\n' "$tc" | grep -q '^channel '"#))
     }
 );

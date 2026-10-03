@@ -235,7 +235,9 @@ $unknown"
   tc=$(toolchain_file) || return 1
   unknown=$(printf '%s\n' "$tc" | sed -n 's/^unknown //p')
   [ -z "$unknown" ] || die "the root toolchain file has a key this script doesn't know: $unknown"
-  if [ -n "$tc" ] && ! printf '%s\n' "$tc" | grep -q '^channel '; then die "the root toolchain file names no channel"; fi
+  # A here-string, not a pipe: under pipefail, `grep -q` quitting at its match could leave printf to die of SIGPIPE,
+  # and the check would fail falsely.
+  if [ -n "$tc" ] && ! grep -q '^channel ' <<<"$tc"; then die "the root toolchain file names no channel"; fi
   {
     printf '%s\n' "$records" | awk '
       $1 == "R" { print "toolchain action " $2; print "profile " $2 " minimal" }
