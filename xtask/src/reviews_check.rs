@@ -9,13 +9,14 @@
 //! `qa: tests for <TASK-id>` commit adding files only under qa's paths (R-260, R-237). A PR whose title names no task
 //! passes, printing "no task, no named reviewers" (R-261).
 
+use std::ffi::OsStr;
 use std::path::Path;
 use std::process::Command;
 
 use serde::Deserialize;
 
 /// One PR review, as `gh api repos/{owner}/{repo}/pulls/N/reviews` lists it.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Review {
     /// The review's text; its first line carries the verdict.
     #[serde(default)]
@@ -84,7 +85,7 @@ fn is_verdict(body: &str, verdict: &str, role: &str) -> bool {
 
 /// A PR commit, as `gh api repos/{owner}/{repo}/pulls/N/commits` lists it (oldest first), with its files as
 /// `gh api repos/{owner}/{repo}/commits/SHA` gives them.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Commit {
     pub sha: String,
     pub commit: CommitMessage,
@@ -94,13 +95,13 @@ pub struct Commit {
 }
 
 /// The `commit` object of a listed commit.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CommitMessage {
     pub message: String,
 }
 
 /// One file a commit changes, and how (`added`, `modified`, `removed`, `renamed`, ...).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CommitFile {
     pub filename: String,
     pub status: String,
@@ -202,8 +203,8 @@ pub fn check_with_commits(
 }
 
 /// Runs `gh api <endpoint>` (with `--paginate` when `paginate`), returning its stdout.
-fn gh_api(endpoint: &str, paginate: bool) -> Result<String, String> {
-    let mut command = Command::new("gh");
+fn gh_api(gh: &OsStr, endpoint: &str, paginate: bool) -> Result<String, String> {
+    let mut command = Command::new(gh);
     command.arg("api").arg(endpoint);
     if paginate {
         command.arg("--paginate");
@@ -247,7 +248,7 @@ pub fn names_task(title: &str) -> bool {
 }
 
 /// What reviews-check reads of one PR: its number, title, head commit, reviews and commits (oldest first).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Pr {
     pub number: u64,
     pub title: String,
@@ -297,8 +298,22 @@ fn parse_pages<T: serde::de::DeserializeOwned>(json: &str, what: &str) -> Result
 /// `cargo xtask reviews-check`: checks PR `pr` (or the event's) of the repository `gh` resolves from the checkout,
 /// against the task file under `root`.
 pub fn run(root: &Path, pr: Option<u64>) -> Result<(), String> {
-    let n = pr_number(pr)?;
+    let pr = fetch(pr_number(pr)?)?;
+    println!("{}", verdict(root, &pr)?);
+    Ok(())
+}
+
+/// What the check reads of PR `n`, through `gh`, of the repository `gh` resolves from the checkout ([`fetch_with`]).
+pub fn fetch(n: u64) -> Result<Pr, String> {
+    fetch_with(OsStr::new("gh"), n)
+}
+
+/// What the check reads of PR `n`, through `gh` (the program so named, or a stand-in), of the repository it resolves
+/// from the checkout: its title and head, and, when the title names a task, its reviews and (when some APPROVE is off
+/// the head) its commits.
+pub fn fetch_with(gh: &OsStr, n: u64) -> Result<Pr, String> {
     let pull: serde_json::Value = serde_json::from_str(&gh_api(
+        gh,
         &format!("repos/{{owner}}/{{repo}}/pulls/{n}"),
         false,
     )?)
@@ -317,6 +332,7 @@ pub fn run(root: &Path, pr: Option<u64>) -> Result<(), String> {
     };
     if names_task(&pr.title) {
         pr.reviews = parse_reviews(&gh_api(
+            gh,
             &format!("repos/{{owner}}/{{repo}}/pulls/{n}/reviews"),
             true,
         )?)?;
@@ -331,13 +347,18 @@ pub fn run(root: &Path, pr: Option<u64>) -> Result<(), String> {
         });
         if off_head {
             pr.commits = parse_pages(
-                &gh_api(&format!("repos/{{owner}}/{{repo}}/pulls/{n}/commits"), true)?,
+                &gh_api(
+                    gh,
+                    &format!("repos/{{owner}}/{{repo}}/pulls/{n}/commits"),
+                    true,
+                )?,
                 "commit list",
             )?;
             // Only a commit titled `qa: tests for ...` can carry an approval over (R-260), so only its files are read.
             for commit in &mut pr.commits {
                 if commit.commit.message.starts_with("qa: tests for ") {
                     let pages = gh_api(
+                        gh,
                         &format!("repos/{{owner}}/{{repo}}/commits/{}", commit.sha),
                         true,
                     )?;
@@ -350,6 +371,5 @@ pub fn run(root: &Path, pr: Option<u64>) -> Result<(), String> {
             }
         }
     }
-    println!("{}", verdict(root, &pr)?);
-    Ok(())
+    Ok(pr)
 }

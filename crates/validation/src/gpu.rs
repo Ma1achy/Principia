@@ -5,6 +5,9 @@
 
 use std::fmt;
 
+use engine::contract::profile::Api;
+use engine::telemetry::session;
+
 /// The environment variable naming the backend (R-169).
 pub const BACKEND_VAR: &str = "PRIN_GPU_BACKEND";
 
@@ -85,6 +88,7 @@ pub struct GpuHarness {
     device: wgpu::Device,
     queue: wgpu::Queue,
     info: AdapterInfo,
+    session: Result<session::Adapter, GpuError>,
 }
 
 impl GpuHarness {
@@ -112,6 +116,7 @@ impl GpuHarness {
         let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
             .map_err(|e| GpuError(format!("request_device failed: {e}")))?;
         let raw = adapter.get_info();
+        let session = session_adapter(&raw, adapter.features());
         let info = AdapterInfo {
             name: raw.name,
             backend: raw.backend,
@@ -122,11 +127,18 @@ impl GpuHarness {
             device,
             queue,
             info,
+            session,
         })
     }
 
     pub fn adapter_info(&self) -> &AdapterInfo {
         &self.info
+    }
+
+    /// The opened adapter as the session header records it (telemetry §2, §5; TASK-M0-19); `Err` where the adapter
+    /// doesn't report what the header needs.
+    pub fn session_adapter(&self) -> Result<&session::Adapter, &GpuError> {
+        self.session.as_ref()
     }
 
     /// The features the device was opened with: those [`GpuHarness::new`] requested, none, so no `SHADER_F16`
@@ -139,6 +151,12 @@ impl GpuHarness {
     /// `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write at the next binding and returned.
     /// A WGSL or validation error panics (wgpu's uncaptured-error handler).
     pub fn run_wgsl(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Vec<u32> {
+        self.prepare(module, entry, inputs).run()
+    }
+
+    /// [`run_wgsl`](Self::run_wgsl)'s pipeline and buffers, built once, so that [`Prepared::run`] times the dispatch
+    /// and readback alone (the benchmark runner, TASK-M0-19).
+    pub fn prepare(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Prepared<'_> {
         use wgpu::util::DeviceExt;
         let len = inputs.first().map_or(0, |i| i.len());
         assert!(len > 0, "run_wgsl needs a non-empty first input");
@@ -195,18 +213,45 @@ impl GpuHarness {
             layout: &pipeline.get_bind_group_layout(0),
             entries: &entries,
         });
-        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let output = buffers.pop().expect("the output buffer");
+        Prepared {
+            harness: self,
+            pipeline,
+            bind_group,
+            output,
+            readback,
+            len,
+        }
+    }
+}
+
+/// A compiled dispatch and its buffers, from [`GpuHarness::prepare`].
+pub struct Prepared<'h> {
+    harness: &'h GpuHarness,
+    pipeline: wgpu::ComputePipeline,
+    bind_group: wgpu::BindGroup,
+    output: wgpu::Buffer,
+    readback: wgpu::Buffer,
+    len: usize,
+}
+
+impl Prepared<'_> {
+    /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
+    pub fn run(&self) -> Vec<u32> {
+        let size = (self.len * 4) as u64;
+        let (device, queue) = (&self.harness.device, &self.harness.queue);
+        let mut encoder = device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&buffers[inputs.len()], 0, &readback, 0, size);
-        self.queue.submit([encoder.finish()]);
-        let slice = readback.slice(..);
+        encoder.copy_buffer_to_buffer(&self.output, 0, &self.readback, 0, size);
+        queue.submit([encoder.finish()]);
+        let slice = self.readback.slice(..);
         slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map failed"));
-        self.device
+        device
             .poll(wgpu::PollType::wait_indefinitely())
             .expect("device poll failed");
         let view = slice.get_mapped_range().expect("readback range");
@@ -217,9 +262,80 @@ impl GpuHarness {
             .map(|b| u32::from_le_bytes(*b))
             .collect();
         drop(view);
-        readback.unmap();
+        self.readback.unmap();
         words
     }
+}
+
+/// macOS's `sw_vers`, by its full path, so the probe never depends on the run's PATH. Elsewhere it doesn't exist.
+const SW_VERS: &str = "/usr/bin/sw_vers";
+
+/// Metal's driver ships with macOS, and wgpu reports no version for it, so its version is the system's:
+/// `macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers` (`program`: [`SW_VERS`], a test's stand-in in the tests);
+/// empty where it gives nothing.
+fn metal_driver(program: &str) -> String {
+    let field = |flag: &str| {
+        std::process::Command::new(program)
+            .arg(flag)
+            .output()
+            .ok()
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned())
+            .filter(|v| !v.is_empty())
+    };
+    match (field("-productVersion"), field("-buildVersion")) {
+        (Some(version), Some(build)) => format!("macOS {version} ({build})"),
+        _ => String::new(),
+    }
+}
+
+/// An adapter's report, as the session header records it (telemetry §2, §5): its name, API and driver; unified memory
+/// for an adapter that shares the machine's RAM (an integrated GPU, Apple silicon's included, or a CPU rasteriser such as
+/// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version
+/// ([`metal_driver`]). wgpu reports no VRAM size, so a discrete or virtual adapter is refused rather than given one it
+/// doesn't know (RQ-201, decided per R-369).
+pub fn session_adapter(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+) -> Result<session::Adapter, GpuError> {
+    adapter_with(info, features, SW_VERS)
+}
+
+/// [`session_adapter`], Metal's version read from `sw_vers`, the program named.
+fn adapter_with(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+    sw_vers: &str,
+) -> Result<session::Adapter, GpuError> {
+    let api = match info.backend {
+        wgpu::Backend::Metal => Api::Metal,
+        wgpu::Backend::Vulkan => Api::Vulkan,
+        wgpu::Backend::Dx12 => Api::Dx12,
+        wgpu::Backend::BrowserWebGpu => Api::Webgpu,
+        other => {
+            return Err(GpuError(format!(
+                "{other:?} is not an API the header records"
+            )))
+        }
+    };
+    let memory = match info.device_type {
+        wgpu::DeviceType::IntegratedGpu | wgpu::DeviceType::Cpu => session::AdapterMemory::Unified,
+        other => {
+            return Err(GpuError(format!(
+                "{other:?} adapter {}: wgpu reports no VRAM size for the session header",
+                info.name
+            )))
+        }
+    };
+    Ok(session::Adapter {
+        name: info.name.clone(),
+        api,
+        driver: match format!("{} {}", info.driver, info.driver_info).trim() {
+            "" if api == Api::Metal => metal_driver(sw_vers),
+            driver => driver.to_owned(),
+        },
+        memory,
+        f64: features.contains(wgpu::Features::SHADER_F64),
+    })
 }
 
 /// The identity kernel: `output[i] = input[i]`. The harness's M0 fixture (R-186's placement note).
@@ -425,4 +541,88 @@ mod tests {
         check_selects("metal", wgpu::Backends::METAL);
         check_selects("vulkan", wgpu::Backends::VULKAN);
     }
+
+    /// `/bin/echo` stands in for `sw_vers`: it prints the flag it is given, so the version it reports names the flags
+    /// asked for.
+    const ECHO_VERSION: &str = "macOS -productVersion (-buildVersion)";
+
+    /// `driver` reads `macOS <ProductVersion> (<BuildVersion>)` from the program named, and nothing from one that prints
+    /// nothing (`/usr/bin/true`) or doesn't exist.
+    fn check_metal_driver(driver: fn(&str) -> String) {
+        for (program, want) in [
+            ("/bin/echo", ECHO_VERSION),
+            ("/usr/bin/true", ""),
+            ("/nonexistent/sw_vers", ""),
+        ] {
+            assert_eq!(
+                driver(program),
+                want,
+                "Metal's driver is not the version `{program}` reports"
+            );
+        }
+    }
+
+    #[test]
+    fn metal_driver_reads_sw_vers() {
+        check_metal_driver(metal_driver);
+    }
+
+    crate::negative_control!(
+        metal_driver_reads_sw_vers,
+        "a probe that reports no version must fail the check",
+        expected = "Metal's driver is not the version",
+        check_metal_driver(|_| String::new())
+    );
+
+    /// An integrated adapter on `backend` reporting `driver` and `driver_info`.
+    fn reported(backend: wgpu::Backend, driver: &str, driver_info: &str) -> wgpu::AdapterInfo {
+        let mut info = wgpu::AdapterInfo::new(wgpu::DeviceType::IntegratedGpu, backend);
+        info.driver = driver.to_owned();
+        info.driver_info = driver_info.to_owned();
+        info
+    }
+
+    /// The adapter mapping under test, `sw_vers`'s stand-in named, or a control's broken one.
+    type Mapping =
+        fn(&wgpu::AdapterInfo, wgpu::Features, &str) -> Result<session::Adapter, GpuError>;
+
+    /// Only a Metal adapter that reports no driver takes the system's version, read from the `sw_vers` named (here
+    /// `/bin/echo`); an adapter on another API, or one that reports a driver, records what it reported.
+    fn check_driver_source(map: Mapping) {
+        for (backend, driver, driver_info, want) in [
+            (wgpu::Backend::Metal, "", "", ECHO_VERSION),
+            (wgpu::Backend::Vulkan, "", "", ""),
+            (wgpu::Backend::Dx12, "", "", ""),
+            (wgpu::Backend::Metal, "Apple", "3", "Apple 3"),
+            (
+                wgpu::Backend::Vulkan,
+                "llvmpipe",
+                "Mesa 24",
+                "llvmpipe Mesa 24",
+            ),
+        ] {
+            let got = map(
+                &reported(backend, driver, driver_info),
+                wgpu::Features::empty(),
+                "/bin/echo",
+            )
+            .unwrap_or_else(|e| panic!("{e}"));
+            assert_eq!(
+                got.driver, want,
+                "the driver of a {backend:?} adapter reporting {driver:?} {driver_info:?} is misread"
+            );
+        }
+    }
+
+    #[test]
+    fn session_adapter_driver_source() {
+        check_driver_source(adapter_with);
+    }
+
+    crate::negative_control!(
+        session_adapter_driver_source,
+        "a mapping that never reads the system's version for Metal must fail the check",
+        expected = "the driver of a Metal adapter reporting",
+        check_driver_source(|i, f, _| adapter_with(i, f, "/nonexistent/sw_vers"))
+    );
 }

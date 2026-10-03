@@ -34,3 +34,8 @@ test = false
 [[bin]]
 name = "gate"
 test = false
+
+# The benchmark runner, which `cargo xtask bench` runs as a separate process, as it does `gate` (TASK-M0-19).
+[[bin]]
+name = "bench"
+test = false

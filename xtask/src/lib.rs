@@ -1,12 +1,14 @@
 //! The workspace's runners, invoked as `cargo xtask <command>` (systems_architecture §7.1: `xtask` reads
 //! `cargo metadata`; no crate depends on it).
 
+pub mod bench;
 pub mod build_kernel;
 pub mod ci;
 pub mod codegen;
 pub mod controls;
 pub mod deps;
 pub mod gate;
+pub mod gate_report;
 pub mod golden;
 pub mod lint_constants;
 pub mod lint_vocab;

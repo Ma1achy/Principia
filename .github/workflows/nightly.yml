@@ -1,0 +1,305 @@
+# Nightly (R-177, R-186; REQ-SYS-067, REQ-VAL-150; TASK-M0-19): scheduled daily, and by hand. It runs the CPU suites
+# (the workspace's tests and `cargo xtask ci`) and the lavapipe GPU suites, and the full `cargo mutants` run over the
+# workspace (R-196, R-198, R-302), whose report it uploads. The aggregate survey joins it at M8 (R-134, R-177). No
+# benchmark runs here, nor in any hosted workflow: benchmarks run on the human's own Mac via `prin profile`, at milestone
+# gates and on demand (R-186).
+#
+# Runner disk: one full workspace test build on ubuntu-latest writes about 88 GB, which ran out of disk until the
+# runner's preinstalled toolsets were deleted first (TASK-M0-49). Every job here that builds the workspace's tests
+# starts by deleting the toolsets it does not use, `ci.yml`'s list and the hosted tool cache (setup-python then fetches
+# its Python afresh), logging the free space before and after. Test infrastructure only.
+#
+# Caches (R-285, R-326, R-337): this workflow never runs on a push to `main`, where alone a cache is saved, so it saves
+# nothing and restores, read-only, the keys `ci.yml`'s jobs save on `main`: the cargo registry under the `ci` job's key,
+# `cargo-registry-ci-…`, and the rust-gpu build under the `gpu-kernel` job's, `rust-gpu-gpu-kernel-<os>-<channel>`.
+# rust-cache hashes the environment's CARGO_* variables into its key, so CARGO_TERM_COLOR is set as in `ci.yml`.
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # R-374: every CI job builds the dev and test profiles with line tables only. Panics and backtraces still name
+  # file and line; the build, link, artefacts and caches shrink (a full-debug mutants baseline filled the runner's
+  # disk). Every workflow sets the same values, so rust-cache, which hashes CARGO_* into its key, computes `ci.yml`'s
+  # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  # The CPU suites, as `ci.yml`'s `ci` job runs them: every workspace test but the kernel's (the `ci` nextest profile),
+  # the doctests, and the crate-graph check. The GPU harness's self-tests among them run on lavapipe (R-169).
+  cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo nextest run --workspace
+        env:
+          PRIN_GPU_BACKEND: vulkan
+          NEXTEST_PROFILE: ci
+        run: cargo nextest run --workspace
+      - name: cargo test --workspace --doc
+        run: cargo test --workspace --doc
+      - name: cargo xtask deps
+        run: cargo xtask deps
+
+  # `cargo xtask ci`, every registered per-push runner (R-177), in a job of its own as in `ci.yml` (R-235): plan-check,
+  # the kernel build, every control (on lavapipe for the GPU harness's), the lints, the gates and the golden suites.
+  xtask-ci:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
+      # `main` (R-320, R-337; REQ-SYS-075); never saved here.
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo xtask ci
+        run: cargo xtask ci
+
+  # The lavapipe GPU suites (R-110, R-169, R-186), as `ci.yml`'s `gpu-kernel` and `gpu-lavapipe` jobs run them: the
+  # kernel build and the tests that need it (the `gpu-kernel` nextest profile), the GPU harness's self-tests with their
+  # controls, every golden suite, and R-269's half-way fixture.
+  gpu-lavapipe:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
+      # `main` (R-320, R-337; REQ-SYS-075); never saved here.
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo xtask build-kernel
+        run: cargo xtask build-kernel
+      - name: cargo nextest run -p validation -p xtask
+        env:
+          NEXTEST_PROFILE: gpu-kernel
+        run: cargo nextest run -p validation -p xtask
+      - name: cargo test -p validation -p xtask --doc
+        run: cargo test -p validation -p xtask --doc
+      - name: cargo nextest run -p validation --features controls gpu_harness
+        run: cargo nextest run -p validation --features controls gpu_harness --no-capture
+      - name: cargo test -p validation --features controls gpu_harness --doc
+        run: cargo test -p validation --features controls gpu_harness --doc
+      - name: cargo xtask golden --all
+        run: cargo xtask golden --all
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
+      - name: cargo test -p xtask --features controls golden_halfway --doc
+        run: cargo test -p xtask --features controls golden_halfway --doc
+
+  # The full `cargo mutants` run over the workspace (R-196, R-198; REQ-VAL-150): every mutant, not only a diff's,
+  # sharded as the per-PR run is (`mutants.yml`, R-302), each shard k of 8 with `--shard k/8`. Its exclusions are the
+  # per-PR job's, the one list in `.cargo/mutants.toml`, which `cargo mutants` reads from the workspace root; so are its
+  # two caps (R-348; REQ-VAL-179): the per-mutant timeout (REQ-VAL-180) and the per-process memory cap on the test
+  # processes (REQ-VAL-181), provisional until the human confirms them at the M0 gate (R-71, R-182). Each shard
+  # uploads its `mutants.out`; `mutants-report` joins them. The nightly run is a report, not a gate (R-196): a survivor
+  # here is listed, and the job passes once every shard finished.
+  mutants:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
+      # `main` (R-320, R-337; REQ-SYS-075); never saved here.
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
+      # What the mutated packages' tests need, as in `mutants.yml`: Python and PyYAML, lavapipe, and the kernel's SPIR-V
+      # and WGSL, built as the cargo call the alias expands to (setup for the tests, not one of the checks).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      # Debug info: line tables only, set for the whole workflow (R-374); `mutants.yml`'s note gives why.
+      - name: cargo run --quiet --package xtask -- build-kernel
+        run: cargo run --quiet --package xtask -- build-kernel
+      # The whole workspace's mutants, this shard's share dealt round-robin, under `.cargo/mutants.toml`'s exclusions
+      # and caps. Exit 0: none survived; 2: some survived; 3: some timed out; all three are a finished run, reported.
+      - name: cargo mutants --shard ${{ matrix.shard }}/8 (the full run)
+        run: |
+          set +e
+          start=$(date +%s)
+          cargo mutants --in-place --shard ${{ matrix.shard }}/8 --sharding round-robin -o "$RUNNER_TEMP"
+          code=$?
+          echo "cargo mutants shard ${{ matrix.shard }}/8: exit $code, wall-clock $(( $(date +%s) - start )) s"
+          case $code in 0|2|3) ;; *) exit "$code" ;; esac
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-nightly-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/mutants.out
+          if-no-files-found: ignore
+
+  # The full run's report (REQ-VAL-150): every shard's caught, missed, unviable and timed-out mutants, as cargo-mutants
+  # lists them in each shard's `caught.txt`, `missed.txt`, `unviable.txt` and `timeout.txt`, joined into one file and
+  # uploaded beside the shards' own reports. It fails when a shard did not finish, so a cut-off run is never read as
+  # complete.
+  mutants-report:
+    if: always()
+    needs: mutants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mutants-nightly-shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Join the shards' lists
+        run: |
+          report="$RUNNER_TEMP/mutants-report.txt"
+          for kind in caught missed unviable timeout; do
+            cat "$RUNNER_TEMP"/shards/*/"$kind.txt" 2>/dev/null | sort > "$RUNNER_TEMP/$kind.all"
+            echo "$kind: $(wc -l < "$RUNNER_TEMP/$kind.all")" | tee -a "$report.head"
+          done
+          {
+            echo "cargo mutants, full workspace run (nightly), every shard"
+            cat "$report.head"
+            for kind in caught missed unviable timeout; do
+              echo
+              echo "== $kind"
+              cat "$RUNNER_TEMP/$kind.all"
+            done
+          } > "$report"
+          if [ "${{ needs.mutants.result }}" != success ]; then
+            echo "::error::a nightly mutants shard did not finish (result: ${{ needs.mutants.result }})"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-nightly-report
+          path: |
+            ${{ runner.temp }}/mutants-report.txt
+            ${{ runner.temp }}/shards
+          if-no-files-found: ignore
