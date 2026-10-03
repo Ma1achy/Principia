@@ -443,8 +443,9 @@ negative_control!(
 // The rules case by case, on inline sources: each case is the body of one function, `f`, on a line of its own.
 
 /// The module each case's body is put in: abstract and typed constants, private variables, a workgroup variable,
-/// `isinf`, a function that writes through its pointer and one that passes its pointer on, and functions that write a
-/// global themselves or through a call.
+/// `isinf`, a function that writes through its pointer and one that passes its pointer on, functions that write a
+/// global themselves or through a call, functions that only read through their pointer, one that writes through only
+/// its second pointer, and one that writes a global through a call given a pointer to it.
 const PREAMBLE: &str = "enable f16;
 const M_ABSTRACT = 65504.0;
 const M_ABSTRACT_NEAR = 65503.0;
@@ -461,6 +462,11 @@ fn bump_on(p: ptr<function, f32>) { bump(p); }
 fn bump_g() { g = g + 1.0; }
 fn bump_g_twice() { bump_g(); }
 fn bump_g2() { g2 = g2 + 1.0; }
+fn peek(p: ptr<function, f32>) -> f32 { return *p; }
+fn peek_on(p: ptr<function, f32>) -> f32 { return peek(p); }
+fn set_second(a: ptr<function, f32>, b: ptr<function, f32>) { *b = *a; }
+fn set_p(p: ptr<private, f32>) { *p = 1.0; }
+fn set_g_via_ptr() { set_p(&g); }
 ";
 
 /// `body` as the body of `f`, over floats `x`, `y`, ints `i`, `j`, a vector `p`, a bool `c`, an f16 `h`, an f64 `w`
@@ -605,10 +611,11 @@ negative_control!(
 );
 
 /// Reads of one place with no store to it on any path between them, where a store elsewhere in the function, a call
-/// or a barrier might seem to fall between: a store in a loop before both reads in the iteration, or before a body
-/// read compared in the continuing; a store in an arm control cannot pass from; a call or a barrier that writes
-/// another global.
-const SELF_READS_NO_STORE_ON_ANY_PATH: [&str; 9] = [
+/// or a barrier might seem to fall between: both reads at one step in a loop that stores after them; a store in a
+/// loop before both reads in the iteration, or before a body read compared in the continuing; a store in an arm
+/// control cannot pass from; a call or a barrier that writes another global.
+const SELF_READS_NO_STORE_ON_ANY_PATH: [&str; 10] = [
+    "var v = x; loop { if v != v { return true; } v = v + 1.0; } return false;",
     "var v = x; loop { let a = v; let b = v; if a != b { return true; } v = v + 1.0; } return false;",
     "var v = x; loop { v = v + 1.0; let old = v; if old != v { return true; } } return false;",
     "var v = x; var r = false; loop { v = v + 1.0; let a = v; continuing { r = a != v; break if r; } } return r;",
@@ -661,6 +668,103 @@ negative_control!(
     "reads with no store on any path between them are a self-comparison",
     expected = "a near miss",
     check_bodies(&SELF_READS_NO_STORE_ON_ANY_PATH, Rule::SelfCompare, false)
+);
+
+/// Reads of one place where every path that stores to it between them leaves first: by `return`, `discard`, a
+/// `break` out of a loop or a switch, a `break if`, or a `continue` that takes the other path to the read; a store
+/// in a block, in a switch, behind an exit, round a loop; and the later read on the left.
+const SELF_READS_PAST_AN_EXIT: [&str; 10] = [
+    "var v = x; let old = v; if c { v = 1.0; return false; } return old != v;",
+    "var v = x; let old = v; if c { v = 1.0; return false; } return v != old;",
+    "var v = x; let old = v; if c { { v = 1.0; } return false; } return old != v;",
+    "var v = x; let old = v; if c { v = 1.0; discard; } return old != v;",
+    "var v = x; let old = v; loop { if c { v = 1.0; break; } if old != v { return true; } } return false;",
+    "var v = x; let old = v; switch i { case 0: { if c { v = 1.0; break; } return old != v; } default: {} } return false;",
+    "var v = x; let old = v; loop { if old != v { return true; } switch i { case 0: { v = 1.0; return false; } default: {} } } return false;",
+    "var v = x; var r = false; loop { let a = v; if c { continue; } v = 1.0; break; continuing { r = a != v; break if r; } } return r;",
+    "var v = x; var r = false; loop { let a = v; switch i { case 0: { continue; } default: { v = 1.0; break; } } return false; continuing { r = a != v; break if r; } } return r;",
+    "var v = x; loop { v = v + 1.0; continuing { break if c; } } let old = v; return old != v;",
+];
+
+/// Each a near miss of a `SELF_READS_PAST_AN_EXIT` case: the store's path reaches the second read, with no exit, a
+/// `break` out of a switch (not the loop round it), a `continue` to the read, or a `break if` out to it.
+const SELF_READS_STORE_REACHES_THE_READ: [&str; 10] = [
+    "var v = x; let old = v; if c { v = 1.0; } return old != v;",
+    "var v = x; let old = v; if c { v = 1.0; } return v != old;",
+    "var v = x; let old = v; if c { { v = 1.0; } } return old != v;",
+    "var v = x; let old = v; if c { v = 1.0; } else { discard; } return old != v;",
+    "var v = x; let old = v; loop { if c { v = 1.0; } if old != v { return true; } } return false;",
+    "var v = x; let old = v; switch i { case 0: { if c { v = 1.0; break; } } default: {} } return old != v;",
+    "var v = x; let old = v; loop { if old != v { return true; } switch i { case 0: { v = 1.0; break; } default: {} } } return false;",
+    "var v = x; var r = false; loop { let a = v; if c { v = 1.0; continue; } break; continuing { r = a != v; break if r; } } return r;",
+    "var v = x; var r = false; loop { let a = v; switch i { case 0: { v = 1.0; continue; } default: { break; } } return false; continuing { r = a != v; break if r; } } return r;",
+    "var v = x; let old = v; loop { v = v + 1.0; continuing { break if c; } } return old != v;",
+];
+
+#[test]
+fn lint_wgsl_self_compare_store_that_exits_before_the_read_fires() {
+    check_bodies(&SELF_READS_PAST_AN_EXIT, Rule::SelfCompare, true);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_store_that_exits_before_the_read_fires,
+    "a store whose path reaches the second read is between the reads",
+    expected = "did not fire",
+    check_bodies(&SELF_READS_STORE_REACHES_THE_READ, Rule::SelfCompare, true)
+);
+
+#[test]
+fn lint_wgsl_self_compare_store_that_reaches_the_read_does_not_fire() {
+    check_bodies(&SELF_READS_STORE_REACHES_THE_READ, Rule::SelfCompare, false);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_store_that_reaches_the_read_does_not_fire,
+    "a store whose every path exits before the second read is not between the reads",
+    expected = "a near miss",
+    check_bodies(&SELF_READS_PAST_AN_EXIT, Rule::SelfCompare, false)
+);
+
+/// Reads of one place across a call given a pointer to it whose callee never writes through that pointer: it only
+/// reads, itself or through a call, or writes only through another pointer it is given.
+const SELF_READS_ACROSS_A_READING_CALL: [&str; 4] = [
+    "var v = x; let old = v; let r = peek(&v); return old != v;",
+    "var v = x; let old = v; let r = peek_on(&v); return old != v;",
+    "var v = x; var u = y; let old = v; set_second(&v, &u); return old != v;",
+    "let old = *q; let r = peek_on(q); return old != *q;",
+];
+
+/// Each a near miss of a `SELF_READS_ACROSS_A_READING_CALL` case: the callee writes through the pointer, itself or
+/// through a call, or writes the global read through a call given a pointer to it.
+const SELF_READS_ACROSS_A_WRITING_CALL: [&str; 4] = [
+    "let old = g; set_p(&g); return old != g;",
+    "let old = g; set_g_via_ptr(); return old != g;",
+    "var v = x; var u = y; let old = u; set_second(&v, &u); return old != u;",
+    "let old = *q; bump_on(q); return old != *q;",
+];
+
+#[test]
+fn lint_wgsl_self_compare_call_that_only_reads_the_pointer_fires() {
+    check_bodies(&SELF_READS_ACROSS_A_READING_CALL, Rule::SelfCompare, true);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_call_that_only_reads_the_pointer_fires,
+    "a callee that writes through the pointer stores between the reads",
+    expected = "did not fire",
+    check_bodies(&SELF_READS_ACROSS_A_WRITING_CALL, Rule::SelfCompare, true)
+);
+
+#[test]
+fn lint_wgsl_self_compare_call_that_writes_the_pointer_does_not_fire() {
+    check_bodies(&SELF_READS_ACROSS_A_WRITING_CALL, Rule::SelfCompare, false);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_call_that_writes_the_pointer_does_not_fire,
+    "a callee that only reads through the pointer stores nothing",
+    expected = "a near miss",
+    check_bodies(&SELF_READS_ACROSS_A_READING_CALL, Rule::SelfCompare, false)
 );
 
 /// Constant expressions that evaluate to a finite-max stand-in, beyond the literal spellings of the fixtures.
