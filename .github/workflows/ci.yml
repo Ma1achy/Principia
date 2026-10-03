@@ -13,7 +13,10 @@
 # --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
 # The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
 # archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
-# workspace or compiles a test binary, but shard 1's doctests, which nextest does not run.
+# workspace or compiles a test binary, but shard 1's doctests, which nextest does not run. The xtask tests that run
+# cargo on the workspace's own target directory, which from the archive would rebuild it in their shard while holding
+# every test thread, run beside the shards in `ci-workspace`, on a build of its own, under a nextest profile of their
+# own (`.config/nextest.toml`).
 # Branch protection requires the checks `ci` and `xtask-ci` (R-266): a matrix job's checks are named for its shards
 # (`ci (1)` … `ci (4)`), so the jobs `ci-gate` and `xtask-ci-gate`, named `ci` and `xtask-ci`, pass only when every
 # job they gather passed, whatever the others ended in.
@@ -72,9 +75,13 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # The linker compresses each binary's debug sections (zlib): the same debug info (R-233), stored in fewer bytes,
+      # so archiving it and each shard's extraction of it take a fraction of the time (extraction 50–98 s to 11–24 s on
+      # PR #126's measurements). Test infrastructure only; nothing else is built with it.
       - name: cargo nextest archive --workspace
         env:
           NEXTEST_PROFILE: ci
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib
         run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst
       # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
       - uses: actions/upload-artifact@v4
