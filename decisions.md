@@ -3917,6 +3917,13 @@ helpers that make a uniquely named scratch folder or file per call; the named R-
 `qa_TASK-M0-38.rs` files. A note, not a ruling.
 
 ## R-343 — The fragment unpack layer binds `SimStateFTLE` at `@group(1) @binding(0)` and the word buffer at `@group(1) @binding(1)`; WGSL forms of `closure_step` and the schema version *(closes RQ-188)*
+*Amended by R-378.*
+*Still in force: all of it but the whole-struct read: the bindings (`SimStateFTLE` at `@group(1) @binding(0)`, the
+word buffer at `@group(1) @binding(1)`, group 0 left to the assembler's per-frame uniforms), the group and binding
+numbers generated as constants from one ledger table, `closure_step`'s and the schema version's WGSL forms, and items
+4–6. Each buffer is still read only by the generated unpack layer, at the same sample index `i` for both, but R-378
+replaces `sample_state(i)`'s whole-struct load: the generated read side loads only the stored members each field
+needs, never the whole stored struct in one load.*
 *1 Oct 2026 · applied in render contract Part 5 "Unpack layer", lowering contract Part 3a, payload §1, REQ-RENDER-001,
 REQ-PAY-091 and TASK-M0-13 (PR #107)*
 
@@ -5516,3 +5523,57 @@ numbering note.)
 - R-377 is in the "one-off" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-378 — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*
+*3 Oct 2026 · applied in R-343's forward lines, lowering contract Part 3a, render contract Part 5 "Unpack layer", payload
+§6, REQ-RENDER-001 (reqio), TASK-M1-01 and `plan/rule_groups.yaml`; built by TASK-M1-01 (PR #133)*
+
+"#133 (and the unpack layer generally): the generated read side loads only the stored members each field needs
+(simstate[i].packed_a, simstate[i].S, …), never the whole stored struct in one load, so unused data is never fetched
+on any backend. Physics or perf confirms on #133, from the compiled shader output, that a stain reading one field only
+loads that field's words."
+
+(Message of 3 Oct 2026, "This is from me."; numbered by the orchestrator, applied per R-369.)
+
+*What it changes:*
+- **R-343's read path.** R-343 has each buffer read only through `sample_state(i)` and `sample_word(i)`, and `main`'s
+  generated `crates/render/frag/generated/payload_unpack.wgsl` emits
+  `fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }`, which loads the whole stored struct at
+  once. R-378 replaces that whole-struct load: the generated read side loads only the stored members each field needs
+  (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load, so unused data
+  is never fetched on any backend. R-343 carries a forward line and a "Still in force" line.
+- **What of R-343 stands, unchanged:** the binding numbers (`SimStateFTLE` at `@group(1) @binding(0)`, the word buffer
+  at `@group(1) @binding(1)`), group 0 left to the assembler's per-frame uniforms, the group and binding numbers
+  generated as constants from one ledger table (`SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP`, `WORD_BINDING`),
+  `closure_step`'s and the schema version's WGSL forms, and items 4–6.
+- **Where it applies:** TASK-M1-01 (PR #133), whose draft builds the read-side `SimState` from a whole `SimStateFTLE`
+  value (`sim_state_from_ftle(s: SimStateFTLE, …)`), and the M0 unpack layer, whose `sample_state(i)` is that
+  whole-struct load.
+- **The confirmation.** On #133, the physics reviewer, already named on TASK-M1-01, confirms from the compiled shader
+  output that a stain reading one field loads only that field's words. "Physics or perf" is applied as physics, already
+  named; applied per R-369. The compiled output meant is the backend code the toolchain produces from the generated
+  WGSL, for example naga's MSL, SPIR-V or HLSL output, as the toolchain allows; the exact method is the task's.
+
+*Applied per R-369 (mechanical consequences):*
+- Each buffer is still read only by the generated unpack layer, at the sample index `i`, the same `i` for both
+  buffers; nothing written by hand indexes either buffer. That keeps R-343's "nothing else indexes either buffer"
+  with the generated per-member loads in place of `sample_state(i)`'s whole-struct load. The names and shape of the
+  generated per-member reads are the task's.
+- "The unpack layer generally" covers the word buffer: a field read from the word loads only the components of
+  `word_buffer[i]` it needs (`fgw_length_raw` needs `.w` alone); a field that needs the whole word, such as the decode,
+  loads all four.
+- REQ-RENDER-001, whose statement and verify detail repeat R-343's "only through `sample_state(i)` and
+  `sample_word(i)`", gains R-378 (reqio): its statement and its lint check (`cargo xtask lint wgsl`'s rule that no
+  function but `sample_state` and `sample_word` indexes either buffer) read the per-member loads. TASK-M1-01, which
+  needs REQ-RENDER-001 and already edits the generator and `xtask/src/lint_wgsl.rs`, makes the change in the
+  generated layer and the lint.
+- The forward pointers in lowering Part 3a, the render contract's "Unpack layer" and payload §6 are added; their text
+  is kept.
+- R-378 is in the "design" group of `plan/rule_groups.yaml`.
+
+*Checked against the corpus:* nothing else contradicts it. Lowering Part 3a's fixed read-side `SimState`, with plain
+members and no getters, stands: R-378 governs how the stored members are loaded, not the read type's shape. Payload
+§6's "the fragment READ side is unified …, so it needs no runtime member-omission" is about the stored variants'
+shapes, not loads, and stands.
+
+Changes REQ-RENDER-001: its read path is the per-member loads.
