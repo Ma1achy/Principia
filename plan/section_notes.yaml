@@ -803,3 +803,7 @@
   section: "R-374 — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*"
   reason: informative only
   note: "the human labelled it R-370, already taken, so recorded as R-374; R-233's \"leave debug info at the default\" covers local builds on the Mac only; every CI job sets CARGO_PROFILE_DEV_DEBUG and CARGO_PROFILE_TEST_DEBUG to line-tables-only; built by TASK-M0-19's PR #120 (every workflow job) and TASK-M0-52's PR #126 (the lighter archive); this ruling's PR edits no workflow; amends R-233; changes no requirement"
+- file: decisions.md
+  section: "R-377 — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts"
+  reason: informative only
+  note: "the human's item 4 of 3 Oct 2026, numbered by the orchestrator, applied per R-204: the M0 gate is passed once PR #124 (TASK-M0-50) merges and every requirement in M0's exit gate is green on main; the orchestrator then confirms it in its summary, tags main m0-gate and starts M1; plan/OPERATIONS.md's order of work gains it; changes no requirement"

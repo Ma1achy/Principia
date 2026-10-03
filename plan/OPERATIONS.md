@@ -265,6 +265,12 @@ task. R-357 (2 Oct 2026): they run on the Mac, not in a cloud session, and M0 fi
    REQ-VAL-156, REQ-VAL-180 and REQ-VAL-181), each with its measurements and proposed value, so the human can confirm
    them in one sitting.
 
+R-376 (3 Oct 2026) confirmed the six: REQ-VAL-138 0 steps, a per-backend reference near a tie; REQ-VAL-149 8 shards ×
+300 min, a ceiling, not a target; REQ-VAL-151 256 cases; REQ-VAL-156 600 s; REQ-VAL-180 2.0× the baseline, 60 s floor;
+REQ-VAL-181 8 GiB, `--core=1`. R-377 (3 Oct 2026): the M0 gate is passed once #124 (TASK-M0-50) merges and every
+requirement in M0's exit gate is green on `main`; then confirm it in the summary, tag that commit of `main` `m0-gate`,
+and start M1.
+
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
 **Never, without the human** (R-369's list; R-349):

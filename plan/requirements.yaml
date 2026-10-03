@@ -18218,6 +18218,10 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal states the metric (e.g. per-channel or per-pixel difference) and the default tolerance, shown to pass a re-render on the same backend (native wgpu offscreen, the golden renderer from M1, R-110) and to fail a one-variable change (REQ-VAL-003); lavapipe's max step against Metal on values between 8-bit levels is measured on a measure/ branch (R-269, R-272): at 0, zero steps hold across backends against one reference; otherwise each case keeps one reference per backend; recorded in decisions.md"
@@ -18225,8 +18229,10 @@
   - R-71
   - R-110
   - R-269
+  - R-375
+  - R-376
   milestone: M0
-  note: "R-269 result (30 Sep 2026, run 36719287172): lavapipe vs Metal max step 1 on exact half-way values (Metal rounds ties up, lavapipe to even), 0 on each backend against itself; each golden case keeps one reference per backend (REQ-VAL-176)."
+  note: "R-269 result (30 Sep 2026, run 36719287172): lavapipe vs Metal max step 1 on exact half-way values (Metal rounds ties up, lavapipe to even), 0 on each backend against itself; each golden case keeps one reference per backend (REQ-VAL-176). Confirmed by R-376 (3 Oct 2026, at the M0 gate): the largest per-channel absolute difference over all pixels, in 8-bit steps, 0 steps, on every native backend CI renders on; one reference per case across backends, one per backend for a golden near a tie (R-287, R-296). CI's lavapipe runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures the lavapipe goldens."
 - id: REQ-VAL-139
   area: VAL
   kind: calibration
@@ -18416,6 +18422,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal states the shard count n and the per-shard limit with their evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, each shard's baseline cost, and the headroom the pair leaves; each shard runs under that limit, marked provisional until the human confirms both at the M0 gate (R-182, R-302); if no practical pair covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
@@ -18425,7 +18433,9 @@
   - R-196
   - R-198
   - R-302
+  - R-376
   milestone: M0
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate; closes RQ-202): n = 8 shards and 300 minutes per shard, in place of R-305's provisional 120; the limit is a ceiling for unusually large diffs, not a target."
 - id: REQ-VAL-150
   area: VAL
   statement: "A scheduled nightly workflow must run the full `cargo mutants` over the workspace, with R-196's exclusions, and write its result as a report."
@@ -18450,14 +18460,18 @@
     section: "R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the proposal states the case count with its evidence (proposed: 256, proptest's own default); `crates/validation/src/prop.rs` carries it, marked provisional until the human confirms or changes it at the M0 gate (R-182), and `cargo test -p validation prop_seed` shows the value and that it is provisional"
+    detail: "the proposal states the case count with its evidence (proposed: 256, proptest's own default); `crates/validation/src/prop.rs` carries it, marked provisional until the human confirmed it at the M0 gate (R-182, R-376), and `cargo test -p validation prop_seed` shows the value and its status, confirmed"
   rulings:
   - R-71
   - R-182
   - R-203
+  - R-376
   milestone: M0
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 256 cases per property."
 - id: REQ-VAL-152
   area: VAL
   statement: "Every test the implementer merged before TASK-M0-22 must have a registered negative control that makes it fail (R-199): validation's `gpu` and `prop` unit tests and xtask's `ci`, `controls` and `deps` tests; xtask must declare the `controls` feature with a dev-dependency on `crates/validation` (R-176); and the example in `crates/validation/src/control.rs` must be a non-test block, since a doctest in a controls crate counts as a test without a control (R-208)."
@@ -18544,7 +18558,7 @@
 - id: REQ-VAL-156
   area: VAL
   kind: calibration
-  statement: "The timeout of the shared child-spawn helper (R-214) must be calibrated: 300 s provisional (R-217), checked by a reviewer, confirmed by the human at the M0 gate from cold and warm measurements on CI and the human's Mac, and recorded in decisions.md."
+  statement: "The timeout of the shared child-spawn helper (R-214) must be calibrated: 300 s provisional (R-217), checked by a reviewer, confirmed by the human at the M0 gate from cold and warm measurements on CI and the human's Mac, and recorded in decisions.md: 600 s (R-376)."
   source:
   - file: decisions.md
     section: "R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*"
@@ -18552,15 +18566,19 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the helper carries 300 s, marked provisional until the human confirms or changes it at the M0 gate (R-182); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom 300 s leaves"
+    detail: "the helper carries 600 s, confirmed by the human at the M0 gate (R-376; 300 s provisional until then, R-182, R-217); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom 300 s leaves"
   rulings:
   - R-71
   - R-182
   - R-214
   - R-217
+  - R-376
   milestone: M0
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 600 s, in place of R-217's 300 s provisional."
 - id: REQ-VAL-157
   area: VAL
   statement: "A check copied between qa's test files and the `*_controls.rs` targets (`qa_TASK-M0-04*`, `qa_TASK-M0-21*`, prin's `qa_TASK-M0-01`) must live once, in a shared test-support module that the test and its control both call (R-215)."
@@ -18918,6 +18936,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal states the timeout, in the form cargo-mutants' timeout setting takes it (seconds, or a multiple of the baseline's test time with its floor), with its evidence: the unmutated baseline's test time on `ubuntu-latest` in each shard of the PRs merged so far, the slowest caught mutant's test time, and the headroom the value leaves within the per-shard limit (REQ-VAL-149); every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -18925,7 +18945,9 @@
   - R-71
   - R-182
   - R-348
+  - R-376
   milestone: M0
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 2.0 times the unmutated baseline's test time, no less than 60 s (`timeout_multiplier = 2.0`, `minimum_test_timeout = 60`, `.cargo/mutants.toml`)."
 - id: REQ-VAL-181
   area: VAL
   kind: calibration
@@ -18937,6 +18959,10 @@
     section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
   - file: decisions.md
     section: "R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*"
+  - file: decisions.md
+    section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
+  - file: decisions.md
+    section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal states the cap, in the unit `ulimit -v` or `prlimit` takes, and which of the two sets it, with its evidence: the largest peak of the measure the cap limits (virtual size, for `ulimit -v` or `prlimit --as`) over every test process of the unmutated baseline on `ubuntu-latest`, the GPU tests on lavapipe included, and the runner's memory; the baseline passes under it with headroom; every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -18945,7 +18971,10 @@
   - R-182
   - R-348
   - R-352
+  - R-375
+  - R-376
   milestone: M0
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 8 GiB (8589934592 bytes) of virtual memory, set by `prlimit --as` with `--core=1` on Linux. CI runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures it."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -21330,7 +21359,7 @@
   milestone: M0
 - id: REQ-SYS-065
   area: SYS
-  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-latest with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
+  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-24.04 (pinned, R-375) with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -21342,6 +21371,8 @@
     section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   - file: decisions.md
     section: R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+  - file: decisions.md
+    section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
   verify:
     method: review checklist
     detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
@@ -21351,6 +21382,7 @@
   - R-174
   - R-186
   - R-206
+  - R-375
   milestone: M0
 - id: REQ-SYS-066
   area: SYS

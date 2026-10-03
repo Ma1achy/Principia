@@ -42,10 +42,10 @@ Of these: 104 calibration, 104 definition, 1102 obligation. Retired (kept for th
 
 ## Sections
 
-1065 sections in 46 files: 879 yield at least one requirement; 186 yield none and are listed below with the reason.
+1068 sections in 46 files: 881 yield at least one requirement; 187 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 138 |
+| informative only | 139 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -148,6 +148,7 @@ Of these: 104 calibration, 104 definition, 1102 obligation. Retired (kept for th
 | R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)* | informative only | closes RQ-199 (option 1): R-366's exception covers the four unsharded step strings in xtask/tests/qa_TASK-M0-29.rs, changed by qa to the exact sharded forms, the code reviewer confirming nothing else changed; plan/OPERATIONS.md lists it; TASK-M0-45 names it; archives RQ-199; changes no requirement |
 | R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)* | informative only | every reviewer posts its verdict with exactly `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, the JSON object {event, commit_id, body} on standard input, written first to a scratch file by its own python3 json.dumps command fed by a heredoc, then posted by a command that begins with `gh api` (applied per R-369; a command beginning with python3 matched no allow rule); the only form the human's allow rule matches; no other form, a blocked post is stopped and reported; amends R-357; the five reviewer files and plan/OPERATIONS.md updated; changes no requirement |
 | R-374 — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)* | informative only | the human labelled it R-370, already taken, so recorded as R-374; R-233's "leave debug info at the default" covers local builds on the Mac only; every CI job sets CARGO_PROFILE_DEV_DEBUG and CARGO_PROFILE_TEST_DEBUG to line-tables-only; built by TASK-M0-19's PR #120 (every workflow job) and TASK-M0-52's PR #126 (the lighter archive); this ruling's PR edits no workflow; amends R-233; changes no requirement |
+| R-377 — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts | informative only | the human's item 4 of 3 Oct 2026, numbered by the orchestrator, applied per R-204: the M0 gate is passed once PR #124 (TASK-M0-50) merges and every requirement in M0's exit gate is green on main; the orchestrator then confirms it in its summary, tags main m0-gate and starts M1; plan/OPERATIONS.md's order of work gains it; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
