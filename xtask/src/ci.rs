@@ -1,6 +1,6 @@
 //! `cargo xtask ci` — the single per-push entry point (R-177). Every later per-commit runner (plan-check,
-//! build-kernel, controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl) registers in [`RUNNERS`]; `ci`
-//! runs them in registration order. build-kernel runs before controls, whose `toolchain_trivial_kernel` control
+//! build-kernel, controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl, lint compute-pipelines)
+//! registers in [`RUNNERS`]; `ci` runs them in registration order. build-kernel runs before controls, whose `toolchain_trivial_kernel` control
 //! dispatches the WGSL it writes.
 //! `cargo xtask ci --list` runs each runner's listing-only form instead, which runs no control (R-235).
 //! `cargo xtask ci --partition k/n` runs shard k of n, which CI runs as parallel jobs (R-360): see [`run_partition`].
@@ -49,6 +49,11 @@ pub const RUNNERS: &[Runner] = &[
         name: "lint wgsl",
         run: lint_wgsl,
         list: lint_wgsl,
+    },
+    Runner {
+        name: "lint compute-pipelines",
+        run: lint_compute,
+        list: lint_compute,
     },
     Runner {
         name: "gate",
@@ -106,6 +111,12 @@ fn lint_vocab() -> Result<(), String> {
 /// `cargo xtask lint wgsl` on this workspace; it runs no control, so it is its own listing-only form (R-235).
 fn lint_wgsl() -> Result<(), String> {
     crate::lint_wgsl::run(&crate::workspace_manifest())
+}
+
+/// `cargo xtask lint compute-pipelines` on this workspace; it runs no control, so it is its own listing-only form
+/// (R-235).
+fn lint_compute() -> Result<(), String> {
+    crate::lint_compute::run(&crate::workspace_manifest())
 }
 
 /// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit).

@@ -60,8 +60,8 @@ fn ci_with_no_runners_passes() {
 }
 
 /// The registry's names: `plan-check` (TASK-M0-02), `build-kernel` (TASK-M0-14), `controls` (TASK-M0-22, R-198),
-/// `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `lint wgsl` (TASK-M0-13), then `gate` (TASK-M0-05), then
-/// `golden` (TASK-M0-06, R-110).
+/// `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `lint wgsl` (TASK-M0-13), `lint compute-pipelines`
+/// (TASK-M0-44), then `gate` (TASK-M0-05), then `golden` (TASK-M0-06, R-110).
 fn check_the_registry(runners: &[Runner]) {
     let names: Vec<&str> = runners.iter().map(|runner| runner.name).collect();
     assert_eq!(
@@ -73,11 +73,12 @@ fn check_the_registry(runners: &[Runner]) {
             "lint constants",
             "lint vocab",
             "lint wgsl",
+            "lint compute-pipelines",
             "gate",
             "golden"
         ],
         "the ci registry is not `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, `lint wgsl`, \
-         `gate`, then `golden`"
+         `lint compute-pipelines`, `gate`, then `golden`"
     );
 }
 
@@ -126,9 +127,9 @@ validation::negative_control!(
 validation::negative_control!(
     ci_registry_runs_controls,
     "a registry holding a runner other than `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
-     `lint wgsl`, `gate` and `golden`",
+     `lint wgsl`, `lint compute-pipelines`, `gate` and `golden`",
     expected = "the ci registry is not `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
-                `lint wgsl`, `gate`, then `golden`",
+                `lint wgsl`, `lint compute-pipelines`, `gate`, then `golden`",
     check_the_registry(&[Runner {
         name: "failing",
         run: failing,
