@@ -595,8 +595,8 @@ negative_control!(
     expected = "ci.yml does not run `cargo xtask ci`",
     check_ci(&edited(
         "ci.yml",
-        "  xtask-ci:\n    runs-on: ubuntu-latest\n    env:\n      PRIN_GPU_BACKEND: vulkan\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]\n",
-        "  xtask-ci:\n    runs-on: ubuntu-latest\n    env:\n      PRIN_GPU_BACKEND: vulkan\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3]\n"
+        "  xtask-ci:\n    runs-on: ubuntu-24.04\n    env:\n      PRIN_GPU_BACKEND: vulkan\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]\n",
+        "  xtask-ci:\n    runs-on: ubuntu-24.04\n    env:\n      PRIN_GPU_BACKEND: vulkan\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3]\n"
     ))
 );
 

@@ -5,7 +5,7 @@
 //!   `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)." Verify: "a child that sleeps past a short test
 //!   timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child
 //!   that exits in time returns its output; [...] `cargo test -- --list` lists no child path of `qa_R-206.rs`".
-//! - REQ-VAL-156: "300 s provisional (R-217)".
+//! - REQ-VAL-156: "300 s provisional (R-217)", confirmed by the human at the M0 gate as 600 s (R-376).
 //! - REQ-VAL-154: "every `negative_control!` call in the workspace carries an expected message (the macro requires
 //!   it)", checked on the fixture `fixtures/qa_m0_26/old_form`, a control in R-199's form without the message.
 //!
@@ -85,25 +85,25 @@ fn read_pid(file: &Path) -> String {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-VAL-156: the helper's timeout is 300 s, provisional (R-217).
+// REQ-VAL-156: the helper's timeout is 600 s, confirmed at the M0 gate (R-376), in place of R-217's 300 s provisional.
 
 fn check_timeout_is(want: Duration) {
     assert_eq!(
         SPAWN_TIMEOUT, want,
-        "the helper's timeout is not the provisional REQ-VAL-156 value"
+        "the helper's timeout is not the confirmed REQ-VAL-156 value (600 s, R-376)"
     );
 }
 
 #[test]
-fn qa_m0_26_the_timeout_is_the_provisional_300_s() {
-    check_timeout_is(Duration::from_secs(300));
+fn qa_m0_26_the_timeout_is_the_confirmed_600_s() {
+    check_timeout_is(Duration::from_secs(600));
 }
 
 negative_control!(
-    qa_m0_26_the_timeout_is_the_provisional_300_s,
-    "a timeout of 299 s, required to be the helper's",
-    expected = "the helper's timeout is not the provisional REQ-VAL-156 value",
-    check_timeout_is(Duration::from_secs(299))
+    qa_m0_26_the_timeout_is_the_confirmed_600_s,
+    "a timeout of 300 s, R-217's provisional value, required to be the helper's",
+    expected = "the helper's timeout is not the confirmed REQ-VAL-156 value (600 s, R-376)",
+    check_timeout_is(Duration::from_secs(300))
 );
 
 // ---------------------------------------------------------------------------------------------------------------------

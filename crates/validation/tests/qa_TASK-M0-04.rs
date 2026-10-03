@@ -222,7 +222,52 @@ fn qa_prop_seed_printed_and_rerun_through_the_environment() {
     );
 }
 
-/// REQ-VAL-151 / R-203: the shared config runs 256 cases per property, and says the value is provisional (R-182).
+/// REQ-VAL-151 / R-376: 256 is marked confirmed, not provisional, and the printed status says so. "confirmed" alone
+/// would also match the provisional form ("provisional until confirmed at the M0 gate"), so the status must name R-376
+/// and must not say provisional.
+fn check_marked_confirmed(provisional: bool, status: &str) {
+    assert!(
+        !provisional,
+        "256 was confirmed at the M0 gate (R-376), yet CASES is still marked provisional"
+    );
+    assert!(
+        status.contains("256")
+            && status.contains("confirmed")
+            && status.contains("R-376")
+            && !status.contains("provisional"),
+        "status hides value or its confirmed status (R-376): {status}"
+    );
+}
+
+#[cfg(feature = "controls")]
+mod marked_confirmed {
+    use super::*;
+    validation::negative_control!(
+        qa_prop_shared_config_runs_256_cases_marked_provisional,
+        "the status line prop.rs prints while CASES is provisional, with the flag off",
+        expected = "status hides value or its confirmed status (R-376)",
+        check_marked_confirmed(
+            false,
+            "prop::CASES = 256 (provisional until confirmed at the M0 gate; REQ-VAL-151, R-203, R-376)"
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod flag_provisional {
+    use super::*;
+    validation::negative_control!(
+        qa_prop_shared_config_runs_256_cases_marked_provisional,
+        "CASES_PROVISIONAL still true",
+        expected =
+            "256 was confirmed at the M0 gate (R-376), yet CASES is still marked provisional",
+        check_marked_confirmed(true, &prop::cases_status())
+    );
+}
+
+/// REQ-VAL-151 / R-203: the shared config runs 256 cases per property, and says the value is confirmed: the human
+/// confirmed 256 at the M0 gate (R-376), so it is no longer marked provisional (R-182). The test keeps its name, which
+/// `qa_TASK-M0-04_controls.rs` and `qa_TASK-M0-25.rs` cite; what it asserts is R-376's.
 #[test]
 fn qa_prop_shared_config_runs_256_cases_marked_provisional() {
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -239,14 +284,7 @@ fn qa_prop_shared_config_runs_256_cases_marked_provisional() {
     );
     let status = prop::cases_status();
     println!("{status}");
-    assert!(
-        std::hint::black_box(prop::CASES_PROVISIONAL),
-        "256 is provisional until the M0 gate (R-203)"
-    );
-    assert!(
-        status.contains("256") && status.contains("provisional"),
-        "status hides value or status: {status}"
-    );
+    check_marked_confirmed(std::hint::black_box(prop::CASES_PROVISIONAL), &status);
     // Control: the counter sees a different case count when the config differs, so 256 above was measured.
     let m = AtomicU32::new(0);
     proptest::test_runner::TestRunner::new(proptest::test_runner::Config {
