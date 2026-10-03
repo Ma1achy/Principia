@@ -870,6 +870,13 @@ negative_control!(
 /// test matches", and the report fails, the line saying so.
 fn check_matching_nothing(list: &TestList) {
     check_no_test("REQ-NAM-002", list, &[("xtask", "no_such_test")]);
+    match named_outcome("REQ-NAM-002", true, list) {
+        Outcome::NoTest(why) => assert!(
+            why[0].contains("(`cargo test -p xtask no_such_test`;"),
+            "the reason does not give the command: {why:?}"
+        ),
+        other => panic!("REQ-NAM-002 was not failed for a missing named test: {other:?}"),
+    }
     let got = vec![(
         "REQ-NAM-002".to_owned(),
         named_outcome("REQ-NAM-002", true, list),
@@ -1032,6 +1039,14 @@ fn gate_report_named_test_parses_detail() {
         "cargo testing -p xtask golden; cargo test -p xtask, then",
         &[],
     );
+    check_parses(
+        "`cargo test -p xtask golden-run` and `cargo test -p xtask golden.`, then",
+        &[named("xtask", &[], "golden", false)],
+    );
+    check_parses(
+        "`cargo test -p engine -- --exact first second`",
+        &[named("engine", &[], "first", true)],
+    );
 }
 
 negative_control!(
@@ -1162,7 +1177,8 @@ fn check_writes_listing(name: &str, xtask_list: &str) {
         &root,
         &[
             ("-p xtask", xtask_list),
-            ("-p validation", "scratch_guard_deletes_on_pass: test\\n"),
+            // No newline at the end: the next build's header must still start its own line.
+            ("-p validation", "scratch_guard_deletes_on_pass: test"),
         ],
     );
     let out = root.join("out/tests.txt");
@@ -1201,4 +1217,53 @@ negative_control!(
         "gate_report_named_write_control",
         "\\n0 tests, 0 benchmarks\\n"
     )
+);
+
+/// A command's filter matches a test as libtest matches it: a substring of the path name, or with `-- --exact` the
+/// whole of it; and the command is given back as cargo runs it.
+fn check_matches(exact: bool) {
+    let test = named(
+        "engine",
+        &["--features", "controls"],
+        "session::tests::header",
+        exact,
+    );
+    assert!(
+        test.matches("session::tests::header"),
+        "the filter does not match its own name"
+    );
+    assert_eq!(
+        test.matches("session::tests::header_fields"),
+        !exact,
+        "an exact filter matched a longer name, or a substring filter did not"
+    );
+    assert!(
+        !test.matches("session::tests::head"),
+        "a shorter name matched"
+    );
+    let tail = if exact { " -- --exact" } else { "" };
+    assert_eq!(
+        test.command(),
+        format!("cargo test -p engine --features controls session::tests::header{tail}"),
+        "the command is not given back as cargo runs it"
+    );
+}
+
+#[test]
+fn gate_report_named_test_matches_by_cargos_rule() {
+    check_matches(true);
+    check_matches(false);
+}
+
+negative_control!(
+    gate_report_named_test_matches_by_cargos_rule,
+    "an exact filter checked as a substring one",
+    expected = "an exact filter matched a longer name, or a substring filter did not",
+    {
+        let test = named("engine", &[], "session::tests::header", false);
+        assert!(
+            !test.matches("session::tests::header_fields"),
+            "an exact filter matched a longer name, or a substring filter did not"
+        );
+    }
 );
