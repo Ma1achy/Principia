@@ -18570,7 +18570,7 @@
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the helper carries 600 s, confirmed by the human at the M0 gate (R-376; 300 s provisional until then, R-182, R-217); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom 300 s leaves"
+    detail: "the helper carries 600 s, confirmed by the human at the M0 gate (R-376; 300 s provisional until then, R-182, R-217); the PR states the evidence: the longest child run measured in the suite, cold and warm, and the headroom the value leaves"
   rulings:
   - R-71
   - R-182
