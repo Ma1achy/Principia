@@ -361,7 +361,7 @@ negative_control!(
     check_real_plan(
         &std::fs::read_to_string(root().join("plan/MILESTONES.md"))
             .unwrap()
-            .replace("REQ-SYS-063…078", "REQ-SYS-063…066, REQ-SYS-068…079")
+            .replace("REQ-SYS-063…079", "REQ-SYS-063…066, REQ-SYS-068…080")
     )
 );
 

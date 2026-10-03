@@ -2253,3 +2253,11 @@
   requirements: [REQ-SYS-078]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M0-53
+  milestone: M0
+  title: "gate-report fails a requirement whose named test doesn't exist"
+  depends_on: [TASK-M0-19]
+  needs: []
+  requirements: [REQ-SYS-079]
+  reviewers: [code, qa]
+  pitfalls: []

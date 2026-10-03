@@ -21,16 +21,16 @@
 | TOOL | 147 |
 | VAL | 180 |
 | PERF | 94 |
-| SYS | 78 |
-| **total** | **1310** |
+| SYS | 79 |
+| **total** | **1311** |
 
-Of these: 104 calibration, 104 definition, 1102 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 104 calibration, 104 definition, 1103 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 121 |
+| M0 | 122 |
 | M1 | 83 |
 | M2 | 158 |
 | M3 | 193 |

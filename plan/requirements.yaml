@@ -21616,3 +21616,18 @@
   - R-366
   - R-372
   milestone: M0
+- id: REQ-SYS-079
+  area: SYS
+  statement: "The gate report must not pass a requirement whose result comes from the hosted suites (unit test, property test, numerical gate, golden image, GUI screenshot) when a `cargo test -p <crate> [flags] <filter>` its verify detail names matches no test in that crate as the gate run built it with those flags (cargo's own rule: the filter is a substring of the test's path name); such a requirement fails, naming the crate, the filter and \"no test matches\", and the report fails. The test listing is the gate run's own (`cargo test … -- --list` on that commit), not a scan of the source. A hosted requirement whose detail names no such command keeps its suite's result, marked \"no named test to check\"."
+  source:
+  - file: decisions.md
+    section: R-177 — Cadence *(closes G4, C6)*
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask gate_report_named_test: on fixture details and a fixture test listing, a named test that exists passes; a filter that matches nothing fails with the no-test-matches outcome naming the crate and the filter; a test listed only under `--features controls`, with the listing lacking that build, fails; a detail naming several commands passes only when every one matches; a detail naming none is marked \"no named test to check\"; the listing is written from cargo's own `-- --list` output (a stand-in cargo); each with a registered negative control (R-176)"
+  rulings:
+  - R-176
+  - R-177
+  - R-369
+  milestone: M0
+  note: "the human's instruction, 3 Oct 2026, in their own words: \"fix the gate report to check tests exist\"; it amends RQ-201's decision (per R-369) that a unit-test, property-test or numerical-gate requirement passes whenever the CPU suites pass; built by TASK-M0-53"

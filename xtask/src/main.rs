@@ -43,14 +43,20 @@ Commands:
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none
-  gate-report --milestone <Mn> --results <file> [--bench-results <dir>]
+  gate-report --milestone <Mn> --results <file> [--bench-results <dir>] [--test-list <file>]
                                   list every requirement of <Mn>'s gate block and every earlier one
                                   (plan/MILESTONES.md) with its result from <file> (a JSON object, id to `pass` or
                                   `fail`), a benchmark requirement awaiting the human's run until <dir>/<id>.jsonl,
                                   its prin profile file, is supplied (R-177, R-186), and a review-checklist one
                                   passing when its closing task's PR merged with its reviewers' approvals, read
-                                  through gh (R-369, RQ-201); writes target/gate-report/<Mn>.txt; fails on a
-                                  requirement failed or with no result
+                                  through gh (R-369, RQ-201); a unit-test, property-test, numerical-gate, golden or
+                                  screenshot one fails when a `cargo test -p <crate> [flags] <filter>` its detail
+                                  names matches no test of that build in <file>, the run's listing (REQ-SYS-079);
+                                  writes target/gate-report/<Mn>.txt; fails on a requirement failed or with no result
+  gate-report --milestone <Mn> --write-test-list <file>
+                                  run `cargo test <build> -- --list` for every build the hosted requirements of <Mn>'s
+                                  gate and every earlier one name a test of, and write the listing to <file>, for
+                                  gate-report's --test-list (REQ-SYS-079)
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
@@ -117,22 +123,7 @@ fn main() -> ExitCode {
                 !bless.is_empty(),
             )
         }
-        ["gate-report", "--milestone", m, "--results", results] => xtask::gate_report::run(
-            &workspace_root(),
-            m,
-            Path::new(results),
-            None,
-            &xtask::gate_report::Gh::new("gh"),
-        ),
-        ["gate-report", "--milestone", m, "--results", results, "--bench-results", dir] => {
-            xtask::gate_report::run(
-                &workspace_root(),
-                m,
-                Path::new(results),
-                Some(Path::new(dir)),
-                &xtask::gate_report::Gh::new("gh"),
-            )
-        }
+        ["gate-report", rest @ ..] => gate_report(rest),
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
@@ -245,6 +236,52 @@ fn controls_partition(args: &[&str]) -> Result<(), String> {
     }
     let partition = partition.ok_or("controls: --partition takes k/n")?;
     xtask::controls::run_partition(&manifest, mode, partition)
+}
+
+/// `cargo xtask gate-report` with `args`: `--milestone <Mn>` and `--write-test-list <file>`, or `--milestone <Mn>`,
+/// `--results <file>` and optionally `--bench-results <dir>` and `--test-list <file>`, in any order (REQ-SYS-079).
+fn gate_report(args: &[&str]) -> Result<(), String> {
+    let mut given: std::collections::BTreeMap<&str, &str> = std::collections::BTreeMap::new();
+    let mut args = args.iter();
+    while let Some(&flag) = args.next() {
+        match flag {
+            "--milestone" | "--results" | "--bench-results" | "--test-list"
+            | "--write-test-list" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| format!("gate-report: {flag} takes a value"))?;
+                if given.insert(flag, value).is_some() {
+                    return Err(format!("gate-report: {flag} is given twice"));
+                }
+            }
+            other => return Err(format!("gate-report: unrecognised argument `{other}`")),
+        }
+    }
+    let milestone = given
+        .remove("--milestone")
+        .ok_or("gate-report: --milestone <Mn> is required")?;
+    if let Some(out) = given.remove("--write-test-list") {
+        if let Some(flag) = given.keys().next() {
+            return Err(format!("gate-report: --write-test-list takes no {flag}"));
+        }
+        return xtask::gate_report::write_test_list(
+            &workspace_root(),
+            milestone,
+            &std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()),
+            Path::new(out),
+        );
+    }
+    let results = given
+        .remove("--results")
+        .ok_or("gate-report: --results <file> is required")?;
+    xtask::gate_report::run_listed(
+        &workspace_root(),
+        milestone,
+        Path::new(results),
+        given.get("--bench-results").map(Path::new),
+        given.get("--test-list").map(Path::new),
+        &xtask::gate_report::Gh::new("gh"),
+    )
 }
 
 /// This workspace's root directory.
