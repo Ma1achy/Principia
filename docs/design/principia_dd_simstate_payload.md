@@ -500,6 +500,8 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **WGSL traps:** use the **u32** overload of `extractBits` (i32 sign-extends); no f64; f16 pairs via `pack2x16float`/`unpack2x16float` (**core WGSL — no `shader-f16` needed**; clamp/canonicalise before packing, §1); `SimState` is 8-byte aligned (word moved out) — pack the live block in vec2 groupings. **Two stored sizes** `SimStateBase`/`SimStateFTLE` (the 48 B shadow — monomorphised Rust variants, §1); the fragment READ side is **unified** (`has_ftle` const + NaN sentinel, §5), so it needs no runtime member-omission.
 
+**Reads load per member (R-378).** The accessors above take the stored words a field needs (`packed_a`, `times`, the word, …); the generated read side loads only those members (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load, so unused data is never fetched on any backend. A word field likewise loads only the components of `word_buffer[i]` it needs (applied per R-369).
+
 ---
 
 ## 7. Memory
