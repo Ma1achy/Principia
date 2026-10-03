@@ -4,13 +4,19 @@
 # job of their own, `gpu-kernel`, in parallel with `ci` (R-325, REQ-SYS-076); each CI job's warm wall-clock time is
 # targeted at ~10.5 min (R-270, R-325). The tests run through cargo-nextest, pinned, and doctests, which nextest does
 # not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
-# `cargo test` did. `ci` and `gpu-kernel` split the workspace's tests between them by nextest profile
-# (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `ci` runs every test but the kernel's, `gpu-kernel` the
-# kernel's.
+# `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
+# (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
+# tests that run cargo on the workspace's own target directory, and `ci` every other test.
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
 # --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
+# The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
+# archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
+# workspace or compiles a test binary, but shard 1's doctests, which nextest does not run. The xtask tests that run
+# cargo on the workspace's own target directory, which from the archive would rebuild it in their shard while holding
+# every test thread, run beside the shards in `ci-workspace`, on a build of its own, under a nextest profile of their
+# own (`.config/nextest.toml`).
 # Branch protection requires the checks `ci` and `xtask-ci` (R-266): a matrix job's checks are named for its shards
 # (`ci (1)` … `ci (4)`), so the jobs `ci-gate` and `xtask-ci-gate`, named `ci` and `xtask-ci`, pass only when every
 # job they gather passed, whatever the others ended in.
@@ -52,10 +58,54 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
+  # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
+  # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the
+  # build scripts' output, the standard library, the workspace's metadata), to one archive, which this job uploads as
+  # the workflow artifact `nextest-ci`. NEXTEST_PROFILE names the `ci` profile the shards run under
+  # (`.config/nextest.toml`).
+  ci-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci-archive
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      # The linker compresses each binary's debug sections (zlib): the same line tables (R-374), stored in fewer bytes,
+      # so each shard extracts the archive in 4–8 s rather than 13–28 s (PR #126's measurements, with line tables
+      # only). Test infrastructure only. RUSTFLAGS is this step's alone: rust-cache's key, computed in its own step,
+      # never sees it, and nothing else is built with it.
+      - name: cargo nextest archive --workspace
+        env:
+          NEXTEST_PROFILE: ci
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib
+        run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst
+      # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextest-ci
+          path: ${{ runner.temp }}/nextest-ci.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
   # The workspace's tests, as 4 parallel shards (R-336, R-366, REQ-SYS-077): nextest's `--partition hash:<k>/4` puts
   # each test in the shard its name hashes to, a stable assignment, so together they run every test the unsharded run
-  # did, once.
+  # did, once. Each runs its slice from `ci-archive`'s archive (R-372, REQ-SYS-078): no step of its own builds the
+  # workspace or compiles a test binary, but shard 1's doctests. Tests that run cargo themselves still build what they
+  # run. With no workspace build here, the shards need no runner-disk step: ubuntu-latest leaves about 86 GB free.
   ci:
+    needs: ci-archive
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -63,17 +113,8 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
-      # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
-      # pool left this job with 11–24 MB free on ubuntu-latest. Remove the preinstalled toolsets it does not use (.NET,
-      # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
-      - name: Free runner disk
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force > /dev/null
-          df -h /
-      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
-      # builds (R-169).
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly (R-169). The tests run cargo
+      # themselves, on the fixtures and on the workspace.
       - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
         run: |
@@ -109,14 +150,23 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      - uses: actions/download-artifact@v4
+        with:
+          name: nextest-ci
+          path: ${{ runner.temp }}
       # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
-      # (R-325): the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE.
-      - name: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
+      # (R-325), and those that run cargo on the workspace's own target directory, which `ci-workspace` runs (R-372):
+      # the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. From the archive
+      # (R-372, REQ-SYS-078): its target directory is extracted into this checkout's `target`, where `ci-archive` built
+      # it, beside the fixture pool restored there, so the paths compiled into the tests (`CARGO_BIN_EXE_*`,
+      # `CARGO_TARGET_TMPDIR`) hold here as they did there.
+      - name: cargo nextest run --archive-file … --partition hash:${{ matrix.shard }}/4
         env:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci
-        run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4
-      # The doctests, once, in the first shard (R-231).
+        run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4
+      # The doctests, once, in the first shard (R-231). nextest does not run them, so the archive holds none: this step
+      # compiles them, the shards' one compile.
       - name: cargo test --workspace --doc
         if: matrix.shard == 1
         run: cargo test --workspace --doc
@@ -125,6 +175,44 @@ jobs:
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
+
+  # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
+  # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
+  # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
+  ci-workspace:
+    runs-on: ubuntu-latest
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci-workspace
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo nextest run -p xtask
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask
+      - name: cargo test -p xtask --doc
+        run: cargo test -p xtask --doc
 
   # Formatting, lints, the build and the crate-graph check, once, beside the test shards (R-195, REQ-SYS-004).
   ci-checks:
@@ -160,11 +248,11 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
-  # The required check `ci` (R-266): every `ci` shard and `ci-checks` passed. It runs whatever they ended in
-  # (`always()`), so a failed or cancelled job turns it red rather than skipping it.
+  # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
+  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it.
   ci-gate:
     name: ci
-    needs: [ci, ci-checks]
+    needs: [ci, ci-checks, ci-workspace]
     if: always()
     runs-on: ubuntu-latest
     steps:

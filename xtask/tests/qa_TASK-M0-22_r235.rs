@@ -3,7 +3,9 @@
 //! in a job of its own, in parallel with the tests, failing on any finding (R-235)."
 //!
 //! - CI's workflow (`.github/workflows/ci.yml`) runs bare `cargo xtask ci` (every control, not `--list`) in a job
-//!   other than the one running `cargo nextest run --workspace` (R-231); neither job waits on the other (`needs:`), and the controls
+//!   other than the one running the workspace's nextest shards (R-231; since R-372 they run from the archive
+//!   `cargo nextest archive --workspace` builds); neither job waits on the other (`needs:`), directly or through the
+//!   jobs it needs, and the controls
 //!   job is neither skipped (`if:`) nor allowed to fail (`continue-on-error`). Its GPU controls run where the GPU
 //!   tests do: the same `PRIN_GPU_BACKEND` and the lavapipe install (TASK-M0-22 § Notes, "A GPU test's control runs
 //!   where the test does").
@@ -65,6 +67,46 @@ fn has_key(lines: &[String], key: &str) -> bool {
         .any(|l| l.trim().trim_start_matches("- ").starts_with(key))
 }
 
+/// The jobs a job's lines name in its own `needs:` (indent 4), as `needs: a` or `needs: [a, b]`.
+fn needs(lines: &[String]) -> Vec<String> {
+    lines
+        .iter()
+        .filter_map(|l| l.strip_prefix("    needs:"))
+        .flat_map(|v| {
+            v.trim()
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|n| n.trim().to_owned())
+                .filter(|n| !n.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// Every job `job` waits on in `jobs`: those its `needs:` names, and theirs, transitively.
+fn waits_on(jobs: &[(String, Vec<String>)], job: &str) -> Vec<String> {
+    let mut seen: Vec<String> = Vec::new();
+    let mut todo = vec![job.to_owned()];
+    while let Some(next) = todo.pop() {
+        if let Some((_, lines)) = jobs.iter().find(|(name, _)| *name == next) {
+            for n in needs(lines) {
+                if !seen.contains(&n) {
+                    seen.push(n.clone());
+                    todo.push(n);
+                }
+            }
+        }
+    }
+    seen
+}
+
+/// The workspace's nextest shard step since R-372: a slice of the archive `ARCHIVE_STEP` builds.
+const SHARD_STEP: &str = "cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4";
+/// The step that builds the shards' archive of the whole workspace's tests (R-372).
+const ARCHIVE_STEP: &str =
+    "cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst";
+
 /// REQ-VAL-166's CI half, on `workflow`'s text.
 fn check_controls_job_beside_the_tests(workflow: &str) {
     let jobs = jobs(workflow);
@@ -76,16 +118,17 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
     );
     let tests: Vec<&(String, Vec<String>)> = jobs
         .iter()
-        .filter(|(_, lines)| {
-            runs(lines).iter().any(|r| {
-                r == "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4"
-            })
-        })
+        .filter(|(_, lines)| runs(lines).iter().any(|r| r == SHARD_STEP))
         .collect();
     assert_eq!(
         tests.len(),
         1,
-        "no single job runs `cargo nextest run --workspace`"
+        "no single job runs the workspace's nextest shards (`{SHARD_STEP}`)"
+    );
+    assert!(
+        jobs.iter()
+            .any(|(_, lines)| runs(lines).iter().any(|r| r == ARCHIVE_STEP)),
+        "no job builds the shards' archive of the workspace (`{ARCHIVE_STEP}`)"
     );
     let (test_job, test_lines) = tests[0];
     let controls: Vec<&(String, Vec<String>)> = jobs
@@ -112,8 +155,12 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
             .any(|r| r.starts_with("cargo xtask ci --list"))),
         "CI runs the listing-only `cargo xtask ci --list`, which runs no control"
     );
+    // The tests' job may wait on the job building its archive (R-372), never on the controls job; the controls job
+    // waits on nothing.
     assert!(
-        !has_key(controls_lines, "needs:") && !has_key(test_lines, "needs:"),
+        !has_key(controls_lines, "needs:")
+            && !waits_on(&jobs, test_job).contains(controls_job)
+            && !waits_on(&jobs, controls_job).contains(test_job),
         "the controls job and the tests' job wait on one another, not beside each other"
     );
     // The job's own `if:` (indent 4) can skip it; a step's `if:` (R-326's conditional cache save) cannot (R-335).
@@ -151,7 +198,7 @@ validation::negative_control!(
     "the pre-R-235 workflow, with the `cargo xtask ci` step in the tests' job",
     expected = "`cargo xtask ci` runs in the tests' job",
     check_controls_job_beside_the_tests(
-        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo nextest run --workspace\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n"
+        "on:\n  push:\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install Mesa (lavapipe)\n        run: sudo apt-get install -y mesa-vulkan-drivers\n      - name: cargo nextest archive --workspace\n        run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst\n      - name: cargo nextest run --archive-file\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4\n      - name: cargo xtask ci\n        env:\n          PRIN_GPU_BACKEND: vulkan\n        run: cargo xtask ci --partition ${{ matrix.shard }}/4\n"
     )
 );
 
@@ -167,6 +214,23 @@ validation::negative_control!(
     check_controls_job_beside_the_tests(&the_workflow().replacen(
         "  xtask-ci:\n",
         "  xtask-ci:\n    needs: ci\n",
+        1
+    ))
+);
+
+#[test]
+fn qa_r235_tests_job_does_not_wait_for_the_controls() {
+    check_controls_job_beside_the_tests(&the_workflow());
+}
+
+validation::negative_control!(
+    qa_r235_tests_job_does_not_wait_for_the_controls,
+    "the checked-in workflow with `needs: xtask-ci` added to the job building the shards' archive, which the tests' job \
+     needs, so the tests wait on the controls through it",
+    expected = "wait on one another",
+    check_controls_job_beside_the_tests(&the_workflow().replacen(
+        "  ci-archive:\n",
+        "  ci-archive:\n    needs: xtask-ci\n",
         1
     ))
 );

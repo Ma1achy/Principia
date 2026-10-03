@@ -1,8 +1,10 @@
 //! REQ-VAL-165 (R-231): CI's test steps run through `cargo nextest run`, pinned, with doctests, which nextest does not
 //! run, through `cargo test --doc`, and no test is dropped: in each feature set, the nextest and `--doc` steps
 //! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`); a step
-//! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard. The
-//! documented local run (README) installs the same pinned version.
+//! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard, and a
+//! step that runs from a nextest archive (`--archive-file`, R-372, REQ-SYS-078) is listed with the arguments the
+//! `cargo nextest archive` step that builds that archive was given. The documented local run (README) installs the same
+//! pinned version.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -65,8 +67,8 @@ fn jobs(workflow: &str) -> Vec<Vec<&str>> {
 }
 
 /// The commands of a job's `run:` steps, each with the nextest profile it runs under: the `NEXTEST_PROFILE` its step's
-/// `env:` sets, or else the job's, or none (the default profile). CI's `ci` and `gpu-kernel` jobs split the workspace's
-/// tests by profile (R-325, `.config/nextest.toml`).
+/// `env:` sets, or else the job's, or none (the default profile). CI's `ci`, `ci-workspace` and `gpu-kernel` jobs split
+/// the workspace's tests by profile (R-325, R-372, `.config/nextest.toml`).
 fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
     let mut out = Vec::new();
     let mut in_steps = false;
@@ -123,7 +125,8 @@ fn shards(job: &[&str], run: &str) -> Vec<String> {
 }
 
 /// A CI test step: `cargo nextest run <args>` (`doc` false) or `cargo test <args>` with `--doc` (`doc` true), its
-/// arguments without `--no-capture` and `--doc`, and the nextest profile it runs under (`None` for the default).
+/// arguments without `--no-capture` and `--doc`, and the nextest profile it runs under (`None` for the default). A
+/// nextest step that runs from an archive has, in place of the archive's options, the arguments that built the archive.
 struct Step {
     doc: bool,
     args: Vec<String>,
@@ -138,13 +141,76 @@ fn features(args: &[String]) -> &str {
         .map_or("", String::as_str)
 }
 
+/// The options of `cargo nextest archive` that name the archive, not what goes in it, each with its value.
+const ARCHIVE_OPTIONS: &[&str] = &["--archive-file", "--archive-format", "--zstd-level"];
+
+/// The options of `cargo nextest run` that reuse a build (`--archive-file` and those beside it), each followed by its
+/// value; and its two reuse flags, which take none.
+const REUSE_OPTIONS: &[&str] = &[
+    "--archive-file",
+    "--archive-format",
+    "--extract-to",
+    "--cargo-metadata",
+    "--workspace-remap",
+    "--binaries-metadata",
+    "--target-dir-remap",
+    "--build-dir-remap",
+];
+const REUSE_FLAGS: &[&str] = &["--extract-overwrite", "--persist-extract-tempdir"];
+
+/// `words` without each option of `options` and its value, nor any flag of `flags`; and the value of `--archive-file`,
+/// if it was there.
+fn without(words: &[String], options: &[&str], flags: &[&str]) -> (Vec<String>, Option<String>) {
+    let (mut kept, mut archive) = (Vec::new(), None);
+    let mut words = words.iter();
+    while let Some(word) = words.next() {
+        if options.contains(&word.as_str()) {
+            let value = words.next().cloned();
+            if word == "--archive-file" {
+                archive = value;
+            }
+        } else if !flags.contains(&word.as_str()) {
+            kept.push(word.clone());
+        }
+    }
+    (kept, archive)
+}
+
+/// The archives the `cargo nextest archive` steps of `workflow` build: each archive file's path, and the arguments that
+/// build it, without those naming the archive. A path is built by one step.
+fn archives(workflow: &str) -> BTreeMap<String, Vec<String>> {
+    let mut archives = BTreeMap::new();
+    for job in jobs(workflow) {
+        for (run, _) in runs(&job) {
+            let Some(rest) = run.strip_prefix("cargo nextest archive") else {
+                continue;
+            };
+            let words: Vec<String> = rest.split_whitespace().map(str::to_owned).collect();
+            let (args, path) = without(&words, ARCHIVE_OPTIONS, &[]);
+            let path = path.unwrap_or_else(|| {
+                panic!(
+                    "job {} runs `{run}`, naming no --archive-file",
+                    job[0].trim()
+                )
+            });
+            assert!(
+                archives.insert(path.clone(), args).is_none(),
+                "two steps build the nextest archive `{path}`"
+            );
+        }
+    }
+    archives
+}
+
 /// The test steps of `workflows`, and the pinned cargo-nextest version they install. Every job with a nextest step
 /// installs cargo-nextest at an exact version, and every job that installs it installs the same one; no step runs
-/// `cargo test` but for doctests.
+/// `cargo test` but for doctests. A nextest step that runs from an archive (`--archive-file`) has, in place of its reuse
+/// options, the arguments of the step in its workflow that builds that archive.
 fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     let mut steps = Vec::new();
     let mut pins: Vec<String> = Vec::new();
     for workflow in workflows {
+        let archives = archives(workflow);
         for job in jobs(workflow) {
             let mut nextest = false;
             for (run, profile) in runs(&job).into_iter().flat_map(|(run, profile)| {
@@ -157,11 +223,24 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                         .map(str::to_owned)
                         .collect()
                 };
-                if let Some(rest) = run.strip_prefix("cargo nextest run") {
+                if run.starts_with("cargo nextest archive") {
                     nextest = true;
+                } else if let Some(rest) = run.strip_prefix("cargo nextest run") {
+                    nextest = true;
+                    let (mut args, archive) = without(&words(rest), REUSE_OPTIONS, REUSE_FLAGS);
+                    if let Some(archive) = archive {
+                        let built = archives.get(&archive).unwrap_or_else(|| {
+                            panic!(
+                                "job {} runs `{run}` from the archive `{archive}`, which no step of its workflow \
+                                 builds",
+                                job[0].trim()
+                            )
+                        });
+                        args.splice(0..0, built.iter().cloned());
+                    }
                     steps.push(Step {
                         doc: false,
-                        args: words(rest),
+                        args,
                         profile: profile.map(str::to_owned),
                     });
                 } else if let Some(rest) = run.strip_prefix("cargo test") {
@@ -333,14 +412,14 @@ fn nextest_ci_steps_list_every_test_cargo_test_listed_without_features() {
 
 validation::negative_control!(
     nextest_ci_steps_list_every_test_cargo_test_listed_without_features,
-    "a CI whose workspace nextest step runs only kernel's tests, required to list every test",
+    "a CI whose `ci` shards run from an archive of kernel's tests alone, required to list every test",
     expected = "the CI test steps drop tests `cargo test --workspace` lists",
     check_no_test_dropped(
         &ci_workflow()
             .iter()
             .map(|w| w.replace(
-                "run: cargo nextest run --workspace",
-                "run: cargo nextest run -p kernel"
+                "run: cargo nextest archive --workspace",
+                "run: cargo nextest archive -p kernel"
             ))
             .collect::<Vec<_>>(),
         &[REPLACED[0]]
@@ -389,8 +468,9 @@ validation::negative_control!(
     )
 );
 
-/// The same check, here for its control on the shards: the `ci` job's 4 nextest shards together list every test the
-/// unsharded run did (R-336, REQ-SYS-077).
+/// The same check, here for its control on the shards: the `ci` job's 4 nextest shards, each running its slice from the
+/// one archive `ci-archive` builds (R-372, REQ-SYS-078), together list every test the unsharded run did (R-336,
+/// REQ-SYS-077).
 #[test]
 fn nextest_ci_shards_together_list_every_test() {
     check_no_test_dropped(&ci_workflow(), REPLACED);
@@ -409,8 +489,8 @@ validation::negative_control!(
     )
 );
 
-/// The same check, here for its control on the profiles: CI's `ci` and `gpu-kernel` jobs split the workspace's tests by
-/// nextest profile (R-325), and each step is listed under its own.
+/// The same check, here for its control on the profiles: CI's `ci`, `ci-workspace` and `gpu-kernel` jobs split the
+/// workspace's tests by nextest profile (R-325, R-372), and each step is listed under its own.
 #[test]
 fn nextest_ci_steps_list_every_test_under_their_profiles() {
     check_no_test_dropped(&ci_workflow(), REPLACED);
