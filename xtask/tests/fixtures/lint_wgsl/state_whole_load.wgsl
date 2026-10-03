@@ -1,4 +1,4 @@
-// Every rule holds: the base the other fixtures each break once.
+// Breaks per-member: `sample_read` loads the whole stored struct, `simstate_buffer[i]`, not one member (R-378).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -14,8 +14,8 @@ const WORD_BINDING: u32 = 1u;
 @group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
 
 fn sample_read(i: u32) -> vec2<u32> {
-    let state = simstate_buffer[i].packed_a;
+    let state = simstate_buffer[i];
     let word = word_buffer[i].w;
-    return vec2<u32>(state, word);
+    return vec2<u32>(state.packed_a, word);
 }
 fn sd_state(w: u32) -> u32 { return extractBits(w, 0u, 3u); }

@@ -1,7 +1,8 @@
 //! `cargo xtask lint wgsl` (render contract Part 5, "Unpack layer"; REQ-RENDER-001): it passes on the generated WGSL
 //! and on a clean fixture, and each fixture that breaks one rule fails it, naming that rule: an i32 `extractBits`, an
 //! f64, `enable f16`, an `r` not vec2-grouped, and a word inside `SimState`; and, for R-343's bindings, the state
-//! buffer in group 0, the word buffer at the wrong binding number, and `word_buffer` indexed outside `sample_word`.
+//! buffer in group 0, the word buffer at the wrong binding number, and `word_buffer` indexed outside `sample_read`;
+//! and, for R-378's per-member reads, a whole stored struct loaded and the two buffers read at different indices.
 //! The generated read side (lowering Part 3a) passes as the generated layer's continuation, its findings reported at
 //! its own lines, and its read-side `SimState` may hold the word it read.
 
@@ -208,15 +209,80 @@ negative_control!(
 );
 
 #[test]
-fn lint_wgsl_word_buffer_outside_sample_word_fails_naming_the_rule() {
+fn lint_wgsl_word_buffer_outside_sample_read_fails_naming_the_rule() {
     check_fails_naming(&fixture("word_outside_sample.wgsl"), Rule::SampleOnly);
 }
 
 negative_control!(
-    lint_wgsl_word_buffer_outside_sample_word_fails_naming_the_rule,
-    "the clean fixture reads each buffer only through its sample function, so the rule must not fire",
+    lint_wgsl_word_buffer_outside_sample_read_fails_naming_the_rule,
+    "the clean fixture reads each buffer only in sample_read, so the rule must not fire",
     expected = "did not fire",
     check_fails_naming(&fixture("clean.wgsl"), Rule::SampleOnly)
+);
+
+#[test]
+fn lint_wgsl_whole_stored_struct_load_fails_naming_the_rule() {
+    check_fails_naming(&fixture("state_whole_load.wgsl"), Rule::PerMember);
+}
+
+negative_control!(
+    lint_wgsl_whole_stored_struct_load_fails_naming_the_rule,
+    "the clean fixture loads one stored member at a time, so the rule must not fire",
+    expected = "did not fire",
+    check_fails_naming(&fixture("clean.wgsl"), Rule::PerMember)
+);
+
+/// The clean fixture with its word read at a second argument, `j`, not the sample index its state is read at.
+fn two_indices() -> String {
+    let clean = read(&fixture("clean.wgsl"));
+    for from in ["fn sample_read(i: u32)", "word_buffer[i].w"] {
+        assert!(clean.contains(from), "the clean fixture has no `{from}`");
+    }
+    clean
+        .replace("fn sample_read(i: u32)", "fn sample_read(i: u32, j: u32)")
+        .replace("word_buffer[i].w", "word_buffer[j].w")
+}
+
+/// `source` has a per-member finding that its buffers are read at different arguments.
+fn check_two_indices_fire(source: &str) {
+    let found = check(source).expect("the WGSL parses and validates");
+    assert!(
+        found
+            .iter()
+            .any(|f| f.rule == Rule::PerMember && f.what.contains("different arguments")),
+        "rule per-member did not fire on two indices: {found:?}"
+    );
+}
+
+#[test]
+fn lint_wgsl_buffers_at_different_indices_fail_naming_the_rule() {
+    check_two_indices_fire(&two_indices());
+}
+
+negative_control!(
+    lint_wgsl_buffers_at_different_indices_fail_naming_the_rule,
+    "the clean fixture reads both buffers at its one sample index",
+    expected = "did not fire on two indices",
+    check_two_indices_fire(&read(&fixture("clean.wgsl")))
+);
+
+/// The lint finds nothing of [`Rule::PerMember`] in `source`.
+fn check_no_per_member(source: &str) {
+    let found = check(source).expect("the WGSL parses and validates");
+    let hit: Vec<_> = found.iter().filter(|f| f.rule == Rule::PerMember).collect();
+    assert!(hit.is_empty(), "per-member fired: {hit:?}");
+}
+
+#[test]
+fn lint_wgsl_buffers_at_one_index_pass() {
+    check_no_per_member(&read(&fixture("clean.wgsl")));
+}
+
+negative_control!(
+    lint_wgsl_buffers_at_one_index_pass,
+    "the word read at a second argument must fire",
+    expected = "per-member fired",
+    check_no_per_member(&two_indices())
 );
 
 /// The read-side `SimState` (lowering Part 3a), appended to the clean fixture under the name `name`: it holds the
@@ -224,7 +290,7 @@ negative_control!(
 fn with_read_side(name: &str) -> String {
     format!(
         "{}\nstruct {name} {{\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n    word: vec4<u32>,\n}}\n\
-         fn read_word(i: u32) -> {name} {{ var out: {name}; out.word = sample_word(i); return out; }}\n",
+         fn read_word(w: vec4<u32>) -> {name} {{ var out: {name}; out.word = w; return out; }}\n",
         read(&fixture("clean.wgsl"))
     )
 }

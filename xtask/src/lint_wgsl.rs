@@ -32,7 +32,13 @@
 //!   `simstate_buffer: array<SimStateFTLE>` at `@group(1) @binding(0)` and `word_buffer: array<vec4<u32>>` at
 //!   `@group(1) @binding(1)`, each attribute equal to the generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING` constants,
 //!   and no binding in group 0, the assembler's per-frame uniforms ([`Rule::Bindings`]);
-//! - a use of either buffer in any function but its one reader, `sample_state` or `sample_word` ([`Rule::SampleOnly`]).
+//! - a use of either buffer in any function but its one reader, the read side's generated `sample_read`
+//!   ([`Rule::SampleOnly`], R-343 as R-378 amends it);
+//! - a load of a whole stored struct, `simstate_buffer[i]` loaded as one value rather than one member at a time
+//!   (`simstate_buffer[i].packed_a`), or the two buffers read at different arguments of one function, not the same
+//!   sample index ([`Rule::PerMember`], R-378). A word may be loaded whole, by a field that needs all four of its
+//!   components, or one component at a time; which components a field needs is the read side's own
+//!   (`ledger/tests/per_member_loads.rs` checks them on the compiled output).
 //!
 //! naga folds a call whose arguments are all constant before the IR is built, so the `extractBits` rule sees only
 //! calls on a runtime value, which every generated accessor's is (a parameter). The `enable` directive is not kept in
@@ -90,6 +96,7 @@ pub enum Rule {
     WordBinding,
     Bindings,
     SampleOnly,
+    PerMember,
     IsInfNan,
     InfNanConstant,
     SelfCompare,
@@ -106,6 +113,7 @@ impl fmt::Display for Rule {
             Rule::WordBinding => "word-binding",
             Rule::Bindings => "bindings",
             Rule::SampleOnly => "sample-only",
+            Rule::PerMember => "per-member",
             Rule::IsInfNan => "isinf-isnan",
             Rule::InfNanConstant => "inf-nan-constant",
             Rule::SelfCompare => "self-compare",
@@ -301,6 +309,7 @@ pub fn check(source: &str) -> Result<Vec<Finding>, String> {
     found.extend(word_binding(&module));
     found.extend(bindings(&module));
     found.extend(sample_only(&module));
+    found.extend(per_member(&module));
     found.extend(float_checks(&module, &info, source));
     Ok(found)
 }
@@ -688,17 +697,12 @@ fn bindings(module: &Module) -> Vec<Finding> {
     found
 }
 
-/// Each function or entry point but a buffer's one reader that uses the buffer (R-343: both buffers are read only
-/// through `sample_state(i)` and `sample_word(i)`).
+/// Each function or entry point but a buffer's one reader that uses the buffer (R-343, R-378: both buffers are read
+/// only by the read side's generated `sample_read(i)`).
 fn sample_only(module: &Module) -> Vec<Finding> {
     let table = ledger::payload::bindings();
-    let functions = module
-        .functions
-        .iter()
-        .map(|(_, f)| f)
-        .chain(module.entry_points.iter().map(|ep| &ep.function));
     let mut found = Vec::new();
-    for function in functions {
+    for function in functions(module) {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
         let mut used: Vec<&str> = Vec::new();
         for (_, expr) in function.expressions.iter() {
@@ -712,12 +716,81 @@ fn sample_only(module: &Module) -> Vec<Finding> {
                     found.push(finding(
                         Rule::SampleOnly,
                         format!(
-                            "`{fname}` uses `{}`, which only `{}` reads (R-343)",
+                            "`{fname}` uses `{}`, which only `{}` reads (R-343, R-378)",
                             b.buffer, b.reader
                         ),
                     ));
                 }
             }
+        }
+    }
+    found
+}
+
+/// Every function and entry point of `module`.
+fn functions(module: &Module) -> impl Iterator<Item = &Function> {
+    module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|ep| &ep.function))
+}
+
+/// The buffer global `e` in `function` is, by name, if it is `simstate_buffer` or `word_buffer`.
+fn buffer<'m>(module: &'m Module, function: &Function, e: Handle<Expression>) -> Option<&'m str> {
+    let Expression::GlobalVariable(g) = function.expressions[e] else {
+        return None;
+    };
+    module.global_variables[g]
+        .name
+        .as_deref()
+        .filter(|n| *n == SIMSTATE_BUFFER || *n == WORD_BUFFER)
+}
+
+/// R-378's per-member reads: no load of a whole element of `simstate_buffer`, a stored struct, where the read side
+/// loads one member at a time; and in each function, both buffers indexed by the same argument, the sample index.
+fn per_member(module: &Module) -> Vec<Finding> {
+    let mut found = Vec::new();
+    for function in functions(module) {
+        let fname = function.name.as_deref().unwrap_or("(unnamed)");
+        let mut indices: Vec<u32> = Vec::new();
+        for (_, expr) in function.expressions.iter() {
+            match *expr {
+                Expression::Load { pointer } => {
+                    let base = match function.expressions[pointer] {
+                        Expression::Access { base, .. } | Expression::AccessIndex { base, .. } => {
+                            base
+                        }
+                        _ => continue,
+                    };
+                    if buffer(module, function, base) == Some(SIMSTATE_BUFFER) {
+                        found.push(finding(
+                            Rule::PerMember,
+                            format!(
+                                "`{fname}` loads a whole stored struct from `{SIMSTATE_BUFFER}`: the read side loads \
+                                 only the stored members each field needs, `{SIMSTATE_BUFFER}[i].<member>` (R-378)"
+                            ),
+                        ));
+                    }
+                }
+                Expression::Access { base, index } if buffer(module, function, base).is_some() => {
+                    if let Expression::FunctionArgument(k) = function.expressions[index] {
+                        if !indices.contains(&k) {
+                            indices.push(k);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        if indices.len() > 1 {
+            found.push(finding(
+                Rule::PerMember,
+                format!(
+                    "`{fname}` reads the buffers at different arguments: both are read at the same sample index \
+                     (R-343, R-378)"
+                ),
+            ));
         }
     }
     found
