@@ -706,6 +706,7 @@ fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -
             .enumerate()
             .map(|(i, ep)| (&ep.function, info.get_entry_point(i))),
     );
+    let writes = global_writes(module);
     let mut found = Vec::new();
     for (function, fi) in functions {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
@@ -728,7 +729,7 @@ fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -
                 ));
             }
         }
-        let timeline = Timeline::new(&function.expressions, &statements);
+        let timeline = Timeline::new(module, &writes, &function.expressions, &function.body);
         for (h, expr) in function.expressions.iter() {
             let span = function.expressions.get_span(h);
             match *expr {
@@ -2010,50 +2011,218 @@ fn root(arena: &Arena<Expression>, h: Handle<Expression>) -> Option<Root> {
     }
 }
 
-/// A function's statements in order: the step at which each expression is evaluated, and each store with its step
-/// and the variable it writes (a call given a pointer may write through it, so counts as one).
+/// Whether another invocation can write a global in `space` while this one runs: workgroup memory, a read-write
+/// storage buffer, or a payload shared with other shaders.
+fn shared(space: AddressSpace) -> bool {
+    match space {
+        AddressSpace::WorkGroup
+        | AddressSpace::TaskPayload
+        | AddressSpace::RayPayload
+        | AddressSpace::IncomingRayPayload => true,
+        AddressSpace::Storage { access } => access.contains(naga::StorageAccess::STORE),
+        AddressSpace::Function
+        | AddressSpace::Private
+        | AddressSpace::Uniform
+        | AddressSpace::Handle
+        | AddressSpace::Immediate => false,
+    }
+}
+
+/// The variables `statement`, in a function over `arena`, may write (R-352's "store"): a store's or an atomic's
+/// pointer; each pointer a call is given, and every global its callee may write (`writes`, by function); and, for a
+/// statement that waits on or hands control to other invocations (a barrier, `workgroupUniformLoad`, a ray-pipeline
+/// call), every global another invocation can write.
+fn written(
+    module: &Module,
+    writes: &[Vec<Handle<naga::GlobalVariable>>],
+    arena: &Arena<Expression>,
+    statement: &Statement,
+) -> Vec<Root> {
+    let shared_globals = || {
+        module
+            .global_variables
+            .iter()
+            .filter(|(_, g)| shared(g.space))
+            .map(|(h, _)| Root::Global(h))
+            .collect()
+    };
+    match *statement {
+        Statement::Store { pointer, .. }
+        | Statement::Atomic { pointer, .. }
+        | Statement::CooperativeStore {
+            target: pointer, ..
+        }
+        | Statement::ImageStore { image: pointer, .. }
+        | Statement::ImageAtomic { image: pointer, .. } => {
+            root(arena, pointer).into_iter().collect()
+        }
+        Statement::Call {
+            function,
+            ref arguments,
+            ..
+        } => arguments
+            .iter()
+            .filter_map(|&a| root(arena, a))
+            .chain(writes[function.index()].iter().map(|&g| Root::Global(g)))
+            .collect(),
+        Statement::ControlBarrier(_)
+        | Statement::MemoryBarrier(_)
+        | Statement::WorkGroupUniformLoad { .. }
+        | Statement::RayPipelineFunction(_) => shared_globals(),
+        _ => Vec::new(),
+    }
+}
+
+/// The globals each function of `module` (by index) may write, itself or through the functions it calls. naga's
+/// validator puts a callee before its callers in the arena, so one pass in order sees each callee's set complete.
+fn global_writes(module: &Module) -> Vec<Vec<Handle<naga::GlobalVariable>>> {
+    let mut writes: Vec<Vec<Handle<naga::GlobalVariable>>> = Vec::new();
+    for (_, f) in module.functions.iter() {
+        let mut statements = Vec::new();
+        flatten(&f.body, &mut statements);
+        let mut own = Vec::new();
+        for &(statement, _) in &statements {
+            for r in written(module, &writes, &f.expressions, statement) {
+                if let Root::Global(g) = r {
+                    if !own.contains(&g) {
+                        own.push(g);
+                    }
+                }
+            }
+        }
+        writes.push(own);
+    }
+    writes
+}
+
+/// A compound statement a step lies in: the compound's own step, the arm it lies in (an `if`'s accept 0 and reject
+/// 1; a `switch`'s case; a loop's body 0 and continuing 1; a block's 0), the last arm control can pass on to from it
+/// without leaving the compound (a loop body's continuing; every later case from a case that falls through), and
+/// whether it is a loop.
+#[derive(Clone, Copy, Debug)]
+struct Frame {
+    step: usize,
+    arm: usize,
+    reach: usize,
+    looped: bool,
+}
+
+/// A function's statements in order: the step at which each expression is evaluated, each store with its step and the
+/// variable it writes ([`written`]), and each step's enclosing compound statements, outermost first.
 struct Timeline {
     at: HashMap<Handle<Expression>, usize>,
     stores: Vec<(usize, Root)>,
+    frames: Vec<Vec<Frame>>,
 }
 
 impl Timeline {
-    fn new(arena: &Arena<Expression>, statements: &[(&Statement, Span)]) -> Self {
-        let mut at = HashMap::new();
-        let mut stores = Vec::new();
-        for (step, &(statement, _)) in statements.iter().enumerate() {
-            match *statement {
-                Statement::Emit(ref range) => {
-                    for h in range.clone() {
-                        at.insert(h, step);
-                    }
-                }
-                Statement::Store { pointer, .. } | Statement::Atomic { pointer, .. } => {
-                    stores.extend(root(arena, pointer).map(|r| (step, r)));
-                }
-                Statement::Call { ref arguments, .. } => {
-                    for &a in arguments {
-                        if !matches!(arena[a], Expression::FunctionArgument(_)) {
-                            stores.extend(root(arena, a).map(|r| (step, r)));
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-        Timeline { at, stores }
+    fn new(
+        module: &Module,
+        writes: &[Vec<Handle<naga::GlobalVariable>>],
+        arena: &Arena<Expression>,
+        body: &Block,
+    ) -> Self {
+        let mut timeline = Timeline {
+            at: HashMap::new(),
+            stores: Vec::new(),
+            frames: Vec::new(),
+        };
+        timeline.walk(module, writes, arena, body, &mut Vec::new());
+        timeline
     }
 
-    /// Whether `r` is written between the steps that evaluate `a` and `b`; true if either step is unknown.
+    /// Adds `block`'s statements, inside the compounds `frames`, each compound before the statements it holds.
+    fn walk(
+        &mut self,
+        module: &Module,
+        writes: &[Vec<Handle<naga::GlobalVariable>>],
+        arena: &Arena<Expression>,
+        block: &Block,
+        frames: &mut Vec<Frame>,
+    ) {
+        for statement in block.iter() {
+            let step = self.frames.len();
+            self.frames.push(frames.clone());
+            if let Statement::Emit(ref range) = *statement {
+                for h in range.clone() {
+                    self.at.insert(h, step);
+                }
+            }
+            for r in written(module, writes, arena, statement) {
+                self.stores.push((step, r));
+            }
+            let arms: Vec<(&Block, usize)> = match *statement {
+                Statement::Block(ref b) => vec![(b, 0)],
+                Statement::If {
+                    ref accept,
+                    ref reject,
+                    ..
+                } => vec![(accept, 0), (reject, 1)],
+                // naga's WGSL front end makes a falling-through case only for a selector list's leading selectors,
+                // with an empty body; any later case is taken as reachable from one, which can only add stores.
+                Statement::Switch { ref cases, .. } => cases
+                    .iter()
+                    .enumerate()
+                    .map(|(i, case)| (&case.body, if case.fall_through { usize::MAX } else { i }))
+                    .collect(),
+                Statement::Loop {
+                    ref body,
+                    ref continuing,
+                    ..
+                } => vec![(body, 1), (continuing, 1)],
+                _ => Vec::new(),
+            };
+            let looped = matches!(*statement, Statement::Loop { .. });
+            for (arm, (b, reach)) in arms.into_iter().enumerate() {
+                frames.push(Frame {
+                    step,
+                    arm,
+                    reach,
+                    looped,
+                });
+                self.walk(module, writes, arena, b, frames);
+                frames.pop();
+            }
+        }
+    }
+
+    /// Whether `r` may be written between the steps that evaluate `a` and `b`, on some path; true if either step is
+    /// unknown.
     fn stored_between(&self, r: Root, a: Handle<Expression>, b: Handle<Expression>) -> bool {
         let (Some(&ta), Some(&tb)) = (self.at.get(&a), self.at.get(&b)) else {
             return true;
         };
         let (lo, hi) = (ta.min(tb), ta.max(tb));
-        // Each statement has a step of its own, so a store's step is never `lo` itself.
         self.stores
             .iter()
-            .any(|&(t, s)| s == r && (lo..hi).contains(&t))
+            .any(|&(t, s)| s == r && self.between(lo, hi, t))
+    }
+
+    /// Whether the store at step `s` may run after the read at step `lo` and before the read at step `hi` (`lo <=
+    /// hi`): on the way from one to the other, or round a loop that holds the store and one read but not the other,
+    /// where it runs on the back edge.
+    fn between(&self, lo: usize, hi: usize, s: usize) -> bool {
+        let inside =
+            |step: usize, compound: usize| self.frames[step].iter().any(|f| f.step == compound);
+        // Each statement has a step of its own, so a store's step is never `lo` or `hi` itself.
+        ((lo..hi).contains(&s) && !self.exclusive(s, hi))
+            || self.frames[s]
+                .iter()
+                .any(|f| f.looped && inside(lo, f.step) != inside(hi, f.step))
+    }
+
+    /// Whether the steps `s` and `t` (`s < t`) lie in arms of one compound that control cannot pass between, such as
+    /// an `if`'s two arms, so that no path runs from `s` to `t`. Arms are walked in order, so `t`'s is the later one.
+    fn exclusive(&self, s: usize, t: usize) -> bool {
+        for (x, y) in self.frames[s].iter().zip(&self.frames[t]) {
+            if x.step != y.step {
+                return false;
+            }
+            if x.arm != y.arm {
+                return y.arm > x.reach;
+            }
+        }
+        false
     }
 }
 
