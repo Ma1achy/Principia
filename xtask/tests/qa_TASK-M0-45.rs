@@ -127,8 +127,12 @@ fn jobs(workflow: &str) -> Vec<Job> {
 /// The matrix expression a sharded step names its shard by.
 const SHARD: &str = "${{ matrix.shard }}";
 
-/// The `ci` job's nextest step and the `xtask-ci` job's `cargo xtask ci` step, as R-366 and R-360 give them.
-const NEXTEST_STEP: &str = "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4";
+/// The `ci` job's nextest step and the `xtask-ci` job's `cargo xtask ci` step, as R-366 and R-360 give them; since
+/// R-372 the nextest step runs the workspace's tests from the archive `cargo nextest archive --workspace` builds.
+const NEXTEST_STEP: &str = "cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4";
+/// The nextest step's unsharded form from the same archive: every test of the workspace, in one job.
+const NEXTEST_UNSHARDED: &str =
+    "cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite";
 const XTASK_CI_STEP: &str = "cargo xtask ci --partition ${{ matrix.shard }}/4";
 
 /// REQ-SYS-077 on `workflow`: one job runs the workspace's nextest step, with nextest's `hash:` partition, and one job
@@ -165,7 +169,9 @@ fn check_sharded_steps(workflow: &str) {
     for job in &jobs {
         for run in job.runs() {
             assert!(
-                run != "cargo nextest run --workspace" && run != "cargo xtask ci",
+                run != "cargo nextest run --workspace"
+                    && run != NEXTEST_UNSHARDED
+                    && run != "cargo xtask ci",
                 "job `{}` runs `{run}` unsharded, beside its shards",
                 job.id
             );
@@ -179,7 +185,11 @@ fn check_hash_partition(workflow: &str) {
     let steps: Vec<String> = jobs(workflow)
         .iter()
         .flat_map(|j| j.runs())
-        .filter(|r| r.starts_with("cargo nextest run --workspace") && r.contains("--partition"))
+        .filter(|r| {
+            (r.starts_with("cargo nextest run --workspace")
+                || r.starts_with("cargo nextest run --archive-file"))
+                && r.contains("--partition")
+        })
         .collect();
     assert!(!steps.is_empty(), "no sharded workspace nextest step");
     for step in steps {
@@ -371,7 +381,7 @@ negative_control!(
 
 #[test]
 fn qa_m0_45_the_ci_check_gathers_every_test_shard_and_the_checks() {
-    check_gate(&the_workflow(), "ci", &["ci", "ci-checks"]);
+    check_gate(&the_workflow(), "ci", &["ci", "ci-checks", "ci-workspace"]);
 }
 
 negative_control!(
@@ -379,16 +389,36 @@ negative_control!(
     "the checked-in workflow with the ci check gathering the test shards alone, not `ci-checks`",
     expected = "does not gather job `ci-checks`",
     check_gate(
-        &the_workflow().replace("needs: [ci, ci-checks]", "needs: [ci]"),
+        &the_workflow().replace(
+            "needs: [ci, ci-checks, ci-workspace]",
+            "needs: [ci, ci-workspace]"
+        ),
         "ci",
-        &["ci", "ci-checks"]
+        &["ci", "ci-checks", "ci-workspace"]
+    )
+);
+
+/// R-372: the xtask tests that left the shards for `ci-workspace` still count toward the required check `ci`.
+#[test]
+fn qa_m0_45_the_ci_check_gathers_the_workspace_tests() {
+    check_gate(&the_workflow(), "ci", &["ci", "ci-checks", "ci-workspace"]);
+}
+
+negative_control!(
+    qa_m0_45_the_ci_check_gathers_the_workspace_tests,
+    "the checked-in workflow with the ci check gathering the shards and the checks, not `ci-workspace`",
+    expected = "does not gather job `ci-workspace`",
+    check_gate(
+        &the_workflow().replace("needs: [ci, ci-checks, ci-workspace]", "needs: [ci, ci-checks]"),
+        "ci",
+        &["ci", "ci-checks", "ci-workspace"]
     )
 );
 
 #[test]
 fn qa_m0_45_the_required_checks_cannot_be_skipped() {
     let workflow = the_workflow();
-    check_gate(&workflow, "ci", &["ci", "ci-checks"]);
+    check_gate(&workflow, "ci", &["ci", "ci-checks", "ci-workspace"]);
     check_gate(&workflow, "xtask-ci", &["xtask-ci"]);
 }
 

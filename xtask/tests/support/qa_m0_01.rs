@@ -521,7 +521,9 @@ pub fn check_the_ci_workflow(yml: &str) {
     let pos = |cmd: &str| runs.iter().position(|r| *r == cmd);
     for cmd in [
         "cargo build --workspace",
-        "cargo nextest run --workspace --partition hash:${{ matrix.shard }}/4",
+        // The workspace's tests, built once as a nextest archive and run from it in 4 shards (R-372, REQ-SYS-078).
+        "cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst",
+        "cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4",
         "cargo xtask deps",
         "cargo xtask ci --partition ${{ matrix.shard }}/4",
     ] {
