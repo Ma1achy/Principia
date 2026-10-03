@@ -61,7 +61,9 @@ milestone gets its own file after its gate. Ids never change.
     shard's baseline, as above, after 15–19 min; no `mutants` run on e2eb25b had started by 08:32Z.
   - Every other PR so far has fit inside n = 8 × 120 min. Over all `mutants.yml` runs, the longest *finished* `cargo
     mutants` step outside #124 is 52.0 min (#107, TASK-M0-13: run 36878731915, job 110424763538), and the longest
-    successful PR run's longest step is 48.8 min (#120, TASK-M0-19: run 37085778406). The jobs on #120 that ran 63–66
+    successful run outside #124 has a longest step of 48.8 min (#120, TASK-M0-19: run 37085778406). Two of #124's own
+    runs succeeded, with longer steps, while its diff was smaller: 76.8 min (run 37068037787, job 111040611611) and
+    54.0 min (run 37060054995, job 111014220103). The jobs on #120 that ran 63–66
     min (job 110954728563 in run 37042181185, 63.0 min; 110975680519 in 37048479624, 66.0 min; 110988078207 in
     37052200411, 64.0 min) did not finish their `cargo mutants` step: GitHub annotates each "The hosted runner lost
     communication with the server". A fourth #120 job, 111026322293 (run 37063744524), failed after 24 min with "No
