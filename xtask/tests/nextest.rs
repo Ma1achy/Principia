@@ -67,8 +67,8 @@ fn jobs(workflow: &str) -> Vec<Vec<&str>> {
 }
 
 /// The commands of a job's `run:` steps, each with the nextest profile it runs under: the `NEXTEST_PROFILE` its step's
-/// `env:` sets, or else the job's, or none (the default profile). CI's `ci` and `gpu-kernel` jobs split the workspace's
-/// tests by profile (R-325, `.config/nextest.toml`).
+/// `env:` sets, or else the job's, or none (the default profile). CI's `ci`, `ci-workspace` and `gpu-kernel` jobs split
+/// the workspace's tests by profile (R-325, R-372, `.config/nextest.toml`).
 fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
     let mut out = Vec::new();
     let mut in_steps = false;
@@ -489,8 +489,8 @@ validation::negative_control!(
     )
 );
 
-/// The same check, here for its control on the profiles: CI's `ci` and `gpu-kernel` jobs split the workspace's tests by
-/// nextest profile (R-325), and each step is listed under its own.
+/// The same check, here for its control on the profiles: CI's `ci`, `ci-workspace` and `gpu-kernel` jobs split the
+/// workspace's tests by nextest profile (R-325, R-372), and each step is listed under its own.
 #[test]
 fn nextest_ci_steps_list_every_test_under_their_profiles() {
     check_no_test_dropped(&ci_workflow(), REPLACED);

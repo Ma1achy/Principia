@@ -4,9 +4,9 @@
 # job of their own, `gpu-kernel`, in parallel with `ci` (R-325, REQ-SYS-076); each CI job's warm wall-clock time is
 # targeted at ~10.5 min (R-270, R-325). The tests run through cargo-nextest, pinned, and doctests, which nextest does
 # not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
-# `cargo test` did. `ci` and `gpu-kernel` split the workspace's tests between them by nextest profile
-# (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `ci` runs every test but the kernel's, `gpu-kernel` the
-# kernel's.
+# `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
+# (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
+# tests that run cargo on the workspace's own target directory, and `ci` every other test.
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
@@ -155,7 +155,8 @@ jobs:
           name: nextest-ci
           path: ${{ runner.temp }}
       # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
-      # (R-325): the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. From the archive
+      # (R-325), and those that run cargo on the workspace's own target directory, which `ci-workspace` runs (R-372):
+      # the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. From the archive
       # (R-372, REQ-SYS-078): its target directory is extracted into this checkout's `target`, where `ci-archive` built
       # it, beside the fixture pool restored there, so the paths compiled into the tests (`CARGO_BIN_EXE_*`,
       # `CARGO_TARGET_TMPDIR`) hold here as they did there.
@@ -247,8 +248,8 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
-  # The required check `ci` (R-266): every `ci` shard and `ci-checks` passed. It runs whatever they ended in
-  # (`always()`), so a failed or cancelled job turns it red rather than skipping it.
+  # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
+  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it.
   ci-gate:
     name: ci
     needs: [ci, ci-checks, ci-workspace]
