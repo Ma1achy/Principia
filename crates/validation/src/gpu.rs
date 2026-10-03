@@ -591,6 +591,16 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         assert_eq!(Some(mode), off, "{wrong}: compiled {mode:?}");
     }
 
+    /// `compute_fast_math_harness_features`'s check: the harness's device was opened with exactly `want`, the compute
+    /// entry point's required features on its backend (the passthrough's on Metal, none elsewhere).
+    pub fn check_features(h: &GpuHarness, want: wgpu::Features) {
+        assert_eq!(
+            h.features(),
+            want,
+            "the harness's device does not have exactly the compute entry point's features"
+        );
+    }
+
     /// `compute_fast_math_fuzzed_set`'s check: `a` and `b` are the probe's fuzzed divisions, fixed by their seed (an
     /// FNV-1a fingerprint of every word), and their exponents span exactly 2^-60 to 2^60, so every quotient is a normal
     /// f32 (its exponent within ±121, inside f32's normal range).
@@ -727,6 +737,13 @@ mod tests {
     #[test]
     fn compute_fast_math_defaults_off() {
         check_defaults_off(&harness(), FastMath::default());
+    }
+
+    /// The harness opens its device with exactly the entry point's features, so the passthrough is there on Metal.
+    #[test]
+    fn compute_fast_math_harness_features() {
+        let h = harness();
+        check_features(&h, compute::required_features(h.adapter_info().backend));
     }
 
     fn rejects_naming_the_variable(value: &str) {

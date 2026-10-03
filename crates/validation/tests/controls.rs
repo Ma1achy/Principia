@@ -69,6 +69,16 @@ negative_control!(
 );
 
 negative_control!(
+    compute_fast_math_harness_features,
+    "the harness's features checked against the passthrough's on every backend and SHADER_F16 beside it",
+    expected = "the harness's device does not have exactly the compute entry point's features",
+    check_features(
+        &harness(),
+        wgpu::Features::PASSTHROUGH_SHADERS | wgpu::Features::SHADER_F16
+    )
+);
+
+negative_control!(
     metal_hosted_probe,
     "the probe's backend check on the other platform's expectation: Vulkan on macOS, Metal elsewhere",
     expected = "PRIN_GPU_BACKEND did not give a",
