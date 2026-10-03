@@ -2,7 +2,10 @@
 //! payload §6): writes the fragment-side unpack layer, `crates/render/frag/generated/payload_unpack.wgsl`, from the
 //! same ledger the Rust emitter ([`super::rust`]) reads. It holds the payload schema version, the stored `SimState`
 //! layouts and `ICDescriptor`, the `SimState` and word buffer bindings, the `sd_*`, `pa_`/`pb_`/`tm_` and `fgw_*`
-//! accessors with payload §6's names (R-86), and payload §3's frozen continuation table as shader constants.
+//! accessors with payload §6's names (R-86), and payload §3's frozen continuation table as shader constants. [`emit`]
+//! also writes the read side, `crates/render/frag/generated/read_side.wgsl` ([`super::read::wgsl`]), which follows
+//! this layer at assembly: the read-side `SimState`, its derived accessors and each stored variant's unpack into it
+//! (lowering Part 3a).
 //!
 //! The WGSL traps (render contract Part 5; payload §6) hold by construction: every `extractBits` takes a u32, no f64
 //! is written, f16 pairs are read through core `unpack2x16float` with no `enable f16`, `r`, `p` and the shadow are
@@ -52,10 +55,13 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
     out.push_str(&accessors(words, entries));
     out.push_str(&helpers());
     out.push_str(&continuation());
-    vec![Generated {
-        path: PathBuf::from(PATH),
-        contents: out,
-    }]
+    vec![
+        Generated {
+            path: PathBuf::from(PATH),
+            contents: out,
+        },
+        super::read::wgsl(words, entries),
+    ]
 }
 
 /// Whether `s` is the word buffer's element, which the layer binds as `array<vec4<u32>>`, not as a struct.

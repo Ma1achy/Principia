@@ -2,8 +2,10 @@
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
 //! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]). The emitters are
-//! registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]).
+//! registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
+//! ([`read`]).
 
+pub mod read;
 pub mod rust;
 pub mod wgsl;
 

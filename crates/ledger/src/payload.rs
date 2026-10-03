@@ -383,6 +383,14 @@ pub const fn continuation_index() -> [[u32; 4]; 4] {
     out
 }
 
+/// The canonical quiet NaN's f32 bits, `0x7fc0_0000`: sign 0, exponent all ones, the quiet bit (bit 22) alone in the
+/// significand (lowering Part 3a; R-72, R-79; REQ-RENDER-077). A tier-absent derived scalar reads exactly these bits at
+/// unpack, as does an invalid read (`ftle`, R-254; `diffusion`, R-245), and the bitcast absence test compares against
+/// them. Interface data written into the read side, as the continuation table is; not a register constant.
+pub const fn canonical_qnan_bits() -> u32 {
+    0x7fc0_0000
+}
+
 /// Payload §3's frozen symbol codes, each symbol at its code: `a = 0, A = 1, b = 2, B = 3` ("part of the binary
 /// format"). `inverse` and the digit maps are over these codes; `last_symbol` stores one (payload §2).
 pub const fn symbols() -> [&'static str; 4] {
