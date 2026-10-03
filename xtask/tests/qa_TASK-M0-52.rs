@@ -571,13 +571,26 @@ fn fixture(dir: &Path) {
 }
 
 /// `cargo nextest <args>` in `dir`, with its build directory `target`; its stdout and stderr; it must pass.
+///
+/// Its output, which the checks parse, must not depend on the environment the test inherits: every `CARGO_TERM_*`
+/// variable (CI's `CARGO_TERM_COLOR: always` puts escape codes in it, a `CARGO_TERM_QUIET` would hide the
+/// `Compiling` lines) and every `NEXTEST_*` one (a profile, status levels, the variables of the nextest run this test
+/// is in) is removed, and colour is off, by `--color never` and `CARGO_TERM_COLOR=never`.
 fn nextest(dir: &Path, args: &[&str]) -> (String, String) {
-    let o = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()))
+    let mut cmd = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()));
+    for (name, _) in std::env::vars_os() {
+        let n = name.to_string_lossy();
+        if n.starts_with("CARGO_TERM_") || n.starts_with("NEXTEST_") {
+            cmd.env_remove(&name);
+        }
+    }
+    let o = cmd
         .current_dir(dir)
         .arg("nextest")
         .args(args)
+        .args(["--color", "never"])
         .env("CARGO_TARGET_DIR", dir.join("target"))
-        .env_remove("NEXTEST_PROFILE")
+        .env("CARGO_TERM_COLOR", "never")
         .timed_output()
         .expect("run cargo nextest");
     let (out, err) = (
