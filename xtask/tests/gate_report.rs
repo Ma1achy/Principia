@@ -3,7 +3,10 @@
 //! fails when a requirement failed or has no result; a benchmark requirement is awaiting the human's run until its
 //! `prin profile` file is supplied; a review-checklist requirement passes when its closing task's PR merged with its
 //! reviewers' approvals, or, for a task closed by a ruling, when that ruling's PR merged, no approval asked of it, read
-//! from a fixture in place of `gh` (decided per R-369, RQ-201). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
+//! from a fixture in place of `gh` (decided per R-369, RQ-201). A unit-test, property-test, numerical-gate, golden or
+//! screenshot requirement fails when a `cargo test` command its detail names matches no test of its build in the gate
+//! run's own listing, and one naming none is marked (REQ-SYS-079; the human's instruction, 3 Oct 2026: "fix the gate
+//! report to check tests exist"). And `cargo xtask bench`'s reading of `prin profile diff`'s exit code. Each test
 //! registers the control that must make it fail (R-176).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -11,8 +14,9 @@ use std::path::{Path, PathBuf};
 
 use validation::negative_control;
 use xtask::gate_report::{
-    benchmark_ids, closing_rulings, closing_tasks, gate_ids, names_ruling, outcomes, render,
-    review_checklist_ids, review_outcome, run, title_rulings, Outcome, PrSource, Recorded,
+    benchmark_ids, check_named_tests, closing_rulings, closing_tasks, gate_ids, named_tests,
+    names_ruling, outcomes, render, review_checklist_ids, review_outcome, run, run_listed,
+    test_builds, title_rulings, verifies, NamedTest, Outcome, PrSource, Recorded, TestList,
 };
 
 fn fixture() -> PathBuf {
@@ -793,4 +797,408 @@ negative_control!(
     "a gh that answers",
     expected = "a failing gh did not fail the lookup",
     check_gh_fails("fails_control", false)
+);
+
+// --- Named tests (REQ-SYS-079; TASK-M0-53) -------------------------------------------------------------------------
+
+/// The named-test fixture's listing `name` (`tests.txt`, or `tests_controls.txt`, which adds the controls build and
+/// the tests `tests.txt` lacks).
+fn listing(name: &str) -> TestList {
+    TestList::parse(&read(&format!("named/{name}")))
+}
+
+/// `id`'s outcome from the named-test fixture, its suites having passed (or failed, `pass` false), checked against
+/// `list`.
+fn named_outcome(id: &str, pass: bool, list: &TestList) -> Outcome {
+    let verifies = verifies(&read("named/plan/requirements.yaml"));
+    let suite = if pass { Outcome::Pass } else { Outcome::Fail };
+    let mut got = vec![(id.to_owned(), suite)];
+    check_named_tests(&mut got, &verifies, list);
+    got.remove(0).1
+}
+
+/// `id`'s outcome is a [`Outcome::NoTest`] whose reasons each say "no test matches" and together name every one of
+/// `named` (crate and filter).
+fn check_no_test(id: &str, list: &TestList, named: &[(&str, &str)]) {
+    match named_outcome(id, true, list) {
+        Outcome::NoTest(why) => {
+            assert_eq!(
+                why.len(),
+                named.len(),
+                "{id}: not one reason per missing command: {why:?}"
+            );
+            for (reason, (krate, filter)) in why.iter().zip(named) {
+                for part in [
+                    "no test matches",
+                    &format!("crate `{krate}`"),
+                    &format!("filter `{filter}`"),
+                ] {
+                    assert!(
+                        reason.contains(part),
+                        "{id}: the reason does not say {part}: {reason}"
+                    );
+                }
+            }
+        }
+        other => panic!("{id} was not failed for a missing named test: {other:?}"),
+    }
+}
+
+/// A named test that exists passes its requirement.
+fn check_exists_passes(list: &TestList) {
+    assert_eq!(
+        named_outcome("REQ-NAM-001", true, list),
+        Outcome::Pass,
+        "a requirement whose named test exists did not pass"
+    );
+    assert_eq!(named_outcome("REQ-NAM-001", false, list), Outcome::Fail);
+}
+
+#[test]
+fn gate_report_named_test_exists_passes() {
+    check_exists_passes(&listing("tests.txt"));
+}
+
+negative_control!(
+    gate_report_named_test_exists_passes,
+    "a listing that lacks the named test",
+    expected = "a requirement whose named test exists did not pass",
+    check_exists_passes(&TestList::parse("== -p xtask\ngate::tests::first: test\n"))
+);
+
+/// A filter that matches nothing fails its requirement with the new outcome, naming the crate, the filter and "no
+/// test matches", and the report fails, the line saying so.
+fn check_matching_nothing(list: &TestList) {
+    check_no_test("REQ-NAM-002", list, &[("xtask", "no_such_test")]);
+    let got = vec![(
+        "REQ-NAM-002".to_owned(),
+        named_outcome("REQ-NAM-002", true, list),
+    )];
+    let text = render("M0", &got).expect_err("a missing named test passed the report");
+    assert!(
+        text.contains("REQ-NAM-002  FAIL: no test matches: crate `xtask`, filter `no_such_test`"),
+        "the report's line does not name the missing test:\n{text}"
+    );
+}
+
+#[test]
+fn gate_report_named_test_matching_nothing_fails() {
+    check_matching_nothing(&listing("tests.txt"));
+}
+
+negative_control!(
+    gate_report_named_test_matching_nothing_fails,
+    "a listing in which the filter matches a test",
+    expected = "REQ-NAM-002 was not failed for a missing named test",
+    check_matching_nothing(&listing("tests_controls.txt"))
+);
+
+/// A test that exists only under `--features controls` fails, while the listing lacks that build: named with the
+/// feature (the listing has no such build) and named without it (the default build lacks the test).
+fn check_only_under_controls(list: &TestList) {
+    check_no_test(
+        "REQ-NAM-003",
+        list,
+        &[("validation", "scratch_guard_keeps_a_wrong_message")],
+    );
+    check_no_test(
+        "REQ-NAM-004",
+        list,
+        &[("validation", "scratch_guard_keeps_a_wrong_message")],
+    );
+    match named_outcome("REQ-NAM-003", true, list) {
+        Outcome::NoTest(why) => assert!(
+            why[0].contains("the listing has no build `-p validation --features controls`"),
+            "the reason does not say the controls build is not listed: {why:?}"
+        ),
+        other => panic!("REQ-NAM-003 passed: {other:?}"),
+    }
+}
+
+#[test]
+fn gate_report_named_test_only_under_controls_fails() {
+    check_only_under_controls(&listing("tests.txt"));
+}
+
+negative_control!(
+    gate_report_named_test_only_under_controls_fails,
+    "a listing that holds the controls build",
+    expected = "REQ-NAM-003 was not failed for a missing named test",
+    check_only_under_controls(&listing("tests_controls.txt"))
+);
+
+/// A detail naming several commands passes only when every one matches: both matching passes; the second matching
+/// nothing fails, naming only the second.
+fn check_every_command(list: &TestList) {
+    assert_eq!(
+        named_outcome("REQ-NAM-005", true, list),
+        Outcome::Pass,
+        "a detail whose every named test exists did not pass"
+    );
+    check_no_test("REQ-NAM-006", list, &[("xtask", "lint_wgsl_finite_max")]);
+}
+
+#[test]
+fn gate_report_named_test_every_command_must_match() {
+    check_every_command(&listing("tests.txt"));
+}
+
+negative_control!(
+    gate_report_named_test_every_command_must_match,
+    "a listing in which the second command matches too",
+    expected = "REQ-NAM-006 was not failed for a missing named test",
+    check_every_command(&listing("tests_controls.txt"))
+);
+
+/// A hosted requirement whose detail names no command keeps its suites' result, marked "no named test to check", a
+/// failed one still failing the report; a review-checklist requirement is not checked at all.
+fn check_unnamed(id: &str) {
+    let list = listing("tests.txt");
+    assert_eq!(
+        named_outcome(id, true, &list),
+        Outcome::PassUnnamed,
+        "a requirement naming no test is not marked"
+    );
+    let got = vec![(id.to_owned(), named_outcome(id, true, &list))];
+    let text = render("M0", &got).expect("an unnamed passing requirement fails the report");
+    assert!(
+        text.contains(&format!("{id}  pass (no named test to check)")),
+        "the report does not mark it:\n{text}"
+    );
+    let got = vec![(id.to_owned(), named_outcome(id, false, &list))];
+    assert_eq!(got[0].1, Outcome::FailUnnamed);
+    assert!(
+        render("M0", &got).is_err(),
+        "an unnamed failed requirement passes the report"
+    );
+    assert_eq!(
+        named_outcome("REQ-NAM-008", true, &list),
+        Outcome::Pass,
+        "a review-checklist requirement is checked for named tests"
+    );
+}
+
+#[test]
+fn gate_report_named_test_unnamed_is_marked() {
+    check_unnamed("REQ-NAM-007");
+}
+
+negative_control!(
+    gate_report_named_test_unnamed_is_marked,
+    "a requirement that names a test",
+    expected = "a requirement naming no test is not marked",
+    check_unnamed("REQ-NAM-001")
+);
+
+fn named(krate: &str, flags: &[&str], filter: &str, exact: bool) -> NamedTest {
+    NamedTest {
+        krate: krate.to_owned(),
+        flags: flags.iter().map(|f| (*f).to_owned()).collect(),
+        filter: filter.to_owned(),
+        exact,
+    }
+}
+
+/// A detail's commands are read as cargo reads them: package, flags, filter, `-- --exact`; a backticked command ends
+/// at its backtick, a prose one at its filter or at prose punctuation; one with no package or no filter names none.
+fn check_parses(detail: &str, want: &[NamedTest]) {
+    assert_eq!(
+        named_tests(detail),
+        want,
+        "the detail was parsed wrongly: {detail}"
+    );
+}
+
+#[test]
+fn gate_report_named_test_parses_detail() {
+    check_parses(
+        "cargo test -p xtask scratch_guard, cargo test -p prin scratch_guard and cargo test -p validation \
+         --features controls scratch_guard_keeps: each",
+        &[
+            named("xtask", &[], "scratch_guard", false),
+            named("prin", &[], "scratch_guard", false),
+            named("validation", &["--features", "controls"], "scratch_guard_keeps", false),
+        ],
+    );
+    check_parses(
+        "`cargo test -p xtask` passes; (or `cargo test --features controls`); `cargo nextest run -p xtask \
+         controls_partition`; `cargo test -p engine session::tests::header -- --exact` too",
+        &[
+            named("xtask", &[], "controls_partition", false),
+            named("engine", &[], "session::tests::header", true),
+        ],
+    );
+    check_parses(
+        "cargo testing -p xtask golden; cargo test -p xtask, then",
+        &[],
+    );
+}
+
+negative_control!(
+    gate_report_named_test_parses_detail,
+    "a detail whose command names a package and a filter",
+    expected = "the detail was parsed wrongly",
+    check_parses("`cargo test -p xtask golden` passes", &[])
+);
+
+/// The builds a gate's hosted requirements name, each once: the review checklist's are not among them.
+fn check_builds(ids: &[String]) {
+    let verifies = verifies(&read("named/plan/requirements.yaml"));
+    assert_eq!(
+        test_builds(ids, &verifies),
+        [
+            "-p validation",
+            "-p validation --features controls",
+            "-p xtask"
+        ],
+        "the gate's builds are not every hosted requirement's, once each"
+    );
+}
+
+#[test]
+fn gate_report_named_test_builds() {
+    check_builds(&gate_ids(&read("named/plan/MILESTONES.md"), "M0").expect("gate ids"));
+}
+
+negative_control!(
+    gate_report_named_test_builds,
+    "a gate without the controls requirement",
+    expected = "the gate's builds are not every hosted requirement's",
+    check_builds(&[
+        "REQ-NAM-001".to_owned(),
+        "REQ-NAM-004".to_owned(),
+        "REQ-NAM-008".to_owned()
+    ])
+);
+
+/// A scratch copy of the named-test fixture's workspace, under `name`.
+fn named_root(name: &str) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("plan")).expect("dir");
+    for f in ["plan/MILESTONES.md", "plan/requirements.yaml"] {
+        std::fs::copy(fixture().join("named").join(f), root.join(f)).expect("copy");
+    }
+    root
+}
+
+/// `run_listed` with the listing `list` (none when `None`) writes a report that fails, naming the missing test, passes
+/// the existing one and marks the unnamed one.
+fn check_run_listed(name: &str, list: Option<&str>) {
+    let root = named_root(name);
+    let list = list.map(|l| fixture().join("named").join(l));
+    let results = fixture().join("named/results.json");
+    let got = run_listed(
+        &root,
+        "M0",
+        &results,
+        None,
+        list.as_deref(),
+        &Recorded::default(),
+    );
+    let report =
+        std::fs::read_to_string(root.join("target/gate-report/M0.txt")).expect("no report written");
+    assert!(
+        report.contains("REQ-NAM-002  FAIL: no test matches: crate `xtask`, filter `no_such_test`"),
+        "the report does not fail REQ-NAM-002 for its missing test:\n{report}"
+    );
+    assert!(
+        got.is_err(),
+        "run passed a requirement whose named test is missing"
+    );
+    assert!(
+        report.contains("REQ-NAM-007  pass (no named test to check)"),
+        "the report does not mark the unnamed requirement:\n{report}"
+    );
+    if list.is_some() {
+        assert!(
+            report.contains("REQ-NAM-001  pass\n"),
+            "the report does not pass the requirement whose test exists:\n{report}"
+        );
+    } else {
+        assert!(
+            report.contains("REQ-NAM-001  FAIL: no test matches")
+                && report.contains("no test listing was given (--test-list)"),
+            "with no listing, a named test is not missing:\n{report}"
+        );
+    }
+}
+
+#[test]
+fn gate_report_named_test_run_fails_the_report() {
+    check_run_listed("gate_report_named_run", Some("tests.txt"));
+    check_run_listed("gate_report_named_run_unlisted", None);
+}
+
+negative_control!(
+    gate_report_named_test_run_fails_the_report,
+    "a listing that holds REQ-NAM-002's test",
+    expected = "the report does not fail REQ-NAM-002 for its missing test",
+    check_run_listed("gate_report_named_run_control", Some("tests_controls.txt"))
+);
+
+/// A stand-in `cargo` in `root` answering `test <build> --no-fail-fast -- --list` as libtest lists, from `answers`
+/// (build, listing); any other build fails as cargo does.
+#[cfg(unix)]
+fn stand_in_cargo(root: &Path, answers: &[(&str, &str)]) -> PathBuf {
+    let mut script = "#!/bin/sh\ncase \"$*\" in\n".to_owned();
+    for (build, list) in answers {
+        script.push_str(&format!(
+            "  \"test {build} --no-fail-fast -- --list\") printf '{list}' ;;\n"
+        ));
+    }
+    script.push_str("  *) echo \"error: cargo $*\" >&2; exit 101 ;;\nesac\n");
+    let cargo = root.join("cargo");
+    validation::spawn::write_executable(&cargo, script).expect("stand-in cargo written");
+    cargo
+}
+
+/// `write_test_list` writes each build's `-- --list` output under its build, recording a build whose listing failed,
+/// and the report reads it back: the test listed is found, the failed build's test is missing, saying it failed.
+#[cfg(unix)]
+fn check_writes_listing(name: &str, xtask_list: &str) {
+    let root = named_root(name);
+    let cargo = stand_in_cargo(
+        &root,
+        &[
+            ("-p xtask", xtask_list),
+            ("-p validation", "scratch_guard_deletes_on_pass: test\\n"),
+        ],
+    );
+    let out = root.join("out/tests.txt");
+    no_write(|| xtask::gate_report::write_test_list(&root, "M0", cargo.as_os_str(), &out))
+        .expect("the listing is written");
+    let list = TestList::parse(&std::fs::read_to_string(&out).expect("listing read"));
+    assert_eq!(
+        named_outcome("REQ-NAM-001", true, &list),
+        Outcome::Pass,
+        "the written listing lacks cargo's listed test"
+    );
+    match named_outcome("REQ-NAM-003", true, &list) {
+        Outcome::NoTest(why) => assert!(
+            why[0].contains("the listing of `-p validation --features controls` failed"),
+            "a failed build's listing is not recorded as failed: {why:?}"
+        ),
+        other => panic!("a test of a failed build passed: {other:?}"),
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn gate_report_named_test_list_written_from_cargo() {
+    check_writes_listing(
+        "gate_report_named_write",
+        "gate::tests::first: test\\nlint_wgsl_unset_isinf_fails: test\\n\\n2 tests, 0 benchmarks\\n",
+    );
+}
+
+#[cfg(unix)]
+negative_control!(
+    gate_report_named_test_list_written_from_cargo,
+    "a cargo that lists no test of xtask",
+    expected = "the written listing lacks cargo's listed test",
+    check_writes_listing(
+        "gate_report_named_write_control",
+        "\\n0 tests, 0 benchmarks\\n"
+    )
 );

@@ -1,0 +1,56 @@
+- id: REQ-NAM-001
+  area: NAM
+  statement: "a named test that exists"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask lint_wgsl_unset: the isinf fixture fails naming the rule"
+  milestone: M0
+- id: REQ-NAM-002
+  area: NAM
+  statement: "a filter that matches nothing"
+  verify:
+    method: property test
+    detail: "`cargo test -p xtask no_such_test` passes over every case"
+  milestone: M0
+- id: REQ-NAM-003
+  area: NAM
+  statement: "a test only under the controls feature, named with it"
+  verify:
+    method: unit test
+    detail: "cargo test -p validation --features controls scratch_guard_keeps_a_wrong_message: the control keeps its folder"
+  milestone: M0
+- id: REQ-NAM-004
+  area: NAM
+  statement: "a test only under the controls feature, named without it"
+  verify:
+    method: numerical gate
+    detail: "cargo test -p validation scratch_guard_keeps_a_wrong_message: the control keeps its folder"
+  milestone: M0
+- id: REQ-NAM-005
+  area: NAM
+  statement: "two named commands, both matching"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask lint_wgsl_unset and cargo test -p xtask self_compare: each fixture fails"
+  milestone: M0
+- id: REQ-NAM-006
+  area: NAM
+  statement: "two named commands, the second matching nothing"
+  verify:
+    method: golden image
+    detail: "`cargo test -p xtask lint_wgsl_unset`, then `cargo test -p xtask lint_wgsl_finite_max`: each fixture fails"
+  milestone: M0
+- id: REQ-NAM-007
+  area: NAM
+  statement: "no named command"
+  verify:
+    method: GUI screenshot
+    detail: "the capture shows every control; `cargo test --features controls` runs the controls"
+  milestone: M0
+- id: REQ-NAM-008
+  area: NAM
+  statement: "a review checklist naming a command"
+  verify:
+    method: review checklist
+    detail: "code: `cargo test -p xtask no_such_test` passes"
+  milestone: M0

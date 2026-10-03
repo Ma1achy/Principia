@@ -1,0 +1,10 @@
+== -p validation
+scratch_guard_deletes_on_pass: test
+
+1 test, 0 benchmarks
+== -p xtask
+gate::tests::first: test
+lint_wgsl_rules::self_compare_fails: test
+lint_wgsl_unset_isinf_fails: test
+
+3 tests, 0 benchmarks

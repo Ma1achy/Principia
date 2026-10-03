@@ -12,6 +12,15 @@
 # whose head every reviewer its task file names has approved (R-175, R-260), which `gate-report` reads through `gh`, so
 # the gate-report job reads the repository's pull requests with the workflow's token.
 #
+# A suite's pass is not enough when the tests a requirement names don't exist: a cargo filter that matches no test runs
+# none and still exits 0 (REQ-SYS-079; TASK-M0-53; the human's instruction, 3 Oct 2026, in their own words: "fix the
+# gate report to check tests exist", amending RQ-201's decision above). So the `cpu` job, on the commit under test,
+# writes the run's own test listing, `cargo test <build> -- --list` for every build (`-p <crate>` and flags, such as
+# `--features controls`) that a hosted requirement's `cargo test -p <crate> [flags] <filter>` names, and uploads it;
+# the gate-report job hands it to `gate-report --test-list`. A requirement with a named command that matches no listed
+# test of its build fails, naming the crate, the filter and "no test matches"; one whose detail names no command keeps
+# its suites' result, marked "no named test to check". If the listing never arrived, every named test is missing.
+#
 # Runner disk and caches as in `nightly.yml`: each Linux job that builds the workspace's tests deletes the toolsets it
 # does not use first (TASK-M0-49), and this workflow, never run on a push to `main`, saves no cache and restores
 # `ci.yml`'s keys read-only (R-285, R-326, R-337): the cargo registry under the `ci` job's key, `cargo-registry-ci-…`,
@@ -82,6 +91,20 @@ jobs:
         run: cargo test --workspace --doc
       - name: cargo xtask deps
         run: cargo xtask deps
+      # The gate run's own test listing (REQ-SYS-079): `cargo test <build> -- --list` for every build the hosted
+      # requirements of this milestone's gate, and every earlier one, name a test of, on this commit. Written even when a
+      # suite failed, so the report can still say which named tests exist.
+      - name: cargo xtask gate-report --write-test-list
+        if: ${{ !cancelled() }}
+        env:
+          MILESTONE: ${{ inputs.milestone }}
+        run: cargo xtask gate-report --write-test-list target/gate-test-list/tests.txt --milestone "$MILESTONE"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: gate-test-list
+          path: target/gate-test-list/
+          if-no-files-found: ignore
 
   # `cargo xtask ci`, every registered per-push runner (R-177).
   xtask-ci:
@@ -257,7 +280,8 @@ jobs:
 
   # The gate report (R-177): after every suite, whatever their results. Each requirement's result is its verification
   # method's suites', or, for a review-checklist requirement, its closing task's merged PR's approvals (RQ-201, decided
-  # per R-369); the report fails when any requirement failed or has no result, and is uploaded either way.
+  # per R-369), a hosted suite's requirement failing when a test its detail names is not in the `cpu` job's listing
+  # (REQ-SYS-079); the report fails when any requirement failed or has no result, and is uploaded either way.
   gate-report:
     if: always()
     needs: [cpu, xtask-ci, gpu-metal, gpu-lavapipe, screenshot]
@@ -301,13 +325,22 @@ jobs:
                   results[req["id"]] = "pass" if os.environ[suite] == "true" else "fail"
           json.dump(results, open(os.path.join(os.environ["RUNNER_TEMP"], "results.json"), "w"), indent=1)
           EOF
+      # The `cpu` job's test listing (REQ-SYS-079). When that job never wrote it, the download fails, and the report
+      # then fails every requirement that names a test, as nothing shows the test exists.
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: gate-test-list
+          path: ${{ runner.temp }}/gate-test-list
       # `gh`, preinstalled on the runner, lists the PRs and reads each merged task PR's reviews with this token.
       - name: cargo xtask gate-report --milestone <Mn>
         env:
           MILESTONE: ${{ inputs.milestone }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: cargo xtask gate-report --milestone "$MILESTONE" --results "$RUNNER_TEMP/results.json"
+        run: >-
+          cargo xtask gate-report --milestone "$MILESTONE" --results "$RUNNER_TEMP/results.json"
+          --test-list "$RUNNER_TEMP/gate-test-list/tests.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
