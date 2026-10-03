@@ -706,7 +706,7 @@ fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -
             .enumerate()
             .map(|(i, ep)| (&ep.function, info.get_entry_point(i))),
     );
-    let writes = callee_writes(module);
+    let summaries = summaries(module);
     let mut found = Vec::new();
     for (function, fi) in functions {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
@@ -729,7 +729,7 @@ fn float_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -
                 ));
             }
         }
-        let timeline = Timeline::new(module, &writes, &function.expressions, &function.body);
+        let timeline = Timeline::new(module, &summaries, &function.expressions, &function.body);
         for (h, expr) in function.expressions.iter() {
             let span = function.expressions.get_span(h);
             match *expr {
@@ -2030,12 +2030,13 @@ fn shared(space: AddressSpace) -> bool {
 }
 
 /// The variables `statement`, in a function over `arena`, may write (R-352's "store"): a store's or an atomic's
-/// pointer; each pointer a call is given that its callee may write through, and every global its callee may write
-/// (`writes`, by function, from [`callee_writes`]); and, for a statement that waits on or hands control to other
-/// invocations (a barrier, `workgroupUniformLoad`, a ray-pipeline call), every global another invocation can write.
+/// pointer; each pointer a call is given that its callee may write through, and every global its callee may write,
+/// before it returns (`summaries`, by function, from [`summaries`]); and, for a statement that waits on or hands
+/// control to other invocations (a barrier, `workgroupUniformLoad`, a ray-pipeline call), every global another
+/// invocation can write.
 fn written(
     module: &Module,
-    writes: &[Vec<Root>],
+    summaries: &[Summary],
     arena: &Arena<Expression>,
     statement: &Statement,
 ) -> Vec<Root> {
@@ -2062,7 +2063,7 @@ fn written(
             ref arguments,
             ..
         } => {
-            let callee = &writes[function.index()];
+            let callee = &summaries[function.index()].writes;
             (0u32..)
                 .zip(arguments)
                 .filter(|&(k, _)| callee.contains(&Root::Argument(k)))
@@ -2083,43 +2084,72 @@ fn written(
     }
 }
 
-/// What each function of `module` (by index) may write, itself or through the functions it calls: each global, each
-/// pointer argument (by its index) it may write through, and its own locals, which [`written`] leaves out at a call.
-/// naga's validator puts a callee before its callers in the arena, so one pass in order sees each callee's set
-/// complete.
-fn callee_writes(module: &Module) -> Vec<Vec<Root>> {
-    let mut writes: Vec<Vec<Root>> = Vec::new();
-    for (_, f) in module.functions.iter() {
-        let mut statements = Vec::new();
-        flatten(&f.body, &mut statements);
-        let mut own = Vec::new();
-        for &(statement, _) in &statements {
-            own.extend(written(module, &writes, &f.expressions, statement));
-        }
-        writes.push(own);
-    }
-    writes
+/// What a call to a function does, as its caller sees it: whether it may return (rather than discard on every path,
+/// or never leave a loop), and what it may write on some path from its start that returns: each global, each pointer
+/// argument (by its index) it may write through, and its own locals, which [`written`] leaves out at a call. A store
+/// that no path from the start reaches, or from which every path discards, is not in `writes`: no read after the call
+/// sees it.
+struct Summary {
+    returns: bool,
+    writes: Vec<Root>,
 }
 
-/// A function's control-flow graph, one node (a step) per statement in source order: the step at which each
-/// expression is evaluated, each store with its step and the variable it writes ([`written`]), and the steps control
-/// may pass to from each step.
+/// Each function of `module`'s [`Summary`] (by index), from its own control-flow graph ([`Timeline`]), each call in
+/// which is its callee's summary. naga's validator puts a callee before its callers in the arena, so one pass in
+/// order sees each callee's summary complete.
+fn summaries(module: &Module) -> Vec<Summary> {
+    let mut summaries: Vec<Summary> = Vec::new();
+    for (_, f) in module.functions.iter() {
+        let timeline = Timeline::new(module, &summaries, &f.expressions, &f.body);
+        let started = timeline.reachable(timeline.start);
+        let writes = timeline
+            .stores
+            .iter()
+            .filter(|&&(s, _)| {
+                started.contains(&s) && timeline.reachable(s).contains(&timeline.exit)
+            })
+            .map(|&(_, r)| r)
+            .collect();
+        summaries.push(Summary {
+            returns: started.contains(&timeline.exit),
+            writes,
+        });
+    }
+    summaries
+}
+
+/// A function's control-flow graph, one node (a step) per statement in source order and a last step, `exit`, that
+/// a return passes to: the step at which each expression is evaluated, each store with its step and the variable it
+/// writes ([`written`]), the steps control may pass to from each step, and the step control starts at.
 struct Timeline {
     at: HashMap<Handle<Expression>, usize>,
     stores: Vec<(usize, Root)>,
     next: Vec<Vec<usize>>,
+    start: usize,
+    exit: usize,
 }
 
 impl Timeline {
-    fn new(module: &Module, writes: &[Vec<Root>], arena: &Arena<Expression>, body: &Block) -> Self {
+    fn new(
+        module: &Module,
+        summaries: &[Summary],
+        arena: &Arena<Expression>,
+        body: &Block,
+    ) -> Self {
         let mut timeline = Timeline {
             at: HashMap::new(),
             stores: Vec::new(),
             next: Vec::new(),
+            start: 0,
+            exit: 0,
         };
         let mut steps = HashMap::new();
-        timeline.number(module, writes, arena, body, &mut steps);
-        timeline.link(&steps, body, &[], &[], &[]);
+        timeline.number(module, summaries, arena, body, &mut steps);
+        timeline.exit = timeline.next.len();
+        timeline.next.push(Vec::new());
+        let exit = [timeline.exit];
+        timeline.link(summaries, &steps, body, &exit, &[], &[]);
+        timeline.start = Self::entry(&steps, body, &exit)[0];
         timeline
     }
 
@@ -2128,7 +2158,7 @@ impl Timeline {
     fn number(
         &mut self,
         module: &Module,
-        writes: &[Vec<Root>],
+        summaries: &[Summary],
         arena: &Arena<Expression>,
         block: &Block,
         steps: &mut HashMap<*const Statement, usize>,
@@ -2142,22 +2172,22 @@ impl Timeline {
                     self.at.insert(h, step);
                 }
             }
-            for r in written(module, writes, arena, statement) {
+            for r in written(module, summaries, arena, statement) {
                 self.stores.push((step, r));
             }
             match *statement {
-                Statement::Block(ref b) => self.number(module, writes, arena, b, steps),
+                Statement::Block(ref b) => self.number(module, summaries, arena, b, steps),
                 Statement::If {
                     ref accept,
                     ref reject,
                     ..
                 } => {
-                    self.number(module, writes, arena, accept, steps);
-                    self.number(module, writes, arena, reject, steps);
+                    self.number(module, summaries, arena, accept, steps);
+                    self.number(module, summaries, arena, reject, steps);
                 }
                 Statement::Switch { ref cases, .. } => {
                     for case in cases {
-                        self.number(module, writes, arena, &case.body, steps);
+                        self.number(module, summaries, arena, &case.body, steps);
                     }
                 }
                 Statement::Loop {
@@ -2165,8 +2195,8 @@ impl Timeline {
                     ref continuing,
                     ..
                 } => {
-                    self.number(module, writes, arena, body, steps);
-                    self.number(module, writes, arena, continuing, steps);
+                    self.number(module, summaries, arena, body, steps);
+                    self.number(module, summaries, arena, continuing, steps);
                 }
                 _ => {}
             }
@@ -2187,11 +2217,13 @@ impl Timeline {
 
     /// Records where control may pass from each of `block`'s statements, and from those they hold: control leaves
     /// `block`'s end for `after`, a `break` for `out`, a `continue` for `again` (naga's IR, `Statement::Loop`,
-    /// `Statement::Break`, `Statement::Continue`). A `return` and a `discard` ("Aborts the current shader execution",
-    /// `Statement::Kill`) pass nowhere; a switch case falls through to the next case's entry or leaves the switch; a
-    /// loop's body passes to its continuing, and its continuing back to the loop's head and, with a `break if`, out.
+    /// `Statement::Break`, `Statement::Continue`). A `return` passes to `exit`; a `discard` ("Aborts the current
+    /// shader execution", `Statement::Kill`) passes nowhere, nor does a call whose callee never returns
+    /// ([`Summary`]); a switch case falls through to the next case's entry or leaves the switch; a loop's body passes
+    /// to its continuing, and its continuing back to the loop's head and, with a `break if`, out.
     fn link(
         &mut self,
+        summaries: &[Summary],
         steps: &HashMap<*const Statement, usize>,
         block: &Block,
         after: &[usize],
@@ -2206,7 +2238,7 @@ impl Timeline {
                 .map_or_else(|| after.to_vec(), |&s| vec![steps[&(s as *const _)]]);
             let to = match *statement {
                 Statement::Block(ref b) => {
-                    self.link(steps, b, &next, out, again);
+                    self.link(summaries, steps, b, &next, out, again);
                     Self::entry(steps, b, &next)
                 }
                 Statement::If {
@@ -2214,8 +2246,8 @@ impl Timeline {
                     ref reject,
                     ..
                 } => {
-                    self.link(steps, accept, &next, out, again);
-                    self.link(steps, reject, &next, out, again);
+                    self.link(summaries, steps, accept, &next, out, again);
+                    self.link(summaries, steps, reject, &next, out, again);
                     let mut to = Self::entry(steps, accept, &next);
                     to.extend(Self::entry(steps, reject, &next));
                     to
@@ -2230,7 +2262,7 @@ impl Timeline {
                         } else {
                             next.clone()
                         };
-                        self.link(steps, &case.body, &end, &next, again);
+                        self.link(summaries, steps, &case.body, &end, &next, again);
                         following = Self::entry(steps, &case.body, &end);
                         to.extend(following.iter().copied());
                     }
@@ -2246,12 +2278,16 @@ impl Timeline {
                         back.extend(next.iter().copied());
                     }
                     // naga's validator keeps `break` and `continue` that target this loop out of its continuing.
-                    self.link(steps, continuing, &back, &next, &back);
+                    self.link(summaries, steps, continuing, &back, &next, &back);
                     let continuing = Self::entry(steps, continuing, &back);
-                    self.link(steps, body, &continuing, &next, &continuing);
+                    self.link(summaries, steps, body, &continuing, &next, &continuing);
                     Self::entry(steps, body, &continuing)
                 }
-                Statement::Return { .. } | Statement::Kill => Vec::new(),
+                Statement::Return { .. } => vec![self.exit],
+                Statement::Call { function, .. } if !summaries[function.index()].returns => {
+                    Vec::new()
+                }
+                Statement::Kill => Vec::new(),
                 Statement::Break => out.to_vec(),
                 Statement::Continue => again.to_vec(),
                 _ => next,
@@ -2284,6 +2320,20 @@ impl Timeline {
     /// again, which would read it afresh after the store.
     fn separates(&self, x: usize, y: usize, s: usize, c: usize) -> bool {
         self.reaches(x, s, x) && self.reaches(s, y, x) && self.reaches(y, c, x)
+    }
+
+    /// The steps control may reach from step `from`, itself included.
+    fn reachable(&self, from: usize) -> HashSet<usize> {
+        let mut seen = HashSet::from([from]);
+        let mut stack = vec![from];
+        while let Some(step) = stack.pop() {
+            for &n in &self.next[step] {
+                if seen.insert(n) {
+                    stack.push(n);
+                }
+            }
+        }
+        seen
     }
 
     /// Whether control may pass from step `from` to step `to` (at once, if they are one step) without entering step

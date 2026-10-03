@@ -445,7 +445,11 @@ negative_control!(
 /// The module each case's body is put in: abstract and typed constants, private variables, a workgroup variable,
 /// `isinf`, a function that writes through its pointer and one that passes its pointer on, functions that write a
 /// global themselves or through a call, functions that only read through their pointer, one that writes through only
-/// its second pointer, and one that writes a global through a call given a pointer to it.
+/// its second pointer, and one that writes a global through a call given a pointer to it. Then functions whose own
+/// control flow decides what a caller sees: `die` discards, itself or (`die_on`, `die_on2`) through calls, and
+/// `die_if` on one path only; `set_then_die` stores then discards, `set_on_kill_path` stores only on a path that
+/// discards, `set_after_return` and `set_after_die` store where no path from their start reaches; and their near
+/// misses, which store on a path that returns.
 const PREAMBLE: &str = "enable f16;
 const M_ABSTRACT = 65504.0;
 const M_ABSTRACT_NEAR = 65503.0;
@@ -467,6 +471,23 @@ fn peek_on(p: ptr<function, f32>) -> f32 { return peek(p); }
 fn set_second(a: ptr<function, f32>, b: ptr<function, f32>) { *b = *a; }
 fn set_p(p: ptr<private, f32>) { *p = 1.0; }
 fn set_g_via_ptr() { set_p(&g); }
+fn die() { discard; }
+fn die_on() { die(); }
+fn die_on2() { die_on(); }
+fn die_if(c: bool) { if c { discard; } }
+fn set_then_die(p: ptr<function, f32>) { *p = 1.0; discard; }
+fn set_then_die_on(p: ptr<function, f32>) { set_then_die(p); }
+fn set_then_die_if(p: ptr<function, f32>, c: bool) { *p = 1.0; die_if(c); }
+fn set_on_kill_path(p: ptr<function, f32>, c: bool) { if c { *p = 1.0; discard; } }
+fn set_or_die(p: ptr<function, f32>, c: bool) { if c { *p = 1.0; } else { discard; } }
+fn set_after_return(p: ptr<function, f32>) { return; *p = 1.0; }
+fn set_after_return_on(p: ptr<function, f32>) { set_after_return(p); }
+fn set_unless(p: ptr<function, f32>, c: bool) { if c { return; } *p = 1.0; }
+fn set_unless_on(p: ptr<function, f32>, c: bool) { set_unless(p, c); }
+fn set_after_die(p: ptr<function, f32>) { die_on(); *p = 1.0; }
+fn set_after_die_if(p: ptr<function, f32>, c: bool) { die_if(c); *p = 1.0; }
+fn set_g_then_die() { g = 1.0; die(); }
+fn set_g_or_die(c: bool) { if c { discard; } g = 1.0; }
 ";
 
 /// `body` as the body of `f`, over floats `x`, `y`, ints `i`, `j`, a vector `p`, a bool `c`, an f16 `h`, an f64 `w`
@@ -765,6 +786,66 @@ negative_control!(
     "a callee that only reads through the pointer stores nothing",
     expected = "a near miss",
     check_bodies(&SELF_READS_ACROSS_A_READING_CALL, Rule::SelfCompare, false)
+);
+
+/// Reads of one place where the callee's own control flow keeps every store off the paths between them: a call that
+/// discards on every path, itself or through a chain of calls, ends the path of the store before it; a callee's store
+/// that only a discarding path follows, or that no path from its start reaches (behind a `return`, or behind a call
+/// that never returns), is not seen after the call.
+const SELF_READS_PAST_A_CALLEE_EXIT: [&str; 8] = [
+    "var v = x; let old = v; if c { v = 1.0; die_on2(); } return old != v;",
+    "var v = x; let old = v; if c { set_then_die(&v); } return old != v;",
+    "var v = x; let old = v; if c { set_then_die_on(&v); } return old != v;",
+    "var v = x; let old = v; set_after_return_on(&v); return old != v;",
+    "var v = x; let old = v; set_on_kill_path(&v, c); return old != v;",
+    "var v = x; let old = v; if c { set_after_die(&v); } return old != v;",
+    "let old = g; if c { set_g_then_die(); } return old != g;",
+    "let old = *q; set_on_kill_path(q, c); return old != *q;",
+];
+
+/// Each a near miss of a `SELF_READS_PAST_A_CALLEE_EXIT` case: the callee discards on one path only, so the store
+/// before it, or its own, reaches the second read on the other.
+const SELF_READS_CALLEE_RETURNS_AFTER_A_STORE: [&str; 8] = [
+    "var v = x; let old = v; if c { v = 1.0; die_if(c); } return old != v;",
+    "var v = x; let old = v; if c { set_or_die(&v, c); } return old != v;",
+    "var v = x; let old = v; if c { set_then_die_if(&v, c); } return old != v;",
+    "var v = x; let old = v; set_unless_on(&v, c); return old != v;",
+    "var v = x; let old = v; set_or_die(&v, c); return old != v;",
+    "var v = x; let old = v; if c { set_after_die_if(&v, c); } return old != v;",
+    "let old = g; if c { set_g_or_die(c); } return old != g;",
+    "let old = *q; set_or_die(q, c); return old != *q;",
+];
+
+#[test]
+fn lint_wgsl_self_compare_store_a_callee_exits_before_the_read_fires() {
+    check_bodies(&SELF_READS_PAST_A_CALLEE_EXIT, Rule::SelfCompare, true);
+}
+
+negative_control!(
+    lint_wgsl_self_compare_store_a_callee_exits_before_the_read_fires,
+    "a store whose path returns from the callee to the second read is between the reads",
+    expected = "did not fire",
+    check_bodies(
+        &SELF_READS_CALLEE_RETURNS_AFTER_A_STORE,
+        Rule::SelfCompare,
+        true
+    )
+);
+
+#[test]
+fn lint_wgsl_self_compare_store_a_callee_returns_after_does_not_fire() {
+    check_bodies(
+        &SELF_READS_CALLEE_RETURNS_AFTER_A_STORE,
+        Rule::SelfCompare,
+        false,
+    );
+}
+
+negative_control!(
+    lint_wgsl_self_compare_store_a_callee_returns_after_does_not_fire,
+    "a store the callee discards after, on every path, or never reaches, is not between the reads",
+    expected = "a near miss",
+    check_bodies(&SELF_READS_PAST_A_CALLEE_EXIT, Rule::SelfCompare, false)
 );
 
 /// Constant expressions that evaluate to a finite-max stand-in, beyond the literal spellings of the fixtures.
