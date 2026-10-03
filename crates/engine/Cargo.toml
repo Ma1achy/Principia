@@ -15,6 +15,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
 # The shortest round-trip digits of an f64, for JCS's number format (RFC 8785 §3.2.2.3 names Ryu; REQ-TOOL-145).
 ryu = "1"
+# The compute-pipeline entry point (R-297, TASK-M0-44): wgpu, at validation's version and backends; naga, wgpu's own
+# translator at its version, for the MSL it compiles with fast-math off and loads through wgpu's passthrough on Metal;
+# pollster to read wgpu's error scope.
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+naga = { version = "30", features = ["wgsl-in", "msl-out"] }
+pollster = "1"
 
 # The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
 # so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).

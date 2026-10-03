@@ -552,11 +552,14 @@ dependencies = [
  "jsonschema",
  "kernel",
  "ledger",
+ "naga",
+ "pollster",
  "render",
  "ryu",
  "serde",
  "serde_json",
  "validation",
+ "wgpu",
 ]
 
 [[package]]

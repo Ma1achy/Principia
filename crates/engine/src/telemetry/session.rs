@@ -11,9 +11,11 @@ use std::process::Command;
 
 use serde_json::{Map, Value};
 
+use crate::compute::compiled_modes;
+use crate::contract::fast_math::{FastMath, FastMathRecord};
 use crate::contract::profile::{Api, Backend, Build, Device, Memory, Precision, SessionHeader};
 
-/// The GPU adapter a run opened, as the harness that opened it reports it: plain data, so the engine links no GPU API.
+/// The GPU adapter a run opened, as the harness that opened it reports it: plain data, so this module opens nothing.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Adapter {
     /// The adapter's model name.
@@ -165,11 +167,26 @@ pub fn git_commit(dir: &Path) -> String {
 /// memory is recorded as its own variant, the machine's RAM, never as VRAM (telemetry §2). The f64 rate is recorded as
 /// unavailable, `null`: no backend the harness opens reports one (telemetry §2). A headless run has no display.
 /// Fails when an adapter is given and the machine's RAM is not reported, rather than write a size it doesn't know.
+/// The compute fast-math setting recorded is the default, off, the one every run asks for until the sim key carries it
+/// (TASK-M4-08); [`header_with_fast_math`] records another.
 pub fn header(
     adapter: Option<&Adapter>,
     host: &Host,
     build: Build,
     config: Map<String, Value>,
+) -> Result<SessionHeader, String> {
+    header_with_fast_math(adapter, host, build, config, FastMath::default())
+}
+
+/// [`header`], recording `fast_math` as the compute setting asked for, and each shader stage's mode as compiled under
+/// it on the adapter's API ([`compiled_modes`], what the compute entry point and wgpu's own path compile); with no
+/// adapter, no stage was compiled, and `compiled` is null (R-297, R-308; telemetry §5).
+pub fn header_with_fast_math(
+    adapter: Option<&Adapter>,
+    host: &Host,
+    build: Build,
+    config: Map<String, Value>,
+    fast_math: FastMath,
 ) -> Result<SessionHeader, String> {
     let ram = || {
         host.ram_bytes
@@ -201,6 +218,10 @@ pub fn header(
             f64: a.f64,
             f64_rate: None,
         }),
+        fast_math: FastMathRecord {
+            setting: fast_math,
+            compiled: adapter.and_then(|a| compiled_modes(a.api, fast_math)),
+        },
         build,
         display: None,
         config,

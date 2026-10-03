@@ -17,9 +17,10 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::contract::profile::{
-    read, write, Absent, Allocation, Api, Backend, Build, Device, Display, Event, FrameRecord,
-    GpuPass, LiveKind, LiveMemory, Memory, Pool, PoolLive, Precision, SchemaId, Scope, Session,
-    SessionHeader, Stage, StageMs, StageSections, Stages, Trace, SCHEMA_V1,
+    read, write, Absent, Allocation, Api, Backend, Build, CompiledModes, Device, Display, Event,
+    FastMath, FastMathRecord, FrameRecord, GpuPass, LiveKind, LiveMemory, Memory, Pool, PoolLive,
+    Precision, SchemaId, Scope, Session, SessionHeader, Stage, StageMode, StageMs, StageSections,
+    Stages, Trace, SCHEMA_V1,
 };
 
 /// The five stages' keys, in telemetry §2's order.
@@ -108,6 +109,14 @@ fn header(display: Option<Display>) -> SessionHeader {
             f64: false,
             f64_rate: None,
         }),
+        fast_math: FastMathRecord {
+            setting: FastMath::Off,
+            compiled: Some(CompiledModes {
+                compute: StageMode::Off,
+                vertex: StageMode::On,
+                fragment: StageMode::On,
+            }),
+        },
         build: Build {
             commit: "f8a7f8c".to_owned(),
             profile: "release".to_owned(),
