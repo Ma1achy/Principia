@@ -285,6 +285,27 @@ negative_control!(
     check_no_per_member(&two_indices())
 );
 
+/// The clean fixture with a function that reads the state at its sample index and indexes an array of its own, not a
+/// buffer, at a second argument.
+fn other_array_at_another_index() -> String {
+    format!(
+        "{}\nfn pick(i: u32, j: u32) -> u32 {{ let t = array<u32, 2>(1u, 2u); return simstate_buffer[i].packed_a + t[j]; }}\n",
+        read(&fixture("clean.wgsl"))
+    )
+}
+
+#[test]
+fn lint_wgsl_another_array_at_another_index_passes() {
+    check_no_per_member(&other_array_at_another_index());
+}
+
+negative_control!(
+    lint_wgsl_another_array_at_another_index_passes,
+    "the word buffer, not an array of its own, read at the second argument must fire",
+    expected = "per-member fired",
+    check_no_per_member(&other_array_at_another_index().replace("t[j]", "word_buffer[j].w"))
+);
+
 /// The read-side `SimState` (lowering Part 3a), appended to the clean fixture under the name `name`: it holds the
 /// word it read, `sample.word`, and is never stored.
 fn with_read_side(name: &str) -> String {
