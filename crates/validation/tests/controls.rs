@@ -122,3 +122,10 @@ negative_control!(
         ..config(1)
     })
 );
+
+negative_control!(
+    prop_seed_case_count_is_marked_confirmed,
+    "the case count marked provisional again, as before the M0 gate",
+    expected = "the case count is not marked confirmed (R-376)",
+    check_cases_confirmed(true)
+);

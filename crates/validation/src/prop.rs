@@ -15,7 +15,12 @@ pub const CASES_PROVISIONAL: bool = false;
 
 /// [`CASES`] with its status, as the tests print it.
 pub fn cases_status() -> String {
-    let status = if CASES_PROVISIONAL {
+    status_text(CASES_PROVISIONAL)
+}
+
+/// [`cases_status`]'s text for [`CASES`] marked provisional or not.
+fn status_text(provisional: bool) -> String {
+    let status = if provisional {
         "provisional until confirmed at the M0 gate"
     } else {
         "confirmed"
@@ -138,6 +143,17 @@ pub mod checks {
         );
     }
 
+    /// `prop_seed_case_count_is_marked_confirmed`'s check: [`CASES`] marked `provisional` or not is confirmed, and
+    /// its status says "confirmed" and nowhere "provisional" (R-376).
+    pub fn check_cases_confirmed(provisional: bool) {
+        let status = status_text(provisional);
+        println!("{status}");
+        assert!(
+            !provisional && status.contains("confirmed") && !status.contains("provisional"),
+            "the case count is not marked confirmed (R-376): {status}"
+        );
+    }
+
     /// `prop_seed_runs_the_confirmed_case_count`'s check: a property that always holds runs [`CASES`] cases under
     /// `config`.
     pub fn check_runs_cases(config: Config) {
@@ -190,12 +206,12 @@ mod tests {
 
     #[test]
     fn prop_seed_runs_the_confirmed_case_count() {
-        let status = cases_status();
-        println!("{status}");
-        assert!(
-            status.contains("confirmed"),
-            "CASES was confirmed at the M0 gate (R-376): {status}"
-        );
+        println!("{}", cases_status());
         check_runs_cases(config(seed()));
+    }
+
+    #[test]
+    fn prop_seed_case_count_is_marked_confirmed() {
+        check_cases_confirmed(CASES_PROVISIONAL);
     }
 }
