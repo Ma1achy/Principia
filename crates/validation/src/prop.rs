@@ -5,12 +5,13 @@ use proptest::strategy::Strategy;
 use proptest::test_runner::{Config, RngSeed, TestCaseError, TestError, TestRunner};
 use std::fmt;
 
-/// Cases per property: the calibration value of REQ-VAL-151 (R-203, R-71). 256 is the proposed value, proptest's own
-/// default; it is provisional until the human confirms or changes it at the M0 gate, and is marked so (R-182).
+/// Cases per property: the calibration value of REQ-VAL-151 (R-203, R-71). 256, proptest's own default, confirmed by
+/// the human at the M0 gate (R-376).
 pub const CASES: u32 = 256;
 
-/// True while [`CASES`] is the proposed, unconfirmed value (R-182, R-203). Set false when the M0 gate confirms it.
-pub const CASES_PROVISIONAL: bool = true;
+/// True while [`CASES`] is the proposed, unconfirmed value (R-182, R-203); false since the M0 gate confirmed it
+/// (R-376).
+pub const CASES_PROVISIONAL: bool = false;
 
 /// [`CASES`] with its status, as the tests print it.
 pub fn cases_status() -> String {
@@ -19,7 +20,7 @@ pub fn cases_status() -> String {
     } else {
         "confirmed"
     };
-    format!("prop::CASES = {CASES} ({status}; REQ-VAL-151, R-203)")
+    format!("prop::CASES = {CASES} ({status}; REQ-VAL-151, R-203, R-376)")
 }
 
 /// The config every property test uses: [`CASES`] cases, the given seed, no persistence file (the seed replaces it).
@@ -137,7 +138,7 @@ pub mod checks {
         );
     }
 
-    /// `prop_seed_runs_the_provisional_case_count`'s check: a property that always holds runs [`CASES`] cases under
+    /// `prop_seed_runs_the_confirmed_case_count`'s check: a property that always holds runs [`CASES`] cases under
     /// `config`.
     pub fn check_runs_cases(config: Config) {
         let runs = Cell::new(0u32);
@@ -188,12 +189,12 @@ mod tests {
     }
 
     #[test]
-    fn prop_seed_runs_the_provisional_case_count() {
+    fn prop_seed_runs_the_confirmed_case_count() {
         let status = cases_status();
         println!("{status}");
         assert!(
-            status.contains("provisional"),
-            "CASES is provisional until the M0 gate (R-182, R-203): {status}"
+            status.contains("confirmed"),
+            "CASES was confirmed at the M0 gate (R-376): {status}"
         );
         check_runs_cases(config(seed()));
     }

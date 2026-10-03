@@ -114,7 +114,7 @@ negative_control!(
 );
 
 negative_control!(
-    prop_seed_runs_the_provisional_case_count,
+    prop_seed_runs_the_confirmed_case_count,
     "a config of half the cases required to run CASES",
     expected = "the shared config ran a different case count",
     check_runs_cases(Config {

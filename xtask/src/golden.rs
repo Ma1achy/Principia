@@ -79,8 +79,8 @@ pub struct Tolerance {
 pub const TOLERANCES: &[Tolerance] = &[Tolerance {
     id: "REQ-VAL-138",
     max_step: 0,
-    status: "proposed by TASK-M0-06, for every native backend against one reference, per backend where a case keeps \
-             one reference per backend (R-269, R-287, R-296); confirmed by the human at the M0 gate (R-71)",
+    status: "confirmed by the human at the M0 gate (R-376), for every native backend against one reference, per \
+             backend where a case keeps one reference per backend (R-269, R-287, R-296)",
 }];
 
 /// The backends a case may keep a reference for, by the name `PRIN_GPU_BACKEND` gives them.

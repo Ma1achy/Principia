@@ -64,7 +64,7 @@ jobs:
   # the workflow artifact `nextest-ci`. NEXTEST_PROFILE names the `ci` profile the shards run under
   # (`.config/nextest.toml`).
   ci-archive:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -103,10 +103,10 @@ jobs:
   # each test in the shard its name hashes to, a stable assignment, so together they run every test the unsharded run
   # did, once. Each runs its slice from `ci-archive`'s archive (R-372, REQ-SYS-078): no step of its own builds the
   # workspace or compiles a test binary, but shard 1's doctests. Tests that run cargo themselves still build what they
-  # run. With no workspace build here, the shards need no runner-disk step: ubuntu-latest leaves about 86 GB free.
+  # run. With no workspace build here, the shards need no runner-disk step: ubuntu-24.04 leaves about 86 GB free.
   ci:
     needs: ci-archive
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -180,7 +180,7 @@ jobs:
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   ci-workspace:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -216,11 +216,11 @@ jobs:
 
   # Formatting, lints, the build and the crate-graph check, once, beside the test shards (R-195, REQ-SYS-004).
   ci-checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
-      # pool left this job with 11–24 MB free on ubuntu-latest. Remove the preinstalled toolsets it does not use (.NET,
+      # pool left this job with 11–24 MB free on ubuntu-24.04. Remove the preinstalled toolsets it does not use (.NET,
       # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
       - name: Free runner disk
         run: |
@@ -254,7 +254,7 @@ jobs:
     name: ci
     needs: [ci, ci-checks, ci-workspace]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
         env:
@@ -267,7 +267,7 @@ jobs:
   # `target/spirv/kernel.spv` or `kernel.wgsl`: validation's `toolchain_trivial_kernel` dispatches the WGSL on lavapipe
   # (R-169), xtask's `build_kernel` tests check the SPIR-V and its translation.
   gpu-kernel:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -325,7 +325,7 @@ jobs:
   # (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
   # output (R-325 moves it out of `ci`, not out of this job).
   xtask-ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     strategy:
@@ -387,7 +387,7 @@ jobs:
     name: xtask-ci
     needs: [xtask-ci]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
         env:
@@ -472,7 +472,7 @@ jobs:
 
   # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
   gpu-lavapipe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
