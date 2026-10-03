@@ -49,27 +49,48 @@ milestone gets its own file after its gate. Ids never change.
     way, on all 8 shards, as the evaluator grew. Runs 37081962758 (6d93115) and 37102126099 (fc5489f) were not: each
     ran on a qa commit whose tests fail until the fix that follows, so every shard's baseline failed ("cargo test
     failed in an unmutated tree, so no mutants were tested") after 14–22 min.
-  - #124's head has since moved to fd669b3, which adds to the diff: `cargo mutants --list --in-diff` over
-    `git diff origin/main...fd669b3` gives 718 mutants (714 at 1ad796a), 89 or 90 per shard. Its run, 37104626084,
-    started 06:55Z and is still running.
-  - Every other PR so far has fit inside n = 8 × 120 min; no other PR's shard has run past 66 min.
-  - No local run covers CI's 714 or 718. #124's body records only local `cargo mutants --in-diff` runs over one
+  - In those runs the per-mutant timeout cargo-mutants set from each shard's baseline was 1600–1938 s (shard 0, job
+    111114569255: "Auto-set test timeout to 1600s" after an "88s build + 799s test" baseline; shard 7, job
+    111114569194: "1938s" after "74s build + 968s test"). A hung mutant runs to that timeout, 27–32 min, in place of
+    about 2 min, so each hang adds about 30 min to its shard.
+  - #124's head has since moved to fd669b3 and then e2eb25b, each adding to the diff. `cargo mutants --list --in-diff`
+    (which lists without building) over `git diff origin/main...<head>` gives 714 mutants at 1ad796a, 718 at fd669b3
+    and **725 at e2eb25b**, 90 or 91 per shard (`--shard k/8 --sharding round-robin`). At the slowest shard's 138 s per
+    mutant and 17.4-min baseline, the largest shard now needs about 227 min (about 224 at 1ad796a). Run 37104626084
+    (fd669b3) started 06:55Z and was still running at 08:32Z; run 37107242606 (81c0171, a qa commit) failed every
+    shard's baseline, as above, after 15–19 min; no `mutants` run on e2eb25b had started by 08:32Z.
+  - Every other PR so far has fit inside n = 8 × 120 min. Over all `mutants.yml` runs, the longest *finished* `cargo
+    mutants` step outside #124 is 52.0 min (#107, TASK-M0-13: run 36878731915, job 110424763538), and the longest
+    successful run outside #124 has a longest step of 48.8 min (#120, TASK-M0-19: run 37085778406). Two of #124's own
+    runs succeeded, with longer steps, while its diff was smaller: 76.8 min (run 37068037787, job 111040611611) and
+    54.0 min (run 37060054995, job 111014220103). The jobs on #120 that ran 63–66
+    min (job 110954728563 in run 37042181185, 63.0 min; 110975680519 in 37048479624, 66.0 min; 110988078207 in
+    37052200411, 64.0 min) did not finish their `cargo mutants` step: GitHub annotates each "The hosted runner lost
+    communication with the server". A fourth #120 job, 111026322293 (run 37063744524), failed after 24 min with "No
+    space left on device".
+  - No local run covers CI's 714, 718 or 725. #124's body records only local `cargo mutants --in-diff` runs over one
     round's increment, restricted to the lint's test targets: before review, one on 0b4f9cf that left 25 survivors,
     each then covered by a test; `<git diff df6fd7c 1ad796a>`, 40 mutants (33 caught, 7 unviable, 0 missed); and
     `<git diff fc5489f fd669b3>`, 48 mutants (42 caught, 6 unviable, 0 missed).
 - **Options seen:**
-  1. **Raise the per-shard limit, e.g. to 240 min (recommended):** a GitHub-hosted job allows up to 360. Only a PR with
-     a large diff waits longer; n, and so the runners per Rust PR, stay as they are. It is the change with the fewest
-     side effects. #124's shards (about 188–224 min each) would fit, with about 16 min of headroom on the slowest.
-  2. Raise n, e.g. to 16. Every Rust PR then uses more runners, and each shard rebuilds and re-runs the 15–17-min
-     baseline.
-  3. Keep n and the limit, and split #124 so that each part's diff fits. The evaluator is one file, and with roughly
+  1. **Keep n = 8 and raise the per-shard limit to 300 min (recommended):** #124's largest shard (about 227 min) then
+     fits with two hung mutants (about 257 min with one, 287 with two). With the 7 min or so of setup each shard spends
+     before the step (Mesa 5.0 min and build-kernel 1.2 min in job 110975680519), plus the check and the upload, the
+     job stays under GitHub's 360-min maximum for a hosted job. Only a PR with a large diff waits longer; n, and so the
+     runners per Rust PR, stay as they are, and it is the change with the fewest side effects. Every other PR so far
+     ends in ≤ 52 min, so for them the limit is only a backstop.
+  2. Keep n = 8 and raise the limit to 240 min. #124's largest shard fits with no hang, with about 13 min of headroom;
+     one hung mutant (about 257 min) takes it past 240, and the run is cut off again.
+  3. Raise n, e.g. to 16. Every Rust PR then uses more runners, and each shard rebuilds and re-runs the 15–17-min
+     baseline. At 120 min it still doesn't fit: 725 mutants give 45 or 46 per shard, 46 × 138 s + 17.4 min ≈ 123 min.
+  4. Keep n and the limit, and split #124 so that each part's diff fits. The evaluator is one file, and with roughly
      half the mutants each part would still sit near the limit.
-  4. A one-off for #124: a full local `cargo mutants --in-diff` over #124's whole diff, which does not exist yet, run on
+  5. A one-off for #124: a full local `cargo mutants --in-diff` over #124's whole diff, which does not exist yet, run on
      the Mac, which has no 120-min limit, and the human accepts it as #124's evidence; n and the limit stay. At CI's
-     ~2.1 min per mutant, run one at a time, the 718 mutants would take about 25 hours; the Mac may be faster.
-- **Needed:** the human's choice. n and the per-shard limit are calibration values (R-71; R-369 item 3), the human's to
-  confirm, and R-305 fixes them until the M0 gate: "Provisional values stand: n = 8 shards, 120 min per shard,
+     ~2.1 min per mutant, run one at a time, the 725 mutants would take about 25 hours; the Mac may be faster.
+- **Needed:** the human's choice. Option 1 (n = 8, 300 min) is recommended; option 2 (240 min) stays open, with the
+  risk it states. n and the per-shard limit are calibration values (R-71; R-369 item 3), the human's to confirm, and
+  R-305 fixes them until the M0 gate: "Provisional values stand: n = 8 shards, 120 min per shard,
   confirmed or replaced at the M0 gate." So the orchestrator can't change them, or waive the run for #124, without a
   ruling. REQ-VAL-149 is batched with the M0 gate's calibrations, but this one blocks a merge now. Only #124's merge
   waits on it; nothing else does.
