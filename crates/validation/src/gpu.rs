@@ -516,8 +516,14 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
                 .map(|(i, _)| i)
                 .collect()
         };
+        let halfway_got = halfway.run();
+        assert_eq!(
+            halfway_got.len(),
+            xs.len(),
+            "the probe read back the wrong length"
+        );
         let halfway_differ: Vec<u32> = differ(
-            &halfway.run(),
+            &halfway_got,
             &mut xs.iter().map(|&x| reference(x as f32 + 0.5, 255.0)),
         )
         .into_iter()
@@ -525,6 +531,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         .collect();
         let (a, b) = fuzzed_divisions();
         let got = h.run_wgsl_with(DIVIDE_WGSL, "divide", &[&a, &b], setting);
+        assert_eq!(got.len(), a.len(), "the probe read back the wrong length");
         let fuzzed_differ = differ(
             &got,
             &mut a
@@ -546,26 +553,30 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     /// `reference`, the CPU's correctly rounded f32 division, bit for bit.
     pub fn check_off_exact(h: &GpuHarness, reference: Divide) {
         let (_, halfway, fuzzed) = probe(h, FastMath::Off, reference);
-        assert!(
-            halfway.is_empty() && fuzzed.is_empty(),
-            "with compute fast-math off, {} of 256 (x + 0.5) / 255.0 (x = {halfway:?}) and {} of {FUZZED_DIVISIONS} \
-             fuzzed divisions differ from the CPU's correctly rounded f32 division",
-            halfway.len(),
-            fuzzed.len()
+        assert_eq!(
+            (halfway.len(), fuzzed.len()),
+            (0, 0),
+            "with compute fast-math off, some of 256 (x + 0.5) / 255.0 (x = {halfway:?}) and of {FUZZED_DIVISIONS} \
+             fuzzed divisions differ from the CPU's correctly rounded f32 division"
         );
     }
 
     /// `compute_fast_math_switch_acts`'s check: under `setting`, the compute stage is compiled `expect`, and the probe
-    /// shows it: some division differs from the CPU's correctly rounded one when compiled on, none when compiled off.
+    /// shows it: some `(x + 0.5) / 255.0` differs from the CPU's correctly rounded division when compiled on (R-296's
+    /// Result), none when compiled off.
     pub fn check_switch(h: &GpuHarness, setting: FastMath, expect: StageMode) {
-        let (mode, halfway, fuzzed) = probe(h, setting, divide);
-        let differs = !halfway.is_empty() || !fuzzed.is_empty();
-        assert!(
-            mode == expect && differs == (expect == StageMode::On),
-            "the divisions do not show the compute stage compiled {expect:?} under setting {setting:?}: compiled \
-             {mode:?}, {} of 256 and {} of {FUZZED_DIVISIONS} differ",
-            halfway.len(),
-            fuzzed.len()
+        let (mode, halfway, _) = probe(h, setting, divide);
+        let shown = |what: &str| {
+            format!(
+                "the divisions do not show the compute stage compiled {expect:?} under setting {setting:?}: {what}"
+            )
+        };
+        assert_eq!(mode, expect, "{}", shown("its mode"));
+        assert_eq!(
+            !halfway.is_empty(),
+            expect == StageMode::On,
+            "{}",
+            shown(&format!("{} of 256 differ", halfway.len()))
         );
     }
 
@@ -575,34 +586,34 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         let api = h.session_adapter().map(|a| a.api).unwrap_or(Api::None);
         let off = compute::compiled_modes(api, FastMath::Off).map(|m| m.compute);
         let mode = h.prepare(IDENTITY_WGSL, "identity", &[&[0]]).mode();
-        assert!(
-            setting == FastMath::Off && Some(mode) == off,
-            "the compute fast-math setting does not default to off: {setting:?}, compiled {mode:?}"
-        );
+        let wrong = "the compute fast-math setting does not default to off";
+        assert_eq!(setting, FastMath::Off, "{wrong}");
+        assert_eq!(Some(mode), off, "{wrong}: compiled {mode:?}");
     }
 
     /// `compute_fast_math_fuzzed_set`'s check: `a` and `b` are the probe's fuzzed divisions, fixed by their seed (an
-    /// FNV-1a fingerprint of every word), each operand of either sign with an exponent within 2^±60, and every quotient
-    /// a normal f32.
+    /// FNV-1a fingerprint of every word), and their exponents span exactly 2^-60 to 2^60, so every quotient is a normal
+    /// f32 (its exponent within ±121, inside f32's normal range).
     pub fn check_fuzzed(a: &[u32], b: &[u32]) {
+        let wrong = "the fuzzed divisions are not the fixed set";
+        assert_eq!(
+            (a.len(), b.len()),
+            (FUZZED_DIVISIONS, FUZZED_DIVISIONS),
+            "{wrong}"
+        );
+        let exponents: Vec<i32> = a
+            .iter()
+            .chain(b)
+            .map(|w| ((w >> 23) & 0xFF) as i32 - 127)
+            .collect();
+        let span = (exponents.iter().min(), exponents.iter().max());
+        assert_eq!(span, (Some(&-60), Some(&60)), "{wrong}: exponents {span:?}");
         let fingerprint = a.iter().chain(b).fold(0xCBF2_9CE4_8422_2325_u64, |h, w| {
             (h ^ u64::from(*w)).wrapping_mul(0x0000_0100_0000_01B3)
         });
-        let within = |w: &u32| (127 - 60..=127 + 60).contains(&((w >> 23) & 0xFF));
-        let signs = |ws: &[u32]| ws.iter().any(|w| w >> 31 == 1) && ws.iter().any(|w| w >> 31 == 0);
-        let normal = a
-            .iter()
-            .zip(b)
-            .all(|(&a, &b)| (f32::from_bits(a) / f32::from_bits(b)).is_normal());
-        assert!(
-            a.len() == FUZZED_DIVISIONS
-                && b.len() == FUZZED_DIVISIONS
-                && a.iter().chain(b).all(within)
-                && signs(a)
-                && signs(b)
-                && normal
-                && fingerprint == FUZZED_FINGERPRINT,
-            "the fuzzed divisions are not the fixed set of normal quotients (fingerprint {fingerprint:#018x})"
+        assert_eq!(
+            fingerprint, FUZZED_FINGERPRINT,
+            "{wrong}: fingerprint {fingerprint:#018x}"
         );
     }
 

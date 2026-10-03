@@ -5,9 +5,10 @@
 
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 use validation::negative_control;
-use xtask::lint_compute::{check, scan, Finding, ENTRY_POINT};
+use xtask::lint_compute::{check, run, scan, Finding, ENTRY_POINT};
 
 #[path = "../../crates/validation/tests/support/scratch.rs"]
 mod scratch;
@@ -160,4 +161,99 @@ negative_control!(
     check_scan(&format!(
         "{QUIET}// x.create_compute_pipeline(d);\n// let v: wgpu::VertexState;\n"
     ))
+);
+
+/// `run` fails on a tree with a violation, counting it, and passes on a clean one.
+fn check_run(violating: &Path, clean: &Path) {
+    let err = run(&violating.join("Cargo.toml")).expect_err("the lint passes a violation");
+    assert!(
+        err.starts_with("1 compute pipeline or passthrough use(s) outside the entry point"),
+        "{err}"
+    );
+    assert_eq!(
+        run(&clean.join("Cargo.toml")),
+        Ok(()),
+        "the lint does not pass a clean tree"
+    );
+}
+
+#[test]
+fn lint_compute_pipelines_run_fails_on_a_violation() {
+    let violating = tree(
+        "lint_compute_run",
+        &[(
+            "crates/gui/src/lib.rs",
+            "fn f(d: &wgpu::Device) { d.create_compute_pipeline(x); }\n",
+        )],
+    );
+    let clean = tree(
+        "lint_compute_run_clean",
+        &[("crates/gui/src/lib.rs", QUIET)],
+    );
+    check_run(&violating, &clean);
+}
+
+negative_control!(
+    lint_compute_pipelines_run_fails_on_a_violation,
+    "a violating tree taken as the clean one",
+    expected = "the lint does not pass a clean tree",
+    {
+        let violating = tree(
+            "lint_compute_run_control",
+            &[(
+                "crates/gui/src/lib.rs",
+                "fn f(d: &wgpu::Device) { d.create_compute_pipeline(x); }\n",
+            )],
+        );
+        check_run(&violating, &violating);
+    }
+);
+
+// The `ci` registry's `lint compute-pipelines` runner runs the lint on this workspace.
+
+const CHILD: &str = "XTASK_LINT_COMPUTE_CI_CHILD";
+const RAN: &str = "xtask lint compute-pipelines: every compute pipeline is created through";
+
+fn check_ran(stdout: &str) {
+    assert!(
+        stdout.contains(RAN),
+        "the ci runner `lint compute-pipelines` did not run the lint; its output: {stdout}"
+    );
+}
+
+/// Run as a child (with `CHILD` set), calls the registry's `lint compute-pipelines` runner; otherwise runs itself as
+/// that child, output uncaptured, and checks the lint's report is in its output.
+#[test]
+fn lint_compute_pipelines_ci_runner_runs_the_lint() {
+    if std::env::var_os(CHILD).is_some() {
+        let runner = xtask::ci::RUNNERS
+            .iter()
+            .find(|r| r.name == "lint compute-pipelines")
+            .expect("the registry has `lint compute-pipelines`");
+        (runner.run)().expect("the lint passes on this workspace");
+        return;
+    }
+    let out = Command::new(std::env::current_exe().expect("the test binary"))
+        .args([
+            "--exact",
+            "lint_compute_pipelines_ci_runner_runs_the_lint",
+            "--nocapture",
+            "--test-threads=1",
+        ])
+        .env(CHILD, "1")
+        .output()
+        .expect("the test binary runs");
+    assert!(
+        out.status.success(),
+        "the child failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    check_ran(&String::from_utf8_lossy(&out.stdout));
+}
+
+negative_control!(
+    lint_compute_pipelines_ci_runner_runs_the_lint,
+    "output with no lint report is not the lint having run",
+    expected = "did not run the lint",
+    check_ran("xtask ci: [7/9] lint compute-pipelines ok\n")
 );

@@ -127,6 +127,11 @@ fn check_paths(path_of: PathOf) {
         let err =
             path_of(backend, FastMath::Off).expect_err("a backend with no known path is accepted");
         assert!(err.0.contains("R-297"), "{err}");
+        assert_eq!(
+            err.to_string(),
+            err.0,
+            "the error does not display its message"
+        );
     }
     assert_eq!(
         required_features(wgpu::Backend::Metal),
@@ -251,6 +256,8 @@ fn check_msl(translate: Translate) {
     );
     assert_eq!(name, "lengths");
     for arg in [
+        "// language: metal3.2",
+        "metal::min(",
         "a [[buffer(0)]]",
         "b [[buffer(1)]]",
         "out [[buffer(2)]]",
@@ -259,7 +266,8 @@ fn check_msl(translate: Translate) {
     ] {
         assert!(
             msl.contains(arg),
-            "the MSL does not bind `{arg}` where wgpu's layout puts it:\n{msl}"
+            "the MSL does not hold `{arg}`: MSL 3.2, bounds restricted, and each buffer where wgpu's layout puts \
+             it:\n{msl}"
         );
     }
     let (fixed, _) = translate(FIXED, "fixed").expect("FIXED is not translated");
@@ -273,6 +281,11 @@ fn check_msl(translate: Translate) {
     );
     let err = translate(SHARED, "staged").expect_err("workgroup memory is passed through");
     assert!(err.0.contains("workgroup memory"), "{err}");
+    let (module, info, mut iface) = interface(LENGTHS, "lengths").expect("LENGTHS is refused");
+    iface.bindings.pop();
+    let err = msl_source(&module, &info, "lengths", &iface, Some(3))
+        .expect_err("a buffer with no index is translated");
+    assert!(err.0.contains("MSL translation of `lengths`"), "{err}");
 }
 
 #[test]
@@ -286,6 +299,42 @@ validation::negative_control!(
     expected = "the MSL does not begin with the fast-math-off prelude",
     check_msl(|wgsl, entry| {
         translate(wgsl, entry).map(|(msl, name)| (msl.replacen(FAST_MATH_OFF_PRELUDE, "", 1), name))
+    })
+);
+
+/// The passthrough's module descriptor under test, or a control's broken one.
+type Describe = for<'a> fn(&'a str, String, &'a str, [u32; 3]) -> PassthroughDescriptor<'a>;
+
+/// The descriptor holds the label, the MSL and nothing else to compile, and the one entry point with its workgroup
+/// size.
+fn check_descriptor(describe: Describe) {
+    let wrong = "the passthrough descriptor is not the MSL's";
+    let d = describe("probe", "kernel void k() {}".to_owned(), "k", [8, 2, 1]);
+    assert_eq!(d.label, Some("probe"), "{wrong}");
+    assert_eq!(d.msl.as_deref(), Some("kernel void k() {}"), "{wrong}");
+    assert!(
+        d.spirv.is_none() && d.metallib.is_none() && d.wgsl.is_none(),
+        "{wrong}"
+    );
+    let entries: Vec<_> = d
+        .entry_points
+        .iter()
+        .map(|e| (e.name.as_ref(), e.workgroup_size))
+        .collect();
+    assert_eq!(entries, [("k", (8, 2, 1))], "{wrong}");
+}
+
+#[test]
+fn compute_entry_passthrough_descriptor() {
+    check_descriptor(passthrough_descriptor);
+}
+
+validation::negative_control!(
+    compute_entry_passthrough_descriptor,
+    "a descriptor whose workgroup size is reversed",
+    expected = "the passthrough descriptor is not the MSL's",
+    check_descriptor(|label, msl, name, [x, y, z]| {
+        passthrough_descriptor(label, msl, name, [z, y, x])
     })
 );
 

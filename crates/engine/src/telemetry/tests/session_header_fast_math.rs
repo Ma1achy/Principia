@@ -139,16 +139,20 @@ validation::negative_control!(
     )
 );
 
-/// A one-line trace, its header line Metal's default header with `edit` applied to its `fast_math`.
-fn trace_with(edit: impl FnOnce(&mut Map<String, Value>)) -> String {
-    let h: SessionHeader = header(
+/// Metal's default header.
+fn metal_header() -> SessionHeader {
+    header(
         Some(&adapter(Api::Metal)),
         &host(),
         build("abc123", "release", ""),
         Map::new(),
     )
-    .expect("the header is not written");
-    let mut line = json!({"schema": SCHEMA_ID, "header": h});
+    .expect("the header is not written")
+}
+
+/// A one-line trace, its header line Metal's default header with `edit` applied to its `fast_math`.
+fn trace_with(edit: impl FnOnce(&mut Map<String, Value>)) -> String {
+    let mut line = json!({"schema": SCHEMA_ID, "header": metal_header()});
     edit(
         line["header"]["fast_math"]
             .as_object_mut()
@@ -157,10 +161,16 @@ fn trace_with(edit: impl FnOnce(&mut Map<String, Value>)) -> String {
     format!("{line}\n")
 }
 
-/// The header parses as written, and fails to parse with its setting, `compiled` or any stage removed, or a mode that
+/// The header parses as written, reading back its fast_math, and fails to parse with its setting, `compiled` or any stage removed, or a mode that
 /// isn't one; `removals` are the keys removed, each in turn.
 fn check_missing_fails(removals: &[&str]) {
-    read(trace_with(|_| {}).as_bytes()).expect("the header as written does not parse");
+    let as_read =
+        read(trace_with(|_| {}).as_bytes()).expect("the header as written does not parse");
+    assert_eq!(
+        as_read.header.fast_math,
+        metal_header().fast_math,
+        "the header's fast_math does not read back as written"
+    );
     for &key in removals {
         let text = trace_with(|fm| match key {
             "setting" | "compiled" => {

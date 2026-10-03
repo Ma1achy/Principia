@@ -309,10 +309,8 @@ fn msl_source(
         },
         ..Default::default()
     };
-    let pipeline_options = msl::PipelineOptions {
-        entry_point: Some((naga::ShaderStage::Compute, entry.to_owned())),
-        ..Default::default()
-    };
+    // The module holds this entry point alone ([`interface`] reduced it), so every entry point is this one.
+    let pipeline_options = msl::PipelineOptions::default();
     let (source, translated) = msl::write_string(module, info, &options, &pipeline_options)
         .map_err(|e| error(format!("MSL translation of `{entry}`: {e}")))?;
     let name = translated
@@ -429,21 +427,10 @@ pub fn pipeline(
     let (shader_module, entry_point) = match passthrough {
         None => (validated, entry.to_owned()),
         Some((msl, name)) => {
-            let [x, y, z] = iface.workgroup_size;
-            let entry_points = [wgpu::PassthroughShaderEntryPoint {
-                name: name.as_str().into(),
-                workgroup_size: (x, y, z),
-            }];
+            let descriptor = passthrough_descriptor(label, msl, &name, iface.workgroup_size);
             // SAFETY: the MSL is naga's translation of the module wgpu validates above, its buffers at the indices
             // wgpu's layout gives them and their sizes bound beside them; nothing else is passed through.
-            let module = unsafe {
-                device.create_shader_module_passthrough(wgpu::ShaderModuleDescriptorPassthrough {
-                    label: Some(label),
-                    entry_points: entry_points.as_slice().into(),
-                    msl: Some(msl.into()),
-                    ..Default::default()
-                })
-            };
+            let module = unsafe { device.create_shader_module_passthrough(descriptor) };
             (module, name)
         }
     };
@@ -465,6 +452,30 @@ pub fn pipeline(
         sizes,
         mode,
     })
+}
+
+/// wgpu's passthrough module descriptor, named here alone (`cargo xtask lint compute-pipelines`).
+type PassthroughDescriptor<'a> = wgpu::ShaderModuleDescriptorPassthrough<'a>;
+
+/// The passthrough module of `msl`, labelled `label`, its one entry point `name` with its workgroup size: MSL alone,
+/// for Metal.
+fn passthrough_descriptor<'a>(
+    label: &'a str,
+    msl: String,
+    name: &'a str,
+    workgroup_size: [u32; 3],
+) -> PassthroughDescriptor<'a> {
+    let [x, y, z] = workgroup_size;
+    PassthroughDescriptor {
+        label: Some(label),
+        entry_points: vec![wgpu::PassthroughShaderEntryPoint {
+            name: name.into(),
+            workgroup_size: (x, y, z),
+        }]
+        .into(),
+        msl: Some(msl.into()),
+        ..Default::default()
+    }
 }
 
 fn buffer_entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
