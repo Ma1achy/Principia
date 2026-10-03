@@ -11,13 +11,19 @@
 //! tier-gated state, is not a read-side member: the read side keeps the cheap derived result, never resurrected state
 //! (lowering Part 3a).
 //!
-//! A stored variant unpacks into it through `sim_state_from_ftle` or `sim_state_from_base`. A tier-absent derived
-//! scalar reads the canonical quiet NaN, `CANONICAL_QNAN_BITS` ([`crate::payload::canonical_qnan_bits`]): `ftle`
-//! from `SimStateBase`, and `ensemble_spread` when `has_ensemble` is false (E = 0, R-145). An unbound word buffer
-//! reads `FGW_UNBOUND` ([`unbound_word`]). Both values are lowering Part 3a's definition (R-72; REQ-RENDER-077). An
-//! invalid read writes the same NaN: `ftle` whenever `ftle_valid` is false (R-254), `diffusion` for `n < 2` (R-245).
-//! The NaN is always written from its bits, never computed, and no validity logic tests a value for NaN: validity is
-//! `ftle_valid`, `diffusion_slope_valid` and the state predicates (lowering Part 3a; R-255).
+//! In Rust a stored variant unpacks into it through `sim_state_from_ftle` or `sim_state_from_base`, each taking the
+//! stored struct by reference, so each member is read on its own. In WGSL the fragment reads sample `i` through
+//! `sample_read(i, …)` ([`wgsl_for`]), which loads only the stored members the fields it fills need, one at a time
+//! (`simstate_buffer[i].packed_a`), never the whole stored struct, and of the word only the components they need
+//! (R-378). The assembler generates it at its tier ([`Tier`]) for the fields its stain reads ([`assemble`]), so a stain
+//! that reads one field loads only that field's words, on every backend; the checked-in read side is the full tier's,
+//! every field filled. A tier-absent derived scalar reads the canonical quiet NaN, `CANONICAL_QNAN_BITS`
+//! ([`crate::payload::canonical_qnan_bits`]): `ftle` from `SimStateBase`, and `ensemble_spread` when `has_ensemble`
+//! is false (E = 0, R-145). An unbound word buffer reads `FGW_UNBOUND` ([`unbound_word`]). Both values are lowering
+//! Part 3a's definition (R-72; REQ-RENDER-077). An invalid read writes the same NaN: `ftle` whenever `ftle_valid` is
+//! false (R-254), `diffusion` for `n < 2` (R-245). The NaN is always written from its bits, never computed, and no
+//! validity logic tests a value for NaN: validity is `ftle_valid`, `diffusion_slope_valid` and the state predicates
+//! (lowering Part 3a; R-255).
 //!
 //! The derived accessors carry payload §6's names where it gives one (`ftle_valid`, `diffusion_slope_valid`,
 //! `total_substeps_log2`, `tm_t_end_fraction`, `tm_t_dmin_fraction`, the `sd_is_*` predicates; the last five are the
@@ -208,14 +214,6 @@ fn rust_derived(name: &str, shadow: bool) -> String {
             "if has_ensemble {\n    ensemble_spread\n} else {\n    canonical_nan()\n}".into()
         }
         predicate => format!("sd_{predicate}(s.packed_a)"),
-    }
-}
-
-/// A derived member's expression in WGSL, as [`rust_derived`]'s.
-fn wgsl_derived(name: &str, shadow: bool) -> String {
-    match name {
-        "ensemble_spread" => "select(canonical_nan(), ensemble_spread, has_ensemble)".into(),
-        other => rust_derived(other, shadow),
     }
 }
 
@@ -441,11 +439,305 @@ pub fn retrograde(theta: f32) -> bool {
 }
 "#;
 
+/// A tier as the read side sees it (lowering Part 3a; payload §1): whether the stored variant is `SimStateFTLE`, with
+/// the Benettin shadow, or `SimStateBase`, and whether the word buffer is bound. The assembler bakes the same two as
+/// its `has_ftle` and `has_word` consts; the checked-in layer and read side are the full tier, [`Tier::FULL`] (R-343).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Tier {
+    pub has_ftle: bool,
+    pub has_word: bool,
+}
+
+impl Tier {
+    /// The full tier, the one the checked-in files declare (R-343).
+    pub const FULL: Tier = Tier {
+        has_ftle: true,
+        has_word: true,
+    };
+
+    /// Every tier.
+    pub const ALL: [Tier; 4] = [
+        Tier::FULL,
+        Tier {
+            has_ftle: true,
+            has_word: false,
+        },
+        Tier {
+            has_ftle: false,
+            has_word: true,
+        },
+        Tier {
+            has_ftle: false,
+            has_word: false,
+        },
+    ];
+}
+
+/// The word's components, in order, as a field request names them: `word.x` … `word.w` (R-378).
+pub const WORD_COMPONENTS: [&str; 4] = ["x", "y", "z", "w"];
+
+/// Every field [`wgsl_for`] can fill: each read-side member by its name, then each of the word's components,
+/// `word.x` … `word.w`, for a stain that reads only part of the word (R-378).
+pub fn fields(words: &[Word], entries: &[Entry]) -> Vec<String> {
+    let mut out: Vec<String> = members(words, entries)
+        .into_iter()
+        .map(|m| m.name)
+        .collect();
+    out.extend(WORD_COMPONENTS.iter().map(|c| format!("word.{c}")));
+    out
+}
+
+/// What filling a field needs first (R-378): the stored members it loads, the word's components it loads, and the
+/// shared values derived from them, `n` (from `times`), `ftle_ok` (from `packed_a` and `n`) and `delta` (from the
+/// state and the shadow).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct Needs {
+    stored: Vec<String>,
+    word: [bool; 4],
+    n: bool,
+    ftle_ok: bool,
+    delta: bool,
+}
+
+impl Needs {
+    fn load(&mut self, member: &str) {
+        if !self.stored.iter().any(|m| m == member) {
+            self.stored.push(member.to_owned());
+        }
+    }
+
+    /// `n`, the sample's own completed-step count, `t_end_step`.
+    fn n(&mut self) {
+        self.n = true;
+        self.load("times");
+    }
+
+    /// `ftle_ok`, `ftle_valid` at the FTLE tier.
+    fn ftle_ok(&mut self) {
+        self.ftle_ok = true;
+        self.load("packed_a");
+        self.n();
+    }
+
+    /// `delta`, the shadow's separation.
+    fn delta(&mut self) {
+        self.delta = true;
+        for m in ["r", "p", "r_sh", "p_sh"] {
+            self.load(m);
+        }
+    }
+}
+
+/// A derived member's WGSL value at `tier`, read from the loaded members (`s_<member>`) and the shared values, and
+/// what it needs. A tier-absent `ftle` reads the canonical quiet NaN and is never valid, with nothing loaded.
+fn wgsl_derived(name: &str, tier: Tier, needs: &mut Needs) -> String {
+    match name {
+        "ftle" if tier.has_ftle => {
+            needs.load("S");
+            needs.ftle_ok();
+            needs.delta();
+            "ftle(s_S, delta, params.delta_0, n, params.dt_macro, ftle_ok)".into()
+        }
+        "ftle" => "canonical_nan()".into(),
+        "ftle_valid" if tier.has_ftle => {
+            needs.ftle_ok();
+            "ftle_ok".into()
+        }
+        "ftle_valid" => "false".into(),
+        "diffusion" => {
+            needs.load("C_ty");
+            needs.n();
+            "diffusion_slope(s_C_ty, n, params.dt_macro)".into()
+        }
+        "diffusion_slope_valid" => {
+            needs.n();
+            "diffusion_slope_valid(n)".into()
+        }
+        "total_substeps_log2" => {
+            needs.load("total_substeps");
+            "total_substeps_log2(s_total_substeps)".into()
+        }
+        "t_end_fraction" | "t_dmin_fraction" => {
+            needs.load("times");
+            format!("tm_{name}(s_times, params.horizon_steps)")
+        }
+        "orbit_count" | "retrograde" => {
+            needs.load("theta");
+            format!("{name}(s_theta)")
+        }
+        "ensemble_spread" => "select(canonical_nan(), ensemble_spread, has_ensemble)".into(),
+        predicate => {
+            needs.load("packed_a");
+            format!("sd_{predicate}(s_packed_a)")
+        }
+    }
+}
+
+/// One requested field: the read-side member, and the word's component when only that is asked for.
+type Request<'a> = (&'a ReadMember, Option<usize>);
+
+/// `fields` resolved against `members`, in member order then component order, each once, a component dropped when the
+/// whole word is asked for; or the first name that is no field ([`fields`]).
+fn requests<'a>(members: &'a [ReadMember], fields: &[&str]) -> Result<Vec<Request<'a>>, String> {
+    let mut out: Vec<(usize, Option<usize>)> = Vec::new();
+    for &f in fields {
+        let (name, component) = match f.split_once('.') {
+            Some((name, c)) => (
+                name,
+                Some(
+                    WORD_COMPONENTS
+                        .iter()
+                        .position(|w| *w == c)
+                        .ok_or_else(|| format!("`{f}` is no read-side field"))?,
+                ),
+            ),
+            None => (f, None),
+        };
+        let at = members
+            .iter()
+            .position(|m| m.name == name && (component.is_none() || m.fill == Fill::Word))
+            .ok_or_else(|| format!("`{f}` is no read-side field"))?;
+        out.push((at, component));
+    }
+    out.sort_unstable();
+    out.dedup();
+    let whole: Vec<usize> = out
+        .iter()
+        .filter(|(_, c)| c.is_none())
+        .map(|&(at, _)| at)
+        .collect();
+    out.retain(|&(at, c)| c.is_none() || !whole.contains(&at));
+    Ok(out.into_iter().map(|(at, c)| (&members[at], c)).collect())
+}
+
+/// `sample_read(i, …)` at `tier`, filling the `fields` a stain reads (R-378): it loads each stored member those fields
+/// need once, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the components they
+/// need, the whole `word_buffer[i]` only when all four are; then it fills those fields of a zeroed `SimState`. A field
+/// not asked for stays zero, so the stain must ask for every field it reads. An unbound word buffer (`has_word` false)
+/// reads `FGW_UNBOUND`, and E = 0 (`has_ensemble` false) reads `ensemble_spread` as the canonical quiet NaN (lowering
+/// Part 3a; R-145, R-254).
+fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<String, String> {
+    let requests = requests(members, fields)?;
+    let mut needs = Needs::default();
+    let mut fills = Vec::new();
+    for &(m, component) in &requests {
+        let target = component.map_or_else(
+            || m.name.clone(),
+            |c| format!("{}.{}", m.name, WORD_COMPONENTS[c]),
+        );
+        let value = match &m.fill {
+            Fill::Copy => {
+                needs.load(&m.name);
+                format!("s_{}", m.name)
+            }
+            Fill::Widen { pair } => {
+                needs.load(pair);
+                format!("{}(s_{pair})", m.name)
+            }
+            Fill::Packed { accessor, word } => {
+                needs.load(word);
+                format!("{accessor}(s_{word})")
+            }
+            Fill::Word => {
+                if tier.has_word {
+                    match component {
+                        Some(c) => needs.word[c] = true,
+                        None => needs.word = [true; 4],
+                    }
+                }
+                String::new()
+            }
+            Fill::Derived => wgsl_derived(&m.name, tier, &mut needs),
+        };
+        fills.push((target, component, m.fill == Fill::Word, value));
+    }
+    let whole_word = needs.word.iter().all(|&w| w);
+    let structs = crate::payload::structs();
+    let variant = variants(&structs)
+        .into_iter()
+        .find(|s| has_shadow(s) == tier.has_ftle)
+        .ok_or("no stored variant for the tier")?;
+    let order: Vec<String> = frag::members(variant).into_iter().map(|w| w.name).collect();
+    let mut stored = needs.stored.clone();
+    stored.sort_by_key(|m| order.iter().position(|o| o == m));
+    let names: Vec<String> = fills.iter().map(|(t, ..)| format!("`{t}`")).collect();
+    let named = if requests.len() == members.len() && requests.iter().all(|(_, c)| c.is_none()) {
+        "every field".to_owned()
+    } else if names.is_empty() {
+        "no field".to_owned()
+    } else {
+        format!("only {}", names.join(", "))
+    };
+    let mut out = format!(
+        "\n// Sample `i` read into the read-side `SimState` at this tier, {named} filled: each stored member a field\n\
+         // needs loaded alone, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the\n\
+         // components a field needs (R-378). A field not filled stays zero and is not read. An unbound word buffer\n\
+         // reads `FGW_UNBOUND`; E = 0 reads `ensemble_spread` as the canonical quiet NaN (lowering Part 3a; R-145).\n\
+         fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, params: ReadParams) -> SimState {{\n"
+    );
+    for m in &stored {
+        let _ = writeln!(out, "    let s_{m} = simstate_buffer[i].{m};");
+    }
+    if whole_word {
+        out.push_str("    let w = word_buffer[i];\n");
+    } else {
+        for (c, name) in WORD_COMPONENTS.iter().enumerate() {
+            if needs.word[c] {
+                let _ = writeln!(out, "    let w_{name} = word_buffer[i].{name};");
+            }
+        }
+    }
+    if needs.n {
+        out.push_str("    let n = tm_t_end_step(s_times);\n");
+    }
+    if needs.ftle_ok {
+        out.push_str(
+            "    let ftle_ok = ftle_valid(s_packed_a, true, n, completed_renorms(n, params.n_renorm));\n",
+        );
+    }
+    if needs.delta {
+        out.push_str("    let delta = benettin_delta(s_r, s_p, s_r_sh, s_p_sh);\n");
+    }
+    out.push_str("    var out: SimState;\n");
+    for (target, component, word, value) in fills {
+        let value = match (word, tier.has_word, component) {
+            (false, ..) => value,
+            (true, false, None) => "FGW_UNBOUND".to_owned(),
+            (true, false, Some(c)) => format!("FGW_UNBOUND.{}", WORD_COMPONENTS[c]),
+            (true, true, None) => "w".to_owned(),
+            (true, true, Some(c)) if whole_word => format!("w.{}", WORD_COMPONENTS[c]),
+            (true, true, Some(c)) => format!("w_{}", WORD_COMPONENTS[c]),
+        };
+        let _ = writeln!(out, "    out.{target} = {value};");
+    }
+    out.push_str("    return out;\n}\n");
+    Ok(out)
+}
+
 /// The WGSL read side, which follows the fragment unpack layer: the sentinels, `ReadParams`, the read-side `SimState`,
-/// the derived accessors and the two unpacks. `has_word` and `has_ensemble` are arguments, so the two files need no
-/// bake of their own; the assembler passes its `has_word` const and its `has_ensemble` uniform (lowering Part 3a;
-/// R-145).
+/// the derived accessors, and `sample_read` at the full tier filling every field ([`wgsl_for`]). The assembler
+/// regenerates it for its tier and for the fields its stain reads, so the stain loads only those fields' words
+/// (R-378); `has_ensemble` is an argument, the assembler's uniform (lowering Part 3a; R-145).
 pub fn wgsl(words: &[Word], entries: &[Entry]) -> Generated {
+    let all = fields(words, entries);
+    let members = members(words, entries);
+    let every: Vec<&str> = all.iter().take(members.len()).map(String::as_str).collect();
+    let contents = wgsl_for(words, entries, Tier::FULL, &every)
+        .unwrap_or_else(|why| format!("const_assert false; // {why}\n"));
+    Generated {
+        path: PathBuf::from(WGSL_PATH),
+        contents,
+    }
+}
+
+/// The WGSL read side at `tier`, its `sample_read` filling `fields` ([`fields`]'s names), or the first name that is no
+/// field (R-378).
+pub fn wgsl_for(
+    words: &[Word],
+    entries: &[Entry],
+    tier: Tier,
+    fields: &[&str],
+) -> Result<String, String> {
     let qnan = crate::payload::canonical_qnan_bits();
     let unbound = match unbound_word(entries) {
         Ok(w) => format!(
@@ -457,9 +749,9 @@ pub fn wgsl(words: &[Word], entries: &[Entry]) -> Generated {
     let members = members(words, entries);
     let mut out = format!(
         r"// Generated by `cargo xtask codegen` from the layout table (`crates/ledger/src/payload.rs`); do not edit.
-// The read side (lowering Part 3a; payload §5, §6): one `SimState`, fixed across tiers, each stored variant's unpack
-// into it, and the quantities derived at read, never stored (R-79). It follows the unpack layer,
-// `payload_unpack.wgsl`, whose accessors and stored layouts it reads.
+// The read side (lowering Part 3a; payload §5, §6): one `SimState`, fixed across tiers, `sample_read`, which fills it
+// from the stored buffers one member at a time (R-378), and the quantities derived at read, never stored (R-79). It
+// follows the unpack layer, `payload_unpack.wgsl`, whose accessors, stored layouts and bindings it reads.
 
 // The canonical quiet NaN's f32 bits: sign 0, exponent all ones, the quiet bit alone in the significand (lowering
 // Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
@@ -489,44 +781,23 @@ struct SimState {{
     }
     out.push_str("}\n");
     out.push_str(WGSL_HELPERS);
-    for variant in variants(&crate::payload::structs()) {
-        out.push_str(&wgsl_unpack(variant, &members));
-    }
-    Generated {
-        path: PathBuf::from(WGSL_PATH),
-        contents: out,
-    }
+    out.push_str(&sample_read(&members, tier, fields)?);
+    Ok(out)
 }
 
-/// The WGSL unpack of `s` into the read-side `SimState`.
-fn wgsl_unpack(s: &Struct, members: &[ReadMember]) -> String {
-    let shadow = has_shadow(s);
-    let mut out = format!(
-        "\n// `{}` read into the read-side `SimState`; an unbound word buffer reads `FGW_UNBOUND`, E = 0 reads\n\
-         // `ensemble_spread` as the canonical quiet NaN (lowering Part 3a; R-145, R-254).\n\
-         fn {}(s: {}, word: vec4<u32>, has_word: bool, ensemble_spread: f32, has_ensemble: bool, params: ReadParams) -> SimState {{\n    \
-         let n = tm_t_end_step(s.times);\n    \
-         let ftle_ok = ftle_valid(s.packed_a, {shadow}, n, completed_renorms(n, params.n_renorm));\n",
-        s.name,
-        unpack_name(s),
-        s.name,
-    );
-    if shadow {
-        out.push_str("    let delta = benettin_delta(s.r, s.p, s.r_sh, s.p_sh);\n");
-    }
-    out.push_str("    var out: SimState;\n");
-    for m in members {
-        let value = match &m.fill {
-            Fill::Copy => format!("s.{}", m.name),
-            Fill::Widen { pair } => format!("{}(s.{pair})", m.name),
-            Fill::Packed { accessor, word } => format!("{accessor}(s.{word})"),
-            Fill::Word => "select(FGW_UNBOUND, word, has_word)".into(),
-            Fill::Derived => wgsl_derived(&m.name, shadow),
-        };
-        let _ = writeln!(out, "    out.{} = {value};", m.name);
-    }
-    out.push_str("    return out;\n}\n");
-    out
+/// The fragment's generated WGSL at `tier`: the unpack layer with that tier's bindings ([`super::wgsl::layer`]), then
+/// the read side whose `sample_read` fills `fields` ([`wgsl_for`]); or the first name that is no field (R-378).
+pub fn assemble(
+    words: &[Word],
+    entries: &[Entry],
+    tier: Tier,
+    fields: &[&str],
+) -> Result<String, String> {
+    Ok(format!(
+        "{}{}",
+        frag::layer(words, entries, tier),
+        wgsl_for(words, entries, tier, fields)?
+    ))
 }
 
 /// The WGSL derived accessors, as [`RUST_HELPERS`]'s. `select` evaluates both arms; the invalid arm's arithmetic is

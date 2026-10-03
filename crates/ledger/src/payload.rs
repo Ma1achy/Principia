@@ -294,7 +294,8 @@ pub struct Binding {
     pub buffer: &'static str,
     /// The [`Struct::buffer`] whose elements it holds.
     pub holds: &'static str,
-    /// The one generated function that reads it, by the sample index (R-343).
+    /// The one generated function that reads it, by the sample index: the read side's `sample_read`, which loads one
+    /// stored member or word component at a time, never the whole stored struct (R-343, R-378).
     pub reader: &'static str,
     /// The prefix of its generated constants, `<prefix>_GROUP` and `<prefix>_BINDING`.
     pub constant: &'static str,
@@ -312,7 +313,7 @@ pub const fn bindings() -> [Binding; 2] {
         Binding {
             buffer: "simstate_buffer",
             holds: "SimState",
-            reader: "sample_state",
+            reader: "sample_read",
             constant: "SIMSTATE",
             group: 1,
             binding: 0,
@@ -320,7 +321,7 @@ pub const fn bindings() -> [Binding; 2] {
         Binding {
             buffer: "word_buffer",
             holds: "word",
-            reader: "sample_word",
+            reader: "sample_read",
             constant: "WORD",
             group: 1,
             binding: 1,
