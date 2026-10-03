@@ -418,7 +418,9 @@ pub fn fuzzed_divisions() -> (Vec<u32>, Vec<u32>) {
         let r = next();
         let sign = (r >> 63) as u32;
         let exponent = 127 - 60 + (r >> 32) as u32 % 121;
-        (sign << 31) | (exponent << 23) | (r as u32 & 0x7F_FFFF)
+        // The three fields occupy disjoint bits, so their sum is their bitwise or; a sum, unlike an or, changes the
+        // word under a `^` in its place, so the fingerprint check sees every operator here.
+        (sign << 31) + (exponent << 23) + (r as u32 & 0x7F_FFFF)
     };
     (0..FUZZED_DIVISIONS)
         .map(|_| (operand(), operand()))
