@@ -14,6 +14,12 @@ permissions:
 # this workflow restores (R-337), is the key computed here.
 env:
   CARGO_TERM_COLOR: always
+  # R-374: every CI job builds the dev and test profiles with line tables only. Panics and backtraces still name
+  # file and line; the build, link, artefacts and caches shrink (a full-debug mutants baseline filled the runner's
+  # disk). Every workflow sets the same values, so rust-cache, which hashes CARGO_* into its key, computes `ci.yml`'s
+  # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
   pr-check:

@@ -18,6 +18,12 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # R-374: every CI job builds the dev and test profiles with line tables only. Panics and backtraces still name
+  # file and line; the build, link, artefacts and caches shrink (a full-debug mutants baseline filled the runner's
+  # disk). Every workflow sets the same values, so rust-cache, which hashes CARGO_* into its key, computes `ci.yml`'s
+  # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
   # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
@@ -113,21 +119,16 @@ jobs:
       - name: Install Mesa (lavapipe)
         if: steps.diff.outputs.rust == 'true'
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      # Debug info (applied per R-369 — veto?): the build-kernel step and the run build with line tables only
-      # (`CARGO_PROFILE_DEV_DEBUG`, set on the two steps, not the job, as rust-cache keys on the job's `CARGO_*`
-      # variables). The baseline's full debug info filled the runner: `target/` reached 110G, 75G of it the test
-      # binaries, each linking wgpu, and 22G the alias test's own build, until a link in a test's child build died with
-      # SIGBUS (the linker writes its output through a memory map, which a full disk faults). With line tables only
-      # the baseline peaks at 46G of `target/` and passes, its panics and backtraces still naming file and line. Every
-      # cargo a test spawns inherits the variable, so the fixture and alias builds shrink alike. Test infrastructure
-      # only: no test, and neither of the run's caps, changes.
+      # Debug info: line tables only, set for the whole workflow (R-374). The baseline's full debug info filled the
+      # runner: `target/` reached 110G, 75G of it the test binaries, each linking wgpu, and 22G the alias test's own
+      # build, until a link in a test's child build died with SIGBUS (the linker writes its output through a memory
+      # map, which a full disk faults). With line tables only the baseline peaks at 46G of `target/` and passes. Every
+      # cargo a test spawns inherits the variables, so the fixture and alias builds shrink alike.
       # The kernel's SPIR-V and WGSL, which the baseline's and each mutant's `toolchain_trivial_kernel` and xtask's
       # `build_kernel` tests read (TASK-M0-14): `cargo xtask build-kernel`, written as the cargo call the alias expands
       # to (.cargo/config.toml), since it is setup for the tests, like the Mesa install, not one of the gate's checks.
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
-        env:
-          CARGO_PROFILE_DEV_DEBUG: line-tables-only
         run: cargo run --quiet --package xtask -- build-kernel
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
@@ -145,8 +146,6 @@ jobs:
         # REQ-VAL-149: 120 minutes per shard, provisional until the human confirms it at the M0 gate (R-71, R-182,
         # R-302).
         timeout-minutes: 120
-        env:
-          CARGO_PROFILE_DEV_DEBUG: line-tables-only
         run: |
           set +e
           start=$(date +%s)
