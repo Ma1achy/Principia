@@ -413,8 +413,66 @@ pub fn as_tripped(listed: &[String]) -> BTreeMap<String, Vec<bool>> {
     results
 }
 
+/// The k-th of n slices of the controls, `--partition k/n` (R-360): a control is in the slice its name's
+/// [`shard_of`] gives, so the n slices together hold every control exactly once.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Partition {
+    /// The slice, 1 to `n`.
+    pub k: u64,
+    /// How many slices.
+    pub n: u64,
+}
+
+impl Partition {
+    /// Every control: the one slice of one.
+    pub const ALL: Partition = Partition { k: 1, n: 1 };
+
+    /// `k/n`, with 1 ≤ k ≤ n.
+    pub fn parse(text: &str) -> Result<Partition, String> {
+        let parsed = text
+            .split_once('/')
+            .and_then(|(k, n)| Some((k.parse().ok()?, n.parse().ok()?)));
+        match parsed {
+            Some((k, n)) if (1..=n).contains(&k) => Ok(Partition { k, n }),
+            _ => Err(format!(
+                "--partition takes k/n, with 1 <= k <= n, not `{text}`"
+            )),
+        }
+    }
+
+    /// Whether the control named `control`, as libtest lists it, is in this slice.
+    pub fn holds(&self, control: &str) -> bool {
+        shard_of(control, self.n) == self.k
+    }
+}
+
+impl fmt::Display for Partition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.k, self.n)
+    }
+}
+
+/// The slice, 1 to `n`, of the control named `control`: 64-bit FNV-1a over the name's bytes, mod `n`, plus one. A
+/// fixed function of the name, the same on every run, machine and Rust version (R-360); never by crate.
+pub fn shard_of(control: &str, n: u64) -> u64 {
+    let hash = control
+        .bytes()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    hash % n + 1
+}
+
 /// Runs the check in `mode` on every member of the workspace of `manifest`; `Err` if any test fails it.
 pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
+    run_partition(manifest, mode, Partition::ALL)
+}
+
+/// [`run`] on the controls in `partition` (R-360). Every shard lists every test, and runs, or in `--list` lists, only
+/// its own slice's controls. Each finding is reported by one shard: a control's run by the shard that ran it, and what
+/// the listing shows (a test with no control, a shared name, a doctest) by shard 1, which also runs `cargo xtask ci`'s
+/// other runners.
+pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Result<(), String> {
     let output = Command::new(cargo())
         .args([
             "metadata",
@@ -451,29 +509,72 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
         };
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
         let mut outputs = BTreeMap::new();
+        // This shard's controls, once each, and every other shard's, which that shard runs and judges.
+        let (mine, others): (BTreeSet<&String>, BTreeSet<&String>) = listed
+            .iter()
+            .filter(|t| control_of(t).is_some())
+            .partition(|t| partition.holds(t));
+        if partition != Partition::ALL {
+            println!(
+                "xtask controls: {name}: shard {partition}: {} of {} control(s)",
+                mine.len(),
+                mine.len() + others.len()
+            );
+        }
+        let elsewhere: Vec<String> = listed
+            .iter()
+            .filter(|t| others.contains(t))
+            .cloned()
+            .collect();
         let mut found = match mode {
             Mode::Run => {
-                // Runs the tests whose names contain `negative_control`: every control, and none when there are none.
-                let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let found = findings(&listed, &parse_results(&stdout))
-                    .map_err(|e| format!("{name}: {e}"))?;
+                let mut results = as_tripped(&elsewhere);
+                let stdout = if partition == Partition::ALL {
+                    // Runs the tests whose names contain `negative_control`: every control, and none when there are
+                    // none.
+                    let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
+                    String::from_utf8_lossy(&output.stdout).into_owned()
+                } else if mine.is_empty() {
+                    String::new()
+                } else {
+                    // This shard's controls by exact name; with no name libtest would run every test.
+                    let mut harness = vec!["--exact"];
+                    harness.extend(mine.iter().map(|c| c.as_str()));
+                    let output = cargo_test(manifest, name, "--tests", &harness)?;
+                    String::from_utf8_lossy(&output.stdout).into_owned()
+                };
+                results.extend(parse_results(&stdout));
+                let found = findings(&listed, &results).map_err(|e| format!("{name}: {e}"))?;
                 outputs = parse_outputs(&stdout);
                 name_wrong_panics(found, &parse_wrong_panics(&stdout))
             }
             Mode::List => {
                 for (test, control) in pairs(&listed) {
-                    println!("xtask controls: {name}: test `{test}`: control `{control}`");
+                    if partition.holds(control) {
+                        println!("xtask controls: {name}: test `{test}`: control `{control}`");
+                    }
                 }
                 findings(&listed, &as_tripped(&listed)).map_err(|e| format!("{name}: {e}"))?
             }
         };
         found.extend(doctests.into_iter().map(Finding::Doctest));
+        if partition.k != 1 {
+            found.retain(|f| matches!(f, Finding::ControlPasses(_) | Finding::WrongPanic { .. }));
+        }
         for finding in &found {
             eprintln!("xtask controls: {name}: {}", describe(finding, &outputs));
         }
         if found.is_empty() {
             match mode {
+                Mode::Run if partition != Partition::ALL => println!(
+                    "xtask controls: {name}: shard {partition}'s {} control(s) each failed its test{}",
+                    mine.len(),
+                    if partition.k == 1 {
+                        format!("; {tests} test(s), each with a control")
+                    } else {
+                        String::new()
+                    }
+                ),
                 Mode::Run => {
                     println!("xtask controls: {name}: {tests} test(s), each failed by its control")
                 }
@@ -569,6 +670,65 @@ mod tests {
             assert!(!message.contains("leaves it passing"), "{message}");
         }
     }
+
+    /// R-360: the slice is a fixed function of the name, so it cannot move between runs, machines or Rust versions:
+    /// FNV-1a's published 64-bit values, and the slices `k/n` they give.
+    fn check_shard_is_fnv1a(shard: fn(&str, u64) -> u64) {
+        // FNV-1a 64 of "" is 0xcbf29ce484222325, of "a" 0xaf63dc4c8601ec8c, of "foobar" 0x85944171f73967e8.
+        for (name, hash) in [
+            ("", 0xcbf2_9ce4_8422_2325_u64),
+            ("a", 0xaf63_dc4c_8601_ec8c),
+            ("foobar", 0x8594_4171_f739_67e8),
+        ] {
+            for n in [1, 2, 3, 4, 7] {
+                assert_eq!(
+                    shard(name, n),
+                    hash % n + 1,
+                    "the slice of `{name}` of {n} is not FNV-1a's"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn controls_partition_is_fnv1a_of_the_name() {
+        check_shard_is_fnv1a(shard_of);
+    }
+
+    validation::negative_control!(
+        controls_partition_is_fnv1a_of_the_name,
+        "a slice by the name's length, not its hash",
+        expected = "is not FNV-1a's",
+        check_shard_is_fnv1a(|name, n| name.len() as u64 % n + 1)
+    );
+
+    /// `--partition`'s argument: `k/n` with 1 ≤ k ≤ n, and nothing else.
+    fn check_partition_parse(parse: fn(&str) -> Result<Partition, String>) {
+        assert_eq!(parse("2/4"), Ok(Partition { k: 2, n: 4 }));
+        for bad in ["0/4", "5/4", "1/0", "4", "a/4", "1/4/2", ""] {
+            assert!(parse(bad).is_err(), "--partition accepted `{bad}`");
+        }
+    }
+
+    #[test]
+    fn controls_partition_parses_k_of_n() {
+        check_partition_parse(Partition::parse);
+    }
+
+    validation::negative_control!(
+        controls_partition_parses_k_of_n,
+        "a parse that takes any two numbers, a slice 0 among them",
+        expected = "--partition accepted `0/4`",
+        check_partition_parse(|text| {
+            let (k, n) = text.split_once('/').ok_or("no slash")?;
+            let k = k.parse().map_err(|_| "k")?;
+            let n = n.parse().map_err(|_| "n")?;
+            if n == 0 {
+                return Err("n".to_owned());
+            }
+            Ok(Partition { k, n })
+        })
+    );
 
     #[test]
     fn controls_finding_keeps_the_control_output() {

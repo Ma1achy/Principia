@@ -525,12 +525,14 @@ fn qa_m0_29_ci_workflow_check_accepts_the_per_push_steps() {
          jobs:\n  ci:\n    steps:\n\
          \x20     - name: Build\n\
          \x20       run: cargo build --workspace\n\
+         \x20     - name: Archive\n\
+         \x20       run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst\n\
          \x20     - name: Test\n\
-         \x20       run: cargo nextest run --workspace\n\
+         \x20       run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4\n\
          \x20     - name: Deps\n\
          \x20       run: cargo xtask deps\n\
          \x20     - name: Ci\n\
-         \x20       run: cargo xtask ci\n",
+         \x20       run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
     );
 }
 
@@ -543,11 +545,13 @@ negative_control!(
          jobs:\n  ci:\n    steps:\n\
          \x20     - name: Build\n\
          \x20       run: cargo build --workspace\n\
+         \x20     - name: Archive\n\
+         \x20       run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst\n\
          \x20     - name: Test\n\
-         \x20       run: cargo nextest run --workspace\n\
+         \x20       run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4\n\
          \x20     - name: Deps\n\
          \x20       # run: cargo xtask deps\n\
          \x20     - name: Ci\n\
-         \x20       run: cargo xtask ci\n",
+         \x20       run: cargo xtask ci --partition ${{ matrix.shard }}/4\n",
     )
 );

@@ -50,27 +50,97 @@ fn job_runs(workflow: &str) -> Vec<(String, Vec<String>)> {
     jobs
 }
 
-/// The words of `command` after `prefix`, without the capture flags, sorted; `None` if it does not start so.
+/// The words of `command` after `prefix`, without the capture flags and without nextest's `--partition <shard>`, sorted;
+/// `None` if it does not start so. A shard (R-336, R-366) selects which of the step's tests run, not its packages,
+/// features or filter: the doctest step beside a sharded nextest step covers the same packages, unsharded.
 fn args_after(command: &str, prefix: &str) -> Option<Vec<String>> {
-    let rest = command.strip_prefix(prefix)?;
-    let mut words: Vec<String> = rest
-        .split_whitespace()
-        .filter(|w| !matches!(*w, "--no-capture" | "--nocapture" | "--"))
-        .map(str::to_owned)
-        .collect();
+    let mut words = words_after(command, prefix)?;
     words.sort();
     Some(words)
 }
 
-/// In `workflow`: the workspace suite runs through `cargo nextest run --workspace`; every `cargo test` step is a
-/// doctest step; and each `cargo nextest run <args>` step has, in its own job, `cargo test <args> --doc`.
+/// `args_after`'s words in the command's own order, so each option stays beside its value.
+fn words_after(command: &str, prefix: &str) -> Option<Vec<String>> {
+    let rest = command.strip_prefix(prefix)?;
+    // `${{ matrix.shard }}` is one word of the command, not three.
+    let rest = rest.replace("${{ matrix.shard }}", "${{matrix.shard}}");
+    let mut words: Vec<String> = Vec::new();
+    let mut partition = false;
+    for w in rest.split_whitespace() {
+        if std::mem::take(&mut partition) {
+            continue;
+        }
+        if w == "--partition" {
+            partition = true;
+        } else if !matches!(w, "--no-capture" | "--nocapture" | "--") {
+            words.push(w.to_owned());
+        }
+    }
+    Some(words)
+}
+
+/// The options of `cargo nextest run` that run a reused build (an archive), not choose its tests, each with its value;
+/// and the reuse flags, which take none (R-372).
+const REUSE_OPTIONS: &[&str] = &[
+    "--archive-file",
+    "--archive-format",
+    "--extract-to",
+    "--cargo-metadata",
+    "--workspace-remap",
+    "--binaries-metadata",
+    "--target-dir-remap",
+    "--build-dir-remap",
+];
+const REUSE_FLAGS: &[&str] = &["--extract-overwrite", "--persist-extract-tempdir"];
+
+/// `words` without the options of `options` (each with its value) and the flags of `flags`, and the value its
+/// `--archive-file` had, if any.
+fn strip(words: &[String], options: &[&str], flags: &[&str]) -> (Vec<String>, Option<String>) {
+    let (mut kept, mut archive) = (Vec::new(), None);
+    let mut it = words.iter();
+    while let Some(w) = it.next() {
+        if options.contains(&w.as_str()) {
+            let value = it.next().cloned();
+            if w == "--archive-file" {
+                archive = value;
+            }
+        } else if !flags.contains(&w.as_str()) {
+            kept.push(w.clone());
+        }
+    }
+    (kept, archive)
+}
+
+/// The `cargo nextest archive` steps of `jobs`: each archive file, with the sorted arguments it is built with (without
+/// those naming the archive).
+fn archives(jobs: &[(String, Vec<String>)]) -> Vec<(String, Vec<String>)> {
+    let mut found = Vec::new();
+    for (job, runs) in jobs {
+        for run in runs {
+            let Some(words) = words_after(run, "cargo nextest archive") else {
+                continue;
+            };
+            let (mut args, path) = strip(
+                &words,
+                &["--archive-file", "--archive-format", "--zstd-level"],
+                &[],
+            );
+            let path =
+                path.unwrap_or_else(|| panic!("job {job} runs `{run}` with no --archive-file"));
+            args.sort();
+            found.push((path, args));
+        }
+    }
+    found
+}
+
+/// In `workflow`: the workspace suite runs through nextest, its whole build archived by
+/// `cargo nextest archive --workspace` and its shards run from that archive (R-372); every `cargo test` step is a
+/// doctest step; and each `cargo nextest run <args>` step has, in its own job, `cargo test <args> --doc`, where a step
+/// running from an archive has for `<args>` those the archive was built with.
 fn check_nextest_and_doctest_steps(workflow: &str) {
     let jobs = job_runs(workflow);
-    assert!(
-        jobs.iter()
-            .any(|(_, runs)| runs.iter().any(|r| r == "cargo nextest run --workspace")),
-        "no CI job runs the workspace suite through `cargo nextest run --workspace`"
-    );
+    let archives = archives(&jobs);
     let mut nextest_steps = 0;
     for (job, runs) in &jobs {
         for run in runs {
@@ -80,9 +150,26 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
                     "job {job} runs tests through `cargo test`, not nextest: `{run}`"
                 );
             }
-            let Some(args) = args_after(run, "cargo nextest run") else {
+            let Some(words) = words_after(run, "cargo nextest run") else {
                 continue;
             };
+            let (mut args, archive) = strip(&words, REUSE_OPTIONS, REUSE_FLAGS);
+            args.sort();
+            if let Some(archive) = archive {
+                let built: Vec<&Vec<String>> = archives
+                    .iter()
+                    .filter(|(path, _)| *path == archive)
+                    .map(|(_, a)| a)
+                    .collect();
+                assert_eq!(
+                    built.len(),
+                    1,
+                    "job {job} runs `{run}` from `{archive}`, which {} steps build",
+                    built.len()
+                );
+                args.extend(built[0].iter().cloned());
+                args.sort();
+            }
             nextest_steps += 1;
             let mut doc = args.clone();
             doc.push("--doc".to_owned());
@@ -95,12 +182,37 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
         }
     }
     assert!(nextest_steps >= 3, "CI has {nextest_steps} nextest steps");
+    assert!(
+        jobs.iter().any(|(_, runs)| runs.iter().any(|r| r
+            == "cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite \
+                --partition hash:${{ matrix.shard }}/4"))
+            && archives.iter().any(|(path, args)| path == "$RUNNER_TEMP/nextest-ci.tar.zst"
+                && args == &["--workspace".to_owned()]),
+        "no CI job runs the workspace suite through nextest, from an archive of `cargo nextest archive --workspace`"
+    );
 }
 
 #[test]
 fn qa_m0_33_each_nextest_step_has_its_doctest_step() {
     check_nextest_and_doctest_steps(&ci_workflow());
 }
+
+/// The archive pairing (R-372): a nextest step that runs from an archive no step builds has no arguments to pair.
+#[test]
+fn qa_m0_33_each_archive_run_has_its_archive_step() {
+    check_nextest_and_doctest_steps(&ci_workflow());
+}
+
+negative_control!(
+    qa_m0_33_each_archive_run_has_its_archive_step,
+    "CI's workflow with the shards running from an archive no step builds, required to pair each archive run with the \
+     step building its archive",
+    expected = "which 0 steps build",
+    check_nextest_and_doctest_steps(&ci_workflow().replace(
+        "run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst",
+        "run: cargo nextest run --archive-file $RUNNER_TEMP/elsewhere.tar.zst"
+    ))
+);
 
 negative_control!(
     qa_m0_33_each_nextest_step_has_its_doctest_step,

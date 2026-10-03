@@ -296,12 +296,23 @@ negative_control!(
     qa23s_a_cut_off_shard_fails_visibly,
     "the shard step allowed to fail",
     expected = "qa23s: a failed or cut-off shard can pass",
-    cut_off_fails(&mutants_yml().replacen(
-        "        timeout-minutes: 120\n",
-        "        timeout-minutes: 120\n        continue-on-error: true\n",
-        1
+    cut_off_fails(&edit_once(
+        &mutants_yml(),
+        "        timeout-minutes: 300\n",
+        "        timeout-minutes: 300\n        continue-on-error: true\n"
     ))
 );
+
+/// `yml` with `from` replaced once by `to`. The limit's value changed under R-376 (120 to 300 minutes) and a bare
+/// `replacen` on the old text left these controls editing nothing; an edit target that is gone now fails here.
+#[cfg(feature = "controls")]
+fn edit_once(yml: &str, from: &str, to: &str) -> String {
+    assert!(
+        yml.contains(from),
+        "qa23s: the control's edit target {from:?} is gone"
+    );
+    yml.replacen(from, to, 1)
+}
 
 mod no_limit {
     use super::*;
@@ -309,7 +320,11 @@ mod no_limit {
         qa23s_a_cut_off_shard_fails_visibly,
         "the shard step without its limit",
         expected = "qa23s: the shard's cargo mutants step has no limit of its own",
-        cut_off_fails(&mutants_yml().replacen("        timeout-minutes: 120\n", "", 1))
+        cut_off_fails(&edit_once(
+            &mutants_yml(),
+            "        timeout-minutes: 300\n",
+            ""
+        ))
     );
 }
 

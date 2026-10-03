@@ -1,0 +1,42 @@
+{
+  "TASK-M0-90": [
+    {"merged": false, "number": 89, "title": "TASK-M0-90: first try, closed", "head": ""},
+    {"merged": true, "number": 90, "title": "TASK-M0-90: the fixture task", "head": "h90",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code\n\nfine", "commit_id": "h90", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h90", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ],
+  "TASK-M0-91": [
+    {"merged": false, "number": 91, "title": "TASK-M0-91: still open", "head": "h91",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h91", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h91", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ],
+  "TASK-M0-92": [
+    {"merged": true, "number": 92, "title": "TASK-M0-92: merged without qa", "head": "h92",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h92", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: CHANGES qa", "commit_id": "h92", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]}
+  ],
+  "rulings": [
+    {"merged": true, "number": 101, "title": "R-900, R-901: closes TASK-M0-94", "head": "h101",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h101", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h101", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]},
+    {"merged": false, "number": 102, "title": "R-902: still open", "head": "h102",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h102", "submitted_at": "2026-10-01T10:00:00Z"},
+       {"body": "VERDICT: APPROVE qa", "commit_id": "h102", "submitted_at": "2026-10-01T11:00:00Z"}
+     ]},
+    {"merged": true, "number": 103, "title": "R-903 to R-905: merged with no reviews", "head": "h103", "reviews": []},
+    {"merged": true, "number": 104, "title": "R-901 follow-ups: names no ruling", "head": "h104", "reviews": []},
+    {"merged": true, "number": 106, "title": "R-906: closes TASK-M0-97 once it is done", "head": "h106",
+     "reviews": [
+       {"body": "VERDICT: APPROVE code", "commit_id": "h106", "submitted_at": "2026-10-01T10:00:00Z"}
+     ]}
+  ]
+}

@@ -5,21 +5,27 @@ use proptest::strategy::Strategy;
 use proptest::test_runner::{Config, RngSeed, TestCaseError, TestError, TestRunner};
 use std::fmt;
 
-/// Cases per property: the calibration value of REQ-VAL-151 (R-203, R-71). 256 is the proposed value, proptest's own
-/// default; it is provisional until the human confirms or changes it at the M0 gate, and is marked so (R-182).
+/// Cases per property: the calibration value of REQ-VAL-151 (R-203, R-71). 256, proptest's own default, confirmed by
+/// the human at the M0 gate (R-376).
 pub const CASES: u32 = 256;
 
-/// True while [`CASES`] is the proposed, unconfirmed value (R-182, R-203). Set false when the M0 gate confirms it.
-pub const CASES_PROVISIONAL: bool = true;
+/// True while [`CASES`] is the proposed, unconfirmed value (R-182, R-203); false since the M0 gate confirmed it
+/// (R-376).
+pub const CASES_PROVISIONAL: bool = false;
 
 /// [`CASES`] with its status, as the tests print it.
 pub fn cases_status() -> String {
-    let status = if CASES_PROVISIONAL {
+    status_text(CASES_PROVISIONAL)
+}
+
+/// [`cases_status`]'s text for [`CASES`] marked provisional or not.
+fn status_text(provisional: bool) -> String {
+    let status = if provisional {
         "provisional until confirmed at the M0 gate"
     } else {
         "confirmed"
     };
-    format!("prop::CASES = {CASES} ({status}; REQ-VAL-151, R-203)")
+    format!("prop::CASES = {CASES} ({status}; REQ-VAL-151, R-203, R-376)")
 }
 
 /// The config every property test uses: [`CASES`] cases, the given seed, no persistence file (the seed replaces it).
@@ -137,7 +143,18 @@ pub mod checks {
         );
     }
 
-    /// `prop_seed_runs_the_provisional_case_count`'s check: a property that always holds runs [`CASES`] cases under
+    /// `prop_seed_case_count_is_marked_confirmed`'s check: [`CASES`] marked `provisional` or not is confirmed, and
+    /// its status says "confirmed" and nowhere "provisional" (R-376).
+    pub fn check_cases_confirmed(provisional: bool) {
+        let status = status_text(provisional);
+        println!("{status}");
+        assert!(
+            !provisional && status.contains("confirmed") && !status.contains("provisional"),
+            "the case count is not marked confirmed (R-376): {status}"
+        );
+    }
+
+    /// `prop_seed_runs_the_confirmed_case_count`'s check: a property that always holds runs [`CASES`] cases under
     /// `config`.
     pub fn check_runs_cases(config: Config) {
         let runs = Cell::new(0u32);
@@ -188,13 +205,20 @@ mod tests {
     }
 
     #[test]
-    fn prop_seed_runs_the_provisional_case_count() {
-        let status = cases_status();
-        println!("{status}");
-        assert!(
-            status.contains("provisional"),
-            "CASES is provisional until the M0 gate (R-182, R-203): {status}"
-        );
+    fn prop_seed_runs_the_confirmed_case_count() {
+        println!("{}", cases_status());
         check_runs_cases(config(seed()));
+    }
+
+    /// The check also fires on the count marked provisional, so a check reduced to nothing fails this test, not only
+    /// its control (R-196), as `gpu::tests::fires` has it.
+    #[test]
+    fn prop_seed_case_count_is_marked_confirmed() {
+        check_cases_confirmed(CASES_PROVISIONAL);
+        let caught = std::panic::catch_unwind(|| check_cases_confirmed(true));
+        assert!(
+            caught.is_err(),
+            "the check passed the count marked provisional"
+        );
     }
 }

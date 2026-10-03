@@ -13,6 +13,7 @@
 /// `RenderState`, JCS (gui_state_contract §2, R-309, R-318).
 pub mod contract {
     pub mod canonical;
+    pub mod fast_math;
     pub mod profile;
     pub mod render_state;
     pub mod set_field;
@@ -24,5 +25,21 @@ pub mod contract {
     mod tests {
         mod canonical;
         mod profile_v1;
+    }
+}
+
+/// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting
+/// (R-297; TASK-M0-44).
+pub mod compute;
+
+/// Telemetry (dd_telemetry_and_tiers): the session-header probe that `prin profile` and the benchmark runner share
+/// (§2, §5; TASK-M0-19).
+pub mod telemetry {
+    pub mod session;
+
+    #[cfg(test)]
+    mod tests {
+        mod session_header;
+        mod session_header_fast_math;
     }
 }

@@ -34,7 +34,7 @@ its environment checks on 2 Oct 2026 on three blockers. What each would need is 
    | `gh pr edit --body-file` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -F body=@<file>` |
    | `gh pr reopen` | `gh api -X PATCH repos/Ma1achy/Principia/pulls/N -f state=open` |
    | `gh pr comment` | `gh api repos/Ma1achy/Principia/issues/N/comments -F body=@<file>` |
-   | `gh pr review --comment` | `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<sha> -F body=@-` |
+   | `gh pr review --comment` | `gh api repos/Ma1achy/Principia/pulls/N/reviews --method POST --input - < <file>`, where `<file>` holds the JSON object `{"event":"COMMENT","commit_id":"<sha>","body":"<body>"}`, written first by its own command (R-373) |
    | `gh pr merge --merge --match-head-commit` | `gh api -X PUT repos/Ma1achy/Principia/pulls/N/merge -f merge_method=merge -f sha=<full head sha>` |
 
    Resolving a review thread (R-276) has no REST call; it waits for GraphQL.
@@ -141,10 +141,21 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     over: every reviewer the task names (qa, code, physics, gui, perf) posts again on the new head (`plan/WORKFLOW.md`
     steps 5 and 6). After an `M` or `D` qa commit, dispatch all of them at once, qa's re-approval included, not one
     after another (#78, #79, 30 Sep 2026).
-- **How they post (R-357).** Each reviewer posts its verdict through REST, never `gh pr review`, so it works on the Mac
-  and in a cloud session alike: `gh api repos/Ma1achy/Principia/pulls/N/reviews -f event=COMMENT -f commit_id=<head
-  sha> -F body=@-`, the body, headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175), on standard
-  input, since a reviewer writes no file. `event=COMMENT` is what `gh pr review --comment` posted. `commit_id` attaches
+- **How they post (R-357, R-373).** Each reviewer posts its verdict through REST, never `gh pr review`, so it works on
+  the Mac and in a cloud session alike, in one fixed form, path first and flags after:
+  `gh api repos/Ma1achy/Principia/pulls/N/reviews --method POST --input -`. The human's allow rule,
+  `Bash(gh api repos/Ma1achy/Principia/pulls/*/reviews*)`, matches that form only; the permission check blocked the
+  old `-f event=COMMENT -f commit_id=<sha> -F body=@-` form as an external-system write (R-373). Standard input
+  carries the JSON object `{"event":"COMMENT","commit_id":"<head sha>","body":"<review body>"}`, the body headed
+  `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>` (R-175). It takes two steps, each its own command (the agent
+  files give both in full): first a heredoc feeds the body to `python3 -c '…json.dumps(…)…' <head sha> <file>`, which
+  writes the object to `<file>`, `review.json` in the reviewer's scratch folder (`<scratchpad>/<pr>-<role>/`, § "Dispatching",
+  or `$TMPDIR/<pr>-<role>/` if the dispatch names none), outside its worktree; then
+  `gh api repos/Ma1achy/Principia/pulls/N/reviews --method POST --input - < <file>` posts it, with nothing before
+  `gh`. The allow rule matches a command by how it begins, so a post that began with `python3 … |` matched no rule and
+  the permission check judged each one itself; it blocked one on #123, and the two-step form posted there (review
+  5396798807). A reviewer uses no other form; if the post is blocked, it stops and reports it. `event` `COMMENT` is
+  what `gh pr review --comment` posted. `commit_id` attaches
   the review to the head reviewed, which `reviews-check` compares with the PR head (R-260); qa passes the head it was
   given, before its own unpushed commit. A reviewer reads the diff with `git diff origin/main...HEAD` in its worktree,
   after `git fetch origin`, and checks CI with `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The
@@ -253,6 +264,12 @@ task. R-357 (2 Oct 2026): they run on the Mac, not in a cloud session, and M0 fi
 4. stop before the M0 gate, and lay out its six calibrations together (REQ-VAL-138, REQ-VAL-149, REQ-VAL-151,
    REQ-VAL-156, REQ-VAL-180 and REQ-VAL-181), each with its measurements and proposed value, so the human can confirm
    them in one sitting.
+
+R-376 (3 Oct 2026) confirmed the six: REQ-VAL-138 0 steps, a per-backend reference near a tie; REQ-VAL-149 8 shards ×
+300 min, a ceiling, not a target; REQ-VAL-151 256 cases; REQ-VAL-156 600 s; REQ-VAL-180 2.0× the baseline, 60 s floor;
+REQ-VAL-181 8 GiB, `--core=1`. R-377 (3 Oct 2026): the M0 gate is passed once #124 (TASK-M0-50) merges and every
+requirement in M0's exit gate is green on `main`; then confirm it in the summary, tag that commit of `main` `m0-gate`,
+and start M1.
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 

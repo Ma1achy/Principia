@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use xtask::controls::Mode;
+use xtask::controls::{Mode, Partition};
 use xtask::deps::{self, CompileCheck, Metadata};
 use xtask::workspace_manifest;
 
@@ -9,19 +9,30 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
+  bench (<bench> | --all) [--bless]
+                                  run a fixed benchmark headless on the GPU (or every registered one), write its
+                                  profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
+                                  fixtures/bench/<bench>/baseline.json through `prin profile diff`, every rise in a
+                                  scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
+                                  Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
   build-kernel                    compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
                                   (canonical_spec §1 item 2)
-  ci [--list]                     run every registered per-push runner, in order (R-177); --list runs each
-                                  runner's listing-only form, which runs no control (R-235)
+  ci [--list | --partition <k>/<n>]
+                                  run every registered per-push runner, in order (R-177); --list runs each
+                                  runner's listing-only form, which runs no control (R-235); --partition runs
+                                  shard k of n: controls on its slice, build-kernel, and the other runners in
+                                  shard 1 only (R-360)
   codegen                         regenerate the checked-in generated files from the layout table; refuses when
                                   an entry lacks a §3.8 key, naming the field and the key (dd_generation_root §3.8)
-  controls [--list] [--manifest-path <Cargo.toml>]
+  controls [--list] [--partition <k>/<n>] [--manifest-path <Cargo.toml>]
                                   check that every test of each crate declaring the `controls` feature has a
                                   negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
                                   workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176);
-                                  --list lists each test's controls and checks the listing, running none (R-226)
+                                  --list lists each test's controls and checks the listing, running none (R-226);
+                                  --partition runs, or lists, only the k-th of n slices of the controls, by a
+                                  stable hash of the control name (R-360)
   deps [--metadata <file> | --manifest-path <Cargo.toml>]
                                   check the workspace crate graph against systems_architecture §7.1, and
                                   that no unit test of kernel or ledger uses validation, by compiling them
@@ -32,6 +43,14 @@ Commands:
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none
+  gate-report --milestone <Mn> --results <file> [--bench-results <dir>]
+                                  list every requirement of <Mn>'s gate block and every earlier one
+                                  (plan/MILESTONES.md) with its result from <file> (a JSON object, id to `pass` or
+                                  `fail`), a benchmark requirement awaiting the human's run until <dir>/<id>.jsonl,
+                                  its prin profile file, is supplied (R-177, R-186), and a review-checklist one
+                                  passing when its closing task's PR merged with its reviewers' approvals, read
+                                  through gh (R-369, RQ-201); writes target/gate-report/<Mn>.txt; fails on a
+                                  requirement failed or with no result
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
@@ -58,6 +77,9 @@ Commands:
                                   bit-pattern test as the fix: isinf or isnan, a comparison against an inf or NaN
                                   constant, a float compared with itself, or a comparison against a finite-max
                                   stand-in, ±65504 or ±3.40282347e38 (REQ-RENDER-083, R-351, R-352)
+  lint compute-pipelines          fail on a compute pipeline created, or wgpu's passthrough used, outside the
+                                  compute entry point (crates/engine/src/compute.rs), or a vertex or fragment
+                                  pipeline beside its passthrough, naming file, line and identifier (R-297)
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
@@ -83,9 +105,43 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let result = match args.as_slice() {
+        ["bench", "--all", bless @ ..] if bless.is_empty() || bless == ["--bless"] => {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::All,
+                !bless.is_empty(),
+            )
+        }
+        ["bench", name, bless @ ..]
+            if !name.starts_with('-') && (bless.is_empty() || bless == ["--bless"]) =>
+        {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::One(name),
+                !bless.is_empty(),
+            )
+        }
+        ["gate-report", "--milestone", m, "--results", results] => xtask::gate_report::run(
+            &workspace_root(),
+            m,
+            Path::new(results),
+            None,
+            &xtask::gate_report::Gh::new("gh"),
+        ),
+        ["gate-report", "--milestone", m, "--results", results, "--bench-results", dir] => {
+            xtask::gate_report::run(
+                &workspace_root(),
+                m,
+                Path::new(results),
+                Some(Path::new(dir)),
+                &xtask::gate_report::Gh::new("gh"),
+            )
+        }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
+        ["ci", "--partition", slice] => Partition::parse(slice)
+            .and_then(|slice| xtask::ci::run_partition(xtask::ci::RUNNERS, slice)),
         ["codegen"] => xtask::codegen::run(&workspace_manifest()),
         ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
         ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
@@ -93,6 +149,7 @@ fn main() -> ExitCode {
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
         }
+        ["controls", rest @ ..] if rest.contains(&"--partition") => controls_partition(rest),
         ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
         ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
         ["gate", name] if !name.starts_with('-') => {
@@ -113,6 +170,7 @@ fn main() -> ExitCode {
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
+        ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
         ["mutants-check", outs @ .., "--equivalent", list]
             if !outs.is_empty() && !outs.contains(&"--equivalent") =>
         {
@@ -166,6 +224,31 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// `cargo xtask controls` with `--partition <k>/<n>` among `args`, and optionally `--list` and `--manifest-path
+/// <Cargo.toml>`, in any order (R-360).
+fn controls_partition(args: &[&str]) -> Result<(), String> {
+    let (mut mode, mut partition, mut manifest) = (Mode::Run, None, workspace_manifest());
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        match *arg {
+            "--list" => mode = Mode::List,
+            "--partition" => {
+                let slice = args.next().ok_or("controls: --partition takes k/n")?;
+                partition = Some(Partition::parse(slice)?);
+            }
+            "--manifest-path" => {
+                let path = args
+                    .next()
+                    .ok_or("controls: --manifest-path takes a path")?;
+                manifest = PathBuf::from(path);
+            }
+            other => return Err(format!("controls: unrecognised argument `{other}`")),
+        }
+    }
+    let partition = partition.ok_or("controls: --partition takes k/n")?;
+    xtask::controls::run_partition(&manifest, mode, partition)
 }
 
 /// This workspace's root directory.

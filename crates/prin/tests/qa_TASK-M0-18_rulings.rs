@@ -223,6 +223,7 @@ fn header_line(device: Value) -> Value {
             "device": device,
             "backend": { "api": "none", "driver": null },
             "precision": null,
+            "fast_math": { "setting": "off", "compiled": null },
             "build": { "commit": "qa", "profile": "dev", "features": [] },
             "display": null,
             "config": { "scenario": "synthetic_frames", "frames": 0 }

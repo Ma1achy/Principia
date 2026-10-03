@@ -1,8 +1,9 @@
 //! `cargo xtask ci` — the single per-push entry point (R-177). Every later per-commit runner (plan-check,
-//! build-kernel, controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl) registers in [`RUNNERS`]; `ci`
-//! runs them in registration order. build-kernel runs before controls, whose `toolchain_trivial_kernel` control
+//! build-kernel, controls, gate, golden, codegen, lint constants, lint vocab, lint wgsl, lint compute-pipelines)
+//! registers in [`RUNNERS`]; `ci` runs them in registration order. build-kernel runs before controls, whose `toolchain_trivial_kernel` control
 //! dispatches the WGSL it writes.
 //! `cargo xtask ci --list` runs each runner's listing-only form instead, which runs no control (R-235).
+//! `cargo xtask ci --partition k/n` runs shard k of n, which CI runs as parallel jobs (R-360): see [`run_partition`].
 
 /// A runner's check, or its listing-only form; `Err` carries the failure message.
 pub type Check = fn() -> Result<(), String>;
@@ -48,6 +49,11 @@ pub const RUNNERS: &[Runner] = &[
         name: "lint wgsl",
         run: lint_wgsl,
         list: lint_wgsl,
+    },
+    Runner {
+        name: "lint compute-pipelines",
+        run: lint_compute,
+        list: lint_compute,
     },
     Runner {
         name: "gate",
@@ -107,6 +113,12 @@ fn lint_wgsl() -> Result<(), String> {
     crate::lint_wgsl::run(&crate::workspace_manifest())
 }
 
+/// `cargo xtask lint compute-pipelines` on this workspace; it runs no control, so it is its own listing-only form
+/// (R-235).
+fn lint_compute() -> Result<(), String> {
+    crate::lint_compute::run(&crate::workspace_manifest())
+}
+
 /// `cargo xtask golden --all` on this workspace (R-110: native golden suites on every commit).
 fn golden() -> Result<(), String> {
     let root = crate::plan_check::repo_root();
@@ -133,24 +145,57 @@ fn controls_list() -> Result<(), String> {
 /// Runs every runner in `runners`, in order, printing each to stdout. Every runner runs even after a
 /// failure; the result is `Err` naming each runner that failed.
 pub fn run(runners: &[Runner]) -> Result<(), String> {
-    each(runners, |runner| runner.run, "")
+    each(runners, |runner| Some((runner.run)()), "")
 }
 
 /// Runs the listing-only form of every runner in `runners`, as [`run`] runs the runners (`--list`, R-235).
 pub fn list(runners: &[Runner]) -> Result<(), String> {
-    each(runners, |runner| runner.list, " (--list)")
+    each(runners, |runner| Some((runner.list)()), " (--list)")
 }
 
-/// Runs the form `pick` chooses of every runner in `runners`, in order, printing each with `form` after its name.
-fn each(runners: &[Runner], pick: fn(&Runner) -> Check, form: &str) -> Result<(), String> {
+/// Shard `partition` of [`run`] (`--partition k/n`, R-360): `controls` runs its own slice of the controls, by
+/// [`crate::controls::Partition`]; `build-kernel` runs in every shard, since controls in any slice read the kernel it
+/// writes; every other runner runs in shard 1 only, so the n shards together run each runner's check once.
+pub fn run_partition(
+    runners: &[Runner],
+    partition: crate::controls::Partition,
+) -> Result<(), String> {
+    each(
+        runners,
+        |runner| match runner.name {
+            "controls" => Some(crate::controls::run_partition(
+                &crate::workspace_manifest(),
+                crate::controls::Mode::Run,
+                partition,
+            )),
+            "build-kernel" => Some((runner.run)()),
+            _ if partition.k == 1 => Some((runner.run)()),
+            _ => None,
+        },
+        &format!(" (--partition {partition})"),
+    )
+}
+
+/// Runs, through `pick`, each runner of `runners`, in order, printing each with `form` after its name; a runner
+/// `pick` gives `None` is skipped, as it runs in another shard.
+fn each(
+    runners: &[Runner],
+    pick: impl Fn(&Runner) -> Option<Result<(), String>>,
+    form: &str,
+) -> Result<(), String> {
     let total = runners.len();
     println!("xtask ci: {total} registered runner(s){form}");
     let mut failed = Vec::new();
     for (i, runner) in runners.iter().enumerate() {
         println!("xtask ci: [{}/{total}] {}{form}", i + 1, runner.name);
-        match pick(runner)() {
-            Ok(()) => println!("xtask ci: [{}/{total}] {} ok", i + 1, runner.name),
-            Err(message) => {
+        match pick(runner) {
+            None => println!(
+                "xtask ci: [{}/{total}] {} skipped: it runs in shard 1",
+                i + 1,
+                runner.name
+            ),
+            Some(Ok(())) => println!("xtask ci: [{}/{total}] {} ok", i + 1, runner.name),
+            Some(Err(message)) => {
                 println!(
                     "xtask ci: [{}/{total}] {} FAILED: {message}",
                     i + 1,

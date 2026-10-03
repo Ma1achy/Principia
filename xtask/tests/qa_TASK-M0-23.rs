@@ -9,9 +9,9 @@
 //!   pull_request events as a matrix of n shards ... each exclusion names which of R-196's three categories it falls
 //!   in". (R-305 moved the job from `ci.yml` into `mutants.yml`, which only pull_request runs.)
 //! - REQ-VAL-149 (as reworded by R-302): "each shard runs under that limit, marked provisional until the human
-//!   confirms both at the M0 gate". The `mutants` job below is the matrix job, so its limit is each shard's; the
-//!   sharding itself (every shard runs, a cut-off shard fails, the aggregate reads every shard) is tested in
-//!   `qa_TASK-M0-23_shards.rs`.
+//!   confirms both at the M0 gate", confirmed by R-376 as 8 shards × 300 minutes, a ceiling, not a target. The
+//!   `mutants` job below is the matrix job, so its limit is each shard's; the sharding itself (every shard runs, a
+//!   cut-off shard fails, the aggregate reads every shard) is tested in `qa_TASK-M0-23_shards.rs`.
 //! - R-196, as applied per R-204 (RQ-162): "xtask's own harness plumbing" is `xtask/src/main.rs` and
 //!   `xtask/src/codegen.rs` only; xtask's checks stay mutated.
 //! - TASK-M0-23 Deliverables: generated code is "the files `cargo xtask codegen` writes, matched so that a generated
@@ -61,8 +61,8 @@ fn job<'a>(yml: &'a str, name: &str) -> Vec<&'a str> {
         .collect()
 }
 
-/// REQ-VAL-148: on pull_request events, on ubuntu-latest (R-186), `cargo mutants --in-diff` reads the diff written
-/// by `git diff origin/<base>...HEAD`, the checked-in list decides, and the report is uploaded.
+/// REQ-VAL-148: on pull_request events, on ubuntu-24.04 (R-186, pinned by R-375), `cargo mutants --in-diff` reads the
+/// diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the report is uploaded.
 fn checks_job(yml: &str) {
     assert!(
         yml.lines().any(|l| l.trim_end() == "  pull_request:"),
@@ -75,8 +75,8 @@ fn checks_job(yml: &str) {
         "qa23: the mutants job is not limited to pull_request events"
     );
     assert!(
-        has("runs-on: ubuntu-latest"),
-        "qa23: the mutants job is not on ubuntu-latest"
+        lines.iter().any(|l| l.trim() == "runs-on: ubuntu-24.04"),
+        "qa23: the mutants job is not on ubuntu-24.04 (R-375)"
     );
     let diff_file = lines
         .iter()
@@ -120,8 +120,8 @@ negative_control!(
     ))
 );
 
-/// REQ-VAL-149 / R-182: the job (or its `cargo mutants` step) runs under a `timeout-minutes` limit, with a comment
-/// just above it naming REQ-VAL-149 and marking the value provisional.
+/// REQ-VAL-149 / R-182 / R-376: the job (or its `cargo mutants` step) runs under a `timeout-minutes` limit of 300,
+/// with a comment just above it naming REQ-VAL-149 and marking the value confirmed by R-376 (no longer provisional).
 fn under_limit(yml: &str) {
     let lines = job(yml, "mutants");
     let at = lines.iter().position(|l| {
@@ -132,29 +132,94 @@ fn under_limit(yml: &str) {
     let Some(at) = at else {
         panic!("qa23: the mutants job runs under no time limit (no timeout-minutes)");
     };
+    let minutes = lines[at]
+        .trim()
+        .strip_prefix("timeout-minutes:")
+        .and_then(|v| v.trim().parse::<u32>().ok());
+    assert_eq!(
+        minutes,
+        Some(300),
+        "qa23: the per-shard limit is not R-376's confirmed 300 minutes"
+    );
     let above = lines[at.saturating_sub(4)..at].join("\n");
+    let lower = above.to_lowercase();
     assert!(
-        above.contains("REQ-VAL-149") && above.to_lowercase().contains("provisional"),
-        "qa23: the time limit is not marked as REQ-VAL-149, provisional: {above}"
+        above.contains("REQ-VAL-149")
+            && above.contains("R-376")
+            && lower.contains("confirmed")
+            && !lower.contains("provisional"),
+        "qa23: the time limit is not marked as REQ-VAL-149, confirmed by R-376: {above}"
     );
 }
 
-const LIMITED: &str = "on:\n  pull_request:\njobs:\n  mutants:\n    runs-on: ubuntu-latest\n    \
-                       # REQ-VAL-149, provisional until the M0 gate (R-182).\n    timeout-minutes: 30\n    \
+const LIMITED: &str = "on:\n  pull_request:\njobs:\n  mutants:\n    runs-on: ubuntu-24.04\n    \
+                       # REQ-VAL-149, confirmed at the M0 gate (R-376).\n    timeout-minutes: 300\n    \
                        steps:\n      - run: cargo mutants\n";
 
+/// `yml` with `from` replaced once by `to`; a control whose edit finds nothing fails here, not silently.
+#[cfg(feature = "controls")]
+fn edit(yml: &str, from: &str, to: &str) -> String {
+    assert!(
+        yml.contains(from),
+        "qa23: the control's edit target {from:?} is gone"
+    );
+    yml.replacen(from, to, 1)
+}
+
 #[test]
-fn qa23_mutants_job_runs_under_the_provisional_time_limit() {
+fn qa23_mutants_job_runs_under_the_confirmed_300_minute_limit() {
     under_limit(LIMITED);
     under_limit(&read(".github/workflows/mutants.yml"));
 }
 
 negative_control!(
-    qa23_mutants_job_runs_under_the_provisional_time_limit,
+    qa23_mutants_job_runs_under_the_confirmed_300_minute_limit,
     "a job with its timeout-minutes removed",
     expected = "qa23: the mutants job runs under no time limit",
-    under_limit(&LIMITED.replace("    timeout-minutes: 30\n", ""))
+    under_limit(&edit(LIMITED, "    timeout-minutes: 300\n", ""))
 );
+
+mod old_limit {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_under_the_confirmed_300_minute_limit,
+        "the checked-in shard step with R-305's provisional 120 minutes",
+        expected = "qa23: the per-shard limit is not R-376's confirmed 300 minutes",
+        under_limit(&edit(
+            &read(".github/workflows/mutants.yml"),
+            "        timeout-minutes: 300\n",
+            "        timeout-minutes: 120\n"
+        ))
+    );
+}
+
+mod still_provisional {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_under_the_confirmed_300_minute_limit,
+        "the checked-in limit's comment still marking it provisional",
+        expected = "qa23: the time limit is not marked as REQ-VAL-149, confirmed by R-376",
+        under_limit(&edit(
+            &read(".github/workflows/mutants.yml"),
+            "confirmed by the human at the M0 gate (R-376; R-71, R-302): a ceiling",
+            "provisional until the human confirms it at the M0 gate (R-71, R-182, R-302): a ceiling"
+        ))
+    );
+}
+
+mod latest_runner {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_in_diff_against_the_base_on_pull_requests,
+        "the mutants job back on ubuntu-latest",
+        expected = "qa23: the mutants job is not on ubuntu-24.04 (R-375)",
+        checks_job(&edit(
+            &read(".github/workflows/mutants.yml"),
+            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-24.04\n",
+            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n"
+        ))
+    );
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // .cargo/mutants.toml: the exclusions.

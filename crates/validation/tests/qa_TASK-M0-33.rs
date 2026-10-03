@@ -2,7 +2,8 @@
 //! - REQ-VAL-165: "fixture workspaces must be written only when their content changes, each with its own target
 //!   directory kept across runs; and the spawn helper's grace and timeout must be injectable so its own tests need not
 //!   wait the calibrated values"; verify: "a warm second run of a fixture test rebuilds nothing; no spawn-helper test
-//!   waits the calibrated 5 s grace or 300 s timeout".
+//!   waits the calibrated 5 s grace or 300 s timeout". R-376 confirmed the timeout at the M0 gate as 600 s; the
+//!   grace, R-217's, is not a calibration and stays 5 s.
 //! - R-231: "The spawn helper's calibrated values (REQ-VAL-156) are unchanged": a caller that injects nothing still gets
 //!   R-217's grace after SIGTERM.
 //!
@@ -109,7 +110,7 @@ negative_control!(
         .output_within_grace(Duration::from_millis(500), Duration::ZERO))
 );
 
-/// The calibrated values stand (REQ-VAL-156, R-231): 300 s timeout, 5 s grace.
+/// The calibrated values stand (REQ-VAL-156, R-231): 600 s timeout, confirmed by R-376, and R-217's 5 s grace.
 fn check_calibrated(timeout: Duration, grace: Duration) {
     assert_eq!(
         (SPAWN_TIMEOUT, GRACE),
@@ -120,15 +121,25 @@ fn check_calibrated(timeout: Duration, grace: Duration) {
 
 #[test]
 fn qa_m0_33_the_calibrated_values_are_unchanged() {
-    check_calibrated(Duration::from_secs(300), Duration::from_secs(5));
+    check_calibrated(Duration::from_secs(600), Duration::from_secs(5));
 }
 
 negative_control!(
     qa_m0_33_the_calibrated_values_are_unchanged,
     "a 2 s grace, required to be the calibrated one",
     expected = "the calibrated timeout and grace changed",
-    check_calibrated(Duration::from_secs(300), Duration::from_secs(2))
+    check_calibrated(Duration::from_secs(600), Duration::from_secs(2))
 );
+
+mod provisional_timeout {
+    use super::*;
+    negative_control!(
+        qa_m0_33_the_calibrated_values_are_unchanged,
+        "R-217's 300 s provisional timeout, required to be R-376's confirmed 600 s",
+        expected = "the calibrated timeout and grace changed",
+        check_calibrated(Duration::from_secs(300), Duration::from_secs(5))
+    );
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // REQ-VAL-165: the grace is injectable, so a test need not wait the calibrated one.

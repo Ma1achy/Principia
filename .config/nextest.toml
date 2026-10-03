@@ -17,9 +17,13 @@ threads-required = "num-test-threads"
 
 # The CI split (R-325, REQ-SYS-076): the tests that need the built kernel, `target/spirv/kernel.spv` and `kernel.wgsl`,
 # which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile, the codegen
-# self-test among them (TASK-M0-15); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in NEXTEST_PROFILE. The two filters are
-# complements, so together the jobs run every test once, as `xtask/tests/nextest.rs` checks. Locally, the default
-# profile runs them all.
+# self-test among them (TASK-M0-15); the xtask tests that run cargo on the workspace's own target directory run in
+# the `ci-workspace` job under the `ci-workspace` profile (R-372, REQ-SYS-078; below); every other test runs in the `ci`
+# job under the `ci` profile. Each CI step names its profile in NEXTEST_PROFILE. The three filters are disjoint and
+# together select every test, so the jobs run every test once, as `xtask/tests/nextest.rs` checks. Locally, the default
+# profile runs them all. The `ci` job runs its profile as 4 parallel shards, each with `--partition hash:<k>/4`, which
+# together run every test the profile selects, once (R-336, R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each
+# shard.
 [profile.ci]
 default-filter = """
     not (
@@ -28,7 +32,21 @@ default-filter = """
         | binary_id(=validation::codegen_selftest)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
+        | binary_id(=xtask::nextest)
+        | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+        | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     )
+"""
+
+# The tests that run cargo on the workspace's own target directory from xtask (the override above), which CI's
+# `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
+# archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
+# test thread.
+[profile.ci-workspace]
+default-filter = """
+    binary_id(=xtask::nextest)
+    | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+    | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
 """
 
 [profile.gpu-kernel]

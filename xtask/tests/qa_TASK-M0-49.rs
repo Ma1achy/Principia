@@ -14,7 +14,8 @@
 //!
 //! What these tests hold to:
 //! - the timeout lives in `.cargo/mutants.toml`, the file a `cargo mutants` run in the workspace reads by default, at
-//!   its top level (so no platform scopes it), as a multiple of the baseline with its floor, marked provisional;
+//!   its top level (so no platform scopes it), as a multiple of the baseline with its floor, marked confirmed by the
+//!   human at the M0 gate (R-376; it was marked provisional until then, R-182);
 //! - the memory cap, run as cargo-mutants runs a test (`cargo test` with the config's extra cargo and test arguments),
 //!   binds the test process on Linux, where a reservation the size of the machine's memory is refused, and on macOS
 //!   leaves the test to run without it (no `prlimit` there);
@@ -22,8 +23,8 @@
 //!   config off or overrides the timeout, and none runs on another directory (whose own `.cargo/mutants.toml` it
 //!   would read) without `--config .cargo/mutants.toml`.
 //!
-//! The values themselves are calibrations (REQ-VAL-180, REQ-VAL-181) the human confirms at the M0 gate, so no test
-//! here pins them. Each test's control (R-176) feeds the same assertion an input differing in the one respect the
+//! The values themselves are calibrations (REQ-VAL-180, REQ-VAL-181), which the human confirmed at the M0 gate as they
+//! stood (R-376); no test here pins them. Each test's control (R-176) feeds the same assertion an input differing in the one respect the
 //! requirement turns on, and trips it by its message.
 // The file name `qa_TASK-M0-49` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
@@ -57,7 +58,7 @@ fn scratch(tag: &str) -> PathBuf {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The per-mutant timeout: in the one file, unscoped, in cargo-mutants' form, marked provisional.
+// The per-mutant timeout: in the one file, unscoped, in cargo-mutants' form, marked confirmed (R-376).
 
 /// The comment block directly above the line that starts with `key`.
 fn comment_above(toml: &str, key: &str) -> String {
@@ -102,13 +103,18 @@ fn timeout_is_set(toml: &str) {
     for (needle, what) in [
         ("REQ-VAL-180", "its calibration requirement"),
         ("R-348", "its ruling"),
-        ("provisional", "that it is provisional"),
+        ("confirmed", "that it is confirmed"),
+        ("R-376", "the ruling confirming it"),
     ] {
         assert!(
             comment.contains(needle),
             "qa49: the timeout is not marked: its comment does not give {what} ({needle})"
         );
     }
+    assert!(
+        !comment.contains("provisional"),
+        "qa49: the timeout is not marked: its comment still calls it provisional, though R-376 confirmed it"
+    );
 }
 
 #[test]
@@ -140,12 +146,42 @@ mod unmarked {
     use super::*;
     negative_control!(
         qa49_the_timeout_is_in_the_one_file_every_run_reads,
-        "the timeout's comment no longer says it is provisional",
-        expected = "qa49: the timeout is not marked",
+        "the timeout's comment no longer says it is confirmed",
+        expected =
+            "qa49: the timeout is not marked: its comment does not give that it is confirmed",
         timeout_is_set(&{
             let toml = mutants_toml();
             let comment = comment_above(&toml, "timeout_multiplier");
-            toml.replace(&comment, &comment.replace("provisional", "settled"))
+            assert!(
+                comment.contains("confirmed"),
+                "qa49: the control's edit target is gone"
+            );
+            toml.replace(&comment, &comment.replace("confirmed", "settled"))
+        })
+    );
+}
+
+mod still_provisional {
+    use super::*;
+    negative_control!(
+        qa49_the_timeout_is_in_the_one_file_every_run_reads,
+        "the timeout's comment back to its pre-R-376 form, provisional until the M0 gate",
+        expected = "qa49: the timeout is not marked: its comment still calls it provisional",
+        timeout_is_set(&{
+            let toml = mutants_toml();
+            let comment = comment_above(&toml, "timeout_multiplier");
+            let from = "confirmed by the human at the M0 gate, R-376, R-71";
+            assert!(
+                comment.contains(from),
+                "qa49: the control's edit target is gone"
+            );
+            toml.replace(
+                &comment,
+                &comment.replace(
+                    from,
+                    "provisional until the human confirms it at the M0 gate, R-71, R-182; confirmed, R-376",
+                ),
+            )
         })
     );
 }

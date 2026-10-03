@@ -4,7 +4,8 @@ The build assumes these are in place. The agent can't do them, except where note
 
 ## Runner registration: not needed (R-186)
 
-CI runs on GitHub-hosted runners: `ubuntu-latest` (CPU suites, lavapipe) and `macos-15` (Metal correctness suites).
+CI runs on GitHub-hosted runners: `ubuntu-24.04`, pinned by R-375 (CPU suites, lavapipe), and `macos-15` (Metal
+correctness suites).
 There is no self-hosted runner to register. Benchmarks and performance gates run on your own Mac via `prin profile`, at
 milestone gates and on demand. If the first Metal check on `macos-15` fails or is flaky, the build stops with a
 REVIEW_QUEUE entry proposing a self-hosted runner. The agent then scripts its setup for your approval.

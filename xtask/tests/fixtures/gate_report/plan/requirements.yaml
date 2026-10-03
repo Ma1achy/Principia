@@ -1,0 +1,10 @@
+- id: REQ-TOOL-001
+  verify:
+    method: unit test
+- id: REQ-PERF-004
+  verify:
+    method: benchmark
+    detail: "method: benchmark appears here too, as text"
+- id: REQ-PERF-010
+  verify:
+    method: benchmark
