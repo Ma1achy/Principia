@@ -355,6 +355,17 @@ jobs:
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
+      # The compute fast-math probe on Metal, its controls included: with the setting off, the passthrough's MSL
+      # divides as the CPU does; on, it differs (R-297; REQ-SYS-074; TASK-M0-44). Then the compute entry point's own
+      # tests, its passthrough path among them.
+      - name: cargo nextest run -p validation --features controls compute_fast_math
+        run: cargo nextest run -p validation --features controls compute_fast_math --no-capture
+      - name: cargo test -p validation --features controls compute_fast_math --doc
+        run: cargo test -p validation --features controls compute_fast_math --doc
+      - name: cargo nextest run -p engine --features controls compute_entry
+        run: cargo nextest run -p engine --features controls compute_entry --no-capture
+      - name: cargo test -p engine --features controls compute_entry --doc
+        run: cargo test -p engine --features controls compute_entry --doc
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
@@ -414,6 +425,12 @@ jobs:
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc
         run: cargo test -p validation --features controls gpu_harness --doc
+      # The compute fast-math probe on lavapipe, its controls included: Vulkan compiles without fast-math, so the
+      # divisions are the CPU's whatever the setting (R-297; REQ-SYS-074; TASK-M0-44).
+      - name: cargo nextest run -p validation --features controls compute_fast_math
+        run: cargo nextest run -p validation --features controls compute_fast_math --no-capture
+      - name: cargo test -p validation --features controls compute_fast_math --doc
+        run: cargo test -p validation --features controls compute_fast_math --doc
       # The codegen self-test on lavapipe, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
