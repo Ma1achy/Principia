@@ -73,6 +73,9 @@ Commands:
                                   word_buffer @group(1) @binding(1)), a generated SIMSTATE_/WORD_GROUP or _BINDING
                                   constant unequal to its attribute, a binding in group 0 (bindings, R-343), or
                                   either buffer used outside sample_state/sample_word (sample-only, R-343)
+  lint compute-pipelines          fail on a compute pipeline created, or wgpu's passthrough used, outside the
+                                  compute entry point (crates/engine/src/compute.rs), or a vertex or fragment
+                                  pipeline beside its passthrough, naming file, line and identifier (R-297)
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
@@ -163,6 +166,7 @@ fn main() -> ExitCode {
         ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
+        ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
         ["mutants-check", outs @ .., "--equivalent", list]
             if !outs.is_empty() && !outs.contains(&"--equivalent") =>
         {

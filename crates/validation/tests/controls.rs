@@ -5,6 +5,7 @@
 //! theirs beside them in `src/gpu.rs`. The GPU controls run where their tests do (TASK-M0-04).
 #![cfg(feature = "controls")]
 
+use engine::contract::fast_math::{FastMath, StageMode};
 use proptest::test_runner::Config;
 use validation::gpu::checks::*;
 use validation::gpu::{identity_fixture, IDENTITY_WGSL};
@@ -37,6 +38,44 @@ negative_control!(
             .collect();
         check_overloads_differ(&harness(), &low);
     }
+);
+
+negative_control!(
+    compute_fast_math_off_is_correctly_rounded,
+    "the probe's divisions compared with multiplication by the divisor's f32 reciprocal, one ulp off on R-296's columns",
+    expected = "with compute fast-math off,",
+    check_off_exact(&harness(), |a, b| a * (1.0 / b))
+);
+
+negative_control!(
+    compute_fast_math_switch_acts,
+    "setting on required to show the other mode than the one its backend compiles: off on Metal, on on Vulkan",
+    expected = "the divisions do not show the compute stage compiled",
+    {
+        let h = harness();
+        let other = match h.adapter_info().backend {
+            wgpu::Backend::Metal => StageMode::Off,
+            _ => StageMode::On,
+        };
+        check_switch(&h, FastMath::On, other);
+    }
+);
+
+negative_control!(
+    compute_fast_math_defaults_off,
+    "setting on checked as the default",
+    expected = "the compute fast-math setting does not default to off",
+    check_defaults_off(&harness(), FastMath::On)
+);
+
+negative_control!(
+    compute_fast_math_harness_features,
+    "the harness's features checked against the passthrough's on every backend and SHADER_F16 beside it",
+    expected = "the harness's device does not have exactly the compute entry point's features",
+    check_features(
+        &harness(),
+        wgpu::Features::PASSTHROUGH_SHADERS | wgpu::Features::SHADER_F16
+    )
 );
 
 negative_control!(

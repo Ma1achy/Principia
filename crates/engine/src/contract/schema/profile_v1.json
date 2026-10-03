@@ -37,14 +37,15 @@
     "count": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
     "count32": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
     "session_header": {
-      "$comment": "A session that opens no GPU (R-308) writes backend.api \"none\" and null for backend.driver, device.gpu, device.gpu_cores, device.memory and precision.",
+      "$comment": "A session that opens no GPU (R-308) writes backend.api \"none\" and null for backend.driver, device.gpu, device.gpu_cores, device.memory and precision, and for fast_math.compiled.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["device", "backend", "precision", "build", "display", "config"],
+      "required": ["device", "backend", "precision", "fast_math", "build", "display", "config"],
       "properties": {
         "device": { "$ref": "#/$defs/device" },
         "backend": { "$ref": "#/$defs/backend" },
         "precision": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/precision" }] },
+        "fast_math": { "$ref": "#/$defs/fast_math" },
         "build": { "$ref": "#/$defs/build" },
         "display": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/display" }] },
         "config": { "type": "object" }
@@ -115,6 +116,27 @@
         "f64_rate": { "oneOf": [{ "type": "null" }, { "type": "number", "minimum": 0 }] }
       }
     },
+    "fast_math": {
+      "$comment": "The compute shaders' fast-math setting asked for, the sim key's, and each stage's mode as compiled on the running backend (R-297); compiled is null for a session that opens no GPU (R-308).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setting", "compiled"],
+      "properties": {
+        "setting": { "enum": ["off", "on"] },
+        "compiled": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/compiled_modes" }] }
+      }
+    },
+    "compiled_modes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compute", "vertex", "fragment"],
+      "properties": {
+        "compute": { "$ref": "#/$defs/stage_mode" },
+        "vertex": { "$ref": "#/$defs/stage_mode" },
+        "fragment": { "$ref": "#/$defs/stage_mode" }
+      }
+    },
+    "stage_mode": { "enum": ["off", "on", "unknown"] },
     "build": {
       "type": "object",
       "additionalProperties": false,

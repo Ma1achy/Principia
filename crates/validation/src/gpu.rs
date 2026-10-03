@@ -5,6 +5,8 @@
 
 use std::fmt;
 
+use engine::compute::{self, ComputeKernel, ComputeShader};
+use engine::contract::fast_math::{FastMath, StageMode};
 use engine::contract::profile::Api;
 use engine::telemetry::session;
 
@@ -83,7 +85,8 @@ impl fmt::Display for AdapterInfo {
     }
 }
 
-/// A headless device (no surface) with no optional features.
+/// A headless device (no surface) with no optional features but those the compute entry point needs on its backend
+/// (`engine::compute::required_features`: wgpu's passthrough on Metal).
 pub struct GpuHarness {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -107,9 +110,15 @@ impl GpuHarness {
         };
         let adapter = pollster::block_on(instance.request_adapter(&options))
             .map_err(|e| GpuError(format!("no {backends:?} adapter ({BACKEND_VAR}): {e}")))?;
+        let required = compute::required_features(adapter.get_info().backend);
+        if !adapter.features().contains(required) {
+            return Err(GpuError(format!(
+                "the adapter lacks {required:?}, which the compute entry point needs (R-297)"
+            )));
+        }
         let descriptor = wgpu::DeviceDescriptor {
             label: Some("validation::gpu"),
-            required_features: wgpu::Features::empty(),
+            required_features: required,
             required_limits: wgpu::Limits::default(),
             ..Default::default()
         };
@@ -131,6 +140,16 @@ impl GpuHarness {
         })
     }
 
+    /// The device, for a caller that builds its own dispatch through the compute entry point.
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    /// The device's queue.
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
     pub fn adapter_info(&self) -> &AdapterInfo {
         &self.info
     }
@@ -141,42 +160,57 @@ impl GpuHarness {
         self.session.as_ref()
     }
 
-    /// The features the device was opened with: those [`GpuHarness::new`] requested, none, so no `SHADER_F16`
-    /// (payload §1, REQ-PAY-011).
+    /// The features the device was opened with: those [`GpuHarness::new`] requested, only the compute entry point's,
+    /// so no `SHADER_F16` (payload §1, REQ-PAY-011).
     pub fn features(&self) -> wgpu::Features {
         self.device.features()
     }
 
-    /// Compiles `module` and dispatches `entry` once per word of `inputs[0]`. Input `k` is bound read-only at
-    /// `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write at the next binding and returned.
-    /// A WGSL or validation error panics (wgpu's uncaptured-error handler).
+    /// Compiles `module` and dispatches `entry` once per word of `inputs[0]`, under the default fast-math setting, off.
+    /// Input `k` is bound read-only at `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write
+    /// at the next binding and returned. A WGSL or validation error panics (wgpu's uncaptured-error handler), and so
+    /// does a pipeline the compute entry point refuses.
     pub fn run_wgsl(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Vec<u32> {
         self.prepare(module, entry, inputs).run()
+    }
+
+    /// [`run_wgsl`](Self::run_wgsl) under the fast-math `setting` (R-297).
+    pub fn run_wgsl_with(
+        &self,
+        module: &str,
+        entry: &str,
+        inputs: &[&[u32]],
+        setting: FastMath,
+    ) -> Vec<u32> {
+        self.prepare_with(module, entry, inputs, setting).run()
     }
 
     /// [`run_wgsl`](Self::run_wgsl)'s pipeline and buffers, built once, so that [`Prepared::run`] times the dispatch
     /// and readback alone (the benchmark runner, TASK-M0-19).
     pub fn prepare(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Prepared<'_> {
+        self.prepare_with(module, entry, inputs, FastMath::default())
+    }
+
+    /// [`prepare`](Self::prepare) under the fast-math `setting`: the pipeline is created through the compute entry
+    /// point (`engine::compute::pipeline`, R-297).
+    pub fn prepare_with(
+        &self,
+        module: &str,
+        entry: &str,
+        inputs: &[&[u32]],
+        setting: FastMath,
+    ) -> Prepared<'_> {
         use wgpu::util::DeviceExt;
         let len = inputs.first().map_or(0, |i| i.len());
         assert!(len > 0, "run_wgsl needs a non-empty first input");
         let size = (len * 4) as u64;
-        let shader = self
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some(entry),
-                source: wgpu::ShaderSource::Wgsl(module.into()),
-            });
-        let pipeline = self
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(entry),
-                layout: None,
-                module: &shader,
-                entry_point: Some(entry),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+        let shader = ComputeShader {
+            label: entry,
+            wgsl: module,
+            entry,
+        };
+        let kernel =
+            compute::pipeline(&self.device, &shader, setting).unwrap_or_else(|e| panic!("{e}"));
         let storage = |contents: &[u32], usage| {
             let bytes: Vec<u8> = contents.iter().flat_map(|w| w.to_le_bytes()).collect();
             let desc = wgpu::util::BufferInitDescriptor {
@@ -200,24 +234,15 @@ impl GpuHarness {
             usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
             mapped_at_creation: false,
         });
-        let entries: Vec<_> = buffers
-            .iter()
-            .enumerate()
-            .map(|(k, b)| wgpu::BindGroupEntry {
-                binding: k as u32,
-                resource: b.as_entire_binding(),
-            })
-            .collect();
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &pipeline.get_bind_group_layout(0),
-            entries: &entries,
-        });
+        let group: Vec<&wgpu::Buffer> = buffers.iter().collect();
+        let bindings = kernel
+            .bind(&self.device, &[&group])
+            .unwrap_or_else(|e| panic!("{e}"));
         let output = buffers.pop().expect("the output buffer");
         Prepared {
             harness: self,
-            pipeline,
-            bind_group,
+            kernel,
+            bindings,
             output,
             readback,
             len,
@@ -228,14 +253,19 @@ impl GpuHarness {
 /// A compiled dispatch and its buffers, from [`GpuHarness::prepare`].
 pub struct Prepared<'h> {
     harness: &'h GpuHarness,
-    pipeline: wgpu::ComputePipeline,
-    bind_group: wgpu::BindGroup,
+    kernel: ComputeKernel,
+    bindings: compute::Bindings,
     output: wgpu::Buffer,
     readback: wgpu::Buffer,
     len: usize,
 }
 
 impl Prepared<'_> {
+    /// The compute stage's fast-math mode as compiled (R-297).
+    pub fn mode(&self) -> StageMode {
+        self.kernel.mode()
+    }
+
     /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
     pub fn run(&self) -> Vec<u32> {
         let size = (self.len * 4) as u64;
@@ -243,8 +273,7 @@ impl Prepared<'_> {
         let mut encoder = device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
+            self.kernel.set(&mut pass, &self.bindings);
             pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
         }
         encoder.copy_buffer_to_buffer(&self.output, 0, &self.readback, 0, size);
@@ -348,6 +377,56 @@ fn identity(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 ";
 
+/// The fast-math probe's first kernel (R-297; REQ-SYS-074): `(x + 0.5) / 255.0` for each word `x`, the fragment
+/// arithmetic R-296's Result measured, its f32 result's bits written out.
+pub const HALFWAY_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> x: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn halfway(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&x)) { output[id.x] = bitcast<u32>((f32(x[id.x]) + 0.5) / 255.0); }
+}
+";
+
+/// The fast-math probe's second kernel: `a / b`, for the bits of each pair of f32 words.
+pub const DIVIDE_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read> b: array<u32>;
+@group(0) @binding(2) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn divide(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&a)) { output[id.x] = bitcast<u32>(bitcast<f32>(a[id.x]) / bitcast<f32>(b[id.x])); }
+}
+";
+
+/// The number of fuzzed divisions the probe runs.
+pub const FUZZED_DIVISIONS: usize = 1 << 16;
+
+/// The probe's fuzzed divisions, as the bits of each dividend and divisor: [`FUZZED_DIVISIONS`] pairs from a fixed
+/// seed (splitmix64), each operand of either sign with a random significand and an exponent within 2^±60, so every
+/// quotient is a normal f32 and no subnormal handling enters the comparison.
+pub fn fuzzed_divisions() -> (Vec<u32>, Vec<u32>) {
+    let mut state = 0x5EED_F00D_u64;
+    let mut next = move || {
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    };
+    let mut operand = move || {
+        let r = next();
+        let sign = (r >> 63) as u32;
+        let exponent = 127 - 60 + (r >> 32) as u32 % 121;
+        // The three fields occupy disjoint bits, so their sum is their bitwise or; a sum, unlike an or, changes the
+        // word under a `^` in its place, so the fingerprint check sees every operator here.
+        (sign << 31) + (exponent << 23) + (r as u32 & 0x7F_FFFF)
+    };
+    (0..FUZZED_DIVISIONS)
+        .map(|_| (operand(), operand()))
+        .unzip()
+}
+
 /// The M0 fixture's input: 2^16 distinct words (the index times an odd constant, a bijection on u32), so every bit
 /// position, bit 31 included, carries both values.
 pub fn identity_fixture() -> Vec<u32> {
@@ -412,6 +491,147 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
         (signed, unsigned)
     }
 
+    /// A division as the CPU computes it, or a control's stand-in.
+    pub type Divide = fn(f32, f32) -> f32;
+
+    /// The CPU's correctly rounded f32 division.
+    pub fn divide(a: f32, b: f32) -> f32 {
+        a / b
+    }
+
+    /// The fast-math probe under `setting`: the compute stage's mode as compiled, and the inputs on which the GPU's
+    /// `(x + 0.5) / 255.0`, for every x in 0..256, and its fuzzed divisions differ from `reference`, bit for bit. Prints
+    /// the counts, for the PR (REQ-SYS-074).
+    pub fn probe(
+        h: &GpuHarness,
+        setting: FastMath,
+        reference: Divide,
+    ) -> (StageMode, Vec<u32>, Vec<usize>) {
+        let xs: Vec<u32> = (0..256).collect();
+        let halfway = h.prepare_with(HALFWAY_WGSL, "halfway", &[&xs], setting);
+        let mode = halfway.mode();
+        let differ = |got: &[u32], want: &mut dyn Iterator<Item = f32>| -> Vec<usize> {
+            got.iter()
+                .zip(want)
+                .enumerate()
+                .filter(|(_, (g, w))| **g != w.to_bits())
+                .map(|(i, _)| i)
+                .collect()
+        };
+        let halfway_got = halfway.run();
+        assert_eq!(
+            halfway_got.len(),
+            xs.len(),
+            "the probe read back the wrong length"
+        );
+        let halfway_differ: Vec<u32> = differ(
+            &halfway_got,
+            &mut xs.iter().map(|&x| reference(x as f32 + 0.5, 255.0)),
+        )
+        .into_iter()
+        .map(|i| i as u32)
+        .collect();
+        let (a, b) = fuzzed_divisions();
+        let got = h.run_wgsl_with(DIVIDE_WGSL, "divide", &[&a, &b], setting);
+        assert_eq!(got.len(), a.len(), "the probe read back the wrong length");
+        let fuzzed_differ = differ(
+            &got,
+            &mut a
+                .iter()
+                .zip(&b)
+                .map(|(&a, &b)| reference(f32::from_bits(a), f32::from_bits(b))),
+        );
+        eprintln!(
+            "compute_fast_math: {:?}, setting {setting:?}, compute compiled {mode:?}: {} of 256 (x + 0.5) / 255.0 and \
+             {} of {FUZZED_DIVISIONS} fuzzed divisions differ from the CPU's",
+            h.adapter_info().backend,
+            halfway_differ.len(),
+            fuzzed_differ.len()
+        );
+        (mode, halfway_differ, fuzzed_differ)
+    }
+
+    /// `compute_fast_math_off_is_correctly_rounded`'s check: with the setting off, the probe's every division matches
+    /// `reference`, the CPU's correctly rounded f32 division, bit for bit.
+    pub fn check_off_exact(h: &GpuHarness, reference: Divide) {
+        let (_, halfway, fuzzed) = probe(h, FastMath::Off, reference);
+        assert_eq!(
+            (halfway.len(), fuzzed.len()),
+            (0, 0),
+            "with compute fast-math off, some of 256 (x + 0.5) / 255.0 (x = {halfway:?}) and of {FUZZED_DIVISIONS} \
+             fuzzed divisions differ from the CPU's correctly rounded f32 division"
+        );
+    }
+
+    /// `compute_fast_math_switch_acts`'s check: under `setting`, the compute stage is compiled `expect`, and the probe
+    /// shows it: some `(x + 0.5) / 255.0` differs from the CPU's correctly rounded division when compiled on (R-296's
+    /// Result), none when compiled off.
+    pub fn check_switch(h: &GpuHarness, setting: FastMath, expect: StageMode) {
+        let (mode, halfway, _) = probe(h, setting, divide);
+        let shown = |what: &str| {
+            format!(
+                "the divisions do not show the compute stage compiled {expect:?} under setting {setting:?}: {what}"
+            )
+        };
+        assert_eq!(mode, expect, "{}", shown("its mode"));
+        assert_eq!(
+            !halfway.is_empty(),
+            expect == StageMode::On,
+            "{}",
+            shown(&format!("{} of 256 differ", halfway.len()))
+        );
+    }
+
+    /// `compute_fast_math_defaults_off`'s check: `setting`, the default, is off, and the harness's default dispatch
+    /// compiles the compute stage as off compiles on its backend.
+    pub fn check_defaults_off(h: &GpuHarness, setting: FastMath) {
+        let api = h.session_adapter().map(|a| a.api).unwrap_or(Api::None);
+        let off = compute::compiled_modes(api, FastMath::Off).map(|m| m.compute);
+        let mode = h.prepare(IDENTITY_WGSL, "identity", &[&[0]]).mode();
+        let wrong = "the compute fast-math setting does not default to off";
+        assert_eq!(setting, FastMath::Off, "{wrong}");
+        assert_eq!(Some(mode), off, "{wrong}: compiled {mode:?}");
+    }
+
+    /// `compute_fast_math_harness_features`'s check: the harness's device was opened with exactly `want`, the compute
+    /// entry point's required features on its backend (the passthrough's on Metal, none elsewhere).
+    pub fn check_features(h: &GpuHarness, want: wgpu::Features) {
+        assert_eq!(
+            h.features(),
+            want,
+            "the harness's device does not have exactly the compute entry point's features"
+        );
+    }
+
+    /// `compute_fast_math_fuzzed_set`'s check: `a` and `b` are the probe's fuzzed divisions, fixed by their seed (an
+    /// FNV-1a fingerprint of every word), and their exponents span exactly 2^-60 to 2^60, so every quotient is a normal
+    /// f32 (its exponent within ±121, inside f32's normal range).
+    pub fn check_fuzzed(a: &[u32], b: &[u32]) {
+        let wrong = "the fuzzed divisions are not the fixed set";
+        assert_eq!(
+            (a.len(), b.len()),
+            (FUZZED_DIVISIONS, FUZZED_DIVISIONS),
+            "{wrong}"
+        );
+        let exponents: Vec<i32> = a
+            .iter()
+            .chain(b)
+            .map(|w| ((w >> 23) & 0xFF) as i32 - 127)
+            .collect();
+        let span = (exponents.iter().min(), exponents.iter().max());
+        assert_eq!(span, (Some(&-60), Some(&60)), "{wrong}: exponents {span:?}");
+        let fingerprint = a.iter().chain(b).fold(0xCBF2_9CE4_8422_2325_u64, |h, w| {
+            (h ^ u64::from(*w)).wrapping_mul(0x0000_0100_0000_01B3)
+        });
+        assert_eq!(
+            fingerprint, FUZZED_FINGERPRINT,
+            "{wrong}: fingerprint {fingerprint:#018x}"
+        );
+    }
+
+    /// The fuzzed divisions' FNV-1a fingerprint, pinned so the set the PR reports is the set every run divides.
+    pub const FUZZED_FINGERPRINT: u64 = 0x2e5b_e827_84ee_37a4;
+
     /// `metal_hosted_probe`'s check: the harness opened an adapter on `want`.
     pub fn check_backend(info: &AdapterInfo, want: wgpu::Backend) {
         assert_eq!(
@@ -474,6 +694,95 @@ mod tests {
         check_backend(h.adapter_info(), wgpu::Backend::Metal);
         let input = identity_fixture();
         check_bit_exact(&input, &h.run_wgsl(IDENTITY_WGSL, "identity", &[&input]));
+    }
+
+    /// REQ-SYS-074: with the compute setting off, the probe's divisions are the CPU's correctly rounded ones, bit for
+    /// bit, on every backend; a mismatch is a REVIEW_QUEUE entry, not a looser check (R-296's Result).
+    #[test]
+    fn compute_fast_math_off_is_correctly_rounded() {
+        let h = harness();
+        check_off_exact(&h, divide);
+        fires(
+            || check_off_exact(&h, |a, b| a * (1.0 / b)),
+            "the check passed the reciprocal reference",
+        );
+    }
+
+    /// `check` panics: the check this test made fires on a contaminated input, so a check reduced to nothing fails
+    /// the test, not only its control (R-196).
+    fn fires(check: impl FnOnce(), passed: &str) {
+        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check));
+        assert!(caught.is_err(), "{passed}");
+    }
+
+    /// REQ-SYS-074: the setting acts as the header records it: on Metal, on compiles the compute stage with fast-math
+    /// and the probe differs on at least one input (R-296's Result's 94 columns); on Vulkan, on compiles as off, and
+    /// the probe shows none.
+    #[test]
+    fn compute_fast_math_switch_acts() {
+        let h = harness();
+        let api = h.session_adapter().map(|a| a.api).unwrap_or(Api::None);
+        for setting in [FastMath::Off, FastMath::On] {
+            let expect =
+                compute::compiled_modes(api, setting).map_or(StageMode::Unknown, |m| m.compute);
+            check_switch(&h, setting, expect);
+            let other = if expect == StageMode::On {
+                StageMode::Off
+            } else {
+                StageMode::On
+            };
+            fires(
+                || check_switch(&h, setting, other),
+                "the check passed the other compiled mode",
+            );
+        }
+    }
+
+    /// The probe's fuzzed divisions are a fixed set, of normal operands and quotients only (REQ-SYS-074).
+    #[test]
+    fn compute_fast_math_fuzzed_set() {
+        let (a, b) = fuzzed_divisions();
+        check_fuzzed(&a, &b);
+        let mut flipped = b.clone();
+        flipped[9] ^= 1 << 31;
+        fires(
+            || check_fuzzed(&a, &flipped),
+            "the check passed a divisor with its sign flipped",
+        );
+    }
+
+    crate::negative_control!(
+        compute_fast_math_fuzzed_set,
+        "the set with one divisor's sign flipped",
+        expected = "the fuzzed divisions are not the fixed set",
+        {
+            let (a, mut b) = fuzzed_divisions();
+            b[9] ^= 1 << 31;
+            check_fuzzed(&a, &b);
+        }
+    );
+
+    /// REQ-SYS-074: the setting defaults to off, and the harness's dispatches compile under it.
+    #[test]
+    fn compute_fast_math_defaults_off() {
+        let h = harness();
+        check_defaults_off(&h, FastMath::default());
+        fires(
+            || check_defaults_off(&h, FastMath::On),
+            "the check passed setting on as the default",
+        );
+    }
+
+    /// The harness opens its device with exactly the entry point's features, so the passthrough is there on Metal.
+    #[test]
+    fn compute_fast_math_harness_features() {
+        let h = harness();
+        let want = compute::required_features(h.adapter_info().backend);
+        check_features(&h, want);
+        fires(
+            || check_features(&h, want | wgpu::Features::SHADER_F16),
+            "the check passed a feature the device was not opened with",
+        );
     }
 
     fn rejects_naming_the_variable(value: &str) {

@@ -150,7 +150,7 @@ fn has_number(code: &str) -> bool {
 }
 
 /// `source` with its comments, string literals and character literals blanked, lines kept.
-fn strip(source: &str) -> String {
+pub(crate) fn strip(source: &str) -> String {
     let c: Vec<char> = source.chars().collect();
     let mut out = String::with_capacity(source.len());
     let blank = |out: &mut String, s: &[char]| {

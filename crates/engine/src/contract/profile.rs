@@ -14,6 +14,7 @@ use std::io::{self, BufRead, Write};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::canonical;
+pub use super::fast_math::{CompiledModes, FastMath, FastMathRecord, StageMode};
 
 mod stream;
 pub use stream::{Flush, Stream};
@@ -150,6 +151,9 @@ pub struct SessionHeader {
     /// f32 and f64 support, and the reported f64 rate; `None` for a session that opens no GPU (R-308).
     #[serde(deserialize_with = "nullable")]
     pub precision: Option<Precision>,
+    /// The compute shaders' fast-math setting asked for, and each stage's mode as compiled; `compiled` is `None` for a
+    /// session that opens no GPU (R-297, R-308).
+    pub fast_math: FastMathRecord,
     /// The build's provenance.
     pub build: Build,
     /// The display; `None` for a headless run.

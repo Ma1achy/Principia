@@ -313,6 +313,9 @@ device     gpu (model), cpu (model), cpu_cores_available (the cores this process
 backend    api ("metal" / "vulkan" / "dx12" / "webgpu" / "none"), driver (its version)
 precision  f32, f64 (supported: true / false), f64_rate (the reported f64 rate as a fraction of the f32 rate;
            null when not reported)
+fast_math  setting ("off" / "on": the compute shaders' fast-math setting asked for, the sim key's; off by default),
+           compiled: {compute, vertex, fragment}, each stage's mode as compiled on the running backend ("off" / "on" /
+           "unknown"); compiled is null for a session that opens no GPU (R-297, R-303, R-308)
 build      commit (the hash), profile (the release profile), features ([flag, ...])
 display    width_px, height_px, refresh_hz, dpi_scale; null for a headless run
 config     the run's full configuration, a JSON object, in the canonical serialisation (R-309)
