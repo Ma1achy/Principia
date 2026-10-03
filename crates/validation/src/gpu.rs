@@ -700,7 +700,19 @@ mod tests {
     /// bit, on every backend; a mismatch is a REVIEW_QUEUE entry, not a looser check (R-296's Result).
     #[test]
     fn compute_fast_math_off_is_correctly_rounded() {
-        check_off_exact(&harness(), divide);
+        let h = harness();
+        check_off_exact(&h, divide);
+        fires(
+            || check_off_exact(&h, |a, b| a * (1.0 / b)),
+            "the check passed the reciprocal reference",
+        );
+    }
+
+    /// `check` panics: the check this test made fires on a contaminated input, so a check reduced to nothing fails
+    /// the test, not only its control (R-196).
+    fn fires(check: impl FnOnce(), passed: &str) {
+        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check));
+        assert!(caught.is_err(), "{passed}");
     }
 
     /// REQ-SYS-074: the setting acts as the header records it: on Metal, on compiles the compute stage with fast-math
@@ -714,6 +726,15 @@ mod tests {
             let expect =
                 compute::compiled_modes(api, setting).map_or(StageMode::Unknown, |m| m.compute);
             check_switch(&h, setting, expect);
+            let other = if expect == StageMode::On {
+                StageMode::Off
+            } else {
+                StageMode::On
+            };
+            fires(
+                || check_switch(&h, setting, other),
+                "the check passed the other compiled mode",
+            );
         }
     }
 
@@ -722,6 +743,12 @@ mod tests {
     fn compute_fast_math_fuzzed_set() {
         let (a, b) = fuzzed_divisions();
         check_fuzzed(&a, &b);
+        let mut flipped = b.clone();
+        flipped[9] ^= 1 << 31;
+        fires(
+            || check_fuzzed(&a, &flipped),
+            "the check passed a divisor with its sign flipped",
+        );
     }
 
     crate::negative_control!(
@@ -738,14 +765,24 @@ mod tests {
     /// REQ-SYS-074: the setting defaults to off, and the harness's dispatches compile under it.
     #[test]
     fn compute_fast_math_defaults_off() {
-        check_defaults_off(&harness(), FastMath::default());
+        let h = harness();
+        check_defaults_off(&h, FastMath::default());
+        fires(
+            || check_defaults_off(&h, FastMath::On),
+            "the check passed setting on as the default",
+        );
     }
 
     /// The harness opens its device with exactly the entry point's features, so the passthrough is there on Metal.
     #[test]
     fn compute_fast_math_harness_features() {
         let h = harness();
-        check_features(&h, compute::required_features(h.adapter_info().backend));
+        let want = compute::required_features(h.adapter_info().backend);
+        check_features(&h, want);
+        fires(
+            || check_features(&h, want | wgpu::Features::SHADER_F16),
+            "the check passed a feature the device was not opened with",
+        );
     }
 
     fn rejects_naming_the_variable(value: &str) {
