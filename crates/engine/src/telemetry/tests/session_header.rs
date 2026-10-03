@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 
 use crate::contract::profile::{Api, Build, SessionHeader};
 use crate::telemetry::session::{
-    build, cpu_named, cpu_total_from, header, ram_from, Adapter, AdapterMemory, Host,
+    build, cpu_named, cpu_total_from, header, ram_from, sysctl, Adapter, AdapterMemory, Host,
 };
 
 /// The header writer under test, or a control's broken one.
@@ -357,4 +357,38 @@ validation::negative_control!(
     "a probe that never reads /proc/meminfo must fail the check",
     expected = "the RAM size is wrong",
     check_ram(|s, _| ram_from(s, None))
+);
+
+/// A probe program, the key asked of it, and the output the probe returns.
+type SysctlCase<'a> = (&'a str, &'a str, Option<&'a [u8]>);
+
+/// `probe` runs `<program> -n <key>` and returns its output, or `None` where the program fails or doesn't run. The
+/// stand-ins: `/bin/echo`, which prints the key (`-n` drops its newline); `/usr/bin/false`, which fails; and a path
+/// that names no program.
+fn check_sysctl(probe: fn(&str, &str) -> Option<Vec<u8>>) {
+    let cases: [SysctlCase<'_>; 4] = [
+        ("/bin/echo", "hw.ncpu", Some(b"hw.ncpu")),
+        ("/bin/echo", "hw.memsize", Some(b"hw.memsize")),
+        ("/usr/bin/false", "hw.ncpu", None),
+        ("/nonexistent/sysctl", "hw.ncpu", None),
+    ];
+    for (program, key, want) in cases {
+        assert_eq!(
+            probe(program, key).as_deref(),
+            want,
+            "the probe's output is wrong from `{program} -n {key}`"
+        );
+    }
+}
+
+#[test]
+fn session_header_sysctl_reads_the_output() {
+    check_sysctl(sysctl);
+}
+
+validation::negative_control!(
+    session_header_sysctl_reads_the_output,
+    "a probe that never returns the program's output must fail the check",
+    expected = "the probe's output is wrong",
+    check_sysctl(|_, _| None)
 );

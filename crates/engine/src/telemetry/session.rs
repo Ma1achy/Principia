@@ -57,8 +57,10 @@ pub struct Host {
 /// exist, and the probes fall through to /proc.
 const SYSCTL: &str = "/usr/sbin/sysctl";
 
-fn sysctl(key: &str) -> Option<Vec<u8>> {
-    let out = Command::new(SYSCTL).args(["-n", key]).output().ok()?;
+/// `<program> -n <key>`'s output, `program` being [`SYSCTL`] (a test's stand-in in the tests); `None` where it doesn't
+/// run or fails.
+pub(crate) fn sysctl(program: &str, key: &str) -> Option<Vec<u8>> {
+    let out = Command::new(program).args(["-n", key]).output().ok()?;
     Some(out.stdout).filter(|_| out.status.success())
 }
 
@@ -70,12 +72,12 @@ pub fn host() -> Result<Host, String> {
         .map_err(|e| format!("the CPU core count is not reported: {e}"))?;
     Ok(Host {
         cpu: cpu_named(
-            sysctl("machdep.cpu.brand_string").as_deref(),
+            sysctl(SYSCTL, "machdep.cpu.brand_string").as_deref(),
             cpuinfo.as_deref(),
         ),
         cpu_cores_available: u32::try_from(available.get()).unwrap_or(u32::MAX),
-        cpu_cores_total: cpu_total_from(sysctl("hw.ncpu").as_deref(), cpuinfo.as_deref()),
-        ram_bytes: ram_from(sysctl("hw.memsize").as_deref(), meminfo.as_deref()),
+        cpu_cores_total: cpu_total_from(sysctl(SYSCTL, "hw.ncpu").as_deref(), cpuinfo.as_deref()),
+        ram_bytes: ram_from(sysctl(SYSCTL, "hw.memsize").as_deref(), meminfo.as_deref()),
     })
 }
 

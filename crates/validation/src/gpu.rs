@@ -267,11 +267,15 @@ impl Prepared<'_> {
     }
 }
 
+/// macOS's `sw_vers`, by its full path, so the probe never depends on the run's PATH. Elsewhere it doesn't exist.
+const SW_VERS: &str = "/usr/bin/sw_vers";
+
 /// Metal's driver ships with macOS, and wgpu reports no version for it, so its version is the system's:
-/// `macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers`; empty where `sw_vers` gives nothing.
-fn metal_driver() -> String {
+/// `macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers` (`program`: [`SW_VERS`], a test's stand-in in the tests);
+/// empty where it gives nothing.
+fn metal_driver(program: &str) -> String {
     let field = |flag: &str| {
-        std::process::Command::new("/usr/bin/sw_vers")
+        std::process::Command::new(program)
             .arg(flag)
             .output()
             .ok()
@@ -286,11 +290,21 @@ fn metal_driver() -> String {
 
 /// An adapter's report, as the session header records it (telemetry §2, §5): its name, API and driver; unified memory
 /// for an adapter that shares the machine's RAM (an integrated GPU, Apple silicon's included, or a CPU rasteriser such as
-/// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version ([`metal_driver`]). wgpu reports no VRAM size, so a discrete or virtual adapter is refused
-/// rather than given one it doesn't know (RQ-201, decided per R-369).
+/// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version
+/// ([`metal_driver`]). wgpu reports no VRAM size, so a discrete or virtual adapter is refused rather than given one it
+/// doesn't know (RQ-201, decided per R-369).
 pub fn session_adapter(
     info: &wgpu::AdapterInfo,
     features: wgpu::Features,
+) -> Result<session::Adapter, GpuError> {
+    adapter_with(info, features, SW_VERS)
+}
+
+/// [`session_adapter`], Metal's version read from `sw_vers`, the program named.
+fn adapter_with(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+    sw_vers: &str,
 ) -> Result<session::Adapter, GpuError> {
     let api = match info.backend {
         wgpu::Backend::Metal => Api::Metal,
@@ -316,7 +330,7 @@ pub fn session_adapter(
         name: info.name.clone(),
         api,
         driver: match format!("{} {}", info.driver, info.driver_info).trim() {
-            "" if api == Api::Metal => metal_driver(),
+            "" if api == Api::Metal => metal_driver(sw_vers),
             driver => driver.to_owned(),
         },
         memory,
@@ -527,4 +541,88 @@ mod tests {
         check_selects("metal", wgpu::Backends::METAL);
         check_selects("vulkan", wgpu::Backends::VULKAN);
     }
+
+    /// `/bin/echo` stands in for `sw_vers`: it prints the flag it is given, so the version it reports names the flags
+    /// asked for.
+    const ECHO_VERSION: &str = "macOS -productVersion (-buildVersion)";
+
+    /// `driver` reads `macOS <ProductVersion> (<BuildVersion>)` from the program named, and nothing from one that prints
+    /// nothing (`/usr/bin/true`) or doesn't exist.
+    fn check_metal_driver(driver: fn(&str) -> String) {
+        for (program, want) in [
+            ("/bin/echo", ECHO_VERSION),
+            ("/usr/bin/true", ""),
+            ("/nonexistent/sw_vers", ""),
+        ] {
+            assert_eq!(
+                driver(program),
+                want,
+                "Metal's driver is not the version `{program}` reports"
+            );
+        }
+    }
+
+    #[test]
+    fn metal_driver_reads_sw_vers() {
+        check_metal_driver(metal_driver);
+    }
+
+    crate::negative_control!(
+        metal_driver_reads_sw_vers,
+        "a probe that reports no version must fail the check",
+        expected = "Metal's driver is not the version",
+        check_metal_driver(|_| String::new())
+    );
+
+    /// An integrated adapter on `backend` reporting `driver` and `driver_info`.
+    fn reported(backend: wgpu::Backend, driver: &str, driver_info: &str) -> wgpu::AdapterInfo {
+        let mut info = wgpu::AdapterInfo::new(wgpu::DeviceType::IntegratedGpu, backend);
+        info.driver = driver.to_owned();
+        info.driver_info = driver_info.to_owned();
+        info
+    }
+
+    /// The adapter mapping under test, `sw_vers`'s stand-in named, or a control's broken one.
+    type Mapping =
+        fn(&wgpu::AdapterInfo, wgpu::Features, &str) -> Result<session::Adapter, GpuError>;
+
+    /// Only a Metal adapter that reports no driver takes the system's version, read from the `sw_vers` named (here
+    /// `/bin/echo`); an adapter on another API, or one that reports a driver, records what it reported.
+    fn check_driver_source(map: Mapping) {
+        for (backend, driver, driver_info, want) in [
+            (wgpu::Backend::Metal, "", "", ECHO_VERSION),
+            (wgpu::Backend::Vulkan, "", "", ""),
+            (wgpu::Backend::Dx12, "", "", ""),
+            (wgpu::Backend::Metal, "Apple", "3", "Apple 3"),
+            (
+                wgpu::Backend::Vulkan,
+                "llvmpipe",
+                "Mesa 24",
+                "llvmpipe Mesa 24",
+            ),
+        ] {
+            let got = map(
+                &reported(backend, driver, driver_info),
+                wgpu::Features::empty(),
+                "/bin/echo",
+            )
+            .unwrap_or_else(|e| panic!("{e}"));
+            assert_eq!(
+                got.driver, want,
+                "the driver of a {backend:?} adapter reporting {driver:?} {driver_info:?} is misread"
+            );
+        }
+    }
+
+    #[test]
+    fn session_adapter_driver_source() {
+        check_driver_source(adapter_with);
+    }
+
+    crate::negative_control!(
+        session_adapter_driver_source,
+        "a mapping that never reads the system's version for Metal must fail the check",
+        expected = "the driver of a Metal adapter reporting",
+        check_driver_source(|i, f, _| adapter_with(i, f, "/nonexistent/sw_vers"))
+    );
 }
