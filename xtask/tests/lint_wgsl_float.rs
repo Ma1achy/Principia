@@ -1121,11 +1121,12 @@ negative_control!(
     check_cases(&INF_NAN_EVALUATED, Rule::InfNanConstant, false)
 );
 
-/// Calls to `isinf` nested in statements.
-const ISINF_CALLS: [&str; 3] = [
+/// Calls to `isinf` nested in statements: an `if`, a `switch`, a loop, and a bare `{ … }` block.
+const ISINF_CALLS: [&str; 4] = [
     "if c { return isinf(x); } return false;",
     "switch i { default: { return isinf(x); } }",
     "loop { if c { break; } return isinf(x); } return false;",
+    "{ return isinf(x); }",
 ];
 
 #[test]
