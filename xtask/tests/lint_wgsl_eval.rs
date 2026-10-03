@@ -2,7 +2,10 @@
 //! R-352): a comparison operand is an inf or NaN constant, or a finite-max stand-in, if it is "a constant expression
 //! that evaluates to" one, so the evaluator must give the value WGSL gives every constant expression naga leaves
 //! unfolded: every operator, conversion and `bitcast`, `select`, `all` and `any`, and every built-in WGSL allows in a
-//! constant expression, over float, integer and bool scalars, vectors and matrices.
+//! constant expression, over float, integer and bool scalars, vectors and matrices; integers of every width naga
+//! has (u16, i16, u64 and i64 as well as u32 and i32); and a NaN made by a `bitcast`, whose bit pattern (sign and
+//! payload) is as known as any other value's, through a `bitcast` back, a component, a swizzle, a `select` or a
+//! `transpose`, for f16, f32 and f64.
 //!
 //! Each case is an expression bound to a `let` in a function of its own; the test reads the `let`'s expression from
 //! naga's IR (checking naga left it unfolded, so the evaluator, not naga, gives the value) and compares
@@ -90,7 +93,7 @@ fn int_bits(arg: &str) -> u32 {
 /// The evaluator's float values of `expr`, bound to a `let` naga leaves unfolded.
 fn eval(expr: &str) -> Option<Vec<f64>> {
     let source = format!(
-        "enable f16;\nfn f() {{\n    let v = {};\n}}\n",
+        "enable f16;\nenable wgpu_int16;\nfn f() {{\n    let v = {};\n}}\n",
         expand(expr)
     );
     let module = naga::front::wgsl::parse_str(&source).unwrap_or_else(|e| {
@@ -604,14 +607,174 @@ fn integer_builtins() -> Vec<Case> {
     ]
 }
 
-/// Values WGSL leaves indeterminate, or that divide by zero: none.
+/// A NaN's bit pattern, known when a `bitcast` made it: through a `bitcast` back, a component, a swizzle, a `select`
+/// or a `transpose`, its sign and payload kept, for f32, f16 (through u16 and i16) and f64 (through u64).
+fn nan_bits() -> Vec<Case> {
+    let f32_max = f64::from(f32::MAX);
+    let below_max = f64::from(f32::from_bits(0x7f7f_fffe));
+    vec![
+        case("f32(bitcast<u32>(F(NaN)))", &[2_143_289_344.0]),
+        case("f32(bitcast<u32>(bitcast<f32>(0xffc00001u)) >> 16u)", &[65472.0]),
+        case("f32(bitcast<u32>(bitcast<f32>(0xffc00001u)) & 0xffffu)", &[1.0]),
+        case("f32(bitcast<i32>(bitcast<f32>(0xffc00001u)))", &[-4_194_303.0]),
+        case("bitcast<f32>(bitcast<u32>(bitcast<f32>(0xffc00001u)))", &[f64::NAN]),
+        case("bitcast<f32>(bitcast<u32>(bitcast<f32>(0x7fc00000u)) & 0x7f800000u)", &[f64::INFINITY]),
+        case("bitcast<f32>(bitcast<u32>(bitcast<f32>(0x7fc00000u)) - 0x00400001u)", &[f32_max]),
+        case("bitcast<f32>(bitcast<u32>(bitcast<f32>(0x7fc00000u)) - 0x00400002u)", &[below_max]),
+        case(
+            "vec2<f32>(bitcast<vec2<u32>>(vec2<f32>(bitcast<f32>(0x7f800001u), F(1.0))))",
+            &[r32(2_139_095_041.0), 1_065_353_216.0],
+        ),
+        case(
+            "f32(bitcast<u32>(select(F(1.0), bitcast<f32>(0xff800001u), B(true))))",
+            &[r32(4_286_578_689.0)],
+        ),
+        case(
+            "f32(bitcast<vec2<u32>>(vec2<f32>(F(1.0), bitcast<f32>(0x7fc00003u)).yx).x & 0xffu)",
+            &[3.0],
+        ),
+        case(
+            "f32(bitcast<u32>(array<f32, 2>(F(1.0), bitcast<f32>(0x7fc00005u))[1]) & 0xffu)",
+            &[5.0],
+        ),
+        case(
+            "f32(bitcast<u32>(transpose(mat2x2<f32>(vec2<f32>(F(1.0), bitcast<f32>(0x7fc00007u)), \
+             vec2<f32>(F(3.0), F(4.0))))[1][0]) & 0xffu)",
+            &[7.0],
+        ),
+        case("bitcast<f16>(u16(0x7c00u))", &[f64::INFINITY]),
+        case("bitcast<f16>(u16(0x7bffu))", &[65504.0]),
+        case("f32(bitcast<u16>(bitcast<f16>(u16(0xfe01u))))", &[65025.0]),
+        case("f32(bitcast<i16>(bitcast<f16>(u16(0xfe01u))))", &[-511.0]),
+        case(
+            "bitcast<f16>(bitcast<u16>(bitcast<f16>(u16(0x7e00u))) - u16(0x0201u))",
+            &[65504.0],
+        ),
+        case(
+            "bitcast<f16>(bitcast<u16>(bitcast<f16>(u16(0xfe00u))) & u16(0x7c00u))",
+            &[f64::INFINITY],
+        ),
+        case(
+            "bitcast<vec2<f16>>(bitcast<vec2<u16>>(vec2<f16>(bitcast<f16>(u16(0x7e01u)), H(1.0))) & \
+             vec2<u16>(u16(0x7c00u)))",
+            &[f64::INFINITY, 1.0],
+        ),
+        case("bitcast<f64>(0x7ff0000000000000lu)", &[f64::INFINITY]),
+        case(
+            "bitcast<f64>(bitcast<u64>(bitcast<f64>(0x7ff0000000000000lu)) - 1lu)",
+            &[f64::MAX],
+        ),
+        case(
+            "f64(bitcast<u64>(bitcast<f64>(0xfff8000000000003lu)) & 0xfflu)",
+            &[3.0],
+        ),
+    ]
+}
+
+/// Integers of 16 and 64 bits, and unsigned division of u32s past i32's range: every operator and integer built-in,
+/// and conversions, at their width.
+fn wide_integers() -> Vec<Case> {
+    let one_bits = 4_607_182_418_800_017_408.0; // 0x3ff0000000000000, f64 1.0's bits.
+    vec![
+        case("f32(countOneBits(bitcast<u64>(D(-1.0))))", &[11.0]),
+        case("f32(firstLeadingBit(bitcast<i64>(D(-1.0))))", &[62.0]),
+        case("f32(firstLeadingBit(bitcast<u64>(D(1.0))))", &[61.0]),
+        case("f32(i32(bitcast<i64>(D(-1.0)) >> 60u))", &[-5.0]),
+        case("f32(u32(bitcast<u64>(D(1.0)) >> 32u))", &[1_072_693_248.0]),
+        case(
+            "f32(extractBits(bitcast<u64>(D(1.0)), 52u, 11u))",
+            &[1023.0],
+        ),
+        case("f32(extractBits(bitcast<i64>(D(-1.0)), 60u, 4u))", &[-5.0]),
+        case("f32(extractBits(bitcast<i64>(D(-1.0)), 60u, 8u))", &[-5.0]),
+        case(
+            "f32(min(bitcast<i64>(D(-1.0)), bitcast<i64>(D(1.0))))",
+            &[-4_616_189_618_054_758_400.0],
+        ),
+        case(
+            "f32(max(bitcast<u64>(D(-1.0)), bitcast<u64>(D(1.0))))",
+            &[13_830_554_455_654_793_216.0],
+        ),
+        case(
+            "f32(insertBits(bitcast<u64>(D(1.0)), bitcast<u64>(D(1.0)) >> 52u, 0u, 4u) & 0xfflu)",
+            &[15.0],
+        ),
+        case("f32(reverseBits(bitcast<u16>(H(1.0))))", &[60.0]),
+        case("f32(countLeadingZeros(bitcast<u16>(H(1.0))))", &[2.0]),
+        case("f32(countTrailingZeros(bitcast<u16>(H(1.0))))", &[10.0]),
+        case("f32(firstTrailingBit(bitcast<u16>(H(1.0))))", &[10.0]),
+        case("f32(-bitcast<i16>(H(-1.0)))", &[17408.0]),
+        case("f32(~bitcast<u16>(H(1.0)))", &[50175.0]),
+        case(
+            "f32(abs(bitcast<i64>(D(-2.0))))",
+            &[4_611_686_018_427_387_904.0],
+        ),
+        case(
+            "f32(max(bitcast<i64>(D(-1.0)), bitcast<i64>(D(1.0))))",
+            &[one_bits],
+        ),
+        case(
+            "f32(min(bitcast<u64>(D(-1.0)), bitcast<u64>(D(1.0))))",
+            &[one_bits],
+        ),
+        case("f32(sign(bitcast<i64>(D(-1.0))))", &[-1.0]),
+        case("f32(i32(bitcast<i16>(H(-1.0))))", &[-17408.0]),
+        case("f32(u32(bitcast<i16>(H(-1.0))))", &[4_294_949_888.0]),
+        case("f32(u16(F(70000.0)))", &[65535.0]),
+        case("f32(i16(F(-1.5)))", &[-1.0]),
+        case("f32(u64(F(3.5)))", &[3.0]),
+        case("f32(i64(F(-3.5)))", &[-3.0]),
+        case(
+            "f64(bitcast<i64>(D(-1.0)))",
+            &[-4_616_189_618_054_758_400.0],
+        ),
+        case("f16(bitcast<i16>(H(-1.0)))", &[-17408.0]),
+        case("f32(bitcast<i64>(D(1.0)) % 1000li)", &[408.0]),
+        case("f32(U(0xffffffff) / U(2))", &[r32(2_147_483_647.0)]),
+        case("f32(U(0xffffffff) % U(10))", &[5.0]),
+        case(
+            "f32(bitcast<u64>(D(-1.0)) / 2lu)",
+            &[6_915_277_227_827_396_608.0],
+        ),
+        case("f32(bitcast<u64>(D(-1.0)) % 7lu)", &[3.0]),
+        // 2^60 + 2^36 + 1, rounded once to f32: up, to 2^60 + 2^37 (by way of an f64, it would tie and round down).
+        case(
+            "f32(bitcast<u64>(D(0.0)) + 0x1000001000000001lu)",
+            &[1_152_921_642_045_800_448.0],
+        ),
+        case(
+            "f32(bitcast<i64>(D(0.0)) + 0x1000001000000001li)",
+            &[1_152_921_642_045_800_448.0],
+        ),
+        case("f32(bitcast<i16>(H(-1.0)) / i16(-1))", &[17408.0]),
+        case("f32(bitcast<i16>(H(-2.0)) * i16(3))", &[16384.0]),
+        case("f32(bitcast<u64>(D(1.0)) % 1000lu)", &[408.0]),
+        case("f32(bitcast<i64>(D(-1.0)) < bitcast<i64>(D(1.0)))", &[1.0]),
+        case("f32(bitcast<u64>(D(-1.0)) < bitcast<u64>(D(1.0)))", &[0.0]),
+        case(
+            "f64(bitcast<u64>(D(-1.0)))",
+            &[13_830_554_455_654_793_216.0],
+        ),
+        case("f16(bitcast<u16>(H(1.0)))", &[15360.0]),
+        case(
+            "vec2<f32>(F(1.0), F(2.0))[bitcast<u64>(D(0.0)) + 1lu]",
+            &[2.0],
+        ),
+    ]
+}
+
+/// Values WGSL leaves indeterminate, or that divide by zero: none. A NaN an operator, a conversion or a built-in
+/// computes has indeterminate bits, so a `bitcast` of it is none too.
 fn indeterminate() -> Vec<Case> {
     [
         "frexp(F(inf)).fract",
         "smoothstep(F(1.0), F(1.0), F(2.0))",
         "f32(u32(F(NaN)))",
         "f32(i32(F(NaN)))",
-        "f32(bitcast<u32>(F(NaN)))",
+        "f32(bitcast<u32>(F(inf) - F(inf)))",
+        "f32(bitcast<u32>(-bitcast<f32>(0x7fc00000u)))",
+        "f32(bitcast<u32>(abs(F(NaN))))",
+        "f32(bitcast<u64>(D(NaN)))",
     ]
     .iter()
     .map(|e| (e.to_string(), None))
@@ -626,7 +789,10 @@ fn determinate() -> Vec<Case> {
         "smoothstep(F(1.0), F(2.0), F(2.0))",
         "f32(u32(F(1.0)))",
         "f32(i32(F(1.0)))",
-        "f32(bitcast<u32>(F(1.0)))",
+        "f32(bitcast<u32>(F(inf) - F(1.0)))",
+        "f32(bitcast<u32>(-bitcast<f32>(0x7f800000u)))",
+        "f32(bitcast<u32>(abs(F(-1.0))))",
+        "f32(bitcast<u64>(D(1.0)))",
     ]
     .iter()
     .map(|e| (e.to_string(), None))
@@ -679,6 +845,30 @@ negative_control!(
     "integer built-ins against perturbed values mismatch",
     expected = "mismatched",
     check(&perturbed(&integer_builtins()))
+);
+
+#[test]
+fn lint_wgsl_finite_max_eval_nan_bits() {
+    check(&nan_bits());
+}
+
+negative_control!(
+    lint_wgsl_finite_max_eval_nan_bits,
+    "NaN bit patterns against perturbed values mismatch",
+    expected = "mismatched",
+    check(&perturbed(&nan_bits()))
+);
+
+#[test]
+fn lint_wgsl_finite_max_eval_wide_integers() {
+    check(&wide_integers());
+}
+
+negative_control!(
+    lint_wgsl_finite_max_eval_wide_integers,
+    "16- and 64-bit integers against perturbed values mismatch",
+    expected = "mismatched",
+    check(&perturbed(&wide_integers()))
 );
 
 #[test]
