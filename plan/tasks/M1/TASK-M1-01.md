@@ -35,10 +35,12 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - `docs/design/principia_dd_simstate_payload.md` § "3. The word buffer — `free_group_word`"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
+- `decisions.md` § "R-378 — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*"
 
 ## Deliverables
 - `crates/ledger`: derived-accessor emission for both targets — `ftle`, `ftle_valid`, `diffusion_slope`, `diffusion_slope_valid`, `total_substeps_log2`, `tm_t_end_fraction`, `tm_t_dmin_fraction`, `orbit_count`, `retrograde`, the `sd_is_resolved_outcome/_running/_failed/_finished` predicates — each with exactly the payload §6 name.
 - `crates/ledger`: the unified read-side `SimState` (WGSL struct + Rust struct) with plain members; the unpack from `SimStateFTLE` and from `SimStateBase` into it; tier-absent members filled with the canonical quiet-NaN bits.
+- The read side loads per member (R-378): the generated WGSL loads only the stored members each read-side field needs (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load — no read-side `SimState` built from a whole `SimStateFTLE` value, and the M0 layer's whole-struct `sample_state(i)` replaced; a word field loads only the components of `word_buffer[i]` it needs; `cargo xtask lint wgsl`'s read rule (REQ-RENDER-001) checks the per-member loads (applied per R-369).
 - Generated output checked in under the generated-file guard (M0), e.g. `crates/ledger/generated/read_side.{rs,wgsl}`.
 - Tests: `crates/ledger/tests/derived.rs` (unit + proptest), including a ledger scan asserting none of the removed fields exist.
 
@@ -52,10 +54,12 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - `cargo test -p ledger ftle_valid_truth_table` — full truth table over tier / state / n / completed renorms (REQ-PAY-032).
 - `cargo test -p ledger tier_absent_nan_bits` — at a no-FTLE variant `ftle` bitcasts to the canonical quiet-NaN pattern; at E = 0 `ensemble_spread` does likewise; an unbound word reads the sentinel word (REQ-RENDER-013).
 - `cargo test -p ledger time_fraction` — `tm_t_end_fraction(w, 0) == 0`; (65535, 65535) → 1.0 exactly (REQ-RENDER-019).
+- Review checklist (physics, R-378): from the compiled shader output of the generated WGSL (for example naga's MSL, SPIR-V or HLSL, as the toolchain allows; the method is this task's), a stain reading one field loads only that field's words; the PR shows the output and how it was produced (REQ-RENDER-001).
 - Definition: the canonical quiet-NaN bit pattern and the unbound-word sentinel written into lowering_contract Part 3a and approved by the physics reviewer (REQ-RENDER-077).
 
 ## Notes
 - Each unit test is shown able to fail (VAL-007 discipline, PIT-9): e.g. a mutated finalisation (plain S/t) must fail `derived_not_stored`, and a stored-NaN variant must fail `tier_absent_nan_bits`.
 - The canonical quiet-NaN bit pattern and the "empty/sentinel word" an unbound word buffer reads are not given by the corpus (see Gaps in the milestone report); the task waits on them for REQ-RENDER-013.
 - `ensemble_spread` is resolve-stage (M5); at M1 its read-side member exists and reads NaN at E = 0, which is all REQ-RENDER-013 asserts. R-145: the fragment reads `has_ensemble` as a uniform (TASK-M1-03).
+- R-378 (3 Oct 2026, amends R-343): the generated read side loads only the stored members each field needs, never the whole stored struct in one load, so unused data is never fetched on any backend; R-343's bindings, groups and one-table generation are unchanged. The human named "physics or perf" to confirm it on #133; the physics reviewer, already named here, does (applied per R-369).
 - Closes, for gaps the corpus leaves open: REQ-RENDER-077 (R-72 definition) (classification accepted by R-132).
