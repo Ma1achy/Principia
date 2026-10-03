@@ -81,9 +81,10 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      # The linker compresses each binary's debug sections (zlib): the same debug info (R-233), stored in fewer bytes,
-      # so archiving it and each shard's extraction of it take a fraction of the time (extraction 50–98 s to 11–24 s on
-      # PR #126's measurements). Test infrastructure only; nothing else is built with it.
+      # The linker compresses each binary's debug sections (zlib): the same line tables (R-374), stored in fewer bytes,
+      # so each shard extracts the archive in 4–8 s rather than 13–28 s (PR #126's measurements, with line tables
+      # only). Test infrastructure only. RUSTFLAGS is this step's alone: rust-cache's key, computed in its own step,
+      # never sees it, and nothing else is built with it.
       - name: cargo nextest archive --workspace
         env:
           NEXTEST_PROFILE: ci
