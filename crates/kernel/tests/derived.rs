@@ -792,11 +792,34 @@ impl Bits for [[f32; 2]; 3] {
     }
 }
 
-/// Each case's members 0–23 read on the GPU through the WGSL read side, the tier `has_ftle = true`.
+/// The checked-in WGSL, the full tier, as the harness binds it: its two buffers moved from group 1 to group 0's
+/// bindings 2 (the state) and 3 (the word), after the entry point's selectors and arguments, then the entry point and
+/// its output at binding 4. The binding numbers are `cargo xtask lint wgsl`'s to check; the reads are the generated
+/// `sample_read`'s.
+fn wgsl_module() -> String {
+    let mut text = format!("{LAYER_WGSL}{READ_SIDE_WGSL}");
+    for (from, buffer, to) in [(0, "simstate_buffer", 2), (1, "word_buffer", 3)] {
+        let at = format!("@group(1) @binding({from}) var<storage, read> {buffer}");
+        assert!(text.contains(&at), "the generated WGSL has no `{at}`");
+        text = text.replace(
+            &at,
+            &format!("@group(0) @binding({to}) var<storage, read> {buffer}"),
+        );
+    }
+    format!(
+        "{text}\n{ENTRY_WGSL}\n@group(0) @binding(4) var<storage, read_write> t_out: array<u32>;\n"
+    )
+}
+
+/// Each case's members 0–23 read on the GPU through the WGSL read side's `sample_read` at the full tier, the one the
+/// checked-in files declare (R-343): every case is read from `SimStateFTLE` with the word bound.
 fn wgsl_reads(gpu: &GpuHarness, cases: &[Case]) -> Vec<Vec<u32>> {
-    let (mut sel, mut ftle, mut base_w, mut word, mut args) =
-        (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    let (mut sel, mut ftle, mut word, mut args) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     for (i, c) in (0u32..).zip(cases) {
+        assert!(
+            c.ftle_variant && c.has_word,
+            "the checked-in WGSL is the full tier: {c:?}"
+        );
         sel.extend((0..MEMBERS).map(|m| i << 8 | m));
         let s = &c.state;
         ftle.extend(words!(
@@ -818,39 +841,17 @@ fn wgsl_reads(gpu: &GpuHarness, cases: &[Case]) -> Vec<Vec<u32>> {
             total_substeps,
             closure_min
         ));
-        let b = &base(s);
-        base_w.extend(words!(
-            SimStateBase,
-            b,
-            r,
-            p,
-            S,
-            theta,
-            mean_y,
-            C_ty,
-            E_0,
-            Lz_0,
-            packed_a,
-            packed_b,
-            times,
-            total_substeps,
-            closure_min
-        ));
         word.extend(c.word);
-        let flags =
-            u32::from(c.ftle_variant) | u32::from(c.has_word) << 1 | u32::from(c.has_ensemble) << 2;
         let p = &c.params;
         args.extend([
-            flags,
+            u32::from(c.has_ensemble) << 2,
             c.spread.to_bits(),
             p.dt_macro.to_bits(),
             p.delta_0.to_bits(),
         ]);
         args.extend([p.n_renorm, p.horizon_steps, 0, 0]);
     }
-    let module =
-        format!("const has_ftle: bool = true;\n{LAYER_WGSL}{READ_SIDE_WGSL}\n{ENTRY_WGSL}");
-    let out = gpu.run_wgsl(&module, "t_derived", &[&sel, &ftle, &base_w, &word, &args]);
+    let out = gpu.run_wgsl(&wgsl_module(), "t_derived", &[&sel, &args, &ftle, &word]);
     out.chunks(MEMBERS as usize).map(<[u32]>::to_vec).collect()
 }
 
@@ -910,15 +911,17 @@ fn check_parity(gpu: &GpuHarness, read: Read, cases: &[Case]) {
     }
 }
 
-/// Every random case at each variant, with the word and ensemble each bound and absent.
+/// Every random case at the full tier, the checked-in WGSL's, with the ensemble each bound and absent. The other tiers'
+/// WGSL is the assembler's (`ledger::gen::read::assemble`), checked against the same references on the GPU in
+/// `ledger/tests/derived.rs` as the Rust read is here.
 fn parity_cases(seed: u64) -> Vec<Case> {
     random_cases(seed)
         .into_iter()
         .enumerate()
         .map(|(k, c)| Case {
-            ftle_variant: k % 2 == 0,
-            has_word: k % 3 != 0,
-            has_ensemble: k % 5 != 0,
+            ftle_variant: true,
+            has_word: true,
+            has_ensemble: k % 2 != 0,
             ..c
         })
         .collect()

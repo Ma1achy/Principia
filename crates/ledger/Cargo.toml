@@ -9,8 +9,9 @@ publish.workspace = true
 # unit tests in `src/` (R-176, R-187).
 [dev-dependencies]
 validation = { path = "../validation" }
-# The WGSL emitter's tests parse the generated WGSL with naga, wgpu 30's front end (REQ-PAY-016, REQ-PAY-091).
-naga = { version = "30", features = ["wgsl-in"] }
+# The WGSL emitter's tests parse the generated WGSL with naga, wgpu 30's front end (REQ-PAY-016, REQ-PAY-091), and the
+# read side's compile it to naga's MSL, SPIR-V and HLSL to show which stored words a stain loads (R-378).
+naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"] }
 # The read side's property tests (`tests/derived.rs`) draw their cases through the shared config, `validation::prop`.
 proptest = "1.11"
 

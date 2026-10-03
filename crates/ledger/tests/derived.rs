@@ -23,7 +23,8 @@
 
 use std::path::Path;
 
-use ledger::gen::{self, read, rust, wgsl};
+use ledger::gen::read::{self, Tier};
+use ledger::gen::{self, rust, wgsl};
 use ledger::schema::{Ledger, Location, Struct};
 use naga::{Module, TypeInner};
 use proptest::prelude::*;
@@ -100,25 +101,77 @@ fn checked_in(path: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 
-/// The checked-in fragment unpack layer, then the read side, which follows it at assembly.
-fn generated() -> String {
+/// The checked-in fragment unpack layer, then the read side, which follows it at assembly: the full tier, its
+/// `sample_read` filling every field.
+fn full_text() -> String {
     format!("{}{}", checked_in(wgsl::PATH), checked_in(read::WGSL_PATH))
 }
 
-/// `generated` with `from` replaced by `to`, which must occur: a control's one mutation.
-#[cfg(feature = "controls")]
-fn mutated(from: &str, to: &str) -> String {
-    let text = generated();
-    assert!(
-        text.contains(from),
-        "the mutation's target `{from}` is not in the generated WGSL"
-    );
-    text.replace(from, to)
+/// The generated WGSL a GPU check reads, at each tier, with at most one mutation, a control's: `from` replaced by
+/// `to` in the text of every tier read, which must contain it at least once.
+#[derive(Clone, Copy, Debug)]
+struct Gen {
+    from: &'static str,
+    to: &'static str,
 }
 
-/// A tier's module: its `has_ftle` bake, the unpack layer, and the test entry point.
-fn module(generated: &str, has_ftle: bool) -> String {
-    format!("const has_ftle: bool = {has_ftle};\n{generated}\n{ENTRY}")
+/// The generated WGSL as it is.
+fn generated() -> Gen {
+    Gen { from: "", to: "" }
+}
+
+/// The generated WGSL with `from` replaced by `to`: a control's one mutation.
+#[cfg(feature = "controls")]
+fn mutated(from: &'static str, to: &'static str) -> Gen {
+    Gen { from, to }
+}
+
+/// The generated WGSL at `tier`, `sample_read` filling every field: the checked-in files at the full tier, the
+/// assembler's per-tier output otherwise ([`read::assemble`]).
+fn tier_text(tier: Tier) -> String {
+    if tier == Tier::FULL {
+        return full_text();
+    }
+    let ledger = ledger::layout();
+    let entries = gen::validate(&ledger).expect("the ledger validates");
+    let every: Vec<String> = read::members(&ledger.words, &entries)
+        .into_iter()
+        .map(|m| m.name)
+        .collect();
+    let every: Vec<&str> = every.iter().map(String::as_str).collect();
+    read::assemble(&ledger.words, &entries, tier, &every).expect("every field")
+}
+
+/// The tier with FTLE baked out and no word buffer.
+const BARE: Tier = Tier {
+    has_ftle: false,
+    has_word: false,
+};
+
+/// `text` with the group-1 binding `@group(1) @binding(<from>) var<storage, read> <buffer>` moved to group 0's
+/// binding `to`: the harness binds its inputs in group 0 alone. The binding numbers are the lint's to check
+/// (`cargo xtask lint wgsl`); the reads are the generated ones.
+fn rebound(text: &str, from: u32, buffer: &str, to: u32) -> String {
+    let at = format!("@group(1) @binding({from}) var<storage, read> {buffer}");
+    assert!(text.contains(&at), "the generated WGSL has no `{at}`");
+    text.replace(
+        &at,
+        &format!("@group(0) @binding({to}) var<storage, read> {buffer}"),
+    )
+}
+
+/// The harness's module at `tier` from `text`: the buffers moved to group 0 after the entry point's selectors and
+/// arguments (bindings 0 and 1), the state at 2, the word at 3 when bound, then the output.
+fn module(text: &str, tier: Tier) -> String {
+    let text = rebound(text, 0, "simstate_buffer", 2);
+    let (text, out) = if tier.has_word {
+        (rebound(&text, 1, "word_buffer", 3), 4)
+    } else {
+        (text, 3)
+    };
+    format!(
+        "{text}\n{ENTRY}\n@group(0) @binding({out}) var<storage, read_write> t_out: array<u32>;\n"
+    )
 }
 
 fn gpu() -> GpuHarness {
@@ -208,6 +261,14 @@ struct Case {
 }
 
 impl Case {
+    /// The tier the case is read at: its variant's, and whether the word buffer is bound.
+    fn tier(&self) -> Tier {
+        Tier {
+            has_ftle: self.ftle_variant,
+            has_word: self.has_word,
+        }
+    }
+
     /// `sample` in the FTLE variant, the word bound, E ≥ 1, `dt_macro` 0.01, `δ₀` 1e-6, `n_renorm` 16, horizon 1000.
     fn new(sample: Sample) -> Self {
         Case {
@@ -246,38 +307,63 @@ fn marching(n: u32, ratio: f32) -> Sample {
     }
 }
 
-/// Each case's `members`, read on the GPU through the read side of `generated` at the tier `has_ftle`.
+/// Each case's `members`, read on the GPU through `generated`'s `sample_read` at the case's tier, one dispatch per
+/// tier.
 fn read_members(
     gpu: &GpuHarness,
-    generated: &str,
-    has_ftle: bool,
+    generated: Gen,
     cases: &[Case],
     members: &[u32],
 ) -> Vec<Vec<u32>> {
-    let (ftle_s, base_s) = (variant("SimStateFTLE"), variant("SimStateBase"));
-    let (mut sel, mut ftle, mut base, mut word, mut args) =
-        (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
-    for (i, c) in (0u32..).zip(cases) {
-        sel.extend(members.iter().map(|&m| i << 8 | m));
-        ftle.extend(c.sample.words(&ftle_s));
-        base.extend(c.sample.words(&base_s));
-        word.extend(c.word);
-        let flags =
-            u32::from(c.ftle_variant) | u32::from(c.has_word) << 1 | u32::from(c.has_ensemble) << 2;
-        args.extend([
-            flags,
-            c.spread.to_bits(),
-            c.dt.to_bits(),
-            c.delta_0.to_bits(),
-        ]);
-        args.extend([c.n_renorm, c.horizon, 0, 0]);
+    let mut out = vec![Vec::new(); cases.len()];
+    let mut mutated = false;
+    for tier in Tier::ALL {
+        let at: Vec<usize> = (0..cases.len())
+            .filter(|&k| cases[k].tier() == tier)
+            .collect();
+        if at.is_empty() {
+            continue;
+        }
+        let mut text = tier_text(tier);
+        if !generated.from.is_empty() && text.contains(generated.from) {
+            mutated = true;
+            text = text.replace(generated.from, generated.to);
+        }
+        let stored = variant(if tier.has_ftle {
+            "SimStateFTLE"
+        } else {
+            "SimStateBase"
+        });
+        let (mut sel, mut state, mut word, mut args) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for (i, &k) in (0u32..).zip(&at) {
+            let c = &cases[k];
+            sel.extend(members.iter().map(|&m| i << 8 | m));
+            state.extend(c.sample.words(&stored));
+            word.extend(c.word);
+            args.extend([
+                u32::from(c.has_ensemble) << 2,
+                c.spread.to_bits(),
+                c.dt.to_bits(),
+                c.delta_0.to_bits(),
+            ]);
+            args.extend([c.n_renorm, c.horizon, 0, 0]);
+        }
+        let mut inputs: Vec<&[u32]> = vec![&sel, &args, &state];
+        if tier.has_word {
+            inputs.push(&word);
+        }
+        let got = gpu.run_wgsl(&module(&text, tier), "t_derived", &inputs);
+        for (&k, row) in at.iter().zip(got.chunks(members.len())) {
+            out[k] = row.to_vec();
+        }
     }
-    let out = gpu.run_wgsl(
-        &module(generated, has_ftle),
-        "t_derived",
-        &[&sel, &ftle, &base, &word, &args],
+    assert!(
+        generated.from.is_empty() || mutated,
+        "the mutation's target `{}` is not in the generated WGSL of any tier read",
+        generated.from
     );
-    out.chunks(members.len()).map(<[u32]>::to_vec).collect()
+    out
 }
 
 /// `S_final / (n · dt)`, `S_final = S + ln(δ/δ₀)`, in f64 from the stored f32 values (payload §5).
@@ -405,7 +491,7 @@ fn check_not_stored(ledger: &Ledger, rust_source: &str, wgsl_source: &str) {
 #[test]
 fn derived_not_stored_ledger_holds_no_derived_or_removed_field() {
     let rust_source = checked_in(rust::PATH);
-    check_not_stored(&ledger::layout(), &rust_source, &generated());
+    check_not_stored(&ledger::layout(), &rust_source, &full_text());
 }
 
 negative_control!(
@@ -423,13 +509,13 @@ negative_control!(
         extra.name = Some("encounter_count");
         extra.location = Some(Location::Scalar(36));
         ledger.entries.push(extra);
-        check_not_stored(&ledger, &checked_in(rust::PATH), &generated())
+        check_not_stored(&ledger, &checked_in(rust::PATH), &full_text())
     }
 );
 
 /// Each case's `ftle`, read through `generated`, against [`ftle_reference`].
-fn check_ftle_reference(gpu: &GpuHarness, generated: &str, cases: &[Case]) {
-    let got = read_members(gpu, generated, true, cases, &[FTLE, FTLE_VALID]);
+fn check_ftle_reference(gpu: &GpuHarness, generated: Gen, cases: &[Case]) {
+    let got = read_members(gpu, generated, cases, &[FTLE, FTLE_VALID]);
     for (c, g) in cases.iter().zip(&got) {
         let want = ftle_reference(c);
         let scale = 1.0 / (f64::from(c.sample.t_end_step) * f64::from(c.dt));
@@ -451,7 +537,7 @@ fn partial_interval() -> Vec<Case> {
 
 #[test]
 fn derived_not_stored_ftle_finalises_the_partial_interval() {
-    check_ftle_reference(&gpu(), &generated(), &partial_interval());
+    check_ftle_reference(&gpu(), generated(), &partial_interval());
 }
 
 negative_control!(
@@ -460,7 +546,7 @@ negative_control!(
     expected = "differs from the finalised reference",
     check_ftle_reference(
         &gpu(),
-        &mutated("(s_sum + log(delta / delta_0))", "(s_sum)"),
+        mutated("(s_sum + log(delta / delta_0))", "(s_sum)"),
         &partial_interval()
     )
 );
@@ -514,9 +600,8 @@ fn random_cases(seed: u64) -> Vec<Case> {
 #[test]
 fn derived_not_stored_ftle_property_matches_the_finalised_reference() {
     let gpu = gpu();
-    let generated = generated();
     prop::run(&any::<u64>(), |seed| {
-        check_ftle_reference(&gpu, &generated, &random_cases(seed));
+        check_ftle_reference(&gpu, generated(), &random_cases(seed));
         Ok(())
     });
 }
@@ -527,7 +612,7 @@ negative_control!(
     expected = "differs from the finalised reference",
     check_ftle_reference(
         &gpu(),
-        &mutated("(f32(n) * dt_macro)", "(f32(n - n % 16u) * dt_macro)"),
+        mutated("(f32(n) * dt_macro)", "(f32(n - n % 16u) * dt_macro)"),
         &partial_interval()
     )
 );
@@ -584,10 +669,10 @@ negative_control!(
 
 /// A sample with every other `ftle_valid` clause true, read from `SimStateBase`: `ftle` is the canonical quiet NaN and
 /// `ftle_valid` false.
-fn check_ftle_baked_out(gpu: &GpuHarness, generated: &str) {
+fn check_ftle_baked_out(gpu: &GpuHarness, generated: Gen) {
     let mut c = Case::new(marching(40, 50.0));
     c.ftle_variant = false;
-    let got = &read_members(gpu, generated, false, &[c], &[FTLE, FTLE_VALID])[0];
+    let got = &read_members(gpu, generated, &[c], &[FTLE, FTLE_VALID])[0];
     assert_eq!(got[1], 0, "ftle_valid is true with FTLE baked out");
     assert_eq!(
         got[0], QNAN,
@@ -598,7 +683,7 @@ fn check_ftle_baked_out(gpu: &GpuHarness, generated: &str) {
 
 #[test]
 fn ftle_baked_out_reads_nan_and_is_invalid() {
-    check_ftle_baked_out(&gpu(), &generated());
+    check_ftle_baked_out(&gpu(), generated());
 }
 
 negative_control!(
@@ -607,7 +692,7 @@ negative_control!(
     expected = "with FTLE baked out, not the canonical quiet NaN",
     check_ftle_baked_out(
         &gpu(),
-        &mutated("out.ftle = canonical_nan();", "out.ftle = s.S;")
+        mutated("out.ftle = canonical_nan();", "out.ftle = s_S;")
     )
 );
 
@@ -693,8 +778,7 @@ fn check_same_shape(on: &str, off: &str) {
 
 #[test]
 fn read_type_both_tiers_have_one_shape() {
-    let generated = generated();
-    check_same_shape(&module(&generated, true), &module(&generated, false));
+    check_same_shape(&tier_text(Tier::FULL), &tier_text(BARE));
 }
 
 negative_control!(
@@ -702,22 +786,20 @@ negative_control!(
     "a tier whose read type gains a member must fail",
     expected = "the read-side SimState differs between the tiers",
     check_same_shape(
-        &module(&generated(), true),
-        &module(
-            &mutated(
-                "    ensemble_spread: f32,\n}",
-                "    ensemble_spread: f32,\n    shadow_only: f32,\n}"
-            ),
-            false
+        &tier_text(Tier::FULL),
+        &tier_text(BARE).replace(
+            "    ensemble_spread: f32,\n}",
+            "    ensemble_spread: f32,\n    shadow_only: f32,\n}"
         )
     )
 );
 
-/// At the tier `has_ftle`, a sample asking for the FTLE variant with every `ftle_valid` clause true: with
-/// `has_ftle = false` it reads `SimStateBase`, and `ftle` is the canonical quiet NaN.
+/// At the tier `has_ftle`, a sample with every `ftle_valid` clause true: with `has_ftle = false` it reads
+/// `SimStateBase`, and `ftle` is the canonical quiet NaN.
 fn check_ftle_off_reads_nan(gpu: &GpuHarness, has_ftle: bool) {
-    let c = Case::new(marching(40, 50.0));
-    let got = &read_members(gpu, &generated(), has_ftle, &[c], &[FTLE])[0];
+    let mut c = Case::new(marching(40, 50.0));
+    c.ftle_variant = has_ftle;
+    let got = &read_members(gpu, generated(), &[c], &[FTLE])[0];
     assert_eq!(
         got[0], QNAN,
         "with has_ftle = {has_ftle}, ftle reads {:#010x}, not the canonical quiet NaN",
@@ -751,12 +833,12 @@ fn log2_reference(total: u32) -> u32 {
 /// A march from `start` substeps adding `n_sub`, stored after its first `split` steps and resumed from the read
 /// `total_substeps`: the resumed total equals the uninterrupted one, and the stored total's proxy is
 /// [`log2_reference`]'s.
-fn check_resume(gpu: &GpuHarness, generated: &str, start: u32, n_sub: &[u32], split: usize) {
+fn check_resume(gpu: &GpuHarness, generated: Gen, start: u32, n_sub: &[u32], split: usize) {
     let (done, rest) = n_sub.split_at(split);
     let stored = start + done.iter().sum::<u32>();
     let mut sample = marching(40, 50.0);
     sample.total_substeps = stored;
-    let got = &read_members(gpu, generated, true, &[Case::new(sample)], &[TOTAL, LOG2])[0];
+    let got = &read_members(gpu, generated, &[Case::new(sample)], &[TOTAL, LOG2])[0];
     let resumed = got[0] + rest.iter().sum::<u32>();
     let uninterrupted = start + n_sub.iter().sum::<u32>();
     assert_eq!(
@@ -774,7 +856,6 @@ fn check_resume(gpu: &GpuHarness, generated: &str, start: u32, n_sub: &[u32], sp
 #[test]
 fn total_substeps_resume_equals_the_uninterrupted_march() {
     let gpu = gpu();
-    let generated = generated();
     let marches = (
         0u32..=u32::MAX - 64 * 512,
         proptest::collection::vec(1u32..=64, 1..512),
@@ -783,7 +864,7 @@ fn total_substeps_resume_equals_the_uninterrupted_march() {
     prop::run(&marches, |(start, n_sub, split)| {
         check_resume(
             &gpu,
-            &generated,
+            generated(),
             start,
             &n_sub,
             split.index(n_sub.len() + 1),
@@ -798,9 +879,9 @@ negative_control!(
     expected = "the resumed total differs from the uninterrupted march",
     check_resume(
         &gpu(),
-        &mutated(
-            "out.total_substeps = s.total_substeps;",
-            "out.total_substeps = 1u << total_substeps_log2(s.total_substeps);"
+        mutated(
+            "out.total_substeps = s_total_substeps;",
+            "out.total_substeps = 1u << total_substeps_log2(s_total_substeps);"
         ),
         1000,
         &[3, 5, 7],
@@ -809,7 +890,7 @@ negative_control!(
 );
 
 /// Each total's `total_substeps_log2`, read on the GPU, is [`log2_reference`]'s.
-fn check_proxy(gpu: &GpuHarness, generated: &str, totals: &[u32]) {
+fn check_proxy(gpu: &GpuHarness, generated: Gen, totals: &[u32]) {
     let cases: Vec<Case> = totals
         .iter()
         .map(|&t| {
@@ -820,7 +901,7 @@ fn check_proxy(gpu: &GpuHarness, generated: &str, totals: &[u32]) {
         .collect();
     for (t, got) in totals
         .iter()
-        .zip(read_members(gpu, generated, true, &cases, &[LOG2]))
+        .zip(read_members(gpu, generated, &cases, &[LOG2]))
     {
         assert_eq!(
             got[0],
@@ -842,7 +923,7 @@ fn proxy_edges() -> Vec<u32> {
 
 #[test]
 fn total_substeps_resume_proxy_at_every_power_of_two() {
-    check_proxy(&gpu(), &generated(), &proxy_edges());
+    check_proxy(&gpu(), generated(), &proxy_edges());
 }
 
 negative_control!(
@@ -851,7 +932,7 @@ negative_control!(
     expected = "is not ⌊log₂⌋",
     check_proxy(
         &gpu(),
-        &mutated("31u - countLeadingZeros", "32u - countLeadingZeros"),
+        mutated("31u - countLeadingZeros", "32u - countLeadingZeros"),
         &proxy_edges()
     )
 );
@@ -859,9 +940,8 @@ negative_control!(
 #[test]
 fn total_substeps_resume_proxy_property_over_u32() {
     let gpu = gpu();
-    let generated = generated();
     prop::run(&proptest::collection::vec(any::<u32>(), 64), |totals| {
-        check_proxy(&gpu, &generated, &totals);
+        check_proxy(&gpu, generated(), &totals);
         Ok(())
     });
 }
@@ -872,7 +952,7 @@ negative_control!(
     expected = "is not ⌊log₂⌋",
     check_proxy(
         &gpu(),
-        &mutated("total > 1u)", "total > 0u) + select(0u, 1u, total == 1u)"),
+        mutated("total > 1u)", "total > 0u) + select(0u, 1u, total == 1u)"),
         &[1]
     )
 );
@@ -880,9 +960,9 @@ negative_control!(
 // ── diffusion_slope (REQ-PAY-030) ─────────────────────────────────────────────────────────────────────────────────
 
 /// At `n` = 0 and 1, `diffusion` is the canonical quiet NaN and `diffusion_slope_valid` false (R-245).
-fn check_diffusion_invalid(gpu: &GpuHarness, generated: &str) {
+fn check_diffusion_invalid(gpu: &GpuHarness, generated: Gen) {
     let cases = [0, 1].map(|n| Case::new(marching(n, 50.0)));
-    let got = read_members(gpu, generated, true, &cases, &[DIFFUSION, DIFFUSION_VALID]);
+    let got = read_members(gpu, generated, &cases, &[DIFFUSION, DIFFUSION_VALID]);
     for (n, g) in [0, 1].iter().zip(&got) {
         assert_eq!(g[1], 0, "diffusion_slope_valid is true at n = {n}");
         assert_eq!(
@@ -895,25 +975,25 @@ fn check_diffusion_invalid(gpu: &GpuHarness, generated: &str) {
 
 #[test]
 fn diffusion_slope_reads_nan_below_two() {
-    check_diffusion_invalid(&gpu(), &generated());
+    check_diffusion_invalid(&gpu(), generated());
 }
 
 negative_control!(
     diffusion_slope_reads_nan_below_two,
     "a fit valid from n = 1 must fail",
     expected = "diffusion_slope_valid is true at n = 1",
-    check_diffusion_invalid(&gpu(), &mutated("return n >= 2u;", "return n >= 1u;"))
+    check_diffusion_invalid(&gpu(), mutated("return n >= 2u;", "return n >= 1u;"))
 );
 
 /// A sample latched at step 40 (an escape) and one running at step 100, the horizon 1000, the same `C_ty`: each
 /// slope is `C_ty / C_tt` at its own `t_end_step`, and valid.
-fn check_diffusion_own_n(gpu: &GpuHarness, generated: &str) {
+fn check_diffusion_own_n(gpu: &GpuHarness, generated: Gen) {
     let mut latched = marching(40, 50.0);
     latched.state = 0;
     let mut running = marching(100, 50.0);
     running.state = 3;
     let cases = [Case::new(latched), Case::new(running)];
-    let got = read_members(gpu, generated, true, &cases, &[DIFFUSION, DIFFUSION_VALID]);
+    let got = read_members(gpu, generated, &cases, &[DIFFUSION, DIFFUSION_VALID]);
     for (c, g) in cases.iter().zip(&got) {
         let n = c.sample.t_end_step;
         let want = diffusion_reference(c.sample.c_ty, n, c.dt);
@@ -928,7 +1008,7 @@ fn check_diffusion_own_n(gpu: &GpuHarness, generated: &str) {
 
 #[test]
 fn diffusion_slope_latched_sample_uses_its_own_n() {
-    check_diffusion_own_n(&gpu(), &generated());
+    check_diffusion_own_n(&gpu(), generated());
 }
 
 negative_control!(
@@ -937,17 +1017,17 @@ negative_control!(
     expected = "is not C_ty/C_tt at the sample's own n",
     check_diffusion_own_n(
         &gpu(),
-        &mutated(
-            "diffusion_slope(s.C_ty, n, params.dt_macro)",
-            "diffusion_slope(s.C_ty, params.horizon_steps, params.dt_macro)"
+        mutated(
+            "diffusion_slope(s_C_ty, n, params.dt_macro)",
+            "diffusion_slope(s_C_ty, params.horizon_steps, params.dt_macro)"
         )
     )
 );
 
 /// At `n` from 2 to the u16 limit, `diffusion` is [`diffusion_reference`]'s.
-fn check_diffusion_reference(gpu: &GpuHarness, generated: &str, ns: &[u32]) {
+fn check_diffusion_reference(gpu: &GpuHarness, generated: Gen, ns: &[u32]) {
     let cases: Vec<Case> = ns.iter().map(|&n| Case::new(marching(n, 50.0))).collect();
-    let got = read_members(gpu, generated, true, &cases, &[DIFFUSION]);
+    let got = read_members(gpu, generated, &cases, &[DIFFUSION]);
     for (c, g) in cases.iter().zip(&got) {
         let n = c.sample.t_end_step;
         let want = diffusion_reference(c.sample.c_ty, n, c.dt);
@@ -963,14 +1043,14 @@ const SLOPE_NS: [u32; 6] = [2, 3, 17, 1000, 40000, 65535];
 
 #[test]
 fn diffusion_slope_matches_the_closed_form() {
-    check_diffusion_reference(&gpu(), &generated(), &SLOPE_NS);
+    check_diffusion_reference(&gpu(), generated(), &SLOPE_NS);
 }
 
 negative_control!(
     diffusion_slope_matches_the_closed_form,
     "a C_tt without its /12 must fail",
     expected = "differs from C_ty/C_tt(n)",
-    check_diffusion_reference(&gpu(), &mutated("(m + 1.0) / 12.0", "(m + 1.0)"), &SLOPE_NS)
+    check_diffusion_reference(&gpu(), mutated("(m + 1.0) / 12.0", "(m + 1.0)"), &SLOPE_NS)
 );
 
 // ── ftle_valid_truth_table (REQ-PAY-032) ──────────────────────────────────────────────────────────────────────────
@@ -978,7 +1058,7 @@ negative_control!(
 /// Every tier (variant), state code 0–7, `n` and `n_renorm` of the table: `ftle_valid` is the tier on, the state not
 /// failed, `n > 0` and `n / n_renorm > 0` (none when `n_renorm` is 0); `ftle` is the canonical quiet NaN exactly when
 /// it is false (R-254); and the state predicates follow the code (payload §6).
-fn check_truth_table(gpu: &GpuHarness, generated: &str) {
+fn check_truth_table(gpu: &GpuHarness, generated: Gen) {
     let mut cases = Vec::new();
     for tier in [true, false] {
         for state in 0..8 {
@@ -1002,7 +1082,7 @@ fn check_truth_table(gpu: &GpuHarness, generated: &str) {
         IS_FAILED,
         IS_FINISHED,
     ];
-    let got = read_members(gpu, generated, true, &cases, &members);
+    let got = read_members(gpu, generated, &cases, &members);
     for (c, g) in cases.iter().zip(&got) {
         let (state, n) = (c.sample.state, c.sample.t_end_step);
         let renorms = n.checked_div(c.n_renorm).unwrap_or(0);
@@ -1029,7 +1109,7 @@ fn check_truth_table(gpu: &GpuHarness, generated: &str) {
 
 #[test]
 fn ftle_valid_truth_table_over_tier_state_n_and_renorms() {
-    check_truth_table(&gpu(), &generated());
+    check_truth_table(&gpu(), generated());
 }
 
 negative_control!(
@@ -1038,7 +1118,7 @@ negative_control!(
     expected = "ftle_valid at tier true, state 4",
     check_truth_table(
         &gpu(),
-        &mutated(
+        mutated(
             "ftle_tier_on && !sd_is_failed(state) && ",
             "ftle_tier_on && "
         )
@@ -1049,7 +1129,7 @@ negative_control!(
 
 /// A no-FTLE read's `ftle`, and `ensemble_spread` at E = 0, are the canonical quiet NaN's bits, and an unbound word
 /// reads the unbound word; at E ≥ 1 and with the word bound, the values pass through.
-fn check_tier_absent(gpu: &GpuHarness, generated: &str) {
+fn check_tier_absent(gpu: &GpuHarness, generated: Gen) {
     let mut base = Case::new(marching(40, 50.0));
     base.ftle_variant = false;
     let mut absent = Case::new(marching(40, 50.0));
@@ -1057,7 +1137,7 @@ fn check_tier_absent(gpu: &GpuHarness, generated: &str) {
     absent.has_word = false;
     let present = Case::new(marching(40, 50.0));
     let members = [FTLE, SPREAD, WORD[0], WORD[1], WORD[2], WORD[3]];
-    let got = read_members(gpu, generated, true, &[base, absent, present], &members);
+    let got = read_members(gpu, generated, &[base, absent, present], &members);
     assert_eq!(
         got[0][0], QNAN,
         "a no-FTLE read's ftle is {:#010x}, not the canonical quiet NaN",
@@ -1087,7 +1167,7 @@ fn check_tier_absent(gpu: &GpuHarness, generated: &str) {
 
 #[test]
 fn tier_absent_nan_bits_read_the_canonical_patterns() {
-    check_tier_absent(&gpu(), &generated());
+    check_tier_absent(&gpu(), generated());
 }
 
 negative_control!(
@@ -1096,7 +1176,7 @@ negative_control!(
     expected = "a no-FTLE read's ftle is",
     check_tier_absent(
         &gpu(),
-        &mutated("out.ftle = canonical_nan();", "out.ftle = s.S;")
+        mutated("out.ftle = canonical_nan();", "out.ftle = s_S;")
     )
 );
 
@@ -1125,7 +1205,7 @@ fn check_sentinel_values(lowering: &str) {
         Ok(UNBOUND),
         "the generator's unbound word"
     );
-    let wgsl_source = generated();
+    let wgsl_source = full_text();
     for line in [
         "const CANONICAL_QNAN_BITS: u32 = 0x7fc00000u;",
         "const FGW_UNBOUND: vec4<u32> = vec4<u32>(0u, 0u, 0u, 0xfe000000u);",
@@ -1176,7 +1256,7 @@ const FRACTIONS: [FractionCase; 4] = [
 
 /// Each case's `t_end_fraction` and `t_dmin_fraction` are bit for bit the expected: 0 at a zero horizon, exactly 1.0
 /// at it (payload §2, §6; R-361).
-fn check_fractions(gpu: &GpuHarness, generated: &str, fractions: &[FractionCase]) {
+fn check_fractions(gpu: &GpuHarness, generated: Gen, fractions: &[FractionCase]) {
     let cases: Vec<Case> = fractions
         .iter()
         .map(|&(end, dmin, horizon, ..)| {
@@ -1187,13 +1267,7 @@ fn check_fractions(gpu: &GpuHarness, generated: &str, fractions: &[FractionCase]
             c
         })
         .collect();
-    let got = read_members(
-        gpu,
-        generated,
-        true,
-        &cases,
-        &[T_END_FRACTION, T_DMIN_FRACTION],
-    );
+    let got = read_members(gpu, generated, &cases, &[T_END_FRACTION, T_DMIN_FRACTION]);
     for (&(end, dmin, horizon, e, d), g) in fractions.iter().zip(&got) {
         assert_eq!(
             g[..],
@@ -1207,7 +1281,7 @@ fn check_fractions(gpu: &GpuHarness, generated: &str, fractions: &[FractionCase]
 
 #[test]
 fn time_fraction_zero_horizon_and_endpoint() {
-    check_fractions(&gpu(), &generated(), &FRACTIONS);
+    check_fractions(&gpu(), generated(), &FRACTIONS);
 }
 
 negative_control!(
@@ -1216,7 +1290,7 @@ negative_control!(
     expected = "at horizon 0",
     check_fractions(
         &gpu(),
-        &mutated("horizon_steps > 0u);", "horizon_steps >= 0u);"),
+        mutated("horizon_steps > 0u);", "horizon_steps >= 0u);"),
         &FRACTIONS
     )
 );
