@@ -210,8 +210,15 @@ mod tests {
         check_runs_cases(config(seed()));
     }
 
+    /// The check also fires on the count marked provisional, so a check reduced to nothing fails this test, not only
+    /// its control (R-196), as `gpu::tests::fires` has it.
     #[test]
     fn prop_seed_case_count_is_marked_confirmed() {
         check_cases_confirmed(CASES_PROVISIONAL);
+        let caught = std::panic::catch_unwind(|| check_cases_confirmed(true));
+        assert!(
+            caught.is_err(),
+            "the check passed the count marked provisional"
+        );
     }
 }
