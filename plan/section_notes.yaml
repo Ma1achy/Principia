@@ -799,3 +799,7 @@
   section: "R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*"
   reason: informative only
   note: "every reviewer posts its verdict with exactly `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, the JSON object {event, commit_id, body} on standard input, written first to a scratch file by its own python3 json.dumps command fed by a heredoc, then posted by a command that begins with `gh api` (applied per R-369; a command beginning with python3 matched no allow rule); the only form the human's allow rule matches; no other form, a blocked post is stopped and reported; amends R-357; the five reviewer files and plan/OPERATIONS.md updated; changes no requirement"
+- file: decisions.md
+  section: "R-374 — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*"
+  reason: informative only
+  note: "the human labelled it R-370, already taken, so recorded as R-374; R-233's \"leave debug info at the default\" covers local builds on the Mac only; every CI job sets CARGO_PROFILE_DEV_DEBUG and CARGO_PROFILE_TEST_DEBUG to line-tables-only; built by TASK-M0-19's PR #120 (every workflow job) and TASK-M0-52's PR #126 (the lighter archive); this ruling's PR edits no workflow; amends R-233; changes no requirement"

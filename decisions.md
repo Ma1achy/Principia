@@ -2067,6 +2067,10 @@ written inside test functions left in qa's files. Numbered R-232 and R-233 becau
 is R-234.
 
 ## R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
+*Amended by R-374.*
+*Still in force: all of it, its debug-info rule scoped to local builds by R-374: "Leave debug info at the default"
+governs local builds only (the Mac, with builds on the SSD); every CI job sets `CARGO_PROFILE_DEV_DEBUG` and
+`CARGO_PROFILE_TEST_DEBUG` to `line-tables-only`.*
 *28 Sep 2026 · applied in TASK-M0-31*
 
 "#35: all three veto items stand. Merge it." "The R-228 to R-231 numbering is fine." "Leave debug info at the default;
@@ -5346,3 +5350,33 @@ human's allow rule matches only the new form.
 - R-373 is in the "process" group of `plan/rule_groups.yaml`, beside R-357.
 
 Process only; no requirement changes.
+
+## R-374 — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*
+*3 Oct 2026 · applied in decisions.md (R-233's forward lines), `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
+built by TASK-M0-19's PR #120 (every job in `.github/workflows/`) and TASK-M0-52's PR #126*
+
+"R-370: R-233 governs local builds only (the Mac, with builds on the SSD). CI jobs set
+CARGO_PROFILE_DEV_DEBUG=line-tables-only (and the same for the test profile), on every job, not only mutants and
+nightly: panics keep file:line backtraces, and the build, link, artefact and cache sizes all shrink. #120's fix stands,
+extended to every CI job; M0-52 uses the lighter archive. Mark R-233's scope in CURRENT_RULES."
+
+(Message of 3 Oct 2026, "This is from me"; numbered by the orchestrator, applied per R-369.)
+
+The human's text says R-370, which was already taken by the RQ-198 ruling ("R-366's number stands"); recorded as R-374,
+the next free number, applied per R-369. That is how R-366's number was handled when the human's message named R-365,
+already taken.
+
+*What it changes:*
+- **R-233's scope.** R-233's "Leave debug info at the default; builds on the SSD make disk a non-issue" now covers
+  local builds on the Mac only, where builds are on the SSD. R-233 carries a forward line and a "Still in force" line
+  that say so, and `plan/CURRENT_RULES.md` shows the scope on R-233's line. Its veto items and its numbering note stand.
+- **CI's debug info.** Every CI job sets `CARGO_PROFILE_DEV_DEBUG=line-tables-only` and
+  `CARGO_PROFILE_TEST_DEBUG=line-tables-only`, not only the mutants and nightly jobs. Panics keep `file:line`
+  backtraces; the build, link, artefact and cache sizes shrink.
+- **Where it is built.** TASK-M0-19's PR #120, whose fix set these for the mutants and nightly jobs, extends it to
+  every job in `.github/workflows/`. This ruling's own PR edits no workflow, so as not to conflict with #120.
+- **TASK-M0-52** (PR #126), whose `ci` shards share one `cargo nextest archive`, builds that archive with the lighter
+  debug info, so the archive uploaded and downloaded by each shard is smaller.
+- R-374 is in the "ci" group of `plan/rule_groups.yaml`.
+
+CI and process only; no requirement changes.
