@@ -75,6 +75,7 @@ fn header_line() -> Value {
             },
             "backend": { "api": "metal", "driver": "1.0" },
             "precision": { "f32": true, "f64": false, "f64_rate": null },
+            "fast_math": { "setting": "off", "compiled": { "compute": "off", "vertex": "on", "fragment": "on" } },
             "build": { "commit": "qa", "profile": "release", "features": [] },
             "display": { "width_px": 800, "height_px": 600, "refresh_hz": 60.0, "dpi_scale": 1.0 },
             "config": { "scenario": "qa", "frames": 3 }

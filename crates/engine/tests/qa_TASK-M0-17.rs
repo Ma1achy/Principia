@@ -104,6 +104,7 @@ fn interactive() -> Value {
             },
             "backend": { "api": "metal", "driver": "3.1" },
             "precision": { "f32": true, "f64": false, "f64_rate": null },
+            "fast_math": { "setting": "off", "compiled": { "compute": "off", "vertex": "on", "fragment": "on" } },
             "build": { "commit": "abc123", "profile": "release", "features": ["x"] },
             "display": { "width_px": 3024, "height_px": 1964, "refresh_hz": 120.0, "dpi_scale": 2.0 },
             "config": { "n": 64, "nested": { "a": [1, 2] } }

@@ -73,6 +73,7 @@ fn header_line() -> Value {
                         "gpu_cores": null, "memory": null },
             "backend": { "api": "none", "driver": null },
             "precision": null,
+            "fast_math": { "setting": "off", "compiled": null },
             "build": { "commit": "0123abc", "profile": "dev", "features": [] },
             "display": null,
             "config": { "scenario": "qa", "frames": 3 }
