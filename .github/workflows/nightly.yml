@@ -4,7 +4,7 @@
 # benchmark runs here, nor in any hosted workflow: benchmarks run on the human's own Mac via `prin profile`, at milestone
 # gates and on demand (R-186).
 #
-# Runner disk: one full workspace test build on ubuntu-latest writes about 88 GB, which ran out of disk until the
+# Runner disk: one full workspace test build on ubuntu-24.04 writes about 88 GB, which ran out of disk until the
 # runner's preinstalled toolsets were deleted first (TASK-M0-49). Every job here that builds the workspace's tests
 # starts by deleting the toolsets it does not use, `ci.yml`'s list and the hosted tool cache (setup-python then fetches
 # its Python afresh), logging the free space before and after. Test infrastructure only.
@@ -36,7 +36,7 @@ jobs:
   # The CPU suites, as `ci.yml`'s `ci` job runs them: every workspace test but the kernel's (the `ci` nextest profile),
   # the doctests, and the crate-graph check. The GPU harness's self-tests among them run on lavapipe (R-169).
   cpu:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Free runner disk
@@ -81,7 +81,7 @@ jobs:
   # `cargo xtask ci`, every registered per-push runner (R-177), in a job of its own as in `ci.yml` (R-235): plan-check,
   # the kernel build, every control (on lavapipe for the GPU harness's), the lints, the gates and the golden suites.
   xtask-ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -130,7 +130,7 @@ jobs:
   # kernel build and the tests that need it (the `gpu-kernel` nextest profile), the GPU harness's self-tests with their
   # controls, every golden suite, and R-269's half-way fixture.
   gpu-lavapipe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -190,11 +190,13 @@ jobs:
   # sharded as the per-PR run is (`mutants.yml`, R-302), each shard k of 8 with `--shard k/8`. Its exclusions are the
   # per-PR job's, the one list in `.cargo/mutants.toml`, which `cargo mutants` reads from the workspace root; so are its
   # two caps (R-348; REQ-VAL-179): the per-mutant timeout (REQ-VAL-180) and the per-process memory cap on the test
-  # processes (REQ-VAL-181), provisional until the human confirms them at the M0 gate (R-71, R-182). Each shard
-  # uploads its `mutants.out`; `mutants-report` joins them. The nightly run is a report, not a gate (R-196): a survivor
-  # here is listed, and the job passes once every shard finished.
+  # processes (REQ-VAL-181), confirmed by the human at the M0 gate (R-376; R-71). Each shard uploads its
+  # `mutants.out`; `mutants-report` joins them. The nightly run is a report, not a gate (R-196): a survivor here is
+  # listed, and the job passes once every shard finished. REQ-VAL-149's 300-minute limit (R-376) sizes the per-PR
+  # `--in-diff` step only; this run, over every mutant, takes no step limit of its own and runs under GitHub's
+  # 360-minute job default.
   mutants:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     strategy:
@@ -269,7 +271,7 @@ jobs:
   mutants-report:
     if: always()
     needs: mutants
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
         with:

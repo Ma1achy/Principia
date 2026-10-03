@@ -17,10 +17,9 @@ use std::sync::{mpsc, PoisonError, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// How long a child may run before it is killed: the calibration value of REQ-VAL-156 (R-214, R-71). 300 s is the
-/// provisional value, covering cold builds with margin (R-217); the human confirms or changes it at the M0 gate, from
-/// cold and warm measurements on CI and on their Mac (R-182, R-217).
-pub const SPAWN_TIMEOUT: Duration = Duration::from_secs(300);
+/// How long a child may run before it is killed: the calibration value of REQ-VAL-156 (R-214, R-71). 600 s, confirmed
+/// by the human at the M0 gate (R-376), in place of the 300 s provisional value (R-217).
+pub const SPAWN_TIMEOUT: Duration = Duration::from_secs(600);
 
 /// How long a timed-out child's process group has, after SIGTERM, to exit before it is sent SIGKILL (R-217).
 pub const GRACE: Duration = Duration::from_secs(5);
@@ -38,7 +37,7 @@ pub trait Spawn {
     /// helper's own tests need not wait the calibrated values (R-231). Every other caller keeps [`GRACE`].
     fn output_within_grace(&mut self, timeout: Duration, grace: Duration) -> io::Result<Output>;
 
-    /// [`Spawn::output_within`] the provisional [`SPAWN_TIMEOUT`].
+    /// [`Spawn::output_within`] the confirmed [`SPAWN_TIMEOUT`].
     fn timed_output(&mut self) -> io::Result<Output> {
         self.output_within(SPAWN_TIMEOUT)
     }
@@ -83,8 +82,8 @@ fn output_within_timings(
     // Whatever went wrong in ending the child is told in the timeout's error, never in place of it (REQ-VAL-155).
     let timed_out = |pid: u32, what: &str, ended: io::Result<()>| {
         let mut message = format!(
-            "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is provisional, \
-             REQ-VAL-156)",
+            "child `{}` (pid {pid}) {what} the {} s timeout (R-214; the {} s default is confirmed, \
+             REQ-VAL-156, R-376)",
             name(command),
             timeout.as_secs_f64(),
             SPAWN_TIMEOUT.as_secs_f64()

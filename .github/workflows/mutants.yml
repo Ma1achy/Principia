@@ -35,15 +35,15 @@ jobs:
   # `mutants-fixture` shows, on `fixtures/mutants/untested/`, that the gate can fire.
   mutants:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     strategy:
       # Every shard runs to its end, so the report names every survivor, not only the first shard's.
       fail-fast: false
       matrix:
-        # REQ-VAL-149: n = 8 shards, k = 0..7 (cargo-mutants counts shards from 0), provisional until the human
-        # confirms it at the M0 gate (R-71, R-182, R-302). A change to n changes this list and `--shard k/8` below.
+        # REQ-VAL-149: n = 8 shards, k = 0..7 (cargo-mutants counts shards from 0), confirmed by the human at the M0
+        # gate (R-376; R-71, R-302). A change to n changes this list and `--shard k/8` below.
         shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
           fi
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the rust-gpu build, the workspace's
       # build and, when the diff mutates xtask, the baseline's fixture targets (each a wgpu build of its own under
-      # target/tmp/fixture-targets) ran ubuntu-latest out of space in the baseline. Remove the preinstalled toolsets
+      # target/tmp/fixture-targets) ran ubuntu-24.04 out of space in the baseline. Remove the preinstalled toolsets
       # this job does not use (.NET, Android, GHC, the hosted tool cache, the docker images), logging the free space
       # before and after, as `ci.yml`'s `ci` job does. setup-python, below, fetches its Python afresh. Test
       # infrastructure only; a shard with no Rust in its diff skips it.
@@ -134,18 +134,19 @@ jobs:
       # so that one file's mutants, whose tests cost alike, spread over the shards. The limit is on this step, so the
       # shard's partial report is still uploaded when it is hit, and the step then fails.
       # The run's two caps (R-348) come from `.cargo/mutants.toml`, which this `cargo mutants` reads, as the nightly
-      # run and a local run do; both are provisional until the human confirms them at the M0 gate (R-71, R-182):
+      # run and a local run do; the human confirmed both at the M0 gate (R-376; R-71):
       # - the per-mutant timeout (REQ-VAL-180), cargo-mutants' `timeout_multiplier` and `minimum_test_timeout`: a
       #   mutant whose tests hang is recorded as a timeout, and the shard goes on to its next mutant;
       # - the per-process memory cap (REQ-VAL-181), `prlimit --as` (core dumps off) as cargo's runner on Linux: each
       #   test process of the baseline and of every mutant runs under it, and an allocation past it kills that test,
       #   not cargo-mutants, cargo or this step.
-      - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, provisional)
+      - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, R-376)
         id: run
         if: steps.diff.outputs.rust == 'true'
-        # REQ-VAL-149: 120 minutes per shard, provisional until the human confirms it at the M0 gate (R-71, R-182,
-        # R-302).
-        timeout-minutes: 120
+        # REQ-VAL-149: 300 minutes per shard, confirmed by the human at the M0 gate (R-376; R-71, R-302): a ceiling
+        # for unusually large diffs, not a target. Every PR's shards but #124's have ended in 52 minutes or less
+        # (RQ-202); with each shard's setup the job stays under GitHub's 360-minute limit for a hosted job.
+        timeout-minutes: 300
         run: |
           set +e
           start=$(date +%s)
@@ -168,7 +169,7 @@ jobs:
         if: always() && steps.run.outcome != 'success' && steps.run.outcome != 'skipped'
         run: |
           echo "::error::mutants shard ${{ matrix.shard }}/8 did not finish: cut off by its REQ-VAL-149 limit" \
-            "(120 min) or failed; its untested mutants are not a pass (R-302)"
+            "(300 min) or failed; its untested mutants are not a pass (R-302)"
           exit 1
       - name: cargo xtask mutants-check (R-202)
         if: steps.run.outputs.tested == 'true'
@@ -185,7 +186,7 @@ jobs:
   # caps (R-348) fire on `fixtures/mutants/caps/` (REQ-VAL-179).
   mutants-fixture:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -269,7 +270,7 @@ jobs:
   mutants-check:
     if: always() && github.event_name == 'pull_request'
     needs: mutants
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace

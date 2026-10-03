@@ -560,6 +560,10 @@ dd_colouring's per-mode sections; `parity_contract` over older determinism wordi
 scheduler's stop rules.
 
 ## R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*
+*Amended by R-376, as it applies to REQ-VAL-138.*
+*Still in force: all of it. R-376 is the M0 gate's confirmation it asks for, recorded here, of the six M0 calibrations,
+REQ-VAL-138's among them: its tolerance and its golden references, marked "proposed, R-71" until then, are
+confirmed.*
 *25 Sep 2026 · applied in step 7*
 
 Every value the corpus doesn't give becomes a **calibration** requirement in the milestone that needs it. The task proposes
@@ -1433,6 +1437,10 @@ build-dependency only (the ledger generates code into the kernel at build time).
 can compile it.
 
 ## R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
+*Amended by R-375.*
+*Still in force: all of it but the Linux runner's label: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
+`ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
+`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner.*
 *26 Sep 2026 · applied in step 8*
 
 Start with GitHub-hosted runners, and no self-hosted runner.
@@ -1667,6 +1675,9 @@ any surviving mutant not in a checked-in list of equivalent mutants. Each entry 
 and the code and qa reviewers approve it, as R-197 does for lint suppressions.
 
 ## R-203 — The shared proptest case count is a calibration requirement, 256 provisional *(closes RQ-140)*
+*Amended by R-376.*
+*Still in force: the shared proptest case count is a calibration requirement (R-71), REQ-VAL-151, closed by
+TASK-M0-04; R-376 confirms 256 at the M0 gate, so it is no longer provisional.*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-140, the human chose "Calibration, 256 provisional": the case count is a calibration requirement (R-71)
@@ -1826,10 +1837,10 @@ exception to edit qa's merged file (`crates/validation/tests/qa_R-206.rs`), with
 so TASK-M0-22 does it.
 
 ## R-214 — Children are spawned through one helper with a timeout *(closes RQ-147)*
-*Amended by R-217.*
+*Amended by R-217 and R-376.*
 *Still in force: one shared spawn helper in `crates/validation`, used by every test that spawns a child, which on
-timeout kills and fails naming the child, its timeout a provisional calibration confirmed at the M0 gate (R-71); the
-kill takes the whole process group and the timeout is 300 s (R-217).*
+timeout kills and fails naming the child; the kill takes the whole process group (R-217); the timeout, a calibration
+(R-71, REQ-VAL-156), is 600 s, confirmed at the M0 gate (R-376), in place of R-217's 300 s provisional.*
 *27 Sep 2026 · applied in TASK-M0-22*
 
 "One shared spawn helper with a timeout; on timeout it kills the child and fails naming it. 120 s provisional,
@@ -1870,6 +1881,10 @@ Each earlier part gets a requirement of its own, as R-209 did, and the last keep
   depends on TASK-M0-26 and TASK-M0-27, so every task waiting on it still waits for all three.
 
 ## R-217 — TASK-M0-26's size accepted; a timed-out child's whole process group dies; the timeout is 300 s provisional *(amends R-214)*
+*Amended by R-376.*
+*Still in force: all of it but the timeout's value: a timed-out child's whole process group dies (SIGTERM, a 5 s
+grace, then SIGKILL, and reaped), with its test, and the error-return item stands; R-376 sets the timeout to 600 s,
+confirmed at the M0 gate, in place of 300 s provisional. Its size acceptance and numbering note stand.*
 *27 Sep 2026 · applied in TASK-M0-26*
 
 "On PR #27: size accepted. The timeout item is vetoed; fix it before merging:
@@ -2067,10 +2082,11 @@ written inside test functions left in qa's files. Numbered R-232 and R-233 becau
 is R-234.
 
 ## R-233 — TASK-M0-31's veto items stand; the speed rulings' numbering stands; debug info stays at the default
-*Amended by R-374.*
+*Amended by R-374 and R-376.*
 *Still in force: all of it, its debug-info rule scoped to local builds by R-374: "Leave debug info at the default"
 governs local builds only (the Mac, with builds on the SSD); every CI job sets `CARGO_PROFILE_DEV_DEBUG` and
-`CARGO_PROFILE_TEST_DEBUG` to `line-tables-only`.*
+`CARGO_PROFILE_TEST_DEBUG` to `line-tables-only`. The 300 s timeout it noted for the M0 gate is settled by R-376:
+600 s, confirmed.*
 *28 Sep 2026 · applied in TASK-M0-31*
 
 "#35: all three veto items stand. Merge it." "The R-228 to R-231 numbering is fine." "Leave debug info at the default;
@@ -2564,9 +2580,10 @@ declares, and refuses a case that declares none). Item 12 (what `golden --list` 
 reviewer's re-check at 76fd151 agrees.
 
 ## R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend
-*Amended by R-287.*
+*Amended by R-287 and R-376.*
 *Still in force: its measurement and result, and one reference per backend as the fallback for a case whose bytes still
-differ; otherwise goldens share one reference (R-287).*
+differ; otherwise goldens share one reference (R-287). R-376 confirms REQ-VAL-138 at the M0 gate: the largest
+per-channel step, 0 steps, with one reference per backend for a golden near a tie.*
 *30 Sep 2026 · applied in REQ-VAL-138; the measurement runs on a `measure/` branch (R-272)*
 
 "REQ-VAL-138: throwaway measure/ branches are allowed (push, measure, delete). Get the lavapipe max-step. If 0: zero
@@ -2786,10 +2803,11 @@ writer never pretty-prints. TASK-M0-17 writes the format in telemetry §5 and ap
 `prin profile show --pretty` joins TASK-M0-18, which builds `prin profile` (REQ-TOOL-139).
 
 ## R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*
-*Amended by R-296.*
+*Amended by R-296 and R-376.*
 *Still in force: fragment output quantises in the shader, rounding half to even, and a golden case whose bytes agree
 across backends keeps one reference; explicit quantisation makes exact ties identical, not values within an ulp of a
-tie, so a golden near a tie keeps one reference per backend (R-296).*
+tie, so a golden near a tie keeps one reference per backend (R-296). R-376 confirms REQ-VAL-138's 0-step tolerance
+and these references at the M0 gate.*
 *30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
 
 "R-287: fragment output quantises explicitly in the shader (round half to even, then store), not through the
@@ -2994,6 +3012,9 @@ memory-pressure bullet cites R-277 in place of R-239 and R-252. The same message
 items 12 and 15 before ruling on them; they stay open.
 
 ## R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
+*Amended by R-376.*
+*Still in force: all of it; R-376 confirms at the M0 gate that a golden near a tie keeps one reference per backend
+under REQ-VAL-138's 0-step tolerance, and the half-way fixture's references are confirmed, no longer proposed.*
 *30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
 
 "R-296 (closes RQ-175): option 1. R-269's fixture keeps one reference
@@ -3222,6 +3243,9 @@ this ruling, not by a run under ~10.5 min. When this was recorded, GitHub had al
 caches. The ten `v0-rust-*` entries then present were all in current use by PR #65's branch, so none was deleted.
 
 ## R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
+*Amended by R-376.*
+*Still in force: all of it; R-376 confirms the pair at the M0 gate: n = 8 shards and 300 minutes per shard, a ceiling
+for unusually large diffs, not a target.*
 *30 Sep 2026 · applied in REQ-VAL-148, REQ-VAL-149 and TASK-M0-23 (PR #65)*
 
 "RQ-176, ahead of #65's proposal (R-302): per-PR mutation runs are sharded across parallel CI jobs (cargo mutants
@@ -3269,6 +3293,10 @@ after SIGKILL, and its reuse of TASK-M0-26's id and reviewers for a defect fix i
 PR merges once its named reviewers approve its head and CI is green.
 
 ## R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
+*Amended by R-376.*
+*Still in force: all of it but the per-shard value: n = 8 shards stands, confirmed, and R-376 replaces 120 minutes per
+shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the required `mutants-check` and the
+comment-width nit stand.*
 *30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
@@ -4092,9 +4120,11 @@ its installer's current release is used. A cargo tool CI adds later other than t
 (section_notes); no requirement changes.
 
 ## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
-*Amended by R-352.*
+*Amended by R-352 and R-376.*
 *Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on
-macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps.*
+macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. R-376 confirms both
+values at the M0 gate: the per-mutant timeout at 2.0× the baseline's test time with a 60 s floor (REQ-VAL-180), and
+the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181).*
 *1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
 
 The human's message of 1 Oct 2026 numbered its first two rulings R-347 and R-348. R-347 was already taken (it closes
@@ -4233,6 +4263,9 @@ NaN constant, so under the human's words the lint does not cover them, and the c
 RQ-191 asks whether the lint should cover them too. R-352 rules that it does (RQ-191's option (b)).
 
 ## R-352 — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*
+*Amended by R-376.*
+*Still in force: all of it; R-376 confirms REQ-VAL-180's and REQ-VAL-181's values at the M0 gate, CI's Linux runners
+enforcing both caps and a local macOS run still getting the timeout alone.*
 *1 Oct 2026 · applied in REQ-RENDER-083, REQ-VAL-179, REQ-VAL-180, REQ-VAL-181, TASK-M0-50, TASK-M0-49, TASK-M0-19,
 the render contract's "Unpack layer", CLAUDE.md § "How work runs", `plan/OPERATIONS.md` § "Reviewers" and
 § "Resources", and R-348's, R-349's and R-351's notes*
@@ -5380,3 +5413,106 @@ already taken.
 - R-374 is in the "ci" group of `plan/rule_groups.yaml`.
 
 CI and process only; no requirement changes.
+
+## R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*
+*3 Oct 2026 · applied in `.github/workflows/` (every `runs-on`), R-186's forward lines, the parity contract §6,
+`plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`, `plan/BUILD_READINESS.md`, REQ-SYS-065, REQ-VAL-138's and REQ-VAL-181's
+notes (reqio) and `plan/rule_groups.yaml`*
+
+"3. R-375: pin CI runners to ubuntu-24.04, not ubuntu-latest. Moving to
+Ubuntu 26 is a deliberate later step that re-measures REQ-VAL-138's
+lavapipe goldens and REQ-VAL-181."
+
+(Message of 3 Oct 2026, "This is from me.", item 3.)
+
+*Numbering:* the human's message has four items and labels only item 3, R-375, the next free number, which it keeps.
+Items 1 and 2 are recorded together as R-376 and item 4 as R-377, the orchestrator's numbers, the next free ones in
+the message's order, applied per R-204. That is how R-370 to R-372 were numbered from the human's unlabelled items.
+
+*Applied:*
+- **The runners.** Every job in `.github/workflows/` that ran on `ubuntu-latest` runs on `ubuntu-24.04`, the image
+  `ubuntu-latest` resolved to when this was recorded (the `ci` run on `main` at 850b6bc reports "Image:
+  ubuntu-24.04"), so no job's image changes now; what changes is that GitHub's next move of `ubuntu-latest` no longer
+  moves CI with it. The `macos-15` jobs were already pinned and stay as they are. The Actions cache keys name the job
+  and `runner.os` (`Linux`), not the image, so no key changes.
+- **Moving to Ubuntu 26** is a deliberate later step, taken by a ruling of its own, that re-measures REQ-VAL-138's
+  lavapipe goldens and REQ-VAL-181's memory cap on the new image. REQ-VAL-138's and REQ-VAL-181's notes say so.
+- **The docs.** R-186's "`ubuntu-latest` for the CPU suites and the lavapipe … GPU suites" reads `ubuntu-24.04`: R-186
+  carries a forward line and a "Still in force" line, and the parity contract §6 ("The other suites, and the CI
+  hardware"), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`, `plan/BUILD_READINESS.md` and REQ-SYS-065's statement (reqio)
+  name `ubuntu-24.04`. Merged M0 task files and the evidence lines of merged requirements, which record runs made on
+  `ubuntu-latest`, are records and stay as written.
+- R-375 is in the "ci" group of `plan/rule_groups.yaml`.
+
+CI only; REQ-SYS-065's statement names the pinned label.
+
+## R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*
+*3 Oct 2026 · applied in the six requirements (reqio), `.github/workflows/mutants.yml`, `.github/workflows/nightly.yml`,
+`.cargo/mutants.toml`, `crates/validation/src/spawn.rs`, `crates/validation/src/prop.rs`, `xtask/src/golden.rs`,
+`fixtures/golden/BASELINES.md`, the forward lines of the rulings it amends, and `docs/archive/review_queue/M0.md`
+(RQ-202 archived)*
+
+"1. RQ-202: confirmed. REQ-VAL-149 is 8 shards × 300 min, a ceiling for
+unusually large diffs, not a target. Finish #124's mutants gate and
+merge it.
+2. M0 gate calibrations, confirmed: REQ-VAL-138 (max per-channel step,
+0 steps; per-backend reference near a tie), REQ-VAL-149 (8 × 300 min),
+REQ-VAL-151 (256 cases), REQ-VAL-156 (600 s), REQ-VAL-180 (2.0×
+baseline, 60 s floor), REQ-VAL-181 (8 GiB, --core=1)."
+
+(Message of 3 Oct 2026, "This is from me.", items 1 and 2; numbered by the orchestrator, applied per R-204: see
+R-375's numbering note.)
+
+*Applied:* each value is confirmed at the M0 gate, as R-71 asks, and recorded here. Each requirement gains R-376 among
+its rulings and sources, and a note giving the confirmed value (reqio); where code or CI carried the value marked
+provisional, the mark now reads confirmed by R-376.
+- **REQ-VAL-138**, the golden-image runner's metric and default tolerance: the largest per-channel absolute
+  difference over all pixels, in 8-bit steps, and 0 steps, on every native backend CI renders on (lavapipe, Metal).
+  A case keeps one reference across backends (R-287), and a golden near a tie keeps one reference per backend
+  (R-269, R-296). `xtask/src/golden.rs`'s tolerance status reads confirmed by R-376. The four `quantise/` rows of
+  `fixtures/golden/BASELINES.md` read "confirmed, R-376" in place of "proposed, R-71"; their hashes and images do not
+  change, so no baseline changes (R-110).
+- **REQ-VAL-149**, the per-PR `cargo mutants --in-diff` job: n = 8 shards and 300 minutes per shard, in place of
+  R-305's provisional 120. The limit is a ceiling for unusually large diffs, not a target: RQ-202 found every PR but
+  #124 ending in 52 minutes or less, and #124's largest shard needing about 227. In `mutants.yml`, the step's
+  `timeout-minutes` is 300 and `mutants-check`'s cut-off message names 300 min; with each shard's setup, the job stays
+  under GitHub's 360-minute maximum for a hosted job. *Applied per R-204:* the nightly full run's shards
+  (`nightly.yml`, REQ-VAL-150) take no step limit: REQ-VAL-149 sizes the per-PR `--in-diff` step, and the nightly run
+  mutates the whole workspace, a report, not a gate (R-196), under GitHub's 360-minute job default as before.
+- **REQ-VAL-151**, the shared proptest case count: 256. `crates/validation/src/prop.rs`'s `CASES` stays 256 and
+  `CASES_PROVISIONAL` becomes false, so its status reads confirmed.
+- **REQ-VAL-156**, the child-spawn helper's timeout: 600 s, in place of R-217's 300 s provisional.
+  `crates/validation/src/spawn.rs`'s `SPAWN_TIMEOUT` is 600 s; its 5 s grace (R-217) is not a calibration and stays.
+- **REQ-VAL-180**, the per-mutant timeout of every `cargo mutants` run: 2.0 times the unmutated baseline's test time,
+  no less than 60 s (`.cargo/mutants.toml`'s `timeout_multiplier = 2.0`, `minimum_test_timeout = 60`), unchanged.
+- **REQ-VAL-181**, the per-process memory cap on the test processes: 8 GiB (8589934592 bytes) of virtual memory, set by
+  `prlimit --as` with `--core=1` on Linux, unchanged; a local macOS run still gets the timeout alone (R-352).
+- **#124** (TASK-M0-50) finishes its `mutants` gate under the 300-minute limit and merges once its reviews and CI pass.
+- **RQ-202** is archived in `docs/archive/review_queue/M0.md` with its Ruling line (R-292). The rulings these values
+  touch carry forward and "Still in force" lines: R-302 and R-305 (REQ-VAL-149), R-203 (REQ-VAL-151), R-214, R-217 and
+  R-233 (REQ-VAL-156), R-348 and R-352 (REQ-VAL-180 and REQ-VAL-181), and R-71, R-269, R-287 and R-296 as they apply
+  to REQ-VAL-138.
+- R-376 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-138, REQ-VAL-149, REQ-VAL-151, REQ-VAL-156, REQ-VAL-180 and REQ-VAL-181: each is confirmed.
+
+## R-377 — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts
+*3 Oct 2026 · applied in `plan/OPERATIONS.md` § "Autonomy (R-369)" and `plan/rule_groups.yaml`*
+
+"4. The M0 gate is passed once #124 merges and every M0 exit requirement
+is green on main. Confirm that in the summary, tag main as m0-gate, and
+start M1."
+
+(Message of 3 Oct 2026, "This is from me.", item 4; numbered by the orchestrator, applied per R-204: see R-375's
+numbering note.)
+
+*Applied:*
+- **The condition.** The M0 gate is passed, with no further word from the human, when both hold: PR #124 (TASK-M0-50)
+  has merged, and every requirement in M0's exit gate (`plan/MILESTONES.md` § "M0 — Gates and scaffolding", its
+  "Exit gate" block) is green on `main`.
+- **Then** the orchestrator confirms it in its next summary, naming `main`'s commit and how each exit requirement was
+  shown green; tags that commit `m0-gate`; and starts M1's tasks under `plan/WORKFLOW.md` and R-369.
+- `plan/OPERATIONS.md` § "Autonomy (R-369)", "Order of work", gains the condition after its item 4.
+- R-377 is in the "one-off" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.

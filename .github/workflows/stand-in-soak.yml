@@ -1,5 +1,5 @@
 # The stand-in-executable soak (REQ-SYS-070, R-267): the tests that write a stand-in `cargo` or `gh` and run xtask
-# against it, 50 consecutive runs, each test binary's tests in parallel, on ubuntu-latest, where the fork/exec race
+# against it, 50 consecutive runs, each test binary's tests in parallel, on ubuntu-24.04, where the fork/exec race
 # (ETXTBSY, "Text file busy") shows. Not per-push: it runs on a PR that changes the spawn helper or one of these
 # tests, and on demand.
 name: stand-in-soak
@@ -30,7 +30,7 @@ jobs:
   # `qa_m022_ci_passes_when_every_control_trips` runs the full `xtask ci`, whose golden runner renders (R-110): Mesa's
   # lavapipe, as in the ci and xtask-ci jobs (applied per R-204, RQ-168).
   soak:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:

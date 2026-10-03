@@ -25,7 +25,7 @@ exclude_globs = [
 # from configuration, so every item gated on `target_arch = "spirv"` also carries `#[cfg_attr(test, mutants::skip)]`,
 # which it recognises. A missing marker fails closed: the item's mutants survive and the job names them.
 
-# The per-mutant timeout (R-348; REQ-VAL-180, provisional until the human confirms it at the M0 gate, R-71, R-182):
+# The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
 # mutant. cargo-mutants sets it from the unmutated baseline's test time: `timeout_multiplier` times that time, but no
 # less than `minimum_test_timeout` seconds. Every run reads it here: the per-PR shards (`mutants.yml`), the nightly
@@ -33,13 +33,13 @@ exclude_globs = [
 timeout_multiplier = 2.0
 minimum_test_timeout = 60
 
-# The per-process memory cap on the test processes (R-348; REQ-VAL-181, provisional until the human confirms it at the
-# M0 gate, R-71, R-182): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. cargo runs
+# The per-process memory cap on the test processes (R-348; REQ-VAL-181, confirmed by the human at the M0 gate, R-376,
+# R-71): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. cargo runs
 # each test binary under `prlimit` as its runner, so the cap binds each test process of the baseline and of every
 # mutant, and what that process spawns, but not cargo-mutants, nor cargo and rustc building the tests. A test whose
 # allocation passes the cap fails, as any failing test does. `--core=1` turns off the process's core dump, which
 # otherwise holds it up: the runners pipe cores to systemd-coredump, which ignores a limit of 0 and reads all 8 GiB
-# (about 45 s on ubuntu-latest, against about 5 s without it); the kernel skips a piped dump when the limit is 1. The
+# (about 45 s on ubuntu-24.04, against about 5 s without it); the kernel skips a piped dump when the limit is 1. The
 # runner is set for Linux alone: CI's Linux runners enforce the cap, and a run on macOS, which has no `prlimit`, gets
 # the timeout alone (R-352).
 additional_cargo_test_args = [

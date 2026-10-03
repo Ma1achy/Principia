@@ -261,8 +261,8 @@ validation::negative_control!(
     "the checked-in workflow with the controls job's PRIN_GPU_BACKEND removed",
     expected = "the controls job does not set the tests' PRIN_GPU_BACKEND",
     check_controls_job_beside_the_tests(&the_workflow().replacen(
-        "  xtask-ci:\n    runs-on: ubuntu-latest\n    env:\n      PRIN_GPU_BACKEND: vulkan\n",
-        "  xtask-ci:\n    runs-on: ubuntu-latest\n",
+        "  xtask-ci:\n    runs-on: ubuntu-24.04\n    env:\n      PRIN_GPU_BACKEND: vulkan\n",
+        "  xtask-ci:\n    runs-on: ubuntu-24.04\n",
         1
     ))
 );

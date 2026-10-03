@@ -21,7 +21,7 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
   `prin profile`, at each milestone gate and on demand, never on hosted runners (R-186); GUI screenshots on GUI
   PRs and at the gates; from M8 the Playwright browser suite nightly, on GUI and colour PRs and at each gate, and the
   aggregate survey nightly and before release (R-134). GPU CI runs on GitHub-hosted runners (R-186): lavapipe
-  (`mesa-vulkan-drivers`) on `ubuntu-latest`, and `macos-15` (Apple silicon, paravirtual Metal) for the Metal
+  (`mesa-vulkan-drivers`) on `ubuntu-24.04`, pinned (R-375), and `macos-15` (Apple silicon, paravirtual Metal) for the Metal
   correctness suites only, both on every commit. There is no self-hosted runner, and lavapipe satisfies M4's two-backend check, and a real
   non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
 - The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs the CPU and lavapipe suites and, from M8, the survey, not benchmarks (R-186);
