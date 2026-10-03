@@ -228,7 +228,8 @@ struct Env {
 }
 
 /// A stand-in `cargo` in `bin`: `cargo xtask …` runs the built xtask; anything else is recorded, one call a line,
-/// and exits 0 having written nothing (for `cargo mutants`: nothing to test).
+/// and exits 0 having written nothing (for `cargo mutants`: nothing to test). Each argument is written followed by
+/// the unit separator (`ARG_END`), so an argument holding a space (a path under "/Volumes/X10 Pro/…") stays one.
 fn env(tag: &str, cwd: &Path) -> Env {
     let dir = scratch(tag);
     let bin = dir.join("bin");
@@ -241,7 +242,7 @@ fn env(tag: &str, cwd: &Path) -> Env {
         &bin.join("cargo"),
         format!(
             "#!/bin/sh\nif [ \"$1\" = xtask ]; then shift; exec \"{}\" \"$@\"; fi\n\
-             printf '%s\\n' \"$*\" >> \"{}\"\nexit 0\n",
+             {{ printf '%s\\037' \"$@\"; printf '\\n'; }} >> \"{}\"\nexit 0\n",
             env!("CARGO_BIN_EXE_xtask"),
             calls.display()
         ),
@@ -254,7 +255,7 @@ fn env(tag: &str, cwd: &Path) -> Env {
         write_executable(
             &bin.join(tool),
             format!(
-                "#!/bin/sh\nprintf '%s\\n' \"{tool} $*\" >> \"{}\"\nexit 0\n",
+                "#!/bin/sh\n{{ printf '%s\\037' {tool} \"$@\"; printf '\\n'; }} >> \"{}\"\nexit 0\n",
                 calls.display()
             ),
         )
@@ -269,11 +270,15 @@ fn env(tag: &str, cwd: &Path) -> Env {
     }
 }
 
+/// The byte the stand-ins write after each argument they record.
+const ARG_END: char = '\u{1f}';
+
 struct JobRun {
     ran: bool,
     success: bool,
     log: String,
-    calls: Vec<String>,
+    /// Each recorded call, as its arguments.
+    calls: Vec<Vec<String>>,
     /// The run's scratch folder, held until the test that made it ends.
     _scratch: Scratch,
 }
@@ -345,7 +350,11 @@ fn run_job(wf: &Value, name: &str, mut ctx: Ctx, env: Env) -> JobRun {
     let calls = std::fs::read_to_string(&env.calls)
         .unwrap_or_default()
         .lines()
-        .map(str::to_owned)
+        .map(|l| {
+            l.strip_suffix(ARG_END)
+                .map(|a| a.split(ARG_END).map(str::to_owned).collect())
+                .unwrap_or_default()
+        })
         .collect();
     JobRun {
         ran: true,
@@ -458,10 +467,10 @@ fn shards_on(yml: &str, repo: &Path, tag: &str) -> Vec<(String, JobRun)> {
         .collect()
 }
 
-fn mutants_calls(run: &JobRun) -> Vec<&String> {
+fn mutants_calls(run: &JobRun) -> Vec<&Vec<String>> {
     run.calls
         .iter()
-        .filter(|c| c.split_whitespace().next() == Some("mutants"))
+        .filter(|c| c.first().map(String::as_str) == Some("mutants"))
         .collect()
 }
 
@@ -588,16 +597,16 @@ fn rust_change_runs(yml: &str, tag: &str, ops: &[Op], changed: &str) {
             run.calls,
             run.log
         );
-        let args: Vec<&str> = calls[0].split_whitespace().collect();
+        let args = calls[0];
         let after = |flag: &str| {
             args.iter()
-                .position(|a| *a == flag)
-                .and_then(|i| args.get(i + 1).copied())
+                .position(|a| a == flag)
+                .and_then(|i| args.get(i + 1))
+                .map(String::as_str)
         };
         assert!(
             after("--shard") == Some(format!("{k}/{n}").as_str()),
-            "qa23r: shard {k} did not run as --shard {k}/{n}: {}",
-            calls[0]
+            "qa23r: shard {k} did not run as --shard {k}/{n}: {args:?}"
         );
         let diff = after("--in-diff")
             .map(|f| std::fs::read_to_string(f).unwrap_or_default())
