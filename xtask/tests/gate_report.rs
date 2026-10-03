@@ -1041,7 +1041,10 @@ fn gate_report_named_test_parses_detail() {
     );
     check_parses(
         "`cargo test -p xtask golden-run` and `cargo test -p xtask golden.`, then",
-        &[named("xtask", &[], "golden", false)],
+        &[
+            named("xtask", &[], "golden-run", false),
+            named("xtask", &[], "golden", false),
+        ],
     );
     check_parses(
         "`cargo test -p engine -- --exact first second`",
@@ -1054,6 +1057,130 @@ negative_control!(
     "a detail whose command names a package and a filter",
     expected = "the detail was parsed wrongly",
     check_parses("`cargo test -p xtask golden` passes", &[])
+);
+
+/// The listing the filter-reading tests check against: `-p xtask` holds `golden_run` and `golden`, `-p kernel` holds
+/// `dmin_unset_fails`.
+fn filter_list() -> TestList {
+    TestList::parse(
+        "== -p xtask\ngolden_run: test\ngolden: test\n== -p kernel\ndmin_unset_fails: test\n",
+    )
+}
+
+/// The one command `detail` names.
+fn only_command(detail: &str) -> NamedTest {
+    let mut tests = named_tests(detail);
+    assert_eq!(tests.len(), 1, "not one command read from: {detail}");
+    tests.remove(0)
+}
+
+/// A filter that is no Rust test path (`golden-run`) is still read as the filter cargo runs, and fails as matching no
+/// test, rather than being dropped so that its requirement passes with no named test to check (REQ-SYS-079).
+fn check_hyphenated_fails(detail: &str) {
+    let test = only_command(detail);
+    let why = filter_list().missing(&test);
+    assert!(
+        why.as_deref()
+            .is_some_and(|w| w.contains("no test matches")
+                && w.contains(&format!("filter `{}`", test.filter))),
+        "a filter that matches no test was not failed: {why:?}"
+    );
+}
+
+#[test]
+fn gate_report_named_test_hyphenated_filter_fails() {
+    check_hyphenated_fails("`cargo test -p xtask golden-run` passes");
+    check_hyphenated_fails("cargo test -p xtask golden-run, then");
+}
+
+negative_control!(
+    gate_report_named_test_hyphenated_filter_fails,
+    "a filter that names a listed test",
+    expected = "a filter that matches no test was not failed",
+    check_hyphenated_fails("`cargo test -p xtask golden_run` passes")
+);
+
+/// A quoted filter is read unquoted, as the shell hands it to cargo, and checked against the listing: found when a
+/// listed test holds it, missing otherwise.
+fn check_quoted_unquoted(detail: &str, filter: &str) {
+    let test = only_command(detail);
+    assert_eq!(
+        (test.filter.as_str(), filter_list().missing(&test)),
+        (filter, None),
+        "a quoted filter was not unquoted and found: {detail}"
+    );
+    let unlisted = TestList::parse("== -p kernel\nother: test\n");
+    assert!(
+        unlisted.missing(&test).is_some(),
+        "an unquoted filter that matches no listed test passed: {detail}"
+    );
+}
+
+#[test]
+fn gate_report_named_test_quoted_filter_is_unquoted() {
+    check_quoted_unquoted("`cargo test -p kernel \"dmin_unset\"`", "dmin_unset");
+    check_quoted_unquoted("cargo test -p kernel 'dmin_unset', then", "dmin_unset");
+    check_quoted_unquoted("`cargo test -p kernel -- \"dmin_unset\"`", "dmin_unset");
+}
+
+negative_control!(
+    gate_report_named_test_quoted_filter_is_unquoted,
+    "a filter whose quotes do not match",
+    expected = "a quoted filter was not unquoted and found",
+    check_quoted_unquoted("`cargo test -p kernel \"dmin_unset'`", "dmin_unset")
+);
+
+#[test]
+fn gate_report_named_test_libtest_values_are_not_filters() {
+    check_parses("`cargo test -p xtask -- --test-threads 1`", &[]);
+    check_parses("`cargo test -p xtask -- --skip slow`", &[]);
+    check_parses("cargo test -p xtask -- --skip slow, then", &[]);
+    check_parses("cargo test -p xtask -- --skip slow. Then golden", &[]);
+    check_parses(
+        "`cargo test -p xtask -- --test-threads 1 --skip slow --format pretty --color never --logfile log \
+         --shuffle-seed 7 -Z unstable-options --exact golden`",
+        &[named("xtask", &[], "golden", true)],
+    );
+    check_parses("`cargo test -p xtask -- --skip`", &[]);
+}
+
+negative_control!(
+    gate_report_named_test_libtest_values_are_not_filters,
+    "a libtest flag that takes no value, before a word",
+    expected = "the detail was parsed wrongly",
+    check_parses("`cargo test -p xtask -- --nocapture slow`", &[])
+);
+
+/// A filter that cannot be read as the one cargo is given (empty, or holding a character the shell acts on) fails its
+/// requirement with that reason, even where the listing holds a test it would match.
+fn check_unreadable_fails(detail: &str, reason: &str) {
+    let test = only_command(detail);
+    let why = filter_list().missing(&test);
+    assert!(
+        why.as_deref()
+            .is_some_and(|w| w.contains("unreadable filter")
+                && w.contains("crate `xtask`")
+                && w.contains(reason)),
+        "an unreadable filter was not failed with its reason: {detail}: {why:?}"
+    );
+}
+
+#[test]
+fn gate_report_named_test_unreadable_filter_fails() {
+    check_unreadable_fails(
+        "`cargo test -p xtask \"\"`",
+        "the filter is empty, so it names every test",
+    );
+    check_unreadable_fails("`cargo test -p xtask golden*`", "the filter holds `*`");
+    check_unreadable_fails("`cargo test -p xtask \"golden`", "the filter holds `\"`");
+    check_unreadable_fails("`cargo test -p xtask $FILTER`", "the filter holds `$`");
+}
+
+negative_control!(
+    gate_report_named_test_unreadable_filter_fails,
+    "a readable filter that names a listed test",
+    expected = "an unreadable filter was not failed with its reason",
+    check_unreadable_fails("`cargo test -p xtask golden`", "the filter holds")
 );
 
 /// The builds a gate's hosted requirements name, each once: the review checklist's are not among them.

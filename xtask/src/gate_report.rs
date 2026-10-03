@@ -625,6 +625,22 @@ impl NamedTest {
         format!("cargo test {} {}{exact}", self.build(), self.filter)
     }
 
+    /// Why this command's filter cannot be read as the filter cargo is given, if it cannot: it is empty, so that it
+    /// names every test rather than one, or it holds a character the shell would expand, strip or act on
+    /// (`SHELL_CHARS`).
+    pub fn unreadable(&self) -> Option<String> {
+        if self.filter.is_empty() {
+            Some("the filter is empty, so it names every test, not one".to_owned())
+        } else {
+            self.filter
+                .chars()
+                .find(|c| SHELL_CHARS.contains(*c))
+                .map(|c| {
+                    format!("the filter holds `{c}`, which the shell would expand, strip or act on")
+                })
+        }
+    }
+
     /// Whether `test`, a test's path name, matches this command's filter by cargo's (libtest's) rule.
     pub fn matches(&self, test: &str) -> bool {
         if self.exact {
@@ -661,16 +677,34 @@ fn unpunctuated(word: &str) -> (&str, bool) {
     (bare, bare.len() != word.len())
 }
 
-/// Whether `word` can be a test-name filter: letters, digits, `_` and `::` paths.
-fn is_filter(word: &str) -> bool {
-    !word.is_empty()
-        && word
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':')
+/// The libtest flags (after `--`) that take a value as the next word: that value is not a filter.
+const LIBTEST_VALUE_FLAGS: [&str; 7] = [
+    "--skip",
+    "--test-threads",
+    "--format",
+    "--color",
+    "--logfile",
+    "--shuffle-seed",
+    "-Z",
+];
+
+/// The characters a shell would expand, strip or act on: a filter holding one is not the filter cargo is given, so it
+/// cannot be read.
+const SHELL_CHARS: &str = "\"'`$\\*?[]{}<>|&;()!#~";
+
+/// `word` with one matching pair of quotes (`"…"` or `'…'`) around it removed, as the shell removes them before cargo
+/// sees the word.
+fn unquoted(word: &str) -> &str {
+    ['"', '\'']
+        .iter()
+        .find_map(|q| word.strip_prefix(*q).and_then(|w| w.strip_suffix(*q)))
+        .unwrap_or(word)
 }
 
-/// One command's words after `cargo test`, read as cargo reads them: `-p <crate>`, flags, then the filter. `None` when
-/// it names no package or no filter, so that no single test is named.
+/// One command's words after `cargo test`, read as cargo reads them: `-p <crate>`, flags, then the filter, unquoted.
+/// After `--`, libtest's flags and their values are skipped. `None` when it names no package or no filter, so that no
+/// single test is named. A filter is kept whatever it holds: one that names no test, or that cannot be read
+/// ([`NamedTest::unreadable`]), then fails rather than being dropped.
 fn named_test(words: &str) -> Option<NamedTest> {
     let (mut krate, mut flags, mut filter, mut exact) = (None, Vec::new(), None, false);
     let mut words = words.split_whitespace();
@@ -680,8 +714,14 @@ fn named_test(words: &str) -> Option<NamedTest> {
         if libtest {
             if word == "--exact" {
                 exact = true;
-            } else if !word.starts_with('-') && filter.is_none() && is_filter(word) {
-                filter = Some(word.to_owned());
+            } else if LIBTEST_VALUE_FLAGS.contains(&word) && !last {
+                let value = words.next().map(unpunctuated);
+                if value.is_none_or(|(_, last)| last) {
+                    break;
+                }
+                continue;
+            } else if !word.starts_with('-') && filter.is_none() && !word.is_empty() {
+                filter = Some(unquoted(word).to_owned());
             }
         } else if word == "--" {
             libtest = true;
@@ -699,8 +739,8 @@ fn named_test(words: &str) -> Option<NamedTest> {
         } else if word.starts_with('-') {
             flags.push(word.to_owned());
         } else {
-            if is_filter(word) {
-                filter = Some(word.to_owned());
+            if !word.is_empty() {
+                filter = Some(unquoted(word).to_owned());
             }
             // The filter ends the command, but for a following `-- --exact`.
             exact = words.clone().take(2).eq(["--", "--exact"]);
@@ -843,8 +883,17 @@ impl TestList {
     }
 
     /// `None` when a test of `test`'s build matches its filter; else why not, naming the crate, the filter and "no test
-    /// matches".
+    /// matches", or "unreadable filter" when the filter cannot be read as the one cargo is given
+    /// ([`NamedTest::unreadable`]).
     pub fn missing(&self, test: &NamedTest) -> Option<String> {
+        if let Some(why) = test.unreadable() {
+            return Some(format!(
+                "unreadable filter: crate `{}`, filter `{}` (`{}`; {why})",
+                test.krate,
+                test.filter,
+                test.command()
+            ));
+        }
         let build = test.build();
         let listed = self.builds.get(&build);
         if listed.is_some_and(|l| l.tests.iter().any(|t| test.matches(t))) {
