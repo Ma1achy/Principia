@@ -2,6 +2,7 @@
 //! reaches it only as a dev-dependency, and `gui` never does (systems_architecture §7.1; R-176,
 //! R-187).
 
+pub mod bench;
 pub mod control;
 pub mod convergence;
 pub mod gate;

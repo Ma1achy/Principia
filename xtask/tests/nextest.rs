@@ -39,6 +39,13 @@ fn workflows() -> Vec<String> {
     texts
 }
 
+/// The text of `.github/workflows/ci.yml` alone: the no-test-dropped checks below hold the per-push CI's test steps
+/// (REQ-VAL-165), so that the nightly and gate workflows' unsharded runs cannot cover a test the per-push CI drops.
+/// The pinned-nextest check still reads every workflow (`workflows`).
+fn ci_workflow() -> Vec<String> {
+    vec![std::fs::read_to_string(root().join(".github/workflows/ci.yml")).unwrap()]
+}
+
 fn readme() -> String {
     std::fs::read_to_string(root().join("README.md")).unwrap()
 }
@@ -400,7 +407,7 @@ fn check_no_test_dropped(workflows: &[String], replaced: &[&str]) {
 
 #[test]
 fn nextest_ci_steps_list_every_test_cargo_test_listed_without_features() {
-    check_no_test_dropped(&workflows(), &[REPLACED[0]]);
+    check_no_test_dropped(&ci_workflow(), &[REPLACED[0]]);
 }
 
 validation::negative_control!(
@@ -408,7 +415,7 @@ validation::negative_control!(
     "a CI whose `ci` shards run from an archive of kernel's tests alone, required to list every test",
     expected = "the CI test steps drop tests `cargo test --workspace` lists",
     check_no_test_dropped(
-        &workflows()
+        &ci_workflow()
             .iter()
             .map(|w| w.replace(
                 "run: cargo nextest archive --workspace",
@@ -421,7 +428,7 @@ validation::negative_control!(
 
 #[test]
 fn nextest_ci_steps_list_every_test_cargo_test_listed_under_metal_hosted_probe() {
-    check_no_test_dropped(&workflows(), &[REPLACED[1]]);
+    check_no_test_dropped(&ci_workflow(), &[REPLACED[1]]);
 }
 
 validation::negative_control!(
@@ -429,7 +436,7 @@ validation::negative_control!(
     "a CI whose metal_hosted_probe nextest step filters on a name no test has, required to list every test",
     expected = "the CI test steps drop tests `cargo test -p validation --features controls metal_hosted_probe` lists",
     check_no_test_dropped(
-        &workflows()
+        &ci_workflow()
             .iter()
             .map(|w| w.replace(
                 "run: cargo nextest run -p validation --features controls metal_hosted_probe ",
@@ -442,7 +449,7 @@ validation::negative_control!(
 
 #[test]
 fn nextest_ci_steps_list_every_gpu_harness_test_cargo_test_listed() {
-    check_no_test_dropped(&workflows(), &[REPLACED[2]]);
+    check_no_test_dropped(&ci_workflow(), &[REPLACED[2]]);
 }
 
 validation::negative_control!(
@@ -450,7 +457,7 @@ validation::negative_control!(
     "a CI whose gpu_harness nextest steps filter on a name no test has, required to list every test",
     expected = "the CI test steps drop tests `cargo test -p validation --features controls gpu_harness` lists",
     check_no_test_dropped(
-        &workflows()
+        &ci_workflow()
             .iter()
             .map(|w| w.replace(
                 "run: cargo nextest run -p validation --features controls gpu_harness ",
@@ -466,7 +473,7 @@ validation::negative_control!(
 /// REQ-SYS-077).
 #[test]
 fn nextest_ci_shards_together_list_every_test() {
-    check_no_test_dropped(&workflows(), REPLACED);
+    check_no_test_dropped(&ci_workflow(), REPLACED);
 }
 
 validation::negative_control!(
@@ -474,7 +481,7 @@ validation::negative_control!(
     "a CI whose `ci` job runs 3 of its 4 shards, required to list every test",
     expected = "the CI test steps drop tests `cargo test --workspace` lists",
     check_no_test_dropped(
-        &workflows()
+        &ci_workflow()
             .iter()
             .map(|w| w.replacen("shard: [1, 2, 3, 4]", "shard: [1, 2, 3]", 1))
             .collect::<Vec<_>>(),
@@ -486,7 +493,7 @@ validation::negative_control!(
 /// nextest profile (R-325), and each step is listed under its own.
 #[test]
 fn nextest_ci_steps_list_every_test_under_their_profiles() {
-    check_no_test_dropped(&workflows(), REPLACED);
+    check_no_test_dropped(&ci_workflow(), REPLACED);
 }
 
 validation::negative_control!(
@@ -495,7 +502,7 @@ validation::negative_control!(
      kernel (R-325), required to list every test",
     expected = "the CI test steps drop tests `cargo test --workspace` lists",
     check_no_test_dropped(
-        &workflows()
+        &ci_workflow()
             .iter()
             .map(|w| w.replace("NEXTEST_PROFILE: gpu-kernel", "NEXTEST_PROFILE: ci"))
             .collect::<Vec<_>>(),

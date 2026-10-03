@@ -77,6 +77,26 @@ derived from discrete-GPU memory limits will be nonsense there. 18 GB shared on 
 the M5 are *different tiers on the same architecture*, which is exactly the case a
 VRAM-threshold rule gets wrong.
 
+**Where the session fields come from (R-72; REQ-TOOL-121; TASK-M0-19).** One probe fills the header for `prin profile`
+and the benchmark runner alike (`engine::telemetry::session`). The GPU's fields come only from the adapter the run
+opened for its own work, as the harness that opened it reports it; a run never opens one to fill the header (R-308).
+- **The f64 rate is recorded as unavailable:** `precision.f64_rate` is `null` unless the adapter reports a rate. Of the
+  three sources, a reported value, a measured probe, or unavailable, only the first is used: wgpu reports whether f64
+  is supported (its `SHADER_F64` feature, which fills `precision.f64`) and no rate on any backend, and a measured probe
+  would be a benchmark inside every session's header, its value moving with the machine's load. f32 is always
+  supported (WebGPU requires it).
+- **A headless session's display is `null`.** A headless run (`prin profile`, `cargo xtask bench`) presents to no
+  surface, so it has no resolution, refresh rate or DPI scale of its own, and the machine's monitor is not recorded in
+  their place, since nothing the run does depends on it. A run that presents to a window records that window's
+  surface.
+- **Memory:** an adapter that shares the machine's RAM, which wgpu reports as an integrated GPU or a CPU (Apple silicon,
+  an integrated GPU, lavapipe), records unified memory, its size the machine's physical RAM. A discrete adapter records
+  its VRAM and the RAM; wgpu reports no VRAM size, so the harness refuses to write a header for a discrete adapter rather
+  than give a size it does not know (RQ-201, decided per R-369).
+- **The driver** is the adapter's reported driver name and version. Metal reports none, and its driver ships with
+  macOS, so on Metal it is the system's version, `macOS <version> (<build>)`.
+- **The GPU's core count** is `null`: wgpu does not report it.
+
 ---
 
 ## 3. Percentiles, not means — and the specific thresholds
