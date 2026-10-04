@@ -49,7 +49,7 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
 | 4 | `version` | the record layout's version; R-81's contract-name layout bumps it above the prototype's (§6), to 3, proposed below (R-71, R-380) |
 | 5 | `flags` | the flag bits, below |
 | 6–9 | `payload_len` | the payload's length in bytes, u32 |
-| 10–11 | `n_records` | how many records the writer placed in the image, u16, below |
+| 10–11 | `n_records` | how many records the writer placed in the RGB plane, u16, below |
 | 12–15 | `crc32(header)` | the CRC of bytes 0–11 |
 | 16 to 16 + `payload_len` − 1 | payload | below |
 | the next 4 | `crc32(payload)` | the CRC of the payload bytes alone |
@@ -66,9 +66,15 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
 
   A record whose variant is `3` or whose reserved bits are not all `0` is discarded whole: a later layout that needs a
   new flag bumps `version` instead.
-- **`n_records`** counts the records the writer placed, over both planes: the RGB plane's tiles, then the alpha
-  plane's. The writer places at most 65,535 (the field's largest value). The reader reports the records it recovered
-  against it (§4's `tiles: 9/9`).
+- **`n_records`** counts the records the writer placed in the RGB plane: its grid's tiles at the RGB side (below), at
+  most 65,535 (the field's largest value). The reader reports the records it recovered from the RGB plane against it,
+  as §4's `tiles: 9/9` and §7's 225/225 count them: a pristine 128² image reports 9/9, and a 512² image with its alpha
+  stripped reports 225/225.
+- **The alpha plane's records are an extra redundancy layer, not counted in `n_records`.** §4 and §7 report no alpha
+  count, so this defines it (R-72): the alpha plane holds its grid's tiles at the alpha side (below), 4 at 128² for a
+  402 B record, a count the reader derives from the same tile rule. Each intact alpha record joins the vote as an RGB
+  record does, and the reader reports how many it recovered separately from `tiles`, against that count. Losing the
+  alpha plane loses only those copies (above: copies, not content).
 - **A record is trusted or discarded whole.** The reader discards a record, and keeps nothing from it, when it is
   shorter than its header, when its `magic` differs, when `crc32(header)` fails, when its flags are not a defined
   combination, when it is shorter than its `payload_len` says, or when `crc32(payload)` fails. Bytes after the
