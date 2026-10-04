@@ -143,6 +143,8 @@ const DBG_LOG: u32 = 9;
 const DBG_FLAG: u32 = 10;
 const DBG_HASH: u32 = 11;
 const DBG_SENTINEL: u32 = 12;
+const SRGB_TO_LINEAR: u32 = 13;
+const LINEAR_TO_SRGB: u32 = 14;
 
 fn f(x: f32) -> u32 {
     x.to_bits()
@@ -690,6 +692,99 @@ negative_control!(
             "return oklch_to_linear(0.75, 0.12, t);",
             "return oklch_to_linear(0.75, 0.10, t);"
         )
+    )
+);
+
+/// The colour-space maps the ramps are built on (dd_colouring §3.1). On the GPU, `text` applied: `srgb_to_linear` and
+/// `linear_to_srgb` against the CPU mirror over both segments of the transfer, within [`SRGB_DECODE_BOUND`] (the
+/// encode's `pow(c, 1/2.4)` is within the same: its `log2` within `3 · 2⁻²⁰` on [0.003, 1], over 2.4, and `exp2`'s
+/// 10 ULP). On the CPU, `mirror`: the transfer's fixed points and its value at ½, and OKLab's published values for
+/// white and the three primaries, each round-tripping.
+fn check_colour_space(gpu: &GpuHarness, text: Text, mirror: fn(f64) -> f64) {
+    let encoded: [[f32; 3]; 4] = [
+        [0.0, 0.01, 0.04045],
+        [0.05, 0.2, 0.5],
+        [0.73, 0.9, 1.0],
+        [0.03, 0.3, 0.6],
+    ];
+    let linear: [[f32; 3]; 4] = [
+        [0.0, 0.001, 0.0031308],
+        [0.004, 0.05, 0.21404114],
+        [0.5, 0.8, 1.0],
+        [0.002, 0.1, 0.7],
+    ];
+    let mut cases: Vec<Case> = encoded
+        .iter()
+        .map(|c| case(SRGB_TO_LINEAR, &c.map(f)))
+        .collect();
+    cases.extend(linear.iter().map(|c| case(LINEAR_TO_SRGB, &c.map(f))));
+    let got = run(gpu, text, &cases);
+    for (k, p) in got.into_iter().enumerate() {
+        let (input, op): ([f32; 3], fn(f64) -> f64) = if k < encoded.len() {
+            (encoded[k], mirror)
+        } else {
+            (linear[k - encoded.len()], present::linear_to_srgb)
+        };
+        let want = input.map(|x| op(f64::from(x)));
+        check_rgb(
+            &format!("the transfer of {input:?}"),
+            p,
+            want,
+            same(SRGB_DECODE_BOUND),
+        );
+    }
+    let fixtures = [
+        (0.0, 0.0),
+        (1.0, 1.0),
+        (0.5, 0.214_041_140_482_232_55),
+        (0.04045, 0.04045 / 12.92),
+    ];
+    for (c, want) in fixtures {
+        assert!(
+            (mirror(c) - want).abs() < 1e-12,
+            "srgb_to_linear({c}) is {}, not {want}",
+            mirror(c)
+        );
+        assert!(
+            // The transfer's two segments meet at 0.04045 only to about 1e-8 (sRGB's published constants).
+            (present::linear_to_srgb(want) - c).abs() < 1e-7,
+            "linear_to_srgb({want}) is not {c}"
+        );
+    }
+    // Ottosson's published OKLab values ("A perceptual color space for image processing", 2020), to their 4 digits.
+    let oklab: [(Rgb, Rgb); 4] = [
+        ([1.0, 1.0, 1.0], [1.0, 0.0, 0.0]),
+        ([1.0, 0.0, 0.0], [0.6280, 0.2249, 0.1258]),
+        ([0.0, 1.0, 0.0], [0.8664, -0.2339, 0.1795]),
+        ([0.0, 0.0, 1.0], [0.4520, -0.0325, -0.3115]),
+    ];
+    for (rgb, lab) in oklab {
+        let got = present::linear_to_oklab(rgb);
+        assert!(
+            (0..3).all(|c| (got[c] - lab[c]).abs() < 1e-4),
+            "linear_to_oklab({rgb:?}) is {got:?}, not {lab:?}"
+        );
+        let back = present::oklab_to_linear(got);
+        assert!(
+            (0..3).all(|c| (back[c] - rgb[c]).abs() < 1e-6),
+            "oklab_to_linear does not invert linear_to_oklab at {rgb:?}: {back:?}"
+        );
+    }
+}
+
+#[test]
+fn prelude_luts_colour_space_maps() {
+    check_colour_space(&gpu(), as_is(), present::srgb_to_linear);
+}
+
+negative_control!(
+    prelude_luts_colour_space_maps,
+    "an encode with the decode's exponent must miss the mirror",
+    expected = "the transfer of",
+    check_colour_space(
+        &gpu(),
+        mutated("pow(c, vec3<f32>(1.0 / 2.4))", "pow(c, vec3<f32>(2.4))"),
+        present::srgb_to_linear
     )
 );
 

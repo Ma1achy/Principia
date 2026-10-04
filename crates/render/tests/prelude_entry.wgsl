@@ -31,6 +31,7 @@ fn t_prelude(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
         case 11u: { return rgb(dbg_hash_u32(a.y)); }
         case 12u: { return rgb(dbg_sentinel(x, pos.xy)); }
         case 13u: { return rgb(srgb_to_linear(bitcast<vec3<f32>>(vec3<u32>(a.y, a.z, a.w)))); }
+        case 14u: { return rgb(linear_to_srgb(bitcast<vec3<f32>>(vec3<u32>(a.y, a.z, a.w)))); }
         default: { return vec4<u32>(0xffffffffu); }
     }
 }
