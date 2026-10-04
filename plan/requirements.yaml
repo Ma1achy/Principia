@@ -13855,15 +13855,16 @@
     section: "R-16 — The colour PDF's map lists are ported *(closes RQ-14)*"
   - file: decisions.md
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*"
   verify:
     method: unit test
     detail: "each helper returns the stated colour for fixture inputs; dbg_sentinel(-1.0, p) equals the ramp's colour for −1.0; NaN bits → debug_invalid(p), the hatch (R-136)"
   rulings:
   - R-16
   - R-136
+  - R-379
   milestone: M1
-  rq:
-  - RQ-204
 - id: REQ-TOOL-010
   area: TOOL
   statement: "The debug views must include live shape views (mode 0: 0.5·(n+1) direction cosines of current n; mode 1: Twilight cyclic of unwrapped θ̃; mode 2: |n|−1 error view expected flat zero), accumulator views (running S/t, Welford slope C_ty/C_tt, drift running-max vs final), a word inspector (reduced length styled invalid when truncated, symbol-at-k slider, truncated flag) and ICDescriptor views."
@@ -15915,6 +15916,24 @@
   - R-356
   - R-358
   milestone: M0
+- id: REQ-TOOL-149
+  area: TOOL
+  kind: definition
+  statement: "The suspect styling that dbg_sentinel's extension point carries — what it looks like, and which drift suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style — must be defined in render_contract's presentation-layer section by TASK-M3-05, reviewed by the physics reviewer before merge, and applied on dbg_sentinel's output by the energy-drift and L_z-drift views; dbg_sentinel(x, frag_xy) keeps its signature (R-379)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: decisions.md
+    section: "R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the section gives the suspect styling's look and the predicate that drives each style; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY, a symplectic occupant within its floors), and fails if a suspect sample's pixel lacks the defined styling or a non-suspect sample's pixel differs from dbg_sentinel's output"
+  rulings:
+  - R-72
+  - R-379
+  milestone: M3
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

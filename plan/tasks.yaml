@@ -673,8 +673,8 @@
   milestone: M3
   title: COM projection and invariant monitoring
   depends_on: [TASK-M3-04, TASK-M2-24]
-  needs: [REQ-PAY-010, REQ-PAY-031, REQ-GEN-007, REQ-DEC-025]
-  requirements: [REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033]
+  needs: [REQ-PAY-010, REQ-PAY-031, REQ-GEN-007, REQ-DEC-025, REQ-TOOL-009]
+  requirements: [REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033, REQ-TOOL-149]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M3-06
