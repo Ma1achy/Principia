@@ -570,7 +570,22 @@ pub fn fgw_truncated(w: [u32; 4]) -> bool {
     fgw_length_raw(w) == FGW_LENGTH_SENTINEL
 }
 
-/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+/// Whether the reduced crossing count is valid: only when the word is not truncated, as later cancellations are
+/// untracked after the cap (payload §3, §5, §6).
+#[inline]
+pub fn fgw_reduced_length_valid(w: [u32; 4]) -> bool {
+    !fgw_truncated(w)
+}
+
+/// The reduced crossing count, the net branch-cut crossings; use only when [`fgw_reduced_length_valid`] (payload §5,
+/// §6).
+#[inline]
+pub fn fgw_reduced_length(w: [u32; 4]) -> u32 {
+    fgw_length_raw(w)
+}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity; debug and export only, never the
+/// reduced crossing count (payload §3, §6; R-86).
 #[inline]
 pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {
     if fgw_truncated(w) {
@@ -578,6 +593,88 @@ pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {
     } else {
         fgw_length_raw(w)
     }
+}
+
+/// No symbol: one past the last symbol code. [`fgw_symbol`] returns it past the retained prefix, and the append's
+/// `prev` holds it after a pop to the empty word (payload §3's `INVALID`).
+pub const FGW_NO_SYMBOL: u32 = 4;
+
+/// The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
+/// bits 0–24 (payload §3).
+#[inline]
+pub fn fgw_mixed_radix(w: [u32; 4]) -> [u32; 4] {
+    [w[0], w[1], w[2], extract(w[3], 0, 25)]
+}
+
+/// The word holding `W` (four limbs, low first, as [`fgw_mixed_radix`] reads them) and `length`, which the append
+/// writes (payload §3).
+#[inline]
+pub fn fgw_pack(v: [u32; 4], length: u32) -> [u32; 4] {
+    [
+        v[0],
+        v[1],
+        v[2],
+        insert(insert(0, v[3], 0, 25), length, 25, 7),
+    ]
+}
+
+/// One limb of [`fgw_div3`]: `r · 2³² + limb`, `r` the remainder carried from the limb above (< 3), divided by 3 over
+/// its two 16-bit halves, so no step exceeds a u32 (WGSL has no u64). The quotient limb and the remainder.
+#[inline]
+pub fn fgw_div3_limb(limb: u32, r: u32) -> (u32, u32) {
+    let hi = (r << 16) | (limb >> 16);
+    let lo = ((hi % 3) << 16) | (limb & 0xffff);
+    (((hi / 3) << 16) | (lo / 3), lo % 3)
+}
+
+/// `v` (four limbs, low first) divided by 3, and the remainder: one pop of the base-3 tail, the remainder its digit
+/// (payload §3). Long division from the high limb down, by constant indices.
+#[inline]
+pub fn fgw_div3(v: [u32; 4]) -> ([u32; 4], u32) {
+    let (q3, r) = fgw_div3_limb(v[3], 0);
+    let (q2, r) = fgw_div3_limb(v[2], r);
+    let (q1, r) = fgw_div3_limb(v[1], r);
+    let (q0, r) = fgw_div3_limb(v[0], r);
+    ([q0, q1, q2, q3], r)
+}
+
+/// `perm` composed after digit `e`'s continuation: `x ↦ perm(continuation_symbol(x, e))`, each permutation of the
+/// symbol codes packed with code `x`'s image in bits `2x .. 2x + 2` (payload §3's table, read through
+/// [`continuation_symbol`]).
+#[inline]
+pub fn fgw_after(perm: u32, e: u32) -> u32 {
+    extract(perm, 2 * continuation_symbol(0, e), 2)
+        | (extract(perm, 2 * continuation_symbol(1, e), 2) << 2)
+        | (extract(perm, 2 * continuation_symbol(2, e), 2) << 4)
+        | (extract(perm, 2 * continuation_symbol(3, e), 2) << 6)
+}
+
+/// Symbol `k` of the word's retained prefix, 0-based (`d₀` is symbol 0), or [`FGW_NO_SYMBOL`] at or past its length.
+/// Sequential, O(length), never random-access (payload §3): the base-3 tail is popped by depth down to the prefix
+/// ending at symbol `k`, then its `k` digits are popped, last first, composing their continuations ([`fgw_after`]),
+/// and the composition is applied to the residue, `d₀`. A truncated word's retained prefix is its 76 stored symbols,
+/// a debug quantity, not the reduced word (payload §3, §5).
+#[inline]
+pub fn fgw_symbol(w: [u32; 4], k: u32) -> u32 {
+    let length = fgw_retained_prefix_length(w);
+    if k >= length {
+        return FGW_NO_SYMBOL;
+    }
+    let mut v = fgw_mixed_radix(w);
+    let mut i = k + 1;
+    while i < length {
+        v = fgw_div3(v).0;
+        i += 1;
+    }
+    let mut perm = 0xe4;
+    let mut j = 0;
+    while j < k {
+        let (q, e) = fgw_div3(v);
+        v = q;
+        perm = fgw_after(perm, e);
+        j += 1;
+    }
+    extract(perm, 2 * (v[0] & 3), 2)
 }
 
 /// Payload §3's frozen `inverse` (symbol codes `a = 0, A = 1, b = 2, B = 3`): part of the binary format.

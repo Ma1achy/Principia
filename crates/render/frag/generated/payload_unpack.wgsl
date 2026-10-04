@@ -157,6 +157,66 @@ fn fgw_reduced_length(word: vec4<u32>) -> u32 { return fgw_length_raw(word); }
 // The retained prefix's length, the sentinel clamped to the capacity; debug and export only (payload §6, R-86).
 fn fgw_retained_prefix_length(word: vec4<u32>) -> u32 { return select(fgw_length_raw(word), FGW_CAPACITY, fgw_truncated(word)); }
 
+// No symbol: one past the last symbol code; `fgw_symbol` past the retained prefix (payload §3).
+const FGW_NO_SYMBOL: u32 = 4u;
+
+// The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
+// bits 0–24 (payload §3).
+fn fgw_mixed_radix(word: vec4<u32>) -> vec4<u32> { return vec4<u32>(word.x, word.y, word.z, extractBits(word.w, 0u, 25u)); }
+
+// One limb of `fgw_div3`: `r · 2³² + limb`, `r` < 3 carried from the limb above, divided by 3 over its two 16-bit
+// halves (WGSL has no u64). `.x` the quotient limb, `.y` the remainder.
+fn fgw_div3_limb(limb: u32, r: u32) -> vec2<u32> {
+    let hi = (r << 16u) | (limb >> 16u);
+    let lo = ((hi % 3u) << 16u) | (limb & 0xffffu);
+    return vec2<u32>(((hi / 3u) << 16u) | (lo / 3u), lo % 3u);
+}
+
+// `fgw_div3`'s result: the quotient's limbs, low first, and the remainder.
+struct FgwDiv3 {
+    q: vec4<u32>,
+    r: u32,
+}
+
+// `v` (four limbs, low first) divided by 3, and the remainder: one pop of the base-3 tail (payload §3).
+fn fgw_div3(v: vec4<u32>) -> FgwDiv3 {
+    let d3 = fgw_div3_limb(v.w, 0u);
+    let d2 = fgw_div3_limb(v.z, d3.y);
+    let d1 = fgw_div3_limb(v.y, d2.y);
+    let d0 = fgw_div3_limb(v.x, d1.y);
+    return FgwDiv3(vec4<u32>(d0.x, d1.x, d2.x, d3.x), d0.y);
+}
+
+// `perm` composed after digit `e`'s continuation: x ↦ perm(continuation_symbol(x, e)), code `x`'s image in bits
+// 2x .. 2x + 2 (payload §3).
+fn fgw_after(perm: u32, e: u32) -> u32 {
+    return extractBits(perm, 2u * continuation_symbol(0u, e), 2u)
+        | (extractBits(perm, 2u * continuation_symbol(1u, e), 2u) << 2u)
+        | (extractBits(perm, 2u * continuation_symbol(2u, e), 2u) << 4u)
+        | (extractBits(perm, 2u * continuation_symbol(3u, e), 2u) << 6u);
+}
+
+// Symbol `k` of the word's retained prefix, 0-based (`d₀` is symbol 0), or `FGW_NO_SYMBOL` at or past its length.
+// Sequential, O(length) (payload §3): the base-3 tail popped by depth down to the prefix ending at symbol `k`, its `k`
+// digits popped, last first, composing their continuations, the composition applied to the residue `d₀`.
+fn fgw_symbol(word: vec4<u32>, k: u32) -> u32 {
+    let length = fgw_retained_prefix_length(word);
+    if (k >= length) {
+        return FGW_NO_SYMBOL;
+    }
+    var v = fgw_mixed_radix(word);
+    for (var i = k + 1u; i < length; i++) {
+        v = fgw_div3(v).q;
+    }
+    var perm = 0xe4u;
+    for (var j = 0u; j < k; j++) {
+        let d = fgw_div3(v);
+        v = d.q;
+        perm = fgw_after(perm, d.r);
+    }
+    return extractBits(perm, 2u * (v.x & 3u), 2u);
+}
+
 // Escape, bounded or collision: a resolved outcome. sim_failed and decode_failed are finished but not resolved, so
 // never gate re-dispatch on this (payload §6).
 fn sd_is_resolved_outcome(w: u32) -> bool {
