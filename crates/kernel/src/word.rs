@@ -116,10 +116,6 @@ pub fn fgw_append(word: [u32; 4], prev: u32, packed_a: u32, s: u32) -> FgwAppend
     }
 }
 
-/// `W`'s base-3 digits that can be nonzero: `W` < 2¹²¹ < 3⁷⁷ (payload §3's 121 bits). Any more are zero, and no more
-/// are popped, so the popped ones fit [`FgwDecode`]'s `digits` (3⁷⁷ < 2¹²⁸) at every `length_raw`, 77…126 included.
-const FGW_W_DIGITS: u32 = 77;
-
 /// The symbols of a word in order, first to last, from [`fgw_decode`]: `d₀`, then `zeros` zero digits, then each digit
 /// popped from `digits`, replayed through `continuation_symbol` from the symbol before it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -127,10 +123,10 @@ pub struct FgwDecode {
     /// `W`'s digits `e₁ … e_{ℓ−1}` past the `zeros` leading ones, as an integer whose base-3 tail is the first of them,
     /// popped one per symbol after those.
     digits: [u32; 4],
-    /// The digits `e₁ …` above [`FGW_W_DIGITS`], all zero, replayed before `digits`: `length − 1 − 77` at a
-    /// `length_raw` of 78…126, otherwise none.
+    /// The digits `e₁ …` above `W`'s 77 that can be nonzero, all zero, replayed before `digits`: `length − 1 − 77` at
+    /// a `length_raw` of 78…126, otherwise none.
     zeros: u32,
-    /// `d₀`, the residue, masked `& 3`: 0 above [`FGW_W_DIGITS`].
+    /// `d₀`, the residue, masked `& 3`: 0 at a `length_raw` of 78…126.
     first: u32,
     /// The symbols not yet yielded.
     remaining: u32,
@@ -167,14 +163,16 @@ impl Iterator for FgwDecode {
 /// iterator replays the digits forward from it. O(length), sequential, not random-access.
 ///
 /// Total, as [`crate::payload::fgw_symbol`] is, and equal to it at every `k` of any `[u32; 4]` (R-321): `d₀` is masked
-/// `& 3`, and on a `length_raw` of 78…126, which payload §3 leaves unused, at most [`FGW_W_DIGITS`] digits are popped
-/// and the rest, all zero, are counted rather than pushed, so the second integer never overflows.
+/// `& 3`, and on a `length_raw` of 78…126, which payload §3 leaves unused, at most 77 digits are popped and the rest,
+/// all zero, are counted rather than pushed, so the second integer never overflows.
 #[inline]
 pub fn fgw_decode(w: [u32; 4]) -> FgwDecode {
     let length = fgw_retained_prefix_length(w);
     let mut v = fgw_mixed_radix(w);
     let mut digits = [0; 4];
-    let popped = length.min(FGW_W_DIGITS + 1);
+    // `W`'s base-3 digits that can be nonzero are `FGW_CAPACITY + 1`, 77: `W` < 2¹²¹ < 3⁷⁷ (payload §3's 121 bits). No
+    // more are popped, so the popped ones fit `digits` (3⁷⁷ < 2¹²⁸); `popped` counts `d₀` with them.
+    let popped = length.min(FGW_CAPACITY + 2);
     let mut i = 1;
     while i < popped {
         let (q, e) = fgw_div3(v);
