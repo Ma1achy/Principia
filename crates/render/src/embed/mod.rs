@@ -165,8 +165,12 @@ impl Image {
             for x in 0..side {
                 for channel in 0..bpp {
                     let at = self.index(plane, ox + x, oy + y, channel);
-                    let low = slots.next().expect("one low bit per slot") & 1;
-                    self.pixels[at] = (self.pixels[at] & !1) | low;
+                    let set = slots.next().expect("one low bit per slot") & 1 == 1;
+                    self.pixels[at] = if set {
+                        self.pixels[at] | 1
+                    } else {
+                        self.pixels[at] & !1
+                    };
                 }
             }
         }
