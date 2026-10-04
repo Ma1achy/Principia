@@ -6,3 +6,14 @@ publish.workspace = true
 
 [dependencies]
 ledger = { path = "../ledger" }
+# The embedded record's CRC is PNG's CRC-32 (principia_dd_image_embedding.md §2); crc32fast is already in the build.
+crc32fast = "1.5"
+
+# Controls reach render's tests through a dev-dependency on validation; they are integration tests in `tests/`, never
+# unit tests in `src/` (R-176, R-187).
+[dev-dependencies]
+validation = { path = "../validation" }
+
+# Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
+[features]
+controls = []

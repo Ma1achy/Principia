@@ -233,6 +233,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-258** — The convergence gate's region minimum is a calibration, its fixtures' counts are "not recorded", and scatter is defined *(closes RQ-159)*. Still in force: all three items, but the region minimum is calibrated at M3 (R-273), not at the M0 gate. Amended by R-273.
 - **R-273** — REQ-VAL-168's region minimum is calibrated at M3 *(closes RQ-165, amends R-258)*
 - **R-376** — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*
+- **R-380** — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*
 
 ## Process
 

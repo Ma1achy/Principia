@@ -5577,3 +5577,44 @@ members and no getters, stands: R-378 governs how the stored members are loaded,
 shapes, not loads, and stands.
 
 Changes REQ-RENDER-001: its read path is the per-member loads.
+
+## R-380 — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*
+*4 Oct 2026 · applied in `principia_dd_image_embedding.md` § "2. Layout", REQ-TOOL-109 and REQ-TOOL-118 (reqio) and
+`plan/rule_groups.yaml`; built by TASK-M7-27 (PR #139)*
+
+The orchestrator asked (abridged):
+
+> "Here's what's in `workbench/`:
+> - `principia_pxpack_prototype.py`: magic `PRPX`, version `1`.
+> - `principia_pxpack2_robust.py`: a later experiment using the same magic, version `2`.
+>
+> The question: may I record `PRPX` and the prototype's version in the design doc as the values the new format must
+> avoid, and which version counts: 1 or 2? If 1, the new version byte is proposed as 2. If 2, the new version byte is
+> proposed as 3. … A one-line answer like 'yes, use version 2' is enough."
+
+The human answered: "Yeah sure that works"
+
+(Message of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **The prototype's values are transcribed.** The prototype's magic `PRPX` (`50 52 50 58`) and its version byte 2 are
+  transcribed into `principia_dd_image_embedding.md` § "2. Layout" as the values a new record must not reuse. The
+  highest prototype version is 2, from `pxpack2`, read from the human's answer. R-380 is their source in the corpus;
+  `workbench/` stays no source (R-159).
+- **The version byte is proposed as 3**, the prototype's highest version plus one, which is R-81's bump. It is an R-71
+  proposal (REQ-TOOL-109), used provisionally until the human confirms it at the M7 gate.
+- **The proposed magic `8F 50 72 6E` is checked against `PRPX`**: it differs from `50 52 50 58` in every byte.
+
+*Applied (the orchestrator's reading, flagged for the M7 gate):* the human's "Yeah sure that works" is read as yes to
+the transcription, with the question's example, version 2, as the prototype's version. That reading is the
+orchestrator's interpretation of a short answer, not words the human wrote. It decides the proposed version byte (3,
+not 2), and the human may correct it at the M7 gate, where REQ-TOOL-109's proposal is confirmed anyway.
+
+*Applied per R-369 (mechanical consequences):*
+- REQ-TOOL-109 and REQ-TOOL-118 lose their `rq: RQ-205` marks and gain R-380 as a ruling and a source (reqio).
+- RQ-205 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- TASK-M7-27's `embed_record_version` asserts that a new record's header version differs from the prototype's 2
+  (REQ-TOOL-118).
+- R-380 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-109 and REQ-TOOL-118: each gains R-380, and neither waits on RQ-205.
