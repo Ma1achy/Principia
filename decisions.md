@@ -5722,5 +5722,7 @@ contract to cite the preset. The layout table's `Scale::Diverging` with `floor: 
 §3.4, §3.8; R-263) is the default's metadata as it stands. It also meets a question it does not settle: `f_edrift`'s
 ramp is `diverging` (colour_composition §1.2, "`diverging(c−,c0,c+)` (through a neutral)"), while `dbg_sentinel` draws
 the viridis ramp (render contract Part 5); filed as RQ-208 against TASK-M3-05. What R-381 decides is unchanged.
+RQ-208, the ramp: decided per R-369, option 3 (the preset's diverging ramp by default, viridis through the palette
+swap).
 
 Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
