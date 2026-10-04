@@ -1574,35 +1574,34 @@ negative_control!(
     }
 );
 
-/// A post whose colour input is absent reads the combiner (here the flat grey, neither slot filled), and is applied:
-/// an absent colour input is no identity.
-fn check_post_without_input(inputs: &[Option<usize>]) {
+/// A stain of the combiner, one post of `occupant` and `inputs`, and OUT: `shade()` calls `want`.
+fn check_post(occupant: assemble::Occupant, inputs: &[Option<usize>], want: &[&str]) {
     let s = Stain::new(vec![
         node(Kind::Combiner, pass_through(), &[None, None]),
-        node(
-            Kind::Post,
-            assemble::Occupant::Custom(PASS_POST.into()),
-            inputs,
-        ),
+        node(Kind::Post, occupant, inputs),
         node(Kind::Out, assemble::Occupant::None, &[Some(1)]),
     ])
     .expect("a stain");
     let source = assemble::assemble(&s, Tier::FULL)
         .expect("assembled")
         .source;
-    assert_eq!(shade_calls(&source), ["n1_post"], "the post is not applied");
+    assert_eq!(shade_calls(&source), want, "the post's calls");
 }
 
+/// A post whose colour input is absent reads the combiner (here the flat grey, neither slot filled) and is applied: an
+/// absent colour input is no identity. A post of None, wired, is the identity: passed over.
 #[test]
 fn backbone_a_post_with_no_colour_input_reads_the_combiner() {
-    check_post_without_input(&[None]);
+    let post = || assemble::Occupant::Custom(PASS_POST.into());
+    check_post(post(), &[None], &["n1_post"]);
+    check_post(assemble::Occupant::None, &[Some(0)], &[]);
 }
 
 negative_control!(
     backbone_a_post_with_no_colour_input_reads_the_combiner,
-    "a post of no inputs at all is malformed",
-    expected = "a stain",
-    check_post_without_input(&[])
+    "a post of None is not applied",
+    expected = "the post's calls",
+    check_post(assemble::Occupant::None, &[Some(0)], &["n1_post"])
 );
 
 // ── The canonical form (REQ-RENDER-075) ───────────────────────────────────────────────────────────────────────────
