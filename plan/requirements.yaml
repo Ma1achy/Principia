@@ -3810,6 +3810,23 @@
   - R-162
   milestone: M3
   note: "Transcribed from docs/reference/prin-rs (reference, not authority, R-159); the TTL verdict (built, validated, loses on accuracy) is recorded as a prior finding (R-162)."
+- id: REQ-INT-085
+  area: INT
+  kind: calibration
+  statement: "The drift suspect predicates' thresholds — the energy-suspect threshold on relative δE and the L_z-suspect threshold on absolute ΔL_z — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md. ε_E and ε_L are δE's and δL's denominator floors, not these thresholds."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.5 Invariant monitoring (per `STEP`, post-projection)
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 2 — Occupants and the capability profile
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "the proposal measures relative δE and absolute ΔL_z, final and max, for Euler, RK4 and the symplectic occupants on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and sets each threshold so that Euler lights SUSPECT_ENERGY and a symplectic occupant does not; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M3
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -15929,7 +15946,7 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   verify:
     method: review checklist
-    detail: "the section gives the suspect styling's look and the predicate that drives each style; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY, a symplectic occupant within its floors), and fails if a suspect sample's pixel lacks the defined styling or a non-suspect sample's pixel differs from dbg_sentinel's output"
+    detail: "the section gives the suspect styling's look and the predicate that drives each style; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY; an L_z-suspect sample, set through the synthetic payload's `dLz_max`, showing the L_z styling; a symplectic occupant below the suspect predicates' thresholds, REQ-INT-085), and fails if a suspect sample's pixel lacks the defined styling or a non-suspect sample's pixel differs from dbg_sentinel's output"
   rulings:
   - R-72
   - R-379

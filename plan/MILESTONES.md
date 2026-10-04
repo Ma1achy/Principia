@@ -160,10 +160,10 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 194 requirements** (and every earlier gate still green):
+**Exit gate — 195 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
-- INT (63): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084
+- INT (64): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085
 - EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
 - PAY (28): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
 - GEN (1): REQ-GEN-016
