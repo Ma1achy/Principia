@@ -88,6 +88,29 @@ kernel/  (Φ maps · decode · canonicalise · wrapper · occupants KDK/Yoshida/
 
 The scanner produces registry entries `{id, slot, source, category, uniformSchema, inputDomains}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). **`inputDomains` (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares its own. The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
 
+**The declaration format (R-72; REQ-GEN-027; TASK-M1-04).** An occupant's `.wgsl` file declares its `uniformSchema`
+and `inputDomains` in line comments, so the file stays plain WGSL; the scanner and the assembler read the same lines.
+A declaration is a line whose text, leading white space removed, starts `// @`, one to a line, anywhere in the file.
+The word after `@` is `uniform` or `input`; any other is refused, so a misspelt declaration is an error, never a
+silent default.
+- `// @uniform <name>: <type> = <default>`, optionally followed by `[<lo>, <hi>]`: one `uniformSchema` entry. `<type>`
+  is `f32`, `i32`, `u32`, `vec2<f32>`, `vec3<f32>` or `vec4<f32>`. `<default>`, the value a new node starts with, is a
+  number for a scalar and `(<x>, <y>, …)` for a vector, one number per component. `[<lo>, <hi>]`, `lo < hi`, is the
+  range of the control the GUI offers, for a scalar only. A number is a decimal literal without a suffix; an `i32` or
+  `u32` value is an integer in its type's range. The default, and every value a node is given, is a value of the type
+  within the range, or it is refused. The occupant reads the value as `uniforms.<name>`: the assembler declares
+  `uniforms` for it, a uniform block holding the entries in declaration order, in group 0 with the per-frame uniforms
+  (R-343), each node's block at the next binding after the prelude's.
+- `// @input <name>`, optionally followed by `[<lo>, <hi>]`: one `field` in-port of the node, in declaration order.
+  The occupant reads the field wired to it as `ctx.inputs[k]`, `k` its position, a `vec4<f32>` holding a scalar or a
+  category in `.x` and a vector in `.xyz`. The bracket is the input's `inputDomains` entry, the domain the node maps
+  from (R-53); without it the input inherits the manifest's per-field domain, the fixed `[lo, hi]` of `range_norm`. A
+  colour occupant declares one to four inputs and a brightness occupant one; one that declares none has one, named
+  `field`, its domain inherited (render_gui_spec Part II §3.1). A post's inputs are its optional field ins, up to
+  four, after its `vec3` in. A source and a combiner declare none. (Four, the length of `ctx.inputs`, is applied per
+  R-369: the corpus gives no bound.)
+- Names are WGSL identifiers, each declared once among a file's uniforms and once among its inputs.
+
 **`debug/` is a peer directory, but a filter tag — not a different mechanism.** Debug occupants satisfy the same signatures as their slot; they just read `ctx.sample`/`ctx.quad` raw fields. The scanner tags anything under `debug/` `category: debug`. The polished GUI hides that category by **filtering the list** (`ViewUI.debugVisible = false`); the dev GUI shows it. "Hide debug in the nice GUI" is a filter predicate over a tagged registry, never a structural change.
 
 **Generated field views mount into the same tree.** The ledger-derived per-field debug shaders (tooling plan §B–E) are emitted into `frag/debug/generated/` (or the ledger is scanned as a virtual directory beside the real files). Hand-written debug shaders (quad-depth heatmap, quadtree overlay) are real files in `debug/`. Both surface through one scan; both are registry occupants selectable in a slot.
