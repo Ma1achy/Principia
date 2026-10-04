@@ -16,6 +16,10 @@ crc32fast = "1.5"
 [dev-dependencies]
 validation = { path = "../validation" }
 naga = { version = "30", features = ["wgsl-in"] }
+# The embedding's survives suite (principia_dd_image_embedding.md §7): the PNG round trip through the png crate xtask
+# already builds with, and the shared proptest configuration's runner (validation::prop).
+png = "0.18"
+proptest = "1.11"
 
 # Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
 [features]
