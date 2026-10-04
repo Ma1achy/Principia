@@ -160,6 +160,10 @@ fn fgw_retained_prefix_length(word: vec4u) -> u32 { return select(fgw_length_raw
 **WGSL traps (one line each, they all bite):** use the **u32** overload of `extractBits` — the i32 overload sign-extends. WGSL has **no f64**. f16-packed pairs read via `unpack2x16float`. **`SimState` is now 8-byte aligned** (the `vec4` word moved to its own buffer — largest remaining member is `array<vec2>`); pack the live-state block in vec2 groupings for `r, p` and shadow. The word buffer is separately bound and indexed identically to samples (per-copy).
 **Bindings (R-343):** `SimStateFTLE` at `@group(1) @binding(0)`, the word buffer at `@group(1) @binding(1)`; group 0 is reserved for the assembler's per-frame uniforms. The group and binding numbers are generated constants from one ledger table, never literals written by hand. Both buffers are read only through `sample_state(i)` and `sample_word(i)`, the same `i` for both; no other code indexes either buffer (a `word_buffer[i]` in a comment above reads as `sample_word(i)`). **`closure_step` (R-343):** WGSL has no u16, so `closure_step` and `_reserved` are one member, `closure_step_reserved: u32` (`closure_step` bits 0–15, `_reserved` bits 16–31), read through `closure_step(w)`. **Schema version (R-343):** WGSL has no u64, so it is `const PAYLOAD_SCHEMA_VERSION: vec2<u32>`, `.x` the low 32 bits and `.y` the high 32. The layer only reads: no WGSL setter is emitted (R-343). **Unset-checks test bit patterns (R-343):** an unset-check on a value read in a fragment shader tests its bit pattern (`pa_d_min_is_unset`, against `PA_D_MIN_UNSET = 0x7c00u`, R-271), never `isinf` or `isnan` (nor a float comparison standing in for them, such as `x != x` or `x > 65504.0`), because fast-math (R-297) may optimise those away. **The lint (R-351, R-352):** `cargo xtask lint wgsl` fails on `isinf` or `isnan`, on a comparison against an inf or NaN constant, on a float compared with itself (`x != x`, `x == x`, and `<`, `<=`, `>` or `>=` of an expression with itself), or on a comparison against a finite-max stand-in used as an inf check (65504.0, f16's largest finite value, or 3.40282347e38, f32's, of either sign, in any spelling or as a `bitcast<f32>` of its bit pattern), in any WGSL file under `crates/render/frag/`; the fix is a bit-pattern test. The review checklist's grep stays as a backup. (The `crates/render/frag/` scope and the rule's place in `lint wgsl` are applied per R-204, accepted by R-352; the stand-in list and the ordered self-comparisons are applied per R-204, accepted by R-353.)
 
+*Note (TASK-M1-03, applied per R-369):* the float rules also hold in every WGSL file of the fragment stage's shared
+library under `crates/render/shaders/` (render_gui_spec Part II §10.1). The generated prelude is linted alone, and every
+other library file as the prelude's continuation, since it follows the prelude at assembly.
+
 **Per-member loads (R-378):** the generated read side loads only the stored members each field needs (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load, so unused data is never fetched on any backend; this replaces the whole-struct `sample_state(i)` above, and each buffer is still read only by the generated layer, at the same `i` for both. A word field likewise loads only the components of `word_buffer[i]` it needs (applied per R-369). The physics review confirms, from the compiled shader output, that a stain reading one field loads only that field's words.
 
 ### Presentation layer (hand-written, small, reused by every debug view)
@@ -172,6 +176,41 @@ fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
 fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as −1.0 shows as its literal value on the ramp (R-79); suspect-flag styling hook
 ```
+
+**The renderings (R-72; REQ-TOOL-122; TASK-M1-03).** The helpers live in `crates/render/shaders/wgsl/lib/present.wgsl`
+and follow the shared prelude at assembly (render_gui_spec Part II §10.1), whose ramps, colour-space maps and
+`debug_invalid` they call. Each returns linear RGB, the colour slot's space (Part 2). An "8-bit sRGB" colour is decoded
+with dd_colouring §3.1's sRGB transfer.
+- **`dbg_cat(i, n)`:** for `n ≤ 8`, the Okabe–Ito palette (Okabe & Ito 2002), cycling `i mod 8`, as 8-bit sRGB in
+  its published order: black `#000000`, orange `#E69F00`, sky blue `#56B4E9`, bluish green `#009E73`, yellow `#F0E442`,
+  blue `#0072B2`, vermillion `#D55E00`, reddish purple `#CC79A7`. For `n > 8`, every class takes the golden angle
+  (dd_colouring §3.7): OKLCH with L = 0.75 and C = 0.12, hue `frac(i·φ_g)` turns, `φ_g = (√5 − 1)/2`. The shader
+  computes the hue as `i · round(φ_g·2³²)` mod 2³², over 2³², so it is within `(i + 1)·2⁻³²` turns of `frac(i·φ_g)`
+  before the f32 rounding. At L = 0.75 the sRGB gamut holds a chroma of 0.1275 at every hue, so C = 0.12 is in gamut
+  at every hue.
+- **`dbg_lin(x, lo, hi)`:** `ramp_viridis(range_norm(x, lo, hi, false, ·))`, the fixed range, clamped.
+- **`dbg_log(x, eps)`:** `s = ln(1 + |x|/eps)`, then `ramp_viridis(1 − 1/(1 + s))`. Below `eps` the map is nearly
+  linear (`t ≈ |x|/eps`), above it logarithmic; 0 maps to the ramp's start and `|x| → ∞` to its end; `|x| = eps·(e − 1)`
+  maps to its middle. `eps > 0` is the caller's argument, the magnitude where compression sets in; the helper gives it
+  no default. The sign of `x` is not shown.
+- **`dbg_flag(b)`:** true is Okabe–Ito's bluish green `#009E73`, false its vermillion `#D55E00`, a green and red that
+  the common colour-vision deficiencies still tell apart.
+- **`dbg_hash_u32(v)`:** the PCG hash (Jarzynski & Olano 2020, "Hash Functions for GPU Rendering", JCGT 9(3),
+  `pcg_hash`): `state = v·747796405 + 2891336453`, `word = ((state >> ((state >> 28) + 4)) ^ state)·277803737`,
+  `h = (word >> 22) ^ word`, all wrapping u32. Its low three bytes, low first, are the 8-bit sRGB red, green and blue.
+- **`dbg_sentinel(x, frag_xy)`:** the absence NaN, tested by its exact bits against the canonical quiet NaN (`0x7FC00000`,
+  lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as −1.0
+  included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
+  first clamped to ±1e30, which needs no range: 0 maps to the middle, −1 to a quarter, 1 to three quarters, and every
+  finite value to its own place (R-79, R-136). The suspect-flag styling hook is not yet defined (RQ-204).
+- **The hatch, `debug_invalid(frag_xy)` (proposed, R-71; REQ-COL-055; R-132, R-136):** diagonal stripes 4 px wide
+  across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or aquamarine
+  `#50FFD2` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.177 from its nearest
+  entry (twilight's stop 162) and aquamarine 0.155 from its nearest (the OKLCH hue circle at L 0.75, C 0.12). The
+  palettes measured are the outcome palette with `#E034C6` (colour_composition §1.4), the `dbg_*` palettes, viridis,
+  twilight, the grey ramp and that hue circle. The flat magenta R-16 kept, `#FF00FF`, is 0.101 from `#E034C6`. The two
+  colours are 0.34 apart in OKLab lightness, so the stripes stay visible without colour vision. `dbg_hash_u32` can
+  give any colour, but never a pattern. The human confirms the pattern and colours at the M1 gate.
 
 ### Live-state & array inspection
 

@@ -13862,6 +13862,8 @@
   - R-16
   - R-136
   milestone: M1
+  rq:
+  - RQ-204
 - id: REQ-TOOL-010
   area: TOOL
   statement: "The debug views must include live shape views (mode 0: 0.5·(n+1) direction cosines of current n; mode 1: Twilight cyclic of unwrapped θ̃; mode 2: |n|−1 error view expected flat zero), accumulator views (running S/t, Welford slope C_ty/C_tt, drift running-max vs final), a word inspector (reduced length styled invalid when truncated, symbol-at-k slider, truncated flag) and ICDescriptor views."
