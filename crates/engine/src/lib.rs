@@ -28,6 +28,10 @@ pub mod contract {
     }
 }
 
+/// The stain graph, its edits and its canonical form, which lowers to the render crate's assembler (gui_state_contract
+/// §5; lowering contract Part 5; TASK-M1-04).
+pub mod stain;
+
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting
 /// (R-297; TASK-M0-44).
 pub mod compute;

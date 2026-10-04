@@ -8,6 +8,9 @@ publish.workspace = true
 ledger = { path = "../ledger" }
 # The embedded record's CRC is PNG's CRC-32 (principia_dd_image_embedding.md §2); crc32fast is already in the build.
 crc32fast = "1.5"
+# The assembler parses and validates the assembled WGSL with naga, wgpu 30's front end, and reads the stain's field set
+# off naga's IR (R-378; TASK-M1-04).
+naga = { version = "30", features = ["wgsl-in"] }
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
 # tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). They are
@@ -15,7 +18,13 @@ crc32fast = "1.5"
 # validates the assembled WGSL.
 [dev-dependencies]
 validation = { path = "../validation" }
-naga = { version = "30", features = ["wgsl-in"] }
+# The assembler's tests compile the assembled stain to naga's MSL, SPIR-V and HLSL to show which stored words it loads
+# (R-378), and build stains through the engine's stain-graph type, the contract surface (gui_state_contract §5).
+naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"] }
+engine = { path = "../engine" }
+# The stain graph's serialised form is read back in the tests (gui_state_contract §5).
+serde_json = "1"
+
 
 # Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
 [features]
