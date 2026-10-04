@@ -208,6 +208,8 @@ fn embed_record_crc_discard_reasons() {
     let mut magic = intact.clone();
     magic[0] ^= 1;
     check_discarded_for(&magic, Discard::Magic);
+    // A header alone is long enough for the header's own checks, so its magic, not its length, is what fails.
+    check_discarded_for(&magic[..HEADER_LEN], Discard::Magic);
     let mut header = intact.clone();
     header[10] ^= 1;
     check_discarded_for(&header, Discard::HeaderCrc);

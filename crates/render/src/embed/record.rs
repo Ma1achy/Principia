@@ -144,20 +144,24 @@ impl Flags {
     const VARIANT: u8 = 0b011;
     /// Bit 2, `source`.
     const SOURCE: u8 = 0b100;
+    /// Bits 3–7, reserved.
+    const RESERVED: u8 = 0b1111_1000;
 
-    /// The flags byte.
+    /// The flags byte: each defined combination spelled out.
     pub fn to_byte(self) -> u8 {
-        let variant = match self.variant {
-            Variant::Tiled => 0,
-            Variant::Redundant => 1,
-            Variant::Hybrid => 2,
-        };
-        variant | if self.source { Self::SOURCE } else { 0 }
+        match (self.variant, self.source) {
+            (Variant::Tiled, false) => 0b000,
+            (Variant::Redundant, false) => 0b001,
+            (Variant::Hybrid, false) => 0b010,
+            (Variant::Tiled, true) => 0b100,
+            (Variant::Redundant, true) => 0b101,
+            (Variant::Hybrid, true) => 0b110,
+        }
     }
 
     /// The flags a byte holds, or `None` when its variant is the reserved `3` or a reserved bit (3–7) is set.
     pub fn from_byte(byte: u8) -> Option<Self> {
-        if byte & !(Self::VARIANT | Self::SOURCE) != 0 {
+        if byte & Self::RESERVED != 0 {
             return None;
         }
         let variant = match byte & Self::VARIANT {
