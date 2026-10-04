@@ -5578,6 +5578,53 @@ shapes, not loads, and stands.
 
 Changes REQ-RENDER-001: its read path is the per-member loads.
 
+## R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
+*4 Oct 2026 · applied in render contract Part 5 "Presentation layer", REQ-TOOL-009 and REQ-TOOL-149 (reqio), TASK-M3-05,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-204 archived); REQ-TOOL-009 closes with TASK-M1-03
+(PR #137)*
+
+"For RQ-204 Option 1. Find the task that will decide the styling and explicitly make sure that is stated as a to do"
+
+(Message of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **Option 1.** The "suspect-flag styling hook" on `dbg_sentinel` is an extension point, not behaviour now.
+  `dbg_sentinel(x, frag_xy)` keeps its signature and stays as TASK-M1-03 builds it: the absence NaN, by its exact bits,
+  to the hatch, and every other value to its literal place on the ramp. It takes no suspect argument.
+- **REQ-TOOL-009 closes with TASK-M1-03.** Its "suspect styling hook" is met by the extension point; its `rq: RQ-204`
+  is removed.
+- **The styling is TASK-M3-05's to do.** TASK-M3-05 defines the suspect styling, what it looks like and which drift
+  suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style, in render
+  contract Part 5 "Presentation layer", as an R-72 definition the physics reviewer approves before merge. It applies
+  the styling on `dbg_sentinel`'s output, in the energy-drift and L_z-drift views, from the suspect predicates. A new
+  definition requirement, REQ-TOOL-149, states it, and TASK-M3-05 closes it.
+
+*Applied per R-369:*
+- **The task is TASK-M3-05** (COM projection and invariant monitoring). Its Deliverables already build the drift
+  suspect predicates in the generated accessor layer, so it is the first task in which the predicate the styling reads
+  exists; its acceptance test `drift_suspect_read_time` already has "Euler + the energy-drift view" light
+  `SUSPECT_ENERGY` everywhere (REQ-INT-040); and its reviewers include physics, whom R-72 requires for a definition.
+- TASK-M3-05 gains REQ-TOOL-149 in Closes, REQ-TOOL-009 in its earlier-milestone needs, a Deliverable for the styling,
+  an acceptance test (`cargo test -p render drift_suspect_styling`) that fails if a suspect sample renders without the
+  styling, the render contract's presentation-layer section and R-379 in References, and a Note that the suspect
+  styling is its to do.
+- The render contract's `dbg_sentinel` line, and its rendering paragraph, read the hook as that extension point, with
+  TASK-M3-05 and R-379 named.
+- R-379 is in the "design" group of `plan/rule_groups.yaml`.
+
+*Checked against the corpus:* render contract Part 4's "the drift suspect gates are read-time predicates over the
+stored latches (payload §5)" stands, and is what the styling reads: no suspect bit is stored, and none reaches
+`dbg_sentinel`. REQ-TOOL-122's list of the presentation helpers' renderings, TASK-M1-03's, is unchanged; the suspect
+styling is REQ-TOOL-149's.
+It also meets a conflict it does not settle (found by PR #137's physics review, 5406355539): the drift views must scale
+the drift before `dbg_sentinel`, whose `0.5 + 0.5·x/(1 + |x|)` shows a raw drift ≪ 1 as one flat colour, and the
+corpus gives that scale two ways, "diverging, not sequential-log" (debug_tooling_plan §D, generation-root §3.4) and
+"log with floor" (render contract Part 6). Filed as RQ-206 against TASK-M3-05; TASK-M3-05's styling definition states
+the value each drift view passes to `dbg_sentinel`, the field's scale applied first (REQ-TOOL-149), once RQ-206 is
+ruled. What R-379 decides is unchanged.
+
+Adds REQ-TOOL-149; changes REQ-TOOL-009 (its RQ-204 removed).
+
 ## R-380 — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*
 *4 Oct 2026 · applied in `principia_dd_image_embedding.md` § "2. Layout", REQ-TOOL-109 and REQ-TOOL-118 (reqio) and
 `plan/rule_groups.yaml`; built by TASK-M7-27 (PR #139)*
@@ -5618,3 +5665,122 @@ not 2), and the human may correct it at the M7 gate, where REQ-TOOL-109's propos
 - R-380 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-109 and REQ-TOOL-118: each gains R-380, and neither waits on RQ-205.
+
+## R-381 — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
+*4 Oct 2026 · applied in render contract Part 6 "The debug catalogue", REQ-TOOL-149 (reqio), TASK-M3-05,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-206 archived); built by TASK-M3-05*
+
+The orchestrator put RQ-206 to the human, the drift views' scale before `dbg_sentinel`, with its three options: 1
+signed log with floor, 2 diverging linear, 3 unsigned log with floor. The human answered:
+
+"With how the frag shaders work, you can do all 3 of these as options just having option 1 as the default. Since these are all data driven / customisable"
+
+and then:
+
+"Yeah I'm pretty sure this sort of thing is in the spec for all of the debug shaders / shaders that display a scalar value / range"
+
+(Messages of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **All three scales are options.** The drift views (`energy_drift`, `Lz_drift`) offer the three scales of RQ-206 as
+  colour_composition's Compaction stage gives them (§1.2): `symlog`, the signed log through the midpoint with the
+  field's floor `eps_E` or `eps_L` (RQ-206's option 1, `x ↦ sign(x)·ln(1 + |x|/ε)`); `lin`, diverging and linear, `x`
+  over a symmetric range `[−R, R]` (option 2); and `log`, unsigned, with the floor (option 3, `ln(1 + |x|/ε)`, the
+  sign dropped).
+- **`symlog` is the default**: the field-view preset `f_edrift` = `energy_drift · diverging · symlog`
+  (colour_composition §6), and `Lz_drift` likewise with `eps_L`.
+- **No new mechanism.** The options are colour_composition's existing Compaction stage, and `lin` and `log` are
+  reached through the compaction override that the field-view presets inherit (§6: "As presets they inherit
+  compaction override, palette swap, the post chain, and per-stage shader visibility for free").
+- **The value fed to `dbg_sentinel` is the compacted value**, under whichever compaction the view has. TASK-M3-05's
+  styling definition (REQ-TOOL-149) states it, and a non-suspect pixel equals `dbg_sentinel` of it.
+
+*Applied per R-369 (mechanical consequences):*
+- Render contract Part 6's "So `energy_drift` → log with floor" is reworded: the drift fields default to
+  `diverging · symlog` with the field's floor, and `lin` and `log` are available through the compaction override
+  (colour_composition §6, R-381).
+- REQ-TOOL-149 loses its `rq: RQ-206` and gains R-381 as a ruling and a source (reqio); its verify reads the scaled
+  value as the preset's compacted value, `symlog` by default, with `lin` and `log` as overrides.
+- TASK-M3-05's Deliverables and acceptance lines that name the scale cite R-381, and it gains an acceptance check that
+  the drift views default to `symlog`, accept the `lin` and `log` overrides, and that a non-suspect pixel equals
+  `dbg_sentinel` of the compacted value under each.
+- **`lin`'s range is a calibration.** No text gives the drift views' `lin` a finite range: generation-root §3.8 gives
+  both drifts the range "(−∞, ∞), signed", which a node inherits as its input domain by default
+  (gui_state_contract §3, "the fixed `[lo, hi]` of `range_norm`"); colour_composition §1.2 and §6 give the presets no
+  range; and `range_norm`'s `auto_range` (render_gui_spec §10.1) is a mode, not a default value, which
+  dd_image_embedding §6 warns "manufactures or hides the difference it is meant to show". So the default symmetric
+  range `R` for the drift views' `lin` override is a new R-71 calibration requirement, proposed with evidence by
+  TASK-M3-05 and confirmed by the human at the M3 gate.
+- RQ-206 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-381 is in the "design" group of `plan/rule_groups.yaml`.
+
+*Checked against the corpus:* colour_composition already gives this: §1.2's Compaction stage has "`lin`, `log`,
+`symlog` (signed, through the midpoint)", and §6's presets have `f_edrift` = `energy_drift · diverging · symlog` with
+an inherited compaction override. The conflict was render contract Part 6's "`energy_drift` → log with floor" against
+debug_tooling_plan §D's and generation-root §3.4's "diverging, not sequential-log"; it is resolved by rewording the
+contract to cite the preset. The layout table's `Scale::Diverging` with `floor: eps_E` / `eps_L` (generation-root
+§3.4, §3.8; R-263) is the default's metadata as it stands. It also meets a question it does not settle: `f_edrift`'s
+ramp is `diverging` (colour_composition §1.2, "`diverging(c−,c0,c+)` (through a neutral)"), while `dbg_sentinel` draws
+the viridis ramp (render contract Part 5); filed as RQ-208 against TASK-M3-05. What R-381 decides is unchanged.
+RQ-208, the ramp: decided per R-369, option 3 (the preset's diverging ramp by default, viridis through the palette
+swap).
+After physics review 5407380838 and qa review 5407389970 (PR #137), two placements decided per R-369, mechanical
+consequences that leave what R-381 offers unchanged. `log` shows the drift's magnitude `|x|`, unsigned, as option 3
+defines it, placed as `dbg_log` places it (`1 − 1/(1 + s)`, `s` the floored log value) on the sequential viridis
+ramp, not the diverging one, since colour_composition §1.2 sends positive fields to sequential; the view states that
+it shows `|drift|`, and the `diverging` ramp carries only the signed compactions, `symlog` and `lin`. `lin` is
+`range_norm` over the fixed, clamped `[−R, R]` (render_gui_spec §10.1), `0` at the neutral `c0`, a drift beyond `±R`
+saturating to `c−` or `c+`; REQ-TOOL-150's criterion is that on dd_integrator test 2's orbit Euler's and RK4's final
+drifts render as distinct 8-bit sRGB pixels, neither equal to the saturated end colour `c−` or `c+`; the symplectic
+occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral `c0` and need not be told apart; test 7's drifts are
+recorded and may saturate. One linear `R` cannot resolve drifts across decades (pitfalls §3), and `symlog`, the default,
+is the view for that.
+"Distinct 8-bit pixels" adds no numeric threshold, so it needs no calibration.
+
+Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
+
+## R-382 — The L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2 *(closes RQ-207)*
+*4 Oct 2026 · applied in REQ-INT-085 (reqio), TASK-M3-05, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-207 archived); built by TASK-M3-05*
+
+The orchestrator put RQ-207 to the human, the L_z-suspect threshold's pass criterion, with three options (abridged):
+
+> 1. Mirror the energy rule: on dd test 2's orbit, Euler lights it and no symplectic occupant does.
+> 2. Round-off bound only: no symplectic occupant lights it, on test 2's orbit or test 7's close encounter; Euler
+>    needn't.
+> 3. Both: the threshold sits above the symplectic occupants' round-off on both fixtures, and below Euler's drift on
+>    test 2.
+
+The human answered: "do 3"
+
+(Message of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:* the L_z-suspect threshold (REQ-INT-085, R-71) must be set so that:
+- **Euler lights it on test 2.** On `principia_dd_integrator.md` § "5. Unit tests" test 2's long bounded orbit, Euler
+  lights the L_z-suspect predicate.
+- **No symplectic occupant lights it, on either fixture.** KDK, Yoshida-4 and Yoshida-6 light it neither on test 2's
+  orbit nor on test 7's close-encounter IC, their L_z drift being round-off by construction.
+- **RK4 is measured and recorded**, with no requirement that it light the predicate or not.
+
+The threshold is still an R-71 proposal: TASK-M3-05 proposes it with this evidence, and the human confirms it at the
+M3 gate. R-382 gives the proposal a criterion that can fail; it fixes no value.
+
+*Applied per R-369 (mechanical consequences):*
+- REQ-INT-085 loses its `rq: RQ-207` and gains R-382 as a ruling and a source (reqio); its verify detail states the
+  L_z criterion beside the energy criterion, so both thresholds can pass and fail.
+- TASK-M3-05's "Proposal:" line for the suspect thresholds states the L_z criterion, its Notes read "RQ-207 ruled by
+  R-382", and R-382 is in its References.
+- RQ-207 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-382 is in the "values" group of `plan/rule_groups.yaml`.
+
+After physics review 5407832535 (PR #137), the precision decided per R-369, a mechanical consequence of "round-off by
+construction" that leaves what R-382 decides unchanged. A symplectic occupant's ΔL_z is pure round-off, so its size is
+set by the working precision, and the occupants run at CPU-f64, CPU-f32, GPU-f32 and double-double (integrator
+contract Part 1; dd_integrator §3.3) under one absolute threshold (dd_integrator §3.5). The symplectic occupants'
+ΔL_z, final and max, is therefore measured on test 2's orbit and test 7's IC at f32, the coarsest precision the kernel
+runs (CPU-f32 standing in for GPU-f32, as REQ-INT-030 does), and at each finer precision the predicate reads; the
+criterion fails if any symplectic occupant lights L_z-suspect at any of them. Euler's side is truncation-dominated and
+needs no change. The energy criterion's "no symplectic occupant lights SUSPECT_ENERGY" names the same precisions.
+Applied in REQ-INT-085's verify detail (reqio), TASK-M3-05's "Proposal:" line and `plan/reviewers/physics.md`.
+
+Changes REQ-INT-085 (RQ-207 removed, R-382 added).

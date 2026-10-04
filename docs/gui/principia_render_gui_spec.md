@@ -669,6 +669,33 @@ code (§9, §10). **Debug fields are raw** — the stated exception to §13's va
 guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
 against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern.
 
+**The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
+`crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant
+(`ledger::gen::prelude::wgsl(tier)`). Its members, beyond the two above:
+- **The tier's features:** `const has_ftle: bool` and `const has_word: bool`, baked from the variant's tier bits: the
+  stored variant is `SimStateFTLE` exactly when `has_ftle`, and the word buffer is bound exactly when `has_word`.
+  `has_ensemble` is read from a uniform (R-145), so authors write `has_ensemble()`. WGSL has no bool in a uniform and
+  no module-scope value from one. The uniform is `PreludeUniforms { has_ensemble: u32, … }`, 16 bytes, 1 when E ≥ 1,
+  bound at `@group(0) @binding(0)`, in group 0 with the assembler's per-frame uniforms. The ledger writes the numbers
+  as `PRELUDE_UNIFORMS_GROUP` and `PRELUDE_UNIFORMS_BINDING`. The read side's `sample_read` takes `has_ensemble()` as
+  its argument.
+- **`is_absent_nan(x)`:** the absence test, `bitcast<u32>(x) == 0x7FC00000u`, the canonical quiet NaN's bits
+  (lowering Part 3a), never `isnan` (R-114, R-297).
+- **`range_norm`:** `range_norm(x, lo, hi, auto_range, meas)`. `auto` is a WGSL reserved word, so the argument is
+  named `auto_range`. A degenerate range, `h = l`, reads 0, not the implementation-defined clamp of `0/0`.
+- **Colour space:** `srgb_to_linear` and `linear_to_srgb` (dd_colouring §3.1's transfer), `oklab_to_linear` (§3.1's
+  inverse), and `oklch_to_linear(l, c, turns)`. The hue is in turns and reduced to [−½, ½) before `cos` and `sin`,
+  whose WGSL error is bounded on [−π, π].
+- **The ramps return linear RGB**, the colour slot's space (render contract Part 2). `ramp_viridis(t)` and
+  `ramp_twilight(t)` read matplotlib's published tables (R-122), checked in under `crates/ledger/data/lut/` with their
+  source named: matplotlib 3.8.0, `_cm_listed.py`, 256 and 510 stops. Stop `k` sits at `t = k/(N − 1)`, with `t`
+  clamped to [0, 1]. The ramp interpolates linearly between stops in the tables' sRGB encoding, then decodes. A cyclic
+  caller passes `fract(·)` to `ramp_twilight`. `ramp_grey(t)` is OKLab `(t, 0, 0)`, `t` clamped: the colour slot's
+  None grey (colour_composition §4.1). `hue_wheel(t)` is OKLCH with L = 0.75 and C = 0.12 at hue `t` turns, periodic
+  in `t`, and in gamut at every hue.
+- **`debug_invalid(frag_xy)`** draws the hatch defined in the render contract's presentation layer (Part 5;
+  proposed, R-71, REQ-COL-055).
+
 ---
 
 ## 11. Presets = whole graphs

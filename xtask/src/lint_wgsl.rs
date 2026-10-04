@@ -1,6 +1,10 @@
 //! `cargo xtask lint wgsl` — the WGSL traps of the fragment stage (render contract Part 5, "Unpack layer"; payload
 //! §6; REQ-RENDER-001, REQ-RENDER-083), checked over naga's IR. It parses and validates every WGSL file under
-//! `crates/render/frag/` ([`FRAG_DIR`]), generated or written by hand (R-351).
+//! `crates/render/frag/` ([`FRAG_DIR`]), generated or written by hand (R-351), and every WGSL file of the shared
+//! library under `crates/render/shaders/` ([`LIB_DIR`]): the generated prelude ([`PRELUDE`]) alone, and every other
+//! file there, which follows the prelude at assembly (render_gui_spec §10.1), as its continuation
+//! ([`check_fragment_after`]). The library's files are fragment-stage WGSL too, so the float rules hold there as well
+//! (applied per R-369, TASK-M1-03).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -67,6 +71,14 @@ pub const READ_SIDE_FILE: &str = "crates/render/frag/generated/read_side.wgsl";
 
 /// The fragment stage's WGSL: every `.wgsl` file under this directory, relative to the workspace root (R-351).
 pub const FRAG_DIR: &str = "crates/render/frag";
+
+/// The fragment stage's shared library (render_gui_spec §10.1; gui_state_contract §3's `shaders/wgsl/lib/`): every
+/// `.wgsl` file under this directory, relative to the workspace root, held to the float rules.
+pub const LIB_DIR: &str = "crates/render/shaders";
+
+/// The generated prelude, relative to the workspace root: linted alone, and every other file under [`LIB_DIR`] as its
+/// continuation, since each follows it at assembly.
+pub const PRELUDE: &str = "crates/render/shaders/wgsl/lib/prelude.wgsl";
 
 /// The fix every float-rule finding names (R-343).
 pub const BIT_PATTERN_FIX: &str =
@@ -188,8 +200,58 @@ pub fn run(manifest: &Path) -> Result<(), String> {
 
 /// Every `.wgsl` file under `root`'s [`FRAG_DIR`], linted: [`GENERATED`], which must exist, by [`check`], the read
 /// side ([`READ_SIDE_FILE`]) as its continuation by [`check_read_side`], and every other file, written by hand, by
-/// [`check_fragment`]. A file that does not parse or validate is an error naming it.
+/// [`check_fragment`]; then every `.wgsl` file under [`LIB_DIR`], if it exists: [`PRELUDE`], which must exist then,
+/// by [`check_fragment`], and every other file as its continuation by [`check_fragment_after`]. A file that does not
+/// parse or validate is an error naming it.
 pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
+    let mut reports = lint_frag(root)?;
+    reports.extend(lint_lib(root)?);
+    Ok(reports)
+}
+
+/// `path` relative to `root`, `/`-separated.
+fn relative(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// [`lint`]'s reports for [`LIB_DIR`]: none when it does not exist.
+fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
+    let dir = root.join(LIB_DIR);
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+    let prelude_path = root.join(PRELUDE);
+    let prelude = std::fs::read_to_string(&prelude_path)
+        .map_err(|e| format!("{}: {e}", prelude_path.display()))?;
+    let mut files = Vec::new();
+    wgsl_files(&dir, &mut files)?;
+    files.sort();
+    let mut reports = Vec::new();
+    for path in files {
+        let rel = relative(root, &path);
+        let source =
+            std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let findings = if rel == PRELUDE {
+            check_fragment(&source)
+        } else {
+            check_fragment_after(&prelude, &source)
+        }
+        .map_err(|e| format!("{rel}: {e}"))?;
+        reports.push(FileReport {
+            file: rel,
+            findings,
+        });
+    }
+    Ok(reports)
+}
+
+/// [`lint`]'s reports for [`FRAG_DIR`].
+fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
     let generated = root.join(GENERATED);
     if !generated.is_file() {
         return Err(format!("{}: no such file", generated.display()));
@@ -201,13 +263,7 @@ pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
     files.sort();
     let mut reports = Vec::new();
     for path in files {
-        let rel = path
-            .strip_prefix(root)
-            .unwrap_or(&path)
-            .components()
-            .map(|c| c.as_os_str().to_string_lossy())
-            .collect::<Vec<_>>()
-            .join("/");
+        let rel = relative(root, &path);
         let source =
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let findings = if rel == GENERATED {
@@ -279,6 +335,30 @@ pub fn check_read_side(layer: &str, source: &str) -> Result<Vec<Finding>, String
             }
             _ if own.contains(&f) => None,
             _ => Some(f),
+        })
+        .collect())
+}
+
+/// The float rules' findings in `source`, a fragment-stage WGSL file that follows `prefix` at assembly, linted as
+/// `prefix`'s continuation; or why it could not be checked: the two together do not parse or validate. A finding on
+/// a line of `source` is reported at that line of it; one on a line of `prefix` is `prefix`'s own, reported on it, and
+/// left out here. One on no line (naga gives a synthesised expression no span) is kept, so it is never lost.
+pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, String> {
+    let base = u32::try_from(prefix.lines().count()).map_err(|e| e.to_string())?;
+    let joined = if prefix.ends_with('\n') {
+        format!("{prefix}{source}")
+    } else {
+        format!("{prefix}\n{source}")
+    };
+    Ok(check_fragment(&joined)?
+        .into_iter()
+        .filter_map(|mut f| match f.line {
+            Some(line) if line > base => {
+                f.line = Some(line - base);
+                Some(f)
+            }
+            Some(_) => None,
+            None => Some(f),
         })
         .collect())
 }

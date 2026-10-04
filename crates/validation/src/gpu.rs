@@ -296,6 +296,285 @@ impl Prepared<'_> {
     }
 }
 
+/// What a fragment draw binds at one binding: a uniform or a read-only storage buffer of u32 words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BindingKind {
+    Uniform,
+    Storage,
+}
+
+/// The vertex stage of every [`GpuHarness::fragment`] draw: one triangle covering the target, so each pixel runs the
+/// fragment entry once, at its centre (`@builtin(position).xy` = the pixel's `(x + 0.5, y + 0.5)`).
+pub const FULL_TARGET_VS: &str = r"
+@vertex
+fn full_target(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let x = f32((i << 1u) & 2u);
+    let y = f32(i & 2u);
+    return vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
+}
+";
+
+/// The bytes a texture-to-buffer copy pads each row to (WebGPU's `COPY_BYTES_PER_ROW_ALIGNMENT`).
+const ROW_ALIGN: u32 = 256;
+
+/// A compiled fragment draw, from [`GpuHarness::fragment`]: its pipeline, the layout of its bind groups and the
+/// target's size. [`FragmentKernel::draw`] runs it on given buffer contents, so one pipeline serves several draws.
+pub struct FragmentKernel<'h> {
+    harness: &'h GpuHarness,
+    pipeline: wgpu::RenderPipeline,
+    layouts: Vec<wgpu::BindGroupLayout>,
+    kinds: Vec<Vec<BindingKind>>,
+    width: u32,
+    height: u32,
+}
+
+impl GpuHarness {
+    /// Compiles `module`'s fragment entry `entry` into a draw over a `width` × `height` `Rgba32Uint` target, the vertex
+    /// stage [`FULL_TARGET_VS`]. The entry returns `@location(0) vec4<u32>`. `kinds[g][b]` is the kind of
+    /// `@group(g) @binding(b)`, visible to the fragment stage; a group may be empty. The display stages take wgpu's own
+    /// path, never the compute entry point's passthrough (R-297). A WGSL, validation or pipeline error is returned.
+    pub fn fragment(
+        &self,
+        module: &str,
+        entry: &str,
+        kinds: &[&[BindingKind]],
+        width: u32,
+        height: u32,
+    ) -> Result<FragmentKernel<'_>, GpuError> {
+        if width == 0 || height == 0 {
+            return Err(GpuError(format!(
+                "a {width} × {height} target has no pixel"
+            )));
+        }
+        let device = &self.device;
+        let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let fs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some(entry),
+            source: wgpu::ShaderSource::Wgsl(module.into()),
+        });
+        let vs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("full_target"),
+            source: wgpu::ShaderSource::Wgsl(FULL_TARGET_VS.into()),
+        });
+        let layouts: Vec<wgpu::BindGroupLayout> = kinds
+            .iter()
+            .map(|group| {
+                let entries: Vec<_> = (0u32..)
+                    .zip(group.iter())
+                    .map(|(binding, kind)| wgpu::BindGroupLayoutEntry {
+                        binding,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: match kind {
+                                BindingKind::Uniform => wgpu::BufferBindingType::Uniform,
+                                BindingKind::Storage => {
+                                    wgpu::BufferBindingType::Storage { read_only: true }
+                                }
+                            },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    })
+                    .collect();
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some(entry),
+                    entries: &entries,
+                })
+            })
+            .collect();
+        let refs: Vec<Option<&wgpu::BindGroupLayout>> = layouts.iter().map(Some).collect();
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some(entry),
+            bind_group_layouts: &refs,
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some(entry),
+            layout: Some(&layout),
+            vertex: wgpu::VertexState {
+                module: &vs,
+                entry_point: Some("full_target"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &fs,
+                entry_point: Some(entry),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Rgba32Uint,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+        if let Some(e) = pollster::block_on(scope.pop()) {
+            return Err(GpuError(format!("fragment shader `{entry}`: {e}")));
+        }
+        Ok(FragmentKernel {
+            harness: self,
+            pipeline,
+            layouts,
+            kinds: kinds.iter().map(|g| g.to_vec()).collect(),
+            width,
+            height,
+        })
+    }
+}
+
+impl FragmentKernel<'_> {
+    /// Draws once with `groups[g][b]` as the contents of `@group(g) @binding(b)`, one slice per group and one buffer
+    /// per binding, as [`GpuHarness::fragment`]'s `kinds` gave them, and returns the target's pixels, row by row from
+    /// the top, each its four words. A shape that differs from `kinds` is an error naming the group.
+    pub fn draw(&self, groups: &[&[&[u32]]]) -> Result<Vec<[u32; 4]>, GpuError> {
+        use wgpu::util::DeviceExt;
+        if groups.len() != self.kinds.len() {
+            return Err(GpuError(format!(
+                "{} bind groups given; the draw has {}",
+                groups.len(),
+                self.kinds.len()
+            )));
+        }
+        let (device, queue) = (&self.harness.device, &self.harness.queue);
+        let mut buffers = Vec::new();
+        for (g, (given, kinds)) in groups.iter().zip(&self.kinds).enumerate() {
+            if given.len() != kinds.len() {
+                return Err(GpuError(format!(
+                    "group {g}: {} buffers given; the draw binds {}",
+                    given.len(),
+                    kinds.len()
+                )));
+            }
+            let group: Vec<wgpu::Buffer> = given
+                .iter()
+                .zip(kinds)
+                .map(|(words, kind)| {
+                    let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: None,
+                        contents: &bytes,
+                        usage: match kind {
+                            BindingKind::Uniform => wgpu::BufferUsages::UNIFORM,
+                            BindingKind::Storage => wgpu::BufferUsages::STORAGE,
+                        },
+                    })
+                })
+                .collect();
+            buffers.push(group);
+        }
+        let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let bind_groups: Vec<wgpu::BindGroup> = buffers
+            .iter()
+            .zip(&self.layouts)
+            .map(|(group, layout)| {
+                let entries: Vec<_> = (0u32..)
+                    .zip(group)
+                    .map(|(binding, buffer)| wgpu::BindGroupEntry {
+                        binding,
+                        resource: buffer.as_entire_binding(),
+                    })
+                    .collect();
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout,
+                    entries: &entries,
+                })
+            })
+            .collect();
+        let extent = wgpu::Extent3d {
+            width: self.width,
+            height: self.height,
+            depth_or_array_layers: 1,
+        };
+        let target = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fragment target"),
+            size: extent,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba32Uint,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
+            view_formats: &[],
+        });
+        let row = (self.width * 16).div_ceil(ROW_ALIGN) * ROW_ALIGN;
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fragment readback"),
+            size: u64::from(row) * u64::from(self.height),
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let view = target.create_view(&Default::default());
+        let mut encoder = device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("fragment draw"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            for (g, bind_group) in (0u32..).zip(&bind_groups) {
+                pass.set_bind_group(g, bind_group, &[]);
+            }
+            pass.draw(0..3, 0..1);
+        }
+        encoder.copy_texture_to_buffer(
+            target.as_image_copy(),
+            wgpu::TexelCopyBufferInfo {
+                buffer: &readback,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(row),
+                    rows_per_image: Some(self.height),
+                },
+            },
+            extent,
+        );
+        queue.submit([encoder.finish()]);
+        if let Some(e) = pollster::block_on(scope.pop()) {
+            return Err(GpuError(format!("fragment draw: {e}")));
+        }
+        let slice = readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map failed"));
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| GpuError(format!("device poll failed: {e}")))?;
+        let mapped = slice
+            .get_mapped_range()
+            .map_err(|e| GpuError(format!("readback range: {e}")))?;
+        let mut pixels = Vec::with_capacity((self.width * self.height) as usize);
+        for y in 0..self.height as usize {
+            let start = y * row as usize;
+            let line = &mapped[start..start + self.width as usize * 16];
+            for texel in line.as_chunks::<16>().0 {
+                let word = |k: usize| {
+                    u32::from_le_bytes([texel[k], texel[k + 1], texel[k + 2], texel[k + 3]])
+                };
+                pixels.push([word(0), word(4), word(8), word(12)]);
+            }
+        }
+        drop(mapped);
+        readback.unmap();
+        Ok(pixels)
+    }
+}
+
 /// macOS's `sw_vers`, by its full path, so the probe never depends on the run's PATH. Elsewhere it doesn't exist.
 const SW_VERS: &str = "/usr/bin/sw_vers";
 

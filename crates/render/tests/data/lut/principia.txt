@@ -1,0 +1,11 @@
+# The Principia palette's stops (colour_composition §7.1, R-122): indigo → teal → gold, the explorer's eight stops
+# (`LUT.principia`).
+# 8 stops, in order; each line one stop's 8-bit sRGB red, green and blue, 0 to 255.
+6 4 35
+18 20 85
+12 65 110
+22 120 130
+60 165 148
+130 185 128
+210 170 60
+240 148 10

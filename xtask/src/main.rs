@@ -81,7 +81,8 @@ Commands:
                                   either buffer used outside the read side's sample_read (sample-only, R-343,
                                   R-378), a whole stored struct loaded from simstate_buffer, or the two buffers
                                   read at different indices (per-member, R-378); and,
-                                  in every WGSL file under crates/render/frag/, naming file, line and rule and a
+                                  in every WGSL file under crates/render/frag/ and crates/render/shaders/ (the
+                                  shared library, linted after the prelude), naming file, line and rule and a
                                   bit-pattern test as the fix: isinf or isnan, a comparison against an inf or NaN
                                   constant, a float compared with itself, or a comparison against a finite-max
                                   stand-in, ±65504 or ±3.40282347e38 (REQ-RENDER-083, R-351, R-352)

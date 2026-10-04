@@ -3,8 +3,9 @@
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
 //! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]). The emitters are
 //! registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
-//! ([`read`]).
+//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]).
 
+pub mod prelude;
 pub mod read;
 pub mod rust;
 pub mod wgsl;
