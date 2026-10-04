@@ -622,6 +622,72 @@ negative_control!(
     check_loads(&DRIFT_CASES[..1], false)
 );
 
+/// The word accessors (payload §6) and `fgw_symbol` on the read-side word: each length accessor reads `.w` alone, so a
+/// stain reading one loads `word_buffer[i].w` and nothing else, at the tier with the word; `fgw_symbol` decodes the whole
+/// word, so it loads all four components; without the word buffer nothing is loaded (R-378).
+const WORD_CASES: [Case; 8] = [
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(f32(fgw_reduced_length(sample.word)))",
+        state: &[],
+        word: &["w"],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(select(0.0, 1.0, fgw_reduced_length_valid(sample.word)))",
+        state: &[],
+        word: &["w"],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(select(0.0, 1.0, fgw_truncated(sample.word)))",
+        state: &[],
+        word: &["w"],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(f32(fgw_retained_prefix_length(sample.word)))",
+        state: &[],
+        word: &["w"],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(select(0.0, 1.0, sd_last_symbol_valid(fgw_length_raw(sample.word))))",
+        state: &[],
+        word: &["w"],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(f32(fgw_symbol(sample.word, 3u)))",
+        state: &[],
+        word: &["x", "y", "z", "w"],
+    },
+    Case {
+        tier: NO_WORD,
+        colour: "vec4<f32>(f32(fgw_reduced_length(sample.word)))",
+        state: &[],
+        word: &[],
+    },
+    Case {
+        tier: NO_WORD,
+        colour: "vec4<f32>(f32(fgw_symbol(sample.word, 3u)))",
+        state: &[],
+        word: &[],
+    },
+];
+
+#[test]
+fn per_member_loads_word_accessors_load_only_their_components() {
+    check_loads(&WORD_CASES, true);
+}
+
+negative_control!(
+    per_member_loads_word_accessors_load_only_their_components,
+    "a stain reading `fgw_reduced_length` through a sample_read that fills every field loads every stored member",
+    expected = "loads other stored words than its fields need",
+    check_loads(&WORD_CASES[..1], false)
+);
+
 // ── The field set ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The fields each stain's IR reads are `want`.
