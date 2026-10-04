@@ -125,7 +125,7 @@ header_format! {
         flags: u8,
         /// The payload's length in bytes.
         payload_len: u32,
-        /// How many records the writer placed in the image, over both planes.
+        /// How many records the writer placed in the RGB plane; the alpha plane's are not counted (§2, "`n_records`").
         n_records: u16,
     }
 }
@@ -221,7 +221,7 @@ impl Flags {
 pub struct Record {
     /// The flag bits.
     pub flags: Flags,
-    /// How many records the writer placed in the image, over both planes.
+    /// How many records the writer placed in the RGB plane; the alpha plane's are not counted (§2, "`n_records`").
     pub n_records: u16,
     /// The payload: the canonical JSON, compressed with raw DEFLATE (§2, "Payload serialisation").
     pub payload: Vec<u8>,
@@ -356,6 +356,15 @@ pub fn tile_grid(width: u32, height: u32, side: u32) -> (u32, u32) {
 /// The top-left pixel of tile `(col, row)` in a grid of side `side`, `(col × side, row × side)`.
 pub fn tile_origin(col: u32, row: u32, side: u32) -> (u32, u32) {
     (col * side, row * side)
+}
+
+/// The `n_records` a writer puts in each record it places in a `width` × `height` image, for a payload of
+/// `payload_len` bytes: the RGB plane's tiles, `⌊width / side⌋ × ⌊height / side⌋` at the RGB side, at most 65,535 (§2,
+/// "`n_records`"). The alpha plane's records are an extra layer and are not counted.
+pub fn placed_records(width: u32, height: u32, payload_len: usize) -> u16 {
+    let side = tile_side(record_bits(payload_len), RGB_BITS_PER_PIXEL);
+    let (cols, rows) = tile_grid(width, height, side);
+    u16::try_from(u64::from(cols) * u64::from(rows)).unwrap_or(u16::MAX)
 }
 
 /// Where bit `i` of the record sits in its byte stream: byte `⌊i / 8⌋`, shifted down by `7 − (i mod 8)` (§2, "Bit

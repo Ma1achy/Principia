@@ -3,10 +3,10 @@
 //! registers its negative control (R-176).
 
 use render::embed::record::{
-    bit_slot, crc32, decode, encode, read_tile, record_bit, record_bits, record_len, tile_grid,
-    tile_origin, tile_side, write_tile, Decoded, Discard, Flags, Record, Slot, Variant,
-    ALPHA_BITS_PER_PIXEL, CRC_LEN, HEADER_FIELDS, HEADER_LEN, MAGIC, PROTOTYPE_MAGIC,
-    PROTOTYPE_VERSION, RGB_BITS_PER_PIXEL, VERSION,
+    bit_slot, crc32, decode, encode, placed_records, read_tile, record_bit, record_bits,
+    record_len, tile_grid, tile_origin, tile_side, write_tile, Decoded, Discard, Flags, Record,
+    Slot, Variant, ALPHA_BITS_PER_PIXEL, CRC_LEN, HEADER_FIELDS, HEADER_LEN, MAGIC,
+    PROTOTYPE_MAGIC, PROTOTYPE_VERSION, RGB_BITS_PER_PIXEL, VERSION,
 };
 use validation::negative_control;
 
@@ -686,4 +686,144 @@ negative_control!(
             write_tile(bytes, side, bpp, lows);
         }
     )
+);
+
+// --- n_records counts the RGB plane (§2, "`n_records`"; §4, §7) ----------------------------------------------------
+
+/// One plane of a `width` × `height` image's low bits, `bpp` per pixel, laid out `(y × width + x) × bpp + channel`.
+struct Plane {
+    width: u32,
+    height: u32,
+    bpp: u32,
+    lows: Vec<u8>,
+}
+
+impl Plane {
+    fn new(width: u32, height: u32, bpp: u32, fill: u8) -> Self {
+        Plane {
+            width,
+            height,
+            bpp,
+            lows: vec![fill; (width * height * bpp) as usize],
+        }
+    }
+
+    fn at(&self, x: u32, y: u32, channel: u32) -> usize {
+        ((y * self.width + x) * self.bpp + channel) as usize
+    }
+
+    /// The tiles of this plane's grid for a record of `payload_len` payload bytes: its side and each tile's origin.
+    fn tiles(&self, payload_len: usize) -> (u32, Vec<(u32, u32)>) {
+        let side = tile_side(record_bits(payload_len), self.bpp);
+        let (cols, rows) = tile_grid(self.width, self.height, side);
+        let origins = (0..rows)
+            .flat_map(|r| (0..cols).map(move |c| tile_origin(c, r, side)))
+            .collect();
+        (side, origins)
+    }
+
+    /// Writes `bytes`, a record of `payload_len` payload bytes, into every tile of the grid.
+    fn write_every_tile(&mut self, bytes: &[u8], payload_len: usize) {
+        let (side, origins) = self.tiles(payload_len);
+        for (ox, oy) in origins {
+            let mut tile = self.tile_lows(ox, oy, side);
+            write_tile(bytes, side, self.bpp, &mut tile);
+            for y in 0..side {
+                for x in 0..side {
+                    for ch in 0..self.bpp {
+                        let i = self.at(ox + x, oy + y, ch);
+                        self.lows[i] = tile[((y * side + x) * self.bpp + ch) as usize];
+                    }
+                }
+            }
+        }
+    }
+
+    fn tile_lows(&self, ox: u32, oy: u32, side: u32) -> Vec<u8> {
+        let mut tile = Vec::with_capacity((side * side * self.bpp) as usize);
+        for y in 0..side {
+            for x in 0..side {
+                for ch in 0..self.bpp {
+                    tile.push(self.lows[self.at(ox + x, oy + y, ch)]);
+                }
+            }
+        }
+        tile
+    }
+
+    /// The intact records read from every tile of the grid for a record of `payload_len` payload bytes.
+    fn recovered(&self, payload_len: usize) -> Vec<Record> {
+        let (side, origins) = self.tiles(payload_len);
+        origins
+            .into_iter()
+            .filter_map(|(ox, oy)| {
+                decoded_record(&read_tile(&self.tile_lows(ox, oy, side), side, self.bpp)).ok()
+            })
+            .collect()
+    }
+}
+
+/// A writer's count of records placed: `placed_records`, or a stand-in for a control.
+type Placed = fn(u32, u32, usize) -> u16;
+
+/// Embeds a config-sized record in every tile of both planes of a `size`² image, with `n_records` from `placed`;
+/// strips alpha (every alpha low bit set, as an opaque 255 is) when `strip_alpha`; then reads the RGB plane and checks
+/// the report `recovered/n_records` is `expected`, and that the alpha plane's records, when present, are counted apart.
+fn check_report(size: u32, strip_alpha: bool, placed: Placed, expected: (usize, u16)) {
+    let payload_len = CONFIG_PAYLOAD;
+    let mut record = record_with(payload_len);
+    record.n_records = placed(size, size, payload_len);
+    let bytes = encoded(&record);
+    let mut rgb = Plane::new(size, size, RGB_BITS_PER_PIXEL, 0);
+    let mut alpha = Plane::new(size, size, ALPHA_BITS_PER_PIXEL, 1);
+    rgb.write_every_tile(&bytes, payload_len);
+    alpha.write_every_tile(&bytes, payload_len);
+    if strip_alpha {
+        alpha.lows.fill(1);
+    }
+    let found = rgb.recovered(payload_len);
+    let n_records = found.first().map_or(0, |r| r.n_records);
+    assert_eq!(
+        (found.len(), n_records),
+        expected,
+        "a {size}² image (alpha stripped: {strip_alpha}) reports {}/{n_records}, not {}/{}",
+        found.len(),
+        expected.0,
+        expected.1
+    );
+    let alpha_found = alpha.recovered(payload_len).len();
+    let alpha_grid = alpha.tiles(payload_len).1.len();
+    assert_eq!(
+        alpha_found,
+        if strip_alpha { 0 } else { alpha_grid },
+        "the alpha plane's records are not a separate layer"
+    );
+}
+
+/// A pristine 128² image reports §4's `tiles: 9/9`, and a 512² image with its alpha stripped reports §7's 225/225:
+/// `n_records` counts the RGB plane, not both (§2, "`n_records`").
+#[test]
+fn embed_record_n_records_counts_rgb_plane() {
+    check_report(128, false, placed_records, (9, 9));
+    check_report(512, true, placed_records, (225, 225));
+    assert_eq!(placed_records(64, 64, SHADER_PAYLOAD), 0);
+    assert_eq!(placed_records(1024, 1024, CONFIG_PAYLOAD), 961);
+}
+
+/// A writer that counts both planes' tiles in `n_records`; only its control uses it.
+#[cfg(feature = "controls")]
+fn placed_over_both_planes(width: u32, height: u32, payload_len: usize) -> u16 {
+    let bits = record_bits(payload_len);
+    let count = |bpp| {
+        let (c, r) = tile_grid(width, height, tile_side(bits, bpp));
+        c * r
+    };
+    (count(RGB_BITS_PER_PIXEL) + count(ALPHA_BITS_PER_PIXEL)) as u16
+}
+
+negative_control!(
+    embed_record_n_records_counts_rgb_plane,
+    "n_records counted over both planes must fail §4's 9/9",
+    expected = "reports 9/13, not 9/9",
+    check_report(128, false, placed_over_both_planes, (9, 9))
 );
