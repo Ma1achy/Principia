@@ -11,8 +11,8 @@
 //! is intact and its `payload_len` gives that side.
 
 use super::record::{
-    bit_slot, decode, read_tile, record_bits, record_len, tile_grid, tile_origin, tile_side,
-    Discard, Record, CRC_LEN, HEADER_FIELDS, HEADER_LEN, MAGIC,
+    bit_slot, decode, decode_header, read_tile, record_bits, record_len, tile_grid, tile_origin,
+    tile_side, Discard, Record, CRC_LEN, HEADER_LEN, MAGIC,
 };
 use super::{Image, Plane};
 
@@ -208,12 +208,13 @@ fn scan(image: &Image, plane: Plane, found: &mut Vec<Found>) -> bool {
                     continue;
                 }
                 present = true;
-                let header = read_prefix(image, plane, col, row, side, HEADER_LEN);
-                // A header that passes its magic, CRC and flags checks leaves `decode` short of the payload only.
-                if decode(&header) != Err(Discard::Truncated) {
+                let Ok(header) =
+                    decode_header(&read_prefix(image, plane, col, row, side, HEADER_LEN))
+                else {
                     continue;
-                }
-                let payload_len = payload_len(&header);
+                };
+                let payload_len =
+                    usize::try_from(header.payload_len).expect("a payload_len beyond usize");
                 if tile_side(record_bits(payload_len), bpp) != side {
                     continue;
                 }
@@ -243,21 +244,6 @@ fn read_prefix(image: &Image, plane: Plane, col: u32, row: u32, side: u32, n: us
         bytes[i / 8] |= image.low(plane, ox + slot.x, oy + slot.y, slot.channel) << (7 - i % 8);
     }
     bytes
-}
-
-/// The `payload_len` of an intact header, read at its place in the one format description ([`HEADER_FIELDS`]).
-fn payload_len(header: &[u8]) -> usize {
-    let mut at = 0;
-    for &(name, len) in HEADER_FIELDS {
-        if name == "payload_len" {
-            let value = header[at..at + len]
-                .iter()
-                .fold(0u64, |acc, &b| (acc << 8) | u64::from(b));
-            return usize::try_from(value).expect("a payload_len beyond usize");
-        }
-        at += len;
-    }
-    unreachable!("the header format has a payload_len field")
 }
 
 /// The majority vote over the intact records (§2, "Read"): the length more than half of them have, then each byte's
