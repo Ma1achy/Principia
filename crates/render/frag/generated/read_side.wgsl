@@ -60,6 +60,8 @@ struct SimState {
     is_failed: bool,
     is_finished: bool,
     ensemble_spread: f32,
+    energy_drift: f32,
+    Lz_drift: f32,
 }
 
 // The renormalisations completed by step `n`, `n / n_renorm` under the uniform schedule (payload §5); none when
@@ -111,11 +113,39 @@ fn orbit_count(theta: f32) -> u32 { return u32(min(floor(abs(theta) / 6.2831855)
 // The winding sense: `θ̃ < 0` (payload §5).
 fn retrograde(theta: f32) -> bool { return theta < 0.0; }
 
+// The Hamiltonian of the planar three-body problem in CoM-frame particle coordinates, `G = 1`: `H(r, p) = K + V`,
+// `K = Σᵢ ‖pᵢ‖²/2mᵢ`, `V = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (integrator dd §3.5; decoder dd §3.6), the masses `m` the sample's
+// `ICDescriptor` `m0 m1 m2` (dd_generation_root §3.6).
+fn hamiltonian(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>) -> f32 {
+    let r01 = r[0] - r[1];
+    let r02 = r[0] - r[2];
+    let r12 = r[1] - r[2];
+    let k = dot(p[0], p[0]) / (2.0 * m.x) + dot(p[1], p[1]) / (2.0 * m.y) + dot(p[2], p[2]) / (2.0 * m.z);
+    let v = m.x * m.y / sqrt(dot(r01, r01)) + m.x * m.z / sqrt(dot(r02, r02)) + m.y * m.z / sqrt(dot(r12, r12));
+    return k - v;
+}
+
+// The angular momentum `L_z(r, p) = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})` (integrator dd §3.5).
+fn angular_momentum_z(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> f32 {
+    return (r[0].x * p[0].y - r[0].y * p[0].x) + (r[1].x * p[1].y - r[1].y * p[1].x) + (r[2].x * p[2].y - r[2].y * p[2].x);
+}
+
+// The current energy drift `ΔE = H(r, p) − E_0`, in live f32 (payload §5; dd_generation_root §3.8, R-246).
+fn energy_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>, e_0: f32) -> f32 {
+    return hamiltonian(r, p, m) - e_0;
+}
+
+// The current angular-momentum drift `ΔLz = L_z(r, p) − Lz_0`, in live f32 (payload §5; dd_generation_root §3.8).
+fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
+    return angular_momentum_z(r, p) - lz_0;
+}
+
 // Sample `i` read into the read-side `SimState` at this tier, every field filled: each stored member a field
 // needs loaded alone, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the
 // components a field needs (R-378). A field not filled stays zero and is not read. An unbound word buffer
 // reads `FGW_UNBOUND`; E = 0 reads `ensemble_spread` as the canonical quiet NaN (lowering Part 3a; R-145).
-fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, params: ReadParams) -> SimState {
+// `masses` are the sample's `ICDescriptor` `m0 m1 m2` (`ctx.ic`), which `energy_drift` reads.
+fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f32>, params: ReadParams) -> SimState {
     let s_r = simstate_buffer[i].r;
     let s_p = simstate_buffer[i].p;
     let s_r_sh = simstate_buffer[i].r_sh;
@@ -173,5 +203,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, params: ReadPar
     out.is_failed = sd_is_failed(s_packed_a);
     out.is_finished = sd_is_finished(s_packed_a);
     out.ensemble_spread = select(canonical_nan(), ensemble_spread, has_ensemble);
+    out.energy_drift = energy_drift(s_r, s_p, masses, s_E_0);
+    out.Lz_drift = Lz_drift(s_r, s_p, s_Lz_0);
     return out;
 }

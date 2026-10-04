@@ -42,7 +42,7 @@ fn checked_in(rel: &str) -> String {
 fn stain(colour: &str) -> String {
     format!(
         "\n@fragment\nfn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
-         let sample = sample_read(u32(p.x), 0.5, true, ReadParams(0.01, 1e-6, 16u, 1000u));\n    \
+         let sample = sample_read(u32(p.x), 0.5, true, vec3<f32>(0.25, 0.35, 0.4), ReadParams(0.01, 1e-6, 16u, 1000u));\n    \
          return {colour};\n}}\n"
     )
 }
@@ -285,7 +285,7 @@ fn msl_loads(source: &str) -> Loads {
                 let member = line[past..].strip_prefix('.').map(ident);
                 hit = true;
                 match (word, member) {
-                    (false, Some(m)) => out.state.insert(m.to_owned()),
+                    (false, Some(m)) => out.state.insert(unsuffixed(m).to_owned()),
                     (false, None) => out.state.insert(WHOLE.to_owned()),
                     (true, Some(c)) => out.word.insert(c.to_owned()),
                     (true, None) => {
@@ -302,6 +302,15 @@ fn msl_loads(source: &str) -> Loads {
         }
     }
     out
+}
+
+/// A member's WGSL name from naga's MSL one: naga's namer appends `_` to a name that ends in a digit (`E_0` is
+/// written `E_0_`), so that suffix is dropped.
+fn unsuffixed(name: &str) -> &str {
+    match name.strip_suffix('_') {
+        Some(base) if base.ends_with(|c: char| c.is_ascii_digit()) => base,
+        _ => name,
+    }
 }
 
 fn hlsl(module: &Module, info: &ModuleInfo) -> String {
@@ -560,6 +569,35 @@ const CASES: [Case; 9] = [
     },
 ];
 
+/// The current drifts: each loads the state and its own reference alone, `E_0` or `Lz_0`, at both stored variants;
+/// the masses are an argument, the sample's `ICDescriptor`'s, never a load (dd_generation_root §3.8; R-378).
+const DRIFT_CASES: [Case; 4] = [
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(sample.energy_drift)",
+        state: &["r", "p", "E_0"],
+        word: &[],
+    },
+    Case {
+        tier: NO_FTLE,
+        colour: "vec4<f32>(sample.energy_drift)",
+        state: &["r", "p", "E_0"],
+        word: &[],
+    },
+    Case {
+        tier: Tier::FULL,
+        colour: "vec4<f32>(sample.Lz_drift)",
+        state: &["r", "p", "Lz_0"],
+        word: &[],
+    },
+    Case {
+        tier: NO_FTLE,
+        colour: "vec4<f32>(sample.Lz_drift)",
+        state: &["r", "p", "Lz_0"],
+        word: &[],
+    },
+];
+
 #[test]
 fn per_member_loads_a_stain_loads_only_its_fields_words() {
     check_loads(&CASES, true);
@@ -570,6 +608,18 @@ negative_control!(
     "a stain reading `d_min` through a sample_read that fills every field loads every stored member",
     expected = "loads other stored words than its fields need",
     check_loads(&CASES[..1], false)
+);
+
+#[test]
+fn current_drift_loads_only_the_state_and_its_reference() {
+    check_loads(&DRIFT_CASES, true);
+}
+
+negative_control!(
+    current_drift_loads_only_the_state_and_its_reference,
+    "a stain reading `energy_drift` through a sample_read that fills every field loads every stored member",
+    expected = "loads other stored words than its fields need",
+    check_loads(&DRIFT_CASES[..1], false)
 );
 
 // ── The field set ──────────────────────────────────────────────────────────────────────────────────────────────────

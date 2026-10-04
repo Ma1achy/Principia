@@ -16,6 +16,9 @@
 //! - REQ-RENDER-013, REQ-RENDER-077: the tier-absent reads are lowering Part 3a's values, the canonical quiet NaN's
 //!   bits and the unbound word (`tier_absent_nan_bits`).
 //! - REQ-RENDER-019: the time fractions read 0 at a zero horizon and exactly 1.0 at it (`time_fraction`).
+//! - REQ-PAY-031: the current drifts are computed at read, `energy_drift = H(r, p) − E_0` and
+//!   `Lz_drift = L_z(r, p) − Lz_0` (payload §5; dd_generation_root §3.8), against hand-computed configurations and an
+//!   f64 reference, at every tier (`current_drift`).
 //!
 //! The Rust target's behaviour is `kernel/tests/derived.rs`'s. Each GPU check takes the generated WGSL, the unpack
 //! layer then the read side, as text, so its
@@ -54,6 +57,8 @@ const IS_FINISHED: u32 = 12;
 const SPREAD: u32 = 13;
 const WORD: [u32; 4] = [14, 15, 16, 17];
 const TOTAL: u32 = 18;
+const ENERGY_DRIFT: u32 = 24;
+const LZ_DRIFT: u32 = 25;
 
 /// The quantities derived at read, and payload §5's removed fields: none is stored (REQ-PAY-021, REQ-PAY-031).
 const NOT_STORED: [&str; 30] = [
@@ -212,6 +217,8 @@ struct Sample {
     t_end_step: u32,
     t_dmin_step: u32,
     total_substeps: u32,
+    e_0: f32,
+    lz_0: f32,
 }
 
 impl Sample {
@@ -234,6 +241,8 @@ impl Sample {
                 "S" => out[at] = self.s.to_bits(),
                 "theta" => out[at] = self.theta.to_bits(),
                 "C_ty" => out[at] = self.c_ty.to_bits(),
+                "E_0" => out[at] = self.e_0.to_bits(),
+                "Lz_0" => out[at] = self.lz_0.to_bits(),
                 // d_min unset, f16 +∞ (R-271), above the descriptor.
                 "packed_a" => out[at] = self.state | 0x7c00 << 16,
                 "times" => out[at] = self.t_end_step | self.t_dmin_step << 16,
@@ -245,10 +254,12 @@ impl Sample {
     }
 }
 
-/// One read: the sample, which variant stores it, the word and ensemble arguments and the sim-key values.
+/// One read: the sample, which variant stores it, the word and ensemble arguments, the sample's `ICDescriptor` masses
+/// and the sim-key values.
 #[derive(Clone, Copy, Debug)]
 struct Case {
     sample: Sample,
+    masses: [f32; 3],
     ftle_variant: bool,
     word: [u32; 4],
     has_word: bool,
@@ -269,10 +280,12 @@ impl Case {
         }
     }
 
-    /// `sample` in the FTLE variant, the word bound, E ≥ 1, `dt_macro` 0.01, `δ₀` 1e-6, `n_renorm` 16, horizon 1000.
+    /// `sample` in the FTLE variant, the word bound, E ≥ 1, masses (0.25, 0.35, 0.4), `dt_macro` 0.01, `δ₀` 1e-6,
+    /// `n_renorm` 16, horizon 1000.
     fn new(sample: Sample) -> Self {
         Case {
             sample,
+            masses: [0.25, 0.35, 0.4],
             ftle_variant: true,
             word: [1, 2, 3, 4 << 25],
             has_word: true,
@@ -304,6 +317,8 @@ fn marching(n: u32, ratio: f32) -> Sample {
         t_end_step: n,
         t_dmin_step: n / 2,
         total_substeps: 1000,
+        e_0: -1.0,
+        lz_0: 0.1,
     }
 }
 
@@ -348,6 +363,8 @@ fn read_members(
                 c.delta_0.to_bits(),
             ]);
             args.extend([c.n_renorm, c.horizon, 0, 0]);
+            args.extend(c.masses.map(f32::to_bits));
+            args.push(0);
         }
         let mut inputs: Vec<&[u32]> = vec![&sel, &args, &state];
         if tier.has_word {
@@ -788,8 +805,8 @@ negative_control!(
     check_same_shape(
         &tier_text(Tier::FULL),
         &tier_text(BARE).replace(
-            "    ensemble_spread: f32,\n}",
-            "    ensemble_spread: f32,\n    shadow_only: f32,\n}"
+            "    Lz_drift: f32,\n}",
+            "    Lz_drift: f32,\n    shadow_only: f32,\n}"
         )
     )
 );
@@ -1292,5 +1309,238 @@ negative_control!(
         &gpu(),
         mutated("horizon_steps > 0u);", "horizon_steps >= 0u);"),
         &FRACTIONS
+    )
+);
+
+// ── current_drift (REQ-PAY-031) ───────────────────────────────────────────────────────────────────────────────────
+
+/// The f64 reference of the current drifts' terms, from the stored f32 values (integrator dd §3.5; decoder dd §3.6;
+/// `G = 1`): `(K, V, L_z)`, `K = Σᵢ ‖pᵢ‖²/2mᵢ`, `V = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, `L_z = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})`;
+/// and the scales the f32 reads are held to, `|K| + |V|` and `Σᵢ (|xᵢ p_{y,i}| + |yᵢ p_{x,i}|)`.
+fn drift_reference(r: &[[f32; 2]; 3], p: &[[f32; 2]; 3], m: &[f32; 3]) -> [f64; 5] {
+    let f = |x: f32| f64::from(x);
+    let k: f64 = (0..3)
+        .map(|i| (f(p[i][0]).powi(2) + f(p[i][1]).powi(2)) / (2.0 * f(m[i])))
+        .sum();
+    let v: f64 = [(0, 1), (0, 2), (1, 2)]
+        .iter()
+        .map(|&(i, j)| {
+            let d = (f(r[i][0]) - f(r[j][0])).hypot(f(r[i][1]) - f(r[j][1]));
+            -f(m[i]) * f(m[j]) / d
+        })
+        .sum();
+    let lz: f64 = (0..3)
+        .map(|i| f(r[i][0]) * f(p[i][1]) - f(r[i][1]) * f(p[i][0]))
+        .sum();
+    let lz_scale: f64 = (0..3)
+        .map(|i| (f(r[i][0]) * f(p[i][1])).abs() + (f(r[i][1]) * f(p[i][0])).abs())
+        .sum();
+    [k, v, lz, k + v.abs(), lz_scale]
+}
+
+/// The drifts' tolerance, relative to the scale of the terms they are differences of: parity §4's class for the
+/// monitored `E₀`/`L_z`, ~1e-6 relative. The drift is a cancellation (payload §5), so its error is the terms', not its
+/// own magnitude's.
+const DRIFT_TOL: f64 = 1e-6;
+
+/// Whether `got` is within [`DRIFT_TOL`] of `want` against `scale`, the terms' magnitude.
+fn drift_close(got: u32, want: f64, scale: f64) -> bool {
+    let got = f64::from(f32::from_bits(got));
+    (got - want).abs() <= DRIFT_TOL * scale
+}
+
+/// Each case's `energy_drift` and `Lz_drift`, read through `generated` at the case's tier, against `want`'s
+/// `(ΔE, ΔLz)` where given, and against the f64 reference ([`drift_reference`]) always.
+fn check_drifts(gpu: &GpuHarness, generated: Gen, cases: &[(Case, Option<(f64, f64)>)]) {
+    let reads: Vec<Case> = cases.iter().map(|(c, _)| *c).collect();
+    let got = read_members(gpu, generated, &reads, &[ENERGY_DRIFT, LZ_DRIFT]);
+    for ((c, want), g) in cases.iter().zip(&got) {
+        let s = &c.sample;
+        let [k, v, lz, e_scale, lz_scale] = drift_reference(&s.r, &s.p, &c.masses);
+        let e_scale = e_scale + f64::from(s.e_0).abs();
+        let lz_scale = lz_scale + f64::from(s.lz_0).abs();
+        let reference = (k + v - f64::from(s.e_0), lz - f64::from(s.lz_0));
+        for (name, (want_e, want_lz)) in [("the reference", Some(reference)), ("by hand", *want)]
+            .into_iter()
+            .filter_map(|(n, w)| Some((n, w?)))
+        {
+            assert!(
+                drift_close(g[0], want_e, e_scale),
+                "energy_drift {} differs from H(r,p) − E_0 = {want_e} ({name}) for {c:?}",
+                f32::from_bits(g[0])
+            );
+            assert!(
+                drift_close(g[1], want_lz, lz_scale),
+                "Lz_drift {} differs from L_z(r,p) − Lz_0 = {want_lz} ({name}) for {c:?}",
+                f32::from_bits(g[1])
+            );
+        }
+    }
+}
+
+/// A sample at rest or moving with masses `m`, positions `r`, momenta `p`, `E_0` and `Lz_0`, at `tier`.
+fn drift_case(
+    m: [f32; 3],
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    e_0: f32,
+    lz_0: f32,
+    tier: Tier,
+) -> Case {
+    let mut c = Case::new(Sample {
+        r,
+        p,
+        r_sh: r,
+        p_sh: p,
+        e_0,
+        lz_0,
+        state: 1,
+        t_end_step: 40,
+        ..Sample::default()
+    });
+    c.masses = m;
+    c.ftle_variant = tier.has_ftle;
+    c.has_word = tier.has_word;
+    c
+}
+
+/// Hand-computed configurations, each at every tier, with its `(ΔE, ΔLz)`:
+/// - equal unit masses at (1, 0), (−1, 0), (0, 0) with momenta (0, 1), (0, −1), 0: `K = ½ + ½ = 1`,
+///   `V = −(1/2 + 1 + 1) = −5/2`, `H = −3/2`; `L_z = 1·1 + (−1)(−1) = 2`. Read against `E_0 = −1`, `Lz_0 = 0.5`:
+///   `ΔE = −1/2`, `ΔLz = 3/2`; and against `E_0 = H`, `Lz_0 = L_z`: both 0.
+/// - Burrau's problem (dd_predictability_horizon § "Units, so the numbers mean something": `G = 1`,
+///   `m = (3, 4, 5)`, `E = −12.82`), at rest at (1, 3), (−2, −1), (1, −1), the CoM at the origin: the pair distances
+///   5, 4 and 3 give `V = −(12/5 + 15/4 + 20/3) = −769/60`, `K = 0`; `L_z = 0`. Read against `E_0 = 0`:
+///   `ΔE = −769/60 ≈ −12.8167`.
+/// - The Chenciner–Montgomery figure-eight (dd_validation_orbits §0: equal masses, `E = −1.2871419918`, `L_z = 0`
+///   exactly), from its published initial condition, unit masses: `r₁ = −r₂ = (0.97000436, −0.24308753)`, `r₃ = 0`,
+///   `p₃ = (−0.93240737, −0.86473146)`, `p₁ = p₂ = −p₃/2`. Read against its own `E_0` and `Lz_0 = 0`: both drifts 0.
+fn hand_cases() -> Vec<(Case, Option<(f64, f64)>)> {
+    const EIGHT_E: f32 = -1.287_141_991_8_f64 as f32;
+    let unit = [1.0, 1.0, 1.0];
+    let line = [[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]];
+    let line_p = [[0.0, 1.0], [0.0, -1.0], [0.0, 0.0]];
+    let burrau = [[1.0, 3.0], [-2.0, -1.0], [1.0, -1.0]];
+    let (x, y) = (0.970_004_36_f64 as f32, -0.243_087_53_f64 as f32);
+    let (vx, vy) = (-0.932_407_37_f64 as f32, -0.864_731_46_f64 as f32);
+    let eight = [[x, y], [-x, -y], [0.0, 0.0]];
+    let eight_p = [[-vx / 2.0, -vy / 2.0], [-vx / 2.0, -vy / 2.0], [vx, vy]];
+    let mut out = Vec::new();
+    for tier in Tier::ALL {
+        out.push((
+            drift_case(unit, line, line_p, -1.0, 0.5, tier),
+            Some((-0.5, 1.5)),
+        ));
+        out.push((
+            drift_case(unit, line, line_p, -1.5, 2.0, tier),
+            Some((0.0, 0.0)),
+        ));
+        out.push((
+            drift_case([3.0, 4.0, 5.0], burrau, [[0.0; 2]; 3], 0.0, 0.0, tier),
+            Some((-769.0 / 60.0, 0.0)),
+        ));
+        out.push((
+            drift_case(unit, eight, eight_p, EIGHT_E, 0.0, tier),
+            Some((0.0, 0.0)),
+        ));
+    }
+    out
+}
+
+#[test]
+fn current_drift_hand_computed_configurations() {
+    check_drifts(&gpu(), generated(), &hand_cases());
+}
+
+negative_control!(
+    current_drift_hand_computed_configurations,
+    "a kinetic energy without its ½ must fail the hand-computed energies",
+    expected = "differs from H(r,p) − E_0",
+    check_drifts(
+        &gpu(),
+        mutated("dot(p[0], p[0]) / (2.0 * m.x)", "dot(p[0], p[0]) / m.x"),
+        &hand_cases()
+    )
+);
+
+/// The hand-computed values are the f64 reference's: the reference itself is right, on the same configurations.
+/// A reference of the drifts' terms, as [`drift_reference`].
+type Reference = fn(&[[f32; 2]; 3], &[[f32; 2]; 3], &[f32; 3]) -> [f64; 5];
+
+fn check_reference_by_hand(reference: Reference) {
+    for (c, want) in hand_cases() {
+        let (want_e, want_lz) = want.expect("a hand value");
+        let s = &c.sample;
+        let [k, v, lz, ..] = reference(&s.r, &s.p, &c.masses);
+        let (e, l) = (k + v - f64::from(s.e_0), lz - f64::from(s.lz_0));
+        assert!(
+            (e - want_e).abs() <= 1e-6 && (l - want_lz).abs() <= 1e-6,
+            "the reference gives ({e}, {l}), by hand ({want_e}, {want_lz}), for {c:?}"
+        );
+    }
+}
+
+#[test]
+fn current_drift_reference_matches_the_hand_values() {
+    check_reference_by_hand(drift_reference);
+}
+
+negative_control!(
+    current_drift_reference_matches_the_hand_values,
+    "a reference whose potential is positive must fail",
+    expected = "the reference gives",
+    check_reference_by_hand(|r, p, m| {
+        let mut out = drift_reference(r, p, m);
+        out[1] = -out[1];
+        out
+    })
+);
+
+/// 64 cases from `seed` over every tier: positions and momenta in [−2, 2], masses in [0.05, 1], `E_0` and `Lz_0` in
+/// [−4, 4].
+fn random_drift_cases(seed: u64) -> Vec<(Case, Option<(f64, f64)>)> {
+    let mut state = seed;
+    let mut next = move || {
+        state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
+    };
+    (0..64)
+        .map(|k| {
+            let mut v = [[[0f32; 2]; 3]; 2];
+            v.iter_mut()
+                .flatten()
+                .flatten()
+                .for_each(|x| *x = (4.0 * next() - 2.0) as f32);
+            let m = [0, 1, 2].map(|_| (0.05 + 0.95 * next()) as f32);
+            let e_0 = (8.0 * next() - 4.0) as f32;
+            let lz_0 = (8.0 * next() - 4.0) as f32;
+            (drift_case(m, v[0], v[1], e_0, lz_0, Tier::ALL[k % 4]), None)
+        })
+        .collect()
+}
+
+#[test]
+fn current_drift_property_matches_the_reference() {
+    let gpu = gpu();
+    prop::run(&any::<u64>(), |seed| {
+        check_drifts(&gpu, generated(), &random_drift_cases(seed));
+        Ok(())
+    });
+}
+
+negative_control!(
+    current_drift_property_matches_the_reference,
+    "an L_z with one cross product's sign flipped must fail the reference",
+    expected = "differs from L_z(r,p) − Lz_0",
+    check_drifts(
+        &gpu(),
+        mutated(
+            "(r[1].x * p[1].y - r[1].y * p[1].x)",
+            "(r[1].y * p[1].x - r[1].x * p[1].y)"
+        ),
+        &random_drift_cases(1)
     )
 );

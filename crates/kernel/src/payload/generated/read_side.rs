@@ -23,7 +23,8 @@ pub fn canonical_nan() -> f32 {
 }
 
 /// The sim-key values the read side derives from (lowering Part 3; payload §4, §5): the macro-step `dt_macro`, the
-/// Benettin shadow's initial separation `delta_0`, the renormalisation interval `n_renorm` and `horizon_steps`.
+/// Benettin shadow's initial separation `delta_0`, the renormalisation interval `n_renorm` and `horizon_steps`. The
+/// masses are the sample's own `ICDescriptor`'s, not the sim key's, and each read takes them apart (`masses`).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ReadParams {
     pub dt_macro: f32,
@@ -72,6 +73,8 @@ pub struct SimState {
     pub is_failed: bool,
     pub is_finished: bool,
     pub ensemble_spread: f32,
+    pub energy_drift: f32,
+    pub Lz_drift: f32,
 }
 
 /// The renormalisations completed by step `n`, `n / n_renorm` under the uniform schedule (payload §5); none when
@@ -158,9 +161,45 @@ pub fn retrograde(theta: f32) -> bool {
     theta < 0.0
 }
 
+/// The Hamiltonian of the planar three-body problem in CoM-frame particle coordinates, `G = 1`: `H(r, p) = K + V`,
+/// `K = Σᵢ ‖pᵢ‖²/2mᵢ`, `V = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (integrator dd §3.5; decoder dd §3.6), the masses `m0 m1 m2` the
+/// sample's `ICDescriptor`'s (dd_generation_root §3.6). Constant indices only.
+#[inline]
+pub fn hamiltonian(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> f32 {
+    let kinetic = |q: [f32; 2], mass: f32| (q[0] * q[0] + q[1] * q[1]) / (2.0 * mass);
+    let pair = |a: [f32; 2], b: [f32; 2], ma: f32, mb: f32| {
+        let (x, y) = (a[0] - b[0], a[1] - b[1]);
+        ma * mb / Float::sqrt(x * x + y * y)
+    };
+    let k = kinetic(p[0], m[0]) + kinetic(p[1], m[1]) + kinetic(p[2], m[2]);
+    let v =
+        pair(r[0], r[1], m[0], m[1]) + pair(r[0], r[2], m[0], m[2]) + pair(r[1], r[2], m[1], m[2]);
+    k - v
+}
+
+/// The angular momentum `L_z(r, p) = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})` (integrator dd §3.5).
+#[inline]
+pub fn angular_momentum_z(r: [[f32; 2]; 3], p: [[f32; 2]; 3]) -> f32 {
+    let cross = |q: [f32; 2], m: [f32; 2]| q[0] * m[1] - q[1] * m[0];
+    cross(r[0], p[0]) + cross(r[1], p[1]) + cross(r[2], p[2])
+}
+
+/// The current energy drift `ΔE = H(r, p) − E_0`, in live f32 (payload §5; dd_generation_root §3.8, R-246).
+#[inline]
+pub fn energy_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3], e_0: f32) -> f32 {
+    hamiltonian(r, p, m) - e_0
+}
+
+/// The current angular-momentum drift `ΔLz = L_z(r, p) − Lz_0`, in live f32 (payload §5; dd_generation_root §3.8).
+#[inline]
+pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
+    angular_momentum_z(r, p) - lz_0
+}
+
 /// `SimStateFTLE` read: `ftle` finalised from the shadow (payload §5), NaN whenever `ftle_valid` is false (R-254).
 /// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads
-/// `ensemble_spread` as the canonical quiet NaN (R-145).
+/// `ensemble_spread` as the canonical quiet NaN (R-145). `masses` are the sample's `ICDescriptor` `m0 m1 m2`,
+/// which `energy_drift` reads (dd_generation_root §3.8).
 #[inline]
 pub fn sim_state_from_ftle(
     s: &SimStateFTLE,
@@ -168,6 +207,7 @@ pub fn sim_state_from_ftle(
     has_word: bool,
     ensemble_spread: f32,
     has_ensemble: bool,
+    masses: [f32; 3],
     params: &ReadParams,
 ) -> SimState {
     let n = tm_t_end_step(s.times);
@@ -214,13 +254,16 @@ pub fn sim_state_from_ftle(
         } else {
             canonical_nan()
         },
+        energy_drift: energy_drift(s.r, s.p, masses, s.E_0),
+        Lz_drift: Lz_drift(s.r, s.p, s.Lz_0),
     }
 }
 
 /// `SimStateBase` read: FTLE is baked out, so `ftle` reads the canonical quiet NaN and `ftle_valid` is false
 /// (lowering Part 3a).
 /// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads
-/// `ensemble_spread` as the canonical quiet NaN (R-145).
+/// `ensemble_spread` as the canonical quiet NaN (R-145). `masses` are the sample's `ICDescriptor` `m0 m1 m2`,
+/// which `energy_drift` reads (dd_generation_root §3.8).
 #[inline]
 pub fn sim_state_from_base(
     s: &SimStateBase,
@@ -228,6 +271,7 @@ pub fn sim_state_from_base(
     has_word: bool,
     ensemble_spread: f32,
     has_ensemble: bool,
+    masses: [f32; 3],
     params: &ReadParams,
 ) -> SimState {
     let n = tm_t_end_step(s.times);
@@ -273,5 +317,7 @@ pub fn sim_state_from_base(
         } else {
             canonical_nan()
         },
+        energy_drift: energy_drift(s.r, s.p, masses, s.E_0),
+        Lz_drift: Lz_drift(s.r, s.p, s.Lz_0),
     }
 }

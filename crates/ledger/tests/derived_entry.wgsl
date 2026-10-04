@@ -9,13 +9,15 @@
 @group(0) @binding(0) var<storage, read> t_sel: array<u32>;
 @group(0) @binding(1) var<storage, read> t_args: array<vec4<u32>>;
 
-// Sample `i` through `sample_read`. Its two argument rows: (flags, ensemble_spread bits, dt_macro bits, delta_0
-// bits) and (n_renorm, horizon_steps, 0, 0); flag bit 2 is `has_ensemble`.
+// Sample `i` through `sample_read`. Its three argument rows: (flags, ensemble_spread bits, dt_macro bits, delta_0
+// bits), (n_renorm, horizon_steps, 0, 0) and (m0 bits, m1 bits, m2 bits, 0), the masses the `ICDescriptor`'s; flag
+// bit 2 is `has_ensemble`.
 fn t_read(i: u32) -> SimState {
-    let a = t_args[2u * i];
-    let b = t_args[2u * i + 1u];
+    let a = t_args[3u * i];
+    let b = t_args[3u * i + 1u];
+    let c = t_args[3u * i + 2u];
     let params = ReadParams(bitcast<f32>(a.z), bitcast<f32>(a.w), b.x, b.y);
-    return sample_read(i, bitcast<f32>(a.y), (a.x & 4u) != 0u, params);
+    return sample_read(i, bitcast<f32>(a.y), (a.x & 4u) != 0u, bitcast<vec3<f32>>(c.xyz), params);
 }
 
 fn t_bool(b: bool) -> u32 { return select(0u, 1u, b); }
@@ -47,6 +49,8 @@ fn t_member(s: SimState, m: u32) -> u32 {
         case 21u: { return bitcast<u32>(s.S); }
         case 22u: { return s.closure_step; }
         case 23u: { return bitcast<u32>(s.d_min); }
+        case 24u: { return bitcast<u32>(s.energy_drift); }
+        case 25u: { return bitcast<u32>(s.Lz_drift); }
         default: { return 0xffffffffu; }
     }
 }

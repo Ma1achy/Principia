@@ -7,7 +7,8 @@
 //! Its members ([`members`]) are the stored members every tier's `SimState` variant holds, each packed word expanded
 //! into its fields, then the word, then the quantities derived at read (payload §5): `ftle`, `ftle_valid`,
 //! `diffusion`, `diffusion_slope_valid`, `total_substeps_log2`, the two time fractions, `orbit_count`, `retrograde`,
-//! the four state predicates and `ensemble_spread`. None of the derived ones is stored (R-79). The Benettin shadow,
+//! the four state predicates, `ensemble_spread` and the current drifts `energy_drift` and `Lz_drift`. None of the
+//! derived ones is stored (R-79). The Benettin shadow,
 //! tier-gated state, is not a read-side member: the read side keeps the cheap derived result, never resurrected state
 //! (lowering Part 3a).
 //!
@@ -28,7 +29,14 @@
 //! The derived accessors carry payload §6's names where it gives one (`ftle_valid`, `diffusion_slope_valid`,
 //! `total_substeps_log2`, `tm_t_end_fraction`, `tm_t_dmin_fraction`, the `sd_is_*` predicates; the last five are the
 //! fragment unpack layer's and the Rust emitter's, [`super::rust`], already), and payload §5's otherwise (`ftle`,
-//! `diffusion_slope`, `orbit_count`, `retrograde`).
+//! `diffusion_slope`, `orbit_count`, `retrograde`); the drifts carry dd_generation_root §3.8's entry names.
+//!
+//! The current drifts (payload §5; dd_generation_root §3.8, R-246) are `energy_drift = H(r, p) − E_0` and
+//! `Lz_drift = L_z(r, p) − Lz_0`, with integrator dd §3.5's forms in CoM-frame particle coordinates and `G = 1`:
+//! `H = Σᵢ ‖pᵢ‖²/2mᵢ − Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (decoder dd §3.6's `K₀ + V₀`) and `L_z = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})`.
+//! The masses `m0 m1 m2` are the `ICDescriptor`'s (dd_generation_root §3.6, §3.8), not the stored `SimState`'s, so each
+//! read takes them as an argument, `masses` (the fragment's `ctx.ic`, render contract Part 1). Both are f32, the live
+//! f32 values, not the f16 latches (payload §1, §5).
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -72,7 +80,7 @@ pub struct ReadMember {
 }
 
 /// The derived members, in order, each with its type as `(name, Rust, WGSL)`.
-pub const DERIVED: [(&str, &str, &str); 14] = [
+pub const DERIVED: [(&str, &str, &str); 16] = [
     ("ftle", "f32", "f32"),
     ("ftle_valid", "bool", "bool"),
     ("diffusion", "f32", "f32"),
@@ -87,6 +95,8 @@ pub const DERIVED: [(&str, &str, &str); 14] = [
     ("is_failed", "bool", "bool"),
     ("is_finished", "bool", "bool"),
     ("ensemble_spread", "f32", "f32"),
+    ("energy_drift", "f32", "f32"),
+    ("Lz_drift", "f32", "f32"),
 ];
 
 /// The `SimState` variants the stored buffer holds, one per tier (payload §1).
@@ -210,6 +220,8 @@ fn rust_derived(name: &str, shadow: bool) -> String {
         "t_end_fraction" => "tm_t_end_fraction(s.times, params.horizon_steps)".into(),
         "t_dmin_fraction" => "tm_t_dmin_fraction(s.times, params.horizon_steps)".into(),
         "orbit_count" | "retrograde" => format!("{name}(s.theta)"),
+        "energy_drift" => "energy_drift(s.r, s.p, masses, s.E_0)".into(),
+        "Lz_drift" => "Lz_drift(s.r, s.p, s.Lz_0)".into(),
         "ensemble_spread" => {
             "if has_ensemble {\n    ensemble_spread\n} else {\n    canonical_nan()\n}".into()
         }
@@ -264,7 +276,8 @@ pub fn canonical_nan() -> f32 {{
 }}
 
 /// The sim-key values the read side derives from (lowering Part 3; payload §4, §5): the macro-step `dt_macro`, the
-/// Benettin shadow's initial separation `delta_0`, the renormalisation interval `n_renorm` and `horizon_steps`.
+/// Benettin shadow's initial separation `delta_0`, the renormalisation interval `n_renorm` and `horizon_steps`. The
+/// masses are the sample's own `ICDescriptor`'s, not the sim key's, and each read takes them apart (`masses`).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ReadParams {{
     pub dt_macro: f32,
@@ -321,10 +334,11 @@ fn rust_unpack(s: &Struct, members: &[ReadMember]) -> String {
     };
     let mut out = format!(
         "\n{doc}\n/// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads\n\
-         /// `ensemble_spread` as the canonical quiet NaN (R-145).\n\
+         /// `ensemble_spread` as the canonical quiet NaN (R-145). `masses` are the sample's `ICDescriptor` `m0 m1 m2`,\n\
+         /// which `energy_drift` reads (dd_generation_root §3.8).\n\
          #[inline]\n\
          pub fn {}(\n    s: &{},\n    word: [u32; 4],\n    has_word: bool,\n    ensemble_spread: f32,\n    has_ensemble: bool,\n    \
-         params: &ReadParams,\n) -> SimState {{\n    let n = tm_t_end_step(s.times);\n    \
+         masses: [f32; 3],\n    params: &ReadParams,\n) -> SimState {{\n    let n = tm_t_end_step(s.times);\n    \
          let ftle_ok = ftle_valid(s.packed_a, {shadow}, n, completed_renorms(n, params.n_renorm));\n",
         unpack_name(s),
         s.name,
@@ -436,6 +450,41 @@ pub fn orbit_count(theta: f32) -> u32 {
 #[inline]
 pub fn retrograde(theta: f32) -> bool {
     theta < 0.0
+}
+
+/// The Hamiltonian of the planar three-body problem in CoM-frame particle coordinates, `G = 1`: `H(r, p) = K + V`,
+/// `K = Σᵢ ‖pᵢ‖²/2mᵢ`, `V = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (integrator dd §3.5; decoder dd §3.6), the masses `m0 m1 m2` the
+/// sample's `ICDescriptor`'s (dd_generation_root §3.6). Constant indices only.
+#[inline]
+pub fn hamiltonian(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> f32 {
+    let kinetic = |q: [f32; 2], mass: f32| (q[0] * q[0] + q[1] * q[1]) / (2.0 * mass);
+    let pair = |a: [f32; 2], b: [f32; 2], ma: f32, mb: f32| {
+        let (x, y) = (a[0] - b[0], a[1] - b[1]);
+        ma * mb / Float::sqrt(x * x + y * y)
+    };
+    let k = kinetic(p[0], m[0]) + kinetic(p[1], m[1]) + kinetic(p[2], m[2]);
+    let v =
+        pair(r[0], r[1], m[0], m[1]) + pair(r[0], r[2], m[0], m[2]) + pair(r[1], r[2], m[1], m[2]);
+    k - v
+}
+
+/// The angular momentum `L_z(r, p) = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})` (integrator dd §3.5).
+#[inline]
+pub fn angular_momentum_z(r: [[f32; 2]; 3], p: [[f32; 2]; 3]) -> f32 {
+    let cross = |q: [f32; 2], m: [f32; 2]| q[0] * m[1] - q[1] * m[0];
+    cross(r[0], p[0]) + cross(r[1], p[1]) + cross(r[2], p[2])
+}
+
+/// The current energy drift `ΔE = H(r, p) − E_0`, in live f32 (payload §5; dd_generation_root §3.8, R-246).
+#[inline]
+pub fn energy_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3], e_0: f32) -> f32 {
+    hamiltonian(r, p, m) - e_0
+}
+
+/// The current angular-momentum drift `ΔLz = L_z(r, p) − Lz_0`, in live f32 (payload §5; dd_generation_root §3.8).
+#[inline]
+pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
+    angular_momentum_z(r, p) - lz_0
 }
 "#;
 
@@ -565,6 +614,18 @@ fn wgsl_derived(name: &str, tier: Tier, needs: &mut Needs) -> String {
             needs.load("theta");
             format!("{name}(s_theta)")
         }
+        "energy_drift" => {
+            for m in ["r", "p", "E_0"] {
+                needs.load(m);
+            }
+            "energy_drift(s_r, s_p, masses, s_E_0)".into()
+        }
+        "Lz_drift" => {
+            for m in ["r", "p", "Lz_0"] {
+                needs.load(m);
+            }
+            "Lz_drift(s_r, s_p, s_Lz_0)".into()
+        }
         "ensemble_spread" => "select(canonical_nan(), ensemble_spread, has_ensemble)".into(),
         predicate => {
             needs.load("packed_a");
@@ -615,7 +676,7 @@ fn requests<'a>(members: &'a [ReadMember], fields: &[&str]) -> Result<Vec<Reques
 /// need, the whole `word_buffer[i]` only when all four are; then it fills those fields of a zeroed `SimState`. A field
 /// not asked for stays zero, so the stain must ask for every field it reads. An unbound word buffer (`has_word` false)
 /// reads `FGW_UNBOUND`, and E = 0 (`has_ensemble` false) reads `ensemble_spread` as the canonical quiet NaN (lowering
-/// Part 3a; R-145, R-254).
+/// Part 3a; R-145, R-254). `masses` are the sample's `ICDescriptor` `m0 m1 m2`, which `energy_drift` reads.
 fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<String, String> {
     let requests = requests(members, fields)?;
     let mut needs = Needs::default();
@@ -673,7 +734,8 @@ fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<St
          // needs loaded alone, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the\n\
          // components a field needs (R-378). A field not filled stays zero and is not read. An unbound word buffer\n\
          // reads `FGW_UNBOUND`; E = 0 reads `ensemble_spread` as the canonical quiet NaN (lowering Part 3a; R-145).\n\
-         fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, params: ReadParams) -> SimState {{\n"
+         // `masses` are the sample's `ICDescriptor` `m0 m1 m2` (`ctx.ic`), which `energy_drift` reads.\n\
+         fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f32>, params: ReadParams) -> SimState {{\n"
     );
     for m in &stored {
         let _ = writeln!(out, "    let s_{m} = simstate_buffer[i].{m};");
@@ -851,4 +913,31 @@ fn orbit_count(theta: f32) -> u32 { return u32(min(floor(abs(theta) / 6.2831855)
 
 // The winding sense: `θ̃ < 0` (payload §5).
 fn retrograde(theta: f32) -> bool { return theta < 0.0; }
+
+// The Hamiltonian of the planar three-body problem in CoM-frame particle coordinates, `G = 1`: `H(r, p) = K + V`,
+// `K = Σᵢ ‖pᵢ‖²/2mᵢ`, `V = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (integrator dd §3.5; decoder dd §3.6), the masses `m` the sample's
+// `ICDescriptor` `m0 m1 m2` (dd_generation_root §3.6).
+fn hamiltonian(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>) -> f32 {
+    let r01 = r[0] - r[1];
+    let r02 = r[0] - r[2];
+    let r12 = r[1] - r[2];
+    let k = dot(p[0], p[0]) / (2.0 * m.x) + dot(p[1], p[1]) / (2.0 * m.y) + dot(p[2], p[2]) / (2.0 * m.z);
+    let v = m.x * m.y / sqrt(dot(r01, r01)) + m.x * m.z / sqrt(dot(r02, r02)) + m.y * m.z / sqrt(dot(r12, r12));
+    return k - v;
+}
+
+// The angular momentum `L_z(r, p) = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})` (integrator dd §3.5).
+fn angular_momentum_z(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> f32 {
+    return (r[0].x * p[0].y - r[0].y * p[0].x) + (r[1].x * p[1].y - r[1].y * p[1].x) + (r[2].x * p[2].y - r[2].y * p[2].x);
+}
+
+// The current energy drift `ΔE = H(r, p) − E_0`, in live f32 (payload §5; dd_generation_root §3.8, R-246).
+fn energy_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>, e_0: f32) -> f32 {
+    return hamiltonian(r, p, m) - e_0;
+}
+
+// The current angular-momentum drift `ΔLz = L_z(r, p) − Lz_0`, in live f32 (payload §5; dd_generation_root §3.8).
+fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
+    return angular_momentum_z(r, p) - lz_0;
+}
 ";
