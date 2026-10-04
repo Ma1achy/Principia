@@ -159,10 +159,12 @@ pub fn fgw_decode(w: [u32; 4]) -> FgwDecode {
     let length = fgw_retained_prefix_length(w);
     let mut v = fgw_mixed_radix(w);
     let mut digits = [0; 4];
-    for _ in 1..length {
+    let mut i = 1;
+    while i < length {
         let (q, e) = fgw_div3(v);
         v = q;
         digits = fgw_mul3_add(digits, e);
+        i += 1;
     }
     FgwDecode {
         digits,
