@@ -206,11 +206,17 @@ with dd_colouring §3.1's sRGB transfer.
   `dbg_sentinel` takes no suspect flag, and the view that reads the drift suspect predicates (Part 4; the energy-drift
   and L_z-drift views) applies the styling on `dbg_sentinel`'s output. TASK-M3-05 defines the styling here, its look
   and which predicate drives which style (R-72, the physics reviewer approves; REQ-TOOL-149), and builds it (R-379).
-  The drift views' ramp is the preset's (RQ-208, decided per R-369, option 3): the compacted value (R-381) takes
-  `dbg_sentinel`'s place `t` and its absence hatch, and is drawn on `f_edrift`'s `diverging(c−,c0,c+)` by default, `0`
-  at the neutral `c0`, or on viridis through the palette swap (colour_composition §6), where the pixel is
-  `dbg_sentinel`'s output; the styling applies on that ramp's output, and TASK-M3-05's definition gives the three
-  colours (R-72; REQ-TOOL-149).
+  The drift views' ramp is the preset's (RQ-208, decided per R-369, option 3), and each compaction (R-381) has its own
+  placement `t` on it; the absence NaN draws `dbg_sentinel`'s hatch under every compaction. `symlog`, the default:
+  the compacted value takes `dbg_sentinel`'s place `t = 0.5 + 0.5·x/(1 + |x|)` on `f_edrift`'s `diverging(c−,c0,c+)`,
+  `0` at the neutral `c0`, or on viridis through the palette swap (colour_composition §6), where the pixel is
+  `dbg_sentinel`'s output. `lin`: `t = range_norm(x, −R, R, false, ·)` (render_gui_spec §10.1), the fixed range,
+  clamped, on the `diverging` ramp, `0` at the neutral `c0`, or on viridis through the palette swap; a drift beyond
+  `±R` saturates to the ramp's end, `c−` or `c+`. `log`: the drift's magnitude `|x|`, unsigned, placed as `dbg_log`
+  places it, `t = 1 − 1/(1 + s)` with `s = ln(1 + |x|/ε)` the floored log value, on the sequential viridis ramp,
+  `dbg_sentinel`'s, never the diverging one, since colour_composition §1.2 sends positive fields to sequential; the view
+  states that it shows `|drift|`. The `diverging` ramp carries only the signed compactions, `symlog` and `lin`. The
+  styling applies on that ramp's output, and TASK-M3-05's definition gives the three colours (R-72; REQ-TOOL-149).
 - **The hatch, `debug_invalid(frag_xy)` (proposed, R-71; REQ-COL-055; R-132, R-136):** diagonal stripes 4 px wide
   across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or cyan
   `#48FFFF` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.142 from its nearest
