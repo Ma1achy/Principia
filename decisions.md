@@ -5737,3 +5737,39 @@ One linear `R` cannot resolve drifts across decades (pitfalls §3), and `symlog`
 "Distinct 8-bit pixels" adds no numeric threshold, so it needs no calibration.
 
 Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
+
+## R-382 — The L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2 *(closes RQ-207)*
+*4 Oct 2026 · applied in REQ-INT-085 (reqio), TASK-M3-05, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-207 archived); built by TASK-M3-05*
+
+The orchestrator put RQ-207 to the human, the L_z-suspect threshold's pass criterion, with three options (abridged):
+
+> 1. Mirror the energy rule: on dd test 2's orbit, Euler lights it and no symplectic occupant does.
+> 2. Round-off bound only: no symplectic occupant lights it, on test 2's orbit or test 7's close encounter; Euler
+>    needn't.
+> 3. Both: the threshold sits above the symplectic occupants' round-off on both fixtures, and below Euler's drift on
+>    test 2.
+
+The human answered: "do 3"
+
+(Message of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:* the L_z-suspect threshold (REQ-INT-085, R-71) must be set so that:
+- **Euler lights it on test 2.** On `principia_dd_integrator.md` § "5. Unit tests" test 2's long bounded orbit, Euler
+  lights the L_z-suspect predicate.
+- **No symplectic occupant lights it, on either fixture.** KDK, Yoshida-4 and Yoshida-6 light it neither on test 2's
+  orbit nor on test 7's close-encounter IC, their L_z drift being round-off by construction.
+- **RK4 is measured and recorded**, with no requirement that it light the predicate or not.
+
+The threshold is still an R-71 proposal: TASK-M3-05 proposes it with this evidence, and the human confirms it at the
+M3 gate. R-382 gives the proposal a criterion that can fail; it fixes no value.
+
+*Applied per R-369 (mechanical consequences):*
+- REQ-INT-085 loses its `rq: RQ-207` and gains R-382 as a ruling and a source (reqio); its verify detail states the
+  L_z criterion beside the energy criterion, so both thresholds can pass and fail.
+- TASK-M3-05's "Proposal:" line for the suspect thresholds states the L_z criterion, its Notes read "RQ-207 ruled by
+  R-382", and R-382 is in its References.
+- RQ-207 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-382 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-085 (RQ-207 removed, R-382 added).
