@@ -5612,7 +5612,7 @@ not 2), and the human may correct it at the M7 gate, where REQ-TOOL-109's propos
 
 *Applied per R-369 (mechanical consequences):*
 - REQ-TOOL-109 and REQ-TOOL-118 lose their `rq: RQ-205` marks and gain R-380 as a ruling and a source (reqio).
-- RQ-205 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with a "Decided" line.
+- RQ-205 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
 - TASK-M7-27's `embed_record_version` asserts that a new record's header version differs from the prototype's 2
   (REQ-TOOL-118).
 - R-380 is in the "values" group of `plan/rule_groups.yaml`.
