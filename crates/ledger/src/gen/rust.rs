@@ -3,6 +3,7 @@
 //! into `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed
 //! words' pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors, payload §3's frozen
 //! continuation table ([`continuation`]) and the stored buffers' binding constants ([`bindings`], R-343). [`check`] holds each member against the ledger entry or word it stores.
+//! [`emit`] also writes the read side, `crates/kernel/src/payload/generated/read_side.rs` ([`super::read::rust`]).
 //!
 //! The `SimState` structs and `ICDescriptor` are emitted per precision (philosophy §7.1; dd_simstate_payload §1;
 //! dd_generation_root §3.6; R-313): generic over the kernel's `Real`, their f32 members widen to it ([`widens`]) and
@@ -226,10 +227,13 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
     out.push_str(&accessors(words, entries));
     out.push_str(&continuation());
     out.push_str(&bindings());
-    vec![Generated {
-        path: PathBuf::from(PATH),
-        contents: out,
-    }]
+    vec![
+        Generated {
+            path: PathBuf::from(PATH),
+            contents: out,
+        },
+        super::read::rust(words, entries),
+    ]
 }
 
 /// The per-precision code: the `PayloadReal` trait, which gives each struct generic over the `Real` its declared tail
@@ -340,7 +344,7 @@ pub const PREFIXES: [(&str, &str); 4] = [
 const FGW_WORD: &str = "fgw_w";
 
 /// The accessor prefix of `entry` in `word`, or `None` if the word has none.
-fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
+pub(crate) fn prefix(word: &str, entry: &Entry) -> Option<&'static str> {
     let (_, p) = PREFIXES.iter().find(|(w, _)| *w == word)?;
     Some(if *p == "pa" && entry.ty == FieldType::UBits {
         "sd"

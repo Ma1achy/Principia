@@ -13,6 +13,9 @@ const WORD_BINDING: u32 = 1u;
 @group(0) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
 @group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
 
-fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }
-fn sample_word(i: u32) -> vec4<u32> { return word_buffer[i]; }
+fn sample_read(i: u32) -> vec2<u32> {
+    let state = simstate_buffer[i].packed_a;
+    let word = word_buffer[i].w;
+    return vec2<u32>(state, word);
+}
 fn sd_state(w: u32) -> u32 { return extractBits(w, 0u, 3u); }

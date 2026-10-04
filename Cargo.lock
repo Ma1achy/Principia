@@ -1113,6 +1113,7 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "ledger",
+ "proptest",
  "spirv-std",
  "validation",
 ]
@@ -1134,6 +1135,7 @@ name = "ledger"
 version = "0.1.0"
 dependencies = [
  "naga",
+ "proptest",
  "validation",
 ]
 
