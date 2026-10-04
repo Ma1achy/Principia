@@ -341,10 +341,9 @@ pub fn check_read_side(layer: &str, source: &str) -> Result<Vec<Finding>, String
 
 /// The float rules' findings in `source`, a fragment-stage WGSL file that follows `prefix` at assembly, linted as
 /// `prefix`'s continuation; or why it could not be checked: the two together do not parse or validate. A finding on
-/// a line of `source` is reported at that line of it; one on a line of `prefix` is `prefix`'s own, and left out; one
-/// on no line is reported here only if `prefix` alone does not give it.
+/// a line of `source` is reported at that line of it; one on a line of `prefix` is `prefix`'s own, reported on it, and
+/// left out here. One on no line (naga gives a synthesised expression no span) is kept, so it is never lost.
 pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, String> {
-    let own = check_fragment(prefix)?;
     let base = u32::try_from(prefix.lines().count()).map_err(|e| e.to_string())?;
     let joined = if prefix.ends_with('\n') {
         format!("{prefix}{source}")
@@ -359,7 +358,6 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
                 Some(f)
             }
             Some(_) => None,
-            None if own.contains(&f) => None,
             None => Some(f),
         })
         .collect())
