@@ -133,8 +133,9 @@ fn at_step(mut c: Case, n: u32) -> Case {
     c
 }
 
-/// `S_final / (n · dt)`, `S_final = S + ln(δ/δ₀)`, in f64 from the stored f32 values (payload §5).
-fn ftle_reference(c: &Case) -> f64 {
+/// `S_final / (n · dt)`, `S_final = S + ln(δ/δ₀)`, in f64 from the stored f32 values (payload §5), and the f32
+/// read's error bound against it ([`ftle_bound`]).
+fn ftle_reference(c: &Case) -> (f64, f64) {
     let s = &c.state;
     let sq = |a: &[[f32; 2]; 3], b: &[[f32; 2]; 3]| -> f64 {
         let a = a.iter().flatten();
@@ -143,8 +144,10 @@ fn ftle_reference(c: &Case) -> f64 {
             .sum()
     };
     let delta = (sq(&s.r, &s.r_sh) + sq(&s.p, &s.p_sh)).sqrt();
-    let s_final = f64::from(s.S) + (delta / f64::from(c.params.delta_0)).ln();
-    s_final / (f64::from(tm_t_end_step(s.times)) * f64::from(c.params.dt_macro))
+    let l = (delta / f64::from(c.params.delta_0)).ln();
+    let s_final = f64::from(s.S) + l;
+    let n_dt = f64::from(tm_t_end_step(s.times)) * f64::from(c.params.dt_macro);
+    (s_final / n_dt, ftle_bound(l, s_final, n_dt))
 }
 
 /// `C_ty / C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12`, in f64 (payload §4).
@@ -153,9 +156,36 @@ fn diffusion_reference(c_ty: f32, n: u32, h: f32) -> f64 {
     f64::from(c_ty) / (h * h * n * (n * n - 1.0) / 12.0)
 }
 
-/// Whether `got` is within the f32 read's error of `want`: 1e-4 relative, against at least `scale`.
-fn close(got: f32, want: f64, scale: f64) -> bool {
-    (f64::from(got) - want).abs() <= 1e-4 * want.abs().max(scale)
+/// The f32 unit roundoff, `2⁻²⁴`: a correctly rounded f32 `+ − ×` is within `U` of the exact result, relatively.
+/// The bounds below take WGSL's stated accuracies (WGSL § "Floating Point Accuracy"), the looser target's: `x / y`
+/// within 2.5 ULP (at most `5U` relative), `sqrt` inherited from `1 / inverseSqrt` (2 + 2.5 ULP, at most `9U`), and
+/// `log` within an absolute `2⁻²¹` (`8U`) on [0.5, 2] and 3 ULP (`6U` relative) outside it. Rust's `/`, `sqrt` and
+/// `ln` are within those, so a Rust read meets the same bound. A sum of `k` non-negative rounded terms, in any order,
+/// is within `γ_k ≈ kU` (Higham, *Accuracy and Stability of Numerical Algorithms*, §3.1), so the GPU's reassociation
+/// does not loosen them. The f64 reference's own error, ~1e-16, is covered by rounding each constant up.
+const U: f64 = f32::EPSILON as f64 / 2.0;
+
+/// The f32 `ftle`'s worst-case error against [`ftle_reference`]'s f64 value, derived from the read's operations:
+/// - `δ²`: 12 differences and 12 squares, each term within `3U`, summed within `11U` more: `14U` relative;
+/// - `δ = sqrt(δ²)`: half of `14U`, plus `sqrt`'s `9U`: `16U`; `δ / δ₀`: `5U` more, `21U`;
+/// - `L = ln(δ/δ₀)`: its argument's `21U` becomes an absolute `22U`, plus `log`'s own, at most `8U + 6U·|L|`;
+/// - `S + L`: `U·|S_final|` more, so `S_final` is within `30U + 6U·|L| + U·|S_final|` absolutely;
+/// - `/ (f32(n) · dt)`: `f32(n)` is exact (`n < 2²⁴`), the product `U`, the division `5U`: `7U·|ftle|` with the
+///   second-order terms, and `|ftle| = |S_final| / (n·dt)`.
+///
+/// Rounded up: `U·(32 + 8·|L| + 10·|S_final|) / (n·dt)`.
+fn ftle_bound(l: f64, s_final: f64, n_dt: f64) -> f64 {
+    U * (32.0 + 8.0 * l.abs() + 10.0 * s_final.abs()) / n_dt
+}
+
+/// The f32 `diffusion`'s worst-case error against [`diffusion_reference`]'s, relative: `f32(n)`, `n − 1` and `n + 1`
+/// are exact (`n < 2²⁴`), the four products `h·h·m·(m−1)·(m+1)` within `U` each, the two divisions (`/ 12`,
+/// `C_ty / C_tt`) within `5U` each: `γ_14`, rounded up to `15U`.
+const DIFFUSION_REL: f64 = 15.0 * U;
+
+/// Whether `got` is within `bound` of `want`.
+fn close(got: f32, want: f64, bound: f64) -> bool {
+    (f64::from(got) - want).abs() <= bound
 }
 
 // ── derived_not_stored (REQ-PAY-021) ──────────────────────────────────────────────────────────────────────────────
@@ -164,12 +194,10 @@ fn close(got: f32, want: f64, scale: f64) -> bool {
 fn check_ftle_reference(read: Read, cases: &[Case]) {
     for c in cases {
         let got = read(c);
-        let n = tm_t_end_step(c.state.times);
-        let scale = 1.0 / (f64::from(n) * f64::from(c.params.dt_macro));
         assert!(got.ftle_valid, "ftle_valid is false for {c:?}");
-        let want = ftle_reference(c);
+        let (want, bound) = ftle_reference(c);
         assert!(
-            close(got.ftle, want, scale),
+            close(got.ftle, want, bound),
             "ftle {} differs from the finalised reference {want} for {c:?}",
             got.ftle
         );
@@ -507,7 +535,7 @@ fn check_diffusion_own_n(read: Read) {
             "diffusion_slope_valid is false at n = {n}"
         );
         assert!(
-            close(got.diffusion, want, 0.0),
+            close(got.diffusion, want, DIFFUSION_REL * want.abs()),
             "diffusion {} is not C_ty/C_tt at the sample's own n = {n} ({want})",
             got.diffusion
         );
@@ -540,7 +568,7 @@ fn check_diffusion_reference(read: Read, ns: &[u32]) {
         let want = diffusion_reference(c.state.C_ty, n, c.params.dt_macro);
         let got = read(&c).diffusion;
         assert!(
-            close(got, want, 0.0),
+            close(got, want, DIFFUSION_REL * want.abs()),
             "diffusion {got} at n = {n} differs from C_ty/C_tt(n) = {want}"
         );
     }
@@ -915,8 +943,24 @@ fn rust_members(s: &SimState) -> [u32; 26] {
 const CONTINUOUS: [usize; 4] = [0, 2, 5, 6];
 const DRIFTS: [usize; 2] = [24, 25];
 
+/// How far the Rust and WGSL reads of continuous member `k` (`a`, `g`) may differ: each is within its bound of the f64
+/// reference, so the two are within the sum, twice the WGSL bound, which covers Rust's too ([`U`]). `ftle` (member 0)
+/// and `diffusion` (member 2) take [`ftle_bound`] and [`DIFFUSION_REL`]; the fractions (members 5, 6) are one division
+/// of exact operands (`t_*_step` and `horizon_steps` below 2²⁴), within `U` in Rust and `5U` in WGSL: `6U` of the exact
+/// quotient, `7U` of the larger read with the second-order term.
+fn continuous_bound(k: usize, c: &Case, a: f64, g: f64) -> f64 {
+    match k {
+        0 => 2.0 * ftle_reference(c).1,
+        2 => {
+            let n = tm_t_end_step(c.state.times);
+            2.0 * DIFFUSION_REL * diffusion_reference(c.state.C_ty, n, c.params.dt_macro).abs()
+        }
+        _ => 7.0 * U * a.abs().max(g.abs()),
+    }
+}
+
 /// Each case read through `read` and through the WGSL read side agree: exact members bit for bit, the continuous ones
-/// within 1e-4 relative, or bit for bit where either is the canonical NaN, and the drifts within [`DRIFT_TOL`] of
+/// within [`continuous_bound`], or bit for bit where either is the canonical NaN, and the drifts within [`DRIFT_TOL`] of
 /// their terms' scale ([`drift_scales`]). `orbit_count` may differ by one at an exact multiple of 2π, which the cases
 /// avoid.
 fn check_parity(gpu: &GpuHarness, read: Read, cases: &[Case]) {
@@ -929,7 +973,7 @@ fn check_parity(gpu: &GpuHarness, read: Read, cases: &[Case]) {
                 (a - g).abs() <= DRIFT_TOL * scales[d]
             } else if CONTINUOUS.contains(&k) && a != QNAN && g != QNAN {
                 let (a, g) = (f64::from(f32::from_bits(a)), f64::from(f32::from_bits(g)));
-                (a - g).abs() <= 1e-4 * a.abs().max(g.abs()).max(1e-30)
+                (a - g).abs() <= continuous_bound(k, c, a, g)
             } else {
                 a == g
             };
