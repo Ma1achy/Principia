@@ -3823,14 +3823,15 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: docs/design/principia_dd_integrator.md
     section: 5. Unit tests
+  - file: decisions.md
+    section: "R-382 — The L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2 *(closes RQ-207)*"
   verify:
     method: numerical gate
-    detail: "the proposal measures relative δE and absolute ΔL_z, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and records which suspect predicates each occupant lights on each under the proposed thresholds. Energy-suspect threshold: on test 2's orbit, Euler lights SUSPECT_ENERGY (test 2's pass condition) and no symplectic occupant does (their energy error oscillates about E₀ with no secular trend, test 2). On test 7's IC the symplectic max|ΔE| spike is the expected close-encounter stress (dd_integrator §3.5, test 7), which a symplectic occupant's drift measures as physics (integrator contract Part 2), so the energy criterion is not applied there; the record says whether the spike lights SUSPECT_ENERGY. L_z-suspect threshold: measured and recorded on both fixtures; the occupants and fixtures on which it must and must not light wait on RQ-207. Recorded in decisions.md"
+    detail: "the proposal measures relative δE and absolute ΔL_z, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and records which suspect predicates each occupant lights on each under the proposed thresholds. Energy-suspect threshold: on test 2's orbit, Euler lights SUSPECT_ENERGY (test 2's pass condition) and no symplectic occupant does (their energy error oscillates about E₀ with no secular trend, test 2). On test 7's IC the symplectic max|ΔE| spike is the expected close-encounter stress (dd_integrator §3.5, test 7), which a symplectic occupant's drift measures as physics (integrator contract Part 2), so the energy criterion is not applied there; the record says whether the spike lights SUSPECT_ENERGY. L_z-suspect threshold (R-382): it passes only if, on test 2's orbit, Euler lights the L_z-suspect predicate, and no symplectic occupant (KDK, Yoshida-4, Yoshida-6) lights it on test 2's orbit or on test 7's IC, their L_z drift being round-off by construction; it fails if Euler does not light it on test 2's orbit or any symplectic occupant lights it on either fixture. RK4 is measured and recorded on both fixtures, with no requirement. Recorded in decisions.md"
   rulings:
   - R-71
+  - R-382
   milestone: M3
-  rq:
-  - RQ-207
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
