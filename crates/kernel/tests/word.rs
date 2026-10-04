@@ -31,8 +31,10 @@ type Append = fn([u32; 4], u32, u32, u32) -> FgwAppended;
 /// A decode: [`fgw_decode`] collected, or a control's faulty one.
 type Decode = fn([u32; 4]) -> Vec<u32>;
 
+/// [`fgw_decode`] collected, at most one symbol past the capacity, so a decode that never ends fails rather than
+/// hangs.
 fn decode(w: [u32; 4]) -> Vec<u32> {
-    fgw_decode(w).collect()
+    fgw_decode(w).take(FGW_CAPACITY as usize + 1).collect()
 }
 
 /// `packed_a`'s bits outside `last_symbol` (bits 8–9) the appends start from, so a check sees they are kept.

@@ -26,12 +26,12 @@ use crate::payload::{
 };
 
 /// One limb of [`fgw_mul3_add`]: `3 · limb + carry`, `carry` < 3, over its two 16-bit halves, so no step exceeds a
-/// u32. The low 32 bits and the carry out.
+/// u32. The low 32 bits, the halves added (their bits are disjoint), and the carry out.
 #[inline]
 fn mul3_add_limb(limb: u32, carry: u32) -> (u32, u32) {
     let lo = 3 * (limb & 0xffff) + carry;
     let hi = 3 * (limb >> 16) + (lo >> 16);
-    ((hi << 16) | (lo & 0xffff), hi >> 16)
+    ((hi << 16) + (lo & 0xffff), hi >> 16)
 }
 
 /// `3 · v + e`, `v` four limbs, low first, and `e` a base-3 digit: payload §3's push, `W = 3·W + e`. Constant indices
@@ -159,12 +159,10 @@ pub fn fgw_decode(w: [u32; 4]) -> FgwDecode {
     let length = fgw_retained_prefix_length(w);
     let mut v = fgw_mixed_radix(w);
     let mut digits = [0; 4];
-    let mut i = 1;
-    while i < length {
+    for _ in 1..length {
         let (q, e) = fgw_div3(v);
         v = q;
         digits = fgw_mul3_add(digits, e);
-        i += 1;
     }
     FgwDecode {
         digits,
