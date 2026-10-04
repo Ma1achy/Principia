@@ -30,17 +30,20 @@ A stain is a free, typed node graph on the fixed backbone — sources → colour
 - `docs/gui/principia_render_gui_spec.md` § "13. Invariants"
 - `docs/contracts/principia_gui_state_contract.md` § "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
 - `decisions.md` § "R-53 — Node interfaces declare their input domains *(GU-2 (a))*"
+- `decisions.md` § "R-378 — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*"
 
 ## Deliverables
 - `crates/engine`: the stain-graph type (nodes, typed ports, wires, per-node params) and its canonical form.
 - `crates/render/src/assemble.rs`: the one assembler entry point — graph → `[prelude][node functions][shade()]`; backbone and acyclicity enforced at construction.
 - Doc change (R-72): the canonical form written into `docs/contracts/principia_lowering_contract.md` Part 5 and `docs/contracts/principia_render_contract.md` Part 3, with the porting rule's "Removed lines" note.
+- `crates/render/src/assemble.rs`, the read side (R-378): the assembler derives the stain's field set from its IR — every member of the read-side `SimState` the assembled stain reads, with the word as `word` or as only the components `word.x` … `word.w` it reads, as `fields_read` in `crates/ledger/tests/per_member_loads.rs` does — and generates the unpack layer and read side through `ledger::gen::read::assemble` at the tier with that field set. It never concatenates the checked-in full-fill `crates/render/frag/generated/read_side.wgsl`, whose `sample_read` loads every stored member. A field `sample_read` doesn't fill reads 0, a plausible value with no validity signal, so the assembler refuses a stain whose field set misses a field it reads.
 - Tests: `crates/render/tests/assemble.rs`.
 
 ## Acceptance tests
 - Review checklist (code): the generated `shade()` follows the backbone order; no configuration can reorder the backbone or feed post back into colour — a test graph that tries is rejected (REQ-RENDER-009).
 - Review checklist (code): built-in occupants load through the same assembler entry point as a user custom; no second compile path exists (REQ-RENDER-010).
 - `cargo test -p render custom_reads_any_tier` — a custom occupant reading `sample.ftle`, `sample.ensemble_spread` and `sample.word` compiles and runs at every tier variant (REQ-RENDER-012).
+- `cargo test -p render assemble_field_set` — a stain whose field set misses a read-side field it reads is refused, never assembled to read 0; and the compiled output (naga's MSL, HLSL and SPIR-V, the `per_member_loads` method) of an assembled stain reading one field loads only that field's stored members and word components (R-378).
 - Review checklist (code): the colour slot signature returns linear-RGB `vec3`; brightness returns `f32` (REQ-RENDER-016).
 - Review checklist (physics): the docs state the canonical form; `cargo test -p render canonical_hash` — two wirings of the same graph hash equal and different graphs hash differently (REQ-RENDER-075).
 - Definition: the `.wgsl` uniformSchema / inputDomains declaration format written into gui_state_contract §3 and approved by the physics reviewer (REQ-GEN-027).
