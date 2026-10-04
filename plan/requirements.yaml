@@ -15936,7 +15936,7 @@
 - id: REQ-TOOL-149
   area: TOOL
   kind: definition
-  statement: "The suspect styling that dbg_sentinel's extension point carries — what it looks like, and which drift suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style — must be defined in render_contract's presentation-layer section by TASK-M3-05, reviewed by the physics reviewer before merge, and applied on dbg_sentinel's output by the energy-drift and L_z-drift views; dbg_sentinel(x, frag_xy) keeps its signature (R-379)."
+  statement: "The suspect styling that dbg_sentinel's extension point carries — what it looks like, which drift suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style, and the value each drift view passes to dbg_sentinel, the field's scale applied first so that the view still shows the drift's magnitude — must be defined in render_contract's presentation-layer section by TASK-M3-05, reviewed by the physics reviewer before merge, and applied on dbg_sentinel's output by the energy-drift and L_z-drift views; dbg_sentinel(x, frag_xy) keeps its signature (R-379)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: "Presentation layer (hand-written, small, reused by every debug view)"
@@ -15944,13 +15944,19 @@
     section: "R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: D. Payload field views — `SimState` scalars (ledger §3.4)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 6 — The debug catalogue (first build target)
   verify:
     method: review checklist
-    detail: "the section gives the suspect styling's look and the predicate that drives each style; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY; an L_z-suspect sample, set through the synthetic payload's `dLz_max`, showing the L_z styling; a symplectic occupant below the suspect predicates' thresholds, REQ-INT-085), and fails if a suspect sample's pixel lacks the defined styling or a non-suspect sample's pixel differs from dbg_sentinel's output"
+    detail: "the section gives the suspect styling's look, the predicate that drives each style, and the value each drift view passes to dbg_sentinel with the field's scale applied first; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY; an L_z-suspect sample, set through the synthetic payload's `dLz_max`, showing the L_z styling; a symplectic occupant below the suspect predicates' thresholds, REQ-INT-085), and fails if a suspect sample's pixel lacks the defined styling or a non-suspect sample's pixel differs from dbg_sentinel's output on the scaled value"
   rulings:
   - R-72
   - R-379
   milestone: M3
+  rq:
+  - RQ-206
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

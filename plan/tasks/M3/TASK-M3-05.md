@@ -28,12 +28,15 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - `decisions.md` § "R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/design/principia_debug_tooling_plan.md` § "D. Payload field views — `SimState` scalars (ledger §3.4)"
+- `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)"
 
 ## Deliverables
 - `crates/kernel/src/driver/project.rs` — `project_com` (position–momentum form; velocity form for a velocity occupant), `M` cached.
 - `crates/kernel/src/driver/monitor.rs` — `E_0`/`L_{z,0}` capture, per-step accumulation, `δ_E`, `δ_L` with `eps_E`, `eps_L` floors.
 - Read side: the drift suspect predicates (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) in the generated accessor layer, reading `symplectic` from the profile; no stored suspect bits.
 - The suspect styling (R-379): its look, and which drift suspect predicate drives which style, defined in render contract Part 5 "Presentation layer" (R-72; the physics reviewer approves before merge); applied on `dbg_sentinel`'s output by the energy-drift and L_z-drift views from the suspect predicates. `dbg_sentinel(x, frag_xy)` keeps its signature (REQ-TOOL-149).
+- The same definition gives the value each drift view passes to `dbg_sentinel`: the field's scale applied first, so that the view still shows the drift's magnitude (a raw drift ≪ 1 lands at the ramp's middle). Which scale waits on RQ-206 (REQ-TOOL-149).
 - The drift suspect predicates' thresholds, energy-suspect on relative δE and L_z-suspect on absolute ΔL_z, proposed with evidence (R-71; REQ-INT-085). ε_E and ε_L are δE's floors, not these thresholds.
 
 ## Acceptance tests
@@ -43,12 +46,13 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - `cargo xtask gate projection-parity` — property test: stepOnce on shared states, the projected state is bit-identical across repeated CPU-f32 runs and follows the one written operation order; no Jacobi conversion inside the step (REQ-INT-030).
 - `cargo test -p kernel drift_suspect_read_time` — the payload has no suspect bits; the predicate is evaluated at read; Euler + the energy-drift view lights SUSPECT_ENERGY everywhere (REQ-INT-040).
 - `cargo test -p kernel close_encounter_drift_shape` — dd test 7: a close-encounter IC shows max|ΔE| ≫ |ΔE_final| in the stored max vs final (REQ-VAL-033).
-- `cargo test -p render drift_suspect_styling` — the energy-drift and L_z-drift views render a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY; an L_z-suspect sample, set through the synthetic payload's `dLz_max`, showing the L_z styling; a symplectic occupant below the suspect predicates' thresholds, REQ-INT-085); fails if a suspect sample's pixel lacks the defined styling, or a non-suspect sample's pixel differs from `dbg_sentinel`'s output (REQ-TOOL-149).
-- Review (physics): the suspect styling's definition in render contract Part 5 "Presentation layer" gives its look and the predicate driving each style, and the views match it (REQ-TOOL-149).
+- `cargo test -p render drift_suspect_styling` — the energy-drift and L_z-drift views render a synthetic payload with suspect and non-suspect samples (Euler lighting SUSPECT_ENERGY; an L_z-suspect sample, set through the synthetic payload's `dLz_max`, showing the L_z styling; a symplectic occupant below the suspect predicates' thresholds, REQ-INT-085); fails if a suspect sample's pixel lacks the defined styling, or a non-suspect sample's pixel differs from `dbg_sentinel`'s output on the scaled value (REQ-TOOL-149).
+- Review (physics): the suspect styling's definition in render contract Part 5 "Presentation layer" gives its look, the predicate driving each style and the value each drift view passes to `dbg_sentinel`, the field's scale applied first, and the views match it (REQ-TOOL-149).
 - Proposal: the energy-suspect and L_z-suspect thresholds, with relative δE and absolute ΔL_z, final and max, for Euler, RK4 and the symplectic occupants on dd test 2's long bounded orbit and dd test 7's close-encounter IC as evidence; Euler lights SUSPECT_ENERGY and a symplectic occupant does not; the human confirms them at the M3 gate (REQ-INT-085).
 
 ## Notes
 - Per-trajectory projection of the Benettin shadow and ensemble copies is TASK-M3-14's (REQ-INT-039).
 - RQ-97 ruled: R-113 — REQ-INT-030's CPU-f32 vs GPU-f32 match on Metal is dropped from M3; M4 covers it by REQ-VAL-061 (one step).
 - RQ-204 ruled by R-379: the suspect styling is this task's to do.
+- RQ-206 (open): the drift views' scale before `dbg_sentinel`, diverging (debug_tooling_plan §D) or log with floor (render contract Part 6). The styling definition's scaled value waits for its ruling.
 - Closes, for gaps the corpus leaves open: REQ-INT-085 (R-71 calibration; PR #137's physics review, 5406355539).
