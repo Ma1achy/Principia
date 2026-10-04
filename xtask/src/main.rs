@@ -78,7 +78,9 @@ Commands:
                                   buffer off the ledger's binding table (simstate_buffer @group(1) @binding(0),
                                   word_buffer @group(1) @binding(1)), a generated SIMSTATE_/WORD_GROUP or _BINDING
                                   constant unequal to its attribute, a binding in group 0 (bindings, R-343), or
-                                  either buffer used outside sample_state/sample_word (sample-only, R-343); and,
+                                  either buffer used outside the read side's sample_read (sample-only, R-343,
+                                  R-378), a whole stored struct loaded from simstate_buffer, or the two buffers
+                                  read at different indices (per-member, R-378); and,
                                   in every WGSL file under crates/render/frag/, naming file, line and rule and a
                                   bit-pattern test as the fix: isinf or isnan, a comparison against an inf or NaN
                                   constant, a float compared with itself, or a comparison against a finite-max

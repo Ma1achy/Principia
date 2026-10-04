@@ -16,7 +16,8 @@
 //!   ([`Rule::FiniteMax`]).
 //!
 //! The generated file, `crates/render/frag/generated/payload_unpack.wgsl`, is also checked against the unpack
-//! layer's own rules:
+//! layer's own rules, and so is the generated read side, `read_side.wgsl` beside it, linted as that file's
+//! continuation, since it follows it at assembly ([`check_read_side`]):
 //! - an `extractBits` whose argument is not u32: the i32 overload sign-extends ([`Rule::ExtractBitsU32`]);
 //! - any f64 type: WGSL has none ([`Rule::NoF64`]);
 //! - an `enable f16` directive, or any f16 type: f16 pairs are read through core `unpack2x16float`, which needs no
@@ -25,12 +26,19 @@
 //!   ([`Rule::Vec2Groups`]);
 //! - a word buffer that is not its own binding: `word_buffer` must be a storage global `array<vec4<u32>>` with a
 //!   binding no other global shares, read only at a per-sample index (a function argument), as the `SimState` buffer
-//!   is; and no `SimState*` struct may hold a `vec4<u32>` ([`Rule::WordBinding`]);
+//!   is; and no stored `SimState*` struct may hold a `vec4<u32>`, the read-side `SimState` (lowering Part 3a) holding
+//!   the word it read ([`Rule::WordBinding`]);
 //! - a buffer off R-343's bindings, the numbers of the ledger's one table ([`ledger::payload::bindings`]):
 //!   `simstate_buffer: array<SimStateFTLE>` at `@group(1) @binding(0)` and `word_buffer: array<vec4<u32>>` at
 //!   `@group(1) @binding(1)`, each attribute equal to the generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING` constants,
 //!   and no binding in group 0, the assembler's per-frame uniforms ([`Rule::Bindings`]);
-//! - a use of either buffer in any function but its one reader, `sample_state` or `sample_word` ([`Rule::SampleOnly`]).
+//! - a use of either buffer in any function but its one reader, the read side's generated `sample_read`
+//!   ([`Rule::SampleOnly`], R-343 as R-378 amends it);
+//! - a load of a whole stored struct, `simstate_buffer[i]` loaded as one value rather than one member at a time
+//!   (`simstate_buffer[i].packed_a`), or the two buffers read at different arguments of one function, not the same
+//!   sample index ([`Rule::PerMember`], R-378). A word may be loaded whole, by a field that needs all four of its
+//!   components, or one component at a time; which components a field needs is the read side's own
+//!   (`ledger/tests/per_member_loads.rs` checks them on the compiled output).
 //!
 //! naga folds a call whose arguments are all constant before the IR is built, so the `extractBits` rule sees only
 //! calls on a runtime value, which every generated accessor's is (a parameter). The `enable` directive is not kept in
@@ -53,6 +61,10 @@ use naga::{
 /// The generated file the lint checks, relative to the workspace root.
 pub const GENERATED: &str = "crates/render/frag/generated/payload_unpack.wgsl";
 
+/// The generated read side (lowering Part 3a), relative to the workspace root. It follows [`GENERATED`] at assembly
+/// and reads its accessors and stored layouts, so it is linted as that file's continuation ([`check_read_side`]).
+pub const READ_SIDE_FILE: &str = "crates/render/frag/generated/read_side.wgsl";
+
 /// The fragment stage's WGSL: every `.wgsl` file under this directory, relative to the workspace root (R-351).
 pub const FRAG_DIR: &str = "crates/render/frag";
 
@@ -67,6 +79,8 @@ pub const SIMSTATE_BUFFER: &str = "simstate_buffer";
 
 /// The struct-name prefix of the stored `SimState` layouts.
 const SIMSTATE: &str = "SimState";
+/// The read-side `SimState` (lowering Part 3a): not stored, so the word may be one of its members.
+const READ_SIDE: &str = "SimState";
 
 /// The members that are vec2-grouped (R-86), and those every `SimState*` layout has.
 const VEC2_GROUPED: [&str; 4] = ["r", "p", "r_sh", "p_sh"];
@@ -82,6 +96,7 @@ pub enum Rule {
     WordBinding,
     Bindings,
     SampleOnly,
+    PerMember,
     IsInfNan,
     InfNanConstant,
     SelfCompare,
@@ -98,6 +113,7 @@ impl fmt::Display for Rule {
             Rule::WordBinding => "word-binding",
             Rule::Bindings => "bindings",
             Rule::SampleOnly => "sample-only",
+            Rule::PerMember => "per-member",
             Rule::IsInfNan => "isinf-isnan",
             Rule::InfNanConstant => "inf-nan-constant",
             Rule::SelfCompare => "self-compare",
@@ -170,13 +186,16 @@ pub fn run(manifest: &Path) -> Result<(), String> {
     ))
 }
 
-/// Every `.wgsl` file under `root`'s [`FRAG_DIR`], linted: [`GENERATED`], which must exist, by [`check`], and every
-/// other file, written by hand, by [`check_fragment`]. A file that does not parse or validate is an error naming it.
+/// Every `.wgsl` file under `root`'s [`FRAG_DIR`], linted: [`GENERATED`], which must exist, by [`check`], the read
+/// side ([`READ_SIDE_FILE`]) as its continuation by [`check_read_side`], and every other file, written by hand, by
+/// [`check_fragment`]. A file that does not parse or validate is an error naming it.
 pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
     let generated = root.join(GENERATED);
     if !generated.is_file() {
         return Err(format!("{}: no such file", generated.display()));
     }
+    let layer =
+        std::fs::read_to_string(&generated).map_err(|e| format!("{}: {e}", generated.display()))?;
     let mut files = Vec::new();
     wgsl_files(&root.join(FRAG_DIR), &mut files)?;
     files.sort();
@@ -193,6 +212,8 @@ pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let findings = if rel == GENERATED {
             check(&source)
+        } else if rel == READ_SIDE_FILE {
+            check_read_side(&layer, &source)
         } else {
             check_fragment(&source)
         }
@@ -236,6 +257,32 @@ fn validate(module: &Module, source: &str) -> Result<naga::valid::ModuleInfo, St
     .map_err(|e| e.emit_to_string(source))
 }
 
+/// The findings in the generated read side's `source`, linted as the continuation of the generated layer `layer` by
+/// every rule [`check`] applies, or why it could not be checked: the two together do not parse or validate. A finding
+/// on a line of `source` is reported at that line of it. One on a line of `layer`, or on none, is reported here only if
+/// `layer` alone does not give it, since the layer's own report has it.
+pub fn check_read_side(layer: &str, source: &str) -> Result<Vec<Finding>, String> {
+    let own = check(layer)?;
+    let lines = layer.lines().count();
+    let joined = if layer.ends_with('\n') {
+        format!("{layer}{source}")
+    } else {
+        format!("{layer}\n{source}")
+    };
+    let base = u32::try_from(lines).map_err(|e| e.to_string())?;
+    Ok(check(&joined)?
+        .into_iter()
+        .filter_map(|mut f| match f.line {
+            Some(line) if line > base => {
+                f.line = Some(line - base);
+                Some(f)
+            }
+            _ if own.contains(&f) => None,
+            _ => Some(f),
+        })
+        .collect())
+}
+
 /// The float rules' findings in a fragment-stage WGSL file written by hand, or why it could not be checked: it does
 /// not parse or validate as WGSL.
 pub fn check_fragment(source: &str) -> Result<Vec<Finding>, String> {
@@ -262,6 +309,7 @@ pub fn check(source: &str) -> Result<Vec<Finding>, String> {
     found.extend(word_binding(&module));
     found.extend(bindings(&module));
     found.extend(sample_only(&module));
+    found.extend(per_member(&module));
     found.extend(float_checks(&module, &info, source));
     Ok(found)
 }
@@ -471,8 +519,8 @@ fn is_word_array(module: &Module, ty: naga::Handle<naga::Type>) -> bool {
 }
 
 /// The word buffer's binding rule: `word_buffer` exists, is a storage `array<vec4<u32>>` with a binding of its own,
-/// the `SimState` buffer exists with another binding, every read of either is at a function argument, and no
-/// `SimState*` struct holds a `vec4<u32>`.
+/// the `SimState` buffer exists with another binding, every read of either is at a function argument, and no stored
+/// `SimState*` struct holds a `vec4<u32>`: the read-side `SimState`, which is never stored, holds the word it read.
 fn word_binding(module: &Module) -> Vec<Finding> {
     let mut found = Vec::new();
     let mut bad = |what: String| found.push(finding(Rule::WordBinding, what));
@@ -542,12 +590,14 @@ fn word_binding(module: &Module) -> Vec<Finding> {
             }
         }
     }
+    // The stored layouts only: the read-side `SimState` holds the word read from its own buffer, `sample.word`
+    // (lowering Part 3a), and is never stored.
     for (_, ty) in module.types.iter() {
         let (Some(name), TypeInner::Struct { members, .. }) = (ty.name.as_deref(), &ty.inner)
         else {
             continue;
         };
-        if !name.starts_with(SIMSTATE) {
+        if !name.starts_with(SIMSTATE) || name == READ_SIDE {
             continue;
         }
         for m in members {
@@ -647,17 +697,12 @@ fn bindings(module: &Module) -> Vec<Finding> {
     found
 }
 
-/// Each function or entry point but a buffer's one reader that uses the buffer (R-343: both buffers are read only
-/// through `sample_state(i)` and `sample_word(i)`).
+/// Each function or entry point but a buffer's one reader that uses the buffer (R-343, R-378: both buffers are read
+/// only by the read side's generated `sample_read(i)`).
 fn sample_only(module: &Module) -> Vec<Finding> {
     let table = ledger::payload::bindings();
-    let functions = module
-        .functions
-        .iter()
-        .map(|(_, f)| f)
-        .chain(module.entry_points.iter().map(|ep| &ep.function));
     let mut found = Vec::new();
-    for function in functions {
+    for function in functions(module) {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
         let mut used: Vec<&str> = Vec::new();
         for (_, expr) in function.expressions.iter() {
@@ -671,12 +716,81 @@ fn sample_only(module: &Module) -> Vec<Finding> {
                     found.push(finding(
                         Rule::SampleOnly,
                         format!(
-                            "`{fname}` uses `{}`, which only `{}` reads (R-343)",
+                            "`{fname}` uses `{}`, which only `{}` reads (R-343, R-378)",
                             b.buffer, b.reader
                         ),
                     ));
                 }
             }
+        }
+    }
+    found
+}
+
+/// Every function and entry point of `module`.
+fn functions(module: &Module) -> impl Iterator<Item = &Function> {
+    module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|ep| &ep.function))
+}
+
+/// The buffer global `e` in `function` is, by name, if it is `simstate_buffer` or `word_buffer`.
+fn buffer<'m>(module: &'m Module, function: &Function, e: Handle<Expression>) -> Option<&'m str> {
+    let Expression::GlobalVariable(g) = function.expressions[e] else {
+        return None;
+    };
+    module.global_variables[g]
+        .name
+        .as_deref()
+        .filter(|n| *n == SIMSTATE_BUFFER || *n == WORD_BUFFER)
+}
+
+/// R-378's per-member reads: no load of a whole element of `simstate_buffer`, a stored struct, where the read side
+/// loads one member at a time; and in each function, both buffers indexed by the same argument, the sample index.
+fn per_member(module: &Module) -> Vec<Finding> {
+    let mut found = Vec::new();
+    for function in functions(module) {
+        let fname = function.name.as_deref().unwrap_or("(unnamed)");
+        let mut indices: Vec<u32> = Vec::new();
+        for (_, expr) in function.expressions.iter() {
+            match *expr {
+                Expression::Load { pointer } => {
+                    let base = match function.expressions[pointer] {
+                        Expression::Access { base, .. } | Expression::AccessIndex { base, .. } => {
+                            base
+                        }
+                        _ => continue,
+                    };
+                    if buffer(module, function, base) == Some(SIMSTATE_BUFFER) {
+                        found.push(finding(
+                            Rule::PerMember,
+                            format!(
+                                "`{fname}` loads a whole stored struct from `{SIMSTATE_BUFFER}`: the read side loads \
+                                 only the stored members each field needs, `{SIMSTATE_BUFFER}[i].<member>` (R-378)"
+                            ),
+                        ));
+                    }
+                }
+                Expression::Access { base, index } if buffer(module, function, base).is_some() => {
+                    if let Expression::FunctionArgument(k) = function.expressions[index] {
+                        if !indices.contains(&k) {
+                            indices.push(k);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        if indices.len() > 1 {
+            found.push(finding(
+                Rule::PerMember,
+                format!(
+                    "`{fname}` reads the buffers at different arguments: both are read at the same sample index \
+                     (R-343, R-378)"
+                ),
+            ));
         }
     }
     found

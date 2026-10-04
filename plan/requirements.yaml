@@ -4833,7 +4833,7 @@
   - R-17
   - R-245
   milestone: M1
-  note: "Payload §4 offers \"NaN/sentinel or −1\"; the ledger fixes −1.0."
+  note: "Payload §4 offers \"NaN/sentinel or −1\"; R-245 fixes NaN, by the validity predicate `n ≥ 2`, with no −1.0 sentinel."
 - id: REQ-PAY-031
   area: PAY
   statement: "Derived quantities (`ftle`, `diffusion_slope`, `orbit_count`, `retrograde`, current drifts, reduced crossing count, `total_substeps_log2`, the shape point `n`, the live substep count, suspect predicates) must be computed at read, and the removed fields (`arc_length_n`, peak substep, a stored `ftle_valid`, `encounter_count`, per-pair tallies, `dominant_pair`, `trajectory_stats`, `timeout`, per-sample ensemble spread) must not be stored."

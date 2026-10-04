@@ -21,6 +21,8 @@ ledger = { path = "../ledger" }
 # R-187).
 [dev-dependencies]
 validation = { path = "../validation" }
+# The read side's property tests (`tests/derived.rs`) draw their cases through the shared config, `validation::prop`.
+proptest = "1.11"
 
 # Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
 [features]

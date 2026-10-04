@@ -210,11 +210,7 @@ negative_control!(
 #[test]
 fn lint_wgsl_vec2_word_buffer_fires() {
     let source = edited(&clean(), WORD_TYPE, "word_buffer: array<vec2<u32>>;");
-    let source = edited(
-        &source,
-        "fn sample_word(i: u32) -> vec4<u32>",
-        "fn sample_word(i: u32) -> vec2<u32>",
-    );
+    let source = edited(&source, "word_buffer[i].w", "word_buffer[i].y");
     check_fires(&source, Rule::WordBinding, "is not array<vec4<u32>>");
 }
 
@@ -228,24 +224,20 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------
 // The type a wrongly typed buffer is told it should be (R-343).
 
-/// `source` with `buffer` an `array<u32>` and its reader returning a u32.
-fn u32_buffer(buffer: &str, element: &str, reader: &str) -> String {
+/// `source` with `buffer` an `array<u32>` and its read in `sample_read`, `read`, a read of the u32 element.
+fn u32_buffer(buffer: &str, element: &str, read: &str) -> String {
     let source = edited(
         &clean(),
         &format!("{buffer}: array<{element}>;"),
         &format!("{buffer}: array<u32>;"),
     );
-    edited(
-        &source,
-        &format!("fn {reader}(i: u32) -> {element}"),
-        &format!("fn {reader}(i: u32) -> u32"),
-    )
+    edited(&source, read, &format!("{buffer}[i]"))
 }
 
 #[test]
 fn lint_wgsl_state_buffer_of_u32_is_told_simstate_ftle() {
     check_fires(
-        &u32_buffer("simstate_buffer", "SimStateFTLE", "sample_state"),
+        &u32_buffer("simstate_buffer", "SimStateFTLE", STATE_READ),
         Rule::Bindings,
         "`simstate_buffer` is not a storage `array<SimStateFTLE>`",
     );
@@ -265,7 +257,7 @@ negative_control!(
 #[test]
 fn lint_wgsl_word_buffer_of_u32_is_told_vec4() {
     check_fires(
-        &u32_buffer("word_buffer", "vec4<u32>", "sample_word"),
+        &u32_buffer("word_buffer", "vec4<u32>", WORD_READ),
         Rule::Bindings,
         "`word_buffer` is not a storage `array<vec4<u32>>`",
     );
@@ -285,8 +277,8 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------
 // Each buffer read at an index other than its reader's sample-index argument (R-343).
 
-const STATE_READ: &str = "return simstate_buffer[i];";
-const WORD_READ: &str = "return word_buffer[i];";
+const STATE_READ: &str = "simstate_buffer[i].packed_a";
+const WORD_READ: &str = "word_buffer[i].w";
 const OFF_INDEX: &str = "at an index other than its sample-index argument";
 
 /// `source` has a `word-binding` finding that `reader` reads `buffer` off its sample index, and no `sample-only`
@@ -310,49 +302,49 @@ fn check_off_index(source: &str, reader: &str, buffer: &str) {
 #[test]
 fn lint_wgsl_state_buffer_at_a_constant_index_fires() {
     check_off_index(
-        &edited(&clean(), STATE_READ, "return simstate_buffer[0];"),
-        "sample_state",
+        &edited(&clean(), STATE_READ, "simstate_buffer[0].packed_a"),
+        "sample_read",
         "simstate_buffer",
     );
 }
 
 negative_control!(
     lint_wgsl_state_buffer_at_a_constant_index_fires,
-    "the clean fixture's sample_state reads simstate_buffer at its argument",
+    "the clean fixture's sample_read reads simstate_buffer at its argument",
     expected = "did not fire",
-    check_off_index(&clean(), "sample_state", "simstate_buffer")
+    check_off_index(&clean(), "sample_read", "simstate_buffer")
 );
 
 #[test]
 fn lint_wgsl_state_buffer_at_a_computed_index_fires() {
     check_off_index(
-        &edited(&clean(), STATE_READ, "return simstate_buffer[i + 1u];"),
-        "sample_state",
+        &edited(&clean(), STATE_READ, "simstate_buffer[i + 1u].packed_a"),
+        "sample_read",
         "simstate_buffer",
     );
 }
 
 negative_control!(
     lint_wgsl_state_buffer_at_a_computed_index_fires,
-    "the clean fixture's sample_state reads simstate_buffer at its argument",
+    "the clean fixture's sample_read reads simstate_buffer at its argument",
     expected = "did not fire",
-    check_off_index(&clean(), "sample_state", "simstate_buffer")
+    check_off_index(&clean(), "sample_read", "simstate_buffer")
 );
 
 #[test]
 fn lint_wgsl_word_buffer_at_a_computed_index_fires() {
     check_off_index(
-        &edited(&clean(), WORD_READ, "return word_buffer[i + 1u];"),
-        "sample_word",
+        &edited(&clean(), WORD_READ, "word_buffer[i + 1u].w"),
+        "sample_read",
         "word_buffer",
     );
 }
 
 negative_control!(
     lint_wgsl_word_buffer_at_a_computed_index_fires,
-    "the clean fixture's sample_word reads word_buffer at its argument",
+    "the clean fixture's sample_read reads word_buffer at its argument",
     expected = "did not fire",
-    check_off_index(&clean(), "sample_word", "word_buffer")
+    check_off_index(&clean(), "sample_read", "word_buffer")
 );
 
 // ---------------------------------------------------------------------------------------------------------------

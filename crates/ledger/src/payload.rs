@@ -294,7 +294,8 @@ pub struct Binding {
     pub buffer: &'static str,
     /// The [`Struct::buffer`] whose elements it holds.
     pub holds: &'static str,
-    /// The one generated function that reads it, by the sample index (R-343).
+    /// The one generated function that reads it, by the sample index: the read side's `sample_read`, which loads one
+    /// stored member or word component at a time, never the whole stored struct (R-343, R-378).
     pub reader: &'static str,
     /// The prefix of its generated constants, `<prefix>_GROUP` and `<prefix>_BINDING`.
     pub constant: &'static str,
@@ -312,7 +313,7 @@ pub const fn bindings() -> [Binding; 2] {
         Binding {
             buffer: "simstate_buffer",
             holds: "SimState",
-            reader: "sample_state",
+            reader: "sample_read",
             constant: "SIMSTATE",
             group: 1,
             binding: 0,
@@ -320,7 +321,7 @@ pub const fn bindings() -> [Binding; 2] {
         Binding {
             buffer: "word_buffer",
             holds: "word",
-            reader: "sample_word",
+            reader: "sample_read",
             constant: "WORD",
             group: 1,
             binding: 1,
@@ -381,6 +382,14 @@ pub const fn continuation_index() -> [[u32; 4]; 4] {
         e += 1;
     }
     out
+}
+
+/// The canonical quiet NaN's f32 bits, `0x7fc0_0000`: sign 0, exponent all ones, the quiet bit (bit 22) alone in the
+/// significand (lowering Part 3a; R-72, R-79; REQ-RENDER-077). A tier-absent derived scalar reads exactly these bits at
+/// unpack, as does an invalid read (`ftle`, R-254; `diffusion`, R-245), and the bitcast absence test compares against
+/// them. Interface data written into the read side, as the continuation table is; not a register constant.
+pub const fn canonical_qnan_bits() -> u32 {
+    0x7fc0_0000
 }
 
 /// Payload §3's frozen symbol codes, each symbol at its code: `a = 0, A = 1, b = 2, B = 3` ("part of the binary

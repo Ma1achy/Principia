@@ -74,14 +74,10 @@ const SIMSTATE_BINDING: u32 = 0u;
 const WORD_GROUP: u32 = 1u;
 const WORD_BINDING: u32 = 1u;
 
+// Read only by the read side's `sample_read(i)`, the same `i` for both, one stored member or word component per load,
+// never the whole stored struct (R-343, R-378).
 @group(1) @binding(0) var<storage, read> simstate_buffer: array<SimStateFTLE>;
 @group(1) @binding(1) var<storage, read> word_buffer: array<vec4<u32>>;
-
-// Sample `i`'s stored state; the only read of `simstate_buffer` (R-343).
-fn sample_state(i: u32) -> SimStateFTLE { return simstate_buffer[i]; }
-
-// Sample `i`'s word: the same index as its state, per copy; the only read of `word_buffer` (R-343).
-fn sample_word(i: u32) -> vec4<u32> { return word_buffer[i]; }
 
 // The `state` code of escape (payload §2).
 const STATE_ESCAPE: u32 = 0u;
