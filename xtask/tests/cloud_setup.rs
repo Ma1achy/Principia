@@ -11,7 +11,9 @@
 //! - R-347: cargo-nextest comes from its official prebuilt installer (get.nexte.st) and cargo-mutants through
 //!   cargo-binstall, each at CI's pin, and each falls back to `cargo install --locked` only when its download fails. The
 //!   dry run names that route, and the script's install function, run with `curl`, `tar`, `cargo` and `uname` stubbed,
-//!   takes it.
+//!   takes it;
+//! - under `pipefail`, the script pipes (`|` or `|&`) into no reader that can quit before its input ends (`head`,
+//!   `grep -q`, `-m`, `-l`, `-L`): the writer would die of SIGPIPE and fail the pipeline at random.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -958,5 +960,168 @@ validation::negative_control!(
         )
         .unwrap();
         check_prebuilt_routes(&copy, &copy, &the_ci_plan())
+    }
+);
+
+/// The pipes in `text` (`|` or `|&`) whose reader can quit before reading all its input: `head`, or `grep` with `-q`,
+/// `-m`, `-l`, `-L` or their long forms. Under `pipefail` the writer then dies of SIGPIPE whenever it writes after the
+/// reader has gone, and the pipeline fails at random (seen on Linux bash 5, where `printf` writes line by line).
+///
+/// A short option that takes an argument (`-e -f -A -B -C -d -D`) ends its cluster: the rest of the word, or the next
+/// word when nothing is attached, is its argument, so `grep -elog` and `grep -e -l` are not read as `-l`. Options end
+/// at the first word that is not one, or at `--`; an option GNU grep would still take after its pattern
+/// (`grep y -l`) is not read, so write options before the pattern.
+fn early_exit_readers(text: &str) -> Vec<String> {
+    let bytes = text.as_bytes();
+    let mut found: Vec<String> = Vec::new();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'|' || (i > 0 && bytes[i - 1] == b'|') || bytes.get(i + 1) == Some(&b'|') {
+            continue;
+        }
+        let rest = text[i + 1..].replace("\\\n", " ");
+        let rest = rest.strip_prefix('&').unwrap_or(&rest);
+        let mut words = rest.split_whitespace();
+        let early = match words.next() {
+            Some("head") => true,
+            Some("grep") => grep_quits_early(words),
+            _ => false,
+        };
+        if early {
+            let line = text[..i].matches('\n').count() + 1;
+            found.push(format!(
+                "line {line}: `{}`",
+                text.lines().nth(line - 1).unwrap_or("").trim()
+            ));
+        }
+    }
+    found
+}
+
+/// Whether `grep`'s option words (the words after `grep`) hold an option that stops it before its input ends.
+fn grep_quits_early<'a>(mut words: impl Iterator<Item = &'a str>) -> bool {
+    while let Some(word) = words.next() {
+        if word == "--" || !word.starts_with('-') || word == "-" {
+            return false;
+        }
+        if let Some(long) = word.strip_prefix("--") {
+            if matches!(
+                long.split('=').next().unwrap(),
+                "quiet" | "silent" | "max-count" | "files-with-matches" | "files-without-match"
+            ) {
+                return true;
+            }
+            continue;
+        }
+        let cluster = &word[1..];
+        for (j, letter) in cluster.char_indices() {
+            if matches!(letter, 'q' | 'm' | 'l' | 'L') {
+                return true;
+            }
+            if matches!(letter, 'e' | 'f' | 'A' | 'B' | 'C' | 'd' | 'D') {
+                if j + 1 == cluster.len() {
+                    words.next();
+                }
+                break;
+            }
+        }
+    }
+    false
+}
+
+/// Each input names a pipe into a reader that quits early, at the line given.
+fn check_flagged(cases: &[(&str, usize)]) {
+    for &(input, line) in cases {
+        let found = early_exit_readers(input);
+        assert!(
+            found.len() == 1 && found[0].starts_with(&format!("line {line}: ")),
+            "the early-exit reader check does not flag `{input}` at line {line}: {found:?}"
+        );
+    }
+}
+
+/// No input pipes into a reader that quits early.
+fn check_not_flagged(inputs: &[&str]) {
+    for input in inputs {
+        let found = early_exit_readers(input);
+        assert!(
+            found.is_empty(),
+            "the early-exit reader check flags `{input}`: {found:?}"
+        );
+    }
+}
+
+#[test]
+fn early_exit_reader_check_flags_each_early_reader_at_its_line() {
+    check_flagged(&[
+        ("x | head -n1", 1),
+        ("x | grep -q y", 1),
+        ("x | grep -c -m1 y", 1),
+        ("x | grep -l y", 1),
+        ("x | grep -L y", 1),
+        ("x | grep -iL y", 1),
+        ("x | grep --files-without-match y", 1),
+        ("x | grep --max-count=1 y", 1),
+        ("x |& grep -q y", 1),
+        ("x |&grep -L y", 1),
+        ("a\n| grep -q y", 2),
+        ("a\nb \\\n  | grep -q y", 3),
+    ]);
+}
+
+validation::negative_control!(
+    early_exit_reader_check_flags_each_early_reader_at_its_line,
+    "`grep -elog`, whose `-e` takes `log` as its pattern, required to be flagged as `-l`",
+    expected = "the early-exit reader check does not flag",
+    check_flagged(&[("x | grep -elog y", 1)])
+);
+
+#[test]
+fn early_exit_reader_check_passes_readers_that_read_to_the_end() {
+    check_not_flagged(&[
+        "x | grep -elog y",
+        "x | grep -e -l y",
+        "x | grep -flist y",
+        "x | grep -A1 -e y",
+        "x | grep -c y",
+        "x | grep -- -l",
+        "x | sort | sed -n 1p",
+        "x || grep -q y",
+        "awk 'END { exit !f }' < y",
+    ]);
+}
+
+validation::negative_control!(
+    early_exit_reader_check_passes_readers_that_read_to_the_end,
+    "`grep -L` and `|& grep -q`, each of which can quit at its first match, required to pass",
+    expected = "the early-exit reader check flags",
+    check_not_flagged(&["x | grep -L y", "x |& grep -q y"])
+);
+
+fn check_no_early_exit_reader(text: &str) {
+    let found = if text.contains("pipefail") {
+        early_exit_readers(text)
+    } else {
+        Vec::new()
+    };
+    assert!(
+        found.is_empty(),
+        "cloud-setup.sh pipes into a reader that can quit before its input ends, under pipefail: {found:?}"
+    );
+}
+
+#[test]
+fn cloud_setup_pipes_into_no_early_exit_reader_under_pipefail() {
+    check_no_early_exit_reader(&script(&root()));
+}
+
+validation::negative_control!(
+    cloud_setup_pipes_into_no_early_exit_reader_under_pipefail,
+    "a script whose channel check pipes printf into `grep -q`, as it did before, required to use no such pipe",
+    expected = "cloud-setup.sh pipes into a reader that can quit before its input ends",
+    {
+        let here = r#"grep -q '^channel ' <<<"$tc""#;
+        let text = script(&root());
+        assert!(text.contains(here), "the script checks the channel with `{here}`");
+        check_no_early_exit_reader(&text.replace(here, r#"printf '%s\n' "$tc" | grep -q '^channel '"#))
     }
 );
