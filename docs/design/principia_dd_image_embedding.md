@@ -46,7 +46,7 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
 | bytes | field | definition |
 |---|---|---|
 | 0–3 | `magic` | four fixed bytes, proposed below (R-71) |
-| 4 | `version` | the record layout's version; R-81's contract-name layout bumps it above the prototype's (§6) |
+| 4 | `version` | the record layout's version; R-81's contract-name layout bumps it above the prototype's (§6), to 3, proposed below (R-71, R-380) |
 | 5 | `flags` | the flag bits, below |
 | 6–9 | `payload_len` | the payload's length in bytes, u32 |
 | 10–11 | `n_records` | how many records the writer placed in the image, u16, below |
@@ -97,9 +97,13 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
   is `8F 50 72 6E` (`0x8F` then ASCII `Prn`). It is none of the five 4-byte windows of the PNG signature
   `89 50 4E 47 0D 0A 1A 0A`, and its first byte is above `0x7F`, so it is no PNG chunk type (those are four ASCII
   letters) and no ASCII text. It has 16 of its 32 bits set, so a blank or saturated low-bit plane never reads as it, and
-  it differs from its own bit reversal, so a record read back to front does not start with it. Whether it collides with
-  the prototype's magic, and the version byte, which must be above the prototype's, wait on RQ-205: the corpus does not
-  record the prototype's magic or version.
+  it differs from its own bit reversal, so a record read back to front does not start with it.
+
+  **The prototype's values, which a new record must not reuse (R-380):** the prototype's magic is `PRPX`
+  (`50 52 50 58`), and its highest version byte is 2. The proposed magic `8F 50 72 6E` differs from `50 52 50 58` in
+  every byte. The proposed version byte is **3**, the prototype's highest plus one: R-81's bump for the contract-name
+  layout (§6). Both are R-71 proposals (REQ-TOOL-109), used provisionally until the human confirms them at the M7 gate;
+  the prototype's version, 2, is the orchestrator's reading of the human's ruling, flagged in R-380 for that gate.
 
 **Read = collect every intact record, majority-vote per byte.** With 9+ records at the smallest
 resolution, repetition *is* the error correction and Reed–Solomon buys less than a dependency
