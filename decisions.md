@@ -5728,12 +5728,13 @@ After physics review 5407380838 and qa review 5407389970 (PR #137), two placemen
 consequences that leave what R-381 offers unchanged. `log` shows the drift's magnitude `|x|`, unsigned, as option 3
 defines it, placed as `dbg_log` places it (`1 − 1/(1 + s)`, `s` the floored log value) on the sequential viridis
 ramp, not the diverging one, since colour_composition §1.2 sends positive fields to sequential; the view states that
-it shows `|drift|`, and the `diverging` ramp carries only the signed compactions, `symlog` and `lin`. `lin` is `range_norm` over the fixed,
-clamped `[−R, R]` (render_gui_spec §10.1), `0` at the neutral `c0`, a drift beyond `±R` saturating to `c−` or `c+`;
-REQ-TOOL-150's criterion is that on dd_integrator test 2's orbit Euler's and RK4's final drifts render as distinct
-8-bit sRGB pixels, neither equal to the saturated end colour `c−` or `c+`; the symplectic occupants (KDK, Yoshida-4,
-Yoshida-6) may render as the neutral `c0` and need not be told apart; test 7's drifts are recorded and may saturate.
-One linear `R` cannot resolve drifts across decades (pitfalls §3), and `symlog`, the default, is the view for that.
+it shows `|drift|`, and the `diverging` ramp carries only the signed compactions, `symlog` and `lin`. `lin` is
+`range_norm` over the fixed, clamped `[−R, R]` (render_gui_spec §10.1), `0` at the neutral `c0`, a drift beyond `±R`
+saturating to `c−` or `c+`; REQ-TOOL-150's criterion is that on dd_integrator test 2's orbit Euler's and RK4's final
+drifts render as distinct 8-bit sRGB pixels, neither equal to the saturated end colour `c−` or `c+`; the symplectic
+occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral `c0` and need not be told apart; test 7's drifts are
+recorded and may saturate. One linear `R` cannot resolve drifts across decades (pitfalls §3), and `symlog`, the default,
+is the view for that.
 "Distinct 8-bit pixels" adds no numeric threshold, so it needs no calibration.
 
 Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
@@ -5771,5 +5772,15 @@ M3 gate. R-382 gives the proposal a criterion that can fail; it fixes no value.
   R-382", and R-382 is in its References.
 - RQ-207 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
 - R-382 is in the "values" group of `plan/rule_groups.yaml`.
+
+After physics review 5407832535 (PR #137), the precision decided per R-369, a mechanical consequence of "round-off by
+construction" that leaves what R-382 decides unchanged. A symplectic occupant's ΔL_z is pure round-off, so its size is
+set by the working precision, and the occupants run at CPU-f64, CPU-f32, GPU-f32 and double-double (integrator
+contract Part 1; dd_integrator §3.3) under one absolute threshold (dd_integrator §3.5). The symplectic occupants'
+ΔL_z, final and max, is therefore measured on test 2's orbit and test 7's IC at f32, the coarsest precision the kernel
+runs (CPU-f32 standing in for GPU-f32, as REQ-INT-030 does), and at each finer precision the predicate reads; the
+criterion fails if any symplectic occupant lights L_z-suspect at any of them. Euler's side is truncation-dominated and
+needs no change. The energy criterion's "no symplectic occupant lights SUSPECT_ENERGY" names the same precisions.
+Applied in REQ-INT-085's verify detail (reqio), TASK-M3-05's "Proposal:" line and `plan/reviewers/physics.md`.
 
 Changes REQ-INT-085 (RQ-207 removed, R-382 added).
