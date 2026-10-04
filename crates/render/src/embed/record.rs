@@ -6,8 +6,8 @@
 //! (`Header::put_fields`), the reader (`Header::get_fields`) and the layout table ([`HEADER_FIELDS`]), so the two
 //! sides cannot disagree on a field (REQ-TOOL-110). A record is trusted whole or discarded whole (REQ-TOOL-060).
 //!
-//! The version byte is not set here: it waits on RQ-205 (REQ-TOOL-109, REQ-TOOL-118), so [`encode`] writes the
-//! version its caller gives and [`decode`] returns the version it reads.
+//! The description also fixes the values a newly written record carries in `magic` and `version` ([`MAGIC`],
+//! [`VERSION`]), so [`encode`] writes those and no other; [`decode`] returns the version it reads, unchecked (§2).
 
 /// A header field's wire form: its width in bytes, and its bytes most significant first (§2, "Byte order").
 trait Field: Sized {
@@ -59,24 +59,39 @@ impl Field for [u8; 4] {
     }
 }
 
-/// Generates the header struct, its writer, its reader and its layout table from one list of fields in wire order.
+/// Generates the header struct, its constructor, its writer, its reader and its layout table from one list of fields
+/// in wire order: the `fixed` fields first, each with the value a newly written record carries, then the `free` ones,
+/// which the writer's caller gives.
 macro_rules! header_format {
-    ($($(#[doc = $doc:literal])* $field:ident: $ty:ty,)+) => {
+    (
+        fixed { $($(#[doc = $fdoc:literal])* $fixed:ident: $fty:ty = $value:expr,)+ }
+        free { $($(#[doc = $doc:literal])* $field:ident: $ty:ty,)+ }
+    ) => {
         /// A record's header fields before `crc32(header)`, as the record carries them (§2).
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         pub struct Header {
+            $($(#[doc = $fdoc])* pub $fixed: $fty,)+
             $($(#[doc = $doc])* pub $field: $ty,)+
         }
 
         /// The header's fields in wire order, each with its width in bytes; `crc32(header)` follows them.
-        pub const HEADER_FIELDS: &[(&str, usize)] = &[$((stringify!($field), <$ty as Field>::LEN),)+];
+        pub const HEADER_FIELDS: &[(&str, usize)] = &[
+            $((stringify!($fixed), <$fty as Field>::LEN),)+
+            $((stringify!($field), <$ty as Field>::LEN),)+
+        ];
 
         /// The width in bytes of the fields `crc32(header)` covers.
-        const FIELDS_LEN: usize = 0 $(+ <$ty as Field>::LEN)+;
+        const FIELDS_LEN: usize = 0 $(+ <$fty as Field>::LEN)+ $(+ <$ty as Field>::LEN)+;
 
         impl Header {
+            /// A newly written record's header: the fixed fields at their values, the free ones as given.
+            pub fn new($($field: $ty),+) -> Self {
+                Self { $($fixed: $value,)+ $($field,)+ }
+            }
+
             /// The writer: appends each field's bytes to `out`, in wire order.
             fn put_fields(&self, out: &mut Vec<u8>) {
+                $(Field::put(&self.$fixed, out);)+
                 $(Field::put(&self.$field, out);)+
             }
 
@@ -84,27 +99,35 @@ macro_rules! header_format {
             fn get_fields(bytes: &[u8]) -> Self {
                 let mut at = 0;
                 $(
+                    let $fixed = <$fty as Field>::get(&bytes[at..]);
+                    at += <$fty as Field>::LEN;
+                )+
+                $(
                     let $field = <$ty as Field>::get(&bytes[at..]);
                     at += <$ty as Field>::LEN;
                 )+
                 debug_assert_eq!(at, FIELDS_LEN);
-                Self { $($field,)+ }
+                Self { $($fixed,)+ $($field,)+ }
             }
         }
     };
 }
 
 header_format! {
-    /// The four fixed bytes that mark a record ([`MAGIC`]).
-    magic: [u8; 4],
-    /// The record layout's version.
-    version: u8,
-    /// The flag bits ([`Flags`]).
-    flags: u8,
-    /// The payload's length in bytes.
-    payload_len: u32,
-    /// How many records the writer placed in the image, over both planes.
-    n_records: u16,
+    fixed {
+        /// The four fixed bytes that mark a record ([`MAGIC`]).
+        magic: [u8; 4] = MAGIC,
+        /// The record layout's version ([`VERSION`] when written; read, not checked).
+        version: u8 = VERSION,
+    }
+    free {
+        /// The flag bits ([`Flags`]).
+        flags: u8,
+        /// The payload's length in bytes.
+        payload_len: u32,
+        /// How many records the writer placed in the image, over both planes.
+        n_records: u16,
+    }
 }
 
 /// The width in bytes of a CRC field.
@@ -116,8 +139,24 @@ pub const HEADER_LEN: usize = FIELDS_LEN + CRC_LEN;
 const _: () = assert!(HEADER_LEN == 16, "§2 gives a 16-byte header");
 
 /// The record's magic, `8F 50 72 6E`: proposed (R-71, REQ-TOOL-109) and provisional until the human confirms it at
-/// the M7 gate (R-182); its check against the prototype's magic waits on RQ-205 (§2, "Magic and version").
+/// the M7 gate (R-182). It differs from the prototype's [`PROTOTYPE_MAGIC`] in every byte (§2, "Magic and version";
+/// R-380).
 pub const MAGIC: [u8; 4] = [0x8F, 0x50, 0x72, 0x6E];
+
+/// The record layout's version, 3: R-81's contract-name layout, one above the prototype's [`PROTOTYPE_VERSION`]. An
+/// R-71 proposal per R-380 (REQ-TOOL-109, REQ-TOOL-118), provisional until the human confirms it at the M7 gate (R-182).
+pub const VERSION: u8 = 3;
+
+/// The prototype's magic, `PRPX` (`50 52 50 58`), which a new record must not reuse (§2; R-380).
+pub const PROTOTYPE_MAGIC: [u8; 4] = *b"PRPX";
+
+/// The prototype layout's highest version byte, 2, which a new record must not reuse (§2; R-380).
+pub const PROTOTYPE_VERSION: u8 = 2;
+
+const _: () = assert!(
+    VERSION > PROTOTYPE_VERSION,
+    "R-81 bumps the version above the prototype's"
+);
 
 /// The variant a record's writer used (§5), flag bits 0–1.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -180,14 +219,21 @@ impl Flags {
 /// One record's content: what the writer puts in and the reader gets back from an intact record.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Record {
-    /// The record layout's version.
-    pub version: u8,
     /// The flag bits.
     pub flags: Flags,
     /// How many records the writer placed in the image, over both planes.
     pub n_records: u16,
     /// The payload: the canonical JSON, compressed with raw DEFLATE (§2, "Payload serialisation").
     pub payload: Vec<u8>,
+}
+
+/// An intact record as the reader finds it: its layout's version, as read, and its content.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Decoded {
+    /// The header's `version`, read and not checked: an intact record of another layout is reported as such (§2).
+    pub version: u8,
+    /// The record's content.
+    pub record: Record,
 }
 
 /// Why a record could not be encoded.
@@ -217,17 +263,12 @@ pub fn crc32(bytes: &[u8]) -> u32 {
     crc32fast::hash(bytes)
 }
 
-/// The record's bytes: `header ‖ payload ‖ crc32(payload)`, with [`MAGIC`] and `payload_len` the payload's length.
+/// The record's bytes: `header ‖ payload ‖ crc32(payload)`, with [`MAGIC`], [`VERSION`] and `payload_len` the
+/// payload's length.
 pub fn encode(record: &Record) -> Result<Vec<u8>, EncodeError> {
     let payload_len = u32::try_from(record.payload.len())
         .map_err(|_| EncodeError::PayloadTooLong(record.payload.len()))?;
-    let header = Header {
-        magic: MAGIC,
-        version: record.version,
-        flags: record.flags.to_byte(),
-        payload_len,
-        n_records: record.n_records,
-    };
+    let header = Header::new(record.flags.to_byte(), payload_len, record.n_records);
     let mut out = Vec::with_capacity(record_len(record.payload.len()));
     header.put_fields(&mut out);
     crc32(&out).put(&mut out);
@@ -238,7 +279,7 @@ pub fn encode(record: &Record) -> Result<Vec<u8>, EncodeError> {
 
 /// The record at the start of `bytes`, or why it is discarded whole. Bytes after its `crc32(payload)` are not part of
 /// it. The version is returned as read, not checked (§2).
-pub fn decode(bytes: &[u8]) -> Result<Record, Discard> {
+pub fn decode(bytes: &[u8]) -> Result<Decoded, Discard> {
     if bytes.len() < HEADER_LEN {
         return Err(Discard::Truncated);
     }
@@ -262,11 +303,13 @@ pub fn decode(bytes: &[u8]) -> Result<Record, Discard> {
     if u32::get(&bytes[HEADER_LEN + payload_len..]) != crc32(payload) {
         return Err(Discard::PayloadCrc);
     }
-    Ok(Record {
+    Ok(Decoded {
         version: header.version,
-        flags,
-        n_records: header.n_records,
-        payload: payload.to_vec(),
+        record: Record {
+            flags,
+            n_records: header.n_records,
+            payload: payload.to_vec(),
+        },
     })
 }
 

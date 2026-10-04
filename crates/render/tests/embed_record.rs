@@ -1,11 +1,12 @@
 //! The embedded record and its tile geometry (`principia_dd_image_embedding.md` §2, §3, §7): REQ-TOOL-060,
-//! REQ-TOOL-062, REQ-TOOL-110, and the magic's checks for REQ-TOOL-109. Each test registers its negative control
-//! (R-176).
+//! REQ-TOOL-062, REQ-TOOL-110, REQ-TOOL-118, and the magic's and version's checks for REQ-TOOL-109. Each test
+//! registers its negative control (R-176).
 
 use render::embed::record::{
     bit_slot, crc32, decode, encode, read_tile, record_bit, record_bits, record_len, tile_grid,
-    tile_origin, tile_side, write_tile, Discard, Flags, Record, Slot, Variant,
-    ALPHA_BITS_PER_PIXEL, CRC_LEN, HEADER_FIELDS, HEADER_LEN, MAGIC, RGB_BITS_PER_PIXEL,
+    tile_origin, tile_side, write_tile, Decoded, Discard, Flags, Record, Slot, Variant,
+    ALPHA_BITS_PER_PIXEL, CRC_LEN, HEADER_FIELDS, HEADER_LEN, MAGIC, PROTOTYPE_MAGIC,
+    PROTOTYPE_VERSION, RGB_BITS_PER_PIXEL, VERSION,
 };
 use validation::negative_control;
 
@@ -19,7 +20,6 @@ const PNG_SIGNATURE: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 /// A record with a payload of `len` bytes that are not all alike.
 fn record_with(len: usize) -> Record {
     Record {
-        version: 7,
         flags: Flags {
             variant: Variant::Tiled,
             source: false,
@@ -31,6 +31,11 @@ fn record_with(len: usize) -> Record {
 
 fn encoded(record: &Record) -> Vec<u8> {
     encode(record).expect("the record encodes")
+}
+
+/// The content `decode` finds in `bytes`, or why it discards them.
+fn decoded_record(bytes: &[u8]) -> Result<Record, Discard> {
+    decode(bytes).map(|d| d.record)
 }
 
 // --- Layout (§2) ---------------------------------------------------------------------------------------------------
@@ -73,7 +78,7 @@ negative_control!(
 fn check_wire_bytes(record: &Record, bytes: &[u8]) {
     let n = record.payload.len();
     let mut expected = MAGIC.to_vec();
-    expected.push(record.version);
+    expected.push(VERSION);
     expected.push(record.flags.to_byte());
     expected.extend_from_slice(&[(n >> 24) as u8, (n >> 16) as u8, (n >> 8) as u8, n as u8]);
     expected.extend_from_slice(&[(record.n_records >> 8) as u8, record.n_records as u8]);
@@ -140,7 +145,7 @@ fn check_only_corrupt_discarded(
     what: &str,
 ) {
     for (k, bytes) in records.iter().enumerate() {
-        let decoded = decode(bytes);
+        let decoded = decoded_record(bytes);
         if k == corrupt {
             assert!(
                 decoded.is_err(),
@@ -245,6 +250,7 @@ fn check_flags(defined: fn(u8) -> bool) {
         if defined(byte) {
             let flags = decoded
                 .unwrap_or_else(|d| panic!("defined flags {byte:#04x} were discarded: {d:?}"))
+                .record
                 .flags;
             assert_eq!(
                 flags.to_byte(),
@@ -292,7 +298,7 @@ fn check_decodes_to(bytes: &[u8], expected: &Record) {
     let mut padded = bytes.to_vec();
     padded.extend_from_slice(&[0xA5; 7]);
     assert_eq!(
-        decode(&padded).as_ref(),
+        decoded_record(&padded).as_ref(),
         Ok(expected),
         "the record did not decode to what was encoded"
     );
@@ -313,7 +319,7 @@ negative_control!(
     check_decodes_to(&encoded(&record_with(5)), &record_with(6))
 );
 
-// --- The magic, against the PNG signature (REQ-TOOL-109; the prototype's check waits on RQ-205) ---------------------
+// --- The magic and the version, against the PNG signature and the prototype's (REQ-TOOL-109, REQ-TOOL-118, R-380) ----
 
 /// `magic` meets §2's proposal checks: none of the PNG signature's 4-byte windows, not a chunk type or ASCII (first
 /// byte above 0x7F), 16 of 32 bits set, and different from its own bit reversal.
@@ -348,6 +354,122 @@ negative_control!(
     "the PNG signature's first four bytes must fail the magic check",
     expected = "collides with the PNG signature",
     check_magic([0x89, 0x50, 0x4E, 0x47])
+);
+
+/// `magic` and `version` are the prototype's values as §2 transcribes them (R-380): `PRPX`, `50 52 50 58`, and 2.
+fn check_prototype_values(magic: [u8; 4], version: u8) {
+    assert_eq!(
+        magic,
+        [0x50, 0x52, 0x50, 0x58],
+        "the prototype's magic is not §2's PRPX"
+    );
+    assert_eq!(&magic, b"PRPX", "the prototype's magic is not §2's PRPX");
+    assert_eq!(version, 2, "the prototype's version is not §2's 2");
+}
+
+#[test]
+fn embed_record_prototype_values_are_section_2() {
+    check_prototype_values(PROTOTYPE_MAGIC, PROTOTYPE_VERSION);
+}
+
+negative_control!(
+    embed_record_prototype_values_are_section_2,
+    "a prototype version of 1, not the transcribed 2, must fail the transcription check",
+    expected = "the prototype's version is not §2's 2",
+    check_prototype_values(PROTOTYPE_MAGIC, 1)
+);
+
+/// `magic` differs from the prototype's `prototype` in every byte (§2, "Magic and version").
+fn check_magic_not_prototype(magic: [u8; 4], prototype: [u8; 4]) {
+    for (k, (m, p)) in magic.iter().zip(prototype).enumerate() {
+        assert_ne!(*m, p, "the magic's byte {k} is the prototype's");
+    }
+}
+
+#[test]
+fn embed_record_magic_is_not_prototype() {
+    check_magic_not_prototype(MAGIC, PROTOTYPE_MAGIC);
+    let bytes = encoded(&record_with(CONFIG_PAYLOAD));
+    check_magic_not_prototype(bytes[..4].try_into().expect("four bytes"), PROTOTYPE_MAGIC);
+}
+
+negative_control!(
+    embed_record_magic_is_not_prototype,
+    "a magic sharing a byte with `PRPX` must fail the prototype check",
+    expected = "the magic's byte 1 is the prototype's",
+    check_magic_not_prototype([0x8F, 0x52, 0x72, 0x6E], PROTOTYPE_MAGIC)
+);
+
+/// A newly embedded record's header carries `version` in byte 4, the reader reports it, and it differs from the
+/// prototype layout's `prototype` (REQ-TOOL-118) and is above it (REQ-TOOL-109).
+fn check_new_version(bytes: &[u8], prototype: u8) {
+    let version = bytes[4];
+    assert_ne!(
+        version, prototype,
+        "a new record's version is the prototype layout's"
+    );
+    assert!(
+        version > prototype,
+        "a new record's version is not above the prototype's"
+    );
+    let decoded = decode(bytes).expect("a new record decodes");
+    assert_eq!(
+        decoded.version, version,
+        "the reader reports another version"
+    );
+}
+
+#[test]
+fn embed_record_version_differs_from_prototype() {
+    let bytes = encoded(&record_with(CONFIG_PAYLOAD));
+    assert_eq!(bytes[4], VERSION);
+    assert_eq!(VERSION, 3, "§2 proposes version 3 (R-380)");
+    check_new_version(&bytes, PROTOTYPE_VERSION);
+}
+
+negative_control!(
+    embed_record_version_differs_from_prototype,
+    "a record written at the prototype's version must fail the version check",
+    expected = "a new record's version is the prototype layout's",
+    {
+        let mut bytes = encoded(&record_with(CONFIG_PAYLOAD));
+        bytes[4] = PROTOTYPE_VERSION;
+        check_new_version(&bytes, PROTOTYPE_VERSION)
+    }
+);
+
+/// An intact record of `version`, its header CRC recomputed, decodes and reports `version` as read (§2: "A record's
+/// `version` is read, not checked").
+fn check_other_layout_read(version: u8, reported: fn(&[u8]) -> Option<u8>) {
+    let record = record_with(CONFIG_PAYLOAD);
+    let mut bytes = encoded(&record);
+    bytes[4] = version;
+    let crc = crc32(&bytes[..HEADER_LEN - CRC_LEN]);
+    bytes[HEADER_LEN - CRC_LEN..HEADER_LEN].copy_from_slice(&crc.to_be_bytes());
+    assert_eq!(
+        reported(&bytes),
+        Some(version),
+        "a record of version {version} is not reported as such"
+    );
+    assert_eq!(decoded_record(&bytes), Ok(record));
+}
+
+#[test]
+fn embed_record_version_of_another_layout_is_read() {
+    for version in [0, 1, PROTOTYPE_VERSION, VERSION + 1, 255] {
+        check_other_layout_read(version, |bytes| {
+            decode(bytes).ok().map(|d: Decoded| d.version)
+        });
+    }
+}
+
+negative_control!(
+    embed_record_version_of_another_layout_is_read,
+    "a reader that reports its own version must fail the read check",
+    expected = "a record of version 2 is not reported as such",
+    check_other_layout_read(PROTOTYPE_VERSION, |bytes| decode(bytes)
+        .ok()
+        .map(|_| VERSION))
 );
 
 // --- Tile side and grid (REQ-TOOL-062, §3, §7) ---------------------------------------------------------------------
@@ -536,7 +658,7 @@ fn check_tile_round_trip(
         "the slots after the record were written"
     );
     assert_eq!(
-        decode(&read_tile(&lows, side, bpp)).as_ref(),
+        decoded_record(&read_tile(&lows, side, bpp)).as_ref(),
         Ok(record),
         "the tile did not read back as its record"
     );
