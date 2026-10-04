@@ -407,12 +407,14 @@ fn decode_corrupt_table(w: [u32; 4]) -> Vec<u32> {
             }
         },
         0,
+        3,
     )
 }
 
-/// Payload §3's decode written out with `cont` as the continuation table, popping `skip` digits too few.
+/// Payload §3's decode written out with `cont` as the continuation table, popping `skip` digits too few, and `d₀` the
+/// residue `& mask` (3 masks it; `u32::MAX` leaves it unmasked); each continuation replays from the symbol masked.
 #[cfg(feature = "controls")]
-fn replay(w: [u32; 4], cont: fn(u32, u32) -> u32, skip: u32) -> Vec<u32> {
+fn replay(w: [u32; 4], cont: fn(u32, u32) -> u32, skip: u32, mask: u32) -> Vec<u32> {
     let length = fgw_retained_prefix_length(w);
     let mut v = kernel::payload::fgw_mixed_radix(w);
     let mut digits = Vec::new();
@@ -423,10 +425,10 @@ fn replay(w: [u32; 4], cont: fn(u32, u32) -> u32, skip: u32) -> Vec<u32> {
     }
     let mut out = Vec::new();
     if length > 0 {
-        out.push(v[0] & 3);
+        out.push(v[0] & mask);
     }
     for (k, &e) in digits.iter().rev().enumerate() {
-        out.push(cont(out[k], e));
+        out.push(cont(out[k] & 3, e));
     }
     out
 }
@@ -469,7 +471,82 @@ negative_control!(
     word_decode_reduced_fixed_streams,
     "a decode that drops a base-3 digit must fail",
     expected = "is not the free reduction",
-    check_decode_reduced(|w| replay(w, continuation_symbol, 1), &fixed_streams())
+    check_decode_reduced(|w| replay(w, continuation_symbol, 1, 3), &fixed_streams())
+);
+
+// ── fgw_decode and fgw_symbol agree on every word (R-321) ─────────────────────────────────────────────────────────────
+
+/// [`fgw_decode`] collected, at most one symbol past `w`'s retained prefix, so a decode that never ends fails rather
+/// than hangs.
+fn decode_any(w: [u32; 4]) -> Vec<u32> {
+    fgw_decode(w)
+        .take(fgw_retained_prefix_length(w) as usize + 1)
+        .collect()
+}
+
+/// Each word of `words`, any `[u32; 4]` (its `d₀` above 3 included, which `fgw_append` never writes), decodes to
+/// `fgw_symbol` at each `k` of its retained prefix: the symbol values are total and masked (R-321).
+fn check_decode_agrees(decode: Decode, words: &[[u32; 4]]) {
+    for &w in words {
+        let by_k: Vec<u32> = (0..fgw_retained_prefix_length(w))
+            .map(|k| fgw_symbol(w, k))
+            .collect();
+        assert_eq!(
+            decode(w),
+            by_k,
+            "fgw_decode and fgw_symbol differ on {w:x?}"
+        );
+    }
+}
+
+/// `W` with `length` in `.w` bits 25–31.
+fn with_length(w: [u32; 4], length: u32) -> [u32; 4] {
+    [w[0], w[1], w[2], (w[3] & ((1 << 25) - 1)) | (length << 25)]
+}
+
+/// Words whose `d₀` is out of range: `W = 5` at length 1, `W = 12` (`d₀ = 4`, [`FGW_NO_SYMBOL`]) at length 2, and
+/// `W = 5·3⁶⁹` (`d₀ = 5`) at length 70.
+fn out_of_range_words() -> Vec<[u32; 4]> {
+    let w = (0..69).fold(5u128, |w, _| 3 * w);
+    vec![
+        with_length([5, 0, 0, 0], 1),
+        with_length([12, 0, 0, 0], 2),
+        with_length(
+            [
+                w as u32,
+                (w >> 32) as u32,
+                (w >> 64) as u32,
+                (w >> 96) as u32,
+            ],
+            70,
+        ),
+    ]
+}
+
+/// Any `[u32; 4]`'s limbs, every bit of `W` arbitrary, at a `length_raw` payload §3 gives a meaning: 0…76, or 127,
+/// truncated (77…126 are its unused sentinel space).
+fn any_words() -> impl Strategy<Value = Vec<[u32; 4]>> {
+    let length = prop_oneof![0u32..=76, Just(FGW_LENGTH_SENTINEL)];
+    proptest::collection::vec((any::<[u32; 4]>(), length), 1..16)
+        .prop_map(|draws| draws.iter().map(|&(w, n)| with_length(w, n)).collect())
+}
+
+#[test]
+fn word_decode_agrees_with_fgw_symbol_on_any_word() {
+    prop::run(&any_words(), |words| {
+        check_decode_agrees(decode_any, &[out_of_range_words(), words].concat());
+        Ok(())
+    });
+}
+
+negative_control!(
+    word_decode_agrees_with_fgw_symbol_on_any_word,
+    "a decode that leaves d₀ unmasked must fail",
+    expected = "fgw_decode and fgw_symbol differ",
+    check_decode_agrees(
+        |w| replay(w, continuation_symbol, 0, u32::MAX),
+        &out_of_range_words()
+    )
 );
 
 // ── The truncated fixture word and the accessors at 0, 1, 76, 127 (REQ-PAY-028, REQ-PAY-033) ─────────────────────────

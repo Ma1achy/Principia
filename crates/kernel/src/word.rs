@@ -166,9 +166,11 @@ pub fn fgw_decode(w: [u32; 4]) -> FgwDecode {
         digits = fgw_mul3_add(digits, e);
         i += 1;
     }
+    // The residue is `d₀`, a symbol code on any word `fgw_append` writes, but the decode takes any `[u32; 4]`: masked
+    // as `fgw_symbol` masks it, unasserted, so the two agree on every word and no out-of-range symbol exists (R-321).
     FgwDecode {
         digits,
-        first: v[0],
+        first: v[0] & 3,
         remaining: length,
         prev: FGW_NO_SYMBOL,
     }
