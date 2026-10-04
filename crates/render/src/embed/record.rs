@@ -277,9 +277,10 @@ pub fn encode(record: &Record) -> Result<Vec<u8>, EncodeError> {
     Ok(out)
 }
 
-/// The record at the start of `bytes`, or why it is discarded whole. Bytes after its `crc32(payload)` are not part of
-/// it. The version is returned as read, not checked (§2).
-pub fn decode(bytes: &[u8]) -> Result<Decoded, Discard> {
+/// The header at the start of `bytes`, read by the one format description (`Header::get_fields`), or why its record
+/// is discarded whole: `bytes` shorter than the header, the magic not [`MAGIC`], `crc32(header)` failing, or the flags
+/// not a defined combination. The payload is not read; the version is returned as read, not checked (§2).
+pub fn decode_header(bytes: &[u8]) -> Result<Header, Discard> {
     if bytes.len() < HEADER_LEN {
         return Err(Discard::Truncated);
     }
@@ -290,6 +291,14 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Discard> {
     if u32::get(&bytes[FIELDS_LEN..]) != crc32(&bytes[..FIELDS_LEN]) {
         return Err(Discard::HeaderCrc);
     }
+    Flags::from_byte(header.flags).ok_or(Discard::Flags)?;
+    Ok(header)
+}
+
+/// The record at the start of `bytes`, or why it is discarded whole. Bytes after its `crc32(payload)` are not part of
+/// it. The version is returned as read, not checked (§2).
+pub fn decode(bytes: &[u8]) -> Result<Decoded, Discard> {
+    let header = decode_header(bytes)?;
     let flags = Flags::from_byte(header.flags).ok_or(Discard::Flags)?;
     let payload_len = usize::try_from(header.payload_len).map_err(|_| Discard::Truncated)?;
     let end = HEADER_LEN
