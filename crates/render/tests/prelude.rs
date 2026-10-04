@@ -1120,21 +1120,22 @@ negative_control!(
 /// `golden` is `frac(i·φ_g)`, `φ_g = (√5 − 1)/2` (dd_colouring §3.7), to the rounding of evaluating it in f64:
 /// `golden` is the mirror's `golden_turns`, or a control's stand-in. The reference is exact to `i·2⁻⁶⁴`:
 /// `frac(i·K/2⁶⁴)` in integers, `K = ⌊φ_g·2⁶⁴⌋`. The bound is the f64 evaluation's error: `i·|φ̂ − φ_g|` from the
-/// rounded `φ̂`, half an ulp of the product, and the reference's own error. `frac(i/φ_g)` equals `frac(i·φ_g)` in
-/// exact arithmetic (`1/φ_g = 1 + φ_g`), so only a bound this tight tells the two apart.
+/// rounded `φ̂`, half an ulp of the product, and the reference's own error, its rounding to f64 included.
+/// `frac(i/φ_g)` and `frac(i·(φ_g + 1))` equal `frac(i·φ_g)` in exact arithmetic (`1/φ_g = 1 + φ_g`), so only a bound
+/// this tight tells them apart, and only at some `i`: 11, 22 and 44 separate the second, the larger three the first.
 fn check_golden_turns(golden: fn(u32) -> f64) {
     const K: u128 = 0x9E37_79B9_7F4A_7C15;
     let two64 = 2f64.powi(64);
     let phi = (5f64.sqrt() - 1.0) / 2.0;
     // φ̂ ∈ [½, 1) has 53 significant bits, so φ̂·2⁶⁴ is an integer, exactly.
     let phi_err = ((phi * two64) as u128).abs_diff(K) as f64 / two64 + 1.0 / two64;
-    for i in [1000u32, 12345, 1_000_003] {
+    for i in [11u32, 22, 44, 1000, 12345, 1_000_003] {
         let reference = ((u128::from(i) * K) % (1u128 << 64)) as f64 / two64;
         let x = f64::from(i) * phi;
         let bound = f64::from(i) * phi_err
             + 2f64.powi(x.log2().floor() as i32 - 53)
             + f64::from(i) / two64
-            + 2f64.powi(-60);
+            + 2f64.powi(-54);
         let got = golden(i);
         assert!(
             (got - reference).abs() <= bound,
