@@ -6,3 +6,14 @@ publish.workspace = true
 
 [dependencies]
 ledger = { path = "../ledger" }
+
+# Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
+# tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). naga, wgpu 30's
+# front end, parses and validates the assembled WGSL.
+[dev-dependencies]
+validation = { path = "../validation" }
+naga = { version = "30", features = ["wgsl-in"] }
+
+# Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
+[features]
+controls = []
