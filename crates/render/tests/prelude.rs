@@ -633,6 +633,34 @@ negative_control!(
     })
 );
 
+/// The mirror's named ramps each read their own table: `viridis` and `twilight` are the mirror's `ramp_viridis` and
+/// `ramp_twilight`, or a control's stand-ins.
+fn check_named_ramps(viridis: fn(f64) -> Rgb, twilight: fn(f64) -> Rgb) {
+    let (v, w) = (present::viridis_stops(), present::twilight_stops());
+    for t in [0.0, 0.3, 0.5, 0.77, 1.0] {
+        assert!(
+            close(viridis(t), present::ramp(&v, t)),
+            "ramp_viridis({t}) does not read the viridis table"
+        );
+        assert!(
+            close(twilight(t), present::ramp(&w, t)),
+            "ramp_twilight({t}) does not read the twilight table"
+        );
+    }
+}
+
+#[test]
+fn prelude_luts_named_ramps_read_their_own_tables() {
+    check_named_ramps(present::ramp_viridis, present::ramp_twilight);
+}
+
+negative_control!(
+    prelude_luts_named_ramps_read_their_own_tables,
+    "a twilight ramp that reads the viridis table must fail",
+    expected = "does not read the twilight table",
+    check_named_ramps(present::ramp_viridis, present::ramp_viridis)
+);
+
 /// `ramp_grey` and `hue_wheel` on the GPU, `text` applied, against the CPU mirror; and the mirror against their
 /// definitions: the grey is OKLab `(t, 0, 0)`, `t³` on every channel, `hue_wheel` OKLCH (0.75, 0.12) at `t` turns,
 /// periodic in `t` and in gamut at every hue.
@@ -1087,6 +1115,44 @@ negative_control!(
         },
         ..mirror()
     })
+);
+
+/// `golden` is `frac(i·φ_g)`, `φ_g = (√5 − 1)/2` (dd_colouring §3.7), to the rounding of evaluating it in f64:
+/// `golden` is the mirror's `golden_turns`, or a control's stand-in. The reference is exact to `i·2⁻⁶⁴`:
+/// `frac(i·K/2⁶⁴)` in integers, `K = ⌊φ_g·2⁶⁴⌋`. The bound is the f64 evaluation's error: `i·|φ̂ − φ_g|` from the
+/// rounded `φ̂`, half an ulp of the product, and the reference's own error. `frac(i/φ_g)` equals `frac(i·φ_g)` in
+/// exact arithmetic (`1/φ_g = 1 + φ_g`), so only a bound this tight tells the two apart.
+fn check_golden_turns(golden: fn(u32) -> f64) {
+    const K: u128 = 0x9E37_79B9_7F4A_7C15;
+    let two64 = 2f64.powi(64);
+    let phi = (5f64.sqrt() - 1.0) / 2.0;
+    // φ̂ ∈ [½, 1) has 53 significant bits, so φ̂·2⁶⁴ is an integer, exactly.
+    let phi_err = ((phi * two64) as u128).abs_diff(K) as f64 / two64 + 1.0 / two64;
+    for i in [1000u32, 12345, 1_000_003] {
+        let reference = ((u128::from(i) * K) % (1u128 << 64)) as f64 / two64;
+        let x = f64::from(i) * phi;
+        let bound = f64::from(i) * phi_err
+            + 2f64.powi(x.log2().floor() as i32 - 53)
+            + f64::from(i) / two64
+            + 2f64.powi(-60);
+        let got = golden(i);
+        assert!(
+            (got - reference).abs() <= bound,
+            "golden_turns({i}) = {got} is not frac(i·φ_g) = {reference} within {bound:e}"
+        );
+    }
+}
+
+#[test]
+fn dbg_helpers_golden_turns_is_frac_i_phi() {
+    check_golden_turns(present::golden_turns);
+}
+
+negative_control!(
+    dbg_helpers_golden_turns_is_frac_i_phi,
+    "frac(i/φ_g), equal only in exact arithmetic, must miss the f64 bound",
+    expected = "is not frac(i·φ_g)",
+    check_golden_turns(|i| (f64::from(i) / ((5f64.sqrt() - 1.0) / 2.0)).fract())
 );
 
 // ── the hatch (REQ-COL-055; R-132, R-136) ─────────────────────────────────────────────────────────────────────────
