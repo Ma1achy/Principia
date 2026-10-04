@@ -264,8 +264,10 @@ scale both survive, which LSB cannot touch at any redundancy. It was still rejec
   - **Its keyword is `Principia`.**
   - **Its text is the record's `version` in decimal digits, one line feed (`0x0A`), then the payload's JSON** before
     it is compressed (§2). A `tEXt` text is Latin-1 with no control character but the line feed, so every character of
-    the JSON outside `0x20`–`0x7E` is written as its JSON escape `\uXXXX` (a surrogate pair above U+FFFF). That is the
-    same JSON value, and its canonical serialisation (§2) gives back the payload's bytes exactly.
+    the JSON outside `0x20`–`0x7E` is written as its JSON escape `\uXXXX` (a surrogate pair above U+FFFF), its four hex
+    digits lowercase, as JCS writes its own `\u` escapes (RFC 8785 §3.2.2.2), so two writers produce the same chunk
+    bytes. That is the same JSON value: a reader parses it and serialises it canonically (§2), and gets back the
+    canonical JSON the writer compressed into the payload, byte for byte.
   - The chunk carries no magic, flags or CRC of its own: PNG gives every chunk a length and a CRC.
 - **Three distinguishable outcomes**, never two: *no embedded state* / *state present, corrupt* /
   *recovered, and here is how*. Silent wrongness is the failure mode this project exists to
