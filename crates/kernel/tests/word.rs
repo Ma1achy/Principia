@@ -523,11 +523,10 @@ fn out_of_range_words() -> Vec<[u32; 4]> {
     ]
 }
 
-/// Any `[u32; 4]`'s limbs, every bit of `W` arbitrary, at a `length_raw` payload §3 gives a meaning: 0…76, or 127,
-/// truncated (77…126 are its unused sentinel space).
+/// Any `[u32; 4]`, every bit of `W` arbitrary, at any `length_raw`, 0…127: payload §3's 0…76 and 127, truncated, and
+/// the 77…126 it leaves unused, which the decode reads as `fgw_symbol` does (R-321).
 fn any_words() -> impl Strategy<Value = Vec<[u32; 4]>> {
-    let length = prop_oneof![0u32..=76, Just(FGW_LENGTH_SENTINEL)];
-    proptest::collection::vec((any::<[u32; 4]>(), length), 1..16)
+    proptest::collection::vec((any::<[u32; 4]>(), 0u32..=127), 1..16)
         .prop_map(|draws| draws.iter().map(|&(w, n)| with_length(w, n)).collect())
 }
 
@@ -547,6 +546,57 @@ negative_control!(
         |w| replay(w, continuation_symbol, 0, u32::MAX),
         &out_of_range_words()
     )
+);
+
+/// A decode that pushes all `length − 1` popped digits onto a 128-bit integer, which wraps past 80 of them, as
+/// [`fgw_decode`] would without its cap at 77 popped digits.
+#[cfg(feature = "controls")]
+fn decode_wrapping(w: [u32; 4]) -> Vec<u32> {
+    let length = fgw_retained_prefix_length(w);
+    let m = kernel::payload::fgw_mixed_radix(w);
+    let mut v = m
+        .iter()
+        .rev()
+        .fold(0u128, |v, &l| (v << 32) | u128::from(l));
+    let mut digits = 0u128;
+    for _ in 1..length {
+        digits = digits.wrapping_mul(3).wrapping_add(v % 3);
+        v /= 3;
+    }
+    let mut out: Vec<u32> = Vec::new();
+    if length > 0 {
+        out.push(v as u32 & 3);
+    }
+    for _ in 1..length {
+        out.push(continuation_symbol(out[out.len() - 1], (digits % 3) as u32));
+        digits /= 3;
+    }
+    out
+}
+
+/// Fixed limbs, `W` all ones (2¹²¹ − 1, its top digit at position 76) and a mixed pattern, at every `length_raw` past
+/// the cap, 77…127, where more digits are read than `W` can make nonzero.
+fn long_words() -> Vec<[u32; 4]> {
+    let limbs = [
+        [u32::MAX; 4],
+        [0x19a9_5bab, 0x2ee0_ae18, 0x90e0_5326, 0xd579_6857],
+    ];
+    limbs
+        .iter()
+        .flat_map(|&w| (77..=127).map(move |n| with_length(w, n)))
+        .collect()
+}
+
+#[test]
+fn word_decode_agrees_with_fgw_symbol_past_the_cap() {
+    check_decode_agrees(decode_any, &long_words());
+}
+
+negative_control!(
+    word_decode_agrees_with_fgw_symbol_past_the_cap,
+    "a decode whose popped digits overflow at a length_raw of 77…126 must fail",
+    expected = "fgw_decode and fgw_symbol differ",
+    check_decode_agrees(decode_wrapping, &long_words())
 );
 
 // ── The truncated fixture word and the accessors at 0, 1, 76, 127 (REQ-PAY-028, REQ-PAY-033) ─────────────────────────
