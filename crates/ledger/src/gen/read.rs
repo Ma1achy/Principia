@@ -674,7 +674,12 @@ fn requests<'a>(members: &'a [ReadMember], fields: &[&str]) -> Result<Vec<Reques
 /// `sample_read(i, …)` at `tier`, filling the `fields` a stain reads (R-378): it loads each stored member those fields
 /// need once, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the components they
 /// need, the whole `word_buffer[i]` only when all four are; then it fills those fields of a zeroed `SimState`. A field
-/// not asked for stays zero, so the stain must ask for every field it reads. An unbound word buffer (`has_word` false)
+/// not asked for stays zero: a plausible value beside no validity signal (`ftle = 0.0`, `d_min = 0.0`,
+/// `step_count = 0`), the misreading lowering Part 3a and R-254 exist to prevent. It is not made NaN here: R-79 and
+/// R-254 give NaN to a field that is tier-absent or invalid for the sample, which an unrequested field isn't, and the
+/// integer, bool and word members have no NaN, so it would close the hazard only for some fields. The closing guard is
+/// the assembler's (TASK-M1-04): it derives the stain's field set from its IR and refuses a stain that reads a field
+/// its set misses, so no assembled stain ever reads an unfilled field. An unbound word buffer (`has_word` false)
 /// reads `FGW_UNBOUND`, and E = 0 (`has_ensemble` false) reads `ensemble_spread` as the canonical quiet NaN (lowering
 /// Part 3a; R-145, R-254). `masses` are the sample's `ICDescriptor` `m0 m1 m2`, which `energy_drift` reads.
 fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<String, String> {
@@ -849,6 +854,10 @@ struct SimState {{
 
 /// The fragment's generated WGSL at `tier`: the unpack layer with that tier's bindings ([`super::wgsl::layer`]), then
 /// the read side whose `sample_read` fills `fields` ([`wgsl_for`]); or the first name that is no field (R-378).
+///
+/// This is the assembler's one way to the read side (TASK-M1-04): `fields` is the set of read-side fields the stain
+/// reads, derived from its IR, never the checked-in full-fill file, which loads every stored member. A field the stain
+/// reads but `fields` misses reads zero (`sample_read`), so the assembler refuses that stain rather than assemble it.
 pub fn assemble(
     words: &[Word],
     entries: &[Entry],
