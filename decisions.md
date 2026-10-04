@@ -5577,3 +5577,44 @@ members and no getters, stands: R-378 governs how the stored members are loaded,
 shapes, not loads, and stands.
 
 Changes REQ-RENDER-001: its read path is the per-member loads.
+
+## R-379 — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
+*4 Oct 2026 · applied in render contract Part 5 "Presentation layer", REQ-TOOL-009 and REQ-TOOL-149 (reqio), TASK-M3-05,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-204 archived); REQ-TOOL-009 closes with TASK-M1-03
+(PR #137)*
+
+"For RQ-204 Option 1. Find the task that will decide the styling and explicitly make sure that is stated as a to do"
+
+(Message of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **Option 1.** The "suspect-flag styling hook" on `dbg_sentinel` is an extension point, not behaviour now.
+  `dbg_sentinel(x, frag_xy)` keeps its signature and stays as TASK-M1-03 builds it: the absence NaN, by its exact bits,
+  to the hatch, and every other value to its literal place on the ramp. It takes no suspect argument.
+- **REQ-TOOL-009 closes with TASK-M1-03.** Its "suspect styling hook" is met by the extension point; its `rq: RQ-204`
+  is removed.
+- **The styling is TASK-M3-05's to do.** TASK-M3-05 defines the suspect styling, what it looks like and which drift
+  suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style, in render
+  contract Part 5 "Presentation layer", as an R-72 definition the physics reviewer approves before merge. It applies
+  the styling on `dbg_sentinel`'s output, in the energy-drift and L_z-drift views, from the suspect predicates. A new
+  definition requirement, REQ-TOOL-149, states it, and TASK-M3-05 closes it.
+
+*Applied per R-369:*
+- **The task is TASK-M3-05** (COM projection and invariant monitoring). Its Deliverables already build the drift
+  suspect predicates in the generated accessor layer, so it is the first task in which the predicate the styling reads
+  exists; its acceptance test `drift_suspect_read_time` already has "Euler + the energy-drift view" light
+  `SUSPECT_ENERGY` everywhere (REQ-INT-040); and its reviewers include physics, whom R-72 requires for a definition.
+- TASK-M3-05 gains REQ-TOOL-149 in Closes, REQ-TOOL-009 in its earlier-milestone needs, a Deliverable for the styling,
+  an acceptance test (`cargo test -p render drift_suspect_styling`) that fails if a suspect sample renders without the
+  styling, the render contract's presentation-layer section and R-379 in References, and a Note that the suspect
+  styling is its to do.
+- The render contract's `dbg_sentinel` line, and its rendering paragraph, read the hook as that extension point, with
+  TASK-M3-05 and R-379 named.
+- R-379 is in the "design" group of `plan/rule_groups.yaml`.
+
+*Checked against the corpus:* render contract Part 4's "the drift suspect gates are read-time predicates over the
+stored latches (payload §5)" stands, and is what the styling reads: no suspect bit is stored, and none reaches
+`dbg_sentinel`. REQ-TOOL-122's list of the presentation helpers' renderings, TASK-M1-03's, is unchanged; the suspect
+styling is REQ-TOOL-149's.
+
+Adds REQ-TOOL-149; changes REQ-TOOL-009 (its RQ-204 removed).

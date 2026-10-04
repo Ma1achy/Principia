@@ -215,6 +215,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-358** — RQ-192's B1–B7 stand; a cut-off tail after the summary line is a complete session, its dropped bytes always reported *(closes RQ-192; amends R-299, R-323 and R-356)*
 - **R-361** — The generated display fraction is exactly 1 at its endpoint: `select(f32(s)/f32(h), 1.0, s == h)` *(closes RQ-195)*
 - **R-378** — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*
+- **R-379** — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
 
 ## Values
 

@@ -174,7 +174,7 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
-fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as −1.0 shows as its literal value on the ramp (R-79); suspect-flag styling hook
+fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as −1.0 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
 ```
 
 **The renderings (R-72; REQ-TOOL-122; TASK-M1-03).** The helpers live in `crates/render/shaders/wgsl/lib/present.wgsl`
@@ -202,7 +202,10 @@ with dd_colouring §3.1's sRGB transfer.
   lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as −1.0
   included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
   first clamped to ±1e30, which needs no range: 0 maps to the middle, −1 to a quarter, 1 to three quarters, and every
-  finite value to its own place (R-79, R-136). The suspect-flag styling hook is not yet defined (RQ-204).
+  finite value to its own place (R-79, R-136). The suspect styling is an extension point, not an argument:
+  `dbg_sentinel` takes no suspect flag, and the view that reads the drift suspect predicates (Part 4; the energy-drift
+  and L_z-drift views) applies the styling on `dbg_sentinel`'s output. TASK-M3-05 defines the styling here, its look
+  and which predicate drives which style (R-72, the physics reviewer approves; REQ-TOOL-149), and builds it (R-379).
 - **The hatch, `debug_invalid(frag_xy)` (proposed, R-71; REQ-COL-055; R-132, R-136):** diagonal stripes 4 px wide
   across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or aquamarine
   `#50FFD2` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.177 from its nearest
