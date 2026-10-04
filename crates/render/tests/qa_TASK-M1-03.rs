@@ -9,7 +9,8 @@
 //!   returns its defined colour on fixture inputs; `dbg_sentinel(−1.0, p)` is −1.0's place on the ramp; the absence
 //!   NaN's bits draw `debug_invalid(p)`, the hatch, and nothing else does (R-136).
 //! - REQ-COL-055 (R-132, R-136): `debug_invalid` draws the proposed hatch from the pixel position, and neither of its
-//!   colours comes as close to any palette entry as the flat magenta R-132 ruled a collision does to `#E034C6`.
+//!   colours comes as close to any palette entry as the flat magenta R-132 ruled a collision does to `#E034C6`. The
+//!   palettes include every LUT of colour_composition §7.1 (render contract Part 5, the hatch), between its stops too.
 //! - Lowering Part 3a, R-297: the absence test is by bits; it holds on the GPU for the canonical quiet NaN (the
 //!   sentinel checks below), where an `isnan` under fast-math could not be relied on.
 //!
@@ -67,7 +68,7 @@ const SPEC: Spec = Spec {
     flag: [[0x00, 0x9E, 0x73], [0xD5, 0x5E, 0x00]],
     golden_lc: (0.75, 0.12),
     phi_g: 0.618_033_988_749_894_8,
-    hatch: [[0x9B, 0x00, 0xFF], [0x50, 0xFF, 0xD2]],
+    hatch: [[0x9B, 0x00, 0xFF], [0x48, 0xFF, 0xFF]],
     hatch_width: 4,
     wheel_lc: (0.75, 0.12),
     auto_selects_meas: true,
@@ -1069,8 +1070,194 @@ negative_control!(
     )
 );
 
-/// Every palette entry the requirement names, as the GPU draws it: the outcome palette with `#E034C6`, `dbg_cat`'s
-/// Okabe–Ito and golden-angle classes, `dbg_flag`, viridis, twilight, the grey ramp and the hue wheel, sampled.
+/// A published table: its name, its stop count and qa's anchor stops.
+type Table = (&'static str, usize, &'static [(usize, Rgb)]);
+
+/// colour_composition §7.1's LUTs whose stops are a published table, by name: the table file under
+/// `crates/render/tests/data/lut/` (sRGB-encoded stops in [0, 1], one per line, `#` comments), its stop count, and
+/// stops qa transcribed independently from the source the file names, matplotlib 3.8.0's `_cm_listed.py`
+/// (`_<name>_data`) and `_cm.py` (`_coolwarm_data`, Moreland's table), so that the file is checked against the table
+/// before it is measured. Viridis and twilight are drawn by the prelude's own ramps on the GPU ([`palette`]).
+const TABLES: [Table; 6] = [
+    (
+        "cividis",
+        256,
+        &[
+            (0, [0.0, 0.135112, 0.304751]),
+            (255, [0.995737, 0.909344, 0.217772]),
+        ],
+    ),
+    (
+        "plasma",
+        256,
+        &[
+            (0, [0.050383, 0.029803, 0.527975]),
+            (71, [0.534952, 0.031217, 0.650165]),
+            (72, [0.54057, 0.03495, 0.64864]),
+            (255, [0.940015, 0.975158, 0.131326]),
+        ],
+    ),
+    (
+        "magma",
+        256,
+        &[
+            (0, [0.001462, 0.000466, 0.013866]),
+            (255, [0.987053, 0.991438, 0.749504]),
+        ],
+    ),
+    (
+        "inferno",
+        256,
+        &[
+            (0, [0.001462, 0.000466, 0.013866]),
+            (255, [0.988362, 0.998364, 0.644924]),
+        ],
+    ),
+    (
+        "turbo",
+        256,
+        &[
+            (0, [0.18995, 0.07176, 0.23217]),
+            (83, [0.09662, 0.88454, 0.73316]),
+            (84, [0.09958, 0.8904, 0.72393]),
+            (255, [0.4796, 0.01583, 0.01055]),
+        ],
+    ),
+    (
+        "coolwarm",
+        33,
+        &[
+            (0, [0.2298057, 0.298717966, 0.753683153]),
+            (16, [0.865395197, 0.86541021, 0.865395561]),
+            (32, [0.705673158, 0.01555616, 0.150232812]),
+        ],
+    ),
+];
+
+/// A published table's stops, read from its file and checked against `anchors` and `count`.
+fn table(name: &str, count: usize, anchors: &[(usize, Rgb)]) -> Vec<Rgb> {
+    let text = read(&format!("crates/render/tests/data/lut/{name}.txt"));
+    let stops: Vec<Rgb> = text
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+        .map(|l| {
+            let v: Vec<f64> = l.split_whitespace().map(|x| x.parse().unwrap()).collect();
+            assert_eq!(v.len(), 3, "{name}: the line {l:?} is not one stop");
+            [v[0], v[1], v[2]]
+        })
+        .collect();
+    assert_eq!(
+        stops.len(),
+        count,
+        "{name}: the table has {} stops, the source {count}",
+        stops.len()
+    );
+    for (k, want) in anchors {
+        assert_eq!(stops[*k], *want, "{name}: stop {k} is not the source's");
+    }
+    stops
+}
+
+/// The Principia palette's eight stops, read from the oracle itself, `principia_colour_explorer.html`'s
+/// `LUT.principia` (colour_composition §7.1; R-122), 8-bit sRGB as encoded fractions.
+fn principia_stops() -> Vec<Rgb> {
+    let html = read("docs/gui/reference/principia_colour_explorer.html");
+    let at = html
+        .find("principia:[[")
+        .expect("the explorer has no LUT.principia")
+        + "principia:[".len();
+    let body = &html[at..at + html[at..].find("]]").unwrap() + 1];
+    let stops: Vec<Rgb> = body
+        .split("],")
+        .map(|s| {
+            let v: Vec<f64> = s
+                .trim_matches(|c| c == '[' || c == ']')
+                .split(',')
+                .map(|x| x.trim().parse::<f64>().unwrap() / 255.0)
+                .collect();
+            [v[0], v[1], v[2]]
+        })
+        .collect();
+    assert_eq!(
+        stops.len(),
+        8,
+        "LUT.principia has {} stops, not eight",
+        stops.len()
+    );
+    stops
+}
+
+/// Cubehelix's reference, the analytic form with dd_colouring §3.8's parameters (s = 0.5, λ = 1.5, h = 1; R-151),
+/// clamped to [0, 1] and read as sRGB-encoded, as the explorer draws it.
+fn cubehelix(t: f64) -> Rgb {
+    let phi = std::f64::consts::TAU * (0.5 / 3.0 - 1.5 * t);
+    let a = t * (1.0 - t) / 2.0;
+    let (c, s) = (phi.cos(), phi.sin());
+    [
+        t + a * (-0.14861 * c + 1.78277 * s),
+        t + a * (-0.29227 * c - 0.90649 * s),
+        t + a * (1.97294 * c),
+    ]
+    .map(|v| v.clamp(0.0, 1.0))
+}
+
+/// Samples per interval between two stops.
+const PER_INTERVAL: usize = 32;
+
+/// Every LUT of colour_composition §7.1 that the GPU ramps don't draw, as linear RGB: cividis, plasma, magma, inferno,
+/// Turbo, Cool-warm and the Principia palette at every stop and between each pair of neighbouring stops, mixed both in
+/// the sRGB encoding and in linear light (either way a ramp may draw them), and cubehelix along its analytic curve.
+/// Each entry is named `<lut> …` so a collision names its LUT.
+fn lut_palette() -> Vec<(String, Rgb)> {
+    let mut luts: Vec<(&str, Vec<Rgb>)> = TABLES
+        .iter()
+        .map(|(n, c, a)| (*n, table(n, *c, a)))
+        .collect();
+    luts.push(("principia", principia_stops()));
+    let mut out = Vec::new();
+    for (name, stops) in &luts {
+        for (k, w) in stops.windows(2).enumerate() {
+            let (a, b) = (w[0], w[1]);
+            let (la, lb) = (a.map(decode), b.map(decode));
+            for j in 0..=PER_INTERVAL {
+                let f = j as f64 / PER_INTERVAL as f64;
+                let enc = [0, 1, 2].map(|c| decode(a[c] + (b[c] - a[c]) * f));
+                let lin = [0, 1, 2].map(|c| la[c] + (lb[c] - la[c]) * f);
+                out.push((format!("{name} stop {k} + {f:.3} (sRGB mix)"), enc));
+                out.push((format!("{name} stop {k} + {f:.3} (linear mix)"), lin));
+            }
+        }
+    }
+    let n = 255 * PER_INTERVAL;
+    for j in 0..=n {
+        let t = j as f64 / n as f64;
+        out.push((format!("cubehelix at {t:.5}"), cubehelix(t).map(decode)));
+    }
+    out
+}
+
+/// One colour on each §7.1 LUT, as [`lut_palette`] draws it (mid-interval, in the sRGB mix), by the LUT's name.
+fn on_each_lut() -> Vec<(&'static str, Rgb)> {
+    let mut v: Vec<(&'static str, Rgb)> = TABLES
+        .iter()
+        .map(|(n, c, a)| {
+            let s = table(n, *c, a);
+            let k = c / 3;
+            (*n, [0, 1, 2].map(|i| decode((s[k][i] + s[k + 1][i]) / 2.0)))
+        })
+        .collect();
+    let p = principia_stops();
+    v.push((
+        "principia",
+        [0, 1, 2].map(|i| decode((p[3][i] + p[4][i]) / 2.0)),
+    ));
+    v.push(("cubehelix", cubehelix(0.37).map(decode)));
+    v
+}
+
+/// Every palette entry the requirement names: as the GPU draws them, `dbg_cat`'s Okabe–Ito and golden-angle classes,
+/// `dbg_flag`, viridis, twilight, the grey ramp and the hue wheel, sampled; and the outcome palette with `#E034C6` and
+/// every LUT of colour_composition §7.1 ([`lut_palette`]).
 fn palette(gpu: &GpuHarness) -> Vec<(String, Rgb)> {
     let mut named = Vec::new();
     let mut cases = Vec::new();
@@ -1104,6 +1291,7 @@ fn palette(gpu: &GpuHarness) -> Vec<(String, Rgb)> {
             .iter()
             .map(|&h| (format!("outcome #{h:06X}"), hex(h))),
     );
+    out.extend(lut_palette());
     out
 }
 
@@ -1142,5 +1330,58 @@ negative_control!(
     qa_dbg_helpers_hatch_collides_with_no_palette_entry,
     "the flat magenta R-16 kept must collide",
     expected = "collides with outcome #E034C6",
-    check_no_collision([hex(0xFF00FF), hex(0x50FFD2)], &palette(&gpu()))
+    check_no_collision([hex(0xFF00FF), hex(0x48FFFF)], &palette(&gpu()))
+);
+
+/// Each hatch colour is clear of every §7.1 LUT on its own, each LUT measured: the palette has entries named for all
+/// ten (viridis and twilight from the GPU ramps, the rest from [`lut_palette`]), and a colour taken on each LUT is
+/// found to collide with that LUT by name, so no LUT is missing from the measurement or mislabelled.
+fn check_every_lut_measured(hatch: [Rgb; 2], palette: &[(String, Rgb)]) {
+    for name in [
+        "ramp_viridis",
+        "cividis",
+        "plasma",
+        "magma",
+        "inferno",
+        "ramp_twilight",
+        "coolwarm",
+        "principia",
+        "cubehelix",
+        "turbo",
+    ] {
+        let n = palette.iter().filter(|(p, _)| p.starts_with(name)).count();
+        assert!(n >= 33, "the palette samples {name} {n} times");
+    }
+    for (name, c) in on_each_lut() {
+        let got = std::panic::catch_unwind(|| check_no_collision([c, c], palette));
+        let msg = match got {
+            Ok(()) => panic!("a colour on {name} is not found to collide with it"),
+            Err(e) => e.downcast_ref::<String>().cloned().unwrap_or_default(),
+        };
+        assert!(
+            msg.contains(&format!("collides with {name}")),
+            "a colour on {name} is matched elsewhere: {msg}"
+        );
+    }
+    check_no_collision(hatch, palette);
+}
+
+#[test]
+fn qa_hatch_clear_of_every_colour_composition_lut() {
+    let gpu = gpu();
+    let drawn = eval_rgb(
+        &gpu,
+        &[
+            case(INVALID, &[], &[fb(0.5), fb(0.5)]),
+            case(INVALID, &[], &[fb(4.5), fb(0.5)]),
+        ],
+    );
+    check_every_lut_measured([drawn[0], drawn[1]], &palette(&gpu));
+}
+
+negative_control!(
+    qa_hatch_clear_of_every_colour_composition_lut,
+    "the aquamarine #50FFD2 physics review 5406355539 found 0.072 from Turbo must collide with turbo",
+    expected = "collides with turbo",
+    check_every_lut_measured([hex(0x9B00FF), hex(0x50FFD2)], &palette(&gpu()))
 );
