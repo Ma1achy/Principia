@@ -232,7 +232,7 @@ with dd_colouring §3.1's sRGB transfer.
 
 **The catalogue is a test suite where the display is the assertion.** Two kinds of view: **field views** certify a single producer; **cross-check views** certify the *contract between* two producers. When a view looks wrong, you know which side — or which seam — to suspect.
 
-**Generation is fully mechanical because the layout table carries per-field presentation metadata**: `{scale: lin|log|cyclic, range, sentinel?, categorical_n?, tier_gate?}`. So `energy_drift` → log with floor, `t_end` → lin [0, T], `rho_angle` → cyclic, `diffusion` → lin, NaN (invalid fit) hatched (R-245). **A field without metadata fails generation loudly** — coverage of every struct member is enforced, not hoped for.
+**Generation is fully mechanical because the layout table carries per-field presentation metadata**: `{scale: lin|log|cyclic, range, sentinel?, categorical_n?, tier_gate?}`. So the drift fields `energy_drift` and `Lz_drift` default to `diverging · symlog` with the field's floor (`eps_E`, `eps_L`), the preset `f_edrift`'s, and `lin` and `log` are available through the compaction override (`principia_colour_composition.md` §1.2, §6; R-381); `t_end` → lin [0, T], `rho_angle` → cyclic, `diffusion` → lin, NaN (invalid fit) hatched (R-245). **A field without metadata fails generation loudly** — coverage of every struct member is enforced, not hoped for.
 
 ### Field views (one per field, every struct)
 

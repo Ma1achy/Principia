@@ -9,40 +9,6 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-206: the drift views' scale before `dbg_sentinel`: diverging (debug plan §D) or log with floor (render contract Part 6) *(TASK-M3-05, REQ-TOOL-149)*
-
-- **File, section:**
-  - `docs/design/principia_debug_tooling_plan.md` § "D. Payload field views — `SimState` scalars (ledger §3.4)":
-    "**The two drift fields are signed → diverging scale, not sequential-log** (generation-root finding)", and its
-    rows "`energy_drift` | derived: `H(r,p) − E_0` | **diverging**" and "`Lz_drift` | derived: `L_z(r,p) − Lz_0` |
-    **diverging**".
-  - `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata" (the note at
-    line 146): "**the two drift fields are signed** → *diverging* colour scale, not sequential-log".
-  - `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)": "So
-    `energy_drift` → log with floor, `t_end` → lin [0, T], …".
-  - The layout table (TASK-M0-09, R-263) carries `Scale::Diverging` with `floor: eps_E` for `energy_drift` and
-    `floor: eps_L` for `Lz_drift`, so the metadata has both a diverging scale and a floor.
-  - `plan/tasks/M3/TASK-M3-05.md` § "Deliverables" and REQ-TOOL-149: the energy-drift and L_z-drift views apply the
-    suspect styling on `dbg_sentinel`'s output, and a non-suspect pixel equals `dbg_sentinel`'s output (R-379).
-- **What:** `dbg_sentinel` places a value on the viridis ramp at `0.5 + 0.5·x/(1 + |x|)`, with no range (render contract
-  Part 5 "Presentation layer"). Fed the raw drift, which is ≪ 1 on any sane run, a drift of 10⁻⁶ to 10⁻³ lands within
-  0.0005 of the ramp's middle, and the view is one flat colour. So the drift views must apply the field's scale first and
-  pass the scaled value to `dbg_sentinel` (TASK-M3-05's styling definition states it). The corpus gives that scale two
-  ways: §D and generation-root say diverging and expressly not sequential-log; render contract Part 6 says log with
-  floor. They disagree on whether the sign is shown, and on whether the magnitude is compressed by a log.
-- **Options seen:**
-  1. **Signed log with floor (diverging):** `x ↦ sign(x)·ln(1 + |x|/ε)`, ε the field's floor (`eps_E`, `eps_L`), fed to
-     `dbg_sentinel`. It keeps §D's sign and Part 6's log compression and floor, and reads the layout table's
-     `Diverging` plus `floor` as one scale. Part 6's "log with floor" is reworded to say so.
-  2. **Diverging, linear:** `x` over a symmetric range `[−R, R]`, which needs a range value (a calibration, R-71).
-     Part 6's "log with floor" is corrected to "diverging".
-  3. **Log with floor, unsigned:** `ln(1 + |x|/ε)`, the sign dropped, as Part 6 says; §D and generation-root are
-     corrected.
-- **Needed:** a ruling on which scale the drift views apply before `dbg_sentinel`. TASK-M3-05's suspect styling
-  definition (REQ-TOOL-149) waits for it; nothing in TASK-M1-03 does.
-
----
-
 ## RQ-207: the L_z-suspect threshold has no pass criterion: which occupant, on which orbit, must light it and which must not *(TASK-M3-05, REQ-INT-085)*
 
 - **File, section:**
@@ -83,3 +49,36 @@ milestone gets its own file after its gate. Ids never change.
 - **Needed:** a ruling on the L_z-suspect threshold's pass criterion, the occupants and fixtures on which it must and
   must not light. REQ-INT-085's verify detail and TASK-M3-05's "Proposal:" line give the L_z part only as far as the
   corpus goes (measured and recorded on both fixtures) until then; nothing in TASK-M1-03 waits on it.
+
+---
+
+## RQ-208: the drift views' ramp: the preset's `diverging` through a neutral, or `dbg_sentinel`'s viridis *(TASK-M3-05, REQ-TOOL-149)*
+
+- **File, section:**
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets": "`f_edrift` =
+    `energy_drift · diverging · symlog`", and § "1.2 Family B — field-ramp → `vec3` or `f32`": "**Ramp** (scalar →
+    colour): … `diverging(c−,c0,c+)` (through a neutral)", and "**Default ramps by field role.** Signed fields
+    (energy, L_z, drifts) default to diverging-through-neutral so the zero-crossing is a legible contour".
+  - `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug
+    view)": "Any other value … shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)`", and
+    "the view that reads the drift suspect predicates (Part 4; the energy-drift and L_z-drift views) applies the
+    styling on `dbg_sentinel`'s output".
+  - `decisions.md` § "R-381": "**`symlog` is the default**: the field-view preset `f_edrift` = `energy_drift ·
+    diverging · symlog`", and "**The value fed to `dbg_sentinel` is the compacted value**".
+  - `plan/requirements.yaml` REQ-TOOL-149 and `plan/tasks/M3/TASK-M3-05.md` § "Acceptance tests",
+    `drift_suspect_styling`: a non-suspect pixel equals `dbg_sentinel`'s output on the compacted value.
+- **What:** R-381 settles the compaction, not the ramp. The preset colours the compacted drift with a diverging ramp
+  through a neutral; `dbg_sentinel`, whose output the drift views style (R-379), draws viridis, a sequential ramp with
+  no neutral at its middle. `dbg_sentinel`'s `0.5 + 0.5·x/(1 + |x|)` does put 0 at the middle and the two signs on
+  either side, so the sign stays legible, but the colours differ from the preset's, and the corpus gives the drift
+  views both.
+- **Options seen:**
+  1. **`dbg_sentinel`'s viridis:** the drift views are `dbg_sentinel(compacted value)`, as R-379 and REQ-TOOL-149
+     read; colour_composition §6's `diverging` names the scale's signed midpoint, not the colour ramp.
+  2. **The preset's diverging ramp:** the drift views colour the compacted value with `diverging(c−,c0,c+)`, and the
+     absence hatch and the suspect styling are applied as `dbg_sentinel` applies them; REQ-TOOL-149's "equals
+     `dbg_sentinel`'s output" is restated for that ramp, and the ramp's three colours are a definition (R-72).
+  3. **Both, as the palette swap:** viridis by default, the diverging ramp through the presets' palette swap
+     (colour_composition §6), or the reverse.
+- **Needed:** a ruling on which ramp the drift views' compacted value is drawn on. TASK-M3-05's styling definition
+  (REQ-TOOL-149) waits for it; nothing in TASK-M1-03 does.

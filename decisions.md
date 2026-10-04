@@ -5665,3 +5665,62 @@ not 2), and the human may correct it at the M7 gate, where REQ-TOOL-109's propos
 - R-380 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-109 and REQ-TOOL-118: each gains R-380, and neither waits on RQ-205.
+
+## R-381 — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
+*4 Oct 2026 · applied in render contract Part 6 "The debug catalogue", REQ-TOOL-149 (reqio), TASK-M3-05,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-206 archived); built by TASK-M3-05*
+
+The orchestrator put RQ-206 to the human, the drift views' scale before `dbg_sentinel`, with its three options: 1
+signed log with floor, 2 diverging linear, 3 unsigned log with floor. The human answered:
+
+"With how the frag shaders work, you can do all 3 of these as options just having option 1 as the default. Since these are all data driven / customisable"
+
+and then:
+
+"Yeah I'm pretty sure this sort of thing is in the spec for all of the debug shaders / shaders that display a scalar value / range"
+
+(Messages of 4 Oct 2026; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **All three scales are options.** The drift views (`energy_drift`, `Lz_drift`) offer the three scales of RQ-206 as
+  colour_composition's Compaction stage gives them (§1.2): `symlog`, the signed log through the midpoint with the
+  field's floor `eps_E` or `eps_L` (RQ-206's option 1, `x ↦ sign(x)·ln(1 + |x|/ε)`); `lin`, diverging and linear, `x`
+  over a symmetric range `[−R, R]` (option 2); and `log`, unsigned, with the floor (option 3, `ln(1 + |x|/ε)`, the
+  sign dropped).
+- **`symlog` is the default**: the field-view preset `f_edrift` = `energy_drift · diverging · symlog`
+  (colour_composition §6), and `Lz_drift` likewise with `eps_L`.
+- **No new mechanism.** The options are colour_composition's existing Compaction stage, and `lin` and `log` are
+  reached through the compaction override that the field-view presets inherit (§6: "As presets they inherit
+  compaction override, palette swap, the post chain, and per-stage shader visibility for free").
+- **The value fed to `dbg_sentinel` is the compacted value**, under whichever compaction the view has. TASK-M3-05's
+  styling definition (REQ-TOOL-149) states it, and a non-suspect pixel equals `dbg_sentinel` of it.
+
+*Applied per R-369 (mechanical consequences):*
+- Render contract Part 6's "So `energy_drift` → log with floor" is reworded: the drift fields default to
+  `diverging · symlog` with the field's floor, and `lin` and `log` are available through the compaction override
+  (colour_composition §6, R-381).
+- REQ-TOOL-149 loses its `rq: RQ-206` and gains R-381 as a ruling and a source (reqio); its verify reads the scaled
+  value as the preset's compacted value, `symlog` by default, with `lin` and `log` as overrides.
+- TASK-M3-05's Deliverables and acceptance lines that name the scale cite R-381, and it gains an acceptance check that
+  the drift views default to `symlog`, accept the `lin` and `log` overrides, and that a non-suspect pixel equals
+  `dbg_sentinel` of the compacted value under each.
+- **`lin`'s range is a calibration.** No text gives the drift views' `lin` a finite range: generation-root §3.8 gives
+  both drifts the range "(−∞, ∞), signed", which a node inherits as its input domain by default
+  (gui_state_contract §3, "the fixed `[lo, hi]` of `range_norm`"); colour_composition §1.2 and §6 give the presets no
+  range; and `range_norm`'s `auto_range` (render_gui_spec §10.1) is a mode, not a default value, which
+  dd_image_embedding §6 warns "manufactures or hides the difference it is meant to show". So the default symmetric
+  range `R` for the drift views' `lin` override is a new R-71 calibration requirement, proposed with evidence by
+  TASK-M3-05 and confirmed by the human at the M3 gate.
+- RQ-206 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-381 is in the "design" group of `plan/rule_groups.yaml`.
+
+*Checked against the corpus:* colour_composition already gives this: §1.2's Compaction stage has "`lin`, `log`,
+`symlog` (signed, through the midpoint)", and §6's presets have `f_edrift` = `energy_drift · diverging · symlog` with
+an inherited compaction override. The conflict was render contract Part 6's "`energy_drift` → log with floor" against
+debug_tooling_plan §D's and generation-root §3.4's "diverging, not sequential-log"; it is resolved by rewording the
+contract to cite the preset. The layout table's `Scale::Diverging` with `floor: eps_E` / `eps_L` (generation-root
+§3.4, §3.8; R-263) is the default's metadata as it stands. It also meets a question it does not settle: `f_edrift`'s
+ramp is `diverging` (colour_composition §1.2, "`diverging(c−,c0,c+)` (through a neutral)"), while `dbg_sentinel` draws
+the viridis ramp (render contract Part 5); filed as RQ-208 against TASK-M3-05. What R-381 decides is unchanged.
+
+Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
