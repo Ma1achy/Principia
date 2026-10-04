@@ -207,12 +207,14 @@ with dd_colouring §3.1's sRGB transfer.
   and L_z-drift views) applies the styling on `dbg_sentinel`'s output. TASK-M3-05 defines the styling here, its look
   and which predicate drives which style (R-72, the physics reviewer approves; REQ-TOOL-149), and builds it (R-379).
 - **The hatch, `debug_invalid(frag_xy)` (proposed, R-71; REQ-COL-055; R-132, R-136):** diagonal stripes 4 px wide
-  across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or aquamarine
-  `#50FFD2` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.177 from its nearest
-  entry (twilight's stop 162) and aquamarine 0.155 from its nearest (the OKLCH hue circle at L 0.75, C 0.12). The
-  palettes measured are the outcome palette with `#E034C6` (colour_composition §1.4), the `dbg_*` palettes, viridis,
-  twilight, the grey ramp and that hue circle. The flat magenta R-16 kept, `#FF00FF`, is 0.101 from `#E034C6`. The two
-  colours are 0.34 apart in OKLab lightness, so the stripes stay visible without colour vision. `dbg_hash_u32` can
+  across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or cyan
+  `#48FFFF` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.142 from its nearest
+  entry (plasma, near its stop 71) and cyan 0.112 from its nearest (Turbo, between its stops 83 and 84). The palettes
+  measured are the outcome palette with `#E034C6` (colour_composition §1.4), the `dbg_*` palettes, every LUT of
+  colour_composition §7.1 (Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix and
+  Turbo, each as its ramp draws it, between its stops too), the grey ramp and the OKLCH hue circle at L 0.75, C 0.12.
+  The flat magenta R-16 kept, `#FF00FF`, is 0.101 from `#E034C6`. The two colours are 0.35 apart in OKLab lightness, so
+  the stripes stay visible without colour vision. `dbg_hash_u32` can
   give any colour, but never a pattern. The human confirms the pattern and colours at the M1 gate.
 
 ### Live-state & array inspection
