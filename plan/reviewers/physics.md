@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*101 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*102 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -45,6 +45,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-EVT-019 — On the re-validation set, count escape fires whose ground truth is bound (false positives writing wrong t_end); gate at the measured precision (pre-R-29: 100.0%); a criterion variant that fires earlier with any false positives fails.
 - [ ] REQ-EVT-023 — the proposal measures per-pixel differences on the config slice, config_stability (fixtures/slices.toml; R-166), for both experiments and states the tolerance, with a seam-structure check; recorded in decisions.md
 - [ ] REQ-PAY-083 — measured truncation rates over the validation fixtures and a representative survey against the proposed threshold
+- [ ] REQ-TOOL-150 — the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R beside the default symlog view, showing that the drifts the proposal measures are told apart and not clamped flat; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md
 - [ ] REQ-VAL-025 — reference output unchanged between successive precision/tolerance steps before it is accepted
 - [ ] REQ-VAL-027 — on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field
 - [ ] REQ-VAL-030 — dd test 1: fitted log-log slope of energy error vs dt equals the occupant's order within tolerance

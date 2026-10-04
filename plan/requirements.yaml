@@ -15946,7 +15946,7 @@
 - id: REQ-TOOL-149
   area: TOOL
   kind: definition
-  statement: "The suspect styling that dbg_sentinel's extension point carries — what it looks like, which drift suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style, and the value each drift view passes to dbg_sentinel, the field's scale applied first so that the view still shows the drift's magnitude — must be defined in render_contract's presentation-layer section by TASK-M3-05, reviewed by the physics reviewer before merge, and applied on dbg_sentinel's output by the energy-drift and L_z-drift views; dbg_sentinel(x, frag_xy) keeps its signature (R-379)."
+  statement: "The suspect styling that dbg_sentinel's extension point carries — what it looks like, which drift suspect predicate (energy-suspect on relative δE, L_z-suspect on absolute ΔL_z) drives which style, and the value each drift view passes to dbg_sentinel, the field-view preset's compacted value (symlog with the field's floor by default, lin and log through the compaction override, R-381) so that the view still shows the drift's magnitude — must be defined in render_contract's presentation-layer section by TASK-M3-05, reviewed by the physics reviewer before merge, and applied on dbg_sentinel's output by the energy-drift and L_z-drift views; dbg_sentinel(x, frag_xy) keeps its signature (R-379)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: "Presentation layer (hand-written, small, reused by every debug view)"
@@ -15958,15 +15958,40 @@
     section: D. Payload field views — `SimState` scalars (ledger §3.4)
   - file: docs/contracts/principia_render_contract.md
     section: Part 6 — The debug catalogue (first build target)
+  - file: decisions.md
+    section: "R-381 — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
   verify:
     method: review checklist
-    detail: "the section gives the suspect styling's look, the predicate that drives each style, and the value each drift view passes to dbg_sentinel with the field's scale applied first; physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with three samples: an energy-only suspect sample (Euler lighting SUSPECT_ENERGY, its `dLz_max` set below the L_z-suspect threshold), an L_z-only suspect sample (L_z-suspect set through the synthetic payload's `dLz_max`, its energy drift below the energy-suspect threshold), and a non-suspect sample (a symplectic occupant below both suspect predicates' thresholds, REQ-INT-085); it fails if, in either view, the energy-only sample's pixel shows the L_z styling or the L_z-only sample's pixel the energy styling; if a suspect sample's pixel lacks the style its predicate drives, in a view the definition applies that style to; or if the non-suspect sample's pixel, in either view, differs from dbg_sentinel's output on the scaled value"
+    detail: "the section gives the suspect styling's look, the predicate that drives each style, and the value each drift view passes to dbg_sentinel: the preset's compacted value, symlog with the field's floor (eps_E, eps_L) by default, with lin and log as compaction overrides (R-381); physics reviewer approved; `cargo test -p render drift_suspect_styling` renders the energy-drift and L_z-drift views on a synthetic payload with three samples: an energy-only suspect sample (Euler lighting SUSPECT_ENERGY, its `dLz_max` set below the L_z-suspect threshold), an L_z-only suspect sample (L_z-suspect set through the synthetic payload's `dLz_max`, its energy drift below the energy-suspect threshold), and a non-suspect sample (a symplectic occupant below both suspect predicates' thresholds, REQ-INT-085); it fails if, in either view, the energy-only sample's pixel shows the L_z styling or the L_z-only sample's pixel the energy styling; if a suspect sample's pixel lacks the style its predicate drives, in a view the definition applies that style to; or if the non-suspect sample's pixel, in either view, differs from dbg_sentinel's output on the compacted value; `cargo test -p render drift_view_compaction` checks that the drift views default to symlog, accept the lin and log overrides, and that a non-suspect pixel equals dbg_sentinel of the compacted value under each"
   rulings:
   - R-72
   - R-379
+  - R-381
   milestone: M3
   rq:
-  - RQ-206
+  - RQ-208
+- id: REQ-TOOL-150
+  area: TOOL
+  kind: calibration
+  statement: "The default symmetric range [−R, R] of the drift views' (energy_drift, Lz_drift) lin compaction override must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md. No text gives the drifts a finite range (R-381)."
+  source:
+  - file: decisions.md
+    section: "R-381 — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  verify:
+    method: numerical gate
+    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R beside the default symlog view, showing that the drifts the proposal measures are told apart and not clamped flat; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-381
+  milestone: M3
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
