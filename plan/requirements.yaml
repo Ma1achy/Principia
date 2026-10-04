@@ -15257,6 +15257,8 @@
   - R-71
   - R-81
   milestone: M7
+  rq:
+  - RQ-205
 - id: REQ-TOOL-110
   area: TOOL
   kind: definition
@@ -15401,6 +15403,8 @@
   rulings:
   - R-81
   milestone: M7
+  rq:
+  - RQ-205
   note: "The byte value is set with the rest of the header: REQ-TOOL-109 (calibration)."
 - id: REQ-TOOL-119
   area: TOOL
