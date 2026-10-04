@@ -1,0 +1,8 @@
+# A truncated free-group word (dd_simstate_payload §3; REQ-PAY-028). Not transcribed from prin-rs: computed by payload
+# §3's append from `stream`, the crossings in order, symbols a = 0, A = 1, b = 2, B = 3. `abBb` reduces to `ab`; the
+# pushes reach the cap, 76 symbols, and the next push truncates the word to the sentinel 127; the crossings after it are
+# ignored, the `BA` that would have cancelled among them. `word` is the packed vec4<u32>, x y z w: the mixed-radix W in
+# x, y, z and w bits 0–24, length_raw 127 in w bits 25–31. `prefix` is the retained prefix, the 76 symbols stored.
+stream = a b B b A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B a b B A a B
+word = 0xf9839ad5 0xb7e1c913 0x2beed0ad 0xfe4c78b8
+prefix = a b A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b a B A b

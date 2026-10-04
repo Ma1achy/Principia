@@ -37,7 +37,8 @@ pub enum GenError {
     /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
     /// one stored entry, vectors whose component is not a scalar type or whose `k` is below 2, and a `floor` that is
     /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`), and a word buffer `.w`
-    /// whose `length` entry is missing or has no closed greatest value or no sentinel ([`rust::fgw_problem`]).
+    /// whose `length` entry is missing or has no closed greatest value or no sentinel, or whose `payload` entry is
+    /// missing ([`rust::fgw_problem`]).
     Malformed(Vec<String>),
     /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
     Layout(Vec<LayoutError>),

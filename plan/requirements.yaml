@@ -15274,12 +15274,15 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-81 — The embedded record uses the contract names *(closes RQ-32)*"
+  - file: decisions.md
+    section: "R-380 — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*"
   verify:
     method: review checklist
     detail: "the proposal gives the four magic bytes (checked not to collide with PNG signatures or the prototype's) and a version byte above the prototype's"
   rulings:
   - R-71
   - R-81
+  - R-380
   milestone: M7
 - id: REQ-TOOL-110
   area: TOOL
@@ -15419,11 +15422,14 @@
     section: 6. What travels
   - file: decisions.md
     section: "R-81 — The embedded record uses the contract names *(closes RQ-32)*"
+  - file: decisions.md
+    section: "R-380 — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*"
   verify:
     method: unit test
     detail: "the header version of a newly embedded record differs from the prototype layout's version"
   rulings:
   - R-81
+  - R-380
   milestone: M7
   note: "The byte value is set with the rest of the header: REQ-TOOL-109 (calibration)."
 - id: REQ-TOOL-119

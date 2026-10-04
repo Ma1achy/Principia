@@ -6,10 +6,13 @@ publish.workspace = true
 
 [dependencies]
 ledger = { path = "../ledger" }
+# The embedded record's CRC is PNG's CRC-32 (principia_dd_image_embedding.md §2); crc32fast is already in the build.
+crc32fast = "1.5"
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
-# tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). naga, wgpu 30's
-# front end, parses and validates the assembled WGSL.
+# tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). They are
+# integration tests in `tests/`, never unit tests in `src/` (R-176, R-187). naga, wgpu 30's front end, parses and
+# validates the assembled WGSL.
 [dev-dependencies]
 validation = { path = "../validation" }
 naga = { version = "30", features = ["wgsl-in"] }

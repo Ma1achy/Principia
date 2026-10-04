@@ -1,7 +1,7 @@
 //! The Rust emitter (dd_generation_root §1; dd_simstate_payload §1, §2, §6): writes the payload schema version
 //! ([`crate::version::emit`]), then each of [`crate::payload::structs`] as a `#[repr(C)]`, `no_std`-compatible struct
 //! into `crates/kernel/src/payload/generated.rs`, members in order, vec2 groups as `[[f32; 2]; 3]`, then the packed
-//! words' pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors, payload §3's frozen
+//! words' pack/unpack/insert code ([`accessors`]), the word buffer's `fgw_*` accessors ([`fgw`]), payload §3's frozen
 //! continuation table ([`continuation`]) and the stored buffers' binding constants ([`bindings`], R-343). [`check`] holds each member against the ledger entry or word it stores.
 //! [`emit`] also writes the read side, `crates/kernel/src/payload/generated/read_side.rs` ([`super::read::rust`]).
 //!
@@ -599,27 +599,77 @@ pub fn fgw_length(entries: &[Entry]) -> Result<(u32, u32, u32, u32), String> {
     Ok((offset, width, capacity as u32, sentinel as u32))
 }
 
+/// `fgw_w`'s `payload` entry as [`fgw`] needs it, `(offset, width)`: the bits of `.w` holding the mixed-radix `W`'s
+/// high bits, its low 96 bits filling `x`, `y` and `z` (payload §3). Otherwise the line naming `fgw_w.payload`, which
+/// refuses generation, as [`fgw_length`]'s does.
+pub fn fgw_payload(entries: &[Entry]) -> Result<(u32, u32), String> {
+    entries
+        .iter()
+        .find_map(|e| match e.location {
+            Location::Packed {
+                word,
+                offset,
+                width,
+            } if word == FGW_WORD && e.name == "payload" => Some((offset, width)),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            format!(
+                "field `{FGW_WORD}.payload` has no entry: the word buffer's accessors need it (payload §3; \
+                 dd_generation_root §3.8)"
+            )
+        })
+}
+
 /// The line refusing generation if `words` declare the word buffer's `.w`, `fgw_w`, and its `length` entry is not as
-/// [`fgw_length`] needs it.
+/// [`fgw_length`] needs it, or it has no `payload` entry ([`fgw_payload`]).
 pub fn fgw_problem(words: &[Word], entries: &[Entry]) -> Option<String> {
     if words.iter().any(|w| w.name == FGW_WORD) {
-        fgw_length(entries).err()
+        fgw_length(entries)
+            .err()
+            .or_else(|| fgw_payload(entries).err())
     } else {
         None
     }
 }
 
-/// The word buffer's accessors, emitted from `fgw_w`'s `length` entry (payload §3; R-86's names): `FGW_CAPACITY`, its
-/// range's greatest value, `FGW_LENGTH_SENTINEL`, its sentinel, and `fgw_length_raw`, `fgw_truncated` and
-/// `fgw_retained_prefix_length`. Each takes the whole `vec4<u32>` as `[u32; 4]` and reads element 3, `.w`, as §3's
-/// `fgw_length_raw(w: vec4u)` does. The driver refuses a ledger whose entry lacks any of them ([`fgw_problem`]); an
-/// emitter called past it writes a `compile_error!` naming `fgw_w.length`, so the file never builds without them.
+/// The value of [`fgw`]'s `FGW_NO_SYMBOL`: one past the last of payload §3's symbol codes, so no symbol.
+pub fn fgw_no_symbol() -> u32 {
+    crate::payload::symbols().len() as u32
+}
+
+/// The identity permutation of payload §3's symbol codes, packed as `fgw_symbol` composes them: code `x`'s image in
+/// bits `2x .. 2x + 2`.
+pub fn fgw_identity() -> u32 {
+    (0..fgw_no_symbol()).map(|x| x << (2 * x)).sum()
+}
+
+/// The word buffer's accessors, emitted from `fgw_w`'s `length` and `payload` entries (payload §3, §6; R-86's names),
+/// each taking the whole `vec4<u32>` as `[u32; 4]`, as §3's `fgw_length_raw(w: vec4u)` does:
+/// - `FGW_CAPACITY`, `length`'s range's greatest value, and `FGW_LENGTH_SENTINEL`, its sentinel;
+/// - `fgw_length_raw`, `fgw_truncated`, `fgw_reduced_length_valid`, `fgw_reduced_length` and
+///   `fgw_retained_prefix_length`, which read `.w` alone;
+/// - `fgw_symbol(w, k)`, symbol `k` of the retained prefix, 0-based, or `FGW_NO_SYMBOL` past it, decoded sequentially
+///   in O(length) (payload §3: the base-3 tail popped by depth, the residue `d₀`, the continuations replayed), through
+///   `fgw_mixed_radix`, the integer `W`, `fgw_div3`, one pop, and `fgw_after`, one continuation composed;
+/// - `fgw_pack`, the word from `W` and a length, which the kernel's append writes (`kernel::word`); the fragment side
+///   only reads, so the WGSL emitter writes no such setter.
+///
+/// The driver refuses a ledger whose entries lack any of them ([`fgw_problem`]); an emitter called past it writes a
+/// `compile_error!` naming the entry, so the file never builds without them.
 pub fn fgw(entries: &[Entry]) -> String {
     let (offset, width, capacity, sentinel) = match fgw_length(entries) {
         Ok(length) => length,
         Err(why) => return format!("\ncompile_error!({why:?});\n"),
     };
+    let (p_offset, p_width) = match fgw_payload(entries) {
+        Ok(payload) => payload,
+        Err(why) => return format!("\ncompile_error!({why:?});\n"),
+    };
     let bits = format!("bits {offset}–{}", offset + width - 1);
+    let p_bits = format!("bits {p_offset}–{}", p_offset + p_width - 1);
+    let no_symbol = fgw_no_symbol();
+    let identity = fgw_identity();
     format!(
         r#"
 /// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
@@ -641,7 +691,22 @@ pub fn fgw_truncated(w: [u32; 4]) -> bool {{
     fgw_length_raw(w) == FGW_LENGTH_SENTINEL
 }}
 
-/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity (payload §3).
+/// Whether the reduced crossing count is valid: only when the word is not truncated, as later cancellations are
+/// untracked after the cap (payload §3, §5, §6).
+#[inline]
+pub fn fgw_reduced_length_valid(w: [u32; 4]) -> bool {{
+    !fgw_truncated(w)
+}}
+
+/// The reduced crossing count, the net branch-cut crossings; use only when [`fgw_reduced_length_valid`] (payload §5,
+/// §6).
+#[inline]
+pub fn fgw_reduced_length(w: [u32; 4]) -> u32 {{
+    fgw_length_raw(w)
+}}
+
+/// The retained prefix's length: `length_raw`, the sentinel clamped to the capacity; debug and export only, never the
+/// reduced crossing count (payload §3, §6; R-86).
 #[inline]
 pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {{
     if fgw_truncated(w) {{
@@ -649,6 +714,88 @@ pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {{
     }} else {{
         fgw_length_raw(w)
     }}
+}}
+
+/// No symbol: one past the last symbol code. [`fgw_symbol`] returns it past the retained prefix, and the append's
+/// `prev` holds it after a pop to the empty word (payload §3's `INVALID`).
+pub const FGW_NO_SYMBOL: u32 = {no_symbol};
+
+/// The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
+/// {p_bits} (payload §3).
+#[inline]
+pub fn fgw_mixed_radix(w: [u32; 4]) -> [u32; 4] {{
+    [w[0], w[1], w[2], extract(w[3], {p_offset}, {p_width})]
+}}
+
+/// The word holding `W` (four limbs, low first, as [`fgw_mixed_radix`] reads them) and `length`, which the append
+/// writes (payload §3).
+#[inline]
+pub fn fgw_pack(v: [u32; 4], length: u32) -> [u32; 4] {{
+    [
+        v[0],
+        v[1],
+        v[2],
+        insert(insert(0, v[3], {p_offset}, {p_width}), length, {offset}, {width}),
+    ]
+}}
+
+/// One limb of [`fgw_div3`]: `r · 2³² + limb`, `r` the remainder carried from the limb above (< 3), divided by 3 over
+/// its two 16-bit halves, so no step exceeds a u32 (WGSL has no u64). The quotient limb and the remainder.
+#[inline]
+pub fn fgw_div3_limb(limb: u32, r: u32) -> (u32, u32) {{
+    let hi = (r << 16) | (limb >> 16);
+    let lo = ((hi % 3) << 16) | (limb & 0xffff);
+    (((hi / 3) << 16) | (lo / 3), lo % 3)
+}}
+
+/// `v` (four limbs, low first) divided by 3, and the remainder: one pop of the base-3 tail, the remainder its digit
+/// (payload §3). Long division from the high limb down, by constant indices.
+#[inline]
+pub fn fgw_div3(v: [u32; 4]) -> ([u32; 4], u32) {{
+    let (q3, r) = fgw_div3_limb(v[3], 0);
+    let (q2, r) = fgw_div3_limb(v[2], r);
+    let (q1, r) = fgw_div3_limb(v[1], r);
+    let (q0, r) = fgw_div3_limb(v[0], r);
+    ([q0, q1, q2, q3], r)
+}}
+
+/// `perm` composed after digit `e`'s continuation: `x ↦ perm(continuation_symbol(x, e))`, each permutation of the
+/// symbol codes packed with code `x`'s image in bits `2x .. 2x + 2` (payload §3's table, read through
+/// [`continuation_symbol`]).
+#[inline]
+pub fn fgw_after(perm: u32, e: u32) -> u32 {{
+    extract(perm, 2 * continuation_symbol(0, e), 2)
+        | (extract(perm, 2 * continuation_symbol(1, e), 2) << 2)
+        | (extract(perm, 2 * continuation_symbol(2, e), 2) << 4)
+        | (extract(perm, 2 * continuation_symbol(3, e), 2) << 6)
+}}
+
+/// Symbol `k` of the word's retained prefix, 0-based (`d₀` is symbol 0), or [`FGW_NO_SYMBOL`] at or past its length.
+/// Sequential, O(length), never random-access (payload §3): the base-3 tail is popped by depth down to the prefix
+/// ending at symbol `k`, then its `k` digits are popped, last first, composing their continuations ([`fgw_after`]),
+/// and the composition is applied to the residue, `d₀`. A truncated word's retained prefix is its 76 stored symbols,
+/// a debug quantity, not the reduced word (payload §3, §5).
+#[inline]
+pub fn fgw_symbol(w: [u32; 4], k: u32) -> u32 {{
+    let length = fgw_retained_prefix_length(w);
+    if k >= length {{
+        return FGW_NO_SYMBOL;
+    }}
+    let mut v = fgw_mixed_radix(w);
+    let mut i = k + 1;
+    while i < length {{
+        v = fgw_div3(v).0;
+        i += 1;
+    }}
+    let mut perm = {identity:#x};
+    let mut j = 0;
+    while j < k {{
+        let (q, e) = fgw_div3(v);
+        v = q;
+        perm = fgw_after(perm, e);
+        j += 1;
+    }}
+    extract(perm, 2 * (v[0] & 3), 2)
 }}
 "#
     )
