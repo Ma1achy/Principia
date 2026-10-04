@@ -796,6 +796,35 @@ fn length_source() -> Occupant {
     )
 }
 
+/// A source passing the word to `fgw_length_raw`, which reads `.w`, in a block, both arms of an `if`, a loop and a
+/// switch: each call is followed into, wherever it is.
+const NESTED_LENGTHS: &str = r"
+fn source(ctx: Ctx) -> Field {
+    var n = 0.0;
+    { n += f32(fgw_length_raw(ctx.sample.word)); }
+    if n > 0.0 { n += f32(fgw_length_raw(ctx.sample.word)); } else { n -= f32(fgw_length_raw(ctx.sample.word)); }
+    loop { n += f32(fgw_length_raw(ctx.sample.word)); break; }
+    switch 0 { default { n += f32(fgw_length_raw(ctx.sample.word)); } }
+    return Field(n, 0.0, 0.0, 0.0);
+}
+";
+
+/// A source reading the word's `.x` and the whole word besides: the whole word.
+const WORD_AND_WHOLE: &str = r"
+fn source(ctx: Ctx) -> Field {
+    let w = ctx.sample.word;
+    return Field(f32(w.x), bitcast<vec4<f32>>(w).y, 0.0, 0.0);
+}
+";
+
+/// A source reading `d_min` of a copy of the sample, through a pointer.
+const SAMPLE_COPIED: &str = r"
+fn source(ctx: Ctx) -> Field {
+    var s = ctx.sample;
+    return Field(s.d_min, 0.0, 0.0, 0.0);
+}
+";
+
 /// Each stain's field set, by its IR, is `want`: the live nodes' reads only.
 fn check_field_sets(cases: &[(StainGraph, &[&str])]) {
     for (g, want) in cases {
@@ -814,11 +843,15 @@ fn field_set_cases() -> Vec<(StainGraph, &'static [&'static str])> {
     let c = colour_node(&mut dead);
     dead.connect(s, c, 0).expect("into a colour nothing reads");
     let (reads_three, ..) = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
+    let source = |text: &str| graph(custom(text), SHOW_INPUT).0;
     vec![
         (d_min, &["d_min"]),
         (length, &["word.w"]),
         (dead, &["d_min"]),
         (reads_three, &["ensemble_spread", "ftle", "word"]),
+        (source(NESTED_LENGTHS), &["word.w"]),
+        (source(WORD_AND_WHOLE), &["word"]),
+        (source(SAMPLE_COPIED), &["d_min"]),
     ]
 }
 
@@ -854,6 +887,7 @@ fn assemble_field_set_a_stain_missing_a_field_it_reads_is_refused() {
     check_unfilled(&["d_min"]);
     check_unfilled(&[]);
     check_unfilled(&["word"]);
+    check_unfilled(&["word.x", "word.y", "word.z", "word.w"]);
 }
 
 negative_control!(
@@ -1298,6 +1332,11 @@ fn slot_cases() -> Vec<(NodeKind, &'static str, &'static str)> {
             "defines `fn colour`",
         ),
         (NodeKind::Colour, "fn colour", "is `fn() -> `"),
+        (
+            NodeKind::Colour,
+            "fn colour() -> vec3<f32> { return vec3<f32>(1.0); }",
+            "is `fn() -> vec3<f32>`",
+        ),
     ]
 }
 
@@ -1362,6 +1401,8 @@ fn occupant_cases() -> Vec<(&'static str, &'static str)> {
             "does not name `sample_read`",
         ),
         ("/* never closed", "unclosed"),
+        ("alias A = f32", "expected"),
+        ("const N = 1", "expected"),
         ("fn", "with no name"),
         (
             "fn colour2(ctx: Ctx) -> vec3<f32> { return vec3<f32>(oops); }",
@@ -1440,6 +1481,128 @@ negative_control!(
     "a name the text never declares is not prefixed",
     expected = "is not in the source",
     check_own_names(OWN_NAMES, &["n1_ctx"])
+);
+
+/// A colour whose names are its own, written to reach each case of the renaming: a nested block comment holding the
+/// words a node may not write; names beginning `_` and named as attributes are; a local `var` and `const`; a local
+/// shadowing the node's constant; a struct member of a node's name; hex, exponent and suffixed numbers.
+const RENAMED: &str = r"/* a /* nested */ var x: f32; @group(0) fn K */
+const _h: f32 = 0.5;
+const group: f32 = 1.0;
+const K: f32 = 0.25;
+struct Pair { colour: f32, K: f32 }
+fn colour(ctx: Ctx) -> vec3<f32> {
+    var acc = 0x1e-K;
+    const q: f32 = 2.0;
+    let K: f32 = 1e5f;
+    let p = Pair(_h, group);
+    return vec3<f32>(acc + q * K + p.K, 1.5e-3, 0.0);
+}
+";
+
+/// [`RENAMED`] as node 1 of a stain assembles to exactly this, one blank line before the next node's comment.
+const RENAMED_AS_NODE_1: &str = r"/* a /* nested */ var x: f32; @group(0) fn K */
+const n1__h: f32 = 0.5;
+const n1_group: f32 = 1.0;
+const n1_K: f32 = 0.25;
+struct n1_Pair { colour: f32, K: f32 }
+fn n1_colour(ctx: Ctx) -> vec3<f32> {
+    var acc = 0x1e-n1_K;
+    const q: f32 = 2.0;
+    let n1_K: f32 = 1e5f;
+    let p = n1_Pair(n1__h, n1_group);
+    return vec3<f32>(acc + q * n1_K + p.K, 1.5e-3, 0.0);
+}
+
+// Node 2:";
+
+/// The colour `text`, as node 1, assembles to `want`.
+fn check_renamed(text: &str, want: &str) {
+    let (g, ..) = graph(Occupant::Field("d_min".into()), text);
+    let source = assembled(&g, Tier::FULL);
+    assert!(
+        source.contains(want),
+        "the node does not assemble to\n{want}\nin\n{source}"
+    );
+}
+
+#[test]
+fn slot_signature_a_nodes_text_is_renamed_exactly() {
+    check_renamed(RENAMED, RENAMED_AS_NODE_1);
+    // A text with no closing newline is given one.
+    check_renamed(SHOW_INPUT, "vec3<f32>(ctx.inputs[0].x); }\n\n// Node 2:");
+}
+
+negative_control!(
+    slot_signature_a_nodes_text_is_renamed_exactly,
+    "the local constant `q` is not the node's",
+    expected = "does not assemble to",
+    check_renamed(RENAMED, &RENAMED_AS_NODE_1.replace("const q", "const n1_q"))
+);
+
+// ── Stain construction, read back ─────────────────────────────────────────────────────────────────────────────────
+
+/// Each node of `g`'s stain holds its occupant's declarations.
+fn check_stain_declarations(g: &StainGraph) {
+    let s = stain(g);
+    for (i, n) in s.nodes().iter().enumerate() {
+        let want = assemble::declaration(n.kind, &n.occupant).expect("a declaration");
+        assert_eq!(s.declaration(i), &want, "node {i}'s declarations");
+    }
+}
+
+/// A colour with a uniform and a declared input.
+const DECLARING: &str = "// @uniform gain: f32 = 1.0 [0.0, 2.0]\n// @input a [0.0, 1.0]\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms.gain); }";
+
+#[test]
+fn declaration_a_stain_holds_each_nodes_declarations() {
+    check_stain_declarations(&graph(Occupant::Field("d_min".into()), DECLARING).0);
+}
+
+negative_control!(
+    declaration_a_stain_holds_each_nodes_declarations,
+    "a colour's uniform is in its declarations",
+    expected = "node 1's declarations",
+    {
+        let (g, ..) = graph(Occupant::Field("d_min".into()), DECLARING);
+        let s = stain(&g);
+        assert_eq!(
+            s.declaration(1),
+            &Declaration::default(),
+            "node 1's declarations"
+        );
+    }
+);
+
+/// A post whose colour input is absent reads the combiner (here the flat grey, neither slot filled), and is applied:
+/// an absent colour input is no identity.
+fn check_post_without_input(inputs: &[Option<usize>]) {
+    let s = Stain::new(vec![
+        node(Kind::Combiner, pass_through(), &[None, None]),
+        node(
+            Kind::Post,
+            assemble::Occupant::Custom(PASS_POST.into()),
+            inputs,
+        ),
+        node(Kind::Out, assemble::Occupant::None, &[Some(1)]),
+    ])
+    .expect("a stain");
+    let source = assemble::assemble(&s, Tier::FULL)
+        .expect("assembled")
+        .source;
+    assert_eq!(shade_calls(&source), ["n1_post"], "the post is not applied");
+}
+
+#[test]
+fn backbone_a_post_with_no_colour_input_reads_the_combiner() {
+    check_post_without_input(&[None]);
+}
+
+negative_control!(
+    backbone_a_post_with_no_colour_input_reads_the_combiner,
+    "a post of no inputs at all is malformed",
+    expected = "a stain",
+    check_post_without_input(&[])
 );
 
 // ── The canonical form (REQ-RENDER-075) ───────────────────────────────────────────────────────────────────────────

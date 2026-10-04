@@ -341,12 +341,12 @@ fn numbers(list: &str) -> Result<Vec<f64>, String> {
     list.split(',').map(number).collect()
 }
 
-/// A WGSL decimal literal, unsuffixed, finite.
+/// A WGSL decimal literal, unsuffixed, finite: Rust's `f64` syntax, whose only words, `inf`, `infinity` and `nan`, are
+/// not finite.
 fn number(s: &str) -> Result<f64, String> {
     let s = s.trim();
-    let plain = !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || "+-.eE".contains(c));
     match s.parse::<f64>() {
-        Ok(v) if plain && v.is_finite() => Ok(v),
+        Ok(v) if v.is_finite() => Ok(v),
         _ => Err(format!("`{s}` is not a number")),
     }
 }
@@ -922,7 +922,7 @@ enum Tok {
 }
 
 /// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
-/// numbers (with their suffixes and exponents), white space and single punctuation characters.
+/// numbers (a digit and the letters and digits after it), white space and single punctuation characters.
 fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
     let b = s.as_bytes();
     let mut out = Vec::new();
@@ -963,15 +963,9 @@ fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
             }
             Tok::Ident
         } else if c.is_ascii_digit() {
-            let hex = s[i..].starts_with("0x") || s[i..].starts_with("0X");
-            while i < b.len() {
-                let d = b[i];
-                let sign = (d == b'+' || d == b'-')
-                    && matches!(b[i - 1], b'p' | b'P' | b'e' | b'E')
-                    && (!hex || matches!(b[i - 1], b'p' | b'P'));
-                if !(d.is_ascii_alphanumeric() || d == b'.' || d == b'_' || sign) {
-                    break;
-                }
+            // A number's letters — its suffix, hex digits and exponent letter — are its own, never a name; a `.`, an
+            // exponent's sign and the digits after them lex as punctuation and numbers, which nothing renames.
+            while i < b.len() && b[i].is_ascii_alphanumeric() {
                 i += 1;
             }
             Tok::Number
@@ -997,30 +991,29 @@ fn prefixed(text: &str, prefix: &str, kind: Kind, extra: &[&str]) -> Result<Stri
     let refuse = |why: String| Err(AssembleError::Occupant(why));
     let mut declared: Vec<&str> = extra.to_vec();
     let mut members = BTreeSet::new();
-    let (mut depth, mut struct_at) = (0usize, None::<usize>);
-    let mut pending_struct = false;
+    // The brace depth, and whether the braces open are a struct's body, which holds no braces of its own.
+    let (mut depth, mut in_struct, mut pending_struct) = (0usize, false, false);
     for k in 0..sig.len() {
         let word = at(k);
+        let prev = if k > 0 { at(k - 1) } else { "" };
         match word {
             "{" => {
                 depth += 1;
-                if pending_struct && depth == 1 {
-                    struct_at = Some(depth);
-                    pending_struct = false;
-                }
+                in_struct = pending_struct;
+                pending_struct = false;
             }
             "}" => {
-                if struct_at == Some(depth) {
-                    struct_at = None;
-                }
+                in_struct = false;
                 depth = depth.saturating_sub(1);
             }
-            ":" if struct_at == Some(depth) && k > 0 && toks[sig[k - 1]].0 == Tok::Ident => {
+            ":" if in_struct => {
                 members.insert(sig[k - 1]);
             }
             "fn" | "const" | "struct" | "alias" if depth == 0 => {
-                let name =
-                    (k + 1 < sig.len() && toks[sig[k + 1]].0 == Tok::Ident).then(|| at(k + 1));
+                let name = sig
+                    .get(k + 1)
+                    .filter(|&&t| toks[t].0 == Tok::Ident)
+                    .map(|&t| &text[toks[t].1..toks[t].2]);
                 let Some(name) = name else {
                     return refuse(format!("`{word}` with no name"));
                 };
@@ -1037,9 +1030,7 @@ fn prefixed(text: &str, prefix: &str, kind: Kind, extra: &[&str]) -> Result<Stri
                     "a node declares no module-scope `{word}`: its uniforms come from its uniformSchema"
                 ));
             }
-            "fragment" | "vertex" | "compute" | "group" | "binding"
-                if depth == 0 && k > 0 && at(k - 1) == "@" =>
-            {
+            "fragment" | "vertex" | "compute" | "group" | "binding" if prev == "@" => {
                 return refuse(format!(
                     "a node declares no `@{word}`: stages and bindings are the assembler's"
                 ));
@@ -1053,7 +1044,7 @@ fn prefixed(text: &str, prefix: &str, kind: Kind, extra: &[&str]) -> Result<Stri
         }
     }
     if let Some(slot) = kind.slot() {
-        let Some(k) = (0..sig.len()).find(|&k| at(k) == slot && k > 0 && at(k - 1) == "fn") else {
+        let Some(k) = (1..sig.len()).find(|&k| at(k) == slot && at(k - 1) == "fn") else {
             return refuse(format!("a {} occupant defines `fn {slot}`", kind.name()));
         };
         let words: Vec<&str> = (k + 1..sig.len())
@@ -1121,7 +1112,8 @@ fn header(words: &[&str]) -> String {
 fn compile(source: &str) -> Result<(Module, ModuleInfo), AssembleError> {
     let module = naga::front::wgsl::parse_str(source)
         .map_err(|e| AssembleError::Compile(e.emit_to_string(source)))?;
-    let capabilities = Capabilities::default() | Capabilities::SHADER_FLOAT16_IN_FLOAT32;
+    let mut capabilities = Capabilities::default();
+    capabilities.insert(Capabilities::SHADER_FLOAT16_IN_FLOAT32);
     let info = Validator::new(ValidationFlags::all(), capabilities)
         .validate(&module)
         .map_err(|e| AssembleError::Compile(e.emit_to_string(source)))?;

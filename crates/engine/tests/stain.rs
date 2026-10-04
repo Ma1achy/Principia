@@ -133,11 +133,11 @@ fn refusals() -> Vec<(&'static str, Box<Edit>)> {
             Box::new(|g: &mut StainGraph| g.add(NodeKind::Out, Occupant::None).map(|_| ())),
         ),
         (
-            "fixed singleton",
+            "never deleted",
             Box::new(|g: &mut StainGraph| g.remove(StainGraph::OUT)),
         ),
         (
-            "fixed singleton",
+            "never deleted",
             Box::new(|g: &mut StainGraph| g.remove(StainGraph::COMBINER)),
         ),
         (
@@ -282,6 +282,19 @@ fn stain_graph_edits_keep_the_graph() {
     g.connect(NodeId(2), NodeId(3), 1)
         .expect("the second input");
     g.set_param(NodeId(3), "k", vec![2.0]).expect("a param");
+    assert!(
+        g.set_param(NodeId(3), "j", vec![2.0]).is_err(),
+        "a param the schema does not declare was taken"
+    );
+    // A new occupant keeps the params its schema still declares.
+    let kept = format!("// @input a\n// @input b\n// @uniform k: f32 = 0.0\n{SHOW_INPUT}");
+    g.set_occupant(NodeId(3), custom(&kept))
+        .expect("the same schema");
+    assert_eq!(
+        g.node(NodeId(3)).and_then(|n| n.params.get("k").cloned()),
+        Some(vec![2.0]),
+        "a param of the schema went"
+    );
     assert_eq!(into(&g, NodeId(3)), [(t, 0), (NodeId(2), 1)]);
     g.set_occupant(NodeId(3), custom(SHOW_INPUT))
         .expect("one input");
@@ -294,11 +307,13 @@ fn stain_graph_edits_keep_the_graph() {
         g.node(NodeId(3)).is_some_and(|n| n.params.is_empty()),
         "a lost param stayed"
     );
+    let wires = g.wires().len();
     g.remove(t).expect("removed");
     assert!(
         into(&g, NodeId(3)).is_empty(),
         "a removed node's wire stayed"
     );
+    assert_eq!(g.wires().len(), wires - 1, "another node's wire went");
     g.connect(NodeId(2), NodeId(3), 0).expect("rewired");
     g.disconnect(NodeId(3), 0).expect("disconnected");
     assert!(into(&g, NodeId(3)).is_empty(), "the wire stayed");
