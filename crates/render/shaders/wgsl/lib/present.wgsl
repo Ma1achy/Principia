@@ -21,21 +21,17 @@ const DBG_OKABE_ITO: array<vec3<u32>, 8> = array<vec3<u32>, 8>(
 // golden-angle hue of class i is frac(i · φ_g) turns (dd_colouring §3.7), computed exactly as i · this, wrapping.
 const DBG_GOLDEN_FIXED: u32 = 2654435769u;
 
-// The golden-angle palette's OKLCH lightness and chroma (R-72): the hue wheel's, in gamut at every hue.
-const DBG_GOLDEN_L: f32 = 0.75;
-const DBG_GOLDEN_C: f32 = 0.12;
-
 // An 8-bit sRGB colour, decoded to linear RGB.
 fn dbg_srgb8(c: vec3<u32>) -> vec3<f32> { return srgb_to_linear(vec3<f32>(c) / 255.0); }
 
 // Categorical: class `i` of `n`. With n ≤ 8, the Okabe–Ito palette, cycling (i mod 8); with n > 8, the golden angle
-// for every class, OKLCH (0.75, 0.12) at hue frac(i · φ_g) turns, so adjacent classes sit ≈ 137.5° apart
-// (dd_colouring §3.7).
+// for every class, the prelude's `hue_wheel` at frac(i · φ_g) turns, so adjacent classes sit ≈ 137.5° apart
+// (dd_colouring §3.7). The wheel's OKLCH lightness and chroma (R-72) are the ledger's, in gamut at every hue.
 fn dbg_cat(i: u32, n: u32) -> vec3<f32> {
     if (n <= 8u) {
         return dbg_srgb8(DBG_OKABE_ITO[i % 8u]);
     }
-    return oklch_to_linear(DBG_GOLDEN_L, DBG_GOLDEN_C, f32(i * DBG_GOLDEN_FIXED) / 4294967296.0);
+    return hue_wheel(f32(i * DBG_GOLDEN_FIXED) / 4294967296.0);
 }
 
 // Scalar: `x` on the fixed range [lo, hi], clamped, on the viridis ramp.

@@ -833,7 +833,7 @@ fn check_helpers_gpu(gpu: &GpuHarness, text: Text) {
         cases.push(c);
         want.push((what, w, b));
     };
-    let (gl, gc) = present::GOLDEN_LC;
+    let (gl, gc) = prelude::hue_wheel_lc();
     for (i, n) in [
         (0u32, 6u32),
         (5, 6),

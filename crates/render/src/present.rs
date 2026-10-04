@@ -172,21 +172,18 @@ pub const OKABE_ITO: [[u8; 3]; 8] = [
     [204, 121, 167],
 ];
 
-/// The golden-angle palette's OKLCH lightness and chroma.
-pub const GOLDEN_LC: (f64, f64) = (0.75, 0.12);
-
 /// The golden-angle hue of class `i`, in turns: `frac(i · φ_g)`, `φ_g = (√5 − 1)/2` (dd_colouring §3.7).
 pub fn golden_turns(i: u32) -> f64 {
     let phi = (5f64.sqrt() - 1.0) / 2.0;
     (f64::from(i) * phi).fract()
 }
 
-/// `dbg_cat(i, n)`: Okabe–Ito, cycling, for `n ≤ 8`; the golden angle for every class when `n > 8`.
+/// `dbg_cat(i, n)`: Okabe–Ito, cycling, for `n ≤ 8`; the golden angle on `hue_wheel` for every class when `n > 8`.
 pub fn dbg_cat(i: u32, n: u32) -> Rgb {
     if n <= 8 {
         srgb8(OKABE_ITO[(i % 8) as usize])
     } else {
-        oklch_to_linear(GOLDEN_LC.0, GOLDEN_LC.1, golden_turns(i))
+        hue_wheel(golden_turns(i))
     }
 }
 
