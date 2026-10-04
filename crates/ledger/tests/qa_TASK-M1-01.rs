@@ -24,9 +24,15 @@
 //!   `(0, 0, 0, 0xFE000000)`; those values are IEEE 754's default quiet NaN and `length_raw` 127.
 //! - REQ-RENDER-019: `tm_*_fraction(w, 0) == 0`; `(65535, 65535)` → 1.0 exactly.
 //!
-//! GPU tolerances: WGSL's f32 `+ − ×` are correctly rounded and its `/`, `sqrt` and `log` are within 3 ULP (WGSL
-//! "Floating point accuracy"); the bound used is the first-order forward error `ops · 3u · Σ|terms|`, `u = 2⁻²⁴`,
-//! `ops` the rounded operations the formula takes, counted at each use. Each test has a registered negative control
+//! GPU tolerances (WGSL § "Floating Point Accuracy"): f32 `+ − ×` are correctly rounded (within `u`, `u = 2⁻²⁴`,
+//! relative); `x / y` is within 2.5 ULP; `sqrt` is inherited from `1 / inverseSqrt` (2 ULP, then 2.5 ULP), so it is
+//! counted as two operations; `log` is within an absolute `2⁻²¹` (`8u`) on [0.5, 2] and 3 ULP outside it. One ULP of a
+//! value `y` reaches `2u·|y|`, so 2.5 ULP reaches `5u` and 3 ULP `6u` relative: the bound used is the first-order
+//! forward error `ops · 6u · mag`, `ops` an upper count, at each use, of the rounded operations on any one term's path
+//! to the result (`sqrt` as two; a sum of `k` terms, in any order, as `k − 1`), and `mag` the sum of the terms'
+//! magnitudes. The counts used: `ftle` 40 (path 19), `diffusion` 12 (6), `energy_drift` 30 (13), `Lz_drift` 8 (5), the
+//! time fractions 1 (one division of exact operands). `log`'s absolute `8u` on [0.5, 2] is covered by `ftle`'s
+//! magnitude carrying `1 / (n·dt)` for it ([`ftle_ref`]): `8u ≤ 2 · 6u`. Each test has a registered negative control
 //! (R-176): the same check on generated WGSL with one rule broken.
 
 use std::collections::BTreeSet;
@@ -966,10 +972,11 @@ fn broken(tier: Tier, from: &str, to: &str) -> String {
 
 const U: f64 = 1.0 / 16_777_216.0; // 2⁻²⁴
 
-/// `got` (f32 bits) within `ops · 3u · mag` of `want`.
+/// `got` (f32 bits) within `ops · 6u · mag` of `want`: each operation at most 3 ULP, which is `6u` relative, the
+/// loosest of WGSL's per-operation figures (module header); `sqrt` counts as two.
 fn near(got: u32, want: f64, mag: f64, ops: u32) -> bool {
     let g = f64::from(f32::from_bits(got));
-    g.is_finite() && (g - want).abs() <= f64::from(ops) * 3.0 * U * mag
+    g.is_finite() && (g - want).abs() <= f64::from(ops) * 6.0 * U * mag
 }
 
 fn delta(s: &Sample) -> f64 {
