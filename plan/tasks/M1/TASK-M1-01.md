@@ -36,10 +36,15 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
 - `decisions.md` § "R-378 — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*"
+- `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
+- `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)"
+- `docs/design/principia_dd_integrator.md` § "3.5 Invariant monitoring (per `STEP`, post-projection)"
+- `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
 
 ## Deliverables
 - `crates/ledger`: derived-accessor emission for both targets — `ftle`, `ftle_valid`, `diffusion_slope`, `diffusion_slope_valid`, `total_substeps_log2`, `tm_t_end_fraction`, `tm_t_dmin_fraction`, `orbit_count`, `retrograde`, the `sd_is_resolved_outcome/_running/_failed/_finished` predicates — each with exactly the payload §6 name.
 - `crates/ledger`: the unified read-side `SimState` (WGSL struct + Rust struct) with plain members; the unpack from `SimStateFTLE` and from `SimStateBase` into it; tier-absent members filled with the canonical quiet-NaN bits.
+- `crates/ledger`: the current drifts on both targets, `energy_drift` = `H(r,p) − E_0` and `Lz_drift` = `L_z(r,p) − Lz_0` (payload §5; generation root §3.8, R-246), `H` and `L_z` as integrator dd §3.5 gives them (decoder dd §3.6's `K₀ + V₀`, `G = 1`), the masses `m0 m1 m2` the sample's `ICDescriptor`'s and an argument of each read (applied per R-369: RQ-203 option 2).
 - The read side loads per member (R-378): the generated WGSL loads only the stored members each read-side field needs (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load — no read-side `SimState` built from a whole `SimStateFTLE` value, and the M0 layer's whole-struct `sample_state(i)` replaced; a word field loads only the components of `word_buffer[i]` it needs; `cargo xtask lint wgsl`'s read rule (REQ-RENDER-001) checks the per-member loads (applied per R-369).
 - Generated output checked in under the generated-file guard (M0), e.g. `crates/ledger/generated/read_side.{rs,wgsl}`.
 - Tests: `crates/ledger/tests/derived.rs` (unit + proptest), including a ledger scan asserting none of the removed fields exist.
@@ -54,6 +59,7 @@ The generation root (M0) emits the stored layout and its pack/unpack. This task 
 - `cargo test -p ledger ftle_valid_truth_table` — full truth table over tier / state / n / completed renorms (REQ-PAY-032).
 - `cargo test -p ledger tier_absent_nan_bits` — at a no-FTLE variant `ftle` bitcasts to the canonical quiet-NaN pattern; at E = 0 `ensemble_spread` does likewise; an unbound word reads the sentinel word (REQ-RENDER-013).
 - `cargo test -p ledger time_fraction` — `tm_t_end_fraction(w, 0) == 0`; (65535, 65535) → 1.0 exactly (REQ-RENDER-019).
+- `cargo test -p ledger current_drift` — `energy_drift` and `Lz_drift` equal hand-computed configurations and an f64 reference at every tier, and a stain reading one loads only `r`, `p` and its own reference (REQ-PAY-031; applied per R-369: RQ-203 option 2).
 - Review checklist (physics, R-378): from the compiled shader output of the generated WGSL (for example naga's MSL, SPIR-V or HLSL, as the toolchain allows; the method is this task's), a stain reading one field loads only that field's words; the PR shows the output and how it was produced (REQ-RENDER-001).
 - Definition: the canonical quiet-NaN bit pattern and the unbound-word sentinel written into lowering_contract Part 3a and approved by the physics reviewer (REQ-RENDER-077).
 
