@@ -1,3 +1,5 @@
 //! Fragment assembly, the compositor and the screen (systems_architecture §7.1).
 //!
-//! Stub (TASK-M0-01): no behaviour yet.
+//! The image embedding's record format lives here too (`embed`): the plan layout names no export crate.
+
+pub mod embed;
