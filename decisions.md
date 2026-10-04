@@ -5616,5 +5616,11 @@ Changes REQ-RENDER-001: its read path is the per-member loads.
 stored latches (payload §5)" stands, and is what the styling reads: no suspect bit is stored, and none reaches
 `dbg_sentinel`. REQ-TOOL-122's list of the presentation helpers' renderings, TASK-M1-03's, is unchanged; the suspect
 styling is REQ-TOOL-149's.
+It also meets a conflict it does not settle (found by PR #137's physics review, 5406355539): the drift views must scale
+the drift before `dbg_sentinel`, whose `0.5 + 0.5·x/(1 + |x|)` shows a raw drift ≪ 1 as one flat colour, and the
+corpus gives that scale two ways, "diverging, not sequential-log" (debug_tooling_plan §D, generation-root §3.4) and
+"log with floor" (render contract Part 6). Filed as RQ-206 against TASK-M3-05; TASK-M3-05's styling definition states
+the value each drift view passes to `dbg_sentinel`, the field's scale applied first (REQ-TOOL-149), once RQ-206 is
+ruled. What R-379 decides is unchanged.
 
 Adds REQ-TOOL-149; changes REQ-TOOL-009 (its RQ-204 removed).
