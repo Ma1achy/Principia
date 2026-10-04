@@ -424,6 +424,33 @@ negative_control!(
     }
 );
 
+/// A 660 B payload gives a 680 B record and RGB side 43, the first side the 128-bit header does not wrap at
+/// (`⌈128 / 3⌉ = 43`), so the header is read once there and the record must be found once, not twice. A 43² image
+/// holds that one tile, flush with its edges, and no alpha tile (the alpha side is 74).
+#[test]
+fn embed_searches_first_unwrapped_side_finds_the_record_once() {
+    let (image, payload) = embedded(43, 43, 660, 16);
+    check_recovered(
+        &read(&image),
+        &payload,
+        how_of(Dihedral::Identity, 1, 0, (1, 1), Some((0, 0))),
+    );
+}
+
+negative_control!(
+    embed_searches_first_unwrapped_side_finds_the_record_once,
+    "the record counted twice, 2 of 1, is not the report",
+    expected = "the report does not say how it was recovered",
+    {
+        let (image, payload) = embedded(43, 43, 660, 16);
+        check_recovered(
+            &read(&image),
+            &payload,
+            how_of(Dihedral::Identity, 1, 0, (2, 1), Some((0, 0))),
+        )
+    }
+);
+
 /// With the RGB plane cleared, the offset reported is the alpha grid's: a 37 px crop of a 512² image moves the alpha
 /// grid (side 57) to `57 − 37 = 20`, and the cropped 475² view holds `⌊(475 − 20) / 57⌋² = 49` of its tiles.
 #[test]

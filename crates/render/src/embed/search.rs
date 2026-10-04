@@ -168,6 +168,14 @@ fn prefix(plane: Plane, smallest: u32) -> Vec<(u8, u8)> {
         prefix[at].0 |= 1 << shift;
         prefix[at].1 |= bit << shift;
     }
+    debug_assert_eq!(
+        prefix
+            .iter()
+            .map(|&(mask, _)| mask.count_ones())
+            .sum::<u32>(),
+        (smallest * plane.bits_per_pixel()).min(8 * MAGIC.len() as u32),
+        "the prefix is not the magic's bits in the smallest tile's top row"
+    );
     prefix
 }
 
@@ -182,7 +190,7 @@ fn lows(image: &Image) -> Vec<u8> {
             pixel
                 .iter()
                 .enumerate()
-                .fold(0, |lows, (k, channel)| lows | (channel & 1) << k)
+                .fold(0, |lows, (k, channel)| lows + ((channel & 1) << k))
         })
         .collect()
 }
