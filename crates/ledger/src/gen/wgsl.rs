@@ -5,7 +5,8 @@
 //! accessors with payload §6's names (R-86), and payload §3's frozen continuation table as shader constants. [`emit`]
 //! also writes the read side, `crates/render/frag/generated/read_side.wgsl` ([`super::read::wgsl`]), which follows
 //! this layer at assembly: the read-side `SimState`, its derived accessors and `sample_read`, which fills it from the
-//! buffers (lowering Part 3a). [`layer`] writes the layer at any tier, for the assembler and the tests; the checked-in
+//! buffers (lowering Part 3a), and the shared prelude, `crates/render/shaders/wgsl/lib/prelude.wgsl`
+//! ([`super::prelude`]). [`layer`] writes the layer at any tier, for the assembler and the tests; the checked-in
 //! file is the full tier's.
 //!
 //! The WGSL traps (render contract Part 5; payload §6) hold by construction: every `extractBits` takes a u32, no f64
@@ -49,6 +50,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
             contents: layer(words, entries, Tier::FULL),
         },
         super::read::wgsl(words, entries),
+        super::prelude::emit(),
     ]
 }
 
