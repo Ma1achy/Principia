@@ -40,6 +40,67 @@ RECORD = header(16B) ‖ payload ‖ crc32(payload)
 header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2) ‖ crc32(header)(4)
 ```
 
+**The record, field by field (R-72, REQ-TOOL-110).** One format description generates both the writer and the reader
+(`crates/render/src/embed/record.rs`), so the two cannot disagree on a field.
+
+| bytes | field | definition |
+|---|---|---|
+| 0–3 | `magic` | four fixed bytes, proposed below (R-71) |
+| 4 | `version` | the record layout's version; R-81's contract-name layout bumps it above the prototype's (§6) |
+| 5 | `flags` | the flag bits, below |
+| 6–9 | `payload_len` | the payload's length in bytes, u32 |
+| 10–11 | `n_records` | how many records the writer placed in the image, u16, below |
+| 12–15 | `crc32(header)` | the CRC of bytes 0–11 |
+| 16 to 16 + `payload_len` − 1 | payload | below |
+| the next 4 | `crc32(payload)` | the CRC of the payload bytes alone |
+
+- **Byte order: big-endian.** Every multi-byte integer (`payload_len`, `n_records`, both CRCs) is written most
+  significant byte first, the byte order PNG itself uses for its lengths and CRCs.
+- **The CRC is PNG's:** CRC-32 with the reflected polynomial `0xEDB88320`, initial value `0xFFFFFFFF` and final XOR
+  `0xFFFFFFFF` (the CRC of the ASCII bytes `123456789` is `0xCBF43926`).
+- **Flag bits** (bit 0 is the least significant):
+  - bits 0–1, the variant the writer used (§5): `0` tiled, `1` redundant, `2` hybrid; `3` is reserved;
+  - bit 2, `source`: the payload carries the source of at least one ejected WGSL node (§6), so a reader knows before
+    it inflates the payload that the image carries code that overrides a built-in colouring;
+  - bits 3–7 are reserved and written `0`.
+
+  A record whose variant is `3` or whose reserved bits are not all `0` is discarded whole: a later layout that needs a
+  new flag bumps `version` instead.
+- **`n_records`** counts the records the writer placed, over both planes: the RGB plane's tiles, then the alpha
+  plane's. The writer places at most 65,535 (the field's largest value). The reader reports the records it recovered
+  against it (§4's `tiles: 9/9`).
+- **A record is trusted or discarded whole.** The reader discards a record, and keeps nothing from it, when it is
+  shorter than its header, when its `magic` differs, when `crc32(header)` fails, when its flags are not a defined
+  combination, when it is shorter than its `payload_len` says, or when `crc32(payload)` fails. Bytes after the
+  payload's CRC are not part of the record. A record's `version` is read, not checked: an intact record of another
+  layout is reported as such, never as corrupt.
+- **Payload serialisation.** The payload is one JSON object (§6's fields) in the canonical serialisation, JCS
+  (RFC 8785; `principia_gui_state_contract.md` §2, R-309, R-318), UTF-8, compressed with raw DEFLATE (RFC 1951, no
+  zlib or gzip wrapper: the record's own CRC covers it). `payload_len` is the compressed length. JSON compressed with
+  DEFLATE is the encoding §7 measured (596 B of JSON to 382 B), so the payload is §7's size class: a config-only
+  record is 16 + 382 + 4 = 402 B.
+- **Bit order.** The record is read as a bit stream, each byte most significant bit first: bit `i` of the record is
+  bit `7 − (i mod 8)` of byte `⌊i / 8⌋`.
+- **Within a tile**, the bit stream fills the tile's pixels row by row from the tile's top-left pixel (the top row
+  first, the top row being the first row PNG stores, each row left to right), and within a pixel its channels in
+  order. In the RGB plane a pixel holds three bits, in R, G, B order, so bit `i` goes to the low bit of channel
+  `i mod 3` of the tile's pixel `p = ⌊i / 3⌋`, at column `p mod side`, row `⌊p / side⌋`. In the alpha plane a pixel
+  holds one bit, so bit `i` goes to the low bit of alpha at column `i mod side`, row `⌊i / side⌋`. A tile's slots after
+  the record's last bit are not written: those pixels keep their own low bits.
+- **Tile side and the grid.** A plane holding `b` bits per pixel has tiles of side `ceil(sqrt(ceil(record_bits / b)))`,
+  `record_bits = 8 × (16 + payload_len + 4)`: §3's side is the RGB plane's, `b = 3`, and the alpha plane's is `b = 1`.
+  Each plane's tiles sit in a grid from the image's top-left pixel, tile `(c, r)` at pixel `(c × side, r × side)`, with
+  `⌊width / side⌋` columns and `⌊height / side⌋` rows; the strip beyond the last whole tile is not written. A
+  402 B record gives an RGB side of 33, and the grid then holds §7's 1, 9, 49, 225 and 961 tiles at 64², 128², 256²,
+  512² and 1024²; a record carrying both of §7's payloads, 382 + 2,969 B, gives a side of 95 and §7's second column.
+- **Magic and version: proposed (R-71, REQ-TOOL-109), to be confirmed by the human at the M7 gate.** The proposed magic
+  is `8F 50 72 6E` (`0x8F` then ASCII `Prn`). It is none of the five 4-byte windows of the PNG signature
+  `89 50 4E 47 0D 0A 1A 0A`, and its first byte is above `0x7F`, so it is no PNG chunk type (those are four ASCII
+  letters) and no ASCII text. It has 16 of its 32 bits set, so a blank or saturated low-bit plane never reads as it, and
+  it differs from its own bit reversal, so a record read back to front does not start with it. Whether it collides with
+  the prototype's magic, and the version byte, which must be above the prototype's, wait on RQ-205: the corpus does not
+  record the prototype's magic or version.
+
 **Read = collect every intact record, majority-vote per byte.** With 9+ records at the smallest
 resolution, repetition *is* the error correction and Reed–Solomon buys less than a dependency
 costs.
@@ -199,7 +260,13 @@ scale both survive, which LSB cannot touch at any redundancy. It was still rejec
   exactly the pixels the renderer produced — otherwise someone eventually measures an embedded
   image and finds structure that is not physics.
 - **`tEXt` chunk alongside**, carrying the same payload. Strippable, but free and trivially
-  readable by anything.
+  readable by anything. Defined by R-72, REQ-TOOL-110:
+  - **Its keyword is `Principia`.**
+  - **Its text is the record's `version` in decimal digits, one line feed (`0x0A`), then the payload's JSON** before
+    it is compressed (§2). A `tEXt` text is Latin-1 with no control character but the line feed, so every character of
+    the JSON outside `0x20`–`0x7E` is written as its JSON escape `\uXXXX` (a surrogate pair above U+FFFF). That is the
+    same JSON value, and its canonical serialisation (§2) gives back the payload's bytes exactly.
+  - The chunk carries no magic, flags or CRC of its own: PNG gives every chunk a length and a CRC.
 - **Three distinguishable outcomes**, never two: *no embedded state* / *state present, corrupt* /
   *recovered, and here is how*. Silent wrongness is the failure mode this project exists to
   eliminate.
