@@ -79,13 +79,13 @@ fn ramp_grey(t: f32) -> vec3<f32> { return oklab_to_linear(vec3<f32>(clamp(t, 0.
 fn hue_wheel(t: f32) -> vec3<f32> { return oklch_to_linear(0.75, 0.12, t); }
 
 // The reserved invalid rendering (R-132, R-136; REQ-COL-055, proposed, R-71): a hatch drawn from the pixel position,
-// diagonal stripes 4 px wide across x + y, alternating #9B00FF and #50FFD2. It collides with no palette
+// diagonal stripes 4 px wide across x + y, alternating #9B00FF and #48FFFF. It collides with no palette
 // entry. Only NaN gets it; a stored sentinel shows its value (R-136). Linear RGB.
 fn debug_invalid(frag_xy: vec2<f32>) -> vec3<f32> {
     let p = vec2<i32>(floor(frag_xy));
     let stripe = ((p.x + p.y) >> 2u) & 1;
     let a = vec3<f32>(155.0, 0.0, 255.0) / 255.0;
-    let b = vec3<f32>(80.0, 255.0, 210.0) / 255.0;
+    let b = vec3<f32>(72.0, 255.0, 255.0) / 255.0;
     return srgb_to_linear(select(a, b, stripe == 1));
 }
 

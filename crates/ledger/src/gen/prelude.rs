@@ -120,13 +120,14 @@ pub struct Hatch {
     pub half_period: u32,
 }
 
-/// The proposed hatch (proposed, R-71; REQ-COL-055): violet `#9B00FF` and aquamarine `#50FFD2`, in stripes 4 px wide.
-/// Each colour is farther in OKLab from every palette entry (the outcome palette, the `dbg_*` palettes, the LUTs, the
-/// grey ramp and the OKLCH hue circle at L 0.75, C 0.12) than the flat magenta R-16 kept is; the evidence is the PR's
-/// and `render/tests/prelude.rs`'s.
+/// The proposed hatch (proposed, R-71; REQ-COL-055): violet `#9B00FF` and cyan `#48FFFF`, in stripes 4 px wide.
+/// Each colour is farther in OKLab from every palette entry (the outcome palette, the `dbg_*` palettes, every LUT of
+/// colour_composition §7.1 as its ramp draws it, the grey ramp and the OKLCH hue circle at L 0.75, C 0.12) than the
+/// flat magenta R-16 kept is from `#E034C6`, 0.101: violet is 0.142 from plasma near its stop 71, and cyan 0.112 from
+/// Turbo between its stops 83 and 84. The evidence is the PR's and `render/tests/prelude.rs`'s.
 pub const fn hatch() -> Hatch {
     Hatch {
-        colours: [[0x9b, 0x00, 0xff], [0x50, 0xff, 0xd2]],
+        colours: [[0x9b, 0x00, 0xff], [0x48, 0xff, 0xff]],
         half_period: 4,
     }
 }

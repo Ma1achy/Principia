@@ -9,8 +9,8 @@
 //! - REQ-TOOL-009, REQ-TOOL-122: each `dbg_*` helper returns its defined colour for fixture inputs; `dbg_sentinel(-1.0,
 //!   p)` is the ramp's colour for −1.0; the absence NaN's bits draw `debug_invalid(p)`, the hatch (R-136)
 //!   (`dbg_helpers_*`).
-//! - REQ-COL-055: the proposed hatch's pattern and colours, each colour farther in OKLab from every palette entry than
-//!   the flat magenta R-16 kept (`dbg_helpers_hatch_*`).
+//! - REQ-COL-055: the proposed hatch's pattern and colours, each colour farther in OKLab from every palette entry, every
+//!   LUT of colour_composition §7.1 included, than the flat magenta R-16 kept (`dbg_helpers_hatch_*`).
 //!
 //! Each GPU check takes the WGSL as text, so its control runs the same check on the text with one mutation and shows
 //! it fails (pitfalls §9). Each CPU check takes the mirror's function, so its control runs it on a wrong one.
@@ -458,9 +458,10 @@ negative_control!(
 
 // ── prelude_luts (R-122; REQ-RENDER-020) ──────────────────────────────────────────────────────────────────────────
 
-/// matplotlib 3.8.0's published tables (`_cm_listed.py`): each one's length, first and last stops, a middle stop and
-/// the sum of every component, as the source writes them.
+/// A published table: its source, and its length, first and last stops, a middle stop and the sum of every component,
+/// as the source writes them.
 struct Published {
+    source: &'static str,
     len: usize,
     first: Rgb,
     middle: (usize, Rgb),
@@ -468,7 +469,11 @@ struct Published {
     sum: f64,
 }
 
+/// matplotlib 3.8.0's published tables (`_cm_listed.py`).
+const MATPLOTLIB: &str = "matplotlib's published table";
+
 const VIRIDIS: Published = Published {
+    source: MATPLOTLIB,
     len: 256,
     first: [0.267004, 0.004874, 0.329415],
     middle: (127, [0.128729, 0.563265, 0.551229]),
@@ -477,6 +482,7 @@ const VIRIDIS: Published = Published {
 };
 
 const TWILIGHT: Published = Published {
+    source: MATPLOTLIB,
     len: 510,
     first: [0.8857501584075443, 0.8500092494306783, 0.8879736506427196],
     middle: (
@@ -496,7 +502,8 @@ fn check_published(name: &str, stops: &[Rgb], p: &Published) {
             && stops[p.middle.0] == p.middle.1
             && stops[p.len - 1] == p.last
             && (sum - p.sum).abs() < 1e-9,
-        "{name}: the data file is not matplotlib's published table"
+        "{name}: the data file is not {}",
+        p.source
     );
 }
 
@@ -1158,13 +1165,13 @@ negative_control!(
 
 // ── the hatch (REQ-COL-055; R-132, R-136) ─────────────────────────────────────────────────────────────────────────
 
-/// The proposed hatch: violet `#9B00FF` and aquamarine `#50FFD2` in diagonal stripes 4 px wide across `x + y`, at the
+/// The proposed hatch: violet `#9B00FF` and cyan `#48FFFF` in diagonal stripes 4 px wide across `x + y`, at the
 /// pixel centre; `stripe` is the mirror's stripe function, or a control's.
 fn check_hatch_pattern(stripe: fn([f64; 2]) -> usize) {
     let h = prelude::hatch();
     assert_eq!(
         h.colours,
-        [[0x9b, 0x00, 0xff], [0x50, 0xff, 0xd2]],
+        [[0x9b, 0x00, 0xff], [0x48, 0xff, 0xff]],
         "the hatch colours"
     );
     assert_eq!(h.half_period, 4, "the stripe width");
@@ -1189,9 +1196,172 @@ negative_control!(
     check_hatch_pattern(|p| (p[0].floor() as i64).div_euclid(4).rem_euclid(2) as usize)
 );
 
+// ── the hatch's collision evidence (REQ-COL-055): every LUT of colour_composition §7.1 ─────────────────────────────
+
+/// The §7.1 LUTs the prelude does not carry, as published tables (R-16, R-122, R-139): each one's name, its data file
+/// under `tests/data/lut/` (each naming its source), its fingerprint, and the scale that takes a component to [0, 1].
+const SECTION_7_1_TABLES: [(&str, &str, Published, f64); 7] = [
+    (
+        "cividis",
+        include_str!("data/lut/cividis.txt"),
+        Published {
+            source: MATPLOTLIB,
+            len: 256,
+            first: [0.0, 0.135112, 0.304751],
+            middle: (127, [0.485141, 0.482451, 0.470384]),
+            last: [0.995737, 0.909344, 0.217772],
+            sum: 357.2571600000007,
+        },
+        1.0,
+    ),
+    (
+        "plasma",
+        include_str!("data/lut/plasma.txt"),
+        Published {
+            source: MATPLOTLIB,
+            len: 256,
+            first: [0.050383, 0.029803, 0.527975],
+            middle: (127, [0.794549, 0.27577, 0.473117]),
+            last: [0.940015, 0.975158, 0.131326],
+            sum: 377.82052599999986,
+        },
+        1.0,
+    ),
+    (
+        "magma",
+        include_str!("data/lut/magma.txt"),
+        Published {
+            source: MATPLOTLIB,
+            len: 256,
+            first: [0.001462, 0.000466, 0.013866],
+            middle: (127, [0.709962, 0.212797, 0.477201]),
+            last: [0.987053, 0.991438, 0.749504],
+            sum: 353.4014399999998,
+        },
+        1.0,
+    ),
+    (
+        "inferno",
+        include_str!("data/lut/inferno.txt"),
+        Published {
+            source: MATPLOTLIB,
+            len: 256,
+            first: [0.001462, 0.000466, 0.013866],
+            middle: (127, [0.729909, 0.212759, 0.333861]),
+            last: [0.988362, 0.998364, 0.644924],
+            sum: 317.14938400000005,
+        },
+        1.0,
+    ),
+    (
+        "turbo",
+        include_str!("data/lut/turbo.txt"),
+        Published {
+            source: "Google's published Turbo table (matplotlib's `_turbo_data`)",
+            len: 256,
+            first: [0.18995, 0.07176, 0.23217],
+            middle: (127, [0.63323, 0.99195, 0.23937]),
+            last: [0.4796, 0.01583, 0.01055],
+            sum: 392.57500000000016,
+        },
+        1.0,
+    ),
+    (
+        "cool-warm",
+        include_str!("data/lut/coolwarm.txt"),
+        Published {
+            source: "Moreland's 33-stop Cool-warm table",
+            len: 33,
+            first: [0.2298057, 0.298717966, 0.753683153],
+            middle: (16, [0.865395197, 0.86541021, 0.865395561]),
+            last: [0.705673158, 0.01555616, 0.150232812],
+            sum: 66.45168609999999,
+        },
+        1.0,
+    ),
+    (
+        "principia",
+        include_str!("data/lut/principia.txt"),
+        Published {
+            source: "the explorer's eight Principia stops",
+            len: 8,
+            first: [6.0, 4.0, 35.0],
+            middle: (3, [22.0, 120.0, 130.0]),
+            last: [240.0, 148.0, 10.0],
+            sum: 2281.0,
+        },
+        255.0,
+    ),
+];
+
+/// A data file's stops, as written: `#` lines are comments, every other line three numbers; a missing or unparsable
+/// number reads as NaN, so no stop is dropped silently.
+fn table_stops(data: &str) -> Vec<Rgb> {
+    data.lines()
+        .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+        .map(|l| {
+            let mut it = l.split_whitespace().map(|x| x.parse().unwrap_or(f64::NAN));
+            [0; 3].map(|_| it.next().unwrap_or(f64::NAN))
+        })
+        .collect()
+}
+
+/// Cubehelix, sRGB-encoded, at `t` (colour_composition §7.1; dd_colouring §3.8's analytic form, the reference, with
+/// s = 0.5, λ = 1.5, h = 1): `φ = 2π(s/3 − λt)`, `a = h·t(1 − t)/2`, each channel clamped to [0, 1] for display.
+fn cubehelix(t: f64) -> Rgb {
+    let (s, lambda, h) = (0.5, 1.5, 1.0);
+    let phi = std::f64::consts::TAU * (s / 3.0 - lambda * t);
+    let a = h * t * (1.0 - t) / 2.0;
+    let (c, n) = (phi.cos(), phi.sin());
+    [
+        t + a * (-0.14861 * c + 1.78277 * n),
+        t + a * (-0.29227 * c - 0.90649 * n),
+        t + a * (1.97294 * c),
+    ]
+    .map(|x| x.clamp(0.0, 1.0))
+}
+
+#[test]
+fn dbg_helpers_hatch_lut_tables_are_the_published_tables() {
+    for (name, data, published, _) in &SECTION_7_1_TABLES {
+        check_published(name, &table_stops(data), published);
+    }
+}
+
+negative_control!(
+    dbg_helpers_hatch_lut_tables_are_the_published_tables,
+    "a Turbo table with one stop changed must not pass as the published one",
+    expected = "turbo: the data file is not Google's published Turbo table",
+    {
+        let (name, data, published, _) = &SECTION_7_1_TABLES[4];
+        let mut stops = table_stops(data);
+        stops[91][1] += 1e-5;
+        check_published(name, &stops, published)
+    }
+);
+
+/// Samples per interval between a LUT's stops: the ramp interpolates in sRGB (`present::ramp`), and a colour may sit
+/// nearer a point between two stops than either stop.
+const PER_INTERVAL: usize = 16;
+
+/// `stops` (sRGB-encoded, in [0, 1]) as the ramp draws them, `PER_INTERVAL` samples per interval, in linear RGB, each
+/// named by its position in stops.
+fn sampled(name: &str, stops: &[Rgb]) -> Vec<(String, Rgb)> {
+    let n = PER_INTERVAL * (stops.len() - 1);
+    (0..=n)
+        .map(|j| {
+            (
+                format!("{name} near stop {:.2}", j as f64 / PER_INTERVAL as f64),
+                present::ramp(stops, j as f64 / n as f64),
+            )
+        })
+        .collect()
+}
+
 /// Every finite palette the hatch must not collide with, as linear RGB: the outcome palette (colour_composition §1.4),
-/// the `dbg_*` palettes (Okabe–Ito, the flag pair), and the LUTs, the grey ramp and the OKLCH hue circle the hue wheel
-/// and the golden angle draw from, sampled finely.
+/// the `dbg_*` palettes (Okabe–Ito, the flag pair), every LUT of colour_composition §7.1 (Viridis, Cividis, Plasma,
+/// Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix and Turbo; R-16, R-139) as its ramp draws it, and the
+/// grey ramp and the OKLCH hue circle the hue wheel and the golden angle draw from, sampled finely.
 fn palettes() -> Vec<(String, Rgb)> {
     let mut out = Vec::new();
     let outcome = [
@@ -1200,18 +1370,22 @@ fn palettes() -> Vec<(String, Rgb)> {
     out.extend(outcome.map(|h| (format!("outcome #{h:06X}"), hex(h))));
     out.extend((0..8).map(|i| (format!("Okabe–Ito {i}"), present::dbg_cat(i, 8))));
     out.extend([true, false].map(|b| (format!("dbg_flag({b})"), present::dbg_flag(b))));
-    out.extend(
-        present::viridis_stops()
+    out.extend(sampled("viridis", &present::viridis_stops()));
+    out.extend(sampled("twilight", &present::twilight_stops()));
+    for (name, data, _, scale) in &SECTION_7_1_TABLES {
+        let stops: Vec<Rgb> = table_stops(data)
             .into_iter()
-            .enumerate()
-            .map(|(k, s)| (format!("viridis {k}"), present::srgb_to_linear3(s))),
-    );
-    out.extend(
-        present::twilight_stops()
-            .into_iter()
-            .enumerate()
-            .map(|(k, s)| (format!("twilight {k}"), present::srgb_to_linear3(s))),
-    );
+            .map(|s| s.map(|x| x / scale))
+            .collect();
+        out.extend(sampled(name, &stops));
+    }
+    out.extend((0..=4096).map(|k| {
+        let t = f64::from(k) / 4096.0;
+        (
+            format!("cubehelix at {t:.4}"),
+            present::srgb_to_linear3(cubehelix(t)),
+        )
+    }));
     out.extend((0..=1000).map(|k| {
         (
             format!("grey {k}"),
@@ -1278,5 +1452,50 @@ negative_control!(
     dbg_helpers_hatch_collides_with_no_palette_entry,
     "a hatch of body-1 escape's magenta must collide",
     expected = "no farther than the flat magenta's",
-    check_no_collision([[0xE0, 0x34, 0xC6], [0x50, 0xFF, 0xD2]])
+    check_no_collision([[0xE0, 0x34, 0xC6], [0x48, 0xFF, 0xFF]])
+);
+
+/// The ten LUTs of colour_composition §7.1 (R-16, R-139).
+const SECTION_7_1: [&str; 10] = [
+    "viridis",
+    "cividis",
+    "plasma",
+    "magma",
+    "inferno",
+    "twilight",
+    "cool-warm",
+    "principia",
+    "cubehelix",
+    "turbo",
+];
+
+/// `palettes` samples every LUT of colour_composition §7.1, so the collision check measures against each.
+fn check_every_lut(palettes: &[(String, Rgb)]) {
+    for lut in SECTION_7_1 {
+        let n = palettes
+            .iter()
+            .filter(|(name, _)| name.starts_with(&format!("{lut} ")))
+            .count();
+        assert!(
+            n > 0,
+            "the collision check samples the §7.1 LUT {lut} {n} times"
+        );
+    }
+}
+
+#[test]
+fn dbg_helpers_hatch_measured_against_every_section_7_1_lut() {
+    check_every_lut(&palettes());
+}
+
+negative_control!(
+    dbg_helpers_hatch_measured_against_every_section_7_1_lut,
+    "a palette set without Turbo, where the first proposal's aquamarine collided, must fail",
+    expected = "the §7.1 LUT turbo 0 times",
+    check_every_lut(
+        &palettes()
+            .into_iter()
+            .filter(|(name, _)| !name.starts_with("turbo "))
+            .collect::<Vec<_>>()
+    )
 );
