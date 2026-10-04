@@ -12,7 +12,7 @@ const PROBE: &str = r"
 struct Probe { word: u32, _a: u32, _b: u32, _c: u32, }
 @group(0) @binding(0) var<uniform> probe: Probe;
 @group(1) @binding(0) var<storage, read> words: array<u32>;
-const WIDTH: u32 = 5u;
+const WIDTH: u32 = 17u;
 
 @fragment
 fn t_probe(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
@@ -21,8 +21,8 @@ fn t_probe(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
 }
 ";
 
-/// The target: 5 × 3, so a row's 80 bytes are padded to the copy's 256.
-const WIDTH: u32 = 5;
+/// The target: 17 × 3, so a row's 272 bytes are padded to the copy's 512, two of its 256-byte units.
+const WIDTH: u32 = 17;
 const HEIGHT: u32 = 3;
 
 fn harness() -> GpuHarness {
@@ -71,7 +71,7 @@ negative_control!(
     expected = "the pixel at",
     check_probe(
         &harness(),
-        &PROBE.replace("words[i]", "words[(i + 1u) % 15u]")
+        &PROBE.replace("words[i]", "words[(i + 1u) % 51u]")
     )
 );
 
@@ -102,7 +102,7 @@ fn check_refusals(h: &GpuHarness, refused: [&str; 5]) {
     let kernel = h
         .fragment(PROBE, "t_probe", &kinds, WIDTH, HEIGHT)
         .unwrap_or_else(|e| panic!("{e}"));
-    let words = [0u32; 15];
+    let words = [0u32; 51];
     let uniform = [0u32; 4];
     let e = kernel.draw(&[&[&uniform]]).err();
     assert!(
