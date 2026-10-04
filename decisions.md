@@ -5724,14 +5724,16 @@ ramp is `diverging` (colour_composition §1.2, "`diverging(c−,c0,c+)` (through
 the viridis ramp (render contract Part 5); filed as RQ-208 against TASK-M3-05. What R-381 decides is unchanged.
 RQ-208, the ramp: decided per R-369, option 3 (the preset's diverging ramp by default, viridis through the palette
 swap).
-After physics review 5407380838 (PR #137), two placements decided per R-369, mechanical consequences that leave what
-R-381 offers unchanged. `log` shows the drift's magnitude `|x|`, unsigned, as option 3 defines it, placed as `dbg_log`
-places it (`1 − 1/(1 + s)`, `s` the floored log value) on the sequential viridis ramp, not the diverging one, since
-colour_composition §1.2 sends positive fields to sequential; the view states that it shows `|drift|`, and the
-`diverging` ramp carries only the signed compactions, `symlog` and `lin`. `lin` is `range_norm` over the fixed,
+After physics review 5407380838 and qa review 5407389970 (PR #137), two placements decided per R-369, mechanical
+consequences that leave what R-381 offers unchanged. `log` shows the drift's magnitude `|x|`, unsigned, as option 3
+defines it, placed as `dbg_log` places it (`1 − 1/(1 + s)`, `s` the floored log value) on the sequential viridis
+ramp, not the diverging one, since colour_composition §1.2 sends positive fields to sequential; the view states that
+it shows `|drift|`, and the `diverging` ramp carries only the signed compactions, `symlog` and `lin`. `lin` is `range_norm` over the fixed,
 clamped `[−R, R]` (render_gui_spec §10.1), `0` at the neutral `c0`, a drift beyond `±R` saturating to `c−` or `c+`;
-REQ-TOOL-150's criterion is that on dd_integrator test 2's orbit Euler's and RK4's drifts render as distinct colours,
-neither saturated at `±R`, while the symplectic occupants' band may read as neutral: one linear `R` cannot resolve
-drifts across decades (pitfalls §3), and `symlog`, the default, is the view for that.
+REQ-TOOL-150's criterion is that on dd_integrator test 2's orbit Euler's and RK4's final drifts render as distinct
+8-bit sRGB pixels, neither equal to the saturated end colour `c−` or `c+`; the symplectic occupants (KDK, Yoshida-4,
+Yoshida-6) may render as the neutral `c0` and need not be told apart; test 7's drifts are recorded and may saturate.
+One linear `R` cannot resolve drifts across decades (pitfalls §3), and `symlog`, the default, is the view for that.
+"Distinct 8-bit pixels" adds no numeric threshold, so it needs no calibration.
 
 Changes REQ-TOOL-149 (RQ-206 removed, R-381 added); adds a calibration requirement for the `lin` range.
