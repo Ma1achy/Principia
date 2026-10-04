@@ -4,15 +4,16 @@
 //! passes. The rules: the u32 overload of `extractBits`; no f64; no `enable f16`; `r`, `p`, `r_sh`, `p_sh` as
 //! `array<vec2<f32>, 3>`; the word buffer its own binding, `array<vec4<u32>>`, never inside `SimState`;
 //! `simstate_buffer: array<SimStateFTLE>` at `@group(1) @binding(0)` and `word_buffer` at `@group(1) @binding(1)`,
-//! equal to the generated constants, nothing in group 0; and no function but `sample_state`/`sample_word` using either
-//! buffer.
+//! equal to the generated constants, nothing in group 0; and no function but the read side's `sample_read` using either
+//! buffer (R-343 as R-378 amends it: `sample_state`/`sample_word` are replaced by `sample_read`'s per-member loads), the
+//! read side (`read_side.wgsl`) linted as the unpack layer's continuation.
 //!
 //! Each test has a registered negative control (R-176): the unbroken file, on which the rule must not fire.
 
 use std::path::Path;
 
 use validation::negative_control;
-use xtask::lint_wgsl::{check, Rule, GENERATED};
+use xtask::lint_wgsl::{check, check_read_side, Finding, Rule, GENERATED, READ_SIDE_FILE};
 
 fn generated() -> String {
     let p = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -31,9 +32,26 @@ fn edit(from: &str, to: &str) -> String {
     g.replacen(from, to, 1)
 }
 
+/// The generated read side with `extra` appended, linted as the unpack layer's continuation (R-378).
+fn read_side_with(extra: &str) -> Vec<Finding> {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(READ_SIDE_FILE);
+    let read_side = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    check_read_side(&generated(), &format!("{read_side}\n{extra}"))
+        .expect("the edited WGSL parses and validates")
+}
+
 /// The lint fires on `src` with at least one finding of `rule`, its text naming the rule.
 fn fires(src: &str, rule: Rule) {
-    let found = check(src).expect("the edited WGSL parses and validates");
+    fires_in(
+        check(src).expect("the edited WGSL parses and validates"),
+        rule,
+    );
+}
+
+/// `found` has at least one finding of `rule`, its text naming the rule.
+fn fires_in(found: Vec<Finding>, rule: Rule) {
     let hit: Vec<_> = found.iter().filter(|f| f.rule == rule).collect();
     assert!(
         !hit.is_empty(),
@@ -293,6 +311,12 @@ negative_control!(
     )
 );
 
+/// A read of `simstate_buffer` outside `sample_read`, beside the generated read side.
+const STATE_OF_DIRECT: &str = "fn state_of(i: u32) -> u32 { return simstate_buffer[i].packed_a; }";
+/// The same read through `sample_read`, the one reader (R-343, R-378).
+#[cfg(feature = "controls")]
+const STATE_OF_READER: &str = "fn state_of(i: u32) -> u32 { return sample_read(i, 0.0, false, vec3<f32>(1.0), ReadParams(1.0, 1.0, 1u, 1u)).state; }";
+
 #[test]
 fn qa_lint_wgsl_state_read_outside_sample_state_fires() {
     fires(
@@ -302,20 +326,20 @@ fn qa_lint_wgsl_state_read_outside_sample_state_fires() {
         ),
         Rule::SampleOnly,
     );
+    fires_in(read_side_with(STATE_OF_DIRECT), Rule::SampleOnly);
 }
 
 negative_control!(
     qa_lint_wgsl_state_read_outside_sample_state_fires,
-    "reading through sample_state must not fire",
+    "reading through sample_read must not fire",
     expected = "rule sample-only did not fire",
-    fires(
-        &format!(
-            "{}\nfn state_of(i: u32) -> u32 {{ return sample_state(i).packed_a; }}\n",
-            generated()
-        ),
-        Rule::SampleOnly
-    )
+    fires_in(read_side_with(STATE_OF_READER), Rule::SampleOnly)
 );
+
+/// A fragment entry point reading the word itself, and one reading it through `sample_read`.
+const FS_DIRECT: &str = "@fragment\nfn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> { let w = word_buffer[u32(p.x)]; return vec4<f32>(f32(w.w)); }";
+#[cfg(feature = "controls")]
+const FS_READER: &str = "@fragment\nfn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> { let w = sample_read(u32(p.x), 0.0, false, vec3<f32>(1.0), ReadParams(1.0, 1.0, 1u, 1u)).word; return vec4<f32>(f32(w.w)); }";
 
 #[test]
 fn qa_lint_wgsl_word_read_in_entry_point_fires() {
@@ -326,17 +350,12 @@ fn qa_lint_wgsl_word_read_in_entry_point_fires() {
         ),
         Rule::SampleOnly,
     );
+    fires_in(read_side_with(FS_DIRECT), Rule::SampleOnly);
 }
 
 negative_control!(
     qa_lint_wgsl_word_read_in_entry_point_fires,
-    "an entry point reading through sample_word must not fire",
+    "an entry point reading through sample_read must not fire",
     expected = "rule sample-only did not fire",
-    fires(
-        &format!(
-            "{}\n@fragment\nfn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {{ let w = sample_word(u32(p.x)); return vec4<f32>(f32(w.w)); }}\n",
-            generated()
-        ),
-        Rule::SampleOnly
-    )
+    fires_in(read_side_with(FS_READER), Rule::SampleOnly)
 );

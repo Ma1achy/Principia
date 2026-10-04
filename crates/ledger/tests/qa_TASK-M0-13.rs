@@ -7,9 +7,11 @@
 //! - REQ-RENDER-001 (render contract Part 5 "Unpack layer"; R-343, R-271): `simstate_buffer: array<SimStateFTLE>` at
 //!   `@group(1) @binding(0)`, `word_buffer: array<vec4<u32>>` at `@group(1) @binding(1)`, both read-only storage;
 //!   nothing in group 0; the attributes equal `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP`, `WORD_BINDING` in
-//!   the WGSL and in the generated Rust; only `sample_state`/`sample_word` touch the buffers; no setter (no store to a
-//!   buffer, no `insertBits`, no `set_` function); no `isinf`/`isnan`, no self-comparison and no float comparison
-//!   standing in for an infinity test; `PA_D_MIN_UNSET` is f16 +inf's bits, 0x7c00.
+//!   the WGSL and in the generated Rust; only the read side's `sample_read` touches the buffers, both at its sample
+//!   index, one stored member per load and never a whole stored struct (R-378, amending R-343's `sample_state` /
+//!   `sample_word`), checked on the fragment's generated WGSL, `payload_unpack.wgsl` then `read_side.wgsl`; no setter
+//!   (no store to a buffer, no `insertBits`, no `set_` function); no `isinf`/`isnan`, no self-comparison and no float
+//!   comparison standing in for an infinity test; `PA_D_MIN_UNSET` is f16 +inf's bits, 0x7c00.
 //!
 //! Each test has a registered negative control (R-176). The GPU-run checks (accessor values, `closure_step`,
 //! `pa_d_min_is_unset`, the tables, the schema version) are in `crates/kernel/tests/qa_TASK-M0-13.rs`.
@@ -23,6 +25,8 @@ use naga::{
 use validation::negative_control;
 
 const WGSL: &str = "crates/render/frag/generated/payload_unpack.wgsl";
+/// The generated read side, which follows the unpack layer in the fragment's WGSL and holds `sample_read` (R-378).
+const READ_SIDE: &str = "crates/render/frag/generated/read_side.wgsl";
 const RUST: &str = "crates/kernel/src/payload/generated.rs";
 
 fn read(rel: &str) -> String {
@@ -34,6 +38,11 @@ fn read(rel: &str) -> String {
 
 fn wgsl() -> String {
     read(WGSL)
+}
+
+/// The fragment's generated WGSL: the unpack layer, then the read side.
+fn fragment() -> String {
+    format!("{}\n{}", read(WGSL), read(READ_SIDE))
 }
 
 fn parse(src: &str) -> Module {
@@ -404,7 +413,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-RENDER-001: only sample_state / sample_word use the buffers; no setter.
+// REQ-RENDER-001: only sample_read uses the buffers, one stored member per load (R-343 as R-378 amends it); no setter.
 
 /// The global a pointer expression in `f` is rooted at, if any.
 fn root_global(
@@ -436,6 +445,33 @@ fn stores_to_global(f: &naga::Function, b: &Block) -> bool {
     })
 }
 
+/// The steps from the global a pointer expression in `f` is rooted at down to it: `None` for a runtime index (its
+/// expression alongside), `Some(k)` for a member or component.
+fn access_path(
+    f: &naga::Function,
+    mut e: naga::Handle<Expression>,
+) -> Vec<(Option<u32>, Option<naga::Handle<Expression>>)> {
+    let mut steps = Vec::new();
+    loop {
+        match f.expressions[e] {
+            Expression::Access { base, index } => {
+                steps.push((None, Some(index)));
+                e = base;
+            }
+            Expression::AccessIndex { base, index } => {
+                steps.push((Some(index), None));
+                e = base;
+            }
+            _ => break,
+        }
+    }
+    steps.reverse();
+    steps
+}
+
+/// The one reader of both buffers (R-343, R-378).
+const READER: &str = "sample_read";
+
 fn check_read_only_access(src: &str) {
     let m = parse(src);
     let fns = m
@@ -448,15 +484,12 @@ fn check_read_only_access(src: &str) {
         for (_, e) in f.expressions.iter() {
             if let Expression::GlobalVariable(g) = *e {
                 let gname = m.global_variables[g].name.as_deref().unwrap_or("");
-                let reader = match gname {
-                    "simstate_buffer" => "sample_state",
-                    "word_buffer" => "sample_word",
-                    _ => continue,
-                };
-                assert_eq!(
-                    name, reader,
-                    "`{name}` uses `{gname}`, which only `{reader}` may read"
-                );
+                if gname == "simstate_buffer" || gname == "word_buffer" {
+                    assert_eq!(
+                        name, READER,
+                        "`{name}` uses `{gname}`, which only `{READER}` may read"
+                    );
+                }
             }
             if let Expression::Math {
                 fun: MathFunction::InsertBits,
@@ -475,49 +508,72 @@ fn check_read_only_access(src: &str) {
             "`{name}` is a setter: the layer only reads"
         );
     }
-    // `sample_state(i)` and `sample_word(i)` index by their argument, the same i for both.
-    for reader in ["sample_state", "sample_word"] {
-        let (_, f) = m
-            .functions
-            .iter()
-            .find(|(_, f)| f.name.as_deref() == Some(reader))
-            .unwrap_or_else(|| panic!("no `{reader}`"));
-        assert_eq!(f.arguments.len(), 1, "`{reader}` does not take one index");
-        assert_eq!(
-            ty_name(&m, f.arguments[0].ty),
-            "u32",
-            "`{reader}`'s index is not a u32"
-        );
-        let by_arg = f.expressions.iter().any(|(_, e)| {
-            matches!(*e, Expression::Access { base, index }
-                if matches!(f.expressions[base], Expression::GlobalVariable(_))
-                && matches!(f.expressions[index], Expression::FunctionArgument(0)))
-        });
+    // `sample_read(i, …)` indexes both buffers by its first argument, a u32, the same i for both, and loads one stored
+    // member at a time, never a whole `SimStateFTLE` (R-378).
+    let (_, f) = m
+        .functions
+        .iter()
+        .find(|(_, f)| f.name.as_deref() == Some(READER))
+        .unwrap_or_else(|| panic!("no `{READER}`"));
+    assert!(!f.arguments.is_empty(), "`{READER}` takes no index");
+    assert_eq!(
+        ty_name(&m, f.arguments[0].ty),
+        "u32",
+        "`{READER}`'s index is not a u32"
+    );
+    let mut read = Vec::new();
+    for (_, e) in f.expressions.iter() {
+        let Expression::Load { pointer } = *e else {
+            continue;
+        };
+        let Some(g) = root_global(f, pointer) else {
+            continue;
+        };
+        let gname = m.global_variables[g].name.clone().unwrap_or_default();
+        if gname != "simstate_buffer" && gname != "word_buffer" {
+            continue;
+        }
+        let path = access_path(f, pointer);
+        let by_arg = matches!(path.first(), Some((None, Some(index)))
+            if matches!(f.expressions[*index], Expression::FunctionArgument(0)));
         assert!(
             by_arg,
-            "`{reader}` does not index its buffer by its argument"
+            "`{READER}` does not index `{gname}` by its argument"
+        );
+        if gname == "simstate_buffer" {
+            assert!(
+                matches!(path.get(1), Some((Some(_), _))),
+                "`{READER}` loads a whole stored struct from `simstate_buffer`, not one member (R-378)"
+            );
+        }
+        read.push(gname);
+    }
+    for buffer in ["simstate_buffer", "word_buffer"] {
+        assert!(
+            read.iter().any(|g| g == buffer),
+            "`{READER}` does not read `{buffer}`"
         );
     }
 }
 
 #[test]
 fn qa_wgsl_buffers_read_only_through_sample_functions() {
-    check_read_only_access(&wgsl());
+    check_read_only_access(&fragment());
 }
 
 negative_control!(
     qa_wgsl_buffers_read_only_through_sample_functions,
     "an accessor indexing word_buffer itself must fail",
-    expected = "`fgw_at` uses `word_buffer`, which only `sample_word` may read",
+    expected = "`fgw_at` uses `word_buffer`, which only `sample_read` may read",
     check_read_only_access(&format!(
         "{}\nfn fgw_at(i: u32) -> u32 {{ return fgw_length_raw(word_buffer[i]); }}\n",
-        wgsl()
+        fragment()
     ))
 );
 
 #[test]
 fn qa_wgsl_no_setter() {
-    check_read_only_access(&wgsl());
+    check_read_only_access(&fragment());
 }
 
 negative_control!(
@@ -526,22 +582,27 @@ negative_control!(
     expected = "calls insertBits",
     check_read_only_access(&format!(
         "{}\nfn sd_put_last_symbol(pa: u32, s: u32) -> u32 {{ return insertBits(pa, s, 8u, 2u); }}\n",
-        wgsl()
+        fragment()
     ))
 );
 
 #[test]
 fn qa_wgsl_sample_functions_index_by_their_argument() {
-    check_read_only_access(&wgsl());
+    check_read_only_access(&fragment());
 }
 
 negative_control!(
     qa_wgsl_sample_functions_index_by_their_argument,
-    "sample_word reading a constant index, not its argument, must fail",
-    expected = "`sample_word` does not index its buffer by its argument",
-    check_read_only_access(
-        &wgsl().replace("return word_buffer[i];", "return word_buffer[0u + 0u * i];")
-    )
+    "sample_read reading the word at a constant index, not its argument, must fail",
+    expected = "`sample_read` does not index `word_buffer` by its argument",
+    {
+        let src = fragment();
+        assert!(
+            src.contains("word_buffer[i]"),
+            "the control's pattern is gone"
+        );
+        check_read_only_access(&src.replace("word_buffer[i]", "word_buffer[0u + 0u * i]"))
+    }
 );
 
 // ---------------------------------------------------------------------------------------------------------------
