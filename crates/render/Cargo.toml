@@ -21,9 +21,10 @@ serde = { version = "1", features = ["derive"] }
 pollster = "1"
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
-# tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). They are
-# integration tests in `tests/`, never unit tests in `src/` (R-176, R-187). naga, wgpu 30's front end, parses and
-# validates the assembled WGSL.
+# tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). Most are
+# integration tests in `tests/`; pipeline_cache.rs also has a `#[cfg(test)]` module, compiled out of every non-test
+# build, which reaches the worker's test-only hold. R-187's integration-test condition binds only kernel and ledger
+# (applied per R-369, review 5410432126 C7). naga, wgpu 30's front end, parses and validates the assembled WGSL.
 [dev-dependencies]
 validation = { path = "../validation" }
 # The assembler's tests compile the assembled stain to naga's MSL, SPIR-V and HLSL to show which stored words it loads
