@@ -22,7 +22,7 @@
 //! record are the ones read, and the reader reports them.
 //!
 //! **The default `k`, [`DEFAULT`], is proposed under R-71 (REQ-TOOL-111)** and provisional until the human confirms it
-//! at the M7 gate.
+//! at the M7 gate; its doc gives §5's measurements and the capacity it costs.
 
 use super::reader::{self, settle, Corrupt, CorruptReason, Outcome};
 use super::record::{
@@ -48,6 +48,13 @@ pub enum Redundancy {
 /// The default redundancy, `k = 25`: proposed under R-71 (REQ-TOOL-111), provisional until the human confirms it at the
 /// M7 gate. §5: nearest rotation leaves ~8 % bit error, which `k = 25` absorbs (15 % uniform noise) and `k = 9` does not
 /// (5 %).
+///
+/// **Its capacity cost.** A bit takes `k = 25` slots, 25 times the tiled variant's, so a tile's side grows 5-fold. For
+/// §7's config-only record an image holds no RGB tile at 64² and 128², and 1, 9 and 36 at 256², 512² and 1024², against
+/// the tiled 49, 225 and 961 (`k = 9`: 1, 4, 25 and 100 from 128²); it needs at least 165 px a side, against the
+/// tiled 33. With the full shader it needs 475 px a side, so 1 tile at 512² and 4 at 1024², against the tiled 95 px,
+/// which carries the shader from 128². The value stays an R-71 proposal: the human confirms or changes it at the M7
+/// gate.
 pub const DEFAULT: Redundancy = Redundancy::K25;
 
 impl Redundancy {
