@@ -22,7 +22,7 @@ use render::assemble::{
 };
 use render::compositor::{blur_words, checked, Compositor, Direction, LAYER_FORMAT, MAX_TAPS};
 use render::debug_bake::{view_keys, BakeError, DebugViews};
-use render::frame_record::{blank, FrameClock, FrameRecord, RenderLoop, Stage, Stages};
+use render::frame_record::{blank, Applied, FrameClock, FrameRecord, RenderLoop, Stage, Stages};
 use render::hot_reload::{ingest, HotReload, Snippet};
 use render::pipeline_cache::{
     block_layout, encode, CompileError, FrameInputs, NodeKey, PipelineCache, PipelineKey, Requested,
@@ -811,8 +811,8 @@ fn check_params(edit: bool) {
     let names: Vec<&str> = blocks[0].uniforms.iter().map(|u| u.name.as_str()).collect();
     assert_eq!(
         (
-            blocks[0].node,
-            blocks[0].key,
+            blocks[0].position,
+            r.rl.cache().live_keys()[blocks[0].position],
             blocks[0].binding,
             names,
             blocks[0].offsets.clone()
@@ -820,8 +820,11 @@ fn check_params(edit: bool) {
         (1, 1, 1, vec!["gain", "tint"], vec![0, 16])
     );
     if edit {
-        r.rl.set_param(1, "gain", &[0.25])
-            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            r.rl.set_param(1, "gain", &[0.25])
+                .unwrap_or_else(|e| panic!("{e}")),
+            Applied::Now
+        );
     }
     assert_all(&r.frame(), [0.25, 0.125, 0.0625], "after the edit");
     assert_eq!(r.rl.cache().compiles(), 1, "a param edit compiled");
@@ -839,8 +842,12 @@ fn check_params(edit: bool) {
     // A param set before its stain compiles is written when it does.
     let g2 = graph(&colour.replace("gain;", "gain * 2.0;"));
     let k2: Vec<NodeKey> = vec![10, 11, 12, 13];
-    r.rl.set_param(11, "tint", &[0.5, 0.5, 0.5])
-        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        r.rl.set_param(11, "tint", &[0.5, 0.5, 0.5])
+            .unwrap_or_else(|e| panic!("{e}")),
+        Applied::Later,
+        "a node not yet live took its param now"
+    );
     r.rl.cache()
         .request(&stain(&g2), &k2, Tier::FULL)
         .unwrap_or_else(|e| panic!("{e}"));
@@ -862,6 +869,91 @@ negative_control!(
     "without the edit, the default draws",
     expected = "after the edit",
     check_params(false)
+);
+
+/// A colour with the uniforms `gain` (default 0.5) and `tint` (default (1, 0.5, 0.25)), drawing `tint · gain`.
+const GAIN_COLOUR: &str = "// @uniform gain: f32 = 0.5 [0, 1]\n\
+                           // @uniform tint: vec3<f32> = (1, 0.5, 0.25)\n\
+                           fn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * uniforms.gain; }";
+
+/// A cache hit for the same stain built another way, its nodes under other keys (a node deleted and added again, the
+/// graph built in another order): the hit draws its own nodes' params, the defaults, and a param edit on it reaches
+/// the GPU at its node's canonical position; the first stain, requested again, gets its own params back. Each param
+/// edit compiles nothing (lowering Part 5; render contract Part 2).
+fn check_hit_params(edit: bool) {
+    let mut r = rig();
+    let first = graph(GAIN_COLOUR);
+    r.request(&first);
+    assert_eq!(
+        r.rl.set_param(1, "gain", &[0.25])
+            .unwrap_or_else(|e| panic!("{e}")),
+        Applied::Now
+    );
+    assert_all(&r.frame(), [0.25, 0.125, 0.0625], "the first stain's edit");
+    let compiled = Arc::clone(r.rl.cache().current().expect("compiled"));
+
+    // An unwired brightness first: every node at another index, under another key.
+    let mut second = vec![node(Kind::Brightness, Occupant::None, &[None])];
+    second.extend(graph(GAIN_COLOUR).into_iter().map(|mut n| {
+        n.inputs = n.inputs.iter().map(|i| i.map(|j| j + 1)).collect();
+        n
+    }));
+    let second_keys: Vec<NodeKey> = vec![30, 31, 32, 33, 34];
+    let got =
+        r.rl.cache()
+            .request(&stain(&second), &second_keys, Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        got,
+        Requested::Hit,
+        "the same stain built another way did not hit"
+    );
+    assert!(Arc::ptr_eq(
+        r.rl.cache().current().expect("current"),
+        &compiled
+    ));
+    assert_eq!(r.rl.cache().live_keys(), &[31, 32, 33, 34]);
+    assert_all(&r.frame(), [0.5, 0.25, 0.125], "the hit's own defaults");
+    if edit {
+        assert_eq!(
+            r.rl.set_param(32, "gain", &[0.75])
+                .unwrap_or_else(|e| panic!("{e}")),
+            Applied::Now,
+            "a live node's edit after a hit was not written"
+        );
+    }
+    assert_all(&r.frame(), [0.75, 0.375, 0.1875], "the edit after the hit");
+    assert_eq!(
+        r.rl.set_param(1, "gain", &[1.0])
+            .unwrap_or_else(|e| panic!("{e}")),
+        Applied::Later,
+        "a node not live in the current stain took its param now"
+    );
+    assert_all(
+        &r.frame(),
+        [0.75, 0.375, 0.1875],
+        "an edit to a node not live",
+    );
+
+    assert_eq!(r.request(&first), Requested::Hit);
+    assert_all(
+        &r.frame(),
+        [1.0, 0.5, 0.25],
+        "the first stain's params back",
+    );
+    assert_eq!(r.rl.cache().compiles(), 1, "a param edit or a hit compiled");
+}
+
+#[test]
+fn fragment_cache_hit_with_other_node_keys_takes_param_edits() {
+    check_hit_params(true);
+}
+
+negative_control!(
+    fragment_cache_hit_with_other_node_keys_takes_param_edits,
+    "without the edit, the hit draws its defaults",
+    expected = "the edit after the hit",
+    check_hit_params(false)
 );
 
 // ── REQ-RENDER-011: per-node failure isolation ──────────────────────────────────────────────────────────────────
@@ -901,12 +993,9 @@ fn check_isolation(broken: usize) {
         r.rl.cache().last_valid(1),
         Some(Occupant::Custom(new_colour.clone()))
     );
-    let compiled = r.rl.cache().current().expect("current");
-    assert_eq!(
-        compiled.stain().nodes()[3].occupant,
-        Occupant::Custom(scale(0.5))
-    );
-    assert_eq!(compiled.keys(), &[0, 1, 2, 3, 4]);
+    let rendered = r.rl.cache().rendered().expect("rendered");
+    assert_eq!(rendered.nodes()[3].occupant, Occupant::Custom(scale(0.5)));
+    assert_eq!(r.rl.cache().live_keys(), &[0, 1, 2, 3, 4]);
     let g2 = graph_post(&new_colour, &new_post);
     r.request(&g2);
     assert!(r.rl.cache().errors().is_empty());

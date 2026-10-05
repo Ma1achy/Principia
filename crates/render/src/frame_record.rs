@@ -475,7 +475,19 @@ impl FrameClock {
 /// The bind groups of the stain they were made for.
 struct Bound {
     stain: Arc<CompiledStain>,
+    /// The live nodes' keys the params were written by, by canonical position.
+    live_keys: Vec<NodeKey>,
     groups: [wgpu::BindGroup; 3],
+}
+
+/// Where [`RenderLoop::set_param`] put a param.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Applied {
+    /// The node is live in the current stain: its block holds the value now.
+    Now,
+    /// The node is not live in the current stain (no stain has compiled, its stain is still with the worker, or it is
+    /// off the live graph): the value is kept and written when a stain in which it is live is bound.
+    Later,
 }
 
 /// The render loop: the pipeline cache, the compositor and its layers, the frame clock, the sim buffers the colour
@@ -551,23 +563,32 @@ impl RenderLoop {
         self.bound = None;
     }
 
-    /// How many times the loop has made a pipeline's bind groups: once per pipeline swapped in, and again after the sim
-    /// buffers change, never per frame.
+    /// How many times the loop has made a pipeline's bind groups: once per pipeline swapped in, again when a stain of
+    /// the same pipeline with other live node keys becomes current, and again after the sim buffers change, never per
+    /// frame.
     pub fn binds(&self) -> u64 {
         self.binds
     }
 
-    /// Sets the param `name` of the node keyed `key` to `value`: written to the current pipeline's block now, and to
-    /// every later pipeline's that has it. Refused when the current pipeline has a node keyed `key` that does not
-    /// declare `name` or does not admit `value`.
-    pub fn set_param(&mut self, key: NodeKey, name: &str, value: &[f64]) -> Result<(), String> {
-        if let Some(c) = self.cache.current() {
-            if c.keys().contains(&key) {
-                c.write_param(&self.queue, key, name, value)?;
+    /// Sets the param `name` of the node keyed `key` to `value`: written to the current pipeline's block at that node's
+    /// canonical position now, when it is live in the current stain ([`Applied::Now`]), and to every later pipeline's
+    /// in which it is live ([`Applied::Later`] when that is the first). Refused, and not kept, when the node is live in
+    /// the current stain and does not declare `name` or does not admit `value`.
+    pub fn set_param(
+        &mut self,
+        key: NodeKey,
+        name: &str,
+        value: &[f64],
+    ) -> Result<Applied, String> {
+        let applied = match (self.cache.current(), self.cache.position(key)) {
+            (Some(c), Some(position)) => {
+                c.write_param(&self.queue, position, name, value)?;
+                Applied::Now
             }
-        }
+            _ => Applied::Later,
+        };
         self.params.insert((key, name.to_owned()), value.to_vec());
-        Ok(())
+        Ok(applied)
     }
 
     /// Renders one frame into `target`, a view of the layers' size in the compositor's target format, and returns its
@@ -630,10 +651,11 @@ impl RenderLoop {
             self.bound = None;
             return Err("no pipeline has compiled".into());
         };
+        let live_keys = self.cache.live_keys().to_vec();
         if self
             .bound
             .as_ref()
-            .is_some_and(|b| Arc::ptr_eq(&b.stain, &current))
+            .is_some_and(|b| Arc::ptr_eq(&b.stain, &current) && b.live_keys == live_keys)
         {
             return Ok(());
         }
@@ -650,15 +672,19 @@ impl RenderLoop {
                 current.frame_group(device, &self.frame),
             ])
         })??;
+        // Another stain of the key may have written its own nodes' params into the shared blocks: back to the defaults,
+        // then this stain's params, each at its node's canonical position.
+        current.write_defaults(&self.queue);
         for ((key, name), value) in &self.params {
-            if current.keys().contains(key) {
+            if let Some(position) = live_keys.iter().position(|k| k == key) {
                 // A param the new stain's node no longer declares, or no longer admits, keeps its default there.
-                let _ = current.write_param(&self.queue, *key, name, value);
+                let _ = current.write_param(&self.queue, position, name, value);
             }
         }
         self.binds += 1;
         self.bound = Some(Bound {
             groups,
+            live_keys,
             stain: current,
         });
         Ok(())

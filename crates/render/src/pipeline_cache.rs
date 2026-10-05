@@ -23,6 +23,11 @@
 //! that fails even with the failing nodes at their last valid occupants — the previous pipeline stays and the error is
 //! surfaced ([`CompileError::Stain`]).
 //!
+//! **Node keys and node positions.** A compiled pipeline is shared by every stain of its key, whatever its nodes' keys
+//! or the order its nodes were given in, so its node blocks are by canonical position ([`NodeBlock::position`]). The
+//! current request's keys, by canonical position, are the cache's ([`PipelineCache::live_keys`]): a param edit goes
+//! to the block at its node's position there.
+//!
 //! **The colour pass's entry.** The assembler's source has no entry point; the cache appends [`STAIN_ENTRY`], a
 //! fragment entry that shades one sample per pixel, sample `y · width + x`, from the frame's uniform block
 //! ([`FrameInputs`]; applied per R-369: the flat layout until the render context binds quads). Its vertex stage is the
@@ -195,13 +200,11 @@ pub fn encode(ty: UniformType, value: &[f64]) -> Vec<u8> {
         .collect()
 }
 
-/// One node's uniform block in a compiled stain: the node, its buffer and its schema.
+/// One node's uniform block in a compiled stain: the node's canonical position, its buffer and its schema.
 #[derive(Debug)]
 pub struct NodeBlock {
-    /// The node's position in the stain.
-    pub node: usize,
-    /// The node's key.
-    pub key: NodeKey,
+    /// The node's position in the canonical form, the same in every stain of the key.
+    pub position: usize,
     /// Its binding in group 0.
     pub binding: u32,
     /// The block's buffer, its defaults written at compile.
@@ -216,13 +219,12 @@ pub struct NodeBlock {
 
 /// A compiled stain: the pipeline, its bind group layouts (group 0: the prelude's block and the node blocks after it;
 /// group 1: the stored `SimState` buffer, and the word buffer where the tier binds it, at R-343's bindings,
-/// `ledger::payload::bindings`; group 2: the frame's block, applied per R-369), and the stain as it compiled, with each
-/// node's key.
+/// `ledger::payload::bindings`; group 2: the frame's block, applied per R-369), and the node blocks, by canonical
+/// position. Every stain of its key shares it: what is a request's own, the stain as it renders and its nodes' keys, is
+/// the cache's ([`PipelineCache::rendered`], [`PipelineCache::live_keys`]).
 #[derive(Debug)]
 pub struct CompiledStain {
     key: PipelineKey,
-    stain: Stain,
-    keys: Vec<NodeKey>,
     source: String,
     pipeline: wgpu::RenderPipeline,
     layouts: [wgpu::BindGroupLayout; 3],
@@ -233,16 +235,6 @@ impl CompiledStain {
     /// The key it compiled under.
     pub fn key(&self) -> PipelineKey {
         self.key
-    }
-
-    /// The stain as it compiled: a failed node at its last valid occupant.
-    pub fn stain(&self) -> &Stain {
-        &self.stain
-    }
-
-    /// Each node's key, by position.
-    pub fn keys(&self) -> &[NodeKey] {
-        &self.keys
     }
 
     /// The WGSL it compiled from: the assembled stain and [`STAIN_ENTRY`].
@@ -265,13 +257,13 @@ impl CompiledStain {
         &self.blocks
     }
 
-    /// Writes `value` to the uniform `name` of the node keyed `key`: a param edit, a buffer write that never
-    /// recompiles (lowering Part 5). Refused when no live node of that key declares `name`, or `value` is not a value
-    /// of it ([`Uniform::admits`]).
+    /// Writes `value` to the uniform `name` of the node at canonical position `position`: a param edit, a buffer write
+    /// that never recompiles (lowering Part 5). Refused when the node there declares no `name`, or `value` is not a
+    /// value of it ([`Uniform::admits`]).
     pub fn write_param(
         &self,
         queue: &wgpu::Queue,
-        key: NodeKey,
+        position: usize,
         name: &str,
         value: &[f64],
     ) -> Result<(), String> {
@@ -280,15 +272,27 @@ impl CompiledStain {
             .iter()
             .find_map(|b| {
                 let k = b.uniforms.iter().position(|u| u.name == name)?;
-                (b.key == key).then_some((b, k))
+                (b.position == position).then_some((b, k))
             })
-            .ok_or_else(|| format!("no live node keyed {key} declares the uniform `{name}`"))?;
+            .ok_or_else(|| {
+                format!(
+                    "the live node at canonical position {position} declares no uniform `{name}`"
+                )
+            })?;
         let u = &block.uniforms[k];
         if !u.admits(value) {
             return Err(format!("{value:?} is not a value of `{name}`: {u:?}"));
         }
         queue.write_buffer(&block.buffer, block.offsets[k], &encode(u.ty, value));
         Ok(())
+    }
+
+    /// Writes every node block's defaults: the blocks back as they compiled, before another stain of the key, whose
+    /// nodes have their own params, is bound.
+    pub fn write_defaults(&self, queue: &wgpu::Queue) {
+        for b in &self.blocks {
+            queue.write_buffer(&b.buffer, 0, &defaults(&b.uniforms));
+        }
     }
 
     /// The bind group 0 for this stain: `prelude` at binding 0, then each node block's buffer.
@@ -370,24 +374,30 @@ fn buffer_entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLay
     }
 }
 
-/// `fragment`, the assembled `stain` at `key`'s tier, as a pipeline: the source with [`STAIN_ENTRY`] appended, its
+/// A block of `uniforms` holding each one's default, by [`block_layout`].
+fn defaults(uniforms: &[Uniform]) -> Vec<u8> {
+    let (offsets, size) = block_layout(uniforms);
+    let mut contents = vec![0u8; size as usize];
+    for (u, &at) in uniforms.iter().zip(&offsets) {
+        let v = encode(u.ty, &u.default);
+        contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
+    }
+    contents
+}
+
+/// `fragment`, an assembled stain at `key`'s tier, as a pipeline: the source with [`STAIN_ENTRY`] appended, its
 /// layouts, and each node block's buffer with its defaults. A WGSL, validation or pipeline error is returned.
 fn create(
     device: &wgpu::Device,
     key: PipelineKey,
-    stain: Stain,
-    keys: Vec<NodeKey>,
     fragment: Fragment,
 ) -> Result<CompiledStain, String> {
     let source = format!("{}{STAIN_ENTRY}", fragment.source);
-    let order = stain.canonical().order().to_vec();
     checked(device, "the stain's pipeline", || {
-        objects(device, key, &source, &fragment.uniforms, &order, &keys)
+        objects(device, key, &source, &fragment.uniforms)
     })
     .map(|(pipeline, layouts, blocks)| CompiledStain {
         key,
-        stain,
-        keys,
         source,
         pipeline,
         layouts,
@@ -401,8 +411,6 @@ fn objects(
     key: PipelineKey,
     source: &str,
     uniforms: &[UniformBlock],
-    order: &[usize],
-    keys: &[NodeKey],
 ) -> (
     wgpu::RenderPipeline,
     [wgpu::BindGroupLayout; 3],
@@ -466,16 +474,10 @@ fn objects(
     let blocks = uniforms
         .iter()
         .map(|b| {
-            let (offsets, size) = block_layout(&b.uniforms);
-            let mut contents = vec![0u8; size as usize];
-            for (u, &at) in b.uniforms.iter().zip(&offsets) {
-                let v = encode(u.ty, &u.default);
-                contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
-            }
-            let node = order[b.node];
+            let (offsets, _) = block_layout(&b.uniforms);
+            let contents = defaults(&b.uniforms);
             NodeBlock {
-                node,
-                key: keys[node],
+                position: b.node,
                 binding: b.binding,
                 buffer: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("node uniforms"),
@@ -569,10 +571,35 @@ struct Job {
     tier: Tier,
 }
 
+/// A stain as it renders: its pipeline, the stain (a failed node at its last valid occupant), and its live nodes'
+/// keys and occupants, by canonical position.
+struct Rendered {
+    compiled: Arc<CompiledStain>,
+    stain: Stain,
+    live: Vec<(NodeKey, Occupant)>,
+}
+
+impl Rendered {
+    /// `stain`, keyed by `keys`, on `compiled`.
+    fn new(compiled: Arc<CompiledStain>, stain: Stain, keys: &[NodeKey]) -> Rendered {
+        let live = stain
+            .canonical()
+            .order()
+            .iter()
+            .map(|&i| (keys[i], stain.nodes()[i].occupant.clone()))
+            .collect();
+        Rendered {
+            compiled,
+            stain,
+            live,
+        }
+    }
+}
+
 /// The worker's answer to a [`Job`].
 struct Outcome {
     ticket: u64,
-    compiled: Option<Arc<CompiledStain>>,
+    rendered: Option<Rendered>,
     errors: Vec<CompileError>,
 }
 
@@ -597,6 +624,10 @@ pub struct PipelineCache {
     jobs: Sender<Job>,
     outcomes: Receiver<Outcome>,
     current: Option<Arc<CompiledStain>>,
+    /// The current request's stain as it renders.
+    rendered: Option<Stain>,
+    /// The current request's live nodes' keys, by canonical position.
+    live_keys: Vec<NodeKey>,
     errors: Vec<CompileError>,
     next_ticket: u64,
     /// The latest request still with the worker, its ticket and key: only its outcome becomes current.
@@ -622,10 +653,10 @@ impl PipelineCache {
             .name("render-compile".into())
             .spawn(move || {
                 for job in rx {
-                    let (compiled, errors) = resolve(&worker_shared, &job);
+                    let (rendered, errors) = resolve(&worker_shared, &job);
                     let outcome = Outcome {
                         ticket: job.ticket,
-                        compiled,
+                        rendered,
                         errors,
                     };
                     if tx.send(outcome).is_err() {
@@ -638,6 +669,8 @@ impl PipelineCache {
             jobs,
             outcomes,
             current: None,
+            rendered: None,
+            live_keys: Vec::new(),
             errors: Vec::new(),
             next_ticket: 0,
             latest: None,
@@ -662,7 +695,8 @@ impl PipelineCache {
             for (n, &k) in stain.nodes().iter().zip(keys) {
                 last_valid.insert(k, n.occupant.clone());
             }
-            self.current = Some(compiled);
+            drop(last_valid);
+            self.make_current(Rendered::new(compiled, stain.clone(), keys));
             self.errors.clear();
             self.latest = None;
             return Ok(Requested::Hit);
@@ -736,18 +770,41 @@ impl PipelineCache {
         }
         self.latest = None;
         self.errors = outcome.errors;
-        match outcome.compiled {
-            Some(compiled) => {
-                self.current = Some(compiled);
+        match outcome.rendered {
+            Some(rendered) => {
+                self.make_current(rendered);
                 true
             }
             None => false,
         }
     }
 
+    /// `rendered` as the current pipeline.
+    fn make_current(&mut self, rendered: Rendered) {
+        self.live_keys = rendered.live.into_iter().map(|(k, _)| k).collect();
+        self.rendered = Some(rendered.stain);
+        self.current = Some(rendered.compiled);
+    }
+
     /// The current pipeline, the one frames draw; `None` until a request compiles.
     pub fn current(&self) -> Option<&Arc<CompiledStain>> {
         self.current.as_ref()
+    }
+
+    /// The current request's stain as it renders: a failed node at its last valid occupant.
+    pub fn rendered(&self) -> Option<&Stain> {
+        self.rendered.as_ref()
+    }
+
+    /// The current request's live nodes' keys, by canonical position: the key of the node whose block is at each
+    /// [`NodeBlock::position`] of the current pipeline. Empty until a request compiles.
+    pub fn live_keys(&self) -> &[NodeKey] {
+        &self.live_keys
+    }
+
+    /// The canonical position of the node keyed `key` in the current stain: `None` when it is not live there.
+    pub fn position(&self, key: NodeKey) -> Option<usize> {
+        self.live_keys.iter().position(|&k| k == key)
     }
 
     /// The compiled pipeline of `key`, if it is in the cache.
@@ -796,7 +853,7 @@ fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
 
 /// The worker's work on `job`: the stain as it can render, each failing node at its last valid occupant (the module
 /// docs), compiled or taken from the cache; and the errors to surface.
-fn resolve(shared: &Shared, job: &Job) -> (Option<Arc<CompiledStain>>, Vec<CompileError>) {
+fn resolve(shared: &Shared, job: &Job) -> (Option<Rendered>, Vec<CompileError>) {
     let last_valid = lock(&shared.last_valid).clone();
     let nodes = job.stain.nodes();
     let (stain, fragment, failed) = match assemble(&job.stain, job.tier) {
@@ -849,7 +906,7 @@ fn resolve(shared: &Shared, job: &Job) -> (Option<Arc<CompiledStain>>, Vec<Compi
         Some(c) => c,
         None => {
             shared.compiles.fetch_add(1, Ordering::SeqCst);
-            match create(&shared.device, key, stain, job.keys.clone(), fragment) {
+            match create(&shared.device, key, fragment) {
                 Ok(c) => {
                     let c = Arc::new(c);
                     lock(&shared.cache).insert(key, Arc::clone(&c));
@@ -865,7 +922,8 @@ fn resolve(shared: &Shared, job: &Job) -> (Option<Arc<CompiledStain>>, Vec<Compi
             last.insert(k, n.occupant.clone());
         }
     }
-    (Some(compiled), errors)
+    drop(last);
+    (Some(Rendered::new(compiled, stain, &job.keys)), errors)
 }
 
 /// `nodes` with each node `j` for which `swap(j)` holds at its key's last valid occupant; `swap` holds only for nodes
