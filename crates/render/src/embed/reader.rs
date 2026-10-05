@@ -13,10 +13,12 @@ use super::{Image, Plane};
 /// What the reader found: exactly one of §9's three outcomes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
-    /// No embedded state: in no view the search tried does a tile of either plane, at any pixel and any side a record
-    /// can have, start with the magic.
+    /// No embedded state: no tile of either plane, at any side a record can have, starts with the magic in the grid
+    /// the writer lays from the image's top-left pixel, and in no view the search tried does a tile, at any pixel and
+    /// any side, start with an intact header ([`Search::present`](super::search::Search::present)).
     None,
-    /// State present, corrupt: some tile starts with the magic, but no record can be trusted.
+    /// State present, corrupt: state is present ([`Search::present`](super::search::Search::present)), but no record
+    /// can be trusted.
     Corrupt(Corrupt),
     /// Recovered, and how.
     Recovered(Recovered),
@@ -34,7 +36,7 @@ pub struct Corrupt {
 /// Why the state present is corrupt.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CorruptReason {
-    /// Tiles start with the magic, but every record is discarded whole (§2).
+    /// State is present, but every record is discarded whole (§2).
     NoIntactRecord,
     /// Intact records were found, but no length, or no value of some byte, is held by more than half of them.
     NoMajority,

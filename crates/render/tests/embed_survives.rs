@@ -7,6 +7,7 @@
 
 use proptest::prelude::*;
 use render::embed::reader::{read, Count, Dihedral, How, Outcome, Transform};
+use render::embed::record::MAGIC;
 use render::embed::writer::embed;
 use render::embed::{Image, Plane};
 use validation::{negative_control, prop};
@@ -475,6 +476,67 @@ negative_control!(
             &payload,
             how(Dihedral::Identity, 1, 20, (0, 225), Some(49)),
         )
+    }
+);
+
+/// A 64² noise patch whose RGB plane spells the magic from its top-left pixel along its top row, as a tile of side 43
+/// or more starts with it (`⌈32 / 3⌉ = 11` pixels), followed by noise, so its header's CRC fails.
+fn magic_patch() -> Image {
+    let mut patch = canvas(64, 64, 17);
+    for (i, bit) in MAGIC
+        .iter()
+        .flat_map(|&byte| (0..8).rev().map(move |shift| (byte >> shift) & 1))
+        .enumerate()
+    {
+        let at = (i / 3) * 4 + i % 3;
+        patch.pixels_mut()[at] = (patch.pixels()[at] & !1) | bit;
+    }
+    patch
+}
+
+/// `image` with `patch` pasted over it, its top-left pixel at `(x, y)`.
+fn paste(mut image: Image, patch: &Image, x: u32, y: u32) -> Image {
+    let (width, row) = (image.width(), (patch.width() * 4) as usize);
+    for b in 0..patch.height() {
+        let from = (b * patch.width() * 4) as usize;
+        let to = (((y + b) * width + x) * 4) as usize;
+        image.pixels_mut()[to..to + row].copy_from_slice(&patch.pixels()[from..from + row]);
+    }
+    image
+}
+
+/// A 512² noise canvas holding the magic, but no intact header, where only the search finds it: off the writer's
+/// grid at `(5, 7)`, rotated 90° at `(101, 203)` and upscaled ×2 at `(300, 300)`. The magic alone there is not state
+/// present (§9's three outcomes), so the canvas reads as no state: the search's many views and pixels must not raise
+/// the rate of false "state present" above the writer's grid's own.
+fn magic_off_the_writer_grid() -> Image {
+    let patch = magic_patch();
+    let image = paste(canvas(SIZE, SIZE, 18), &patch, 5, 7);
+    let image = paste(image, &dihedral(&patch, Dihedral::Rot90), 101, 203);
+    paste(image, &upscale(&patch, 2), 300, 300)
+}
+
+/// `outcome` is "no embedded state".
+fn check_no_state(outcome: &Outcome) {
+    assert_eq!(outcome, &Outcome::None, "the canvas reads as state present");
+}
+
+#[test]
+fn embed_searches_magic_alone_off_the_writer_grid_is_no_state() {
+    check_no_state(&read(&magic_off_the_writer_grid()));
+}
+
+negative_control!(
+    embed_searches_magic_alone_off_the_writer_grid_is_no_state,
+    "the magic at the start of a tile of the writer's grid, (0, 0), is state present, corrupt",
+    expected = "the canvas reads as state present",
+    {
+        check_no_state(&read(&paste(
+            magic_off_the_writer_grid(),
+            &magic_patch(),
+            0,
+            0,
+        )))
     }
 );
 

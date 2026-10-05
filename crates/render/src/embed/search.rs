@@ -103,7 +103,12 @@ pub struct Found {
 /// What the search found.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Search {
-    /// Whether the magic began a tile at some pixel and side of some view searched.
+    /// Whether state is present: in the untransformed, undecimated view, a tile of the grid the writer lays from the
+    /// image's top-left pixel starts with the magic, at some side a record can have; or, at any pixel and side of any
+    /// view searched, a tile starts with an intact header, its CRC verifying. The magic alone, at a pixel off that
+    /// grid or in another view, is not counted: it is 32 bits, which a canvas's own low bits spell by chance somewhere
+    /// among the many pixels, sides and views the search tries, so the rate of state reported present in images
+    /// that hold none would rise with the search.
     pub present: bool,
     /// The first candidate whose view held an intact record, or `None` when no view held one.
     pub found: Option<Found>,
@@ -200,6 +205,9 @@ fn lows(image: &Image) -> Vec<u8> {
 /// `lows[origin + u × step_u + v × step_v]`, each step a unit of x or y with its sign, scaled by the decimation.
 struct View<'a> {
     lows: &'a [u8],
+    /// Whether the view is the image itself, the identity undecimated: the only view in which the writer's grid, the
+    /// tiles at multiples of their side from the top-left pixel, is where the magic alone shows state present.
+    writer: bool,
     width: u32,
     height: u32,
     origin: i64,
@@ -219,6 +227,7 @@ impl<'a> View<'a> {
         let (width, height) = if dihedral.swaps() { (dh, dw) } else { (dw, dh) };
         Self {
             lows,
+            writer: dihedral == Dihedral::Identity && decimate == 1,
             width,
             height,
             origin,
@@ -239,7 +248,7 @@ impl<'a> View<'a> {
     }
 
     /// Pushes onto `hits` every intact record of `plane` whose tile lies whole in the view, at any pixel and any side
-    /// a record can have; returns whether the magic began a tile at any of them.
+    /// a record can have; returns whether any of them shows state present ([`Search::present`]).
     fn scan(&self, plane: Plane, hits: &mut Vec<Hit>) -> bool {
         let smallest = tile_side(record_bits(0), plane.bits_per_pixel());
         let prefix = prefix(plane, smallest);
@@ -310,8 +319,9 @@ impl Tiles<'_, '_> {
     }
 
     /// Looks for a record whose tile's top-left pixel is `(x, y)`, at every side from `smallest` to `largest`, the
-    /// widest that fits the view there, and pushes it onto `hits` when it is intact; returns whether the magic began a
-    /// tile there.
+    /// widest that fits the view there, and pushes it onto `hits` when it is intact; returns whether a tile there shows
+    /// state present ([`Search::present`]): its header intact, or the magic at the start of a tile of the writer's
+    /// grid.
     ///
     /// A side narrower than the header wraps it onto pixels of its own, so each such side is read. From the first side
     /// the header does not wrap at, every wider side reads the same header, and only the side its `payload_len` gives
@@ -321,7 +331,7 @@ impl Tiles<'_, '_> {
         let mut present = false;
         for side in smallest..unwrapped.min(largest + 1) {
             let (magic, need) = self.try_side(x, y, side, hits);
-            if magic {
+            if need.is_some() || (magic && self.on_writer_grid(x, y, side..=side)) {
                 present = true;
             }
             if need == Some(side) {
@@ -329,8 +339,10 @@ impl Tiles<'_, '_> {
             }
         }
         if unwrapped <= largest {
+            // Every side from `unwrapped` up reads the magic the same, so it starts a tile of the writer's grid when
+            // any of those sides that fits divides both coordinates.
             let (magic, need) = self.try_side(x, y, unwrapped, hits);
-            if magic {
+            if need.is_some() || (magic && self.on_writer_grid(x, y, unwrapped..=largest)) {
                 present = true;
             }
             if let Some(need) = need.filter(|&need| need > unwrapped && need <= largest) {
@@ -340,9 +352,15 @@ impl Tiles<'_, '_> {
         present
     }
 
+    /// Whether `(x, y)` is the top-left pixel of a tile of the writer's grid, the view being the image itself, at
+    /// one of `sides`: a multiple of the side in both coordinates.
+    fn on_writer_grid(&self, x: u32, y: u32, sides: std::ops::RangeInclusive<u32>) -> bool {
+        self.view.writer && sides.into_iter().any(|side| x % side == 0 && y % side == 0)
+    }
+
     /// Reads the header of the tile of side `side` with top-left pixel `(x, y)`, and pushes its record onto `hits`
     /// when `side` is the side the header's `payload_len` gives and the record is intact. Returns whether the tile
-    /// starts with the magic, and the side an intact header gives.
+    /// starts with the magic, and the side the header gives when it is intact.
     fn try_side(&mut self, x: u32, y: u32, side: u32, hits: &mut Vec<Hit>) -> (bool, Option<u32>) {
         if self.bytes(x, y, side, MAGIC.len()) != MAGIC {
             return (false, None);
