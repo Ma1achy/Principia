@@ -9,8 +9,8 @@
 //! the debug views baked one source per field on demand ([`debug_bake`]); the three fixed compositor pipelines
 //! ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame ([`frame_record`]).
 //!
-//! The image embedding lives here too (`embed`): its record format, tiled writer and majority-vote reader. The plan
-//! layout names no export crate.
+//! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
+//! reader. The plan layout names no export crate.
 
 pub mod assemble;
 pub mod compositor;

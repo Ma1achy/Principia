@@ -1,10 +1,11 @@
 //! Embedding a slice's provenance in the pixels of its own PNG (`principia_dd_image_embedding.md`).
 //!
-//! [`record`] is the record format and its tile geometry, [`writer`] the tiled writer and [`reader`] the
-//! majority-vote reader with its three outcomes. [`Image`] is the pixels both sides work on.
+//! [`record`] is the record format and its tile geometry, [`writer`] the tiled writer, [`search`] §4's three searches
+//! on read and [`reader`] the majority-vote reader with its three outcomes. [`Image`] is the pixels both sides work on.
 
 pub mod reader;
 pub mod record;
+pub mod search;
 pub mod writer;
 
 use record::{tile_origin, ALPHA_BITS_PER_PIXEL, RGB_BITS_PER_PIXEL};
