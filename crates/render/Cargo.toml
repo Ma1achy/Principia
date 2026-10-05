@@ -21,6 +21,10 @@ validation = { path = "../validation" }
 # The assembler's tests compile the assembled stain to naga's MSL, SPIR-V and HLSL to show which stored words it loads
 # (R-378).
 naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"] }
+# The embedding's survives suite (principia_dd_image_embedding.md §7): the PNG round trip through the png crate xtask
+# already builds with, and the shared proptest configuration's runner (validation::prop).
+png = "0.18"
+proptest = "1.11"
 
 # Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
 [features]
