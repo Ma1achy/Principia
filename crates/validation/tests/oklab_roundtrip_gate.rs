@@ -484,8 +484,8 @@ negative_control!(
 
 // ── The fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The runner on `root`'s `fixtures/gates/oklab-roundtrip/` gives every input its expected outcome: the lattice
-/// passes and the perturbed `M₁` fails (PIT-3).
+/// The runner on `root`'s `fixtures/gates/oklab-roundtrip/` gives every input its expected outcome: the whole 8-bit
+/// gamut and the stride-5 lattice pass, and the perturbed `M₁` fails (PIT-3).
 fn check_fixtures(root: &Path) {
     let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("oklab_roundtrip_gate");
     let result = gate::run(root, oklab::NAME, &out);
