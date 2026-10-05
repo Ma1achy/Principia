@@ -11,6 +11,14 @@ crc32fast = "1.5"
 # The assembler parses and validates the assembled WGSL with naga, wgpu 30's front end, and reads the stain's field set
 # off naga's IR (R-378; TASK-M1-04).
 naga = { version = "30", features = ["wgsl-in"] }
+# The fragment pipeline at runtime (TASK-M1-05): the stain and compositor pipelines are wgpu objects, at validation's and
+# engine's version and backends. wgpu is an external crate, not a workspace edge.
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+# The frame record, profiler schema v1's measurement struct (R-56, TASK-M0-17), is typed Rust with serde: the render
+# loop fills it, and the engine writes and reads it (TASK-M1-05).
+serde = { version = "1", features = ["derive"] }
+# The compile worker reads wgpu's error scope for each pipeline it creates (TASK-M1-05).
+pollster = "1"
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
 # tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). They are
@@ -21,6 +29,10 @@ validation = { path = "../validation" }
 # The assembler's tests compile the assembled stain to naga's MSL, SPIR-V and HLSL to show which stored words it loads
 # (R-378).
 naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"] }
+# The runtime tests validate each frame record against profiler schema v1's JSON Schema (TASK-M1-05); no remote
+# references, so no HTTP resolver.
+serde_json = "1"
+jsonschema = { version = "0.58", default-features = false }
 
 # Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
 [features]
