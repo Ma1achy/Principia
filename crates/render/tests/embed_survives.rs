@@ -98,8 +98,8 @@ fn upscale(image: &Image, s: u32) -> Image {
     })
 }
 
-/// `image` saved as a PNG at the strongest compression with adaptive filtering (§7: `optimize=True`,
-/// `compress_level=9`), and loaded back.
+/// `image` saved as a PNG at deflate level 9 with adaptive filtering (§7: `optimize=True`, `compress_level=9`), and
+/// loaded back.
 fn png_round_trip(image: &Image) -> Image {
     let mut file = Vec::new();
     {
@@ -110,7 +110,7 @@ fn png_round_trip(image: &Image) -> Image {
             png::ColorType::Rgb
         });
         encoder.set_depth(png::BitDepth::Eight);
-        encoder.set_compression(png::Compression::High);
+        encoder.set_deflate_compression(png::DeflateCompression::Level(9));
         encoder.set_filter(png::Filter::Adaptive);
         let mut writer = encoder.write_header().expect("the PNG header writes");
         writer
