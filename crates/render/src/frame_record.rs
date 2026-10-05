@@ -472,11 +472,13 @@ impl FrameClock {
 
 // ── The render loop ───────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The bind groups of the stain they were made for.
+/// The bind groups of the pipeline they were made for, and the request whose params its node blocks hold.
 struct Bound {
     stain: Arc<CompiledStain>,
-    /// The live nodes' keys the params were written by, by canonical position.
-    live_keys: Vec<NodeKey>,
+    /// The [`PipelineCache::generation`] of the request whose params were last written to the node blocks: `None`
+    /// until they are. Every stain of the key shares the blocks, and a request made current changes the generation, so
+    /// a frame after any other request on the pipeline, a param edit made on it included, writes them again.
+    written: Option<u64>,
     groups: [wgpu::BindGroup; 3],
 }
 
@@ -563,9 +565,9 @@ impl RenderLoop {
         self.bound = None;
     }
 
-    /// How many times the loop has made a pipeline's bind groups: once per pipeline swapped in, again when a stain of
-    /// the same pipeline with other live node keys becomes current, and again after the sim buffers change, never per
-    /// frame.
+    /// How many times the loop has made a pipeline's bind groups: once per pipeline swapped in and again after the sim
+    /// buffers change, never per frame. Another stain of the same pipeline becoming current makes none: its params are
+    /// written to the shared node blocks, and the groups stay.
     pub fn binds(&self) -> u64 {
         self.binds
     }
@@ -644,49 +646,54 @@ impl RenderLoop {
         drawn
     }
 
-    /// Binds the current pipeline's groups, if they are not bound already, and writes its params. A wgpu error, sim
-    /// buffers past the device's binding limit say, is returned, and the frame skips.
+    /// Binds the current pipeline's groups, if they are not bound already, and writes the current request's params to
+    /// its node blocks, if they do not hold them already. A wgpu error, sim buffers past the device's binding limit
+    /// say, is returned, and the frame skips. A frame with nothing changed allocates nothing and creates nothing.
     fn bind(&mut self) -> Result<(), String> {
-        let Some(current) = self.cache.current().cloned() else {
+        let Some(current) = self.cache.current() else {
             self.bound = None;
             return Err("no pipeline has compiled".into());
         };
-        let live_keys = self.cache.live_keys().to_vec();
-        if self
+        if !self
             .bound
             .as_ref()
-            .is_some_and(|b| Arc::ptr_eq(&b.stain, &current) && b.live_keys == live_keys)
+            .is_some_and(|b| Arc::ptr_eq(&b.stain, current))
         {
-            return Ok(());
+            self.bound = None;
+            let (simstate, word) = self
+                .sim
+                .as_ref()
+                .ok_or_else(|| "no sim buffers are set".to_owned())?;
+            let device = &self.device;
+            let groups = checked(device, "the stain's bind groups", || {
+                Ok::<_, String>([
+                    current.uniform_group(device, &self.prelude),
+                    current.sim_group(device, simstate, word.as_ref())?,
+                    current.frame_group(device, &self.frame),
+                ])
+            })??;
+            self.binds += 1;
+            self.bound = Some(Bound {
+                stain: Arc::clone(current),
+                written: None,
+                groups,
+            });
         }
-        self.bound = None;
-        let (simstate, word) = self
-            .sim
-            .as_ref()
-            .ok_or_else(|| "no sim buffers are set".to_owned())?;
-        let device = &self.device;
-        let groups = checked(device, "the stain's bind groups", || {
-            Ok::<_, String>([
-                current.uniform_group(device, &self.prelude),
-                current.sim_group(device, simstate, word.as_ref())?,
-                current.frame_group(device, &self.frame),
-            ])
-        })??;
-        // Another stain of the key may have written its own nodes' params into the shared blocks: back to the defaults,
-        // then this stain's params, each at its node's canonical position.
+        let generation = Some(self.cache.generation());
+        let Some(bound) = self.bound.as_mut().filter(|b| b.written != generation) else {
+            return Ok(());
+        };
+        // Another request on the pipeline, another stain of the key or this one under other node keys, may have
+        // written its own nodes' params into the shared blocks, by a bind or by a param edit made while it was current:
+        // back to the defaults, then this request's params, each at its node's canonical position.
         current.write_defaults(&self.queue);
         for ((key, name), value) in &self.params {
-            if let Some(position) = live_keys.iter().position(|k| k == key) {
+            if let Some(position) = self.cache.position(*key) {
                 // A param the new stain's node no longer declares, or no longer admits, keeps its default there.
                 let _ = current.write_param(&self.queue, position, name, value);
             }
         }
-        self.binds += 1;
-        self.bound = Some(Bound {
-            groups,
-            live_keys,
-            stain: current,
-        });
+        bound.written = generation;
         Ok(())
     }
 

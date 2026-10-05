@@ -635,6 +635,8 @@ pub struct PipelineCache {
     /// The latest request still with the worker, its ticket and key: only its outcome becomes current.
     latest: Option<(u64, PipelineKey)>,
     in_flight: usize,
+    /// How many times the current request has changed: what a bind of the shared node blocks is checked against.
+    generation: u64,
 }
 
 impl PipelineCache {
@@ -677,6 +679,7 @@ impl PipelineCache {
             next_ticket: 0,
             latest: None,
             in_flight: 0,
+            generation: 0,
         }
     }
 
@@ -783,7 +786,16 @@ impl PipelineCache {
         for (k, o) in &rendered.live {
             last_valid.insert(*k, o.clone());
         }
-        self.live_keys = rendered.live.into_iter().map(|(k, _)| k).collect();
+        let live_keys: Vec<NodeKey> = rendered.live.into_iter().map(|(k, _)| k).collect();
+        let same = self
+            .current
+            .as_ref()
+            .is_some_and(|c| Arc::ptr_eq(c, &rendered.compiled))
+            && self.live_keys == live_keys;
+        if !same {
+            self.generation += 1;
+        }
+        self.live_keys = live_keys;
         self.rendered = Some(rendered.stain);
         self.current = Some(rendered.compiled);
     }
@@ -802,6 +814,14 @@ impl PipelineCache {
     /// [`NodeBlock::position`] of the current pipeline. Empty until a request compiles.
     pub fn live_keys(&self) -> &[NodeKey] {
         &self.live_keys
+    }
+
+    /// How many times the current request has changed, by a hit or a swap, to another pipeline or to the same pipeline
+    /// under other node keys, whose params differ from those the shared node blocks hold. A request for the current
+    /// pipeline under its current node keys leaves it: the blocks hold that request's params already, a param edit
+    /// made since included. 0 until a request compiles.
+    pub fn generation(&self) -> u64 {
+        self.generation
     }
 
     /// The canonical position of the node keyed `key` in the current stain: `None` when it is not live there.

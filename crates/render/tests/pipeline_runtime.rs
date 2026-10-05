@@ -956,6 +956,132 @@ negative_control!(
     check_hit_params(false)
 );
 
+/// How [`check_shared_blocks`] makes the first stain current again after the edit on the second.
+#[derive(Clone, Copy, PartialEq)]
+enum Back {
+    /// A request for it, a cache hit.
+    Hit,
+    /// A request under its node keys whose colour fails to assemble: the worker falls back to its last valid source,
+    /// the first stain's, and the swap brings back the same pipeline and the same node keys.
+    Fallback,
+}
+
+/// Two stains of one pipeline share its node blocks: a param edit made on the second while the first is the one bound
+/// never reaches the first. The first compiles and a frame draws it; the second, the same graph under other node keys,
+/// is requested, a hit, and no frame draws it; a param edit on one of its nodes is written to the shared block at
+/// once; the first is made current again, by `back` (`None`, the control: the second stays current); the next frame draws the first with its own params, the defaults.
+/// The pipeline's groups are made once (review 5410181424 C5).
+fn check_shared_blocks(back: Option<Back>) {
+    let mut r = rig();
+    let first = graph(GAIN_COLOUR);
+    r.request(&first);
+    assert_all(&r.frame(), [0.5, 0.25, 0.125], "the first stain's defaults");
+    let second_keys: Vec<NodeKey> = vec![30, 31, 32, 33];
+    assert_eq!(
+        r.rl.cache()
+            .request(&stain(&first), &second_keys, Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}")),
+        Requested::Hit
+    );
+    assert_eq!(
+        r.rl.set_param(31, "gain", &[1.0])
+            .unwrap_or_else(|e| panic!("{e}")),
+        Applied::Now
+    );
+    match back {
+        None => {}
+        Some(Back::Hit) => assert_eq!(r.request(&first), Requested::Hit),
+        Some(Back::Fallback) => {
+            assert_eq!(r.request(&graph(BROKEN_COLOUR)), Requested::Queued);
+            assert!(
+                matches!(r.rl.cache().errors(), [CompileError::Node { key: 1, .. }]),
+                "{:?}",
+                r.rl.cache().errors()
+            );
+            assert_eq!(r.rl.cache().live_keys(), &[0, 1, 2, 3]);
+        }
+    }
+    assert_all(
+        &r.frame(),
+        [0.5, 0.25, 0.125],
+        "the first stain drew with the second's param",
+    );
+    assert_eq!(r.rl.cache().compiles(), 1, "a hit or a fallback compiled");
+    assert_eq!(r.rl.binds(), 1, "a stain of the bound pipeline rebound");
+}
+
+#[test]
+fn fragment_cache_param_edit_on_a_stain_sharing_the_pipeline_stays_its_own() {
+    check_shared_blocks(Some(Back::Hit));
+}
+
+negative_control!(
+    fragment_cache_param_edit_on_a_stain_sharing_the_pipeline_stays_its_own,
+    "with the second stain still current, its edit draws",
+    expected = "the first stain drew with the second's param",
+    check_shared_blocks(None)
+);
+
+#[test]
+fn fragment_cache_param_edit_on_a_stain_sharing_the_pipeline_stays_its_own_after_a_fallback() {
+    check_shared_blocks(Some(Back::Fallback));
+}
+
+negative_control!(
+    fragment_cache_param_edit_on_a_stain_sharing_the_pipeline_stays_its_own_after_a_fallback,
+    "with the second stain still current, its edit draws",
+    expected = "the first stain drew with the second's param",
+    check_shared_blocks(None)
+);
+
+/// A host requesting the current stain again every frame, under its node keys (`rekey` false), leaves the current
+/// request as it is: the generation the loop binds against does not change, and each frame draws the param edit made
+/// before, with the groups made once. `rekey`, the control, requests it under other node keys, another request.
+fn check_rerequest(rekey: bool) {
+    let mut r = rig();
+    let g = graph(GAIN_COLOUR);
+    r.request(&g);
+    assert_eq!(
+        r.rl.set_param(1, "gain", &[0.25])
+            .unwrap_or_else(|e| panic!("{e}")),
+        Applied::Now
+    );
+    assert_all(&r.frame(), [0.25, 0.125, 0.0625], "the edit");
+    let generation = r.rl.cache().generation();
+    let k: Vec<NodeKey> = if rekey {
+        vec![40, 41, 42, 43]
+    } else {
+        keys(&g)
+    };
+    for _ in 0..3 {
+        assert_eq!(
+            r.rl.cache()
+                .request(&stain(&g), &k, Tier::FULL)
+                .unwrap_or_else(|e| panic!("{e}")),
+            Requested::Hit
+        );
+        assert_eq!(
+            r.rl.cache().generation(),
+            generation,
+            "a request for the current stain changed the current request"
+        );
+        assert_all(&r.frame(), [0.25, 0.125, 0.0625], "the edit, re-requested");
+    }
+    assert_eq!(r.rl.binds(), 1, "a re-request rebound");
+}
+
+#[test]
+fn fragment_cache_rerequest_of_the_current_stain_changes_nothing() {
+    check_rerequest(false);
+}
+
+negative_control!(
+    fragment_cache_rerequest_of_the_current_stain_changes_nothing,
+    "under other node keys, the request is another",
+    expected = "a request for the current stain changed the current request",
+    check_rerequest(true)
+);
+
 // ── REQ-RENDER-011: per-node failure isolation ──────────────────────────────────────────────────────────────────
 
 /// A colour and a post compiled, then both edited, `broken` (1 or 3) given a syntax error: the broken node keeps its
