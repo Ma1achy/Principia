@@ -229,9 +229,16 @@ render-key.
 | **screen**    | `pixel` (ivec2), `uv` (screenspace, vec2), `target_dims` (ivec2) |
 | **chart**     | `slice_uv` (vec2 in [0,1]²), `z` (the full 8-D latent at this pixel, chart triple applied), `chart_id` |
 | **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
-| **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples/quad), `E` (ensemble) |
+| **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples/quad), `E` (ensemble), `uv` (within-tile vec2) |
 | **payload**   | every per-pixel field written by the kernel — `state`, `ftle`, `energy_drift`, `Lz_drift`, `diffusion`, `d_min`, `word`/hash, `t_end`, decoded-IC quantities, masses, … |
 | **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
+
+**The within-cell coordinates `ctx.quad.uv` and `ctx.tile.uv` (R-72; REQ-COL-056).** Each is a vec2 in [0, 1]², with
+its origin at its cell's bottom-left corner, `u` increasing rightward and `v` upward on the slice: the post-flip, Y-up
+convention of the debug tooling plan's UV passthrough (§F). The quad's cell is the quad; a tile's is the tile, one of
+the quad's N × N, which its one sample rasterises to (canonical spec §8). So, for the tile in column `i` and row `j` of
+its quad, both counted from the quad's bottom-left from 0, `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`.
+`ctx.tile.uv` is what render GUI spec §12.1 draws tile boundaries from, as it draws quad boundaries from `ctx.quad.uv`.
 
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
