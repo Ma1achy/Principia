@@ -15,8 +15,10 @@ use crate::pipeline_cache::bytes;
 /// spec's 4 bytes a pixel for the render-sized targets).
 pub const LAYER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
-/// The most weights a blur pass takes, the centre's and one per tap out from it (applied per R-369: the corpus gives
-/// no blur radius; the weights are the caller's).
+/// The most weights a blur pass takes, the centre's and one per tap out from it: the uniform block's capacity, a blur
+/// radius of at most 15 render pixels, not the radius. The radius is REQ-RENDER-079, an R-71 calibration requirement
+/// (caching contract Part 5) owned by TASK-M5-26 and confirmed by the human at the M5 gate; until then the weights,
+/// and so the radius, are the caller's, and the calibration may raise this capacity.
 pub const MAX_TAPS: usize = 16;
 
 /// The blur pass's uniform block's size in bytes: direction, tap count, padding, and [`MAX_TAPS`] weights.

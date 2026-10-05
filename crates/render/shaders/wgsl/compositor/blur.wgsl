@@ -1,7 +1,9 @@
 // The blur pass, a fixed compositor shader run twice, across then down: a separable blur (caching contract Part 5;
 // lowering contract Part 3). Each output texel is `w[0]·c(p) + Σ_{k=1}^{taps−1} w[k]·(c(p + k·d) + c(p − k·d))`,
 // `d` the pass's direction and each read clamped to the texture's edge. The weights are the caller's, `w[k]` in
-// `weights[k / 4][k % 4]`; the shader holds no blur constant.
+// `weights[k / 4][k % 4]`; the shader holds no blur constant. The 16 weights are the block's capacity (MAX_TAPS, a
+// radius of at most 15 render pixels), not the radius: the radius is REQ-RENDER-079, an R-71 calibration owned by
+// TASK-M5-26 and confirmed at the M5 gate.
 struct CmpBlur {
     direction: vec2<i32>,
     taps: u32,
