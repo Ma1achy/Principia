@@ -7,5 +7,6 @@ pub mod control;
 pub mod convergence;
 pub mod gate;
 pub mod gpu;
+pub mod oklab;
 pub mod prop;
 pub mod spawn;
