@@ -6,8 +6,9 @@
 //! "Read"). It reports exactly one of three outcomes (§9): no embedded state, state present but corrupt, or recovered
 //! and how, the how being the transform the search found.
 
+use super::hybrid::Rotation;
 use super::record::{decode, record_bits, tile_grid, tile_side, Discard, Record};
-use super::search::{search, Hit};
+use super::search::{search, Hit, Search};
 use super::{Image, Plane};
 
 /// What the reader found: exactly one of §9's three outcomes.
@@ -82,7 +83,8 @@ pub struct Count {
 /// The transform through which the reader read the grid (§4's three searches).
 ///
 /// `dx` and `dy` are in the pixels of the view the records were read in, the image decimated and its dihedral
-/// transform undone. They are the RGB plane's grid origin when an RGB record agrees with the vote, and otherwise the
+/// transform undone; under a hybrid record's rotation they count the view's blocks, the image's rotation undone and
+/// each block voted. They are the RGB plane's grid origin when an RGB record agrees with the vote, and otherwise the
 /// alpha plane's, whose tiles have their own side.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Transform {
@@ -94,15 +96,19 @@ pub struct Transform {
     pub dihedral: Dihedral,
     /// The decimation factor `s`: every `s`-th pixel of every `s`-th row.
     pub decimate: u32,
+    /// The rotation the hybrid variant's angle search undid before the dihedral transform, and the redundancy whose
+    /// blocks it voted ([`hybrid`](super::hybrid)); `None` when §4's three searches read the record without it.
+    pub rotation: Option<Rotation>,
 }
 
 impl Transform {
-    /// The grid as the writer laid it: no offset, no dihedral transform, no decimation.
+    /// The grid as the writer laid it: no offset, no dihedral transform, no decimation, no rotation.
     pub const IDENTITY: Self = Self {
         dx: 0,
         dy: 0,
         dihedral: Dihedral::Identity,
         decimate: 1,
+        rotation: None,
     };
 }
 
@@ -128,9 +134,16 @@ pub enum Dihedral {
     AntiTranspose,
 }
 
-/// Reads `image`'s embedded state and reports exactly one of the three outcomes (§9).
+/// Reads `image`'s embedded state through §4's three searches and reports exactly one of the three outcomes (§9). An
+/// arbitrarily rotated hybrid record needs the angle search as well: [`hybrid::read`](super::hybrid::read) runs both.
 pub fn read(image: &Image) -> Outcome {
-    let searched = search(image);
+    settle(search(image), image.has_alpha(), None)
+}
+
+/// The outcome of a search (§9): no state, state present but corrupt, or the intact records `searched` found voted
+/// and reported, with `rotation` the rotation undone to find them. `alpha` says whether the image read has an alpha
+/// channel.
+pub(super) fn settle(searched: Search, alpha: bool, rotation: Option<Rotation>) -> Outcome {
     let Some(view) = searched.found else {
         return if searched.present {
             Outcome::Corrupt(Corrupt {
@@ -157,7 +170,7 @@ pub fn read(image: &Image) -> Outcome {
         found: agree(Plane::Rgb),
         of: u32::from(decoded.record.n_records),
     };
-    let alpha = image.has_alpha().then(|| {
+    let alpha = alpha.then(|| {
         let side = tile_side(
             record_bits(decoded.record.payload.len()),
             Plane::Alpha.bits_per_pixel(),
@@ -182,6 +195,7 @@ pub fn read(image: &Image) -> Outcome {
                 dy,
                 dihedral: view.dihedral,
                 decimate: view.decimate,
+                rotation,
             },
             tiles,
             alpha,

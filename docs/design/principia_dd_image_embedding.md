@@ -99,6 +99,31 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
   `⌊width / side⌋` columns and `⌊height / side⌋` rows; the strip beyond the last whole tile is not written. A
   402 B record gives an RGB side of 33, and the grid then holds §7's 1, 9, 49, 225 and 961 tiles at 64², 128², 256²,
   512² and 1024²; a record carrying both of §7's payloads, 382 + 2,969 B, gives a side of 95 and §7's second column.
+- **The hybrid layout (flag variant `2`; R-72, REQ-TOOL-110).** The hybrid variant (§5) writes each bit of the record
+  `k` times, side by side, in a *block* of `m` × `m` pixels, `k = m²`; `m` is the block side (`b` above is a plane's
+  bits per pixel). Two redundancies are offered, §5's measured `k = 9` (`m = 3`) and `k = 25` (`m = 5`); `m` is odd, so
+  the reader's majority over a block's `k` pixels never ties.
+  - **The block grid.** An image's blocks sit in a grid from its top-left pixel, block `(i, j)` covering pixels
+    `(i × m + dx, j × m + dy)` for `dx, dy` from 0 to `m − 1`, with `⌊width / m⌋` columns and `⌊height / m⌋` rows. The
+    pixels beyond the last whole block, on the right and at the bottom, are not written.
+  - **Tiles of blocks.** Each plane's tile side is the one above (`side`, at that plane's `b`), counted in blocks: a
+    record's tile is `side` × `side` blocks, tile `(c, r)` at block `(c × side, r × side)`, that is at pixel
+    `(c × side × m, r × side × m)`, and the tile grid has `⌊⌊width / m⌋ / side⌋` columns and `⌊⌊height / m⌋ / side⌋`
+    rows. Within a tile the record's bits fill the blocks as "Within a tile" above fills a tiled record's pixels, with
+    "block" for "pixel": in the RGB plane bit `i` goes to channel `i mod 3` of the tile's block `p = ⌊i / 3⌋`, at
+    column `p mod side`, row `⌊p / side⌋`; in the alpha plane bit `i` goes to alpha of the tile's block at column
+    `i mod side`, row `⌊i / side⌋`. Every one of the block's `k` pixels holds the bit in that channel's low bit. A
+    tile's slots after the record's last bit, and the blocks beyond the last whole tile, are not written: their pixels
+    keep their own low bits. The low bits the hybrid writer writes are thus the ones the tiled writer writes in a
+    `⌊width / m⌋` × `⌊height / m⌋` image, upscaled `m`-fold by nearest neighbour; the smallest image that holds one RGB
+    tile is `side × m` pixels a side (165 px for a 402 B record at `k = 25`).
+  - **The two planes.** The RGB plane's tiles are written row by row from the top-left, as many as `n_records` counts,
+    which is the number of tiles in the RGB plane's grid of blocks, at most 65,535. On an image with alpha, every tile
+    of the alpha plane's grid of blocks is written; they are not counted in `n_records`, as for the tiled variant
+    (above).
+  - **`k` is not stored.** The record is the one defined above, field for field; the only marker of the hybrid layout
+    is variant `2` in its flags. Neither the record nor the image stores `k` or `m`: the reader finds them by search,
+    trying each offered `k` (§5), and the CRC tells it which is right (§4).
 - **Magic and version: proposed (R-71, REQ-TOOL-109), to be confirmed by the human at the M7 gate.** The proposed magic
   is `8F 50 72 6E` (`0x8F` then ASCII `Prn`). It is none of the five 4-byte windows of the PNG signature
   `89 50 4E 47 0D 0A 1A 0A`, and its first byte is above `0x7F`, so it is no PNG chunk type (those are four ASCII
@@ -165,6 +190,24 @@ for each other.**
 a threat that does not occur, and the capacity is better spent on more tiles or on the shader
 source. **Hybrid is available** for arbitrary rotation, which needs it — nearest rotation is
 recoverable but leaves ~8% bit error, which whole-record repetition cannot absorb and `k=25` can.
+
+**The hybrid's layout is §2's "The hybrid layout"** (R-72, REQ-TOOL-110): §2's record and tiles laid in `m` × `m`
+blocks of pixels, each bit written `k = m²` times side by side, `k = 9` or `k = 25`. Side by side is what a rotation
+keeps together: nearest rotation moves a block's pixels as a group, so its bit errors fall at the blocks' edges, and a
+vote over each block absorbs them. Unrotated, a hybrid image is an upscaled tiled one, which §4's decimation search
+reads. Rotated, it is read by the angle search, run when §4's three searches recover nothing: the reader undoes each
+whole degree from 0 to 89 (§4's blind 0–89° search; the dihedral search covers the multiples of 90°), and for each
+offered `k` finds the blocks' phase in the rotated-back image (the column and the row, from 0 to `m − 1`, at which its
+low bits change most often from the pixel before, as they do at a block's edge), takes each block's majority of each
+low bit, and searches the voted blocks for intact records. The CRC is the oracle (§4): the first angle and `k` whose
+blocks hold an intact record are the ones read, and the reader reports both. The cost is capacity: a bit takes `k`
+slots, so an image holds about `k` times fewer records (§2: 165 px a side at least for a config-only record at
+`k = 25`, against the tiled variant's 33).
+The angle reported is in whole degrees counter-clockwise, 0 to 89, and is undone before the dihedral transform
+reported beside it: the image read is the original under that transform, then rotated counter-clockwise by the angle,
+so 97° counter-clockwise reports a 90° rotation and 7°, and 34° clockwise a 270° rotation and 56°.
+At each angle `k = 25` is tried before `k = 9`, so the angle reported is the first whole degree at which either `k`'s
+blocks hold an intact record, and the `k` reported is the one that verified there.
 
 ---
 
