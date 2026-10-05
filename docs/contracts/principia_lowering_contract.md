@@ -164,6 +164,37 @@ function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
 }
 ```
 
+**The stain graph's canonical form (R-72; REQ-RENDER-075; TASK-M1-04).** `canonical(rc.stainGraph)` is the graph as
+it lowers, whatever order it was built in: node ids, the order nodes and wires were added in and canvas positions are
+not in it, so two constructions of one graph have one form.
+- **Live nodes.** The form holds the nodes `OUT` depends on. Walking back from `OUT`: its colour input is the chain's
+  last post or the combiner, and each post's colour input the post before it or the combiner; the combiner's two
+  inputs are the colour and the brightness nodes wired to them; a colour, brightness or post node's field inputs are
+  the sources wired to them. A node that is the identity (render_gui_spec §13; colour_composition §4.1), its occupant
+  None or one of its field inputs absent or fed by a None source, is not in the form: the input it would feed reads as
+  absent, and its own inputs are not followed. An identity post drops out of the chain, and a post's or `OUT`'s absent
+  colour input reads the combiner, the chain before it empty. A node nothing live reads cannot change a pixel and is
+  not in the form.
+- **Order.** The sources, each once, in order of first use, reading the field inputs in port order of the colour, the
+  brightness, then each post in chain order; then the colour, the brightness, the combiner, the posts from the
+  combiner to `OUT`, and `OUT`. Every wire runs forward in this order.
+- **Each node** is `{"kind", "occupant", "inputs"}`. `kind` is `source`, `colour`, `brightness`, `combiner`, `post` or
+  `out`. `occupant` is `{"field": <member>}` for the built-in source of a read-side field, `{"builtin": <id>}`,
+  `{"custom": <text>}` with the custom WGSL exactly as written, or `null` for `OUT`. `inputs` has one entry per in-port
+  in port order (a post's colour first, then its field inputs; the combiner's colour, then its brightness): the
+  feeding node's position in the order, or `null` where the input is absent.
+- **The post chain** is encoded by the posts' positions, in chain order, each post's first input the position of the
+  node before it; it holds at most 8 posts (colour_composition §4.2).
+- **Text and hash.** The form is the JSON object `{"nodes": [...]}` in the one canonical serialisation, JCS
+  (gui_state_contract §2, R-318). `fragmentKey` is the 64-bit FNV-1a hash of its UTF-8 bytes, R-36's hash.
+- **The tier is not in it.** The fragment key identifies the graph; a compiled pipeline is identified by the fragment
+  key plus the tier bits, `has_ftle` and `has_word`, which the assembled source bakes (Part 3a) and which choose the
+  read side's stored struct and whether the word buffer is bound. `has_ensemble` is excluded: the fragment side reads
+  it as a uniform (R-145).
+- **The params are not in it.** A node's params are the values of its occupant's `uniformSchema` (gui_state_contract
+  §3), uniforms (Part 3, fragment side), so a slider edit rebinds and never changes the fragment key. They are in the
+  render key (render contract Part 3).
+
 Chart validation (well-posedness, flags, feasibility declarations) runs **before** resolution, CPU-side, per the chart contract Part 5 — `resolve` only ever sees valid charts.
 
 ---

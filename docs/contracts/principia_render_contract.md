@@ -62,6 +62,13 @@ Internally, built-ins may work in OKLab/OKLCH; the public slot contract stays RG
 | **Baked texture** | equirect `GPUTexture` for colour occupants that are pure `f(n̂)` (vMF, LUTs, patterns). The physics overlay is **not** baked: it is a per-fragment occupant (its sites are functions of the decoded masses); hoisting its sites to uniforms when masses are constant over the slice is an allowed optimisation, not a bake tier (R-121; colour_composition §2) | **bake key**: colour-node source + its uniforms | ~ms, JS, debounced (~120 ms); preview canvas *is* the uploaded texture — zero preview/render drift by construction |
 | **Frame** | composited output | **render key**: hash of the stain graph (nodes, their sources, wires, per-node params — the canonical graph form is defined by the task that needs it, R-72) + uniform values + overlay set | per-frame: one `textureSample` (or direct `colour(ctx)`) + L-override + post |
 
+**The render key's graph part (R-72; REQ-RENDER-075; TASK-M1-04).** The canonical graph form is lowering Part 5's: the
+live nodes in canonical order, each its kind, its occupant and its inputs by position, in JCS. The render key hashes
+that form with each live node's per-node params added, as `"params"`: each uniform its occupant's `uniformSchema`
+declares (gui_state_contract §3), by name, its value a list of numbers, one per component, the schema's default where
+none is set. The hash is the 64-bit FNV-1a of the text's UTF-8 bytes, as the fragment key's. The fragment key hashes
+the form without the params, which are uniforms, so a param edit recolours without a recompile.
+
 The bake is an *implementation strategy* for the f(n̂) subset, not a contract change — publicly the occupant is still `colour(ctx)`. Occupants that read dynamical fields (event class, diffusion) skip the bake tier and evaluate per-fragment.
 
 **Field-availability gating.** `ftle` (per-sample) exists only when the tier computed it (`has_ftle`; per-sample validity via the read-time `ftle_valid` predicate — payload §6); ensemble spread (footprint-derived at resolve) exists only when `contains-ensemble` — but it is not a per-sample field, so "availability" means the resolve stage runs the spread reduction, gated on the tier flag. Binding brightness to an unpopulated field **must not trigger recompute**: the UI greys out unavailable sources; reading anyway reads **NaN** at unpack (a tier-absent field is derived, never stored — Part 2), and every colouring maps it to its invalid colour (R-79). The *only* path to recompute is an explicit quality-tier change by the user. (This is the render-side analogue of "don't reconcile CPU/GPU" — the helpful violation an agent will attempt.)
