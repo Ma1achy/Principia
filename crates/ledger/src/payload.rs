@@ -287,15 +287,17 @@ pub fn structs() -> Vec<Struct> {
     ]
 }
 
-/// One stored buffer's binding in the fragment-side unpack layer (R-343).
+/// One stored buffer's binding in the fragment's group 1 (R-343).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Binding {
     /// The WGSL global the buffer is bound to.
     pub buffer: &'static str,
-    /// The [`Struct::buffer`] whose elements it holds.
+    /// What its elements are: the [`Struct::buffer`] whose elements it holds (`SimState`, `word`, `quad`), or, for
+    /// `ICDescriptor`, which names no buffer, the struct's name.
     pub holds: &'static str,
-    /// The one generated function that reads it, by the sample index: the read side's `sample_read`, which loads one
-    /// stored member or word component at a time, never the whole stored struct (R-343, R-378).
+    /// The generated reader of the buffer, by its element index, which loads one stored member or word component at a
+    /// time, never the whole stored struct (R-343, R-378): the read side's `sample_read` for the two payload buffers;
+    /// for the others, the prefix of their per-member readers, `<reader>_<member>(i)`.
     pub reader: &'static str,
     /// The prefix of its generated constants, `<prefix>_GROUP` and `<prefix>_BINDING`.
     pub constant: &'static str,
@@ -303,12 +305,15 @@ pub struct Binding {
     pub binding: u32,
 }
 
-/// The one table of the stored buffers' bindings (R-343), the source of the numbers both emitters write, as the
-/// constants `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING` and as the WGSL `@group`/`@binding`
-/// attributes: `SimStateFTLE` at group 1, binding 0, the word buffer at group 1, binding 1. Group 0 is the
-/// assembler's per-frame uniforms. A binding number decides no stored bit's meaning, so the table is not hashed into
-/// the schema version (R-343's applied note; dd_generation_root §3.8 "The hash").
-pub const fn bindings() -> [Binding; 2] {
+/// The one table of the stored buffers' bindings (R-343), the source of the numbers the emitters write, as the
+/// constants `<prefix>_GROUP` and `<prefix>_BINDING` and as the WGSL `@group`/`@binding` attributes. First the two
+/// payload buffers the fragment-side unpack layer binds ([`unpack_bindings`]): `SimStateFTLE` at group 1, binding 0,
+/// the word buffer at group 1, binding 1 (R-343). Then the buffers the render side binds beside them, which the corpus
+/// gives no number (applied per R-369, TASK-M1-06): `ICDescriptor`, one per sample, at group 1, binding 2, and
+/// `RenderQuad`, one per quad (dd_generation_root §3.7a), at group 1, binding 3. Group 0 is the assembler's per-frame
+/// uniforms. A binding number decides no stored bit's meaning, so the table is not hashed into the schema version
+/// (R-343's applied note; dd_generation_root §3.8 "The hash").
+pub const fn bindings() -> [Binding; 4] {
     [
         Binding {
             buffer: "simstate_buffer",
@@ -326,7 +331,30 @@ pub const fn bindings() -> [Binding; 2] {
             group: 1,
             binding: 1,
         },
+        Binding {
+            buffer: "ic_buffer",
+            holds: "ICDescriptor",
+            reader: "ic_read",
+            constant: "IC",
+            group: 1,
+            binding: 2,
+        },
+        Binding {
+            buffer: "quad_buffer",
+            holds: "quad",
+            reader: "quad_read",
+            constant: "QUAD",
+            group: 1,
+            binding: 3,
+        },
     ]
+}
+
+/// The [`bindings`] rows of the two payload buffers (payload §0) that the fragment-side unpack layer binds and only
+/// the read side's `sample_read` reads (R-343, R-378): `SimStateFTLE` and the word buffer.
+pub const fn unpack_bindings() -> [Binding; 2] {
+    let [simstate, word, _, _] = bindings();
+    [simstate, word]
 }
 
 /// Payload §3's frozen `inverse`, each symbol's code to its inverse's, the symbol codes `a = 0, A = 1, b = 2, B = 3`.

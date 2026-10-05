@@ -4,10 +4,11 @@
 //! screen, chart, quad, tile/sample, payload and validity.
 //!
 //! **Bindings.** Group 0 is the prelude's per-frame uniforms (`ledger::gen::prelude`, R-343). Group 1 holds the four
-//! buffers, each read by one generated function: the `SimState` buffer at binding 0 and the word buffer at binding 1,
-//! the ledger's (`ledger::payload::bindings`, R-343), read by the read side's `sample_read`; `ICDescriptor` at binding
-//! 2, by `ic_read`; `RenderQuad` at binding 3, by `quad_read` ([`buffers`]; applied per R-369: the corpus binds the
-//! first two and gives no number to the others). Group 2, binding 0 holds the context's uniforms ([`Context`]).
+//! buffers, all four at the numbers of the ledger's one binding table (`ledger::payload::bindings`, R-343), each with
+//! its generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING`: the `SimState` buffer at binding 0 and the word buffer at
+//! binding 1, read by the read side's `sample_read`; `ICDescriptor` at binding 2, by `ic_read`; `RenderQuad` at binding
+//! 3, by `quad_read` ([`buffers`]; applied per R-369: the corpus binds the first two and gives no number to the
+//! others). Group 2, binding 0 holds the context's uniforms ([`Context`]).
 //!
 //! **The logical view is accessors, not a copy** (render contract Part 1; REQ-RENDER-007). Nothing here writes a
 //! buffer, and no compute pass does: the fragment reads the physical structs through the generated readers, and
@@ -23,54 +24,44 @@
 use std::fmt::Write as _;
 
 use ledger::gen::{self as generate, prelude, read};
+use ledger::payload::Binding;
 use ledger::schema::{Entry, FieldType, Location, Storage, Word};
 
 use crate::raster::{self, Grid};
 
-/// One buffer the fragment binds in group 1: its WGSL global, the struct its elements are, its binding and its one
-/// reader.
+/// One buffer the fragment binds in group 1: its WGSL global, the struct its elements are, its constants' prefix, its
+/// binding and its reader.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BufferBinding {
     pub buffer: &'static str,
     pub element: &'static str,
+    pub constant: &'static str,
     pub group: u32,
     pub binding: u32,
     pub reader: &'static str,
 }
 
-/// The group-1 buffers, in binding order: the ledger's `SimState` and word buffers (R-343), then `ICDescriptor` and
-/// `RenderQuad`.
+/// `b`'s row, its elements `element`.
+const fn row(b: Binding, element: &'static str) -> BufferBinding {
+    BufferBinding {
+        buffer: b.buffer,
+        element,
+        constant: b.constant,
+        group: b.group,
+        binding: b.binding,
+        reader: b.reader,
+    }
+}
+
+/// The group-1 buffers, in binding order, all four from the ledger's one binding table (`ledger::payload::bindings`,
+/// R-343): the `SimState` and word buffers, then `ICDescriptor` and `RenderQuad`.
 pub const fn buffers() -> [BufferBinding; 4] {
-    let [s, w] = ledger::payload::bindings();
+    let [s, w, ic, quad] = ledger::payload::bindings();
     [
-        BufferBinding {
-            buffer: s.buffer,
-            element: "SimStateFTLE",
-            group: s.group,
-            binding: s.binding,
-            reader: s.reader,
-        },
-        BufferBinding {
-            buffer: w.buffer,
-            element: "vec4<u32>",
-            group: w.group,
-            binding: w.binding,
-            reader: w.reader,
-        },
-        BufferBinding {
-            buffer: "ic_buffer",
-            element: "ICDescriptor",
-            group: 1,
-            binding: 2,
-            reader: "ic_read",
-        },
-        BufferBinding {
-            buffer: "quad_buffer",
-            element: "RenderQuad",
-            group: 1,
-            binding: 3,
-            reader: "quad_read",
-        },
+        row(s, "SimStateFTLE"),
+        row(w, "vec4<u32>"),
+        row(ic, "ICDescriptor"),
+        row(quad, "RenderQuad"),
     ]
 }
 
@@ -372,10 +363,18 @@ pub fn declarations() -> String {
     for b in [ic, quad] {
         let _ = write!(
             out,
-            "@group({}) @binding({}) var<storage, read> {}: array<{}>;\n\
-             // The one reader of `{}`: element `i`.\n\
-             fn {}(i: u32) -> {} {{ return {}[i]; }}\n",
-            b.group, b.binding, b.buffer, b.element, b.buffer, b.reader, b.element, b.buffer
+            "\n// `{buf}`'s bind group and binding number (R-343).\n\
+             const {c}_GROUP: u32 = {g}u;\n\
+             const {c}_BINDING: u32 = {n}u;\n\
+             @group({g}) @binding({n}) var<storage, read> {buf}: array<{e}>;\n\
+             // The one reader of `{buf}`: element `i`.\n\
+             fn {r}(i: u32) -> {e} {{ return {buf}[i]; }}\n",
+            buf = b.buffer,
+            c = b.constant,
+            g = b.group,
+            n = b.binding,
+            e = b.element,
+            r = b.reader,
         );
     }
     out.push_str(WGSL_CONTEXT);

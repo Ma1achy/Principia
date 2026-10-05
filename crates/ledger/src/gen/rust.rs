@@ -845,15 +845,16 @@ fn select(var: &str, cells: &[String], depth: usize) -> String {
     out
 }
 
-/// The stored buffers' bindings in the fragment-side unpack layer, from the ledger's one table
-/// ([`crate::payload::bindings`], R-343): `<PREFIX>_GROUP` and `<PREFIX>_BINDING` for each, which the host's bind group
-/// layout reads. The WGSL emitter writes the same constants and numbers ([`super::wgsl`]).
+/// The stored buffers' bindings in the fragment's group 1, from the ledger's one table ([`crate::payload::bindings`],
+/// R-343): `<PREFIX>_GROUP` and `<PREFIX>_BINDING` for each, which the host's bind group layouts read. The WGSL emitter
+/// writes the same constants and numbers for the unpack layer's two ([`super::wgsl`]), and `render::bind` for the
+/// others.
 pub fn bindings() -> String {
     let mut out = String::new();
     for b in crate::payload::bindings() {
         let _ = write!(
             out,
-            "\n/// `{buf}`'s bind group in the fragment-side unpack layer (R-343).\n\
+            "\n/// `{buf}`'s bind group in the fragment (R-343).\n\
              pub const {c}_GROUP: u32 = {g};\n\
              \n/// `{buf}`'s binding number in its group (R-343).\n\
              pub const {c}_BINDING: u32 = {n};\n",

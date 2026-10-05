@@ -366,6 +366,74 @@ negative_control!(
     check_views_compile(&[("playhead", reading("rc.playhead"))])
 );
 
+/// The u32 module constant `name` in `m`.
+fn wgsl_const(m: &naga::Module, name: &str) -> Option<u32> {
+    let (_, c) = m
+        .constants
+        .iter()
+        .find(|(_, c)| c.name.as_deref() == Some(name))?;
+    match m.global_expressions[c.init] {
+        naga::Expression::Literal(naga::Literal::U32(v)) => Some(v),
+        _ => None,
+    }
+}
+
+/// In `wgsl`, each of the four group-1 buffers is bound at its row of the ledger's one binding table
+/// (`ledger::payload::bindings`, R-343), equal to the generated constants `<PREFIX>_GROUP` and `<PREFIX>_BINDING`.
+fn check_buffer_bindings(wgsl: &str) {
+    let m =
+        naga::front::wgsl::parse_str(wgsl).unwrap_or_else(|e| panic!("{}", e.emit_to_string(wgsl)));
+    let table = ledger::payload::bindings();
+    assert_eq!(
+        bind::buffers().map(|b| (b.buffer, b.group, b.binding)),
+        table.map(|b| (b.buffer, b.group, b.binding)),
+        "render::bind's buffers are not the ledger's table"
+    );
+    for b in table {
+        let (_, g) = m
+            .global_variables
+            .iter()
+            .find(|(_, g)| g.name.as_deref() == Some(b.buffer))
+            .unwrap_or_else(|| panic!("the module binds no `{}`", b.buffer));
+        let at = g.binding.as_ref().map(|r| (r.group, r.binding));
+        assert_eq!(
+            at,
+            Some((b.group, b.binding)),
+            "`{}` is not bound at the ledger table's numbers",
+            b.buffer
+        );
+        for (suffix, want) in [("GROUP", b.group), ("BINDING", b.binding)] {
+            let name = format!("{}_{suffix}", b.constant);
+            assert_eq!(
+                wgsl_const(&m, &name),
+                Some(want),
+                "the WGSL `{name}` is not the ledger table's number"
+            );
+        }
+    }
+}
+
+#[test]
+fn render_context_buffers_are_bound_from_the_ledger_table() {
+    check_buffer_bindings(
+        &bind::module(E0_VIEW, ViewOutput::Words).unwrap_or_else(|e| panic!("{e}")),
+    );
+}
+
+negative_control!(
+    render_context_buffers_are_bound_from_the_ledger_table,
+    "an ICDescriptor buffer bound at 4, off the table's 2, fails",
+    expected = "`ic_buffer` is not bound at the ledger table's numbers",
+    check_buffer_bindings(
+        &bind::module(E0_VIEW, ViewOutput::Words)
+            .unwrap_or_else(|e| panic!("{e}"))
+            .replace(
+                "@group(1) @binding(2) var<storage, read> ic_buffer",
+                "@group(1) @binding(4) var<storage, read> ic_buffer"
+            )
+    )
+);
+
 // ── REQ-COL-003, REQ-COL-056: the ctx lanes ─────────────────────────────────────────────────────────────────────
 
 fn colour_composition() -> String {

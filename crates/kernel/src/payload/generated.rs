@@ -838,14 +838,26 @@ pub const fn continuation_index(prev: u32, s: u32) -> u32 {
     }
 }
 
-/// `simstate_buffer`'s bind group in the fragment-side unpack layer (R-343).
+/// `simstate_buffer`'s bind group in the fragment (R-343).
 pub const SIMSTATE_GROUP: u32 = 1;
 
 /// `simstate_buffer`'s binding number in its group (R-343).
 pub const SIMSTATE_BINDING: u32 = 0;
 
-/// `word_buffer`'s bind group in the fragment-side unpack layer (R-343).
+/// `word_buffer`'s bind group in the fragment (R-343).
 pub const WORD_GROUP: u32 = 1;
 
 /// `word_buffer`'s binding number in its group (R-343).
 pub const WORD_BINDING: u32 = 1;
+
+/// `ic_buffer`'s bind group in the fragment (R-343).
+pub const IC_GROUP: u32 = 1;
+
+/// `ic_buffer`'s binding number in its group (R-343).
+pub const IC_BINDING: u32 = 2;
+
+/// `quad_buffer`'s bind group in the fragment (R-343).
+pub const QUAD_GROUP: u32 = 1;
+
+/// `quad_buffer`'s binding number in its group (R-343).
+pub const QUAD_BINDING: u32 = 3;

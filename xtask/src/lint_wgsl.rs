@@ -715,7 +715,7 @@ fn constant(module: &Module, name: &str) -> Option<u32> {
 fn bindings(module: &Module) -> Vec<Finding> {
     let mut found = Vec::new();
     let mut bad = |what: String| found.push(finding(Rule::Bindings, what));
-    for b in ledger::payload::bindings() {
+    for b in ledger::payload::unpack_bindings() {
         let want = if b.holds == "word" {
             "array<vec4<u32>>"
         } else {
@@ -780,7 +780,7 @@ fn bindings(module: &Module) -> Vec<Finding> {
 /// Each function or entry point but a buffer's one reader that uses the buffer (R-343, R-378: both buffers are read
 /// only by the read side's generated `sample_read(i)`).
 fn sample_only(module: &Module) -> Vec<Finding> {
-    let table = ledger::payload::bindings();
+    let table = ledger::payload::unpack_bindings();
     let mut found = Vec::new();
     for function in functions(module) {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");

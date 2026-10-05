@@ -329,7 +329,7 @@ impl CompiledStain {
                 if word.is_some() { "" } else { "not " }
             ));
         }
-        let [s, w] = ledger::payload::bindings();
+        let [s, w] = ledger::payload::unpack_bindings();
         let mut entries = vec![wgpu::BindGroupEntry {
             binding: s.binding,
             resource: simstate.as_entire_binding(),
@@ -426,7 +426,7 @@ fn objects(
     let mut group0 = vec![uniform_entry(prelude::uniforms_binding().binding)];
     group0.extend(uniforms.iter().map(|b| uniform_entry(b.binding)));
     let read_only = wgpu::BufferBindingType::Storage { read_only: true };
-    let [simstate, word] = ledger::payload::bindings();
+    let [simstate, word] = ledger::payload::unpack_bindings();
     let mut group1 = vec![buffer_entry(simstate.binding, read_only)];
     if key.has_word {
         group1.push(buffer_entry(word.binding, read_only));
