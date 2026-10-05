@@ -329,6 +329,82 @@ negative_control!(
     }
 );
 
+/// `image` translated `left` pixels right and `top` down onto a larger canvas, the new strips pseudo-random from `seed`.
+fn pad(image: &Image, left: u32, top: u32, seed: u32) -> Image {
+    let mut out = canvas(image.width() + left, image.height() + top, seed);
+    let (from_row, to_row) = (image.width() as usize * 4, out.width() as usize * 4);
+    for y in 0..image.height() as usize {
+        let to = (y + top as usize) * to_row + left as usize * 4;
+        out.pixels_mut()[to..to + from_row]
+            .copy_from_slice(&image.pixels()[y * from_row..(y + 1) * from_row]);
+    }
+    out
+}
+
+/// Sets every low bit of the pixels in column class `column` (`x mod 5`) or row class `row` (`y mod 5`) to 1, each
+/// such pixel with probability 0.7, drawn from `seed`: set bits, not changes, concentrated inside the blocks.
+fn stripe(image: &mut Image, column: u32, row: u32, seed: u32) {
+    let width = image.width();
+    let draws = noise(image.pixels().len() / 4, seed);
+    for (at, (pixel, draw)) in image
+        .pixels_mut()
+        .chunks_exact_mut(4)
+        .zip(draws)
+        .enumerate()
+    {
+        let (x, y) = (at as u32 % width, at as u32 / width);
+        if (x % 5 == column || y % 5 == row) && f64::from(draw) < 0.7 * 256.0 {
+            for byte in pixel {
+                *byte |= 1;
+            }
+        }
+    }
+}
+
+/// A 256² hybrid image at `k = 25`, translated by (2, 1) so its blocks start at column phase 2 and row phase 1, with
+/// the low bits of column class 4 and row class 3, two pixels inside each block, set to 1 at random (`stripe`), under
+/// 2 % uniform noise so that §4's searches alone read nothing.
+fn striped() -> (Image, Vec<u8>) {
+    let (image, payload) = embedded(256, 256, CONFIG_PAYLOAD, 12, Redundancy::K25);
+    let mut image = pad(&image, 2, 1, 12);
+    stripe(&mut image, 4, 3, 120);
+    flip_low_bits(&mut image, 0.02, 121);
+    (image, payload)
+}
+
+/// The block phase is where the low bits *change* most often, not where they are most often set (§5, "The hybrid's
+/// layout"). In `striped`, the striped classes and the class after each hold more set bits from one pixel to the next
+/// than the blocks' edges (0.85 a bit against 0.75) but fewer changes (0.35 against 0.5), so a phase found from set
+/// bits lands two or three pixels inside the blocks on both axes, and a vote over blocks that straddle four of the
+/// writer's loses the record. The changes find the blocks at their non-zero phase, and the vote at 0° recovers it.
+#[test]
+fn embed_hybrid_rotation_block_phase_counts_changes() {
+    let (image, payload) = striped();
+    check_rotated(
+        &hybrid::read(&image),
+        &payload,
+        Dihedral::Identity,
+        undone(0),
+        (1, 1),
+    );
+}
+
+negative_control!(
+    embed_hybrid_rotation_block_phase_counts_changes,
+    "the striped, noisy image is not recovered by §4's three searches alone",
+    expected = "the payload was not recovered",
+    {
+        let (image, payload) = striped();
+        check_rotated(
+            &reader::read(&image),
+            &payload,
+            Dihedral::Identity,
+            undone(0),
+            (1, 1),
+        )
+    }
+);
+
 // --- The tiled variant stays the default (REQ-TOOL-064) -------------------------------------------------------------
 
 /// The variant `outcome`'s record carries.
