@@ -21,7 +21,9 @@
 //! back, the others keep their current ones, and the error is surfaced ([`CompileError::Node`]). Where that cannot
 //! render — a failure no node with a last valid occupant explains (a new node's, or two nodes' together), or a stain
 //! that fails even with the failing nodes at their last valid occupants — the previous pipeline stays and the error is
-//! surfaced ([`CompileError::Stain`]).
+//! surfaced ([`CompileError::Stain`]). Only the live nodes, those the canonical form keeps, compile, so only they are
+//! recorded as valid, and only for a request that becomes current: a superseded request's and a prepare's nodes are
+//! not.
 //!
 //! **Node keys and node positions.** A compiled pipeline is shared by every stain of its key, whatever its nodes' keys
 //! or the order its nodes were given in, so its node blocks are by canonical position ([`NodeBlock::position`]). The
@@ -691,11 +693,6 @@ impl PipelineCache {
         let key = PipelineKey::new(stain, tier);
         let hit = lock(&self.shared.cache).get(&key).cloned();
         if let Some(compiled) = hit {
-            let mut last_valid = lock(&self.shared.last_valid);
-            for (n, &k) in stain.nodes().iter().zip(keys) {
-                last_valid.insert(k, n.occupant.clone());
-            }
-            drop(last_valid);
             self.make_current(Rendered::new(compiled, stain.clone(), keys));
             self.errors.clear();
             self.latest = None;
@@ -779,8 +776,13 @@ impl PipelineCache {
         }
     }
 
-    /// `rendered` as the current pipeline.
+    /// `rendered` as the current pipeline, its live nodes' occupants recorded as each one's last valid: a request's
+    /// that becomes current, and no other's.
     fn make_current(&mut self, rendered: Rendered) {
+        let mut last_valid = lock(&self.shared.last_valid);
+        for (k, o) in &rendered.live {
+            last_valid.insert(*k, o.clone());
+        }
         self.live_keys = rendered.live.into_iter().map(|(k, _)| k).collect();
         self.rendered = Some(rendered.stain);
         self.current = Some(rendered.compiled);
@@ -827,7 +829,7 @@ impl PipelineCache {
         self.in_flight
     }
 
-    /// The last occupant of the node keyed `key` that compiled.
+    /// The last occupant of the node keyed `key` that compiled live in a stain made current.
     pub fn last_valid(&self, key: NodeKey) -> Option<Occupant> {
         lock(&self.shared.last_valid).get(&key).cloned()
     }
@@ -916,13 +918,6 @@ fn resolve(shared: &Shared, job: &Job) -> (Option<Rendered>, Vec<CompileError>) 
             }
         }
     };
-    let mut last = lock(&shared.last_valid);
-    for (i, (n, &k)) in nodes.iter().zip(&job.keys).enumerate() {
-        if !failed.iter().any(|(f, _)| *f == i) {
-            last.insert(k, n.occupant.clone());
-        }
-    }
-    drop(last);
     (Some(Rendered::new(compiled, stain, &job.keys)), errors)
 }
 

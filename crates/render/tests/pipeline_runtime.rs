@@ -1106,6 +1106,128 @@ negative_control!(
     )
 );
 
+/// [`graph_post`] with the post unwired: `OUT` reads the combiner, so the post is not live and never compiles.
+fn graph_post_unwired(colour: &str, post: &str) -> Vec<Node> {
+    let mut g = graph_post(colour, post);
+    g[4].inputs = vec![Some(2)];
+    g
+}
+
+/// A post compiled with source P is unwired and edited to a broken B (`unwire`), then wired back: B never compiled, so
+/// the post keeps P and the error is the node's. Without the unwiring, the edit is a valid ×0.25 that compiles live
+/// and becomes the post's last valid source.
+fn check_unwired_edit(unwire: bool) {
+    let mut r = rig();
+    let colour = flat([0.5, 0.25, 0.75]);
+    r.request(&graph_post(&colour, &scale(0.5)));
+    assert_all(&r.frame(), [0.25, 0.125, 0.375], "the post P");
+    let edited = if unwire {
+        graph_post_unwired(&colour, BROKEN_POST)
+    } else {
+        graph_post(&colour, &scale(0.25))
+    };
+    r.request(&edited);
+    assert!(
+        r.rl.cache().errors().is_empty(),
+        "{:?}",
+        r.rl.cache().errors()
+    );
+    r.request(&graph_post(&colour, BROKEN_POST));
+    let errors = r.rl.cache().errors().to_vec();
+    assert!(
+        matches!(
+            &errors[..],
+            [CompileError::Node {
+                node: 3,
+                key: 3,
+                ..
+            }]
+        ),
+        "the rewired broken post is not the node's error: {errors:?}"
+    );
+    assert_all(
+        &r.frame(),
+        [0.25, 0.125, 0.375],
+        "the post's last valid source P",
+    );
+    assert_eq!(
+        r.rl.cache().last_valid(3),
+        Some(Occupant::Custom(scale(0.5)))
+    );
+}
+
+#[test]
+fn node_failure_isolation_unwired_node_keeps_its_last_valid_source() {
+    check_unwired_edit(true);
+}
+
+negative_control!(
+    node_failure_isolation_unwired_node_keeps_its_last_valid_source,
+    "a live valid edit becomes the post's last valid source",
+    expected = "the post's last valid source P",
+    check_unwired_edit(false)
+);
+
+/// Only a request that becomes current records its nodes as valid: a prepared preset sharing the colour's key, and a
+/// request superseded before it swapped in, leave the colour's last valid source P, which a broken colour then falls
+/// back to. Without the supersession (`supersede` false) the request becomes current and its colour is the fallback.
+fn check_recorded_only_when_current(supersede: bool) {
+    let mut r = rig();
+    let p = flat([0.25, 0.5, 0.75]);
+    r.request(&graph(&p));
+    let preset = graph(&flat([0.75, 0.75, 0.75]));
+    r.rl.cache()
+        .prepare(&stain(&preset), &keys(&preset), Tier::FULL)
+        .unwrap_or_else(|e| panic!("{e}"));
+    r.rl.cache().wait();
+    assert_eq!(
+        r.rl.cache().last_valid(1),
+        Some(Occupant::Custom(p.clone())),
+        "a prepare recorded its colour as valid"
+    );
+    let later = graph(&flat([0.125, 0.125, 0.125]));
+    let queued =
+        r.rl.cache()
+            .request(&stain(&later), &keys(&later), Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(queued, Requested::Queued);
+    if supersede {
+        assert_eq!(r.request(&graph(&p)), Requested::Hit);
+    } else {
+        r.rl.cache().wait();
+    }
+    r.request(&graph(BROKEN_COLOUR));
+    let errors = r.rl.cache().errors().to_vec();
+    assert!(
+        matches!(
+            &errors[..],
+            [CompileError::Node {
+                node: 1,
+                key: 1,
+                ..
+            }]
+        ),
+        "{errors:?}"
+    );
+    assert_all(
+        &r.frame(),
+        [0.25, 0.5, 0.75],
+        "the colour's last valid source P",
+    );
+}
+
+#[test]
+fn node_failure_isolation_only_a_current_request_records_last_valid() {
+    check_recorded_only_when_current(true);
+}
+
+negative_control!(
+    node_failure_isolation_only_a_current_request_records_last_valid,
+    "a request that becomes current records its colour",
+    expected = "the colour's last valid source P",
+    check_recorded_only_when_current(false)
+);
+
 // ── REQ-RENDER-006: debug views baked per field, the compositor ─────────────────────────────────────────────────
 
 /// A view of `field`: its built-in source into a colour showing the field on the grey ramp.
