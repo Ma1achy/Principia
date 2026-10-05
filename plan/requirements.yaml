@@ -10877,6 +10877,8 @@
   - R-67
   - R-78
   milestone: M7
+  rq:
+  - RQ-209
 - id: REQ-COL-043
   area: COL
   statement: "The display chain must run in the fixed order SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen, so that the colour-vision simulation sees the final in-gamut colours."
@@ -10938,6 +10940,8 @@
   - R-78
   - R-123
   milestone: M7
+  rq:
+  - RQ-209
 - id: REQ-COL-046
   area: COL
   statement: "The golden-image tests must be pinned to colour_composition §7.1's complete map lists, grouped under the two oracle files principia_colour_explorer.html and principia_colour_presets.html (R-139), with Stability × Hue deleted from them, against the two reference HTML files as the oracle, and invalid samples must render the invalid pattern REQ-COL-055 sets."
