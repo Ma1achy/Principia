@@ -229,7 +229,7 @@ render-key.
 | **screen**    | `pixel` (ivec2), `uv` (screenspace, vec2), `target_dims` (ivec2) |
 | **chart**     | `slice_uv` (vec2 in [0,1]²), `z` (the full 8-D latent at this pixel, chart triple applied), `chart_id` |
 | **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
-| **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples/quad), `E` (ensemble), `uv` (within-tile vec2) |
+| **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples per quad axis: a quad holds N × N, canonical spec §8), `E` (ensemble), `uv` (within-tile vec2) |
 | **payload**   | every per-pixel field written by the kernel — `state`, `ftle`, `energy_drift`, `Lz_drift`, `diffusion`, `d_min`, `word`/hash, `t_end`, decoded-IC quantities, masses, … |
 | **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
 
