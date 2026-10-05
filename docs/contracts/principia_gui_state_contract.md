@@ -102,7 +102,9 @@ silent default.
   given, is a value of the type
   within the range, or it is refused. The occupant reads the value as `uniforms.<name>`: the assembler declares
   `uniforms` for it, a uniform block holding the entries in declaration order, in group 0 with the per-frame uniforms
-  (R-343), each node's block at the next binding after the prelude's.
+  (R-343). Each node that declares a uniform has its own block, and the blocks take consecutive bindings, the first
+  the binding after the prelude's, in the nodes' canonical order (lowering contract Part 5): the first such node's
+  block at the prelude's binding + 1, the next at + 2, and so on.
 - `// @input <name>`, optionally followed by `[<lo>, <hi>]`: one `field` in-port of the node, in declaration order.
   The occupant reads the field wired to it as `ctx.inputs[k]`, `k` its position, a `vec4<f32>` holding a scalar or a
   category in `.x` and a vector in `.xyz`. The bracket is the input's `inputDomains` entry, the domain the node maps
