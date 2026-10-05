@@ -1073,16 +1073,21 @@ fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
     while i < b.len() {
         let start = i;
         let c = b[i];
-        let tok = if s[i..].starts_with("//") {
-            i = s[i..].find('\n').map_or(b.len(), |k| i + k);
+        // The comment branches compare bytes, never slice `s`: inside a comment `i` steps a byte at a time, through
+        // the middle of a multi-byte character, and a `/`, `*` or newline byte is never part of one (UTF-8).
+        let tok = if b[i..].starts_with(b"//") {
+            i = b[i..]
+                .iter()
+                .position(|&x| x == b'\n')
+                .map_or(b.len(), |k| i + k);
             Tok::Comment
-        } else if s[i..].starts_with("/*") {
+        } else if b[i..].starts_with(b"/*") {
             let mut depth = 0;
             loop {
-                if s[i..].starts_with("/*") {
+                if b[i..].starts_with(b"/*") {
                     depth += 1;
                     i += 2;
-                } else if s[i..].starts_with("*/") {
+                } else if b[i..].starts_with(b"*/") {
                     depth -= 1;
                     i += 2;
                     if depth == 0 {

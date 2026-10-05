@@ -1269,6 +1269,63 @@ negative_control!(
     check_occupant_refused(&[("fn helper() -> f32 { return 1.0; }", "refused")])
 );
 
+/// Each colour, its comments holding characters of more than one byte, assembles, never panics, with `want` in its
+/// source as written (render_gui_spec §13: a defined fallback, never a crash).
+fn check_unicode_comments(cases: &[(&str, &str)]) {
+    for &(text, want) in cases {
+        let g = graph(Occupant::Field("d_min".into()), text);
+        let got = assemble::assemble(&stain(&g), Tier::FULL).map(|f| f.source);
+        assert!(
+            got.as_ref().is_ok_and(|s| s.contains(want)),
+            "`{want}` is not in the source of `{text}`: {got:?}"
+        );
+    }
+}
+
+fn unicode_comment_cases() -> Vec<(&'static str, &'static str)> {
+    vec![
+        (
+            "/* é */ fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/* é */ fn n1_colour(",
+        ),
+        (
+            "/* ü /* 色 */ ∂ */ fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/* ü /* 色 */ ∂ */ fn n1_colour(",
+        ),
+        (
+            "/*é*//*∂*/fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/*é*//*∂*/fn n1_colour(",
+        ),
+        (
+            "// é, 色\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); } // ∂",
+            "// é, 色\nfn n1_colour(",
+        ),
+    ]
+}
+
+#[test]
+fn slot_signature_a_comment_of_any_characters_assembles() {
+    check_unicode_comments(&unicode_comment_cases());
+    // An unclosed comment holding them is refused, not a panic.
+    let g = graph(
+        Occupant::Field("d_min".into()),
+        &format!("{SHOW_INPUT}\n/* é /* 色 */"),
+    );
+    let got = assemble::assemble(&stain(&g), Tier::FULL);
+    assert!(
+        got.as_ref()
+            .is_err_and(|e| e.to_string().contains("unclosed")),
+        "an unclosed comment: {got:?}"
+    );
+}
+
+negative_control!(
+    slot_signature_a_comment_of_any_characters_assembles,
+    "a comment is kept as written, its characters unchanged",
+    expected = "is not in the source",
+    check_unicode_comments(&[(unicode_comment_cases()[0].0, "/* e */")])
+);
+
 /// A node's own names are prefixed — its functions, constants, structs and aliases — and its struct members,
 /// swizzles, comments and numbers are not, so two nodes of one text coexist.
 fn check_own_names(text: &str, want: &[&str]) {
