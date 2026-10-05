@@ -5860,6 +5860,8 @@
   source:
   - file: decisions.md
     section: "R-256 — TASK-M0-09 is accepted at ~1,000 counted lines in one PR; TASK-M0-10 keeps only pack/unpack"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.7a `RenderQuad` — the CPU-written quad record
   verify:
     method: unit test
     detail: "the generated RenderQuad layout is compared field-by-field against the ledger table; render contract Part 1's RenderQuad field list is a subset check"
