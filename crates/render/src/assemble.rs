@@ -691,7 +691,8 @@ impl Stain {
         for &i in &order {
             let n = &self.nodes[i];
             let inputs = match n.kind {
-                Kind::Combiner => vec![colour.and_then(at), brightness.and_then(at)],
+                // A post and OUT read the node before them in the chain, an identity post passed over and an
+                // absent input read as the combiner; every other input its live node, an identity one absent.
                 Kind::Out => vec![nodes.len().checked_sub(1)],
                 Kind::Post => [nodes.len().checked_sub(1)]
                     .into_iter()

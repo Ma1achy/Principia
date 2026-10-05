@@ -1601,6 +1601,20 @@ fn canonical_hash_the_text_is_the_defined_form() {
         "{}",
         c.text()
     );
+    // The chain wired by position: a post's absent colour input reads the combiner, and OUT, fed by a None post,
+    // reads the post before it.
+    let (mut g, [_, _, _, p1, p2]) = full_graph();
+    g[p1].inputs[0] = None;
+    set_occupant(&mut g, p2, Occupant::None);
+    let chain: Vec<Vec<Option<usize>>> = stain(&g).canonical().stain().nodes()[3..]
+        .iter()
+        .map(|n| n.inputs.clone())
+        .collect();
+    assert_eq!(
+        chain,
+        [vec![Some(1), Some(2)], vec![Some(3)], vec![Some(4)]],
+        "the chain's inputs"
+    );
     // The full graph given in another order: each canonical node's place in it.
     assert_eq!(
         stain(&full_graph_rebuilt()).canonical().order(),
