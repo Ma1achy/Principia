@@ -26,6 +26,7 @@ use serde::Deserialize;
 pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
 use crate::convergence::ConvergenceGate;
+use crate::oklab::OklabRoundtripGate;
 
 /// A numerical gate.
 pub trait Gate: Sync {
@@ -43,7 +44,7 @@ pub trait Gate: Sync {
 }
 
 /// The registered gates, in the order `--all` runs them.
-pub const REGISTRY: &[&dyn Gate] = &[&ConvergenceGate];
+pub const REGISTRY: &[&dyn Gate] = &[&ConvergenceGate, &OklabRoundtripGate];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

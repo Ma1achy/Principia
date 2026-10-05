@@ -3,30 +3,25 @@
 //! layer"), for the assertions that compare the shaders with it. Each function computes, in f64, what its WGSL
 //! namesake computes in f32, from the same definitions (render contract Part 5's renderings, R-72; render_gui_spec
 //! §10.1; dd_colouring §3.1, §3.7): the arithmetic is written here again, not shared, so a slip in either shows as a
-//! disagreement. The data the shaders embed, the published LUT stops (R-122) and the proposed hatch (REQ-COL-055), is
-//! read from the ledger that generates them. Colours are linear RGB unless a name says sRGB.
+//! disagreement. The colour-space maps are [`crate::colour::space`]'s, the one Rust source of dd_colouring §3.1's
+//! transforms, in f64. The data the shaders embed, the published LUT stops (R-122) and the proposed hatch
+//! (REQ-COL-055), is read from the ledger that generates them. Colours are linear RGB unless a name says sRGB.
 
 use ledger::gen::prelude;
+
+use crate::colour::space;
 
 /// An RGB triple.
 pub type Rgb = [f64; 3];
 
-/// The sRGB transfer, encoded to linear (dd_colouring §3.1).
+/// The sRGB transfer, encoded to linear (dd_colouring §3.1), in f64: [`space::srgb_to_linear`].
 pub fn srgb_to_linear(c: f64) -> f64 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else {
-        ((c + 0.055) / 1.055).powf(2.4)
-    }
+    space::srgb_to_linear(c)
 }
 
-/// The sRGB transfer's inverse, linear to encoded (dd_colouring §3.1).
+/// The sRGB transfer's inverse, linear to encoded (dd_colouring §3.1), in f64: [`space::linear_to_srgb`].
 pub fn linear_to_srgb(c: f64) -> f64 {
-    if c <= 0.0031308 {
-        12.92 * c
-    } else {
-        1.055 * c.powf(1.0 / 2.4) - 0.055
-    }
+    space::linear_to_srgb(c)
 }
 
 /// [`srgb_to_linear`] on each channel.
@@ -39,52 +34,23 @@ pub fn srgb8(c: [u8; 3]) -> Rgb {
     c.map(|x| srgb_to_linear(f64::from(x) / 255.0))
 }
 
-/// dd_colouring §3.1's `M₂⁻¹`, closed form: OKLab to `lms'`.
-const LAB_TO_LMS: [[f64; 3]; 3] = [
-    [1.0, 0.3963377774, 0.2158037573],
-    [1.0, -0.1055613458, -0.0638541728],
-    [1.0, -0.0894841775, -1.2914855480],
-];
+/// dd_colouring §3.1's `M₁⁻¹`: LMS to linear sRGB ([`space::OKLAB`]'s).
+pub const LMS_TO_LINEAR: [[f64; 3]; 3] = space::OKLAB.m1_inv;
 
-/// dd_colouring §3.1's `M₁⁻¹`: LMS to linear sRGB.
-pub const LMS_TO_LINEAR: [[f64; 3]; 3] = [
-    [4.0767416621, -3.3077115913, 0.2309699292],
-    [-1.2684380046, 2.6097574011, -0.3413193965],
-    [-0.0041960863, -0.7034186147, 1.7076147010],
-];
-
-/// dd_colouring §3.1's `M₁`: linear sRGB to LMS.
-const LINEAR_TO_LMS: [[f64; 3]; 3] = [
-    [0.4122214708, 0.5363325363, 0.0514459929],
-    [0.2119034982, 0.6806995451, 0.1073969566],
-    [0.0883024619, 0.2817188376, 0.6299787005],
-];
-
-/// dd_colouring §3.1's `M₂`: `lms^{1/3}` to OKLab.
-const LMS_TO_LAB: [[f64; 3]; 3] = [
-    [0.2104542553, 0.7936177850, -0.0040720468],
-    [1.9779984951, -2.4285922050, 0.4505937099],
-    [0.0259040371, 0.7827717662, -0.8086757660],
-];
-
-fn mul(m: &[[f64; 3]; 3], v: Rgb) -> Rgb {
-    m.map(|row| row[0] * v[0] + row[1] * v[1] + row[2] * v[2])
-}
-
-/// OKLab to linear sRGB (dd_colouring §3.1).
+/// OKLab to linear sRGB (dd_colouring §3.1), in f64: [`space::oklab_to_linear`].
 pub fn oklab_to_linear(lab: Rgb) -> Rgb {
-    mul(&LMS_TO_LINEAR, mul(&LAB_TO_LMS, lab).map(|x| x * x * x))
+    space::oklab_to_linear(lab)
 }
 
-/// Linear sRGB to OKLab (dd_colouring §3.1), for distances between colours.
+/// Linear sRGB to OKLab (dd_colouring §3.1), in f64, for distances between colours: [`space::linear_to_oklab`].
 pub fn linear_to_oklab(rgb: Rgb) -> Rgb {
-    mul(&LMS_TO_LAB, mul(&LINEAR_TO_LMS, rgb).map(f64::cbrt))
+    space::linear_to_oklab(rgb)
 }
 
-/// OKLCH to linear sRGB, the hue `turns` in turns.
+/// OKLCH to linear sRGB, the hue `turns` in turns: [`space::oklch_to_oklab`] at `2π · turns` radians, then
+/// [`oklab_to_linear`].
 pub fn oklch_to_linear(l: f64, c: f64, turns: f64) -> Rgb {
-    let h = std::f64::consts::TAU * turns;
-    oklab_to_linear([l, c * h.cos(), c * h.sin()])
+    oklab_to_linear(space::oklch_to_oklab([l, c, std::f64::consts::TAU * turns]))
 }
 
 /// `range_norm(x, lo, hi, auto_range, meas)` (render_gui_spec §10.1): `clamp((x − l)/(h − l), 0, 1)` with `(l, h)` the

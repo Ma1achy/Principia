@@ -41,6 +41,10 @@ use naga::{Block, Expression, Function, Handle, Module, Statement, TypeInner};
 
 pub use ledger::gen::read::Tier;
 
+/// The colour-space maps the prelude lacks, linear sRGB → OKLab and the maps built on it (dd_colouring §3.1;
+/// render_gui_spec §10.1), hand-written; they follow the prelude at assembly, so every node may call them.
+const COLOUR_SPACE: &str = include_str!("../shaders/wgsl/lib/colour_space.wgsl");
+
 /// The presentation layer, hand-written; it follows the prelude at assembly (render contract Part 5).
 const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 
@@ -929,7 +933,7 @@ fn source(
     let (words, entries) = ledger()?;
     let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
     let mut out = format!(
-        "{}\n{PRESENT}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
+        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
         prelude::wgsl(tier),
         CONTEXT.replace("INPUTS", &MAX_INPUTS.to_string())
     );

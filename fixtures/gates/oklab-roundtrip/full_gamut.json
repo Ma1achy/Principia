@@ -1,0 +1,6 @@
+{
+  "description": "dd_colouring §5 unit test 1 over the whole 8-bit gamut: the round trip sRGB → linear → OKLab → linear → sRGB in f32 through render::colour::space, at every 8-bit sRGB code (stride 1, 256 codes per channel, 16777216 colours). Exhaustive, so its maximum is the largest error any 8-bit colour gives, not a sample of it: REQ-COL-049's proposal is made from this input. Recorded: the CPU measurement on Apple silicon. On the GPU (Metal, Apple M3 Pro), the WGSL over the same 16777216 colours measured 3.019e-6 linear (at code [192, 255, 247]) and 3.187e-5 encoded (at code [3, 255, 41]).",
+  "expected": "pass",
+  "stride": 1,
+  "recorded": { "platform": "aarch64-apple-darwin", "linear": 2.7418136596679688e-6, "srgb": 2.8058886528015137e-5 }
+}

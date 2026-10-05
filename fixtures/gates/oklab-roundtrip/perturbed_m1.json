@@ -1,0 +1,6 @@
+{
+  "description": "PIT-3, the measurement can fire: the same lattice, with M₁[0][0] wrong in its fourth decimal (0.4123214708 for Ottosson's 0.4122214708), a one-digit transcription slip. The round trip no longer closes, so the gate must fail it.",
+  "expected": "fail",
+  "stride": 5,
+  "perturb": { "matrix": "m1", "row": 0, "col": 0, "by": 1e-4 }
+}
