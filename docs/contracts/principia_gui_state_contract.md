@@ -97,7 +97,9 @@ silent default.
   is `f32`, `i32`, `u32`, `vec2<f32>`, `vec3<f32>` or `vec4<f32>`. `<default>`, the value a new node starts with, is a
   number for a scalar and `(<x>, <y>, …)` for a vector, one number per component. `[<lo>, <hi>]`, `lo < hi`, is the
   range of the control the GUI offers, for a scalar only. A number is a decimal literal without a suffix; an `i32` or
-  `u32` value is an integer in its type's range. The default, and every value a node is given, is a value of the type
+  `u32` value is an integer in its type's range; an `f32` value, and each component of a vector, is a number that
+  rounds to a finite `f32`, so none beyond `f32::MAX` but its rounding. The default, and every value a node is
+  given, is a value of the type
   within the range, or it is refused. The occupant reads the value as `uniforms.<name>`: the assembler declares
   `uniforms` for it, a uniform block holding the entries in declaration order, in group 0 with the per-frame uniforms
   (R-343), each node's block at the next binding after the prelude's.

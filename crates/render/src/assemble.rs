@@ -200,14 +200,17 @@ impl UniformType {
         }
     }
 
-    /// Whether `v` is a value of a component of this type: an integer in range for `i32` and `u32`, finite always.
+    /// Whether `v` is a value of a component of this type: an integer in range for `i32` and `u32`; for an `f32`
+    /// component, a number that rounds to a finite `f32`, as a WGSL `f32` literal does, so nothing beyond `f32::MAX`
+    /// but its rounding: `1e39` is refused, and `3.4028235e38`, `f32::MAX` as Rust writes it, is `f32::MAX`.
     fn holds(self, v: f64) -> bool {
         match self {
             UniformType::I32 => {
                 v.fract() == 0.0 && (-2_147_483_648.0..=2_147_483_647.0).contains(&v)
             }
             UniformType::U32 => v.fract() == 0.0 && (0.0..=4_294_967_295.0).contains(&v),
-            _ => v.is_finite(),
+            // `as` rounds to nearest, and to infinity past f32::MAX's rounding interval.
+            _ => (v as f32).is_finite(),
         }
     }
 }

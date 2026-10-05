@@ -1796,7 +1796,18 @@ fn declaration_a_malformed_declaration_is_refused() {
         ("// @input t [0.0]", "two numbers"),
         ("// @input t [0.0, 1.0] extra", "nothing after it"),
         ("// @input t [0.0, 1.0", "nothing after it"),
+        // An f32 component beyond f32::MAX is no f32, finite as an f64 though it is.
+        ("// @uniform x: f32 = 1e39", "the default"),
+        ("// @uniform x: f32 = -3.5e38", "the default"),
+        ("// @uniform x: vec3<f32> = (0, 1e39, 0)", "the default"),
     ]);
+    // f32::MAX and its negative are values of an f32, written as Rust writes them, which rounds to them.
+    Declaration::parse(&format!(
+        "// @uniform a: f32 = {}\n// @uniform b: vec2<f32> = (0, {})",
+        f32::MAX,
+        -f32::MAX
+    ))
+    .expect("the f32 extremes");
     // A uniform and an input may share a name: they are read apart, `uniforms.t` and `ctx.inputs[0]`.
     Declaration::parse("// @uniform t: f32 = 1.0\n// @input t")
         .expect("a uniform and an input of one name");
@@ -1962,6 +1973,13 @@ fn declaration_a_schema_is_the_nodes_uniforms() {
     ] {
         assert!(!gain.admits(&value), "gain = {value:?} was taken");
     }
+    // An unranged f32 takes any f32, and nothing beyond f32::MAX.
+    let free = Declaration::parse("// @uniform k: f32 = 0.0").expect("the schema");
+    let k = &free.uniforms[0];
+    assert!(k.admits(&[f64::from(f32::MAX)]), "k = f32::MAX was refused");
+    assert!(!k.admits(&[1e39]), "k = 1e39 was taken");
+    assert!(!k.admits(&[-1e39]), "k = -1e39 was taken");
+    assert!(!k.admits(&[f64::INFINITY]), "k = inf was taken");
     assert!(!n.admits(&[1.5]), "n = 1.5 was taken");
     assert!(n.admits(&[7.0]), "an integer");
     // An occupant that declares `uniforms` itself collides with the assembler's.
