@@ -93,10 +93,13 @@ last word for 7, 10, 11 and 12; 8 was RQ-17, since ruled by R-19. Source: step 4
 
 ## Audit section C — transcription checks
 
-**Audit section C — transcription checks, not yet run** (audit, logged in step 5): the Yoshida-6 coefficients against
+**Audit section C — transcription checks** (audit, logged in step 5): the Yoshida-6 coefficients against
 Yoshida (1990), Table 1, solution A; the OKLab coefficients against Ottosson's reference implementation. Both come
-before the coefficients enter the shared source. **Open:** both checks. *Carried by: REQ-INT-056 (Yoshida-6, R-57);
-REQ-COL-033 (OKLab, R-51).*
+before the coefficients enter the shared source. **Closed for OKLab: run by TASK-M7-02 (PR #145, R-51).**
+`crates/render/tests/oklab_transcription.rs` (11 tests) checks every dd_colouring §3.1 coefficient, the Rust source
+and the WGSL literals against Ottosson's reference at a pinned commit (REQ-COL-033). **Open:** the Yoshida-6 check,
+not yet run (TASK-M3-02). Was open: both checks, with the entry titled "not yet run". *Carried by: REQ-INT-056
+(Yoshida-6, R-57).*
 
 ## Audit section D — deliberately parked
 
