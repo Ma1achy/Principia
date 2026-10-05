@@ -331,7 +331,7 @@
   depends_on: [TASK-M1-01, TASK-M1-02, TASK-M1-05, TASK-M0-02]
   needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-008, REQ-PAY-012, REQ-SYS-003, REQ-TOOL-004]
   requirements: [REQ-RENDER-004, REQ-RENDER-007, REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014, REQ-COL-056, REQ-PAY-090]
-  reviewers: [code, qa]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M1-07
   milestone: M1
