@@ -792,3 +792,180 @@ negative_control!(
         );
     }
 );
+
+// --- The default k's evidence, measured (REQ-TOOL-111, R-71) --------------------------------------------------------
+
+/// Half a degree from the nearest whole degree, the worst residual the whole-degree angle search leaves.
+const HALF_DEGREES: [f64; 6] = [7.5, 12.5, 22.5, 34.5, 44.5, 60.5];
+
+/// The RGB records recovered from a `size`² canvas `seed` holding §7's config payload at `redundancy`, rotated
+/// `degrees` with the canvas expanded or, without `expand`, the corners cut; `None` when the payload is lost.
+fn recovered_after(
+    redundancy: Redundancy,
+    size: u32,
+    seed: u32,
+    degrees: f64,
+    expand: bool,
+) -> Option<u32> {
+    let (image, payload) = embedded(size, size, CONFIG_PAYLOAD, seed, redundancy);
+    recovered_tiles(&rotate(&image, degrees, expand), &payload)
+}
+
+/// The payload on a `size`² canvas `seed` at `redundancy` is recovered after `degrees` of rotation.
+fn check_recovered(redundancy: Redundancy, size: u32, seed: u32, degrees: f64) {
+    assert!(
+        recovered_after(redundancy, size, seed, degrees, true).is_some(),
+        "the payload was lost after {degrees}° at {size}², k = {}, canvas {seed}",
+        redundancy.k()
+    );
+}
+
+/// `outcomes` as a table cell: the records recovered on each canvas, or "lost".
+fn cell(outcomes: impl IntoIterator<Item = Option<u32>>) -> String {
+    outcomes
+        .into_iter()
+        .map(|found| found.map_or("lost".to_owned(), |n| n.to_string()))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// `image` rotated back clockwise by `degrees`, as the reader's angle search does: onto a canvas
+/// `⌈w cos θ + h sin θ⌉` × `⌈w sin θ + h cos θ⌉` centred on the image's centre, each pixel taking the image's pixel
+/// under its centre rotated counter-clockwise, the pixels outside the image 0.
+fn rotate_back(image: &Image, degrees: f64) -> Image {
+    let (sin, cos) = degrees.to_radians().sin_cos();
+    let (w, h) = (f64::from(image.width()), f64::from(image.height()));
+    let (out_w, out_h) = ((w * cos + h * sin).ceil(), (w * sin + h * cos).ceil());
+    let channels = if image.has_alpha() { 4 } else { 3 };
+    let mut pixels = vec![0u8; (out_w * out_h) as usize * channels];
+    for y in 0..out_h as usize {
+        for x in 0..out_w as usize {
+            let (dx, dy) = (x as f64 + 0.5 - out_w / 2.0, y as f64 + 0.5 - out_h / 2.0);
+            let sx = (dx * cos + dy * sin + w / 2.0).floor();
+            let sy = (-dx * sin + dy * cos + h / 2.0).floor();
+            if sx >= 0.0 && sy >= 0.0 && sx < w && sy < h {
+                let from = (sy as usize * image.width() as usize + sx as usize) * channels;
+                let to = (y * out_w as usize + x) * channels;
+                pixels[to..to + channels].copy_from_slice(&image.pixels()[from..from + channels]);
+            }
+        }
+    }
+    Image::new(out_w as u32, out_h as u32, image.has_alpha(), pixels)
+}
+
+/// The fraction of `original`'s R, G and B low bits that `back`, `original` rotated and rotated back, holds wrong at
+/// the same place relative to the two images' centres, over the pixels of `original` that `back` covers.
+fn bit_error(original: &Image, back: &Image) -> f64 {
+    let (size_w, size_h) = (f64::from(original.width()), f64::from(original.height()));
+    let (back_w, back_h) = (f64::from(back.width()), f64::from(back.height()));
+    let (mut wrong, mut bits) = (0u64, 0u64);
+    for v in 0..back.height() {
+        for u in 0..back.width() {
+            let x = (f64::from(u) + 0.5 - back_w / 2.0 + size_w / 2.0).floor();
+            let y = (f64::from(v) + 0.5 - back_h / 2.0 + size_h / 2.0).floor();
+            if x < 0.0 || y < 0.0 || x >= size_w || y >= size_h {
+                continue;
+            }
+            let at = (y as usize * original.width() as usize + x as usize) * 4;
+            let to = (v as usize * back.width() as usize + u as usize) * 4;
+            for c in 0..3 {
+                wrong += u64::from((original.pixels()[at + c] ^ back.pixels()[to + c]) & 1);
+                bits += 1;
+            }
+        }
+    }
+    wrong as f64 / bits as f64
+}
+
+/// The measurements behind the proposed default `k = 25` (REQ-TOOL-111, R-71), printed as the tables the proposal
+/// gives, from fixed canvases: uniform noise by `k` at 512²; the raw low-bit error left by nearest rotation and
+/// rotation back by the nearest whole degree, at 512²; rotation by `k` at 512² and 256², the canvas expanded and the
+/// corners cut; the half-degree residuals at 512² and 1024²; and the angle search's time. It asserts what the
+/// proposal rests on: `k = 25` recovers after every half-degree residual. Release only, ignored by default:
+/// `cargo test -p render --release --test embed_hybrid -- --ignored --nocapture embed_hybrid_default_k_evidence`.
+#[test]
+#[ignore = "the R-71 evidence harness, minutes in release: run it with --ignored"]
+fn embed_hybrid_default_k_evidence() {
+    println!("uniform low-bit noise, 512², canvases 0, 1, 2 (noise seeds 100, 101, 102): RGB records intact");
+    for redundancy in [Redundancy::K9, Redundancy::K25] {
+        for p in [0.02, 0.05, 0.08, 0.10, 0.12, 0.15, 0.18, 0.20, 0.25] {
+            let found = (0..3).map(|seed| {
+                let (mut image, payload) = embedded(512, 512, CONFIG_PAYLOAD, seed, redundancy);
+                flip_low_bits(&mut image, p, seed + 100);
+                recovered_tiles(&image, &payload)
+            });
+            println!("  k = {}, p = {p}: {}", redundancy.k(), cell(found));
+        }
+    }
+
+    println!("raw low-bit error after nearest rotation and back by the nearest whole degree, 512², canvas 77");
+    let plain = canvas(512, 512, 77);
+    for degrees in [7.0, 34.0, 45.0, 7.3, 34.7, 12.0, 20.0, 60.0, 83.0] {
+        let back = rotate_back(&rotate(&plain, degrees, true), f64::round(degrees));
+        println!(
+            "  {degrees}°, {}° undone: {:.2} %",
+            f64::round(degrees),
+            100.0 * bit_error(&plain, &back)
+        );
+    }
+
+    for (label, size, seeds, expand) in [
+        ("512², expanded", 512, 0..4, true),
+        ("256², expanded", 256, 0..3, true),
+        ("512², corners cut", 512, 0..4, false),
+    ] {
+        println!("rotation by k, {label}, canvases {seeds:?}: RGB records recovered");
+        for redundancy in [Redundancy::K25, Redundancy::K9] {
+            for degrees in ANGLES {
+                let found = seeds
+                    .clone()
+                    .map(|seed| recovered_after(redundancy, size, seed, degrees, expand));
+                println!("  k = {}, {degrees}°: {}", redundancy.k(), cell(found));
+            }
+        }
+    }
+
+    for (size, seeds) in [(512, 0..4), (1024, 0..2)] {
+        println!(
+            "half-degree residuals, {size}², k = 25, canvases {seeds:?}: RGB records recovered"
+        );
+        for degrees in HALF_DEGREES {
+            let found = seeds
+                .clone()
+                .map(|seed| recovered_after(DEFAULT, size, seed, degrees, true));
+            println!("  {degrees}°: {}", cell(found));
+            for seed in seeds.clone() {
+                check_recovered(DEFAULT, size, seed, degrees);
+            }
+        }
+    }
+
+    println!("the angle search's time");
+    for (size, degrees) in [(256, 34.0), (512, 34.0)] {
+        let (image, _) = embedded(size, size, CONFIG_PAYLOAD, 0, DEFAULT);
+        let rotated = rotate(&image, degrees, true);
+        let start = std::time::Instant::now();
+        let outcome = hybrid::read(&rotated);
+        println!(
+            "  {size}², {degrees}°: {:.2} s, {}",
+            start.elapsed().as_secs_f64(),
+            matches!(outcome, Outcome::Recovered(_))
+        );
+    }
+    for size in [128, 512] {
+        let plain = canvas(size, size, 9);
+        let start = std::time::Instant::now();
+        let outcome = hybrid::read(&plain);
+        println!(
+            "  {size}², no state: {:.2} s, {outcome:?}",
+            start.elapsed().as_secs_f64()
+        );
+    }
+}
+
+negative_control!(
+    embed_hybrid_default_k_evidence,
+    "k = 9 loses the payload after 7° of rotation at 256²",
+    expected = "the payload was lost after",
+    { check_recovered(Redundancy::K9, 256, 0, 7.0) }
+);
