@@ -559,14 +559,14 @@ enum Survive {
     Dihedral(Dihedral),
     /// Nearest upscale ×2 or ×3.
     Upscale(u32),
-    /// Rot90 and upscale ×2 together.
-    Rot90Upscale2,
+    /// Rot90 and nearest upscale ×2 or ×3 together.
+    Rot90Upscale(u32),
     /// The top 50 % overwritten.
     OverwriteTop,
 }
 
 /// §7's list, every entry once.
-const SURVIVES: [Survive; 15] = [
+const SURVIVES: [Survive; 16] = [
     Survive::Png,
     Survive::AlphaStripped,
     Survive::CropHalf,
@@ -580,7 +580,8 @@ const SURVIVES: [Survive; 15] = [
     Survive::Dihedral(Dihedral::Transpose),
     Survive::Upscale(2),
     Survive::Upscale(3),
-    Survive::Rot90Upscale2,
+    Survive::Rot90Upscale(2),
+    Survive::Rot90Upscale(3),
     Survive::OverwriteTop,
 ];
 
@@ -595,7 +596,7 @@ impl Survive {
             Self::CropPng => png_round_trip(&Self::Crop37.apply(image, seed)),
             Self::Dihedral(transform) => dihedral(image, transform),
             Self::Upscale(s) => upscale(image, s),
-            Self::Rot90Upscale2 => upscale(&dihedral(image, Dihedral::Rot90), 2),
+            Self::Rot90Upscale(s) => upscale(&dihedral(image, Dihedral::Rot90), s),
             Self::OverwriteTop => overwrite_top(image, SIZE / 2, seed),
         }
     }
@@ -616,7 +617,7 @@ impl Survive {
             Self::Crop37 | Self::CropPng => how(Dihedral::Identity, 1, 29, (169, 225), Some(49)),
             Self::Dihedral(transform) => how(transform, 1, 0, all, Some(64)),
             Self::Upscale(s) => how(Dihedral::Identity, s, 0, all, Some(64)),
-            Self::Rot90Upscale2 => how(Dihedral::Rot90, 2, 0, all, Some(64)),
+            Self::Rot90Upscale(s) => how(Dihedral::Rot90, s, 0, all, Some(64)),
             // The top 256 rows lost: the RGB tile rows from 264 = 8 × 33 survive, 7 of 15; the alpha rows from
             // 285 = 5 × 57, 3 of 8.
             Self::OverwriteTop => how_of(Dihedral::Identity, 1, 0, (105, 225), Some((24, 64))),
