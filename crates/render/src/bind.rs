@@ -6,9 +6,10 @@
 //! **Bindings.** Group 0 is the prelude's per-frame uniforms (`ledger::gen::prelude`, R-343). Group 1 holds the four
 //! buffers, all four at the numbers of the ledger's one binding table (`ledger::payload::bindings`, R-343), each with
 //! its generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING`: the `SimState` buffer at binding 0 and the word buffer at
-//! binding 1, read by the read side's `sample_read`; `ICDescriptor` at binding 2, by `ic_read`; `RenderQuad` at binding
-//! 3, by `quad_read` ([`buffers`]; applied per R-369: the corpus binds the first two and gives no number to the
-//! others). Group 2, binding 0 holds the context's uniforms ([`Context`]).
+//! binding 1, read by the read side's `sample_read`; `ICDescriptor` at binding 2, by `ic_read` and its per-member
+//! `ic_read_<member>`; `RenderQuad` at binding 3, by `quad_read` and `quad_read_<member>` ([`buffers`]; applied per
+//! R-369: the corpus binds the first two and gives no number to the others). Every reader loads one stored member at a
+//! time, never the whole stored struct (R-378). Group 2, binding 0 holds the context's uniforms ([`Context`]).
 //!
 //! **The logical view is accessors, not a copy** (render contract Part 1; REQ-RENDER-007). Nothing here writes a
 //! buffer, and no compute pass does: the fragment reads the physical structs through the generated readers, and
@@ -352,8 +353,27 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
     ])
 }
 
+/// The members `quad_read` and `ic_read` load, each `(name, WGSL type)`: `RenderQuad`'s, from §3.7a's table, and
+/// `ICDescriptor`'s, its padding left out.
+fn reader_members(element: &str) -> Vec<(&'static str, &'static str)> {
+    if element == "RenderQuad" {
+        ledger::quad::render_quad()
+            .members
+            .iter()
+            .map(|m| (m.name, wgsl_type(m.storage)))
+            .collect()
+    } else {
+        ic_members()
+            .into_iter()
+            .map(|(name, storage)| (name, wgsl_type(storage)))
+            .collect()
+    }
+}
+
 /// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, the `ICDescriptor` and
-/// `RenderQuad` buffers and their one readers each, and the context's uniform block.
+/// `RenderQuad` buffers and their generated readers, and the context's uniform block. Each buffer's readers load one
+/// stored member at a time, never the whole stored struct (R-378): `<reader>_<member>(i)`, one per member, and
+/// `<reader>(i)`, the element built from them, its padding zero.
 pub fn declarations() -> String {
     let [_, _, ic, quad] = buffers();
     let mut out = String::from(
@@ -367,15 +387,31 @@ pub fn declarations() -> String {
              const {c}_GROUP: u32 = {g}u;\n\
              const {c}_BINDING: u32 = {n}u;\n\
              @group({g}) @binding({n}) var<storage, read> {buf}: array<{e}>;\n\
-             // The one reader of `{buf}`: element `i`.\n\
-             fn {r}(i: u32) -> {e} {{ return {buf}[i]; }}\n",
+             // `{buf}`'s readers, element `i`, one stored member per load, never the whole struct (R-378).\n",
             buf = b.buffer,
             c = b.constant,
             g = b.group,
             n = b.binding,
             e = b.element,
-            r = b.reader,
         );
+        let members = reader_members(b.element);
+        for (m, ty) in &members {
+            let _ = writeln!(
+                out,
+                "fn {r}_{m}(i: u32) -> {ty} {{ return {buf}[i].{m}; }}",
+                r = b.reader,
+                buf = b.buffer,
+            );
+        }
+        let _ = writeln!(
+            out,
+            "fn {}(i: u32) -> {} {{\n    var v: {};",
+            b.reader, b.element, b.element
+        );
+        for (m, _) in &members {
+            let _ = writeln!(out, "    v.{m} = {}_{m}(i);", b.reader);
+        }
+        out.push_str("    return v;\n}\n");
     }
     out.push_str(WGSL_CONTEXT);
     let _ = writeln!(
@@ -494,14 +530,14 @@ pub const STAIN_ENTRY: &str = "stain_harness_fs";
 
 /// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers: the
 /// raster and the [`declarations`] appended, and the entry [`STAIN_ENTRY`], which shades the base sample of the pixel's
-/// tile with its own masses and writes the colour with alpha 1. The stain's nodes may declare no uniforms: group 0 is
+/// tile with its own masses, loading only those three members of its `ICDescriptor` (R-378), and writes the colour
+/// with alpha 1. The stain's nodes may declare no uniforms: group 0 is
 /// the prelude's block alone.
 pub fn stain_module(assembled: &str) -> String {
     format!(
         "{assembled}{}{}\n@fragment\nfn {STAIN_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
          let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
-         let ic = ic_read(r.sample);\n    \
-         let masses = vec3<f32>(ic.m0, ic.m1, ic.m2);\n    \
+         let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
          return vec4<f32>(shade_sample(r.sample, pos.xy, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read), 1.0);\n}}\n",
         raster::WGSL,
         declarations(),

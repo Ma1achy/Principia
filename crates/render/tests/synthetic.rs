@@ -434,6 +434,177 @@ negative_control!(
     )
 );
 
+/// The functions `entry` reaches by calls in `m`, `entry` included: its body and each callee's, transitively.
+fn reachable<'m>(m: &'m naga::Module, entry: &'m naga::Function) -> Vec<&'m naga::Function> {
+    fn calls(block: &naga::Block, out: &mut Vec<naga::Handle<naga::Function>>) {
+        for st in block.iter() {
+            match st {
+                naga::Statement::Call { function, .. } => out.push(*function),
+                naga::Statement::Block(b) => calls(b, out),
+                naga::Statement::If { accept, reject, .. } => {
+                    calls(accept, out);
+                    calls(reject, out);
+                }
+                naga::Statement::Switch { cases, .. } => {
+                    cases.iter().for_each(|c| calls(&c.body, out))
+                }
+                naga::Statement::Loop {
+                    body, continuing, ..
+                } => {
+                    calls(body, out);
+                    calls(continuing, out);
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut seen: Vec<naga::Handle<naga::Function>> = Vec::new();
+    let mut todo = Vec::new();
+    calls(&entry.body, &mut todo);
+    while let Some(h) = todo.pop() {
+        if !seen.contains(&h) {
+            seen.push(h);
+            calls(&m.functions[h].body, &mut todo);
+        }
+    }
+    std::iter::once(entry)
+        .chain(seen.into_iter().map(|h| &m.functions[h]))
+        .collect()
+}
+
+/// What `functions` load from the buffer global `buffer`: each member loaded alone, by name, and whether any loads a
+/// whole element.
+fn buffer_loads(
+    m: &naga::Module,
+    functions: &[&naga::Function],
+    buffer: &str,
+) -> (Vec<String>, bool) {
+    let (mut members, mut whole) = (Vec::new(), false);
+    for f in functions {
+        let is_buffer = |e: naga::Handle<naga::Expression>| match f.expressions[e] {
+            naga::Expression::GlobalVariable(g) => {
+                m.global_variables[g].name.as_deref() == Some(buffer)
+            }
+            _ => false,
+        };
+        let element = |e: naga::Handle<naga::Expression>| match f.expressions[e] {
+            naga::Expression::Access { base, .. } | naga::Expression::AccessIndex { base, .. } => {
+                is_buffer(base)
+            }
+            _ => false,
+        };
+        for (_, expr) in f.expressions.iter() {
+            let naga::Expression::Load { pointer } = *expr else {
+                continue;
+            };
+            if element(pointer) {
+                whole = true;
+            }
+            if let naga::Expression::AccessIndex { base, index } = f.expressions[pointer] {
+                if element(base) {
+                    let (_, g) = m
+                        .global_variables
+                        .iter()
+                        .find(|(_, g)| g.name.as_deref() == Some(buffer))
+                        .expect("the buffer");
+                    let naga::TypeInner::Array { base: ty, .. } = m.types[g.ty].inner else {
+                        panic!("`{buffer}` is not an array");
+                    };
+                    let naga::TypeInner::Struct {
+                        members: ref ms, ..
+                    } = m.types[ty].inner
+                    else {
+                        panic!("`{buffer}`'s element is not a struct");
+                    };
+                    let name = ms[index as usize].name.clone().unwrap_or_default();
+                    if !members.contains(&name) {
+                        members.push(name);
+                    }
+                }
+            }
+        }
+    }
+    (members, whole)
+}
+
+fn parse(wgsl: &str) -> naga::Module {
+    naga::front::wgsl::parse_str(wgsl).unwrap_or_else(|e| panic!("{}", e.emit_to_string(wgsl)))
+}
+
+/// No function of the harness module `wgsl` loads a whole `ICDescriptor` or `RenderQuad` element (R-378).
+fn check_no_whole_loads(wgsl: &str) {
+    let m = parse(wgsl);
+    let functions: Vec<&naga::Function> = m
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(m.entry_points.iter().map(|e| &e.function))
+        .collect();
+    for buffer in ["ic_buffer", "quad_buffer"] {
+        let (_, whole) = buffer_loads(&m, &functions, buffer);
+        assert!(
+            !whole,
+            "a function loads a whole element of `{buffer}` (R-378)"
+        );
+    }
+}
+
+#[test]
+fn render_context_buffers_are_read_one_member_per_load() {
+    check_no_whole_loads(
+        &bind::module(E0_VIEW, ViewOutput::Words).unwrap_or_else(|e| panic!("{e}")),
+    );
+    check_no_whole_loads(&e0_stain());
+}
+
+negative_control!(
+    render_context_buffers_are_read_one_member_per_load,
+    "a reader returning `ic_buffer[i]` whole fails",
+    expected = "a function loads a whole element of `ic_buffer`",
+    check_no_whole_loads(&format!(
+        "{}\nfn whole(i: u32) -> ICDescriptor {{ return ic_buffer[i]; }}\n",
+        bind::module(E0_VIEW, ViewOutput::Words).unwrap_or_else(|e| panic!("{e}"))
+    ))
+);
+
+/// The stain entry point of `wgsl`, through every function it calls, loads only the masses `m0`, `m1` and `m2` of
+/// `ICDescriptor`, and nothing of `RenderQuad` (R-378).
+fn check_stain_loads_the_masses(wgsl: &str) {
+    let m = parse(wgsl);
+    let entry = m
+        .entry_points
+        .iter()
+        .find(|e| e.name == bind::STAIN_ENTRY)
+        .expect("the stain entry point");
+    let functions = reachable(&m, &entry.function);
+    let (mut ic, whole) = buffer_loads(&m, &functions, "ic_buffer");
+    ic.sort();
+    assert!(
+        !whole && ic == ["m0", "m1", "m2"],
+        "the stain loads {ic:?} of ICDescriptor (whole: {whole}), not only the masses (R-378)"
+    );
+    let (quad, whole) = buffer_loads(&m, &functions, "quad_buffer");
+    assert!(
+        !whole && quad.is_empty(),
+        "the stain loads {quad:?} of RenderQuad (whole: {whole}) (R-378)"
+    );
+}
+
+#[test]
+fn synthetic_upload_stain_loads_only_the_masses() {
+    check_stain_loads_the_masses(&e0_stain());
+}
+
+negative_control!(
+    synthetic_upload_stain_loads_only_the_masses,
+    "a stain reading its masses through the whole-ICDescriptor reader fails",
+    expected = "not only the masses",
+    check_stain_loads_the_masses(&e0_stain().replace(
+        "vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample))",
+        "vec3<f32>(ic_read(r.sample).m0, ic_read(r.sample).m1, ic_read(r.sample).m2)"
+    ))
+);
+
 // ── REQ-COL-003, REQ-COL-056: the ctx lanes ─────────────────────────────────────────────────────────────────────
 
 fn colour_composition() -> String {
