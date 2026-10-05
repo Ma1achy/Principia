@@ -1,0 +1,6 @@
+{
+  "description": "dd_colouring §5 unit test 1: the round trip sRGB → linear → OKLab → linear → sRGB in f32 through render::colour::space, at every 8-bit sRGB code that is a multiple of 5 on each channel (52 codes per channel, 140608 colours, black, white, the primaries and the secondaries among them). Recorded: the CPU measurement TASK-M7-02 proposed REQ-COL-049 from. On the GPU (Metal, Apple silicon), oklab_transcription_gpu_round_trip measured 2.431e-6 linear and 2.370e-5 encoded over the same lattice.",
+  "expected": "pass",
+  "stride": 5,
+  "recorded": { "platform": "aarch64-apple-darwin", "linear": 2.5033950805664063e-6, "srgb": 1.8768012523651123e-5 }
+}
