@@ -417,16 +417,16 @@ impl StainGraph {
             .order()
             .iter()
             .zip(form.stain().nodes())
-            .map(|(&i, lowered)| {
+            .enumerate()
+            .map(|(j, (&i, lowered))| {
                 let n = &self.nodes[&order[i]];
-                let schema = assemble::declaration(n.kind.into(), &(&n.occupant).into())
-                    .map(|d| d.uniforms)
-                    .unwrap_or_default();
+                // The schema the form's stain parsed at construction, so it is the node's, never a fallback.
+                let schema = &form.stain().declaration(j).uniforms;
                 let params = schema
-                    .into_iter()
+                    .iter()
                     .map(|u| {
-                        let value = n.params.get(&u.name).cloned().unwrap_or(u.default);
-                        (u.name, value)
+                        let value = n.params.get(&u.name).unwrap_or(&u.default).clone();
+                        (u.name.clone(), value)
                     })
                     .collect();
                 CanonicalNode {
@@ -491,7 +491,10 @@ impl Canonical {
                 })
             })
             .collect();
-        canonical::json_to_string(&json!({ "nodes": nodes })).unwrap_or_default()
+        // Every number here is a position in the graph, far below 2^53, or a param, a finite f64 (each value is
+        // admitted by its schema), so JCS holds each exactly and the serialisation cannot fail.
+        canonical::json_to_string(&json!({ "nodes": nodes }))
+            .expect("positions and finite params are JCS numbers")
     }
 
     /// The fragment key (lowering contract Part 5): the 64-bit FNV-1a hash of [`Canonical::text`]'s UTF-8 bytes.
