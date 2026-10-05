@@ -1,17 +1,18 @@
 //! The hybrid variant: per-bit `k`-fold redundancy plus tiling, for arbitrary rotation (`principia_dd_image_embedding.md`
 //! §5, §7; REQ-TOOL-064, REQ-TOOL-111).
 //!
-//! **The layout.** The hybrid writer lays the tiled variant's grid (§2, "Tile side and the grid"; §3) in *blocks*
-//! rather than pixels: a block is `b` × `b` pixels, `k = b²`, and every pixel of a block holds the same low bits, so
-//! each bit of the record is written `k` times, side by side. The image's blocks sit in a grid from its top-left
-//! pixel, block `(i, j)` at pixel `(i × b, j × b)`; a record's tile is `side` × `side` blocks, `side` §2's tile side, and
-//! within it the record's bits fill the blocks as §2 ("Within a tile") fills a tiled record's pixels, three bits a
-//! block in the RGB plane and one in alpha. The pixels beyond the last whole block, and the slots after a record's
-//! last bit, keep their own low bits. A hybrid image is thus the tiled layout of an image `b` times smaller, upscaled
-//! by `b` with nearest neighbour, over the canvas's own high bits. Its records carry the hybrid variant in their flags
-//! and, in `n_records`, the RGB plane's tiles; every other field is §2's.
+//! **The layout** is §2's "The hybrid layout": the hybrid writer lays the tiled variant's grid (§2, "Tile side and the
+//! grid"; §3) in *blocks* rather than pixels. A block is `m` × `m` pixels, `k = m²` (`m` the block side; §2's `b` is a
+//! plane's bits per pixel), and every pixel of a block holds the same low bits, so each bit of the record is written
+//! `k` times, side by side. The image's blocks sit in a grid from its top-left pixel, block `(i, j)` at pixel
+//! `(i × m, j × m)`; a record's tile is `side` × `side` blocks, `side` §2's tile side, and within it the record's bits
+//! fill the blocks as §2 ("Within a tile") fills a tiled record's pixels, three bits a block in the RGB plane and one
+//! in alpha. The pixels beyond the last whole block, and the slots after a record's last bit, keep their own low bits.
+//! A hybrid image is thus the tiled layout of an image `m` times smaller, upscaled by `m` with nearest neighbour, over
+//! the canvas's own high bits. Its records carry the hybrid variant in their flags and, in `n_records`, the RGB
+//! plane's tiles; every other field is §2's, and `k` is stored nowhere: the reader finds it by search.
 //!
-//! **The angle search.** Nearest-neighbour rotation by an arbitrary angle moves each pixel to the nearest pixel of the
+//! **The angle search** (§5). Nearest-neighbour rotation by an arbitrary angle moves each pixel to the nearest pixel of the
 //! rotated grid, which is a permutation of most pixels but not of all: rotating back leaves bits wrong near the blocks'
 //! edges (§5: ~8 %), which whole-record repetition cannot absorb and a vote over each block can. [`read`]
 //! first reads the image as §4's three searches do ([`reader::read`]); when they recover nothing, it undoes a rotation
@@ -33,8 +34,9 @@ use super::writer::{EmbedError, Placed};
 use super::{Image, Plane};
 use std::cmp::Reverse;
 
-/// A per-bit redundancy the hybrid variant offers: `k` copies of each bit, a `b` × `b` block of pixels, `k = b²`. The
-/// two offered are §5's measured `k = 9` and `k = 25`; `b` is odd, so a block's vote has no tie.
+/// A per-bit redundancy the hybrid variant offers: `k` copies of each bit, an `m` × `m` block of pixels, `k = m²`
+/// (§2, "The hybrid layout"). The two offered are §5's measured `k = 9` and `k = 25`; `m` is odd, so a block's vote has
+/// no tie.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Redundancy {
     /// `k = 9`, 3 × 3 blocks: §5's 5 % uniform noise.
@@ -60,7 +62,7 @@ impl Redundancy {
         }
     }
 
-    /// A block's side in pixels, `b = √k`.
+    /// A block's side in pixels, `m = √k`.
     pub fn block(self) -> u32 {
         match self {
             Self::K9 => 3,
@@ -90,11 +92,11 @@ pub fn embed(
     source: bool,
     redundancy: Redundancy,
 ) -> Result<Placed, EmbedError> {
-    let b = redundancy.block();
-    let n_records = placed_records(image.width() / b, image.height() / b, payload.len());
+    let m = redundancy.block();
+    let n_records = placed_records(image.width() / m, image.height() / m, payload.len());
     if n_records == 0 {
         return Err(EmbedError::TooSmall {
-            side: tile_side(record_bits(payload.len()), Plane::Rgb.bits_per_pixel()) * b,
+            side: tile_side(record_bits(payload.len()), Plane::Rgb.bits_per_pixel()) * m,
             width: image.width(),
             height: image.height(),
         });
@@ -108,10 +110,10 @@ pub fn embed(
         payload: payload.to_vec(),
     };
     let bytes = encode(&record).map_err(EmbedError::Encode)?;
-    let rgb = place(image, Plane::Rgb, &bytes, b, usize::from(n_records));
+    let rgb = place(image, Plane::Rgb, &bytes, m, usize::from(n_records));
     debug_assert_eq!(rgb, u32::from(n_records));
     let alpha = if image.has_alpha() {
-        place(image, Plane::Alpha, &bytes, b, usize::MAX)
+        place(image, Plane::Alpha, &bytes, m, usize::MAX)
     } else {
         0
     };
@@ -121,13 +123,13 @@ pub fn embed(
     })
 }
 
-/// Writes the record `bytes` into the first `limit` tiles of `plane`'s grid of `b` × `b` blocks, row by row from the
+/// Writes the record `bytes` into the first `limit` tiles of `plane`'s grid of `m` × `m` blocks, row by row from the
 /// top-left, every pixel of a block holding its bits, and returns how many it wrote.
-fn place(image: &mut Image, plane: Plane, bytes: &[u8], b: u32, limit: usize) -> u32 {
+fn place(image: &mut Image, plane: Plane, bytes: &[u8], m: u32, limit: usize) -> u32 {
     let bpp = plane.bits_per_pixel();
     let bits = 8 * bytes.len() as u64;
     let side = tile_side(bits, bpp);
-    let (cols, rows) = tile_grid(image.width() / b, image.height() / b, side);
+    let (cols, rows) = tile_grid(image.width() / m, image.height() / m, side);
     let mut placed = 0;
     for (row, col) in (0..rows)
         .flat_map(|row| (0..cols).map(move |col| (row, col)))
@@ -137,9 +139,9 @@ fn place(image: &mut Image, plane: Plane, bytes: &[u8], b: u32, limit: usize) ->
         for i in 0..bits {
             let slot = bit_slot(i, side, bpp);
             let bit = u8::from(record_bit(bytes, i));
-            let (x, y) = ((bx + slot.x) * b, (by + slot.y) * b);
-            for dy in 0..b {
-                for dx in 0..b {
+            let (x, y) = ((bx + slot.x) * m, (by + slot.y) * m);
+            for dy in 0..m {
+                for dx in 0..m {
                     image.set_low(plane, x + dx, y + dy, slot.channel, bit);
                 }
             }
@@ -240,44 +242,44 @@ impl Canvas {
         }
     }
 
-    /// The column or row, from 0 to `b` − 1, at which the canvas's blocks of side `b` start along one axis: the one
+    /// The column or row, from 0 to `m` − 1, at which the canvas's blocks of side `m` start along one axis: the one
     /// where the low bits change most often from the pixel before, as they do at a block's edge and seldom inside it.
     /// `across` says whether the axis is the rows' (x) or the columns' (y).
-    fn phase(&self, b: u32, across: bool) -> u32 {
+    fn phase(&self, m: u32, across: bool) -> u32 {
         let w = self.width as usize;
         // The step from a pixel to the one before it along the axis.
         let step = if across { 1 } else { w };
-        let mut changes = vec![0u64; b as usize];
+        let mut changes = vec![0u64; m as usize];
         for at in 0..self.lows.len() {
             let coordinate = if across { at % w } else { at / w };
             if coordinate > 0 {
-                changes[coordinate % b as usize] +=
+                changes[coordinate % m as usize] +=
                     u64::from((self.lows[at] ^ self.lows[at - step]).count_ones());
             }
         }
         // The first of the most frequent, so a tie is settled the same way every time.
-        (0..b)
+        (0..m)
             .max_by_key(|&i| (changes[i as usize], Reverse(i)))
             .unwrap_or(0)
     }
 
-    /// The canvas's blocks of `redundancy`'s side `b` from their phase ([`Canvas::phase`]) as an image, each pixel's R,
-    /// G, B and (when `alpha`) A low bits the majority of that bit over the block's `k = b²` pixels, every other bit 0.
+    /// The canvas's blocks of `redundancy`'s side `m` from their phase ([`Canvas::phase`]) as an image, each pixel's R,
+    /// G, B and (when `alpha`) A low bits the majority of that bit over the block's `k = m²` pixels, every other bit 0.
     fn blocks(&self, redundancy: Redundancy, alpha: bool) -> Image {
-        let (b, k) = (redundancy.block(), redundancy.k());
-        let (px, py) = (self.phase(b, true), self.phase(b, false));
+        let (m, k) = (redundancy.block(), redundancy.k());
+        let (px, py) = (self.phase(m, true), self.phase(m, false));
         let (bw, bh) = (
-            self.width.saturating_sub(px) / b,
-            self.height.saturating_sub(py) / b,
+            self.width.saturating_sub(px) / m,
+            self.height.saturating_sub(py) / m,
         );
         let channels = if alpha { 4 } else { 3 };
         let mut pixels = Vec::with_capacity(bw as usize * bh as usize * channels);
         for j in 0..bh {
             for i in 0..bw {
                 let mut ones = [0u32; 4];
-                for y in py + j * b..py + (j + 1) * b {
+                for y in py + j * m..py + (j + 1) * m {
                     let row = y as usize * self.width as usize;
-                    for x in px + i * b..px + (i + 1) * b {
+                    for x in px + i * m..px + (i + 1) * m {
                         let low = self.lows[row + x as usize];
                         for (c, n) in ones.iter_mut().enumerate() {
                             *n += u32::from((low >> c) & 1);
