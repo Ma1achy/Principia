@@ -611,7 +611,9 @@ negative_control!(
 );
 
 /// A request equal to the one with the worker is pending; of two requests, only the later swaps in; a prepared stain
-/// compiles into the cache without becoming current, and a request for it then hits.
+/// compiles into the cache without becoming current, and a request for it then hits. Whether the earlier request
+/// compiled depends on whether the worker took it before the later one superseded it, so nothing here counts on it:
+/// the compile count is checked only across the prepare (review 5410432126 C6).
 fn check_requests(later: &str) {
     let mut r = rig();
     let a = graph(&flat([0.125, 0.25, 0.5]));
@@ -633,20 +635,19 @@ fn check_requests(later: &str) {
     assert!(cache.wait(), "the later request did not swap in");
     assert_eq!(cache.in_flight(), 0);
     let kb = PipelineKey::new(&stain(&b), Tier::FULL);
-    let ka = PipelineKey::new(&stain(&a), Tier::FULL);
     assert_eq!(
         cache.current().expect("current").key(),
         kb,
         "the earlier request swapped in last"
     );
-    assert!(cache.get(ka).is_some(), "the earlier stain is cached");
+    let compiles = cache.compiles();
     let c = graph(&flat([0.875, 0.5, 0.125]));
     cache
         .prepare(&stain(&c), &keys(&c), Tier::FULL)
         .unwrap_or_else(|e| panic!("{e}"));
     assert!(!cache.wait(), "a prepared stain swapped in");
     assert_eq!(cache.current().expect("current").key(), kb);
-    assert_eq!(cache.compiles(), 3);
+    assert_eq!(cache.compiles(), compiles + 1, "the prepare compiled once");
     cache
         .prepare(&stain(&c), &keys(&c), Tier::FULL)
         .unwrap_or_else(|e| panic!("{e}"));
