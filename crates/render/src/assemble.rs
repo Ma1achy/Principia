@@ -6,7 +6,8 @@
 //! construction, and every wire obeys the port types and the backbone (render_gui_spec Part II §4, §6;
 //! colour_composition §4): sources feed colour and brightness, which meet only at the combiner, then the post chain,
 //! then `OUT` ([`check_wire`]). `combiner` and `OUT` are singletons, and the post chain holds at most [`MAX_POSTS`]
-//! posts (colour_composition §4.2). The engine's stain-graph type (`engine::stain`) lowers to it in its canonical order.
+//! posts (colour_composition §4.2). Its canonical form ([`Stain::canonical`]) is what the fragment key hashes and what
+//! is assembled. The engine's stain-graph type (`engine::stain`) lowers to it.
 //!
 //! **The slot functions** each occupant defines (render contract Part 2; colour_composition §4.2 for the post's `ctx`):
 //! `fn source(ctx: Ctx) -> Field`, `fn colour(ctx: Ctx) -> vec3<f32>` (linear RGB), `fn brightness(ctx: Ctx) -> f32`
@@ -668,6 +669,143 @@ impl Stain {
         let skip = usize::from(self.nodes[i].kind == Kind::Post);
         self.nodes[i].inputs[skip..].to_vec()
     }
+
+    /// The canonical form (lowering contract Part 5; render contract Part 3; REQ-RENDER-075): the live nodes, those
+    /// `OUT` depends on with the identity dropped, in canonical order — the sources in order of first use, then the
+    /// colour, the brightness, the combiner, the posts from the combiner to `OUT`, and `OUT` — each wired by position:
+    /// the combiner to its live colour and brightness, a post and `OUT` to the node before it in the chain, and each
+    /// field input to its source. The order the nodes were given in is not in it.
+    pub fn canonical(&self) -> Canonical {
+        let (colour, brightness) = self.slots();
+        let order: Vec<usize> = self
+            .sources()
+            .into_iter()
+            .chain(colour)
+            .chain(brightness)
+            .chain([self.position(Kind::Combiner)])
+            .chain(self.chain())
+            .chain([self.position(Kind::Out)])
+            .collect();
+        let at = |i: usize| order.iter().position(|&o| o == i);
+        let mut nodes: Vec<Node> = Vec::with_capacity(order.len());
+        for &i in &order {
+            let n = &self.nodes[i];
+            let inputs = match n.kind {
+                Kind::Combiner => vec![colour.and_then(at), brightness.and_then(at)],
+                Kind::Out => vec![nodes.len().checked_sub(1)],
+                Kind::Post => [nodes.len().checked_sub(1)]
+                    .into_iter()
+                    .chain(self.field_inputs(i).into_iter().map(|j| j.and_then(at)))
+                    .collect(),
+                _ => n.inputs.iter().map(|j| j.and_then(at)).collect(),
+            };
+            nodes.push(Node {
+                kind: n.kind,
+                occupant: n.occupant.clone(),
+                inputs,
+            });
+        }
+        let declarations = order
+            .iter()
+            .map(|&i| self.declarations[i].clone())
+            .collect();
+        Canonical {
+            order,
+            stain: Stain {
+                nodes,
+                declarations,
+            },
+        }
+    }
+}
+
+/// A stain's canonical form ([`Stain::canonical`]): its live nodes in canonical order, as a stain.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Canonical {
+    order: Vec<usize>,
+    stain: Stain,
+}
+
+impl Canonical {
+    /// Each canonical node's position in the stain it was taken from.
+    pub fn order(&self) -> &[usize] {
+        &self.order
+    }
+
+    /// The form as a stain: its nodes in canonical order.
+    pub fn stain(&self) -> &Stain {
+        &self.stain
+    }
+
+    /// The form's text (lowering contract Part 5): `{"nodes":[…]}`, each node `{"inputs":[…],"kind":…,"occupant":…}`,
+    /// its occupant `null`, `{"field":…}`, `{"builtin":…}` or `{"custom":…}`, in JCS (RFC 8785: keys sorted, no white
+    /// space, strings escaped as ECMAScript's `JSON.stringify` escapes them). The fragment key's input.
+    pub fn text(&self) -> String {
+        let mut out = String::from("{\"nodes\":[");
+        for (k, n) in self.stain.nodes.iter().enumerate() {
+            if k > 0 {
+                out.push(',');
+            }
+            out.push_str("{\"inputs\":[");
+            for (m, input) in n.inputs.iter().enumerate() {
+                if m > 0 {
+                    out.push(',');
+                }
+                match input {
+                    Some(j) => {
+                        let _ = write!(out, "{j}");
+                    }
+                    None => out.push_str("null"),
+                }
+            }
+            out.push_str("],\"kind\":");
+            json_string(n.kind.name(), &mut out);
+            out.push_str(",\"occupant\":");
+            let (key, value) = match &n.occupant {
+                Occupant::None => {
+                    out.push_str("null}");
+                    continue;
+                }
+                Occupant::Field(f) => ("field", f),
+                Occupant::BuiltIn(id) => ("builtin", id),
+                Occupant::Custom(text) => ("custom", text),
+            };
+            out.push('{');
+            json_string(key, &mut out);
+            out.push(':');
+            json_string(value, &mut out);
+            out.push_str("}}");
+        }
+        out.push_str("]}");
+        out
+    }
+
+    /// The fragment key (lowering contract Part 5): the 64-bit FNV-1a hash of [`Canonical::text`]'s UTF-8 bytes.
+    pub fn fragment_key(&self) -> u64 {
+        ledger::version::fnv1a64(self.text().as_bytes())
+    }
+}
+
+/// `s` as a JSON string, escaped as JCS escapes it (RFC 8785 §3.2.2.2): `"` and `\` escaped, the control characters
+/// as `\b`, `\t`, `\n`, `\f`, `\r` or `\u00xx`, every other character as itself.
+fn json_string(s: &str, out: &mut String) {
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\u{8}' => out.push_str("\\b"),
+            '\t' => out.push_str("\\t"),
+            '\n' => out.push_str("\\n"),
+            '\u{c}' => out.push_str("\\f"),
+            '\r' => out.push_str("\\r"),
+            c if c < ' ' => {
+                let _ = write!(out, "\\u{:04x}", u32::from(c));
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
 }
 
 // ── Assembly ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -788,6 +926,10 @@ fn source(
         prelude::wgsl(tier),
         CONTEXT.replace("INPUTS", &MAX_INPUTS.to_string())
     );
+    // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
+    // assemble to one source.
+    let canonical = stain.canonical();
+    let stain = canonical.stain();
     let (colour, brightness) = stain.slots();
     let chain = stain.chain();
     let sources = stain.sources();

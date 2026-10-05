@@ -1,5 +1,6 @@
-//! The one assembler (`render::assemble`; render contract Part 2; lowering contract Part 2, Part 3a, Part 5), with
-//! stains built through the engine's stain-graph type (gui_state_contract §5):
+//! The one assembler (`render::assemble`; render contract Part 2; lowering contract Part 2, Part 3a, Part 5), its
+//! stains written as node lists (render never depends on engine, systems_architecture §7.1; the engine's stain-graph
+//! type, its edits and its params are `crates/engine/tests/stain.rs`'s):
 //! - REQ-RENDER-009: the backbone — a graph that feeds post back into colour, reorders the backbone or closes a cycle
 //!   is refused, and the generated `shade()` walks sources → colour / brightness → combiner → (post)* → OUT
 //!   (`backbone_*`);
@@ -11,8 +12,9 @@
 //!   assembled stain reading one field loads only that field's stored members and word components in naga's MSL,
 //!   HLSL and SPIR-V (`assemble_field_set_*`, the method of `crates/ledger/tests/per_member_loads.rs`);
 //! - REQ-RENDER-016: the slot signatures, colour → `vec3<f32>`, brightness → `f32` (`slot_signature_*`);
-//! - REQ-RENDER-075: the canonical form — two constructions of one graph hash equal, different graphs differently,
-//!   params only in the render key (`canonical_hash_*`);
+//! - REQ-RENDER-075: the canonical form — two wirings of one graph hash equal and assemble to one source, different
+//!   graphs hash differently, and the text is the defined form (`canonical_hash_*`; the render key's params are the
+//!   engine's);
 //! - REQ-GEN-027: the declaration format, `// @uniform` and `// @input` (`declaration_*`).
 //!
 //! Each test registers its negative control (R-176). Run `assemble_field_set_an_assembled_stain_loads_only_its_fields_words`
@@ -20,12 +22,11 @@
 
 use std::collections::BTreeSet;
 
-use engine::stain::{GraphError, NodeId, NodeKind, Occupant, StainGraph};
 use ledger::gen::{prelude, read, rust, wgsl};
 use naga::valid::{Capabilities, ModuleInfo, ValidationFlags, Validator};
 use naga::Module;
 use render::assemble::{
-    self, AssembleError, Declaration, Kind, PortType, Stain, Tier, UniformType,
+    self, AssembleError, Declaration, Kind, Node, Occupant, PortType, Stain, Tier, UniformType,
 };
 use validation::gpu::{BindingKind, GpuHarness};
 use validation::negative_control;
@@ -62,22 +63,59 @@ fn custom(text: &str) -> Occupant {
     Occupant::Custom(text.to_owned())
 }
 
-/// The backbone with `source` wired into a colour node of `colour`, wired into the combiner: ids 2 and 3.
-fn graph(source: Occupant, colour: &str) -> (StainGraph, NodeId, NodeId) {
-    let mut g = StainGraph::new();
-    let s = g.add(NodeKind::Source, source).expect("a source");
-    let c = g.add(NodeKind::Colour, custom(colour)).expect("a colour");
-    g.connect(s, c, 0).expect("source → colour");
-    g.connect(c, StainGraph::COMBINER, 0)
-        .expect("colour → combiner");
-    (g, s, c)
+fn pass_through() -> Occupant {
+    Occupant::BuiltIn("pass_through".into())
 }
 
-fn stain(g: &StainGraph) -> Stain {
-    g.lower().unwrap_or_else(|e| panic!("{e}"))
+/// A node of `kind` and `occupant`, its in-ports fed by `inputs`, exactly.
+fn node(kind: Kind, occupant: Occupant, inputs: &[Option<usize>]) -> Node {
+    Node {
+        kind,
+        occupant,
+        inputs: inputs.to_vec(),
+    }
 }
 
-fn assembled(g: &StainGraph, tier: Tier) -> String {
+/// A node of `kind` and `occupant`, one input per in-port its occupant declares: the first fed by `fed`, the rest
+/// absent.
+fn wired(kind: Kind, occupant: Occupant, fed: &[Option<usize>]) -> Node {
+    let ports = assemble::declaration(kind, &occupant)
+        .map_or(fed.len(), |d| assemble::in_ports(kind, &d).len());
+    let mut inputs = fed.to_vec();
+    inputs.resize(ports, None);
+    node(kind, occupant, &inputs)
+}
+
+/// The backbone with `source` (node 0) into a colour of `colour` (1), into the combiner (2), into OUT (3).
+fn graph(source: Occupant, colour: &str) -> Vec<Node> {
+    vec![
+        wired(Kind::Source, source, &[]),
+        wired(Kind::Colour, custom(colour), &[Some(0)]),
+        node(Kind::Combiner, pass_through(), &[Some(1), None]),
+        node(Kind::Out, Occupant::None, &[Some(2)]),
+    ]
+}
+
+/// A post of `occupant` added before OUT, which is last: it reads what OUT read, and OUT reads it. Its position.
+fn add_post(g: &mut Vec<Node>, occupant: Occupant) -> usize {
+    let out = g.pop().expect("OUT, last");
+    let p = g.len();
+    g.push(wired(Kind::Post, occupant, &[out.inputs[0]]));
+    g.push(node(Kind::Out, Occupant::None, &[Some(p)]));
+    p
+}
+
+/// Node `i` given `occupant`, its inputs kept as far as its new in-ports reach.
+fn set_occupant(g: &mut [Node], i: usize, occupant: Occupant) {
+    let inputs = g[i].inputs.clone();
+    g[i] = wired(g[i].kind, occupant, &inputs);
+}
+
+fn stain(g: &[Node]) -> Stain {
+    Stain::new(g.to_vec()).unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn assembled(g: &[Node], tier: Tier) -> String {
     assemble::assemble(&stain(g), tier)
         .unwrap_or_else(|e| panic!("{e}"))
         .source
@@ -93,228 +131,10 @@ fn parse(source: &str) -> (Module, ModuleInfo) {
     (module, info)
 }
 
-fn post(g: &mut StainGraph) -> NodeId {
-    g.add(NodeKind::Post, custom(PASS_POST)).expect("a post")
-}
-
-fn colour_node(g: &mut StainGraph) -> NodeId {
-    g.add(NodeKind::Colour, custom(SHOW_INPUT))
-        .expect("a colour")
-}
-
 // ── The backbone (REQ-RENDER-009) ─────────────────────────────────────────────────────────────────────────────────
 
-type Edit = dyn Fn(&mut StainGraph) -> Result<(), GraphError>;
-
-/// Each edit's last step is refused with a message containing its `want`.
-fn check_refused(edits: &[(&str, &Edit)]) {
-    for (want, edit) in edits {
-        let (mut g, ..) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
-        let got = edit(&mut g);
-        assert!(
-            got.as_ref().is_err_and(|e| e.0.contains(want)),
-            "an edit that should be refused ({want}) gave {got:?}"
-        );
-    }
-}
-
-fn backbone_edits() -> Vec<(&'static str, Box<Edit>)> {
-    vec![
-        // Post fed back into colour: a vec3 out-port into a field in-port.
-        (
-            "cannot feed",
-            Box::new(|g: &mut StainGraph| {
-                let p = post(g);
-                let c = colour_node(g);
-                g.connect(p, c, 0)
-            }),
-        ),
-        // Colour straight into a post, skipping the combiner.
-        (
-            "backbone",
-            Box::new(|g: &mut StainGraph| {
-                let p = post(g);
-                let c = colour_node(g);
-                g.connect(c, p, 0)
-            }),
-        ),
-        // A post into the combiner's colour: post before the combiner.
-        (
-            "backbone",
-            Box::new(|g: &mut StainGraph| {
-                let p = post(g);
-                g.connect(p, StainGraph::COMBINER, 0)
-            }),
-        ),
-        // Colour straight into OUT.
-        (
-            "backbone",
-            Box::new(|g: &mut StainGraph| {
-                let c = colour_node(g);
-                g.connect(c, StainGraph::OUT, 0)
-            }),
-        ),
-        // Two posts into each other: a cycle.
-        (
-            "acyclic",
-            Box::new(|g: &mut StainGraph| {
-                let a = post(g);
-                let b = post(g);
-                g.connect(a, b, 0)?;
-                g.connect(b, a, 0)
-            }),
-        ),
-        // A second combiner or OUT, or OUT deleted.
-        (
-            "fixed singleton",
-            Box::new(|g: &mut StainGraph| {
-                g.add(NodeKind::Combiner, Occupant::Builtin("pass_through".into()))
-                    .map(|_| ())
-            }),
-        ),
-        (
-            "fixed singleton",
-            Box::new(|g: &mut StainGraph| g.add(NodeKind::Out, Occupant::None).map(|_| ())),
-        ),
-        (
-            "fixed singleton",
-            Box::new(|g: &mut StainGraph| g.remove(StainGraph::OUT)),
-        ),
-        (
-            "fixed singleton",
-            Box::new(|g: &mut StainGraph| g.remove(StainGraph::COMBINER)),
-        ),
-        // A brightness into the combiner's colour: f32 into vec3.
-        (
-            "cannot feed",
-            Box::new(|g: &mut StainGraph| {
-                let b = g.add(NodeKind::Brightness, Occupant::None)?;
-                g.connect(b, StainGraph::COMBINER, 0)
-            }),
-        ),
-        // A port the node does not have, and a node that does not exist.
-        (
-            "no port 1",
-            Box::new(|g: &mut StainGraph| g.connect(NodeId(2), NodeId(3), 1)),
-        ),
-        (
-            "names no node",
-            Box::new(|g: &mut StainGraph| g.connect(NodeId(9), NodeId(3), 0)),
-        ),
-        (
-            "no node 9",
-            Box::new(|g: &mut StainGraph| g.remove(NodeId(9))),
-        ),
-        (
-            "no node 9",
-            Box::new(|g: &mut StainGraph| g.set_occupant(NodeId(9), Occupant::None)),
-        ),
-        (
-            "no node 9",
-            Box::new(|g: &mut StainGraph| g.set_param(NodeId(9), "x", vec![1.0])),
-        ),
-        // The combiner's occupant None.
-        (
-            "the combiner is required",
-            Box::new(|g: &mut StainGraph| g.set_occupant(StainGraph::COMBINER, Occupant::None)),
-        ),
-        // Nine posts in the live chain.
-        (
-            "at most 8",
-            Box::new(|g: &mut StainGraph| {
-                let mut previous = StainGraph::COMBINER;
-                for _ in 0..=assemble::MAX_POSTS {
-                    let p = post(g);
-                    g.connect(previous, p, 0)?;
-                    previous = p;
-                }
-                g.connect(previous, StainGraph::OUT, 0)
-            }),
-        ),
-    ]
-}
-
-#[test]
-fn backbone_a_graph_that_breaks_it_is_refused() {
-    let edits = backbone_edits();
-    let refs: Vec<(&str, &Edit)> = edits.iter().map(|(w, e)| (*w, e.as_ref())).collect();
-    check_refused(&refs);
-}
-
-negative_control!(
-    backbone_a_graph_that_breaks_it_is_refused,
-    "a post wired after the combiner is a graph, not refused",
-    expected = "should be refused",
-    check_refused(&[("backbone", &|g: &mut StainGraph| {
-        let p = post(g);
-        g.connect(StainGraph::COMBINER, p, 0)?;
-        g.connect(p, StainGraph::OUT, 0)
-    })])
-);
-
-/// Edits that keep the graph a graph: removing a node drops its wires, a new wire replaces the old on its in-port,
-/// and a new occupant with fewer in-ports drops the wires to those it lost.
-#[test]
-fn backbone_edits_keep_the_graph() {
-    let (mut g, s, c) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
-    let t = g
-        .add(NodeKind::Source, Occupant::Field("S".into()))
-        .expect("a second source");
-    g.connect(t, c, 0).expect("last write wins");
-    assert!(g
-        .wires()
-        .iter()
-        .any(|w| (w.from, w.to, w.port) == (t, c, 0)));
-    assert!(
-        !g.wires().iter().any(|w| w.from == s),
-        "the old wire stayed"
-    );
-    g.set_occupant(
-        c,
-        custom(&format!("// @input a\n// @input b\n{SHOW_INPUT}")),
-    )
-    .expect("two inputs");
-    g.connect(s, c, 1).expect("into the second");
-    g.set_occupant(c, custom(SHOW_INPUT))
-        .expect("one input again");
-    assert!(
-        !g.wires().iter().any(|w| w.to == c && w.port == 1),
-        "a wire to a lost port stayed"
-    );
-    g.remove(t).expect("removed");
-    assert!(g.node(t).is_none());
-    assert!(
-        !g.wires().iter().any(|w| w.from == t || w.to == t),
-        "a removed node's wire stayed"
-    );
-    g.disconnect(c, 0).expect("disconnected");
-    assert!(!g.wires().iter().any(|w| w.to == c), "the wire stayed");
-    assert_eq!(StainGraph::default(), StainGraph::new());
-    // A refused edit leaves the graph as it was.
-    let before = g.clone();
-    assert!(
-        g.connect(c, StainGraph::OUT, 0).is_err(),
-        "colour → OUT was taken"
-    );
-    assert_eq!(g, before, "a refused edit changed the graph");
-}
-
-negative_control!(
-    backbone_edits_keep_the_graph,
-    "a wire onto an occupied in-port does not add a second",
-    expected = "the old wire stayed",
-    {
-        let (mut g, s, c) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
-        g.connect(s, c, 0).expect("the same wire again");
-        assert!(
-            !g.wires().iter().any(|w| w.from == s),
-            "the old wire stayed"
-        );
-    }
-);
-
 /// The assembler's own graph refuses a backward wire, the only way to write a cycle, and the backbone's breaks.
-fn check_stain_refused(cases: &[(Vec<assemble::Node>, &str)]) {
+fn check_stain_refused(cases: &[(Vec<Node>, &str)]) {
     for (nodes, want) in cases {
         let got = Stain::new(nodes.clone());
         assert!(
@@ -324,33 +144,21 @@ fn check_stain_refused(cases: &[(Vec<assemble::Node>, &str)]) {
     }
 }
 
-fn node(kind: Kind, occupant: assemble::Occupant, inputs: &[Option<usize>]) -> assemble::Node {
-    assemble::Node {
-        kind,
-        occupant,
-        inputs: inputs.to_vec(),
-    }
-}
-
-fn pass_through() -> assemble::Occupant {
-    assemble::Occupant::BuiltIn("pass_through".into())
-}
-
-fn chain(posts: usize) -> Vec<assemble::Node> {
+fn chain(posts: usize) -> Vec<Node> {
     let mut v = vec![node(Kind::Combiner, pass_through(), &[None, None])];
     for k in 0..posts {
         v.push(node(
             Kind::Post,
-            assemble::Occupant::Custom(PASS_POST.into()),
+            Occupant::Custom(PASS_POST.into()),
             &[Some(k)],
         ));
     }
-    v.push(node(Kind::Out, assemble::Occupant::None, &[Some(posts)]));
+    v.push(node(Kind::Out, Occupant::None, &[Some(posts)]));
     v
 }
 
-fn stain_cases() -> Vec<(Vec<assemble::Node>, &'static str)> {
-    use assemble::Occupant as O;
+fn stain_cases() -> Vec<(Vec<Node>, &'static str)> {
+    use Occupant as O;
     let post = O::Custom(PASS_POST.into());
     vec![
         (
@@ -371,15 +179,6 @@ fn stain_cases() -> Vec<(Vec<assemble::Node>, &'static str)> {
         ),
         (
             vec![
-                node(Kind::Source, O::Field("d_min".into()), &[]),
-                node(Kind::Colour, O::Custom(SHOW_INPUT.into()), &[Some(0)]),
-                node(Kind::Combiner, pass_through(), &[None, None]),
-                node(Kind::Out, O::None, &[Some(1)]),
-            ],
-            "backbone",
-        ),
-        (
-            vec![
                 node(Kind::Combiner, pass_through(), &[None, None]),
                 node(Kind::Combiner, pass_through(), &[None, None]),
                 node(Kind::Out, O::None, &[Some(1)]),
@@ -390,6 +189,15 @@ fn stain_cases() -> Vec<(Vec<assemble::Node>, &'static str)> {
             vec![node(Kind::Combiner, pass_through(), &[None, None])],
             "one out",
         ),
+        (
+            vec![
+                node(Kind::Combiner, pass_through(), &[None, None]),
+                node(Kind::Out, O::None, &[Some(0)]),
+                node(Kind::Out, O::None, &[Some(0)]),
+            ],
+            "one out",
+        ),
+        (vec![node(Kind::Out, O::None, &[None])], "one combiner"),
         (
             vec![
                 node(Kind::Combiner, pass_through(), &[None]),
@@ -415,6 +223,81 @@ fn stain_cases() -> Vec<(Vec<assemble::Node>, &'static str)> {
     ]
 }
 
+/// Graphs that break the backbone: post fed back into colour, colour past the combiner, a post or a brightness into
+/// the combiner's colour, colour straight into OUT, and a cycle, which can only be written as a wire running backward.
+fn backbone_cases() -> Vec<(Vec<Node>, &'static str)> {
+    let post = || custom(PASS_POST);
+    let colour = || custom(SHOW_INPUT);
+    let combiner = || node(Kind::Combiner, pass_through(), &[None, None]);
+    vec![
+        (
+            vec![
+                combiner(),
+                node(Kind::Post, post(), &[Some(0)]),
+                node(Kind::Colour, colour(), &[Some(1)]),
+                node(Kind::Out, Occupant::None, &[Some(1)]),
+            ],
+            "cannot feed",
+        ),
+        (
+            vec![
+                node(Kind::Source, Occupant::Field("d_min".into()), &[]),
+                node(Kind::Colour, colour(), &[Some(0)]),
+                node(Kind::Post, post(), &[Some(1)]),
+                combiner(),
+                node(Kind::Out, Occupant::None, &[Some(2)]),
+            ],
+            "backbone",
+        ),
+        (
+            vec![
+                node(Kind::Post, post(), &[None]),
+                node(Kind::Combiner, pass_through(), &[Some(0), None]),
+                node(Kind::Out, Occupant::None, &[Some(1)]),
+            ],
+            "backbone",
+        ),
+        (
+            vec![
+                node(Kind::Brightness, Occupant::None, &[None]),
+                node(Kind::Combiner, pass_through(), &[Some(0), None]),
+                node(Kind::Out, Occupant::None, &[Some(1)]),
+            ],
+            "cannot feed",
+        ),
+        (
+            vec![
+                node(Kind::Source, Occupant::Field("d_min".into()), &[]),
+                node(Kind::Colour, colour(), &[Some(0)]),
+                combiner(),
+                node(Kind::Out, Occupant::None, &[Some(1)]),
+            ],
+            "backbone",
+        ),
+        (
+            vec![
+                combiner(),
+                node(Kind::Post, post(), &[Some(2)]),
+                node(Kind::Post, post(), &[Some(1)]),
+                node(Kind::Out, Occupant::None, &[Some(2)]),
+            ],
+            "runs forward",
+        ),
+    ]
+}
+
+#[test]
+fn backbone_a_graph_that_breaks_it_is_refused() {
+    check_stain_refused(&backbone_cases());
+}
+
+negative_control!(
+    backbone_a_graph_that_breaks_it_is_refused,
+    "a post wired after the combiner is a graph, not refused",
+    expected = "should be refused",
+    check_stain_refused(&[(chain(1), "backbone")])
+);
+
 #[test]
 fn backbone_the_assemblers_graph_is_checked_at_construction() {
     check_stain_refused(&stain_cases());
@@ -430,48 +313,26 @@ negative_control!(
     check_stain_refused(&[(chain(0), "backbone")])
 );
 
-/// A graph with every kind: a source into a colour and a brightness, a combiner reading both, and two posts.
-fn full_graph() -> (StainGraph, [NodeId; 5]) {
-    let mut g = StainGraph::new();
-    let s = g
-        .add(NodeKind::Source, Occupant::Field("ftle".into()))
-        .expect("source");
-    let c = colour_node(&mut g);
-    let b = g
-        .add(
-            NodeKind::Brightness,
-            custom("fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }"),
-        )
-        .expect("brightness");
-    let p1 = g
-        .add(
-            NodeKind::Post,
-            custom("fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * 0.5; }"),
-        )
-        .expect("post");
-    let p2 = g
-        .add(
-            NodeKind::Post,
-            custom("fn post(ctx: Ctx, rgb: vec3f) -> vec3f { return 1.0 - rgb; }"),
-        )
-        .expect("post");
-    g.set_occupant(
-        StainGraph::COMBINER,
-        custom("fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }"),
-    )
-    .expect("combiner");
-    for (from, to, port) in [
-        (s, c, 0),
-        (s, b, 0),
-        (c, StainGraph::COMBINER, 0),
-        (b, StainGraph::COMBINER, 1),
-        (StainGraph::COMBINER, p1, 0),
-        (p1, p2, 0),
-        (p2, StainGraph::OUT, 0),
-    ] {
-        g.connect(from, to, port).expect("a backbone wire");
-    }
-    (g, [s, c, b, p1, p2])
+/// The brightness of the full graph: its input.
+const BRIGHTNESS: &str = "fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }";
+/// The full graph's combiner, posts in order.
+const COMBINE: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }";
+const POST_1: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * 0.5; }";
+const POST_2: &str = "fn post(ctx: Ctx, rgb: vec3f) -> vec3f { return 1.0 - rgb; }";
+
+/// A graph with every kind: a source (0) into a colour (1) and a brightness (2), the combiner (3) reading both, two
+/// posts (4, 5) and OUT (6); the positions of the source, colour, brightness and posts.
+fn full_graph() -> (Vec<Node>, [usize; 5]) {
+    let g = vec![
+        wired(Kind::Source, Occupant::Field("ftle".into()), &[]),
+        wired(Kind::Colour, custom(SHOW_INPUT), &[Some(0)]),
+        wired(Kind::Brightness, custom(BRIGHTNESS), &[Some(0)]),
+        node(Kind::Combiner, custom(COMBINE), &[Some(1), Some(2)]),
+        wired(Kind::Post, custom(POST_1), &[Some(3)]),
+        wired(Kind::Post, custom(POST_2), &[Some(4)]),
+        node(Kind::Out, Occupant::None, &[Some(5)]),
+    ];
+    (g, [0, 1, 2, 4, 5])
 }
 
 /// `shade()`'s calls, in the order they are made: each node function's name.
@@ -502,7 +363,7 @@ fn shade_calls(source: &str) -> Vec<String> {
 }
 
 /// `shade()` calls the nodes in backbone order.
-fn check_shade_order(g: &StainGraph, want: &[&str]) {
+fn check_shade_order(g: &[Node], want: &[&str]) {
     let got = shade_calls(&assembled(g, Tier::FULL));
     assert_eq!(got, want, "shade() is not in backbone order");
 }
@@ -543,7 +404,7 @@ negative_control!(
 // ── Identity (render_gui_spec §13; colour_composition §4.1) ───────────────────────────────────────────────────────
 
 /// Each graph's `shade()` contains its `want`.
-fn check_identity(cases: &[(StainGraph, &str)]) {
+fn check_identity(cases: &[(Vec<Node>, &str)]) {
     for (g, want) in cases {
         let source = assembled(g, Tier::FULL);
         let body = source.split("fn shade(ctx: Ctx)").nth(1).expect("shade()");
@@ -554,30 +415,20 @@ fn check_identity(cases: &[(StainGraph, &str)]) {
     }
 }
 
-fn identity_cases() -> Vec<(StainGraph, &'static str)> {
+fn identity_cases() -> Vec<(Vec<Node>, &'static str)> {
     let (both, [s, c, b, p1, _]) = full_graph();
     let mut colour_none = both.clone();
-    colour_none
-        .set_occupant(c, Occupant::None)
-        .expect("colour None");
+    set_occupant(&mut colour_none, c, Occupant::None);
     let mut brightness_none = both.clone();
-    brightness_none
-        .disconnect(b, 0)
-        .expect("brightness dangling");
+    brightness_none[b].inputs[0] = None;
     let mut neither = colour_none.clone();
-    neither.disconnect(b, 0).expect("brightness dangling");
+    neither[b].inputs[0] = None;
     let mut source_none = both.clone();
-    source_none
-        .set_occupant(s, Occupant::None)
-        .expect("source None");
+    set_occupant(&mut source_none, s, Occupant::None);
     let mut post_none = both.clone();
-    post_none
-        .set_occupant(p1, Occupant::None)
-        .expect("post None");
+    set_occupant(&mut post_none, p1, Occupant::None);
     let mut chain_cut = both.clone();
-    chain_cut
-        .disconnect(p1, 0)
-        .expect("the chain cut before the first post");
+    chain_cut[p1].inputs[0] = None;
     vec![
         (both, "var out = n3_combine(rgb, b);"),
         (colour_none, "var out = n2_combine(vec3<f32>(1.0), b);"),
@@ -604,7 +455,7 @@ negative_control!(
 // ── One compile path (REQ-RENDER-010) ─────────────────────────────────────────────────────────────────────────────
 
 /// `a` and `b` assemble to the same WGSL but for the node comments, which name the occupant.
-fn check_same_source(a: &StainGraph, b: &StainGraph) {
+fn check_same_source(a: &[Node], b: &[Node]) {
     let strip = |s: String| {
         s.lines()
             .filter(|l| !l.starts_with("// Node "))
@@ -619,12 +470,10 @@ fn check_same_source(a: &StainGraph, b: &StainGraph) {
 
 #[test]
 fn one_path_a_builtin_is_assembled_as_a_custom_of_its_text() {
-    let (built_in, ..) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
+    let built_in = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
     let mut as_custom = built_in.clone();
     let text = assemble::builtin(Kind::Combiner, "pass_through").expect("the built-in");
-    as_custom
-        .set_occupant(StainGraph::COMBINER, custom(text))
-        .expect("the same text, custom");
+    as_custom[2].occupant = custom(text);
     check_same_source(&built_in, &as_custom);
     let source = assembled(&built_in, Tier::FULL);
     assert!(source.contains("// Node 2: combiner, built-in `pass_through`."));
@@ -637,14 +486,10 @@ negative_control!(
     "a custom of other text assembles differently",
     expected = "assemble differently",
     {
-        let (built_in, ..) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
+        let built_in = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
         let mut other = built_in.clone();
-        other
-            .set_occupant(
-                StainGraph::COMBINER,
-                custom("fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * 2.0; }"),
-            )
-            .expect("custom");
+        other[2].occupant =
+            custom("fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * 2.0; }");
         check_same_source(&built_in, &other);
     }
 );
@@ -744,7 +589,7 @@ fn check_reads(tier: Tier, e: u32, got: [u32; 4]) {
 
 /// The custom colour `colour`, assembled and drawn at every tier with E = 0 and E = 1; each pixel checked.
 fn check_any_tier(h: &GpuHarness, colour: &str) {
-    let (g, ..) = graph(Occupant::Field("ftle".into()), colour);
+    let g = graph(Occupant::Field("ftle".into()), colour);
     for tier in Tier::ALL {
         let source = assembled(&g, tier) + ENTRY;
         let group1: &[BindingKind] = if tier.has_word {
@@ -826,24 +671,23 @@ fn source(ctx: Ctx) -> Field {
 ";
 
 /// Each stain's field set, by its IR, is `want`: the live nodes' reads only.
-fn check_field_sets(cases: &[(StainGraph, &[&str])]) {
+fn check_field_sets(cases: &[(Vec<Node>, &[&str])]) {
     for (g, want) in cases {
         let got = assemble::field_set(&stain(g), Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(got, *want, "the stain's field set");
     }
 }
 
-fn field_set_cases() -> Vec<(StainGraph, &'static [&'static str])> {
-    let d_min = graph(Occupant::Field("d_min".into()), SHOW_INPUT).0;
-    let length = graph(length_source(), SHOW_INPUT).0;
+fn field_set_cases() -> Vec<(Vec<Node>, &'static [&'static str])> {
+    let d_min = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
+    let length = graph(length_source(), SHOW_INPUT);
+    // A source nothing live reads, into a colour nothing reads.
     let mut dead = d_min.clone();
-    let s = dead
-        .add(NodeKind::Source, Occupant::Field("S".into()))
-        .expect("a source nothing reads");
-    let c = colour_node(&mut dead);
-    dead.connect(s, c, 0).expect("into a colour nothing reads");
-    let (reads_three, ..) = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
-    let source = |text: &str| graph(custom(text), SHOW_INPUT).0;
+    let s = dead.len();
+    dead.push(wired(Kind::Source, Occupant::Field("S".into()), &[]));
+    dead.push(wired(Kind::Colour, custom(SHOW_INPUT), &[Some(s)]));
+    let reads_three = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
+    let source = |text: &str| graph(custom(text), SHOW_INPUT);
     vec![
         (d_min, &["d_min"]),
         (length, &["word.w"]),
@@ -865,14 +709,14 @@ negative_control!(
     "a stain reading `d_min` does not read `S`",
     expected = "the stain's field set",
     check_field_sets(&[(
-        graph(Occupant::Field("d_min".into()), SHOW_INPUT).0,
+        graph(Occupant::Field("d_min".into()), SHOW_INPUT),
         &["S", "d_min"]
     )])
 );
 
 /// `fields` for the stain reading `ftle` is refused, naming the field it misses, never assembled to read 0.
 fn check_unfilled(fields: &[&str]) {
-    let (g, ..) = graph(Occupant::Field("ftle".into()), SHOW_INPUT);
+    let g = graph(Occupant::Field("ftle".into()), SHOW_INPUT);
     let got = assemble::assemble_reading(&stain(&g), Tier::FULL, fields);
     assert!(
         got.as_ref()
@@ -901,7 +745,7 @@ negative_control!(
 /// records the fields it fills, each once.
 #[test]
 fn assemble_field_set_the_word_and_its_components_cover_each_other() {
-    let (whole, ..) = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
+    let whole = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
     let parts = [
         "word.w",
         "ftle",
@@ -925,7 +769,7 @@ fn assemble_field_set_the_word_and_its_components_cover_each_other() {
         ],
         "the fields filled"
     );
-    let (length, ..) = graph(length_source(), SHOW_INPUT);
+    let length = graph(length_source(), SHOW_INPUT);
     assemble::assemble_reading(&stain(&length), Tier::FULL, &["word"])
         .expect("the word holds `.w`");
 }
@@ -935,7 +779,7 @@ negative_control!(
     "three components are not the word",
     expected = "UnfilledField",
     {
-        let (whole, ..) = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
+        let whole = graph(Occupant::Field("ftle".into()), READS_ANY_TIER);
         let parts = ["ftle", "ensemble_spread", "word.x", "word.y", "word.z"];
         assemble::assemble_reading(&stain(&whole), Tier::FULL, &parts).unwrap();
     }
@@ -1226,7 +1070,7 @@ fn check_loads(cases: &[LoadCase], every: bool) {
         .collect();
     let all: Vec<&str> = all.iter().map(String::as_str).collect();
     for c in cases {
-        let (g, ..) = graph(c.source.clone(), SHOW_INPUT);
+        let g = graph(c.source.clone(), SHOW_INPUT);
         let s = stain(&g);
         let fragment = if every {
             assemble::assemble_reading(&s, c.tier, &all)
@@ -1274,19 +1118,21 @@ negative_control!(
 // ── The slot signatures (REQ-RENDER-016) ──────────────────────────────────────────────────────────────────────────
 
 /// Each colour or brightness occupant, in a stain, is refused with `want` in the message.
-fn check_slots(cases: &[(NodeKind, &str, &str)]) {
+fn check_slots(cases: &[(Kind, &str, &str)]) {
     for &(kind, text, want) in cases {
-        let (mut g, s, c) = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
-        let edited = match kind {
-            NodeKind::Brightness => g.add(kind, custom(text)).and_then(|b| {
-                g.connect(s, b, 0)?;
-                g.connect(b, StainGraph::COMBINER, 1)
-            }),
-            _ => g.set_occupant(c, custom(text)),
+        let g = match kind {
+            Kind::Brightness => vec![
+                wired(Kind::Source, Occupant::Field("d_min".into()), &[]),
+                wired(Kind::Colour, custom(SHOW_INPUT), &[Some(0)]),
+                wired(kind, custom(text), &[Some(0)]),
+                node(Kind::Combiner, pass_through(), &[Some(1), Some(2)]),
+                node(Kind::Out, Occupant::None, &[Some(3)]),
+            ],
+            _ => graph(Occupant::Field("d_min".into()), text),
         };
-        let got = edited
-            .map_err(|e| e.0)
-            .and_then(|()| assemble::assemble(&stain(&g), Tier::FULL).map_err(|e| e.to_string()));
+        let got = Stain::new(g)
+            .and_then(|s| assemble::assemble(&s, Tier::FULL))
+            .map_err(|e| e.to_string());
         assert!(
             got.as_ref().is_err_and(|e| e.contains(want)),
             "a {kind:?} `{text}` was not refused with `{want}`: {got:?}"
@@ -1294,46 +1140,46 @@ fn check_slots(cases: &[(NodeKind, &str, &str)]) {
     }
 }
 
-fn slot_cases() -> Vec<(NodeKind, &'static str, &'static str)> {
+fn slot_cases() -> Vec<(Kind, &'static str, &'static str)> {
     vec![
         (
-            NodeKind::Colour,
+            Kind::Colour,
             "fn colour(ctx: Ctx) -> f32 { return 1.0; }",
             "a colour slot is `fn(Ctx) -> vec3<f32>`",
         ),
         (
-            NodeKind::Colour,
+            Kind::Colour,
             "fn colour(ctx: Ctx) -> vec4<f32> { return vec4<f32>(1.0); }",
             "a colour slot is `fn(Ctx) -> vec3<f32>`",
         ),
         (
-            NodeKind::Colour,
+            Kind::Colour,
             "fn colour(ctx: Ctx) { }",
             "is `fn(Ctx) -> `; a colour slot",
         ),
         (
-            NodeKind::Brightness,
+            Kind::Brightness,
             "fn brightness(ctx: Ctx) -> vec3<f32> { return vec3<f32>(1.0); }",
             "a brightness slot is `fn(Ctx) -> f32`",
         ),
         (
-            NodeKind::Brightness,
+            Kind::Brightness,
             "fn brightness(c: vec3<f32>) -> f32 { return c.x; }",
             "is `fn(vec3<f32>) -> f32`; a brightness slot is `fn(Ctx) -> f32`",
         ),
         (
-            NodeKind::Brightness,
+            Kind::Brightness,
             "fn brightness(ctx: Ctx, extra: f32) -> f32 { return extra; }",
             "a brightness slot is `fn(Ctx) -> f32`",
         ),
         (
-            NodeKind::Colour,
+            Kind::Colour,
             "fn paint(ctx: Ctx) -> vec3<f32> { return vec3<f32>(1.0); }",
             "defines `fn colour`",
         ),
-        (NodeKind::Colour, "fn colour", "is `fn() -> `"),
+        (Kind::Colour, "fn colour", "is `fn() -> `"),
         (
-            NodeKind::Colour,
+            Kind::Colour,
             "fn colour() -> vec3<f32> { return vec3<f32>(1.0); }",
             "is `fn() -> vec3<f32>`",
         ),
@@ -1345,7 +1191,7 @@ fn slot_signature_colour_is_linear_rgb_and_brightness_a_scalar() {
     check_slots(&slot_cases());
     // The slot signatures assemble, `vec3f` and `vec4f` read as the types they name.
     assemble::assemble(&stain(&full_graph().0), Tier::FULL).expect("the slot signatures");
-    let (g, ..) = graph(
+    let g = graph(
         custom("fn source(ctx: Ctx) -> vec4f { return vec4f(1.0); }"),
         "fn colour(ctx: Ctx) -> vec3f { return vec3f(ctx.inputs[0].x); }",
     );
@@ -1356,13 +1202,13 @@ negative_control!(
     slot_signature_colour_is_linear_rgb_and_brightness_a_scalar,
     "a colour returning vec3<f32> is the slot's signature",
     expected = "was not refused",
-    check_slots(&[(NodeKind::Colour, SHOW_INPUT, "a colour slot")])
+    check_slots(&[(Kind::Colour, SHOW_INPUT, "a colour slot")])
 );
 
 /// What a node may not write: a module-scope binding or `var`, an entry point, or a name of the stored buffers.
 fn check_occupant_refused(cases: &[(&str, &str)]) {
     for &(text, want) in cases {
-        let (g, ..) = graph(
+        let g = graph(
             Occupant::Field("d_min".into()),
             &format!("{SHOW_INPUT}\n{text}"),
         );
@@ -1426,18 +1272,13 @@ negative_control!(
 /// A node's own names are prefixed — its functions, constants, structs and aliases — and its struct members,
 /// swizzles, comments and numbers are not, so two nodes of one text coexist.
 fn check_own_names(text: &str, want: &[&str]) {
-    let (mut g, ..) = graph(Occupant::Field("d_min".into()), text);
-    let p = g
-        .add(
-            NodeKind::Post,
-            custom(&format!(
-                "{text}\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{ return rgb * helper(Pair(1.0, K)); }}"
-            )),
-        )
-        .expect("a post of the same helpers");
-    g.connect(StainGraph::COMBINER, p, 0)
-        .expect("combiner → post");
-    g.connect(p, StainGraph::OUT, 0).expect("post → OUT");
+    let mut g = graph(Occupant::Field("d_min".into()), text);
+    add_post(
+        &mut g,
+        custom(&format!(
+            "{text}\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{ return rgb * helper(Pair(1.0, K)); }}"
+        )),
+    );
     let source = assembled(&g, Tier::FULL);
     for name in want {
         assert!(source.contains(name), "`{name}` is not in the source");
@@ -1518,7 +1359,7 @@ fn n1_colour(ctx: Ctx) -> vec3<f32> {
 
 /// The colour `text`, as node 1, assembles to `want`.
 fn check_renamed(text: &str, want: &str) {
-    let (g, ..) = graph(Occupant::Field("d_min".into()), text);
+    let g = graph(Occupant::Field("d_min".into()), text);
     let source = assembled(&g, Tier::FULL);
     assert!(
         source.contains(want),
@@ -1543,7 +1384,7 @@ negative_control!(
 // ── Stain construction, read back ─────────────────────────────────────────────────────────────────────────────────
 
 /// Each node of `g`'s stain holds its occupant's declarations.
-fn check_stain_declarations(g: &StainGraph) {
+fn check_stain_declarations(g: &[Node]) {
     let s = stain(g);
     for (i, n) in s.nodes().iter().enumerate() {
         let want = assemble::declaration(n.kind, &n.occupant).expect("a declaration");
@@ -1556,7 +1397,7 @@ const DECLARING: &str = "// @uniform gain: f32 = 1.0 [0.0, 2.0]\n// @input a [0.
 
 #[test]
 fn declaration_a_stain_holds_each_nodes_declarations() {
-    check_stain_declarations(&graph(Occupant::Field("d_min".into()), DECLARING).0);
+    check_stain_declarations(&graph(Occupant::Field("d_min".into()), DECLARING));
 }
 
 negative_control!(
@@ -1564,7 +1405,7 @@ negative_control!(
     "a colour's uniform is in its declarations",
     expected = "node 1's declarations",
     {
-        let (g, ..) = graph(Occupant::Field("d_min".into()), DECLARING);
+        let g = graph(Occupant::Field("d_min".into()), DECLARING);
         let s = stain(&g);
         assert_eq!(
             s.declaration(1),
@@ -1575,11 +1416,11 @@ negative_control!(
 );
 
 /// A stain of the combiner, one post of `occupant` and `inputs`, and OUT: `shade()` calls `want`.
-fn check_post(occupant: assemble::Occupant, inputs: &[Option<usize>], want: &[&str]) {
+fn check_post(occupant: Occupant, inputs: &[Option<usize>], want: &[&str]) {
     let s = Stain::new(vec![
         node(Kind::Combiner, pass_through(), &[None, None]),
         node(Kind::Post, occupant, inputs),
-        node(Kind::Out, assemble::Occupant::None, &[Some(1)]),
+        node(Kind::Out, Occupant::None, &[Some(1)]),
     ])
     .expect("a stain");
     let source = assemble::assemble(&s, Tier::FULL)
@@ -1592,147 +1433,106 @@ fn check_post(occupant: assemble::Occupant, inputs: &[Option<usize>], want: &[&s
 /// absent colour input is no identity. A post of None, wired, is the identity: passed over.
 #[test]
 fn backbone_a_post_with_no_colour_input_reads_the_combiner() {
-    let post = || assemble::Occupant::Custom(PASS_POST.into());
+    let post = || Occupant::Custom(PASS_POST.into());
     check_post(post(), &[None], &["n1_post"]);
-    check_post(assemble::Occupant::None, &[Some(0)], &[]);
+    check_post(Occupant::None, &[Some(0)], &[]);
 }
 
 negative_control!(
     backbone_a_post_with_no_colour_input_reads_the_combiner,
     "a post of None is not applied",
     expected = "the post's calls",
-    check_post(assemble::Occupant::None, &[Some(0)], &["n1_post"])
+    check_post(Occupant::None, &[Some(0)], &["n1_post"])
 );
 
 // ── The canonical form (REQ-RENDER-075) ───────────────────────────────────────────────────────────────────────────
 
-/// The full graph built a second way: other ids (a node added and removed first), nodes added and wires made in
-/// another order, a dead source, and an identity colour it feeds.
-fn full_graph_rebuilt() -> StainGraph {
-    let mut g = StainGraph::new();
-    let junk = g.add(NodeKind::Post, Occupant::None).expect("junk");
-    g.remove(junk).expect("removed");
-    let p2 = g
-        .add(
-            NodeKind::Post,
-            custom("fn post(ctx: Ctx, rgb: vec3f) -> vec3f { return 1.0 - rgb; }"),
-        )
-        .expect("post");
-    let b = g
-        .add(
-            NodeKind::Brightness,
-            custom("fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }"),
-        )
-        .expect("brightness");
-    let p1 = g
-        .add(
-            NodeKind::Post,
-            custom("fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * 0.5; }"),
-        )
-        .expect("post");
-    let c = colour_node(&mut g);
-    let s = g
-        .add(NodeKind::Source, Occupant::Field("ftle".into()))
-        .expect("source");
-    let dead = g
-        .add(NodeKind::Source, Occupant::Field("S".into()))
-        .expect("dead source");
-    let none = g
-        .add(NodeKind::Colour, Occupant::None)
-        .expect("an identity colour");
-    g.connect(dead, none, 0).expect("into nothing live");
-    g.set_occupant(
-        StainGraph::COMBINER,
-        custom("fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }"),
-    )
-    .expect("combiner");
-    for (from, to, port) in [
-        (p2, StainGraph::OUT, 0),
-        (p1, p2, 0),
-        (StainGraph::COMBINER, p1, 0),
-        (b, StainGraph::COMBINER, 1),
-        (c, StainGraph::COMBINER, 0),
-        (s, b, 0),
-        (s, c, 0),
-    ] {
-        g.connect(from, to, port).expect("a backbone wire");
-    }
-    g
+/// The full graph given a second way: its nodes in another order, a dead source, and an identity colour it feeds.
+fn full_graph_rebuilt() -> Vec<Node> {
+    vec![
+        wired(Kind::Source, Occupant::Field("S".into()), &[]),
+        wired(Kind::Source, Occupant::Field("ftle".into()), &[]),
+        wired(Kind::Colour, Occupant::None, &[Some(0)]),
+        wired(Kind::Brightness, custom(BRIGHTNESS), &[Some(1)]),
+        wired(Kind::Colour, custom(SHOW_INPUT), &[Some(1)]),
+        node(Kind::Combiner, custom(COMBINE), &[Some(4), Some(3)]),
+        wired(Kind::Post, custom(POST_1), &[Some(5)]),
+        wired(Kind::Post, custom(POST_2), &[Some(6)]),
+        node(Kind::Out, Occupant::None, &[Some(7)]),
+    ]
 }
 
-/// Each pair hashes equal, with equal canonical text.
-fn check_equal(pairs: &[(StainGraph, StainGraph)]) {
+/// Each pair hashes equal, with equal canonical text, and assembles to one source.
+fn check_equal(pairs: &[(Vec<Node>, Vec<Node>)]) {
     for (a, b) in pairs {
-        let (x, y) = (a.canonical(), b.canonical());
+        let (x, y) = (stain(a).canonical(), stain(b).canonical());
         assert!(
             x.fragment_key() == y.fragment_key() && x.text() == y.text(),
             "one graph hashes differently:\n{}\n{}",
             x.text(),
             y.text()
         );
+        assert!(
+            assembled(a, Tier::FULL) == assembled(b, Tier::FULL),
+            "one graph assembles differently"
+        );
     }
 }
 
+/// The full graph with a second source of `ftle` (1) feeding the brightness.
+fn full_graph_two_sources() -> Vec<Node> {
+    vec![
+        wired(Kind::Source, Occupant::Field("ftle".into()), &[]),
+        wired(Kind::Source, Occupant::Field("ftle".into()), &[]),
+        wired(Kind::Colour, custom(SHOW_INPUT), &[Some(0)]),
+        wired(Kind::Brightness, custom(BRIGHTNESS), &[Some(1)]),
+        node(Kind::Combiner, custom(COMBINE), &[Some(2), Some(3)]),
+        wired(Kind::Post, custom(POST_1), &[Some(4)]),
+        wired(Kind::Post, custom(POST_2), &[Some(5)]),
+        node(Kind::Out, Occupant::None, &[Some(6)]),
+    ]
+}
+
 /// The full graph and its variants, each a different graph.
-fn variants() -> Vec<StainGraph> {
-    let (base, [s, c, b, p1, p2]) = full_graph();
-    let mut out = vec![base.clone()];
-    let mut edit = |f: &dyn Fn(&mut StainGraph)| {
+fn variants() -> Vec<Vec<Node>> {
+    let (base, [s, c, _, p1, p2]) = full_graph();
+    let combiner = 3;
+    let out = 6;
+    let mut v = vec![base.clone()];
+    let mut edit = |f: &dyn Fn(&mut Vec<Node>)| {
         let mut g = base.clone();
         f(&mut g);
-        out.push(g);
+        v.push(g);
     };
+    edit(&|g| set_occupant(g, s, Occupant::Field("d_min".into())));
+    edit(&|g| set_occupant(g, c, custom(&format!("{SHOW_INPUT} // edited"))));
+    edit(&|g| g[combiner].inputs[1] = None);
+    // The posts swapped.
     edit(&|g| {
-        g.set_occupant(s, Occupant::Field("d_min".into()))
-            .expect("another field")
+        g[p1].occupant = custom(POST_2);
+        g[p2].occupant = custom(POST_1);
     });
-    edit(&|g| {
-        g.set_occupant(c, custom(&format!("{SHOW_INPUT} // edited")))
-            .expect("other custom text")
-    });
-    edit(&|g| {
-        g.disconnect(StainGraph::COMBINER, 1)
-            .expect("no brightness")
-    });
-    edit(&|g| {
-        // The posts swapped.
-        g.connect(StainGraph::COMBINER, p2, 0)
-            .expect("combiner → p2");
-        g.connect(p2, p1, 0).expect("p2 → p1");
-        g.connect(p1, StainGraph::OUT, 0).expect("p1 → OUT");
-    });
-    edit(&|g| g.connect(p1, StainGraph::OUT, 0).expect("one post"));
-    edit(&|g| {
-        // The brightness from a second source of the same field.
-        let t = g
-            .add(NodeKind::Source, Occupant::Field("ftle".into()))
-            .expect("second source");
-        g.connect(t, b, 0).expect("t → brightness");
-    });
-    edit(&|g| {
-        g.set_occupant(
-            StainGraph::COMBINER,
-            Occupant::Builtin("pass_through".into()),
-        )
-        .expect("built-in combiner")
-    });
-    edit(&|g| g.set_occupant(c, Occupant::None).expect("colour None"));
-    out
+    edit(&|g| g[out].inputs[0] = Some(p1));
+    edit(&|g| *g = full_graph_two_sources());
+    edit(&|g| g[combiner].occupant = pass_through());
+    edit(&|g| set_occupant(g, c, Occupant::None));
+    v
 }
 
 /// Every two graphs hash differently.
-fn check_distinct(graphs: &[StainGraph]) {
+fn check_distinct(graphs: &[Vec<Node>]) {
+    let texts: Vec<String> = graphs.iter().map(|g| stain(g).canonical().text()).collect();
     let keys: Vec<u64> = graphs
         .iter()
-        .map(|g| g.canonical().fragment_key())
+        .map(|g| stain(g).canonical().fragment_key())
         .collect();
     for i in 0..keys.len() {
         for j in 0..i {
             assert!(
                 keys[i] != keys[j],
                 "graphs {j} and {i} hash the same:\n{}\n{}",
-                graphs[j].canonical().text(),
-                graphs[i].canonical().text()
+                texts[j],
+                texts[i]
             );
         }
     }
@@ -1762,9 +1562,10 @@ negative_control!(
     check_distinct(&[full_graph().0, full_graph_rebuilt()])
 );
 
-/// The canonical text of a source into a custom colour, as lowering Part 5 defines it, and its hash.
-fn check_text(g: &StainGraph, want: &str) {
-    let c = g.canonical();
+/// The canonical text of a source into a custom colour, as lowering Part 5 defines it, and its hash; the form keeps
+/// each node's place in the graph it was taken from.
+fn check_text(g: &[Node], want: &str) {
+    let c = stain(g).canonical();
     assert_eq!(c.text(), want, "the canonical text");
     assert_eq!(
         c.fragment_key(),
@@ -1782,8 +1583,29 @@ fn defined_text() -> String {
 #[test]
 fn canonical_hash_the_text_is_the_defined_form() {
     check_text(
-        &graph(Occupant::Field("d_min".into()), SHOW_INPUT).0,
+        &graph(Occupant::Field("d_min".into()), SHOW_INPUT),
         &defined_text(),
+    );
+    // A post's field input, a quote, a backslash and a control character in an occupant's text, escaped (JCS).
+    let mut g = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
+    let p = add_post(
+        &mut g,
+        custom(&format!("// @input mask\n{PASS_POST} // \"\\\t\u{1}")),
+    );
+    g[p].inputs[1] = Some(0);
+    let c = stain(&g).canonical();
+    assert!(
+        c.text().ends_with(
+            r#"{"inputs":[2,0],"kind":"post","occupant":{"custom":"// @input mask\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; } // \"\\\t\u0001"}},{"inputs":[3],"kind":"out","occupant":null}]}"#
+        ),
+        "{}",
+        c.text()
+    );
+    // The full graph given in another order: each canonical node's place in it.
+    assert_eq!(
+        stain(&full_graph_rebuilt()).canonical().order(),
+        [1, 4, 3, 5, 6, 7, 8],
+        "the canonical order"
     );
 }
 
@@ -1792,102 +1614,9 @@ negative_control!(
     "the brightness input absent is `null`, not 0",
     expected = "the canonical text",
     check_text(
-        &graph(Occupant::Field("d_min".into()), SHOW_INPUT).0,
+        &graph(Occupant::Field("d_min".into()), SHOW_INPUT),
         &defined_text().replace("[1,null]", "[1,0]")
     )
-);
-
-/// A param edit changes the render key, never the fragment key; the render text carries the value, the schema's
-/// default where none is set.
-fn check_params(value: f64, same_render_key: bool) {
-    let colour = "// @uniform gain: f32 = 1.0 [0.0, 4.0]\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x * uniforms.gain); }";
-    let (a, _, c) = graph(Occupant::Field("d_min".into()), colour);
-    let mut b = a.clone();
-    b.set_param(c, "gain", vec![value])
-        .expect("a value in range");
-    let (x, y) = (a.canonical(), b.canonical());
-    assert_eq!(
-        x.fragment_key(),
-        y.fragment_key(),
-        "a param edit changed the fragment key"
-    );
-    assert_eq!(
-        x.render_key() == y.render_key(),
-        same_render_key,
-        "the render key does not follow the param"
-    );
-    assert!(
-        x.render_text().contains(r#""params":{"gain":[1.0]}"#)
-            || x.render_text().contains(r#""params":{"gain":[1]}"#)
-    );
-    assert!(
-        !x.text().contains("params"),
-        "the params are in the fragment key's text"
-    );
-    assert_eq!(
-        y.render_key(),
-        ledger::version::fnv1a64(y.render_text().as_bytes()),
-        "the render key is not the render text's hash"
-    );
-}
-
-#[test]
-fn canonical_hash_params_are_in_the_render_key_only() {
-    check_params(2.0, false);
-    check_params(1.0, true);
-}
-
-negative_control!(
-    canonical_hash_params_are_in_the_render_key_only,
-    "a param edit to another value changes the render key",
-    expected = "does not follow the param",
-    check_params(3.0, true)
-);
-
-/// The graph serialises as its nodes and wires and reads back equal; a serialised graph edited by `text_edit` is
-/// refused when read.
-fn check_serde(text_edit: (&str, &str)) {
-    let (g, ..) = full_graph();
-    let json = serde_json::to_string(&g).expect("serialises");
-    let back: StainGraph = serde_json::from_str(&json).expect("reads back");
-    assert_eq!(back, g, "the graph does not read back");
-    let broken = json.replacen(text_edit.0, text_edit.1, 1);
-    assert!(
-        broken != json,
-        "the edit's target is not in the text: {json}"
-    );
-    let got = serde_json::from_str::<StainGraph>(&broken);
-    assert!(got.is_err(), "a broken graph was read: {broken}");
-}
-
-#[test]
-fn canonical_hash_a_serialised_graph_is_checked_when_read() {
-    // The combiner's colour fed from a post: post back into the backbone, and a cycle.
-    check_serde((
-        r#"{"from":3,"to":0,"port":0}"#,
-        r#"{"from":6,"to":0,"port":0}"#,
-    ));
-    // A second OUT.
-    check_serde((r#""kind":"post""#, r#""kind":"out""#));
-    // A node id used twice.
-    check_serde((r#""id":6"#, r#""id":5"#));
-    // Two wires into one in-port.
-    check_serde((
-        r#"{"from":3,"to":0,"port":0}"#,
-        r#"{"from":3,"to":0,"port":0},{"from":3,"to":0,"port":0}"#,
-    ));
-    // A param no uniform declares.
-    check_serde((r#""params":{}"#, r#""params":{"x":[1.0]}"#));
-}
-
-negative_control!(
-    canonical_hash_a_serialised_graph_is_checked_when_read,
-    "the same graph with white space added is read",
-    expected = "a broken graph was read",
-    check_serde((
-        r#"{"from":2,"to":3,"port":0}"#,
-        r#"{"from":2,"to":3,"port":0} "#
-    ))
 );
 
 // ── The declaration format (REQ-GEN-027) ──────────────────────────────────────────────────────────────────────────
@@ -2020,7 +1749,7 @@ type PortCase<'a> = (Kind, &'a str, Result<Vec<PortType>, &'a str>);
 /// Each occupant's declared inputs are its node's ports, within the slot's bounds.
 fn check_ports(cases: &[PortCase]) {
     for (kind, text, want) in cases {
-        let got = assemble::declaration(*kind, &assemble::Occupant::Custom((*text).into()))
+        let got = assemble::declaration(*kind, &Occupant::Custom((*text).into()))
             .map(|d| assemble::in_ports(*kind, &d))
             .map_err(|e| e.to_string());
         match want {
@@ -2080,7 +1809,7 @@ fn declaration_inputs_are_the_nodes_ports() {
         (Kind::Out, vec![PortType::Vec3]),
         (Kind::Source, vec![]),
     ] {
-        let d = assemble::declaration(kind, &assemble::Occupant::None).expect("None");
+        let d = assemble::declaration(kind, &Occupant::None).expect("None");
         assert_eq!(
             assemble::in_ports(kind, &d),
             want,
@@ -2100,29 +1829,20 @@ negative_control!(
     )])
 );
 
+/// A colour with two uniforms, a range on the first.
+const GAIN_TINT: &str = "// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform tint: vec3<f32> = (1.0, 0.5, 0.25)\nfn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * ctx.inputs[0].x * uniforms.gain; }";
+
 /// A node with a schema gets its uniform block, at the binding after the prelude's, read as `uniforms.<name>`; a
-/// param is set when it is a value of the schema.
+/// value is the schema's when it is `value`.
 fn check_uniforms(value: Vec<f64>) {
-    let colour = "// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform tint: vec3<f32> = (1.0, 0.5, 0.25)\nfn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * ctx.inputs[0].x * uniforms.gain; }";
-    let mut g = StainGraph::new();
-    let s = g
-        .add(NodeKind::Source, Occupant::Field("d_min".into()))
-        .expect("source");
-    let b = g
-        .add(
-            NodeKind::Brightness,
-            custom("// @uniform lift: f32 = 0.0\nfn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x + uniforms.lift; }"),
-        )
-        .expect("brightness");
-    let c = g.add(NodeKind::Colour, custom(colour)).expect("colour");
-    for (from, to, port) in [
-        (s, c, 0),
-        (s, b, 0),
-        (c, StainGraph::COMBINER, 0),
-        (b, StainGraph::COMBINER, 1),
-    ] {
-        g.connect(from, to, port).expect("wired");
-    }
+    let lift = "// @uniform lift: f32 = 0.0\nfn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x + uniforms.lift; }";
+    let g = vec![
+        wired(Kind::Source, Occupant::Field("d_min".into()), &[]),
+        wired(Kind::Brightness, custom(lift), &[Some(0)]),
+        wired(Kind::Colour, custom(GAIN_TINT), &[Some(0)]),
+        node(Kind::Combiner, pass_through(), &[Some(2), Some(1)]),
+        node(Kind::Out, Occupant::None, &[Some(3)]),
+    ];
     let f = assemble::assemble(&stain(&g), Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
     let first = prelude::uniforms_binding();
     let blocks: Vec<(usize, u32, u32, usize)> = f
@@ -2130,6 +1850,7 @@ fn check_uniforms(value: Vec<f64>) {
         .iter()
         .map(|u| (u.node, u.group, u.binding, u.uniforms.len()))
         .collect();
+    // Canonical positions: the colour 1, the brightness 2.
     assert_eq!(
         blocks,
         [
@@ -2148,44 +1869,32 @@ fn check_uniforms(value: Vec<f64>) {
     assert!(f
         .source
         .contains("n1_uniforms.tint * ctx.inputs[0].x * n1_uniforms.gain"));
-    g.set_param(c, "gain", value)
-        .expect("a value of the schema");
+    let d = Declaration::parse(GAIN_TINT).expect("the schema");
+    assert!(
+        d.uniforms[0].admits(&value),
+        "{value:?} is not a value of the schema"
+    );
 }
 
 #[test]
 fn declaration_a_schema_is_the_nodes_uniforms() {
     check_uniforms(vec![4.0]);
-    let (mut g, _, c) = graph(
-        Occupant::Field("d_min".into()),
-        "// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform n: u32 = 1\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms.gain); }",
-    );
-    for (name, value) in [
-        ("gain", vec![5.0]),
-        ("gain", vec![-0.5]),
-        ("gain", vec![1.0, 2.0]),
-        ("gain", vec![]),
-        ("bias", vec![1.0]),
-        ("gain", vec![f64::NAN]),
-        ("n", vec![1.5]),
+    let d = Declaration::parse("// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform n: u32 = 1")
+        .expect("the schema");
+    let (gain, n) = (&d.uniforms[0], &d.uniforms[1]);
+    for value in [
+        vec![5.0],
+        vec![-0.5],
+        vec![1.0, 2.0],
+        vec![],
+        vec![f64::NAN],
     ] {
-        let before = g.clone();
-        assert!(
-            g.set_param(c, name, value.clone()).is_err(),
-            "`{name}` = {value:?} was taken"
-        );
-        assert_eq!(g, before);
+        assert!(!gain.admits(&value), "gain = {value:?} was taken");
     }
-    g.set_param(c, "n", vec![7.0]).expect("an integer");
-    // A new occupant drops the params its schema no longer declares.
-    g.set_occupant(c, custom("// @uniform n: u32 = 1\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(f32(uniforms.n)); }"))
-        .expect("another schema");
-    assert_eq!(
-        g.node(c).map(|n| n.params.len()),
-        Some(1),
-        "a param of the old schema stayed"
-    );
+    assert!(!n.admits(&[1.5]), "n = 1.5 was taken");
+    assert!(n.admits(&[7.0]), "an integer");
     // An occupant that declares `uniforms` itself collides with the assembler's.
-    let (g, ..) = graph(
+    let g = graph(
         Occupant::Field("d_min".into()),
         "// @uniform gain: f32 = 1.0\nconst uniforms: f32 = 1.0;\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms); }",
     );
@@ -2196,7 +1905,7 @@ fn declaration_a_schema_is_the_nodes_uniforms() {
 negative_control!(
     declaration_a_schema_is_the_nodes_uniforms,
     "a value outside the schema's range is refused",
-    expected = "a value of the schema",
+    expected = "is not a value of the schema",
     check_uniforms(vec![4.5])
 );
 
@@ -2227,23 +1936,22 @@ fn declaration_a_source_reads_a_scalar_field() {
         ("r", None),
         ("speed", None),
     ]);
-    let mut g = StainGraph::new();
     for (kind, occupant) in [
-        (NodeKind::Source, Occupant::Field("word".into())),
-        (NodeKind::Colour, Occupant::Field("ftle".into())),
-        (NodeKind::Colour, Occupant::Builtin("nope".into())),
-        (NodeKind::Source, Occupant::Builtin("pass_through".into())),
+        (Kind::Source, Occupant::Field("word".into())),
+        (Kind::Colour, Occupant::Field("ftle".into())),
+        (Kind::Colour, Occupant::BuiltIn("nope".into())),
+        (Kind::Source, Occupant::BuiltIn("pass_through".into())),
     ] {
         assert!(
-            g.add(kind, occupant.clone()).is_err(),
+            assemble::declaration(kind, &occupant).is_err(),
             "a {kind:?} took {occupant:?}"
         );
     }
     // A bool field reads as 0 or 1, the others as themselves.
-    let (g, ..) = graph(Occupant::Field("is_failed".into()), SHOW_INPUT);
+    let g = graph(Occupant::Field("is_failed".into()), SHOW_INPUT);
     assert!(assembled(&g, Tier::FULL)
         .contains("Field(select(0.0, 1.0, ctx.sample.is_failed), 0.0, 0.0, 0.0)"));
-    let (g, ..) = graph(Occupant::Field("t_end_step".into()), SHOW_INPUT);
+    let g = graph(Occupant::Field("t_end_step".into()), SHOW_INPUT);
     assert!(assembled(&g, Tier::FULL).contains("Field(f32(ctx.sample.t_end_step), 0.0, 0.0, 0.0)"));
 }
 

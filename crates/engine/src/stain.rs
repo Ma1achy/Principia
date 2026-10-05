@@ -171,12 +171,7 @@ impl Default for StainGraph {
 }
 
 impl StainGraph {
-    /// The id of the combiner [`StainGraph::new`] makes.
-    pub const COMBINER: NodeId = NodeId(0);
-    /// The id of the `OUT` [`StainGraph::new`] makes.
-    pub const OUT: NodeId = NodeId(1);
-
-    /// The backbone alone: the combiner, the built-in pass-through (M1's), wired to `OUT`.
+    /// The backbone alone: the combiner (id 0), the built-in pass-through (M1's), wired to `OUT` (id 1).
     pub fn new() -> StainGraph {
         let node = |id, kind, occupant| Node {
             id,
@@ -184,17 +179,20 @@ impl StainGraph {
             occupant,
             params: BTreeMap::new(),
         };
-        let combiner = node(
-            Self::COMBINER,
-            NodeKind::Combiner,
-            Occupant::Builtin("pass_through".into()),
-        );
+        let (combiner, out) = (NodeId(0), NodeId(1));
         StainGraph {
             nodes: BTreeMap::from([
-                (Self::COMBINER, combiner),
-                (Self::OUT, node(Self::OUT, NodeKind::Out, Occupant::None)),
+                (
+                    combiner,
+                    node(
+                        combiner,
+                        NodeKind::Combiner,
+                        Occupant::Builtin("pass_through".into()),
+                    ),
+                ),
+                (out, node(out, NodeKind::Out, Occupant::None)),
             ]),
-            wires: BTreeMap::from([((Self::OUT, 0), Self::COMBINER)]),
+            wires: BTreeMap::from([((out, 0), combiner)]),
         }
     }
 
@@ -237,7 +235,11 @@ impl StainGraph {
 
     /// Removes node `id` and its wires; the combiner and `OUT` are refused.
     pub fn remove(&mut self, id: NodeId) -> Result<(), GraphError> {
-        if id == Self::COMBINER || id == Self::OUT {
+        if self
+            .nodes
+            .get(&id)
+            .is_some_and(|n| matches!(n.kind, NodeKind::Combiner | NodeKind::Out))
+        {
             return Err(GraphError(
                 "the combiner and OUT are fixed singletons: never deleted".into(),
             ));
@@ -301,27 +303,10 @@ impl StainGraph {
         Ok(())
     }
 
-    /// Whether the graph is one: one combiner and one `OUT`; each node's occupant one its slot takes, each param a
-    /// value of its schema; each wire into an in-port its target has, its type and the backbone kept; acyclic; and
-    /// it lowers.
+    /// Whether the graph is one: each node's occupant one its slot takes, each param a value of its schema; each
+    /// wire into an in-port its target has, its type and the backbone kept; acyclic; and it lowers, so one combiner and
+    /// one `OUT` and the post chain within its bound ([`Stain::new`]).
     pub fn check(&self) -> Result<(), GraphError> {
-        for (kind, id) in [
-            (NodeKind::Combiner, Self::COMBINER),
-            (NodeKind::Out, Self::OUT),
-        ] {
-            let ids: Vec<NodeId> = self
-                .nodes
-                .values()
-                .filter(|n| n.kind == kind)
-                .map(|n| n.id)
-                .collect();
-            if ids != [id] {
-                return Err(GraphError(format!(
-                    "the {kind:?} is a fixed singleton, node {}; the graph has {ids:?}",
-                    id.0
-                )));
-            }
-        }
         for n in self.nodes.values() {
             let d = assemble::declaration(n.kind.into(), &(&n.occupant).into())?;
             for (name, value) in &n.params {
@@ -354,12 +339,6 @@ impl StainGraph {
             };
             assemble::check_wire(f.kind.into(), t.kind.into(), ty)?;
         }
-        if let Some(id) = self.cycle() {
-            return Err(GraphError(format!(
-                "node {} feeds itself: the stain graph is acyclic",
-                id.0
-            )));
-        }
         self.lower()?;
         Ok(())
     }
@@ -369,111 +348,77 @@ impl StainGraph {
         Ok(assemble::in_ports(n.kind.into(), &d))
     }
 
-    /// A node on a cycle, if any: a depth-first walk upstream from each node.
-    fn cycle(&self) -> Option<NodeId> {
-        // 0 unvisited, 1 on the walk, 2 done.
-        let mut state: BTreeMap<NodeId, u8> = BTreeMap::new();
-        fn visit(g: &StainGraph, id: NodeId, state: &mut BTreeMap<NodeId, u8>) -> Option<NodeId> {
+    /// The node ids in an order every wire runs forward in, each node after the nodes feeding it, ties in id order;
+    /// refused on a cycle.
+    fn order(&self) -> Result<Vec<NodeId>, GraphError> {
+        // `true` on the walk, `false` done.
+        fn visit(
+            g: &StainGraph,
+            id: NodeId,
+            state: &mut BTreeMap<NodeId, bool>,
+            order: &mut Vec<NodeId>,
+        ) -> Result<(), GraphError> {
             match state.get(&id) {
-                Some(1) => return Some(id),
-                Some(_) => return None,
+                Some(true) => {
+                    return Err(GraphError(format!(
+                        "node {} feeds itself: the stain graph is acyclic",
+                        id.0
+                    )))
+                }
+                Some(false) => return Ok(()),
                 None => {}
             }
-            state.insert(id, 1);
+            state.insert(id, true);
             for (_, &from) in g.wires.range((id, 0)..=(id, usize::MAX)) {
-                if let Some(c) = visit(g, from, state) {
-                    return Some(c);
-                }
+                visit(g, from, state, order)?;
             }
-            state.insert(id, 2);
-            None
+            state.insert(id, false);
+            order.push(id);
+            Ok(())
         }
-        self.nodes
-            .keys()
-            .find_map(|&id| visit(self, id, &mut state))
+        let (mut state, mut order) = (BTreeMap::new(), Vec::new());
+        for &id in self.nodes.keys() {
+            visit(self, id, &mut state, &mut order)?;
+        }
+        Ok(order)
     }
 
-    /// The node feeding `to`'s in-port `port`, if any.
-    fn feeder(&self, to: NodeId, port: usize) -> Option<NodeId> {
-        self.wires.get(&(to, port)).copied()
-    }
-
-    /// Whether node `id` is the identity (render_gui_spec §13): its occupant None, or a field input absent or fed by
-    /// an identity source.
-    fn identity(&self, id: NodeId) -> bool {
-        let n = &self.nodes[&id];
-        if n.occupant == Occupant::None {
-            return true;
-        }
-        let ports = self.ports(n).unwrap_or_default();
-        ports.iter().enumerate().any(|(k, &p)| {
-            p == PortType::Field && self.feeder(id, k).is_none_or(|f| self.identity(f))
-        })
-    }
-
-    /// The canonical form (lowering contract Part 5; render contract Part 3): the live nodes in canonical order.
-    pub fn canonical(&self) -> Canonical {
-        let live = |port: Option<NodeId>| port.filter(|&f| !self.identity(f));
-        let mut chain = Vec::new();
-        let mut at = self.feeder(Self::OUT, 0);
-        while let Some(id) = at.filter(|&id| self.nodes[&id].kind == NodeKind::Post) {
-            if !self.identity(id) {
-                chain.push(id);
-            }
-            at = self.feeder(id, 0);
-        }
-        chain.reverse();
-        let colour = live(self.feeder(Self::COMBINER, 0));
-        let brightness = live(self.feeder(Self::COMBINER, 1));
-        let field_ports = |id: NodeId| {
-            let ports = self.ports(&self.nodes[&id]).unwrap_or_default();
-            (0..ports.len())
-                .filter(|&k| ports[k] == PortType::Field)
-                .collect::<Vec<usize>>()
-        };
-        let mut order: Vec<NodeId> = Vec::new();
-        for id in colour.iter().chain(&brightness).chain(&chain) {
-            for k in field_ports(*id) {
-                if let Some(s) = self.feeder(*id, k).filter(|s| !order.contains(s)) {
-                    order.push(s);
-                }
-            }
-        }
-        order.extend(colour);
-        order.extend(brightness);
-        order.push(Self::COMBINER);
-        order.extend(&chain);
-        order.push(Self::OUT);
+    /// The graph as the assembler takes it, every node in [`StainGraph::order`], each in-port its feeder's position,
+    /// with that order.
+    fn lowered(&self) -> Result<(Vec<NodeId>, Stain), GraphError> {
+        let order = self.order()?;
         let position = |id: NodeId| order.iter().position(|&o| o == id);
-        let nodes = order
+        let mut nodes = Vec::with_capacity(order.len());
+        for &id in &order {
+            let n = &self.nodes[&id];
+            let inputs = (0..self.ports(n)?.len())
+                .map(|k| self.wires.get(&(id, k)).and_then(|&f| position(f)))
+                .collect();
+            nodes.push(assemble::Node {
+                kind: n.kind.into(),
+                occupant: (&n.occupant).into(),
+                inputs,
+            });
+        }
+        Ok((order, Stain::new(nodes)?))
+    }
+
+    /// The graph as the assembler takes it ([`Stain`]); it assembles its canonical form.
+    pub fn lower(&self) -> Result<Stain, GraphError> {
+        Ok(self.lowered()?.1)
+    }
+
+    /// The canonical form (lowering contract Part 5; render contract Part 3): the assembler's ([`Stain::canonical`]),
+    /// each node with its params.
+    pub fn canonical(&self) -> Result<Canonical, GraphError> {
+        let (order, stain) = self.lowered()?;
+        let form = stain.canonical();
+        let nodes = form
+            .order()
             .iter()
-            .map(|&id| {
-                let n = &self.nodes[&id];
-                let inputs = match n.kind {
-                    NodeKind::Combiner => {
-                        vec![colour.and_then(position), brightness.and_then(position)]
-                    }
-                    NodeKind::Post | NodeKind::Out => {
-                        let previous = order[..position(id).unwrap_or(0)]
-                            .iter()
-                            .rev()
-                            .find(|&&o| {
-                                matches!(self.nodes[&o].kind, NodeKind::Combiner | NodeKind::Post)
-                            })
-                            .copied();
-                        let mut inputs = vec![previous.and_then(position)];
-                        inputs.extend(
-                            field_ports(id)
-                                .into_iter()
-                                .map(|k| self.feeder(id, k).and_then(position)),
-                        );
-                        inputs
-                    }
-                    _ => field_ports(id)
-                        .into_iter()
-                        .map(|k| self.feeder(id, k).and_then(position))
-                        .collect(),
-                };
+            .zip(form.stain().nodes())
+            .map(|(&i, lowered)| {
+                let n = &self.nodes[&order[i]];
                 let schema = assemble::declaration(n.kind.into(), &(&n.occupant).into())
                     .map(|d| d.uniforms)
                     .unwrap_or_default();
@@ -487,17 +432,12 @@ impl StainGraph {
                 CanonicalNode {
                     kind: n.kind,
                     occupant: n.occupant.clone(),
-                    inputs,
+                    inputs: lowered.inputs.clone(),
                     params,
                 }
             })
             .collect();
-        Canonical { nodes }
-    }
-
-    /// The graph as the assembler takes it: its canonical form ([`Canonical::stain`]).
-    pub fn lower(&self) -> Result<Stain, GraphError> {
-        self.canonical().stain()
+        Ok(Canonical { nodes, form })
     }
 }
 
@@ -515,17 +455,24 @@ pub struct CanonicalNode {
     pub params: BTreeMap<String, Vec<f64>>,
 }
 
-/// The canonical form of a stain graph (lowering contract Part 5; render contract Part 3; REQ-RENDER-075): its live
-/// nodes, those `OUT` depends on with the identity dropped, in canonical order — the sources in order of first use,
-/// then the colour, the brightness, the combiner, the posts from the combiner to `OUT`, and `OUT` — each wired by
-/// position. Node ids and the order of construction are not in it.
+/// The canonical form of a stain graph (lowering contract Part 5; render contract Part 3; REQ-RENDER-075): the
+/// assembler's form of its lowering ([`assemble::Canonical`]), its live nodes in canonical order, each wired by
+/// position, and each node's params. Node ids and the order of construction are not in it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Canonical {
     pub nodes: Vec<CanonicalNode>,
+    form: assemble::Canonical,
 }
 
 impl Canonical {
-    fn json(&self, params: bool) -> Value {
+    /// The form's text, JCS: the fragment key's input ([`assemble::Canonical::text`]). The params are not in it.
+    pub fn text(&self) -> String {
+        self.form.text()
+    }
+
+    /// The form's text with each node's `params`, its uniforms' values, in JCS (gui_state_contract §2, R-318): the
+    /// render key's graph part.
+    pub fn render_text(&self) -> String {
         let nodes: Vec<Value> = self
             .nodes
             .iter()
@@ -536,33 +483,20 @@ impl Canonical {
                     Occupant::Builtin(id) => json!({ "builtin": id }),
                     Occupant::Custom(text) => json!({ "custom": text }),
                 };
-                let mut v = json!({
+                json!({
                     "kind": Kind::from(n.kind).name(),
                     "occupant": occupant,
                     "inputs": n.inputs,
-                });
-                if params {
-                    v["params"] = json!(n.params);
-                }
-                v
+                    "params": n.params,
+                })
             })
             .collect();
-        json!({ "nodes": nodes })
-    }
-
-    /// The form's text, JCS (gui_state_contract §2, R-318): the fragment key's input. The params are not in it.
-    pub fn text(&self) -> String {
-        canonical::json_to_string(&self.json(false)).unwrap_or_default()
-    }
-
-    /// The form's text with each node's `params`, its uniforms' values: the render key's graph part.
-    pub fn render_text(&self) -> String {
-        canonical::json_to_string(&self.json(true)).unwrap_or_default()
+        canonical::json_to_string(&json!({ "nodes": nodes })).unwrap_or_default()
     }
 
     /// The fragment key (lowering contract Part 5): the 64-bit FNV-1a hash of [`Canonical::text`]'s UTF-8 bytes.
     pub fn fragment_key(&self) -> u64 {
-        ledger::version::fnv1a64(self.text().as_bytes())
+        self.form.fragment_key()
     }
 
     /// The render key's graph part (render contract Part 3): the 64-bit FNV-1a hash of [`Canonical::render_text`].
@@ -570,17 +504,8 @@ impl Canonical {
         ledger::version::fnv1a64(self.render_text().as_bytes())
     }
 
-    /// The form as the assembler's [`Stain`], in the same order.
-    pub fn stain(&self) -> Result<Stain, GraphError> {
-        let nodes = self
-            .nodes
-            .iter()
-            .map(|n| assemble::Node {
-                kind: n.kind.into(),
-                occupant: (&n.occupant).into(),
-                inputs: n.inputs.clone(),
-            })
-            .collect();
-        Ok(Stain::new(nodes)?)
+    /// The form as the assembler's [`Stain`], in canonical order.
+    pub fn stain(&self) -> &Stain {
+        self.form.stain()
     }
 }

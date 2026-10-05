@@ -12,6 +12,10 @@ const POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb;
 const COMBINE: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }";
 const SOURCE: &str = "fn source(ctx: Ctx) -> Field { return Field(0.5, 0.0, 0.0, 0.0); }";
 
+/// The ids [`StainGraph::new`] gives the combiner and `OUT`.
+const COMBINER: NodeId = NodeId(0);
+const OUT: NodeId = NodeId(1);
+
 fn custom(text: &str) -> Occupant {
     Occupant::Custom(text.to_owned())
 }
@@ -31,16 +35,15 @@ fn full() -> StainGraph {
     let p2 = g
         .add(NodeKind::Post, custom(&format!("{POST} // 2")))
         .expect("post");
-    g.set_occupant(StainGraph::COMBINER, custom(COMBINE))
-        .expect("combiner");
+    g.set_occupant(COMBINER, custom(COMBINE)).expect("combiner");
     for (from, to, port) in [
         (s, c, 0),
         (s, b, 0),
-        (c, StainGraph::COMBINER, 0),
-        (b, StainGraph::COMBINER, 1),
-        (StainGraph::COMBINER, p1, 0),
+        (c, COMBINER, 0),
+        (b, COMBINER, 1),
+        (COMBINER, p1, 0),
         (p1, p2, 0),
-        (p2, StainGraph::OUT, 0),
+        (p2, OUT, 0),
     ] {
         g.connect(from, to, port).expect("a backbone wire");
     }
@@ -68,13 +71,10 @@ fn summary(c: &Canonical) -> Vec<String> {
 /// The backbone alone: the pass-through combiner wired to OUT; nodes take the next id.
 fn check_new(g: &StainGraph, want: &[Wire]) {
     assert_eq!(g.wires(), want, "the backbone's wires");
+    assert_eq!(g.node(COMBINER).map(|n| n.kind), Some(NodeKind::Combiner));
+    assert_eq!(g.node(OUT).map(|n| n.kind), Some(NodeKind::Out));
     assert_eq!(
-        g.node(StainGraph::COMBINER).map(|n| n.kind),
-        Some(NodeKind::Combiner)
-    );
-    assert_eq!(g.node(StainGraph::OUT).map(|n| n.kind), Some(NodeKind::Out));
-    assert_eq!(
-        g.node(StainGraph::COMBINER).map(|n| n.occupant.clone()),
+        g.node(COMBINER).map(|n| n.occupant.clone()),
         Some(Occupant::Builtin("pass_through".into()))
     );
 }
@@ -85,8 +85,8 @@ fn stain_graph_new_is_the_backbone() {
     check_new(
         &g,
         &[Wire {
-            from: StainGraph::COMBINER,
-            to: StainGraph::OUT,
+            from: COMBINER,
+            to: OUT,
             port: 0,
         }],
     );
@@ -134,11 +134,11 @@ fn refusals() -> Vec<(&'static str, Box<Edit>)> {
         ),
         (
             "never deleted",
-            Box::new(|g: &mut StainGraph| g.remove(StainGraph::OUT)),
+            Box::new(|g: &mut StainGraph| g.remove(OUT)),
         ),
         (
             "never deleted",
-            Box::new(|g: &mut StainGraph| g.remove(StainGraph::COMBINER)),
+            Box::new(|g: &mut StainGraph| g.remove(COMBINER)),
         ),
         (
             "no node 9",
@@ -174,7 +174,7 @@ fn refusals() -> Vec<(&'static str, Box<Edit>)> {
         ),
         (
             "backbone",
-            Box::new(|g: &mut StainGraph| g.connect(NodeId(6), StainGraph::COMBINER, 0)),
+            Box::new(|g: &mut StainGraph| g.connect(NodeId(6), COMBINER, 0)),
         ),
         (
             "acyclic",
@@ -186,7 +186,7 @@ fn refusals() -> Vec<(&'static str, Box<Edit>)> {
         ),
         (
             "the combiner is required",
-            Box::new(|g: &mut StainGraph| g.set_occupant(StainGraph::COMBINER, Occupant::None)),
+            Box::new(|g: &mut StainGraph| g.set_occupant(COMBINER, Occupant::None)),
         ),
         (
             "does not take",
@@ -215,7 +215,7 @@ fn chain_of(posts: usize) -> (StainGraph, NodeId) {
     for _ in 2..posts {
         let p = g.add(NodeKind::Post, custom(POST)).expect("a post");
         g.connect(previous, p, 0).expect("chained");
-        g.connect(p, StainGraph::OUT, 0).expect("to OUT");
+        g.connect(p, OUT, 0).expect("to OUT");
         previous = p;
     }
     let p = g.add(NodeKind::Post, custom(POST)).expect("one more");
@@ -227,7 +227,7 @@ fn chain_of(posts: usize) -> (StainGraph, NodeId) {
 fn check_bound(posts: usize) {
     let (mut g, p) = chain_of(posts);
     let before = g.clone();
-    let got = g.connect(p, StainGraph::OUT, 0);
+    let got = g.connect(p, OUT, 0);
     assert!(
         got.as_ref().is_err_and(|e| e.0.contains("at most 8")),
         "{posts} + 1 posts gave {got:?}"
@@ -239,7 +239,7 @@ fn check_bound(posts: usize) {
 fn stain_graph_the_live_chain_holds_eight_posts() {
     check_bound(8);
     let (mut g, p) = chain_of(7);
-    g.connect(p, StainGraph::OUT, 0).expect("eight posts");
+    g.connect(p, OUT, 0).expect("eight posts");
 }
 
 negative_control!(
@@ -416,10 +416,13 @@ fn stain_graph_errors_name_the_problem() {
         "{e}"
     );
     let e = serde_json::from_str::<StainGraph>(
-        r#"{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"}},{"id":2,"kind":"out","occupant":"none"}],"wires":[]}"#,
+        r#"{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"}},{"id":1,"kind":"out","occupant":"none"},{"id":2,"kind":"out","occupant":"none"}],"wires":[]}"#,
     )
-    .expect_err("OUT is not node 1");
-    assert!(e.to_string().contains("fixed singleton, node 1"), "{e}");
+    .expect_err("two OUTs");
+    assert!(
+        e.to_string().contains("one out node; this one has 2"),
+        "{e}"
+    );
     assert_eq!(GraphError("x".into()).to_string(), "x");
 }
 
@@ -434,7 +437,11 @@ negative_control!(
 
 /// `g`'s canonical form, by kind, occupant and inputs.
 fn check_canonical(g: &StainGraph, want: &[&str]) {
-    assert_eq!(summary(&g.canonical()), want, "the canonical form");
+    assert_eq!(
+        summary(&g.canonical().expect("a canonical form")),
+        want,
+        "the canonical form"
+    );
 }
 
 #[test]
@@ -501,7 +508,7 @@ fn stain_graph_the_canonical_form_is_the_live_graph_in_order() {
         .expect("a third source");
     m.set_occupant(NodeId(6), custom(&format!("// @input mask\n{POST} // 2")))
         .expect("a second post with a field");
-    m.connect(NodeId(6), StainGraph::OUT, 0).expect("unchanged");
+    m.connect(NodeId(6), OUT, 0).expect("unchanged");
     m.connect(w, NodeId(6), 1)
         .expect("the third source into the second post");
     check_canonical(
@@ -529,7 +536,7 @@ negative_control!(
 
 /// The canonical text, its keys and the assembler's stain agree with the form.
 fn check_keys(g: &StainGraph) {
-    let c = g.canonical();
+    let c = g.canonical().expect("a canonical form");
     let text = c.text();
     assert!(
         text.starts_with(r#"{"nodes":[{"inputs":[],"kind":"source","occupant":{"field":"ftle"}}"#),
@@ -559,7 +566,7 @@ fn check_keys(g: &StainGraph) {
         c.render_text()
     );
     assert_ne!(c.render_text(), text);
-    let stain = g.lower().expect("lowers");
+    let stain = c.stain();
     assert_eq!(stain.nodes().len(), c.nodes.len(), "the stain's nodes");
     assert_eq!(stain.nodes()[1].kind, render::assemble::Kind::Colour);
     assert_eq!(stain.nodes()[6].kind, render::assemble::Kind::Out);
@@ -570,25 +577,23 @@ fn check_keys(g: &StainGraph) {
     assert_eq!(stain.nodes()[3].inputs, [Some(1), Some(2)]);
     let mut builtin = g.clone();
     builtin
-        .set_occupant(
-            StainGraph::COMBINER,
-            Occupant::Builtin("pass_through".into()),
-        )
+        .set_occupant(COMBINER, Occupant::Builtin("pass_through".into()))
         .expect("built-in");
+    let builtin = builtin.canonical().expect("a canonical form");
     assert!(builtin
-        .canonical()
         .text()
         .contains(r#""occupant":{"builtin":"pass_through"}"#));
     assert_eq!(
-        builtin.lower().expect("lowers").nodes()[3].occupant,
+        builtin.stain().nodes()[3].occupant,
         render::assemble::Occupant::BuiltIn("pass_through".into())
     );
     let mut none = g.clone();
     none.set_occupant(NodeId(4), Occupant::None)
         .expect("brightness None");
-    assert!(none.canonical().text().contains(r#""inputs":[1,null]"#));
+    let none = none.canonical().expect("a canonical form");
+    assert!(none.text().contains(r#""inputs":[1,null]"#));
     assert_eq!(
-        none.lower().expect("lowers").nodes()[1].occupant,
+        none.stain().nodes()[1].occupant,
         render::assemble::Occupant::Custom(SHOW_INPUT.into())
     );
 }
@@ -615,9 +620,9 @@ fn check_params(set: f64, want_same: bool) {
         )),
     )
     .expect("a schema");
-    let before = g.canonical();
+    let before = g.canonical().expect("a canonical form");
     g.set_param(NodeId(3), "gain", vec![set]).expect("set");
-    let after = g.canonical();
+    let after = g.canonical().expect("a canonical form");
     assert_eq!(
         before.fragment_key(),
         after.fragment_key(),
@@ -647,4 +652,42 @@ negative_control!(
     "another value moves the render key",
     expected = "the render key",
     check_params(2.5, true)
+);
+
+/// The canonical text of a source into a colour of `colour` is the engine's JCS (gui_state_contract §2, R-318) of the
+/// form's value with the colour's text `written`: the assembler writes the text, and the two serialisers agree.
+fn check_jcs(colour: &str, written: &str) {
+    let mut g = StainGraph::new();
+    let s = g
+        .add(NodeKind::Source, Occupant::Field("d_min".into()))
+        .expect("a source");
+    let c = g.add(NodeKind::Colour, custom(colour)).expect("a colour");
+    g.connect(s, c, 0).expect("source → colour");
+    g.connect(c, COMBINER, 0).expect("colour → combiner");
+    let want = engine::contract::canonical::json_to_string(&serde_json::json!({ "nodes": [
+        { "inputs": [], "kind": "source", "occupant": { "field": "d_min" } },
+        { "inputs": [0], "kind": "colour", "occupant": { "custom": written } },
+        { "inputs": [1, null], "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+        { "inputs": [2], "kind": "out", "occupant": null },
+    ] }))
+    .expect("JCS");
+    let got = g.canonical().expect("a canonical form").text();
+    assert_eq!(got, want, "the canonical text is not the JCS of the form");
+}
+
+/// A colour whose text holds every class of character JCS escapes or keeps.
+fn escaped() -> String {
+    format!("{SHOW_INPUT} // \"q\" \\ \t \u{1} \u{8} \u{c} \r \u{1f} \u{7f} é ☃ \u{2028}\n")
+}
+
+#[test]
+fn stain_graph_the_text_is_jcs() {
+    check_jcs(&escaped(), &escaped());
+}
+
+negative_control!(
+    stain_graph_the_text_is_jcs,
+    "another colour's text is another text",
+    expected = "is not the JCS of the form",
+    check_jcs(&escaped(), SHOW_INPUT)
 );

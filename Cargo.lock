@@ -1855,10 +1855,8 @@ name = "render"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
- "engine",
  "ledger",
  "naga",
- "serde_json",
  "validation",
 ]
 
