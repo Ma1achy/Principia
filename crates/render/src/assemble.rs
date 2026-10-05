@@ -355,14 +355,17 @@ fn number(s: &str) -> Result<f64, String> {
     }
 }
 
-/// A WGSL identifier: an ASCII letter or `_`, then letters, digits or `_`.
+/// An ASCII WGSL identifier (gui_state_contract §3): an ASCII letter or `_`, then ASCII letters, digits or `_`; not
+/// `_` alone and not beginning `__`, which WGSL does not take as identifiers.
 fn identifier(s: &str) -> Result<String, String> {
     let s = s.trim();
     let mut chars = s.chars();
     let ok = chars
         .next()
         .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
-        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_');
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && s != "_"
+        && !s.starts_with("__");
     if ok {
         Ok(s.to_owned())
     } else {

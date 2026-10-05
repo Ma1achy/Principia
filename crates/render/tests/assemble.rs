@@ -1800,7 +1800,16 @@ fn declaration_a_malformed_declaration_is_refused() {
         ("// @uniform x: f32 = 1e39", "the default"),
         ("// @uniform x: f32 = -3.5e38", "the default"),
         ("// @uniform x: vec3<f32> = (0, 1e39, 0)", "the default"),
+        // A name is an ASCII WGSL identifier: not `_` alone, not beginning `__`, no non-ASCII letter.
+        ("// @uniform _: f32 = 1.0", "is not a name"),
+        ("// @uniform __x: f32 = 1.0", "is not a name"),
+        ("// @input __", "is not a name"),
+        ("// @input é", "is not a name"),
+        ("// @uniform größe: f32 = 1.0", "is not a name"),
     ]);
+    // A name may begin with one `_`.
+    Declaration::parse("// @uniform _x: f32 = 1.0\n// @input _t\n// @input a_b2")
+        .expect("names beginning with one `_`");
     // f32::MAX and its negative are values of an f32, written as Rust writes them, which rounds to them.
     Declaration::parse(&format!(
         "// @uniform a: f32 = {}\n// @uniform b: vec2<f32> = (0, {})",

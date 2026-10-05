@@ -111,7 +111,9 @@ silent default.
   `field`, its domain inherited (render_gui_spec Part II §3.1). A post's inputs are its optional field ins, up to
   four, after its `vec3` in. A source and a combiner declare none. (Four, the length of `ctx.inputs`, is applied per
   R-369: the corpus gives no bound.)
-- Names are WGSL identifiers, each declared once among a file's uniforms and once among its inputs.
+- Names are ASCII WGSL identifiers, each declared once among a file's uniforms and once among its inputs: an ASCII
+  letter or `_`, then ASCII letters, digits or `_`, and neither `_` alone nor beginning `__`, which WGSL does not take
+  as identifiers. WGSL's non-ASCII identifiers are not names here.
 
 **`debug/` is a peer directory, but a filter tag — not a different mechanism.** Debug occupants satisfy the same signatures as their slot; they just read `ctx.sample`/`ctx.quad` raw fields. The scanner tags anything under `debug/` `category: debug`. The polished GUI hides that category by **filtering the list** (`ViewUI.debugVisible = false`); the dev GUI shows it. "Hide debug in the nice GUI" is a filter predicate over a tagged registry, never a structural change.
 
