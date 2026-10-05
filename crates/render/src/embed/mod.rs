@@ -137,7 +137,11 @@ impl Image {
     /// Sets the low bit of slot `channel` of `plane` at pixel `(x, y)` to `bit`'s low bit; every other bit is kept.
     pub fn set_low(&mut self, plane: Plane, x: u32, y: u32, channel: u32, bit: u8) {
         let at = self.index(plane, x, y, channel);
-        self.pixels[at] = (self.pixels[at] & !1) | (bit & 1);
+        self.pixels[at] = if bit & 1 == 1 {
+            self.pixels[at] | 1
+        } else {
+            self.pixels[at] & !1
+        };
     }
 
     /// The low bits of tile `(col, row)` of side `side` in `plane`, laid out as [`record::write_tile`] takes them:
