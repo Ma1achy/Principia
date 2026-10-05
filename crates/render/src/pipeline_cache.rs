@@ -568,6 +568,8 @@ impl std::error::Error for RequestError {}
 /// One request for the worker. Only the latest request's ticket swaps in; a prepare's never does.
 struct Job {
     ticket: u64,
+    /// A [`PipelineCache::prepare`]'s job: never superseded, always compiled.
+    prepare: bool,
     stain: Stain,
     keys: Vec<NodeKey>,
     tier: Tier,
@@ -605,13 +607,20 @@ struct Outcome {
     errors: Vec<CompileError>,
 }
 
-/// What the frame's side and the worker share: the device, the cache, each node's last valid occupant, and the count
-/// of pipelines created.
+/// What the frame's side and the worker share: the device, the cache, each node's last valid occupant, the count
+/// of pipelines created, and the ticket below which a request is superseded.
 struct Shared {
     device: wgpu::Device,
     cache: Mutex<HashMap<PipelineKey, Arc<CompiledStain>>>,
     last_valid: Mutex<HashMap<NodeKey, Occupant>>,
     compiles: AtomicU64,
+    /// A request job whose ticket is below it is superseded, by a later request or a hit: it can never become
+    /// current, so the worker answers it without compiling, and the latest request waits behind none of them
+    /// (lowering Part 4; caching contract Part 6 item 2).
+    superseded_below: AtomicU64,
+    /// Held by a test while it queues requests: the worker waits on it after taking a job.
+    #[cfg(test)]
+    hold: Mutex<()>,
 }
 
 /// The lock's value, a panic in another holder notwithstanding: the maps hold no invariant a panic could break midway.
@@ -648,6 +657,9 @@ impl PipelineCache {
             cache: Mutex::new(HashMap::new()),
             last_valid: Mutex::new(HashMap::new()),
             compiles: AtomicU64::new(0),
+            superseded_below: AtomicU64::new(0),
+            #[cfg(test)]
+            hold: Mutex::new(()),
         });
         let (jobs, rx) = mpsc::channel::<Job>();
         let (tx, outcomes) = mpsc::channel::<Outcome>();
@@ -657,7 +669,15 @@ impl PipelineCache {
             .name("render-compile".into())
             .spawn(move || {
                 for job in rx {
-                    let (rendered, errors) = resolve(&worker_shared, &job);
+                    #[cfg(test)]
+                    drop(lock(&worker_shared.hold));
+                    let superseded = !job.prepare
+                        && job.ticket < worker_shared.superseded_below.load(Ordering::SeqCst);
+                    let (rendered, errors) = if superseded {
+                        (None, Vec::new())
+                    } else {
+                        resolve(&worker_shared, &job)
+                    };
                     let outcome = Outcome {
                         ticket: job.ticket,
                         rendered,
@@ -685,7 +705,9 @@ impl PipelineCache {
 
     /// Asks for `stain` at `tier`, its nodes keyed by `keys` (one per node, distinct), as the current pipeline: at once
     /// when its key is compiled ([`Requested::Hit`]), else through the worker ([`Requested::Queued`]); a request equal
-    /// to the latest one still with the worker is [`Requested::Pending`].
+    /// to the latest one still with the worker is [`Requested::Pending`]. Either supersedes every earlier request still
+    /// with the worker: the worker answers those without compiling them, so the latest waits behind none of them
+    /// (lowering Part 4; caching contract Part 6 item 2). A prepare is never superseded.
     pub fn request(
         &mut self,
         stain: &Stain,
@@ -699,12 +721,16 @@ impl PipelineCache {
             self.make_current(Rendered::new(compiled, stain.clone(), keys));
             self.errors.clear();
             self.latest = None;
+            self.shared
+                .superseded_below
+                .store(self.next_ticket, Ordering::SeqCst);
             return Ok(Requested::Hit);
         }
         if self.latest.is_some_and(|(_, k)| k == key) {
             return Ok(Requested::Pending);
         }
-        let ticket = self.send(stain, keys, tier)?;
+        let ticket = self.send(stain, keys, tier, false)?;
+        self.shared.superseded_below.store(ticket, Ordering::SeqCst);
         self.latest = Some((ticket, key));
         Ok(Requested::Queued)
     }
@@ -719,15 +745,22 @@ impl PipelineCache {
     ) -> Result<(), RequestError> {
         check_keys(stain, keys)?;
         if !lock(&self.shared.cache).contains_key(&PipelineKey::new(stain, tier)) {
-            self.send(stain, keys, tier)?;
+            self.send(stain, keys, tier, true)?;
         }
         Ok(())
     }
 
-    fn send(&mut self, stain: &Stain, keys: &[NodeKey], tier: Tier) -> Result<u64, RequestError> {
+    fn send(
+        &mut self,
+        stain: &Stain,
+        keys: &[NodeKey],
+        tier: Tier,
+        prepare: bool,
+    ) -> Result<u64, RequestError> {
         let ticket = self.next_ticket;
         let job = Job {
             ticket,
+            prepare,
             stain: stain.clone(),
             keys: keys.to_vec(),
             tier,
@@ -960,4 +993,85 @@ fn with_last_valid(
             n
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assemble::Kind;
+    use validation::gpu::GpuHarness;
+    use validation::negative_control;
+
+    /// The source of `ftle` into a colour drawing the grey `v`, the pass-through combiner, and OUT.
+    fn grey(v: usize) -> Stain {
+        let node = |kind, occupant, inputs: &[Option<usize>]| Node {
+            kind,
+            occupant,
+            inputs: inputs.to_vec(),
+        };
+        let colour =
+            format!("fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>({v}.0 / 16.0); }}");
+        Stain::new(vec![
+            node(Kind::Source, Occupant::Field("ftle".into()), &[]),
+            node(Kind::Colour, Occupant::Custom(colour), &[Some(0)]),
+            node(
+                Kind::Combiner,
+                Occupant::BuiltIn("pass_through".into()),
+                &[Some(1), None],
+            ),
+            node(Kind::Out, Occupant::None, &[Some(2)]),
+        ])
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// N = 10 requests for ten stains of ten keys, after a prepare of an eleventh, all queued while the worker is held
+    /// (`hold`): the worker compiles only the latest request, which becomes current, and the prepare. Without `hold`,
+    /// the control, each request is waited for before the next, none is superseded, and all compile (perf review
+    /// 5410218466 P1).
+    fn check_superseded(hold: bool) {
+        const N: usize = 10;
+        let h = GpuHarness::new().expect("a GPU device");
+        let mut cache = PipelineCache::new(h.device());
+        let keys = [0, 1, 2, 3];
+        let shared = Arc::clone(&cache.shared);
+        let held = hold.then(|| lock(&shared.hold));
+        cache
+            .prepare(&grey(N), &keys, Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+        for v in 0..N {
+            assert_eq!(
+                cache.request(&grey(v), &keys, Tier::FULL),
+                Ok(Requested::Queued)
+            );
+            if !hold {
+                cache.wait();
+            }
+        }
+        drop(held);
+        cache.wait();
+        let latest = PipelineKey::new(&grey(N - 1), Tier::FULL);
+        assert_eq!(cache.current().expect("the latest").key(), latest);
+        assert!(
+            cache.get(PipelineKey::new(&grey(N), Tier::FULL)).is_some(),
+            "the prepare was skipped"
+        );
+        assert_eq!(
+            cache.compiles(),
+            2,
+            "the superseded requests compiled: the latest and the prepare are the two"
+        );
+        assert_eq!(cache.in_flight(), 0);
+    }
+
+    #[test]
+    fn fragment_cache_superseded_requests_never_compile() {
+        check_superseded(true);
+    }
+
+    negative_control!(
+        fragment_cache_superseded_requests_never_compile,
+        "with each request waited for before the next, none is superseded and all compile",
+        expected = "the superseded requests compiled",
+        check_superseded(false)
+    );
 }
