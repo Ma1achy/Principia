@@ -6,14 +6,16 @@
 //!
 //! Every write goes through the generated layout: a sample's packed words through the generated pack routines
 //! (`kernel::payload`, payload §6), its word through `fgw_pack`, and a quad's members by their names in the ledger's
-//! `RenderQuad` table (`ledger::quad`, dd_generation_root §3.7a), each at its generated offset. The bytes are the
-//! generated structs' members in order, little-endian, as the GPU reads them.
+//! `RenderQuad` table (`ledger::quad`, dd_generation_root §3.7a), each at its generated offset. The bytes place each
+//! member of `SimStateFTLE` and `ICDescriptor` by its name at the ledger's offset for it (`ledger::gen::rust::offsets`),
+//! little-endian, as the GPU reads them: no offset is written here.
 
 use kernel::payload::{
     fgw_pack, pack_packed_b, pack_times, set_d_min, set_d_min_unset, set_detail, set_dmin_pair,
     set_last_symbol, set_saturated, set_state, DminCounters, ICDescriptor, SimStateFTLE,
     SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
 };
+use ledger::gen::rust::offsets;
 use ledger::quad::RENDER_QUAD;
 use ledger::schema::Storage;
 use render::bind::Payload;
@@ -161,56 +163,99 @@ impl Synthetic {
     }
 }
 
-/// `SimStateFTLE`'s 144 B as words, its members in order: the u16 `closure_step` and `_reserved` share one word, the
-/// step in its low half, as little-endian memory holds them.
-pub fn simstate_words(s: &SimStateFTLE) -> [u32; 36] {
-    let mut w = [0u32; 36];
-    let groups = [s.r, s.p, s.r_sh, s.p_sh];
-    for (g, group) in groups.iter().enumerate() {
-        for (k, x) in group.iter().flatten().enumerate() {
-            w[6 * g + k] = x.to_bits();
-        }
-    }
-    let rest = [
-        s.S.to_bits(),
-        s.theta.to_bits(),
-        s.mean_y.to_bits(),
-        s.C_ty.to_bits(),
-        s.E_0.to_bits(),
-        s.Lz_0.to_bits(),
-        s.packed_a,
-        s.packed_b,
-        s.times,
-        s.total_substeps,
-        s.closure_min.to_bits(),
-        u32::from(s.closure_step) | u32::from(s._reserved) << 16,
-    ];
-    w[24..].copy_from_slice(&rest);
-    w
+/// The ledger struct `name`'s members, each with its byte offset and size, and the struct's size: the generated
+/// layout (`ledger::payload::structs`, `ledger::gen::rust::offsets`), the one source of every offset here.
+fn layout(name: &str) -> (Vec<(&'static str, usize, usize)>, usize) {
+    let s = ledger::payload::structs()
+        .into_iter()
+        .find(|s| s.name == name)
+        .unwrap_or_else(|| panic!("the ledger has no struct `{name}`"));
+    let (offsets, size) = offsets(&s);
+    let members = s
+        .members
+        .iter()
+        .zip(offsets)
+        .map(|(m, at)| (m.name, at as usize, m.storage.size() as usize))
+        .collect();
+    (members, size as usize)
 }
 
-/// `ICDescriptor`'s 64 B as words: its twelve f32s, then its declared padding.
-pub fn ic_words(d: &ICDescriptor) -> [u32; 16] {
-    let f = [
-        d.m0,
-        d.m1,
-        d.m2,
-        d.q_mass,
-        d.rho_mag,
-        d.lambda_mag,
-        d.rho_ratio,
-        d.rho_angle,
-        d.K_0,
-        d.V_0,
-        d.virial_ratio,
-        d.r_min_pair_0,
-    ];
-    let mut w = [0u32; 16];
-    for (k, x) in f.iter().enumerate() {
-        w[k] = x.to_bits();
+/// The words of struct `name`, each member's little-endian bytes, as `value` gives them by the member's name, at its
+/// offset in the generated layout ([`layout`]).
+fn place(name: &str, value: impl Fn(&str) -> Option<Vec<u8>>) -> Vec<u32> {
+    let (members, size) = layout(name);
+    let mut bytes = vec![0u8; size];
+    for (member, at, len) in members {
+        let v = value(member)
+            .unwrap_or_else(|| panic!("`{name}` has no value for the ledger's `{member}`"));
+        assert_eq!(
+            v.len(),
+            len,
+            "`{name}.{member}` is not the ledger's {len} B"
+        );
+        bytes[at..at + len].copy_from_slice(&v);
     }
-    w[12..].copy_from_slice(&d._pad);
-    w
+    bytes
+        .chunks_exact(4)
+        .map(|w| u32::from_le_bytes([w[0], w[1], w[2], w[3]]))
+        .collect()
+}
+
+fn le(words: impl IntoIterator<Item = u32>) -> Vec<u8> {
+    words.into_iter().flat_map(u32::to_le_bytes).collect()
+}
+
+fn f32s(v: impl IntoIterator<Item = f32>) -> Vec<u8> {
+    le(v.into_iter().map(f32::to_bits))
+}
+
+/// `SimStateFTLE` as the words it uploads as: each member at its ledger offset, by name ([`place`]); the ledger's size.
+pub fn simstate_words(s: &SimStateFTLE) -> Vec<u32> {
+    place("SimStateFTLE", |member| {
+        Some(match member {
+            "r" => f32s(s.r.into_iter().flatten()),
+            "p" => f32s(s.p.into_iter().flatten()),
+            "r_sh" => f32s(s.r_sh.into_iter().flatten()),
+            "p_sh" => f32s(s.p_sh.into_iter().flatten()),
+            "S" => f32s([s.S]),
+            "theta" => f32s([s.theta]),
+            "mean_y" => f32s([s.mean_y]),
+            "C_ty" => f32s([s.C_ty]),
+            "E_0" => f32s([s.E_0]),
+            "Lz_0" => f32s([s.Lz_0]),
+            "packed_a" => le([s.packed_a]),
+            "packed_b" => le([s.packed_b]),
+            "times" => le([s.times]),
+            "total_substeps" => le([s.total_substeps]),
+            "closure_min" => f32s([s.closure_min]),
+            "closure_step" => s.closure_step.to_le_bytes().to_vec(),
+            "_reserved" => s._reserved.to_le_bytes().to_vec(),
+            _ => return None,
+        })
+    })
+}
+
+/// `ICDescriptor` as the words it uploads as: each member at its ledger offset, by name ([`place`]), its declared
+/// padding included; the ledger's size.
+pub fn ic_words(d: &ICDescriptor) -> Vec<u32> {
+    place("ICDescriptor", |member| {
+        Some(match member {
+            "m0" => f32s([d.m0]),
+            "m1" => f32s([d.m1]),
+            "m2" => f32s([d.m2]),
+            "q_mass" => f32s([d.q_mass]),
+            "rho_mag" => f32s([d.rho_mag]),
+            "lambda_mag" => f32s([d.lambda_mag]),
+            "rho_ratio" => f32s([d.rho_ratio]),
+            "rho_angle" => f32s([d.rho_angle]),
+            "K_0" => f32s([d.K_0]),
+            "V_0" => f32s([d.V_0]),
+            "virial_ratio" => f32s([d.virial_ratio]),
+            "r_min_pair_0" => f32s([d.r_min_pair_0]),
+            "_pad" => le(d._pad),
+            _ => return None,
+        })
+    })
 }
 
 /// One sample's setters, each a field of its `SimState` or its word, written through the generated pack routines.
