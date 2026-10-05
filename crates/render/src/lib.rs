@@ -11,10 +11,15 @@
 //! the debug views baked one source per field on demand ([`debug_bake`]); the three fixed compositor pipelines
 //! ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame ([`frame_record`]).
 //!
+//! The occupant algebra's front end (TASK-M7-03): a colour or brightness occupant's expression tree to readable WGSL,
+//! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
+//! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
+//!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
 
 pub mod assemble;
+pub mod codegen;
 pub mod colour;
 pub mod compositor;
 pub mod debug_bake;
