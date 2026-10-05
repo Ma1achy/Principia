@@ -10,9 +10,11 @@
 //! within the threshold.
 //!
 //! An input may perturb one coefficient of one matrix before measuring (`perturb`), so the gate shows a wrong
-//! coefficient fails it (pitfalls, PIT-3: check the measurement can fire). An input also records the measurement the
-//! proposal was made from (`recorded`), which the report sets beside the one measured here: f32 `cbrt` and `powf`
-//! are the platform's, so a run elsewhere may differ in the last bits.
+//! coefficient fails it (pitfalls, PIT-3: check the measurement can fire). An input may also record a measurement on
+//! that input (`recorded`), which the report sets beside the one measured here: f32 `cbrt` and `powf` are the
+//! platform's, so a run elsewhere may differ in the last bits. The R-71 proposal for REQ-COL-049 is made from the
+//! full-gamut input (`full_gamut.json`, stride 1); a coarser input's recorded values are a sample, not the
+//! proposal's evidence.
 
 use std::path::Path;
 
@@ -173,7 +175,8 @@ impl Perturb {
     }
 }
 
-/// The measurement an input records: the proposal's, and where it was made.
+/// The measurement an input records, made on that input, and where it was made. Only the full-gamut input's is the
+/// R-71 proposal's evidence; a coarser input's is a sample.
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Recorded {
@@ -196,7 +199,7 @@ pub struct Input {
     /// A coefficient to change before measuring, if any.
     #[serde(default)]
     pub perturb: Option<Perturb>,
-    /// The measurement the proposal was made from, if any.
+    /// A measurement made on this input, if any.
     #[serde(default)]
     pub recorded: Option<Recorded>,
 }
