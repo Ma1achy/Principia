@@ -22,3 +22,23 @@ justification = "fraction is masked to bits 0..52, so bit 52 is always clear and
 [[equivalent]]
 mutant = "crates/validation/src/gpu.rs:166:9: replace GpuHarness::features -> wgpu::Features with Default::default()"
 justification = "GpuHarness::new is the only constructor and requests engine::compute::required_features(backend), Features::empty() on every backend but Metal, and wgpu enables exactly the requested features, so on the mutants job's lavapipe device.features() is Features::empty() == Default::default()"
+
+[[equivalent]]
+mutant = "crates/render/src/compositor.rs:282:25: replace | with ^ in Compositor::layers"
+justification = "RENDER_ATTACHMENT and TEXTURE_BINDING are distinct single-bit wgpu::TextureUsages flags, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/render/src/compositor.rs:283:25: replace | with ^ in Compositor::layers"
+justification = "COPY_SRC is a single-bit wgpu::TextureUsages flag clear in RENDER_ATTACHMENT | TEXTURE_BINDING, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/render/src/compositor.rs:293:52: replace | with ^ in Compositor::layers"
+justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/render/src/pipeline_cache.rs:487:56: replace | with ^ in objects"
+justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_buffers"
+justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
