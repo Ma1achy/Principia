@@ -9,9 +9,10 @@
 //! quad and tile in column `i` and row `j` are `j · columns + i`, and `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`
 //! for the tile at `(i, j)` in its quad.
 //!
-//! **The index map.** A sample's index in the payload buffers is `(quad · N² + tile) · (E + 1) + copy` (applied per
-//! R-369: payload §0 names a `(quad, sample, copy)` → index map and does not give it). A pixel reads its tile's base
-//! sample, copy 0; the E copies are the resolve stage's.
+//! **The flat grid's index.** On this harness's flat grid, a sample's index in the buffers the harness fills is
+//! `(quad · N² + tile) · (E + 1) + copy` (applied per R-369). It is the flat grid's own index, for the synthetic
+//! harness, and not payload §0's `(quad, sample, copy)` → index map of the cache's buffers, which this module does not
+//! define. A pixel reads its tile's base sample, copy 0; the E copies are the resolve stage's.
 
 /// A flat grid of quads covering the target: `quads[0]` columns by `quads[1]` rows of quads, each `n` × `n` tiles
 /// (`N = SAMPLES_PER_QUAD_AXIS`), each tile `tile_px` pixels square, each sample with `e` ensemble copies.
@@ -72,12 +73,13 @@ impl Grid {
         self.n * self.n * (self.e + 1)
     }
 
-    /// The payload buffers' length in samples.
+    /// The length in samples of the buffers the harness fills over this grid.
     pub fn sample_count(&self) -> u32 {
         self.quad_count() * self.samples_per_quad()
     }
 
-    /// The index of copy `copy` of tile `tile`'s sample in quad `quad`: `(quad · N² + tile) · (E + 1) + copy`.
+    /// The flat grid's index of copy `copy` of tile `tile`'s sample in quad `quad`: `(quad · N² + tile) · (E + 1) +
+    /// copy` (not payload §0's map; see the module's note).
     pub fn sample_index(&self, quad: u32, tile: u32, copy: u32) -> u32 {
         (quad * self.n * self.n + tile) * (self.e + 1) + copy
     }
@@ -140,7 +142,7 @@ fn raster(pos: vec2<f32>, quads: vec2<u32>, n: u32, e: u32, tile_px: u32) -> Ras
     r.tile_xy = cell % n;
     r.quad = r.quad_xy.y * quads.x + r.quad_xy.x;
     r.tile = r.tile_xy.y * n + r.tile_xy.x;
-    r.sample = (r.quad * n * n + r.tile) * (e + 1u);
+    r.sample = (r.quad * n * n + r.tile) * (e + 1u); // the flat grid's index, not payload §0's map
     let up = vec2<f32>(pos.x, f32(r.target_dims.y) - pos.y);
     r.screen_uv = up / vec2<f32>(r.target_dims);
     r.tile_uv = (up - vec2<f32>(cell * tile_px)) / f32(tile_px);
