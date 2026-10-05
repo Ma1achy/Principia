@@ -1855,11 +1855,16 @@ name = "render"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
+ "jsonschema",
  "ledger",
  "naga",
  "png",
+ "pollster",
  "proptest",
+ "serde",
+ "serde_json",
  "validation",
+ "wgpu",
 ]
 
 [[package]]

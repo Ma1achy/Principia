@@ -4,7 +4,9 @@
 //! [`SCHEMA_V1`].
 //!
 //! [`FrameRecord`] is the measurement struct, always compiled: the reporting is toggleable, the measurement is not
-//! (telemetry §5.5). The engine writes it, `prin` reads and writes it, and the dev GUI's profiler reads it.
+//! (telemetry §5.5). It and the types beneath it are `render::frame_record`'s, re-exported here: the render loop fills
+//! it (TASK-M1-05; render never depends on engine, systems_architecture §7.1). The engine writes it, `prin` reads and
+//! writes it, and the dev GUI's profiler reads it.
 
 use std::collections::HashSet;
 use std::fmt;
@@ -15,6 +17,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::canonical;
 pub use super::fast_math::{CompiledModes, FastMath, FastMathRecord, StageMode};
+pub use render::frame_record::{
+    Allocation, Event, FrameRecord, GpuPass, LiveKind, LiveMemory, Pool, PoolLive, Scope, Stage,
+    StageMs, StageSections, Stages,
+};
 
 mod stream;
 pub use stream::{Flush, Stream};
@@ -282,245 +288,6 @@ pub struct Display {
     pub refresh_hz: f64,
     /// The DPI scale.
     pub dpi_scale: f64,
-}
-
-/// One frame: telemetry §2's frame record, key for key, then the five stages' nested sections.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct FrameRecord {
-    /// The frame's index in the session, from 0.
-    pub frame: u64,
-    /// Wall clock, ms.
-    pub frame_ms: f64,
-    /// New quads this frame.
-    pub quads_computed: u64,
-    /// Cache hits.
-    pub quads_reused: u64,
-    /// quads × N² × (E+1): the actual integration work.
-    pub samples: u64,
-    /// The honest cost measure.
-    pub substeps_total: u64,
-    /// How far time moved (signed): the change in the playhead's simulation time `t`, in the unit of `T_horizon`;
-    /// negative when the playhead moves back. Not wall-clock time.
-    pub playhead_dt: f64,
-    /// Pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not (a static frame, a batch render).
-    /// v1 makes only that sign normative; the magnitude's metric is defined by the task that first consumes it.
-    pub camera_delta: f64,
-    /// The quad tree's maximum depth.
-    pub tree_depth_max: u32,
-    /// The quad tree's leaf count.
-    pub leaf_count: u64,
-    /// How many `d_min` values the packer received as NaN and stored as unset this frame (R-288).
-    pub dmin_nan_unset: u32,
-    /// How many `d_min` values the packer received negative and clamped to the floor this frame (R-288).
-    pub dmin_negative_floored: u32,
-    /// Each stage's ms.
-    pub stage_ms: StageMs,
-    /// Each stage's nested sections.
-    pub stages: Stages,
-    /// Each pool's live memory at the frame's end.
-    pub live_memory: LiveMemory,
-}
-
-/// The memory live at a frame's end, per pool (render_gui_spec § "Profiler": memory over time, live allocations by
-/// type). A snapshot, not a change, so a downsampled file still shows each kept frame's memory. The pools are disjoint:
-/// a tracked allocation counts in exactly one, and the tile cache's bytes count in `tile_cache` only, never also in
-/// `heap` or `gpu`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct LiveMemory {
-    /// The CPU heap.
-    pub heap: PoolLive,
-    /// GPU memory.
-    pub gpu: PoolLive,
-    /// The tile cache.
-    pub tile_cache: PoolLive,
-}
-
-/// One pool's live memory: `bytes` is the sum of `by_kind`'s bytes.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PoolLive {
-    /// The pool's total live bytes, the sum of `by_kind`'s bytes.
-    pub bytes: u64,
-    /// One entry for each type with live allocations in the pool.
-    pub by_kind: Vec<LiveKind>,
-}
-
-/// The live allocations of one type in one pool.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct LiveKind {
-    /// The type.
-    pub kind: String,
-    /// How many are live.
-    pub count: u64,
-    /// Their total size.
-    pub bytes: u64,
-}
-
-/// The five stages of telemetry §2's `stage_ms`, in its order.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Stage {
-    /// Integrate.
-    Integrate,
-    /// Reduce.
-    Reduce,
-    /// Colour.
-    Colour,
-    /// Upload.
-    Upload,
-    /// Present; absent from a batch render (telemetry §5.5).
-    Present,
-}
-
-impl Stage {
-    /// The five, in `stage_ms`'s order.
-    pub const ALL: [Stage; 5] = [
-        Stage::Integrate,
-        Stage::Reduce,
-        Stage::Colour,
-        Stage::Upload,
-        Stage::Present,
-    ];
-
-    /// The stage's key.
-    pub fn key(self) -> &'static str {
-        match self {
-            Stage::Integrate => "integrate",
-            Stage::Reduce => "reduce",
-            Stage::Colour => "colour",
-            Stage::Upload => "upload",
-            Stage::Present => "present",
-        }
-    }
-}
-
-/// `stage_ms`: each stage's ms. `present` is `None` in a batch render (telemetry §5.5).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StageMs {
-    /// Integrate.
-    pub integrate: f64,
-    /// Reduce.
-    pub reduce: f64,
-    /// Colour.
-    pub colour: f64,
-    /// Upload.
-    pub upload: f64,
-    /// Present.
-    #[serde(deserialize_with = "nullable")]
-    pub present: Option<f64>,
-}
-
-/// `stages`: each stage's nested sections, and nothing beside the five. `present` is `None` in a batch render.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Stages {
-    /// Integrate.
-    pub integrate: StageSections,
-    /// Reduce.
-    pub reduce: StageSections,
-    /// Colour.
-    pub colour: StageSections,
-    /// Upload.
-    pub upload: StageSections,
-    /// Present.
-    #[serde(deserialize_with = "nullable")]
-    pub present: Option<StageSections>,
-}
-
-impl Stages {
-    /// The stage's sections; `None` for an absent present stage.
-    pub fn get(&self, stage: Stage) -> Option<&StageSections> {
-        match stage {
-            Stage::Integrate => Some(&self.integrate),
-            Stage::Reduce => Some(&self.reduce),
-            Stage::Colour => Some(&self.colour),
-            Stage::Upload => Some(&self.upload),
-            Stage::Present => self.present.as_ref(),
-        }
-    }
-}
-
-/// What sits beneath one stage.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StageSections {
-    /// The CPU scopes, nested; the finer categories (quadtree, stain + style, IC decode, readback, egui) are among them.
-    pub scopes: Vec<Scope>,
-    /// The GPU passes.
-    pub gpu_passes: Vec<GpuPass>,
-    /// The allocations the stage made, one entry per kind and pool.
-    pub allocations: Vec<Allocation>,
-    /// The events.
-    pub events: Vec<Event>,
-}
-
-/// A CPU scope, beneath a stage or another scope.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Scope {
-    /// Its name.
-    pub name: String,
-    /// Its start, ms from the start of the frame.
-    pub start_ms: f64,
-    /// Its duration, ms.
-    pub ms: f64,
-    /// The scopes inside it.
-    pub children: Vec<Scope>,
-}
-
-/// A GPU pass, from the GPU timestamps.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct GpuPass {
-    /// Its name.
-    pub name: String,
-    /// Its start, ms from the start of the frame.
-    pub start_ms: f64,
-    /// Its duration, ms.
-    pub ms: f64,
-}
-
-/// The allocations of one kind in one pool that a stage made.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Allocation {
-    /// The allocated type.
-    pub kind: String,
-    /// The pool.
-    pub pool: Pool,
-    /// How many.
-    pub count: u64,
-    /// Their total size.
-    pub bytes: u64,
-}
-
-/// The memory pools the profiler tracks: heap, GPU and tile cache (render_gui_spec § "Profiler").
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Pool {
-    /// The CPU heap.
-    Heap,
-    /// GPU memory.
-    Gpu,
-    /// The tile cache.
-    TileCache,
-}
-
-/// An instant event.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Event {
-    /// Its name.
-    pub name: String,
-    /// When, ms from the start of the frame.
-    pub at_ms: f64,
-    /// What happened, as text; `None` when the name says it all.
-    #[serde(deserialize_with = "nullable")]
-    pub detail: Option<String>,
 }
 
 /// Reads a key §5 lets be `null`: the key must be there (its absence is not `null`, and not v1), and `null` is `None`.
