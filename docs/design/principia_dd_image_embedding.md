@@ -206,6 +206,8 @@ slots, so an image holds about `k` times fewer records (§2: 165 px a side at le
 The angle reported is in whole degrees counter-clockwise, 0 to 89, and is undone before the dihedral transform
 reported beside it: the image read is the original under that transform, then rotated counter-clockwise by the angle,
 so 97° counter-clockwise reports a 90° rotation and 7°, and 34° clockwise a 270° rotation and 56°.
+At each angle `k = 25` is tried before `k = 9`, so the angle reported is the first whole degree at which either `k`'s
+blocks hold an intact record, and the `k` reported is the one that verified there.
 
 ---
 
