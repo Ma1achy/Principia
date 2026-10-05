@@ -187,6 +187,10 @@ not in it, so two constructions of one graph have one form.
   node before it; it holds at most 8 posts (colour_composition §4.2).
 - **Text and hash.** The form is the JSON object `{"nodes": [...]}` in the one canonical serialisation, JCS
   (gui_state_contract §2, R-318). `fragmentKey` is the 64-bit FNV-1a hash of its UTF-8 bytes, R-36's hash.
+- **The tier is not in it.** The fragment key identifies the graph; a compiled pipeline is identified by the fragment
+  key plus the tier bits, `has_ftle` and `has_word`, which the assembled source bakes (Part 3a) and which choose the
+  read side's stored struct and whether the word buffer is bound. `has_ensemble` is excluded: the fragment side reads
+  it as a uniform (R-145).
 - **The params are not in it.** A node's params are the values of its occupant's `uniformSchema` (gui_state_contract
   §3), uniforms (Part 3, fragment side), so a slider edit rebinds and never changes the fragment key. They are in the
   render key (render contract Part 3).
