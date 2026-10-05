@@ -117,6 +117,23 @@ silent default.
   letter or `_`, then ASCII letters, digits or `_`, and neither `_` alone nor beginning `__`, which WGSL does not take
   as identifiers. WGSL's non-ASCII identifiers are not names here.
 
+**Worked example of the declaration format.** A colour occupant, `frag/colour/banded.wgsl`:
+
+```wgsl
+// @uniform gain: f32 = 1.0 [0.0, 4.0]
+// @uniform tint: vec3<f32> = (1.0, 0.5, 0.25)
+// @input t [0.0, 1.0]
+// @input mask
+fn colour(ctx: Ctx) -> vec3<f32> {
+    return uniforms.tint * clamp(ctx.inputs[0].x * uniforms.gain, 0.0, 1.0) * ctx.inputs[1].x;
+}
+```
+
+Its `uniformSchema` is `gain`, an `f32` starting at 1.0 with a control over [0, 4], then `tint`, a `vec3<f32>`
+starting at (1.0, 0.5, 0.25) with no range; the assembler declares its block holding `gain` then `tint`, read as
+`uniforms.gain` and `uniforms.tint`. Its node has two `field` in-ports: `t`, read as `ctx.inputs[0]`, whose
+`inputDomains` entry is [0, 1], and `mask`, read as `ctx.inputs[1]`, which inherits the manifest's per-field domain.
+
 **`debug/` is a peer directory, but a filter tag — not a different mechanism.** Debug occupants satisfy the same signatures as their slot; they just read `ctx.sample`/`ctx.quad` raw fields. The scanner tags anything under `debug/` `category: debug`. The polished GUI hides that category by **filtering the list** (`ViewUI.debugVisible = false`); the dev GUI shows it. "Hide debug in the nice GUI" is a filter predicate over a tagged registry, never a structural change.
 
 **Generated field views mount into the same tree.** The ledger-derived per-field debug shaders (tooling plan §B–E) are emitted into `frag/debug/generated/` (or the ledger is scanned as a virtual directory beside the real files). Hand-written debug shaders (quad-depth heatmap, quadtree overlay) are real files in `debug/`. Both surface through one scan; both are registry occupants selectable in a slot.

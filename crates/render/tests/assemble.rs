@@ -2007,6 +2007,76 @@ negative_control!(
     check_uniforms(vec![4.5])
 );
 
+/// The worked example of gui_state_contract §3, read from the doc: the ```wgsl block after its heading.
+fn worked_example() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../docs/contracts/principia_gui_state_contract.md");
+    let doc = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let (_, after) = doc
+        .split_once("**Worked example of the declaration format.**")
+        .expect("the worked example's heading");
+    let (_, block) = after.split_once("```wgsl\n").expect("its ```wgsl block");
+    let (text, _) = block.split_once("```").expect("the block's close");
+    text.to_owned()
+}
+
+/// `text` declares the example's schema and ports, as the doc reads them, and assembles as a colour fed two fields.
+fn check_worked_example(text: &str) {
+    let d = Declaration::parse(text).unwrap_or_else(|e| panic!("{e}"));
+    let got: Vec<String> = d
+        .uniforms
+        .iter()
+        .map(|u| format!("{}:{}={:?}{:?}", u.name, u.ty.wgsl(), u.default, u.range))
+        .chain(
+            d.inputs
+                .iter()
+                .map(|i| format!("{}={:?}", i.name, i.domain)),
+        )
+        .collect();
+    assert_eq!(
+        got,
+        [
+            "gain:f32=[1.0]Some((0.0, 4.0))",
+            "tint:vec3<f32>=[1.0, 0.5, 0.25]None",
+            "t=Some((0.0, 1.0))",
+            "mask=None"
+        ],
+        "the example's declarations"
+    );
+    let g = vec![
+        wired(Kind::Source, Occupant::Field("d_min".into()), &[]),
+        wired(Kind::Source, Occupant::Field("ftle".into()), &[]),
+        node(Kind::Colour, custom(text), &[Some(0), Some(1)]),
+        node(Kind::Combiner, pass_through(), &[Some(2), None]),
+        node(Kind::Out, Occupant::None, &[Some(3)]),
+    ];
+    let f = assemble::assemble(&stain(&g), Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(f.uniforms.len(), 1, "the example's uniform blocks");
+    assert!(
+        f.source
+            .contains("struct n2_Uniforms {\n    gain: f32,\n    tint: vec3<f32>,\n}"),
+        "the example's block"
+    );
+    assert!(
+        f.source.contains(
+            "n2_uniforms.tint * clamp(ctx.inputs[0].x * n2_uniforms.gain, 0.0, 1.0) * ctx.inputs[1].x"
+        ),
+        "the example's reads"
+    );
+}
+
+#[test]
+fn declaration_the_worked_example_is_read_and_assembled() {
+    check_worked_example(&worked_example());
+}
+
+negative_control!(
+    declaration_the_worked_example_is_read_and_assembled,
+    "the example's second input is a declaration",
+    expected = "the example's declarations",
+    check_worked_example(&worked_example().replace("// @input mask\n", ""))
+);
+
 /// A built-in source reads one scalar field, and its out-port carries the field's subtype.
 fn check_sources(cases: &[(&str, Option<assemble::Subtype>)]) {
     let fields = assemble::source_fields().expect("the fields");
