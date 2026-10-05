@@ -1,8 +1,10 @@
 //! Embedding a slice's provenance in the pixels of its own PNG (`principia_dd_image_embedding.md`).
 //!
 //! [`record`] is the record format and its tile geometry, [`writer`] the tiled writer, [`search`] §4's three searches
-//! on read and [`reader`] the majority-vote reader with its three outcomes. [`Image`] is the pixels both sides work on.
+//! on read and [`reader`] the majority-vote reader with its three outcomes. [`hybrid`] is §5's hybrid variant, its
+//! writer and the angle search that reads it after arbitrary rotation. [`Image`] is the pixels both sides work on.
 
+pub mod hybrid;
 pub mod reader;
 pub mod record;
 pub mod search;
@@ -130,6 +132,12 @@ impl Image {
     /// The low bit, 0 or 1, of slot `channel` of `plane` at pixel `(x, y)`.
     pub fn low(&self, plane: Plane, x: u32, y: u32, channel: u32) -> u8 {
         self.pixels[self.index(plane, x, y, channel)] & 1
+    }
+
+    /// Sets the low bit of slot `channel` of `plane` at pixel `(x, y)` to `bit`'s low bit; every other bit is kept.
+    pub fn set_low(&mut self, plane: Plane, x: u32, y: u32, channel: u32, bit: u8) {
+        let at = self.index(plane, x, y, channel);
+        self.pixels[at] = (self.pixels[at] & !1) | (bit & 1);
     }
 
     /// The low bits of tile `(col, row)` of side `side` in `plane`, laid out as [`record::write_tile`] takes them:

@@ -187,6 +187,7 @@ fn how_of(
             dy: d,
             dihedral,
             decimate,
+            rotation: None,
         },
         tiles: Count {
             found: tiles.0,

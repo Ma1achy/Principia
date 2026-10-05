@@ -117,14 +117,38 @@ pub struct Search {
 /// Searches `image` for intact records (§4): the eight dihedral transforms and, for each, the decimation factors from 1
 /// up while the decimated image can still hold the smallest tile; returns at the first candidate whose view holds one.
 pub fn search(image: &Image) -> Search {
+    search_in(image, Scope::Image)
+}
+
+/// Searches a hybrid record's block view ([`hybrid`](super::hybrid)): `image` is an image's blocks, each pixel of it
+/// the majority of one block, read after the angle search undid a rotation. The eight dihedral transforms are tried at
+/// decimation 1 alone, and the magic alone never shows state present: no view of the blocks is the image the writer's
+/// grid was laid in, so only an intact header does ([`Search::present`]).
+pub(super) fn search_blocks(image: &Image) -> Search {
+    search_in(image, Scope::Blocks)
+}
+
+/// What [`search_in`] searches.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    /// The image as read: every decimation, and the identity undecimated view is the writer's grid's.
+    Image,
+    /// A hybrid record's block view: decimation 1 alone, and no view is the writer's grid's.
+    Blocks,
+}
+
+/// The search of [`search`] and [`search_blocks`], over the candidates `scope` allows.
+fn search_in(image: &Image, scope: Scope) -> Search {
     let lows = lows(image);
     let (width, height) = (image.width(), image.height());
     let smallest = tile_side(record_bits(0), RGB_BITS_PER_PIXEL);
     let mut present = false;
     let fits = |s: u32| width.div_ceil(s).min(height.div_ceil(s)) >= smallest;
+    let decimates = |s: u32| scope == Scope::Image || s == 1;
     for dihedral in Dihedral::ALL {
-        for decimate in (1..).take_while(|&s| fits(s)) {
-            let view = View::new(&lows, width, height, dihedral, decimate);
+        for decimate in (1..).take_while(|&s| fits(s) && decimates(s)) {
+            let writer = scope == Scope::Image && dihedral == Dihedral::Identity && decimate == 1;
+            let view = View::new(&lows, width, height, dihedral, decimate, writer);
             let mut hits = Vec::new();
             for &plane in image.planes() {
                 if view.scan(plane, &mut hits) {
@@ -186,7 +210,7 @@ fn prefix(plane: Plane, smallest: u32) -> Vec<(u8, u8)> {
 
 /// `image`'s low bits, one byte a pixel, `lows[y × width + x]`, whose bit `k` is the low bit of the pixel's channel
 /// `k` (R, G, B and, when the image has one, A): so a plane's slot `channel` is bit `first_channel + channel`.
-fn lows(image: &Image) -> Vec<u8> {
+pub(super) fn lows(image: &Image) -> Vec<u8> {
     let channels = if image.has_alpha() { 4 } else { 3 };
     image
         .pixels()
@@ -205,8 +229,9 @@ fn lows(image: &Image) -> Vec<u8> {
 /// `lows[origin + u × step_u + v × step_v]`, each step a unit of x or y with its sign, scaled by the decimation.
 struct View<'a> {
     lows: &'a [u8],
-    /// Whether the view is the image itself, the identity undecimated: the only view in which the writer's grid, the
-    /// tiles at multiples of their side from the top-left pixel, is where the magic alone shows state present.
+    /// Whether the view is the image itself, the identity undecimated of an image as read (never of a hybrid record's
+    /// block view): the only view in which the writer's grid, the tiles at multiples of their side from the top-left
+    /// pixel, is where the magic alone shows state present.
     writer: bool,
     width: u32,
     height: u32,
@@ -216,9 +241,17 @@ struct View<'a> {
 }
 
 impl<'a> View<'a> {
-    /// The view of candidate `(dihedral, decimate)` of a `width` × `height` image's `lows`. The search builds a view
-    /// only when it is at least the smallest tile side wide and high, so at least 2 pixels.
-    fn new(lows: &'a [u8], width: u32, height: u32, dihedral: Dihedral, decimate: u32) -> Self {
+    /// The view of candidate `(dihedral, decimate)` of a `width` × `height` image's `lows`; `writer` says whether it is
+    /// the image itself, in which the writer's grid lies. The search builds a view only when it is at least the smallest
+    /// tile side wide and high, so at least 2 pixels.
+    fn new(
+        lows: &'a [u8],
+        width: u32,
+        height: u32,
+        dihedral: Dihedral,
+        decimate: u32,
+        writer: bool,
+    ) -> Self {
         let (dw, dh) = (width.div_ceil(decimate), height.div_ceil(decimate));
         let pixel = |(x, y): (u32, u32)| {
             (i64::from(y) * i64::from(width) + i64::from(x)) * i64::from(decimate)
@@ -227,7 +260,7 @@ impl<'a> View<'a> {
         let (width, height) = if dihedral.swaps() { (dh, dw) } else { (dw, dh) };
         Self {
             lows,
-            writer: dihedral == Dihedral::Identity && decimate == 1,
+            writer,
             width,
             height,
             origin,
