@@ -11,15 +11,23 @@
 //! the debug views baked one source per field on demand ([`debug_bake`]); the three fixed compositor pipelines
 //! ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame ([`frame_record`]).
 //!
+//! The synthetic payload harness's fragment side (TASK-M1-06): the four payload-side buffers and the uniforms bound
+//! to the fragment, with the generated WGSL `RenderContext` and `ctx` lanes ([`bind`]); the sample → tile
+//! rasterisation, one sample per tile ([`raster`]); and the headless render-to-texture helper the golden tests render
+//! through ([`headless`]).
+//!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
 
 pub mod assemble;
+pub mod bind;
 pub mod colour;
 pub mod compositor;
 pub mod debug_bake;
 pub mod embed;
 pub mod frame_record;
+pub mod headless;
 pub mod hot_reload;
 pub mod pipeline_cache;
 pub mod present;
+pub mod raster;
