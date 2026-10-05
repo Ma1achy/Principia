@@ -80,7 +80,7 @@ pub const CONTEXT_BINDING: u32 = 0;
 
 /// The context's uniforms (lowering Part 3: view-only state is uniform, never a recompile): the read side's
 /// arguments, the grid the raster covers, the chart lane's values (charts land in M2; until then the uniforms fill
-/// them), the playhead and the footprint's ensemble spread.
+/// them), the playhead, the footprint's ensemble spread and the quad's valid sample count.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Context {
     pub dt_macro: f32,
@@ -96,6 +96,10 @@ pub struct Context {
     /// The ensemble spread `sample_read` passes through (lowering Part 3a; R-145).
     pub ensemble_spread: f32,
     pub out_of_chart: bool,
+    /// `ctx.quad.sample_count`: dd_generation_root §3.7's `valid_sample_count`, the quad's decoded samples of N², at
+    /// §3.7's grain (R-315: footprints, at most N², not copies). `QuadReduction` carries it once it lands; until then
+    /// the harness sets it here, one value for every quad it draws, as it sets the chart lane.
+    pub valid_sample_count: u32,
 }
 
 /// The `ContextUniforms` block's size in words.
@@ -115,7 +119,7 @@ impl Context {
         for (k, z) in self.z.iter().enumerate() {
             w[4 + k] = z.to_bits();
         }
-        w[12..21].copy_from_slice(&[
+        w[12..22].copy_from_slice(&[
             g.quads[0],
             g.quads[1],
             g.n,
@@ -125,6 +129,7 @@ impl Context {
             self.time.to_bits(),
             self.ensemble_spread.to_bits(),
             u32::from(self.out_of_chart),
+            self.valid_sample_count,
         ]);
         w
     }
@@ -133,7 +138,8 @@ impl Context {
 /// The context's uniform block, as [`Context::words`] writes it: 96 B.
 const WGSL_CONTEXT: &str = "
 // The context's uniforms (render::bind::Context): the read side's arguments, the raster's grid, the chart lane's
-// values, the playhead and the ensemble spread `sample_read` passes through.
+// values, the playhead, the ensemble spread `sample_read` passes through and the quad's valid sample count
+// (dd_generation_root §3.7's `valid_sample_count`, decoded of N²).
 struct ContextUniforms {
     read: ReadParams,
     z: array<vec4<f32>, 2>,
@@ -145,9 +151,9 @@ struct ContextUniforms {
     time: f32,
     ensemble_spread: f32,
     out_of_chart: u32,
+    valid_sample_count: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 }
 ";
 
@@ -292,11 +298,7 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
             format!("(vec2<f32>(r.quad_xy) + vec2<f32>(0.5)) / {quads}"),
         ),
         member("uv", "vec2<f32>", "r.quad_uv"),
-        member(
-            "sample_count",
-            "u32",
-            "ctx_uniforms.n * ctx_uniforms.n * (ctx_uniforms.e + 1u)",
-        ),
+        member("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
     ];
     let rq = ledger::quad::render_quad();
     for (lane, field) in QUAD_LANE {

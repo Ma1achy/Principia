@@ -36,6 +36,7 @@ fn context(grid: Grid) -> Context {
         time: 2.5,
         ensemble_spread: 0.25,
         out_of_chart: false,
+        valid_sample_count: 13,
     }
 }
 
@@ -642,6 +643,52 @@ negative_control!(
         let g = grid();
         let image = draw_words(&gpu(), &Synthetic::flat(g, 0), &context(g), UV_VIEW);
         check_uv(g, &flipped(&image))
+    }
+);
+
+/// The sample-count view: `ctx.quad.sample_count`.
+const SAMPLE_COUNT_VIEW: &str = "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    return vec4<u32>(l.quad.sample_count, 0u, 0u, 0u);
+}";
+
+/// Each pixel's `ctx.quad.sample_count` is `want`.
+fn check_sample_count(grid: Grid, image: &Image, want: u32) {
+    let (width, height) = grid.target();
+    for y in 0..height {
+        for x in 0..width {
+            assert_eq!(
+                image.words(x, y)[0],
+                want,
+                "pixel ({x}, {y}): ctx.quad.sample_count is not the quad's valid sample count"
+            );
+        }
+    }
+}
+
+/// `ctx.quad.sample_count` is dd_generation_root §3.7's `valid_sample_count`, decoded of N², as the harness sets it
+/// (13 of the grid's 16), not a geometric count such as N²(E + 1).
+#[test]
+fn ctx_lanes_quad_sample_count_is_the_valid_sample_count() {
+    let g = grid();
+    let ctx = context(g);
+    assert!(ctx.valid_sample_count < g.n * g.n);
+    let image = draw_words(&gpu(), &Synthetic::flat(g, 0), &ctx, SAMPLE_COUNT_VIEW);
+    check_sample_count(g, &image, ctx.valid_sample_count);
+}
+
+negative_control!(
+    ctx_lanes_quad_sample_count_is_the_valid_sample_count,
+    "the lane checked against N²(E + 1), the geometric count of samples with copies, fails",
+    expected = "is not the quad's valid sample count",
+    {
+        let g = grid();
+        let image = draw_words(
+            &gpu(),
+            &Synthetic::flat(g, 0),
+            &context(g),
+            SAMPLE_COUNT_VIEW,
+        );
+        check_sample_count(g, &image, g.n * g.n * (g.e + 1))
     }
 );
 
