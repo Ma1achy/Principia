@@ -355,7 +355,10 @@ impl Tiles<'_, '_> {
     /// Whether `(x, y)` is the top-left pixel of a tile of the writer's grid, the view being the image itself, at
     /// one of `sides`: a multiple of the side in both coordinates.
     fn on_writer_grid(&self, x: u32, y: u32, sides: std::ops::RangeInclusive<u32>) -> bool {
-        self.view.writer && sides.into_iter().any(|side| x % side == 0 && y % side == 0)
+        self.view.writer
+            && sides
+                .into_iter()
+                .any(|side| x.is_multiple_of(side) && y.is_multiple_of(side))
     }
 
     /// Reads the header of the tile of side `side` with top-left pixel `(x, y)`, and pushes its record onto `hits`
