@@ -8,6 +8,7 @@
 //!   included, and each payload field has a validity accessor (`ctx_lanes_*`);
 //! - REQ-TOOL-014: a CPU-filled SimState/ICDescriptor/RenderQuad set uploads and renders a debug view, through the
 //!   generated context and through an assembled stain (`synthetic_upload_renders_*`).
+//! - the headless helper refuses a target with no texel (`headless_empty_target_is_refused`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -944,6 +945,145 @@ negative_control!(
         );
         check_diffusion_validity(g, &image)
     }
+);
+
+/// The word validity view: `word_valid` and `last_symbol_valid`, each 0 or 1.
+const WORD_VALIDITY_VIEW: &str = "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    return vec4<u32>(select(0u, 1u, l.validity.word_valid), select(0u, 1u, l.validity.last_symbol_valid), 0u, 0u);
+}";
+
+/// The `length_raw` that [`lengths_set`] gives sample `i`, stepped once per tile as [`steps_n`] steps `n`: the empty
+/// word 0, 1, the capacity 76, and the truncation sentinel 127 (render contract Part 1, `fgw_length_raw`).
+fn length_raw(grid: Grid, i: u32) -> u32 {
+    [0, 1, 76, 127][steps_n(grid, i) as usize]
+}
+
+/// A set where sample `i`'s word has `length_raw` = [`length_raw`], or `len` for every sample: a valid length through
+/// `fgw_pack`, the sentinel 127 written into `.w` bits 25–31 whole.
+fn lengths_set(grid: Grid, len: Option<u32>) -> Synthetic {
+    let mut set = Synthetic::flat(grid, 0);
+    for i in 0..grid.sample_count() {
+        let l = len.unwrap_or(length_raw(grid, i));
+        let mut s = set.sample(i);
+        if l == 127 {
+            s.word_raw([0, 0, 0, 127 << 25]);
+        } else {
+            s.word([0; 4], l);
+        }
+    }
+    set
+}
+
+/// Each pixel's `word_valid` is `fgw_reduced_length_valid`, `length_raw != 127` (a truncated word is invalid, the
+/// empty word valid), and its `last_symbol_valid` is `sd_last_symbol_valid`, `length_raw >= 1 && length_raw != 127`
+/// (render contract Part 1).
+fn check_word_validity(grid: Grid, image: &Image) {
+    let (width, height) = grid.target();
+    for y in 0..height {
+        for x in 0..width {
+            let i = grid.cell(x, y).sample;
+            let l = length_raw(grid, i);
+            assert_eq!(
+                image.words(x, y)[..2],
+                [u32::from(l != 127), u32::from(l >= 1 && l != 127)],
+                "pixel ({x}, {y}): sample {i}'s word validity is not the truncation sentinel's for length_raw {l}"
+            );
+        }
+    }
+}
+
+#[test]
+fn ctx_lanes_word_validity_is_not_truncated() {
+    let g = grid();
+    let (width, height) = g.target();
+    let drawn: std::collections::BTreeSet<u32> = (0..height)
+        .flat_map(|y| (0..width).map(move |x| length_raw(g, g.cell(x, y).sample)))
+        .collect();
+    assert_eq!(
+        drawn,
+        [0, 1, 76, 127].into(),
+        "the drawn samples must cover length_raw 0, 1, 76 and the sentinel 127"
+    );
+    let image = draw_words(
+        &gpu(),
+        &lengths_set(g, None),
+        &context(g),
+        WORD_VALIDITY_VIEW,
+    );
+    check_word_validity(g, &image);
+}
+
+negative_control!(
+    ctx_lanes_word_validity_is_not_truncated,
+    "a set whose every word has length 1 is valid where the stepped length is truncated or empty",
+    expected = "word validity is not the truncation sentinel's",
+    {
+        let g = grid();
+        let image = draw_words(
+            &gpu(),
+            &lengths_set(g, Some(1)),
+            &context(g),
+            WORD_VALIDITY_VIEW,
+        );
+        check_word_validity(g, &image)
+    }
+);
+
+/// `headless::render` over `target` with an empty module: the error, if it returns one.
+fn render_empty(h: &GpuHarness, target: Target) -> Option<String> {
+    let draw = Draw {
+        module: "",
+        entry: "",
+        layouts: &[],
+        groups: &[],
+    };
+    headless::render(h.device(), h.queue(), &draw, target).err()
+}
+
+/// A target with no texel, by a zero width, a zero height, or a format with no single-plane texel, is refused before
+/// anything is drawn: [`headless::render`] returns the empty-target error.
+fn check_empty_target(h: &GpuHarness, target: Target) {
+    let err = render_empty(h, target);
+    assert!(
+        err.as_deref()
+            .is_some_and(|e| e.contains("has no texel to read back")),
+        "{target:?} is not refused as an empty target: {err:?}"
+    );
+}
+
+#[test]
+fn headless_empty_target_is_refused() {
+    let h = gpu();
+    let rgba = wgpu::TextureFormat::Rgba32Uint;
+    for (width, height, format) in [
+        (0, 4, rgba),
+        (4, 0, rgba),
+        (0, 0, rgba),
+        (4, 4, wgpu::TextureFormat::Depth24PlusStencil8),
+    ] {
+        check_empty_target(
+            &h,
+            Target {
+                width,
+                height,
+                format,
+            },
+        );
+    }
+}
+
+negative_control!(
+    headless_empty_target_is_refused,
+    "a 4 × 4 Rgba32Uint target has texels, and is not refused as empty",
+    expected = "is not refused as an empty target",
+    check_empty_target(
+        &gpu(),
+        Target {
+            width: 4,
+            height: 4,
+            format: wgpu::TextureFormat::Rgba32Uint,
+        },
+    )
 );
 
 /// The uv view: `ctx.tile.uv` and `ctx.quad.uv`, as bits.
