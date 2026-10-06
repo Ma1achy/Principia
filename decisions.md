@@ -1146,6 +1146,10 @@ Cubehelix's reference is the analytic form with dd_colouring's parameters (s = 0
 cubehelix function, called with the same parameters, is a cross-check only.
 
 ## R-152 — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*
+*Amended in part by R-390 (TASK-M6-28 builds the Profiler window's frame and tabs on the mock engine, in place of
+TASK-M6-22's minimal shell).*
+*Still in force: the Arbiter tab is in the Profiler window at M6; TASK-M6-22 fills it, and TASK-M8-28 fills in the
+rest.*
 *25 Sep 2026 · applied in step 7*
 
 TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; TASK-M8-28 fills in the rest.
@@ -2653,6 +2657,11 @@ proposes the region minimum with its evidence, and the human confirms it at the 
 count it saw and "minimum not yet calibrated", which TASK-M0-05 (merged) already does.
 
 ## R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*
+*Amended in part by R-390 (TASK-M6-24 builds the capture mode, running the app on the mock engine, in place of
+TASK-M6-22).*
+*Still in force: gui's headless capture mode, spawned by the screenshot runner as a separate process, renders a named
+window offscreen and writes the PNG and the AccessKit names; no crate depends on `gui`; a case's `surface` field names
+the kind.*
 *30 Sep 2026 · applied in systems_architecture §7.1, a new GUI requirement, TASK-M6-22*
 
 "RQ-166: gui gets a headless capture mode, spawned by the runner (no crate edge)."
@@ -6090,7 +6099,7 @@ Changes no requirement.
 ## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
-TASK-M6-29 (new), `plan/tasks.yaml` and twenty-two existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
+TASK-M6-29 (new), `plan/tasks.yaml` and twenty-three existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
 `plan/MILESTONES.md` § "M6 — Adaptive refinement and deep zoom (deep_zoom layer 2)", `plan/reviewers/gui.md` and
 `plan/rule_groups.yaml`; built by TASK-M6-24 to TASK-M6-29*
 
@@ -6257,8 +6266,48 @@ and the human confirms it at its gate. A physics choice stays the human's (R-369
   with its artboard through `cargo xtask screenshot` and checks the design notes' global rules.
 - R-390 is in the "design" group of `plan/rule_groups.yaml`.
 
+*Amends R-152 and R-274 in part (review 5434769963 on PR #157):* R-152's minimal Profiler window shell, which
+TASK-M6-22 was to build, is now the Profiler window with its frame and tabs that TASK-M6-28 builds on the mock engine
+(ORDER item 5, "Profiler (frame and tabs)"); TASK-M6-22 fills its Arbiter tab and TASK-M8-28 the rest. R-274's
+capture mode, which TASK-M6-22 was to build as the first task with a GUI screenshot requirement, is now TASK-M6-24's
+(REQ-GUI-162), since the track's screenshots need it first; TASK-M6-22 re-runs its acceptance on the real engine. Both
+carry "Amended in part by R-390" and "Still in force" lines (R-292).
+
+*Applied per R-369 (the reviews of PR #157):*
+- **A track task the chain waits on takes the chain's priority** (review 5434769963). TASK-M6-21 depends on
+  TASK-M6-26, TASK-M6-22 on TASK-M6-24 and TASK-M6-28, TASK-M7-22 on TASK-M6-29 and TASK-M7-25 on TASK-M6-28. A track
+  task one of them waits on, directly or through the track tasks before it, takes the chain's priority for agent slots
+  once that chain task's other dependencies are merged or in flight, so "the chain keeps priority" can't leave a chain
+  task waiting on the track. No M1 or M2 task depends on the track. `plan/OPERATIONS.md` § "The GUI track (R-390)".
+- **The keyboard runs through every later screen** (review 5434766412). ORDER item 2 says it "runs through everything
+  that follows". Each of TASK-M6-26 to TASK-M6-29 extends `mock_keyboard` with its own scopes and adds a `07_keyboard`
+  focus case: Tab and Enter reach each new control, the focus ring and the breadcrumb follow it, and arrows with Shift
+  and Alt adjust it. render_gui_spec §G3 gives Explore's scopes only, so: an open window is a scope that takes focus
+  when it opens, and Esc from its top level returns focus to the scope that opened it (TASK-M6-28); in Stain mode the
+  big scopes are the top bar, the library drawer, the graph canvas, the preview and node inspector, and the code and
+  Problems pane, in that order (TASK-M6-29). REQ-GUI-169 gains a note.
+- **Legend by evaluation, on the mock** (review 5434766412). The GUI holds no legend key of its own: it draws the keys
+  the engine side sends through the contract. The mock produces them from its fake stain in the shape the real
+  evaluation gives them (walking back from OUT, one key per dimension: categorical swatches with their shares, then a
+  brightness bar), and the "generated from the stain" frame is drawn as in `06_legend.png` (TASK-M6-27). The real
+  evaluation stays TASK-M8-22's (REQ-GUI-105, REQ-GUI-106). `plan/reviewers/gui.md` § 8 says so.
+- **The artboards' figure and lock marks are built on mock data** (review 5434766412). R-390's GOAL lets content, not
+  look, feel or behaviour, be placeholder, and the track's screenshots are compared against artboards that show these
+  marks. So TASK-M6-26 builds the lock badge ("● locked at z_locked", with unlock and open in Inspector) and the gold
+  reticle on a fake `z_locked`, and the figure's axis labels on fake ranges, updated on a pan; TASK-M6-27 builds the
+  hover path, drawn by the mock into its stand-in as the compositor draws the real trace, and the hover label from the
+  mock's fake sample. Their requirements keep their closing tasks, which wire them to real data: REQ-GUI-099
+  (TASK-M8-07), REQ-GUI-084 (TASK-M8-06), and REQ-GUI-085 and REQ-GUI-086 (TASK-M8-10, which now depends on
+  TASK-M6-27). Each gains R-390 and a note.
+- **The shell's status line and footer are filled from the mock** (review 5434766412). TASK-M6-24's top bar shows the
+  status line (`t`, fps, frame ms, quad count, undo / redo depth) from the mock's snapshot, the undo depth from the
+  mock's history, and its footer shows the memory readout and the "? keys" hint. Only the real data source, the real
+  engine's snapshot with `budget-bound` (REQ-GUI-078), stays TASK-M8-05's.
+
 Adds REQ-GUI-165 to REQ-GUI-175; REQ-GUI-075, REQ-GUI-081, REQ-GUI-091, REQ-GUI-095, REQ-GUI-098, REQ-GUI-126,
-REQ-GUI-128, REQ-GUI-131, REQ-GUI-146, REQ-GUI-157, REQ-GUI-158 and REQ-GUI-162 change closing task and note.
+REQ-GUI-128, REQ-GUI-131, REQ-GUI-146, REQ-GUI-157, REQ-GUI-158 and REQ-GUI-162 change closing task and note;
+REQ-GUI-084, REQ-GUI-085, REQ-GUI-086 and REQ-GUI-099 gain R-390 and a note; REQ-GUI-169 gains a note, and its verify
+detail names TASK-M6-25's screenshot cases.
 
 ## R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
 *6 Oct 2026 · applied in `CLAUDE.md` § "The main session orchestrates; it never implements or reviews", `plan/OPERATIONS.md`
