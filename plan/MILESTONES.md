@@ -96,6 +96,11 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   (coordinate_conventions).
 - Structural views over a defined `RenderQuad`, before any scheduler fills it.
 - The baseline outcome palette that the field views need, pinned by golden images.
+- **Also at the M1 gate (R-386):** REQ-COL-061, the hatch's colours distinguishable from the palette under each
+  colour-vision simulation, its criterion confirmed by the human beside REQ-COL-055. It is in M7's generated gate
+  because TASK-M7-20, the M7 task that builds the simulation, closes it, and no task closes an earlier milestone's
+  requirement. The M1 gate does not pass until REQ-COL-061 is green on `main`, so **TASK-M7-20 merges before the M1
+  gate**.
 
 <!-- gate:M1 -->
 **Exit gate — 83 requirements** (and every earlier gate still green):
@@ -273,16 +278,18 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - Palettes beyond M1's baseline.
 - The display chain: stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-67).
 - Image embedding.
+- **Before the M7 gate (R-385):** the hybrid embedding (`k = 25`) re-measured on real rendered figures, and
+  §5's ~8 % reconciled with the 37.6 % raw low-bit error measured on random canvases (REQ-TOOL-151, TASK-M7-34).
 
 <!-- gate:M7 -->
-**Exit gate — 113 requirements** (and every earlier gate still green):
+**Exit gate — 115 requirements** (and every earlier gate still green):
 
 - GEN (4): REQ-GEN-019…022
 - SCHED (1): REQ-SCHED-072
 - RENDER (18): REQ-RENDER-057…072, REQ-RENDER-080…081
-- COL (45): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059
+- COL (46): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061
 - GUI (18): REQ-GUI-016…031, REQ-GUI-151…152
-- TOOL (21): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142
+- TOOL (22): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151
 - VAL (4): REQ-VAL-096…098, REQ-VAL-145
 - PERF (2): REQ-PERF-068…069
 <!-- /gate:M7 -->

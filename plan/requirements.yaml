@@ -10870,15 +10870,17 @@
     section: 4.3 Display stage (terminal, outside the pipeline)
   - file: decisions.md
     section: "R-78 — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*"
+  - file: decisions.md
+    section: "R-383 — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*"
   verify:
     method: unit test
     detail: "dd_colouring unit test 10: protan, deutan and tritan match the named reference implementation's golden values; achrom yields R = G = B exactly; applying any simulation pre-linearisation produces a detectable difference"
   rulings:
   - R-67
   - R-78
+  - R-383
   milestone: M7
-  rq:
-  - RQ-209
+  note: "R-383: the reference implementation is DaltonLens-Python (https://github.com/DaltonLens/DaltonLens-Python) at commit 3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d: Simulator_Vienot1999 (protan, deutan) and Simulator_Brettel1997 (tritan) on LMSModel_sRGB_SmithPokorny75; the method's sources are Viénot, Brettel & Mollon 1999 and Brettel, Viénot & Mollon 1997; the golden values in fixtures/cvd/ are generated from it in linear sRGB."
 - id: REQ-COL-043
   area: COL
   statement: "The display chain must run in the fixed order SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen, so that the colour-vision simulation sees the final in-gamut colours."
@@ -10933,15 +10935,17 @@
     section: "R-78 — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*"
   - file: decisions.md
     section: "R-123 — Achromatopsia is a fifth Display mode *(closes RQ-91)*"
+  - file: decisions.md
+    section: "R-383 — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*"
   verify:
     method: unit test
     detail: "each mode transforms a test colour set by its Viénot (protan, deutan) or Brettel (tritan) simulation, matching the reference golden values, and achromatopsia by M_achrom (R = G = B); off is identity"
   rulings:
   - R-78
   - R-123
+  - R-383
   milestone: M7
-  rq:
-  - RQ-209
+  note: "R-383: the reference golden values come from DaltonLens-Python at commit 3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d (REQ-COL-042)."
 - id: REQ-COL-046
   area: COL
   statement: "The golden-image tests must be pinned to colour_composition §7.1's complete map lists, grouped under the two oracle files principia_colour_explorer.html and principia_colour_presets.html (R-139), with Stability × Hue deleted from them, against the two reference HTML files as the oracle, and invalid samples must render the invalid pattern REQ-COL-055 sets."
@@ -11142,7 +11146,7 @@
   - R-132
   - R-136
   milestone: M1
-  note: "R-132: a hatched pattern, not a flat colour (the corpus's 'fixed magenta' collides with #E034C6)."
+  note: "R-132: a hatched pattern, not a flat colour (the corpus's 'fixed magenta' collides with #E034C6). R-386: at the M1 gate the hatch colours are also checked distinguishable from the palette under each colour-vision simulation (REQ-COL-061, TASK-M7-20)."
 - id: REQ-COL-056
   area: COL
   kind: definition
@@ -11235,6 +11239,30 @@
   - R-358
   milestone: M2
   note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note)."
+- id: REQ-COL-061
+  area: COL
+  kind: calibration
+  statement: "Under each colour-vision simulation (deuteranopia, protanopia, tritanopia, achromatopsia), the invalid-pixel hatch's colours (debug_invalid(frag_xy), REQ-COL-055, R-136) must stay distinguishable from every palette entry REQ-COL-055 measures against, by a criterion — each hatch colour's OKLab distance to its nearest palette entry, both simulated, its threshold, and how the two-stripe pattern counts where a single stripe colour falls within it (as under achromatopsia against the grey ramp) — that must be calibrated: proposed with its evidence by TASK-M7-20, checked by a reviewer, confirmed by the human at the M1 gate beside REQ-COL-055 and recorded in decisions.md (R-386)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/design/principia_dd_colouring.md
+    section: 3.8 Palettes and CVD
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-386 — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate"
+  verify:
+    method: unit test
+    detail: "cargo test -p render cvd_hatch_distinct: for each simulation mode, simulates the hatch's violet #9B00FF and cyan #48FFFF and every palette entry REQ-COL-055 lists (the outcome palette with #E034C6, the dbg_* palettes, every §7.1 LUT between its stops, the grey ramp, the OKLCH hue circle at L 0.75, C 0.12), prints each hatch colour's least OKLab distance to a simulated entry, and fails if the calibrated criterion fails; review (code, qa): the proposal gives the criterion and threshold with the measured distances, and the human confirms it at the M1 gate"
+  rulings:
+  - R-71
+  - R-136
+  - R-386
+  milestone: M7
+  note: "R-386, applied per R-369: the milestone is M7 because the simulation is TASK-M7-20's and no task may close a requirement of an earlier milestone than its own (plan/check_plan.py); plan/MILESTONES.md § M1 names it beside the M1 gate, which does not pass until it is green on main, so TASK-M7-20 merges before the M1 gate."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -15327,6 +15355,7 @@
   rulings:
   - R-71
   milestone: M7
+  note: "R-385: before the M7 gate, k = 25 is re-measured on real rendered figures and §5's ~8 % reconciled with the 37.6 % raw low-bit error TASK-M7-30 measured on random canvases (REQ-TOOL-151, TASK-M7-34); those measurements join this proposal's evidence."
 - id: REQ-TOOL-112
   area: TOOL
   kind: definition
@@ -16003,6 +16032,23 @@
   - R-71
   - R-381
   milestone: M3
+- id: REQ-TOOL-151
+  area: TOOL
+  statement: "Before the M7 gate, the hybrid embedding variant at k = 25 must be re-measured on real rendered figures, not random canvases — figures the renderer produces from a computed field through the M7 display chain, coloured by §7.1 presets and written by the PNG export with the hybrid embedding — for the raw low-bit error after nearest rotation and back and the intact records recovered at each of §7's angles (7°, 34°, 45°, 7.3°, 34.7°), and dd_image_embedding §5's \"~8%\" bit error after nearest rotation must be reconciled with the 37.6 % raw low-bit error measured on random canvases where the rotated-back pixel centres fall on the original's pixel corners (R-385)."
+  source:
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 5. Two variants, one choice
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 7. Measured capacity and behaviour
+  - file: decisions.md
+    section: "R-385 — Before the M7 gate, the hybrid embedding (`k = 25`) is re-measured on real rendered figures, and the 37.6 % raw low-bit error is reconciled with §5's ~8 %"
+  verify:
+    method: unit test
+    detail: "cargo test -p render embed_hybrid_real_figures: on at least three real rendered figures of different §7.1 presets, among them a smooth one and one with a fine fractal boundary, at 512² and 1024², the test measures and records the per-angle recovery of the hybrid variant at k = 25 (intact records recovered at each of §7's angles) and reports it, with the raw low-bit error after nearest rotation and back at each whole degree 0–89 and at 7.3° and 34.7°. It asserts that the measurement ran over every listed figure, size and angle and that the report was written; it does not fail on a recovery shortfall. A shortfall goes to the M7 gate for the human, because k = 25 is the human's calibration (REQ-TOOL-111, R-71), and the reconciliation of 37.6 % with ~8 % goes in the same report (R-385, applied per R-369). Review (code, qa): dd_image_embedding §5 states the raw error measured on real figures and the conditions under which ~8 % and ~37.6 % hold, with a \"Removed lines\" note for any reworded line, and the measurements are cited in REQ-TOOL-111's proposal for the M7 gate"
+  rulings:
+  - R-385
+  milestone: M7
+  note: "R-385, applied per R-369: closed by TASK-M7-34, which depends on TASK-M7-30, TASK-M7-32, TASK-M7-18 and TASK-M7-21 for the real figures."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
