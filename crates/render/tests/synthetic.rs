@@ -876,27 +876,34 @@ const DIFFUSION_VALIDITY_VIEW: &str = "fn view(rc: RenderContext, l: Lanes) -> v
     return vec4<u32>(select(0u, 1u, l.validity.diffusion_valid), 0u, 0u, 0u);
 }";
 
-/// A set where sample `i` has `t_end_step`, the `n` of the diffusion slope, `i % 4`, or `n` for every sample.
+/// The `n` of the diffusion slope that [`steps_set`] gives sample `i`: `(i / (E + 1)) % 4`. A pixel draws only copy 0
+/// of its tile (`Grid::cell`), whose index is a multiple of `E + 1`, so `i % 4` would draw only some of the `n`; this
+/// steps `n` once per tile, and the drawn samples cover `n` = 0, 1, 2 and 3.
+fn steps_n(grid: Grid, i: u32) -> u32 {
+    (i / (grid.e + 1)) % 4
+}
+
+/// A set where sample `i` has `t_end_step`, the `n` of the diffusion slope, [`steps_n`], or `n` for every sample.
 fn steps_set(grid: Grid, n: Option<u32>) -> Synthetic {
     let mut set = Synthetic::flat(grid, 0);
     for i in 0..grid.sample_count() {
-        set.sample(i).times(n.unwrap_or(i % 4), 0);
+        set.sample(i).times(n.unwrap_or(steps_n(grid, i)), 0);
     }
     set
 }
 
-/// Each pixel's `diffusion_valid` is the predicate `n ≥ 2` over its sample's `n = i % 4` (R-245; payload §6's
+/// Each pixel's `diffusion_valid` is the predicate `n ≥ 2` over its sample's `n` = [`steps_n`] (R-245; payload §6's
 /// `diffusion_slope_valid`; colour_composition §3).
 fn check_diffusion_validity(grid: Grid, image: &Image) {
     let (width, height) = grid.target();
     for y in 0..height {
         for x in 0..width {
             let i = grid.cell(x, y).sample;
+            let n = steps_n(grid, i);
             assert_eq!(
                 image.words(x, y)[0],
-                u32::from(i % 4 >= 2),
-                "pixel ({x}, {y}): sample {i}'s diffusion_valid is not n >= 2 for n = {}",
-                i % 4
+                u32::from(n >= 2),
+                "pixel ({x}, {y}): sample {i}'s diffusion_valid is not n >= 2 for n = {n}"
             );
         }
     }
@@ -905,6 +912,15 @@ fn check_diffusion_validity(grid: Grid, image: &Image) {
 #[test]
 fn ctx_lanes_diffusion_validity_is_n_at_least_2() {
     let g = grid();
+    let (width, height) = g.target();
+    let drawn: std::collections::BTreeSet<u32> = (0..height)
+        .flat_map(|y| (0..width).map(move |x| steps_n(g, g.cell(x, y).sample)))
+        .collect();
+    assert_eq!(
+        drawn,
+        (0..4).collect(),
+        "the drawn samples must cover n = 0, 1, 2 and 3, the boundary n = 1 of n >= 2 included"
+    );
     let image = draw_words(
         &gpu(),
         &steps_set(g, None),
@@ -916,7 +932,7 @@ fn ctx_lanes_diffusion_validity_is_n_at_least_2() {
 
 negative_control!(
     ctx_lanes_diffusion_validity_is_n_at_least_2,
-    "a set whose every sample has n = 2 is valid where n = i % 4 is not",
+    "a set whose every sample has n = 2 is valid where the stepped n is not",
     expected = "diffusion_valid is not n >= 2",
     {
         let g = grid();
