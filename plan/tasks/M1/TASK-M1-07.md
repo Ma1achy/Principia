@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The earliest view of all: one internal orientation (bottom-left origin, Y-up) and exactly one named flip at the framebuffer↔UV boundary (`v = 1 − frag_coord.y/H`), mirrored once at image export. On top of it, the UV fragment preset (quad-local `ctx.quad.uv → RG`, and `ctx.screen.uv → RG`), the UV-passthrough coordinate view (u → red, v → green, plus a quad-local δ mode), and the pointer-picking path that flips canvas coordinates the same way before computing the picked quad or z — with the picking cross-check.
+The earliest view of all: one internal orientation (bottom-left origin, Y-up) and exactly one named flip at the framebuffer↔UV boundary (`v = 1 − frag_coord.y/H`). The one-line rule's "mirrored once at image export" is the coordinate note's path-5 flip, which fires only for a Y-up internal image; the export takes the headless readback, already display-oriented (rows from the top), and writes its rows unreversed, so that flip does not fire on this path (REQ-SYS-080; RQ-212). On top of it, the UV fragment preset (quad-local `ctx.quad.uv → RG`, and `ctx.screen.uv → RG`), the UV-passthrough coordinate view (u → red, v → green, plus a quad-local δ mode), and the pointer-picking path that flips canvas coordinates the same way before computing the picked quad or z — with the picking cross-check.
 
 ## References
 - `docs/design/principia_coordinate_conventions_note.md` § "Principia — coordinate conventions"

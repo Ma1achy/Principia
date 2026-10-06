@@ -21847,7 +21847,7 @@
 - id: REQ-SYS-080
   area: SYS
   kind: definition
-  statement: "The image export's orientation — export takes the headless readback as returned, rows from the top, and writes the PNG's rows in that order with no reversal, so the coordinate note's path-5 flip, which fires only for a Y-up internal image, does not fire for this path — must be defined in the coordinate conventions note's path 5 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The image export's orientation — export takes the headless readback as returned, rows from the top, and writes the PNG's rows in that order with no reversal, so the coordinate note's path-5 flip, which fires only for a Y-up internal image, does not fire for this path; the one-line rule's \"mirrored once at image export\" reads as that path-5 flip, stated in short, so it too does not fire on a readback that is already display-oriented — must be defined in the coordinate conventions note's path 5 by the task that needs it and reviewed by the physics reviewer before merge."
   source:
   - file: docs/design/principia_coordinate_conventions_note.md
     section: "Code paths that must honour the single convention (each is a separate path)"

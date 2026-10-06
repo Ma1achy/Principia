@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-PAY-008, REQ-PAY-017, REQ-GEN-004, REQ-SYS-004
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-3
-- **Size:** ~380 lines
+- **Size:** ~600 lines
 
 ## Goal
 Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — colour_composition Appendix A's bring-up mode — as a baked, pre-built kernel variant (not a dispatch-flag bit) that skips integration and writes a known pattern into the existing payload slots, is part of the sim key, and whose output reads back through the normal unpack path. Beside it, the shared kernel source gains the live shape readout (Montgomery map, `n` from mass-weighted Jacobi vectors) and the unwrapped-phase accumulator θ̃ (principal-value delta of `atan2(n_v, n_u)` per step), with `orbit_count` and `retrograde` derived at read.
@@ -32,6 +32,7 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - `docs/design/principia_chart_reference.md` § "3.1 Forward map (already implemented as `shape_vec`)"
 - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `docs/contracts/principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity"
 - `docs/contracts/principia_caching_contract.md` § "Part 2 — What invalidates what (the dependency graph)"
 
 ## Deliverables
