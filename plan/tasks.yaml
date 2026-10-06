@@ -338,8 +338,8 @@
   title: "The coordinate convention: the one flip, the UV preset, the coordinate view and picking"
   depends_on: [TASK-M1-06]
   needs: [REQ-TOOL-004]
-  requirements: [REQ-SYS-009, REQ-TOOL-019, REQ-TOOL-027, REQ-GUI-001]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-SYS-009, REQ-TOOL-019, REQ-TOOL-027, REQ-GUI-001, REQ-SYS-080, REQ-TOOL-152, REQ-TOOL-153]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M1-08
   milestone: M1
@@ -370,7 +370,7 @@
   title: The kernel bring-up mode and the live unwrapped phase
   depends_on: [TASK-M1-01, TASK-M1-06]
   needs: [REQ-PAY-008, REQ-PAY-017, REQ-GEN-004, REQ-SYS-004]
-  requirements: [REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123]
+  requirements: [REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123, REQ-INT-086]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M1-12

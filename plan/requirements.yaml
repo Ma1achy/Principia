@@ -2370,11 +2370,17 @@
     section: 3.1 `sample_descriptor` (u32)
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+  - file: decisions.md
+    section: "R-392 — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*"
   verify:
     method: unit test
-    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction"
+    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction; θ̃ is 0 at the start whatever n(0)'s longitude (R-389); a synthetic path passing through the pole disc √(n_u² + n_v²) < r_pole (REQ-INT-086) adds no delta while inside and exactly wrap(exit longitude − stored longitude), into (−π, π], on exit, the stored longitude being the last one outside the disc; a per-step longitude difference of exactly ±π, and a pole passage whose exit-minus-stored difference is exactly ±π, each add +π (R-389); a synthetic path that starts inside the disc leaves θ̃ unchanged, at 0, at its first exit and accumulates from the exit longitude after it (R-392)"
   rulings:
   - R-113
+  - R-389
+  - R-392
   milestone: M1
   note: "R-113 (RQ-94): dd test 8 on a real circulating bounded orbit is a separate M3 requirement."
 - id: REQ-INT-002
@@ -3832,6 +3838,24 @@
   - R-71
   - R-382
   milestone: M3
+- id: REQ-INT-086
+  area: INT
+  kind: calibration
+  statement: "The pole radius r_pole of the unwrapped phase θ̃ — below which, in √(n_u² + n_v²), θ̃ holds with a frozen reference, adding no delta while inside and the wrapped exit-minus-stored longitude on exit (dd_integrator §3.7, R-389) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives r_pole with its evidence: the error of the longitude atan2(n_v, n_u) from n's round-off, which grows as 1/√(n_u² + n_v²), at f32 and f64, the shared kernel's precisions (R-265), so that outside r_pole a step's longitude delta is trustworthy; and, on TASK-M1-11's synthetic paths, that the hold fires on a pole passage and never on a path circulating the w axis away from the poles; reviewed, confirmed by the human at the M1 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-389
+  milestone: M1
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -6048,6 +6072,7 @@
     detail: "after ledger codegen, each generated field view appears as a debug registry entry"
   rulings: []
   milestone: M1
+  note: "RQ-219, decided per R-369: the generated views go in crates/render/frag/debug/generated/, beside the generated unpack layer in crates/render/frag/generated/; a debug occupant's slot is the slot function its file defines, so a generated field view's is colour."
 - id: REQ-GEN-010
   area: GEN
   statement: "One source — the Rust layout definition transcribed from the ledger/payload doc — must generate the Rust kernel pack/unpack, the Rust host export decoder, the WGSL fragment unpack accessors and the WGSL debug catalogue; hand-duplication is forbidden and a hand edit to a generated file must be detected."
@@ -6082,6 +6107,7 @@
   rulings:
   - R-36
   milestone: M1
+  note: "RQ-217, decided per R-369: the Rust host export decoder's emitter is built by TASK-M1-08, a mechanical consequence of TASK-M0-13's note."
 - id: REQ-GEN-011
   area: GEN
   statement: "The debug catalogue must be exhaustive by construction: a new ledger field must appear in the picker automatically or generation must fail."
@@ -11276,6 +11302,7 @@
     detail: "picking cross-check: click each known corner, assert the reported UV/IC coordinate is that corner"
   rulings: []
   milestone: M1
+  note: "RQ-216, decided per R-369: at M1 picking reports the UV, the quad and the screen's single ctx.chart.z; per-pixel z (z₀ + (2s − 1)q₁ + (2t − 1)q₂) arrives with SimConfig.plane in M2, through the same function."
 - id: REQ-GUI-002
   area: GUI
   statement: "Navigation must implement pan as Δz₀ ∈ span(q₁, q₂), slice as Δz₀ ⊥ span(q₁, q₂) (z₀ ← z₀ + t·d), zoom as a common log-stepped scale of q₁, q₂, and tilt as a basis rotation."
@@ -14022,11 +14049,12 @@
     section: Appendix A — kernel-side bring-up mode
   verify:
     method: unit test
-    detail: "the kernel's debug variants are exactly the bring-up variant; dispatch-flag bits 6–7 stay reserved (R-41); the bring-up output decodes via the normal unpack path"
+    detail: "the kernel's debug variants are exactly the bring-up variant, a baked variant selected by type that reads no DEBUG_MODE flag bit (R-41); the bring-up output decodes via the normal unpack path. Bits 6–7's reservation on QuadRequest.flags is checked by REQ-PAY-064 (TASK-M5-04), where the flags word exists (RQ-220)"
   rulings:
   - R-41
   - R-75
   milestone: M1
+  note: "RQ-220, decided per R-369: at M1 there is no flags word (TASK-M5-04) and no variant table (TASK-M4-06), so debug_variants checks what exists; REQ-PAY-064 already checks bits 6–7, so nothing is dropped."
 - id: REQ-TOOL-014
   area: TOOL
   statement: "The rendering substrate and debug catalogue must be testable with synthetic CPU-filled payloads before any physics exists, and the build order must be contract + SDK → debug catalogue → flat compute → quads → adaptive."
@@ -14052,6 +14080,7 @@
   rulings:
   - R-75
   milestone: M1
+  note: "RQ-221 and RQ-222, decided per R-369: the kernel variant is on the sim key in gui_state §2, render contract Part 3 and the caching contract (Parts 1–2); the engine test runs the f64 native variant, and the f32 SPIR-V readback is a validation test in CI's gpu-kernel job."
 - id: REQ-TOOL-016
   area: TOOL
   statement: "The sub-field debug views must show live, sane values for every ledger field."
@@ -14089,7 +14118,7 @@
   milestone: M1
 - id: REQ-TOOL-019
   area: TOOL
-  statement: "The UV preset (fragment-side, from the quad-local uv in ctx) must reconstruct quad-local (u, v) equal to c ± h·(2t−1) for sampled quads with no banding (adjacent-sample deltas smooth, not step-quantised)."
+  statement: "The UV preset (fragment-side, from the quad-local sample coordinate t in ctx) must reconstruct each sample's UV coordinate as deep_zoom §1 writes it, u = c_u + h_u·(2t − 1) and v likewise, with c the quad's centre and h its half-width, for sampled quads with no banding (adjacent-sample deltas smooth, not step-quantised, by the criterion REQ-TOOL-152 calibrates)."
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)"
@@ -14097,12 +14126,15 @@
     section: R-75 — The kernel keeps one debug mode *(closes RQ-26)*
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
   verify:
     method: unit test
-    detail: "sampled quads' reconstructed (u, v) match the formula; adjacent deltas vary smoothly"
+    detail: "sampled quads' reconstructed (u, v) match c + h·(2t − 1), with c and h the synthetic harness's per-quad values from its own grid at M1; adjacent deltas pass REQ-TOOL-152's banding criterion, and its negative fixture fails it"
   rulings:
   - R-75
   milestone: M1
+  note: "RQ-214, decided per R-369: the formula is transcribed as deep_zoom §1 writes it (\"+\", not \"±\"); t is the quad-local sample coordinate and (u, v) the UV coordinate it reconstructs; at M1 the synthetic harness supplies c and h (the per-quad uniforms arrive with TASK-M5-04)."
 - id: REQ-TOOL-020
   area: TOOL
   statement: "Every ledger field must have exactly one generated debug view and one test, generated from the ledger so the catalogue is exhaustive by construction."
@@ -14122,6 +14154,7 @@
     detail: the catalogue's field list equals the ledger's field list
   rulings: []
   milestone: M1
+  note: "RQ-218, decided per R-369: the ledger's field list is ledger::layout().entries; RenderQuad's structural views stay hand-written by TASK-M1-13."
 - id: REQ-TOOL-021
   area: TOOL
   statement: "The state field (bits 0–2) must round-trip values 0–5 with the six-colour dbg_cat categorical palette for the six states (escape, bounded, collision, running = 3, sim_failed, decode_failed), each rendered distinctly."
@@ -14227,6 +14260,7 @@
     detail: "green increases upward in the golden image; picking returns the expected corners"
   rulings: []
   milestone: M1
+  note: "RQ-210, decided per R-369: the picking half is checked by `cargo test -p engine picking_corners`, since the golden runner binds no RenderContext and xtask may depend on neither engine nor render; `cargo xtask golden m1-coords` checks the view, its fragment taking the flip from lib/coords.wgsl, which the runner prepends by path. RQ-213: the δ mode's mapping is REQ-TOOL-153."
 - id: REQ-TOOL-028
   area: TOOL
   statement: "Observation taps (debug catalogue, hover trace, sonification, telemetry) must read payloads and uniforms only and never perturb results."
@@ -16049,6 +16083,44 @@
   - R-385
   milestone: M7
   note: "R-385, applied per R-369: closed by TASK-M7-34, which depends on TASK-M7-30, TASK-M7-32, TASK-M7-18 and TASK-M7-21 for the real figures."
+- id: REQ-TOOL-152
+  area: TOOL
+  kind: calibration
+  statement: "The UV preset's banding criterion (REQ-TOOL-019) — the bound on how far the adjacent-sample deltas of the reconstructed UV coordinate may depart from the exact step 2h/N before the reconstruction counts as step-quantised — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: unit test
+    detail: "the proposal gives the criterion and its bound with the measured adjacent-sample deltas on M1's flat grid; `cargo test -p render uv_preset_reconstruction` applies it, and a negative fixture, a quad deep enough that deep_zoom §1's global form u_min + (u_max − u_min)·t bands in f32, fails it; confirmed by the human at the M1 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M1
+  note: RQ-214, decided per R-369.
+- id: REQ-TOOL-153
+  area: TOOL
+  kind: definition
+  statement: "The coordinate view's quad-local δ mode colour mapping — each component of δ (deep_zoom §2's quad-local UV offset, u − c = h·(2t − 1)) normalised by its bound h = 2^−(ℓ+1) to [−1, 1] and mapped to (x + 1)/2, u's in R and v's in G, with B = 0 — must be defined in debug_tooling_plan §F by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§F's UV-passthrough row gives the δ mode's normalisation and mapping; `cargo test -p render delta_mode` checks the preset draws it on sampled quads; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "RQ-213, decided per R-369. In exact arithmetic the mode draws t, as uv_quad does, so the two agree pixel for pixel unless the δ path (c, h or δ's orientation, deep_zoom §1) is wrong."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -20680,9 +20752,10 @@
     section: "Code paths that must honour the single convention (each is a separate path)"
   verify:
     method: review checklist
-    detail: "grep finds one framebuffer→UV flip and one export flip, both named; no other Y inversion in coordinate code"
+    detail: "grep finds the named framebuffer→UV flip once per language, the WGSL flip in lib/coords.wgsl and its Rust twin, held equal by a test (RQ-211), and the named export seam, which writes a framebuffer readback's rows unreversed (REQ-SYS-080, RQ-212); no other Y inversion in coordinate code (embed/search.rs's FlipV, an image transform the embedding recovery searches, is not coordinate code)"
   rulings: []
   milestone: M1
+  note: "RQ-211 and RQ-212, decided per R-369: one named flip per language counts as the one flip; the coordinate note's path-5 export flip is conditional on a Y-up internal image, and a framebuffer readback is already top-row-first, as PNG stores it, so the export seam reverses nothing for it (REQ-SYS-080)."
 - id: REQ-SYS-010
   area: SYS
   statement: "The 8D latent space must be exactly 2 configuration ⊕ 4 momentum ⊕ 2 mass controls, with the masses inside it (mass ratio is directions 6–7, never a global or external parameter) and no latent coordinate spent on a gauge direction (translation, boost, rotation, scale)."
@@ -21771,3 +21844,21 @@
   - R-369
   milestone: M0
   note: "the human's instruction, 3 Oct 2026, in their own words: \"fix the gate report to check tests exist\"; it amends RQ-201's decision (per R-369) that a unit-test, property-test or numerical-gate requirement passes whenever the CPU suites pass; built by TASK-M0-53"
+- id: REQ-SYS-080
+  area: SYS
+  kind: definition
+  statement: "The image export's orientation — export takes the headless readback as returned, rows from the top, and writes the PNG's rows in that order with no reversal, so the coordinate note's path-5 flip, which fires only for a Y-up internal image, does not fire for this path; the one-line rule's \"mirrored once at image export\" reads as that path-5 flip, stated in short, so it too does not fire on a readback that is already display-oriented — must be defined in the coordinate conventions note's path 5 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_coordinate_conventions_note.md
+    section: "Code paths that must honour the single convention (each is a separate path)"
+  - file: docs/design/principia_coordinate_conventions_note.md
+    section: The one-line rule
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "path 5 states the export's input (the headless readback, rows from the top) and that its rows are written unreversed; `cargo test -p render export_orientation`: the coordinate view's exported PNG has its top-left pixel at UV (0, 1) and its bottom-left at (0, 0), and a row-reversed export fails it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: RQ-212, decided per R-369.
