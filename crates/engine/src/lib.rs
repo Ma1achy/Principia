@@ -21,9 +21,16 @@ pub mod contract {
     pub mod snapshot;
     pub mod view_ui;
 
+    /// A stain node's colour occupant as the occupant algebra's typed expression tree (colour_composition §1;
+    /// TASK-M7-03).
+    pub mod stain {
+        pub mod occupant;
+    }
+
     #[cfg(test)]
     mod tests {
         mod canonical;
+        mod occupant;
         mod profile_v1;
     }
 }

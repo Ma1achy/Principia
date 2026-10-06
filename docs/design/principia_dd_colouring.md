@@ -148,6 +148,13 @@ triplet:
 
 $$M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
 
+**The reference implementation (R-383):** DaltonLens-Python, `https://github.com/DaltonLens/DaltonLens-Python`, at
+commit `3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d` (version 0.1.6 in its `setup.cfg`): its `Simulator_Vienot1999` for
+protan and deutan and its `Simulator_Brettel1997` for tritan, both on its `LMSModel_sRGB_SmithPokorny75` (Viénot et
+al.'s Judd–Vos-corrected XYZ from linear sRGB, then Smith & Pokorny 1975's LMS). The method's sources are Viénot,
+Brettel & Mollon 1999 and Brettel, Viénot & Mollon 1997. TASK-M7-20 transcribes its matrices here and generates the
+golden values from it, in linear sRGB.
+
 Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
 orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
 

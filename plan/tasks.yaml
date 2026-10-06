@@ -1658,7 +1658,7 @@
   title: "Colour-vision simulation: real Viénot and Brettel"
   depends_on: [TASK-M7-02]
   needs: []
-  requirements: [REQ-COL-042, REQ-COL-045]
+  requirements: [REQ-COL-042, REQ-COL-045, REQ-COL-061]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M7-21
@@ -1765,6 +1765,14 @@
   requirements: [REQ-PERF-068, REQ-PERF-069]
   reviewers: [code, qa, perf]
   pitfalls: []
+- id: TASK-M7-34
+  milestone: M7
+  title: "Image embedding: the hybrid variant re-measured on real rendered figures, and §5's ~8 % reconciled"
+  depends_on: [TASK-M7-30, TASK-M7-32, TASK-M7-18, TASK-M7-21]
+  needs: []
+  requirements: [REQ-TOOL-151]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"

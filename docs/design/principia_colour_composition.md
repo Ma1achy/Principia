@@ -343,6 +343,7 @@ applies uniformly to *everything* — main render, sphere preview, equirect unwr
 which is exactly what an accessibility audit wants: check the whole instrument at once. The CVD
 simulation is real Viénot (protan, deutan) and Brettel (tritan) through LMS from linear sRGB, with matrices and golden
 values from a published reference implementation, named with its version when the task lands (R-78; dd_colouring §3.8).
+The reference is DaltonLens-Python at commit `3cba5e6`, named by R-383 in dd_colouring §3.8.
 
 ---
 
