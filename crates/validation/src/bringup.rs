@@ -1,8 +1,10 @@
 //! The bring-up pattern's check (colour_composition Appendix A; REQ-TOOL-013, REQ-TOOL-015, REQ-TOOL-123), shared by
 //! the kernel's, the engine's and validation's tests. It is written from Appendix A's definition, not from
 //! `kernel::bringup`'s writer, so a fault in the writer's arithmetic fails it. A stored `SimState` is read through the
-//! generated unpack, `sim_state_from_ftle` (lowering Part 3a), each field compared with the pattern; and its raw words
-//! too, `packed_a` by `roundtrip_ctl`, so a contaminated bit that the unpack masks off fails (pitfalls §9).
+//! generated unpack, `sim_state_from_ftle` (lowering Part 3a), each field compared with the pattern; and `packed_a`'s
+//! raw word too, by `roundtrip_ctl`, so a contaminated reserved bit that the unpack masks off fails (pitfalls §9).
+//! `packed_b`'s and `times`' fields cover all their bits, and `_reserved`, which the unpack does not read, is compared
+//! as stored.
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::{
@@ -104,8 +106,6 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
         roundtrip_ctl(&expected, s.packed_a),
         true,
     )?;
-    same(i, "packed_b's raw word", s.packed_b, 0)?;
-    same(i, "times' raw word", s.times, j | ((0xffff - j) << 16))?;
     same(i, "_reserved", s._reserved, 0)
 }
 
@@ -155,4 +155,129 @@ pub fn check_f64(i: u32, s: &SimStateFTLEOf<f64>) -> Result<(), String> {
         same(i, name, got, slot(i, k))?;
     }
     check(i, &narrow(s))
+}
+
+#[cfg(test)]
+mod tests {
+    use kernel::bringup::pattern;
+    use kernel::payload::{set_detail, set_dmin_pair, set_last_symbol, set_saturated, set_state};
+
+    use super::*;
+
+    /// A check of sample `i`: [`check`], or a control's lenient one.
+    type Check = fn(u32, &SimStateFTLE) -> Result<(), String>;
+
+    /// A corruption of an f64 `SimState`.
+    type Corrupt64 = fn(&mut SimStateFTLEOf<f64>);
+
+    /// Sample `i`'s f32 pattern with one field corrupted, for each field, with the name the check must report.
+    fn corruptions(i: u32) -> Vec<(&'static str, SimStateFTLE)> {
+        let p = pattern::<f32>(i);
+        let one = |f: &dyn Fn(&mut SimStateFTLE)| {
+            let mut s = p;
+            f(&mut s);
+            s
+        };
+        vec![
+            ("`r[2][1]`", one(&|s| s.r[2][1] += 1.0)),
+            ("`p[1][0]`", one(&|s| s.p[1][0] += 1.0)),
+            ("`r_sh[0][1]`", one(&|s| s.r_sh[0][1] += 1.0)),
+            ("`p_sh[2][0]`", one(&|s| s.p_sh[2][0] += 1.0)),
+            ("`S`", one(&|s| s.S += 1.0)),
+            ("`theta`", one(&|s| s.theta += 1.0)),
+            ("`mean_y`", one(&|s| s.mean_y += 1.0)),
+            ("`C_ty`", one(&|s| s.C_ty += 1.0)),
+            ("`E_0`", one(&|s| s.E_0 += 1.0)),
+            ("`Lz_0`", one(&|s| s.Lz_0 += 1.0)),
+            ("`closure_min`", one(&|s| s.closure_min += 1.0)),
+            (
+                "`state`",
+                one(&|s| s.packed_a = set_state(s.packed_a, (i + 1) % 6)),
+            ),
+            (
+                "`detail`",
+                one(&|s| s.packed_a = set_detail(s.packed_a, (i / 2 + 1) % 4)),
+            ),
+            (
+                "`saturated`",
+                one(&|s| s.packed_a = set_saturated(s.packed_a, (i / 8).is_multiple_of(2))),
+            ),
+            (
+                "`dmin_pair`",
+                one(&|s| s.packed_a = set_dmin_pair(s.packed_a, (i / 16 + 1) % 4)),
+            ),
+            (
+                "`last_symbol`",
+                one(&|s| s.packed_a = set_last_symbol(s.packed_a, (i / 64 + 1) % 4)),
+            ),
+            (
+                "`d_min unset`",
+                one(&|s| s.packed_a = (s.packed_a & 0xffff) | (0x3c00 << 16)),
+            ),
+            ("`dE_max bits`", one(&|s| s.packed_b ^= 1)),
+            ("`dLz_max bits`", one(&|s| s.packed_b ^= 1 << 16)),
+            ("`t_end_step`", one(&|s| s.times ^= 1)),
+            ("`t_dmin_step`", one(&|s| s.times ^= 1 << 16)),
+            ("`total_substeps`", one(&|s| s.total_substeps ^= 1)),
+            ("`closure_step`", one(&|s| s.closure_step ^= 1)),
+            (
+                "`packed_a's raw word matches`",
+                one(&|s| s.packed_a |= 1 << 12),
+            ),
+            ("`_reserved`", one(&|s| s._reserved = 1)),
+        ]
+    }
+
+    /// `check` passes each sample's pattern, at f32 and at f64, and fails each corruption naming its field; and
+    /// [`check_f64`] fails each f64 real slot moved by less than f32 can hold, which narrowing would hide.
+    fn check_names_each_field(check: Check) {
+        for i in [0, 1, 77, 65_537, (1 << 19) - 1] {
+            check(i, &pattern::<f32>(i)).unwrap_or_else(|e| panic!("{e}"));
+            check_f64(i, &pattern::<f64>(i)).unwrap_or_else(|e| panic!("{e}"));
+            assert_eq!(
+                narrow(&pattern::<f64>(i)),
+                pattern::<f32>(i),
+                "narrow is not exact on the pattern"
+            );
+            for (name, s) in corruptions(i) {
+                match check(i, &s) {
+                    Err(e) if e.contains(name) => {}
+                    other => panic!("sample {i}: a corrupted {name} reads {other:?}"),
+                }
+            }
+            let f64_cases: [(&str, Corrupt64); 11] = [
+                ("`r[0][0]`", |s| s.r[0][0] += 1e-6),
+                ("`p[2][1]`", |s| s.p[2][1] += 1e-6),
+                ("`r_sh[1][1]`", |s| s.r_sh[1][1] += 1e-6),
+                ("`p_sh[0][0]`", |s| s.p_sh[0][0] += 1e-6),
+                ("`S`", |s| s.S += 1e-6),
+                ("`theta`", |s| s.theta += 1e-6),
+                ("`mean_y`", |s| s.mean_y += 1e-6),
+                ("`C_ty`", |s| s.C_ty += 1e-6),
+                ("`E_0`", |s| s.E_0 += 1e-6),
+                ("`Lz_0`", |s| s.Lz_0 += 1e-6),
+                ("`closure_min`", |s| s.closure_min += 1e-6),
+            ];
+            for (name, f) in f64_cases {
+                let mut s = pattern::<f64>(i);
+                f(&mut s);
+                match check_f64(i, &s) {
+                    Err(e) if e.contains(name) => {}
+                    other => panic!("sample {i}: a corrupted f64 {name} reads {other:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bringup_check_names_each_field() {
+        check_names_each_field(check);
+    }
+
+    crate::negative_control!(
+        bringup_check_names_each_field,
+        "a check that accepts every SimState must fail",
+        expected = "a corrupted",
+        check_names_each_field(|_, _| Ok(()))
+    );
 }

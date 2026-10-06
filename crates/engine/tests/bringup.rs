@@ -7,20 +7,24 @@
 //! - `bringup_pattern_sample_limit`: the dispatch covers at most 2¹⁹ samples, where the pattern is exact in f32.
 //! - `bringup_pattern_words`: a `SimState` read back from its words is the one written, member by member at the
 //!   ledger's offsets; a pattern read one word off fails the readback (pitfalls §9).
+//! - `bringup_pattern_gpu_dispatch`: the GPU dispatch's plumbing, on a stand-in for the built kernel: one invocation
+//!   per sample, every sample read back in order.
 //!
 //! The f32 SPIR-V build's GPU readback is `validation`'s `bringup_pattern_spirv`, in CI's `gpu-kernel` job.
 
-use engine::bringup::{native, samples};
+use engine::bringup::{gpu, native, samples, ENTRY};
 use engine::contract::canonical;
+use engine::contract::fast_math::FastMath;
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
 };
 use engine::synthetic::{simstate_from_words, simstate_words, Synthetic};
-use kernel::bringup::{max_samples, pattern, BringUp, Variant};
+use kernel::bringup::{max_samples, pattern, words_per_sample, BringUp, Variant};
 use kernel::payload::SimStateFTLEOf;
 use render::raster::Grid;
 use validation::bringup::{check, check_f64, narrow};
+use validation::gpu::GpuHarness;
 use validation::negative_control;
 
 /// The sim key with the kernel variant `kernel_variant`, every other group as at M0.
@@ -179,4 +183,90 @@ negative_control!(
     "the pattern read one word off must fail the readback (pitfalls §9)",
     expected = "not the bring-up pattern's",
     check_words(1)
+);
+
+/// A stand-in for the built kernel's bring-up entry point, for the dispatch's own plumbing: each sample of a buffer
+/// of `words`-word samples, one invocation per sample, written word by word with its index in the buffer plus 1.
+fn stand_in(words: usize) -> String {
+    format!(
+        "@group(0) @binding(0) var<storage, read_write> simstate: array<u32>;
+@compute @workgroup_size(64)
+fn {ENTRY}(@builtin(global_invocation_id) id: vec3<u32>) {{
+    if (id.x < arrayLength(&simstate) / {words}u) {{
+        for (var k = 0u; k < {words}u; k++) {{
+            let at = id.x * {words}u + k;
+            simstate[at] = at + 1u;
+        }}
+    }}
+}}
+"
+    )
+}
+
+/// The dispatch over `grid` returns one `SimState` per sample, each the stand-in's words, in order: every sample's
+/// invocation ran, and the buffer read back whole.
+fn check_dispatch(out: &[kernel::payload::SimStateFTLE], grid: Grid) {
+    assert_eq!(
+        out.len(),
+        grid.sample_count() as usize,
+        "the dispatch read back {} samples, not the grid's {}",
+        out.len(),
+        grid.sample_count()
+    );
+    let words = words_per_sample();
+    for (i, s) in out.iter().enumerate() {
+        let want: Vec<u32> = (0..words).map(|k| (i * words + k + 1) as u32).collect();
+        assert_eq!(
+            simstate_words(s),
+            want,
+            "sample {i} is not its invocation's words"
+        );
+    }
+}
+
+#[test]
+fn bringup_pattern_gpu_dispatch() {
+    let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    // 3 × 2 quads of 8 × 8 tiles, two copies: 768 samples, 12 workgroups.
+    let out = gpu(
+        h.device(),
+        h.queue(),
+        &stand_in(words_per_sample()),
+        KernelVariant::BringUp,
+        grid(),
+        FastMath::Off,
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    check_dispatch(&out, grid());
+    let physics = gpu(
+        h.device(),
+        h.queue(),
+        &stand_in(words_per_sample()),
+        KernelVariant::Physics,
+        grid(),
+        FastMath::Off,
+    );
+    assert!(
+        physics.is_err(),
+        "the physics variant dispatched on the GPU, with no physics kernel built"
+    );
+}
+
+negative_control!(
+    bringup_pattern_gpu_dispatch,
+    "a readback one sample short must fail",
+    expected = "samples, not the grid's",
+    {
+        let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+        let out = gpu(
+            h.device(),
+            h.queue(),
+            &stand_in(words_per_sample()),
+            KernelVariant::BringUp,
+            grid(),
+            FastMath::Off,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        check_dispatch(&out[1..], grid())
+    }
 );
