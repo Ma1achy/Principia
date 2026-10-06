@@ -4,6 +4,7 @@
 
 pub mod payload;
 pub mod real;
+pub mod shape;
 pub mod toolchain;
 pub mod word;
 
