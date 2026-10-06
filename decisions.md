@@ -2690,6 +2690,9 @@ in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-run
   `pull_request` run for the same head, so one review turns both green.
 
 ## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
+*Replaced in part by R-391 (its warning rule, as a trial).*
+*Still in force: three agents at normal pressure, and only the running work at critical; two at warning while R-391's
+trial finds the Mac swapping, and for every warning reading if the trial is reverted (R-391).*
 *30 Sep 2026 · applied in the orchestrator's loop*
 
 "Two agents while memory pressure sits at warning; three at normal."
@@ -6256,3 +6259,47 @@ and the human confirms it at its gate. A physics choice stays the human's (R-369
 
 Adds REQ-GUI-165 to REQ-GUI-175; REQ-GUI-075, REQ-GUI-081, REQ-GUI-091, REQ-GUI-095, REQ-GUI-098, REQ-GUI-126,
 REQ-GUI-128, REQ-GUI-131, REQ-GUI-146, REQ-GUI-157, REQ-GUI-158 and REQ-GUI-162 change closing task and note.
+
+## R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
+*6 Oct 2026 · applied in `CLAUDE.md` § "The main session orchestrates; it never implements or reviews", `plan/OPERATIONS.md`
+§ "Resources" and § "Logs", and `plan/rule_groups.yaml`; a trial, with R-277 the fallback*
+
+"R-391 (trial, replaces R-277's warning rule): at memory
+pressure "warning", allow 3 or more agents unless the system is actively
+swapping. Check vm_stat's page-outs before each dispatch; if they rose by
+more than a set amount over the last minute (your proposal, logged),
+treat it as swapping and allow 2. Critical is unchanged (finish running
+work only). Run it for a few days and log, per day: agents running,
+page-out rate, and any timeouts or flaky failures. If timeouts or flakes
+rise, revert to R-277 and tell me."
+
+(Message of 6 Oct 2026; the human numbered it R-391, the next free number.)
+
+*What it decides:* at memory-pressure warning (`kern.memorystatus_vm_pressure_level` 2), the agent limit is no longer
+two: it is three unless the Mac is actively swapping, and two while it is. Normal pressure (1) keeps R-277's three, and
+critical (4) keeps only the running work finishing. It is a trial: it runs for a few days with a daily log, and if
+timeouts or flaky failures rise, the orchestrator reverts to R-277's two at warning and tells the human.
+
+*Applied per R-369 (the orchestrator's proposal, logged):*
+- **The threshold.** The Mac counts as swapping when `vm_stat`'s "Pageouts" count rose by more than 1000 over the last
+  minute, about 16 MB a minute at its 16 KB pages. The baseline, measured on 6 Oct 2026 at pressure 2 with two agents
+  running, was 39 and 2 page-outs a minute, with 0 swap-outs, so the threshold sits well above a quiet minute and well
+  below sustained swapping.
+- **The reading.** Before each dispatch at warning, the orchestrator reads "Pageouts" from `vm_stat` twice, 60 s apart,
+  and takes the rise; above 1000, it allows two agents, and otherwise three. It logs both readings with the dispatch.
+  At normal pressure the reading isn't needed; at critical nothing new starts.
+- **"3 or more" (flagged).** R-262's cap, three agents at most, still holds: R-391 replaces only R-277's warning rule,
+  and three is also normal pressure's limit. So "3 or more" is three in practice. A higher cap would need a ruling.
+- **The log.** Each day of the trial, the away-mode log (`plan/OPERATIONS.md` § "Logs") gets one line: the agents
+  running (the peak, and how many dispatches ran at warning with three), the page-out rate (the lowest and highest
+  rise read per minute, and each dispatch held to two by it), and every timeout or flaky failure, local or in CI, with
+  its run or PR. The next summary reports the trial's days.
+- **Reverting.** Timeouts or flaky failures "rise" when a day of the trial has more of them than the days before
+  6 Oct 2026 had, as the log and CI's history show. The orchestrator then reverts to R-277's two at warning at once,
+  logs it, and tells the human in the next summary; R-391 gives the revert, so it needs no new ruling.
+- **How long.** The trial runs from 6 Oct 2026; after three days the orchestrator reports the log in its next summary,
+  and the trial continues until the human rules on it or it is reverted.
+- **Mac only.** `vm_stat` is macOS's; a Linux cloud machine keeps R-277's levels as R-347 reads them.
+- R-391 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
