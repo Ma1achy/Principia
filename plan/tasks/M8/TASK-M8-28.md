@@ -47,5 +47,5 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - Definitions (R-72) written here: REQ-TOOL-114. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - RQ-93 ruled: R-113 — REQ-TOOL-002's dev-GUI half (the profiler reading the same file, its header config REQ-GUI-039's provenance object) is verified here by REQ-TOOL-098.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-128 (R-72 definition) (classification accepted by R-132).
-- R-152: TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).
+- R-152, amended in part by R-390: TASK-M6-28 builds the Profiler window's frame and tabs, TASK-M6-22 fills its Arbiter tab, and this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).
 - R-390: TASK-M6-28 builds the Profiler window's frame and tabs on the mock engine; this task depends on it and fills them from the real profiler stream, keeping every requirement it closes.

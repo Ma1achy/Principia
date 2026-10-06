@@ -18,7 +18,7 @@ The console is the footer opened: severity, time, source and message columns; fi
 
 ## Deliverables
 - `crates/engine/src/telemetry/events.rs` — the event stream with ids; the contract logs each applied SetField.
-- `crates/gui/src/windows/console.rs`.
+- Uses and extends the track's `crates/gui/src/windows/console.rs` (TASK-M6-28, R-390): fed from the real engine's telemetry stream.
 - Tests: `setfield_logged`; screenshot cases `12_console/open`, `12_console/auto_open_on_error`.
 
 ## Acceptance tests

@@ -157,7 +157,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-146** — The crate layout is confirmed *(closes RQ-76)*
 - **R-148** — The validation harness renders the "off" image *(closes RQ-78)*
 - **R-151** — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)*
-- **R-152** — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*
+- **R-152** — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*. Still in force: the Arbiter tab is in the Profiler window at M6; TASK-M6-22 fills it, and TASK-M8-28 fills in the rest. Amended in part by R-390.
 - **R-155** — One GIF encoder for both builds *(closes RQ-125)*
 - **R-170** — The crate map *(closes G2)*
 - **R-172** — There is no contract crate *(closes C1, C4)*
@@ -174,7 +174,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-251** — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
 - **R-263** — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*
 - **R-271** — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*
-- **R-274** — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*
+- **R-274** — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*. Still in force: gui's headless capture mode, spawned by the screenshot runner as a separate process, renders a named window offscreen and writes the PNG and the AccessKit names; no crate depends on `gui`; a case's `surface` field names the kind. Amended in part by R-390.
 - **R-275** — A control clipped out of the visible surface isn't present *(closes RQ-167)*
 - **R-278** — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*
 - **R-280** — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*

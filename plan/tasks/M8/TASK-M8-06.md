@@ -19,9 +19,9 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
-- `crates/gui/src/explore/manifold_view/{chart,navigate,depth,centre,slice_tilt}.rs` — each control emits SetField on the SimConfig paths from TASK-M8-01; each shows the per-field warning from TASK-M8-03.
+- `crates/gui/src/explore/manifold_view/{chart,navigate,depth,centre,slice_tilt}.rs`, extending the track's Manifold view group (TASK-M6-26, R-390) — each control emits SetField on the SimConfig paths from TASK-M8-01; each shows the per-field warning from TASK-M8-03.
 - `crates/gui/src/explore/direction_label.rs` — raw-control vs physical labelling from the chart axis metadata (REQ-CHART-012).
-- `crates/gui/src/explore/axis_labels.rs` — short axis name and range at each end, recomputed after pan.
+- `crates/gui/src/explore/axis_labels.rs`, the track's axis labels (TASK-M6-26, R-390) wired to the real chart — short axis name and range at each end, recomputed after pan.
 - `crates/gui/src/explore/manifold_view/chart.rs` also carries the shape-sphere controls: the projection selector (equirectangular / the equal-area alternative) and the hemisphere toggle, shown only when the chart is the shape sphere (R-113).
 - Screenshot cases `01_main/shape_sphere_controls`, `01_main/left_panel`, `01_main/axis_labels`, `01_main/direction_labels`.
 
@@ -37,3 +37,4 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - R-113 (RQ-95 M2-G5): the shape-sphere projection selector and hemisphere toggle live in the Manifold view's Chart section, shown when the chart is the shape sphere (REQ-GUI-161); the M2 goldens (TASK-M2-28) verify the render side.
 - The Lock sub-group's badge and the compass are TASK-M8-07; this task leaves the Lock slot wired to the lock SetFields.
 - R-390: TASK-M6-26 builds the Manifold view group on the mock engine and closes REQ-GUI-081; this task depends on it, wires the group to the real engine and re-runs REQ-GUI-081's acceptance there, keeping every other requirement it closes.
+- TASK-M6-26 also builds the figure's axis labels on mock data (applied per R-369, review 5434766412 on PR #157); this task wires them to the real chart's ranges and keeps REQ-GUI-084.

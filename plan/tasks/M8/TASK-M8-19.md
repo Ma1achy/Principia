@@ -30,7 +30,7 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
-- `crates/gui/src/stain/{mode,library,preview,problems}.rs`.
+- `crates/gui/src/stain/{mode,library,preview,problems}.rs`, extending the track's Stain layout (TASK-M6-29, R-390) on the real stain graph.
 - `crates/gui/src/stain/your_stains.rs` — user stains as serialised graphs (import / export files).
 - `crates/render/src/registry/filter.rs` — `debugVisible` filtering on the `category` tag.
 - Tests: `debug_visible_filter`, `your_stains_roundtrip`; screenshot cases `02_stain/layout`, `02_stain/preview_{sphere,slice}`, `02_stain/library_filter`, `02_stain/aspect_{square,wide}`, `03_chartbuilder/aspect_{square,wide}`.

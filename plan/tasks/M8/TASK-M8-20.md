@@ -21,7 +21,7 @@ The canvas supports §7's gestures: click-select opening the inspector, click-em
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
-- `crates/gui/src/stain/canvas/{select,drag,wire,palette}.rs`, `crates/gui/src/stain/node_box.rs`.
+- `crates/gui/src/stain/canvas/{select,drag,wire,palette}.rs`, extending the track's canvas and its gestures (TASK-M6-29, R-390), and `crates/gui/src/stain/node_box.rs`.
 - Tests: `canvas_gestures`, `wire_drag_filter`, `wire_remove`, `node_palette`, `subtype_morph`; screenshot case `02_stain/nodes`.
 
 ## Acceptance tests

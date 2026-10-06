@@ -52,6 +52,9 @@ it. This task proposes the repeat delay and rate and the base steps, the first t
   re-runs REQ-GUI-095's and REQ-GUI-098's acceptance on the real engine and uses the proposed values. The in-scope keys
   (REQ-GUI-097) and Ctrl+Z from the contract's history with held-key repeat checked end to end (REQ-GUI-096) stay
   TASK-M8-13's; the keys of each later track screen join the tree in that screen's task.
+- Each later track task, TASK-M6-26 to TASK-M6-29, extends `mock_keyboard` with its own scopes and adds a
+  `07_keyboard` focus case, so the keyboard is checked on every screen that follows (R-390's ORDER item 2; applied per
+  R-369, review 5434766412 on PR #157). `mock_keyboard`'s registration API is built for that.
 - Calibrations (R-71) proposed here: REQ-GUI-146 and REQ-GUI-158. Each is confirmed by the human at the M8 gate; an
   unconfirmed one blocks that gate.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).

@@ -18,10 +18,10 @@ The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
-- `crates/gui/src/keyboard/{scopes,keymap,repeat}.rs` — the scope tree, the key tables, DAS / ARR repeat.
+- `crates/gui/src/keyboard/{scopes,keymap,repeat}.rs` — uses and extends the track's scope tree, key tables and DAS / ARR repeat (TASK-M6-25, R-390): wires Ctrl+Z to the contract's undo and the in-scope keys to the real engine's SetField / ViewUI changes.
 - `crates/gui/src/explore/breadcrumb.rs` — filled from ViewUI's focus scope.
 - Tests: `scope_tab_order`, `global_keys`, `in_scope_keys`; screenshot cases `07_keyboard/before`, `07_keyboard/after`.
-- Calibration proposal: the repeat delay and rate, with the reference they follow.
+- Uses the track's calibration proposal for the repeat delay and rate, with the reference they follow (TASK-M6-25, R-390); the human confirms it at the M8 gate.
 
 ## Acceptance tests
 - `cargo test -p gui scope_tab_order` — Tab / Shift+Tab cycles the seven scopes in order; Enter on Manifold view enters Chart (REQ-GUI-095). Closed by TASK-M6-25 on the mock engine since R-390; this task re-runs it on the real engine.

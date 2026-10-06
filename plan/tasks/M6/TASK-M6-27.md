@@ -11,13 +11,19 @@
 ## Goal
 On the mock engine, as `01_main.png`, `06_legend.png` and the design notes give them: Time (play, step, a scrubber,
 speed; transport is `ViewUI`, the fake clock advances the playhead through `SetField`s marked "no history", a manual
-scrub is one entry); the Legend frame, its keys drawn from plausible data the mock gives; the Trajectory side panel's
+scrub is one entry); the Legend frame, drawing exactly the keys it receives through the contract, which the mock
+produces from its fake stain in the shape the real evaluation gives them, the GUI holding no key of its own; the
+Trajectory side panel's
 frame (the tabs "under cursor", `#1`, `#2`, `+`, the summary line, real space beside the shape sphere, which turns
 slowly with visible x, y, z axes, switches to the unwrapped view and stops when "turn" is cleared, the playhead, listen,
 Open full viewer… and IC Inspector…, the kept orbits), with the mock's plausible content; and Overlays ▾ with its
 grouped toggles and their Alt+digit shortcuts, all off and save as default. The tile-bounds overlay works on the mock's
 fake quads: the toggle is a `SetField` on `RenderState`'s overlay set, and the mock draws the bounds over its stand-in
-figure, panning and zooming with it; the GUI draws nothing over the figure. Each control joins the keyboard scope tree.
+figure, panning and zooming with it; the GUI draws nothing over the figure. Hovering the figure shows the hover path,
+drawn by the mock into its stand-in (as the real compositor draws the trace), solid near the slice and faint away from
+it, and the hover label, drawn by the GUI from the mock's fake sample under the cursor ("undecided · still interacting
+at t … of …" until the fake sample is decided); the Trajectory panel's "under cursor" tab follows the same sample.
+Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Legend scopes in §G3's Tab order.
 
 ## References
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
@@ -30,18 +36,29 @@ figure, panning and zooming with it; the GUI draws nothing over the figure. Each
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
-- `crates/gui/src/explore/{time,legend,trajectory}.rs` and `crates/gui/src/explore/overlays_menu.rs`.
-- The mock's content for them: a plausible orbit summary and shape-sphere path, legend keys, its fake quads and their
-  bounds drawn into the stand-in when the overlay set has tile bounds.
+- `crates/gui/src/explore/{time,legend,trajectory}.rs`, `crates/gui/src/explore/overlays_menu.rs` and
+  `crates/gui/src/explore/hover_label.rs`; the keyboard scopes of every control, registered in TASK-M6-25's scope tree.
+- The mock's content for them: a plausible orbit summary and shape-sphere path; the legend keys, produced from its fake
+  stain the way the real engine will produce them (walking back from OUT, one key per dimension: categorical swatches
+  with their shares, then a brightness bar) and sent through the contract, under a snapshot field the task adds as the
+  corpus names it or, where the corpus names none, as it records under "applied per R-369" (R-390's "Contract
+  fields"); a fake sample under the cursor and its hover path, drawn into the stand-in solid near the slice and faint
+  away from it; its fake quads and their bounds drawn into the stand-in when the overlay set has tile bounds
+  (applied per R-369, review 5434766412 on PR #157).
 - Calibration proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent (REQ-GUI-157),
   used provisionally until the human confirms it at the M8 gate (R-182).
-- Tests `mock_time`, `mock_tile_bounds`; screenshot cases `01_main/mock_time`, `01_main/mock_trajectory_sphere`,
-  `01_main/mock_trajectory_unwrapped`, `01_main/mock_overlays_menu`, `01_main/mock_tile_bounds`, `06_legend/mock_legend`.
+- Tests `mock_time`, `mock_tile_bounds`, `mock_legend_keys`, `mock_hover`, and `mock_keyboard` extended; screenshot
+  cases `01_main/mock_time`, `01_main/mock_trajectory_sphere`, `01_main/mock_trajectory_unwrapped`,
+  `01_main/mock_overlays_menu`, `01_main/mock_tile_bounds`, `01_main/mock_hover`, `06_legend/mock_legend`,
+  `07_keyboard/mock_focus_time`.
 
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` (mock_time, mock_trajectory_sphere, mock_trajectory_unwrapped, mock_overlays_menu), `cargo xtask screenshot 06_legend` (mock_legend) and `cargo test -p gui mock_time` — against 01_main.png and 06_legend.png; play advances the playhead through no-history SetFields, step moves one step, a scrub is one SetField (REQ-GUI-172).
 - `cargo xtask screenshot 01_main` (mock_tile_bounds) and `cargo test -p gui mock_tile_bounds` — against 01_main.png; the toggle emits one SetField on the overlay set and the GUI draws nothing over the figure; after a pan the mock's drawn bounds move with the stand-in (REQ-GUI-173).
 - Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent, with the reason it reads as "slowly"; the gui reviewer checks it and the human confirms it at the M8 gate (REQ-GUI-157).
+- `cargo test -p gui mock_legend_keys` and `cargo xtask screenshot 06_legend` (mock_legend) — the Legend draws exactly the keys the snapshot carries, one per dimension in the order received, and no key of its own: changing the mock's fake stain (adding a dimension, removing the brightness channel) changes the keys drawn, and an empty key list draws an empty frame; the "generated from the stain" frame against 06_legend.png (REQ-GUI-172; legend by evaluation on the mock, applied per R-369, review 5434766412 on PR #157; the real evaluation, REQ-GUI-105 and REQ-GUI-106, stays TASK-M8-22's).
+- `cargo xtask screenshot 01_main` (mock_hover) and `cargo test -p gui mock_hover` — hovering the stand-in shows the mock's hover path, drawn by the mock, solid near the slice and faint away from it, and the GUI's hover label for the fake sample, reading "undecided · still interacting at t … of …" until the sample is decided; the GUI draws no mark on the figure but the label; the Trajectory panel's "under cursor" tab shows the same sample; moving off clears both; against 01_main.png (REQ-GUI-172; the marks REQ-GUI-085 and REQ-GUI-086 require, built here on mock data, applied per R-369, review 5434766412 on PR #157; both stay closed by TASK-M8-10 on the real engine).
+- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_time) — every control this task adds joins the scope tree: Tab and Shift+Tab reach the Figure, Trajectory, Time and Legend scopes in §G3's order, Enter reaches the Trajectory panel's playhead, listen and kept orbits, and the Overlays menu's toggles are reached from the top bar; the Legend is read-only and takes focus without changing anything; Esc backs out one level; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its proposed base step, ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes
@@ -54,5 +71,12 @@ figure, panning and zooming with it; the GUI draws nothing over the figure. Each
   (REQ-GUI-079 and the rest) stay TASK-M8-08's; the scrubber's re-integration (REQ-GUI-092, REQ-GUI-155) stays
   TASK-M8-07's; the legend by evaluating the stain (REQ-GUI-105, REQ-GUI-106) stays TASK-M8-22's. Each depends on this
   task.
+- **Legend by evaluation, on the mock** (applied per R-369, review 5434766412 on PR #157): the GUI holds no legend key
+  of its own; it draws the keys the engine side sends through the contract. The mock produces them from its fake stain
+  in the shape the real evaluation gives them, and TASK-M8-22 produces them on the real engine by evaluating the stain.
+- **The hover path and label** (REQ-GUI-085, REQ-GUI-086) are built here on mock data, because 01_main.png shows them
+  and R-390 lets content, not look, feel or behaviour, be placeholder (applied per R-369, review 5434766412 on PR #157).
+  Their requirements stay closed by TASK-M8-10, which depends on this task and wires them to the real hover integration
+  and the compositor's trace layer; the hover path's fall-off here is a stand-in, not REQ-GUI-156's definition.
 - Calibrations (R-71) proposed here: REQ-GUI-157, confirmed by the human at the M8 gate.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).

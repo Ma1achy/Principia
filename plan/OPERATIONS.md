@@ -327,6 +327,12 @@ qa and gui.
   limits. When slots are short, the chain's ready task gets the next free one; a running GUI-track agent is not
   stopped, but the next slot doesn't go to the track. The track never holds up M1 or M2: no M1 or M2 task depends on
   it, and none waits for a slot it holds.
+- **A track task the chain waits on takes the chain's priority** (applied per R-369, review 5434769963 on PR #157).
+  TASK-M6-21 depends on TASK-M6-26, TASK-M6-22 on TASK-M6-24 and TASK-M6-28, TASK-M7-22 on TASK-M6-29 and TASK-M7-25 on
+  TASK-M6-28. A track task that one of these chain tasks waits on, directly or through the track tasks before it, takes
+  the chain's priority for agent slots, with its reviewers and fix rounds, once that chain task's other dependencies
+  are merged or in flight. So the chain never waits on a track task that never gets a slot. No M1 or M2 task depends on
+  the track, so this never takes a slot from M1 or M2.
 - **When it merges.** Each track task merges once its reviews pass and CI is green, without waiting for the gates of M1
   to M5 (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"). Each depends only on merged work and on the
   track's task before it.

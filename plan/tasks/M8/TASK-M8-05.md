@@ -21,8 +21,8 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 
 ## Deliverables
 - `crates/gui/src/render_host.rs` — egui-wgpu `Renderer` constructed from the engine's `wgpu::Device` / `Queue`, painting after the engine's pass on the same surface texture.
-- `crates/gui/src/theme.rs` — egui dark default + Ubuntu / Ubuntu Mono (fonts under `crates/gui/assets/fonts/`).
-- `crates/gui/src/explore/{top_bar,footer,figure}.rs` — the status line reads the Snapshot (frame record, binding axis, undo depth); the figure region admits only the hover label and the lock reticle as marks.
+- Uses the track's `crates/gui/src/theme.rs` — egui dark default + Ubuntu / Ubuntu Mono (fonts under `crates/gui/assets/fonts/`) (TASK-M6-24, R-390) — on the real engine.
+- `crates/gui/src/explore/{top_bar,footer,figure}.rs`, extending the track's top bar and footer (TASK-M6-24, R-390) — the status line reads the real engine's Snapshot (frame record, binding axis, undo depth); the figure region admits only the hover label and the lock reticle as marks.
 - `crates/gui/src/windows/mod.rs` — the window registry the Windows menu lists (entries filled by later tasks).
 - `xtask` screenshot cases `01_main/shell`, `01_main/f3_off`, `01_main/warning`, `01_main/budget_bound`.
 

@@ -43,11 +43,17 @@ the three panes and the one timeline).
   both engines.
 - Screenshot cases `04_windows/mock_run`, `04_windows/mock_export`, `04_windows/mock_display`,
   `04_windows/mock_profiler`, `03_chartbuilder/mock_chart_builder`, `12_console/mock_console`,
-  `05_inspectors/mock_inspector`; test `mock_windows_open`.
+  `05_inspectors/mock_inspector`, `07_keyboard/mock_focus_window`; tests `mock_windows_open`, and `mock_keyboard`
+  extended.
+- Each window's scope in TASK-M6-25's scope tree: an open window is a scope that takes focus when it opens; Tab and
+  Shift+Tab move between its sections and Enter goes into one; Esc backs out one level, and from the window's top level
+  returns focus to the scope that opened it (render_gui_spec §G3 is silent on windows; applied per R-369, review
+  5434766412 on PR #157).
 
 ## Acceptance tests
 - `cargo xtask screenshot 04_windows` (mock_run, mock_export, mock_display, mock_profiler), `cargo xtask screenshot 03_chartbuilder` (mock_chart_builder), `cargo xtask screenshot 12_console` (mock_console), `cargo xtask screenshot 05_inspectors` (mock_inspector) and `cargo test -p gui mock_windows_open` — against their artboards; the Chart builder's two previews are square for a square viewport; each window opens from its top-bar or menu entry (REQ-GUI-174).
 - `cargo xtask screenshot 12_console` (mock_console) — screenshot against 12_console.png; raising an error opens it (REQ-GUI-126).
+- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_window) — every control this task adds joins the scope tree: each window, opened from its entry, takes focus as a scope, Tab and Shift+Tab move between its sections and Enter reaches each control (the Run window's fields, the Chart builder's axis kinds and presets, Export's formats, Display's settings, the Profiler's tabs, the Console's filters, the Inspector's panes); Esc backs out one level and, from the window's top level, returns focus to the scope that opened it; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its proposed base step, ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes

@@ -33,13 +33,18 @@ scope tree.
 - The mock's content: a plausible graph of fake nodes and wires, library rows, assembled code text, Problems entries, and
   a live preview it re-renders on each graph edit; any contract field the graph edits need, added as the corpus names it
   (R-390's "Contract fields"), with the conformance suite re-run on both engines.
-- Tests `mock_stain_preview`, `canvas_gestures_mock`; screenshot cases `02_stain/mock_stain`,
-  `02_stain/mock_stain_selected`.
+- Tests `mock_stain_preview`, `canvas_gestures_mock`, and `mock_keyboard` extended; screenshot cases
+  `02_stain/mock_stain`, `02_stain/mock_stain_selected`, `07_keyboard/mock_focus_stain`.
+- Stain mode's scopes in TASK-M6-25's scope tree: in Stain mode the big scopes in Tab order are the top bar, the
+  library drawer, the graph canvas, the preview and node inspector, and the code and Problems pane; Enter goes into one,
+  and arrows move between its rows or nodes (render_gui_spec §G3 gives Explore's order only; applied per R-369, review
+  5434766412 on PR #157).
 
 ## Acceptance tests
 - `cargo xtask screenshot 02_stain` (mock_stain, mock_stain_selected) and `cargo test -p gui mock_stain_preview` — against 02_stain.png; an edit to the graph is a SetField and the mock's preview changes; the preview is square for a square viewport (REQ-GUI-175).
 - `cargo xtask screenshot 02_stain` (mock_stain) — screenshot against 02_stain.png (REQ-GUI-128).
 - `cargo test -p gui canvas_gestures_mock` — scripted pointer events for each gesture produce the stated selection / position change (REQ-GUI-131).
+- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_stain) — every control this task adds joins the scope tree: in Stain mode, Tab and Shift+Tab reach the top bar, the library drawer, the graph canvas, the preview and node inspector, and the code and Problems pane in that order, and Enter reaches each control inside them (a library row, a node, a node inspector field, the Graph · Pipeline WGSL · Node WGSL toggle); Esc backs out one level; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its proposed base step, ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes

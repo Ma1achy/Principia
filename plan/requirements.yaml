@@ -12489,8 +12489,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png; after a pan the end values update"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the axis labels on mock data in TASK-M6-26, since 01_main.png shows them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-06, which wires them to the real chart's ranges."
 - id: REQ-GUI-085
   area: GUI
   statement: "The hover path must be z(t) through the manifold projected onto this chart's q₁, q₂ — not real space — drawn solid near the slice and faint where it leaves the plane."
@@ -12502,8 +12504,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png: the path is drawn from the cursor's IC with opacity falling with distance from the slice"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the hover path on mock data in TASK-M6-27, drawn by the mock into its stand-in figure, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which draws the real path with the compositor's trace layer."
 - id: REQ-GUI-086
   area: GUI
   statement: "The hover label must name a fate only once it is decided (a terminal state — escape, collision — or bounded at the horizon) and read 'undecided · still interacting at t of t_max' before that."
@@ -12515,8 +12519,10 @@
   verify:
     method: unit test
     detail: "label strings for a running sample, an escape, a collision and a bounded-at-horizon sample"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the hover label on mock data in TASK-M6-27, from the mock's fake sample, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which reads the real sample."
 - id: REQ-GUI-087
   area: GUI
   statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels."
@@ -12744,8 +12750,10 @@
   verify:
     method: GUI screenshot
     detail: screenshot against 08_lock.png after K over a point
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock."
 - id: REQ-GUI-100
   area: GUI
   statement: "Present mode must hide all chrome and Esc must return from it."
@@ -13854,10 +13862,11 @@
     section: 07 Keyboard — design note, not a screen
   verify:
     method: GUI screenshot
-    detail: "cargo test -p gui mock_keyboard: synthetic key events for Tab, Shift+Tab, Enter, Esc, the arrows and Shift and Alt steps move focus and values as §G3 gives; `?` opens the shortcuts over everything and Esc closes it; cargo xtask screenshot 07_keyboard (mock_focus, mock_shortcuts) against 07_keyboard.png"
+    detail: "cargo test -p gui mock_keyboard: synthetic key events for Tab, Shift+Tab, Enter, Esc, the arrows and Shift and Alt steps move focus and values as §G3 gives; `?` opens the shortcuts over everything and Esc closes it; cargo xtask screenshot 07_keyboard (mock_focus_before, mock_focus_after, mock_shortcuts) against 07_keyboard.png"
   rulings:
   - R-390
   milestone: M6
+  note: "R-390: each later track task, TASK-M6-26 to TASK-M6-29, extends mock_keyboard with its own scopes and adds a 07_keyboard focus case (mock_focus_manifold_view, mock_focus_time, mock_focus_window, mock_focus_stain), so each later screen is checked to join the scope tree (applied per R-369, review 5434766412 on PR #157)."
 - id: REQ-GUI-170
   area: GUI
   statement: "On the mock engine, the Manifold view group and the compass must look, feel and behave as `01_main.png`, `08_lock.png` and the design notes give them: Chart, Navigate, centre z₀, Slice & tilt and rotation as one group, every edit a SetField on z₀ or the basis; lock re-basing the sliders to the anchor (anchor plus offset), not freezing them; and the compass switching between slicing and tilting by which slider was touched, with the gold pin when locked."

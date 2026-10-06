@@ -22,9 +22,9 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
 ## Deliverables
-- `crates/gui/src/explore/lock.rs` — badge, unlock, open-in-Inspector (opens the window id of TASK-M8-14), reticle mark on the figure.
-- `crates/gui/src/explore/compass.rs` — the nav cube; mode follows the last-touched slider group.
-- `crates/gui/src/explore/time.rs` — transport in ViewUI; per-frame playhead write marked no-history; scrub = one coalesced entry; progress from the snapshot.
+- `crates/gui/src/explore/lock.rs`, the track's badge and reticle (TASK-M6-26, R-390) wired to the real engine — badge, unlock, open-in-Inspector (opens the window id of TASK-M8-14), reticle mark on the figure.
+- `crates/gui/src/explore/compass.rs`, extending the track's compass (TASK-M6-26, R-390) — the nav cube; mode follows the last-touched slider group.
+- `crates/gui/src/explore/time.rs`, extending the track's Time (TASK-M6-27, R-390) — transport in ViewUI; per-frame playhead write marked no-history; scrub = one coalesced entry; progress from the snapshot.
 - Screenshot cases `08_lock/locked`, `01_main/compass_slice`, `01_main/compass_tilt`.
 - Tests: `scrub_reintegrates`.
 
@@ -37,4 +37,5 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 ## Notes
 - The scrubber's "refining · N%" needs a progress fraction in the snapshot; what it is a fraction of is not stated.
 - Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).
+- TASK-M6-26 also builds the lock badge and the gold reticle on mock data (applied per R-369, review 5434766412 on PR #157); this task wires them to the real engine's lock and keeps REQ-GUI-099.
 - R-390: TASK-M6-26 builds the compass and lock's re-basing on the mock engine and closes REQ-GUI-091, and TASK-M6-27 builds Time; this task depends on both, wires them to the real engine, re-runs REQ-GUI-091's acceptance there, and keeps REQ-GUI-092, REQ-GUI-099 and REQ-GUI-155.

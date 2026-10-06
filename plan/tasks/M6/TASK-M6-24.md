@@ -48,14 +48,17 @@ headless capture mode (R-274) runs the app on the mock, so `cargo xtask screensh
   raise a warning and an error.
 - `crates/gui/src/main.rs` and `crates/gui/src/app.rs`: the app; with `--features mock` it runs on the mock. egui-wgpu is
   built from the device and queue the engine side provides (here the mock), as REQ-GUI-070 requires of the real engine.
-- `crates/gui/src/theme.rs` and the fonts under `crates/gui/assets/fonts/`; `crates/gui/src/explore/{top_bar,footer}.rs`
-  and the Explore page's regions (left Manifold view, figure, right Trajectory, bottom compass, Time and Legend) as empty
+- `crates/gui/src/theme.rs` and the fonts under `crates/gui/assets/fonts/`; `crates/gui/src/explore/{top_bar,footer}.rs`:
+  the top bar's status line (`t`, fps, frame ms, quad count, undo / redo depth, "F3 hide") filled from the mock's
+  snapshot, the undo depth from the mock's history, and the footer's warning and error counts, latest message, memory
+  readout (GPU, heap) and "? keys" hint filled from the mock's snapshot and events (applied per R-369, review
+  5434766412 on PR #157); and the Explore page's regions (left Manifold view, figure, right Trajectory, bottom compass, Time and Legend) as empty
   frames that later track tasks fill.
 - gui's headless capture mode (R-274): an entry point the screenshot runner spawns, which runs the app on the mock,
   renders a named screen offscreen and writes the PNG and its AccessKit names, with rects for R-275; the runner's `gui`
   surface kind that spawns it. No crate depends on `gui`.
 - Screenshot cases `01_main/mock_shell`, `01_main/mock_f3_off`, `01_main/mock_footer`, `01_main/mock_warning`.
-- Tests: `mock_engine`, `conformance` (in engine and in gui), `mock_tag`, `f3_toggle_mock`.
+- Tests: `mock_engine`, `conformance` (in engine and in gui), `mock_tag`, `f3_toggle_mock`, `mock_status_line`.
 
 ## Acceptance tests
 - `cargo test -p gui mock_engine` — a SetField shows in the next snapshot; undo and redo restore and reapply it; an edit marked no history leaves the history unchanged; the fake clock advances the playhead while playing and holds it while paused; events arrive only through the contract's channels. The PR shows `cargo run -p gui --features mock` opening the app window (REQ-GUI-165).
@@ -63,6 +66,7 @@ headless capture mode (R-274) runs the app on the mock, so `cargo xtask screensh
 - `cargo xtask screenshot 01_main` (mock_footer) and `cargo test -p gui mock_tag` — the footer on the mock shows the "mock engine" tag beside 01_main.png's footer; the tag is drawn exactly when the engine is the mock (REQ-GUI-167).
 - `cargo xtask screenshot 01_main` (mock_shell, mock_f3_off, mock_warning) and `cargo test -p gui f3_toggle_mock` — against 01_main.png with F3 on and off, the stand-in figure identical underneath; a raised warning and error change the footer's counts and nothing over the figure; a footer click opens the console; the gui reviewer checks the design notes' global rules (REQ-GUI-168).
 - `cargo xtask screenshot 01_main` (mock_shell) — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code (REQ-GUI-075).
+- `cargo test -p gui mock_status_line` and `cargo xtask screenshot 01_main` (mock_shell, mock_footer) — the top bar's status line shows the mock snapshot's `t`, fps, frame ms and quad count, and its undo depth reads 2 after two edits on the mock and 1 after an undo; the footer shows the mock's memory readout and the "? keys" hint; against 01_main.png's top bar and footer (REQ-GUI-168).
 - `cargo test -p xtask screenshot_gui_surface` and `cargo xtask deps` — a screenshot case with surface kind `gui` spawns the capture mode for a named window and gets its PNG and names back; `cargo xtask deps` shows no edge into gui (REQ-GUI-162).
 
 ## Notes
@@ -78,8 +82,11 @@ headless capture mode (R-274) runs the app on the mock, so `cargo xtask screensh
 - REQ-GUI-075 moved here from TASK-M8-05, and REQ-GUI-162 from TASK-M6-22 (R-390); both tasks depend on this one.
   TASK-M8-05 re-runs REQ-GUI-075's acceptance on the real engine.
 - The firewall (the engine's internals crate-private, the compile-fail test, `cargo xtask lint-gui`) stays TASK-M8-04's;
-  REQ-GUI-070's egui-wgpu on the real engine's device, and the top bar's real status line, stay TASK-M8-05's. This task
-  keeps to their rules already: the GUI reads snapshots and emits SetFields only, and names no camera and no "Fate".
+  REQ-GUI-070's egui-wgpu on the real engine's device stays TASK-M8-05's. This task draws the whole top bar and footer
+  on the mock: the status line (`t`, fps, frame ms, quad count, undo / redo depth) from the mock's snapshot, with the
+  undo depth from the mock's history, and the footer's memory readout and "? keys" hint; only their real data source,
+  the real engine's snapshot (with `budget-bound`, REQ-GUI-078), stays TASK-M8-05's. This task keeps to both tasks' rules
+  already: the GUI reads snapshots and emits SetFields only, and names no camera and no "Fate".
 - The contract's history here is what the conformance suite needs (apply, undo, redo, no-history edits); the full
   undoable set, coalescing and the blast-radius metadata stay TASK-M8-03's, which depends on this task.
 - Size: the mock, the suite, the shell and the capture mode are one reviewable step, the ruling's first ORDER item.

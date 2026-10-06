@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156
-- **Depends on:** TASK-M8-09, TASK-M8-05
+- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27
 - **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-2.4
@@ -23,7 +23,7 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 
 ## Deliverables
 - `crates/render/src/compositor/trace_layer.rs` — the trace as a compositor layer above the stain output; suppressed over non-current-identity regions.
-- `crates/gui/src/explore/hover_label.rs` — label strings from the snapshot's sample under the cursor.
+- `crates/gui/src/explore/hover_label.rs`, the track's hover label (TASK-M6-27, R-390) wired to the real engine — label strings from the snapshot's sample under the cursor.
 - `crates/gui/src/labels.rs` — the shared 0-based body / pair label functions (used by the legend, Trajectory panel and Inspector).
 - Tests: `hover_clears`, `hover_label_strings`, `labels_zero_based`; screenshot cases `01_main/hover_current`, `01_main/hover_stale`, `01_main/hover_path`.
 
@@ -39,3 +39,4 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - The opacity fall-off with distance from the slice has no stated function or distance measure.
 - The click inspector's persistence half of REQ-GUI-052 is asserted against the Inspector window id; the window itself is TASK-M8-14.
 - Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (classification accepted by R-132).
+- R-390: TASK-M6-27 builds the hover path and label on mock data, the path drawn by the mock into its stand-in (applied per R-369, review 5434766412 on PR #157); this task depends on it, draws the real path with the compositor's trace layer and the label from the real sample, and keeps REQ-GUI-085 and REQ-GUI-086. The mock's fall-off is a stand-in; REQ-GUI-156's definition is written here.
