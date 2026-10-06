@@ -9,22 +9,22 @@
 | DEC | 44 |
 | ENC | 33 |
 | CHART | 52 |
-| INT | 84 |
+| INT | 85 |
 | EVT | 26 |
 | PAY | 90 |
 | GEN | 32 |
 | SCHED | 95 |
 | REF | 50 |
 | RENDER | 83 |
-| COL | 59 |
+| COL | 60 |
 | GUI | 163 |
-| TOOL | 147 |
+| TOOL | 150 |
 | VAL | 180 |
 | PERF | 94 |
 | SYS | 79 |
-| **total** | **1311** |
+| **total** | **1316** |
 
-Of these: 104 calibration, 104 definition, 1103 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 107 calibration, 105 definition, 1104 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -33,19 +33,19 @@ Of these: 104 calibration, 104 definition, 1103 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 83 |
 | M2 | 158 |
-| M3 | 193 |
+| M3 | 196 |
 | M4 | 104 |
 | M5 | 163 |
 | M6 | 141 |
-| M7 | 113 |
+| M7 | 115 |
 | M8 | 234 |
 
 ## Sections
 
-1069 sections in 46 files: 882 yield at least one requirement; 187 yield none and are listed below with the reason.
+1078 sections in 46 files: 889 yield at least one requirement; 189 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 139 |
+| informative only | 141 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 33 |
 | rationale | 10 |
@@ -149,6 +149,8 @@ Of these: 104 calibration, 104 definition, 1103 obligation. Retired (kept for th
 | R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)* | informative only | every reviewer posts its verdict with exactly `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, the JSON object {event, commit_id, body} on standard input, written first to a scratch file by its own python3 json.dumps command fed by a heredoc, then posted by a command that begins with `gh api` (applied per R-369; a command beginning with python3 matched no allow rule); the only form the human's allow rule matches; no other form, a blocked post is stopped and reported; amends R-357; the five reviewer files and plan/OPERATIONS.md updated; changes no requirement |
 | R-374 — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)* | informative only | the human labelled it R-370, already taken, so recorded as R-374; R-233's "leave debug info at the default" covers local builds on the Mac only; every CI job sets CARGO_PROFILE_DEV_DEBUG and CARGO_PROFILE_TEST_DEBUG to line-tables-only; built by TASK-M0-19's PR #120 (every workflow job) and TASK-M0-52's PR #126 (the lighter archive); this ruling's PR edits no workflow; amends R-233; changes no requirement |
 | R-377 — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts | informative only | the human's item 4 of 3 Oct 2026, numbered by the orchestrator, applied per R-204: the M0 gate is passed once PR #124 (TASK-M0-50) merges and every requirement in M0's exit gate is green on main; the orchestrator then confirms it in its summary, tags main m0-gate and starts M1; plan/OPERATIONS.md's order of work gains it; changes no requirement |
+| R-384 — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge | informative only | the human's item 2 of 6 Oct 2026, numbered by the orchestrator, applied per R-369: TASK-M0-00 was already status: done in plan/tasks.yaml (R-185, PR #11), so no change; the m0-gate tag is on 002576e, #124's merge, and gate run 37146733001 there passed; the re-run on main addf630, run 37446425304, was in progress when recorded, its result to be added as a dated bullet; changes no requirement |
+| R-387 — `cargo doc` with warnings as errors joins `ci-checks`, and `plan/coverage.md`'s counts are regenerated, in a separate ops PR, the orchestrator's call | informative only | the human's item 5 of 6 Oct 2026, the orchestrator's call under R-369: a separate ops PR adds cargo doc with warnings as errors to ci-checks, regenerates plan/coverage.md, and fixes crates/validation/src/gpu.rs:602's private intra-doc link; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
