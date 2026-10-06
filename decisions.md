@@ -6083,3 +6083,176 @@ of ready-next tasks, starting a task off its approved dependency's head, and fas
 - R-388 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
+*6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
+header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
+TASK-M6-29 (new), `plan/tasks.yaml` and twenty existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
+`plan/MILESTONES.md` § "M6 — Adaptive refinement and deep zoom (deep_zoom layer 2)", `plan/reviewers/gui.md` and
+`plan/rule_groups.yaml`; built by TASK-M6-24 to TASK-M6-29*
+
+"Start the GUI track now, in parallel with the physics
+and renderer chain. Record it as a ruling (next free number). It
+replaces my earlier R-382 wording, if that was never recorded.
+
+GOAL
+A dev GUI (egui) I can run on my Mac and use: it should look, feel and
+behave like the design. Content can be placeholder; the look, feel and
+behaviour can't.
+
+SOURCES (authoritative, in this order)
+decisions.md > docs/gui/design/GUI_DESIGN_NOTES.md > the artboards in
+docs/gui/design/ > docs/gui/render_gui_spec.md >
+gui_state_contract.md. Where they disagree, the higher one wins; where
+they're silent, decide (R-369) and record it.
+
+ARCHITECTURE
+- The gui crate depends only on the engine's contract (R-185). Build a
+  mock engine as a test double implementing that contract: it serves
+  plausible Snapshots, accepts SetField (with undo/redo, R-69), emits
+  events, and runs a fake clock so Time plays.
+- The mock and the real engine pass the same contract conformance
+  tests. Contract changes go through review and re-run them for both.
+- `cargo run -p gui --features mock` launches the app on my Mac.
+
+PLACEHOLDERS (fine, but obvious)
+- The figure: a procedural stand-in (smooth noise or the poster image
+  from workbench/), panning and zooming like the real one, with the
+  tile-bounds overlay working on fake quads.
+- The legend, trajectory viewer, Inspector and profiler: their frames
+  and controls are real; their content is plausible fake data from the
+  mock.
+- A small "mock engine" tag in the footer, so I always know what I'm
+  looking at.
+
+ORDER (each its own task and PR)
+1. The mock engine, the conformance tests, and the app shell: window,
+   F3 toggle, egui dark theme, top bar, footer with the console.
+2. Keyboard navigation: the scope tree, Tab and Shift+Tab, Enter and
+   Esc, arrows, Shift and Alt steps, the focus ring, the breadcrumb, `?`
+   for shortcuts. It runs through everything that follows.
+3. The Manifold view group (chart, navigate, z₀, slice and tilt,
+   rotation, lock re-basing the sliders) and the compass (switching
+   slice and tilt by activity, the lock pin).
+4. Time (play, step, scrub), the Legend frame, the Trajectory side
+   panel frame (sphere turning with axes, unwrap toggle), the Overlays
+   menu.
+5. The windows: Run, Chart builder (with the square domain preview),
+   Export and share, Display, Profiler (frame and tabs), Console, the
+   Inspector frame.
+6. The Stain node-graph editor, with fake nodes and live preview from
+   the mock.
+
+REVIEW
+- Reviewers: code, qa and gui. The gui reviewer compares every screen
+  with its artboard through the screenshot runner, and checks the design
+  notes' global rules (nothing covers the figure, square previews,
+  navigation edits z₀ and the basis, legend by evaluation, and so on).
+- Each PR's description includes a short "what to try" list for me: the
+  clicks and keys that show off what changed.
+
+PRIORITY AND RESOURCES
+The physics and renderer chain keeps priority for agent slots; the GUI
+track uses spare capacity within the memory and disk limits. Don't let
+it hold up M1 or M2.
+
+FEEDBACK
+I'll try each merged screen myself. My look-and-feel feedback comes to
+you as plain notes; treat it as GUI design rulings and record it."
+
+(Message of 6 Oct 2026, "This is from me."; numbered by the orchestrator: R-390 is the next free number once the rulings
+already in flight are counted.)
+
+*R-382 (flagged):* the message says this ruling takes the place of the human's earlier "R-382" wording of the GUI track,
+if that was never recorded. R-382 is recorded: it is the L_z-suspect threshold (RQ-207), and has nothing to do with the
+GUI. No earlier wording of the GUI track was ever recorded in `decisions.md`, under R-382 or any other number. So
+nothing is taken out: R-382 stands unchanged, and the GUI track is recorded here, new.
+
+*The sources' order, read with R-68 (flagged):* the message ranks `decisions.md` above
+`docs/gui/design/GUI_DESIGN_NOTES.md`, then the twelve artboards (`docs/gui/design/01_main.png` to `12_console.png`),
+then `docs/gui/principia_render_gui_spec.md` (the message's "render_gui_spec.md"), then
+`docs/contracts/principia_gui_state_contract.md`. The first three are the order the design notes and render_gui_spec
+already state. Ranking the artboards above render_gui_spec and the state contract is new, while R-68, a ruling and so at
+the top of this very order, says artboard values are illustrative and corpus values win. Applied: the order governs
+layout, look, feel and behaviour; on values (hex codes, defaults, the 0-based labels, the contract's names and fields)
+R-68 still makes the corpus win, as render_gui_spec §G13 lists. Read so, the two agree and nothing built changes, so it
+is not asked.
+
+*Silences:* "where they're silent, decide (R-369) and record it." Applied: on the GUI track, a look, feel or behaviour
+the sources leave open is decided by the orchestrator and the reviewers, and recorded in the PR as "applied per R-369".
+A value the plan already holds as a calibration requirement (R-71) stays one: the task that first needs it proposes it,
+and the human confirms it at its gate. A physics choice stays the human's (R-369's list).
+
+*Applied per R-369 (the plan):*
+- **The placeholder figure is smooth procedural noise**, generated by the mock engine. Nothing from `workbench/`, the
+  poster image included, is copied in, since `workbench/` is never normative (CLAUDE.md § "Authority"; R-159).
+- **Six tasks, one per ORDER item, each its own PR, reviewed by code, qa and gui:**
+  1. TASK-M6-24 — the mock engine, the contract conformance suite and the app shell;
+  2. TASK-M6-25 — keyboard navigation, through every later screen;
+  3. TASK-M6-26 — the Manifold view group and the compass, with the stand-in figure panning and zooming;
+  4. TASK-M6-27 — Time, the Legend frame, the Trajectory panel frame and the Overlays menu, with the tile-bounds overlay
+     on the mock's fake quads;
+  5. TASK-M6-28 — the windows: Run, Chart builder, Export & share, Display, Profiler, Console and the Inspector frame;
+  6. TASK-M6-29 — the Stain node-graph editor, with fake nodes and the mock's live preview.
+  Each task's acceptance includes `cargo run -p gui --features mock` launching the app, the conformance suite on both
+  engines, and `cargo xtask screenshot` comparisons against the artboards it names.
+- **Why `TASK-M6-nn` ids, in M6.** `plan/check_plan.py` accepts only `TASK-M<n>-<nn>` task files in milestones M0 to
+  M8, and `cargo xtask reviews-check` finds a PR's task file at `plan/tasks/<Mn>/<TASK-id>.md` from its title, so a
+  separate "G" series would need code changes, and this is a docs-and-plan change. No task may depend on a task of a
+  later milestone (`plan/check_plan.py`), and four tasks before M8 build on what the track builds: TASK-M6-21 (the
+  precision warning in the Manifold view's depth readout), TASK-M6-22 (gui's headless capture mode, REQ-GUI-162, the
+  Run window and the minimal Profiler window, R-152), TASK-M7-22 (the stain canvas) and TASK-M7-25 (the Display
+  window). So the track sits in M6, the latest milestone those four allow. M1 or M2 would put it in their gates, which
+  the ruling forbids; it is in M6's gate, far behind them.
+- **It starts now.** TASK-M6-24 depends only on merged work: TASK-M0-16 (the contract surfaces' skeleton) and TASK-M0-20
+  (the screenshot runner). Each later track task depends on the one before it, in ORDER's order. `plan/WORKFLOW.md`
+  § "Human checkpoints: the milestone gates" gains the exception: a track task merges once its reviews pass and CI is
+  green, without waiting for the gates of M1 to M5.
+- **Eleven new requirements, REQ-GUI-165 to REQ-GUI-175, in M6:** the mock engine and `cargo run -p gui --features
+  mock` (165), the conformance suite on both engines (166) and the "mock engine" tag (167), closed by TASK-M6-24; and
+  the screens on the mock, one per task (168 the shell, 169 keyboard, 170 the Manifold view and compass, 172 Time, the
+  Legend, the Trajectory panel and the Overlays menu, 174 the windows, 175 the Stain editor), with the stand-in figure
+  panning and zooming (171, TASK-M6-26) and the tile-bounds overlay on fake quads (173, TASK-M6-27).
+- **Twelve requirements move their closing task to the track**, each one its task shows in full, look, feel and
+  behaviour, on the mock: REQ-GUI-075 (theme and fonts, from TASK-M8-05) and REQ-GUI-162 (the headless capture mode,
+  from TASK-M6-22) to TASK-M6-24; REQ-GUI-095 (the scope tree), REQ-GUI-098 (the focus ring and breadcrumb),
+  REQ-GUI-146 (DAS / ARR) and REQ-GUI-158 (the base steps) to TASK-M6-25, all from TASK-M8-13; REQ-GUI-081 (the
+  Manifold view group, from TASK-M8-06) and REQ-GUI-091 (the compass, from TASK-M8-07) to TASK-M6-26; REQ-GUI-157 (the
+  sphere's rotation rate, from TASK-M8-11) to TASK-M6-27; REQ-GUI-126 (the console, from TASK-M8-27) to TASK-M6-28;
+  REQ-GUI-128 (the Stain layout, from TASK-M8-19) and REQ-GUI-131 (the canvas gestures, from TASK-M8-20) to
+  TASK-M6-29. Each keeps its statement, verify, milestone and rulings; its note names R-390 and both tasks. The three
+  calibrations move because the track's task is the first to need the value (`plan/WORKFLOW.md` § "Task files"); the
+  human still confirms each at the M8 gate. Each task they leave keeps its acceptance line for them, re-run there on the
+  real engine, keeps every other requirement it closes, and depends on the track's task.
+- **What stays.** Every other requirement stays with its task: those that need the real engine's data or wiring
+  (egui-wgpu on the engine's device, REQ-GUI-070; the budget binding, REQ-GUI-078; the contract's history, TASK-M8-03),
+  the definitions (R-72), the contract names (the Run window, REQ-GUI-102) and the requirements a track task shows
+  only in part. No move drops or changes a decision.
+- **The mock lives in the gui crate**, under its `mock` feature and in its tests, so the crate map is unchanged
+  (R-185; systems_architecture §7.1). The conformance suite is defined once, in the engine crate beside the contract;
+  engine's tests run it against the real engine and gui's tests against the mock. Every case runs on both, none is
+  skipped for either, and a case joins the suite only when both can run it.
+- **The real engine's side.** The engine crate's contract gains the interface the GUI calls (`set_field`, the
+  snapshot, undo and redo as requests, the events), and the real engine implements it as far as the conformance suite
+  reaches. TASK-M8-01 and TASK-M8-03 keep every requirement they close, and TASK-M8-03 depends on TASK-M6-24.
+- **Contract fields.** Where a track control needs a `SetField` path or a snapshot field the contract doesn't have yet,
+  its task adds it as the corpus names it (gui_state_contract §2 and the contract that owns the field), with no engine
+  behaviour beyond what the conformance suite checks, and re-runs the suite on both engines. The task that closes that
+  field's requirement keeps it.
+- **The headless capture mode runs the app on the mock**, so `cargo xtask screenshot` reaches every track screen
+  without the real engine (R-274).
+- **The resource rule** is `plan/OPERATIONS.md` § "The GUI track (R-390)": the physics and renderer chain has priority
+  for agent slots; a track task or its reviewer takes only a slot no ready chain task needs, within § "Resources"'
+  limits, and never holds up M1 or M2.
+- **The feedback rule** is in the same section: each of the human's look-and-feel notes on a merged screen is recorded
+  as a GUI design ruling, in the human's words, at the next free number, in the "design" group; it is applied docs
+  first (the design notes or render_gui_spec), then the plan, then the code through a task.
+- **"What to try".** A track PR's description has a "What to try" section: the clicks and keys that show what changed,
+  on `cargo run -p gui --features mock` (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR"; each track
+  task's Notes).
+- **The gui reviewer** (`plan/reviewers/gui.md` § "8. The GUI track on the mock engine (R-390)") compares every screen
+  with its artboard through `cargo xtask screenshot` and checks the design notes' global rules.
+- R-390 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-165 to REQ-GUI-175; REQ-GUI-075, REQ-GUI-081, REQ-GUI-091, REQ-GUI-095, REQ-GUI-098, REQ-GUI-126,
+REQ-GUI-128, REQ-GUI-131, REQ-GUI-146, REQ-GUI-157, REQ-GUI-158 and REQ-GUI-162 change closing task and note.
