@@ -11,7 +11,8 @@ use engine::contract::canonical;
 use engine::contract::profile::{self, percentile, SCHEMA_V1};
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, Links, Lock, Plane, Quality, SimConfig, Slice,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
+    Slice,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -131,6 +132,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             lock: Lock {},
             links: Links {},
             integrator: Integrator {},
+            kernel_variant: KernelVariant::Physics,
             horizon: Horizon {},
             collision: Collision {},
             quality: Quality {},
@@ -393,7 +395,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&sim).unwrap(),
         &canonical::to_string(&sim2).unwrap(),
-        r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
+        r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
     );
     check_same_text(
         &canonical::to_string(&render).unwrap(),

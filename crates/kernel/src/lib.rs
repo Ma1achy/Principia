@@ -2,6 +2,7 @@
 //! kernel and its occupants (systems_architecture §7.1). `no_std`, so rust-gpu can compile it (R-185).
 #![no_std]
 
+pub mod bringup;
 pub mod payload;
 pub mod real;
 pub mod shape;

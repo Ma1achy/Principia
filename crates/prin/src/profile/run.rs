@@ -27,7 +27,8 @@ use engine::contract::profile::{
 };
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, Links, Lock, Plane, Quality, SimConfig, Slice,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
+    Slice,
 };
 use engine::telemetry::session;
 use serde_json::{Map, Value};
@@ -218,6 +219,7 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
         lock: Lock {},
         links: Links {},
         integrator: Integrator {},
+        kernel_variant: KernelVariant::Physics,
         horizon: Horizon {},
         collision: Collision {},
         quality: Quality {},

@@ -3,6 +3,7 @@
 //! R-187).
 
 pub mod bench;
+pub mod bringup;
 pub mod control;
 pub mod convergence;
 pub mod gate;

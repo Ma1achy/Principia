@@ -23,6 +23,9 @@ pub struct SimConfig {
     pub links: Links,
     /// The integrator occupant.
     pub integrator: Integrator,
+    /// The kernel variant: physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item" of
+    /// colour_composition §0 (RQ-221). A change re-integrates, as for any sim-key field (caching contract Part 2).
+    pub kernel_variant: KernelVariant,
     /// `T`, `dt`, the thresholds and `eps`.
     pub horizon: Horizon,
     /// The collision radius `r_coll`.
@@ -61,6 +64,17 @@ pub struct Links {}
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Integrator {}
+
+/// The kernel variant, each a baked kernel (lowering Part 3, "Compute side"; R-41): the physics kernel, or the one
+/// debug mode, colour_composition Appendix A's bring-up mode (R-75; `kernel::bringup`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum KernelVariant {
+    /// The physics kernel.
+    Physics,
+    /// The bring-up mode: the kernel writes a known pattern instead of physics.
+    BringUp,
+}
 
 /// `T`/`dt`/thresholds/`eps` (gui_state_contract §2).
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
