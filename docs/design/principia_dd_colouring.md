@@ -143,7 +143,7 @@ The outcome `state` takes `principia_colour_composition.md` §1.4's canonical ni
 
 **The method (R-78):** real **Viénot** simulation for protan and deutan, and real **Brettel** simulation for tritan, both
 through LMS space from linear sRGB. The matrices and golden values come from a published reference implementation, named
-with its version when the task lands (R-78). Achromatopsia — offered in the Display window as a fifth mode (R-123) — is neither, and multiplies the linear $(R_\ell, G_\ell, B_\ell)$
+with its version below (R-78, R-383). Achromatopsia — offered in the Display window as a fifth mode (R-123) — is neither, and multiplies the linear $(R_\ell, G_\ell, B_\ell)$
 triplet:
 
 $$M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
@@ -154,6 +154,38 @@ protan and deutan and its `Simulator_Brettel1997` for tritan, both on its `LMSMo
 al.'s Judd–Vos-corrected XYZ from linear sRGB, then Smith & Pokorny 1975's LMS). The method's sources are Viénot,
 Brettel & Mollon 1999 and Brettel, Viénot & Mollon 1997. TASK-M7-20 transcribes its matrices here and generates the
 golden values from it, in linear sRGB.
+
+**The matrices, transcribed from the reference at `3cba5e6` (TASK-M7-20; R-383).** Every matrix acts on a column vector.
+The reference's file and lines are DaltonLens-Python's, at that commit.
+- **The LMS model.** $M_{\mathrm{LMS}} = M_{\mathrm{SP}}\,M_{\mathrm{JV}}$, from linear sRGB to LMS, with Viénot et al.'s
+  matrix to Judd–Vos-corrected XYZ (`convert.py:186–190`)
+  $M_{\mathrm{JV}} = 10^{-2}\begin{pmatrix} 40.9568 & 35.5041 & 17.9167 \\ 21.3389 & 70.6743 & 7.98680 \\ 1.86297 & 11.4620 & 91.2367 \end{pmatrix}$
+  and Smith & Pokorny 1975's cone fundamentals (`convert.py:160–164`)
+  $M_{\mathrm{SP}} = \begin{pmatrix} 0.15514 & 0.54312 & -0.03286 \\ -0.15514 & 0.45684 & 0.03286 \\ 0 & 0 & 0.01608 \end{pmatrix}$.
+  To six decimals, $M_{\mathrm{LMS}}$ is [[0.178824, 0.435161, 0.041193], [0.034556, 0.271554, 0.038671],
+  [0.000300, 0.001843, 0.014671]]; its inverse, taken in f64, is [[8.094436, −13.050431, 11.672058],
+  [−1.024851, 5.401931, −11.361471], [−0.036530, −0.412163, 69.351324]].
+- **Viénot (protan, deutan; `simulate.py:150–158`, `:167`).** The plane through black and the LMS images of blue
+  (0, 0, 1) and yellow (1, 1, 0) has normal $n = M_{\mathrm{LMS}}(1,1,0)^{\mathsf T} \times M_{\mathrm{LMS}}(0,0,1)^{\mathsf T}$.
+  The projection along the missing cone's axis onto it (`plane_projection_matrix`, `simulate.py:95–125`) replaces that
+  cone's response, $L' = -(n_M M + n_S S)/n_L$ for protan, $M' = -(n_L L + n_S S)/n_M$ for deutan, and keeps the other two.
+  The transform on linear sRGB is $M_{\mathrm{LMS}}^{-1}\,P\,M_{\mathrm{LMS}}$: to six decimals, protan
+  [[0.112383, 0.887617, 0], [0.112383, 0.887617, 0], [0.004006, −0.004006, 1]] and deutan
+  [[0.292750, 0.707250, 0], [0.292750, 0.707250, 0], [−0.022337, 0.022337, 1]]. The zeros are zero in exact arithmetic,
+  blue being on the plane; the reference's f64 holds them as roundoff below $2\cdot10^{-16}$.
+- **Brettel (tritan; `simulate.py:235–240`, `:252–271`, `:279–294`).** The neutral axis is white's LMS image,
+  $w = M_{\mathrm{LMS}}(1,1,1)^{\mathsf T}$. The anchors are the Judd–Vos XYZ of 485 nm, (0.05699, 0.16987, 0.5864), and of
+  660 nm, (0.16161, 0.061, 0.00001) (`simulate.py:239–240`), each taken to LMS by $M_{\mathrm{SP}}$. The separating plane
+  has normal $n_{\mathrm{sep}} = w \times (0, 0, 1)$; each half-plane passes through $w$ and one anchor, normal
+  $w \times a$, and the anchor on $n_{\mathrm{sep}}$'s positive side, 660 nm, is the first. $H_k$ projects along the S axis
+  onto half-plane $k$, $S' = -(n_L L + n_M M)/n_S$. A colour takes $H_2$ where $n_{\mathrm{sep}} \cdot \mathrm{LMS} < 0$,
+  else $H_1$. On linear sRGB, to six decimals: $T_1 = M_{\mathrm{LMS}}^{-1} H_1 M_{\mathrm{LMS}}$ =
+  [[1.012773, 0.135485, −0.148257], [−0.012433, 0.868121, 0.144312], [0.075891, 0.805002, 0.119107]];
+  $T_2$ = [[0.936781, 0.189790, −0.126571], [0.061537, 0.815260, 0.123203], [−0.375624, 1.127665, 0.247958]]; and the
+  separating normal carried to linear sRGB, $n_{\mathrm{sep}}^{\mathsf T} M_{\mathrm{LMS}}$ = (0.039015, −0.027881, −0.011134).
+- **Severity 1** (full dichromacy, `simulate.py:84–89`). The CVD stage's code derives every matrix in f64 from
+  $M_{\mathrm{JV}}$, $M_{\mathrm{SP}}$ and the two anchors, and its shader holds them rounded to f32; the golden values in
+  `fixtures/cvd/goldens.json`, generated from the reference, check both.
 
 Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
 orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
