@@ -5881,6 +5881,11 @@ numbering note.)
 - **Green on `main` now.** A re-run of the `gate` workflow on `main` at `addf630` (#148's merge), run 37446425304, was
   in progress when this was recorded, so this confirmation is pending that run's result. The result is added as the
   next bullet, dated, when the run finishes, and no line here is reworded.
+- **6 Oct 2026: green on `main`, confirmed.** Run 37446425304 of the `gate` workflow, for M0 on `main` at `addf630`
+  (https://github.com/Ma1achy/Principia/actions/runs/37446425304), completed with success: every job passed, namely
+  xtask-ci, cpu, screenshot, gpu-metal, gpu-lavapipe and gate-report. The report's last two lines read "122
+  requirements: 122 pass, 0 fail, 0 missing, 0 awaiting the human's run, 0 supplied" and "of which 0 with a named test
+  that does not exist, 49 with no named test to check". Every M0 exit requirement is green on `main`.
 - R-384 is in the "one-off" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
@@ -5919,6 +5924,12 @@ random canvas, whose neighbouring low bits are independent; a real figure's are 
   export with the hybrid embedding. TASK-M7-34 therefore depends on TASK-M7-30 (the hybrid), TASK-M7-32 (embedding in
   PNG export), TASK-M7-18 (the §7.1 presets) and TASK-M7-21 (the display chain). It measures at least three figures
   of different presets, among them a smooth one and one with a fine fractal boundary, at 512² and 1024².
+- **A recovery shortfall is reported, not failed (applied per R-369).** TASK-M7-34's test measures and records the
+  per-angle recovery on the real figures and reports it. It asserts that the measurement ran over every listed figure,
+  size and angle and that the report was written; it does not fail on a recovery shortfall. A shortfall goes to the M7
+  gate for the human, because `k = 25` is the human's calibration (REQ-TOOL-111, R-71), and the reconciliation of
+  37.6 % with ~8 % goes in the same report. The same rule is stated in REQ-TOOL-151's verify detail (reqio) and in
+  TASK-M7-34's acceptance line and Note.
 - REQ-TOOL-111's note names R-385 and REQ-TOOL-151 (reqio); its statement is unchanged.
 - R-385 is in the "values" group of `plan/rule_groups.yaml`.
 
@@ -5926,7 +5937,8 @@ Adds REQ-TOOL-151; REQ-TOOL-111's note changes.
 
 ## R-386 — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
 *6 Oct 2026 · applied in REQ-COL-061 (reqio, new), REQ-COL-055's note (reqio), TASK-M7-20, `plan/MILESTONES.md` § "M1
-— The synthetic payload and the eyes" and `plan/rule_groups.yaml`; built by TASK-M7-20*
+— The synthetic payload and the eyes", `plan/OPERATIONS.md` § "Order of work" and `plan/rule_groups.yaml`; built by
+TASK-M7-20*
 
 "4. At the M1 gate: also check the hatch colours stay distinguishable
    from the palette under each colour-vision simulation."
@@ -5952,12 +5964,20 @@ distinguishable from every palette entry REQ-COL-055 measured against.
   gate does not pass until REQ-COL-061 is green on `main`, so TASK-M7-20 merges before the M1 gate.** TASK-M7-20
   depends only on TASK-M7-02, which has merged, so this delays nothing. Moving TASK-M7-20 into M1 would also move
   TASK-M7-02, a merged M7 task; that is not done.
+- **Where the gate is run (applied per R-369).** The M1 gate report (`cargo xtask gate-report --milestone M1`, run by
+  `.github/workflows/gate.yml`) lists only the gate blocks of M1 and earlier milestones, so it does not show
+  REQ-COL-061, which is in M7. `plan/OPERATIONS.md` § "Order of work" therefore gains a line, as R-377's condition
+  did: before the M1 gate passes, the orchestrator lays out REQ-COL-061's proposal beside REQ-COL-055's and checks
+  `cvd_hatch_distinct` green on `main`.
 - **Achromatopsia (flagged for the proposal).** Under M_achrom every colour maps to a grey, and the palettes
   REQ-COL-055 measured include the grey ramp, so under achromatopsia each stripe colour on its own matches some grey.
-  There the hatch is told apart by its pattern, its two stripes 0.35 apart in OKLab lightness (render contract Part
-  5), not by either colour. The proposal states how the two-colour pattern counts where a single stripe colour falls
-  within the threshold. If a hatch colour fails under any simulation, the failure goes to the M1 gate with
-  REQ-COL-055's proposal, and the human decides there.
+  There the hatch is told apart by its pattern, not by either colour. Its two stripes are 0.35 apart in OKLab lightness
+  before simulation (render contract Part 5; L 0.562 for `#9B00FF` and 0.912 for `#48FFFF`, by dd_colouring §3.1's
+  transforms), and 0.30 apart under M_achrom (L 0.596 and 0.896, each stripe's linear triplet multiplied by
+  dd_colouring §3.8's M_achrom), so the proposal measures the pattern's lightness step under M_achrom, at 0.30, not
+  0.35. The proposal states how the two-colour pattern counts where a single stripe colour falls within the threshold.
+  If a hatch colour fails under any simulation, the failure goes to the M1 gate with REQ-COL-055's proposal, and the
+  human decides there.
 - REQ-COL-055's note names R-386 and REQ-COL-061 (reqio); its statement is unchanged.
 - R-386 is in the "values" group of `plan/rule_groups.yaml`.
 
