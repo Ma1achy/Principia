@@ -438,142 +438,66 @@ negative_control!(
     )
 );
 
-// ── the stage: the pass on linear colour, 8-bit sRGB in and out ─────────────────────────────────────────────────────
+// ── the stage: the pass on linear colour, the transfer around it in f64 ─────────────────────────────────────────────
 
-/// Where the pass is put: after linearisation, as the stage is, or before it, the layer's 8-bit sRGB read and written
-/// as they are stored, through non-sRGB views of the same textures.
+/// Where the pass is put: after linearisation, as the stage is, fed the layer's 8-bit sRGB decoded and its output
+/// encoded; or before it, fed the 8-bit sRGB as it is stored (`v / 255`) and its output taken as encoded.
+///
+/// The pass runs on float layers ([`run_float_stage`]) and the decode and encode around it are dd_colouring §3.1's
+/// transfer in f64 (`render::present`), so no backend's own sRGB conversion enters: an `Rgba8UnormSrgb` view's
+/// conversion near black differs between backends by more than its rounding (lavapipe draws 15 where the transfer
+/// gives 13.43), and is not what this test checks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Placement {
     Linear,
     PreLinearisation,
 }
 
-/// The pass drawn on a layer holding `colours` (8-bit sRGB, one per pixel), under `mode`, placed as `placement`
-/// says; the screen's 8-bit sRGB, pixel by pixel.
-fn run_stage(
-    gpu: &GpuHarness,
-    colours: &[[u8; 3]],
-    mode: CvdMode,
-    placement: Placement,
-) -> Vec<[u8; 3]> {
-    use wgpu::util::DeviceExt;
-    let (device, queue) = (gpu.device(), gpu.queue());
-    let width = colours.len() as u32;
-    let srgb = wgpu::TextureFormat::Rgba8UnormSrgb;
-    let unorm = wgpu::TextureFormat::Rgba8Unorm;
-    let view_format = match placement {
-        Placement::Linear => srgb,
-        Placement::PreLinearisation => unorm,
-    };
-    let size = wgpu::Extent3d {
-        width,
-        height: 1,
-        depth_or_array_layers: 1,
-    };
-    let texels: Vec<u8> = colours
-        .iter()
-        .flat_map(|c| [c[0], c[1], c[2], 255])
-        .collect();
-    let source = device.create_texture_with_data(
-        queue,
-        &wgpu::TextureDescriptor {
-            label: Some("layer"),
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: srgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[unorm],
-        },
-        wgpu::util::TextureDataOrder::LayerMajor,
-        &texels,
-    );
-    let screen = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("screen"),
-        size,
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: srgb,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[unorm],
-    });
-    let view = |t: &wgpu::Texture| {
-        t.create_view(&wgpu::TextureViewDescriptor {
-            format: Some(view_format),
-            ..Default::default()
-        })
-    };
-    let pass = CvdPass::new(device, view_format).unwrap_or_else(|e| panic!("{e}"));
-    let row = (4 * width).next_multiple_of(256);
-    let staging = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("screen readback"),
-        size: u64::from(row),
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    });
-    let mut encoder = device.create_command_encoder(&Default::default());
-    pass.draw(device, &mut encoder, &view(&source), &view(&screen), mode);
-    encoder.copy_texture_to_buffer(
-        screen.as_image_copy(),
-        wgpu::TexelCopyBufferInfo {
-            buffer: &staging,
-            layout: wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(row),
-                rows_per_image: None,
-            },
-        },
-        size,
-    );
-    queue.submit([encoder.finish()]);
-    let slice = staging.slice(..);
-    slice.map_async(wgpu::MapMode::Read, |r| r.expect("the readback maps"));
-    device
-        .poll(wgpu::PollType::wait_indefinitely())
-        .expect("the device polls");
-    let bytes = slice
-        .get_mapped_range()
-        .expect("the readback maps")
-        .to_vec();
-    (0..colours.len())
-        .map(|k| [bytes[4 * k], bytes[4 * k + 1], bytes[4 * k + 2]])
-        .collect()
-}
-
-/// The screen's expected 8-bit sRGB for a simulated linear colour: clamped to [0, 1], encoded by dd_colouring §3.1's
+/// The 8-bit screen of a linear channel: clamped to [0, 1] as the pass clamps, encoded by dd_colouring §3.1's
 /// transfer, rounded.
-fn encode8(c: Rgb) -> [u8; 3] {
-    c.map(|x| (present::linear_to_srgb(x.clamp(0.0, 1.0)) * 255.0).round() as u8)
+fn screen8(x: f64) -> u8 {
+    (present::linear_to_srgb(x.clamp(0.0, 1.0)) * 255.0).round() as u8
 }
 
-/// The stage's expected screen for each test colour under `mode`: the reference's golden for the three it computes,
-/// `M_achrom`'s grey, the colour itself for off.
-fn expected8(c: &Colour, mode: CvdMode) -> [u8; 3] {
-    match mode {
-        CvdMode::Off => c.srgb8,
-        CvdMode::Achromatopsia => encode8(cvd::simulate(mode, c.linear)),
-        _ => encode8(c.golden(mode).unwrap()),
-    }
+/// The 8-bit screens the stage may draw for a channel whose expected linear value is `want`: the pass's output lies
+/// within the f32 bound `b` of it ([`bound`], which `cvd_modes_transform_the_test_colours` holds the pass to on the
+/// same float layers), and the clamp, the encode and the rounding are monotone, so its screen lies between the
+/// screens of `want - b` and `want + b`. No step is allowed beyond that: the tolerance is the bound's, carried through
+/// the transfer.
+fn allowed(want: f64, b: f64) -> std::ops::RangeInclusive<u8> {
+    screen8(want - b)..=screen8(want + b)
 }
 
-/// The test colours the pass, placed as `placement` says, draws more than one 8-bit step from the expected screen
-/// under `mode` (the GPU's f32 and its sRGB encode's rounding are within one).
+/// The test colours the pass, placed as `placement` says, draws outside the screens [`allowed`] for the expected
+/// simulation under `mode` (the reference's golden, `M_achrom`'s grey, or the colour itself for off: [`expected`]).
 fn stage_misses(gpu: &GpuHarness, mode: CvdMode, placement: Placement) -> Vec<String> {
     let colours = goldens().colours;
-    let input: Vec<[u8; 3]> = colours.iter().map(|c| c.srgb8).collect();
-    let got = run_stage(gpu, &input, mode, placement);
+    let input: Vec<Rgb> = colours
+        .iter()
+        .map(|c| match placement {
+            Placement::Linear => c.linear,
+            Placement::PreLinearisation => c.srgb8.map(|v| f64::from(v) / 255.0),
+        })
+        .collect();
+    let got = run_float_stage(gpu, &input, mode);
     colours
         .iter()
         .zip(&got)
         .filter_map(|(c, g)| {
-            let want = expected8(c, mode);
-            let off = (0..3)
-                .map(|j| (i32::from(g[j]) - i32::from(want[j])).abs())
-                .max()
-                .unwrap();
-            (off > 1).then(|| format!("{:?} → {g:?}, expected {want:?}", c.srgb8))
+            let want = expected(c, mode);
+            let b = bound(mode, c.linear);
+            let shown: [u8; 3] = std::array::from_fn(|j| match placement {
+                Placement::Linear => screen8(g[j]),
+                Placement::PreLinearisation => (g[j].clamp(0.0, 1.0) * 255.0).round() as u8,
+            });
+            let range: [_; 3] = std::array::from_fn(|j| allowed(want[j], b[j]));
+            (0..3).any(|j| !range[j].contains(&shown[j])).then(|| {
+                format!(
+                    "{:?} → {shown:?}, expected {:?}",
+                    c.srgb8,
+                    range.clone().map(|r| (*r.start(), *r.end()))
+                )
+            })
         })
         .collect()
 }
@@ -592,8 +516,8 @@ fn check_stage(gpu: &GpuHarness, placement: Placement) {
     }
 }
 
-/// Every simulation applied before linearisation misses the reference on some test colour, by more than the stage's
-/// one-step tolerance: the check above detects a misplaced stage.
+/// Every simulation applied before linearisation misses the reference on some test colour, outside the screens the
+/// stage on linear colour is allowed: the check above detects a misplaced stage.
 fn check_prelinearisation_detected(gpu: &GpuHarness, placement: Placement) {
     for mode in SIMULATIONS {
         let misses = stage_misses(gpu, mode, placement);
@@ -677,7 +601,8 @@ negative_control!(
 fn check_pass_modes(gpu: &GpuHarness, expect: fn(&Colour, CvdMode) -> Rgb) {
     let colours = goldens().colours;
     for mode in CvdMode::ALL {
-        let got = run_float_stage(gpu, &colours, mode);
+        let linear: Vec<Rgb> = colours.iter().map(|c| c.linear).collect();
+        let got = run_float_stage(gpu, &linear, mode);
         for (c, g) in colours.iter().zip(&got) {
             let want = expect(c, mode).map(|x| x.clamp(0.0, 1.0));
             let b = bound(mode, c.linear);
@@ -708,8 +633,8 @@ fn expected(c: &Colour, mode: CvdMode) -> Rgb {
     }
 }
 
-/// The pass on an `Rgba32Float` layer of `colours`' linear values into an `Rgba32Float` screen, under `mode`.
-fn run_float_stage(gpu: &GpuHarness, colours: &[Colour], mode: CvdMode) -> Vec<Rgb> {
+/// The pass on an `Rgba32Float` layer of `colours`, each rounded to f32, into an `Rgba32Float` screen, under `mode`.
+fn run_float_stage(gpu: &GpuHarness, colours: &[Rgb], mode: CvdMode) -> Vec<Rgb> {
     use wgpu::util::DeviceExt;
     let (device, queue) = (gpu.device(), gpu.queue());
     let format = wgpu::TextureFormat::Rgba32Float;
@@ -720,14 +645,7 @@ fn run_float_stage(gpu: &GpuHarness, colours: &[Colour], mode: CvdMode) -> Vec<R
     };
     let texels: Vec<u8> = colours
         .iter()
-        .flat_map(|c| {
-            [
-                c.linear[0] as f32,
-                c.linear[1] as f32,
-                c.linear[2] as f32,
-                1.0,
-            ]
-        })
+        .flat_map(|c| [c[0] as f32, c[1] as f32, c[2] as f32, 1.0])
         .flat_map(f32::to_le_bytes)
         .collect();
     let descriptor = |label, usage| wgpu::TextureDescriptor {
