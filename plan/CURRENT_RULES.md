@@ -295,6 +295,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-369** — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 - **R-371** — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
 - **R-373** — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
+- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
 
 ## CI
 
