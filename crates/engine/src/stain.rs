@@ -12,6 +12,11 @@
 //!
 //! The port rules, the occupants' declarations and the lowering are the render crate's, the fragment side's
 //! (systems_architecture §7.1: `engine` depends on `render`, never the reverse).
+//!
+//! [`Canonical`]: crate::stain::Canonical
+//! [`StainGraph::check`]: crate::stain::StainGraph::check
+//! [`StainGraph::new`]: crate::stain::StainGraph::new
+//! [`StainGraph::lower`]: crate::stain::StainGraph::lower
 
 use std::collections::BTreeMap;
 use std::fmt;

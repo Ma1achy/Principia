@@ -1131,11 +1131,11 @@ fn is_finite_max(v: f64) -> bool {
 }
 
 /// The float values of `h`, if it is a constant expression of floats, its components in order; `None` if it is not
-/// constant, holds an integer or a bool, or holds a value [`evaluate`] cannot give soundly. naga folds a constant
+/// constant, holds an integer or a bool, or holds a value `evaluate` cannot give soundly. naga folds a constant
 /// expression of literals before the IR is built, and rejects one at parse where WGSL makes it an error (the `sqrt` of
 /// a negative literal, an overflowing `exp`), which the lint reports. It leaves unfolded any constant expression over a
 /// `bitcast`, and some built-ins (`ldexp`, `mix`, `smoothstep`, `modf`, `frexp`, the packing built-ins) even over
-/// literals, so [`evaluate`] evaluates what naga leaves, as the shader does at run time. naga concretises an abstract
+/// literals, so `evaluate` evaluates what naga leaves, as the shader does at run time. naga concretises an abstract
 /// literal or constant before the IR, so no abstract literal reaches here.
 pub fn constant_floats(
     module: &Module,

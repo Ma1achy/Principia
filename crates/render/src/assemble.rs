@@ -1359,7 +1359,7 @@ fn components(
 
 /// The read-side fields the stain in `module` reads, by naga's IR: each member of the read-side `SimState` taken in
 /// any function but `sample_read`, which fills it; the word as `word`, or as `word.x` … `word.w` where only those
-/// components are read ([`components`]). These are the fields its `sample_read` must fill (R-378).
+/// components are read (`components`). These are the fields its `sample_read` must fill (R-378).
 pub fn fields_read(module: &Module, info: &ModuleInfo) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     let Some(simstate) = module

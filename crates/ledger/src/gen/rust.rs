@@ -374,7 +374,7 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
 }
 
 /// The pack/unpack/insert code of the packed words, emitted from their entries (payload §2, §6), after the fixed
-/// helpers ([`helpers`]). Per packed field `f` of word `w`, at bits `o .. o + n`:
+/// helpers (`helpers`). Per packed field `f` of word `w`, at bits `o .. o + n`:
 /// - an unpack accessor named as payload §6, `<prefix>_f(w)`, reading `extract(w, o, n)`: a `bool` for a flag, an f32
 ///   through the binary16 conversion for an `f16-pair`, else a `u32`;
 /// - a setter `set_f(w, v)` writing `insert(w, v, o, n)`; an `f16-pair` value is clamped to ±65504 first (payload
@@ -882,7 +882,7 @@ fn select2(outer: &str, inner: &str, table: &[[u32; 4]]) -> String {
 /// `CONT_SYMBOL`, `PREDECESSOR_SYMBOL` and `CONTINUATION_INDEX` (3 in its four `next = inverse(prev)` cells, R-307),
 /// and §3's small tables as functions: `inverse`, `continuation_symbol`, `predecessor_symbol` and
 /// `continuation_index`. The arrays are data, for host code; each function is a comparison chain over the same table's
-/// literals ([`select`]), never a runtime index into an array, which rust-gpu would bounds-check (GPU determinism note
+/// literals (`select`), never a runtime index into an array, which rust-gpu would bounds-check (GPU determinism note
 /// § "The discipline", rule 5). Each function is total (R-321, R-324): it `debug_assert!`s each symbol input < 4 and
 /// each digit < 3, then reads the table at the symbol masked to 2 bits (`& 3`) and the digit clamped (`min(d, 2)`), so
 /// a release build given an input out of range reads the cell at the masked or clamped input, and

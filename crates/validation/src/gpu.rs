@@ -599,8 +599,8 @@ fn metal_driver(program: &str) -> String {
 /// An adapter's report, as the session header records it (telemetry §2, §5): its name, API and driver; unified memory
 /// for an adapter that shares the machine's RAM (an integrated GPU, Apple silicon's included, or a CPU rasteriser such as
 /// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version
-/// ([`metal_driver`]). wgpu reports no VRAM size, so a discrete or virtual adapter is refused rather than given one it
-/// doesn't know (RQ-201, decided per R-369).
+/// (`macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers`). wgpu reports no VRAM size, so a discrete or virtual
+/// adapter is refused rather than given one it doesn't know (RQ-201, decided per R-369).
 pub fn session_adapter(
     info: &wgpu::AdapterInfo,
     features: wgpu::Features,
