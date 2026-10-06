@@ -29,7 +29,8 @@ exclude_globs = [
 # (neither `test_workspace` nor `test_package` is set), through cargo-nextest. The baseline runs the tests of every
 # package the run mutates. nextest runs each test as a process of its own and the test binaries side by side, where
 # `cargo test` runs the binaries one after another (render's 296 tests: 238 s against 105 s), and stops at the first
-# failing test. It runs the same tests as `cargo test`: the workspace has no doctests, which nextest would skip.
+# test that fails (the options below). It runs the same tests as `cargo test`: the workspace has no doctests, which
+# nextest would skip.
 # Dependents' tests are not added: every crate but gui reaches ledger, render, kernel and engine through its
 # dev-dependency on `validation`, so they would take a ledger mutant from its own 36 s of tests to the whole suite's,
 # against REQ-VAL-149's limit. A narrower test set can only leave more mutants surviving, never fewer, so the gate is
@@ -54,10 +55,20 @@ minimum_test_timeout = 60
 # runner is set for Linux alone: CI's Linux runners enforce the cap, and a run on macOS, which has no `prlimit`, gets
 # the timeout alone (R-352). nextest reads the runner from `--config`, as cargo does, and runs each test process under
 # it. cargo-mutants' timeout wraps the whole `cargo nextest run`.
-# `--no-tests=warn`: a package with no tests (gui) passes, as under `cargo test`. nextest's default fails such a run
-# (exit 4), and cargo-mutants would then count each of its mutants as caught, a survivor hidden.
+# nextest's own options, each so that a mutant is caught only by a test that fails:
+# - `--no-tests=warn`: a package with no tests (gui) passes, as under `cargo test`. nextest's default fails such a run
+#   (exit 4), and cargo-mutants would then count each of its mutants as caught, a survivor hidden.
+# - `--retries=2`: a failing test is run up to twice more, and passes if any run passes. On lavapipe, a GPU test process
+#   now and then dies of SIGSEGV after its test has passed ("test result: ok", then signal 11, measured on PR #149's
+#   diff, run 37532961883): one failed a shard's baseline, so the shard tested nothing, and one counted a mutant as
+#   caught. nextest gives each test a process of its own, so such exits are many times likelier than under `cargo test`.
+#   A mutant that breaks a test fails all three runs; a retry can only turn a catch into a survivor, never the reverse.
+# - `--max-fail=1:immediate`: the first test failing all its runs catches the mutant, and the tests still running are
+#   stopped at once rather than waited for.
 additional_cargo_test_args = [
     "--no-tests=warn",
+    "--retries=2",
+    "--max-fail=1:immediate",
     "--config",
     "target.'cfg(target_os = \"linux\")'.runner = ['prlimit', '--as=8589934592', '--core=1']",
 ]
