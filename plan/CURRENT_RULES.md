@@ -80,6 +80,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-265** — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
 - **R-339** — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
 - **R-368** — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*
+- **R-389** — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*
+- **R-392** — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*
 
 ## Design and architecture
 
@@ -295,6 +297,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-369** — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 - **R-371** — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
 - **R-373** — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
+- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
 
 ## CI
 
