@@ -171,6 +171,16 @@ fn check_words(shift: usize) {
         simstate_from_words(&[0; 35]).is_err(),
         "35 words read as a SimStateFTLE"
     );
+    // Arbitrary words, every byte distinct, the u16 members' high bytes and NaN bits included, read back whole.
+    let words: Vec<u32> = (0..words_per_sample() as u32)
+        .map(|k| 0x0403_0201u32.wrapping_mul(4 * k + 1) ^ 0x8080_8080)
+        .collect();
+    let s = simstate_from_words(&words).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        simstate_words(&s),
+        words,
+        "arbitrary words do not read back whole"
+    );
 }
 
 #[test]

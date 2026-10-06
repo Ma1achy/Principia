@@ -162,14 +162,15 @@ fn put(out: &mut [u32], at: usize, v: f32) {
     out[at] = v.to_bits();
 }
 
-/// The six real slots `k0 .. k0 + 6` of sample `i` at f32, from word `at` on.
+/// The six real slots `k0 .. k0 + 6` of sample `i` at f32, from word `at` on: constant offsets, no loop.
 #[inline]
 fn put_vectors(out: &mut [u32], at: usize, i: u32, k0: u32) {
-    let mut c = 0;
-    while c < 6 {
-        put(out, at + c as usize, real_slot(i, k0 + c));
-        c += 1;
-    }
+    put(out, at, real_slot(i, k0));
+    put(out, at + 1, real_slot(i, k0 + 1));
+    put(out, at + 2, real_slot(i, k0 + 2));
+    put(out, at + 3, real_slot(i, k0 + 3));
+    put(out, at + 4, real_slot(i, k0 + 4));
+    put(out, at + 5, real_slot(i, k0 + 5));
 }
 
 /// Sample `i`'s `SimStateFTLE` under the bring-up mode, at f32, as its words in `out`, the `SimState` buffer: each
