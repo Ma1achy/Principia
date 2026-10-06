@@ -823,3 +823,7 @@
   section: "R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*"
   reason: informative only
   note: "the human's ruling of 6 Oct 2026, a trial: at memory-pressure warning three agents unless the Mac is swapping, two while it is; swapping is more than 1000 vm_stat page-outs over the last minute (the orchestrator's proposal, applied per R-369 and logged; baseline 39/min and 2/min with 0 swap-outs at pressure 2 with two agents); R-262's cap of three stands; a daily log, and a revert to R-277 if timeouts or flakes rise; applied in CLAUDE.md and plan/OPERATIONS.md; replaces R-277's warning rule in part; changes no requirement"
+- file: decisions.md
+  section: "R-393 — R-388 item 4 is applied as nextest with own-package selection; \"plus genuine dependents\" is not applied *(amends R-388)*"
+  reason: informative only
+  note: "the human's acceptance of 6 Oct 2026 (\"yeah i accept it\"): R-388 item 4 is applied as nextest with cargo-mutants' own-package test selection kept; \"plus genuine dependents\" is not applied, since it rested on a wrong premise and would add tests (a ledger mutant ≈36 s → ≈20 min; a #149-sized shard ≈4–5 h against the 300-minute limit); implemented by the ops PR #156; amends R-388 in part; changes no requirement"

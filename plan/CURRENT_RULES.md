@@ -296,8 +296,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-369** — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 - **R-371** — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
 - **R-373** — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
-- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
+- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package. Still in force: items 1 to 3 as recorded; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count and time limits (R-376). Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied).
 - **R-391** — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
+- **R-393** — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
 
 ## CI
 
