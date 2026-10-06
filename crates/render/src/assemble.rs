@@ -921,19 +921,9 @@ fn ledger() -> Result<(&'static [Word], &'static [Entry]), AssembleError> {
     }
 }
 
-/// The stain's context (render contract Part 1's `RenderContext`, its lanes as M1 fills them; R-369).
-const CONTEXT: &str = r"
-// A field on a wire (render_gui_spec Part II §3): a scalar or categorical value in `.x`, a vector in `.xyz`.
-alias Field = vec4<f32>;
-
-// What every node reads (render contract Part 1): the sample's read-side `SimState`, the pixel's position for the
-// invalid hatch (`debug_invalid`), and the node's wired fields, `inputs[k]` its k-th field input.
-struct Ctx {
-    sample: SimState,
-    frag_xy: vec2<f32>,
-    inputs: array<Field, INPUTS>,
-}
-";
+/// The stain's context (render contract Part 1's `RenderContext`, its lanes as M1 fills them; R-369), its `inputs`
+/// [`MAX_INPUTS`] long: a file of its own, so `cargo xtask lint wgsl` lints the generated debug views after it.
+pub const CONTEXT: &str = include_str!("../shaders/wgsl/stain/context.wgsl");
 
 /// `stain`'s WGSL at `tier`, its read side filling `fields`, and its uniform blocks.
 fn source(
@@ -946,7 +936,7 @@ fn source(
     let mut out = format!(
         "{}\n{COLOUR_SPACE}\n{PRESENT}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
         prelude::wgsl(tier),
-        CONTEXT.replace("INPUTS", &MAX_INPUTS.to_string())
+        CONTEXT
     );
     // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
     // assemble to one source.
@@ -1142,6 +1132,22 @@ fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
         out.push((tok, start, i));
     }
     Ok(out)
+}
+
+/// The names of the functions `text` defines, in order: each name after `fn`, comments skipped (the registry reads
+/// a debug occupant's slot from them, gui_state_contract §3).
+pub fn defined_functions(text: &str) -> Result<Vec<String>, AssembleError> {
+    let toks = lex(text)?;
+    let sig: Vec<&str> = toks
+        .iter()
+        .filter(|(t, ..)| !matches!(t, Tok::Comment | Tok::Space))
+        .map(|&(_, a, b)| &text[a..b])
+        .collect();
+    Ok(sig
+        .windows(2)
+        .filter(|w| w[0] == "fn")
+        .map(|w| w[1].to_owned())
+        .collect())
 }
 
 /// `text`, a node's WGSL, with each name it declares at module scope, and each of `extra`, prefixed with `prefix`

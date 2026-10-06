@@ -160,6 +160,9 @@ fn fgw_retained_prefix_length(word: vec4<u32>) -> u32 { return select(fgw_length
 // No symbol: one past the last symbol code; `fgw_symbol` past the retained prefix (payload §3).
 const FGW_NO_SYMBOL: u32 = 4u;
 
+// `payload`: bits 0–24 of the word's `.w`, the top limb of the mixed-radix integer `W` (payload §3).
+fn fgw_payload(word: vec4<u32>) -> u32 { return extractBits(word.w, 0u, 25u); }
+
 // The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
 // bits 0–24 (payload §3).
 fn fgw_mixed_radix(word: vec4<u32>) -> vec4<u32> { return vec4<u32>(word.x, word.y, word.z, extractBits(word.w, 0u, 25u)); }

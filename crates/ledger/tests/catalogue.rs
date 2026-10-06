@@ -1,0 +1,569 @@
+//! The debug catalogue and the host export decoder, generated from the layout table beside Rust pack/unpack and the
+//! WGSL unpack, one source for all four artefacts (dd_generation_root §1, §4 seam 13; render contract Part 5, Part 6;
+//! TASK-M1-08):
+//! - REQ-GEN-010: mutating one ledger entry changes all four artefacts together, and the generated-file guard finds a
+//!   checked-in catalogue or decoder that is not the emitters' output, or a stale view (`one_source_four_artefacts`).
+//! - REQ-GEN-011: a field added with metadata appears in the catalogue and the decoder; without metadata, or with no
+//!   read the fragment has, generation fails naming it (`new_field_in_catalogue`).
+//! - REQ-TOOL-017: each view's WGSL and its test reference the same generated accessor symbols, the WGSL by naga's IR
+//!   (`shader_and_test_share_accessor`).
+//! - REQ-TOOL-020: the catalogue's field list is the ledger's, `ledger::layout().entries`, on disk too
+//!   (`catalogue_equals_ledger`; RQ-218).
+//!
+//! Each test has a registered negative control (R-176).
+
+use std::collections::BTreeSet;
+use std::path::Path;
+
+use ledger::gen::catalogue::{self, Accessor, View};
+use ledger::gen::{self, export, read, rust, wgsl, GenError, Generated};
+use ledger::schema::{EntryBuilder, FieldType, Ledger, Location, Range, Scale, Span};
+use naga::{Expression, Module, Statement, TypeInner};
+use validation::negative_control;
+
+fn root() -> &'static Path {
+    Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+}
+
+fn checked_in(path: &str) -> String {
+    let path = root().join(path);
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+}
+
+fn generate(ledger: &Ledger) -> Vec<Generated> {
+    gen::generate(ledger, gen::EMITTERS).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The catalogue's views of `ledger`.
+fn views_of(ledger: &Ledger) -> Vec<View> {
+    let entries = gen::validate(ledger).unwrap_or_else(|e| panic!("{e}"));
+    catalogue::views(&ledger.words, &entries)
+}
+
+// ── REQ-GEN-010: one source, four artefacts ──────────────────────────────────────────────────────────────────────
+
+/// The four artefact families, each by the paths of its generated files: Rust pack/unpack (and the Rust read side),
+/// the host export decoder, the WGSL unpack (and the WGSL read side), the catalogue (its views and their tests).
+fn family(path: &Path) -> Option<&'static str> {
+    let p = path.to_string_lossy();
+    if p == rust::PATH || p == read::RUST_PATH {
+        Some("the Rust pack/unpack")
+    } else if p == export::PATH {
+        Some("the export decoder")
+    } else if p == wgsl::PATH || p == read::WGSL_PATH {
+        Some("the WGSL unpack")
+    } else if p.starts_with(catalogue::DIR) || p == catalogue::TESTS_PATH {
+        Some("the catalogue")
+    } else {
+        None
+    }
+}
+
+/// Each family's files, concatenated in emission order.
+fn families(files: &[Generated]) -> Vec<(&'static str, String)> {
+    let mut out: Vec<(&'static str, String)> = Vec::new();
+    for f in files {
+        let Some(name) = family(&f.path) else {
+            continue;
+        };
+        let text = format!("{}\n{}", f.path.display(), f.contents);
+        match out.iter_mut().find(|(n, _)| *n == name) {
+            Some((_, all)) => all.push_str(&text),
+            None => out.push((name, text)),
+        }
+    }
+    out
+}
+
+/// The payload ledger with its packed field `saturated` renamed `sticky`, or unchanged.
+fn renamed(rename: bool) -> Ledger {
+    let mut l = ledger::layout();
+    if rename {
+        let e = l
+            .entries
+            .iter_mut()
+            .find(|e| e.name == Some("saturated"))
+            .expect("the ledger has `saturated`");
+        e.name = Some("sticky");
+    }
+    l
+}
+
+/// Generating from `mutated` changes each of the four artefact families the payload ledger generates.
+fn check_four_change(mutated: &Ledger) {
+    let before = families(&generate(&ledger::layout()));
+    let after = families(&generate(mutated));
+    assert_eq!(
+        before.len(),
+        4,
+        "the emitters write {} families",
+        before.len()
+    );
+    for (name, text) in &before {
+        let other = after.iter().find(|(n, _)| n == name).map(|(_, t)| t);
+        assert!(
+            other.is_some_and(|t| t != text),
+            "{name} did not change with the ledger entry"
+        );
+    }
+}
+
+#[test]
+fn one_source_four_artefacts_change_together() {
+    check_four_change(&renamed(true));
+}
+
+negative_control!(
+    one_source_four_artefacts_change_together,
+    "an unchanged ledger changes no artefact",
+    expected = "did not change with the ledger entry",
+    check_four_change(&renamed(false))
+);
+
+/// The generated-file guard over the catalogue and the export decoder: each file the emitters write is `on_disk`'s,
+/// and the views on disk are the emitted ones, no stale view left (`listing`, the `.wgsl` files in the views'
+/// directory).
+fn check_guard(on_disk: &dyn Fn(&str) -> String, listing: &[String]) {
+    let files = generate(&ledger::layout());
+    let mut views = Vec::new();
+    for f in &files {
+        let path = f.path.to_string_lossy().into_owned();
+        if family(&f.path).is_none_or(|n| n != "the catalogue" && n != "the export decoder") {
+            continue;
+        }
+        if path.starts_with(catalogue::DIR) {
+            views.push(path.clone());
+        }
+        assert!(
+            on_disk(&path) == f.contents,
+            "the checked-in {path} is not the emitter's output: run `cargo xtask codegen`"
+        );
+    }
+    views.sort();
+    assert_eq!(
+        listing, views,
+        "the views on disk are not the emitted ones: a stale view is left, or one is missing"
+    );
+}
+
+/// The `.wgsl` files in the views' directory, as paths relative to the root, sorted.
+fn listing() -> Vec<String> {
+    let mut out: Vec<String> = std::fs::read_dir(root().join(catalogue::DIR))
+        .expect("the views' directory")
+        .map(|e| {
+            e.expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|n| n.ends_with(".wgsl"))
+        .map(|n| format!("{}/{n}", catalogue::DIR))
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn one_source_four_artefacts_guard_detects_an_edit() {
+    check_guard(&|p| checked_in(p), &listing());
+}
+
+negative_control!(
+    one_source_four_artefacts_guard_detects_an_edit,
+    "a checked-in view with its ramp edited is not the emitter's output",
+    expected = "is not the emitter's output",
+    check_guard(
+        &|p| checked_in(p).replace("dbg_cat(", "dbg_lin("),
+        &listing()
+    )
+);
+
+/// The guard refuses the checked-in files with a view of `stale` left beside them.
+fn check_guard_refuses_stale(stale: Option<&str>) {
+    let mut views = listing();
+    views.extend(stale.map(|f| format!("{}/{f}.wgsl", catalogue::DIR)));
+    views.sort();
+    let guard = std::panic::AssertUnwindSafe(|| check_guard(&|p| checked_in(p), &views));
+    assert!(
+        std::panic::catch_unwind(guard).is_err(),
+        "the guard passed the views on disk with {stale:?} left"
+    );
+}
+
+#[test]
+fn one_source_four_artefacts_guard_detects_a_stale_view() {
+    check_guard_refuses_stale(Some("removed_field"));
+}
+
+negative_control!(
+    one_source_four_artefacts_guard_detects_a_stale_view,
+    "with no stale view the guard passes",
+    expected = "the guard passed the views on disk",
+    check_guard_refuses_stale(None)
+);
+
+// ── REQ-GEN-011: a new field appears in the catalogue, or generation fails ──────────────────────────────────────
+
+/// The payload ledger with `probe_bit`, a flag in `packed_a`'s bit 10, its reserved span narrowed to bits 11–15; its
+/// entry built by `entry`.
+fn with_probe_bit(entry: impl FnOnce(EntryBuilder) -> EntryBuilder) -> Ledger {
+    let mut l = ledger::layout();
+    let a = l
+        .words
+        .iter_mut()
+        .find(|w| w.name == "packed_a")
+        .expect("packed_a");
+    a.reserved = vec![Span {
+        offset: 11,
+        width: 5,
+    }];
+    let builder = EntryBuilder::new("probe_bit")
+        .location(Location::Packed {
+            word: "packed_a",
+            offset: 10,
+            width: 1,
+        })
+        .ty(FieldType::UBits)
+        .scale(Scale::Flag)
+        .range(Range::int(0, 1))
+        .provenance(ledger::schema::Provenance::Kernel)
+        .consumers(&[
+            ledger::schema::Consumer::Render,
+            ledger::schema::Consumer::Export,
+            ledger::schema::Consumer::Debug,
+        ]);
+    l.entries.push(entry(builder));
+    l
+}
+
+/// Generating from `ledger` writes a view of `probe_bit`, its test and its export decoding.
+fn check_new_field_viewed(ledger: &Ledger) {
+    let files = generate(ledger);
+    let view = format!("{}/probe_bit.wgsl", catalogue::DIR);
+    let text = |path: &str| {
+        files
+            .iter()
+            .find(|f| f.path.to_string_lossy() == path)
+            .map(|f| f.contents.clone())
+            .unwrap_or_default()
+    };
+    assert!(
+        text(&view).contains("dbg_flag(ctx.sample.probe_bit)"),
+        "the catalogue has no view of the new field `probe_bit`"
+    );
+    assert!(
+        text(catalogue::TESTS_PATH).contains("fn catalogue_view_probe_bit()"),
+        "the new field's view has no test"
+    );
+    assert!(
+        text(export::PATH).contains("pub probe_bit: bool,"),
+        "the export decoder does not decode the new field"
+    );
+}
+
+#[test]
+fn new_field_in_catalogue_with_metadata_appears() {
+    check_new_field_viewed(&with_probe_bit(|e| e));
+}
+
+negative_control!(
+    new_field_in_catalogue_with_metadata_appears,
+    "the payload ledger without the new field has no view of it",
+    expected = "has no view of the new field",
+    check_new_field_viewed(&ledger::layout())
+);
+
+/// Generation from `ledger` is refused, naming `field` and `why`.
+fn check_refused(ledger: &Ledger, field: &str, why: &str) {
+    let message = match gen::generate(ledger, gen::EMITTERS) {
+        Ok(_) => panic!("generation was not refused"),
+        Err(e) => e.to_string(),
+    };
+    assert!(
+        message.contains(&format!("`{field}`")) && message.contains(why),
+        "generation was refused without naming `{field}` and {why:?}: {message}"
+    );
+}
+
+#[test]
+fn new_field_in_catalogue_without_metadata_fails_naming_it() {
+    check_refused(
+        &with_probe_bit(|e| e.without("scale")),
+        "probe_bit",
+        "missing `scale`",
+    );
+}
+
+negative_control!(
+    new_field_in_catalogue_without_metadata_fails_naming_it,
+    "a new field with its metadata complete generates",
+    expected = "generation was not refused",
+    check_refused(&with_probe_bit(|e| e), "probe_bit", "missing `scale`")
+);
+
+/// The payload ledger with `t_end`, dd_generation_root §3.8's derived field, which the read side does not compute, so
+/// the fragment has no read of it; or unchanged.
+fn with_t_end(add: bool) -> Ledger {
+    let mut l = ledger::layout();
+    if add {
+        l.entries.push(
+            EntryBuilder::new("t_end")
+                .location(Location::Derived {
+                    from: vec!["t_end_step"],
+                })
+                .ty(FieldType::F32)
+                .scale(Scale::Lin)
+                .range(Range::int(0, 1))
+                .provenance(ledger::schema::Provenance::Kernel)
+                .consumers(&[ledger::schema::Consumer::Debug]),
+        );
+    }
+    l
+}
+
+#[test]
+fn new_field_in_catalogue_unread_fails_naming_it() {
+    check_refused(&with_t_end(true), "t_end", "has no debug view");
+}
+
+negative_control!(
+    new_field_in_catalogue_unread_fails_naming_it,
+    "the payload ledger, every field read, generates",
+    expected = "generation was not refused",
+    check_refused(&with_t_end(false), "t_end", "has no debug view")
+);
+
+#[test]
+fn new_field_in_catalogue_refusal_is_its_own_error() {
+    let l = with_t_end(true);
+    let entries = gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
+    let refused = catalogue::refused(&l.words, &entries);
+    assert_eq!(refused.len(), 1, "{refused:?}");
+    assert_eq!(
+        export::refused(&l.words, &entries).len(),
+        1,
+        "the export decoder has no read of `t_end` either"
+    );
+    assert!(
+        matches!(gen::generate(&l, gen::EMITTERS), Err(GenError::Unread(lines)) if lines.len() == 2),
+        "both refusals are reported as unread fields"
+    );
+    assert!(
+        gen::generate(&l, &[rust::emit, wgsl::emit]).is_ok(),
+        "the struct emitters alone need no read of a derived field"
+    );
+}
+
+negative_control!(
+    new_field_in_catalogue_refusal_is_its_own_error,
+    "the payload ledger refuses nothing",
+    expected = "assertion",
+    {
+        let l = ledger::layout();
+        let entries = gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(catalogue::refused(&l.words, &entries).len(), 1);
+    }
+);
+
+// ── REQ-TOOL-017: the shader and its test share the accessor ─────────────────────────────────────────────────────
+
+/// What precedes a view at assembly, from the checked-in files: the prelude, the library, the unpack layer, the read
+/// side and the stain's context.
+fn view_context() -> String {
+    let lib = "crates/render/shaders/wgsl/lib";
+    [
+        format!("{lib}/prelude.wgsl"),
+        format!("{lib}/colour_space.wgsl"),
+        format!("{lib}/present.wgsl"),
+        wgsl::PATH.to_owned(),
+        read::WGSL_PATH.to_owned(),
+        "crates/render/shaders/wgsl/stain/context.wgsl".to_owned(),
+    ]
+    .iter()
+    .map(|p| checked_in(p))
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+/// The accessor symbols `colour` references in `module`: each member of the read-side `SimState` it takes, and each
+/// function it calls but the presentation layer's (`dbg_*`).
+fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
+    let mut out = BTreeSet::new();
+    let Some(simstate) = module
+        .types
+        .iter()
+        .find(|(_, t)| t.name.as_deref() == Some("SimState"))
+        .map(|(h, _)| h)
+    else {
+        return out;
+    };
+    let TypeInner::Struct { members, .. } = &module.types[simstate].inner else {
+        return out;
+    };
+    let Some((_, colour)) = module
+        .functions
+        .iter()
+        .find(|(_, f)| f.name.as_deref() == Some("colour"))
+    else {
+        return out;
+    };
+    for (_, e) in colour.expressions.iter() {
+        if let Expression::AccessIndex { base, index } = *e {
+            if is_sample(module, base, colour, simstate) {
+                let name = members[index as usize].name.clone().unwrap_or_default();
+                out.insert(Accessor::Member(name));
+            }
+        }
+    }
+    let mut calls = Vec::new();
+    collect_calls(&colour.body, &mut calls);
+    for f in calls {
+        let name = module.functions[f].name.clone().unwrap_or_default();
+        if !name.starts_with("dbg_") {
+            out.insert(Accessor::Function(name));
+        }
+    }
+    out
+}
+
+/// Whether `e` in `f` is `ctx.sample`: the `sample` member, of type `simstate`, of `f`'s first argument, a `Ctx`.
+fn is_sample(
+    module: &Module,
+    e: naga::Handle<Expression>,
+    f: &naga::Function,
+    simstate: naga::Handle<naga::Type>,
+) -> bool {
+    let Expression::AccessIndex { base, index } = f.expressions[e] else {
+        return false;
+    };
+    let (Expression::FunctionArgument(0), Some(arg)) = (&f.expressions[base], f.arguments.first())
+    else {
+        return false;
+    };
+    match &module.types[arg.ty].inner {
+        TypeInner::Struct { members, .. } => members
+            .get(index as usize)
+            .is_some_and(|m| m.ty == simstate && m.name.as_deref() == Some("sample")),
+        _ => false,
+    }
+}
+
+fn collect_calls(block: &naga::Block, out: &mut Vec<naga::Handle<naga::Function>>) {
+    for s in block.iter() {
+        match s {
+            Statement::Call { function, .. } => out.push(*function),
+            Statement::Block(b) => collect_calls(b, out),
+            Statement::If { accept, reject, .. } => {
+                collect_calls(accept, out);
+                collect_calls(reject, out);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The body of the generated Rust check `check_<field>` in `tests`.
+fn rust_check(tests: &str, field: &str) -> String {
+    let start = format!("fn check_{}(p: &Probe) {{", field.to_lowercase());
+    let at = tests
+        .find(&start)
+        .unwrap_or_else(|| panic!("the tests have no `{start}`"));
+    let body = &tests[at..];
+    body[..body.find("\n}\n").unwrap_or(body.len())].to_owned()
+}
+
+/// Each view's WGSL, compiled after its context, references exactly its accessors, and its Rust check in `tests`
+/// references each: a member as `read.<member>`, a function as `<function>(`.
+fn check_shared(views: &[View], wgsl_of: &dyn Fn(&View) -> String, tests: &str) {
+    let context = view_context();
+    for v in views {
+        let source = format!("{context}\n{}", wgsl_of(v));
+        let module = naga::front::wgsl::parse_str(&source)
+            .unwrap_or_else(|e| panic!("`{}`'s view: {}", v.field, e.emit_to_string(&source)));
+        let want: BTreeSet<Accessor> = v.read.accessors(v.field).into_iter().collect();
+        assert!(!want.is_empty(), "`{}`'s view names no accessor", v.field);
+        assert_eq!(
+            wgsl_accessors(&module),
+            want,
+            "`{}`'s view does not reference its accessors",
+            v.field
+        );
+        let check = rust_check(tests, v.field);
+        for a in &want {
+            let needle = match a {
+                Accessor::Member(m) => format!("read.{m}"),
+                Accessor::Function(f) => format!("{f}("),
+            };
+            assert!(
+                check.contains(&needle),
+                "`{}`'s test does not reference `{needle}`:\n{check}",
+                v.field
+            );
+        }
+    }
+}
+
+#[test]
+fn shader_and_test_share_accessor() {
+    let views = views_of(&ledger::layout());
+    check_shared(
+        &views,
+        &|v| checked_in(&v.path.to_string_lossy()),
+        &checked_in(catalogue::TESTS_PATH),
+    );
+}
+
+negative_control!(
+    shader_and_test_share_accessor,
+    "a view of `state` that reads `detail` does not reference its accessor",
+    expected = "`state`'s view does not reference its accessors",
+    check_shared(
+        &views_of(&ledger::layout()),
+        &|v| checked_in(&v.path.to_string_lossy()).replace("ctx.sample.state", "ctx.sample.detail"),
+        &checked_in(catalogue::TESTS_PATH)
+    )
+);
+
+// ── REQ-TOOL-020: the catalogue's field list is the ledger's ─────────────────────────────────────────────────────
+
+/// The catalogue's fields, and the views on disk, are `ledger::layout().entries`, in the ledger's order.
+fn check_catalogue_equals_ledger(views: &[View], on_disk: &[String]) {
+    let l = ledger::layout();
+    let ledger_fields: Vec<&str> = l.entries.iter().filter_map(|e| e.name).collect();
+    let catalogue_fields: Vec<&str> = views.iter().map(|v| v.field).collect();
+    let missing: Vec<&&str> = ledger_fields
+        .iter()
+        .filter(|f| !catalogue_fields.contains(f))
+        .collect();
+    assert!(
+        catalogue_fields == ledger_fields,
+        "the catalogue's fields are not the ledger's: no view of {missing:?}"
+    );
+    let mut want: Vec<String> = ledger_fields
+        .iter()
+        .map(|f| format!("{}/{f}.wgsl", catalogue::DIR))
+        .collect();
+    want.sort();
+    assert_eq!(
+        on_disk, want,
+        "the views on disk are not one per ledger field"
+    );
+}
+
+#[test]
+fn catalogue_equals_ledger() {
+    check_catalogue_equals_ledger(&views_of(&ledger::layout()), &listing());
+}
+
+negative_control!(
+    catalogue_equals_ledger,
+    "a catalogue with one field deliberately unregistered is not the ledger's (PIT-3)",
+    expected = "the catalogue's fields are not the ledger's",
+    check_catalogue_equals_ledger(
+        &views_of(&ledger::layout())
+            .into_iter()
+            .filter(|v| v.field != "state")
+            .collect::<Vec<_>>(),
+        &listing()
+    )
+);

@@ -209,7 +209,7 @@ pub fn unbound_word(entries: &[Entry]) -> Result<[u32; 4], String> {
 }
 
 /// A derived member's expression in Rust, `ftle` as the variant with the shadow (`shadow`) or without reads it.
-fn rust_derived(name: &str, shadow: bool) -> String {
+pub(crate) fn rust_derived(name: &str, shadow: bool) -> String {
     match name {
         "ftle" if shadow => "ftle(s.S, delta, params.delta_0, n, params.dt_macro, ftle_ok)".into(),
         "ftle" => "canonical_nan()".into(),

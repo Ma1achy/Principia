@@ -372,7 +372,8 @@ fn accessors(words: &[Word], entries: &[Entry]) -> String {
 /// The word buffer's accessors, from `fgw_w`'s `length` and `payload` entries (payload §3, §6; R-86's names), each
 /// taking the whole `vec4<u32>`, the read-only twins of [`rust::fgw`]'s: `FGW_CAPACITY`, `FGW_LENGTH_SENTINEL`,
 /// `fgw_length_raw`, `fgw_truncated`, `fgw_reduced_length_valid`, `fgw_reduced_length` and
-/// `fgw_retained_prefix_length`, which read `.w` alone; and `fgw_symbol(word, k)`, symbol `k` of the retained prefix
+/// `fgw_retained_prefix_length`, which read `.w` alone; `fgw_payload`, the `payload` entry's accessor, which reads `.w`
+/// alone; and `fgw_symbol(word, k)`, symbol `k` of the retained prefix
 /// or `FGW_NO_SYMBOL` past it, decoded sequentially through `fgw_mixed_radix`, `fgw_div3` (its result a `FgwDiv3`, as
 /// WGSL has no tuple) and `fgw_after`, by the same steps. No setter is written: the fragment side only reads. A ledger
 /// whose entries lack what they need is refused by the driver ([`rust::fgw_problem`]); an emitter called past it
@@ -411,6 +412,9 @@ fn fgw_retained_prefix_length(word: vec4<u32>) -> u32 {{ return select(fgw_lengt
 
 // No symbol: one past the last symbol code; `fgw_symbol` past the retained prefix (payload §3).
 const FGW_NO_SYMBOL: u32 = {no_symbol}u;
+
+// `payload`: bits {p_offset}–{p_last} of the word's `.w`, the top limb of the mixed-radix integer `W` (payload §3).
+fn fgw_payload(word: vec4<u32>) -> u32 {{ return extractBits(word.w, {p_offset}u, {p_width}u); }}
 
 // The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
 // bits {p_offset}–{p_last} (payload §3).

@@ -1,10 +1,14 @@
 //! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
-//! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]). The emitters are
-//! registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
-//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]).
+//! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]), or when a field has
+//! no read the debug catalogue or the export decoder needs ([`catalogue::refused`], [`export::refused`]). The emitters
+//! are registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
+//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); and the
+//! debug catalogue, its views and their tests ([`catalogue`]). One source generates all four artefacts (seam 13).
 
+pub mod catalogue;
+pub mod export;
 pub mod prelude;
 pub mod read;
 pub mod rust;
@@ -27,7 +31,7 @@ pub struct Generated {
 pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
 
 /// The registered emitters, run in order.
-pub const EMITTERS: &[Emitter] = &[rust::emit, wgsl::emit];
+pub const EMITTERS: &[Emitter] = &[rust::emit, wgsl::emit, export::emit, catalogue::emit];
 
 /// Why generation was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,15 +53,20 @@ pub enum GenError {
     /// Constants-register entries missing a value, class or citation, or thresholds without an admissible relative
     /// basis, each naming the constant ([`crate::constants::gate`]; REQ-SYS-001, REQ-SYS-005, REQ-VAL-006).
     Constants(Vec<String>),
+    /// Fields an artefact emitter has no read of, each naming the field: the debug catalogue's
+    /// ([`catalogue::refused`]) and the export decoder's ([`export::refused`]), so the catalogue is exhaustive by
+    /// construction (render contract Part 6; dd_generation_root §4, seam 13).
+    Unread(Vec<String>),
 }
 
 impl fmt::Display for GenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let lines: Vec<String> = match self {
             GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
-            GenError::Malformed(lines) | GenError::Structs(lines) | GenError::Constants(lines) => {
-                lines.clone()
-            }
+            GenError::Malformed(lines)
+            | GenError::Structs(lines)
+            | GenError::Constants(lines)
+            | GenError::Unread(lines) => lines.clone(),
             GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
         };
         write!(
@@ -198,8 +207,9 @@ fn is_name(s: &str) -> bool {
 
 /// Validates `ledger` and runs the static layout check over it; if `emitters` include a struct emitter
 /// ([`rust::emit`] or [`wgsl::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
-/// ([`rust::check`], exempting [`crate::payload::PENDING`]); then runs `emitters` over it. The files they generate, or
-/// why not.
+/// ([`rust::check`], exempting [`crate::payload::PENDING`]); if they include the export decoder ([`export::emit`]) or
+/// the catalogue ([`catalogue::emit`]), refuses a field it has no read of; then runs `emitters` over it. The files they
+/// generate, or why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
     let findings = check::check(&ledger.words, &entries);
@@ -216,6 +226,17 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
         if !found.is_empty() {
             return Err(GenError::Structs(found));
         }
+    }
+    let runs = |emitter: Emitter| emitters.iter().any(|&e| std::ptr::fn_addr_eq(e, emitter));
+    let mut unread = Vec::new();
+    if runs(export::emit as Emitter) {
+        unread.extend(export::refused(&ledger.words, &entries));
+    }
+    if runs(catalogue::emit as Emitter) {
+        unread.extend(catalogue::refused(&ledger.words, &entries));
+    }
+    if !unread.is_empty() {
+        return Err(GenError::Unread(unread));
     }
     Ok(emitters
         .iter()

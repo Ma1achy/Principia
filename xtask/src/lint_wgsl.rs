@@ -6,7 +6,10 @@
 //! ([`check_fragment_after`]). The library's files are fragment-stage WGSL too, so the float rules hold there as well
 //! (applied per R-369, TASK-M1-03). A built-in occupant, a file under [`OCCUPANT_DIR`], is linted as the assembler
 //! presents it: after the prelude, the other files of [`LIB_FILES`] and its `// @uniform` block declared as the
-//! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04).
+//! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04). The stain's context, a file under
+//! [`STAIN_DIR`], is linted after the prelude, the other files of [`LIB_FILES`], the unpack layer and the read side,
+//! whose `SimState` it holds; a generated debug view, a file under [`DEBUG_VIEWS`], after all of those and the stain's
+//! context, whose `Ctx` it reads, as the assembler presents it ([`view_context`]; applied per R-369, TASK-M1-08).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -89,6 +92,14 @@ pub const OCCUPANT_DIR: &str = "crates/render/shaders/wgsl/frag";
 /// The library files the assembler places after the prelude and before every occupant (render_gui_spec §10.1):
 /// every `.wgsl` file in this directory but [`PRELUDE`], relative to the workspace root.
 pub const LIB_FILES: &str = "crates/render/shaders/wgsl/lib";
+
+/// The stain's context (render contract Part 1), relative to the workspace root: every `.wgsl` file in this
+/// directory follows the read side at assembly and precedes the node functions.
+pub const STAIN_DIR: &str = "crates/render/shaders/wgsl/stain";
+
+/// The debug catalogue's generated views (`ledger::gen::catalogue::DIR`, RQ-219), relative to the workspace root:
+/// each a colour occupant reading the stain's context.
+pub const DEBUG_VIEWS: &str = "crates/render/frag/debug/generated";
 
 /// The fix every float-rule finding names (R-343).
 pub const BIT_PATTERN_FIX: &str =
@@ -219,6 +230,61 @@ pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
     Ok(reports)
 }
 
+/// `path` under `root`, read.
+fn read(root: &Path, path: &str) -> Result<String, String> {
+    let path = root.join(path);
+    std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// `parts` joined, each ending its line.
+fn joined(parts: &[&str]) -> String {
+    let mut out = String::new();
+    for part in parts {
+        out.push_str(part);
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// What precedes the stain's context at assembly (render contract Part 2; TASK-M1-04): the prelude, the other files of
+/// [`LIB_FILES`] in sorted order, the unpack layer ([`GENERATED`]) and the read side ([`READ_SIDE_FILE`]).
+fn read_side_context(root: &Path) -> Result<String, String> {
+    let mut parts = vec![read(root, PRELUDE)?];
+    let mut library = Vec::new();
+    wgsl_files(&root.join(LIB_FILES), &mut library)?;
+    library.sort();
+    for path in library {
+        if relative(root, &path) != PRELUDE {
+            parts.push(
+                std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?,
+            );
+        }
+    }
+    parts.push(read(root, GENERATED)?);
+    parts.push(read(root, READ_SIDE_FILE)?);
+    let parts: Vec<&str> = parts.iter().map(String::as_str).collect();
+    Ok(joined(&parts))
+}
+
+/// What precedes a generated debug view at assembly: the prelude, the library, the unpack layer and the read side,
+/// then the stain's context, the files of [`STAIN_DIR`] in sorted order (render contract Part 2; gui_state_contract §3).
+pub fn view_context(root: &Path) -> Result<String, String> {
+    let mut parts = vec![read_side_context(root)?];
+    let mut stain = Vec::new();
+    let dir = root.join(STAIN_DIR);
+    if dir.is_dir() {
+        wgsl_files(&dir, &mut stain)?;
+    }
+    stain.sort();
+    for path in stain {
+        parts.push(std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?);
+    }
+    let parts: Vec<&str> = parts.iter().map(String::as_str).collect();
+    Ok(joined(&parts))
+}
+
 /// `path` relative to `root`, `/`-separated.
 fn relative(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
@@ -259,6 +325,8 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let findings = if rel == PRELUDE {
             check_fragment(&source)
+        } else if rel.starts_with(&format!("{STAIN_DIR}/")) {
+            read_side_context(root).and_then(|context| check_fragment_after(&context, &source))
         } else if rel.starts_with(&format!("{OCCUPANT_DIR}/")) {
             occupant_context(&prelude, &library, &source)
                 .and_then(|context| check_fragment_after(&context, &source))
@@ -343,6 +411,8 @@ fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
             check(&source)
         } else if rel == READ_SIDE_FILE {
             check_read_side(&layer, &source)
+        } else if rel.starts_with(&format!("{DEBUG_VIEWS}/")) {
+            view_context(root).and_then(|context| check_fragment_after(&context, &source))
         } else {
             check_fragment(&source)
         }
