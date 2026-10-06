@@ -338,8 +338,8 @@
   title: "The coordinate convention: the one flip, the UV preset, the coordinate view and picking"
   depends_on: [TASK-M1-06]
   needs: [REQ-TOOL-004]
-  requirements: [REQ-SYS-009, REQ-TOOL-019, REQ-TOOL-027, REQ-GUI-001]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-SYS-009, REQ-TOOL-019, REQ-TOOL-027, REQ-GUI-001, REQ-SYS-080, REQ-TOOL-152, REQ-TOOL-153]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M1-08
   milestone: M1
