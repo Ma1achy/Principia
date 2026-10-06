@@ -89,7 +89,12 @@ The roles, the loop and the read-only check are in `CLAUDE.md` § "The main sess
 or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
 - **Run independent work in parallel** (the human, 27 Sep 2026): every ready task starts at once, each in its own
   worktree and target directory, within the agent cap (§ "Resources"). Never start a task whose dependencies aren't
-  merged, and never stack a task on an unmerged PR (28 Sep 2026; R-362).
+  merged, and never stack a task on an unmerged PR (28 Sep 2026; R-362). The one exception is R-388's early start: a
+  task whose other dependencies have all merged may start off its one unmerged dependency's head, once every reviewer
+  that dependency's task names has approved that head and its CI is green there apart from mutants (applied per R-369:
+  never with two unmerged dependencies, which would be stacking, R-362). It opens no PR until the dependency merges,
+  then merges `main` in and opens its PR against `main`; if the dependency changes beyond added tests first, re-check
+  the task before its PR opens (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
 - **Every approval sits on the head.** Before a merge, each named reviewer's `VERDICT: APPROVE` is on the latest
   commit, or carried over to it under R-260 (§ "Reviewers").
 - **A compile check beats a token scan.** Don't enforce a source rule by reading tokens when the compiler can check
@@ -106,9 +111,18 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   path, a merge order, "main moved") or a review finding. Relaying R-286 and R-288 by message on PR #79 got the agent
   blocked by the permission classifier, even for `git status`. If an agent reports a classifier block, don't retry that
   path: tell the human.
+- **Pre-flight ready-next tasks (R-388).** While tasks are in flight, have a read-only agent pre-flight each
+  ready-next task, one whose every dependency is merged or in review: against its task file and References, that each
+  cited section exists and that no value, definition or decision it needs is missing or in conflict. The agent writes
+  nothing; run the read-only check on it as on a reviewer (§ "Reviewers"). File each gap in `REVIEW_QUEUE.md` then,
+  with file, section and quoted text, rather than when the implementer reaches it.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
+  - for an implementer, the target directory of its local mutants run, `<target>-mutants`, and that it deletes it
+    straight after (§ "Reviewers", its **Mutants** item; R-388);
+  - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
+    dependency to merge (R-388; § "Roles and the loop");
   - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`, and on the Mac the
     PATH fix (§ "Paths and warm builds");
   - a private scratch subdirectory for PR bodies and temp files, `<scratchpad>/<pr>-<role>/`. Agents sharing one
@@ -166,14 +180,17 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   description, "applied per R-369: <what>", not only in a reply: qa may not read the implementer's replies (#72,
   30 Sep 2026). Ask for both in the first dispatch. Reviewers no longer class "veto?" items: R-234's classes went with
   it (R-369).
-- **Mutants.** Don't run `cargo mutants` locally; CI's shards do (`mutants.yml`, R-302). If one has to run locally, give
-  it a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats
-  as fresh, and delete it straight after. A local run uses R-348's two caps, the per-mutant timeout and the memory cap
-  on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the machine enforces them (applied per
-  R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's Linux runners enforce both caps
-  (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a dependency (E0433) and skips a
-  whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite (R-197), or a justified entry in
-  `.cargo/mutants-equivalent.toml` (R-202).
+- **Mutants.** The implementer runs `cargo mutants --in-diff` on its own diff against `origin/main` before it requests
+  review (opens the PR), and again before it pushes fixes for survivors (R-388). It tests the boundary of every
+  comparison and match arm it adds. Reviewers don't run it, and CI's mutants gate stays the authority (`mutants.yml`,
+  R-302): a clean local run doesn't replace a green `mutants-check`. The local run gets a target directory of its own
+  (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats as fresh, deleted straight
+  after, and it counts as an agent against R-277's limit (§ "Resources"). A local run uses R-348's two caps, the
+  per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
+  machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
+  Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
+  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
+  (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
 
 ## qa commits
 

@@ -6003,3 +6003,188 @@ ops PR, not this one, does both:
 R-387 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-388 — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
+*6 Oct 2026 · applied in `plan/OPERATIONS.md` § "Roles and the loop", § "Dispatching" and § "Reviewers" (its
+**Mutants** item), `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR", § "Task files" and § "The review
+loop", `CLAUDE.md` § "How work runs", `.claude/agents/implementer.md` and `plan/rule_groups.yaml`; item 4 built by a
+follow-up ops task*
+
+"Yes to all four (R-381):
+1. Implementers run cargo mutants --in-diff locally on their own diff
+   before requesting review (own target dir, deleted after; counts
+   against the memory limit), and test the boundary of every comparison
+   and match arm. CI's mutants gate stays the authority.
+2. Pre-flight ready-next tasks with a read-only agent; gaps go to
+   REVIEW_QUEUE early.
+3. A task may start before its dependency merges once every named
+   reviewer has approved the dependency's head and its CI is green apart
+   from mutants. Branch from that head, open no PR until the dependency
+   merges, then merge main in and open normally (no stacking, R-362). If
+   the dependency changes beyond added tests, re-check before opening.
+   Amend WORKFLOW.md.
+4. Speed up mutants shards by test selection, your call: each mutant
+   runs the tests of its own package plus genuine dependents, not the
+   whole workspace (so GPU render tests don't run for unrelated crates),
+   and through nextest. Shard count and time limits stay as confirmed at
+   the M0 gate."
+
+(Message of 6 Oct 2026, "This is from me.")
+
+*Numbering:* the human numbered this ruling R-381. R-381 was already taken (the drift views), so it is recorded here as
+R-388, the next free number (R-278).
+
+*Context:* the message answers the orchestrator's four proposals made after PR #149 (TASK-M1-06) needed three CI
+mutants rounds, about 2.5 hours each, all on boundary survivors: local mutants before review, a read-only pre-flight
+of ready-next tasks, starting a task off its approved dependency's head, and faster shards.
+
+*Applied:*
+- **Item 1, local mutants before review.** `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item: the implementer
+  runs `cargo mutants --in-diff` on its own diff against `origin/main` before it opens the PR (requests review). The run
+  uses its own target directory, `<target>-mutants`, deleted straight after. The implementer tests the boundary of every
+  comparison and match arm it adds. Reviewers still don't run it, and CI's mutants gate (`mutants.yml`, R-302) stays the
+  authority: a clean local run is no substitute for a green `mutants-check`. The existing text on R-348's two caps
+  (REQ-VAL-180, REQ-VAL-181, enforced on macOS as the timeout only, R-352) and on equivalent mutants (R-202) stands.
+  - Applied per R-369: the implementer runs it again before it pushes fixes for survivors CI reports.
+  - Applied per R-369: the ruling's "counts against the memory limit" is read as counting as an agent against R-277's
+    limit, the cap on agents by memory pressure.
+  - Applied per R-369: `plan/WORKFLOW.md` § "The review loop" step 1 and `.claude/agents/implementer.md` (a new step 4)
+    state the run; the implementer writes `git diff origin/main...HEAD` to a file in its scratch directory and points
+    `--in-diff` at it.
+  - Applied per R-369: § "Dispatching"'s list of what every dispatch names gains the implementer's `<target>-mutants`
+    directory.
+- **Item 2, pre-flight.** `plan/OPERATIONS.md` § "Dispatching": the orchestrator has a read-only agent pre-flight each
+  ready-next task against its task file and References: that each cited section exists and that no value, definition or
+  decision it needs is missing or in conflict. A gap goes to `REVIEW_QUEUE.md` then, with file, section and quoted text,
+  not when the implementer reaches it.
+  - Applied per R-369: a ready-next task is one whose every dependency is merged or in review, and the pre-flight runs
+    while tasks are in flight.
+  - Applied per R-369: the agent writes nothing; the orchestrator files the entries and runs the read-only check on it
+    as on a reviewer.
+- **Item 3, early start.** `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR" and § "Task files" (Depends
+  on): a task may start before a dependency merges once every reviewer the dependency's task names has approved the
+  dependency's head and its CI is green on that head apart from mutants. It branches from that head and opens no PR
+  until the dependency merges; then it merges `main` in and opens its PR normally, against `main`, so nothing is stacked
+  (R-362). If the dependency changes beyond added tests before it merges, the task is re-checked against the merged
+  dependency before its PR opens.
+  - Applied per R-369 (review 5434285000 on PR #154): an early start is allowed only when every other dependency of the
+    task has merged and exactly one is unmerged; that one meets the condition above, and the task branches from its
+    approved head. Branching from two unmerged heads would be stacking (R-362). The same is stated at `plan/WORKFLOW.md`
+    § "The unit: one task, one branch, one PR" and § "Task files", `plan/OPERATIONS.md` § "Roles and the loop" and
+    `CLAUDE.md` § "How work runs".
+  - Applied per R-369: `plan/OPERATIONS.md` § "Roles and the loop" and `CLAUDE.md` § "How work runs" point at it; §
+    "Dispatching"'s list of what every dispatch names gains the dependency head's sha for an early start; and
+    `.claude/agents/implementer.md` step 1 branches from the head the orchestrator names.
+- **Item 4, faster shards.** Applied by a follow-up ops task, not this PR: the per-PR mutants shards
+  (`.github/workflows/mutants.yml`) run each mutant against the tests of its own package plus its genuine dependents,
+  not the whole workspace, so GPU render tests don't run for unrelated crates, and run them through nextest. How the
+  selection is made is the orchestrator's call (R-369). REQ-VAL-149's n = 8 shards and 300 minutes per shard, and
+  REQ-VAL-180 and REQ-VAL-181, are unchanged (R-376).
+- R-388 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*
+*6 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7", REQ-INT-086 (reqio, new), REQ-INT-001
+(reqio), TASK-M1-11, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-223 archived)
+and `REVIEW_QUEUE.md` (RQ-225, open); built by TASK-M1-11*
+
+The orchestrator put RQ-223 to the human as two questions on dd_integrator §3.7's unwrapped phase `θ̃`, which feeds
+`orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0`.
+
+> Q1. What does θ̃ start at?
+
+The human answered "0", the option described as:
+
+> θ̃ counts net turning from the IC: orbit_count is completed revolutions, retrograde is net clockwise motion,
+> independent of starting longitude.
+
+> Q2. The poles (n_u = n_v = 0).
+
+The human chose "Hold below a radius", then refined it verbatim:
+
+> Hold below a radius, with a frozen reference: on entering √(n_u²+n_v²) < r_pole, store the last longitude; add no
+> delta while inside; on exit, add wrap(exit longitude − stored longitude) into (−π, π]. r_pole is an R-71
+> calibration, confirmed at a gate. Document the exact-π case (+π by the wrap convention).
+
+(Answers of 6 Oct 2026 to the orchestrator's two questions; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **The start.** `θ̃(0) = 0`. `θ̃` is the net turning since the IC, so `orbit_count` counts completed revolutions and
+  `retrograde` is net clockwise motion, whatever the IC's longitude.
+- **The poles.** Where the longitude `atan2(n_v, n_u)` is undefined or ill-conditioned, near `n_u = n_v = 0`
+  (`w = ±1`), `θ̃` holds: on entering `√(n_u² + n_v²) < r_pole` the last longitude, the one outside the radius, is
+  stored; no delta is added while inside; on exit, `wrap(exit longitude − stored longitude)` is added, wrapped into
+  (−π, π], the interval the per-step principal-value delta already uses.
+- **The exact-π case.** A difference of exactly ±π, per step or on exit, is added as +π: the wrap's interval is
+  closed at +π and open at −π.
+- **`r_pole` is a value**, an R-71 calibration: the task that builds `θ̃` proposes it with its evidence, a reviewer
+  checks it, and the human confirms it at the gate of the milestone that first uses `θ̃`, M1 (TASK-M1-11).
+
+*Applied per R-369 (mechanical consequences):*
+- dd_integrator § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)" gains a paragraph
+  after "Unwrapped phase", giving the start, the pole rule and the exact-π case. It adds; the existing paragraph is
+  unchanged.
+- **A new requirement, REQ-INT-086 (M1)**, the R-71 calibration of `r_pole`, closed by TASK-M1-11, which builds
+  `θ̃` and closes REQ-INT-001, and confirmed by the human at the M1 gate. TASK-M1-11 gains it in Closes and a
+  "Proposal:" line.
+- **The test obligation.** REQ-INT-001's verify detail and TASK-M1-11's `theta_unwrap` line gain: `θ̃` is 0 at the
+  start whatever `n(0)`'s longitude; a synthetic path passing through the pole disc adds no delta inside and exactly
+  `wrap(exit − stored)` on exit; and a step, and a pole passage, whose longitude difference is exactly ±π adds +π.
+  REQ-INT-001 gains R-389 as a ruling and a source.
+- **A case the ruling does not reach, filed as RQ-225 (open).** The pole rule stores the last longitude on
+  *entering* the radius. An IC that starts inside the radius never enters it, so it has no stored longitude to
+  difference against on exit. Whether that first exit adds nothing or a difference from `n(0)`'s longitude changes
+  `θ̃` by up to π, and so can change `retrograde` and `orbit_count`: physics, for the human (R-369). REQ-INT-001
+  carries `rq: RQ-225`; the rest of TASK-M1-11 does not wait on it.
+- RQ-223 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-389 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries `rq: RQ-225`.
+
+## R-392 — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*
+*6 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7", REQ-INT-001 (reqio), TASK-M1-11,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-225 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M1-11*
+
+The orchestrator put RQ-225 to the human, a case R-389's pole rule does not reach:
+
+> R-389's pole rule stores the reference longitude "on entering" √(n_u²+n_v²) < r_pole. An IC that starts inside the
+> radius never enters it, so at its first exit there's nothing to subtract. What does the first exit add?
+
+The human chose option 1, "Nothing", the option RQ-225 described as:
+
+> **The first exit adds nothing** (recommended): θ̃ counts turning from the first longitude the hold trusts, the exit
+> longitude. It keeps the hold's premise that a longitude inside the radius is not trusted.
+
+Their reasoning, verbatim:
+
+> **1, nothing.** It's the only answer consistent with the rule itself: a longitude inside `r_pole` is never trusted,
+> and an initial condition starting there is no exception, since its starting longitude is just as noisy as any other
+> near-pole reading.
+>
+> It also makes physical sense. An orbit that starts at a Lagrange pole has no meaningful starting "direction" around
+> the sphere, so its winding count properly begins once it's far enough from the pole to have one. Option 2 would let
+> an essentially random starting angle shift θ̃ by up to π, and flip `retrograde` on noise, which is exactly what the
+> hold exists to prevent.
+
+(Answer of 6 Oct 2026 to the orchestrator's question; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **The first exit of an IC inside the radius.** An IC with `√(n_u² + n_v²) < r_pole` at `t = 0` has no stored
+  longitude. Its first exit adds no delta: `θ̃` is still 0 there (R-389's `θ̃(0) = 0`, and no delta inside), and from
+  that exit on it accumulates as R-389 says, starting from the exit longitude. Every later passage through the radius
+  stores its entry longitude and adds `wrap(exit − stored)` on exit, as R-389 says.
+- R-389's start, its pole rule for a path that enters the radius from outside, its exact-π case and `r_pole`
+  (REQ-INT-086) stand as they are.
+
+*Applied per R-369 (mechanical consequences):*
+- dd_integrator § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)": R-389's paragraph
+  "Unwrapped phase — its start and the poles" gains the case in place of "that case is open (RQ-225)".
+- **The test obligation.** REQ-INT-001's verify detail and TASK-M1-11's `theta_unwrap` line gain: a synthetic path
+  that starts inside the pole disc leaves `θ̃` unchanged, at 0, at its first exit, and accumulates from the exit
+  longitude after it. REQ-INT-001 gains R-392 as a ruling and a source, and drops `rq: RQ-225`.
+- RQ-225 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-392 is in the "physics" group of `plan/rule_groups.yaml`, with R-389.
+
+REQ-INT-001's verify detail, rulings and sources change, and it no longer carries an `rq`.
