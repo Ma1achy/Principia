@@ -6090,7 +6090,7 @@ Changes no requirement.
 ## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
-TASK-M6-29 (new), `plan/tasks.yaml` and twenty existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
+TASK-M6-29 (new), `plan/tasks.yaml` and twenty-two existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
 `plan/MILESTONES.md` § "M6 — Adaptive refinement and deep zoom (deep_zoom layer 2)", `plan/reviewers/gui.md` and
 `plan/rule_groups.yaml`; built by TASK-M6-24 to TASK-M6-29*
 
