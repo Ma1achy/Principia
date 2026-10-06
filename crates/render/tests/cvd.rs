@@ -235,6 +235,69 @@ negative_control!(
     })
 );
 
+/// Colours exactly on Brettel's separating plane, `n_sep_rgb · c` zero in f64 by construction: each pairs two of the
+/// normal's components crosswise, `[n₁, -n₀, 0]` and its kin, so the two products cancel bit for bit, at three
+/// power-of-two scales, which keep the cancellation exact.
+fn on_separating_plane() -> Vec<Rgb> {
+    let n = Matrices::get().brettel_tritan.n_sep_rgb;
+    let base = [[n[1], -n[0], 0.0], [n[2], 0.0, -n[0]], [0.0, n[2], -n[1]]];
+    [1.0, 0.25, 1.0 / 64.0]
+        .iter()
+        .flat_map(|s| base.map(|c| c.map(|x| x * s)))
+        .collect()
+}
+
+/// On the separating plane, `simulate`'s tritan takes `t1`, as the reference does: it takes `t2` only where
+/// `n_sep_rgb · c < 0` (simulate.py's selection, R-383). The two transforms agree there in exact arithmetic but not
+/// in f64, so the choice shows in the bits; the colours where it does not are skipped, and at least one must show it.
+fn check_plane_takes_t1(simulate: fn(CvdMode, Rgb) -> Rgb) {
+    let b = &Matrices::get().brettel_tritan;
+    let n = b.n_sep_rgb;
+    let mut told = 0;
+    for c in on_separating_plane() {
+        let d = n[0] * c[0] + n[1] * c[1] + n[2] * c[2];
+        assert!(
+            d == 0.0,
+            "{c:?} is not on the separating plane: n · c = {d:e}"
+        );
+        let (t1, t2) = (cvd::apply(&b.t1, c), cvd::apply(&b.t2, c));
+        if t1 == t2 {
+            continue;
+        }
+        told += 1;
+        let got = simulate(CvdMode::Tritanopia, c);
+        assert!(
+            got == t1,
+            "tritanopia of {c:?}, on the separating plane, is {got:?}: t2's {t2:?}, not t1's {t1:?}"
+        );
+    }
+    assert!(
+        told > 0,
+        "no colour on the separating plane tells t1 from t2 in f64"
+    );
+}
+
+#[test]
+fn cvd_simulation_separating_plane_takes_the_first_half_plane() {
+    check_plane_takes_t1(cvd::simulate);
+}
+
+negative_control!(
+    cvd_simulation_separating_plane_takes_the_first_half_plane,
+    "a tritan that takes t2 on the plane itself, `<=` for `<`, must fail",
+    expected = "on the separating plane, is",
+    check_plane_takes_t1(|mode, c| {
+        let b = &Matrices::get().brettel_tritan;
+        let n = b.n_sep_rgb;
+        match mode {
+            CvdMode::Tritanopia if n[0] * c[0] + n[1] * c[1] + n[2] * c[2] <= 0.0 => {
+                cvd::apply(&b.t2, c)
+            }
+            _ => cvd::simulate(mode, c),
+        }
+    })
+);
+
 // ── the WGSL on the GPU ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The test entry appended to the pass's WGSL: pixel `k` of a `WIDTH`-wide target evaluates `cvd_sim` on case `k`,

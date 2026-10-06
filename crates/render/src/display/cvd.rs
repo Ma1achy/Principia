@@ -208,11 +208,13 @@ impl Matrices {
         m.vienot_deutan = on_rgb(&m, &plane_projection(n, Cone::M));
         // Brettel (simulate.py:252–254, :261–271, :279–281): the neutral axis is white's LMS image; each half-plane
         // passes through it and one anchor; the separating plane through it and the S axis. The anchor on the
-        // separating plane's positive side is the first.
+        // separating plane's positive side is the first. The test is the sign: the anchors' products with the normal
+        // are fixed and far from zero (485 nm on the negative side, 660 nm on the positive), so no tie arises, and a
+        // sign test has no `<`/`<=` pair to tell apart where none can.
         let neutral = apply(&lms_from_linear_rgb, [1.0, 1.0, 1.0]);
         let mut wings = TRITAN_ANCHORS_XYZ.map(|a| apply(&LMS_FROM_XYZ_JUDD_VOS, a));
         let n_sep_lms = cross(neutral, [0.0, 0.0, 1.0]);
-        if dot(n_sep_lms, wings[0]) < 0.0 {
+        if dot(n_sep_lms, wings[0]).is_sign_negative() {
             wings.swap(0, 1);
         }
         let h1 = plane_projection(cross(neutral, wings[0]), Cone::S);
