@@ -1,7 +1,7 @@
 # TASK-M1-11 — The kernel bring-up mode and the live unwrapped phase
 
 - **Milestone:** M1
-- **Closes:** REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123
+- **Closes:** REQ-TOOL-013, REQ-TOOL-015, REQ-INT-001, REQ-TOOL-123, REQ-INT-086
 - **Depends on:** TASK-M1-01, TASK-M1-06
 - **Needs (earlier milestones):** REQ-PAY-008, REQ-PAY-017, REQ-GEN-004, REQ-SYS-004
 - **Reviewers:** code, qa, physics
@@ -25,6 +25,8 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - `docs/contracts/principia_render_contract.md` § "Part 3 — Cache tiers and the recompute rule"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
 - `crates/kernel/src/bringup.rs`: the bring-up variant (type-selected, monomorphised; f32 SPIR-V and f64 native) writing the pattern into existing `SimState` slots; no new buffer.
@@ -36,6 +38,8 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - `cargo test -p kernel debug_variants` — the kernel's debug variants are exactly the bring-up variant; dispatch-flag bits 6–7 stay reserved (R-41); the bring-up output decodes via the normal unpack path (REQ-TOOL-013).
 - `cargo test -p engine bringup_pattern` — enabling the bring-up variant writes the known pattern into the payload (read back on the CPU through the generated unpack); it changes the sim key (REQ-TOOL-015).
 - `cargo test -p kernel theta_unwrap` — on a synthetic n(t) path circulating the w axis θ̃ accumulates with no 2π jumps, `orbit_count` matches the path's turn count, and `retrograde` matches its direction (REQ-INT-001; dd test 8 on a real orbit is REQ-INT-082, TASK-M3-11).
+- `cargo test -p kernel theta_unwrap` — R-389's start and pole rule: θ̃ is 0 at the start whatever n(0)'s longitude; a synthetic path passing through the pole disc √(n_u² + n_v²) < r_pole adds no delta inside and exactly wrap(exit − stored) into (−π, π] on exit, the stored longitude the last one outside; a step whose longitude difference is exactly ±π, and a pole passage whose exit-minus-stored difference is exactly ±π, each add +π (REQ-INT-001). An IC starting inside the disc is added once RQ-225 is ruled.
+- Proposal: `r_pole` with its evidence — the longitude's round-off error near the poles at f32 and f64, and that the hold fires on the pole passage and never on the circulating paths; the human confirms it at the M1 gate (REQ-INT-086).
 - Definition: the bring-up pattern and its payload slots written into colour_composition Appendix A and approved by the physics reviewer (REQ-TOOL-123).
 
 ## Notes
@@ -43,3 +47,4 @@ Debug-tooling step 0c, first half. The kernel keeps exactly one debug mode — c
 - The bring-up readback is shown able to fail: a pattern written one slot off must fail `bringup_pattern` (PIT-9).
 - RQ-94 ruled: R-113 — REQ-INT-001 keeps the accumulator on a synthetic path at M1; dd test 8 on a real circulating bounded orbit is a new M3 requirement (REQ-INT-082, TASK-M3-11).
 - Closes, for gaps the corpus leaves open: REQ-TOOL-123 (R-72 definition) (classification accepted by R-132).
+- RQ-223 ruled: R-389 — θ̃(0) = 0, and θ̃ holds below `r_pole` with a frozen reference, the exact-π case adding +π (dd_integrator §3.7); `r_pole` is REQ-INT-086 (R-71, the M1 gate). RQ-225 (open): an IC that starts inside the disc has no stored longitude; only that case waits.

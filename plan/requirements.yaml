@@ -2370,12 +2370,17 @@
     section: 3.1 `sample_descriptor` (u32)
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
   verify:
     method: unit test
-    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction"
+    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction; θ̃ is 0 at the start whatever n(0)'s longitude (R-389); a synthetic path passing through the pole disc √(n_u² + n_v²) < r_pole (REQ-INT-086) adds no delta while inside and exactly wrap(exit longitude − stored longitude), into (−π, π], on exit, the stored longitude being the last one outside the disc; a per-step longitude difference of exactly ±π, and a pole passage whose exit-minus-stored difference is exactly ±π, each add +π (R-389). An IC starting inside the disc waits on RQ-225"
   rulings:
   - R-113
+  - R-389
   milestone: M1
+  rq:
+  - RQ-225
   note: "R-113 (RQ-94): dd test 8 on a real circulating bounded orbit is a separate M3 requirement."
 - id: REQ-INT-002
   area: INT
@@ -3832,6 +3837,24 @@
   - R-71
   - R-382
   milestone: M3
+- id: REQ-INT-086
+  area: INT
+  kind: calibration
+  statement: "The pole radius r_pole of the unwrapped phase θ̃ — below which, in √(n_u² + n_v²), θ̃ holds with a frozen reference, adding no delta while inside and the wrapped exit-minus-stored longitude on exit (dd_integrator §3.7, R-389) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives r_pole with its evidence: the error of the longitude atan2(n_v, n_u) from n's round-off, which grows as 1/√(n_u² + n_v²), at f32 and f64, the shared kernel's precisions (R-265), so that outside r_pole a step's longitude delta is trustworthy; and, on TASK-M1-11's synthetic paths, that the hold fires on a pole passage and never on a path circulating the w axis away from the poles; reviewed, confirmed by the human at the M1 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-389
+  milestone: M1
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
