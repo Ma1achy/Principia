@@ -4,7 +4,9 @@
 //! library under `crates/render/shaders/` ([`LIB_DIR`]): the generated prelude ([`PRELUDE`]) alone, and every other
 //! file there, which follows the prelude at assembly (render_gui_spec §10.1), as its continuation
 //! ([`check_fragment_after`]). The library's files are fragment-stage WGSL too, so the float rules hold there as well
-//! (applied per R-369, TASK-M1-03).
+//! (applied per R-369, TASK-M1-03). A built-in occupant, a file under [`OCCUPANT_DIR`], is linted as the assembler
+//! presents it: after the prelude, the other files of [`LIB_FILES`] and its `// @uniform` block declared as the
+//! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -79,6 +81,14 @@ pub const LIB_DIR: &str = "crates/render/shaders";
 /// The generated prelude, relative to the workspace root: linted alone, and every other file under [`LIB_DIR`] as its
 /// continuation, since each follows it at assembly.
 pub const PRELUDE: &str = "crates/render/shaders/wgsl/lib/prelude.wgsl";
+
+/// The built-in occupants (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): every `.wgsl` file under this
+/// directory, relative to the workspace root, is linted with [`occupant_context`] before it.
+pub const OCCUPANT_DIR: &str = "crates/render/shaders/wgsl/frag";
+
+/// The library files the assembler places after the prelude and before every occupant (render_gui_spec §10.1):
+/// every `.wgsl` file in this directory but [`PRELUDE`], relative to the workspace root.
+pub const LIB_FILES: &str = "crates/render/shaders/wgsl/lib";
 
 /// The fix every float-rule finding names (R-343).
 pub const BIT_PATTERN_FIX: &str =
@@ -231,6 +241,17 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
     let mut files = Vec::new();
     wgsl_files(&dir, &mut files)?;
     files.sort();
+    // The library's files after the prelude, in the order a sorted listing gives them, as the assembler places
+    // `colour_space.wgsl` then `present.wgsl`.
+    let mut library = Vec::new();
+    for path in &files {
+        let rel = relative(root, path);
+        if rel != PRELUDE && path.parent() == Some(root.join(LIB_FILES).as_path()) {
+            library.push(
+                std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?,
+            );
+        }
+    }
     let mut reports = Vec::new();
     for path in files {
         let rel = relative(root, &path);
@@ -238,6 +259,9 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let findings = if rel == PRELUDE {
             check_fragment(&source)
+        } else if rel.starts_with(&format!("{OCCUPANT_DIR}/")) {
+            occupant_context(&prelude, &library, &source)
+                .and_then(|context| check_fragment_after(&context, &source))
         } else {
             check_fragment_after(&prelude, &source)
         }
@@ -248,6 +272,55 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
         });
     }
     Ok(reports)
+}
+
+/// What precedes a built-in occupant's `source` when it is linted, as the assembler presents a node (render contract
+/// Part 2; gui_state_contract §3): the prelude, the `library` files after it, then the occupant's `// @uniform` block,
+/// each line `// @uniform <name>: <type> = <default> …`, declared as a struct in the prelude's uniform group, one
+/// binding past the prelude's, and bound as `uniforms`, which the occupant reads as `uniforms.<name>`. With no
+/// `// @uniform` line there is no block. The assembler also renames the occupant's functions and `uniforms` per node;
+/// that renaming changes no float expression, so the lint reads the text as written. A `// @uniform` line without a
+/// name before `:` and a type between `:` and `=` is an error.
+pub fn occupant_context(prelude: &str, library: &[String], source: &str) -> Result<String, String> {
+    let mut members = Vec::new();
+    for (k, line) in source.lines().enumerate() {
+        let Some(rest) = line.trim_start().strip_prefix("// @uniform") else {
+            continue;
+        };
+        let parsed = rest
+            .split_once(':')
+            .and_then(|(name, rest)| rest.split_once('=').map(|(ty, _)| (name.trim(), ty.trim())))
+            .filter(|(name, ty)| !name.is_empty() && !ty.is_empty());
+        let Some((name, ty)) = parsed else {
+            return Err(format!(
+                "line {}: `{}` is not `// @uniform <name>: <type> = <default>`",
+                k + 1,
+                line.trim()
+            ));
+        };
+        members.push(format!("    {name}: {ty},\n"));
+    }
+    let mut out = String::from(prelude);
+    for file in library {
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(file);
+    }
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    if !members.is_empty() {
+        let first = ledger::gen::prelude::uniforms_binding();
+        out.push_str("struct OccupantUniforms {\n");
+        out.extend(members);
+        out.push_str(&format!(
+            "}}\n@group({}) @binding({}) var<uniform> uniforms: OccupantUniforms;\n",
+            first.group,
+            first.binding + 1
+        ));
+    }
+    Ok(out)
 }
 
 /// [`lint`]'s reports for [`FRAG_DIR`].
@@ -1058,11 +1131,11 @@ fn is_finite_max(v: f64) -> bool {
 }
 
 /// The float values of `h`, if it is a constant expression of floats, its components in order; `None` if it is not
-/// constant, holds an integer or a bool, or holds a value [`evaluate`] cannot give soundly. naga folds a constant
+/// constant, holds an integer or a bool, or holds a value `evaluate` cannot give soundly. naga folds a constant
 /// expression of literals before the IR is built, and rejects one at parse where WGSL makes it an error (the `sqrt` of
 /// a negative literal, an overflowing `exp`), which the lint reports. It leaves unfolded any constant expression over a
 /// `bitcast`, and some built-ins (`ldexp`, `mix`, `smoothstep`, `modf`, `frexp`, the packing built-ins) even over
-/// literals, so [`evaluate`] evaluates what naga leaves, as the shader does at run time. naga concretises an abstract
+/// literals, so `evaluate` evaluates what naga leaves, as the shader does at run time. naga concretises an abstract
 /// literal or constant before the IR, so no abstract literal reaches here.
 pub fn constant_floats(
     module: &Module,

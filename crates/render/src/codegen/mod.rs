@@ -16,7 +16,11 @@
 //! `node_<id>_<p>` ([`uniform_name`]), declared `// @uniform` with the node's value at generation as its default and,
 //! for a map parameter, its adopted range ([`schema`]). A slider edit writes that uniform and regenerates nothing, so
 //! the occupant's text, and with it the fragment key, is unchanged: it rebinds and never recompiles.
+//!
+//! **`None` is the identity of `combine`** ([`combine`]): the statement the generated `shade()` gives the combiner's
+//! output by, per colour_composition §4.1's truth table.
 
+pub mod combine;
 pub mod schema;
 
 use std::collections::BTreeSet;

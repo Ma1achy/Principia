@@ -15,6 +15,10 @@
 //!   both (telemetry §5).
 //!
 //! [`compiled_modes`] states the same per backend, and the session header records it (TASK-M0-19's probe).
+//!
+//! [`pipeline`]: crate::compute::pipeline
+//! [`FastMath`]: crate::contract::fast_math::FastMath
+//! [`compiled_modes`]: crate::compute::compiled_modes
 
 use std::fmt;
 

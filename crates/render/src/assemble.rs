@@ -34,6 +34,7 @@ use std::collections::BTreeSet;
 use std::fmt::{self, Write as _};
 use std::sync::OnceLock;
 
+use crate::codegen;
 use ledger::gen::{self as generate, prelude, read};
 use ledger::schema::{Entry, Scale, Word};
 use naga::valid::{Capabilities, FunctionInfo, ModuleInfo, ValidationFlags, Validator};
@@ -48,21 +49,31 @@ const COLOUR_SPACE: &str = include_str!("../shaders/wgsl/lib/colour_space.wgsl")
 /// The presentation layer, hand-written; it follows the prelude at assembly (render contract Part 5).
 const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 
-/// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`).
-const BUILTINS: [(Kind, &str, &str); 1] = [(
-    Kind::Combiner,
-    "pass_through",
-    include_str!("../shaders/wgsl/frag/combiner/pass_through.wgsl"),
-)];
+/// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
+/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5).
+const BUILTINS: [(Kind, &str, &str); 3] = [
+    (
+        Kind::Combiner,
+        "pass_through",
+        include_str!("../shaders/wgsl/frag/combiner/pass_through.wgsl"),
+    ),
+    (
+        Kind::Combiner,
+        "replace_l",
+        include_str!("../shaders/wgsl/frag/combiner/replace_l.wgsl"),
+    ),
+    (
+        Kind::Combiner,
+        "multiply",
+        include_str!("../shaders/wgsl/frag/combiner/multiply.wgsl"),
+    ),
+];
 
 /// The post chain's bound (colour_composition §4.2: "Bounded at ≤ 8").
 pub const MAX_POSTS: usize = 8;
 
 /// The most field inputs a node takes, the length of `ctx.inputs` (applied per R-369: the corpus gives no bound).
 pub const MAX_INPUTS: usize = 4;
-
-/// The flat mid-grey's OKLab lightness, both slots None (colour_composition §4.1: `OKLab(0.6,0,0)`).
-const MID_GREY_L: &str = "0.6";
 
 /// Names a node may not write: the stored buffers and the read side's one reader of them (R-343, R-378).
 const RESERVED: [&str; 3] = ["simstate_buffer", "word_buffer", "sample_read"];
@@ -1037,15 +1048,12 @@ fn shade(
         context(b, &mut out);
         let _ = writeln!(out, "    let b = n{b}_brightness(c{b});");
     }
-    let combine = match (colour, brightness) {
-        (Some(_), Some(_)) => format!("n{combiner}_combine(rgb, b);"),
-        (Some(_), None) => "rgb; // brightness None: the colour as it is".into(),
-        (None, Some(_)) => format!(
-            "n{combiner}_combine(vec3<f32>(1.0), b); // colour None: white, so the greyscale of the brightness"
-        ),
-        (None, None) => format!("ramp_grey({MID_GREY_L}); // both None: the flat mid-grey OKLab (0.6, 0, 0)"),
-    };
-    let _ = writeln!(out, "    var out = {combine}");
+    let combine = codegen::combine::statement(
+        &format!("n{combiner}_combine"),
+        colour.is_some(),
+        brightness.is_some(),
+    );
+    let _ = writeln!(out, "    {combine}");
     for &p in chain {
         context(p, &mut out);
         let _ = writeln!(out, "    out = n{p}_post(c{p}, out);");
@@ -1351,7 +1359,7 @@ fn components(
 
 /// The read-side fields the stain in `module` reads, by naga's IR: each member of the read-side `SimState` taken in
 /// any function but `sample_read`, which fills it; the word as `word`, or as `word.x` … `word.w` where only those
-/// components are read ([`components`]). These are the fields its `sample_read` must fill (R-378).
+/// components are read (`components`). These are the fields its `sample_read` must fill (R-378).
 pub fn fields_read(module: &Module, info: &ModuleInfo) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     let Some(simstate) = module

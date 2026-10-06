@@ -9,8 +9,9 @@
 # tests that run cargo on the workspace's own target directory, and `ci` every other test.
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
-# build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs `cargo xtask ci
-# --partition <k>/4` as 4 parallel shards, which together run every control exactly once (`xtask/src/controls.rs`).
+# docs (R-387), the build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs
+# `cargo xtask ci --partition <k>/4` as 4 parallel shards, which together run every control exactly once
+# (`xtask/src/controls.rs`).
 # The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
 # archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
 # workspace or compiles a test binary, but shard 1's doctests, which nextest does not run. The xtask tests that run
@@ -214,7 +215,8 @@ jobs:
       - name: cargo test -p xtask --doc
         run: cargo test -p xtask --doc
 
-  # Formatting, lints, the build and the crate-graph check, once, beside the test shards (R-195, REQ-SYS-004).
+  # Formatting, lints, the docs, the build and the crate-graph check, once, beside the test shards (R-195, R-387,
+  # REQ-SYS-004).
   ci-checks:
     runs-on: ubuntu-24.04
     steps:
@@ -243,6 +245,14 @@ jobs:
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
         run: cargo clippy --workspace --all-targets -- -D warnings
+      # The workspace's own docs, every rustdoc warning an error (R-387): a broken or private intra-doc link, an
+      # unclosed HTML tag. `--no-deps`: only the workspace's crates are documented, the dependencies only checked, so
+      # the step adds little to the runner's disk. RUSTDOCFLAGS is this step's alone: rustdoc reads it and rustc
+      # never does, and rust-cache's key, computed in its own step, never sees it.
+      - name: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps
       - name: cargo build --workspace
         run: cargo build --workspace
       - name: cargo xtask deps
