@@ -98,7 +98,7 @@ pub struct Context {
 pub const CONTEXT_WORDS: usize = 24;
 
 impl Context {
-    /// The `ContextUniforms` block's words, in [`WGSL_CONTEXT`]'s order.
+    /// The `ContextUniforms` block's words, in `WGSL_CONTEXT`'s order.
     pub fn words(&self) -> [u32; CONTEXT_WORDS] {
         let g = &self.grid;
         let mut w = [0u32; CONTEXT_WORDS];

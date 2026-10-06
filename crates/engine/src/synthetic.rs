@@ -1,8 +1,9 @@
 //! The synthetic payload harness (debug tooling plan, "Principle" and Phase 0's step 0b; render contract Part 6, "Why
 //! first"): a payload set filled on the CPU with hand-chosen values, before any physics exists, for the fragment to
-//! render and the tests to assert on. [`Synthetic`] holds the four buffers' contents: the `SimState` buffer and the
-//! word buffer, one element per sample, `ICDescriptor`, one per sample, and `RenderQuad`, one per quad, over a flat
-//! grid of quads ([`Synthetic::flat`]).
+//! render and the tests to assert on. [`Synthetic`](crate::synthetic::Synthetic) holds the four buffers' contents:
+//! the `SimState` buffer and the word buffer, one element per sample, `ICDescriptor`, one per sample, and
+//! `RenderQuad`, one per quad, over a flat grid of quads
+//! ([`Synthetic::flat`](crate::synthetic::Synthetic::flat)).
 //!
 //! Every write goes through the generated layout: a sample's packed words through the generated pack routines
 //! (`kernel::payload`, payload §6), its word through `fgw_pack`, and a quad's members by their names in the ledger's
@@ -210,7 +211,7 @@ fn f32s(v: impl IntoIterator<Item = f32>) -> Vec<u8> {
     le(v.into_iter().map(f32::to_bits))
 }
 
-/// `SimStateFTLE` as the words it uploads as: each member at its ledger offset, by name ([`place`]); the ledger's size.
+/// `SimStateFTLE` as the words it uploads as: each member at its ledger offset, by name (`place`); the ledger's size.
 pub fn simstate_words(s: &SimStateFTLE) -> Vec<u32> {
     place("SimStateFTLE", |member| {
         Some(match member {
@@ -236,7 +237,7 @@ pub fn simstate_words(s: &SimStateFTLE) -> Vec<u32> {
     })
 }
 
-/// `ICDescriptor` as the words it uploads as: each member at its ledger offset, by name ([`place`]), its declared
+/// `ICDescriptor` as the words it uploads as: each member at its ledger offset, by name (`place`), its declared
 /// padding included; the ledger's size.
 pub fn ic_words(d: &ICDescriptor) -> Vec<u32> {
     place("ICDescriptor", |member| {
