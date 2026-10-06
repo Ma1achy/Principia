@@ -48,7 +48,6 @@ fn vectors<R: Copy + Into<f64>>(i: u32, name: &str, v: [[R; 2]; 3], k0: u32) -> 
 /// raw words; otherwise the first field that differs.
 pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
     let j = i & 0xffff;
-    let third = 1.0 / 3.0;
     let params = ReadParams {
         dt_macro: 1.0,
         delta_0: 1.0,
@@ -61,7 +60,8 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
         false,
         canonical_nan(),
         false,
-        [third; 3],
+        // The masses enter only `energy_drift`, which the pattern does not define and the check does not read.
+        [1.0; 3],
         &params,
     );
     vectors(i, "r", read.r, 0)?;
@@ -80,18 +80,7 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
     for (name, got, k) in scalars {
         same(i, name, f64::from(got), slot(i, k))?;
     }
-    same(i, "state", read.state, i % 6)?;
-    same(i, "detail", read.detail, (i / 2) % 4)?;
-    same(i, "saturated", read.saturated, (i / 8) % 2 == 1)?;
-    same(i, "dmin_pair", read.dmin_pair, (i / 16) % 4)?;
-    same(i, "last_symbol", read.last_symbol, (i / 64) % 4)?;
-    same(i, "d_min unset", pa_d_min_is_unset(s.packed_a), true)?;
-    same(i, "dE_max bits", read.dE_max.to_bits(), 0)?;
-    same(i, "dLz_max bits", read.dLz_max.to_bits(), 0)?;
-    same(i, "t_end_step", read.t_end_step, j)?;
-    same(i, "t_dmin_step", read.t_dmin_step, 0xffff - j)?;
-    same(i, "total_substeps", read.total_substeps, i)?;
-    same(i, "closure_step", read.closure_step, j)?;
+    // Appendix A's packed_a, its fields compared one by one and its packed word with the stored one.
     let expected = PackedA {
         state: i % 6,
         detail: (i / 2) % 4,
@@ -100,6 +89,18 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
         last_symbol: (i / 64) % 4,
         d_min: f32::INFINITY,
     };
+    same(i, "state", read.state, expected.state)?;
+    same(i, "detail", read.detail, expected.detail)?;
+    same(i, "saturated", read.saturated, expected.saturated)?;
+    same(i, "dmin_pair", read.dmin_pair, expected.dmin_pair)?;
+    same(i, "last_symbol", read.last_symbol, expected.last_symbol)?;
+    same(i, "d_min unset", pa_d_min_is_unset(s.packed_a), true)?;
+    same(i, "dE_max bits", read.dE_max.to_bits(), 0)?;
+    same(i, "dLz_max bits", read.dLz_max.to_bits(), 0)?;
+    same(i, "t_end_step", read.t_end_step, j)?;
+    same(i, "t_dmin_step", read.t_dmin_step, 0xffff - j)?;
+    same(i, "total_substeps", read.total_substeps, i)?;
+    same(i, "closure_step", read.closure_step, j)?;
     same(
         i,
         "packed_a's raw word matches",
