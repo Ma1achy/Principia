@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
 - **Pitfalls:** PIT-3
-- **Size:** ~300 lines
+- **Size:** ~400 lines (the simulation and its goldens, ~300; REQ-COL-061's `cvd_hatch_distinct` test and calibration proposal, ~100)
 
 ## Goal
 Colour-vision simulation as a display-stage function on linear sRGB: real Viénot simulation for protan and deutan and real Brettel simulation for tritan, through LMS space, with matrices and golden values from a published reference implementation named with its version in dd_colouring §3.8 (R-78); achromatopsia multiplies the linear triplet by §3.8's M_achrom. The modes offered in the Display window are off, deuteranopia, protanopia, tritanopia and achromatopsia (R-123).

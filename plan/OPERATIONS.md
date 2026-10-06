@@ -270,6 +270,9 @@ R-376 (3 Oct 2026) confirmed the six: REQ-VAL-138 0 steps, a per-backend referen
 REQ-VAL-181 8 GiB, `--core=1`. R-377 (3 Oct 2026): the M0 gate is passed once #124 (TASK-M0-50) merges and every
 requirement in M0's exit gate is green on `main`; then confirm it in the summary, tag that commit of `main` `m0-gate`,
 and start M1.
+R-386 (6 Oct 2026, applied per R-369): before the M1 gate passes, lay out REQ-COL-061's proposal beside REQ-COL-055's
+and check `cvd_hatch_distinct` (TASK-M7-20) green on `main`. The M1 gate report lists only the gate blocks of M1 and
+earlier milestones, so it does not show REQ-COL-061, which is in M7.
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 

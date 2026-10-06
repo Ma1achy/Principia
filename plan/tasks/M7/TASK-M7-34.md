@@ -23,9 +23,9 @@ Before the M7 gate, re-measure the hybrid embedding at `k = 25` (REQ-TOOL-111) o
 - The measurements, added to REQ-TOOL-111's proposal for the M7 gate.
 
 ## Acceptance tests
-- `cargo test -p render embed_hybrid_real_figures` — on every figure and size, the hybrid variant at `k = 25` recovers an intact record at each of §7's angles, and the test prints the raw low-bit error table and the records recovered (REQ-TOOL-151).
+- `cargo test -p render embed_hybrid_real_figures` — measures and records the per-angle recovery of the hybrid variant at `k = 25` on the real figures and reports it, with the raw low-bit error table. It asserts that the measurement ran over every listed figure, size and angle and that the report was written; it does not fail on a recovery shortfall. A shortfall goes to the M7 gate for the human, because `k = 25` is the human's calibration (REQ-TOOL-111, R-71), and the reconciliation of 37.6 % with ~8 % goes in the same report (R-385, applied per R-369; REQ-TOOL-151).
 - Review (code, qa): §5 states the raw error measured on real figures and the conditions under which ~8 % and ~37.6 % hold, reconciled with TASK-M7-30's random-canvas figures (8.13 % at 34°, 8.53 % at 45°, 4.30 % at 12°; 37.6 % at 7°, 20°, 60°, 83°; 43.3 % and 43.1 % at 7.3° and 34.7°); the measurements are cited in REQ-TOOL-111's proposal (REQ-TOOL-151).
 
 ## Notes
 - R-385, applied per R-369: the dependencies are what produces a real rendered figure: the hybrid (TASK-M7-30), embedding in PNG export (TASK-M7-32), the §7.1 presets (TASK-M7-18) and the display chain (TASK-M7-21).
-- If `k = 25` fails to recover a record on a real figure at one of §7's angles, the task reports it with the measurements for the M7 gate; it does not change `k`.
+- R-385, applied per R-369: the test measures and records the per-angle recovery on the real figures and reports it. It asserts that the measurement ran over every listed figure, size and angle and that the report was written; it does not fail on a recovery shortfall. A shortfall goes to the M7 gate for the human, because `k = 25` is the human's calibration (REQ-TOOL-111, R-71), and the reconciliation of 37.6 % with ~8 % goes in the same report. The task does not change `k`.
