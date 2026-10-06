@@ -5784,3 +5784,202 @@ needs no change. The energy criterion's "no symplectic occupant lights SUSPECT_E
 Applied in REQ-INT-085's verify detail (reqio), TASK-M3-05's "Proposal:" line and `plan/reviewers/physics.md`.
 
 Changes REQ-INT-085 (RQ-207 removed, R-382 added).
+
+## R-383 — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
+*6 Oct 2026 · applied in `plan/tasks/M7/TASK-M7-20.md`, REQ-COL-042 and REQ-COL-045 (reqio), forward lines in
+dd_colouring §3.8 and colour_composition §4.3, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-209
+archived); built by TASK-M7-20*
+
+"1. RQ-209: DaltonLens-Python, pinned to a release tag or commit. Record
+   which LMS model and sRGB conversion it uses; cite Viénot 1999 and
+   Brettel 1997 as the method's sources; generate TASK-M7-20's goldens
+   from it."
+
+(Message of 6 Oct 2026, "This is from me.", item 1; numbered by the orchestrator, applied per R-369.)
+
+*Numbering:* the human's message has five items and labels none. They are R-383 to R-387, the next free numbers, one
+ruling per item in the message's order, as R-375 to R-377 were numbered.
+
+*What it decides:* the published reference implementation R-78 leaves to be named is DaltonLens-Python, pinned to one
+commit. TASK-M7-20 transcribes its matrices into dd_colouring §3.8 and generates the golden values in `fixtures/cvd/`
+from it. The method's sources are the two papers its simulators implement: Viénot, Brettel & Mollon 1999, "Digital
+video colourmaps for checking the legibility of displays by dichromats" (Viénot, protan and deutan), and Brettel,
+Viénot & Mollon 1997, "Computerized simulation of color appearance for dichromats" (Brettel, tritan).
+
+*Applied per R-369 (the pin, read from the repository, nothing installed):*
+- **Commit, not tag.** `https://github.com/DaltonLens/DaltonLens-Python`, commit
+  `3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d` (`master`, 3 Dec 2021; its `setup.cfg` reads version 0.1.6; MIT
+  licence). The newest tag, `v0.1.5` (commit `3c41b94`, 19 Nov 2021), comes before commit `8903697` (3 Dec 2021), "Fix
+  the Smith and Pokorny LMS from RGB conversion by applying the missing Judd-Vos conversion", which changed every
+  Viénot and Brettel reference image in its tests; version 0.1.6 has no tag. `3cba5e6` is `8903697` plus one commit
+  that keeps the simulators' intermediate matrices on the object for inspection and changes no output.
+- **The LMS model** is `convert.LMSModel_sRGB_SmithPokorny75`, the default `color_model` of both
+  `Simulator_Vienot1999` (`daltonlens/simulate.py:144`) and `Simulator_Brettel1997` (`simulate.py:184`), with
+  `ignoreJuddVosCorrection=False`, its default (`daltonlens/convert.py:258–263`). Its `LMS_from_linearRGB` is
+  `LMS_from_XYZ @ XYZ_from_linearRGB` (`convert.py:141`), where:
+  - `XYZ_from_linearRGB` is `XYZJuddVos_from_linearRGB_BT709` (`convert.py:186–190`, used at `:244`), Viénot et al.
+    1999's matrix from linear BT.709 RGB to Judd–Vos-corrected XYZ, `1e-2 ·` [[40.9568, 35.5041, 17.9167],
+    [21.3389, 70.6743, 7.98680], [1.86297, 11.4620, 91.2367]];
+  - `LMS_from_XYZ` is `LMS_from_XYZJuddVos_Smith_Pokorny_1975` (`convert.py:160–164`, used at `:247`), the Smith &
+    Pokorny 1975 cone fundamentals Viénot 1999 uses, [[0.15514, 0.54312, −0.03286], [−0.15514, 0.45684, 0.03286],
+    [0, 0, 0.01608]].
+  Their product is `0.01 ×` the widely quoted [[17.8824, 43.5161, 4.11935], [3.45565, 27.1554, 3.86714],
+  [0.0299566, 0.184309, 1.46709]] (`convert.py:253–256`, a comment); the inverse is taken by `np.linalg.inv`
+  (`convert.py:142`).
+- **Viénot (protan, deutan).** The plane through black and the LMS images of linear-RGB blue (0, 0, 1) and yellow
+  (1, 1, 0), normal `yellow × blue` (`simulate.py:150–158`); the projection along the missing cone's axis
+  (`plane_projection_matrix`, `simulate.py:95–125`); the whole transform
+  `linearRGB_from_LMS · P · LMS_from_linearRGB` (`simulate.py:167`). Its Viénot tritan branch (`simulate.py:159–164`)
+  is not used: tritan is Brettel's (R-78).
+- **Brettel (tritan).** The neutral axis is the LMS image of linear-RGB white (1, 1, 1) (`use_white_as_neutral=True`,
+  the default, `simulate.py:186`, `:252–254`). The anchors are the Judd–Vos XYZ of 485 nm and 660 nm for tritan (475 nm
+  and 575 nm for protan and deutan), mapped by `LMS_from_XYZ` (`simulate.py:235–240`, `:274–281`), with
+  `use_vischeck_anchors=False`, the default. Each half-plane passes through the neutral axis and one anchor; the
+  separating plane passes through the neutral axis and the missing cone's axis; a colour takes the half-plane on its
+  side of it, by the sign of `lms · n_sep` (`simulate.py:261–271`, `:286–294`).
+- **Severity.** Principia's modes are full dichromacy: severity 1, which returns the dichromat image unblended
+  (`simulate.py:84–89`).
+- **The sRGB conversion.** `Simulator.simulate_cvd` (`simulate.py:48–62`), under its default `ImageEncoding.SRGB`
+  (`simulate.py:27`), decodes with `convert.linearRGB_from_sRGB` (`convert.py:27–47`): `c / 12.92` for `c < 0.04045`,
+  else `((c + 0.055) / 1.055)^2.4`. It encodes with `convert.sRGB_from_linearRGB` (`convert.py:74–97`): clip to
+  [0, 1], then `12.92 c` for `c < 0.0031308`, else `1.055 c^(1/2.4) − 0.055`. 8-bit values enter through `as_float32`
+  (÷ 255, `convert.py:15–17`) and leave through `as_uint8` (clip, × 255, truncated, `convert.py:11–13`). These are the
+  constants of Principia's sRGB transfer (TASK-M7-02, `crates/ledger/src/gen/prelude.rs:207`, `:212`), which takes the
+  linear branch at the threshold itself (`≤`, not `<`).
+- **The goldens are generated in linear sRGB**, through the simulators' linear-RGB path
+  (`_simulate_dichromacy_linear_rgb`, `simulate.py:148`, `:215`), because Principia's CVD stage takes and returns
+  linear sRGB (dd_colouring §3.8). The 8-bit path's truncation and its `<` at the thresholds then don't enter the
+  goldens. They are generated from a read-only clone of the pinned commit; the script and the commit are recorded
+  beside them in `fixtures/cvd/`.
+
+*Applied per R-369 (mechanical consequences):*
+- `plan/tasks/M7/TASK-M7-20.md` pins the source (the repository URL, the commit, the files to transcribe from) and
+  names the two papers. Its Notes keep the "Gap" line and add a line saying R-383 closes it.
+- REQ-COL-042 and REQ-COL-045 lose their `rq: RQ-209` and gain R-383 as a ruling and a source (reqio).
+- dd_colouring §3.8 and colour_composition §4.3 gain a forward line naming R-383; their text is kept, and TASK-M7-20
+  still names the version in §3.8 when it lands, as its third deliverable says.
+- RQ-209 moves, unchanged, to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-383 is in the "design" group of `plan/rule_groups.yaml`, beside R-78.
+
+Changes REQ-COL-042 and REQ-COL-045: each gains R-383, and neither waits on RQ-209.
+
+## R-384 — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge
+*6 Oct 2026 · applied in `plan/rule_groups.yaml`; nothing else changes*
+
+"2. TASK-M0-00 is complete (R-185, PR #11): mark it done. Confirm the
+   m0-gate tag exists and every M0 exit requirement is green on main."
+
+(Message of 6 Oct 2026, "This is from me.", item 2; numbered by the orchestrator, applied per R-369: see R-383's
+numbering note.)
+
+*Applied:*
+- **TASK-M0-00 is already marked done.** `plan/tasks.yaml` has carried `status: done  # closed by R-185 (PR #11), not
+  by a task PR` since R-185, so no change was needed.
+- **The `m0-gate` tag exists**, the orchestrator confirms: an annotated tag (object `7bdd3ef`) on `002576e`, the merge
+  of #124 (TASK-M0-50), which is the commit R-377's condition names. The `gate` workflow's run on `002576e`, run
+  37146733001, completed with success.
+- **Green on `main` now.** A re-run of the `gate` workflow on `main` at `addf630` (#148's merge), run 37446425304, was
+  in progress when this was recorded, so this confirmation is pending that run's result. The result is added as the
+  next bullet, dated, when the run finishes, and no line here is reworded.
+- R-384 is in the "one-off" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-385 — Before the M7 gate, the hybrid embedding (`k = 25`) is re-measured on real rendered figures, and the 37.6 % raw low-bit error is reconciled with §5's ~8 %
+*6 Oct 2026 · applied in REQ-TOOL-151 (reqio, new), REQ-TOOL-111's note (reqio), TASK-M7-34 (new), `plan/tasks.yaml`
+and `plan/rule_groups.yaml`; built by TASK-M7-34*
+
+"3. Before the M7 gate: re-measure the hybrid embedding on real rendered
+   figures (not random canvases), and reconcile the 37.6% low-bit error
+   with §5's "~8%" figure."
+
+(Message of 6 Oct 2026, "This is from me.", item 3; numbered by the orchestrator, applied per R-369: see R-383's
+numbering note.)
+
+*What it decides:* the evidence for REQ-TOOL-111's `k = 25`, which the human confirms at the M7 gate, includes a
+measurement on real rendered figures. `principia_dd_image_embedding.md` §5's "nearest rotation is recoverable but
+leaves ~8% bit error" is reconciled with the 37.6 % that TASK-M7-30 measured.
+
+*The two figures:* PR #144 (TASK-M7-30) measured the hybrid variant on pseudo-random (xorshift) canvases. With 512²
+canvases, rotated by the nearest whole degree and back, the raw low-bit error, with no redundancy, was 8.13 % at 34°,
+8.53 % at 45° and 4.30 % at 12°, which is §5's ~8 %. At 7°, 20°, 60° and 83° it was 37.6 %: there the size parities put
+the rotated-back canvas's pixel centres on the original's pixel corners, so every pixel is a coin toss between two
+neighbours. At 7.3° and 34.7° it was 43.3 % and 43.1 %. `k = 25` still recovered every one of §7's angles, but on a
+random canvas, whose neighbouring low bits are independent; a real figure's are not.
+
+*Applied per R-369 (mechanical consequences):*
+- **A new requirement, REQ-TOOL-151 (M7):** the hybrid variant at `k = 25` is re-measured on real rendered figures,
+  not random canvases, for the raw low-bit error after nearest rotation and back and for the records recovered at
+  each of §7's angles. §5's ~8 % is reconciled with the measurements: §5 states the raw error found and the conditions
+  under which each figure holds, with a "Removed lines" note for any reworded line. The reconciled wording rests on
+  R-385, and no decision changes. The measurements join REQ-TOOL-111's evidence for the M7 gate.
+- **A new task, TASK-M7-34**, closes it, with code and qa as reviewers: a measurement and a doc reconciliation, no
+  physics field, no R-72 definition (`plan/WORKFLOW.md` § "Task files"). A real rendered figure is one the renderer
+  produces from a computed field through the M7 display chain, coloured by a §7.1 preset and written by the PNG
+  export with the hybrid embedding. TASK-M7-34 therefore depends on TASK-M7-30 (the hybrid), TASK-M7-32 (embedding in
+  PNG export), TASK-M7-18 (the §7.1 presets) and TASK-M7-21 (the display chain). It measures at least three figures
+  of different presets, among them a smooth one and one with a fine fractal boundary, at 512² and 1024².
+- REQ-TOOL-111's note names R-385 and REQ-TOOL-151 (reqio); its statement is unchanged.
+- R-385 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-151; REQ-TOOL-111's note changes.
+
+## R-386 — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
+*6 Oct 2026 · applied in REQ-COL-061 (reqio, new), REQ-COL-055's note (reqio), TASK-M7-20, `plan/MILESTONES.md` § "M1
+— The synthetic payload and the eyes" and `plan/rule_groups.yaml`; built by TASK-M7-20*
+
+"4. At the M1 gate: also check the hatch colours stay distinguishable
+   from the palette under each colour-vision simulation."
+
+(Message of 6 Oct 2026, "This is from me.", item 4; numbered by the orchestrator, applied per R-369: see R-383's
+numbering note.)
+
+*What it decides:* at the M1 gate, where the human confirms the hatch's pattern and colours (REQ-COL-055;
+`debug_invalid(frag_xy)`, R-136: violet `#9B00FF` and cyan `#48FFFF`, render contract Part 5), it is also checked
+that under each colour-vision simulation, deuteranopia, protanopia, tritanopia and achromatopsia, the hatch stays
+distinguishable from every palette entry REQ-COL-055 measured against.
+
+*Applied per R-369 (mechanical consequences):*
+- **A new requirement, REQ-COL-061**, an R-71 calibration. The criterion, a measure (each hatch colour's OKLab
+  distance to its nearest palette entry, both simulated) and its threshold, is proposed with its evidence by
+  TASK-M7-20 and confirmed by the human at the M1 gate, beside REQ-COL-055. TASK-M7-20 gains it in Closes and an
+  acceptance test, `cargo test -p render cvd_hatch_distinct`.
+- **The ordering consequence (flagged).** The simulation is TASK-M7-20's, an M7 task. The plan's tooling allows no
+  task to close a requirement of an earlier milestone than its own, and no task to depend on a later milestone's task
+  (`plan/WORKFLOW.md` § "Task files"; `plan/check_plan.py`). So REQ-COL-061 cannot sit in M1's generated gate with
+  TASK-M7-20 closing it, and no M1 task can wait on TASK-M7-20. REQ-COL-061's milestone is therefore M7, TASK-M7-20
+  stays in M7, and `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" names it beside the gate: **the M1
+  gate does not pass until REQ-COL-061 is green on `main`, so TASK-M7-20 merges before the M1 gate.** TASK-M7-20
+  depends only on TASK-M7-02, which has merged, so this delays nothing. Moving TASK-M7-20 into M1 would also move
+  TASK-M7-02, a merged M7 task; that is not done.
+- **Achromatopsia (flagged for the proposal).** Under M_achrom every colour maps to a grey, and the palettes
+  REQ-COL-055 measured include the grey ramp, so under achromatopsia each stripe colour on its own matches some grey.
+  There the hatch is told apart by its pattern, its two stripes 0.35 apart in OKLab lightness (render contract Part
+  5), not by either colour. The proposal states how the two-colour pattern counts where a single stripe colour falls
+  within the threshold. If a hatch colour fails under any simulation, the failure goes to the M1 gate with
+  REQ-COL-055's proposal, and the human decides there.
+- REQ-COL-055's note names R-386 and REQ-COL-061 (reqio); its statement is unchanged.
+- R-386 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-061; REQ-COL-055's note changes.
+
+## R-387 — `cargo doc` with warnings as errors joins `ci-checks`, and `plan/coverage.md`'s counts are regenerated, in a separate ops PR, the orchestrator's call
+*6 Oct 2026 · applied in `plan/rule_groups.yaml`; built by a separate ops PR*
+
+"5. Housekeeping (R-369, your call): add cargo doc with warnings as errors
+   to ci-checks; regenerate plan/coverage.md's counts."
+
+(Message of 6 Oct 2026, "This is from me.", item 5; numbered by the orchestrator, applied per R-369: see R-383's
+numbering note.)
+
+*Applied:* this is the orchestrator's call under R-369, CI and tooling being the orchestrator's to decide. A separate
+ops PR, not this one, does both:
+- it adds a `cargo doc` step with warnings as errors (`RUSTDOCFLAGS="-D warnings"`) to the `ci-checks` job of
+  `.github/workflows/ci.yml`;
+- it regenerates `plan/coverage.md` with `plan/tools/coverage.py`;
+- it fixes the private intra-doc link at `crates/validation/src/gpu.rs:602` (``[`metal_driver`]`` in
+  `session_adapter`'s doc comment), which would fail the new step.
+
+R-387 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.

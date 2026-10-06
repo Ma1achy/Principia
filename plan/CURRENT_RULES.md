@@ -217,6 +217,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-378** — The generated read side loads only the stored members each field needs, never the whole stored struct in one load *(amends R-343)*
 - **R-379** — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
 - **R-381** — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
+- **R-383** — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
 
 ## Values
 
@@ -237,6 +238,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-376** — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*
 - **R-380** — The prototype's embedding magic `PRPX` and version 2 are transcribed as values a new record must not reuse; the new layout's version byte is proposed as 3 *(closes RQ-205)*
 - **R-382** — The L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2 *(closes RQ-207)*
+- **R-385** — Before the M7 gate, the hybrid embedding (`k = 25`) is re-measured on real rendered figures, and the 37.6 % raw low-bit error is reconciled with §5's ~8 %
+- **R-386** — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
 
 ## Process
 
@@ -339,6 +342,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-372** — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*
 - **R-374** — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*
 - **R-375** — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*
+- **R-387** — `cargo doc` with warnings as errors joins `ci-checks`, and `plan/coverage.md`'s counts are regenerated, in a separate ops PR, the orchestrator's call
 
 ## One-off acts (history only)
 
@@ -403,3 +407,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-365** — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)*
 - **R-370** — R-366's number stands *(closes RQ-198)*
 - **R-377** — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts
+- **R-384** — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge
