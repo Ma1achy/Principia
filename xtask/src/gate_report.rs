@@ -24,7 +24,7 @@
 //!   `reviews-complete` applies (R-175, R-260; [`crate::reviews_check`]); it fails when the task has no merged PR or
 //!   when the merged PR lacks an approval. A task `plan/tasks.yaml` records as `status: done` and closed by a ruling
 //!   (`# closed by R-<n>` on its status line, as TASK-M0-00's R-185) has no task PR: it is closed by the human's own
-//!   decision, so its requirement passes when that ruling's PR, titled `R-<n>: …` or naming R-<n> in a list or range
+//!   decision, so its requirement passes when that ruling's PR, titled `R-<n>: …` or naming `R-<n>` in a list or range
 //!   (`R-<a> to R-<b>: …`), is merged, with no reviewer approval asked of it (the ruling is the approval), and fails
 //!   while it is not. The lookup is behind [`PrSource`], so the tests read a fixture.
 //! - Benchmark requirements (`verify.method: benchmark` in `plan/requirements.yaml`) run on the human's Mac, never on a

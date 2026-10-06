@@ -1,7 +1,8 @@
 //! The benchmark runner's process, which `cargo xtask bench` runs: xtask reaches `validation` only as a dev-dependency
 //! (systems_architecture §7.1; R-176, R-187), so it runs this binary rather than linking the benches.
 //!
-//! `bench --root <workspace> <bench> --out <path>`: runs the bench and writes its profiler schema v1 trace to <path>.
+//! `bench --root <workspace> <bench> --out <path>`: runs the bench and writes its profiler schema v1 trace
+//! to `<path>`.
 //! `bench --list`: names the registered benches, one per line.
 
 use std::fs::File;

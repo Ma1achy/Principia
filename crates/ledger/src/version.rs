@@ -395,7 +395,7 @@ fn check_links(h: &Hashed) -> Result<(), String> {
 }
 
 /// The canonical serialisation of `h`, or a line naming each [`STORED_BITS`] constant its register lacks or holds
-/// more than once, or the link registry fault [`check_links`] finds.
+/// more than once, or the link registry fault `check_links` finds.
 pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
     check_links(h)?;
     let mut stored = Vec::new();

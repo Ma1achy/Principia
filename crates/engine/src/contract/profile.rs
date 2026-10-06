@@ -41,7 +41,7 @@ pub enum SchemaId {
 
 /// One profiler trace: the session header, the frame records, then the precomputed summaries (telemetry §5).
 ///
-/// The file is JSON Lines (R-286), which [`write`] writes and [`read`] reads: the header line
+/// The file is JSON Lines (R-286), which [`write()`] writes and [`read()`] reads: the header line
 /// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. A session
 /// that ended before its summary line, a crash or a session still running, is [`Session::Incomplete`] (R-298). This
 /// type's own serde form, one object with the five keys (and `session` when incomplete, `dropped_bytes` when not 0),
