@@ -20,6 +20,9 @@
 //! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
 //! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
 //!
+//! The display stage (colour_composition §4.3), outside the pipeline: the colour-vision simulation pass and its CPU
+//! mirror ([`display::cvd`]; dd_colouring §3.8; TASK-M7-20).
+//!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
 
@@ -29,6 +32,7 @@ pub mod codegen;
 pub mod colour;
 pub mod compositor;
 pub mod debug_bake;
+pub mod display;
 pub mod embed;
 pub mod frame_record;
 pub mod headless;
