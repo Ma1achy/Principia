@@ -2372,15 +2372,16 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+  - file: decisions.md
+    section: "R-392 — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*"
   verify:
     method: unit test
-    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction; θ̃ is 0 at the start whatever n(0)'s longitude (R-389); a synthetic path passing through the pole disc √(n_u² + n_v²) < r_pole (REQ-INT-086) adds no delta while inside and exactly wrap(exit longitude − stored longitude), into (−π, π], on exit, the stored longitude being the last one outside the disc; a per-step longitude difference of exactly ±π, and a pole passage whose exit-minus-stored difference is exactly ±π, each add +π (R-389). An IC starting inside the disc waits on RQ-225"
+    detail: "on a synthetic n(t) path circulating the w axis, θ̃ accumulates with no 2π jumps, orbit_count matches the path's turn count and retrograde matches its direction; θ̃ is 0 at the start whatever n(0)'s longitude (R-389); a synthetic path passing through the pole disc √(n_u² + n_v²) < r_pole (REQ-INT-086) adds no delta while inside and exactly wrap(exit longitude − stored longitude), into (−π, π], on exit, the stored longitude being the last one outside the disc; a per-step longitude difference of exactly ±π, and a pole passage whose exit-minus-stored difference is exactly ±π, each add +π (R-389); a synthetic path that starts inside the disc leaves θ̃ unchanged, at 0, at its first exit and accumulates from the exit longitude after it (R-392)"
   rulings:
   - R-113
   - R-389
+  - R-392
   milestone: M1
-  rq:
-  - RQ-225
   note: "R-113 (RQ-94): dd test 8 on a real circulating bounded orbit is a separate M3 requirement."
 - id: REQ-INT-002
   area: INT
