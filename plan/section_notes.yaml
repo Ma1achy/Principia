@@ -807,3 +807,11 @@
   section: "R-377 — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts"
   reason: informative only
   note: "the human's item 4 of 3 Oct 2026, numbered by the orchestrator, applied per R-204: the M0 gate is passed once PR #124 (TASK-M0-50) merges and every requirement in M0's exit gate is green on main; the orchestrator then confirms it in its summary, tags main m0-gate and starts M1; plan/OPERATIONS.md's order of work gains it; changes no requirement"
+- file: decisions.md
+  section: "R-384 — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge"
+  reason: informative only
+  note: "the human's item 2 of 6 Oct 2026, numbered by the orchestrator, applied per R-369: TASK-M0-00 was already status: done in plan/tasks.yaml (R-185, PR #11), so no change; the m0-gate tag is on 002576e, #124's merge, and gate run 37146733001 there passed; the re-run on main addf630, run 37446425304, was in progress when recorded, its result to be added as a dated bullet; changes no requirement"
+- file: decisions.md
+  section: "R-387 — `cargo doc` with warnings as errors joins `ci-checks`, and `plan/coverage.md`'s counts are regenerated, in a separate ops PR, the orchestrator's call"
+  reason: informative only
+  note: "the human's item 5 of 6 Oct 2026, the orchestrator's call under R-369: a separate ops PR adds cargo doc with warnings as errors to ci-checks, regenerates plan/coverage.md, and fixes crates/validation/src/gpu.rs:602's private intra-doc link; changes no requirement"
