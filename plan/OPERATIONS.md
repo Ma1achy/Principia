@@ -390,9 +390,20 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | 3 at normal, 2 at warning, at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels, and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
+
+**The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
+`vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
+If it rose by more than 1000 in that minute (about 16 MB a minute at the Mac's 16 KB pages), the Mac is swapping: allow
+2 agents. Otherwise allow 3, R-262's cap (R-391's "3 or more" is three under that cap). Log both readings with the
+dispatch. The threshold is the orchestrator's proposal, applied per R-369; the baseline on 6 Oct 2026, at pressure 2
+with two agents running, was 39 and 2 page-outs a minute, with 0 swap-outs. Each day of the trial, log one line
+(§ "Logs"): the agents running, the page-out rates read, the dispatches held to 2, and every timeout or flaky failure
+with its run or PR. If timeouts or flaky failures rise above the days before the trial, revert to R-277's 2 at warning
+at once, log it, and tell the human in the next summary. After three days, report the log in the next summary; the
+trial runs until the human rules on it or it is reverted.
 
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
 its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),
@@ -488,6 +499,10 @@ don't route around it.
 ## Logs
 
 - **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
+- **R-391's trial log (Mac only).** Each day of the trial, one line in the away-mode log: the date; the agents running
+  (the peak, and how many dispatches ran at warning with 3); the page-out rises read (the lowest and highest per
+  minute, and each dispatch held to 2); every timeout or flaky failure, local or in CI, with its run or PR; and whether
+  the trial was reverted (§ "Resources").
 - **Linux cloud.** A cloud machine's disk may not outlive the session. Under R-347,
   keep the running log in the session's scratch directory, and post the away-mode summary as the session's final
   message and as a comment on each PR it concerns.
