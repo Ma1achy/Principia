@@ -6017,6 +6017,9 @@ R-387 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-388 — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
+*Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied).*
+*Still in force: items 1 to 3 as recorded; item 4's nextest, its test selection by package rather than the whole
+workspace, and its unchanged shard count and time limits (R-376).*
 *6 Oct 2026 · applied in `plan/OPERATIONS.md` § "Roles and the loop", § "Dispatching" and § "Reviewers" (its
 **Mutants** item), `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR", § "Task files" and § "The review
 loop", `CLAUDE.md` § "How work runs", `.claude/agents/implementer.md` and `plan/rule_groups.yaml`; item 4 built by a
@@ -6350,5 +6353,42 @@ timeouts or flaky failures rise, the orchestrator reverts to R-277's two at warn
   and the trial continues until the human rules on it or it is reverted.
 - **Mac only.** `vm_stat` is macOS's; a Linux cloud machine keeps R-277's levels as R-347 reads them.
 - R-391 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-393 — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
+*6 Oct 2026 · applied in the ops PR on branch `ops/mutants-test-selection` (#156: `.cargo/mutants.toml`,
+`.github/workflows/mutants.yml`) and `plan/rule_groups.yaml`*
+
+The orchestrator told the human that R-388 item 4 ("each mutant runs the tests of its own package plus genuine
+dependents … and through nextest") rested on its wrong premise, and that it had applied, per R-369, nextest only, with
+own-package selection kept. The human replied:
+
+"yeah i accept it"
+
+(Message of 6 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*The premise and the evidence (from the orchestrator's report, and #156's description):*
+- **The premise was wrong.** R-388 item 4 assumed each mutant ran the whole workspace's tests, so selecting its own
+  package plus its genuine dependents would cut them. cargo-mutants already runs only the mutated package's tests:
+  that is its default (`TestPackages::Mutated`, "Only the package containing the mutated file"), which neither
+  `.cargo/mutants.toml` nor `mutants.yml` overrode. PR #149's shard 0 (run 37497434605) shows each mutant running
+  `cargo test --package=<its package>` only: about 200 s for render, 16 s for engine and 36 s for ledger.
+- **Adding dependents would add tests, not remove them.** Almost every crate dev-depends on `validation`, which
+  depends on engine, kernel, ledger and render, so a mutant in any of those four would run nearly the whole workspace.
+  A ledger mutant would go from about 36 s to about 20 min (about 4860 test-seconds, from main's CI run 37492606491),
+  and a shard the size of #149's to an estimated 4–5 hours, against REQ-VAL-149's 300-minute limit.
+- **What is applied** (per R-369, accepted here): each mutant runs through nextest (`test_tool = "nextest"` in
+  `.cargo/mutants.toml`), on its own package's tests, as before. The gate's strictness is unchanged: the selected set
+  is the one already in force, and a narrower set can only leave more survivors, never hide one.
+
+*What it decides:* R-388 item 4 is applied as nextest with own-package selection. Its "plus genuine dependents" is not
+applied. Items 1 to 3 of R-388, item 4's "through nextest", and REQ-VAL-149's n = 8 shards and 300 minutes per shard,
+REQ-VAL-180 and REQ-VAL-181 (R-376) are unchanged.
+
+*Applied:*
+- The ops PR on branch `ops/mutants-test-selection` (#156) implements it, separately from this entry.
+- R-388 gains "Amended in part by R-393" and "Still in force" lines (R-292).
+- R-393 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
