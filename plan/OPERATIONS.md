@@ -90,10 +90,11 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
 - **Run independent work in parallel** (the human, 27 Sep 2026): every ready task starts at once, each in its own
   worktree and target directory, within the agent cap (§ "Resources"). Never start a task whose dependencies aren't
   merged, and never stack a task on an unmerged PR (28 Sep 2026; R-362). The one exception is R-388's early start: a
-  task may start off a dependency's head once every reviewer the dependency's task names has approved that head and its
-  CI is green there apart from mutants. It opens no PR until the dependency merges, then merges `main` in and opens its
-  PR against `main`; if the dependency changes beyond added tests first, re-check the task before its PR opens
-  (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
+  task whose other dependencies have all merged may start off its one unmerged dependency's head, once every reviewer
+  that dependency's task names has approved that head and its CI is green there apart from mutants (applied per R-369:
+  never with two unmerged dependencies, which would be stacking, R-362). It opens no PR until the dependency merges,
+  then merges `main` in and opens its PR against `main`; if the dependency changes beyond added tests first, re-check
+  the task before its PR opens (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
 - **Every approval sits on the head.** Before a merge, each named reviewer's `VERDICT: APPROVE` is on the latest
   commit, or carried over to it under R-260 (§ "Reviewers").
 - **A compile check beats a token scan.** Don't enforce a source rule by reading tokens when the compiler can check

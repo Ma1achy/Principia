@@ -6040,27 +6040,41 @@ of ready-next tasks, starting a task off its approved dependency's head, and fas
 
 *Applied:*
 - **Item 1, local mutants before review.** `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item: the implementer
-  runs `cargo mutants --in-diff` on its own diff against `origin/main` before it opens the PR (requests review), and
-  again before it pushes fixes for survivors. The run uses its own target directory, `<target>-mutants`, deleted
-  straight after, and counts as an agent against R-277's limit. The implementer tests the boundary of every comparison
-  and match arm it adds. Reviewers still don't run it, and CI's mutants gate (`mutants.yml`, R-302) stays the
+  runs `cargo mutants --in-diff` on its own diff against `origin/main` before it opens the PR (requests review). The run
+  uses its own target directory, `<target>-mutants`, deleted straight after. The implementer tests the boundary of every
+  comparison and match arm it adds. Reviewers still don't run it, and CI's mutants gate (`mutants.yml`, R-302) stays the
   authority: a clean local run is no substitute for a green `mutants-check`. The existing text on R-348's two caps
   (REQ-VAL-180, REQ-VAL-181, enforced on macOS as the timeout only, R-352) and on equivalent mutants (R-202) stands.
-  `plan/WORKFLOW.md` § "The review loop" step 1, `.claude/agents/implementer.md` and § "Dispatching"'s list of what
-  every dispatch names (the implementer's `<target>-mutants` directory) say the same.
-- **Item 2, pre-flight.** `plan/OPERATIONS.md` § "Dispatching": while tasks are in flight, the orchestrator has a
-  read-only agent pre-flight each ready-next task (one whose every dependency is merged or in review) against its task
-  file and References: that each cited section exists and that no value, definition or decision it needs is missing
-  or in conflict. A gap goes to `REVIEW_QUEUE.md` then, with file, section and quoted text, not when the implementer
-  reaches it. The agent writes nothing, and the orchestrator files the entries and runs the read-only check on it as
-  on a reviewer.
+  - Applied per R-369: the implementer runs it again before it pushes fixes for survivors CI reports.
+  - Applied per R-369: the ruling's "counts against the memory limit" is read as counting as an agent against R-277's
+    limit, the cap on agents by memory pressure.
+  - Applied per R-369: `plan/WORKFLOW.md` § "The review loop" step 1 and `.claude/agents/implementer.md` (a new step 4)
+    state the run; the implementer writes `git diff origin/main...HEAD` to a file in its scratch directory and points
+    `--in-diff` at it.
+  - Applied per R-369: § "Dispatching"'s list of what every dispatch names gains the implementer's `<target>-mutants`
+    directory.
+- **Item 2, pre-flight.** `plan/OPERATIONS.md` § "Dispatching": the orchestrator has a read-only agent pre-flight each
+  ready-next task against its task file and References: that each cited section exists and that no value, definition or
+  decision it needs is missing or in conflict. A gap goes to `REVIEW_QUEUE.md` then, with file, section and quoted text,
+  not when the implementer reaches it.
+  - Applied per R-369: a ready-next task is one whose every dependency is merged or in review, and the pre-flight runs
+    while tasks are in flight.
+  - Applied per R-369: the agent writes nothing; the orchestrator files the entries and runs the read-only check on it
+    as on a reviewer.
 - **Item 3, early start.** `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR" and § "Task files" (Depends
   on): a task may start before a dependency merges once every reviewer the dependency's task names has approved the
   dependency's head and its CI is green on that head apart from mutants. It branches from that head and opens no PR
-  until the dependency merges; then it merges `main` in and opens its PR normally, against `main`, so nothing is
-  stacked (R-362). If the dependency changes beyond added tests before it merges, the task is re-checked against the
-  merged dependency before its PR opens. `plan/OPERATIONS.md` § "Roles and the loop" and § "Dispatching" and
-  `CLAUDE.md` § "How work runs" point at it.
+  until the dependency merges; then it merges `main` in and opens its PR normally, against `main`, so nothing is stacked
+  (R-362). If the dependency changes beyond added tests before it merges, the task is re-checked against the merged
+  dependency before its PR opens.
+  - Applied per R-369 (review 5434285000 on PR #154): an early start is allowed only when every other dependency of the
+    task has merged and exactly one is unmerged; that one meets the condition above, and the task branches from its
+    approved head. Branching from two unmerged heads would be stacking (R-362). The same is stated at `plan/WORKFLOW.md`
+    § "The unit: one task, one branch, one PR" and § "Task files", `plan/OPERATIONS.md` § "Roles and the loop" and
+    `CLAUDE.md` § "How work runs".
+  - Applied per R-369: `plan/OPERATIONS.md` § "Roles and the loop" and `CLAUDE.md` § "How work runs" point at it; §
+    "Dispatching"'s list of what every dispatch names gains the dependency head's sha for an early start; and
+    `.claude/agents/implementer.md` step 1 branches from the head the orchestrator names.
 - **Item 4, faster shards.** Applied by a follow-up ops task, not this PR: the per-PR mutants shards
   (`.github/workflows/mutants.yml`) run each mutant against the tests of its own package plus its genuine dependents,
   not the whole workspace, so GPU render tests don't run for unrelated crates, and run them through nextest. How the

@@ -12,8 +12,9 @@ Read this first; each rule points at its source.
 
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
-  its Depends on is merged, or early off a dependency's approved head, opening its PR only once the dependency has
-  merged (R-388; `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
+  its Depends on is merged, or early off the approved head of its one unmerged dependency, every other dependency
+  merged, opening its PR only once that dependency has merged (R-388; `plan/WORKFLOW.md` § "The unit: one task, one
+  branch, one PR").
 - The reviewers are the ones the task file names. Each posts a PR review headed `VERDICT: APPROVE <role>` or
   `VERDICT: CHANGES <role>` (R-175). `reviews-complete` counts them.
 - The orchestrator merges a PR once every named reviewer has approved its head and CI is green, and stops only when

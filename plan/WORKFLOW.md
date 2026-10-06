@@ -10,11 +10,12 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 - Each task in `plan/tasks.yaml` is built on its own branch, `task/<TASK-id>` (e.g. `task/TASK-M3-04`), and merged
   through one PR titled `<TASK-id>: <title>`. Nothing else goes in that PR.
 - A task starts only when every task in its **Depends on** list is merged, or early, off a dependency's approved head
-  (R-388): once every reviewer the dependency's task names has approved the dependency's head and its CI is green on
-  that head apart from mutants, the task may start. It branches from that head and opens no PR until the dependency
-  merges; then it merges `main` in and opens its PR normally, against `main`, so nothing is stacked (R-362). If the
-  dependency changes beyond added tests before it merges, the task is re-checked against the merged dependency before
-  its PR opens.
+  (R-388): when every other dependency has merged and exactly one is unmerged, and every reviewer that dependency's task
+  names has approved its head and its CI is green on that head apart from mutants, the task may start (applied per
+  R-369: only one unmerged dependency, since branching from two unmerged heads would be stacking, R-362). It branches
+  from that head and opens no PR until the dependency merges; then it merges `main` in and opens its PR normally,
+  against `main`, so nothing is stacked (R-362). If the dependency changes beyond added tests before it merges, the task
+  is re-checked against the merged dependency before its PR opens.
 - The PR description lists the requirement ids the task closes and, for each, the acceptance command that
   demonstrates it, with its output. It links the task file.
 - A task that is to be split is split **in the plan first**: new task files and manifest entries, `plan/check_plan.py`
@@ -55,9 +56,9 @@ Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`;
 - **Definition requirements** (R-72) are closed by the task that needs the definition. Its deliverable is the doc
   change, reviewed by the physics reviewer.
 - **The header fields** are Milestone, Closes, Depends on, Needs (earlier milestones), Reviewers, Pitfalls and Size.
-  - **Depends on** names the tasks that must be merged first, including tasks in earlier milestones. A task may
-    start earlier, off a dependency's approved head, but opens its PR only once the dependency has merged (R-388;
-    § "The unit: one task, one branch, one PR").
+  - **Depends on** names the tasks that must be merged first, including tasks in earlier milestones. A task may start
+    earlier, off the approved head of its one unmerged dependency, every other dependency merged, but opens its PR only
+    once that dependency has merged (R-388, applied per R-369; § "The unit: one task, one branch, one PR").
   - **Needs** lists the earlier-milestone requirement ids the task builds on. The task closing each one is reachable
     through Depends on.
 - **The sections** are Goal, References, Deliverables, Acceptance tests and Notes.
