@@ -17,14 +17,14 @@
 | REF | 50 |
 | RENDER | 83 |
 | COL | 60 |
-| GUI | 163 |
+| GUI | 174 |
 | TOOL | 150 |
 | VAL | 180 |
 | PERF | 94 |
 | SYS | 79 |
-| **total** | **1316** |
+| **total** | **1327** |
 
-Of these: 107 calibration, 105 definition, 1104 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 107 calibration, 105 definition, 1115 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -36,18 +36,18 @@ Of these: 107 calibration, 105 definition, 1104 obligation. Retired (kept for th
 | M3 | 196 |
 | M4 | 104 |
 | M5 | 163 |
-| M6 | 141 |
+| M6 | 152 |
 | M7 | 115 |
 | M8 | 234 |
 
 ## Sections
 
-1079 sections in 46 files: 889 yield at least one requirement; 190 yield none and are listed below with the reason.
+1081 sections in 46 files: 891 yield at least one requirement; 190 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 142 |
+| informative only | 143 |
 | out of v1 (R-125) | 1 |
-| parent heading (obligations are in its subsections) | 33 |
+| parent heading (obligations are in its subsections) | 32 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -152,6 +152,7 @@ Of these: 107 calibration, 105 definition, 1104 obligation. Retired (kept for th
 | R-384 — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge | informative only | the human's item 2 of 6 Oct 2026, numbered by the orchestrator, applied per R-369: TASK-M0-00 was already status: done in plan/tasks.yaml (R-185, PR #11), so no change; the m0-gate tag is on 002576e, #124's merge, and gate run 37146733001 there passed; the re-run on main addf630, run 37446425304, was in progress when recorded, its result to be added as a dated bullet; changes no requirement |
 | R-387 — `cargo doc` with warnings as errors joins `ci-checks`, and `plan/coverage.md`'s counts are regenerated, in a separate ops PR, the orchestrator's call | informative only | the human's item 5 of 6 Oct 2026, the orchestrator's call under R-369: a separate ops PR adds cargo doc with warnings as errors to ci-checks, regenerates plan/coverage.md, and fixes crates/validation/src/gpu.rs:602's private intra-doc link; changes no requirement |
 | R-388 — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package | informative only | the human's ruling of 6 Oct 2026, numbered R-381 by the human and recorded as R-388 (R-381 taken; R-278): a process ruling applied in plan/OPERATIONS.md, plan/WORKFLOW.md, CLAUDE.md and .claude/agents/implementer.md; item 4's CI change is a follow-up ops task, REQ-VAL-149, REQ-VAL-180 and REQ-VAL-181 unchanged (R-376); changes no requirement |
+| R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)* | informative only | the human's ruling of 6 Oct 2026, a trial: at memory-pressure warning three agents unless the Mac is swapping, two while it is; swapping is more than 1000 vm_stat page-outs over the last minute (the orchestrator's proposal, applied per R-369 and logged; baseline 39/min and 2/min with 0 swap-outs at pressure 2 with two agents); R-262's cap of three stands; a daily log, and a revert to R-277 if timeouts or flakes rise; applied in CLAUDE.md and plan/OPERATIONS.md; replaces R-277's warning rule in part; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -385,7 +386,6 @@ Of these: 107 calibration, 105 definition, 1104 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Part I — The dev GUI | parent heading (obligations are in its subsections) |  |
-| G5. Windows (`04_windows.png`) | parent heading (obligations are in its subsections) |  |
 | 14. Prototype → GUI mapping | informative only | maps HTML prototypes to GUI roles; the prototypes are prior art |
 
 ### `docs/notes/ic_inspector_scratchpad.md`

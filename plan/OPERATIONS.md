@@ -290,6 +290,8 @@ and start M1.
 R-386 (6 Oct 2026, applied per R-369): before the M1 gate passes, lay out REQ-COL-061's proposal beside REQ-COL-055's
 and check `cvd_hatch_distinct` (TASK-M7-20) green on `main`. The M1 gate report lists only the gate blocks of M1 and
 earlier milestones, so it does not show REQ-COL-061, which is in M7.
+R-390 (6 Oct 2026): the GUI track, TASK-M6-24 to TASK-M6-29, starts now, in parallel with the physics and renderer
+chain, on spare agent slots only, and never holds up M1 or M2 (§ "The GUI track (R-390)").
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
@@ -314,6 +316,35 @@ summary:
 - every question in `REVIEW_QUEUE.md`, in one list;
 - anything surprising;
 - free disk and the memory-pressure level at each checkpoint (R-252, R-295).
+
+## The GUI track (R-390)
+
+The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
+built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
+qa and gui.
+- **Priority and resources.** The physics and renderer chain keeps priority for agent slots. A GUI-track task, its
+  reviewers and its fix rounds take only a slot that no ready chain task needs, within § "Resources"' memory and disk
+  limits. When slots are short, the chain's ready task gets the next free one; a running GUI-track agent is not
+  stopped, but the next slot doesn't go to the track. The track never holds up M1 or M2: no M1 or M2 task depends on
+  it, and none waits for a slot it holds.
+- **When it merges.** Each track task merges once its reviews pass and CI is green, without waiting for the gates of M1
+  to M5 (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"). Each depends only on merged work and on the
+  track's task before it.
+- **"What to try".** Each track PR's description has a "What to try" section: the clicks and keys that show what
+  changed, on `cargo run -p gui --features mock` (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
+- **Sources and silences.** `decisions.md`, then `docs/gui/design/GUI_DESIGN_NOTES.md`, then the artboards in
+  `docs/gui/design/`, then `docs/gui/principia_render_gui_spec.md`, then `docs/contracts/principia_gui_state_contract.md`;
+  the higher wins, and R-68 still makes corpus values win over artboard values. Where they're silent on look, feel or
+  behaviour, the orchestrator and the reviewers decide and record it as "applied per R-369"; calibrations and physics
+  choices stay as R-71 and R-369 give them.
+- **The human's feedback.** The human tries each merged screen and sends look-and-feel notes as plain text. Each note is
+  a GUI design ruling: record it in `decisions.md` at the next free number, in the human's words, in the "design" group
+  of `plan/rule_groups.yaml`, as any ruling is recorded. Apply it in the porting rule's order: the docs first
+  (`docs/gui/design/GUI_DESIGN_NOTES.md`, or render_gui_spec where the note settles a spec point), then the plan (the
+  task it changes, or a new task), then the code, through a task PR reviewed like any other. A note that contradicts
+  a ruling or the corpus is flagged in the PR and the next summary (CLAUDE.md § "Rulings").
+- **Contract changes.** A track task that adds to the contract surface re-runs the conformance suite on both engines,
+  and the code reviewer checks the field is as the corpus names it (R-390's "Contract fields").
 
 ## Size
 

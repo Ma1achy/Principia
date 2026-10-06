@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
-- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05
+- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -33,5 +33,5 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - Definition: the chart-preset, Your-stains and warning-suppression stores written into render_gui_spec §G7 and §11 and approved by the physics reviewer (REQ-GUI-160).
 
 ## Notes
-- none
 - Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (classification accepted by R-132).
+- R-390: TASK-M6-28 builds the Chart builder's frame on the mock engine, its previews square; this task depends on it and wires it to the real chart system, keeping every requirement it closes.

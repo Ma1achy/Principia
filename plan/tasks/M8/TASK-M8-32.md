@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -31,4 +31,4 @@ The Export & share window offers image export (size in multiples of the view, fo
 - `cargo xtask screenshot 01_main` (present mode; Esc restores the layout) — screenshot in present mode shows only the figure; Esc restores 01_main.png's layout (REQ-GUI-100).
 
 ## Notes
-- none
+- R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.

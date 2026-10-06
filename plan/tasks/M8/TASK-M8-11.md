@@ -1,8 +1,8 @@
 # TASK-M8-11 — The Trajectory panel: summary, real space, the turning shape sphere, kept orbits
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-157
-- **Depends on:** TASK-M8-09, TASK-M8-05
+- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054
+- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27
 - **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -29,8 +29,9 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `cargo xtask screenshot 01_main` (right panel) and `cargo test -p gui trajectory_buttons_open_inspector` — screenshot against 01_main.png's right panel; both buttons open the Inspector window (REQ-GUI-088).
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 05_inspectors` (sphere and unwrapped; turn cleared) — screenshots against 01_main.png and 05_inspectors.png in sphere and unwrapped modes; with 'turn' cleared two frames are identical (REQ-GUI-089).
 - `cargo test -p gui sphere_unwrap_agree` — points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged (REQ-GUI-054).
-- Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent; the human confirms it at the M8 gate (REQ-GUI-157).
+- Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent; the human confirms it at the M8 gate (REQ-GUI-157). Proposed by TASK-M6-27 since R-390, the first task to need the value; this task uses it.
 
 ## Notes
 - The turning rate ("slowly") is not given. The listen button's sound is TASK-M8-12.
-- Closes, for gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (classification accepted by R-132).
+- For gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (classification accepted by R-132), closed by TASK-M6-27 since R-390 and used here.
+- R-390: TASK-M6-27 builds the Trajectory panel's frame on the mock engine and proposes the rotation rate (REQ-GUI-157, the first task to need it); this task depends on it, uses that value, fills the panel from the real engine and keeps REQ-GUI-088, REQ-GUI-089 and REQ-GUI-054.

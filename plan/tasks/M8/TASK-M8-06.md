@@ -1,8 +1,8 @@
 # TASK-M8-06 — Manifold view panel: Chart, Navigate, depth readout, Centre z₀, Slice & tilt, and the figure's axis labels
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-081, REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161
-- **Depends on:** TASK-M8-05
+- **Closes:** REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161
+- **Depends on:** TASK-M8-05, TASK-M6-26
 - **Needs (earlier milestones):** REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -26,7 +26,7 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - Screenshot cases `01_main/shape_sphere_controls`, `01_main/left_panel`, `01_main/axis_labels`, `01_main/direction_labels`.
 
 ## Acceptance tests
-- `cargo xtask screenshot 01_main` (left panel) — screenshot against 01_main.png's left panel: one group, sub-sections in that order, eight named z₀ sliders (REQ-GUI-081).
+- `cargo xtask screenshot 01_main` (left panel) — screenshot against 01_main.png's left panel: one group, sub-sections in that order, eight named z₀ sliders (REQ-GUI-081). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 01_main` and `cargo test -p gui preset_display_names` — screenshot against 01_main.png; every shipped preset's display name is built from its axis names (REQ-GUI-082).
 - `cargo test -p gui navigate_z0_fields` — drag and typed entry on each of the eight z₀ fields both emit the same SetField and round-trip through the snapshot (REQ-GUI-083).
 - `cargo xtask screenshot 01_main` (axis labels, before and after a pan) — screenshot against 01_main.png; after a pan the end values update (REQ-GUI-084).
@@ -36,3 +36,4 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 ## Notes
 - R-113 (RQ-95 M2-G5): the shape-sphere projection selector and hemisphere toggle live in the Manifold view's Chart section, shown when the chart is the shape sphere (REQ-GUI-161); the M2 goldens (TASK-M2-28) verify the render side.
 - The Lock sub-group's badge and the compass are TASK-M8-07; this task leaves the Lock slot wired to the lock SetFields.
+- R-390: TASK-M6-26 builds the Manifold view group on the mock engine and closes REQ-GUI-081; this task depends on it, wires the group to the real engine and re-runs REQ-GUI-081's acceptance there, keeping every other requirement it closes.

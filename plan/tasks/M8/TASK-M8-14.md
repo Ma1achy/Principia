@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068
-- **Depends on:** TASK-M8-09, TASK-M8-11, TASK-M4-16
+- **Depends on:** TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28
 - **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -43,3 +43,4 @@ The one Inspector window exists and absorbs the standalone IC Inspector (R-65), 
 ## Notes
 - The Jacobi frame, angles, CoM marks and auto-fit (REQ-GUI-058, REQ-GUI-059) are built in TASK-M8-15 as the body canvas shared by panes 1 and 2 and asserted there on both panes; this task's pane 1 draws the bodies, arrows and ghosts.
 - RQ-98 ruled: R-113 — "hosted in the one Inspector window" left REQ-GUI-008 (M3) and is carried by REQ-GUI-112 here.
+- R-390: TASK-M6-28 builds the Inspector window's frame on the mock engine; this task depends on it and fills pane 1 from the real engine, keeping every requirement it closes.

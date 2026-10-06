@@ -1,8 +1,8 @@
 # TASK-M8-07 — Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-091, REQ-GUI-092, REQ-GUI-099, REQ-GUI-155
-- **Depends on:** TASK-M8-06
+- **Closes:** REQ-GUI-092, REQ-GUI-099, REQ-GUI-155
+- **Depends on:** TASK-M8-06, TASK-M6-26, TASK-M6-27
 - **Needs (earlier milestones):** REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-1.7
@@ -29,7 +29,7 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 - Tests: `scrub_reintegrates`.
 
 ## Acceptance tests
-- `cargo xtask screenshot 01_main` (slice and tilt cases) and `cargo xtask screenshot 08_lock` — screenshots against 01_main.png after touching a slice slider and after touching a tilt, and against 08_lock.png when locked (REQ-GUI-091).
+- `cargo xtask screenshot 01_main` (slice and tilt cases) and `cargo xtask screenshot 08_lock` — screenshots against 01_main.png after touching a slice slider and after touching a tilt, and against 08_lock.png when locked (REQ-GUI-091). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo test -p gui scrub_reintegrates` — scrub from t=40 to t=10: the playhead SetField triggers re-integration from 0 with a progress indicator; no frame store is read (REQ-GUI-092).
 - `cargo xtask screenshot 08_lock` — screenshot against 08_lock.png after K over a point (REQ-GUI-099).
 - Definition: the scrubber's progress percentage written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-155).
@@ -37,3 +37,4 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 ## Notes
 - The scrubber's "refining · N%" needs a progress fraction in the snapshot; what it is a fraction of is not stated.
 - Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).
+- R-390: TASK-M6-26 builds the compass and lock's re-basing on the mock engine and closes REQ-GUI-091, and TASK-M6-27 builds Time; this task depends on both, wires them to the real engine, re-runs REQ-GUI-091's acceptance there, and keeps REQ-GUI-092, REQ-GUI-099 and REQ-GUI-155.
