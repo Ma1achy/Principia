@@ -6141,3 +6141,50 @@ The human chose "Hold below a radius", then refined it verbatim:
 - R-389 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries `rq: RQ-225`.
+
+## R-392 — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*
+*6 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7", REQ-INT-001 (reqio), TASK-M1-11,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-225 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M1-11*
+
+The orchestrator put RQ-225 to the human, a case R-389's pole rule does not reach:
+
+> R-389's pole rule stores the reference longitude "on entering" √(n_u²+n_v²) < r_pole. An IC that starts inside the
+> radius never enters it, so at its first exit there's nothing to subtract. What does the first exit add?
+
+The human chose option 1, "Nothing", the option RQ-225 described as:
+
+> **The first exit adds nothing** (recommended): θ̃ counts turning from the first longitude the hold trusts, the exit
+> longitude. It keeps the hold's premise that a longitude inside the radius is not trusted.
+
+Their reasoning, verbatim:
+
+> **1, nothing.** It's the only answer consistent with the rule itself: a longitude inside `r_pole` is never trusted,
+> and an initial condition starting there is no exception, since its starting longitude is just as noisy as any other
+> near-pole reading.
+>
+> It also makes physical sense. An orbit that starts at a Lagrange pole has no meaningful starting "direction" around
+> the sphere, so its winding count properly begins once it's far enough from the pole to have one. Option 2 would let
+> an essentially random starting angle shift θ̃ by up to π, and flip `retrograde` on noise, which is exactly what the
+> hold exists to prevent.
+
+(Answer of 6 Oct 2026 to the orchestrator's question; numbered by the orchestrator, applied per R-369.)
+
+*What it decides:*
+- **The first exit of an IC inside the radius.** An IC with `√(n_u² + n_v²) < r_pole` at `t = 0` has no stored
+  longitude. Its first exit adds no delta: `θ̃` is still 0 there (R-389's `θ̃(0) = 0`, and no delta inside), and from
+  that exit on it accumulates as R-389 says, starting from the exit longitude. Every later passage through the radius
+  stores its entry longitude and adds `wrap(exit − stored)` on exit, as R-389 says.
+- R-389's start, its pole rule for a path that enters the radius from outside, its exact-π case and `r_pole`
+  (REQ-INT-086) stand as they are.
+
+*Applied per R-369 (mechanical consequences):*
+- dd_integrator § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)": R-389's paragraph
+  "Unwrapped phase — its start and the poles" gains the case in place of "that case is open (RQ-225)".
+- **The test obligation.** REQ-INT-001's verify detail and TASK-M1-11's `theta_unwrap` line gain: a synthetic path
+  that starts inside the pole disc leaves `θ̃` unchanged, at 0, at its first exit, and accumulates from the exit
+  longitude after it. REQ-INT-001 gains R-392 as a ruling and a source, and drops `rq: RQ-225`.
+- RQ-225 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-392 is in the "physics" group of `plan/rule_groups.yaml`, with R-389.
+
+REQ-INT-001's verify detail, rulings and sources change, and it no longer carries an `rq`.
