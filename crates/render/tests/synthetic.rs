@@ -212,6 +212,50 @@ negative_control!(
     }
 );
 
+/// `grid`'s sample index is the flat grid's `(quad · N² + tile) · (E + 1) + copy` (render::raster's note, applied
+/// per R-369): every `(quad, tile, copy)` has its own index, the indices fill `0..sample_count`, and a tile's E + 1
+/// copies sit together after its base sample.
+fn check_sample_index(grid: Grid, index: impl Fn(u32, u32, u32) -> u32) {
+    let mut seen = vec![false; grid.sample_count() as usize];
+    for quad in 0..grid.quad_count() {
+        for tile in 0..grid.n * grid.n {
+            for copy in 0..=grid.e {
+                let i = index(quad, tile, copy);
+                assert_eq!(
+                    i,
+                    (quad * grid.n * grid.n + tile) * (grid.e + 1) + copy,
+                    "copy {copy} of quad {quad}'s tile {tile} is not at the flat grid's index"
+                );
+                assert!(
+                    !std::mem::replace(&mut seen[i as usize], true),
+                    "sample index {i} is given twice"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn tile_rasterisation_sample_index_is_the_flat_grids() {
+    // Two quads of 2 × 2 tiles, each sample with two copies: the last copy of the last tile is index 23, the last
+    // of the 2 · 4 · 3 = 24.
+    let g = Grid::new([2, 1], 2, 2, 1).expect("the index grid");
+    assert_eq!(g.sample_count(), 24, "the grid's sample count");
+    assert_eq!(g.sample_index(1, 3, 2), 23, "the last sample's index");
+    assert_eq!(g.sample_index(0, 1, 1), 4, "quad 0's tile 1's copy 1");
+    check_sample_index(g, |q, t, c| g.sample_index(q, t, c));
+}
+
+negative_control!(
+    tile_rasterisation_sample_index_is_the_flat_grids,
+    "an index that ignores the copy gives each tile's copies one index",
+    expected = "is not at the flat grid's index",
+    {
+        let g = Grid::new([2, 1], 2, 2, 1).expect("the index grid");
+        check_sample_index(g, |q, t, _| g.sample_index(q, t, 0))
+    }
+);
+
 /// Each sample's `E_0` set to its own value, distinct per sample.
 fn distinct(grid: Grid) -> Synthetic {
     let mut set = Synthetic::flat(grid, 1);
@@ -824,6 +868,65 @@ negative_control!(
         let g = Grid { e: 0, ..grid() };
         let image = draw_words(&gpu(), &validity_set(g), &context(g), VALIDITY_VIEW);
         check_validity_drawn(Grid { e: 1, ..g }, &image)
+    }
+);
+
+/// The diffusion validity view: `diffusion_valid`, 0 or 1.
+const DIFFUSION_VALIDITY_VIEW: &str = "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    return vec4<u32>(select(0u, 1u, l.validity.diffusion_valid), 0u, 0u, 0u);
+}";
+
+/// A set where sample `i` has `t_end_step`, the `n` of the diffusion slope, `i % 4`, or `n` for every sample.
+fn steps_set(grid: Grid, n: Option<u32>) -> Synthetic {
+    let mut set = Synthetic::flat(grid, 0);
+    for i in 0..grid.sample_count() {
+        set.sample(i).times(n.unwrap_or(i % 4), 0);
+    }
+    set
+}
+
+/// Each pixel's `diffusion_valid` is the predicate `n ≥ 2` over its sample's `n = i % 4` (R-245; payload §6's
+/// `diffusion_slope_valid`; colour_composition §3).
+fn check_diffusion_validity(grid: Grid, image: &Image) {
+    let (width, height) = grid.target();
+    for y in 0..height {
+        for x in 0..width {
+            let i = grid.cell(x, y).sample;
+            assert_eq!(
+                image.words(x, y)[0],
+                u32::from(i % 4 >= 2),
+                "pixel ({x}, {y}): sample {i}'s diffusion_valid is not n >= 2 for n = {}",
+                i % 4
+            );
+        }
+    }
+}
+
+#[test]
+fn ctx_lanes_diffusion_validity_is_n_at_least_2() {
+    let g = grid();
+    let image = draw_words(
+        &gpu(),
+        &steps_set(g, None),
+        &context(g),
+        DIFFUSION_VALIDITY_VIEW,
+    );
+    check_diffusion_validity(g, &image);
+}
+
+negative_control!(
+    ctx_lanes_diffusion_validity_is_n_at_least_2,
+    "a set whose every sample has n = 2 is valid where n = i % 4 is not",
+    expected = "diffusion_valid is not n >= 2",
+    {
+        let g = grid();
+        let image = draw_words(
+            &gpu(),
+            &steps_set(g, Some(2)),
+            &context(g),
+            DIFFUSION_VALIDITY_VIEW,
+        );
+        check_diffusion_validity(g, &image)
     }
 );
 

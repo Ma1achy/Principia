@@ -132,9 +132,10 @@ impl Synthetic {
         self.quad[q as usize]
     }
 
-    /// The `d_min` packs' counts so far, `(dmin_nan_unset, dmin_negative_floored)` (R-288).
-    pub fn dmin_counts(&self) -> (u32, u32) {
-        self.counters.read()
+    /// The set's one `d_min` counter pair, the frame's pair its `d_min` packs count into (R-288, R-294); its owner
+    /// reads it back with [`DminCounters::read`], `(dmin_nan_unset, dmin_negative_floored)`.
+    pub fn counters(&self) -> &DminCounters {
+        &self.counters
     }
 
     /// The four buffers' bytes.

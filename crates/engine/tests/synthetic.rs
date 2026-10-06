@@ -283,7 +283,7 @@ fn check_setters(set: &Synthetic, fresh: u32) {
         sd_state(f) == STATE_RUNNING && pa_d_min_is_unset(f) && sd_dmin_pair(f) == 3,
         "a fresh sample is not running with d_min unset and dmin_pair at its sentinel"
     );
-    assert_eq!(set.dmin_counts(), (0, 0), "a d_min pack was counted");
+    assert_eq!(set.counters().read(), (0, 0), "a d_min pack was counted");
 }
 
 fn set_sample_2() -> Synthetic {
@@ -310,4 +310,59 @@ negative_control!(
     "sample 2 read back as the fresh sample fails",
     expected = "a fresh sample is not running",
     check_setters(&set_sample_2(), 2)
+);
+
+/// Every sample of `set` has equal masses summing to 1, the flat layout's fresh `ICDescriptor`.
+fn check_fresh_masses(set: &mut Synthetic) {
+    for i in 0..set.grid().sample_count() {
+        let d = set.ic(i);
+        let (m0, m1, m2) = (d.m0, d.m1, d.m2);
+        assert!(
+            m0 == m1 && m1 == m2 && ((m0 + m1 + m2) - 1.0).abs() <= f32::EPSILON,
+            "sample {i}'s masses ({m0}, {m1}, {m2}) are not equal and summing to 1"
+        );
+    }
+}
+
+#[test]
+fn synthetic_flat_masses_are_equal_and_sum_to_1() {
+    check_fresh_masses(&mut Synthetic::flat(grid(), 0));
+}
+
+negative_control!(
+    synthetic_flat_masses_are_equal_and_sum_to_1,
+    "a sample whose m0 is set to 1 fails the check",
+    expected = "are not equal and summing to 1",
+    {
+        let mut set = Synthetic::flat(grid(), 0);
+        set.ic(3).m0 = 1.0;
+        check_fresh_masses(&mut set)
+    }
+);
+
+/// The counts made into `counted`'s counter pair, one NaN stored unset and two negatives floored, read back from
+/// `read`'s: the set holds one pair, across reads, as the frame's owner reads its pair back after the packs (R-288,
+/// R-294).
+fn check_one_pair(counted: &Synthetic, read: &Synthetic) {
+    counted.counters().increment_nan_unset();
+    counted.counters().increment_negative_floored();
+    counted.counters().increment_negative_floored();
+    assert_eq!(
+        read.counters().read(),
+        (1, 2),
+        "the set's d_min counters do not read back the counts made into them"
+    );
+}
+
+#[test]
+fn synthetic_counters_are_the_sets_one_pair() {
+    let set = Synthetic::flat(grid(), 0);
+    check_one_pair(&set, &set);
+}
+
+negative_control!(
+    synthetic_counters_are_the_sets_one_pair,
+    "counts made into one set's pair, read back from another's, are not there",
+    expected = "do not read back the counts made into them",
+    check_one_pair(&Synthetic::flat(grid(), 0), &Synthetic::flat(grid(), 0))
 );
