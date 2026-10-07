@@ -70,6 +70,12 @@ pub const fn buffers() -> [BufferBinding; 4] {
 pub const CONTEXT_GROUP: u32 = 2;
 pub const CONTEXT_BINDING: u32 = 0;
 
+/// The per-quad frames' binding, in the context's group: one `vec4<f32>` per quad, `(c_u, c_v, h_u, h_v)`, deep_zoom
+/// §1's centre and half-width, which the CPU computes in f64 and the GPU reads as f32. At M1 the synthetic harness
+/// supplies them from its own grid (RQ-214); the per-quad uniforms of the scheduler's `QuadRequest` replace them
+/// (TASK-M5-04). Applied per R-369: a harness binding in the harness's own group, not the ledger's binding table.
+pub const FRAME_BINDING: u32 = 1;
+
 /// The context's uniforms (lowering Part 3: view-only state is uniform, never a recompile): the read side's
 /// arguments, the grid the raster covers, the chart lane's values (charts land in M2; until then the uniforms fill
 /// them), the playhead, the footprint's ensemble spread and the quad's valid sample count.
@@ -544,14 +550,41 @@ pub fn stain_module(assembled: &str) -> String {
     )
 }
 
+/// The preset harness's entry point name.
+pub const PRESET_ENTRY: &str = "preset_harness_fs";
+
+/// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers, its
+/// screen and quad lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], the per-quad frames
+/// at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile through
+/// `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad.uv` the sample's quad-local coordinate and
+/// `ctx.quad.c`, `ctx.quad.h` its quad's frame, and writes the colour with alpha 1. The presets (`engine::presets`)
+/// render through it.
+pub fn preset_module(assembled: &str) -> String {
+    format!(
+        "{assembled}{}{}\n// The per-quad frames (render::bind::FRAME_BINDING): (c_u, c_v, h_u, h_v), deep_zoom §1's centre and half-width.\n\
+         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;\n\
+         @fragment\nfn {PRESET_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
+         let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
+         let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
+         let frame = quad_frames[r.quad];\n    \
+         let quad = CtxQuad(r.quad_uv, frame.xy, frame.zw);\n    \
+         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
+         return vec4<f32>(rgb, 1.0);\n}}\n",
+        raster::WGSL,
+        declarations(),
+    )
+}
+
 /// The four buffers' contents, as bytes: each the elements its binding's struct declares, in sample order (the quad
-/// buffer in quad order).
+/// buffer in quad order); and the per-quad frames, `(c_u, c_v, h_u, h_v)` as four f32 per quad, in quad order
+/// ([`FRAME_BINDING`]).
 #[derive(Clone, Copy, Debug)]
 pub struct Payload<'a> {
     pub simstate: &'a [u8],
     pub word: &'a [u8],
     pub ic: &'a [u8],
     pub quad: &'a [u8],
+    pub quad_frame: &'a [u8],
 }
 
 /// The three bind groups a harness draw reads, and their layouts, by group number.
@@ -586,7 +619,8 @@ fn entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 }
 
 /// Uploads `payload` and the uniforms, the prelude's for `context`'s ensemble and `context`'s own, and binds them: group
-/// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block.
+/// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block and the
+/// per-quad frames ([`FRAME_BINDING`]).
 pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -> Bound {
     use wgpu::util::DeviceExt;
     let buffer = |label: &str, bytes: &[u8], usage| {
@@ -605,6 +639,11 @@ pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -
         uniform,
     );
     let context_block = buffer("context uniforms", &words(&context.words()), uniform);
+    let frames = buffer(
+        "quad frames",
+        payload.quad_frame,
+        wgpu::BufferUsages::STORAGE,
+    );
     let stored = [
         buffer("simstate", payload.simstate, storage),
         buffer("word", payload.word, storage),
@@ -633,7 +672,10 @@ pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -
         layout("harness buffers", &group1),
         layout(
             "harness context",
-            &[entry(CONTEXT_BINDING, wgpu::BufferBindingType::Uniform)],
+            &[
+                entry(CONTEXT_BINDING, wgpu::BufferBindingType::Uniform),
+                entry(FRAME_BINDING, read_only),
+            ],
         ),
     ];
     let group = |label: &str, layout: &wgpu::BindGroupLayout, entries: &[wgpu::BindGroupEntry]| {
@@ -664,10 +706,16 @@ pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -
         group(
             "harness context",
             &layouts[2],
-            &[wgpu::BindGroupEntry {
-                binding: CONTEXT_BINDING,
-                resource: context_block.as_entire_binding(),
-            }],
+            &[
+                wgpu::BindGroupEntry {
+                    binding: CONTEXT_BINDING,
+                    resource: context_block.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: FRAME_BINDING,
+                    resource: frames.as_entire_binding(),
+                },
+            ],
         ),
     ];
     Bound { layouts, groups }
