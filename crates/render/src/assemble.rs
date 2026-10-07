@@ -1064,6 +1064,7 @@ fn shade(
          ctx.sample = sample_read(i, ensemble_spread, has_ensemble(), masses, params);\n    \
          ctx.ic = ic_read(i);\n    \
          ctx.frag_xy = frag_xy;\n    \
+         ctx.params = params;\n    \
          return shade(ctx);\n}\n",
     );
     out

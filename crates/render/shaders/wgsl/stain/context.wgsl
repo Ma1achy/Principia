@@ -7,11 +7,13 @@
 alias Field = vec4<f32>;
 
 // What every node reads (render contract Part 1): the sample's read-side `SimState`, its `ICDescriptor` (`ic`, only
-// the members the stain reads filled; RQ-227), the pixel's position for the invalid hatch (`debug_invalid`), and the
-// node's wired fields, `inputs[k]` its k-th field input.
+// the members the stain reads filled; RQ-227), the pixel's position for the invalid hatch (`debug_invalid`), the node's
+// wired fields, `inputs[k]` its k-th field input, and the read side's arguments, `params`, the uniforms the sample was
+// read with, whose `horizon_steps` places a step index on `[0, horizon_steps]` (render_gui_spec §10.1; TASK-M1-09).
 struct Ctx {
     sample: SimState,
     ic: ICDescriptor,
     frag_xy: vec2<f32>,
     inputs: array<Field, 4>,
+    params: ReadParams,
 }

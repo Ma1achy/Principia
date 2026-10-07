@@ -463,24 +463,26 @@ fn check_ramp_of(ledger: &Ledger, field: &str, ramp: &str) {
     );
 }
 
+/// `S`'s numeric view (RQ-231): its fixed range from 0 to `hi`, which an end with no finite bound leaves to the
+/// measured end, `u_range`'s.
+fn s_ramp(hi: &str) -> String {
+    format!("ramp_viridis(range_norm(raw, 0.0, {hi}, uniforms.RANGE_AUTO != 0u, uniforms.u_range))")
+}
+
 #[test]
-fn view_ramp_of_an_infinite_closed_bound_is_the_sentinel() {
+fn view_ramp_of_an_infinite_closed_bound_is_the_measured_end() {
     check_ramp_of(
         &closed_at(f64::INFINITY),
         "S",
-        "dbg_sentinel(ctx.sample.S, ctx.frag_xy)",
+        &s_ramp("uniforms.u_range.y"),
     );
 }
 
 negative_control!(
-    view_ramp_of_an_infinite_closed_bound_is_the_sentinel,
+    view_ramp_of_an_infinite_closed_bound_is_the_measured_end,
     "a range closed at two finite ends is coloured over that range",
     expected = "is not coloured with",
-    check_ramp_of(
-        &closed_at(1.0),
-        "S",
-        "dbg_sentinel(ctx.sample.S, ctx.frag_xy)"
-    )
+    check_ramp_of(&closed_at(1.0), "S", &s_ramp("uniforms.u_range.y"))
 );
 
 /// The test of `field` generated from `ledger` stores `value`, and its control `altered`.
@@ -511,7 +513,8 @@ negative_control!(
     )
 );
 
-/// The header comments of `views`, each view's lines after its first, `//` and all: each is at most 120 columns
+/// The header comments of `views`, each view's lines after its first, `//` and all, up to its declarations
+/// (`// @uniform`, which are not prose): each is at most 120 columns
 /// unless it holds one word alone, none is empty, and none could have taken the next line's first word (the wrap is
 /// greedy).
 fn check_headers(views: &[String]) {
@@ -519,7 +522,7 @@ fn check_headers(views: &[String]) {
         let lines: Vec<&str> = view
             .lines()
             .skip(1)
-            .take_while(|l| l.starts_with("//"))
+            .take_while(|l| l.starts_with("//") && !l.starts_with("// @"))
             .collect();
         for pair in lines.windows(2) {
             let next = pair[1]["// ".len()..].split(' ').next().unwrap_or("");
@@ -597,10 +600,47 @@ fn named_struct(
     }
 }
 
+/// The functions the shared library defines, the prelude, the colour-space maps and the presentation layer
+/// (render_gui_spec §10.1; render contract Part 5): what a view calls to colour, not to read its field.
+fn library_functions() -> BTreeSet<String> {
+    let lib = "crates/render/shaders/wgsl/lib";
+    let source = ["prelude", "colour_space", "present"]
+        .iter()
+        .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let module =
+        naga::front::wgsl::parse_str(&source).unwrap_or_else(|e| panic!("the library: {e}"));
+    module
+        .functions
+        .iter()
+        .filter_map(|(_, f)| f.name.clone())
+        .collect()
+}
+
+/// A view's `// @uniform` block as the assembler declares it (gui_state_contract §3): a struct of its uniforms bound
+/// as `uniforms`, which the view reads as `uniforms.<name>`.
+fn uniform_block(view: &str) -> String {
+    let members: String = view
+        .lines()
+        .filter_map(|l| l.strip_prefix("// @uniform "))
+        .filter_map(|l| {
+            let (name, rest) = l.split_once(':')?;
+            let (ty, _) = rest.split_once('=')?;
+            Some(format!("    {}: {},\n", name.trim(), ty.trim()))
+        })
+        .collect();
+    if members.is_empty() {
+        return String::new();
+    }
+    format!("struct ViewUniforms {{\n{members}}}\n@group(0) @binding(1) var<uniform> uniforms: ViewUniforms;\n")
+}
+
 /// The accessor symbols `colour` references in `module`: each member of the read-side `SimState` it takes from
 /// `ctx.sample`, each member of `ICDescriptor` it takes from `ctx.ic` (RQ-227), and each function it calls but the
-/// presentation layer's (`dbg_*`).
+/// shared library's ([`library_functions`]).
 fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
+    let library = library_functions();
     let mut out = BTreeSet::new();
     let (Some((simstate, members)), Some((ic, ic_members))) = (
         named_struct(module, "SimState"),
@@ -631,7 +671,7 @@ fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
     collect_calls(&colour.body, &mut calls);
     for f in calls {
         let name = module.functions[f].name.clone().unwrap_or_default();
-        if !name.starts_with("dbg_") {
+        if !library.contains(&name) {
             out.insert(Accessor::Function(name));
         }
     }
@@ -691,7 +731,8 @@ fn rust_check(tests: &str, field: &str) -> String {
 fn check_shared(views: &[View], wgsl_of: &dyn Fn(&View) -> String, tests: &str) {
     let context = view_context();
     for v in views {
-        let source = format!("{context}\n{}", wgsl_of(v));
+        let view = wgsl_of(v);
+        let source = format!("{context}\n{}{view}", uniform_block(&view));
         let module = naga::front::wgsl::parse_str(&source)
             .unwrap_or_else(|e| panic!("`{}`'s view: {}", v.field, e.emit_to_string(&source)));
         let want: BTreeSet<Accessor> = v.read.accessors(v.field).into_iter().collect();

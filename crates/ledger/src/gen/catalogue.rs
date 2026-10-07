@@ -17,14 +17,18 @@
 //! **Exhaustive by construction.** A field the fragment cannot read refuses generation, naming it ([`refused`]): a new
 //! ledger field appears in the catalogue or generation fails (seam 13; REQ-GEN-011).
 //!
-//! **The colouring is a placeholder** (TASK-M1-09 and TASK-M1-10 own it): a categorical field `dbg_cat` with its `n`,
-//! a flag `dbg_flag`, a field whose range is closed at both ends `dbg_lin` over that range, and any other the literal
-//! placement of `dbg_sentinel`, which needs no range (render contract Part 5). A vector field shows its norm, `‖·‖`,
-//! the reduction §3.8 names (applied per R-369). The scale and range written in each view's header are the ledger's.
+//! **The colouring.** A numeric field takes the two-line template ([`numeric`]; render_gui_spec §10.1, RQ-231,
+//! TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. The rest is a placeholder
+//! (TASK-M1-10 and TASK-M1-12 own it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and the drift
+//! fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`, which needs
+//! no range (render contract Part 5). A vector field shows its norm, `‖·‖`, the reduction §3.8 names (applied per
+//! R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp through
+//! `dbg_sentinel`, never as a class (R-136). The scale and range written in each view's header are the ledger's.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
+use crate::gen::numeric::NumericView;
 use crate::gen::{read, rust, Generated};
 use crate::schema::{Bound, Entry, FieldType, Location, Scale, Storage, Struct, Word};
 
@@ -263,7 +267,14 @@ fn ramp(e: &Entry, value: &str, wgsl: &str) -> String {
         format!("f32({value})")
     };
     match e.scale {
-        Scale::Categorical(n) => format!("dbg_cat({value}, {n}u)"),
+        Scale::Categorical(n) => match e.sentinel {
+            // A stored sentinel shows as its literal value on the ramp, never as a class (R-136).
+            Some(s) if s.is_finite() && s >= 0.0 => format!(
+                "select(dbg_cat({value}, {n}u), dbg_sentinel({as_f32}, ctx.frag_xy), {value} == {}u)",
+                s as u64
+            ),
+            _ => format!("dbg_cat({value}, {n}u)"),
+        },
         Scale::Flag if wgsl == "bool" => format!("dbg_flag({value})"),
         Scale::Flag => format!("dbg_flag({value} != 0u)"),
         _ => match (closed(e.range.lo), closed(e.range.hi)) {
@@ -273,8 +284,89 @@ fn ramp(e: &Entry, value: &str, wgsl: &str) -> String {
     }
 }
 
-/// The view's WGSL: a header naming the field, its location, type, scale and range, and its accessors, then `colour`.
+/// The view's WGSL: a header naming the field, its location, type, scale and range, and its accessors, then `colour`:
+/// the numeric template's ([`NumericView`]) for a numeric field, its uniforms declared after the header, else the
+/// placeholder's.
 fn view_wgsl(e: &Entry, r: &Read) -> String {
+    let numeric = match r {
+        Read::Member {
+            wgsl: "f32" | "u32",
+            ..
+        }
+        | Read::Ic
+        | Read::Word { .. } => NumericView::of(e),
+        _ => None,
+    };
+    match numeric {
+        Some(n) => numeric_wgsl(e, r, &n),
+        None => placeholder_wgsl(e, r),
+    }
+}
+
+/// The numeric view `n` of `e`, read as `r`: the header, the view's uniforms and the template's `colour`.
+pub fn numeric_wgsl(e: &Entry, r: &Read, n: &NumericView) -> String {
+    let value = r.wgsl(e.name);
+    let as_f32 = match r {
+        Read::Member { wgsl: "f32", .. } | Read::Ic => value,
+        _ => format!("f32({value})"),
+    };
+    format!(
+        "{}{}{}",
+        header(
+            e,
+            r,
+            "Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the NaN \
+             guard, the stored sentinel's line where the field has one, and the ramp, with `RANGE_AUTO` and `u_range` its \
+             uniforms."
+        ),
+        n.header(),
+        n.colour(&as_f32)
+    )
+}
+
+/// The numeric view of `field` in `words` and `entries`, its `RANGE_AUTO` param set to `range_auto` where given (the
+/// header default the generator writes from the node's param, RQ-231), or `None` for a field the template does not
+/// colour.
+pub fn numeric_view(
+    words: &[Word],
+    entries: &[Entry],
+    field: &str,
+    range_auto: Option<bool>,
+) -> Option<String> {
+    let e = entries.iter().find(|e| e.name == field)?;
+    let r = read(words, entries, e)?;
+    let mut n = NumericView::of(e)?;
+    if let Some(on) = range_auto {
+        n = n.with_range_auto(on);
+    }
+    Some(numeric_wgsl(e, &r, &n))
+}
+
+/// The placeholder view of `e`, read as `r`.
+fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
+    let value = r.wgsl(e.name);
+    let body = match r {
+        Read::Vector => format!(
+            "let v = {value};\n    return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), \
+             ctx.frag_xy);"
+        ),
+        Read::Member { wgsl, .. } => format!("return {};", ramp(e, &value, wgsl)),
+        Read::Ic => format!("return {};", ramp(e, &value, "f32")),
+        Read::Word { .. } => format!("return {};", ramp(e, &value, "u32")),
+    };
+    format!(
+        "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
+        header(
+            e,
+            r,
+            "The colouring is a placeholder (`ledger::gen::catalogue`)."
+        )
+    )
+}
+
+/// The generated-file line and the comment naming `e`'s field, location, type, scale, range and accessors, then
+/// `colouring`.
+fn header(e: &Entry, r: &Read, colouring: &str) -> String {
     let location = match &e.location {
         Location::Packed {
             word,
@@ -299,16 +391,6 @@ fn view_wgsl(e: &Entry, r: &Read) -> String {
         Scale::Categorical(n) => format!("categorical({n})"),
         Scale::Flag => "flag".to_owned(),
     };
-    let value = r.wgsl(e.name);
-    let body = match r {
-        Read::Vector => format!(
-            "let v = {value};\n    return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), \
-             ctx.frag_xy);"
-        ),
-        Read::Member { wgsl, .. } => format!("return {};", ramp(e, &value, wgsl)),
-        Read::Ic => format!("return {};", ramp(e, &value, "f32")),
-        Read::Word { .. } => format!("return {};", ramp(e, &value, "u32")),
-    };
     let accessors: Vec<String> = r
         .accessors(e.name)
         .iter()
@@ -318,11 +400,10 @@ fn view_wgsl(e: &Entry, r: &Read) -> String {
             Accessor::Function(f) => format!("`{f}`"),
         })
         .collect();
-    let header = format!(
+    let text = format!(
         "The debug view of `{name}` (render contract Part 6; debug_tooling_plan §B–E): {location}, {ty}, scale {scale}, \
          range {lo}, {hi}. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field \
-         through {acc}; its test, `{test}` in `{TESTS_PATH}`, reads it through their Rust twins. The colouring is a \
-         placeholder (`ledger::gen::catalogue`).",
+         through {acc}; its test, `{test}` in `{TESTS_PATH}`, reads it through their Rust twins. {colouring}",
         name = e.name,
         lo = bound(e.range.lo, true),
         hi = bound(e.range.hi, false),
@@ -330,9 +411,8 @@ fn view_wgsl(e: &Entry, r: &Read) -> String {
         test = test_name(e.name),
     );
     format!(
-        "// Generated by `cargo xtask codegen` from the layout table (`crates/ledger/src/payload.rs`); do not edit.\n\
-         {}fn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
-        comment(&header, "// ")
+        "// Generated by `cargo xtask codegen` from the layout table (`crates/ledger/src/payload.rs`); do not edit.\n{}",
+        comment(&text, "// ")
     )
 }
 
