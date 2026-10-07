@@ -14037,6 +14037,52 @@
   rulings:
   - R-390
   milestone: M6
+- id: REQ-GUI-176
+  area: GUI
+  kind: definition
+  statement: "The snapshot's frame summary against the frame record — quad_count as the frame record's leaf_count at the latest frame, fps as 1000 / the mean frame_ms of the frames since the previous snapshot, and the footer's GPU and heap as live_memory's gpu and heap bytes, the tile cache not added — must be defined in gui_state_contract §2 beside the fields by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "gui_state_contract §2 defines quad_count, fps and the footer's GPU and heap against the frame record; the mock's snapshot and the status line and footer follow it, drawing \"—\" for an absent value; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M6
+  note: "RQ-243, decided per R-369. TASK-M8-05 keeps REQ-GUI-078 and may revise the definition through the porting rule when it wires the real engine's frame loop."
+- id: REQ-GUI-177
+  area: GUI
+  kind: definition
+  statement: "The contract's log entry — { severity: error | warn | info, at, source: stain | integrator | quadtree | contract | app, message }, plain data, carried GUI-sized in the snapshot as the entries accumulated since the previous snapshot, which the GUI reads from each snapshot it receives; each applied SetField logged by both engines as an info entry from contract; and the footer's warning and error counts kept since the session began, until the console's clear resets them — must be defined in gui_state_contract §2 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_systems_architecture.md
+    section: 6. Cross-cutting invariants (the load-bearing walls)
+  verify:
+    method: review checklist
+    detail: "gui_state_contract §2 gives the entry's shape and that the snapshot carries the entries since the previous snapshot, adding no membrane crossing; the conformance suite checks one contract info entry per applied SetField in the next snapshot on both engines; the footer's counts follow it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M6
+  note: "RQ-245, decided per R-369, amended per code review 5438674593: the entries ride in the snapshot, since a separate channel would cross the wasm↔JS membrane that systems_architecture §6 invariant 10 closes. R-54's precision flags stay in the snapshot; schema v1 is unchanged, and carrying the entries in the profiler's telemetry stream stays TASK-M8-27's (REQ-GUI-126 on the real engine)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

@@ -215,6 +215,12 @@ For TASK-M6-24 to TASK-M6-29, and every later GUI PR that runs on the mock.
 - [ ] The marks an artboard the PR is compared against shows are drawn, on mock data where the real data comes later
   (the lock badge and reticle, the axis labels, the hover path and label); nothing is left out as a known absence
   (R-390's GOAL; applied per R-369, review 5434766412 on PR #157).
+- [ ] For TASK-M6-24, the track's first task, the two items above read so (RQ-250, decided per R-369): the reviewer
+  checks the shell's own controls and marks (the top bar, the footer, the regions' placement, F3, the theme and
+  fonts); the keyboard item applies from TASK-M6-25 on, which puts the shell's top bar into the scope tree as scope 1;
+  the marks item applies to each mark's own task. A menu the user opens is not a toast or label in G1's sense, as
+  01_main.png shows the Overlays menu over the figure; nothing the app raises by itself is drawn there.
+  `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere"
 - [ ] The GUI reaches the mock only through the contract (a snapshot in, a `SetField` out), as it will the real engine;
   the "mock engine" tag shows in the footer on the mock. `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
 - [ ] The conformance suite passes on both engines, and a contract change re-runs it for both.

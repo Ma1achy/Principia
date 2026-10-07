@@ -63,6 +63,8 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 
 **The snapshot carries the events the GUI reports (R-54).** The precision warning is raised by events, not fixed depths: the snapshot carries, GUI-sized, whether `DECODE_SWITCHOVER` has fired on visible quads and whether `AT_F32_FLOOR` has been hit (`principia_deep_zoom.md` §2; scheduler contract Part 4). The console (render_gui_spec §G12) reads the same telemetry stream the profiler does.
 
+**The shell's fields (RQ-243, decided per R-369).** `RenderState`'s playhead is `Playhead { t: f64 }`, and its `SetField` path is `RenderField::Playhead`: the GUI's no-history clock advance (R-101) and a scrub (R-96) both write it. The snapshot's history is `History { undo_depth: u32, redo_depth: u32 }` (R-329). The snapshot carries a GUI-sized frame summary, named from the frame record (`principia_dd_telemetry_and_tiers.md` §5): `frame_ms`, `fps`, `quad_count` and `live_memory { heap_bytes, gpu_bytes }`, each optional and absent until the real engine's frame loop fills it, the GUI drawing "—" for an absent value. Their definitions against the frame record are written here by the task that adds them (R-72).
+
 ---
 
 ## 3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants

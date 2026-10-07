@@ -1506,8 +1506,8 @@
   title: "The GUI track (R-390), 1: the mock engine, the contract conformance suite and the app shell"
   depends_on: [TASK-M0-16, TASK-M0-20]
   needs: [REQ-SYS-002, REQ-SYS-003, REQ-TOOL-134]
-  requirements: [REQ-GUI-165, REQ-GUI-166, REQ-GUI-167, REQ-GUI-168, REQ-GUI-075, REQ-GUI-162]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-GUI-165, REQ-GUI-166, REQ-GUI-167, REQ-GUI-168, REQ-GUI-075, REQ-GUI-162, REQ-GUI-176, REQ-GUI-177]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M6-25
   milestone: M6
