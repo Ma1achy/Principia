@@ -354,15 +354,15 @@
   title: "Numeric field views: the two-line template, raw debug fields and sentinel styling"
   depends_on: [TASK-M1-08]
   needs: [REQ-GEN-001, REQ-GEN-005, REQ-PAY-011]
-  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137]
-  reviewers: [code, qa, physics]
+  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137, REQ-COL-053]
+  reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-8, PIT-3]
 - id: TASK-M1-10
   milestone: M1
   title: "The outcome state and detail views: the nine-class default palette"
   depends_on: [TASK-M1-08, TASK-M1-09]
   needs: [REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-018]
-  requirements: [REQ-COL-002, REQ-COL-004, REQ-COL-053, REQ-TOOL-021, REQ-TOOL-022, REQ-RENDER-017]
+  requirements: [REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-TOOL-021, REQ-TOOL-022, REQ-RENDER-017]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-9]
 - id: TASK-M1-11
@@ -378,7 +378,7 @@
   title: Derived, live-shape, accumulator, word and ICDescriptor views
   depends_on: [TASK-M1-02, TASK-M1-09, TASK-M1-11]
   needs: [REQ-PAY-001, REQ-PAY-010, REQ-GEN-006]
-  requirements: [REQ-TOOL-010, REQ-TOOL-024, REQ-TOOL-025, REQ-VAL-010, REQ-VAL-011, REQ-VAL-122]
+  requirements: [REQ-TOOL-010, REQ-TOOL-024, REQ-TOOL-025, REQ-VAL-010, REQ-VAL-011, REQ-VAL-122, REQ-TOOL-154, REQ-TOOL-155, REQ-TOOL-156]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
 - id: TASK-M1-13
@@ -387,7 +387,7 @@
   depends_on: [TASK-M1-07, TASK-M1-08]
   needs: [REQ-PAY-002, REQ-SCHED-001, REQ-SYS-003]
   requirements: [REQ-TOOL-026, REQ-RENDER-024, REQ-TOOL-124]
-  reviewers: [code, qa]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M1-14
   milestone: M1
