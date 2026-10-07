@@ -52,7 +52,7 @@ The categorical descriptor views exist: `state` (bits 0–2, six values, in the 
 ## Notes
 - REQ-COL-062 is a calibration (R-71): the values are proposed with evidence here and confirmed by the human at the M1 gate; an unconfirmed calibration blocks the gate. No value is chosen before the proposal (RQ-234).
 - RQ-233, decided per R-369: REQ-COL-053, the running grey, moved to TASK-M1-09, the first task that needs it (R-280's `d_min` view); this task reads its constant.
-- RQ-229, RQ-234, RQ-237 and RQ-241, decided per R-369 (7 Oct 2026): the golden suites render through the harness case kind TASK-M1-09 or TASK-M1-13 built (RQ-229); the two triple outcomes (RQ-234); the shared `debug-views` suite (RQ-237); the References (RQ-241).
+- RQ-229, RQ-234, RQ-237 and RQ-241, decided per R-369 (7 Oct 2026): the golden suites render through the harness case kind TASK-M1-09 builds (RQ-229, as amended per code review 5438179638); the two triple outcomes (RQ-234); the shared `debug-views` suite (RQ-237); the References (RQ-241).
 - The categorical-discipline half of dd_colouring unit test 8 (colour-per-sample then SSAA resolve) needs ensemble copies (M5) and is not claimed here.
 - PIT-9: the state/detail round-trip tests include a contaminated-bit control that must fail.
 - RQ-83 ruled: R-115 — the raw `state` debug view keeps a six-colour `dbg_cat` palette; R-77's nine-class palette governs the outcome palette (state ⊕ detail) only.
