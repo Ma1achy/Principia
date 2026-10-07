@@ -1,6 +1,7 @@
 //! The read side's `ICDescriptor` reader (render contract Part 1's `ctx.ic`; RQ-227; TASK-M1-08): `ic_read` fills the
 //! `ic.<member>` fields a stain reads, each an `ICDescriptor` member, and a name that is none is refused, the padding
-//! included, as a read-side field that is none is (R-378). Each test has a registered negative control (R-176).
+//! included, as a read-side field that is none is (R-378); the read side's fields end with them. Each test has a
+//! registered negative control (R-176).
 
 use ledger::gen::{self, read};
 use validation::negative_control;
@@ -44,4 +45,44 @@ negative_control!(
     "a member of the ICDescriptor is not refused",
     expected = "`ic.m0` was not refused",
     check_ic_names(&["ic.m0"], &[])
+);
+
+/// `fields` is every field [`read::wgsl_for`] fills: each read-side member, the word's four components, then the
+/// `ICDescriptor`'s members as `ic.<member>`; and each generates.
+fn check_fields(fields: &[String]) {
+    let l = ledger::layout();
+    let entries = gen::validate(&l).expect("the ledger validates");
+    let mut want: Vec<String> = read::members(&l.words, &entries)
+        .into_iter()
+        .map(|m| m.name)
+        .collect();
+    want.extend(["word.x", "word.y", "word.z", "word.w"].map(str::to_owned));
+    want.extend(read::ic_fields());
+    assert_eq!(fields, want, "the read side's fields");
+    let all: Vec<&str> = fields.iter().map(String::as_str).collect();
+    assert_eq!(
+        refusal(&all),
+        None,
+        "the read side's fields do not generate"
+    );
+}
+
+#[test]
+fn ic_read_fields_follow_the_members_and_the_word() {
+    let l = ledger::layout();
+    let entries = gen::validate(&l).expect("the ledger validates");
+    check_fields(&read::fields(&l.words, &entries));
+}
+
+negative_control!(
+    ic_read_fields_follow_the_members_and_the_word,
+    "the fields without the ICDescriptor's are not the read side's",
+    expected = "the read side's fields",
+    {
+        let l = ledger::layout();
+        let entries = gen::validate(&l).expect("the ledger validates");
+        let mut fields = read::fields(&l.words, &entries);
+        fields.retain(|f| !f.starts_with("ic."));
+        check_fields(&fields);
+    }
 );
