@@ -335,7 +335,8 @@ negative_control!(
 // ── read_type_both_tiers (REQ-PAY-026) ────────────────────────────────────────────────────────────────────────────
 
 /// One case read from each variant gives one `SimState` (the type is the same by construction): every member but
-/// `ftle` and `ftle_valid` agrees, and the variant without the shadow reads `ftle` as the canonical quiet NaN.
+/// `ftle`, `ftle_valid` and the shadow agrees, and the variant without the shadow reads `ftle` and every component of
+/// `r_sh` and `p_sh` as the canonical quiet NaN (lowering Part 3a; RQ-228).
 fn check_both_tiers(read: Read) {
     let on = marching(40, 50.0);
     let off = Case {
@@ -349,12 +350,28 @@ fn check_both_tiers(read: Read) {
         "the tier without the shadow reads ftle {:#010x}, not the canonical quiet NaN",
         b.ftle.to_bits()
     );
+    let shadow: Vec<u32> = [b.r_sh, b.p_sh]
+        .iter()
+        .flatten()
+        .flatten()
+        .map(|x| x.to_bits())
+        .collect();
+    assert!(
+        shadow.iter().all(|&x| x == QNAN),
+        "the tier without the shadow reads r_sh and p_sh {shadow:#010x?}, not the canonical quiet NaN"
+    );
     let strip = |s: SimState| SimState {
         ftle: 0.0,
         ftle_valid: false,
+        r_sh: [[0.0; 2]; 3],
+        p_sh: [[0.0; 2]; 3],
         ..s
     };
-    assert_eq!(strip(a), strip(b), "the tiers' reads differ beyond ftle");
+    assert_eq!(
+        strip(a),
+        strip(b),
+        "the tiers' reads differ beyond ftle and the shadow"
+    );
 }
 
 #[test]
@@ -370,6 +387,24 @@ negative_control!(
         ftle_variant: true,
         ..*c
     }))
+);
+
+#[test]
+fn read_type_both_tiers_rust_shadow_off_reads_nan() {
+    check_both_tiers(generated_read);
+}
+
+negative_control!(
+    read_type_both_tiers_rust_shadow_off_reads_nan,
+    "a base read that reads the shadow as zero must fail",
+    expected = "reads r_sh and p_sh",
+    check_both_tiers(|c| {
+        let mut s = generated_read(c);
+        if !c.ftle_variant {
+            s.p_sh[2][1] = 0.0;
+        }
+        s
+    })
 );
 
 // ── total_substeps_resume (REQ-PAY-027) ───────────────────────────────────────────────────────────────────────────

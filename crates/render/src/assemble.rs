@@ -75,8 +75,12 @@ pub const MAX_POSTS: usize = 8;
 /// The most field inputs a node takes, the length of `ctx.inputs` (applied per R-369: the corpus gives no bound).
 pub const MAX_INPUTS: usize = 4;
 
-/// Names a node may not write: the stored buffers and the read side's one reader of them (R-343, R-378).
-const RESERVED: [&str; 3] = ["simstate_buffer", "word_buffer", "sample_read"];
+/// Names a node may not write: the stored buffers and the read side's readers of them (R-343, R-378), `ic_read` and
+/// each `ic_read_<member>` too (RQ-227).
+const RESERVED: [&str; 4] = ["simstate_buffer", "word_buffer", "sample_read", "ic_buffer"];
+
+/// The read side's `ICDescriptor` reader, and the prefix of its per-member readers (RQ-227).
+const IC_READ: &str = "ic_read";
 
 // ── The graph's vocabulary ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -859,13 +863,15 @@ pub fn assemble(stain: &Stain, tier: Tier) -> Result<Fragment, AssembleError> {
 }
 
 /// The stain's field set (R-378): every member of the read-side `SimState` its live nodes read, by naga's IR of the
-/// stain assembled with every field filled, the word as `word` or as only the components it reads ([`fields_read`]).
+/// stain assembled with every field filled, the word as `word` or as only the components it reads, and each member of
+/// `ctx.ic` it reads as `ic.<member>` ([`fields_read`]).
 pub fn field_set(stain: &Stain, tier: Tier) -> Result<Vec<String>, AssembleError> {
     let (words, entries) = ledger()?;
-    let every: Vec<String> = read::members(words, entries)
+    let mut every: Vec<String> = read::members(words, entries)
         .into_iter()
         .map(|m| m.name)
         .collect();
+    every.extend(read::ic_fields());
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
     let (source, _) = source(stain, tier, &every)?;
     let (module, info) = compile(&source)?;
@@ -1050,11 +1056,13 @@ fn shade(
     }
     out.push_str(
         "    return out; // OUT\n}\n\n\
-         // Sample `i` read through the generated read side into a context at pixel `frag_xy`, and shaded. The read\n\
-         // side's arguments are its own (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
+         // Sample `i` read through the generated read side into a context at pixel `frag_xy`, its `ICDescriptor` too\n\
+         // (`ctx.ic`, only the members the stain reads), and shaded. The read side's arguments are its own\n\
+         // (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
          fn shade_sample(i: u32, frag_xy: vec2<f32>, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
          var ctx: Ctx;\n    \
          ctx.sample = sample_read(i, ensemble_spread, has_ensemble(), masses, params);\n    \
+         ctx.ic = ic_read(i);\n    \
          ctx.frag_xy = frag_xy;\n    \
          return shade(ctx);\n}\n",
     );
@@ -1207,7 +1215,7 @@ fn prefixed(text: &str, prefix: &str, kind: Kind, extra: &[&str]) -> Result<Stri
                     "a node declares no `@{word}`: stages and bindings are the assembler's"
                 ));
             }
-            w if RESERVED.contains(&w) && toks[sig[k]].0 == Tok::Ident => {
+            w if (RESERVED.contains(&w) || is_ic_reader(w)) && toks[sig[k]].0 == Tok::Ident => {
                 return refuse(format!(
                     "a node does not name `{w}`: it reads the sample as `ctx.sample` (R-343, R-378)"
                 ));
@@ -1363,36 +1371,61 @@ fn components(
     out
 }
 
-/// The read-side fields the stain in `module` reads, by naga's IR: each member of the read-side `SimState` taken in
-/// any function but `sample_read`, which fills it; the word as `word`, or as `word.x` … `word.w` where only those
-/// components are read (`components`). These are the fields its `sample_read` must fill (R-378).
-pub fn fields_read(module: &Module, info: &ModuleInfo) -> BTreeSet<String> {
-    let mut out = BTreeSet::new();
-    let Some(simstate) = module
+/// Whether `name` is the read side's `ICDescriptor` reader or one of its per-member readers (RQ-227).
+fn is_ic_reader(name: &str) -> bool {
+    name.strip_prefix(IC_READ)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('_'))
+}
+
+/// The handle of the type named `name` in `module`.
+fn named_type(module: &Module, name: &str) -> Option<Handle<naga::Type>> {
+    module
         .types
         .iter()
-        .find(|(_, t)| t.name.as_deref() == Some("SimState"))
+        .find(|(_, t)| t.name.as_deref() == Some(name))
         .map(|(h, _)| h)
-    else {
-        return out;
+}
+
+/// The read-side fields the stain in `module` reads, by naga's IR: each member of the read-side `SimState` taken in
+/// any function but `sample_read`, which fills it; the word as `word`, or as `word.x` … `word.w` where only those
+/// components are read (`components`); and each member of `ICDescriptor` taken in any function but the read side's
+/// `ic_read` and `ic_read_<member>`, which fill it, as `ic.<member>` (RQ-227). These are the fields its `sample_read`
+/// and `ic_read` must fill (R-378).
+pub fn fields_read(module: &Module, info: &ModuleInfo) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let struct_of = |h: Option<Handle<naga::Type>>| {
+        h.and_then(|h| match &module.types[h].inner {
+            TypeInner::Struct { members, .. } => Some((h, members.clone())),
+            _ => None,
+        })
     };
-    let TypeInner::Struct { members, .. } = &module.types[simstate].inner else {
-        return out;
-    };
-    let mut read = |f: &Function, fn_info: &FunctionInfo| {
+    let simstate = struct_of(named_type(module, "SimState"));
+    let ic = struct_of(named_type(module, read::IC_STRUCT));
+    let mut read = |f: &Function, fn_info: &FunctionInfo, reader: bool| {
         for (h, x) in f.expressions.iter() {
             let Expression::AccessIndex { base, index } = *x else {
                 continue;
             };
-            let on_simstate = match *fn_info[base].ty.inner_with(&module.types) {
-                TypeInner::Struct { .. } => fn_info[base].ty.handle() == Some(simstate),
-                TypeInner::Pointer { base, .. } => base == simstate,
-                _ => false,
+            let of = match *fn_info[base].ty.inner_with(&module.types) {
+                TypeInner::Struct { .. } => fn_info[base].ty.handle(),
+                TypeInner::Pointer { base, .. } => Some(base),
+                _ => None,
             };
-            if !on_simstate {
+            let name = |members: &[naga::StructMember]| {
+                members[index as usize].name.clone().unwrap_or_default()
+            };
+            if let Some((t, members)) = &ic {
+                if of == Some(*t) && !reader {
+                    out.insert(format!("ic.{}", name(members)));
+                }
+            }
+            let Some((t, members)) = &simstate else {
+                continue;
+            };
+            if of != Some(*t) || f.name.as_deref() == Some("sample_read") {
                 continue;
             }
-            let name = members[index as usize].name.clone().unwrap_or_default();
+            let name = name(members);
             if name != "word" {
                 out.insert(name);
                 continue;
@@ -1408,12 +1441,10 @@ pub fn fields_read(module: &Module, info: &ModuleInfo) -> BTreeSet<String> {
         }
     };
     for (h, f) in module.functions.iter() {
-        if f.name.as_deref() != Some("sample_read") {
-            read(f, &info[h]);
-        }
+        read(f, &info[h], f.name.as_deref().is_some_and(is_ic_reader));
     }
     for (k, ep) in module.entry_points.iter().enumerate() {
-        read(&ep.function, info.get_entry_point(k));
+        read(&ep.function, info.get_entry_point(k), false);
     }
     if out.contains("word") {
         out.retain(|f| !f.starts_with("word."));

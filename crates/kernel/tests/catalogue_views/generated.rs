@@ -178,6 +178,50 @@ negative_control!(
     check_p(&probe(Some("p")))
 );
 
+/// `r_sh`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_r_sh(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.r_sh,
+        [[0.75, 0.78125], [0.8125, 0.84375], [0.875, 0.90625]],
+        "`r_sh` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_r_sh() {
+    check_r_sh(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_r_sh,
+    "a probe storing another `r_sh` reads another `r_sh`",
+    expected = "does not read back the value stored",
+    check_r_sh(&probe(Some("r_sh")))
+);
+
+/// `p_sh`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_p_sh(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.p_sh,
+        [[1.0, 1.03125], [1.0625, 1.09375], [1.125, 1.15625]],
+        "`p_sh` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_p_sh() {
+    check_p_sh(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_p_sh,
+    "a probe storing another `p_sh` reads another `p_sh`",
+    expected = "does not read back the value stored",
+    check_p_sh(&probe(Some("p_sh")))
+);
+
 /// `S`, read through the Rust twin of its view's accessor, is the value the probe stored.
 fn check_s(p: &Probe) {
     let read = read(p);
@@ -697,6 +741,270 @@ negative_control!(
     "a probe storing another `C_ty` reads another `diffusion`",
     expected = "is not its derived accessor's value",
     check_diffusion(&probe(Some("C_ty")))
+);
+
+/// `m0`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_m0(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.m0.to_bits(),
+        7.0_f32.to_bits(),
+        "`m0` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_m0() {
+    check_m0(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_m0,
+    "a probe storing another `m0` reads another `m0`",
+    expected = "does not read back the value stored",
+    check_m0(&probe(Some("m0")))
+);
+
+/// `m1`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_m1(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.m1.to_bits(),
+        7.25_f32.to_bits(),
+        "`m1` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_m1() {
+    check_m1(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_m1,
+    "a probe storing another `m1` reads another `m1`",
+    expected = "does not read back the value stored",
+    check_m1(&probe(Some("m1")))
+);
+
+/// `m2`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_m2(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.m2.to_bits(),
+        7.5_f32.to_bits(),
+        "`m2` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_m2() {
+    check_m2(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_m2,
+    "a probe storing another `m2` reads another `m2`",
+    expected = "does not read back the value stored",
+    check_m2(&probe(Some("m2")))
+);
+
+/// `q_mass`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_q_mass(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.q_mass.to_bits(),
+        7.75_f32.to_bits(),
+        "`q_mass` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_q_mass() {
+    check_q_mass(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_q_mass,
+    "a probe storing another `q_mass` reads another `q_mass`",
+    expected = "does not read back the value stored",
+    check_q_mass(&probe(Some("q_mass")))
+);
+
+/// `rho_mag`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_rho_mag(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.rho_mag.to_bits(),
+        8.0_f32.to_bits(),
+        "`rho_mag` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_rho_mag() {
+    check_rho_mag(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_rho_mag,
+    "a probe storing another `rho_mag` reads another `rho_mag`",
+    expected = "does not read back the value stored",
+    check_rho_mag(&probe(Some("rho_mag")))
+);
+
+/// `lambda_mag`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_lambda_mag(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.lambda_mag.to_bits(),
+        8.25_f32.to_bits(),
+        "`lambda_mag` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_lambda_mag() {
+    check_lambda_mag(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_lambda_mag,
+    "a probe storing another `lambda_mag` reads another `lambda_mag`",
+    expected = "does not read back the value stored",
+    check_lambda_mag(&probe(Some("lambda_mag")))
+);
+
+/// `rho_ratio`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_rho_ratio(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.rho_ratio.to_bits(),
+        8.5_f32.to_bits(),
+        "`rho_ratio` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_rho_ratio() {
+    check_rho_ratio(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_rho_ratio,
+    "a probe storing another `rho_ratio` reads another `rho_ratio`",
+    expected = "does not read back the value stored",
+    check_rho_ratio(&probe(Some("rho_ratio")))
+);
+
+/// `rho_angle`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_rho_angle(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.rho_angle.to_bits(),
+        8.75_f32.to_bits(),
+        "`rho_angle` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_rho_angle() {
+    check_rho_angle(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_rho_angle,
+    "a probe storing another `rho_angle` reads another `rho_angle`",
+    expected = "does not read back the value stored",
+    check_rho_angle(&probe(Some("rho_angle")))
+);
+
+/// `K_0`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_k_0(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.K_0.to_bits(),
+        9.0_f32.to_bits(),
+        "`K_0` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_k_0() {
+    check_k_0(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_k_0,
+    "a probe storing another `K_0` reads another `K_0`",
+    expected = "does not read back the value stored",
+    check_k_0(&probe(Some("K_0")))
+);
+
+/// `V_0`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_v_0(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.V_0.to_bits(),
+        9.25_f32.to_bits(),
+        "`V_0` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_v_0() {
+    check_v_0(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_v_0,
+    "a probe storing another `V_0` reads another `V_0`",
+    expected = "does not read back the value stored",
+    check_v_0(&probe(Some("V_0")))
+);
+
+/// `virial_ratio`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_virial_ratio(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.virial_ratio.to_bits(),
+        9.5_f32.to_bits(),
+        "`virial_ratio` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_virial_ratio() {
+    check_virial_ratio(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_virial_ratio,
+    "a probe storing another `virial_ratio` reads another `virial_ratio`",
+    expected = "does not read back the value stored",
+    check_virial_ratio(&probe(Some("virial_ratio")))
+);
+
+/// `r_min_pair_0`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_r_min_pair_0(p: &Probe) {
+    let ic = &p.ic;
+    expect(
+        ic.r_min_pair_0.to_bits(),
+        9.75_f32.to_bits(),
+        "`r_min_pair_0` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_r_min_pair_0() {
+    check_r_min_pair_0(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_r_min_pair_0,
+    "a probe storing another `r_min_pair_0` reads another `r_min_pair_0`",
+    expected = "does not read back the value stored",
+    check_r_min_pair_0(&probe(Some("r_min_pair_0")))
 );
 
 /// `payload`, read through the Rust twin of its view's accessor, is the value the probe stored.

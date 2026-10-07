@@ -5,8 +5,8 @@
 //! `Decoded` holds one member per ledger entry, in the ledger's order; `decode` fills it from one stored sample at the
 //! full tier, `SimStateFTLE`, its word and its `ICDescriptor`. A field the read side holds is read through the Rust
 //! read side (lowering Part 3a), so through the same accessors the fragment's read side and the debug catalogue's
-//! tests use ([`super::catalogue::read`]); a word field through its word accessor; the Benettin shadow, which the read
-//! side does not hold, from the stored struct; an `ICDescriptor` field from the descriptor. A vector is flattened,
+//! tests use ([`super::catalogue::read`]), the Benettin shadow included (RQ-228); a word field through its word
+//! accessor; an `ICDescriptor` field from the descriptor. A vector is flattened,
 //! component `2j` and `2j+1` of slot `j` (dd_generation_root §3.8). A field none of these reads refuses generation
 //! ([`refused`]), naming it.
 
@@ -15,24 +15,19 @@ use std::path::PathBuf;
 
 use crate::gen::catalogue::{self, Read};
 use crate::gen::{rust, Generated};
-use crate::schema::{Entry, Storage, Word};
+use crate::schema::{Entry, Word};
 
 /// Where the emitter writes, relative to the workspace root.
 pub const PATH: &str = "crates/engine/src/export/generated.rs";
 
-/// The Rust type `e` decodes to, and its value from `read`, `s`, `word` and `ic`, as [`catalogue::Read::rust`] reads
-/// it: a vector, three `vec2<f32>` (`Vec2x3`, R-86), flattened to its six components; a stored member as its storage's
-/// Rust type.
+/// The Rust type `e` decodes to, and its value from `read`, `word` and `ic`, as [`catalogue::Read::rust`] reads it: a
+/// vector, three `vec2<f32>` (R-86), flattened to its six components.
 fn decoded(e: &Entry, r: &Read) -> (String, String) {
     let value = r.rust(e.name);
     match r {
         Read::Member { wgsl, .. } => ((*wgsl).to_owned(), value),
-        Read::Vector
-        | Read::Stored {
-            storage: Storage::Vec2x3,
-        } => ("[f32; 6]".to_owned(), format!("flat({value})")),
+        Read::Vector => ("[f32; 6]".to_owned(), format!("flat({value})")),
         Read::Word { .. } => ("u32".to_owned(), value),
-        Read::Stored { storage } => (storage.rust(), value),
         Read::Ic => ("f32".to_owned(), value),
     }
 }
@@ -47,8 +42,8 @@ pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
         .filter(|e| catalogue::read(words, entries, e).is_none())
         .map(|e| {
             format!(
-                "field `{}` has no export decoding: neither the read side, the word, the stored struct nor \
-                 `ICDescriptor` holds it (render contract Part 5; dd_generation_root §4, seam 13)",
+                "field `{}` has no export decoding: neither the read side, the word nor `ICDescriptor` \
+                 holds it (render contract Part 5; dd_generation_root §4, seam 13)",
                 e.name
             )
         })

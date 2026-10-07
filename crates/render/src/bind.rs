@@ -353,66 +353,57 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
     ])
 }
 
-/// The members `quad_read` and `ic_read` load, each `(name, WGSL type)`: `RenderQuad`'s, from §3.7a's table, and
-/// `ICDescriptor`'s, its padding left out.
-fn reader_members(element: &str) -> Vec<(&'static str, &'static str)> {
-    if element == "RenderQuad" {
-        ledger::quad::render_quad()
-            .members
-            .iter()
-            .map(|m| (m.name, wgsl_type(m.storage)))
-            .collect()
-    } else {
-        ic_members()
-            .into_iter()
-            .map(|(name, storage)| (name, wgsl_type(storage)))
-            .collect()
-    }
+/// The members `quad_read` loads, each `(name, WGSL type)`: `RenderQuad`'s, from §3.7a's table.
+fn quad_members() -> Vec<(&'static str, &'static str)> {
+    ledger::quad::render_quad()
+        .members
+        .iter()
+        .map(|m| (m.name, wgsl_type(m.storage)))
+        .collect()
 }
 
-/// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, the `ICDescriptor` and
-/// `RenderQuad` buffers and their generated readers, and the context's uniform block. Each buffer's readers load one
-/// stored member at a time, never the whole stored struct (R-378): `<reader>_<member>(i)`, one per member, and
-/// `<reader>(i)`, the element built from them, its padding zero.
+/// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, its buffer and its
+/// generated readers, and the context's uniform block. The readers load one stored member at a time, never the whole
+/// stored struct (R-378): `quad_read_<member>(i)`, one per member, and `quad_read(i)`, the element built from them.
+/// The `ICDescriptor` buffer and its readers are the read side's (`ledger::gen::read`; RQ-227), which a harness module
+/// fills for every member and an assembled stain for the members it reads.
 pub fn declarations() -> String {
-    let [_, _, ic, quad] = buffers();
+    let [_, _, _, b] = buffers();
     let mut out = String::from(
         "\n// ── The payload-side buffers and uniforms (render::bind; TASK-M1-06), generated from the ledger ──\n",
     );
     out.push_str(&ledger::quad::wgsl_struct(&ledger::quad::render_quad()));
-    for b in [ic, quad] {
-        let _ = write!(
-            out,
-            "\n// `{buf}`'s bind group and binding number (R-343).\n\
-             const {c}_GROUP: u32 = {g}u;\n\
-             const {c}_BINDING: u32 = {n}u;\n\
-             @group({g}) @binding({n}) var<storage, read> {buf}: array<{e}>;\n\
-             // `{buf}`'s readers, element `i`, one stored member per load, never the whole struct (R-378).\n",
-            buf = b.buffer,
-            c = b.constant,
-            g = b.group,
-            n = b.binding,
-            e = b.element,
-        );
-        let members = reader_members(b.element);
-        for (m, ty) in &members {
-            let _ = writeln!(
-                out,
-                "fn {r}_{m}(i: u32) -> {ty} {{ return {buf}[i].{m}; }}",
-                r = b.reader,
-                buf = b.buffer,
-            );
-        }
+    let _ = write!(
+        out,
+        "\n// `{buf}`'s bind group and binding number (R-343).\n\
+         const {c}_GROUP: u32 = {g}u;\n\
+         const {c}_BINDING: u32 = {n}u;\n\
+         @group({g}) @binding({n}) var<storage, read> {buf}: array<{e}>;\n\
+         // `{buf}`'s readers, element `i`, one stored member per load, never the whole struct (R-378).\n",
+        buf = b.buffer,
+        c = b.constant,
+        g = b.group,
+        n = b.binding,
+        e = b.element,
+    );
+    let members = quad_members();
+    for (m, ty) in &members {
         let _ = writeln!(
             out,
-            "fn {}(i: u32) -> {} {{\n    var v: {};",
-            b.reader, b.element, b.element
+            "fn {r}_{m}(i: u32) -> {ty} {{ return {buf}[i].{m}; }}",
+            r = b.reader,
+            buf = b.buffer,
         );
-        for (m, _) in &members {
-            let _ = writeln!(out, "    v.{m} = {}_{m}(i);", b.reader);
-        }
-        out.push_str("    return v;\n}\n");
     }
+    let _ = writeln!(
+        out,
+        "fn {}(i: u32) -> {} {{\n    var v: {};",
+        b.reader, b.element, b.element
+    );
+    for (m, _) in &members {
+        let _ = writeln!(out, "    v.{m} = {}_{m}(i);", b.reader);
+    }
+    out.push_str("    return v;\n}\n");
     out.push_str(WGSL_CONTEXT);
     let _ = writeln!(
         out,
@@ -505,10 +496,11 @@ pub const ENTRY: &str = "harness_fs";
 pub fn module(view: &str, output: ViewOutput) -> Result<String, String> {
     let (words, entries) = ledger()?;
     let tier = read::Tier::FULL;
-    let fields: Vec<String> = read::members(&words, &entries)
+    let mut fields: Vec<String> = read::members(&words, &entries)
         .into_iter()
         .map(|m| m.name)
         .collect();
+    fields.extend(read::ic_fields());
     let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
     let read_side = read::assemble(&words, &entries, tier, &fields)?;
     let ty = output.wgsl();

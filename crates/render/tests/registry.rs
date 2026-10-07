@@ -297,7 +297,8 @@ negative_control!(
 // ── The generated views baked through the debug-view entry point ─────────────────────────────────────────────────
 
 /// The field set each of `catalogue`'s views must load: the read-side members its accessors name, the word as
-/// `word.w`, the one component its `.w` accessor reads (R-378).
+/// `word.w`, the one component its `.w` accessor reads, and an `ICDescriptor` member as `ic.<member>` (R-378;
+/// RQ-227).
 fn expected_fields(field: &str) -> Vec<String> {
     let l = ledger::layout();
     let entries = ledger::gen::validate(&l).expect("the ledger validates");
@@ -311,6 +312,7 @@ fn expected_fields(field: &str) -> Vec<String> {
         .filter_map(|a| match a {
             Accessor::Member(m) if m == "word" => Some("word.w".to_owned()),
             Accessor::Member(m) => Some(m),
+            Accessor::IcMember(m) => Some(format!("ic.{m}")),
             Accessor::Function(_) => None,
         })
         .collect()

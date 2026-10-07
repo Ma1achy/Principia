@@ -582,19 +582,30 @@ fn view_context() -> String {
     .join("\n")
 }
 
-/// The accessor symbols `colour` references in `module`: each member of the read-side `SimState` it takes, and each
-/// function it calls but the presentation layer's (`dbg_*`).
-fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
-    let mut out = BTreeSet::new();
-    let Some(simstate) = module
+/// The handle and members of the struct named `name` in `module`.
+fn named_struct(
+    module: &Module,
+    name: &str,
+) -> Option<(naga::Handle<naga::Type>, Vec<naga::StructMember>)> {
+    let (h, t) = module
         .types
         .iter()
-        .find(|(_, t)| t.name.as_deref() == Some("SimState"))
-        .map(|(h, _)| h)
-    else {
-        return out;
-    };
-    let TypeInner::Struct { members, .. } = &module.types[simstate].inner else {
+        .find(|(_, t)| t.name.as_deref() == Some(name))?;
+    match &t.inner {
+        TypeInner::Struct { members, .. } => Some((h, members.clone())),
+        _ => None,
+    }
+}
+
+/// The accessor symbols `colour` references in `module`: each member of the read-side `SimState` it takes from
+/// `ctx.sample`, each member of `ICDescriptor` it takes from `ctx.ic` (RQ-227), and each function it calls but the
+/// presentation layer's (`dbg_*`).
+fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
+    let mut out = BTreeSet::new();
+    let (Some((simstate, members)), Some((ic, ic_members))) = (
+        named_struct(module, "SimState"),
+        named_struct(module, "ICDescriptor"),
+    ) else {
         return out;
     };
     let Some((_, colour)) = module
@@ -606,9 +617,13 @@ fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
     };
     for (_, e) in colour.expressions.iter() {
         if let Expression::AccessIndex { base, index } = *e {
-            if is_sample(module, base, colour, simstate) {
+            if is_ctx_member(module, base, colour, simstate, "sample") {
                 let name = members[index as usize].name.clone().unwrap_or_default();
                 out.insert(Accessor::Member(name));
+            }
+            if is_ctx_member(module, base, colour, ic, "ic") {
+                let name = ic_members[index as usize].name.clone().unwrap_or_default();
+                out.insert(Accessor::IcMember(name));
             }
         }
     }
@@ -623,12 +638,13 @@ fn wgsl_accessors(module: &Module) -> BTreeSet<Accessor> {
     out
 }
 
-/// Whether `e` in `f` is `ctx.sample`: the `sample` member, of type `simstate`, of `f`'s first argument, a `Ctx`.
-fn is_sample(
+/// Whether `e` in `f` is `ctx.<member>`: the member `member`, of type `ty`, of `f`'s first argument, a `Ctx`.
+fn is_ctx_member(
     module: &Module,
     e: naga::Handle<Expression>,
     f: &naga::Function,
-    simstate: naga::Handle<naga::Type>,
+    ty: naga::Handle<naga::Type>,
+    member: &str,
 ) -> bool {
     let Expression::AccessIndex { base, index } = f.expressions[e] else {
         return false;
@@ -640,7 +656,7 @@ fn is_sample(
     match &module.types[arg.ty].inner {
         TypeInner::Struct { members, .. } => members
             .get(index as usize)
-            .is_some_and(|m| m.ty == simstate && m.name.as_deref() == Some("sample")),
+            .is_some_and(|m| m.ty == ty && m.name.as_deref() == Some(member)),
         _ => false,
     }
 }
@@ -670,7 +686,8 @@ fn rust_check(tests: &str, field: &str) -> String {
 }
 
 /// Each view's WGSL, compiled after its context, references exactly its accessors, and its Rust check in `tests`
-/// references each: a member as `read.<member>`, a function as `<function>(`.
+/// references each: a member as `read.<member>`, an `ICDescriptor` member as `ic.<member>`, a function as
+/// `<function>(`.
 fn check_shared(views: &[View], wgsl_of: &dyn Fn(&View) -> String, tests: &str) {
     let context = view_context();
     for v in views {
@@ -689,6 +706,7 @@ fn check_shared(views: &[View], wgsl_of: &dyn Fn(&View) -> String, tests: &str) 
         for a in &want {
             let needle = match a {
                 Accessor::Member(m) => format!("read.{m}"),
+                Accessor::IcMember(m) => format!("ic.{m}"),
                 Accessor::Function(f) => format!("{f}("),
             };
             assert!(

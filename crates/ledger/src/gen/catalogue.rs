@@ -9,12 +9,13 @@
 //! member `ctx.sample.<field>`, filled by `sample_read` through the payload §6 accessor or derived accessor; the host
 //! reads the same member of the Rust read side's `SimState`, filled through the accessor's Rust twin. A field of the
 //! word buffer's `.w` is read through its word accessor over the read side's `word`: `length` through `fgw_length_raw`,
-//! `payload` through `fgw_payload` (payload §3, §6). [`read()`] says which, and [`Read::accessors`] names the
-//! symbols, the ones the view and its test both reference.
+//! `payload` through `fgw_payload` (payload §3, §6). An `ICDescriptor` field is read as `ctx.ic.<field>`, which the
+//! read side's `ic_read` fills through `ic_read_<field>` (render contract Part 6; RQ-227); its test reads the same
+//! member of the stored `ICDescriptor`. [`read()`] says which, and [`Read::accessors`] names the symbols, the ones the
+//! view and its test both reference.
 //!
 //! **Exhaustive by construction.** A field the fragment cannot read refuses generation, naming it ([`refused`]): a new
-//! ledger field appears in the catalogue or generation fails (seam 13; REQ-GEN-011). [`PENDING`] lists the fields
-//! whose fragment read awaits a decision, as [`crate::payload::PENDING`] does for the struct check.
+//! ledger field appears in the catalogue or generation fails (seam 13; REQ-GEN-011).
 //!
 //! **The colouring is a placeholder** (TASK-M1-09 and TASK-M1-10 own it): a categorical field `dbg_cat` with its `n`,
 //! a flag `dbg_flag`, a field whose range is closed at both ends `dbg_lin` over that range, and any other the literal
@@ -40,26 +41,6 @@ pub const TESTS_PATH: &str = "crates/kernel/tests/catalogue_views/generated.rs";
 /// The word buffer's `.w` (payload §3).
 const FGW_WORD: &str = "fgw_w";
 
-/// Fields whose fragment read awaits a decision, so [`refused`] passes over them and the catalogue has no view of
-/// them yet: `ICDescriptor`'s twelve, which render contract Part 6 reads as `ctx.ic`, a member the stain's `Ctx` does
-/// not have, and the Benettin shadow `r_sh` and `p_sh`, which the read side does not hold (lowering Part 3a).
-pub const PENDING: &[&str] = &[
-    "r_sh",
-    "p_sh",
-    "m0",
-    "m1",
-    "m2",
-    "q_mass",
-    "rho_mag",
-    "lambda_mag",
-    "rho_ratio",
-    "rho_angle",
-    "K_0",
-    "V_0",
-    "virial_ratio",
-    "r_min_pair_0",
-];
-
 /// How a field is read, in the fragment and on the host.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Read {
@@ -70,25 +51,20 @@ pub enum Read {
     Vector,
     /// A field of the word buffer's `.w`, through its word accessor `accessor` over the read side's `word`.
     Word { accessor: &'static str },
-    /// A stored member of `SimStateFTLE` the read side does not hold: the Benettin shadow (lowering Part 3a).
-    Stored { storage: Storage },
-    /// A member of `ICDescriptor` (dd_generation_root §3.6).
+    /// A member of the sample's `ICDescriptor` (dd_generation_root §3.6), `ctx.ic.<field>` (RQ-227).
     Ic,
 }
 
-/// A symbol a view and its test both reference: a member of the read-side `SimState`, or a generated function.
+/// A symbol a view and its test both reference: a member of the read-side `SimState`, a member of `ICDescriptor`, or
+/// a generated function.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Accessor {
     Member(String),
+    IcMember(String),
     Function(String),
 }
 
 impl Read {
-    /// Whether the fragment reads the field through the read side, so the catalogue has a view of it.
-    pub fn in_fragment(&self) -> bool {
-        matches!(self, Read::Member { .. } | Read::Vector | Read::Word { .. })
-    }
-
     /// The accessor symbols the field's view and its test reference.
     pub fn accessors(&self, field: &str) -> Vec<Accessor> {
         match self {
@@ -97,7 +73,7 @@ impl Read {
                 Accessor::Member("word".to_owned()),
                 Accessor::Function((*accessor).to_owned()),
             ],
-            Read::Stored { .. } | Read::Ic => Vec::new(),
+            Read::Ic => vec![Accessor::IcMember(field.to_owned())],
         }
     }
 
@@ -106,17 +82,15 @@ impl Read {
         match self {
             Read::Member { .. } | Read::Vector => format!("ctx.sample.{field}"),
             Read::Word { accessor } => format!("{accessor}(ctx.sample.word)"),
-            Read::Stored { .. } | Read::Ic => String::new(),
+            Read::Ic => format!("ctx.ic.{field}"),
         }
     }
 
-    /// The field's value in Rust, from the read-side `SimState` `read`, the stored sample `s` and its `ICDescriptor`
-    /// `ic`.
+    /// The field's value in Rust, from the read-side `SimState` `read` and the sample's `ICDescriptor` `ic`.
     pub fn rust(&self, field: &str) -> String {
         match self {
             Read::Member { .. } | Read::Vector => format!("read.{field}"),
             Read::Word { accessor } => format!("{accessor}(read.word)"),
-            Read::Stored { .. } => format!("s.{field}"),
             Read::Ic => format!("ic.{field}"),
         }
     }
@@ -142,8 +116,7 @@ fn stores() -> (Struct, Struct) {
 }
 
 /// How `e` is read, or `None` if neither the fragment nor the host has a read of it: a read-side member of its name;
-/// a field of the word buffer's `.w` with a word accessor (`length`, `payload`); a stored `SimStateFTLE` member; or an
-/// `ICDescriptor` member.
+/// a field of the word buffer's `.w` with a word accessor (`length`, `payload`); or an `ICDescriptor` member.
 pub fn read(words: &[Word], entries: &[Entry], e: &Entry) -> Option<Read> {
     if let Some(m) = read::members(words, entries)
         .into_iter()
@@ -170,10 +143,7 @@ pub fn read(words: &[Word], entries: &[Entry], e: &Entry) -> Option<Read> {
             _ => None,
         };
     }
-    let (simstate, ic) = stores();
-    if let Some(m) = simstate.members.iter().find(|m| m.name == e.name) {
-        return Some(Read::Stored { storage: m.storage });
-    }
+    let (_, ic) = stores();
     ic.members
         .iter()
         .any(|m| m.name == e.name)
@@ -201,7 +171,7 @@ pub fn test_name(field: &str) -> String {
     format!("catalogue_view_{}", field.to_lowercase())
 }
 
-/// The catalogue: a view of each entry the fragment reads ([`Read::in_fragment`]), in the ledger's order. Empty for a
+/// The catalogue: a view of each entry the fragment reads ([`read()`]), in the ledger's order. Empty for a
 /// layout that declares none of the payload structs' members, as [`rust::emit`] writes nothing for one.
 pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
     if !rust::declares(&crate::payload::structs(), words, entries) {
@@ -210,7 +180,7 @@ pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
     entries
         .iter()
         .filter_map(|e| {
-            let read = read(words, entries, e).filter(Read::in_fragment)?;
+            let read = read(words, entries, e)?;
             Some(View {
                 field: e.name,
                 path: PathBuf::from(format!("{DIR}/{}.wgsl", e.name)),
@@ -221,7 +191,7 @@ pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
         .collect()
 }
 
-/// A line for each entry the fragment has no read of and [`PENDING`] does not list: generation refuses it, naming the
+/// A line for each entry the fragment has no read of: generation refuses it, naming the
 /// field (dd_generation_root §3.8: coverage is enforced, not hoped for).
 pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
     if !rust::declares(&crate::payload::structs(), words, entries) {
@@ -229,8 +199,7 @@ pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
     }
     entries
         .iter()
-        .filter(|e| !PENDING.contains(&e.name))
-        .filter(|e| !read(words, entries, e).is_some_and(|r| r.in_fragment()))
+        .filter(|e| read(words, entries, e).is_none())
         .map(|e| {
             format!(
                 "field `{}` has no debug view: the fragment's read side has no read of it (render contract Part 6; \
@@ -337,13 +306,15 @@ fn view_wgsl(e: &Entry, r: &Read) -> String {
              ctx.frag_xy);"
         ),
         Read::Member { wgsl, .. } => format!("return {};", ramp(e, &value, wgsl)),
-        _ => format!("return {};", ramp(e, &value, "u32")),
+        Read::Ic => format!("return {};", ramp(e, &value, "f32")),
+        Read::Word { .. } => format!("return {};", ramp(e, &value, "u32")),
     };
     let accessors: Vec<String> = r
         .accessors(e.name)
         .iter()
         .map(|a| match a {
             Accessor::Member(m) => format!("`SimState.{m}`"),
+            Accessor::IcMember(m) => format!("`ICDescriptor.{m}`"),
             Accessor::Function(f) => format!("`{f}`"),
         })
         .collect();
@@ -550,6 +521,17 @@ fn check(v: &View, stored: Option<&Probe>) -> String {
                     "    let read = read(p);\n{locals}    let expected: f32 = {expr};\n{}",
                     call(4, "", "expect", &args)
                 ),
+            )
+        }
+        (Read::Ic, Some(p)) => {
+            let args = [
+                format!("{got}.to_bits()"),
+                format!("{}_f32.to_bits()", p.value),
+                message(NOT_STORED),
+            ];
+            (
+                "is the value the probe stored",
+                format!("    let ic = &p.ic;\n{}", call(4, "", "expect", &args)),
             )
         }
         (_, Some(p)) => {

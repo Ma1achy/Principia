@@ -504,6 +504,8 @@ pub struct RenderLoop {
     prelude: wgpu::Buffer,
     frame: wgpu::Buffer,
     sim: Option<(wgpu::Buffer, Option<wgpu::Buffer>)>,
+    /// The `ICDescriptor` buffer, bound for a stain that reads `ctx.ic` (RQ-227).
+    ic: Option<wgpu::Buffer>,
     bound: Option<Bound>,
     binds: u64,
     params: BTreeMap<(NodeKey, String), Vec<f64>>,
@@ -532,6 +534,7 @@ impl RenderLoop {
             prelude,
             frame,
             sim: None,
+            ic: None,
             bound: None,
             binds: 0,
             params: BTreeMap::new(),
@@ -562,6 +565,13 @@ impl RenderLoop {
     /// buffer. They are bound read-only; nothing here writes them.
     pub fn set_sim(&mut self, simstate: wgpu::Buffer, word: Option<wgpu::Buffer>) {
         self.sim = Some((simstate, word));
+        self.bound = None;
+    }
+
+    /// The `ICDescriptor` buffer the colour pass reads, one element per sample, for a stain that reads its sample's
+    /// descriptor, `ctx.ic` (render contract Part 1; RQ-227). Bound read-only; nothing here writes it.
+    pub fn set_ic(&mut self, ic: wgpu::Buffer) {
+        self.ic = Some(ic);
         self.bound = None;
     }
 
@@ -668,7 +678,7 @@ impl RenderLoop {
             let groups = checked(device, "the stain's bind groups", || {
                 Ok::<_, String>([
                     current.uniform_group(device, &self.prelude),
-                    current.sim_group(device, simstate, word.as_ref())?,
+                    current.sim_group_ic(device, simstate, word.as_ref(), self.ic.as_ref())?,
                     current.frame_group(device, &self.frame),
                 ])
             })??;

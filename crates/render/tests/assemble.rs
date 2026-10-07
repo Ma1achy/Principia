@@ -2129,3 +2129,116 @@ negative_control!(
     expected = "the subtype of",
     check_sources(&[("is_failed", Some(assemble::Subtype::Scalar))])
 );
+
+// ── RQ-227: `ctx.ic`, the sample's ICDescriptor, read per member ──────────────────────────────────────────────────
+
+/// A colour reading `ctx.ic.<member>` for each of `members`, summed.
+fn ic_colour(members: &[&str]) -> String {
+    let sum: Vec<String> = members.iter().map(|m| format!("ctx.ic.{m}")).collect();
+    format!(
+        "fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x + {}); }}",
+        sum.join(" + ")
+    )
+}
+
+/// The lines of `ic_read` in `source` that fill a member.
+fn ic_fills(source: &str) -> Vec<String> {
+    let start = source
+        .find("fn ic_read(i: u32)")
+        .expect("the read side's ic_read");
+    let body = &source[start..];
+    body[..body.find("\n}\n").expect("ic_read's end")]
+        .lines()
+        .filter(|l| l.trim_start().starts_with("v."))
+        .map(|l| l.trim().to_owned())
+        .collect()
+}
+
+/// A stain reading `ctx.ic.<member>` for each of `reads` has the field set `ic.<member>` for each, beside its source's
+/// `d_min`, and its `ic_read` loads exactly those members, each through its per-member reader (R-378).
+fn check_ic_fields(reads: &[&str], want: &[&str]) {
+    let g = graph(Occupant::Field("d_min".into()), &ic_colour(reads));
+    let f = assemble::assemble(&stain(&g), Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
+    let mut fields: Vec<String> = want.iter().map(|m| format!("ic.{m}")).collect();
+    fields.push("d_min".to_owned());
+    fields.sort();
+    assert_eq!(f.fields, fields, "the stain's ICDescriptor fields");
+    let fills: Vec<String> = want
+        .iter()
+        .map(|m| format!("v.{m} = ic_read_{m}(i);"))
+        .collect();
+    assert_eq!(ic_fills(&f.source), fills, "ic_read's loads");
+}
+
+#[test]
+fn assemble_ctx_ic_loads_only_the_members_read() {
+    check_ic_fields(&["rho_ratio"], &["rho_ratio"]);
+    check_ic_fields(&["m2", "m0"], &["m0", "m2"]);
+}
+
+negative_control!(
+    assemble_ctx_ic_loads_only_the_members_read,
+    "a stain reading `m0` does not read `m1`",
+    expected = "the stain's ICDescriptor fields",
+    check_ic_fields(&["m0"], &["m0", "m1"])
+);
+
+/// The stain reading `ctx.ic.m0`, at `fields`, is refused for the unfilled `ic.m0`, never assembled to read 0.
+fn check_ic_unfilled(fields: &[&str]) {
+    let g = graph(Occupant::Field("d_min".into()), &ic_colour(&["m0"]));
+    let got = assemble::assemble_reading(&stain(&g), Tier::FULL, fields);
+    assert!(
+        got.is_err_and(|e| e == AssembleError::UnfilledField("ic.m0".into())),
+        "not refused: {fields:?}"
+    );
+}
+
+#[test]
+fn assemble_ctx_ic_a_stain_missing_a_member_it_reads_is_refused() {
+    check_ic_unfilled(&["d_min"]);
+    check_ic_unfilled(&["d_min", "ic.m1"]);
+}
+
+negative_control!(
+    assemble_ctx_ic_a_stain_missing_a_member_it_reads_is_refused,
+    "the field set holding `ic.m0` is not refused",
+    expected = "not refused",
+    check_ic_unfilled(&["d_min", "ic.m0"])
+);
+
+/// Each of `cases`, a colour naming the `ICDescriptor` buffer or one of its readers, is refused or assembles, as its
+/// `refused` says (RQ-227).
+fn check_ic_names(cases: &[(&str, bool)]) {
+    for &(name, refused) in cases {
+        let text = format!(
+            "fn {name}(i: u32) -> f32 {{ return f32(i); }}\n\
+             fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x); }}"
+        );
+        let g = graph(Occupant::Field("d_min".into()), &text);
+        let got = assemble::assemble(&stain(&g), Tier::FULL);
+        let named = got
+            .as_ref()
+            .is_err_and(|e| e.to_string().contains(&format!("does not name `{name}`")));
+        assert_eq!(named, refused, "`{name}`: {got:?}");
+    }
+}
+
+#[test]
+fn slot_signature_a_node_does_not_name_the_icdescriptor_readers() {
+    check_ic_names(&[
+        ("ic_buffer", true),
+        ("ic_read", true),
+        ("ic_read_m0", true),
+        ("ic_read_", true),
+        ("ic_reader", false),
+        ("ic_rea", false),
+        ("my_ic_read", false),
+    ]);
+}
+
+negative_control!(
+    slot_signature_a_node_does_not_name_the_icdescriptor_readers,
+    "a helper named `ic_reader` is not a reader",
+    expected = "`ic_reader`",
+    check_ic_names(&[("ic_reader", true)])
+);

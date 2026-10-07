@@ -1894,3 +1894,75 @@ negative_control!(
     expected = "no skip for a missing word",
     check_buffer_skips(true)
 );
+
+// ── RQ-227: the colour pass binds the ICDescriptor buffer for a stain that reads ctx.ic ─────────────────────────────
+
+/// A stain whose colour is its sample's `ICDescriptor.rho_ratio`, in red.
+const IC_COLOUR: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.ic.rho_ratio, 0.0, 0.0); }";
+
+/// An `ICDescriptor` buffer of `W` × `H` descriptors, each with `rho_ratio` and every other member 1.
+fn ic_buffer(h: &GpuHarness, rho_ratio: f32) -> wgpu::Buffer {
+    use wgpu::util::DeviceExt;
+    let ic = ledger::payload::structs()
+        .into_iter()
+        .find(|s| s.name == "ICDescriptor")
+        .expect("the ICDescriptor");
+    let mut bytes = Vec::new();
+    for _ in 0..W * H {
+        for m in &ic.members {
+            let v = if m.name == "rho_ratio" {
+                rho_ratio
+            } else {
+                1.0
+            };
+            for _ in 0..m.storage.size() / 4 {
+                bytes.extend_from_slice(&v.to_le_bytes());
+            }
+        }
+    }
+    h.device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ic"),
+            contents: &bytes,
+            usage: wgpu::BufferUsages::STORAGE,
+        })
+}
+
+/// A stain reading `ctx.ic` draws its sample's descriptor once the `ICDescriptor` buffer is set (RQ-227), and its
+/// pipeline refuses a sim group without it; a stain that does not read it binds none.
+fn check_ic_drawn(rho_ratio: f32) {
+    let mut r = rig();
+    r.request(&graph(IC_COLOUR));
+    let compiled = Arc::clone(r.rl.cache().current().expect("compiled"));
+    assert!(compiled.reads_ic(), "the stain reads ctx.ic");
+    assert!(
+        compiled
+            .sim_group(r.h.device(), &r.simstate, Some(&r.word))
+            .is_err(),
+        "a stain reading ctx.ic was bound without the ICDescriptor buffer"
+    );
+    r.rl.set_ic(ic_buffer(&r.h, rho_ratio));
+    assert_all(&r.frame(), [0.5, 0.0, 0.0], "ctx.ic.rho_ratio");
+    r.request(&graph(&flat([0.25, 0.25, 0.25])));
+    let plain = Arc::clone(r.rl.cache().current().expect("compiled"));
+    assert!(!plain.reads_ic(), "a stain that does not read ctx.ic");
+    assert!(
+        plain
+            .sim_group(r.h.device(), &r.simstate, Some(&r.word))
+            .is_ok(),
+        "a stain that does not read ctx.ic needs no ICDescriptor buffer"
+    );
+}
+
+#[test]
+fn colour_pass_binds_the_icdescriptor_for_ctx_ic() {
+    check_ic_drawn(0.5);
+}
+
+negative_control!(
+    colour_pass_binds_the_icdescriptor_for_ctx_ic,
+    "a buffer whose rho_ratio is 0.25 draws another red",
+    expected = "ctx.ic.rho_ratio",
+    check_ic_drawn(0.25)
+);

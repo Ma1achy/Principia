@@ -4,13 +4,19 @@
 //! `crates/render/frag/generated/read_side.wgsl` ([`wgsl`]), which follows the fragment unpack layer at assembly and
 //! reads its accessors and stored layouts (`cargo xtask lint wgsl` lints it so).
 //!
-//! Its members ([`members`]) are the stored members every tier's `SimState` variant holds, each packed word expanded
+//! Its members ([`members`]) are the stored members of the full tier's `SimState` variant, each packed word expanded
 //! into its fields, then the word, then the quantities derived at read (payload §5): `ftle`, `ftle_valid`,
 //! `diffusion`, `diffusion_slope_valid`, `total_substeps_log2`, the two time fractions, `orbit_count`, `retrograde`,
 //! the four state predicates, `ensemble_spread` and the current drifts `energy_drift` and `Lz_drift`. None of the
-//! derived ones is stored (R-79). The Benettin shadow,
-//! tier-gated state, is not a read-side member: the read side keeps the cheap derived result, never resurrected state
-//! (lowering Part 3a).
+//! derived ones is stored (R-79). The Benettin shadow `r_sh` and `p_sh`, which only the FTLE tier stores, is a member
+//! at every tier ([`Fill::Shadow`]; RQ-228): read from the stored shadow at the FTLE tier, and the canonical quiet NaN
+//! in every component at the base tier, so the type stays one across tiers and a tier-absent feature degrades by NaN,
+//! never by struct shape (lowering Part 3a).
+//!
+//! **The sample's `ICDescriptor`** (render contract Part 1's `RenderContext.ic`; RQ-227) is read beside it: the WGSL
+//! read side binds `ic_buffer` at the ledger table's numbers (`crate::payload::bindings`, R-343), with a reader per
+//! member, `ic_read_<member>(i)`, each one load, and `ic_read(i)`, which fills only the members a stain reads, named
+//! `ic.<member>` among the requested fields ([`ic_fields`]), and leaves the others zero (R-378).
 //!
 //! In Rust a stored variant unpacks into it through `sim_state_from_ftle` or `sim_state_from_base`, each taking the
 //! stored struct by reference, so each member is read on its own. In WGSL the fragment reads sample `i` through
@@ -66,6 +72,9 @@ pub enum Fill {
     },
     /// The sample's word, or [`unbound_word`] when the word buffer is unbound (`has_word` false).
     Word,
+    /// A stored member of the FTLE tier's variant alone, the Benettin shadow (payload §1): `s.<name>` at that tier,
+    /// every component the canonical quiet NaN at the base tier (lowering Part 3a; RQ-228).
+    Shadow,
     /// Computed at read (payload §5), never stored.
     Derived,
 }
@@ -107,9 +116,10 @@ fn variants(structs: &[Struct]) -> Vec<&Struct> {
         .collect()
 }
 
-/// The read-side `SimState`'s members (lowering Part 3a): each member every stored variant holds, in the first
-/// variant's order, a packed word expanded into its fields in bit order and a member whose name starts with `_`
-/// skipped; then `word`; then [`DERIVED`].
+/// The read-side `SimState`'s members (lowering Part 3a): each member of the first stored variant, the full tier's, in
+/// its order, a packed word expanded into its fields in bit order and a member whose name starts with `_` skipped, a
+/// member the other variants lack being the shadow, a `vector(f32, 6)` ([`Fill::Shadow`], payload §1); then `word`;
+/// then [`DERIVED`].
 pub fn members(words: &[Word], entries: &[Entry]) -> Vec<ReadMember> {
     let structs = crate::payload::structs();
     let variants = variants(&structs);
@@ -121,8 +131,17 @@ pub fn members(words: &[Word], entries: &[Entry]) -> Vec<ReadMember> {
         rest.iter()
             .all(|s| s.members.iter().any(|m| m.name == name))
     };
-    for m in first.members.iter().filter(|m| everywhere(m.name)) {
+    for m in &first.members {
         if m.name.starts_with('_') {
+            continue;
+        }
+        if !everywhere(m.name) {
+            out.push(ReadMember {
+                name: m.name.to_owned(),
+                rust: "[[f32; 2]; 3]",
+                wgsl: "array<vec2<f32>, 3>",
+                fill: Fill::Shadow,
+            });
             continue;
         }
         let member = |rust, wgsl, fill| ReadMember {
@@ -329,8 +348,8 @@ fn rust_unpack(s: &Struct, members: &[ReadMember]) -> String {
     let doc = if shadow {
         "/// `SimStateFTLE` read: `ftle` finalised from the shadow (payload §5), NaN whenever `ftle_valid` is false (R-254)."
     } else {
-        "/// `SimStateBase` read: FTLE is baked out, so `ftle` reads the canonical quiet NaN and `ftle_valid` is false\n\
-         /// (lowering Part 3a)."
+        "/// `SimStateBase` read: FTLE is baked out, so `ftle` and every component of the shadow `r_sh` and `p_sh` read\n\
+         /// the canonical quiet NaN and `ftle_valid` is false (lowering Part 3a)."
     };
     let mut out = format!(
         "\n{doc}\n/// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads\n\
@@ -353,6 +372,8 @@ fn rust_unpack(s: &Struct, members: &[ReadMember]) -> String {
             Fill::Widen { .. } => format!("u32::from(s.{})", m.name),
             Fill::Packed { accessor, word } => format!("{accessor}(s.{word})"),
             Fill::Word => "if has_word { word } else { FGW_UNBOUND }".into(),
+            Fill::Shadow if shadow => format!("s.{}", m.name),
+            Fill::Shadow => "[[canonical_nan(); 2]; 3]".into(),
             Fill::Derived => rust_derived(&m.name, shadow),
         };
         let value = indent(&value, "        ");
@@ -526,14 +547,94 @@ impl Tier {
 pub const WORD_COMPONENTS: [&str; 4] = ["x", "y", "z", "w"];
 
 /// Every field [`wgsl_for`] can fill: each read-side member by its name, then each of the word's components,
-/// `word.x` … `word.w`, for a stain that reads only part of the word (R-378).
+/// `word.x` … `word.w`, for a stain that reads only part of the word (R-378), then each `ICDescriptor` member
+/// ([`ic_fields`]).
 pub fn fields(words: &[Word], entries: &[Entry]) -> Vec<String> {
     let mut out: Vec<String> = members(words, entries)
         .into_iter()
         .map(|m| m.name)
         .collect();
     out.extend(WORD_COMPONENTS.iter().map(|c| format!("word.{c}")));
+    out.extend(ic_fields());
     out
+}
+
+/// The `ICDescriptor` read as a stain reads it, `ctx.ic.<member>` (render contract Part 1; RQ-227): each member as a
+/// field, `ic.<member>`, its padding left out, with its WGSL type, in the struct's order.
+fn ic_members() -> Vec<(String, String)> {
+    crate::payload::structs()
+        .iter()
+        .filter(|s| s.name == IC_STRUCT)
+        .flat_map(frag::members)
+        .filter(|m| !m.name.starts_with('_'))
+        .map(|m| (m.name, m.ty))
+        .collect()
+}
+
+/// The `ICDescriptor` fields [`wgsl_for`] can fill, `ic.<member>`, in the struct's order: what `ic_read` loads for a
+/// stain that reads `ctx.ic.<member>` (R-378; RQ-227).
+pub fn ic_fields() -> Vec<String> {
+    ic_members()
+        .into_iter()
+        .map(|(name, _)| format!("ic.{name}"))
+        .collect()
+}
+
+/// The stored struct `ic_read` reads, one per sample (payload §1).
+pub const IC_STRUCT: &str = "ICDescriptor";
+
+/// The `ICDescriptor` buffer and its readers (RQ-227): `ic_buffer` bound at its row of the ledger's binding table
+/// (R-343), a reader per member, `ic_read_<member>(i)`, one load each, and `ic_read(i)`, the descriptor with only the
+/// members `fields` names (`ic.<member>`) filled, the others zero and never loaded (R-378); or the first name that is
+/// no `ICDescriptor` field.
+fn ic_read(fields: &[&str]) -> Result<String, String> {
+    let members = ic_members();
+    for f in fields {
+        if !members
+            .iter()
+            .any(|(m, _)| f.strip_prefix("ic.") == Some(m))
+        {
+            return Err(format!("`{f}` is no read-side field"));
+        }
+    }
+    let b = crate::payload::bindings()
+        .into_iter()
+        .find(|b| b.holds == IC_STRUCT)
+        .ok_or("no binding holds the ICDescriptor")?;
+    let mut out = format!(
+        "\n// `{buf}`'s bind group and binding number (R-343).\n\
+         const {c}_GROUP: u32 = {g}u;\n\
+         const {c}_BINDING: u32 = {n}u;\n\
+         @group({g}) @binding({n}) var<storage, read> {buf}: array<{IC_STRUCT}>;\n\
+         // `{buf}`'s readers, element `i`, one stored member per load, never the whole struct (R-378).\n",
+        buf = b.buffer,
+        c = b.constant,
+        g = b.group,
+        n = b.binding,
+    );
+    for (m, ty) in &members {
+        let _ = writeln!(
+            out,
+            "fn {r}_{m}(i: u32) -> {ty} {{ return {buf}[i].{m}; }}",
+            r = b.reader,
+            buf = b.buffer,
+        );
+    }
+    let _ = writeln!(
+        out,
+        "// The sample's `{IC_STRUCT}` (`ctx.ic`, render contract Part 1): only the members the stain reads filled, each\n\
+         // through its reader; the others zero and never loaded (R-378).\n\
+         fn {r}(i: u32) -> {IC_STRUCT} {{\n    var v: {IC_STRUCT};",
+        r = b.reader,
+    );
+    for (m, _) in members
+        .iter()
+        .filter(|(m, _)| fields.contains(&&*format!("ic.{m}")))
+    {
+        let _ = writeln!(out, "    v.{m} = {}_{m}(i);", b.reader);
+    }
+    out.push_str("    return v;\n}\n");
+    Ok(out)
 }
 
 /// What filling a field needs first (R-378): the stored members it loads, the word's components it loads, and the
@@ -713,6 +814,15 @@ fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<St
                 }
                 String::new()
             }
+            Fill::Shadow if tier.has_ftle => {
+                needs.load(&m.name);
+                format!("s_{}", m.name)
+            }
+            Fill::Shadow => {
+                "array<vec2<f32>, 3>(vec2<f32>(canonical_nan()), vec2<f32>(canonical_nan()), \
+                             vec2<f32>(canonical_nan()))"
+                    .into()
+            }
             Fill::Derived => wgsl_derived(&m.name, tier, &mut needs),
         };
         fills.push((target, component, m.fill == Fill::Word, value));
@@ -786,9 +896,12 @@ fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<St
 /// regenerates it for its tier and for the fields its stain reads, so the stain loads only those fields' words
 /// (R-378); `has_ensemble` is an argument, the assembler's uniform (lowering Part 3a; R-145).
 pub fn wgsl(words: &[Word], entries: &[Entry]) -> Generated {
-    let all = fields(words, entries);
-    let members = members(words, entries);
-    let every: Vec<&str> = all.iter().take(members.len()).map(String::as_str).collect();
+    let mut every: Vec<String> = members(words, entries)
+        .into_iter()
+        .map(|m| m.name)
+        .collect();
+    every.extend(ic_fields());
+    let every: Vec<&str> = every.iter().map(String::as_str).collect();
     let contents = wgsl_for(words, entries, Tier::FULL, &every)
         .unwrap_or_else(|why| format!("const_assert false; // {why}\n"));
     Generated {
@@ -797,8 +910,8 @@ pub fn wgsl(words: &[Word], entries: &[Entry]) -> Generated {
     }
 }
 
-/// The WGSL read side at `tier`, its `sample_read` filling `fields` ([`fields`]'s names), or the first name that is no
-/// field (R-378).
+/// The WGSL read side at `tier`, its `sample_read` filling `fields` ([`fields`]'s names) and its `ic_read` the
+/// `ic.<member>` among them, or the first name that is no field (R-378).
 pub fn wgsl_for(
     words: &[Word],
     entries: &[Entry],
@@ -848,7 +961,9 @@ struct SimState {{
     }
     out.push_str("}\n");
     out.push_str(WGSL_HELPERS);
-    out.push_str(&sample_read(&members, tier, fields)?);
+    let (ic, sample): (Vec<&str>, Vec<&str>) = fields.iter().partition(|f| f.starts_with("ic."));
+    out.push_str(&sample_read(&members, tier, &sample)?);
+    out.push_str(&ic_read(&ic)?);
     Ok(out)
 }
 

@@ -67,8 +67,8 @@ pub fn decode(s: &SimStateFTLE, word: [u32; 4], ic: &ICDescriptor, params: &Read
     Decoded {
         r: flat(read.r),
         p: flat(read.p),
-        r_sh: flat(s.r_sh),
-        p_sh: flat(s.p_sh),
+        r_sh: flat(read.r_sh),
+        p_sh: flat(read.p_sh),
         S: read.S,
         theta: read.theta,
         mean_y: read.mean_y,
