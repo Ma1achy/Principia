@@ -294,8 +294,11 @@ negative_control!(
     })
 );
 
-/// The two variants of one state read the same in every member but `ftle` and `ftle_valid`; the no-FTLE read's
-/// `ftle` is lowering Part 3a's NaN and `ftle_valid` false, whatever the state.
+/// The two variants of one state read the same in every member but `ftle`, `ftle_valid` and the shadow `r_sh`,
+/// `p_sh`; the no-FTLE read's `ftle` is lowering Part 3a's NaN and `ftle_valid` false, whatever the state. The shadow
+/// is the FTLE tier's stored state (payload §1): RQ-228 has the read side read it from the stored shadow at the FTLE
+/// tier and as NaN at the base tier, where it is absent (lowering Part 3a: "tier features degrade by NaN, not by
+/// struct shape"), so it is left out of the cross-variant comparison, as `ftle` is, and checked on its own here.
 fn check_one_type(read: Read) {
     let a = Args::default();
     for state in [0u32, 1, 3, 4] {
@@ -309,9 +312,30 @@ fn check_one_type(read: Read) {
             "with FTLE baked out, ftle is not the canonical quiet NaN"
         );
         assert!(!b.ftle_valid, "with FTLE baked out, ftle_valid is true");
+        for (name, base, ftle, stored) in [
+            ("r_sh", b.r_sh, f.r_sh, s.r_sh),
+            ("p_sh", b.p_sh, f.p_sh, s.p_sh),
+        ] {
+            for j in 0..3 {
+                for k in 0..2 {
+                    assert_eq!(
+                        base[j][k].to_bits(),
+                        QNAN,
+                        "with FTLE baked out, {name}[{j}][{k}] is not the canonical quiet NaN (RQ-228)"
+                    );
+                    assert_eq!(
+                        ftle[j][k].to_bits(),
+                        stored[j][k].to_bits(),
+                        "at the FTLE tier, {name}[{j}][{k}] is not the stored shadow (RQ-228)"
+                    );
+                }
+            }
+        }
         let strip = |mut x: SimState| {
             x.ftle = 0.0;
             x.ftle_valid = false;
+            x.r_sh = [[0.0; 2]; 3];
+            x.p_sh = [[0.0; 2]; 3];
             x
         };
         assert_eq!(
@@ -339,6 +363,25 @@ negative_control!(
         out
     })
 );
+
+/// RQ-228: a base tier whose shadow reads the stored-looking zero, not NaN, fails.
+#[cfg(feature = "controls")]
+mod qa_pay026_rust_both_variants_read_one_type_shadow {
+    use super::*;
+
+    negative_control!(
+        qa_pay026_rust_both_variants_read_one_type,
+        "a baked-out shadow that reads 0.0 must fail",
+        expected = "with FTLE baked out, p_sh[1][0] is not the canonical quiet NaN",
+        check_one_type(|s, v, a| {
+            let mut out = generated(s, v, a);
+            if !v {
+                out.p_sh[1][0] = 0.0;
+            }
+            out
+        })
+    );
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-RENDER-013 / REQ-RENDER-077
