@@ -1,12 +1,12 @@
 # TASK-M6-08 — The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform
 
 - **Milestone:** M6
-- **Closes:** REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038
+- **Closes:** REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159
 - **Depends on:** TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07
-- **Needs (earlier milestones):** REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077
+- **Needs (earlier milestones):** REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-9
-- **Size:** ~400 lines
+- **Size:** ~430 lines
 
 ## Goal
 The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_MODE`) once `quad.collapsed` is set — the full decoder's adjacent samples give bitwise-identical ICs — or at depth `ℓ_switch = 20` (lowering's `SWITCH`), whichever comes first (R-90); refinement continues. The same symptom on the linear path fires `AT_F32_FLOOR`, a terminal stop cached as a quad fact. `x₀` and `J_D` travel in a separate uniform buffer bound only for linear-path quads. Decode mode is a per-quad workgroup-uniform flag, not a baked variant, unless the occupancy benchmark says otherwise.
@@ -21,6 +21,7 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `docs/contracts/principia_lowering_contract.md` § "Compute side"
 - `decisions.md` § "R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
 
 ## Deliverables
 - `crates/engine/src/deep/switchover.rs`: bitwise IC comparison of adjacent samples (not the energy-drift diagnostic), `quad.collapsed`, the `ℓ_switch = 20` bound shared with lowering's `SWITCH` constant, the switch/stop response keyed off `DECODE_MODE`.
@@ -36,9 +37,13 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `cargo test -p engine linear_uniform_binding` — the QuadRequest struct has no x₀/J_D fields; the linear-path bind group binds the uniform and the full-decoder bind group does not (REQ-PAY-069).
 - `cargo xtask bench decode-mode-occupancy` — measure deep-quad occupancy/register pressure with the two-path branch vs a baked linearised variant; record the result (REQ-SYS-038).
 - `cargo xtask gate linear-decode-switchover` — at the switchover depth, linear vs full decode agree to O(h²) (REQ-DEC-036's check, moved here by R-154) (REQ-DEC-037).
+- `cargo test -p engine past_switch_routing` — R-395's routing: quads at depths 21 and 30 with distinct adjacent ICs (no collapse) are dispatched with DECODE_MODE = LIN and their sample positions come from c and δ only; a quad forced onto the full path at depth 21 fails the check; a quad at depth 20 or shallower may take the full path (REQ-TOOL-159).
 
 ## Notes
 - Which `Decision` variant records `AT_F32_FLOOR` (and which the integration floor) is not stated by refinement_policy §6 — `Collapsed` reads as the candidate but is not named for it; see Gaps.
 - If the benchmark shows the dead full-decode path hurts deep-quad occupancy, REQ-SYS-038 makes decode mode a baked variant; that is recorded in the PR, not decided by the implementer.
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D) is built at M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) stays here.
 - R-154: REQ-DEC-036's check at the actual switchover depth joins REQ-DEC-037 here; M5 verified it over a depth sweep (TASK-M5-04).
+- R-395 (RQ-242): beyond ℓ_switch REQ-TOOL-019's "no banding" holds through the per-quad local coordinates. TASK-M5-04
+  builds that path (REQ-TOOL-158); this task, which builds `DECODE_MODE`'s switchover, checks that every quad past
+  ℓ_switch is routed onto it (REQ-TOOL-159; the human's "M5/M6", applied per R-369).

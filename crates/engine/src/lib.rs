@@ -53,6 +53,14 @@ pub mod stain;
 /// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06).
 pub mod synthetic;
 
+/// The coordinate presets: `uv_screen`, `uv_quad` and the coordinate view with its δ mode, as in-code stain graphs
+/// (colour_composition §6; TASK-M1-07).
+pub mod presets;
+
+/// Pointer picking: a canvas event through the convention's one flip to the post-flip UV, the picked quad and `z`
+/// (coordinate conventions note, path 2; TASK-M1-07).
+pub mod picking;
+
 /// The dispatch of the kernel's bring-up mode over the synthetic flat layout, natively at f64 and on the GPU at f32
 /// (colour_composition Appendix A; R-75; TASK-M1-11).
 pub mod bringup;

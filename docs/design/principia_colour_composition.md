@@ -236,10 +236,20 @@ render-key.
 |---------------|--------|
 | **screen**    | `pixel` (ivec2), `uv` (screenspace, vec2), `target_dims` (ivec2) |
 | **chart**     | `slice_uv` (vec2 in [0,1]²), `z` (the full 8-D latent at this pixel, chart triple applied), `chart_id` |
-| **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
+| **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `half_width` (slice coords, vec2), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
 | **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples per quad axis: a quad holds N × N, canonical spec §8), `E` (ensemble), `uv` (within-tile vec2) |
 | **payload**   | every per-pixel field written by the kernel — `state`, `ftle`, `energy_drift`, `Lz_drift`, `diffusion`, `d_min`, `word`/hash, `t_end`, decoded-IC quantities, masses, … |
 | **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
+
+**The chart lane's `ctx.chart.slice_uv` (R-394; REQ-COL-063).** The sample's position in the slice plane's own frame,
+relative to the plane anchor (R-97): a vec2 in [0, 1]², post-flip Y-up, built from its quad's centre `c`
+(`ctx.quad.centre`) and half-width `h` (`ctx.quad.half_width`, defined below: `2^−(ℓ+1)` per axis, in slice coords)
+as the CPU computes them in f64, `ctx.chart.slice_uv = ctx.quad.centre + ctx.quad.half_width · (2 · ctx.quad.uv − 1)`,
+the pattern of deep_zoom §1's `u = c + h·(2t − 1)`. In-plane pan and zoom never change it for a given sample; they
+change only which quads are drawn. It is not a screen or view position: screen-relative positions are the screen
+lane's fields, `ctx.screen.uv` and `ctx.screen.pixel`. Formed in f32 it is an absolute coordinate, which R-395 keeps
+free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it a fragment works in the quad's local
+coordinates, `ctx.quad.centre` and the offset `δ = ctx.quad.half_width · (2 · ctx.quad.uv − 1)` from it.
 
 **The within-cell coordinates `ctx.quad.uv` and `ctx.tile.uv` (R-72; REQ-COL-056).** Each is a vec2 in [0, 1]², with
 its origin at its cell's bottom-left corner, `u` increasing rightward and `v` upward on the slice: the post-flip, Y-up
@@ -247,6 +257,13 @@ convention of the debug tooling plan's UV passthrough (§F). The quad's cell is 
 the quad's N × N, which its one sample rasterises to (canonical spec §8). So, for the tile in column `i` and row `j` of
 its quad, both counted from the quad's bottom-left from 0, `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`.
 `ctx.tile.uv` is what render GUI spec §12.1 draws tile boundaries from, as it draws quad boundaries from `ctx.quad.uv`.
+
+**The quad's half-width `ctx.quad.half_width` (R-72; TASK-M1-07).** A vec2 in slice coords: the quad's half-width on
+each axis, deep_zoom §1's `h = 2^−(ℓ+1)` at depth `ℓ`, as the CPU computes it in f64 and the GPU reads it in f32,
+beside `ctx.quad.centre`, deep_zoom §1's `c`. With them a fragment reconstructs a sample's UV coordinate from its
+quad-local coordinate, `ctx.quad.centre + ctx.quad.half_width · (2 · ctx.quad.uv − 1)` (deep_zoom §1), and its
+quad-local offset `δ = ctx.quad.half_width · (2 · ctx.quad.uv − 1)` (deep_zoom §2), as the coordinate view and its δ
+mode do (debug_tooling_plan §F).
 
 **Validity is not optional.** Every `ScalarField` returns `(value, valid)`. Every `Ramp`/`Compaction`
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the

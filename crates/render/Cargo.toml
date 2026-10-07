@@ -19,6 +19,9 @@ wgpu = { version = "30", default-features = false, features = ["std", "parking_l
 serde = { version = "1", features = ["derive"] }
 # The compile worker reads wgpu's error scope for each pipeline it creates (TASK-M1-05).
 pollster = "1"
+# The image export writes the headless readback as a PNG (TASK-M1-07, REQ-SYS-080), with the png crate xtask already
+# builds with.
+png = "0.18"
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
 # tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). Most are
@@ -34,9 +37,8 @@ naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"
 # references, so no HTTP resolver.
 serde_json = "1"
 jsonschema = { version = "0.58", default-features = false }
-# The embedding's survives suite (principia_dd_image_embedding.md §7): the PNG round trip through the png crate xtask
-# already builds with, and the shared proptest configuration's runner (validation::prop).
-png = "0.18"
+# The shared proptest configuration's runner (validation::prop), for the embedding's survives suite
+# (principia_dd_image_embedding.md §7), whose PNG round trip uses the png crate of [dependencies].
 proptest = "1.11"
 
 # Under `controls`, each `negative_control!` in render's tests compiles as a test (R-176).
