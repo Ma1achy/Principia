@@ -440,8 +440,8 @@ fn global_form() -> StainGraph {
         .add(
             NodeKind::Source,
             Occupant::Custom(
-                "fn source(ctx: Ctx) -> Field {\n    let lo = ctx.quad.c - ctx.quad.h;\n    \
-                 let span = (ctx.quad.c + ctx.quad.h) - lo;\n    \
+                "fn source(ctx: Ctx) -> Field {\n    let lo = ctx.quad.centre - ctx.quad.half_width;\n    \
+                 let span = (ctx.quad.centre + ctx.quad.half_width) - lo;\n    \
                  return Field(lo + span * ctx.quad.uv, 0.0, 0.0);\n}\n"
                     .into(),
             ),
