@@ -282,25 +282,18 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
         ),
         member("chart_id", "u32", "ctx_uniforms.chart_id"),
     ];
-    let quads = "vec2<f32>(ctx_uniforms.quads)";
     let mut quad = vec![
         member("index", "u32", "r.quad"),
+        // The quad's frame (colour_composition §3, R-72; deep_zoom §1's c and h): one source, the per-quad frames the
+        // CPU computes in f64 and binds at FRAME_BINDING, read as f32 (deep_zoom § "The precision split"). The top-left
+        // corner, Y-up, is c + (−h, +h).
         member(
             "tl",
             "vec2<f32>",
-            format!("vec2<f32>(f32(r.quad_xy.x), f32(r.quad_xy.y + 1u)) / {quads}"),
+            "quad_frames[r.quad].xy + vec2<f32>(-1.0, 1.0) * quad_frames[r.quad].zw",
         ),
-        member(
-            "centre",
-            "vec2<f32>",
-            format!("(vec2<f32>(r.quad_xy) + vec2<f32>(0.5)) / {quads}"),
-        ),
-        // The quad's half-width (colour_composition §3, R-72), on the grid tiling the slice as `tl` and `centre` are.
-        member(
-            "half_width",
-            "vec2<f32>",
-            format!("vec2<f32>(0.5) / {quads}"),
-        ),
+        member("centre", "vec2<f32>", "quad_frames[r.quad].xy"),
+        member("half_width", "vec2<f32>", "quad_frames[r.quad].zw"),
         member("uv", "vec2<f32>", "r.quad_uv"),
         member("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
     ];
@@ -383,7 +376,8 @@ fn reader_members(element: &str) -> Vec<(&'static str, &'static str)> {
 }
 
 /// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, the `ICDescriptor` and
-/// `RenderQuad` buffers and their generated readers, and the context's uniform block. Each buffer's readers load one
+/// `RenderQuad` buffers and their generated readers, the context's uniform block, and the per-quad frames
+/// ([`FRAME_BINDING`], which fill `ctx.quad`'s `tl`, `centre` and `half_width`). Each buffer's readers load one
 /// stored member at a time, never the whole stored struct (R-378): `<reader>_<member>(i)`, one per member, and
 /// `<reader>(i)`, the element built from them, its padding zero.
 pub fn declarations() -> String {
@@ -428,7 +422,9 @@ pub fn declarations() -> String {
     out.push_str(WGSL_CONTEXT);
     let _ = writeln!(
         out,
-        "@group({CONTEXT_GROUP}) @binding({CONTEXT_BINDING}) var<uniform> ctx_uniforms: ContextUniforms;"
+        "@group({CONTEXT_GROUP}) @binding({CONTEXT_BINDING}) var<uniform> ctx_uniforms: ContextUniforms;\n\
+         // The per-quad frames (render::bind::FRAME_BINDING): (c_u, c_v, h_u, h_v), deep_zoom §1's centre and half-width.\n\
+         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;"
     );
     out
 }
@@ -560,16 +556,14 @@ pub fn stain_module(assembled: &str) -> String {
 pub const PRESET_ENTRY: &str = "preset_harness_fs";
 
 /// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers, its
-/// screen and quad lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], the per-quad frames
-/// at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile through
-/// `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad.uv` the sample's quad-local coordinate and
-/// `ctx.quad.centre`, `ctx.quad.half_width` its quad's frame, and writes the colour with alpha 1. The presets (`engine::presets`)
-/// render through it.
+/// screen and quad lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], with the per-quad
+/// frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile
+/// through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad.uv` the sample's quad-local coordinate
+/// and `ctx.quad.centre`, `ctx.quad.half_width` its quad's frame, and writes the colour with alpha 1. The presets
+/// (`engine::presets`) render through it.
 pub fn preset_module(assembled: &str) -> String {
     format!(
-        "{assembled}{}{}\n// The per-quad frames (render::bind::FRAME_BINDING): (c_u, c_v, h_u, h_v), deep_zoom §1's centre and half-width.\n\
-         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;\n\
-         @fragment\nfn {PRESET_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
+        "{assembled}{}{}\n@fragment\nfn {PRESET_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
          let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
          let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
          let frame = quad_frames[r.quad];\n    \

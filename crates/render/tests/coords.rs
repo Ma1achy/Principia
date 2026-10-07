@@ -14,7 +14,7 @@
 //! Each test registers its negative control (R-176).
 
 use render::assemble::{assemble, Tier};
-use render::bind::{self, Context};
+use render::bind::{self, Context, ViewOutput};
 use render::coords::{self, banded, banding_departure, BANDING_BOUND};
 use render::export;
 use render::headless::{self, Draw, Image, Target};
@@ -277,6 +277,105 @@ fn flat(quads: u32, n: u32, depth: u32, origin: [u64; 2]) -> Synthetic {
 fn flat_grid() -> Synthetic {
     flat(4, 8, 2, [0, 0])
 }
+
+// ── colour_composition §3's quad frame through the module harness (R-72) ──────────────────────────────────────────
+
+/// The module harness's views of the quad's frame: `ctx.quad.centre` and `ctx.quad.half_width`, then `ctx.quad.tl`, as
+/// raw f32 bits.
+const FRAME_VIEWS: [&str; 2] = [
+    "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    return vec4<u32>(bitcast<vec2<u32>>(l.quad.centre), bitcast<vec2<u32>>(l.quad.half_width));
+}",
+    "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    return vec4<u32>(bitcast<vec2<u32>>(l.quad.tl), 0u, 0u);
+}",
+];
+
+/// Two sets whose grid is not the slice's 2^ℓ × 2^ℓ tiling from 0, where a lane filled from the grid alone would read
+/// another c and h: a non-square dyadic grid, 4 × 2 quads at depth 2 from the slice's corner, and 3 × 3 quads at
+/// depth 5 from the slice's cell (7, 2).
+fn frame_sets() -> [Synthetic; 2] {
+    let wide = Grid::new([4, 2], 2, 0, 1).expect("the 4 × 2 grid");
+    [Synthetic::flat_at(wide, 2, [0, 0]), flat(3, 4, 5, [7, 2])]
+}
+
+/// `views` drawn through the module harness (`bind::module`) over `set`, as raw words.
+fn draw_module(h: &GpuHarness, set: &Synthetic, views: [&str; 2]) -> [Image; 2] {
+    let ctx = context(set.grid());
+    let bytes = set.bytes();
+    let bound = bind::upload(h.device(), &bytes.payload(), &ctx);
+    let (width, height) = ctx.grid.target();
+    views.map(|view| {
+        let module = bind::module(view, ViewOutput::Words).unwrap_or_else(|e| panic!("{e}"));
+        headless::render(
+            h.device(),
+            h.queue(),
+            &Draw {
+                module: &module,
+                entry: bind::ENTRY,
+                layouts: &bound.layout_refs(),
+                groups: &bound.group_refs(),
+            },
+            Target {
+                width,
+                height,
+                format: wgpu::TextureFormat::Rgba32Uint,
+            },
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    })
+}
+
+/// At every pixel, the module harness's `ctx.quad.centre` and `ctx.quad.half_width` are the pixel's quad's frame
+/// (`Synthetic::quad_frame`, deep_zoom §1's c and h = 2^−(ℓ+1)) as f32, and `ctx.quad.tl` is c + (−h, +h): one source
+/// for c and h (deep_zoom § "The precision split"). Every value is dyadic, so exact in f32.
+fn check_module_frames(set: &Synthetic, images: &[Image; 2]) {
+    let grid = set.grid();
+    let (width, height) = grid.target();
+    let f = |w: u32| f32::from_bits(w);
+    for y in 0..height {
+        for x in 0..width {
+            let q = grid.cell(x, y).quad;
+            let frame = set.quad_frame(q);
+            let c = frame.c.map(|v| v as f32);
+            let h = frame.h.map(|v| v as f32);
+            let tl = [c[0] - h[0], c[1] + h[1]];
+            let a = images[0].words(x, y);
+            let b = images[1].words(x, y);
+            let got = [[f(a[0]), f(a[1])], [f(a[2]), f(a[3])], [f(b[0]), f(b[1])]];
+            assert_eq!(
+                got,
+                [c, h, tl],
+                "pixel ({x}, {y}), quad {q}: the module harness's centre, half_width and tl are {got:?}, not the \
+                 frame's {:?}",
+                [c, h, tl]
+            );
+        }
+    }
+}
+
+#[test]
+fn module_harness_quad_frame_is_the_synthetic_frame() {
+    let h = gpu();
+    for set in frame_sets() {
+        check_module_frames(&set, &draw_module(&h, &set, FRAME_VIEWS));
+    }
+}
+
+negative_control!(
+    module_harness_quad_frame_is_the_synthetic_frame,
+    "a quad lane filled from the grid tiling, half_width = 0.5/quads, is not the frame's h = 2^−3 in v on the 4 × 2 \
+     grid at depth 2",
+    expected = "not the frame's",
+    {
+        let [set, _] = frame_sets();
+        let tiled = "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
+    let half_width = vec2<f32>(0.5) / vec2<f32>(ctx_uniforms.quads);
+    return vec4<u32>(bitcast<vec2<u32>>(l.quad.centre), bitcast<vec2<u32>>(half_width));
+}";
+        check_module_frames(&set, &draw_module(&gpu(), &set, [tiled, FRAME_VIEWS[1]]))
+    }
+);
 
 /// The negative fixture's quad: one quad at depth 30 whose centre is near 0.6, deep enough that the global form
 /// u_min + (u_max − u_min)·t bands in f32 (deep_zoom §1's "at depth 30 the quad is ~10⁻⁹ wide").
