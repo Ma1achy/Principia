@@ -17,7 +17,8 @@
 //! ```text
 //! {
 //!   "render": { "shader": "gradient.wgsl", "fragment": "fs_main", "width": 256, "height": 256,
-//!               "constants": { "<override>": <number>, ... } },
+//!               "constants": { "<override>": <number>, ... },
+//!               "prepend": [ "crates/render/shaders/wgsl/lib/coords.wgsl", ... ] },
 //!   "reference": "reference.png" | { "metal": "metal.png", "vulkan": "vulkan.png" },
 //!   "output": "quantised" | "automatic",
 //!   "tolerance": "REQ-VAL-138",
@@ -29,7 +30,10 @@
 //! ```
 //!
 //! The shader is a WGSL fragment module, drawn over the whole target by a full-screen triangle the runner supplies;
-//! `constants` set its `override` declarations. Its output is quantised in the runner's own shader (R-287): the case's
+//! `constants` set its `override` declarations. `prepend`, optional, names WGSL files by their path relative to the
+//! workspace root, the directory whose `fixtures/golden/` holds the case; the runner places their text, in order,
+//! before the shader's, so a case calls the shared library's functions from their one source rather than a copy
+//! (RQ-210: `m1-coords` takes the convention's flip from `lib/coords.wgsl`). Its output is quantised in the runner's own shader (R-287): the case's
 //! fragment writes an `Rgba32Float` target, and the runner's quantise pass scales each channel to 0..255, rounds it
 //! half to even and stores the exact level `k / 255` in the `Rgba8Unorm` target, so no backend's float-to-unorm
 //! conversion has a tie to break (parity_contract §4). `output: "automatic"` (R-287's control only) draws the case's
@@ -199,6 +203,9 @@ pub struct Config(pub BTreeMap<String, Value>);
 
 const RENDER_FIELDS: [&str; 4] = ["shader", "fragment", "width", "height"];
 
+/// The optional render field naming the WGSL files prepended to the shader, by workspace-relative path (RQ-210).
+const PREPEND: &str = "prepend";
+
 impl Config {
     /// Flattens a case's `render` object, refusing a missing or unknown field.
     pub fn from_render(render: &Value) -> Result<Config, String> {
@@ -212,7 +219,7 @@ impl Config {
                 for (name, value) in constants {
                     fields.insert(format!("constants.{name}"), value.clone());
                 }
-            } else if RENDER_FIELDS.contains(&key.as_str()) {
+            } else if RENDER_FIELDS.contains(&key.as_str()) || key == PREPEND {
                 fields.insert(key.clone(), value.clone());
             } else {
                 return Err(format!("`render.{key}` is not a render field"));
@@ -226,6 +233,7 @@ impl Config {
         }
         config.size()?;
         config.constants()?;
+        config.prepend()?;
         Ok(config)
     }
 
@@ -271,6 +279,29 @@ impl Config {
                 .ok_or(format!("`{field}` is not an integer from 1 to 8192"))
         };
         Ok((dim("width")?, dim("height")?))
+    }
+
+    /// The files `prepend` names, in order, each a relative path with no `..`; none when the field is absent.
+    pub fn prepend(&self) -> Result<Vec<String>, String> {
+        let Some(value) = self.0.get(PREPEND) else {
+            return Ok(Vec::new());
+        };
+        let refused = || format!("`{PREPEND}` is not a list of workspace-relative paths");
+        let list = value.as_array().ok_or_else(refused)?;
+        list.iter()
+            .map(|v| {
+                let path = v.as_str().ok_or_else(refused)?;
+                let relative = Path::new(path)
+                    .components()
+                    .all(|c| matches!(c, std::path::Component::Normal(_)));
+                if path.is_empty() || !relative {
+                    return Err(format!(
+                        "`{PREPEND}` entry {path:?} is not a workspace-relative path"
+                    ));
+                }
+                Ok(path.to_owned())
+            })
+            .collect()
     }
 
     /// The `override` constants, by name.
@@ -705,6 +736,18 @@ fn golden_quantise(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> 
 }
 ";
 
+/// The workspace root of the case directory `dir`: the directory whose `fixtures/golden/` holds it, against which a
+/// case's `prepend` paths resolve.
+pub fn workspace_root(dir: &Path) -> Result<PathBuf, String> {
+    dir.ancestors()
+        .find(|a| dir.starts_with(a.join("fixtures").join("golden")))
+        .map(Path::to_path_buf)
+        .ok_or(format!(
+            "{} is not under a workspace's fixtures/golden/, so `{PREPEND}` has no root",
+            dir.display()
+        ))
+}
+
 /// A headless device that renders golden cases offscreen.
 pub struct Renderer {
     device: wgpu::Device,
@@ -793,8 +836,22 @@ impl Renderer {
     ) -> Result<(u32, u32, Vec<u8>), String> {
         let (width, height) = config.size()?;
         let shader_path = dir.join(config.text("shader")?);
-        let source = fs::read_to_string(&shader_path)
-            .map_err(|e| format!("{}: {e}", shader_path.display()))?;
+        let mut source = String::new();
+        let prepend = config.prepend()?;
+        if !prepend.is_empty() {
+            let root = workspace_root(dir)?;
+            for file in prepend {
+                let path = root.join(&file);
+                let text =
+                    fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+                source.push_str(&text);
+                source.push('\n');
+            }
+        }
+        source.push_str(
+            &fs::read_to_string(&shader_path)
+                .map_err(|e| format!("{}: {e}", shader_path.display()))?,
+        );
         let fragment = config.text("fragment")?;
         let constants = config.constants()?;
         let constants: Vec<(&str, f64)> = constants.iter().map(|(k, v)| (k.as_str(), *v)).collect();

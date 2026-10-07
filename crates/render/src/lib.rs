@@ -18,6 +18,10 @@
 //! rasterisation, one sample per tile ([`raster`]); and the headless render-to-texture helper the golden tests render
 //! through ([`headless`]).
 //!
+//! The coordinate convention (TASK-M1-07): the one framebuffer → UV flip, `shaders/wgsl/lib/coords.wgsl` and its Rust
+//! twin ([`coords`]), which the raster, picking and the golden coordinate view call; and the image export, which
+//! writes the headless readback's rows as they come, top first ([`export`]).
+//!
 //! The occupant algebra's front end (TASK-M7-03): a colour or brightness occupant's expression tree to readable WGSL,
 //! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
 //! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
@@ -33,9 +37,11 @@ pub mod bind;
 pub mod codegen;
 pub mod colour;
 pub mod compositor;
+pub mod coords;
 pub mod debug_bake;
 pub mod display;
 pub mod embed;
+pub mod export;
 pub mod frame_record;
 pub mod headless;
 pub mod hot_reload;

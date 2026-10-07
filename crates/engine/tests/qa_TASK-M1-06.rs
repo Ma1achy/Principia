@@ -296,10 +296,15 @@ negative_control!(
 
 // ── REQ-COL-056 and the chart/quad lanes' geometry, exact on a dyadic grid ─────────────────────────────────────
 
-/// Four by two quads of 2 × 2 tiles of 4 px: a 32 × 16 target, every coordinate below dyadic, so exact in f32.
+/// Four by four quads of 2 × 2 tiles of 4 px: a 32 × 32 target, every coordinate below dyadic, so exact in f32.
 fn dyadic() -> Grid {
-    Grid::new([4, 2], 2, 1, 4).expect("the dyadic grid")
+    Grid::new([4, 4], 2, 1, 4).expect("the dyadic grid")
 }
+
+/// The depth the geometry set is drawn at: 2^DEPTH = 4 quads per axis, so the dyadic grid's quads are the slice's
+/// depth-2 cells from its bottom-left and tile it exactly (`ctx.chart.slice_uv` is the slice's, and every lane stays in
+/// [0, 1]²).
+const DEPTH: u32 = 2;
 
 const UV_VIEWS: [&str; 3] = [
     "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
@@ -321,8 +326,16 @@ fn f(w: u32) -> f32 {
 /// bottom-left, `v` upward; `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N` for the tile in column `i`, row `j` of its
 /// quad counted from the quad's bottom-left; `RenderContext.uv` is the within-quad uv; on a flat grid tiling the
 /// slice, `ctx.chart.slice_uv` is the centre's place on the slice, Y-up; the quad's `tl` and `centre` are its top-left
-/// corner (largest `v`) and centre in slice coords. All exact: every quantity is dyadic.
-fn check_geometry(grid: Grid, images: &[Image; 3]) {
+/// corner (largest `v`) and centre in slice coords, from its frame (§3, R-72: `centre` is deep_zoom §1's `c` and
+/// `half_width` its `h = 2^−(ℓ+1)`): the depth-ℓ cell `(i, j)` has `c = ((i, j) + ½)·2^−ℓ`, so `tl = c + (−h, +h) =
+/// (i, j + 1)·2^−ℓ`, and the harness's frame (`Synthetic::quad_frame`) is that cell's. All exact: every quantity is
+/// dyadic.
+fn check_geometry(grid: Grid, set: &Synthetic, images: &[Image; 3]) {
+    assert_eq!(
+        grid.quads,
+        [1 << DEPTH; 2],
+        "the geometry grid does not tile the slice at depth {DEPTH}"
+    );
     let t = grid.tile_px as f32;
     let n = grid.n as f32;
     let (w, h) = grid.target();
@@ -334,10 +347,17 @@ fn check_geometry(grid: Grid, images: &[Image; 3]) {
             let ij = [cell[0] % n, cell[1] % n];
             let quad_uv = [(ij[0] + tile_uv[0]) / n, (ij[1] + tile_uv[1]) / n];
             let qxy = [(cell[0] / n).floor(), (cell[1] / n).floor()];
-            let quads = [grid.quads[0] as f32, grid.quads[1] as f32];
             let slice = [up[0] / w as f32, up[1] / h as f32];
-            let tl = [qxy[0] / quads[0], (qxy[1] + 1.0) / quads[1]];
-            let centre = [(qxy[0] + 0.5) / quads[0], (qxy[1] + 0.5) / quads[1]];
+            let cells = (1u32 << DEPTH) as f32;
+            let hw = 0.5 / cells;
+            let centre = [(qxy[0] + 0.5) / cells, (qxy[1] + 0.5) / cells];
+            let tl = [centre[0] - hw, centre[1] + hw];
+            let frame = set.quad_frame(qxy[1] as u32 * grid.quads[0] + qxy[0] as u32);
+            assert_eq!(
+                (frame.c, frame.h),
+                (centre.map(f64::from), [f64::from(hw); 2]),
+                "pixel ({x}, {y}): the harness's frame is not the depth-{DEPTH} cell {qxy:?}'s"
+            );
             let got: Vec<[f32; 2]> = images
                 .iter()
                 .flat_map(|im| {
@@ -372,13 +392,17 @@ fn check_geometry(grid: Grid, images: &[Image; 3]) {
 
 fn draw_geometry(h: &GpuHarness) -> [Image; 3] {
     let g = dyadic();
-    let set = Synthetic::flat(g, 0);
+    let set = Synthetic::flat(g, DEPTH);
     UV_VIEWS.map(|v| draw(h, &set, &context(g), v))
 }
 
 #[test]
 fn ctx_lanes_qa_tile_and_quad_uv_are_y_up_and_exact() {
-    check_geometry(dyadic(), &draw_geometry(&gpu()));
+    check_geometry(
+        dyadic(),
+        &Synthetic::flat(dyadic(), DEPTH),
+        &draw_geometry(&gpu()),
+    );
 }
 
 negative_control!(
@@ -387,7 +411,11 @@ negative_control!(
     expected = "ctx.tile.uv is",
     {
         let images = draw_geometry(&gpu());
-        check_geometry(dyadic(), &images.map(|i| flipped(&i)))
+        check_geometry(
+            dyadic(),
+            &Synthetic::flat(dyadic(), DEPTH),
+            &images.map(|i| flipped(&i)),
+        )
     }
 );
 
