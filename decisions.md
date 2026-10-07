@@ -6565,12 +6565,14 @@ carries the recheck (below).
   less 2π when it exceeds π, so the decoded reference lies in (−π, π) and the exit difference stays in [−2π, 2π], the
   domain `wrap` takes. 65535 is odd, so no code decodes to exactly π. `encode(decode(c)) = c` for every code, so a
   reference survives any number of resumes unchanged. The worst-case error is half a step plus the encode's
-  round-off at the kernel's `Real`, bounded by `2·ulp_Real(2π)` (9.5e-7 rad at f32, 1.8e-15 at f64; measured 4.6e-7
-  and 6.0e-16 by the physics review of #168), inside the ruling's "≤ ~5e-5".
+  round-off at the kernel's `Real`, bounded by `4·ulp_Real(2π)` (1.9e-6 rad at f32, 3.6e-15 at f64; the worst over
+  evaluation orders measured 9.4e-7 and 1.9e-15 by the physics review of #168), inside the ruling's "≤ ~5e-5".
 - **The parity tier.** `_reserved` is not Tier B: its code is rounded from the float longitude, so it is Tier N/S
-  with `θ̃`, and backends may differ by one code (mod 65535); only sentinel-or-code, from the comparison-only disc
-  test, is Tier B. The parity contract's Tier B paragraph says so beside the f16 display scalars (physics review
-  5441087488, F1).
+  with `θ̃`: given the same entry state, backends may differ by one code (mod 65535), and along a trajectory by
+  more, within `θ̃`'s envelope. Sentinel-or-code, from the comparison-only disc test formed at the kernel's `Real`,
+  is Tier B across backends at the same `Real` only; across precisions it may differ at the disc edge. The one-code
+  allowance needs REQ-INT-086's `r_pole` above about 2e-3. The parity contract's Tier B paragraph says so beside
+  the f16 display scalars (physics reviews 5441087488, F1, and 5441219965, F4).
 - **The exact-π case** (R-389) applies to the difference against the decoded reference: an exit whose
   `exit longitude − decoded reference` is exactly ±π adds +π.
 - **One semantics, split or not.** The march quantises the reference when it stores it, on entering the disc, and
