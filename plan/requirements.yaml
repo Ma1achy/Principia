@@ -12373,8 +12373,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24)"
 - id: REQ-GUI-076
   area: GUI
   statement: "The dev GUI must not include Chazy subtitles or the object-based stain desk, and its Stain mode must be the plain node-graph editor."
@@ -12475,8 +12477,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png's left panel: one group, sub-sections in that order, eight named z₀ sliders"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-06, which re-runs its acceptance on the real engine and depends on TASK-M6-26)"
 - id: REQ-GUI-082
   area: GUI
   statement: "The Chart sub-group must show the chart preset named by its axes (e.g. 'z_α × z_β', never a nickname), the basis vectors q₁ and q₂ each with an edit button, a Chart builder… button and the chart's kind (affine or nonlinear)."
@@ -12514,8 +12518,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png; after a pan the end values update"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the axis labels on mock data in TASK-M6-26, since 01_main.png shows them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-06, which wires them to the real chart's ranges."
 - id: REQ-GUI-085
   area: GUI
   statement: "The hover path must be z(t) through the manifold projected onto this chart's q₁, q₂ — not real space — drawn solid near the slice and faint where it leaves the plane."
@@ -12527,8 +12533,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png: the path is drawn from the cursor's IC with opacity falling with distance from the slice"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the hover path on mock data in TASK-M6-27, drawn by the mock into its stand-in figure, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which draws the real path with the compositor's trace layer."
 - id: REQ-GUI-086
   area: GUI
   statement: "The hover label must name a fate only once it is decided (a terminal state — escape, collision — or bounded at the horizon) and read 'undecided · still interacting at t of t_max' before that."
@@ -12540,8 +12548,10 @@
   verify:
     method: unit test
     detail: "label strings for a running sample, an escape, a collision and a bounded-at-horizon sample"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the hover label on mock data in TASK-M6-27, from the mock's fake sample, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which reads the real sample."
 - id: REQ-GUI-087
   area: GUI
   statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels."
@@ -12637,8 +12647,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshots against 01_main.png after touching a slice slider and after touching a tilt, and against 08_lock.png when locked"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-07, which re-runs its acceptance on the real engine and depends on TASK-M6-26)"
 - id: REQ-GUI-092
   area: GUI
   statement: "The time controls must offer play, step, a scrubber and speed, and scrubbing back must set the display time and re-integrate progressively, showing it is refining (e.g. 'refining · 72%'), never replaying stored frames."
@@ -12706,8 +12718,10 @@
   verify:
     method: unit test
     detail: "Tab / Shift+Tab cycles the seven scopes in order; Enter on Manifold view enters Chart"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25)"
 - id: REQ-GUI-096
   area: GUI
   statement: "The global keys must follow §G3's table: Tab / Shift+Tab next / previous scope, Enter into the scope, Esc out one level, arrows between siblings or adjust a value, Shift ×10 and Alt ×0.1 steps, held keys delay-then-repeat (DAS / ARR), Ctrl+Z undo from the contract's history, and ? shows shortcuts over everything."
@@ -12746,8 +12760,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshots before and after moving focus differ only in the ring and the breadcrumb (07_keyboard.png)"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25)"
 - id: REQ-GUI-099
   area: GUI
   statement: "Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector."
@@ -12763,8 +12779,10 @@
   verify:
     method: GUI screenshot
     detail: screenshot against 08_lock.png after K over a point
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock."
 - id: REQ-GUI-100
   area: GUI
   statement: "Present mode must hide all chrome and Esc must return from it."
@@ -13188,8 +13206,10 @@
   verify:
     method: GUI screenshot
     detail: screenshot against 12_console.png; raising an error opens it
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-28 on the mock engine (moved from TASK-M8-27, which re-runs its acceptance on the real engine's telemetry stream and depends on TASK-M6-28)"
 - id: REQ-GUI-127
   area: GUI
   statement: "The stain editor must be one GUI over one object — the composition graph plus display settings — in which the library picks, the canvas wires, the node inspector edits one stage and Advanced drops to its code, with no separate render-mode, colour-map or debug GUI."
@@ -13215,8 +13235,10 @@
   verify:
     method: GUI screenshot
     detail: screenshot against 02_stain.png
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-19, which re-runs its acceptance on the real engine and depends on TASK-M6-29)"
 - id: REQ-GUI-129
   area: GUI
   statement: "Stain mode must show a live preview of the current OUT, toggleable between the shape sphere and an illustrative slice."
@@ -13250,8 +13272,10 @@
   verify:
     method: unit test
     detail: "scripted pointer events for each gesture produce the stated selection / position change"
-  rulings: []
+  rulings:
+  - R-390
   milestone: M8
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-20, which re-runs its acceptance on the real engine and depends on TASK-M6-29)"
 - id: REQ-GUI-132
   area: GUI
   statement: "While a wire is dragged compatible in-ports must highlight and incompatible ones dim, and releasing on empty canvas must open a node-create menu filtered to nodes that accept the dragged type."
@@ -13474,7 +13498,9 @@
     detail: "the proposal gives the delay and rate with the reference they follow (e.g. platform defaults)"
   rulings:
   - R-71
+  - R-390
   milestone: M8
+  note: "R-390: proposed by TASK-M6-25, the first task to need the value (moved from TASK-M8-13, which uses it); the human confirms it at the M8 gate"
 - id: REQ-GUI-147
   area: GUI
   kind: definition
@@ -13664,7 +13690,9 @@
     detail: "the proposal states the rate in degrees per second (frame-rate independent) with the reason it reads as 'slowly'; recorded in decisions.md"
   rulings:
   - R-71
+  - R-390
   milestone: M8
+  note: "R-390: proposed by TASK-M6-27, the first task to need the value (moved from TASK-M8-11, which uses it); the human confirms it at the M8 gate"
 - id: REQ-GUI-158
   area: GUI
   kind: calibration
@@ -13679,7 +13707,9 @@
     detail: "the proposal gives a table of base steps per field kind and scope (absolute or relative to the field's range or the view), with the reasoning; recorded in decisions.md"
   rulings:
   - R-71
+  - R-390
   milestone: M8
+  note: "R-390: proposed by TASK-M6-25, the first task to need the values (moved from TASK-M8-13, which uses them); the human confirms them at the M8 gate"
 - id: REQ-GUI-159
   area: GUI
   kind: definition
@@ -13745,7 +13775,9 @@
     detail: "a screenshot case with surface kind `gui` spawns the capture mode for a named window and gets its PNG and names back; `cargo xtask deps` shows no edge into gui"
   rulings:
   - R-274
+  - R-390
   milestone: M6
+  note: "R-390: closed by TASK-M6-24, whose screenshots need the capture mode first (moved from TASK-M6-22, which depends on TASK-M6-24); the capture mode runs the app on the mock engine"
 - id: REQ-GUI-163
   area: GUI
   statement: "The Run window must show the compute shaders' fast-math setting as a control under its SimConfig name, off by default; changing it must be marked as re-integrating (it is on the sim key), and while it is on the window must say that parity is measured, not exact (R-297). In the browser build the control must be shown disabled, with a note that the browser chooses the mode (R-303)."
@@ -13780,6 +13812,204 @@
   - R-358
   milestone: M8
   note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204, accepted by R-358 (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
+- id: REQ-GUI-165
+  area: GUI
+  statement: "The gui crate must hold a mock engine, a test double of the engine's contract built under gui's `mock` feature and in gui's tests, that serves plausible GUI-sized Snapshots, applies each SetField with undo and redo as R-69 gives them (an edit marked \"no history\" never entering the history), emits events through the contract's own channels, and runs a fake clock so Time plays; and `cargo run -p gui --features mock` must launch the app on it."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: R-69 — What is undoable *(closes the step-6 open question)*
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_engine: a SetField shows in the next snapshot; undo and redo restore and reapply it; an edit marked no history leaves the history unchanged; the fake clock advances the playhead while playing and holds it while paused; events arrive only through the contract's channels. The PR shows `cargo run -p gui --features mock` opening the app window"
+  rulings:
+  - R-69
+  - R-390
+  milestone: M6
+- id: REQ-GUI-166
+  area: GUI
+  statement: "One contract conformance suite, defined once beside the contract in the engine crate, must run every one of its cases against both the mock engine and the real engine's implementation of the contract, none skipped for either, and both must pass it; every change to the contract surface must re-run it for both."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  verify:
+    method: unit test
+    detail: "cargo test -p engine conformance (the real engine) and cargo test -p gui conformance (the mock) run the same case list from the one definition and both pass, with no case skipped; a deliberately non-conforming double fails it, naming the case"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-167
+  area: GUI
+  statement: "While the app runs on the mock engine, the footer must carry a small \"mock engine\" tag, and on the real engine it must not."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (mock_footer): the footer on the mock shows the tag beside 01_main.png's footer; cargo test -p gui mock_tag: the tag is drawn exactly when the engine is the mock"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-168
+  area: GUI
+  statement: "On the mock engine, the app shell must look, feel and behave as `01_main.png` and the design notes give it: the window, F3 hiding and showing the egui layer over the figure, the dark egui theme, the top bar, the footer opening the console, and the Explore page's regions, with nothing drawn over the figure and the figure a procedural stand-in (smooth noise from the mock, nothing from workbench/)."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: Rules that hold everywhere
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 01 Explore — the everyday view
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (mock_shell, mock_f3_off): against 01_main.png with F3 on and off, the stand-in figure identical underneath; a footer click opens the console; the gui reviewer checks the design notes' global rules"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-169
+  area: GUI
+  statement: "On the mock engine, keyboard navigation must behave as render_gui_spec §G3 and `07_keyboard.png` give it in every scope the GUI has: Tab and Shift+Tab between the big scopes, Enter into a scope and Esc out of it, arrows between siblings and on a focused value, Shift ×10 and Alt ×0.1 steps, the focus ring, the top-bar breadcrumb, and `?` showing the shortcuts over everything; and each later screen must join the scope tree."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 07 Keyboard — design note, not a screen
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_keyboard: synthetic key events for Tab, Shift+Tab, Enter, Esc, the arrows and Shift and Alt steps move focus and values as §G3 gives; `?` opens the shortcuts over everything and Esc closes it; cargo xtask screenshot 07_keyboard (mock_focus_before, mock_focus_after, mock_shortcuts) against 07_keyboard.png"
+  rulings:
+  - R-390
+  milestone: M6
+  note: "R-390: each later track task, TASK-M6-26 to TASK-M6-29, extends mock_keyboard with its own scopes and adds a 07_keyboard focus case (mock_focus_manifold_view, mock_focus_time, mock_focus_window, mock_focus_stain), so each later screen is checked to join the scope tree (applied per R-369, review 5434766412 on PR #157)."
+- id: REQ-GUI-170
+  area: GUI
+  statement: "On the mock engine, the Manifold view group and the compass must look, feel and behave as `01_main.png`, `08_lock.png` and the design notes give them: Chart, Navigate, centre z₀, Slice & tilt and rotation as one group, every edit a SetField on z₀ or the basis; lock re-basing the sliders to the anchor (anchor plus offset), not freezing them; and the compass switching between slicing and tilting by which slider was touched, with the gold pin when locked."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 01 Explore — the everyday view
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 08 Lock — the reticle and the pin
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G4. Lock — the reticle and the pin (`08_lock.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (mock_manifold_view, mock_compass_slice, mock_compass_tilt) and 08_lock (mock_locked) against 01_main.png and 08_lock.png; cargo test -p gui mock_manifold_view: each control emits a SetField on z₀ or the basis, and after lock a slider reads anchor plus offset and moving it emits an excursion"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-171
+  area: GUI
+  statement: "On the mock engine, the figure's procedural stand-in must pan and zoom as the real figure does: pan and zoom are SetFields on z₀ and the basis (no camera), and the mock redraws the stand-in for the new chart."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: Rules that hold everywhere
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_figure_navigation: a pan and a zoom each emit one SetField on z₀ or the basis and no other edit; the mock's next frame of the stand-in is the previous one shifted or scaled accordingly, within one pixel"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-172
+  area: GUI
+  statement: "On the mock engine, Time (play, step, scrub, speed), the Legend frame, the Trajectory side panel frame (the shape sphere turning with visible axes, and the unwrap toggle) and the Overlays menu must look, feel and behave as `01_main.png`, `06_legend.png` and the design notes give them, with plausible content from the mock."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 01 Explore — the everyday view
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 06 Legend — generated by evaluating the stain
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (mock_time, mock_trajectory_sphere, mock_trajectory_unwrapped, mock_overlays_menu) and 06_legend (mock_legend) against 01_main.png and 06_legend.png; cargo test -p gui mock_time: play advances the playhead through no-history SetFields, step moves one step, a scrub is one SetField"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-173
+  area: GUI
+  statement: "On the mock engine, the tile-bounds overlay, switched on from Overlays ▾ through RenderState's overlay set, must draw the bounds of the mock's fake quads over the stand-in figure, drawn by the mock and not by the GUI, and they must pan and zoom with it."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (mock_tile_bounds) against 01_main.png; cargo test -p gui mock_tile_bounds: the toggle emits one SetField on the overlay set and the GUI draws nothing over the figure; after a pan the mock's drawn bounds move with the stand-in"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-174
+  area: GUI
+  statement: "On the mock engine, the windows must look, feel and behave as their artboards and the design notes give them, their frames and controls real and their content plausible data from the mock: Run, Chart builder (its domain preview and quick render square), Export & share, Display, Profiler (the frame and its tabs), Console, and the Inspector frame."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 03 Chart builder
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 04 Windows
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 12 Console
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G5. Windows (`04_windows.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 05 Inspector — one IC, its trajectory, one timeline
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 04_windows (mock_run, mock_export, mock_display, mock_profiler), 03_chartbuilder (mock_chart_builder), 12_console (mock_console) and 05_inspectors (mock_inspector) against their artboards; the Chart builder's two previews are square for a square viewport; each window opens from its top-bar or menu entry"
+  rulings:
+  - R-390
+  milestone: M6
+- id: REQ-GUI-175
+  area: GUI
+  statement: "On the mock engine, the Stain node-graph editor must look, feel and behave as `02_stain.png` and Part II give it, with fake nodes and wires from the mock and a live preview the mock renders, square for a square viewport, that changes when the graph is edited."
+  source:
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 02 Stain — the plain node-graph editor
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 1. Layout — four surfaces
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 7. Canvas interactions
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 02_stain (mock_stain, mock_stain_selected) against 02_stain.png; cargo test -p gui mock_stain_preview: an edit to the graph is a SetField and the mock's preview changes; the preview is square for a square viewport"
+  rulings:
+  - R-390
+  milestone: M6
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

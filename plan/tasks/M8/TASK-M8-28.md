@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128, REQ-TOOL-135
-- **Depends on:** TASK-M8-26, TASK-M8-27
+- **Depends on:** TASK-M8-26, TASK-M8-27, TASK-M6-28
 - **Needs (earlier milestones):** REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053
 - **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** PIT-3
@@ -47,4 +47,5 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - Definitions (R-72) written here: REQ-TOOL-114. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - RQ-93 ruled: R-113 — REQ-TOOL-002's dev-GUI half (the profiler reading the same file, its header config REQ-GUI-039's provenance object) is verified here by REQ-TOOL-098.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-128 (R-72 definition) (classification accepted by R-132).
-- R-152: TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).
+- R-152, amended in part by R-390: TASK-M6-28 builds the Profiler window's frame and tabs, TASK-M6-22 fills its Arbiter tab, and this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).
+- R-390: TASK-M6-28 builds the Profiler window's frame and tabs on the mock engine; this task depends on it and fills them from the real profiler stream, keeping every requirement it closes.

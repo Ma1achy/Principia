@@ -14,7 +14,8 @@ use serde_json::Value;
 use crate::contract::canonical::{self, format_f64, json_to_string};
 use crate::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use crate::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, Links, Lock, Plane, Quality, SimConfig, Slice,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
+    Slice,
 };
 
 // ----- RFC 8785's published test vectors -----
@@ -425,6 +426,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             lock: Lock {},
             links: Links {},
             integrator: Integrator {},
+            kernel_variant: KernelVariant::Physics,
             horizon: Horizon {},
             collision: Collision {},
             quality: Quality {},
@@ -518,7 +520,7 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&sim),
-            r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
+            r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
         ),
         (
             to(&render),
@@ -659,7 +661,7 @@ validation::negative_control!(
     "a text in another key order must fail the round trip",
     expected = "the text does not round-trip",
     check_round_trip(
-        r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"links":{},"lock":{},"plane":{},"quality":{}}"#,
+        r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{}}"#,
         r#"{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}}"#
     )
 );

@@ -43,6 +43,10 @@ pub mod stain;
 /// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06).
 pub mod synthetic;
 
+/// The dispatch of the kernel's bring-up mode over the synthetic flat layout, natively at f64 and on the GPU at f32
+/// (colour_composition Appendix A; R-75; TASK-M1-11).
+pub mod bringup;
+
 /// The host export decoder (render contract Part 5 (c); dd_generation_root §1, seam 13; RQ-217): every ledger field of
 /// one sample decoded from the packed payload, generated from the layout table by `cargo xtask codegen`
 /// (`ledger::gen::export`).

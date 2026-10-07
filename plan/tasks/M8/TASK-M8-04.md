@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-032, REQ-GUI-033, REQ-SYS-052, REQ-SYS-053, REQ-SYS-062, REQ-GUI-072, REQ-GUI-107
-- **Depends on:** TASK-M8-01
+- **Depends on:** TASK-M8-01, TASK-M6-24
 - **Needs (earlier milestones):** REQ-SYS-004, REQ-SYS-003, REQ-SYS-002
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -41,3 +41,4 @@
 
 ## Notes
 - The lints run on every later GUI task's PR; the window tasks add their strings under the same check.
+- R-390: TASK-M6-24 builds the gui crate's app, its F3 toggle and its client on the mock engine; this task depends on it and adds the firewall (the visibility pass, the compile-fail test, `cargo xtask lint-gui`) over that code and every later track task's, keeping every requirement it closes.

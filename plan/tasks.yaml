@@ -1480,7 +1480,7 @@
 - id: TASK-M6-21
   milestone: M6
   title: "The event-driven precision warning: DECODE_SWITCHOVER and AT_F32_FLOOR in the snapshot"
-  depends_on: [TASK-M6-08]
+  depends_on: [TASK-M6-08, TASK-M6-26]
   needs: [REQ-GUI-001, REQ-SYS-033]
   requirements: [REQ-GUI-010, REQ-GUI-012]
   reviewers: [code, qa, gui]
@@ -1488,9 +1488,9 @@
 - id: TASK-M6-22
   milestone: M6
   title: "Quality in the GUI: the Run window selector, the Custom fields and the arbiter overlay"
-  depends_on: [TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20]
+  depends_on: [TASK-M6-15, TASK-M6-17, TASK-M6-18, TASK-M0-20, TASK-M6-24, TASK-M6-28]
   needs: [REQ-GUI-001]
-  requirements: [REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058, REQ-GUI-162]
+  requirements: [REQ-GUI-011, REQ-GUI-014, REQ-TOOL-058]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M6-23
@@ -1501,6 +1501,54 @@
   requirements: [REQ-VAL-092, REQ-REF-032, REQ-VAL-090, REQ-VAL-085, REQ-VAL-142, REQ-REF-050, REQ-SCHED-094, REQ-SCHED-095]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-6, PIT-10, PIT-3]
+- id: TASK-M6-24
+  milestone: M6
+  title: "The GUI track (R-390), 1: the mock engine, the contract conformance suite and the app shell"
+  depends_on: [TASK-M0-16, TASK-M0-20]
+  needs: [REQ-SYS-002, REQ-SYS-003, REQ-TOOL-134]
+  requirements: [REQ-GUI-165, REQ-GUI-166, REQ-GUI-167, REQ-GUI-168, REQ-GUI-075, REQ-GUI-162]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-25
+  milestone: M6
+  title: "The GUI track (R-390), 2: keyboard navigation through every screen"
+  depends_on: [TASK-M6-24]
+  needs: []
+  requirements: [REQ-GUI-169, REQ-GUI-095, REQ-GUI-098, REQ-GUI-146, REQ-GUI-158]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-26
+  milestone: M6
+  title: "The GUI track (R-390), 3: the Manifold view group and the compass"
+  depends_on: [TASK-M6-25]
+  needs: []
+  requirements: [REQ-GUI-170, REQ-GUI-171, REQ-GUI-081, REQ-GUI-091]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-27
+  milestone: M6
+  title: "The GUI track (R-390), 4: Time, the Legend frame, the Trajectory panel frame and the Overlays menu"
+  depends_on: [TASK-M6-26]
+  needs: []
+  requirements: [REQ-GUI-172, REQ-GUI-173, REQ-GUI-157]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-28
+  milestone: M6
+  title: "The GUI track (R-390), 5: the windows: Run, Chart builder, Export & share, Display, Profiler, Console, the Inspector frame"
+  depends_on: [TASK-M6-27]
+  needs: []
+  requirements: [REQ-GUI-174, REQ-GUI-126]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-29
+  milestone: M6
+  title: "The GUI track (R-390), 6: the Stain node-graph editor"
+  depends_on: [TASK-M6-28]
+  needs: []
+  requirements: [REQ-GUI-175, REQ-GUI-128, REQ-GUI-131]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -1672,7 +1720,7 @@
 - id: TASK-M7-22
   milestone: M7
   title: "The stain editor canvas (egui): library, graph canvas, preview and ghosted None"
-  depends_on: [TASK-M7-12, TASK-M7-17, TASK-M0-20]
+  depends_on: [TASK-M7-12, TASK-M7-17, TASK-M0-20, TASK-M6-29]
   needs: [REQ-RENDER-009]
   requirements: [REQ-GUI-031, REQ-COL-022, REQ-GUI-151, REQ-GUI-152]
   reviewers: [code, qa, gui, physics]
@@ -1696,7 +1744,7 @@
 - id: TASK-M7-25
   milestone: M7
   title: "The Display window: display settings outside the pipeline, CVD on every surface"
-  depends_on: [TASK-M7-16, TASK-M7-21, TASK-M7-22, TASK-M6-17]
+  depends_on: [TASK-M7-16, TASK-M7-21, TASK-M7-22, TASK-M6-17, TASK-M6-28]
   needs: [REQ-RENDER-042, REQ-GUI-013]
   requirements: [REQ-COL-026]
   reviewers: [code, qa, gui]
@@ -1792,7 +1840,7 @@
 - id: TASK-M8-03
   milestone: M8
   title: "Undo in the contract: the shared SetField history, coalescing, and per-field blast-radius metadata"
-  depends_on: [TASK-M8-01]
+  depends_on: [TASK-M8-01, TASK-M6-24]
   needs: [REQ-SCHED-017, REQ-SCHED-048, REQ-PERF-016, REQ-SCHED-059, REQ-GUI-007, REQ-GUI-009]
   requirements: [REQ-GUI-035, REQ-GUI-071, REQ-GUI-077]
   reviewers: [code, qa, gui]
@@ -1800,7 +1848,7 @@
 - id: TASK-M8-04
   milestone: M8
   title: "The gui crate and its firewall: F3 layer, crate-graph wall, and the GUI string lints"
-  depends_on: [TASK-M8-01]
+  depends_on: [TASK-M8-01, TASK-M6-24]
   needs: [REQ-SYS-004, REQ-SYS-003, REQ-SYS-002]
   requirements: [REQ-GUI-032, REQ-GUI-033, REQ-SYS-052, REQ-SYS-053, REQ-SYS-062, REQ-GUI-072, REQ-GUI-107]
   reviewers: [code, qa, gui]
@@ -1808,31 +1856,31 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21]
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24]
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069]
-  requirements: [REQ-GUI-070, REQ-GUI-075, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093]
+  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-06
   milestone: M8
   title: "Manifold view panel: Chart, Navigate, depth readout, Centre z₀, Slice & tilt, and the figure's axis labels"
-  depends_on: [TASK-M8-05]
+  depends_on: [TASK-M8-05, TASK-M6-26]
   needs: [REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026]
-  requirements: [REQ-GUI-081, REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161]
+  requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-07
   milestone: M8
   title: "Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)"
-  depends_on: [TASK-M8-06]
+  depends_on: [TASK-M8-06, TASK-M6-26, TASK-M6-27]
   needs: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016]
-  requirements: [REQ-GUI-091, REQ-GUI-092, REQ-GUI-099, REQ-GUI-155]
+  requirements: [REQ-GUI-092, REQ-GUI-099, REQ-GUI-155]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-1.7]
 - id: TASK-M8-08
   milestone: M8
   title: "Overlays ▾: the grouped toggles, their tiers, the Tier-3 buffer and quad drill-down"
-  depends_on: [TASK-M8-05, TASK-M4-14, TASK-M5-05]
+  depends_on: [TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27]
   needs: [REQ-RENDER-024, REQ-RENDER-055, REQ-TOOL-026, REQ-TOOL-045, REQ-CHART-039, REQ-SYS-013, REQ-SCHED-047]
   requirements: [REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153]
   reviewers: [code, qa, physics, gui, perf]
@@ -1848,7 +1896,7 @@
 - id: TASK-M8-10
   milestone: M8
   title: The hover trace and label on the figure
-  depends_on: [TASK-M8-09, TASK-M8-05]
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27]
   needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002]
   requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156]
   reviewers: [code, qa, gui]
@@ -1856,9 +1904,9 @@
 - id: TASK-M8-11
   milestone: M8
   title: "The Trajectory panel: summary, real space, the turning shape sphere, kept orbits"
-  depends_on: [TASK-M8-09, TASK-M8-05]
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27]
   needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047]
-  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-157]
+  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-12
@@ -1872,15 +1920,15 @@
 - id: TASK-M8-13
   milestone: M8
   title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
-  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03]
+  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03, TASK-M6-25]
   needs: [REQ-GUI-002, REQ-GUI-003]
-  requirements: [REQ-GUI-095, REQ-GUI-096, REQ-GUI-097, REQ-GUI-098, REQ-GUI-146, REQ-GUI-158]
+  requirements: [REQ-GUI-096, REQ-GUI-097]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-14
   milestone: M8
   title: "Inspector window and pane 1: the editable IC on the physical canvas (05_inspectors.png)"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16]
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28]
   needs: [REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008]
   requirements: [REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068]
   reviewers: [code, qa, physics, gui]
@@ -1912,7 +1960,7 @@
 - id: TASK-M8-18
   milestone: M8
   title: "Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)"
-  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05]
+  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28]
   needs: [REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027]
   requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160]
   reviewers: [code, qa, physics, gui]
@@ -1920,17 +1968,17 @@
 - id: TASK-M8-19
   milestone: M8
   title: "Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png)"
-  depends_on: [TASK-M8-05, TASK-M8-18, TASK-M7-14, TASK-M7-22]
+  depends_on: [TASK-M8-05, TASK-M8-18, TASK-M7-14, TASK-M7-22, TASK-M6-29]
   needs: [REQ-GUI-021, REQ-GUI-028, REQ-GUI-029, REQ-GUI-031, REQ-GEN-020, REQ-GEN-021, REQ-RENDER-006, REQ-RENDER-057, REQ-GUI-152]
-  requirements: [REQ-GUI-127, REQ-GUI-128, REQ-GUI-129, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023]
+  requirements: [REQ-GUI-127, REQ-GUI-129, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-20
   milestone: M8
   title: "Stain canvas: selection, wiring gestures, the node palette, node visuals"
-  depends_on: [TASK-M8-19]
+  depends_on: [TASK-M8-19, TASK-M6-29]
   needs: [REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-024, REQ-GUI-025, REQ-GUI-026, REQ-GUI-027, REQ-GEN-019, REQ-GUI-151]
-  requirements: [REQ-GUI-130, REQ-GUI-131, REQ-GUI-132, REQ-GUI-133, REQ-GUI-134, REQ-GUI-135]
+  requirements: [REQ-GUI-130, REQ-GUI-132, REQ-GUI-133, REQ-GUI-134, REQ-GUI-135]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-21
@@ -1944,7 +1992,7 @@
 - id: TASK-M8-22
   milestone: M8
   title: Legend generated by evaluating the stain (06_legend.png)
-  depends_on: [TASK-M8-19, TASK-M8-10]
+  depends_on: [TASK-M8-19, TASK-M8-10, TASK-M6-27]
   needs: [REQ-GEN-019, REQ-COL-002, REQ-GUI-021, REQ-GUI-030, REQ-COL-018]
   requirements: [REQ-GUI-105, REQ-GUI-106]
   reviewers: [code, qa, gui]
@@ -1952,7 +2000,7 @@
 - id: TASK-M8-23
   milestone: M8
   title: "Display window: the last stages and the display overlays (04_windows.png)"
-  depends_on: [TASK-M8-05, TASK-M8-19, TASK-M8-08]
+  depends_on: [TASK-M8-05, TASK-M8-19, TASK-M8-08, TASK-M6-28]
   needs: [REQ-RENDER-069, REQ-COL-042]
   requirements: [REQ-GUI-101, REQ-GUI-080]
   reviewers: [code, qa, gui]
@@ -1960,7 +2008,7 @@
 - id: TASK-M8-24
   milestone: M8
   title: "Run window: integration, escape and refinement settings under their contract names (04_windows.png)"
-  depends_on: [TASK-M8-05]
+  depends_on: [TASK-M8-05, TASK-M6-28]
   needs: [REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002]
   requirements: [REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047]
   reviewers: [code, qa, physics, gui]
@@ -1984,15 +2032,15 @@
 - id: TASK-M8-27
   milestone: M8
   title: "Console: the footer opened, on the telemetry stream (12_console.png)"
-  depends_on: [TASK-M8-05, TASK-M8-26, TASK-M8-03]
+  depends_on: [TASK-M8-05, TASK-M8-26, TASK-M8-03, TASK-M6-28]
   needs: [REQ-TOOL-002, REQ-TOOL-008, REQ-GUI-012]
-  requirements: [REQ-GUI-126, REQ-TOOL-108]
+  requirements: [REQ-TOOL-108]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-28
   milestone: M8
   title: Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
-  depends_on: [TASK-M8-26, TASK-M8-27]
+  depends_on: [TASK-M8-26, TASK-M8-27, TASK-M6-28]
   needs: [REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-007, REQ-TOOL-008, REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-053]
   requirements: [REQ-TOOL-098, REQ-TOOL-099, REQ-TOOL-100, REQ-TOOL-101, REQ-TOOL-114, REQ-TOOL-115, REQ-TOOL-128, REQ-TOOL-135]
   reviewers: [code, qa, physics, gui, perf]
@@ -2024,7 +2072,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32]
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28]
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
   reviewers: [code, qa, gui]

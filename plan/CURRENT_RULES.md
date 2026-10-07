@@ -159,7 +159,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-146** — The crate layout is confirmed *(closes RQ-76)*
 - **R-148** — The validation harness renders the "off" image *(closes RQ-78)*
 - **R-151** — Cubehelix's reference is the analytic form *(closes RQ-121, amends R-122)*
-- **R-152** — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*
+- **R-152** — A minimal Profiler window holds the Arbiter tab at M6 *(closes RQ-122)*. Still in force: the Arbiter tab is in the Profiler window at M6; TASK-M6-22 fills it, and TASK-M8-28 fills in the rest. Amended in part by R-390.
 - **R-155** — One GIF encoder for both builds *(closes RQ-125)*
 - **R-170** — The crate map *(closes G2)*
 - **R-172** — There is no contract crate *(closes C1, C4)*
@@ -176,7 +176,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-251** — TASK-M0-08 accepted at ~918; its register items, with the hash covering value, type and class
 - **R-263** — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*
 - **R-271** — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*
-- **R-274** — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*
+- **R-274** — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*. Still in force: gui's headless capture mode, spawned by the screenshot runner as a separate process, renders a named window offscreen and writes the PNG and the AccessKit names; no crate depends on `gui`; a case's `surface` field names the kind. Amended in part by R-390.
 - **R-275** — A control clipped out of the visible surface isn't present *(closes RQ-167)*
 - **R-278** — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*
 - **R-280** — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*
@@ -220,6 +220,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-379** — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
 - **R-381** — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
 - **R-383** — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
+- **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
 
 ## Values
 
@@ -272,7 +273,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-262** — Builds move to the internal disk, three agents at most
 - **R-264** — The size budget is a rough heuristic that weighs complexity; M0-09, M3-08 and M5-18 stay whole *(amends R-256, R-211)*. Still in force: its size decisions (PR #59 one PR at 1,084 counted lines; TASK-M3-08 and TASK-M5-18 one task each), and that size is never a question for the human. The budget as a gate and the self-merge condition "within budget" are gone (R-367, R-369): size is judgement, and the reviewers judge whether a big PR is big because the task is (it merges normally) or because the work is sloppy or bloated (it is fixed or split). Amended by R-367 and R-369.
 - **R-272** — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
-- **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
+- **R-277** — Agents: two at memory-pressure warning, three at normal *(amends R-252)*. Still in force: three agents at normal pressure, and only the running work at critical; two at warning while R-391's trial finds the Mac swapping, and for every warning reading if the trial is reverted (R-391). Replaced in part by R-391 (its warning rule, as a trial).
 - **R-289** — Rulings reach agents only in the opening prompt of a fresh dispatch
 - **R-290** — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*. Still in force: all of it; R-335, R-336, R-342, R-366 and R-371 each name test files, with implementer commits, that qa may change under a ruling (`qa_TASK-M0-22_r235.rs`'s `if:` check; TASK-M0-45's splits of the long tests; TASK-M0-48's scratch cleanup in `xtask/tests/qa_TASK-M0-38.rs` and `crates/validation/tests/qa_TASK-M0-38.rs`, accepted by R-346; TASK-M0-45's CI step matches in `qa_TASK-M0-22_r235.rs`, `support/qa_m0_01.rs` and `qa_TASK-M0-29.rs`). An exception of that kind, where a ruling forces the change, is now the orchestrator's and the reviewers' to decide, recorded in the PR (R-369). Amended by R-335, R-336, R-342, R-366, R-369 and R-371.
 - **R-292** — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only. Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293). Amended by R-293.
@@ -297,7 +298,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-369** — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 - **R-371** — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
 - **R-373** — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
-- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
+- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package. Still in force: items 1 to 3 as recorded; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count and time limits (R-376). Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied).
+- **R-391** — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
+- **R-393** — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
 
 ## CI
 
