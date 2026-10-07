@@ -494,6 +494,32 @@ negative_control!(
     check_surface_forms(&gui_cases(&[], &["x"]).to_string())
 );
 
+/// A failing case names its surface: a `data` surface by its path, a `gui` one by its screen.
+fn check_surface_shown(gui_shown: &str) {
+    assert_eq!(
+        screenshot::SurfaceRef::Data("surface.json".into()).to_string(),
+        "surface.json"
+    );
+    let gui = screenshot::SurfaceRef::Gui(screenshot::GuiSurface {
+        kind: screenshot::GuiKind::Gui,
+        screen: "01_main".into(),
+        steps: Vec::new(),
+    });
+    assert_eq!(gui.to_string(), gui_shown, "the gui surface's name");
+}
+
+#[test]
+fn screenshot_surface_ref_names_the_surface() {
+    check_surface_shown("gui screen 01_main");
+}
+
+negative_control!(
+    screenshot_surface_ref_names_the_surface,
+    "a gui surface named without its screen must be rejected",
+    expected = "the gui surface's name",
+    check_surface_shown("gui screen")
+);
+
 /// The capture command runs gui's capture mode through cargo, on xtask's own workspace and the mock, with the steps
 /// by name.
 fn check_command(steps: Vec<screenshot::GuiStep>, want_steps: &str) {
