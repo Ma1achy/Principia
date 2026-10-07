@@ -220,13 +220,15 @@ pub struct NodeBlock {
 // ── Compiled stains ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A compiled stain: the pipeline, its bind group layouts (group 0: the prelude's block and the node blocks after it;
-/// group 1: the stored `SimState` buffer, and the word buffer where the tier binds it, at R-343's bindings,
-/// `ledger::payload::bindings`; group 2: the frame's block, applied per R-369), and the node blocks, by canonical
+/// group 1: the stored `SimState` buffer, the word buffer where the tier binds it, and the `ICDescriptor` buffer where
+/// the stain reads `ctx.ic` (RQ-227), at R-343's bindings, `ledger::payload::bindings`; group 2: the frame's block,
+/// applied per R-369), and the node blocks, by canonical
 /// position. Every stain of its key shares it: what is a request's own, the stain as it renders and its nodes' keys, is
 /// the cache's ([`PipelineCache::rendered`], [`PipelineCache::live_keys`]).
 #[derive(Debug)]
 pub struct CompiledStain {
     key: PipelineKey,
+    reads_ic: bool,
     source: String,
     pipeline: wgpu::RenderPipeline,
     layouts: [wgpu::BindGroupLayout; 3],
@@ -314,13 +316,33 @@ impl CompiledStain {
         })
     }
 
+    /// Whether the stain reads its sample's `ICDescriptor`, `ctx.ic`, so its group 1 binds the `ICDescriptor` buffer
+    /// (RQ-227).
+    pub fn reads_ic(&self) -> bool {
+        self.reads_ic
+    }
+
     /// The bind group 1 for this stain: the stored `SimState` buffer, and the word buffer where the tier binds it.
-    /// Refused when the word is given at a tier without it, or missing at a tier with it.
+    /// Refused when the word is given at a tier without it, or missing at a tier with it, and for a stain that reads
+    /// `ctx.ic`, which needs [`CompiledStain::sim_group_ic`].
     pub fn sim_group(
         &self,
         device: &wgpu::Device,
         simstate: &wgpu::Buffer,
         word: Option<&wgpu::Buffer>,
+    ) -> Result<wgpu::BindGroup, String> {
+        self.sim_group_ic(device, simstate, word, None)
+    }
+
+    /// [`CompiledStain::sim_group`] with the `ICDescriptor` buffer, one element per sample, bound at its row of the
+    /// ledger's table where the stain reads `ctx.ic` (RQ-227) and not bound where it does not. Refused, beyond
+    /// `sim_group`'s refusals, when the stain reads `ctx.ic` and no `ICDescriptor` buffer is given.
+    pub fn sim_group_ic(
+        &self,
+        device: &wgpu::Device,
+        simstate: &wgpu::Buffer,
+        word: Option<&wgpu::Buffer>,
+        ic: Option<&wgpu::Buffer>,
     ) -> Result<wgpu::BindGroup, String> {
         if word.is_some() != self.key.has_word {
             return Err(format!(
@@ -338,6 +360,13 @@ impl CompiledStain {
             binding: w.binding,
             resource: word.as_entire_binding(),
         }));
+        if self.reads_ic {
+            let ic = ic.ok_or("the stain reads ctx.ic; no ICDescriptor buffer was given")?;
+            entries.push(wgpu::BindGroupEntry {
+                binding: ic_binding(),
+                resource: ic.as_entire_binding(),
+            });
+        }
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("stain sim buffers"),
             layout: &self.layouts[1],
@@ -395,11 +424,13 @@ fn create(
     fragment: Fragment,
 ) -> Result<CompiledStain, String> {
     let source = format!("{}{STAIN_ENTRY}", fragment.source);
+    let reads_ic = fragment.fields.iter().any(|f| f.starts_with("ic."));
     checked(device, "the stain's pipeline", || {
-        objects(device, key, &source, &fragment.uniforms)
+        objects(device, key, reads_ic, &source, &fragment.uniforms)
     })
     .map(|(pipeline, layouts, blocks)| CompiledStain {
         key,
+        reads_ic,
         source,
         pipeline,
         layouts,
@@ -407,10 +438,18 @@ fn create(
     })
 }
 
-/// The wgpu objects of [`create`]: the pipeline, its three bind group layouts, and the node blocks.
+/// The `ICDescriptor` buffer's binding in group 1, from the ledger's one table (R-343; RQ-227).
+fn ic_binding() -> u32 {
+    let [_, _, ic, _] = ledger::payload::bindings();
+    ic.binding
+}
+
+/// The wgpu objects of [`create`]: the pipeline, its three bind group layouts, and the node blocks. Group 1 holds the
+/// `ICDescriptor` buffer when `reads_ic`.
 fn objects(
     device: &wgpu::Device,
     key: PipelineKey,
+    reads_ic: bool,
     source: &str,
     uniforms: &[UniformBlock],
 ) -> (
@@ -430,6 +469,9 @@ fn objects(
     let mut group1 = vec![buffer_entry(simstate.binding, read_only)];
     if key.has_word {
         group1.push(buffer_entry(word.binding, read_only));
+    }
+    if reads_ic {
+        group1.push(buffer_entry(ic_binding(), read_only));
     }
     let layout = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

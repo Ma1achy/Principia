@@ -599,6 +599,12 @@ pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {
 /// `prev` holds it after a pop to the empty word (payload §3's `INVALID`).
 pub const FGW_NO_SYMBOL: u32 = 4;
 
+/// `payload`: bits 0–24 of the word's `.w`, the top limb of the mixed-radix integer `W` (payload §3).
+#[inline]
+pub fn fgw_payload(w: [u32; 4]) -> u32 {
+    extract(w[3], 0, 25)
+}
+
 /// The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
 /// bits 0–24 (payload §3).
 #[inline]

@@ -341,26 +341,29 @@ const PAYLOAD_6: [&str; 6] = [
     "sd_last_symbol_valid",
 ];
 
-/// The functions of the unpack layer that take a word, a `vec4<u32>`: payload §6's five and `fgw_symbol`
-/// (REQ-TOOL-025's `fgw_symbol(word, k)`), with its two steps over `W`'s limbs.
-const WGSL_WORD_FNS: [&str; 8] = [
+/// The functions of the unpack layer that take a word, a `vec4<u32>`: payload §6's five, `fgw_payload`, the `payload`
+/// entry's accessor (render contract Part 5: one accessor per named field; TASK-M1-08), and `fgw_symbol` (REQ-TOOL-025's
+/// `fgw_symbol(word, k)`), with its two steps over `W`'s limbs.
+const WGSL_WORD_FNS: [&str; 9] = [
     "fgw_length_raw",
     "fgw_truncated",
     "fgw_reduced_length_valid",
     "fgw_reduced_length",
     "fgw_retained_prefix_length",
+    "fgw_payload",
     "fgw_mixed_radix",
     "fgw_div3",
     "fgw_symbol",
 ];
 
 /// The functions of the generated Rust that take a `[u32; 4]`: the WGSL's, and the pack the append writes with.
-const RUST_WORD_FNS: [&str; 9] = [
+const RUST_WORD_FNS: [&str; 10] = [
     "fgw_length_raw",
     "fgw_truncated",
     "fgw_reduced_length_valid",
     "fgw_reduced_length",
     "fgw_retained_prefix_length",
+    "fgw_payload",
     "fgw_mixed_radix",
     "fgw_div3",
     "fgw_symbol",

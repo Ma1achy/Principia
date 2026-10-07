@@ -26,6 +26,8 @@ struct ReadParams {
 struct SimState {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
+    r_sh: array<vec2<f32>, 3>,
+    p_sh: array<vec2<f32>, 3>,
     S: f32,
     theta: f32,
     mean_y: f32,
@@ -169,6 +171,8 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     var out: SimState;
     out.r = s_r;
     out.p = s_p;
+    out.r_sh = s_r_sh;
+    out.p_sh = s_p_sh;
     out.S = s_S;
     out.theta = s_theta;
     out.mean_y = s_mean_y;
@@ -206,4 +210,40 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     out.energy_drift = energy_drift(s_r, s_p, masses, s_E_0);
     out.Lz_drift = Lz_drift(s_r, s_p, s_Lz_0);
     return out;
+}
+
+// `ic_buffer`'s bind group and binding number (R-343).
+const IC_GROUP: u32 = 1u;
+const IC_BINDING: u32 = 2u;
+@group(1) @binding(2) var<storage, read> ic_buffer: array<ICDescriptor>;
+// `ic_buffer`'s readers, element `i`, one stored member per load, never the whole struct (R-378).
+fn ic_read_m0(i: u32) -> f32 { return ic_buffer[i].m0; }
+fn ic_read_m1(i: u32) -> f32 { return ic_buffer[i].m1; }
+fn ic_read_m2(i: u32) -> f32 { return ic_buffer[i].m2; }
+fn ic_read_q_mass(i: u32) -> f32 { return ic_buffer[i].q_mass; }
+fn ic_read_rho_mag(i: u32) -> f32 { return ic_buffer[i].rho_mag; }
+fn ic_read_lambda_mag(i: u32) -> f32 { return ic_buffer[i].lambda_mag; }
+fn ic_read_rho_ratio(i: u32) -> f32 { return ic_buffer[i].rho_ratio; }
+fn ic_read_rho_angle(i: u32) -> f32 { return ic_buffer[i].rho_angle; }
+fn ic_read_K_0(i: u32) -> f32 { return ic_buffer[i].K_0; }
+fn ic_read_V_0(i: u32) -> f32 { return ic_buffer[i].V_0; }
+fn ic_read_virial_ratio(i: u32) -> f32 { return ic_buffer[i].virial_ratio; }
+fn ic_read_r_min_pair_0(i: u32) -> f32 { return ic_buffer[i].r_min_pair_0; }
+// The sample's `ICDescriptor` (`ctx.ic`, render contract Part 1): only the members the stain reads filled, each
+// through its reader; the others zero and never loaded (R-378).
+fn ic_read(i: u32) -> ICDescriptor {
+    var v: ICDescriptor;
+    v.m0 = ic_read_m0(i);
+    v.m1 = ic_read_m1(i);
+    v.m2 = ic_read_m2(i);
+    v.q_mass = ic_read_q_mass(i);
+    v.rho_mag = ic_read_rho_mag(i);
+    v.lambda_mag = ic_read_lambda_mag(i);
+    v.rho_ratio = ic_read_rho_ratio(i);
+    v.rho_angle = ic_read_rho_angle(i);
+    v.K_0 = ic_read_K_0(i);
+    v.V_0 = ic_read_V_0(i);
+    v.virial_ratio = ic_read_virial_ratio(i);
+    v.r_min_pair_0 = ic_read_r_min_pair_0(i);
+    return v;
 }

@@ -55,6 +55,18 @@ pub mod picking;
 /// (colour_composition Appendix A; R-75; TASK-M1-11).
 pub mod bringup;
 
+/// The host export decoder (render contract Part 5 (c); dd_generation_root §1, seam 13; RQ-217): every ledger field of
+/// one sample decoded from the packed payload, generated from the layout table by `cargo xtask codegen`
+/// (`ledger::gen::export`).
+pub mod export {
+    // The decoded members keep the ledger's names, such as `S`, `C_ty`, `E_0` and `dE_max` (dd_simstate_payload §1,
+    // §6), as the kernel's generated payload does; the one suppression covers the whole generated file.
+    #[allow(non_snake_case)]
+    mod generated;
+
+    pub use generated::*;
+}
+
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting
 /// (R-297; TASK-M0-44).
 pub mod compute;

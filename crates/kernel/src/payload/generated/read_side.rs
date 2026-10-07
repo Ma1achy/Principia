@@ -39,6 +39,8 @@ pub struct ReadParams {
 pub struct SimState {
     pub r: [[f32; 2]; 3],
     pub p: [[f32; 2]; 3],
+    pub r_sh: [[f32; 2]; 3],
+    pub p_sh: [[f32; 2]; 3],
     pub S: f32,
     pub theta: f32,
     pub mean_y: f32,
@@ -216,6 +218,8 @@ pub fn sim_state_from_ftle(
     SimState {
         r: s.r,
         p: s.p,
+        r_sh: s.r_sh,
+        p_sh: s.p_sh,
         S: s.S,
         theta: s.theta,
         mean_y: s.mean_y,
@@ -259,8 +263,8 @@ pub fn sim_state_from_ftle(
     }
 }
 
-/// `SimStateBase` read: FTLE is baked out, so `ftle` reads the canonical quiet NaN and `ftle_valid` is false
-/// (lowering Part 3a).
+/// `SimStateBase` read: FTLE is baked out, so `ftle` and every component of the shadow `r_sh` and `p_sh` read
+/// the canonical quiet NaN and `ftle_valid` is false (lowering Part 3a).
 /// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads
 /// `ensemble_spread` as the canonical quiet NaN (R-145). `masses` are the sample's `ICDescriptor` `m0 m1 m2`,
 /// which `energy_drift` reads (dd_generation_root §3.8).
@@ -279,6 +283,8 @@ pub fn sim_state_from_base(
     SimState {
         r: s.r,
         p: s.p,
+        r_sh: [[canonical_nan(); 2]; 3],
+        p_sh: [[canonical_nan(); 2]; 3],
         S: s.S,
         theta: s.theta,
         mean_y: s.mean_y,

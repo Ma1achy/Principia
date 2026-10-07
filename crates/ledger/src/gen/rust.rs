@@ -649,6 +649,8 @@ pub fn fgw_identity() -> u32 {
 /// - `FGW_CAPACITY`, `length`'s range's greatest value, and `FGW_LENGTH_SENTINEL`, its sentinel;
 /// - `fgw_length_raw`, `fgw_truncated`, `fgw_reduced_length_valid`, `fgw_reduced_length` and
 ///   `fgw_retained_prefix_length`, which read `.w` alone;
+/// - `fgw_payload`, the `payload` entry's accessor, which reads `.w` alone (render contract Part 5: one accessor per
+///   named field; the debug catalogue's view of it reads it so, R-378);
 /// - `fgw_symbol(w, k)`, symbol `k` of the retained prefix, 0-based, or `FGW_NO_SYMBOL` past it, decoded sequentially
 ///   in O(length) (payload §3: the base-3 tail popped by depth, the residue `d₀`, the continuations replayed), through
 ///   `fgw_mixed_radix`, the integer `W`, `fgw_div3`, one pop, and `fgw_after`, one continuation composed;
@@ -719,6 +721,12 @@ pub fn fgw_retained_prefix_length(w: [u32; 4]) -> u32 {{
 /// No symbol: one past the last symbol code. [`fgw_symbol`] returns it past the retained prefix, and the append's
 /// `prev` holds it after a pop to the empty word (payload §3's `INVALID`).
 pub const FGW_NO_SYMBOL: u32 = {no_symbol};
+
+/// `payload`: {p_bits} of the word's `.w`, the top limb of the mixed-radix integer `W` (payload §3).
+#[inline]
+pub fn fgw_payload(w: [u32; 4]) -> u32 {{
+    extract(w[3], {p_offset}, {p_width})
+}}
 
 /// The mixed-radix integer `W` the word packs, as four 32-bit limbs, low first: `x`, `y`, `z`, then `.w`'s `payload`,
 /// {p_bits} (payload §3).

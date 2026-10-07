@@ -2,8 +2,8 @@
 //! source per field from the catalogue generator; compiling a mega-switch over heterogeneous field types would be the
 //! interpreter anti-pattern"; Part 4: "all debug views … compile WGSL on selection, async, last-valid fallback").
 //!
-//! A field's view is a stain of its own, which the catalogue generator writes ([`ViewGenerator`]; it plugs in here in
-//! TASK-M1-08). Selecting a field ([`DebugViews::select`]) bakes its view the first time, keeps it, and requests it
+//! A field's view is a stain of its own, which the catalogue generator writes ([`ViewGenerator`]; the registry's
+//! [`crate::registry::Catalogue`] gives each generated view as one, TASK-M1-08). Selecting a field ([`DebugViews::select`]) bakes its view the first time, keeps it, and requests it
 //! from the pipeline cache like any stain: its own fragment key, its own pipeline, compiled off the frame's path.
 //! Nothing at runtime chooses between fields inside a shader: each field id is a different pipeline.
 
