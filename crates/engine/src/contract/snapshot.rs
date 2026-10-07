@@ -54,7 +54,8 @@ pub struct Precision {
 pub struct FrameSummary {
     /// The frame record's `frame_ms` at the latest frame: its wall-clock milliseconds.
     pub frame_ms: Option<f64>,
-    /// 1000 / the mean `frame_ms` of the frames since the previous snapshot.
+    /// 1000 / the mean `frame_ms` of the frames since the previous snapshot; `None` when no frame has completed
+    /// since the previous snapshot or that mean is 0, never carried forward from an earlier snapshot.
     pub fps: Option<f64>,
     /// The frame record's `leaf_count` at the latest frame.
     pub quad_count: Option<u64>,

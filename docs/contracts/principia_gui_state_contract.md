@@ -68,7 +68,7 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 
 **The frame summary's definitions (R-72; REQ-GUI-176; TASK-M6-24).** Each is read from the frame record (`principia_dd_telemetry_and_tiers.md` §5) and posted GUI-sized, never per frame:
 - `frame_ms` is the frame record's `frame_ms` at the latest frame: its wall-clock milliseconds.
-- `fps` is 1000 / the mean `frame_ms` of the frames since the previous snapshot.
+- `fps` is 1000 / the mean `frame_ms` of the frames since the previous snapshot. When no frame has completed since the previous snapshot, or that mean `frame_ms` is 0, `fps` is absent (the GUI draws "—"); it is not carried forward from an earlier snapshot.
 - `quad_count` is the frame record's `leaf_count` at the latest frame, a u64 as `leaf_count` is.
 - `live_memory { heap_bytes, gpu_bytes }` is the frame record's `live_memory` at the latest frame: `heap_bytes` its `heap` pool's `bytes`, `gpu_bytes` its `gpu` pool's `bytes`, each a u64. The `tile_cache` pool is not added to either: `heap` and `gpu` are the tracked memory outside the tile cache. The footer's memory readout, GPU and heap, shows these two.
 
