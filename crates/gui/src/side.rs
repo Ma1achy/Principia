@@ -65,13 +65,11 @@ impl EngineSide for RealSide {
 }
 
 /// The mock engine, with its canvas when one is open (R-390).
-#[cfg(any(test, feature = "mock"))]
 pub struct MockSide {
     engine: crate::mock::MockEngine,
     canvas: Option<Arc<crate::mock::canvas::MockCanvas>>,
 }
 
-#[cfg(any(test, feature = "mock"))]
 impl MockSide {
     /// The mock engine `engine`, drawing through `canvas` if given.
     pub fn new(
@@ -82,7 +80,6 @@ impl MockSide {
     }
 }
 
-#[cfg(any(test, feature = "mock"))]
 impl EngineSide for MockSide {
     type Engine = crate::mock::MockEngine;
 

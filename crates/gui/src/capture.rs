@@ -2,7 +2,7 @@
 //! on the mock, its clock frozen (RQ-246), plays the steps, renders the named screen offscreen at 01_main.png's 2160 ×
 //! 1350 pixels, and writes `capture.png` and `names.json`, each accessible name with its rect in pixels, for R-275.
 //! The screenshot runner spawns it as a separate process, as `gate` spawns validation's binary: no crate depends on
-//! `gui` (systems_architecture §7.1). Compiled under the `mock` feature and in gui's tests, as the mock is.
+//! `gui` (systems_architecture §7.1). Always compiled, as the mock is (RQ-252).
 
 use std::fs;
 use std::path::Path;

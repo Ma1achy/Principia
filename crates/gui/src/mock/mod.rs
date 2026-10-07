@@ -1,5 +1,5 @@
-//! The mock engine (R-390): a test double of the engine's GUI-facing interface, compiled under the `mock` feature and
-//! in gui's tests. It serves plausible GUI-sized snapshots, applies `SetField` with undo and redo (R-69), carries its
+//! The mock engine (R-390): a test double of the engine's GUI-facing interface, always compiled (RQ-252); the `mock`
+//! feature only chooses it as the binary's engine. It serves plausible GUI-sized snapshots, applies `SetField` with undo and redo (R-69), carries its
 //! log entries in its snapshots (RQ-245), supplies the fake clock's deterministic tick (RQ-246) and draws the figure's
 //! stand-in through the canvas trait (RQ-247). It earns no privilege: the app reaches it only through the interface,
 //! as it reaches the real engine (gui_state_contract §1). Its values are placeholder content, not corpus values.

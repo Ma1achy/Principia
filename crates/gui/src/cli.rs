@@ -20,8 +20,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
     }
 }
 
-/// The commands on the mock.
-#[cfg(any(test, feature = "mock"))]
+/// The commands on the mock, always compiled; the `mock` feature only chooses whether `run` dispatches to them (RQ-252).
 pub mod mock {
     use std::sync::Arc;
 

@@ -133,22 +133,12 @@ struct Step {
     profile: Option<String>,
 }
 
-/// The feature that adds gui's mock engine, which CI's archive and clippy build (RQ-252): it adds the mock to gui and
-/// nothing else, so a step with it alone is in the default feature set.
-const GUI_MOCK: &str = "gui/mock";
-
-/// The value of `--features` in `args`, or "" for the default feature set, which [`GUI_MOCK`] alone stays in.
+/// The value of `--features` in `args`, or "" for the default feature set.
 fn features(args: &[String]) -> &str {
-    let features = args
-        .iter()
+    args.iter()
         .position(|a| a == "--features")
         .and_then(|i| args.get(i + 1))
-        .map_or("", String::as_str);
-    if features == GUI_MOCK {
-        ""
-    } else {
-        features
-    }
+        .map_or("", String::as_str)
 }
 
 /// The options of `cargo nextest archive` that name the archive, not what goes in it, each with its value.
@@ -428,7 +418,7 @@ validation::negative_control!(
         &ci_workflow()
             .iter()
             .map(|w| w.replace(
-                "run: cargo nextest archive --workspace --features gui/mock",
+                "run: cargo nextest archive --workspace",
                 "run: cargo nextest archive -p kernel"
             ))
             .collect::<Vec<_>>(),

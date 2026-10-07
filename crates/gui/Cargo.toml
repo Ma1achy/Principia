@@ -17,6 +17,7 @@ pollster = "1"
 png = "0.18"
 serde_json = "1"
 
-# `--features mock` runs the app on the mock engine (R-390); gui's own tests always compile the mock.
+# `--features mock` runs the app on the mock engine (R-390); the mock is always compiled, and the feature only chooses
+# the engine `main` runs (RQ-252).
 [features]
 mock = []

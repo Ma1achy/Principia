@@ -1,9 +1,8 @@
 //! The dev GUI: depends on the engine's typed surface only; nothing depends on it (systems_architecture §7.1;
-//! gui_state_contract §1). The app shell, on an engine side the app is generic over: the mock engine under the `mock`
-//! feature and in gui's tests (R-390), or the real engine's data contract.
+//! gui_state_contract §1). The app shell, on an engine side the app is generic over: the mock engine (R-390), always compiled,
+//! or the real engine's data contract. The `mock` feature only chooses the engine the binary runs (RQ-252).
 
 pub mod app;
-#[cfg(any(test, feature = "mock"))]
 pub mod capture;
 pub mod cli;
 pub mod clock;
@@ -14,7 +13,6 @@ pub mod layout;
 pub mod side;
 pub mod theme;
 
-#[cfg(any(test, feature = "mock"))]
 pub mod mock;
 
 #[cfg(test)]
