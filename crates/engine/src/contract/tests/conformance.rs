@@ -149,6 +149,8 @@ fn check_names_with<E: EngineInterface>(make: impl FnMut() -> E, case: &str) {
 fn conformance_non_conforming_double_fails_naming_the_case() {
     check_names(Rule::Undo, "undo_and_redo_restore_and_reapply");
     check_names(Rule::Redo, "undo_and_redo_restore_and_reapply");
+    // Redo past a no-history edit reapplies the undone edit, so a redo that does nothing fails that case too.
+    check_names(Rule::Redo, "no_history_edit_leaves_history_unchanged");
     check_names(Rule::NoHistory, "no_history_edit_leaves_history_unchanged");
     check_names(Rule::Drop, "set_field_shows_in_next_snapshot");
     check_names(Rule::NoLog, "each_applied_set_field_logs_one_contract_info");
@@ -300,4 +302,37 @@ validation::negative_control!(
         "SetField Playhead.t 0 → 1 (no history)",
         "message lacks (no history)"
     )
+);
+
+/// The names the console shows for each severity and source (render_gui_spec §G12; gui_state_contract §2).
+fn check_names_shown(severity: fn(Severity) -> &'static str, source: fn(Source) -> &'static str) {
+    assert_eq!(
+        [Severity::Error, Severity::Warn, Severity::Info].map(severity),
+        ["error", "warn", "info"],
+        "the severities' console names"
+    );
+    assert_eq!(
+        [
+            Source::Stain,
+            Source::Integrator,
+            Source::Quadtree,
+            Source::Contract,
+            Source::App
+        ]
+        .map(source),
+        ["stain", "integrator", "quadtree", "contract", "app"],
+        "the sources' console names"
+    );
+}
+
+#[test]
+fn log_names_are_the_consoles() {
+    check_names_shown(Severity::name, Source::name);
+}
+
+validation::negative_control!(
+    log_names_are_the_consoles,
+    "a severity named by its source's name must be rejected",
+    expected = "the severities' console names",
+    check_names_shown(|_| "contract", Source::name)
 );

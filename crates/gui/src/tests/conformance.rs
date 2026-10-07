@@ -51,6 +51,8 @@ fn conformance_non_conforming_mock_fails_naming_the_case() {
     let err = conformance::run(|| NoRedo(MockEngine::new())).expect_err("NoRedo passed");
     assert_eq!(
         err,
-        "conformance case `undo_and_redo_restore_and_reapply` failed: the playhead after redo: got 0.0, expected 1.0"
+        "conformance case `undo_and_redo_restore_and_reapply` failed: the playhead after redo: got 0.0, expected 1.0; \
+         conformance case `no_history_edit_leaves_history_unchanged` failed: the playhead after redo past a \
+         no-history edit: got 2.0, expected 1.0"
     );
 }

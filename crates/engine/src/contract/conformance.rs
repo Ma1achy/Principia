@@ -122,7 +122,8 @@ fn undo_and_redo_restore_and_reapply(engine: &mut dyn EngineInterface) -> Result
     expect("the history after redo", redone.history, after)
 }
 
-/// An edit marked "no history" changes the field and leaves both histories as they were (R-101).
+/// An edit marked "no history" changes the field and leaves both histories as they were, the redo history still
+/// reapplying the edit it holds (R-101).
 fn no_history_edit_leaves_history_unchanged(
     engine: &mut dyn EngineInterface,
 ) -> Result<(), String> {
@@ -138,7 +139,14 @@ fn no_history_edit_leaves_history_unchanged(
         t_of(&after),
         t0 + 2.0,
     )?;
-    expect("the history after a no-history edit", after.history, before)
+    expect("the history after a no-history edit", after.history, before)?;
+    // The redo history still holds the undone edit itself, so redo reapplies it.
+    engine.redo();
+    expect(
+        "the playhead after redo past a no-history edit",
+        t_of(&engine.snapshot()),
+        t0 + 1.0,
+    )
 }
 
 /// Each applied `SetField` logs one `info` entry from `contract`, seen in the next snapshot and in no later one
@@ -146,9 +154,9 @@ fn no_history_edit_leaves_history_unchanged(
 fn each_applied_set_field_logs_one_contract_info(
     engine: &mut dyn EngineInterface,
 ) -> Result<(), String> {
-    let t0 = t_of(&engine.snapshot());
-    engine.set_field(playhead(t0 + 1.0, false));
-    engine.set_field(playhead(t0 + 2.0, true));
+    // Any value logs the same entry, so the two edits take fixed ones.
+    engine.set_field(playhead(0.5, false));
+    engine.set_field(playhead(0.75, true));
     let contract = |s: &Snapshot| {
         s.log
             .iter()
