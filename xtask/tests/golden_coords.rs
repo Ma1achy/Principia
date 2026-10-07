@@ -285,3 +285,44 @@ negative_control!(
         check_prepend_renders(&renderer, "prepend_missing", false);
     }
 );
+
+/// A case's `render` takes `prepend` beside the four render fields and the constants, and still refuses a field it
+/// does not know.
+fn check_render_fields(from_render: fn(&Value) -> Result<Config, String>) {
+    let base = json!({ "shader": "s.wgsl", "fragment": "fs", "width": 1, "height": 1 });
+    assert!(from_render(&base).is_ok(), "the four render fields alone");
+    let mut with = base.clone();
+    with["prepend"] = json!(["a.wgsl"]);
+    assert!(from_render(&with).is_ok(), "`prepend` is a render field");
+    let mut unknown = base.clone();
+    unknown["prepends"] = json!(["a.wgsl"]);
+    let err = from_render(&unknown).expect_err("an unknown render field was accepted");
+    assert!(
+        err.contains("is not a render field"),
+        "refused for another reason: {err}"
+    );
+    let mut bad = base;
+    bad["prepend"] = json!(["../a.wgsl"]);
+    assert!(
+        from_render(&bad).is_err(),
+        "a `prepend` outside the workspace was accepted"
+    );
+}
+
+#[test]
+fn golden_prepend_is_a_render_field() {
+    check_render_fields(Config::from_render);
+}
+
+negative_control!(
+    golden_prepend_is_a_render_field,
+    "a loader that takes every field accepts an unknown one",
+    expected = "an unknown render field was accepted",
+    check_render_fields(|v| {
+        let mut v = v.clone();
+        if let Some(o) = v.as_object_mut() {
+            o.retain(|k, _| k != "prepends");
+        }
+        Config::from_render(&v)
+    })
+);
