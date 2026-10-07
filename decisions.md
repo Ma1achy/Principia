@@ -6308,6 +6308,9 @@ and the human confirms it at its gate. A physics choice stays the human's (R-369
   (R-185; systems_architecture §7.1). The conformance suite is defined once, in the engine crate beside the contract;
   engine's tests run it against the real engine and gui's tests against the mock. Every case runs on both, none is
   skipped for either, and a case joins the suite only when both can run it.
+  *Amended per R-369 (7 Oct 2026; RQ-252 as amended, option (c)):* the mock is always compiled in the gui crate, the
+  `mock` feature choosing only which engine `main` runs; the crate map is still unchanged (R-185; systems_architecture
+  §7.1).
 - **The real engine's side.** The engine crate's contract gains the interface the GUI calls (`set_field`, the
   snapshot, undo and redo as requests, the events), and the real engine implements it as far as the conformance suite
   reaches. TASK-M8-01 and TASK-M8-03 keep every requirement they close, and TASK-M8-03 depends on TASK-M6-24.

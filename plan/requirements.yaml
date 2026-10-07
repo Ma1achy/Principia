@@ -13932,7 +13932,7 @@
   note: "Showing the compiled compute mode beside the setting where they differ is applied per R-204, accepted by R-358 (design, R-297's Applied note); the vertex and fragment modes are recorded in the header (REQ-TOOL-141), not shown in the Profiler, since R-297 asks only that the compute setting be shown."
 - id: REQ-GUI-165
   area: GUI
-  statement: "The gui crate must hold a mock engine, a test double of the engine's contract built under gui's `mock` feature and in gui's tests, that serves plausible GUI-sized Snapshots, applies each SetField with undo and redo as R-69 gives them (an edit marked \"no history\" never entering the history), emits events through the contract's own channels, and runs a fake clock so Time plays; and `cargo run -p gui --features mock` must launch the app on it."
+  statement: "The gui crate must hold a mock engine, a test double of the engine's contract always compiled in gui, the `mock` feature choosing only which engine `main` runs, that serves plausible GUI-sized Snapshots, applies each SetField with undo and redo as R-69 gives them (an edit marked \"no history\" never entering the history), emits events through the contract's own channels, and runs a fake clock so Time plays; and `cargo run -p gui --features mock` must launch the app on it."
   source:
   - file: decisions.md
     section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
@@ -13949,6 +13949,7 @@
   - R-69
   - R-390
   milestone: M6
+  note: "The mock being always compiled, with the `mock` feature choosing only which engine `main` runs, is applied per R-369 (CI and tooling): RQ-252 as amended, option (c), in place of its option (a), whose `--features gui/mock` broke cargo-mutants' shards without gui and 15 qa checks pinning ci.yml's text."
 - id: REQ-GUI-166
   area: GUI
   statement: "One contract conformance suite, defined once beside the contract in the engine crate, must run every one of its cases against both the mock engine and the real engine's implementation of the contract, none skipped for either, and both must pass it; every change to the contract surface must re-run it for both."
