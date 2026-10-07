@@ -433,6 +433,43 @@ negative_control!(
     )
 );
 
+/// A two-bit categorical probe of four classes with the stored sentinel `sentinel`.
+fn categorical_with(sentinel: f64) -> Ledger {
+    let mut l = with_probe("probe_bit", 2, Scale::Categorical(4), Range::int(0, 3));
+    l.entries
+        .iter_mut()
+        .find(|e| e.name == Some("probe_bit"))
+        .expect("the probe")
+        .sentinel = Some(sentinel);
+    l
+}
+
+/// A categorical view shows a stored sentinel as its literal value (R-136) only when a u-bits field can store it: a
+/// finite, non-negative value; an infinite or negative one leaves the classes alone (TASK-M1-09).
+#[test]
+fn view_ramp_of_a_categorical_sentinel_is_literal_when_storable() {
+    check_ramp(
+        &categorical_with(2.0),
+        "select(dbg_cat(ctx.sample.probe_bit, 4u), dbg_sentinel(f32(ctx.sample.probe_bit), ctx.frag_xy), \
+         ctx.sample.probe_bit == 2u)",
+    );
+    check_ramp(&categorical_with(0.0), "select(dbg_cat(ctx.sample.probe_bit, 4u), dbg_sentinel(f32(ctx.sample.probe_bit), ctx.frag_xy), ctx.sample.probe_bit == 0u)");
+    for s in [f64::INFINITY, -1.0] {
+        check_ramp(&categorical_with(s), "dbg_cat(ctx.sample.probe_bit, 4u)");
+    }
+}
+
+negative_control!(
+    view_ramp_of_a_categorical_sentinel_is_literal_when_storable,
+    "an infinite sentinel, which no u-bits field stores, is not drawn literally",
+    expected = "is not coloured with",
+    check_ramp(
+        &categorical_with(f64::INFINITY),
+        "select(dbg_cat(ctx.sample.probe_bit, 4u), dbg_sentinel(f32(ctx.sample.probe_bit), ctx.frag_xy), \
+         ctx.sample.probe_bit == 0u)"
+    )
+);
+
 /// The payload ledger with `field`'s range replaced by `range`.
 fn with_range(field: &str, range: Range) -> Ledger {
     let mut l = ledger::layout();

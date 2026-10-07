@@ -548,3 +548,90 @@ negative_control!(
         check_round_trip(&wgsl, false);
     }
 );
+
+/// Checks that `float` writes each of `cases` as its literal.
+fn check_floats(cases: &[(f64, &str)]) {
+    for &(x, want) in cases {
+        assert_eq!(numeric::float(x), want, "{x} is not written as {want}");
+    }
+}
+
+/// The template's numbers are WGSL f32 literals: the f32's shortest round-trip form, with a decimal point unless it
+/// has one or an exponent already.
+#[test]
+fn numeric_view_template_floats_are_wgsl_literals() {
+    check_floats(&[
+        (1.0, "1.0"),
+        (0.0, "0.0"),
+        (-2.0, "-2.0"),
+        (2.5, "2.5"),
+        (76.0, "76.0"),
+        (1e-8, "1e-8"),
+        (1e20, "1e20"),
+        (numeric::log_floor(), "5.9604645e-8"),
+        (numeric::cyclic_period(), "6.2831855"),
+        (f64::INFINITY, "inf"),
+        (f64::NAN, "NaN"),
+    ]);
+}
+
+negative_control!(
+    numeric_view_template_floats_are_wgsl_literals,
+    "an integer-valued number written without its decimal point is no f32 literal",
+    expected = "is not written as",
+    check_floats(&[(76.0, "76")])
+);
+
+/// Checks that the diverging view `n`'s ramp line places raw on `[-r, r]`, `r` written as `want`.
+fn check_symmetric(n: &NumericView, want: &str) {
+    let wgsl = n.colour("ctx.sample.probe");
+    let ramp = ramp_line(&wgsl);
+    assert!(
+        ramp.contains(&format!("range_norm(raw, -{want}, {want}, ")),
+        "the diverging view is not on [-{want}, {want}]: {ramp}"
+    );
+    assert!(ramp.ends_with(", vec2<f32>(-m, m)));"), "{ramp}");
+}
+
+/// A diverging view with both ends fixed places raw on the symmetric range of the larger magnitude, `[-2, 2]` for
+/// `[-2, 1]` and for `[-0.5, 2]`; with an end unbounded, on the measured symmetric `[-m, m]`.
+#[test]
+fn numeric_view_template_diverging_fixed_is_symmetric() {
+    check_symmetric(
+        &view(
+            Placement::Diverging,
+            End::Fixed(-2.0),
+            End::Fixed(1.0),
+            None,
+        ),
+        "2.0",
+    );
+    check_symmetric(
+        &view(
+            Placement::Diverging,
+            End::Fixed(-0.5),
+            End::Fixed(2.0),
+            None,
+        ),
+        "2.0",
+    );
+    check_symmetric(
+        &view(Placement::Diverging, End::Fixed(-1.0), End::Measured, None),
+        "m",
+    );
+}
+
+negative_control!(
+    numeric_view_template_diverging_fixed_is_symmetric,
+    "a fixed diverging view is not on the measured range",
+    expected = "is not on [-m, m]",
+    check_symmetric(
+        &view(
+            Placement::Diverging,
+            End::Fixed(-2.0),
+            End::Fixed(1.0),
+            None
+        ),
+        "m"
+    )
+);
