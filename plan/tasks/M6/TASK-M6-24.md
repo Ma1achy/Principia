@@ -57,6 +57,7 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 - `decisions.md` § "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
 - `decisions.md` § "R-329 — The header's core count is `cpu_cores_available`; no `usize` in a serialised type"
 
+- `decisions.md` § "R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*"
 ## Deliverables
 - `crates/engine/src/contract/`: the interface the GUI calls, as a trait — apply a `SetField`, read the latest
   snapshot, request undo and redo; the events are read from the snapshot — as plain data (gui_state_contract §1), with the real engine's
@@ -195,6 +196,8 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   physics reviewer's approval. R-390's three reviewers, code, qa and gui, cover everything else. This is the gate rule
   applied alongside R-390 ("Reviewers: code, qa and gui"), flagged for the human (applied per R-369); it changes
   nothing that gets built.
+- **R-396** settles it: physics reviews this task for REQ-GUI-176 and -177 only, and code, qa and gui review everything
+  else. `plan/tasks.yaml` cites R-396 beside the reviewer list.
 - Carrying the log entries in the profiler's schema-v1 stream stays TASK-M8-27's (REQ-GUI-126 on the real engine).
 - Pre-flight (R-388): RQ-243 to RQ-256, decided per R-369 (7 Oct 2026), shape this file's Goal, Deliverables,
   acceptance lines, Notes and References.

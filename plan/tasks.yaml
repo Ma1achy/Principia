@@ -405,6 +405,14 @@
   requirements: [REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005, REQ-TOOL-028]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M1-16
+  milestone: M1
+  title: "Conform ctx.chart.slice_uv to the slice plane (R-394)"
+  depends_on: [TASK-M1-07]
+  needs: []
+  requirements: [REQ-COL-063]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M2-01
   milestone: M2
   title: "Link registry: generated links with inverses, log-det, ε clamps and the chart constants"
@@ -600,8 +608,8 @@
 - id: TASK-M2-25
   milestone: M2
   title: Portable WGSL decode and encode, the DECODE preset and the agreement preset
-  depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14]
-  needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001]
+  depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16]
+  needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063]
   requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.7, PIT-9, PIT-5]
@@ -1113,8 +1121,8 @@
   milestone: M5
   title: "QuadRequest: flags, per-quad uniforms and quad-local sample positions"
   depends_on: [TASK-M5-03]
-  needs: [REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010]
-  requirements: [REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036]
+  needs: [REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010, REQ-TOOL-152]
+  requirements: [REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M5-05
@@ -1507,7 +1515,7 @@
   depends_on: [TASK-M0-16, TASK-M0-20]
   needs: [REQ-SYS-002, REQ-SYS-003, REQ-TOOL-134]
   requirements: [REQ-GUI-165, REQ-GUI-166, REQ-GUI-167, REQ-GUI-168, REQ-GUI-075, REQ-GUI-162, REQ-GUI-176, REQ-GUI-177]
-  reviewers: [code, qa, gui, physics]
+  reviewers: [code, qa, gui, physics]  # physics for REQ-GUI-176 and -177 only (R-396)
   pitfalls: []
 - id: TASK-M6-25
   milestone: M6
