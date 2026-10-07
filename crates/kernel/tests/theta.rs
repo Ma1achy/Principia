@@ -9,11 +9,13 @@
 //! - `theta_unwrap_exact_pi`: a per-step difference, and an exit-minus-stored difference, of exactly ±π each add +π;
 //!   the wrap's edges either side of ±π (R-389).
 //! - `theta_unwrap_pole_boundary`: a point at exactly `r_pole` is outside, the next float below it inside.
+//! - `theta_unwrap_pole_disc_squared`: the disc's branch input, `fma(v, v, u·u)` against `r_pole²·I²` (R-34): exactly
+//!   `r_pole²` is outside, the next float below it inside, at f32 and f64, normalised and unnormalised.
 //! - `theta_unwrap_ic_inside`: an IC inside the disc leaves `θ̃` at 0 at its first exit and counts from the exit
 //!   longitude; a later passage adds `wrap(exit − stored)` (R-392).
 //! - `theta_unwrap_r_pole_evidence`: REQ-INT-086's evidence, the longitude's round-off against `ρ = √(n_u² + n_v²)` at
 //!   f32 and f64, measured against an exact reference, and the proposed `r_pole`'s error.
-//! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7).
+//! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7), normalised and unnormalised.
 //!
 //! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is REQ-INT-086's calibration: the value
 //! here is the proposal, unconfirmed until the M1 gate (R-71). Each check takes the step it tests as an argument, so
@@ -22,7 +24,7 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use kernel::payload::{orbit_count, retrograde};
-use kernel::shape::{in_pole_disc, longitude, shape, theta_step, wrap, Theta};
+use kernel::shape::{in_pole_disc, longitude, shape, shape_unnormalised, theta_step, wrap, Theta};
 use kernel::Real;
 use spirv_std::num_traits::{Float, FloatConst};
 use validation::negative_control;
@@ -460,10 +462,132 @@ mod exact_pi_step_control {
 
 // ── The disc's edge ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// A point at exactly `r_pole` is outside, its step's delta added; the next float below `r_pole` is inside, held.
-fn check_edge<R: Real + Float + FloatConst>(step: Step<R>, below: fn(R) -> R) {
+/// A float's neighbours, for the disc's edge.
+trait Ulp: Real + Float + FloatConst + std::fmt::Debug {
+    /// The next float below `self`, `self` positive.
+    fn below(self) -> Self;
+}
+
+impl Ulp for f64 {
+    fn below(self) -> Self {
+        f64::from_bits(self.to_bits() - 1)
+    }
+}
+
+impl Ulp for f32 {
+    fn below(self) -> Self {
+        f32::from_bits(self.to_bits() - 1)
+    }
+}
+
+/// The `w ≥ 0` for which the disc's `I² = fma(w, w, rho2)` is exactly 1, near `√(1 − rho2)`: so `r_pole²·I²` is
+/// `r_pole²` exactly, and a point's side of the edge is its `ρ²_I`'s.
+fn unit_w<R: Ulp>(rho2: R) -> R {
+    let mut w = Float::sqrt(R::one() - rho2);
+    for _ in 0..16 {
+        let i2 = Float::mul_add(w, w, rho2);
+        if i2 == R::one() {
+            return w;
+        }
+        w = if i2 > R::one() {
+            w.below()
+        } else {
+            w + (w - w.below())
+        };
+    }
+    panic!("no w puts I² at exactly 1 for ρ²_I = {rho2:?}")
+}
+
+/// A shape point `(u, v, w)` whose disc input `fma(v, v, u·u)` is exactly `rho2` and whose `I²` is exactly 1, `rho2`
+/// near `r_pole²`: `u` at or just below `√rho2`, `v` the small remainder, tuned to the float.
+fn on_rho2<R: Ulp>(rho2: R) -> [R; 3] {
+    let mut u = Float::sqrt(rho2);
+    for _ in 0..64 {
+        if u * u <= rho2 {
+            let mut v = Float::sqrt(rho2 - u * u);
+            for _ in 0..64 {
+                let got = Float::mul_add(v, v, u * u);
+                if got == rho2 {
+                    return [u, v, unit_w(rho2)];
+                }
+                if got > rho2 {
+                    break;
+                }
+                v = v + (v - v.below()).max(R::min_positive_value());
+            }
+        }
+        u = u.below();
+    }
+    panic!("no point has ρ²_I = {rho2:?} exactly")
+}
+
+/// The disc's squared edge (R-34): a point with `ρ²_I` exactly `r_pole²` (`I² = 1`) is outside, and one with `ρ²_I`
+/// the next float below it is inside; both the same scaled by 16, unnormalised, as [`shape_unnormalised`]'s point is.
+fn check_squared_edge<R: Ulp>(disc: fn([R; 3], R) -> bool) {
     let r_pole: R = real(R_POLE);
-    let w = Float::sqrt(R::one() - r_pole * r_pole);
+    let r2 = r_pole * r_pole;
+    let sixteen: R = real(16.0);
+    for (rho2, inside, side) in [
+        (r2, false, "exactly r_pole²"),
+        (r2.below(), true, "just below r_pole²"),
+    ] {
+        let n = on_rho2(rho2);
+        assert_eq!(
+            disc(n, r_pole),
+            inside,
+            "a point with ρ²_I {side} is {}",
+            if inside { "outside" } else { "inside" }
+        );
+        assert_eq!(
+            disc(n.map(|x| x * sixteen), r_pole),
+            inside,
+            "the unnormalised point with ρ²_I {side} is on the other side"
+        );
+    }
+}
+
+#[test]
+fn theta_unwrap_pole_disc_squared() {
+    check_squared_edge::<f64>(in_pole_disc);
+    check_squared_edge::<f32>(in_pole_disc);
+}
+
+/// A closed disc, `ρ²_I ≤ r_pole²·I²`.
+#[cfg(feature = "controls")]
+fn closed_disc(n: [f64; 3], r_pole: f64) -> bool {
+    let rho2 = n[1].mul_add(n[1], n[0] * n[0]);
+    rho2 <= r_pole * r_pole * n[2].mul_add(n[2], rho2)
+}
+
+negative_control!(
+    theta_unwrap_pole_disc_squared,
+    "a closed disc must hold a point at exactly r_pole²",
+    expected = "with ρ²_I exactly r_pole² is inside",
+    check_squared_edge::<f64>(closed_disc)
+);
+
+#[cfg(feature = "controls")]
+mod squared_edge_control {
+    use super::*;
+
+    /// The disc of the next float below `r_pole`.
+    fn narrow_disc(n: [f32; 3], r_pole: f32) -> bool {
+        in_pole_disc(n, r_pole.below())
+    }
+
+    negative_control!(
+        theta_unwrap_pole_disc_squared,
+        "a disc one float narrower must leave a point just below r_pole² outside",
+        expected = "with ρ²_I just below r_pole² is outside",
+        check_squared_edge::<f32>(narrow_disc)
+    );
+}
+
+/// A point at exactly `r_pole` is outside, its step's delta added; the next float below `r_pole` is inside, held. Each
+/// point's `I²` is exactly 1.
+fn check_edge<R: Ulp>(step: Step<R>) {
+    let r_pole: R = real(R_POLE);
+    let w = unit_w(r_pole * r_pole);
     let from = [real::<R>(0.5), R::zero(), w];
     let on_edge = [R::zero(), r_pole, w];
     let t = step(Theta::start(), from, on_edge, r_pole);
@@ -472,7 +596,8 @@ fn check_edge<R: Real + Float + FloatConst>(step: Step<R>, below: fn(R) -> R) {
         R::FRAC_PI_2(),
         "a point at exactly r_pole is held, not outside"
     );
-    let inside = [R::zero(), below(r_pole), w];
+    let below = r_pole.below();
+    let inside = [R::zero(), below, unit_w(below * below)];
     let t = step(Theta::start(), from, inside, r_pole);
     assert_eq!(t.theta, R::zero(), "a point just inside r_pole is not held");
     // Back out, onto the edge on the u axis: the passage adds the wrapped exit-minus-stored, 0.
@@ -485,26 +610,10 @@ fn check_edge<R: Real + Float + FloatConst>(step: Step<R>, below: fn(R) -> R) {
     );
 }
 
-/// The next f64 below `x`, `x` positive.
-fn below64(x: f64) -> f64 {
-    f64::from_bits(x.to_bits() - 1)
-}
-
-/// The next f32 below `x`, `x` positive.
-fn below32(x: f32) -> f32 {
-    f32::from_bits(x.to_bits() - 1)
-}
-
 #[test]
 fn theta_unwrap_pole_boundary() {
-    check_edge::<f64>(theta_step, below64);
-    check_edge::<f32>(theta_step, below32);
-    let r: f64 = R_POLE;
-    assert!(!in_pole_disc([r, 0.0, 0.0], r), "ρ = r_pole is inside");
-    assert!(
-        in_pole_disc([below64(r), 0.0, 0.0], r),
-        "ρ below r_pole is outside"
-    );
+    check_edge::<f64>(theta_step);
+    check_edge::<f32>(theta_step);
 }
 
 /// A step whose disc is closed, `ρ ≤ r_pole`.
@@ -517,7 +626,7 @@ negative_control!(
     theta_unwrap_pole_boundary,
     "a closed disc must hold a point at exactly r_pole",
     expected = "a point at exactly r_pole is held",
-    check_edge::<f64>(closed_disc_step, below64)
+    check_edge::<f64>(closed_disc_step)
 );
 
 // ── An IC inside the disc (R-392) ───────────────────────────────────────────────────────────────────────────────────
@@ -846,6 +955,13 @@ fn check_landmarks(map: fn([[f64; 2]; 3], [f64; 3]) -> [f64; 3]) {
 #[test]
 fn shape_landmarks() {
     check_landmarks(shape::<f64>);
+    // The unnormalised point is n scaled by I: by its own norm, it is the same landmarks (with shape's |n| = 1, its
+    // norm is I).
+    check_landmarks(|r, m| {
+        let p = shape_unnormalised(r, m);
+        let norm = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
+        p.map(|x| x / norm)
+    });
 }
 
 /// The shape map with `w` negated: the earlier convention, which put `L⁺` at the opposite pole (R-14).
