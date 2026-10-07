@@ -33,6 +33,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `decisions.md` § "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
 - `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
 - `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
+- `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
 
 ## Deliverables
 - `crates/kernel/src/driver/shape.rs` — `shape(r, masses)` (no momenta), per-macro-step readout.
@@ -48,7 +49,8 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - Review (physics): the shape helper's signature takes r (and masses), not p (REQ-PAY-055).
 - `cargo test -p kernel closure_departure` — a periodic orbit's closure_min ≈ 0 at closure_step ≈ period/dt_macro; closure before departure is ignored (REQ-PAY-056).
 - Review (physics): the SimState layout table lists the lagged n̂ register and payload §1's width totals include it; `cargo test -p kernel lagged_nhat_sampling` — the register updates only at the occupant's sampling points (macro-step or sync boundaries) (REQ-PAY-059).
-- `cargo test -p kernel theta_ref_code` — every code round-trips, `encode(decode(c)) = c`; the encode's error is at most π/65535 plus round-off and never yields 0xFFFF; decode lies in (−π, π) (REQ-INT-087).
+- `cargo test -p kernel theta_ref_code` — every code round-trips, `encode(decode(c)) = c`; the encode's error is at most π/65535 + 2·ulp_Real(2π) (+9.5e-7 at f32, +1.8e-15 at f64) and never yields 0xFFFF, and a truncating encode (no `+ ½`) fails that bound; decode lies in (−π, π) (REQ-INT-087).
+- Review (physics): the sim-parity comparison treats `_reserved` as Tier N/S with θ̃ (one code apart allowed, mod 65535), with sentinel-or-code exact, never as Tier B (REQ-INT-087; parity contract Tier B).
 - `cargo test -p ledger theta_ref_register` — `theta_ref_steps` and `theta_ref_none` are register entries hashed into the schema version; changing either's value changes it (REQ-INT-087).
 - `cargo test -p kernel theta_hold_state` — a fresh sample's `_reserved` is 0xFFFF; it is 0xFFFF outside the disc after every step; entry writes the code of the last longitude outside; exit adds `wrap(exit − decode(code))`, ±π adding +π, and writes 0xFFFF; an IC inside adds nothing at its first exit; the inside test is recomputed from the current state; descriptor bits 10–15 stay zero (REQ-INT-088).
 - `cargo test -p kernel theta_resume_split` — one call against k ∈ {2, 3, 7} resumed calls at f32 and f64, split on a pole passage's entry step, inside it and on its exit step, and inside the disc for an IC that starts there: θ̃'s bits and `_reserved` are identical; a negative control holding the reference unquantised within a dispatch fails (REQ-INT-089).

@@ -3869,15 +3869,17 @@
     section: 3.8 Metadata schema (what every entry must carry)
   - file: decisions.md
     section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
   verify:
     method: unit test
-    detail: "cargo test -p kernel theta_ref_code: at f32 and f64, encode(decode(c)) = c for every code c in 0..=65534; decode(c) lies in (−π, π); over a sweep of λ including −π, −0, 0, π and the longitudes just below 2π (which encode to 0), the encode never returns 0xFFFF and decode(encode(λ)) differs from λ, mod 2π, by at most π/65535 plus the encode's round-off at that precision; cargo test -p ledger theta_ref_register: theta_ref_steps and theta_ref_none are register entries of value 65535, class achievable-maximum, citing R-397, both among the hashed stored-bits entries, and changing either's value changes the schema version; each with a registered negative control (R-176)"
+    detail: "cargo test -p kernel theta_ref_code: at f32 and f64, encode(decode(c)) = c for every code c in 0..=65534; decode(c) lies in (−π, π); over every code's midpoints and a sweep of λ including −π, −0, 0, π and the longitudes just below 2π (which encode to 0), the encode never returns 0xFFFF and decode(encode(λ)) differs from λ, mod 2π, by at most π/65535 + 2·ulp_Real(2π) (π/65535 + 9.5e-7 at f32, π/65535 + 1.8e-15 at f64; measured excess 4.6e-7 and 6.0e-16); a negative control with a truncating encode (⌊·⌋ without + ½, error up to 9.59e-5) fails it; cargo test -p ledger theta_ref_register: theta_ref_steps and theta_ref_none are register entries of value 65535, class achievable-maximum, citing R-397, both among the hashed stored-bits entries, and changing either's value changes the schema version; each with a registered negative control (R-176); parity: the sim-parity harness compares _reserved as Tier N/S with θ̃, not Tier B: across backends and precisions a code may differ by one, cyclically mod 65535, and whether it holds 0xFFFF or a code (from the comparison-only disc test) must match exactly (parity contract Tier B)"
   rulings:
   - R-389
   - R-392
   - R-397
   milestone: M3
-  note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\")."
+  note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\"); the round-off bound and the parity tier follow physics review 5441087488 of #168, applied per R-369."
 - id: REQ-INT-088
   area: INT
   statement: "The kernel's march must keep θ̃'s pole hold in SimState alone: a fresh sample's `_reserved` is 0xFFFF; entering the pole disc from outside writes the code of the last longitude outside it; the exit adds wrap(exit longitude − decoded reference) into (−π, π], exactly ±π adding +π, and writes 0xFFFF back; an IC that starts inside the disc keeps 0xFFFF and adds nothing at its first exit (R-392); whether the sample is inside the hold is never stored but recomputed from the current state by the march's own disc test, on resume as on every step, and no descriptor bit is used."
@@ -3909,7 +3911,7 @@
     section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel theta_resume_split: the same march, at f32 and f64, run as one call and as k ∈ {2, 3, 7} calls, each resuming from the stored SimState through the generated pack and unpack, with split points on a pole passage's entry step, strictly inside it and on its exit step, and inside the disc for an IC that starts there: θ̃'s bits and _reserved are identical for every split, and the trajectory crosses the disc at least once; a negative control that keeps the reference unquantised in a register within a dispatch fails it (R-176)"
+    detail: "cargo test -p kernel theta_resume_split: the same march, at f32 and f64, run as one call and as k ∈ {2, 3, 7} calls, each resuming from the stored SimState through the generated pack and unpack, with split points on a pole passage's entry step, strictly inside it and on its exit step, and inside the disc for an IC that starts there: θ̃'s bits and _reserved are identical for every split, and the trajectory crosses the disc at least once; a negative control that keeps the reference unquantised in a register within a dispatch fails it (R-176); the bit-identity is within one backend and precision, and across backends _reserved is Tier N/S (REQ-INT-087)"
   rulings:
   - R-389
   - R-392
@@ -4566,7 +4568,7 @@
   note: "R-59 D6 / R-40 retire the 136/88 B widths; the corpus now quotes 144 / 96 B (R-73)."
 - id: REQ-PAY-009
   area: PAY
-  statement: "The closure fields must be present unconditionally in both stored variants (not tier-gated), `closure_min` must be f32 (not f16), and neither the u16 `_reserved` nor any new SimState member may be spent or added without re-checking the alignment argument; R-397 spends `_reserved` in place on θ̃'s frozen pole reference, so `SimStateFTLE` stays 144 B and `SimStateBase` 96 B, exactly packed, and any new member costs 8 B."
+  statement: "The closure fields must be present unconditionally in both stored variants (not tier-gated), `closure_min` must be f32 (not f16), and neither the u16 `_reserved` nor any new SimState member may be spent or added without re-checking the alignment argument, per precision row; R-397 spends `_reserved` in place on θ̃'s frozen pole reference, so at f32 `SimStateFTLE` stays 144 B and `SimStateBase` 96 B, exactly packed, and any new member costs 8 B there, while the f64 and DoubleF64 layouts keep their declared 4 B `_tail`, which takes a new u32 at no cost, a new Real costing 8 B at f64 and 16 B at DoubleF64."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
@@ -4576,7 +4578,7 @@
     section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
   verify:
     method: review checklist
-    detail: "both variants carry closure_min: f32 and closure_step: u16; any ledger change touching _reserved includes a size/alignment recheck; R-397's recheck: _reserved: u16 at byte 142 of SimStateFTLE and 94 of SimStateBase, sizes 144 B and 96 B unchanged (18×8 and 12×8, no tail padding), so the next SimState member of any width up to 8 B costs 8 B (144 → 152, 96 → 104), and a later ledger change adding a member includes this recheck"
+    detail: "both variants carry closure_min: f32 and closure_step: u16; any ledger change touching _reserved includes a size/alignment recheck; R-397's recheck: _reserved: u16 at byte 142 of SimStateFTLE and 94 of SimStateBase at f32, sizes 144 B and 96 B unchanged (18×8 and 12×8, no tail padding), so at f32 the next SimState member of any width up to 8 B costs 8 B (144 → 152, 96 → 104); at f64 (272 B, 176 B) and DoubleF64 (520 B, 328 B) the declared 4 B _tail takes a new u32 free and a new Real costs 8 B and 16 B; a later ledger change adding a member includes this recheck at every precision row"
   rulings:
   - R-397
   milestone: M0
