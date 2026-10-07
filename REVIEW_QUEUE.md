@@ -39,3 +39,29 @@ milestone gets its own file after its gate. Ids never change.
   - **(d)** Drop the hold at dispatch boundaries. Physics rejects it: θ̃ would depend on the dispatch split.
 - **Needed:** a ruling on where the two values live, before TASK-M3-11 (REQ-INT-082) runs θ̃ in the kernel's march.
   TASK-M1-11 computes θ̃ in a single call and is not blocked.
+
+*Found by the physics review of PR #160 (TASK-M1-07, review 5438322479). Nothing is chosen; it goes to the human with
+REQ-TOOL-152's calibration at the M1 gate.*
+
+## RQ-242: REQ-TOOL-019's "no banding" has no depth range, and an f32 u bands at depth *(physics, REQ-TOOL-019, REQ-TOOL-152, REQ-DEC-031, TASK-M1-07, M5)*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-TOOL-019: "The UV preset … must reconstruct each sample's UV coordinate as deep_zoom
+    §1 writes it, u = c_u + h_u·(2t − 1) and v likewise, … for sampled quads with no banding (adjacent-sample deltas
+    smooth, not step-quantised, by the criterion REQ-TOOL-152 calibrates)."
+  - `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision": "Within-quad precision is full
+    f32 at any depth."
+  - `plan/requirements.yaml`, REQ-DEC-031: "… the GPU must compute sample positions as u = centre + half·(2t − 1) with
+    t = (i + 0.5)/N, never from the quad's min/max bounds." REQ-SCHED-067 uses the same centre-plus-half-width pattern.
+- **What was measured (PR #160):** on M1's flat grid every form is exact (departure 0). At depth 30, the f32 sum
+  c + h·(2t − 1), which is the coordinate view and the form REQ-DEC-031 names, bands like the global form (departure
+  1). c (f64) + δ stays exact (departure 0). qa's sweep (N = 6) shows the f32 sum's departure doubling per level
+  (N·2^(ℓ−24)), so at the proposed bound of 1/16 it reads "banded" from about ℓ = 19, just inside ℓ_switch = 20 (R-90).
+  §1's "full f32 at any depth" holds for t and δ, but not for a u formed in f32. The decoder is correct only because
+  §2 consumes δ, never u.
+- **The question (physics; it changes what M5 builds):**
+  - (a) Does REQ-TOOL-019's "no banding" apply to an f32 u only down to the depth where REQ-TOOL-152's bound is first
+    exceeded, or to the c (f64) + δ path at every depth?
+  - (b) Is §1's u carried on the GPU as (c, δ), and never as a global f32 u, past ℓ_switch? That would bear on
+    REQ-DEC-031's wording, REQ-SCHED-067 and TASK-M5-04's per-quad uniforms.
+- **Not blocked:** TASK-M1-07 meets REQ-TOOL-019's verify on M1's flat grid. The answer shapes M5.

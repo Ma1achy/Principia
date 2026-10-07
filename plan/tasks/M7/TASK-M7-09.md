@@ -24,7 +24,7 @@ FieldRamp's ScalarField sources, each returning (value, valid) through `ctx`: pa
 
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/fields_nhat.wgsl`, `lib/noise.wgsl`, `lib/lattice.wgsl`, `lib/physics_sites.wgsl`.
-- `crates/render/src/colour/scalar_field.rs` — the ScalarField node variants and their codegen.
+- `crates/render/src/colour/scalar_field.rs` — the ScalarField node variants and their codegen, extending TASK-M1-09's minimal `ScalarField` (a payload field with its validity predicate, returning `(value, valid)`, in `field_ramp.rs`; RQ-232).
 - `crates/render/src/codegen/hoist.rs` — the mass-dimension detection that hoists physics sites to uniforms.
 - Doc change: `docs/design/principia_dd_integrator.md` §3.7 — Euler's quintic in the mass ratios transcribed with its citation, and the map of its roots through the shape map (R-126), with the "Removed lines" note; physics-reviewed and confirmed at the M7 gate.
 

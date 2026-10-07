@@ -51,6 +51,10 @@ pub mod presets;
 /// (coordinate conventions note, path 2; TASK-M1-07).
 pub mod picking;
 
+/// The dispatch of the kernel's bring-up mode over the synthetic flat layout, natively at f64 and on the GPU at f32
+/// (colour_composition Appendix A; R-75; TASK-M1-11).
+pub mod bringup;
+
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting
 /// (R-297; TASK-M0-44).
 pub mod compute;

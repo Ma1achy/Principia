@@ -178,6 +178,14 @@ escape colours. A standalone escaper view is therefore this map **filtered to th
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
 mode admits (“just collisions”, “just body-2 escape”), not a distinct render mode.
 
+**The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
+the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
+`detail = 3` (payload § `sample_descriptor`, "3 means all three"; R-30; REQ-EVT-006). They are neither `running` nor
+`sim_failed`, so neither takes the grey or the invalid pattern, which stays NaN's (PIT-8). Each gets a swatch of its
+own, a calibration (R-71): proposed with its evidence by TASK-M1-10 (its OKLab separation from the nine classes, the
+running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. Until then the two swatches
+have no value here.
+
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
 outcome-state row inherits (that catalogue is out of scope here; this palette is the one piece of it
@@ -543,3 +551,24 @@ sim-key (it changes what the kernel computes), monomorphised on the Rust side un
 law, and demoted from the debug catalogue to this appendix precisely because it is the sole exception
 to "debug is presets over a shared data layer." Once payload writes are trusted, everything else in
 §6 supersedes it.
+
+**The pattern and its slots (R-72; REQ-TOOL-123; TASK-M1-11).** The known pattern is a fixed ramp over the sample's
+index `i` in the `SimState` buffer (on the synthetic harness's flat layout, the flat grid's index), with
+`j = i mod 2¹⁶`. The mode writes every member of the sample's `SimStateFTLE` and nothing else: the word buffer,
+`ICDescriptor` and `RenderQuad` are not written, and no buffer is added.
+
+| Slots | Pattern |
+|---|---|
+| each real slot, numbered `k` in the ledger's member order: `r` 0–5 (`r[b][c]` is `2b + c`), `p` 6–11, `r_sh` 12–17, `p_sh` 18–23, `S` 24, `theta` 25, `mean_y` 26, `C_ty` 27, `E_0` 28, `Lz_0` 29, `closure_min` 30 | `32·i + k` |
+| `packed_a`, through the generated setters | `state = i mod 6`, `detail = ⌊i/2⌋ mod 4`, `saturated = ⌊i/8⌋ mod 2 = 1`, `dmin_pair = ⌊i/16⌋ mod 4`, `last_symbol = ⌊i/64⌋ mod 4`, `d_min` unset (R-271); reserved bits 10–15 zero |
+| `packed_b` | `0`: `dE_max` and `dLz_max` both +0 |
+| `times` | `t_end_step = j`, `t_dmin_step = 65535 − j` |
+| `total_substeps` | `i` |
+| `closure_step`, `_reserved` | `j`, `0` |
+
+Every real slot's value is an integer below 2²⁴ for `i < 2¹⁹`, so it is exact in f32: the f32 SPIR-V variant and the
+f64 native one write the same values, and the dispatch refuses more than 2¹⁹ samples. A slot written one place off
+holds another slot's value, so the readback fails on it. The `f16` fields hold a fresh sample's values (`d_min` unset,
+the drift maxima 0), so the GPU writes no `f16` conversion. The readback test decodes the buffer through the normal
+unpack path (`sim_state_from_ftle`, lowering Part 3a) and compares each field with this table, and compares the raw
+packed words too, `packed_a` by `roundtrip_ctl`, so a reserved bit the unpack masks off also fails (pitfalls §9).

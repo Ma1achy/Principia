@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-101, REQ-GUI-080
-- **Depends on:** TASK-M8-05, TASK-M8-19, TASK-M8-08
+- **Depends on:** TASK-M8-05, TASK-M8-19, TASK-M8-08, TASK-M6-28
 - **Needs (earlier milestones):** REQ-RENDER-069, REQ-COL-042
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -28,4 +28,4 @@ The Display window holds the fixed last stages (style, display scale, gamut clam
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 02_stain` (no display bar) — screenshots of Explore (01_main.png) and Stain (02_stain.png): no display bar; style / scale / gamut / CVD are reachable only from the Display window (REQ-GUI-080).
 
 ## Notes
-- none
+- R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and keeps REQ-GUI-101 and REQ-GUI-080.

@@ -103,15 +103,15 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   gate**.
 
 <!-- gate:M1 -->
-**Exit gate — 87 requirements** (and every earlier gate still green):
+**Exit gate — 92 requirements** (and every earlier gate still green):
 
 - INT (2): REQ-INT-001, REQ-INT-086
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
 - GEN (5): REQ-GEN-009…012, REQ-GEN-027
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
-- COL (8): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056
+- COL (9): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062
 - GUI (1): REQ-GUI-001
-- TOOL (27): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…153
+- TOOL (31): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…157
 - VAL (4): REQ-VAL-010…012, REQ-VAL-122
 - SYS (2): REQ-SYS-009, REQ-SYS-080
 <!-- /gate:M1 -->
@@ -251,16 +251,20 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The integration-floor flags and the precision warnings.
 - The symbolic-dynamics per-quad quantities.
 - The refinement policy's open measurements.
+- **The GUI track on a mock engine (R-390):** TASK-M6-24 to TASK-M6-29, the dev GUI built against a mock engine with
+  one contract conformance suite for the mock and the real engine. It sits in M6 because TASK-M6-21, TASK-M6-22,
+  TASK-M7-22 and TASK-M7-25 build on it and no task may depend on a later milestone's; it starts now, on spare agent
+  slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 141 requirements** (and every earlier gate still green):
+**Exit gate — 154 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (7): REQ-GUI-010…015, REQ-GUI-162
+- GUI (20): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…177
 - TOOL (4): REQ-TOOL-055…058
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090

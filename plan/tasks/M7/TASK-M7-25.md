@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-026
-- **Depends on:** TASK-M7-16, TASK-M7-21, TASK-M7-22, TASK-M6-17
+- **Depends on:** TASK-M7-16, TASK-M7-21, TASK-M7-22, TASK-M6-17, TASK-M6-28
 - **Needs (earlier milestones):** REQ-RENDER-042, REQ-GUI-013
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -31,3 +31,4 @@ The display stage (style, display scale, gamut clamp, CVD) is a set of settings 
 
 ## Notes
 - Which state struct holds the display settings (RenderState or ViewUI) is not stated by the requirement; gui_state_contract §2 governs.
+- R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and fills the window with the real display settings, keeping REQ-COL-026.

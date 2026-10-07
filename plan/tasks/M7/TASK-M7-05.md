@@ -23,7 +23,7 @@ Family B's mapping half: the Compaction forms lin, log (x ≤ 0 → 0 with senti
 
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/compaction.wgsl`, `lib/ramp.wgsl`.
-- `crates/render/src/colour/field_ramp.rs` — the `FieldRamp{field, ramp | compaction}` node for the occupant tree, its invalid colour/value (REQ-COL-001) and its codegen.
+- `crates/render/src/colour/field_ramp.rs` — extends TASK-M1-09's minimal `FieldRamp` (one `ScalarField`, a `lin` `Compaction`, viridis and the invalid lane; RQ-232) to the `FieldRamp{field, ramp | compaction}` node for the occupant tree, its invalid colour/value (REQ-COL-001) and its codegen.
 - `crates/render/src/colour/defaults.rs` — the default-ramp registry keyed by the ledger `scale` and field role.
 - Tests, including the seam-5 re-style test against the dispatch counter.
 

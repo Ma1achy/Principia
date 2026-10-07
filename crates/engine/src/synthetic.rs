@@ -286,6 +286,54 @@ pub fn simstate_words(s: &SimStateFTLE) -> Vec<u32> {
     })
 }
 
+/// The `SimStateFTLE` whose words, as it uploads as, are `words` ([`simstate_words`]'s inverse, for a readback): each
+/// member read by its name at its ledger offset, little-endian; `Err` if `words` is not the ledger's size.
+pub fn simstate_from_words(words: &[u32]) -> Result<SimStateFTLE, String> {
+    let (members, size) = layout("SimStateFTLE");
+    if words.len() * 4 != size {
+        return Err(format!(
+            "{} words are not SimStateFTLE's {size} B",
+            words.len()
+        ));
+    }
+    let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+    let word_at =
+        |at: usize| u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]);
+    let f32_at = |at: usize| f32::from_bits(word_at(at));
+    let vectors = |at: usize| {
+        let c = |k: usize| f32_at(at + 4 * k);
+        [[c(0), c(1)], [c(2), c(3)], [c(4), c(5)]]
+    };
+    let mut s = SimStateFTLE::default();
+    for (member, at, _) in members {
+        match member {
+            "r" => s.r = vectors(at),
+            "p" => s.p = vectors(at),
+            "r_sh" => s.r_sh = vectors(at),
+            "p_sh" => s.p_sh = vectors(at),
+            "S" => s.S = f32_at(at),
+            "theta" => s.theta = f32_at(at),
+            "mean_y" => s.mean_y = f32_at(at),
+            "C_ty" => s.C_ty = f32_at(at),
+            "E_0" => s.E_0 = f32_at(at),
+            "Lz_0" => s.Lz_0 = f32_at(at),
+            "packed_a" => s.packed_a = word_at(at),
+            "packed_b" => s.packed_b = word_at(at),
+            "times" => s.times = word_at(at),
+            "total_substeps" => s.total_substeps = word_at(at),
+            "closure_min" => s.closure_min = f32_at(at),
+            "closure_step" => s.closure_step = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
+            "_reserved" => s._reserved = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
+            other => {
+                return Err(format!(
+                    "`SimStateFTLE` has no reader for the ledger's `{other}`"
+                ))
+            }
+        }
+    }
+    Ok(s)
+}
+
 /// `ICDescriptor` as the words it uploads as: each member at its ledger offset, by name (`place`), its declared
 /// padding included; the ledger's size.
 pub fn ic_words(d: &ICDescriptor) -> Vec<u32> {

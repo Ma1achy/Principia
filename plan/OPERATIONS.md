@@ -290,6 +290,8 @@ and start M1.
 R-386 (6 Oct 2026, applied per R-369): before the M1 gate passes, lay out REQ-COL-061's proposal beside REQ-COL-055's
 and check `cvd_hatch_distinct` (TASK-M7-20) green on `main`. The M1 gate report lists only the gate blocks of M1 and
 earlier milestones, so it does not show REQ-COL-061, which is in M7.
+R-390 (6 Oct 2026): the GUI track, TASK-M6-24 to TASK-M6-29, starts now, in parallel with the physics and renderer
+chain, on spare agent slots only, and never holds up M1 or M2 (§ "The GUI track (R-390)").
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
@@ -314,6 +316,41 @@ summary:
 - every question in `REVIEW_QUEUE.md`, in one list;
 - anything surprising;
 - free disk and the memory-pressure level at each checkpoint (R-252, R-295).
+
+## The GUI track (R-390)
+
+The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
+built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
+qa and gui.
+- **Priority and resources.** The physics and renderer chain keeps priority for agent slots. A GUI-track task, its
+  reviewers and its fix rounds take only a slot that no ready chain task needs, within § "Resources"' memory and disk
+  limits. When slots are short, the chain's ready task gets the next free one; a running GUI-track agent is not
+  stopped, but the next slot doesn't go to the track. The track never holds up M1 or M2: no M1 or M2 task depends on
+  it, and none waits for a slot it holds.
+- **A track task the chain waits on takes the chain's priority** (applied per R-369, review 5434769963 on PR #157).
+  TASK-M6-21 depends on TASK-M6-26, TASK-M6-22 on TASK-M6-24 and TASK-M6-28, TASK-M7-22 on TASK-M6-29 and TASK-M7-25 on
+  TASK-M6-28. A track task that one of these chain tasks waits on, directly or through the track tasks before it, takes
+  the chain's priority for agent slots, with its reviewers and fix rounds, once that chain task's other dependencies
+  are merged or in flight. So the chain never waits on a track task that never gets a slot. No M1 or M2 task depends on
+  the track, so this never takes a slot from M1 or M2.
+- **When it merges.** Each track task merges once its reviews pass and CI is green, without waiting for the gates of M1
+  to M5 (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"). Each depends only on merged work and on the
+  track's task before it.
+- **"What to try".** Each track PR's description has a "What to try" section: the clicks and keys that show what
+  changed, on `cargo run -p gui --features mock` (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
+- **Sources and silences.** `decisions.md`, then `docs/gui/design/GUI_DESIGN_NOTES.md`, then the artboards in
+  `docs/gui/design/`, then `docs/gui/principia_render_gui_spec.md`, then `docs/contracts/principia_gui_state_contract.md`;
+  the higher wins, and R-68 still makes corpus values win over artboard values. Where they're silent on look, feel or
+  behaviour, the orchestrator and the reviewers decide and record it as "applied per R-369"; calibrations and physics
+  choices stay as R-71 and R-369 give them.
+- **The human's feedback.** The human tries each merged screen and sends look-and-feel notes as plain text. Each note is
+  a GUI design ruling: record it in `decisions.md` at the next free number, in the human's words, in the "design" group
+  of `plan/rule_groups.yaml`, as any ruling is recorded. Apply it in the porting rule's order: the docs first
+  (`docs/gui/design/GUI_DESIGN_NOTES.md`, or render_gui_spec where the note settles a spec point), then the plan (the
+  task it changes, or a new task), then the code, through a task PR reviewed like any other. A note that contradicts
+  a ruling or the corpus is flagged in the PR and the next summary (CLAUDE.md § "Rulings").
+- **Contract changes.** A track task that adds to the contract surface re-runs the conformance suite on both engines,
+  and the code reviewer checks the field is as the corpus names it (R-390's "Contract fields").
 
 ## Size
 
@@ -359,9 +396,20 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | 3 at normal, 2 at warning, at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels, and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
+
+**The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
+`vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
+If it rose by more than 1000 in that minute (about 16 MB a minute at the Mac's 16 KB pages), the Mac is swapping: allow
+2 agents. Otherwise allow 3, R-262's cap (R-391's "3 or more" is three under that cap). Log both readings with the
+dispatch. The threshold is the orchestrator's proposal, applied per R-369; the baseline on 6 Oct 2026, at pressure 2
+with two agents running, was 39 and 2 page-outs a minute, with 0 swap-outs. Each day of the trial, log one line
+(§ "Logs"): the agents running, the page-out rates read, the dispatches held to 2, and every timeout or flaky failure
+with its run or PR. If timeouts or flaky failures rise above the days before the trial, revert to R-277's 2 at warning
+at once, log it, and tell the human in the next summary. After three days, report the log in the next summary; the
+trial runs until the human rules on it or it is reverted.
 
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
 its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),
@@ -457,6 +505,10 @@ don't route around it.
 ## Logs
 
 - **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
+- **R-391's trial log (Mac only).** Each day of the trial, one line in the away-mode log: the date; the agents running
+  (the peak, and how many dispatches ran at warning with 3); the page-out rises read (the lowest and highest per
+  minute, and each dispatch held to 2); every timeout or flaky failure, local or in CI, with its run or PR; and whether
+  the trial was reverted (§ "Resources").
 - **Linux cloud.** A cloud machine's disk may not outlive the session. Under R-347,
   keep the running log in the session's scratch directory, and post the away-mode summary as the session's final
   message and as a comment on each PR it concerns.

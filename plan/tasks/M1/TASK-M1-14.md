@@ -49,3 +49,4 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
 - Each golden is shown able to fail (VAL-007, PIT-3): the bitwise-adversarial descriptor carries a contaminated bit the unpack would mask, and the test must catch it (PIT-9).
 - RQ-80 ruled: R-111 — the uniform echo's `M` is `n_renorm` (render_contract conformed in step 7).
 - RQ-94 ruled: R-113 — REQ-TOOL-011 ticks the rows a synthetic payload can show; the DECODE row is held by REQ-RENDER-027 (M2), the ensemble rows by REQ-TOOL-133 (M5, TASK-M5-18) and the live effort row by REQ-TOOL-132 (M3, TASK-M3-22).
+- RQ-229, decided per R-369 (7 Oct 2026): `m1-subfields` and `m1-synthetic` read the payload, so their cases are `cargo xtask golden`'s harness case kind, which TASK-M1-09 builds (RQ-229, as amended per code review 5438179638); each case's `BASELINES.md` row cites R-369 and RQ-229, proposed and confirmed at the M1 gate.

@@ -26,6 +26,8 @@ The boundary must stay a **data** boundary, not an **object** one — under *bot
 
 No GUI element ever holds sim logic, caches sim data, or computes anything the engine needs; it reads a snapshot and emits field edits, nothing more.
 
+**The mock engine and the conformance suite (R-390).** The dev GUI is built first against a mock engine: a test double of this surface, in the gui crate under its `mock` feature, which serves plausible snapshots, applies `SetField` with undo and redo (R-69), emits events and runs a fake clock so the playhead moves. One conformance suite, defined beside the surface in the engine crate, runs every case against both the mock and the real engine, and both pass it; a change to the surface goes through review and re-runs it for both. The mock earns no privilege: the GUI reaches it only through this surface, as it reaches the real engine.
+
 ---
 
 ## 2. The editable state is the entire coupling surface
@@ -60,6 +62,8 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 **Undo and redo live in the contract (R-52).** The contract keeps one undo/redo history of the typed `setField` edits it has applied, shared by every GUI: a GUI shows the depth (the dev GUI's top bar, `principia_render_gui_spec.md` §G2) and sends undo / redo as requests, and keeps no history of its own. A replacement GUI inherits the history for free. **What is undoable (R-69):** every `SimConfig` and `RenderState` edit — including navigation (it edits `z₀` and the basis) and lock / unlock (chart construction). `ViewUI`-only state — open panels, focus, selection, the kept-orbit list, playback transport — is not. **A drag coalesces into one history entry** (R-96). **Playback never enters undo (R-101):** the GUI's clock advances the playhead each frame through a `SetField` marked "no history"; a manual scrub is one coalesced entry.
 
 **The snapshot carries the events the GUI reports (R-54).** The precision warning is raised by events, not fixed depths: the snapshot carries, GUI-sized, whether `DECODE_SWITCHOVER` has fired on visible quads and whether `AT_F32_FLOOR` has been hit (`principia_deep_zoom.md` §2; scheduler contract Part 4). The console (render_gui_spec §G12) reads the same telemetry stream the profiler does.
+
+**The shell's fields (RQ-243, decided per R-369).** `RenderState`'s playhead is `Playhead { t: f64 }`, and its `SetField` path is `RenderField::Playhead`: the GUI's no-history clock advance (R-101) and a scrub (R-96) both write it. The snapshot's history is `History { undo_depth: u32, redo_depth: u32 }` (R-329). The snapshot carries a GUI-sized frame summary, named from the frame record (`principia_dd_telemetry_and_tiers.md` §5): `frame_ms`, `fps`, `quad_count` and `live_memory { heap_bytes, gpu_bytes }`, each optional and absent until the real engine's frame loop fills it, the GUI drawing "—" for an absent value. Their definitions against the frame record are written here by the task that adds them (R-72).
 
 ---
 

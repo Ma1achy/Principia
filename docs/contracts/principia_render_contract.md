@@ -181,7 +181,7 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
-fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as −1.0 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
+fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as the word length's 127 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
 ```
 
 **The renderings (R-72; REQ-TOOL-122; TASK-M1-03).** The helpers live in `crates/render/shaders/wgsl/lib/present.wgsl`
@@ -206,7 +206,7 @@ with dd_colouring §3.1's sRGB transfer.
   `pcg_hash`): `state = v·747796405 + 2891336453`, `word = ((state >> ((state >> 28) + 4)) ^ state)·277803737`,
   `h = (word >> 22) ^ word`, all wrapping u32. Its low three bytes, low first, are the 8-bit sRGB red, green and blue.
 - **`dbg_sentinel(x, frag_xy)`:** the absence NaN, tested by its exact bits against the canonical quiet NaN (`0x7FC00000`,
-  lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as −1.0
+  lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as the word length's 127
   included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
   first clamped to ±1e30, which needs no range: 0 maps to the middle, −1 to a quarter, 1 to three quarters, and every
   finite value to its own place (R-79, R-136). The suspect styling is an extension point, not an argument:

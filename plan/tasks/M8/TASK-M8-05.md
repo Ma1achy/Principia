@@ -1,8 +1,8 @@
 # TASK-M8-05 — Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-070, REQ-GUI-075, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093
-- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21
+- **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093
+- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24
 - **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -21,17 +21,25 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 
 ## Deliverables
 - `crates/gui/src/render_host.rs` — egui-wgpu `Renderer` constructed from the engine's `wgpu::Device` / `Queue`, painting after the engine's pass on the same surface texture.
-- `crates/gui/src/theme.rs` — egui dark default + Ubuntu / Ubuntu Mono (fonts under `crates/gui/assets/fonts/`).
-- `crates/gui/src/explore/{top_bar,footer,figure}.rs` — the status line reads the Snapshot (frame record, binding axis, undo depth); the figure region admits only the hover label and the lock reticle as marks.
+- Uses the track's `crates/gui/src/theme.rs` — egui dark default + Ubuntu / Ubuntu Mono (fonts under `crates/gui/assets/fonts/`) (TASK-M6-24, R-390) — on the real engine.
+- `crates/gui/src/explore/{top_bar,footer,figure}.rs`, extending the track's top bar and footer (TASK-M6-24, R-390) — the status line reads the real engine's Snapshot (frame record, binding axis, undo depth); the figure region admits only the hover label and the lock reticle as marks.
 - `crates/gui/src/windows/mod.rs` — the window registry the Windows menu lists (entries filled by later tasks).
 - `xtask` screenshot cases `01_main/shell`, `01_main/f3_off`, `01_main/warning`, `01_main/budget_bound`.
 
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png: the figure is identical underneath; review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070).
-- `cargo xtask screenshot 01_main` — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code (REQ-GUI-075).
+- `cargo xtask screenshot 01_main` — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code (REQ-GUI-075). Closed by TASK-M6-24 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 01_main` (warning case) — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments (REQ-GUI-074).
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - `cargo xtask screenshot 01_main` (footer) and `cargo test -p gui footer_opens_console` — screenshot against 01_main.png's footer; a click opens the 12_console.png layout (REQ-GUI-093).
 
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
+- R-390: TASK-M6-24 builds the shell on the mock engine and closes REQ-GUI-075; this task depends on it, wires the shell to the real engine (egui-wgpu on the engine's device and queue, the real status line, the real footer) and re-runs REQ-GUI-075's acceptance there. The console's layout is TASK-M6-28's on the mock (REQ-GUI-126) and TASK-M8-27's on the real engine.
+- RQ-243, RQ-247 and RQ-255, decided per R-369 (7 Oct 2026): TASK-M6-24's contract gives the snapshot an optional
+  frame summary (`frame_ms`, `fps`, `quad_count`, `live_memory { heap_bytes, gpu_bytes }`), `None` from the real
+  engine until this task wires its frame loop to fill it; this task keeps REQ-GUI-078 (`budget-bound`, which the mock
+  never binds) and may revise REQ-GUI-176's definition through the porting rule. The canvas is a separate engine-side
+  trait in `engine::contract`, outside the data contract; the real engine's implementation of it (its device and
+  queue, and drawing the figure into the app's pass) is this task's, for REQ-GUI-070. On the real engine the window
+  title and the footer carry no "mock engine" tag.

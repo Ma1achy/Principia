@@ -12,7 +12,8 @@ use std::collections::{BTreeMap, HashMap};
 use engine::contract::canonical;
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, Links, Lock, Plane, Quality, SimConfig, Slice,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
+    Slice,
 };
 use serde::ser::{SerializeMap, Serializer};
 use serde::Serialize;
@@ -25,6 +26,7 @@ fn sim() -> SimConfig {
         lock: Lock {},
         links: Links {},
         integrator: Integrator {},
+        kernel_variant: KernelVariant::Physics,
         horizon: Horizon {},
         collision: Collision {},
         quality: Quality {},
@@ -42,8 +44,8 @@ fn render() -> RenderState {
 
 /// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}`.
 const SIM_TEXT: &str =
-    "{\"chart\":{},\"collision\":{},\"horizon\":{},\"integrator\":{},\"links\":{},\"lock\":{},\
-\"plane\":{},\"quality\":{},\"slice\":{}}";
+    "{\"chart\":{},\"collision\":{},\"horizon\":{},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
+\"lock\":{},\"plane\":{},\"quality\":{},\"slice\":{}}";
 const RENDER_TEXT: &str = "{\"overlays\":{},\"palette\":{},\"playhead\":{},\"stain_graph\":{}}";
 
 fn check_skeleton(sim_text: &str, render_text: &str) {
@@ -90,8 +92,8 @@ validation::negative_control!(
     "the declaration-order text must fail the canonical-text check",
     expected = "is not its groups in byte order",
     check_skeleton(
-        "{\"chart\":{},\"plane\":{},\"slice\":{},\"lock\":{},\"links\":{},\"integrator\":{},\"horizon\":{},\
-\"collision\":{},\"quality\":{}}",
+        "{\"chart\":{},\"plane\":{},\"slice\":{},\"lock\":{},\"links\":{},\"integrator\":{},\
+\"kernel_variant\":\"physics\",\"horizon\":{},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT
     )
 );

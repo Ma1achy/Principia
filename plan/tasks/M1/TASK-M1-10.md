@@ -1,15 +1,15 @@
 # TASK-M1-10 — The outcome state and detail views: the nine-class default palette
 
 - **Milestone:** M1
-- **Closes:** REQ-COL-002, REQ-COL-004, REQ-COL-053, REQ-TOOL-021, REQ-TOOL-022, REQ-RENDER-017
+- **Closes:** REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-TOOL-021, REQ-TOOL-022, REQ-RENDER-017
 - **Depends on:** TASK-M1-08, TASK-M1-09
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-018
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-9
-- **Size:** ~380 lines
+- **Size:** ~400 lines
 
 ## Goal
-The categorical descriptor views exist: `state` (bits 0–2, six values, in the six-colour `dbg_cat` palette, R-115) and the `detail` union (bits 3–4) decoded per state — escape → body, collision → pair (pair k is the side opposite body k), failure → failure category, undefined while running — with the legend and palette segment keyed by state. The outcome field's canonical default is colour_composition §1.4's nine-class palette read from state plus detail ('degenerate' = `decode_failed`, 'collision @ t=0' = a collision with `t_end_step == 0`), `running` in a neutral grey (value calibrated here) and `sim_failed` in the invalid colour; swatches are user-editable node params. A RUNNING sample is coloured like any class.
+The categorical descriptor views exist: `state` (bits 0–2, six values, in the six-colour `dbg_cat` palette, R-115) and the `detail` union (bits 3–4) decoded per state — escape → body, collision → pair (pair k is the side opposite body k), `3` = all three (triple ejection, triple collision), failure → failure category, undefined while running — with the legend and palette segment keyed by state. The outcome field's canonical default is colour_composition §1.4's nine-class palette read from state plus detail ('degenerate' = `decode_failed`, 'collision @ t=0' = a collision with `t_end_step == 0`), plus a swatch each for triple collision and triple ejection (`detail = 3`), whose values this task proposes (REQ-COL-062; RQ-234), `running` in the neutral grey TASK-M1-09 proposes (REQ-COL-053; RQ-233) and `sim_failed` in the invalid colour; swatches are user-editable node params. A RUNNING sample is coloured like any class.
 
 ## References
 - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -30,23 +30,29 @@ The categorical descriptor views exist: `state` (bits 0–2, six values, in the 
 - `docs/design/principia_dd_colouring.md` § "5. Unit tests"
 - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
 - `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)"
+- `decisions.md` § "R-280 — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*"
+- `decisions.md` § "R-30 — Event precedence is by time *(IE-2)*"
+- `docs/design/principia_colour_composition.md` § "3. The `ctx` contract"
+- `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
-- `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`: the nine-class occupant with editable swatch uniforms.
+- `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`: the eleven-swatch occupant (§1.4's nine classes and the two triple outcomes) with editable swatch uniforms; `running` reads TASK-M1-09's grey constant.
 - Generated `sd_state` / `sd_detail` views with the state-keyed detail legend data (legend rendering itself is M8's G6; this task supplies the per-state segments).
-- The COL-053 proposal: the running grey's sRGB, its OKLab lightness and its separation from all nine classes, attached to the PR for the human's confirmation at the M1 gate.
-- Golden fixtures `fixtures/golden/m1-outcome/` (one sample per class, including a decode_failed sample, a collision with `t_end_step == 0`, collisions with `t_end_step > 0` per pair, escapes per body, running, sim_failed).
+- The COL-062 proposal (RQ-234): the triple-collision and triple-ejection swatches' sRGB, their OKLab lightness and their separation from the nine classes, the running grey (REQ-COL-053) and the invalid pattern's two colours (REQ-COL-055), attached to the PR for the human's confirmation at the M1 gate; colour_composition §1.4's "two triple outcomes" paragraph gains the proposed values, marked proposed; REQ-COL-055's no-collision measurement is rerun with them.
+- Golden fixtures `fixtures/golden/m1-outcome/` (one sample per class, including a decode_failed sample, a collision with `t_end_step == 0`, collisions with `t_end_step > 0` per pair, escapes per body, a triple collision, a triple ejection, running, sim_failed), as RQ-229's harness cases; the `sd_state` and `sd_detail` views' cases also go in `fixtures/golden/debug-views/` (RQ-237).
 
 ## Acceptance tests
-- `cargo xtask golden m1-outcome` — one sample per class renders exactly the §1.4 sRGB values; a running sample renders the neutral grey and a sim_failed sample the invalid colour; editing a swatch changes only that class (REQ-COL-002).
+- `cargo xtask golden m1-outcome` — one sample per class renders exactly the §1.4 sRGB values; a triple-collision and a triple-ejection sample (`detail = 3`) render REQ-COL-062's proposed swatches; a running sample renders the neutral grey and a sim_failed sample the invalid colour; editing a swatch changes only that class (REQ-COL-002).
 - `cargo test -p render detail_legend_per_state` — dd_colouring unit test 8's legend half: the detail legend switches per state (the three-colours-bug regression) (REQ-COL-004).
-- Review checklist (gui, qa): the proposal shows the grey's OKLab lightness and its separation from bounded #141418, degenerate #ECECF0 and the other seven classes; the human confirms the value at the M1 gate and it is recorded in decisions.md (REQ-COL-053).
+- Review checklist (gui, qa): the proposal gives both triple-outcome swatches with their OKLab lightness and their separation from the nine classes, the running grey and the invalid pattern's colours; the human confirms the values at the M1 gate and they are recorded in decisions.md (REQ-COL-062).
 - `cargo test -p ledger sd_state_roundtrip` — `sd_state` round-trips 0–5; `cargo xtask golden m1-outcome` shows the raw `state` view's six distinct `dbg_cat` colours for the six states (REQ-TOOL-021).
 - `cargo test -p render three_colours_regression` — escapes of different bodies render different colours (REQ-TOOL-022).
 - `cargo test -p render running_is_coloured` — a synthetic RUNNING sample renders with its palette colour, not discarded or blank (REQ-RENDER-017).
 
 ## Notes
-- REQ-COL-053 is a calibration (R-71): the value is proposed with evidence here and confirmed by the human at the M1 gate; an unconfirmed calibration blocks the gate.
+- REQ-COL-062 is a calibration (R-71): the values are proposed with evidence here and confirmed by the human at the M1 gate; an unconfirmed calibration blocks the gate. No value is chosen before the proposal (RQ-234).
+- RQ-233, decided per R-369: REQ-COL-053, the running grey, moved to TASK-M1-09, the first task that needs it (R-280's `d_min` view); this task reads its constant.
+- RQ-229, RQ-234, RQ-237 and RQ-241, decided per R-369 (7 Oct 2026): the golden suites render through the harness case kind TASK-M1-09 builds (RQ-229, as amended per code review 5438179638); the two triple outcomes (RQ-234); the shared `debug-views` suite (RQ-237); the References (RQ-241).
 - The categorical-discipline half of dd_colouring unit test 8 (colour-per-sample then SSAA resolve) needs ensemble copies (M5) and is not claimed here.
 - PIT-9: the state/detail round-trip tests include a contaminated-bit control that must fail.
 - RQ-83 ruled: R-115 — the raw `state` debug view keeps a six-colour `dbg_cat` palette; R-77's nine-class palette governs the outcome palette (state ⊕ detail) only.
