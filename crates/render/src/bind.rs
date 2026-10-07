@@ -270,10 +270,14 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
         .map(|k| format!("ctx_uniforms.z[{}].{}", k / 4, ["x", "y", "z", "w"][k % 4]))
         .collect();
     let chart = vec![
+        // The sample's position in the slice plane's own frame (colour_composition §3, R-394; REQ-COL-063): its quad's
+        // centre c and half-width h, the per-quad frames the quad lane reads, as c + h·(2·quad.uv − 1), deep_zoom §1's
+        // u = c + h·(2t − 1). Pan and zoom never change it for a sample (R-97); it reads no grid, so it is no view or
+        // screen position, which are the screen lane's.
         member(
             "slice_uv",
             "vec2<f32>",
-            "(vec2<f32>(r.quad_xy) + r.quad_uv) / vec2<f32>(ctx_uniforms.quads)",
+            "quad_frames[r.quad].xy + quad_frames[r.quad].zw * (2.0 * r.quad_uv - vec2<f32>(1.0))",
         ),
         member(
             "z",
