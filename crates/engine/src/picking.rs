@@ -7,6 +7,8 @@
 //! At M1 a pick reports the UV, the quad of the flat grid the screen is drawn over and the screen's single
 //! `ctx.chart.z`; the per-pixel `z = z₀ + (2s − 1)·q₁ + (2t − 1)·q₂` arrives with `SimConfig.plane` in M2, through
 //! this same function (RQ-216).
+//!
+//! [`pick`]: crate::picking::pick
 
 use render::coords::frag_uv;
 use render::raster::Grid;

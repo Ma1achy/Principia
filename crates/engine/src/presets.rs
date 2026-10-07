@@ -13,6 +13,12 @@
 //! - [`coordinate_view`] in [`CoordinateMode::Delta`], its quad-local δ mode: δ = `h·(2t − 1)`, deep_zoom §2's
 //!   quad-local offset `u − c`, each component normalised by its bound `h = 2^−(ℓ+1)` to [−1, 1] and mapped to
 //!   `(x + 1)/2`, `u`'s in R and `v`'s in G, B = 0 (REQ-TOOL-153; debug_tooling_plan §F).
+//!
+//! [`uv_screen`]: crate::presets::uv_screen
+//! [`uv_quad`]: crate::presets::uv_quad
+//! [`coordinate_view`]: crate::presets::coordinate_view
+//! [`CoordinateMode::Uv`]: crate::presets::CoordinateMode::Uv
+//! [`CoordinateMode::Delta`]: crate::presets::CoordinateMode::Delta
 
 use crate::stain::{GraphError, NodeId, NodeKind, Occupant, StainGraph};
 

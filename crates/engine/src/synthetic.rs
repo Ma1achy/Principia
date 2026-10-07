@@ -18,6 +18,8 @@
 //! `RenderQuad` table (`ledger::quad`, dd_generation_root §3.7a), each at its generated offset. The bytes place each
 //! member of `SimStateFTLE` and `ICDescriptor` by its name at the ledger's offset for it (`ledger::gen::rust::offsets`),
 //! little-endian, as the GPU reads them: no offset is written here.
+//!
+//! [`QuadFrame`]: crate::synthetic::QuadFrame
 
 use kernel::payload::{
     fgw_pack, pack_packed_b, pack_times, set_d_min, set_d_min_unset, set_detail, set_dmin_pair,
