@@ -11,11 +11,14 @@
 //! - `theta_unwrap_pole_boundary`: a point at exactly `r_pole` is outside, the next float below it inside.
 //! - `theta_unwrap_pole_disc_squared`: the disc's branch input, `fma(v, v, u·u)` against `r_pole²·I²` (R-34): exactly
 //!   `r_pole²` is outside, the next float below it inside, at f32 and f64, normalised and unnormalised.
+//! - `theta_unwrap_disc_input`: the kernel's disc input from the configuration, with no division and no `sqrt`, is the
+//!   shape point's at equal and unequal masses; exactly on its squared edge a configuration is outside, one float
+//!   inward inside, at f32 and f64 (R-34).
 //! - `theta_unwrap_ic_inside`: an IC inside the disc leaves `θ̃` at 0 at its first exit and counts from the exit
 //!   longitude; a later passage adds `wrap(exit − stored)` (R-392).
 //! - `theta_unwrap_r_pole_evidence`: REQ-INT-086's evidence, the longitude's round-off against `ρ = √(n_u² + n_v²)` at
 //!   f32 and f64, measured against an exact reference, and the proposed `r_pole`'s error.
-//! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7), normalised and unnormalised.
+//! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7).
 //!
 //! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is REQ-INT-086's calibration: the value
 //! here is the proposal, unconfirmed until the M1 gate (R-71). Each check takes the step it tests as an argument, so
@@ -24,7 +27,10 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use kernel::payload::{orbit_count, retrograde};
-use kernel::shape::{in_pole_disc, longitude, shape, shape_unnormalised, theta_step, wrap, Theta};
+use kernel::shape::{
+    disc_input, in_disc, in_pole_disc, longitude, shape, theta_step, theta_step_config,
+    theta_step_held, wrap, DiscInput, Theta,
+};
 use kernel::Real;
 use spirv_std::num_traits::{Float, FloatConst};
 use validation::negative_control;
@@ -466,17 +472,25 @@ mod exact_pi_step_control {
 trait Ulp: Real + Float + FloatConst + std::fmt::Debug {
     /// The next float below `self`, `self` positive.
     fn below(self) -> Self;
+    /// The next float above `self`, `self` positive.
+    fn above(self) -> Self;
 }
 
 impl Ulp for f64 {
     fn below(self) -> Self {
         f64::from_bits(self.to_bits() - 1)
     }
+    fn above(self) -> Self {
+        f64::from_bits(self.to_bits() + 1)
+    }
 }
 
 impl Ulp for f32 {
     fn below(self) -> Self {
         f32::from_bits(self.to_bits() - 1)
+    }
+    fn above(self) -> Self {
+        f32::from_bits(self.to_bits() + 1)
     }
 }
 
@@ -522,7 +536,7 @@ fn on_rho2<R: Ulp>(rho2: R) -> [R; 3] {
 }
 
 /// The disc's squared edge (R-34): a point with `ρ²_I` exactly `r_pole²` (`I² = 1`) is outside, and one with `ρ²_I`
-/// the next float below it is inside; both the same scaled by 16, unnormalised, as [`shape_unnormalised`]'s point is.
+/// the next float below it is inside; both the same scaled by 16, as a multiple of the point.
 fn check_squared_edge<R: Ulp>(disc: fn([R; 3], R) -> bool) {
     let r_pole: R = real(R_POLE);
     let r2 = r_pole * r_pole;
@@ -580,6 +594,179 @@ mod squared_edge_control {
         "a disc one float narrower must leave a point just below r_pole² outside",
         expected = "with ρ²_I just below r_pole² is outside",
         check_squared_edge::<f32>(narrow_disc)
+    );
+}
+
+// ── The disc's input from the configuration (R-34) ──────────────────────────────────────────────────────────────
+
+/// The mass sets the configuration's disc input is checked at: equal (`M₀₁ = 2/3`), and two unequal, `M₀₁ = 3/4` and
+/// `M₀₁ = 0.7`.
+const DISC_MASSES: [[f64; 3]; 3] = [[1.0 / 3.0; 3], [0.5, 0.25, 0.25], [0.2, 0.5, 0.3]];
+
+/// A configuration with masses `m` whose shape point lies at polar radius about `eps` from the pole: bodies 0 and 1 at
+/// (0, 0) and (1, 0), body 2 off their centre of mass where `ρ̃ ⟂ λ̃` and `‖λ̃‖ = (1 + eps)‖ρ̃‖`, turned by `turn`.
+fn near_pole(m: [f64; 3], eps: f64, turn: f64) -> [[f64; 2]; 3] {
+    let (mu_rho, mu_lambda) = (m[0] * m[1] / (m[0] + m[1]), m[2] * (m[0] + m[1]));
+    let l = (mu_rho / mu_lambda).sqrt() * (1.0 + eps);
+    let x01 = m[1] / (m[0] + m[1]);
+    let (c, s) = (turn.cos(), turn.sin());
+    [[0.0, 0.0], [1.0, 0.0], [x01 - s * l, c * l]]
+}
+
+/// Over configurations from the poles to the equator, at each mass set: [`disc_input`]'s `ρ²_I/I²` is the normalised
+/// shape point's `n_u² + n_v²`, so the disc decides the side [`shape`]'s point has, away from the edge; at `L⁺`
+/// (equal masses) it is inside, and at the collision of 0 and 1 it is `ρ²_I = I²`.
+fn check_disc_input(input: fn([[f64; 2]; 3], [f64; 3]) -> DiscInput<f64>) {
+    for m in DISC_MASSES {
+        for k in 0..400 {
+            let eps = 1e-4 * 1.04f64.powi(k);
+            let r = near_pole(m, eps, 0.37 * k as f64);
+            let n = shape(r, m);
+            let d = input(r, m);
+            let want = n[0] * n[0] + n[1] * n[1];
+            assert!(
+                (d.rho2 / d.i2 - want).abs() <= 1e-12 * want.max(1e-6),
+                "masses {m:?}, ε {eps}: ρ²_I/I² is {}, not the shape point's {want}",
+                d.rho2 / d.i2
+            );
+            if (want.sqrt() - R_POLE).abs() > 1e-6 {
+                assert_eq!(
+                    in_disc(d, R_POLE),
+                    in_pole_disc(n, R_POLE),
+                    "masses {m:?}, ε {eps}: the configuration's disc and the shape point's disagree"
+                );
+            }
+        }
+    }
+    let h = 3f64.sqrt() / 2.0;
+    let l_plus = input([[0.0, 0.0], [1.0, 0.0], [0.5, h]], [1.0 / 3.0; 3]);
+    assert!(
+        l_plus.rho2 <= 1e-15 * l_plus.i2,
+        "L+ is not at the pole: {l_plus:?}"
+    );
+    let bc01 = input([[0.3, 0.2], [0.3, 0.2], [1.0, -0.4]], [0.5, 0.25, 0.25]);
+    assert_eq!(bc01.rho2, bc01.i2, "BC01 is not on the equator: {bc01:?}");
+}
+
+/// A configuration of masses `m` near the pole, at the precision `R`, and the `r_pole` whose squared edge it lies on
+/// exactly: `r_pole·r_pole·I² == ρ²_I` in `R`'s arithmetic. Searched over the polar radius and the floats near
+/// `√(ρ²_I/I²)`.
+fn on_edge<R: Ulp>(m: [f64; 3]) -> ([[R; 2]; 3], [R; 3], R) {
+    let mr = m.map(real::<R>);
+    for k in 0..200 {
+        let r = near_pole(m, 0.01 + 1e-5 * k as f64, 0.2).map(|p| p.map(real::<R>));
+        let d = disc_input(r, mr);
+        let mut r_pole = Float::sqrt(d.rho2 / d.i2);
+        for _ in 0..8 {
+            r_pole = r_pole.below();
+        }
+        for _ in 0..16 {
+            if r_pole * r_pole * d.i2 == d.rho2 {
+                return (r, mr, r_pole);
+            }
+            r_pole = r_pole.above();
+        }
+    }
+    panic!("no configuration of masses {m:?} lies exactly on a squared edge")
+}
+
+/// At each mass set, the configuration exactly on the squared edge, `ρ²_I = r_pole²·I²`, is outside: its step adds
+/// its delta, by [`theta_step_config`]. With `ρ²_I` one float below, or the next wider disc, it is inside, held.
+fn check_config_edge<R: Ulp>(disc: fn(DiscInput<R>, R) -> bool) {
+    for m in DISC_MASSES {
+        let (r, mr, r_pole) = on_edge::<R>(m);
+        let d = disc_input(r, mr);
+        assert!(
+            !disc(d, r_pole),
+            "masses {m:?}: a configuration with ρ²_I exactly r_pole²·I² is inside"
+        );
+        let below = DiscInput {
+            rho2: d.rho2.below(),
+            ..d
+        };
+        assert!(
+            disc(below, r_pole),
+            "masses {m:?}: ρ²_I one float below r_pole²·I² is outside"
+        );
+        // The next r_pole whose squared edge moves: r_pole·r_pole·I² can round to ρ²_I one float above r_pole too.
+        let mut wider = r_pole.above();
+        while wider * wider * d.i2 == d.rho2 {
+            wider = wider.above();
+        }
+        assert!(
+            disc(d, wider),
+            "masses {m:?}: the configuration is outside the next wider disc"
+        );
+        // From the equator, a step onto the edge adds its delta; onto the same point with the next wider disc, nothing.
+        let from = [
+            [R::zero(), R::zero()],
+            [R::one(), R::zero()],
+            [R::zero(), R::one()],
+        ];
+        let step = theta_step_config(Theta::start(), from, r, mr, r_pole);
+        let want = wrap(longitude(shape(r, mr)) - longitude(shape(from, mr)));
+        assert_eq!(
+            step.theta, want,
+            "masses {m:?}: the step onto the edge adds {:?}, not its delta",
+            step.theta
+        );
+        let held = theta_step_config(Theta::start(), from, r, mr, wider);
+        assert_eq!(
+            held,
+            theta_step_held(Theta::start(), shape(from, mr), shape(r, mr), false, true),
+            "masses {m:?}: the step into the next wider disc is not held"
+        );
+    }
+}
+
+#[test]
+fn theta_unwrap_disc_input() {
+    check_disc_input(disc_input);
+    check_config_edge::<f64>(in_disc);
+    check_config_edge::<f32>(in_disc);
+}
+
+/// The disc input with the cross-term factor 4 left out: `m₀m₁m₂` for `4m₀m₁m₂`.
+#[cfg(feature = "controls")]
+fn missing_four(r: [[f64; 2]; 3], m: [f64; 3]) -> DiscInput<f64> {
+    let d = disc_input(r, m);
+    let m01 = m[0] + m[1];
+    let rho = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+    let l = [
+        m01 * r[2][0] - (m[0] * r[0][0] + m[1] * r[1][0]),
+        m01 * r[2][1] - (m[0] * r[0][1] + m[1] * r[1][1]),
+    ];
+    let k = m[0] * m[1] * m[2];
+    let (dot, cross) = (rho[0] * l[0] + rho[1] * l[1], rho[0] * l[1] - rho[1] * l[0]);
+    let u2 = d.rho2 - 4.0 * k * dot * dot;
+    let rho2 = u2 + k * dot * dot;
+    DiscInput {
+        rho2,
+        i2: rho2 + k * cross * cross,
+    }
+}
+
+negative_control!(
+    theta_unwrap_disc_input,
+    "a disc input without the cross terms' factor 4 must miss the shape point",
+    expected = "not the shape point's",
+    check_disc_input(missing_four)
+);
+
+#[cfg(feature = "controls")]
+mod config_edge_control {
+    use super::*;
+
+    /// A closed disc, `ρ²_I ≤ r_pole²·I²`.
+    fn closed(d: DiscInput<f32>, r_pole: f32) -> bool {
+        d.rho2 <= r_pole * r_pole * d.i2
+    }
+
+    negative_control!(
+        theta_unwrap_disc_input,
+        "a closed disc must hold a configuration exactly on the squared edge",
+        expected = "exactly r_pole²·I² is inside",
+        check_config_edge::<f32>(closed)
     );
 }
 
@@ -955,13 +1142,6 @@ fn check_landmarks(map: fn([[f64; 2]; 3], [f64; 3]) -> [f64; 3]) {
 #[test]
 fn shape_landmarks() {
     check_landmarks(shape::<f64>);
-    // The unnormalised point is n scaled by I: by its own norm, it is the same landmarks (with shape's |n| = 1, its
-    // norm is I).
-    check_landmarks(|r, m| {
-        let p = shape_unnormalised(r, m);
-        let norm = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
-        p.map(|x| x / norm)
-    });
 }
 
 /// The shape map with `w` negated: the earlier convention, which put `L⁺` at the opposite pole (R-14).
