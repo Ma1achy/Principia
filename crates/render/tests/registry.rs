@@ -208,6 +208,11 @@ fn registry_scan_refuses_a_file_under_no_slot() {
         ("shaders/wgsl/frag/source/s.wgsl", COLOUR),
         "not under a slot directory",
     );
+    // Named for a slot, but under no slot directory: a file's own name is not a directory.
+    check_refused(
+        ("shaders/wgsl/frag/colour.wgsl", COLOUR),
+        "not under a slot directory",
+    );
 }
 
 negative_control!(
