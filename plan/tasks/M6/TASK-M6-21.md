@@ -2,7 +2,7 @@
 
 - **Milestone:** M6
 - **Closes:** REQ-GUI-010, REQ-GUI-012
-- **Depends on:** TASK-M6-08
+- **Depends on:** TASK-M6-08, TASK-M6-26
 - **Needs (earlier milestones):** REQ-GUI-001, REQ-SYS-033
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -28,4 +28,4 @@ The snapshot carries, GUI-sized, whether `DECODE_SWITCHOVER` has fired on visibl
 - `cargo test -p engine precision_warning_event_driven` — zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q) (REQ-GUI-012).
 
 ## Notes
-- None.
+- R-390: the Manifold view's depth readout and its precision warning are built on the mock engine by TASK-M6-26, on which this task depends; this task binds the warning to the real engine's event fields.

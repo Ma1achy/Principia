@@ -114,10 +114,18 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*65 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*73 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M6**
 - [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control
+- [ ] REQ-GUI-167 — cargo xtask screenshot 01_main (mock_footer): the footer on the mock shows the tag beside 01_main.png's footer; cargo test -p gui mock_tag: the tag is drawn exactly when the engine is the mock
+- [ ] REQ-GUI-168 — cargo xtask screenshot 01_main (mock_shell, mock_f3_off): against 01_main.png with F3 on and off, the stand-in figure identical underneath; a footer click opens the console; the gui reviewer checks the design notes' global rules
+- [ ] REQ-GUI-169 — cargo test -p gui mock_keyboard: synthetic key events for Tab, Shift+Tab, Enter, Esc, the arrows and Shift and Alt steps move focus and values as §G3 gives; `?` opens the shortcuts over everything and Esc closes it; cargo xtask screenshot 07_keyboard (mock_focus_before, mock_focus_after, mock_shortcuts) against 07_keyboard.png
+- [ ] REQ-GUI-170 — cargo xtask screenshot 01_main (mock_manifold_view, mock_compass_slice, mock_compass_tilt) and 08_lock (mock_locked) against 01_main.png and 08_lock.png; cargo test -p gui mock_manifold_view: each control emits a SetField on z₀ or the basis, and after lock a slider reads anchor plus offset and moving it emits an excursion
+- [ ] REQ-GUI-172 — cargo xtask screenshot 01_main (mock_time, mock_trajectory_sphere, mock_trajectory_unwrapped, mock_overlays_menu) and 06_legend (mock_legend) against 01_main.png and 06_legend.png; cargo test -p gui mock_time: play advances the playhead through no-history SetFields, step moves one step, a scrub is one SetField
+- [ ] REQ-GUI-173 — cargo xtask screenshot 01_main (mock_tile_bounds) against 01_main.png; cargo test -p gui mock_tile_bounds: the toggle emits one SetField on the overlay set and the GUI draws nothing over the figure; after a pan the mock's drawn bounds move with the stand-in
+- [ ] REQ-GUI-174 — cargo xtask screenshot 04_windows (mock_run, mock_export, mock_display, mock_profiler), 03_chartbuilder (mock_chart_builder), 12_console (mock_console) and 05_inspectors (mock_inspector) against their artboards; the Chart builder's two previews are square for a square viewport; each window opens from its top-bar or menu entry
+- [ ] REQ-GUI-175 — cargo xtask screenshot 02_stain (mock_stain, mock_stain_selected) against 02_stain.png; cargo test -p gui mock_stain_preview: an edit to the graph is a SetField and the mock's preview changes; the preview is square for a square viewport
 - [ ] REQ-TOOL-058 — presence only (R-129; no layout comparison until the M8 dev GUI): the Profiler tab shows the four items
 
 **M7**
@@ -187,3 +195,28 @@ Artboard → governing section:
 - [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
 - [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->
+
+## 8. The GUI track on the mock engine (R-390)
+
+For TASK-M6-24 to TASK-M6-29, and every later GUI PR that runs on the mock.
+- [ ] Every screen the PR adds or changes is compared with its artboard through `cargo xtask screenshot`, the capture
+  run on the mock engine; layout, look, feel and behaviour follow `decisions.md`, then the design notes, then the
+  artboards, then render_gui_spec, then gui_state_contract, and R-68 still makes corpus values win over artboard values.
+  `docs/gui/principia_render_gui_spec.md` § "Principia — Dev GUI (egui / F3)"
+- [ ] The design notes' global rules hold on every screen: nothing covers the figure; every preview of the slice is
+  square for a square viewport; navigation edits z₀ and the basis, with no camera; the legend comes from evaluating the
+  stain, never a fixed key, which on the mock means the GUI holds no legend key of its own and draws only the keys it
+  receives through the contract, which the mock produces from its fake stain in the shape the real evaluation gives
+  them (the real evaluation is TASK-M8-22's; applied per R-369, review 5434766412 on PR #157); dark egui theme, Ubuntu
+  and Ubuntu Mono. `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere"
+- [ ] Every control the PR adds joins TASK-M6-25's keyboard scope tree, and the PR's acceptance shows it: Tab and Enter
+  reach it, the focus ring and the breadcrumb follow it, and arrows with Shift and Alt adjust it (R-390's ORDER item 2;
+  applied per R-369, review 5434766412 on PR #157).
+- [ ] The marks an artboard the PR is compared against shows are drawn, on mock data where the real data comes later
+  (the lock badge and reticle, the axis labels, the hover path and label); nothing is left out as a known absence
+  (R-390's GOAL; applied per R-369, review 5434766412 on PR #157).
+- [ ] The GUI reaches the mock only through the contract (a snapshot in, a `SetField` out), as it will the real engine;
+  the "mock engine" tag shows in the footer on the mock. `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
+- [ ] The conformance suite passes on both engines, and a contract change re-runs it for both.
+- [ ] The PR description has a "What to try" section the human can follow on `cargo run -p gui --features mock`, and
+  every look, feel or behaviour the sources leave open is recorded as "applied per R-369".

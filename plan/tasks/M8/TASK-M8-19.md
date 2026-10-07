@@ -1,8 +1,8 @@
 # TASK-M8-19 — Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-127, REQ-GUI-128, REQ-GUI-129, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023
-- **Depends on:** TASK-M8-05, TASK-M8-18, TASK-M7-14, TASK-M7-22
+- **Closes:** REQ-GUI-127, REQ-GUI-129, REQ-GUI-139, REQ-GUI-140, REQ-GUI-076, REQ-GUI-073, REQ-GEN-023
+- **Depends on:** TASK-M8-05, TASK-M8-18, TASK-M7-14, TASK-M7-22, TASK-M6-29
 - **Needs (earlier milestones):** REQ-GUI-021, REQ-GUI-028, REQ-GUI-029, REQ-GUI-031, REQ-GEN-020, REQ-GEN-021, REQ-RENDER-006, REQ-RENDER-057, REQ-GUI-152
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -30,14 +30,14 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
-- `crates/gui/src/stain/{mode,library,preview,problems}.rs`.
+- `crates/gui/src/stain/{mode,library,preview,problems}.rs`, extending the track's Stain layout (TASK-M6-29, R-390) on the real stain graph.
 - `crates/gui/src/stain/your_stains.rs` — user stains as serialised graphs (import / export files).
 - `crates/render/src/registry/filter.rs` — `debugVisible` filtering on the `category` tag.
 - Tests: `debug_visible_filter`, `your_stains_roundtrip`; screenshot cases `02_stain/layout`, `02_stain/preview_{sphere,slice}`, `02_stain/library_filter`, `02_stain/aspect_{square,wide}`, `03_chartbuilder/aspect_{square,wide}`.
 
 ## Acceptance tests
 - Review checklist (gui reviewer) — every stain surface edits the same RenderState graph; no parallel colour or debug editor exists (REQ-GUI-127).
-- `cargo xtask screenshot 02_stain` — screenshot against 02_stain.png (REQ-GUI-128).
+- `cargo xtask screenshot 02_stain` — screenshot against 02_stain.png (REQ-GUI-128). Closed by TASK-M6-29 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 02_stain` (both preview modes; an edit updates the preview) — screenshot in both preview modes against 02_stain.png; an edit updates the preview (REQ-GUI-129).
 - `cargo xtask screenshot 02_stain` (library; filter narrows rows) — screenshot against 02_stain.png's library; typing in the filter narrows rows (REQ-GUI-139).
 - `cargo test -p gui your_stains_roundtrip` — create, rename, export and re-import a stain; it round-trips (REQ-GUI-140).
@@ -47,3 +47,4 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 
 ## Notes
 - RQ-100 ruled: R-113 — REQ-GUI-152 (the preview default) moved to M7 (TASK-M7-22); this task lays out the preview §1 now names.
+- R-390: TASK-M6-29 builds Stain mode's layout on the mock engine and closes REQ-GUI-128; this task depends on it, re-runs REQ-GUI-128's acceptance on the real engine and keeps every other requirement it closes.

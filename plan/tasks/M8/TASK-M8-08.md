@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153
-- **Depends on:** TASK-M8-05, TASK-M4-14, TASK-M5-05
+- **Depends on:** TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27
 - **Needs (earlier milestones):** REQ-RENDER-024, REQ-RENDER-055, REQ-TOOL-026, REQ-TOOL-045, REQ-CHART-039, REQ-SYS-013, REQ-SCHED-047
 - **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** none
@@ -39,3 +39,4 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
 - The Stain group's overlays (class edges, t_end contours) also appear in the Display window (TASK-M8-23); both edit the same RenderState overlay set.
 - Calibrations (R-71) proposed here: REQ-PERF-080. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-PERF-079, REQ-GUI-153. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
+- R-390: TASK-M6-27 builds Overlays ▾ on the mock engine, with the tile-bounds overlay on the mock's fake quads; this task depends on it and wires every overlay to its tier on the real engine, keeping every requirement it closes.

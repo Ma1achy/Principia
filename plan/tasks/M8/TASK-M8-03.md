@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-035, REQ-GUI-071, REQ-GUI-077
-- **Depends on:** TASK-M8-01
+- **Depends on:** TASK-M8-01, TASK-M6-24
 - **Needs (earlier milestones):** REQ-SCHED-017, REQ-SCHED-048, REQ-PERF-016, REQ-SCHED-059, REQ-GUI-007, REQ-GUI-009
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -37,4 +37,4 @@ The contract keeps the one undo / redo history of typed SetField edits (R-52), s
 - `cargo test -p engine field_warnings` — for every exposed field the re-integrate warning equals the caching Part 2 blast-radius entry: render_scale, lock_to_native, MAX_REL_DEPTH, E and checkerboard_mode show no warning although they sit in SimConfig.quality; in-plane pan and zoom and lock show none; slicing out of the plane, tilt and rotate do; playback transport shows none (REQ-GUI-077).
 
 ## Notes
-- none
+- R-390: TASK-M6-24 gives the contract the interface the GUI calls and the real engine a history as far as the conformance suite reaches (apply, undo, redo, no-history edits); this task depends on it, builds the full history on it (the undoable set, coalescing, the blast-radius metadata), keeps every requirement it closes, and keeps the conformance suite green on both engines.

@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047
-- **Depends on:** TASK-M8-05
+- **Depends on:** TASK-M8-05, TASK-M6-28
 - **Needs (earlier milestones):** REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-2.2
@@ -40,3 +40,4 @@ Run settings are off the Explore page and in the Run window, every field a SimCo
 ## Notes
 - R-138: dt_macro is derived, not editable; the Run window shows it read-only with its rule max(1e-3, T/65535).
 - The escape window's 0.4 is marked provisional in §G5; the field exposes whatever SimConfig holds.
+- R-390: TASK-M6-28 builds the Run window's frame on the mock engine; this task depends on it and binds every field to its SimConfig field on the real engine, keeping every requirement it closes.

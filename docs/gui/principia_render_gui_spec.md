@@ -10,6 +10,10 @@ notes), then the twelve artboards in `gui/design/`. The notes win over the pictu
 notes and the corpus disagreed, the entries (RQ-20 to RQ-24) are ruled by R-64 to R-68. §G13 lists where a picture is
 overridden.*
 
+*Building the dev GUI on the mock engine (R-390), the sources rank `decisions.md`, then the design notes, then the
+artboards, then this spec, then `principia_gui_state_contract.md`; the higher wins where they disagree. R-68 still makes
+corpus values win over artboard values, as §G13 lists; the order governs layout, look, feel and behaviour.*
+
 *Part I covers the GUI as a whole. Part II is the stain editor, the node-graph editor over the composition algebra; it keeps
 its section numbers (§0–§16). It conforms to `principia_colour_composition.md`: where the two overlap, the composition spec
 is authoritative on semantics and this spec on interaction.*

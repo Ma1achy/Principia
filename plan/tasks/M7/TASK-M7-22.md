@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-GUI-031, REQ-COL-022, REQ-GUI-151, REQ-GUI-152
-- **Depends on:** TASK-M7-12, TASK-M7-17, TASK-M0-20
+- **Depends on:** TASK-M7-12, TASK-M7-17, TASK-M0-20, TASK-M6-29
 - **Needs (earlier milestones):** REQ-RENDER-009
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -39,3 +39,4 @@ The Stain mode of the dev GUI: the four surfaces of render_gui_spec Part II §1 
 - Definitions (R-72) written here: REQ-GUI-151, REQ-GUI-152 (render_gui_spec §16's node-palette contents and preview default). Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - R-68: the artboard sets layout; corpus values win.
 - RQ-100 ruled: R-113 — REQ-GUI-151 and REQ-GUI-152 move to M7 and are closed here, where the canvas and preview are built.
+- R-390: TASK-M6-29 builds Stain mode's layout and the canvas gestures on the mock engine, closing REQ-GUI-128 and REQ-GUI-131; this task depends on it, builds on its canvas, and wires it to the contract's stain graph, keeping every requirement and every part of its Goal.
