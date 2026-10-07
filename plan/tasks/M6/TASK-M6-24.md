@@ -13,9 +13,9 @@ The first task of the GUI track (R-390): a dev GUI the human runs on the Mac wit
 a mock engine. The engine crate's contract gains the interface the GUI calls (`set_field`, the snapshot, undo and redo as
 requests, the events), and the real engine implements it as far as the conformance suite reaches: its first fields are
 the playhead `t`, the history's undo and redo depths and an optional GUI-sized frame summary (RQ-243), and its events are
-log entries through one event channel (RQ-245). The gui crate holds the mock engine, a test double of that contract: it
-serves plausible GUI-sized snapshots, applies `SetField` with undo and redo (R-69), emits log entries through the
-contract's event channel, supplies the deterministic tick the app's clock reads to play Time (RQ-246), and renders the
+log entries the snapshot carries, adding no membrane crossing (RQ-245). The gui crate holds the mock engine, a test
+double of that contract: it serves plausible GUI-sized snapshots, applies `SetField` with undo and redo (R-69), emits
+log entries in its snapshots, supplies the deterministic tick the app's clock reads to play Time (RQ-246), and renders the
 figure's stand-in, smooth procedural noise, through a canvas trait kept apart from the data contract, on the device and
 queue it hands the app (RQ-247). One conformance suite, defined once in the engine crate, runs against both engines. The
 app shell looks, feels and behaves as `01_main.png` and the design notes give it: the window, F3 hiding and showing the
@@ -59,13 +59,15 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 
 ## Deliverables
 - `crates/engine/src/contract/`: the interface the GUI calls, as a trait — apply a `SetField`, read the latest
-  snapshot, request undo and redo, drain the events — as plain data (gui_state_contract §1), with the real engine's
-  implementation: a type holding a `SimConfig` and a `RenderState`, the history and the event queue, built by a
-  constructor that takes the initial state explicitly, since the surfaces carry no default (RQ-254). The fields it needs,
+  snapshot, request undo and redo; the events are read from the snapshot — as plain data (gui_state_contract §1), with the real engine's
+  implementation: a type holding a `SimConfig` and a `RenderState`, the history and the log entries since the last snapshot, built by a
+  constructor that takes the initial state explicitly, since the surfaces carry no default (RQ-254), with the playhead at
+  `t = 0.0` (RQ-244 as amended). The fields it needs,
   as gui_state_contract §2 names them (R-390's "Contract fields"; RQ-243): `RenderField::Playhead` setting
   `Playhead { t: f64 }`; `History { undo_depth: u32, redo_depth: u32 }`; the snapshot's frame summary `frame_ms`, `fps`,
   `quad_count` and `live_memory { heap_bytes, gpu_bytes }`, each an `Option`, `None` from the real engine until
-  TASK-M8-05 wires its frame loop; the log entry and its one event channel (RQ-245). A second, separate engine-side
+  TASK-M8-05 wires its frame loop; the log entry, with the snapshot carrying the entries accumulated since the
+  previous snapshot (RQ-245 as amended per code review 5438674593). A second, separate engine-side
   trait for the canvas (the device and queue, and drawing the figure into the app's pass), §1's sanctioned exception,
   outside the data contract and the conformance suite; the real engine's implementation of it is TASK-M8-05's (RQ-247).
   Everything sits under `engine::contract`, so TASK-M8-04's `pub` surface covers it.
@@ -73,13 +75,14 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   `cfg(test)`), generic over the interface, with the case list and a runner that names the failing case; engine's tests
   run it against the real engine. Its first cases are state semantics both engines run without a frame loop: a
   `SetField` shows in the next snapshot; undo and redo restore and reapply it; a no-history edit leaves the history
-  unchanged; each applied `SetField` logs one `info` entry from `contract` (RQ-254, RQ-245).
+  unchanged; each applied `SetField` logs one `info` entry from `contract`, seen in the next snapshot (RQ-254, RQ-245).
 - Doc changes (R-72), written into `docs/contracts/principia_gui_state_contract.md` § 2 beside the fields: the frame
   summary's definitions (REQ-GUI-176: `quad_count` is the frame record's `leaf_count` at the latest frame; `fps` is
   1000 / the mean `frame_ms` of the frames since the previous snapshot; the footer's GPU and heap are `live_memory`'s
   `gpu` and `heap` bytes, the tile cache not added) and the log entry (REQ-GUI-177: `{ severity: error | warn | info,
-  at, source: stain | integrator | quadtree | contract | app, message }`, plain data, through the contract's one event
-  channel, which the GUI drains each frame beside the ~10 Hz snapshot; R-54's flags stay in the snapshot; both engines
+  at, source: stain | integrator | quadtree | contract | app, message }`, plain data, carried GUI-sized in the snapshot as
+  the entries accumulated since the previous snapshot, which the GUI reads from each snapshot it receives, so no
+  membrane crossing is added (systems_architecture §6 invariant 10); R-54's flags stay in the snapshot; both engines
   log each applied `SetField` as an `info` entry from `contract`; the footer counts warnings and errors since the
   session began, until TASK-M6-28's "clear" resets them). Schema v1 is unchanged.
 - `crates/gui/src/mock/`: the mock engine, compiled under the `mock` feature and in gui's tests; the fake clock's time
@@ -131,7 +134,7 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 - Tests: `mock_engine`, `conformance` (in engine and in gui), `mock_tag`, `f3_toggle_mock`, `mock_status_line`.
 
 ## Acceptance tests
-- `cargo test -p gui mock_engine` — a SetField shows in the next snapshot; undo and redo restore and reapply it; an edit marked no history leaves the history unchanged; the fake clock, run through the app's clock on the mock's tick, advances the playhead through no-history SetFields while playing and holds it while paused, and the mock reads no `ViewUI` (RQ-246); events arrive only through the contract's event channel, one `contract` info entry per applied SetField. The PR shows `cargo run -p gui --features mock` opening the app window (REQ-GUI-165).
+- `cargo test -p gui mock_engine` — a SetField shows in the next snapshot; undo and redo restore and reapply it; an edit marked no history leaves the history unchanged; the fake clock, run through the app's clock on the mock's tick, advances the playhead through no-history SetFields while playing and holds it while paused, and the mock reads no `ViewUI` (RQ-246); events arrive only in the snapshot, as the entries since the previous snapshot, one `contract` info entry per applied SetField (RQ-245 as amended). The PR shows `cargo run -p gui --features mock` opening the app window (REQ-GUI-165).
 - `cargo test -p engine conformance` and `cargo test -p gui conformance` — the same case list from the one definition (the four state-semantics cases, RQ-254), run against the real engine and the mock, both pass with no case skipped; a deliberately non-conforming double fails it, naming the case (REQ-GUI-166).
 - `cargo xtask screenshot 01_main` (mock_footer) and `cargo test -p gui mock_tag` — the footer on the mock shows the "mock engine" tag beside 01_main.png's footer; `mock_tag` runs the app headless once on the mock and once on the real engine's data contract with no figure, and the tag is in the AccessKit names exactly when the engine is the mock (REQ-GUI-167).
 - `cargo xtask screenshot 01_main` (mock_shell, mock_f3_off, mock_warning) and `cargo test -p gui f3_toggle_mock` — against 01_main.png with F3 on and off, the stand-in figure identical underneath: the two captures are pixel-identical over the figure's rect (RQ-248); a raised warning and error change the footer's counts and nothing over the figure; a footer click opens the console window frame; the gui reviewer checks the design notes' global rules (REQ-GUI-168).
@@ -139,7 +142,7 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 - `cargo test -p gui mock_status_line` and `cargo xtask screenshot 01_main` (mock_shell, mock_footer) — the top bar's status line shows the mock snapshot's `t`, fps, frame ms and quad count in the artboard's format, and its undo depth reads 2 after two edits on the mock and 1 after an undo, with the redo depth 1; the footer shows the mock's memory readout and the "? keys" hint; against 01_main.png's top bar and footer (REQ-GUI-168).
 - `cargo test -p xtask screenshot_gui_surface` and `cargo xtask deps` — a screenshot case whose `surface` is a `gui` object spawns the capture mode for a named screen with its steps and gets its PNG and names with rects back; a `data` case is unchanged; `cargo xtask deps` shows no edge into gui (REQ-GUI-162).
 - Review checklist (physics reviewer) of the frame summary's definition — gui_state_contract §2 defines `quad_count`, `fps` and the footer's GPU and heap against the frame record; the mock's snapshot, the status line and the footer follow it (REQ-GUI-176).
-- Review checklist (physics reviewer) of the log entry's definition — gui_state_contract §2 gives the entry's shape and its one event channel; the conformance suite checks one `contract` info entry per applied SetField on both engines; the footer's counts follow it (REQ-GUI-177).
+- Review checklist (physics reviewer) of the log entry's definition — gui_state_contract §2 gives the entry's shape and that the snapshot carries the entries since the previous snapshot; the conformance suite checks one `contract` info entry per applied SetField in the next snapshot on both engines; the footer's counts follow it (REQ-GUI-177).
 
 ## Notes
 - **Fetches (dispatch requirement; RQ-251 as amended per R-369).** The implementer may fetch two things and nothing
@@ -170,17 +173,25 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 - The contract's history here is what the conformance suite needs (apply, undo, redo, no-history edits); the full
   undoable set, coalescing and the blast-radius metadata stay TASK-M8-03's, which depends on this task. Cases that need
   the frame loop (the clock, fps, quads, the figure) join the suite only when the real engine has one (R-390).
-- **The canonical text changes (RQ-244).** `Playhead.t` adds `"playhead":{"t":…}` to RenderState's JCS text (R-309,
-  R-318). The implementer updates its own pins (`crates/engine/src/contract/tests/canonical.rs`:438, :527, :665;
-  `crates/prin/tests/profile.rs`:144, :305, :306, :403). `crates/engine/tests/qa_TASK-M0-18.rs`:49 and
-  `crates/prin/tests/qa_TASK-M0-18.rs`:165 pin the old text; every earlier commit to each is a qa commit, so qa's commit
-  updates them under R-290 (`M` lines), as `a7496d6` did. The implementer's head is red on those two tests until qa's
-  commit, and the PR says so; the code reviewer confirms the only change is the added `playhead` member.
+- **The canonical text changes (RQ-244, as amended per code review 5438674593).** An explicit initial state gives the
+  playhead `t = 0.0`, so RenderState's JCS text gains `"playhead":{"t":0}` (R-309, R-318: 0.0 is written `0`).
+  - The implementer: `crates/prin/src/profile/run.rs`:231 builds `playhead: Playhead {},` in the synthetic run and
+    becomes `Playhead { t: 0.0 }`; the implementer's pins follow (`crates/engine/src/contract/tests/canonical.rs`:438,
+    :527, :665; `crates/prin/tests/profile.rs`:144, :305, :306 (the profile header's `config`), :403).
+  - qa, under R-290 (every earlier commit to each file is a qa commit; `M` lines, as `a7496d6` changed both the struct
+    literal and the text): `crates/engine/tests/qa_TASK-M0-18.rs`:41 (`playhead: Playhead {},` becomes
+    `Playhead { t: 0.0 }`) and :49 (the pinned text), and `crates/prin/tests/qa_TASK-M0-18.rs`:165.
+  - The implementer's head: the surfaces have no `Default` (qa_TASK-M0-16), so the engine qa_TASK-M0-18 target fails to
+    compile until qa's commit, and CI's `cargo nextest archive --workspace` and `cargo clippy --workspace
+    --all-targets` are red there; qa's commit follows the implementer's push, as on PR #160, and the PR says so.
+  - The code reviewer confirms that the struct literals gain `t: 0.0` and the expected texts gain `"t":0`, and nothing
+    else changes.
 - **The gui reviewer's § 8 here** (RQ-250): the reviewer checks the shell's own controls and marks (the top bar, the
   footer, the regions' placement, F3, the theme and fonts); the keyboard item applies from TASK-M6-25 on, and the
   artboard-marks item to each mark's own task.
-- **physics** is added only to approve the two R-72 definitions, REQ-GUI-176 and REQ-GUI-177: `plan/WORKFLOW.md` §
-  "Human checkpoints: the milestone gates" requires every definition requirement's doc change to merge with the
+- **physics** is added only to approve the two R-72 definitions, REQ-GUI-176 and REQ-GUI-177: R-72 says a missing
+  definition is "reviewed by the physics reviewer before merging", and `plan/WORKFLOW.md` § "Human checkpoints: the
+  milestone gates" requires every definition requirement's doc change to merge with the
   physics reviewer's approval. R-390's three reviewers, code, qa and gui, cover everything else. This is the gate rule
   applied alongside R-390 ("Reviewers: code, qa and gui"), flagged for the human (applied per R-369); it changes
   nothing that gets built.
