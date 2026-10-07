@@ -42,3 +42,7 @@ justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages
 [[equivalent]]
 mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_buffers"
 justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/top_bar.rs:23:5: replace overlays_on -> u32 with 0"
+justification = "Overlays has no field yet (the overlay set has no toggle until its task, RQ-249), so the function's body is the constant 0 the mutant returns"

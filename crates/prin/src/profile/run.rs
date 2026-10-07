@@ -228,7 +228,7 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
         stain_graph: StainGraph {},
         overlays: Overlays {},
         palette: Palette {},
-        playhead: Playhead {},
+        playhead: Playhead { t: 0.0 },
     };
     (sim, render)
 }

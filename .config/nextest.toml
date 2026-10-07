@@ -12,6 +12,7 @@ filter = """
     | (binary_id(xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     | binary_id(xtask::nextest)
+    | (binary_id(xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
 threads-required = "num-test-threads"
 
@@ -36,10 +37,12 @@ default-filter = """
         | binary_id(=xtask::nextest)
         | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
         | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
+        | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
     )
 """
 
-# The tests that run cargo on the workspace's own target directory from xtask (the override above), which CI's
+# The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
+# screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
 # archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
 # test thread.
@@ -48,6 +51,7 @@ default-filter = """
     binary_id(=xtask::nextest)
     | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
+    | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
 
 [profile.gpu-kernel]
