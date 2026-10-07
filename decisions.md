@@ -6605,9 +6605,22 @@ carries the recheck (below).
   encode and decode and the sentinel; **REQ-INT-088**, the hold recomputed on resume from the current state, and the
   lifecycle above; **REQ-INT-089**, a march's `θ̃` and `_reserved` bit-identical whether run in one dispatch or
   resumed across `k`, with a resume inside a pole passage. REQ-INT-082 gains R-397 as a ruling, and REQ-PAY-009's
-  verify records the recheck. TASK-M3-11's reviewers already include physics. A TASK-M1-11 or TASK-M0-12 qa
-  assertion that R-397 forces to change (the hold's helper in `crates/kernel/src/shape.rs`, the five-entry hashed
-  list) is a ruling-forced exception to the qa-file rule, listed in TASK-M3-11's PR (R-290, R-369).
+  verify records the recheck. TASK-M3-11's reviewers already include physics.
+- **The qa files this touches (R-290).**
+  - TASK-M1-11's qa tests, `crates/kernel/tests/qa_TASK-M1-11.rs` (the unquantised hold rule at :84–94) and
+    `crates/kernel/tests/qa_TASK-M1-11_config.rs` (`expected` at :55–69, the f64 tolerance from :155,
+    `edge_check!(edge64, f64, 1e-12)` at :504), compare `kernel::shape::theta_step` and `theta_step_config` with the
+    unquantised hold at tolerances far below `π/65535`. They break only if TASK-M3-11 makes that helper in
+    `crates/kernel/src/shape.rs` quantise, a design choice R-397 leaves open, so they are not forced by the ruling.
+    If the march quantises on entry and keeps the helper, they stay untouched. If TASK-M3-11 quantises in the
+    helper, the changes to those files are qa-file changes its PR lists and justifies.
+  - TASK-M0-12's `crates/ledger/tests/qa_TASK-M0-12.rs:447–451` (`SECTION_3_8_HASHED`, five names, and its comment;
+    "five" in the module doc at :8) iterates its own five names, which stay hashed, so it still passes with seven
+    `STORED_BITS` and nothing forces a change. Its only commit is qa's (`f4cb7e8`), so extending it to seven is an
+    ordinary R-290 `M` by qa, with its reason, not a ruling-forced exception.
+  - The implementer's own `crates/ledger/tests/schema_version.rs:512–514` (`STORED_BITS.len() == REGISTER.len()`)
+    still passes at 7 = 7; only its message, "today all five register entries are hashed", goes stale, and
+    TASK-M3-11 updates it.
 - **Not a contradiction, noted:** TASK-M3-11's lagged `n̂` register (REQ-PAY-059) and departed bit (REQ-VAL-055)
   are its own layout changes; R-397's "size unchanged" is about this slot, and the recheck above is what such a
   field then costs.
