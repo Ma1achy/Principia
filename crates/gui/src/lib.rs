@@ -5,6 +5,7 @@
 pub mod app;
 #[cfg(any(test, feature = "mock"))]
 pub mod capture;
+pub mod cli;
 pub mod clock;
 pub mod console;
 pub mod explore;
@@ -18,10 +19,12 @@ pub mod mock;
 
 #[cfg(test)]
 mod tests {
+    mod cli;
     mod conformance;
     mod f3_toggle_mock;
     mod mock_engine;
     mod mock_status_line;
     mod mock_tag;
     mod support;
+    mod theme;
 }
