@@ -295,6 +295,12 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
             "vec2<f32>",
             format!("(vec2<f32>(r.quad_xy) + vec2<f32>(0.5)) / {quads}"),
         ),
+        // The quad's half-width (colour_composition §3, R-72), on the grid tiling the slice as `tl` and `centre` are.
+        member(
+            "half_width",
+            "vec2<f32>",
+            format!("vec2<f32>(0.5) / {quads}"),
+        ),
         member("uv", "vec2<f32>", "r.quad_uv"),
         member("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
     ];
@@ -557,7 +563,7 @@ pub const PRESET_ENTRY: &str = "preset_harness_fs";
 /// screen and quad lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], the per-quad frames
 /// at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile through
 /// `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad.uv` the sample's quad-local coordinate and
-/// `ctx.quad.c`, `ctx.quad.h` its quad's frame, and writes the colour with alpha 1. The presets (`engine::presets`)
+/// `ctx.quad.centre`, `ctx.quad.half_width` its quad's frame, and writes the colour with alpha 1. The presets (`engine::presets`)
 /// render through it.
 pub fn preset_module(assembled: &str) -> String {
     format!(

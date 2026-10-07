@@ -16,8 +16,8 @@
 //! return. An occupant reads the read-side `SimState` by plain member access, `ctx.sample.ftle`, at every tier
 //! (lowering Part 3a), its wired fields as `ctx.inputs[k]`, and its uniforms as `uniforms.<name>`, declared in the
 //! file's header ([`Declaration`]; gui_state_contract §3). It reads the pixel's post-flip UV as `ctx.screen.uv` and its
-//! sample's quad-local coordinate and quad as `ctx.quad.uv`, `ctx.quad.c` and `ctx.quad.h` (colour_composition §3's
-//! lanes; deep_zoom §1's centre and half-width), which `shade_at`'s caller fills from the raster (TASK-M1-07).
+//! sample's quad-local coordinate and quad as `ctx.quad.uv`, `ctx.quad.centre` and
+//! `ctx.quad.half_width` (colour_composition §3's lanes; deep_zoom §1's c and h), which `shade_at`'s caller fills from the raster (TASK-M1-07).
 //!
 //! **Identity** (render_gui_spec §13; colour_composition §4.1): a node whose occupant is None, or one of whose field
 //! inputs is absent, is the identity. A colour None gives the combiner white, so the combiner gives the greyscale of
@@ -934,11 +934,11 @@ struct CtxScreen {
 }
 
 // colour_composition §3's quad lane as the stain reads it: the sample's quad-local coordinate `uv` (t, deep_zoom §1),
-// and the quad's centre `c` and half-width `h`, deep_zoom §1's per-quad values (the synthetic harness's at M1).
+// and the quad's `centre` and `half_width`, deep_zoom §1's per-quad c and h (the synthetic harness's at M1).
 struct CtxQuad {
     uv: vec2<f32>,
-    c: vec2<f32>,
-    h: vec2<f32>,
+    centre: vec2<f32>,
+    half_width: vec2<f32>,
 }
 
 // What every node reads (render contract Part 1): the sample's read-side `SimState`, the pixel's position for the
