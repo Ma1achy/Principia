@@ -24,6 +24,12 @@ const DBG_GOLDEN_FIXED: u32 = 2654435769u;
 // An 8-bit sRGB colour, decoded to linear RGB.
 fn dbg_srgb8(c: vec3<u32>) -> vec3<f32> { return srgb_to_linear(vec3<f32>(c) / 255.0); }
 
+// The neutral "not yet" grey of running samples (R-96; colour_composition §1.4), the colour a field view draws
+// `d_min`'s unset value in (R-280): 8-bit sRGB #4E4E4E, OKLab L 0.424, as linear RGB, each channel the f32 nearest
+// sRGB's decode of 78/255. Proposed, R-71 (REQ-COL-053, RQ-233): the human confirms it at the M1 gate. The CPU mirror
+// is `crate::present::NOT_YET_SRGB8`.
+const DBG_NOT_YET: vec3<f32> = vec3<f32>(0.07618538, 0.07618538, 0.07618538);
+
 // Categorical: class `i` of `n`. With n ≤ 8, the Okabe–Ito palette, cycling (i mod 8); with n > 8, the golden angle
 // for every class, the prelude's `hue_wheel` at frac(i · φ_g) turns, so adjacent classes sit ≈ 137.5° apart
 // (dd_colouring §3.7). The wheel's OKLCH lightness and chroma (R-72) are the ledger's, in gamut at every hue.
