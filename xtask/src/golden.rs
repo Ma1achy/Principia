@@ -29,7 +29,13 @@
 //! ```
 //!
 //! The shader is a WGSL fragment module, drawn over the whole target by a full-screen triangle the runner supplies;
-//! `constants` set its `override` declarations. Its output is quantised in the runner's own shader (R-287): the case's
+//! `constants` set its `override` declarations. A case of the harness kind instead names a synthetic scene,
+//! `"render": { "harness": "<scene>", "width": <w>, "height": <h> }` (RQ-229, decided per R-369; TASK-M1-09): the
+//! runner spawns validation's `golden_harness` binary, which xtask reaches only as a separate process (as it does
+//! `gate`; systems_architecture §7.1, R-187), and which renders the scene through the render harness
+//! (`render::bind`'s module and `upload`) into an `Rgba32Float` target and writes its floats to stdout
+//! ([`HARNESS_MAGIC`]'s format); the runner uploads them as the case's float target and quantises and compares them as
+//! for any case. The width and height must be the scene's. Its output is quantised in the runner's own shader (R-287): the case's
 //! fragment writes an `Rgba32Float` target, and the runner's quantise pass scales each channel to 0..255, rounds it
 //! half to even and stores the exact level `k / 255` in the `Rgba8Unorm` target, so no backend's float-to-unorm
 //! conversion has a tie to break (parity_contract §4). `output: "automatic"` (R-287's control only) draws the case's
@@ -199,42 +205,74 @@ pub struct Config(pub BTreeMap<String, Value>);
 
 const RENDER_FIELDS: [&str; 4] = ["shader", "fragment", "width", "height"];
 
+/// A harness case's render fields: the scene, and the target's size.
+const HARNESS_FIELDS: [&str; 3] = ["harness", "width", "height"];
+
+/// The float image's file the `golden_harness` binary writes: this magic, the width and height as little-endian u32,
+/// then each pixel's RGBA as four little-endian f32, rows from the top (`validation::golden_scene::MAGIC`).
+pub const HARNESS_MAGIC: &[u8; 8] = b"PRINF32\0";
+
 impl Config {
     /// Flattens a case's `render` object, refusing a missing or unknown field.
     pub fn from_render(render: &Value) -> Result<Config, String> {
         let object = render.as_object().ok_or("`render` is not an object")?;
+        let kind = Config::kind(object.contains_key("harness"));
         let mut fields = BTreeMap::new();
         for (key, value) in object {
-            if key == "constants" {
+            if key == "constants" && kind == RENDER_FIELDS {
                 let constants = value
                     .as_object()
                     .ok_or("`render.constants` is not an object")?;
                 for (name, value) in constants {
                     fields.insert(format!("constants.{name}"), value.clone());
                 }
-            } else if RENDER_FIELDS.contains(&key.as_str()) {
+            } else if kind.contains(&key.as_str()) {
                 fields.insert(key.clone(), value.clone());
             } else {
                 return Err(format!("`render.{key}` is not a render field"));
             }
         }
         let config = Config(fields);
-        for field in RENDER_FIELDS {
+        for &field in kind {
             if !config.0.contains_key(field) {
                 return Err(format!("`render.{field}` is missing"));
             }
+        }
+        if kind == HARNESS_FIELDS && config.harness().is_none() {
+            return Err("`render.harness` is not a string".to_owned());
         }
         config.size()?;
         config.constants()?;
         Ok(config)
     }
 
-    /// Sets `field` to `value`: a render field, or `constants.<override>`.
+    /// The render fields of a case of the harness kind, or of a shader case.
+    fn kind(harness: bool) -> &'static [&'static str] {
+        if harness {
+            &HARNESS_FIELDS
+        } else {
+            &RENDER_FIELDS
+        }
+    }
+
+    /// The scene a case of the harness kind names, or `None` for a shader case.
+    pub fn harness(&self) -> Option<&str> {
+        self.0.get("harness").and_then(Value::as_str)
+    }
+
+    /// Sets `field` to `value`: a render field of the config's kind, or a shader case's `constants.<override>`.
     pub fn set(&mut self, field: &str, value: Value) -> Result<(), String> {
-        if !RENDER_FIELDS.contains(&field) && !field.starts_with("constants.") {
+        let harness = self.0.contains_key("harness");
+        let kind = Config::kind(harness);
+        if !kind.contains(&field) && (harness || !field.starts_with("constants.")) {
+            let constants = if harness {
+                ""
+            } else {
+                " and constants.<override>"
+            };
             return Err(format!(
-                "`{field}` is not a field; the fields are {} and constants.<override>",
-                RENDER_FIELDS.join(", ")
+                "`{field}` is not a field; the fields are {}{constants}",
+                kind.join(", ")
             ));
         }
         self.0.insert(field.to_owned(), value);
@@ -792,10 +830,33 @@ impl Renderer {
         readback: Readback,
     ) -> Result<(u32, u32, Vec<u8>), String> {
         let (width, height) = config.size()?;
-        let shader_path = dir.join(config.text("shader")?);
-        let source = fs::read_to_string(&shader_path)
-            .map_err(|e| format!("{}: {e}", shader_path.display()))?;
-        let fragment = config.text("fragment")?;
+        // A harness case's float target comes from the `golden_harness` binary: read back as floats, it is the
+        // render; quantised, it is uploaded into the float target the quantise pass reads; it has no automatic output.
+        let harness = match config.harness() {
+            None => None,
+            Some(scene) => {
+                let floats = harness_floats(scene, width, height)?;
+                match readback {
+                    Readback::Float => return Ok((width, height, floats)),
+                    Readback::Unorm(Output::Automatic) => {
+                        return Err(format!(
+                            "harness scene `{scene}`: a harness case has only the quantised output (R-287)"
+                        ))
+                    }
+                    Readback::Unorm(Output::Quantised) => Some(floats),
+                }
+            }
+        };
+        // A shader case's fragment; a harness case has none.
+        let shader = match harness {
+            Some(_) => None,
+            None => {
+                let shader_path = dir.join(config.text("shader")?);
+                let source = fs::read_to_string(&shader_path)
+                    .map_err(|e| format!("{}: {e}", shader_path.display()))?;
+                Some((shader_path, source, config.text("fragment")?))
+            }
+        };
         let constants = config.constants()?;
         let constants: Vec<(&str, f64)> = constants.iter().map(|(k, v)| (k.as_str(), *v)).collect();
         let unorm = wgpu::TextureFormat::Rgba8Unorm;
@@ -819,7 +880,6 @@ impl Renderer {
                 })
         };
         let vs = module("golden_vs", FULL_SCREEN_VS);
-        let fs_module = module(fragment, &source);
         let pipeline = |layout: Option<&wgpu::PipelineLayout>,
                         fs: &wgpu::ShaderModule,
                         entry: &str,
@@ -851,8 +911,16 @@ impl Renderer {
                     cache: None,
                 })
         };
-        let case_pipeline = pipeline(None, &fs_module, fragment, &constants, case_format);
-        if let Some(error) = pollster::block_on(scope.pop()) {
+        let case_pipeline = shader.as_ref().map(|(_, source, fragment)| {
+            pipeline(
+                None,
+                &module(fragment, source),
+                fragment,
+                &constants,
+                case_format,
+            )
+        });
+        if let (Some(error), Some((shader_path, ..))) = (pollster::block_on(scope.pop()), &shader) {
             return Err(format!("{}: {error}", shader_path.display()));
         }
         let size = wgpu::Extent3d {
@@ -912,14 +980,17 @@ impl Renderer {
         };
         match readback {
             Readback::Unorm(Output::Automatic) | Readback::Float => {
-                draw(&mut encoder, &view, &case_pipeline, None)
+                if let Some(case_pipeline) = &case_pipeline {
+                    draw(&mut encoder, &view, case_pipeline, None);
+                }
             }
             Readback::Unorm(Output::Quantised) => {
                 let float = target(
                     "golden float target",
                     case_format,
                     wgpu::TextureUsages::RENDER_ATTACHMENT
-                        .union(wgpu::TextureUsages::TEXTURE_BINDING),
+                        .union(wgpu::TextureUsages::TEXTURE_BINDING)
+                        .union(wgpu::TextureUsages::COPY_DST),
                 );
                 let float_view = float.create_view(&Default::default());
                 let scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
@@ -967,7 +1038,23 @@ impl Renderer {
                 if let Some(error) = pollster::block_on(scope.pop()) {
                     return Err(format!("golden quantise pass: {error}"));
                 }
-                draw(&mut encoder, &float_view, &case_pipeline, None);
+                match (&case_pipeline, &harness) {
+                    (Some(case_pipeline), _) => {
+                        draw(&mut encoder, &float_view, case_pipeline, None)
+                    }
+                    // The queue's write lands before the encoder's commands, which the next submit carries.
+                    (None, Some(floats)) => self.queue.write_texture(
+                        float.as_image_copy(),
+                        floats,
+                        wgpu::TexelCopyBufferLayout {
+                            offset: 0,
+                            bytes_per_row: Some(16 * width),
+                            rows_per_image: Some(height),
+                        },
+                        size,
+                    ),
+                    (None, None) => {}
+                }
                 draw(&mut encoder, &view, &quantise, Some(&bind_group));
             }
         }
@@ -1002,6 +1089,59 @@ impl Renderer {
         buffer.unmap();
         Ok((width, height, bytes))
     }
+}
+
+/// Renders the harness scene `scene` by running validation's `golden_harness` binary on this workspace, through the
+/// cargo that runs xtask, and returns its floats, tightly packed: refused unless the image is `width` × `height`.
+fn harness_floats(scene: &str, width: u32, height: u32) -> Result<Vec<u8>, String> {
+    let output = std::process::Command::new(crate::deps::cargo())
+        .args(["run", "--quiet", "--manifest-path"])
+        .arg(crate::workspace_manifest())
+        .args([
+            "-p",
+            "validation",
+            "--bin",
+            "golden_harness",
+            "--",
+            "--scene",
+            scene,
+        ])
+        .stderr(std::process::Stdio::inherit())
+        .output()
+        .map_err(|e| format!("cannot run cargo run -p validation --bin golden_harness: {e}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "golden_harness --scene {scene} failed ({})",
+            output.status
+        ));
+    }
+    decode_harness(&output.stdout, width, height)
+        .map_err(|e| format!("golden_harness --scene {scene}: {e}"))
+}
+
+/// The floats of the harness's image `bytes` ([`HARNESS_MAGIC`]'s format), tightly packed: refused unless it is
+/// `width` × `height` and whole.
+pub fn decode_harness(bytes: &[u8], width: u32, height: u32) -> Result<Vec<u8>, String> {
+    let rest = bytes
+        .strip_prefix(HARNESS_MAGIC.as_slice())
+        .ok_or("the image does not start with the harness's magic")?;
+    let (size, floats) = rest.split_at_checked(8).ok_or("the image has no size")?;
+    let (w, h) = size.split_at(4);
+    let dim = |b: &[u8]| u32::from_le_bytes([b[0], b[1], b[2], b[3]]);
+    let (w, h) = (dim(w), dim(h));
+    if (w, h) != (width, height) {
+        return Err(format!(
+            "the scene is {w} × {h}, but the case says {width} × {height}"
+        ));
+    }
+    let want = 16 * u64::from(w) * u64::from(h);
+    if floats.len() as u64 != want {
+        return Err(format!(
+            "the image holds {} bytes of pixels, not {want}",
+            floats.len()
+        ));
+    }
+    Ok(floats.to_vec())
 }
 
 /// What a render reads back: the `Rgba8Unorm` target, its output stored as the [`Output`] says, or the case's own

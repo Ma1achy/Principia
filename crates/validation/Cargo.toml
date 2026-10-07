@@ -39,3 +39,9 @@ test = false
 [[bin]]
 name = "bench"
 test = false
+
+# The golden harness's scene renderer, which `cargo xtask golden` runs as a separate process for a case of the harness
+# kind, as it does `gate` (TASK-M1-09; RQ-229).
+[[bin]]
+name = "golden_harness"
+test = false

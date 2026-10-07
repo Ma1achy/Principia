@@ -7,6 +7,7 @@ pub mod bringup;
 pub mod control;
 pub mod convergence;
 pub mod gate;
+pub mod golden_scene;
 pub mod gpu;
 pub mod oklab;
 pub mod prop;
