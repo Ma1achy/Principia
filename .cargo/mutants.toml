@@ -25,6 +25,18 @@ exclude_globs = [
 # from configuration, so every item gated on `target_arch = "spirv"` also carries `#[cfg_attr(test, mutants::skip)]`,
 # which it recognises. A missing marker fails closed: the item's mutants survive and the job names them.
 
+# What each mutant runs (R-388 item 4; applied per R-369): the tests of the package it mutates, cargo-mutants' default
+# (neither `test_workspace` nor `test_package` is set), through cargo-nextest. The baseline runs the tests of every
+# package the run mutates. nextest runs each test as a process of its own and the test binaries side by side, where
+# `cargo test` runs the binaries one after another (render's 296 tests: 238 s against 105 s), and stops at the first
+# test that fails (the options below). It runs the same tests as `cargo test`: the workspace has no doctests, which
+# nextest would skip.
+# Dependents' tests are not added: every crate but gui reaches ledger, render, kernel and engine through its
+# dev-dependency on `validation`, so they would take a ledger mutant from its own 36 s of tests to the whole suite's,
+# against REQ-VAL-149's limit. A narrower test set can only leave more mutants surviving, never fewer, so the gate is
+# as strict as with the whole workspace's tests.
+test_tool = "nextest"
+
 # The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
 # mutant. cargo-mutants sets it from the unmutated baseline's test time: `timeout_multiplier` times that time, but no
@@ -34,15 +46,29 @@ timeout_multiplier = 2.0
 minimum_test_timeout = 60
 
 # The per-process memory cap on the test processes (R-348; REQ-VAL-181, confirmed by the human at the M0 gate, R-376,
-# R-71): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. cargo runs
-# each test binary under `prlimit` as its runner, so the cap binds each test process of the baseline and of every
+# R-71): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. nextest runs
+# each test under `prlimit` as its runner, so the cap binds each test process of the baseline and of every
 # mutant, and what that process spawns, but not cargo-mutants, nor cargo and rustc building the tests. A test whose
 # allocation passes the cap fails, as any failing test does. `--core=1` turns off the process's core dump, which
 # otherwise holds it up: the runners pipe cores to systemd-coredump, which ignores a limit of 0 and reads all 8 GiB
 # (about 45 s on ubuntu-24.04, against about 5 s without it); the kernel skips a piped dump when the limit is 1. The
 # runner is set for Linux alone: CI's Linux runners enforce the cap, and a run on macOS, which has no `prlimit`, gets
-# the timeout alone (R-352).
+# the timeout alone (R-352). nextest reads the runner from `--config`, as cargo does, and runs each test process under
+# it. cargo-mutants' timeout wraps the whole `cargo nextest run`.
+# nextest's own options, each so that a mutant is caught only by a test that fails:
+# - `--no-tests=warn`: a package with no tests (gui) passes, as under `cargo test`. nextest's default fails such a run
+#   (exit 4), and cargo-mutants would then count each of its mutants as caught, a survivor hidden.
+# - `--retries=2`: a failing test is run up to twice more, and passes if any run passes. On lavapipe, a GPU test process
+#   now and then dies of SIGSEGV after its test has passed ("test result: ok", then signal 11, measured on PR #149's
+#   diff, run 37532961883): one failed a shard's baseline, so the shard tested nothing, and one counted a mutant as
+#   caught. nextest gives each test a process of its own, so such exits are many times likelier than under `cargo test`.
+#   A mutant that breaks a test fails all three runs; a retry can only turn a catch into a survivor, never the reverse.
+# - `--max-fail=1:immediate`: the first test failing all its runs catches the mutant, and the tests still running are
+#   stopped at once rather than waited for.
 additional_cargo_test_args = [
+    "--no-tests=warn",
+    "--retries=2",
+    "--max-fail=1:immediate",
     "--config",
     "target.'cfg(target_os = \"linux\")'.runner = ['prlimit', '--as=8589934592', '--core=1']",
 ]

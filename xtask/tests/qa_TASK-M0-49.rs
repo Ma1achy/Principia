@@ -16,7 +16,8 @@
 //! - the timeout lives in `.cargo/mutants.toml`, the file a `cargo mutants` run in the workspace reads by default, at
 //!   its top level (so no platform scopes it), as a multiple of the baseline with its floor, marked confirmed by the
 //!   human at the M0 gate (R-376; it was marked provisional until then, R-182);
-//! - the memory cap, run as cargo-mutants runs a test (`cargo test` with the config's extra cargo and test arguments),
+//! - the memory cap, run as cargo-mutants runs a test (`cargo test`, or `cargo nextest run` under the config's
+//!   `test_tool = "nextest"`, with the config's extra cargo and test arguments),
 //!   binds the test process on Linux, where a reservation the size of the machine's memory is refused, and on macOS
 //!   leaves the test to run without it (no `prlimit` there);
 //! - every `cargo mutants` call in CI's workflows reads that one file: none points it at another config, turns the
@@ -259,10 +260,24 @@ fn mem_total_bytes() -> u64 {
     kib * 1024
 }
 
-/// Runs a probe crate's test as cargo-mutants runs one, with `toml`'s extra arguments: `cargo test --no-run` with
-/// `additional_cargo_args` (its build phase), then `cargo test` with those and `additional_cargo_test_args` (its test
-/// phase). On Linux the probe's test process must run under a finite address-space cap that refuses a reservation the
-/// size of the machine's memory; on macOS it must run, without `prlimit`, which the Mac does not have (R-352).
+/// The cargo subcommand cargo-mutants runs the tests with under `toml`'s `test_tool`: `nextest run` for `"nextest"`,
+/// `test` for `"cargo"` or when the key is unset (cargo-mutants' default).
+fn test_subcommand(toml: &str) -> &'static [&'static str] {
+    let doc: toml_edit::DocumentMut = toml.parse().expect("qa49: .cargo/mutants.toml is not TOML");
+    match doc.get("test_tool").map(|v| v.as_str()) {
+        None | Some(Some("cargo")) => &["test"],
+        Some(Some("nextest")) => &["nextest", "run"],
+        Some(other) => panic!("qa49: `test_tool` is not one cargo-mutants takes: {other:?}"),
+    }
+}
+
+/// Runs a probe crate's test as cargo-mutants runs one, with `toml`'s test tool and extra arguments: `cargo test
+/// --no-run` (or `cargo nextest run --no-run` under `test_tool = "nextest"`) with `additional_cargo_args` (its build
+/// phase), then `cargo test` (or `cargo nextest run`) with those and `additional_cargo_test_args` (its test phase).
+/// nextest's variables from the run this test is itself part of (`NEXTEST_PROFILE` among them, a profile the probe
+/// does not define) are cleared, as a `cargo mutants` run starts without them. On Linux the probe's test process must
+/// run under a finite address-space cap that refuses a reservation the size of the machine's memory; on macOS it must
+/// run, without `prlimit`, which the Mac does not have (R-352).
 fn cap_binds_where_enforced(toml: &str) {
     const FAIL: &str = "qa49: the memory cap does not bind the test process where it is enforced";
     let dir = scratch("probe");
@@ -273,9 +288,15 @@ fn cap_binds_where_enforced(toml: &str) {
     let reserve = if linux { mem_total_bytes() } else { 0 };
     let cargo_args = args(toml, "additional_cargo_args");
     let test_args = args(toml, "additional_cargo_test_args");
+    let subcommand = test_subcommand(toml);
     let run = |phase: &[&str], extra: &[String]| {
         let mut cmd = Command::new(env!("CARGO"));
-        cmd.arg("test")
+        for (key, _) in std::env::vars_os() {
+            if key.to_string_lossy().starts_with("NEXTEST") {
+                cmd.env_remove(key);
+            }
+        }
+        cmd.args(subcommand)
             .args(phase)
             .args(extra)
             .arg("--target-dir")
