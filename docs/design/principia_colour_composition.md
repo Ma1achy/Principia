@@ -557,7 +557,11 @@ index `i` in the `SimState` buffer (on the synthetic harness's flat layout, the 
 | `packed_b` | `0`: `dE_max` and `dLz_max` both +0 |
 | `times` | `t_end_step = j`, `t_dmin_step = 65535 − j` |
 | `total_substeps` | `i` |
-| `closure_step`, `_reserved` | `j`, `0` |
+| `closure_step`, `_reserved` (`θ̃`'s frozen pole reference, R-397) | `j`, `0` (the code of the reference 0 rad: a valid code, not a fresh sample's 0xFFFF) |
+
+`_reserved` keeps `0` under R-397 (applied per R-369): the pattern is not physics (its `theta` slot holds `32·i + 25`,
+not a phase), 0 is a valid reference code (payload §2), and the bring-up mode never runs the pole hold, so nothing
+reads it as a reference. The synthetic harness uploads whatever `SimState` its test builds, `_reserved` included.
 
 Every real slot's value is an integer below 2²⁴ for `i < 2¹⁹`, so it is exact in f32: the f32 SPIR-V variant and the
 f64 native one write the same values, and the dispatch refuses more than 2¹⁹ samples. A slot written one place off

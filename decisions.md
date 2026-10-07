@@ -6497,3 +6497,113 @@ REQ-VAL-180 and REQ-VAL-181 (R-376) are unchanged.
 - R-393 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
+*7 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "1" and § "2", `docs/design/principia_dd_integrator.md`
+§ "3.7", `docs/design/principia_dd_generation_root.md` § "3.5" and § "3.8", `docs/contracts/principia_render_contract.md`
+§ "Unpack layer", `docs/design/principia_colour_composition.md` Appendix A, REQ-PAY-009 (reqio), REQ-INT-082 (reqio),
+REQ-INT-087 to REQ-INT-089 (reqio, new), TASK-M3-11, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-226 archived) and `REVIEW_QUEUE.md`; built by TASK-M3-11*
+
+The orchestrator put RQ-226 to the human: R-389's pole hold stores a longitude on entering `r_pole`, and R-392's IC
+that starts inside has none, but the payload gives neither value a slot, so kept in kernel locals they are lost at a
+cached-state resume and `θ̃` would depend on how the march is split into dispatches. The human answered, and said
+"This is from me.":
+
+> RQ-226: use the spare bits, no size change (R-397).
+> - First check why closure_step's _reserved half is marked "do not
+>   spend". If the corpus reserves it for a named future use, stop and
+>   tell me; otherwise proceed.
+> - _reserved holds θ̃'s frozen reference longitude as a u16 (2π/65535
+>   steps); 0xFFFF means "no reference" (R-392's IC-starts-inside case).
+>   No descriptor bit is used.
+> - "Inside the hold" is recomputed from the current state on resume
+>   (ρ < r_pole), not stored.
+> - SimState's size is unchanged; the schema version updates as usual
+>   (R-36).
+> - R-389 and R-392 stand as written; document the quantisation (≤ ~5e-5
+>   rad per pole passage). Physics reviews.
+
+(Message of 7 Oct 2026; numbered R-397 by the human.)
+
+*The check the ruling asks for first.* The corpus names no future use for `_reserved`. Its "do not spend" is the
+alignment argument of payload § "Why 8 B costs the same as 4": "So the `u16 _reserved` is genuinely free — but that
+also means **spending it later is not free**, since the next field pushes to 152", and the struct's own comment says
+"do not spend it without re-checking the alignment argument below". REQ-PAY-009 says the same ("must not be spent
+without re-checking the alignment argument"; its verify: "any ledger change touching _reserved includes a
+size/alignment recheck"). No other file in `docs/`, `decisions.md`, `open-questions.md` or `plan/` reserves it for
+anything; R-343 and R-351 only name its WGSL home, `closure_step_reserved` bits 16–31. So the port proceeds, and it
+carries the recheck (below).
+
+*What it decides:*
+- **The slot.** `_reserved`, the u16 beside `closure_step`, holds `θ̃`'s frozen reference longitude, the longitude
+  R-389 stores on entering `√(n_u² + n_v²) < r_pole`. Both stored variants carry `θ̃` and `_reserved`
+  (`SimStateBase` drops only the shadow), so it applies to `SimStateFTLE` and `SimStateBase` alike, and to every
+  precision row (`_reserved` is "u16, fixed" at any `Real`, payload § 1).
+- **The code.** A longitude `λ` is stored as the code `c ∈ {0, …, 65534}` of `λ mod 2π ∈ [0, 2π)` in steps of
+  `2π/65535`; code `c` stands for the longitude `c · 2π/65535` (mod 2π). **0xFFFF (65535) means "no reference"**:
+  R-392's IC that starts inside the radius, which has none. No descriptor bit is used; `sample_descriptor`'s bits
+  10–15 stay reserved.
+- **"Inside the hold" is not stored.** A march that resumes from a stored `SimState` recomputes whether the sample is
+  inside the pole disc from the current state, `√(n_u² + n_v²) < r_pole`, by the same test the uninterrupted march
+  uses.
+- **The size.** `SimStateFTLE` stays 144 B and `SimStateBase` 96 B at f32 (and 272 B and 176 B at f64). The
+  schema version changes as R-36 makes it change: the ledger's content changes, so its hash does.
+- **R-389 and R-392 stand as written.** The stored longitude is now the code's longitude, so a pole passage's exit
+  delta `wrap(exit longitude − stored longitude)` carries the encode's rounding: at most half a step,
+  `π/65535 ≈ 4.8e-5` rad per pole passage (the human's "≤ ~5e-5"). Steps outside the disc are not quantised.
+- **Physics reviews** the task that builds it.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The alignment recheck (REQ-PAY-009).** `_reserved` is spent in place, at byte 142 of `SimStateFTLE` and 94 of
+  `SimStateBase`. Both are exact multiples of their 8-byte alignment with no tail padding (144 = 18 × 8, 96 = 12 × 8),
+  so the struct sizes do not change, and **after this change any new field, of any width up to 8 B, costs 8 B**
+  (144 → 152, 96 → 104). At f64 the declared 4 B `_tail` stays as it is.
+- **The encode and decode, exactly.** Encode: `λ' = λ`, or `λ + 2π` when `λ < 0`; `c = ⌊λ' · 65535/(2π) + ½⌋`, and
+  `c = 65535` becomes 0 (it is the longitude 2π ≡ 0), so the encode never yields the sentinel. Decode: `c · 2π/65535`,
+  less 2π when it exceeds π, so the decoded reference lies in (−π, π) and the exit difference stays in [−2π, 2π], the
+  domain `wrap` takes. 65535 is odd, so no code decodes to exactly π. `encode(decode(c)) = c` for every code, so a
+  reference survives any number of resumes unchanged. The worst-case error is half a step plus the encode's
+  round-off at the kernel's `Real` (≈ 5e-7 rad at f32), inside the ruling's "≤ ~5e-5".
+- **The exact-π case** (R-389) applies to the difference against the decoded reference: an exit whose
+  `exit longitude − decoded reference` is exactly ±π adds +π.
+- **One semantics, split or not.** The march quantises the reference when it stores it, on entering the disc, and
+  every exit differences against the decoded code, whether or not the march was interrupted inside the hold. Kept
+  unquantised in a register within one dispatch, `θ̃` would differ with the dispatch split by up to the
+  quantisation, the dependence RQ-226 exists to remove.
+- **The stored value's lifecycle.** A fresh sample's `_reserved` is 0xFFFF, wherever its IC lies. Entering the disc
+  from outside writes the code of the last longitude outside it; the exit adds its delta and writes 0xFFFF back.
+  So outside the disc `_reserved` is always 0xFFFF, and inside it is either the entry's code or, for R-392's IC that
+  starts inside, 0xFFFF until its first exit (which adds nothing, R-392). A resumed march reads it with the
+  recomputed inside test: inside with a code, a reference; inside with 0xFFFF, R-392's case; outside, unused. This
+  gives `_reserved` one value for one trajectory and playhead, so a stored `SimState` is bit-identical however the
+  march was split. It changes no `θ̃`.
+- **The name stays `_reserved`.** The human's words keep it, and R-343 and R-351 name its WGSL home
+  `closure_step_reserved`; a rename would change both and every layout test that cites them. Its meaning is
+  documented where it is declared. As a `_`-named member it has no §3.8 field entry, so the read side, the export
+  decoder and the debug catalogue do not read it: it is march state, read only by the kernel. The fragment side
+  emits no accessor for bits 16–31.
+- **The schema version (R-36).** The step count and the sentinel are numbers that decide what the stored bits mean,
+  so they enter generation-root § 3.8's constants register as two entries, `theta_ref_steps` = 65535 and
+  `theta_ref_none` = 65535 (0xFFFF), class achievable-maximum (the u16's greatest value), citation R-397, and join the
+  entries hashed into the schema version (§ 3.8, "The hash"; R-251), seven from five. The kernel reads both from the
+  register (`cargo xtask lint constants`). The hash changes with them; no version is bumped by hand.
+- **The bring-up pattern and the synthetic harness.** colour_composition Appendix A keeps `_reserved = 0`: the
+  pattern is not physics (its `theta` is `32·i + 25`), and 0 is a valid code (reference 0 rad), so the readback
+  still tells a slot written one place off. The synthetic harness uploads whatever `SimState` its test builds,
+  `_reserved` included, and needs no change.
+- **The owning task is TASK-M3-11**, which runs `θ̃` in the kernel's march (REQ-INT-082) and already edits the ledger
+  with a schema-version change (REQ-VAL-055, REQ-PAY-059). It gains three requirements: **REQ-INT-087**, the u16
+  encode and decode and the sentinel; **REQ-INT-088**, the hold recomputed on resume from the current state, and the
+  lifecycle above; **REQ-INT-089**, a march's `θ̃` and `_reserved` bit-identical whether run in one dispatch or
+  resumed across `k`, with a resume inside a pole passage. REQ-INT-082 gains R-397 as a ruling, and REQ-PAY-009's
+  verify records the recheck. TASK-M3-11's reviewers already include physics. A TASK-M1-11 or TASK-M0-12 qa
+  assertion that R-397 forces to change (the hold's helper in `crates/kernel/src/shape.rs`, the five-entry hashed
+  list) is a ruling-forced exception to the qa-file rule, listed in TASK-M3-11's PR (R-290, R-369).
+- **Not a contradiction, noted:** TASK-M3-11's lagged `n̂` register (REQ-PAY-059) and departed bit (REQ-VAL-055)
+  are its own layout changes; R-397's "size unchanged" is about this slot, and the recheck above is what such a
+  field then costs.
+- RQ-226 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-397 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-392.
+
+Adds REQ-INT-087, REQ-INT-088 and REQ-INT-089; REQ-PAY-009's statement and verify and REQ-INT-082's rulings change.

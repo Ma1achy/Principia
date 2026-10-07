@@ -158,6 +158,11 @@ The word lives here, not in `SimState`. Specification:
 
 Terminal latch: on termination the whole block freezes (state stops advancing, accumulators stop updating).
 
+**`θ̃`'s pole reference (R-397).** The hold of `θ̃` near the poles (integrator dd §3.7; R-389, R-392) keeps its frozen
+reference longitude in `SimState`'s `_reserved`, a u16 code in steps of `2π/65535` with 0xFFFF for "no reference"
+(payload §2). It is march state, not a field: as a `_`-named member it has no §3.8 entry and no view. Whether the
+sample is inside the hold is not stored; a resumed march recomputes it from the current state.
+
 **Ensemble spread is NOT a stored field — it is derived at the resolve stage.** Spread is a *footprint* quantity (one value per nominal sample), computed in the shader at the resolve stage from the E+1 samples of a footprint — the data-side twin of the SSAA colour resolve (colours→pixel colour on the render side; outcomes→spread scalar on the data side). It is consumed *live* for display (colour-by-spread) and aggregated into `QuadReduction` for the scheduler's refinement signal. It carries no per-sample `SimState` field: storing a group property on each sample is wrong-shaped and costs an f32 ×`2(E+1)`×viewport for nothing. **No per-sample "is ensemble" tag either** — grouping is structural (E+1 samples per footprint in the dispatch layout), `copy_index` marks nominal (0) vs copies (1..E), and ensemble-on/off is a quad/tier flag (`contains-ensemble`).
 
 ### 3.6 `ICDescriptor` (12 × f32)
@@ -575,7 +580,8 @@ population = { name, lo, hi, count }
   and line. The generated files are exempt: their numbers are emitted from the ledger.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
-  the f16 pack clamp (payload §1) and the f16 subnormal floor (R-271), which today are all five entries below. The
+  the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
+  reference in `_reserved` (payload §2; R-397), which today are all seven entries below. The
   canonicalised table the hash covers includes each such entry's value, type and class, not its citation text
   (R-251): changing a hashed entry's value, type or class changes the schema version, and a citation-only edit does
   not. Any other register entry, such as a
@@ -593,6 +599,8 @@ The register's entries, the constants the payload ledger uses:
 | `fgw_length_sentinel` | 127, the greatest value of the 7-bit length field | achievable-maximum | payload §3 |
 | `f16_finite_max` | 65504, binary16's greatest finite value; the pack clamp ±65504 | achievable-maximum | payload §1 |
 | `f16_min_subnormal` | 2⁻²⁴ ≈ 5.96e-8, binary16's smallest positive subnormal; a valid `d_min` below it is stored as it (bits `0x0001`), so 0.0 never appears | achievable-maximum | R-271, R-278 |
+| `theta_ref_steps` | 65535, the codes of `θ̃`'s pole reference in `_reserved`: steps of 2π/65535, codes 0…65534, the u16's greatest value spared for the sentinel | achievable-maximum | R-397 |
+| `theta_ref_none` | 65535 (0xFFFF), the u16's greatest value: `_reserved` holds no reference (outside the pole disc, or R-392's IC that starts inside it) | achievable-maximum | R-397 |
 
 `diffusion` has no sentinel in the register: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 
