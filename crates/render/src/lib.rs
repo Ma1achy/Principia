@@ -8,8 +8,10 @@
 //!
 //! The fragment pipeline at runtime (TASK-M1-05): the assembled stain hashed, compiled asynchronously, cached and kept
 //! last-valid per node ([`pipeline_cache`]); runtime snippets and changed occupant files swapped in ([`hot_reload`]);
-//! the debug views baked one source per field on demand ([`debug_bake`]); the three fixed compositor pipelines
-//! ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame ([`frame_record`]).
+//! the debug views baked one source per field on demand ([`debug_bake`]), the debug catalogue's generated views among
+//! them, which the occupant registry, the scanned filesystem, surfaces ([`registry`]; TASK-M1-08); the three fixed
+//! compositor pipelines ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame
+//! ([`frame_record`]).
 //!
 //! The synthetic payload harness's fragment side (TASK-M1-06): the four payload-side buffers and the uniforms bound
 //! to the fragment, with the generated WGSL `RenderContext` and `ctx` lanes ([`bind`]); the sample → tile
@@ -40,3 +42,4 @@ pub mod hot_reload;
 pub mod pipeline_cache;
 pub mod present;
 pub mod raster;
+pub mod registry;

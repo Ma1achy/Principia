@@ -59,6 +59,8 @@ const WORD: [u32; 4] = [14, 15, 16, 17];
 const TOTAL: u32 = 18;
 const ENERGY_DRIFT: u32 = 24;
 const LZ_DRIFT: u32 = 25;
+/// The shadow's first and last components, `r_sh[0].x` and `p_sh[2].y` (RQ-228).
+const SHADOW: [u32; 2] = [26, 27];
 
 /// The quantities derived at read, and payload §5's removed fields: none is stored (REQ-PAY-021, REQ-PAY-031).
 const NOT_STORED: [&str; 30] = [
@@ -738,6 +740,47 @@ negative_control!(
     check_ftle_baked_out(
         &gpu(),
         mutated("out.ftle = canonical_nan();", "out.ftle = s_S;")
+    )
+);
+
+// ── The shadow on the read side (RQ-228; lowering Part 3a) ───────────────────────────────────────────────────────
+
+/// One sample read at each tier: at the FTLE tier the shadow's first and last components are the stored ones; at the
+/// base tier, which stores no shadow, both are the canonical quiet NaN.
+fn check_shadow_read(gpu: &GpuHarness, generated: Gen) {
+    let on = Case::new(marching(40, 50.0));
+    let mut off = Case::new(marching(40, 50.0));
+    off.ftle_variant = false;
+    let got = read_members(gpu, generated, &[on, off], &SHADOW);
+    let s = &on.sample;
+    assert_eq!(
+        got[0],
+        [s.r_sh[0][0].to_bits(), s.p_sh[2][1].to_bits()],
+        "the FTLE tier does not read the stored shadow"
+    );
+    assert_eq!(
+        got[1],
+        [QNAN, QNAN],
+        "the base tier reads the shadow {:#010x?}, not the canonical quiet NaN",
+        got[1]
+    );
+}
+
+#[test]
+fn shadow_read_stored_at_ftle_nan_at_base() {
+    check_shadow_read(&gpu(), generated());
+}
+
+negative_control!(
+    shadow_read_stored_at_ftle_nan_at_base,
+    "a base read whose shadow is zero must fail",
+    expected = "not the canonical quiet NaN",
+    check_shadow_read(
+        &gpu(),
+        mutated(
+            "array<vec2<f32>, 3>(vec2<f32>(canonical_nan()), vec2<f32>(canonical_nan()), vec2<f32>(canonical_nan()))",
+            "array<vec2<f32>, 3>()"
+        )
     )
 );
 

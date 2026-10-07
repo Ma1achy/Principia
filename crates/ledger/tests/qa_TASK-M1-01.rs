@@ -6,7 +6,10 @@
 //! - R-378 / REQ-RENDER-001: each read-side field, at each tier, loads exactly the stored members payload §1–§6 say it
 //!   needs, one member per load, never a whole `SimStateFTLE`/`SimStateBase`, and of the word only the components it
 //!   needs; both buffers are indexed by `sample_read`'s own sample index. The current drifts load only `r`, `p` and
-//!   their own reference (`E_0` or `Lz_0`).
+//!   their own reference (`E_0` or `Lz_0`). The shadow `r_sh`/`p_sh` loads its own stored member at the FTLE tier and
+//!   nothing at the base tier, where it reads NaN (RQ-228); `ic.<member>`, the sample's `ICDescriptor` as `ctx.ic`
+//!   reads it, loads that member of `ic_buffer` alone, through `ic_read` and its per-member readers, and nothing of
+//!   the `SimState` or the word (RQ-227, R-378).
 //! - REQ-PAY-021: `ftle = (S + ln(δ/δ₀)) / (n·dt_macro)` with the partial interval finalised (payload §5; integrator
 //!   dd §3.4's Benettin: `δ = ‖x' − x‖` over the phase space `(r, p)`), never plain `S/t`; the ledger stores no
 //!   derived or removed field.
@@ -41,7 +44,7 @@ use std::path::Path;
 use ledger::gen::read::{self, Tier};
 use ledger::gen::{self};
 use ledger::schema::{Entry, Location, Storage, Struct, Word};
-use naga::{Expression, Function, Handle, Module, TypeInner};
+use naga::{Expression, Function, Handle, Module, Statement, TypeInner};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -125,13 +128,138 @@ const NO_WORD: Tier = Tier {
 // ---------------------------------------------------------------------------------------------------------------
 // R-378 / REQ-RENDER-001: per-member loads, read off naga's IR of the generated `sample_read`.
 
-/// What `sample_read` loads from the two buffers.
+/// What `sample_read` loads from the two buffers, and what `ic_read` loads from `ic_buffer` (RQ-227).
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Loads {
     /// The stored members loaded, by name.
     state: BTreeSet<String>,
     /// The word's components loaded (`x y z w`); a whole-word load adds all four.
     word: BTreeSet<char>,
+    /// The `ICDescriptor` members `ic_read` loads, by name, itself or through the functions it calls.
+    ic: BTreeSet<String>,
+}
+
+/// The `ICDescriptor` buffer the read side binds (RQ-227).
+const IC_BUFFER: &str = "ic_buffer";
+
+/// Render contract Part 6's `ICDescriptor` row, "all 12", the members a stain reads as `ctx.ic.<member>` (RQ-227).
+const IC_MEMBERS: [&str; 12] = [
+    "m0",
+    "m1",
+    "m2",
+    "q_mass",
+    "rho_mag",
+    "lambda_mag",
+    "rho_ratio",
+    "rho_angle",
+    "K_0",
+    "V_0",
+    "virial_ratio",
+    "r_min_pair_0",
+];
+
+/// A call: the function called and its arguments.
+type Call = (Handle<Function>, Vec<Handle<Expression>>);
+
+/// The functions `block` calls, with each call's arguments, recursively through nested blocks.
+fn calls(block: &naga::Block, out: &mut Vec<Call>) {
+    for st in block.iter() {
+        match st {
+            Statement::Call {
+                function,
+                arguments,
+                ..
+            } => out.push((*function, arguments.clone())),
+            Statement::Block(b) => calls(b, out),
+            Statement::If { accept, reject, .. } => {
+                calls(accept, out);
+                calls(reject, out);
+            }
+            Statement::Loop {
+                body, continuing, ..
+            } => {
+                calls(body, out);
+                calls(continuing, out);
+            }
+            Statement::Switch { cases, .. } => {
+                for c in cases {
+                    calls(&c.body, out);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The members of `ic_buffer` that `f` loads, each at `f`'s first argument; or the first breach of R-378: a whole
+/// `ICDescriptor` loaded, or the buffer indexed by anything else.
+fn ic_loads(m: &Module, f: &Function) -> Result<BTreeSet<String>, String> {
+    let fname = f.name.clone().unwrap_or_default();
+    let mut out = BTreeSet::new();
+    for (_, e) in f.expressions.iter() {
+        let Expression::Load { pointer } = *e else {
+            continue;
+        };
+        let Some((g, steps, idx)) = chain(f, pointer) else {
+            continue;
+        };
+        if m.global_variables[g].name.as_deref() != Some(IC_BUFFER) {
+            continue;
+        }
+        if steps.first() != Some(&None)
+            || !matches!(f.expressions[idx[0]], Expression::FunctionArgument(0))
+        {
+            return Err(format!(
+                "`{fname}` reads `{IC_BUFFER}` not at its sample index"
+            ));
+        }
+        let Some(Some(k)) = steps.get(1) else {
+            return Err(format!(
+                "`{fname}` loads the whole `ICDescriptor` from `{IC_BUFFER}`"
+            ));
+        };
+        let elem = match m.types[m.global_variables[g].ty].inner {
+            TypeInner::Array { base, .. } => base,
+            ref t => return Err(format!("`{IC_BUFFER}` is {t:?}")),
+        };
+        let TypeInner::Struct { ref members, .. } = m.types[elem].inner else {
+            return Err(format!("`{IC_BUFFER}`'s element is not a struct"));
+        };
+        out.insert(members[*k as usize].name.clone().unwrap_or_default());
+    }
+    Ok(out)
+}
+
+/// What `ic_read` loads from `ic_buffer`, itself and through each function it calls with its own sample index.
+fn ic_read_loads(m: &Module) -> Result<BTreeSet<String>, String> {
+    let Some((_, f)) = m
+        .functions
+        .iter()
+        .find(|(_, f)| f.name.as_deref() == Some("ic_read"))
+    else {
+        return Ok(BTreeSet::new());
+    };
+    let mut out = ic_loads(m, f)?;
+    let mut called = Vec::new();
+    calls(&f.body, &mut called);
+    for (h, args) in called {
+        let callee = &m.functions[h];
+        let loads = ic_loads(m, callee)?;
+        if loads.is_empty() {
+            continue;
+        }
+        if !args
+            .first()
+            .is_some_and(|&a| matches!(f.expressions[a], Expression::FunctionArgument(0)))
+        {
+            return Err(format!(
+                "`ic_read` calls `{}` not at its own sample index",
+                callee.name.clone().unwrap_or_default()
+            ));
+        }
+        out.extend(loads);
+    }
+    Ok(out)
 }
 
 /// A pointer's root global, its access steps and its runtime indices, in order from the global.
@@ -189,6 +317,11 @@ fn loads(src: &str) -> Result<Loads, String> {
                         "`{fname}` uses `{n}`: only `sample_read` reads the buffers"
                     ));
                 }
+                if n == IC_BUFFER && !fname.starts_with("ic_read") {
+                    return Err(format!(
+                        "`{fname}` uses `{n}`: only `ic_read` and its readers read it"
+                    ));
+                }
             }
         }
         if fname != "sample_read" {
@@ -244,13 +377,17 @@ fn loads(src: &str) -> Result<Loads, String> {
     if !found {
         return Err("no `sample_read`".into());
     }
+    out.ic = ic_read_loads(&m)?;
     Ok(out)
 }
 
 /// The stored members (payload §1) and word components each read-side field needs, from payload §2, §5 and §6:
 /// the packed words' fields read `packed_a`, `packed_b` or `times`; `ftle` the state, the shadow, `S`, and the
 /// validity's `packed_a` (state) and `times` (n); `diffusion` `C_ty` and `n`; the drifts `r`, `p` and their own
-/// reference. `None` for a field this table does not know, which fails the test until it is added.
+/// reference. The shadow `r_sh`/`p_sh` is its own stored member at the FTLE tier, which stores it, and nothing at the
+/// base tier, which reads it as NaN (RQ-228). An `ICDescriptor` field `ic.<member>` loads nothing of the `SimState`
+/// or the word ([`ic_needs`] gives its `ICDescriptor` load). `None` for a field this table does not know, which fails
+/// the test until it is added.
 fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
     let st = |v: &[&'static str]| Some((v.to_vec(), vec![]));
     let word = |c: &[char]| Some((vec![], if tier.has_word { c.to_vec() } else { vec![] }));
@@ -286,6 +423,10 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
         "ftle" if tier.has_ftle => st(&["r", "p", "r_sh", "p_sh", "S", "packed_a", "times"]),
         "ftle_valid" if tier.has_ftle => st(&["packed_a", "times"]),
         "ftle" | "ftle_valid" | "ensemble_spread" => st(&[]),
+        "r_sh" if tier.has_ftle => st(&["r_sh"]),
+        "p_sh" if tier.has_ftle => st(&["p_sh"]),
+        "r_sh" | "p_sh" => st(&[]),
+        f if ic_needs(f).is_some() => st(&[]),
         "energy_drift" => st(&["r", "p", "E_0"]),
         "Lz_drift" => st(&["r", "p", "Lz_0"]),
         "word" => word(&['x', 'y', 'z', 'w']),
@@ -297,7 +438,13 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
     }
 }
 
-/// `field`'s `sample_read` in `src` loads exactly what [`needs`] gives at `tier`.
+/// The `ICDescriptor` member `field` loads, for `ic.<member>` with `member` one of Part 6's twelve (RQ-227).
+fn ic_needs(field: &str) -> Option<&'static str> {
+    let member = field.strip_prefix("ic.")?;
+    IC_MEMBERS.iter().copied().find(|&m| m == member)
+}
+
+/// `field`'s `sample_read` and `ic_read` in `src` load exactly what [`needs`] and [`ic_needs`] give at `tier`.
 fn check_field_loads(src: &str, tier: Tier, field: &str) {
     let (state, word) = needs(field, tier)
         .unwrap_or_else(|| panic!("no expectation for read-side field `{field}`"));
@@ -305,6 +452,7 @@ fn check_field_loads(src: &str, tier: Tier, field: &str) {
     let want = Loads {
         state: state.into_iter().map(str::to_owned).collect(),
         word: word.into_iter().collect(),
+        ic: ic_needs(field).into_iter().map(str::to_owned).collect(),
     };
     assert_eq!(
         got,
@@ -318,6 +466,14 @@ fn check_field_loads(src: &str, tier: Tier, field: &str) {
 fn qa_r378_each_field_loads_only_its_own_members() {
     let (w, e) = inputs();
     let fields = read::fields(&w, &e);
+    // RQ-227 and RQ-228 add the shadow and every one of Part 6's twelve `ICDescriptor` fields to what a stain reads.
+    for f in ["r_sh", "p_sh"]
+        .into_iter()
+        .map(str::to_owned)
+        .chain(IC_MEMBERS.iter().map(|m| format!("ic.{m}")))
+    {
+        assert!(fields.contains(&f), "`{f}` is not a read-side field");
+    }
     for tier in Tier::ALL {
         for f in &fields {
             check_field_loads(&assembled(tier, &[f]), tier, f);
@@ -344,6 +500,41 @@ negative_control!(
         )
     }
 );
+
+/// RQ-227 / R-378: an `ic_read` that loads a member the stain does not read loads more than the field needs.
+#[cfg(feature = "controls")]
+mod qa_r378_each_field_loads_only_its_own_members_ic {
+    use super::*;
+
+    negative_control!(
+        qa_r378_each_field_loads_only_its_own_members,
+        "an `ic_read` for `ic.m2` that also loads `m1` loads another member",
+        expected = "does not load exactly the stored words it needs",
+        {
+            let src = assembled(Tier::FULL, &["ic.m2"]);
+            let from = "    v.m2 = ic_read_m2(i);\n";
+            assert!(src.contains(from), "the control's pattern is gone");
+            check_field_loads(
+                &src.replacen(from, &format!("{from}    v.m1 = ic_read_m1(i);\n"), 1),
+                Tier::FULL,
+                "ic.m2",
+            )
+        }
+    );
+}
+
+/// RQ-228: a base-tier read of the shadow that loads the full tier's stored shadow resurrects state.
+#[cfg(feature = "controls")]
+mod qa_r378_each_field_loads_only_its_own_members_shadow {
+    use super::*;
+
+    negative_control!(
+        qa_r378_each_field_loads_only_its_own_members,
+        "an FTLE-tier `r_sh` read held to the base tier's expectation loads the shadow",
+        expected = "does not load exactly the stored words it needs",
+        check_field_loads(&assembled(Tier::FULL, &["r_sh"]), BARE, "r_sh")
+    );
+}
 
 /// The current drifts (RQ-203 option 2): a stain reading one loads only `r`, `p` and its own reference, at every tier.
 #[test]
