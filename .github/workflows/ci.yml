@@ -63,7 +63,8 @@ jobs:
   # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the
   # build scripts' output, the standard library, the workspace's metadata), to one archive, which this job uploads as
   # the workflow artifact `nextest-ci`. NEXTEST_PROFILE names the `ci` profile the shards run under
-  # (`.config/nextest.toml`).
+  # (`.config/nextest.toml`). `--features gui/mock` builds gui's mock engine into it, so the tests of `crates/gui/tests/`
+  # reach the mock (RQ-252).
   ci-archive:
     runs-on: ubuntu-24.04
     steps:
@@ -86,11 +87,11 @@ jobs:
       # so each shard extracts the archive in 4–8 s rather than 13–28 s (PR #126's measurements, with line tables
       # only). Test infrastructure only. RUSTFLAGS is this step's alone: rust-cache's key, computed in its own step,
       # never sees it, and nothing else is built with it.
-      - name: cargo nextest archive --workspace
+      - name: cargo nextest archive --workspace --features gui/mock
         env:
           NEXTEST_PROFILE: ci
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib
-        run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst
+        run: cargo nextest archive --workspace --features gui/mock --archive-file $RUNNER_TEMP/nextest-ci.tar.zst
       # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
       - uses: actions/upload-artifact@v4
         with:
@@ -243,8 +244,8 @@ jobs:
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
-      - name: cargo clippy --workspace --all-targets -- -D warnings
-        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo clippy --workspace --all-targets --features gui/mock -- -D warnings
+        run: cargo clippy --workspace --all-targets --features gui/mock -- -D warnings
       # The workspace's own docs, every rustdoc warning an error (R-387): a broken or private intra-doc link, an
       # unclosed HTML tag. `--no-deps`: only the workspace's crates are documented, the dependencies only checked, so
       # the step adds little to the runner's disk. RUSTDOCFLAGS is this step's alone: rustdoc reads it and rustc

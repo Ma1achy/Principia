@@ -1,0 +1,24 @@
+{
+  "cases": [
+    {
+      "name": "mock_shell",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": [] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_f3_off",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["f3"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_footer",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_warning",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "raise_error", "click_footer"] },
+      "artboard": "docs/gui/design/01_main.png"
+    }
+  ]
+}

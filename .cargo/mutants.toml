@@ -37,6 +37,10 @@ exclude_globs = [
 # as strict as with the whole workspace's tests.
 test_tool = "nextest"
 
+# gui's mock engine is compiled under its `mock` feature (R-390): every run builds it, so its mutants are compiled and
+# its tests run (RQ-252).
+features = ["gui/mock"]
+
 # The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
 # mutant. cargo-mutants sets it from the unmutated baseline's test time: `timeout_multiplier` times that time, but no

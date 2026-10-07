@@ -14,14 +14,25 @@
 //!   node's rect also intersects the visible surface (R-275): one in the tree but clipped out of view is named as
 //!   clipped. A case that needs a control below the fold scrolls to it first. It needs no GPU.
 //!
+//! A case's `surface` names its kind (R-274; RQ-253): a path, as above, is a `data` surface; an object
+//! `{ "kind": "gui", "screen": "01_main", "steps": [...] }` is a screen of the dev GUI itself, whose steps are a closed
+//! list (`f3`, `raise_warning`, `raise_error`, `click_footer`). For a `gui` surface the runner spawns gui's headless
+//! capture mode, `cargo run --quiet -p gui --features mock -- capture --screen … --steps … --out <case dir>`, as `gate`
+//! spawns validation's binary (no crate depends on `gui`, systems_architecture §7.1), which runs the app on the mock
+//! engine, and reads back its `capture.png` and `names.json`, each accessible name with its rect in pixels. A layout
+//! case keeps the capture beside its artboard; a presence-only case checks the names as for a `data` surface (R-275).
+//!
 //! Not in the per-commit `cargo xtask ci`: `.github/workflows/screenshot.yml` runs `--all` on GUI PRs (R-177), and the
 //! gate workflow at the gates (R-110). The backend is `PRIN_GPU_BACKEND`'s, or the platform's when unset (R-169, R-206).
 
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde::Deserialize;
+
+use crate::deps::cargo;
 
 /// Where the suites live, relative to the repo root.
 pub const SUITES: &str = "fixtures/screenshot";
@@ -57,12 +68,82 @@ pub enum Control {
     Checkbox { label: String },
 }
 
+/// A case's surface (R-274; RQ-253): a path to a `data` surface description, relative to the suite directory, or a
+/// `gui` screen.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+pub enum SurfaceRef {
+    /// A `data` surface: the path of its description.
+    Data(String),
+    /// A screen of the dev GUI, captured by gui's headless capture mode.
+    Gui(GuiSurface),
+}
+
+impl fmt::Display for SurfaceRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SurfaceRef::Data(path) => f.write_str(path),
+            SurfaceRef::Gui(gui) => write!(f, "gui screen {}", gui.screen),
+        }
+    }
+}
+
+/// A `gui` surface: `{ "kind": "gui", "screen": …, "steps": [...] }`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GuiSurface {
+    /// Always `gui`.
+    pub kind: GuiKind,
+    /// The screen, by its artboard's stem: `01_main`.
+    pub screen: String,
+    /// The steps played before the capture, in order.
+    #[serde(default)]
+    pub steps: Vec<GuiStep>,
+}
+
+/// The one kind of an object surface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GuiKind {
+    /// A screen of the dev GUI.
+    Gui,
+}
+
+/// A step of a `gui` surface: the closed list (RQ-253).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuiStep {
+    /// Press F3.
+    F3,
+    /// Make the mock engine raise a warning.
+    RaiseWarning,
+    /// Make the mock engine raise an error.
+    RaiseError,
+    /// Click the footer.
+    ClickFooter,
+}
+
+impl GuiStep {
+    /// The step's name, as the capture mode takes it.
+    pub fn name(self) -> &'static str {
+        match self {
+            GuiStep::F3 => "f3",
+            GuiStep::RaiseWarning => "raise_warning",
+            GuiStep::RaiseError => "raise_error",
+            GuiStep::ClickFooter => "click_footer",
+        }
+    }
+}
+
+/// The file gui's capture mode writes the names to, beside [`CAPTURE`].
+pub const NAMES: &str = "names.json";
+
 /// One case of `cases.json`: exactly one of `artboard` (a layout case) and `controls` (a presence-only case).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Case {
     pub name: String,
-    pub surface: String,
+    pub surface: SurfaceRef,
     #[serde(default)]
     pub artboard: Option<String>,
     #[serde(default)]
@@ -194,31 +275,41 @@ fn run_case(
     case: &Case,
     gpu: &mut Option<Gpu>,
 ) -> Result<Outcome, String> {
-    let surface_path = dir.join(&case.surface);
-    let text = fs::read_to_string(&surface_path)
-        .map_err(|e| format!("cannot read surface {}: {e}", surface_path.display()))?;
-    let surface: Surface = serde_json::from_str(&text)
-        .map_err(|e| format!("surface {}: {e}", surface_path.display()))?;
-    let frame = lay_out(&surface);
+    let out = root.join(OUT).join(suite).join(&case.name);
+    let shot = match &case.surface {
+        SurfaceRef::Data(path) => {
+            let surface_path = dir.join(path);
+            let text = fs::read_to_string(&surface_path)
+                .map_err(|e| format!("cannot read surface {}: {e}", surface_path.display()))?;
+            let surface: Surface = serde_json::from_str(&text)
+                .map_err(|e| format!("surface {}: {e}", surface_path.display()))?;
+            Shot::Data(lay_out(&surface))
+        }
+        SurfaceRef::Gui(gui) => Shot::Gui(capture_gui(gui, &out)?),
+    };
+    let (names, clipped, size) = match &shot {
+        Shot::Data(frame) => (frame.names.clone(), frame.clipped.clone(), frame.size),
+        Shot::Gui(gui) => (gui.names.clone(), gui.clipped.clone(), gui.size),
+    };
     match (&case.artboard, &case.controls) {
         (Some(artboard), None) => {
             let artboard = root.join(artboard);
             if !artboard.is_file() {
                 return Err(format!("the artboard {} does not exist", artboard.display()));
             }
-            if gpu.is_none() {
-                *gpu = Some(Gpu::new()?);
-            }
-            let gpu = gpu.as_mut().expect("opened above");
-            let rgba = gpu.render(&frame);
-            let out = root.join(OUT).join(suite).join(&case.name);
             fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+            let capture = out.join(CAPTURE);
+            if let Shot::Data(frame) = &shot {
+                if gpu.is_none() {
+                    *gpu = Some(Gpu::new()?);
+                }
+                let rgba = gpu.as_mut().expect("opened above").render(frame);
+                write_png(&capture, frame.size, &rgba)?;
+            }
             let name = artboard.file_name().expect("a file has a name");
             let beside = out.join(name);
             fs::copy(&artboard, &beside)
                 .map_err(|e| format!("cannot copy {} to {}: {e}", artboard.display(), beside.display()))?;
-            let capture = out.join(CAPTURE);
-            write_png(&capture, frame.size, &rgba)?;
             Ok(Outcome::Captured {
                 capture,
                 artboard: beside,
@@ -230,23 +321,23 @@ fn run_case(
         ),
         (None, Some(controls)) => {
             // R-275: a control counts only if it is in the tree and its rect intersects the visible surface.
-            let (mut absent, mut clipped) = (Vec::new(), Vec::new());
+            let (mut absent, mut clipped_out) = (Vec::new(), Vec::new());
             for control in controls {
-                if frame.names.contains(control) {
+                if names.contains(control) {
                     continue;
                 }
-                if frame.clipped.contains(control) {
-                    clipped.push(format!("`{control}`"));
+                if clipped.contains(control) {
+                    clipped_out.push(format!("`{control}`"));
                 } else {
                     absent.push(format!("`{control}`"));
                 }
             }
-            if absent.is_empty() && clipped.is_empty() {
+            if absent.is_empty() && clipped_out.is_empty() {
                 return Ok(Outcome::Present {
                     controls: controls.clone(),
                 });
             }
-            let [w, h] = frame.size;
+            let [w, h] = size;
             let mut parts = Vec::new();
             if !absent.is_empty() {
                 parts.push(format!(
@@ -255,11 +346,11 @@ fn run_case(
                     absent.join(", ")
                 ));
             }
-            if !clipped.is_empty() {
+            if !clipped_out.is_empty() {
                 parts.push(format!(
                     "control(s) clipped out of surface {}, in the tree but outside its visible {w}×{h}: {} (R-275)",
                     case.surface,
-                    clipped.join(", ")
+                    clipped_out.join(", ")
                 ));
             }
             Err(format!("presence-only case: {}", parts.join("; ")))
@@ -269,6 +360,103 @@ fn run_case(
                 .to_owned(),
         ),
     }
+}
+
+/// What a case's surface produced: a `data` surface laid out here, or a `gui` screen captured by gui.
+enum Shot {
+    Data(Frame),
+    Gui(GuiCapture),
+}
+
+/// A `gui` screen as gui's capture mode wrote it: its size, and its names split by visibility (R-275).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GuiCapture {
+    pub size: [u32; 2],
+    /// The names whose rect intersects the capture.
+    pub names: Vec<String>,
+    /// The names with no rect, or a rect outside the capture.
+    pub clipped: Vec<String>,
+}
+
+/// The command that captures `gui` into `out`: gui's headless capture mode on the mock, through the cargo running
+/// xtask, on xtask's own workspace.
+pub fn capture_command(gui: &GuiSurface, out: &Path) -> Command {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml");
+    let steps: Vec<&str> = gui.steps.iter().map(|s| s.name()).collect();
+    let mut command = Command::new(cargo());
+    command
+        .args(["run", "--quiet", "--manifest-path"])
+        .arg(manifest)
+        .args([
+            "-p",
+            "gui",
+            "--features",
+            "mock",
+            "--",
+            "capture",
+            "--screen",
+        ])
+        .arg(&gui.screen)
+        .arg("--steps")
+        .arg(steps.join(","))
+        .arg("--out")
+        .arg(out);
+    command
+}
+
+/// Runs gui's capture mode for `gui` into `out` and reads back its capture and names.
+fn capture_gui(gui: &GuiSurface, out: &Path) -> Result<GuiCapture, String> {
+    let status = capture_command(gui, out)
+        .status()
+        .map_err(|e| format!("cannot run gui's capture mode: {e}"))?;
+    if !status.success() {
+        return Err(format!("gui's capture mode failed ({status})"));
+    }
+    let (size, _) = read_png(&out.join(CAPTURE))?;
+    let path = out.join(NAMES);
+    let text =
+        fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    read_names(&text, size).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// The names file's form: the capture's size, and each name with its rect in pixels, `null` for none.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NamesFile {
+    size: [u32; 2],
+    names: Vec<NamedRect>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NamedRect {
+    name: String,
+    rect: Option<[f64; 4]>,
+}
+
+/// Reads a names file for a capture of `size`, splitting the names by whether their rect meets it (R-275).
+pub fn read_names(text: &str, size: [u32; 2]) -> Result<GuiCapture, String> {
+    let file: NamesFile = serde_json::from_str(text).map_err(|e| e.to_string())?;
+    if file.size != size {
+        return Err(format!(
+            "the names are for a {:?} capture, the capture is {size:?}",
+            file.size
+        ));
+    }
+    let surface =
+        egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(size[0] as f32, size[1] as f32));
+    let (mut names, mut clipped) = (Vec::new(), Vec::new());
+    for named in file.names {
+        let visible = named.rect.is_some_and(|[x0, y0, x1, y1]| {
+            visible_in(egui::accesskit::Rect { x0, y0, x1, y1 }, surface)
+        });
+        if visible { &mut names } else { &mut clipped }.push(named.name);
+    }
+    Ok(GuiCapture {
+        size,
+        names,
+        clipped,
+    })
 }
 
 /// A laid-out surface: its size in pixels, its triangles and textures, and the accessible names in its AccessKit tree,
