@@ -6,3 +6,17 @@ publish.workspace = true
 
 [dependencies]
 engine = { path = "../engine" }
+# The app's window: eframe 0.36, matching egui 0.36.2, on its wgpu renderer (RQ-251). egui-wgpu is built from the
+# device and queue the engine side provides (`engine::contract::canvas`, RQ-247). x11: winit builds on Linux only with
+# a windowing backend, and x11's loads its system libraries at run time, so CI's Linux runners build it as they are.
+eframe = { version = "0.36", default-features = false, features = ["wgpu", "accesskit", "default_fonts", "x11"] }
+# wgpu at engine's version and backends, for the mock's canvas and the headless capture (R-274).
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+# The capture mode writes its PNG and its names file (R-274; RQ-253), as xtask's runner reads them.
+png = "0.18"
+serde_json = "1"
+
+# `--features mock` runs the app on the mock engine (R-390); gui's own tests always compile the mock.
+[features]
+mock = []
