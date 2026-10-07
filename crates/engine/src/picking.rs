@@ -10,7 +10,7 @@
 //!
 //! [`pick`]: crate::picking::pick
 
-use render::coords::frag_uv;
+use render::coords::{flip_y, frag_uv};
 use render::raster::Grid;
 
 /// What a pointer event lands on: the canvas, in the event's units, Y-down from the top-left, and the screen drawn
@@ -37,7 +37,8 @@ pub struct Pick {
 /// The pick at the canvas position `at` (Y-down, from the top-left, as a pointer event gives it), or `None` outside the
 /// canvas, its edges included in it: the UV through the convention's flip (`v = 1 − y/H`), the quad of the grid that
 /// UV falls in (half-open, the top and right edges in the last row and column, as the raster puts each pixel), and the
-/// screen's `z`.
+/// screen's `z`. The quad is computed from the flipped position as `floor(x·q/W)` and `floor(flip_y(y, H)·q/H)`, so a
+/// position on a quad boundary is in the quad above it exactly.
 pub fn pick(screen: &Screen, at: [f64; 2]) -> Option<Pick> {
     let inside = (0..2).all(|k| (0.0..=screen.canvas[k]).contains(&at[k]));
     if !inside {
@@ -45,7 +46,11 @@ pub fn pick(screen: &Screen, at: [f64; 2]) -> Option<Pick> {
     }
     let uv = frag_uv(at, screen.canvas);
     let quads = screen.grid.quads;
-    let quad_xy = [0, 1].map(|k| ((uv[k] * f64::from(quads[k])) as u32).min(quads[k] - 1));
+    // The quad from the flipped position, multiplied before it is divided: `floor(x·q/W)`, `floor(flip_y(y, H)·q/H)`.
+    // Dividing first (`floor(uv·q)`) rounds a boundary landing exactly on a quad edge to the quad below it.
+    let up = [at[0], flip_y(at[1], screen.canvas[1])];
+    let quad_xy =
+        [0, 1].map(|k| ((up[k] * f64::from(quads[k]) / screen.canvas[k]) as u32).min(quads[k] - 1));
     Some(Pick {
         uv,
         quad: quad_xy[1] * quads[0] + quad_xy[0],

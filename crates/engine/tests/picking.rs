@@ -3,7 +3,7 @@
 //! - REQ-GUI-001, REQ-TOOL-027: a click at each known corner of the canvas, through the function the GUI will call,
 //!   reports that corner's UV (top-left → v ≈ 1, bottom-left → v ≈ 0), its quad and the screen's `ctx.chart.z`
 //!   (`picking_corners*`); a pick at each pixel's centre lands in the quad the raster draws there, and one off the
-//!   canvas is none (`picking_*`);
+//!   canvas is none, and a position on a quad boundary picks the quad above or right of it exactly (`picking_*`);
 //! - REQ-TOOL-019 (RQ-214): the synthetic harness's per-quad centre and half-width from its own grid, deep_zoom §1's
 //!   `c` and `h = 2^−(ℓ+1)`, and the f32 frames it uploads (`synthetic_quad_frame_*`).
 //!
@@ -187,6 +187,91 @@ negative_control!(
             [at[0].clamp(0.0, s.canvas[0]), at[1].clamp(0.0, s.canvas[1])],
         )
         .or_else(|| pick(s, [0.0, 0.0]))
+    })
+);
+
+/// A screen of one row (or column) of `quads` quads over a canvas `side` units long on that axis, 1 on the other.
+fn strip(axis: usize, side: u32, quads: u32) -> Screen {
+    let mut q = [1, 1];
+    q[axis] = quads;
+    let mut canvas = [1.0, 1.0];
+    canvas[axis] = f64::from(side);
+    Screen {
+        canvas,
+        grid: Grid::new(q, 1, 0, 1).expect("a strip grid"),
+        z: [0.0; 8],
+    }
+}
+
+/// The quad a canvas position lands in, exactly, along `axis`: the integer `floor(x·q/W)`, or `floor((H − y)·q/H)` for
+/// the rows, Y-up, each clamped to the last quad (the canvas's right and top edges).
+fn exact_quad(axis: usize, side: u32, quads: u32, at: u32) -> u32 {
+    let up = if axis == 0 { at } else { side - at };
+    (up * quads / side).min(quads - 1)
+}
+
+/// A position exactly on a quad boundary picks the quad to its right or above it, and the position just short of it
+/// the quad before: a canvas 49 wide in 49 columns picks column 1 at x = 1, and one 44 high in 22 rows picks row 15
+/// at y = 14 (`flip_y(14, 44)·22/44 = 15`; `(1 − 14/44)·22` rounds to just under 15). Then every integer position on
+/// every canvas side up to 199 units, on each axis, in every grid that divides it, picks the exact quad.
+fn check_boundaries(pick: impl Fn(&Screen, [f64; 2]) -> Option<Pick>) {
+    let e = 1e-9;
+    let quad = |axis: usize, side: u32, quads: u32, x: f64| {
+        let s = strip(axis, side, quads);
+        let mut at = [0.5, 0.5];
+        at[axis] = x;
+        pick(&s, at).expect("on the canvas").quad_xy[axis]
+    };
+    assert_eq!(
+        quad(0, 49, 49, 1.0),
+        1,
+        "a canvas 49 wide in 49 columns: x = 1 picks column 1"
+    );
+    assert_eq!(
+        quad(0, 49, 49, 1.0 - e),
+        0,
+        "just left of x = 1 picks column 0"
+    );
+    assert_eq!(
+        quad(1, 44, 22, 14.0),
+        15,
+        "a canvas 44 high in 22 rows: y = 14 picks row 15"
+    );
+    assert_eq!(
+        quad(1, 44, 22, 14.0 + e),
+        14,
+        "just below y = 14 picks row 14"
+    );
+    for axis in [0, 1] {
+        for side in 1..=199 {
+            for quads in (1..=side).filter(|q| side % q == 0) {
+                for at in 0..=side {
+                    let want = exact_quad(axis, side, quads, at);
+                    let got = quad(axis, side, quads, f64::from(at));
+                    assert_eq!(
+                        got, want,
+                        "axis {axis}, canvas side {side} in {quads} quads: position {at} picks quad {got}, not {want}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn picking_on_every_quad_boundary() {
+    check_boundaries(pick);
+}
+
+negative_control!(
+    picking_on_every_quad_boundary,
+    "a pick that divides before it multiplies, floor(uv·q), puts x = 1 of a canvas 49 wide in 49 columns in column 0",
+    expected = "x = 1 picks column 1",
+    check_boundaries(|s, at| {
+        pick(s, at).map(|p| {
+            let quad_xy = [0, 1].map(|k| ((p.uv[k] * f64::from(s.grid.quads[k])) as u32).min(s.grid.quads[k] - 1));
+            Pick { quad_xy, ..p }
+        })
     })
 );
 
