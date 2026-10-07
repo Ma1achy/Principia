@@ -28,7 +28,7 @@ Conflating "bottom-left origin" (orientation) with "allow negative coordinates" 
 | Space | Range / sign | Origin & orientation | Used for |
 |---|---|---|---|
 | **Screen / framebuffer** | `[0,W]×[0,H]`, pixels | top-left, **Y-down** | rasterisation, mouse events, output image |
-| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) the sample position *in the current view*, which chooses the quads asked for; the quad identity `(depth,tx,ty)` and the quadtree are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀` at the last re-integrating event) — pan and zoom change which addresses are requested, never the addresses (R-97) |
+| **UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) the sample position *in the current view*, which chooses the quads asked for; the quad identity `(depth,tx,ty)` and the quadtree are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀` at the last re-integrating event) — pan and zoom change which addresses are requested, never the addresses (R-97). This view position is what chooses the quads; `ctx.chart.slice_uv` is not it, but the sample's position in the slice plane, `c + h·(2t − 1)` from its quad's centre and half-width, stable under pan and zoom, and the screen-relative position is the separate `ctx.screen.uv` (R-394) |
 | **IC / chart space** | **signed real**, physical scales | centred on `z₀`, **Y-up**, graph-like | the decoder input; any axis display / readout / scale bar — *a normal graph* |
 
 **The map between the last two is the chart placement:**
