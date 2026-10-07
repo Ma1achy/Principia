@@ -511,14 +511,15 @@ negative_control!(
     )
 );
 
-/// The header comments of `views`, each view's lines after its first, `// ` and all: each is at most 120 columns,
-/// and none could have taken the next line's first word (the wrap is greedy).
+/// The header comments of `views`, each view's lines after its first, `//` and all: each is at most 120 columns
+/// unless it holds one word alone, none is empty, and none could have taken the next line's first word (the wrap is
+/// greedy).
 fn check_headers(views: &[String]) {
     for view in views {
         let lines: Vec<&str> = view
             .lines()
             .skip(1)
-            .take_while(|l| l.starts_with("// "))
+            .take_while(|l| l.starts_with("//"))
             .collect();
         for pair in lines.windows(2) {
             let next = pair[1]["// ".len()..].split(' ').next().unwrap_or("");
@@ -529,9 +530,11 @@ fn check_headers(views: &[String]) {
             );
         }
         for line in &lines {
+            let words = line.strip_prefix("// ").unwrap_or("").split(' ').count();
+            assert!(line.len() > "// ".len(), "a header line is empty: {line:?}");
             assert!(
-                line.chars().count() <= 120,
-                "a header line is wider than 120 columns: {line:?}"
+                line.chars().count() <= 120 || words == 1,
+                "a header line of more than one word is wider than 120 columns: {line:?}"
             );
         }
     }
@@ -543,7 +546,8 @@ fn view_header_wraps_greedily_at_120_columns() {
         .into_iter()
         .map(|v| v.wgsl)
         .collect();
-    for k in 0..48 {
+    // Every length to a line's width, then a name too long for any line, which takes a line of its own.
+    for k in (0..48).chain([130]) {
         let name: &'static str = Box::leak(format!("probe_{}", "x".repeat(k)).into_boxed_str());
         let ledger = with_probe(name, 1, Scale::Flag, Range::int(0, 1));
         views.push(emitted(&ledger, &format!("{}/{name}.wgsl", catalogue::DIR)));

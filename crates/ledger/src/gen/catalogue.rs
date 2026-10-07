@@ -367,20 +367,20 @@ fn view_wgsl(e: &Entry, r: &Read) -> String {
 
 /// `text` as line comments led by `lead`, wrapped at 120 columns.
 fn comment(text: &str, lead: &str) -> String {
-    let mut out = String::new();
-    let mut line = String::from(lead);
+    let mut lines: Vec<String> = Vec::new();
     for word in text.split(' ') {
-        if line.chars().count() + word.chars().count() > 120 && line.len() > lead.len() {
-            out.push_str(line.trim_end());
-            out.push('\n');
-            line = String::from(lead);
+        match lines.last_mut() {
+            Some(line) if line.chars().count() + 1 + word.chars().count() <= 120 => {
+                line.push(' ');
+                line.push_str(word);
+            }
+            _ => lines.push(format!("{lead}{word}")),
         }
-        line.push_str(word);
-        line.push(' ');
     }
-    out.push_str(line.trim_end());
-    out.push('\n');
-    out
+    lines
+        .iter()
+        .map(|l| format!("{}\n", l.trim_end()))
+        .collect()
 }
 
 // ── The views' tests ─────────────────────────────────────────────────────────────────────────────────────────────
