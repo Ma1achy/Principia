@@ -152,3 +152,39 @@ negative_control!(
     expected = "did not fire at its line 2",
     check_view_fires(VIEW_CLEAN)
 );
+
+/// A view that reads `NoteField`, which the stain file after the note declares.
+const VIEW_OF_NOTE: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> {\n    let f = NoteField(0.0, 0.0, 0.0, 1.0);\n    return f.xyz;\n}\n";
+
+/// A view lints clean after `note` and a stain file declaring what the view reads, both sorted before the context:
+/// each file of the context ends its own line, so a note whose last line is a comment, with no final newline,
+/// comments out nothing of the file after it.
+fn check_views_lint_after(note: &str) {
+    let files = [
+        (format!("{STAIN_DIR}/a_note.wgsl"), note.to_owned()),
+        (
+            format!("{STAIN_DIR}/b_note.wgsl"),
+            "alias NoteField = vec4<f32>;\n".to_owned(),
+        ),
+        (format!("{DEBUG_VIEWS}/note.wgsl"), VIEW_OF_NOTE.to_owned()),
+    ];
+    let root = workspace(true, &files);
+    let result = lint(&root);
+    let _ = std::fs::remove_dir_all(&root);
+    if let Err(e) = result {
+        panic!("the view did not lint after the note: {e}");
+    }
+}
+
+#[test]
+fn lint_wgsl_views_context_files_end_their_lines() {
+    check_views_lint_after("// a note, without a final newline");
+}
+
+negative_control!(
+    lint_wgsl_views_context_files_end_their_lines,
+    "a note that opens a block comment it never closes swallows the declaration after it",
+    expected = "did not lint after the note",
+    check_views_lint_after("/* a note, never closed")
+);
