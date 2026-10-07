@@ -141,7 +141,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             stain_graph: StainGraph {},
             overlays: Overlays {},
             palette: Palette {},
-            playhead: Playhead {},
+            playhead: Playhead { t: 0.0 },
         },
     )
 }
@@ -302,8 +302,8 @@ validation::negative_control!(
     expected = "the config is not the canonical text",
     check_provenance(
         &lines_of(&synthetic(4).1)[0].replace(
-            r#""config":{"frames":4,"render":{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}},"scenario":"synthetic_frames","#,
-            r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}},"#
+            r#""config":{"frames":4,"render":{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}},"scenario":"synthetic_frames","#,
+            r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}},"#
         ),
         4,
         &expected_commit()
@@ -400,7 +400,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&render).unwrap(),
         &canonical::to_string(&render2).unwrap(),
-        r#"{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}}"#,
+        r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#,
     );
     // Keys sort by their UTF-16 code units at every depth, whatever order the struct declares or the map iterates.
     check_same_text(

@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 /// The render key (gui_state_contract §2): every render-side knob, as a typed field.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RenderState {
     /// The stain graph: nodes, wires and per-node params (§5).
@@ -22,21 +22,25 @@ pub struct RenderState {
 }
 
 /// The stain graph: nodes, wires, per-node params (gui_state_contract §2, §5).
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StainGraph {}
 
 /// The overlay set (gui_state_contract §2).
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Overlays {}
 
 /// Palette and compaction params (gui_state_contract §2).
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Palette {}
 
-/// The playhead `t` (gui_state_contract §2).
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+/// The playhead `t` (gui_state_contract §2): its `SetField` path is
+/// [`RenderField::Playhead`](crate::contract::set_field::RenderField::Playhead) (RQ-243).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Playhead {}
+pub struct Playhead {
+    /// The playhead's simulation time `t`: f64, as the f64 inspector and the playhead's fixed-`dt` sum need (RQ-243).
+    pub t: f64,
+}

@@ -435,7 +435,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             stain_graph: StainGraph {},
             overlays: Overlays {},
             palette: Palette {},
-            playhead: Playhead {},
+            playhead: Playhead { t: 0.0 },
         },
     )
 }
@@ -524,7 +524,7 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&render),
-            r#"{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}}"#,
+            r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#,
         ),
     ]
 }
@@ -662,6 +662,6 @@ validation::negative_control!(
     expected = "the text does not round-trip",
     check_round_trip(
         r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{}}"#,
-        r#"{"overlays":{},"palette":{},"playhead":{},"stain_graph":{}}"#
+        r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#
     )
 );
