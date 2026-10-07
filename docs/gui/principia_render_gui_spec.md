@@ -673,6 +673,23 @@ code (§9, §10). **Debug fields are raw** — the stated exception to §13's va
 guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
 against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern.
 
+**The template as built (TASK-M1-09; RQ-231, decided per R-369; R-72 for the cyclic period, R-71 for the log
+floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts, which keep R-381's `symlog` view.
+`raw` is the field's value compacted per its ledger scale: `lin` and `diverging` the identity; `log`
+`1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on the fixed `[0, 1]`; `cyclic` `fract(x / period)` on the fixed
+`[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`. **The cyclic period is one turn, 2π:** a cyclic
+field is an angle in radians (REQ-TOOL-159). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
+log floor ε** of a field with no ledger `floor` is a calibration, proposed 2⁻²⁴, f16's smallest positive subnormal
+(REQ-TOOL-158). `[lo, hi]` is the ledger range's finite ends; a step index's is `[0, horizon_steps]`; a `diverging`
+field's range is symmetric about 0. An end with no finite bound takes the measured end, and a field whose ledger range
+is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
+the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
+whose default the generator writes from the node's param and the assembler's declaration parser reads back, and
+`// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw`. Between the guard and the ramp, a
+stored sentinel shows as its literal value through `dbg_sentinel`, fed the compacted value (R-136, R-381), and
+`d_min`'s unset value, f16 +∞ tested by its bits, is drawn in `DBG_NOT_YET`, the neutral "not yet" grey of running
+samples (R-271, R-280; REQ-COL-053).
+
 **The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
 `crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant
 (`ledger::gen::prelude::wgsl(tier)`). Its members, beyond the two above:

@@ -354,7 +354,7 @@
   title: "Numeric field views: the two-line template, raw debug fields and sentinel styling"
   depends_on: [TASK-M1-08]
   needs: [REQ-GEN-001, REQ-GEN-005, REQ-PAY-011]
-  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137, REQ-COL-053]
+  requirements: [REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137, REQ-COL-053, REQ-TOOL-158, REQ-TOOL-159]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-8, PIT-3]
 - id: TASK-M1-10
