@@ -64,5 +64,6 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
   switchover (REQ-DEC-037) is built there. REQ-DEC-031's `u = centre + half·(2t − 1)` defines the position; past
   ℓ_switch it is carried as (c, δ) and never summed into an absolute f32 u, which bands from about ℓ = 19 near
   u ≈ 0.6. That needs no RQ because R-395 answers RQ-242's question (b) and REQ-TOOL-158 forbids the sum; the
-  depth-30 gate alone would not show it, since near the origin the absolute sum is exact (REQ-DEC-031's note).
+  depth-30 gate alone would not show it, since near the origin (the k = 0 quad at any N; for N = 8, any u below
+  2^−10) the absolute sum is exact (REQ-DEC-031's note).
   REQ-TOOL-152's bound is the one the human confirms at the M1 gate (RQ-258 is open on a non-dyadic N).

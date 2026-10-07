@@ -580,7 +580,7 @@
   rulings:
   - R-395
   milestone: M5
-  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin, below about u ≈ 2^−10, the absolute f32 sum is itself exact."
+  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin (the k = 0 quad at any N; for N = 8, any u below 2^−10) the absolute f32 sum is itself exact."
 - id: REQ-DEC-032
   area: DEC
   statement: "CPU quad centres/half-widths and the GPU quad-local sample coordinate must share the Y-up UV convention, with the single flip v = 1 − frag_coord.y/H at the framebuffer seam, so ICs are not mirrored within a quad."

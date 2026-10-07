@@ -6601,7 +6601,8 @@ stays exact. The human replied, in their own words ("This is from me."):
 - **REQ-DEC-031** gains a note citing R-395 and R-395 as a ruling. Its "the GPU must compute sample positions as
   u = centre + half·(2t − 1)" does not contradict R-395 past ℓ_switch, and needs no RQ: R-395 answers RQ-242's question
   (b), which named REQ-DEC-031's wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch. (Its depth-30
-  verify alone would not: near the origin, below about `u ≈ 2^−10`, the absolute f32 sum is itself exact.) The note
+  verify alone would not: near the origin, in the `k = 0` quad at any N, and for N = 8 at any `u` below 2^−10, the
+  absolute f32 sum is itself exact.) The note
   says that past ℓ_switch the position is carried as `(c, δ)` and never summed into an absolute f32 `u`. REQ-SCHED-067
   already computes relative to the quad centre and is unchanged.
 - **A conflict the ruling does not settle, filed as RQ-258 (open)**, for the human at the M1 gate with REQ-TOOL-152's
