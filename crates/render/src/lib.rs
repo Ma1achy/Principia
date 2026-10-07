@@ -11,6 +11,11 @@
 //! the debug views baked one source per field on demand ([`debug_bake`]); the three fixed compositor pipelines
 //! ([`compositor`]); and the render loop, which fills profiler schema v1's frame record each frame ([`frame_record`]).
 //!
+//! The synthetic payload harness's fragment side (TASK-M1-06): the four payload-side buffers and the uniforms bound
+//! to the fragment, with the generated WGSL `RenderContext` and `ctx` lanes ([`bind`]); the sample → tile
+//! rasterisation, one sample per tile ([`raster`]); and the headless render-to-texture helper the golden tests render
+//! through ([`headless`]).
+//!
 //! The occupant algebra's front end (TASK-M7-03): a colour or brightness occupant's expression tree to readable WGSL,
 //! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
 //! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
@@ -22,6 +27,7 @@
 //! reader. The plan layout names no export crate.
 
 pub mod assemble;
+pub mod bind;
 pub mod codegen;
 pub mod colour;
 pub mod compositor;
@@ -29,6 +35,8 @@ pub mod debug_bake;
 pub mod display;
 pub mod embed;
 pub mod frame_record;
+pub mod headless;
 pub mod hot_reload;
 pub mod pipeline_cache;
 pub mod present;
+pub mod raster;

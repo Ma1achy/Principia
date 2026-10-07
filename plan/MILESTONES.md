@@ -103,17 +103,17 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   gate**.
 
 <!-- gate:M1 -->
-**Exit gate — 83 requirements** (and every earlier gate still green):
+**Exit gate — 87 requirements** (and every earlier gate still green):
 
-- INT (1): REQ-INT-001
+- INT (2): REQ-INT-001, REQ-INT-086
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
 - GEN (5): REQ-GEN-009…012, REQ-GEN-027
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
 - COL (8): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056
 - GUI (1): REQ-GUI-001
-- TOOL (25): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137
+- TOOL (27): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…153
 - VAL (4): REQ-VAL-010…012, REQ-VAL-122
-- SYS (1): REQ-SYS-009
+- SYS (2): REQ-SYS-009, REQ-SYS-080
 <!-- /gate:M1 -->
 
 ## M2 — Charts, decode and encode

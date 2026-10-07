@@ -80,6 +80,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-265** — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*
 - **R-339** — dd_integrator §3.6's terminal-priority pin is superseded by R-30's time ordering
 - **R-368** — A link's log-det column holds the log of its volume factor; the simplex link's is `log √det(JᵀJ)` *(closes RQ-200)*
+- **R-389** — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*
+- **R-392** — An IC that starts inside `θ̃`'s pole radius adds no delta at its first exit; `θ̃` counts from the exit longitude *(closes RQ-225)*
 
 ## Design and architecture
 

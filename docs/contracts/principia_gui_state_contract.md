@@ -37,7 +37,7 @@ Everything customisable = every knob is a typed field on the state, already spli
 ```
 SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values · lock flag · z_locked anchor · δ excursion
                           (lock is chart construction, R-69) · link ids ·
-                          integrator occupant · compute fast-math setting (off by default, R-297) · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home)
+                          integrator occupant · kernel variant (physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item", RQ-221) · compute fast-math setting (off by default, R-297) · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home)
 RenderState (render key)  the stain graph (nodes · wires · per-node params, §5) · overlay set ·
                           palette/compaction params · playhead t
 ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard focus scope · selection ·

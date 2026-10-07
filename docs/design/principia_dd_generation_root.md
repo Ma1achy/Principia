@@ -432,6 +432,31 @@ automatically: as failures accumulate, parent and child spreads both saturate, `
 quad **floors** — correct, since refining does not make a close encounter easier. Still open: gate threshold and integrator tolerance must be specified **as a pair**
 (at `eta=0.005` the gate stops mattering; at `eta=0.02` no threshold reaches the trust bar) [RC §7.14a].
 
+### 3.7a `RenderQuad` — the CPU-written quad record
+
+Render contract Part 1 names `RenderQuad`'s fields but gives them no types. This table gives them; it is the ledger
+table the generated `RenderQuad` follows, member for member (REQ-PAY-090; written by TASK-M1-06, R-72). The CPU writes
+one per visible quad, and the fragment reads it as `ctx.quad` (render contract Part 1; Part 6's "Quad fields" view).
+It is scheduler state, not payload, and the payload compatibility
+signature excludes scheduler state (scheduler contract: "No carrying scheduler state into the payload"), so it is not
+hashed into the schema version.
+
+Every member is one 4-byte scalar: 40 B, aligned to 4, with no padding. A storage buffer holds no u8, u16 or f16
+without a WGSL extension, so the counts and codes are u32 and the fractions f32.
+
+| member | type | note |
+|---|---|---|
+| `quad_depth` | u32 | the quadtree depth `ℓ` (§3.7's `level`) |
+| `quad_state` | u32 | 0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale (the debug tooling plan's quad-state enum, §F, in its order) |
+| `coherence_score` | f32 | §3.7's `coherence` |
+| `outcome_impurity` | f32 | §3.7's `outcome_impurity` |
+| `ensemble_spread` | f32 | §3.7's `max(spread_shape, spread_event)` |
+| `suspect_fraction` | f32 | §3.7's `suspect_fraction` |
+| `priority_score` | f32 | the scheduler's priority (debug tooling plan §F: `w_v·P_v + w_z·P_z + w_c·P_c + w_f·P_f`) |
+| `ancestor_gap` | u32 | the levels between the quad and the ancestor drawn in its place; 0 when its own payload is drawn |
+| `cache_age` | u32 | the quad's age in the cache, in frames since its payload was last used (the cache's LRU age) |
+| `dominant_outcome` | u32 | §3.7's `dominant_outcome`, `class ⊕ detail` in bits 0–4, as `sample_descriptor` holds `state` and `detail` (§3.1); render contract Part 6's impurity mask reads it ("`RenderQuad` exposes `dominant_outcome`") |
+
 ### 3.8 Metadata schema (what every entry must carry)
 
 ```

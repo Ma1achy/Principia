@@ -15,7 +15,7 @@
 //! `cargo xtask lint wgsl` checks them over naga's IR.
 //!
 //! R-343 (closing RQ-188): `SimStateFTLE` is bound at `@group(1) @binding(0)` and the word buffer at
-//! `@group(1) @binding(1)`, the numbers from the ledger's one binding table ([`crate::payload::bindings`]), also written
+//! `@group(1) @binding(1)`, the numbers from the ledger's one binding table (its rows [`crate::payload::unpack_bindings`]), also written
 //! as the constants `SIMSTATE_GROUP`, `SIMSTATE_BINDING`, `WORD_GROUP` and `WORD_BINDING`; both buffers are read only
 //! by the read side's generated `sample_read(i)`, one stored member or word component per load, never the whole stored
 //! struct (R-378, amending R-343's `sample_state(i)` and `sample_word(i)`); the u16 `closure_step` and `_reserved` are
@@ -201,8 +201,8 @@ pub fn indexed_element(structs: &[Struct], holds: &str) -> Option<&'static str> 
         .map(|s| s.name)
 }
 
-/// The `SimState` buffer and the word buffer, each its own binding, from the ledger's one binding table
-/// ([`crate::payload::bindings`], R-343): first the constants `<PREFIX>_GROUP` and `<PREFIX>_BINDING` the Rust emitter
+/// The `SimState` buffer and the word buffer, each its own binding, from the ledger's one binding table, its rows
+/// [`crate::payload::unpack_bindings`] (R-343): first the constants `<PREFIX>_GROUP` and `<PREFIX>_BINDING` the Rust emitter
 /// also writes ([`rust::bindings`]), then each buffer at the same numbers. The word buffer is indexed identically to
 /// samples, per copy (render contract Part 5; dd_generation_root §3.3a). At the full tier the `SimState` buffer holds
 /// the indexed variant, `SimStateFTLE` (R-343); at a tier without FTLE it holds `SimStateBase`, and a tier without the
@@ -226,7 +226,7 @@ fn bindings(structs: &[Struct], tier: Tier) -> String {
             ToOwned::to_owned,
         )
     };
-    let table = crate::payload::bindings();
+    let table = crate::payload::unpack_bindings();
     let mut out = String::from(
         "\n// The two buffers (payload §0), each its own binding (R-343): group 0 is the assembler's per-frame uniforms.\n",
     );

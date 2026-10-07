@@ -39,6 +39,10 @@ pub mod contract {
 /// §5; lowering contract Part 5; TASK-M1-04).
 pub mod stain;
 
+/// The synthetic payload harness: CPU-filled `SimState`, word, `ICDescriptor` and `RenderQuad` buffers over a flat grid
+/// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06).
+pub mod synthetic;
+
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting
 /// (R-297; TASK-M0-44).
 pub mod compute;
