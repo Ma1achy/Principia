@@ -38,7 +38,7 @@ fn render() -> RenderState {
         stain_graph: StainGraph {},
         overlays: Overlays {},
         palette: Palette {},
-        playhead: Playhead {},
+        playhead: Playhead { t: 0.0 },
     }
 }
 
@@ -46,7 +46,8 @@ fn render() -> RenderState {
 const SIM_TEXT: &str =
     "{\"chart\":{},\"collision\":{},\"horizon\":{},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
 \"lock\":{},\"plane\":{},\"quality\":{},\"slice\":{}}";
-const RENDER_TEXT: &str = "{\"overlays\":{},\"palette\":{},\"playhead\":{},\"stain_graph\":{}}";
+const RENDER_TEXT: &str =
+    "{\"overlays\":{},\"palette\":{},\"playhead\":{\"t\":0},\"stain_graph\":{}}";
 
 fn check_skeleton(sim_text: &str, render_text: &str) {
     assert_eq!(
