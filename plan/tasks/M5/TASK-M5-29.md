@@ -37,3 +37,4 @@ checks transitions against a legal-transition table written into debug_tooling_p
 - Definitions (R-72) this task writes: REQ-TOOL-116.
 - The terminal state is tied to the true floors (scheduler Part 4), which M6 builds; the table lists them now and
   the M5 test exercises the transitions that exist in M5.
+- RQ-239, decided per R-369 (7 Oct 2026): this task, not TASK-M1-13, builds the Tier-3 tile debug path; at M1 the fallback tint and the pending hatch are post occupants reading `ctx.quad`. Its per-visible-quad record is REQ-PERF-079's (TASK-M8-08).
