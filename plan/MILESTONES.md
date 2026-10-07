@@ -103,13 +103,13 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   gate**.
 
 <!-- gate:M1 -->
-**Exit gate — 92 requirements** (and every earlier gate still green):
+**Exit gate — 93 requirements** (and every earlier gate still green):
 
 - INT (2): REQ-INT-001, REQ-INT-086
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
 - GEN (5): REQ-GEN-009…012, REQ-GEN-027
 - RENDER (24): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077
-- COL (9): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062
+- COL (10): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062…063
 - GUI (1): REQ-GUI-001
 - TOOL (31): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…157
 - VAL (4): REQ-VAL-010…012, REQ-VAL-122
@@ -220,7 +220,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 163 requirements** (and every earlier gate still green):
+**Exit gate — 164 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -233,7 +233,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009
-- TOOL (14): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140
+- TOOL (15): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158
 - VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
 - PERF (23): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093
 - SYS (8): REQ-SYS-030…037
@@ -257,7 +257,7 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 154 requirements** (and every earlier gate still green):
+**Exit gate — 155 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
@@ -265,7 +265,7 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
 - GUI (20): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…177
-- TOOL (4): REQ-TOOL-055…058
+- TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
 - SYS (1): REQ-SYS-038

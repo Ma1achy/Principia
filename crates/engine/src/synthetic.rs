@@ -5,11 +5,21 @@
 //! `RenderQuad`, one per quad, over a flat grid of quads
 //! ([`Synthetic::flat`](crate::synthetic::Synthetic::flat)).
 //!
+//! **The quads' frames** (deep_zoom §1; RQ-214; TASK-M1-07). The harness knows each quad's centre `c` and half-width
+//! `h` from its own grid: its quads are the depth-`ℓ` cells of the slice's quadtree whose `(column, row)`, Y-up from the
+//! slice's bottom-left, run from the grid's `origin` (the slice plane's own frame, R-97), so the quad in grid column
+//! `i` and row `j` has `c = (origin + (i, j) + ½) · 2^−ℓ` and `h = 2^−(ℓ+1)` on each axis, exact in f64 ([`QuadFrame`],
+//! [`Synthetic::quad_frame`](crate::synthetic::Synthetic::quad_frame)). The CPU computes them in f64 and the GPU reads
+//! them as f32, as deep_zoom §1's per-quad uniforms are passed; the scheduler's `QuadRequest` carries them from M5
+//! (TASK-M5-04).
+//!
 //! Every write goes through the generated layout: a sample's packed words through the generated pack routines
 //! (`kernel::payload`, payload §6), its word through `fgw_pack`, and a quad's members by their names in the ledger's
 //! `RenderQuad` table (`ledger::quad`, dd_generation_root §3.7a), each at its generated offset. The bytes place each
 //! member of `SimStateFTLE` and `ICDescriptor` by its name at the ledger's offset for it (`ledger::gen::rust::offsets`),
 //! little-endian, as the GPU reads them: no offset is written here.
+//!
+//! [`QuadFrame`]: crate::synthetic::QuadFrame
 
 use kernel::payload::{
     fgw_pack, pack_packed_b, pack_times, set_d_min, set_d_min_unset, set_detail, set_dmin_pair,
@@ -25,10 +35,20 @@ use render::raster::Grid;
 /// `RenderQuad`'s size in words (dd_generation_root §3.7a: each member one 4-byte scalar).
 pub const QUAD_WORDS: usize = RENDER_QUAD.len();
 
+/// A quad's frame (deep_zoom §1): its centre `c` and half-width `h`, `(u, v)` each, in f64, in the slice's UV frame,
+/// Y-up.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct QuadFrame {
+    pub c: [f64; 2],
+    pub h: [f64; 2],
+}
+
 /// A CPU-filled payload set over a grid of quads.
 #[derive(Debug)]
 pub struct Synthetic {
     grid: Grid,
+    depth: u32,
+    origin: [u64; 2],
     simstate: Vec<SimStateFTLE>,
     word: Vec<[u32; 4]>,
     ic: Vec<ICDescriptor>,
@@ -43,6 +63,8 @@ pub struct Bytes {
     pub word: Vec<u8>,
     pub ic: Vec<u8>,
     pub quad: Vec<u8>,
+    /// Each quad's frame, `(c_u, c_v, h_u, h_v)` as f32 ([`QuadFrame`]; `render::bind::FRAME_BINDING`).
+    pub quad_frame: Vec<u8>,
 }
 
 impl Bytes {
@@ -53,15 +75,23 @@ impl Bytes {
             word: &self.word,
             ic: &self.ic,
             quad: &self.quad,
+            quad_frame: &self.quad_frame,
         }
     }
 }
 
 impl Synthetic {
-    /// A flat layout: `grid`'s quads all at quadtree depth `depth`, tiling the slice, each `quad_state` loaded (code
-    /// 0) and its other members zero. Every sample starts fresh: `running`, `d_min` unset, `dmin_pair` at its sentinel,
-    /// the empty word, and equal masses summing to 1; every other member zero.
+    /// A flat layout: `grid`'s quads all at quadtree depth `depth`, tiling the slice from its bottom-left corner
+    /// ([`Synthetic::flat_at`] with the origin `(0, 0)`).
     pub fn flat(grid: Grid, depth: u32) -> Synthetic {
+        Synthetic::flat_at(grid, depth, [0, 0])
+    }
+
+    /// A flat layout: `grid`'s quads all at quadtree depth `depth`, the quad in grid column `i` and row `j` the slice's
+    /// depth-`depth` cell `(origin[0] + i, origin[1] + j)` (its frame, [`Synthetic::quad_frame`]), each `quad_state`
+    /// loaded (code 0) and its other members zero. Every sample starts fresh: `running`, `d_min` unset, `dmin_pair` at
+    /// its sentinel, the empty word, and equal masses summing to 1; every other member zero.
+    pub fn flat_at(grid: Grid, depth: u32, origin: [u64; 2]) -> Synthetic {
         let fresh = {
             let w = set_state(0, STATE_RUNNING);
             let w = set_dmin_pair(w, SD_DMIN_PAIR_SENTINEL);
@@ -84,6 +114,8 @@ impl Synthetic {
             .0] = depth;
         Synthetic {
             grid,
+            depth,
+            origin,
             simstate: vec![fresh; samples],
             word: vec![fgw_pack([0; 4], 0); samples],
             ic: vec![ic; samples],
@@ -95,6 +127,17 @@ impl Synthetic {
     /// The grid the set covers.
     pub fn grid(&self) -> Grid {
         self.grid
+    }
+
+    /// Quad `q`'s frame (deep_zoom §1), from the grid: its grid column and row `(i, j)`, `q = j · columns + i`, place
+    /// it at the slice's depth-`ℓ` cell `origin + (i, j)`, so `c = (origin + (i, j) + ½) · 2^−ℓ` and `h = 2^−(ℓ+1)` on
+    /// each axis, in f64, Y-up.
+    pub fn quad_frame(&self, q: u32) -> QuadFrame {
+        let columns = self.grid.quads[0];
+        let cell = [q % columns, q / columns];
+        let h = (-f64::from(self.depth) - 1.0).exp2();
+        let c = [0, 1].map(|k| ((self.origin[k] + u64::from(cell[k])) as f64 * 2.0 + 1.0) * h);
+        QuadFrame { c, h: [h, h] }
     }
 
     /// Sample `i`'s setters (its index as `Grid::sample_index` gives it).
@@ -146,6 +189,7 @@ impl Synthetic {
             word: Vec::new(),
             ic: Vec::new(),
             quad: Vec::new(),
+            quad_frame: Vec::new(),
         };
         for s in &self.simstate {
             out.simstate
@@ -160,6 +204,11 @@ impl Synthetic {
         }
         for q in &self.quad {
             out.quad.extend(q.iter().flat_map(|w| w.to_le_bytes()));
+        }
+        for q in 0..self.grid.quad_count() {
+            let f = self.quad_frame(q);
+            let frame = [f.c[0], f.c[1], f.h[0], f.h[1]].map(|x| x as f32);
+            out.quad_frame.extend(f32s(frame));
         }
         out
     }

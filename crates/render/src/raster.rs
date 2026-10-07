@@ -7,12 +7,16 @@
 //! **Orientation** (colour_composition §3, R-72): rows and the within-cell coordinates count from the bottom-left, `v`
 //! upward, the post-flip Y-up convention; the target's pixel rows count from the top, as wgpu's framebuffer does. The
 //! quad and tile in column `i` and row `j` are `j · columns + i`, and `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`
-//! for the tile at `(i, j)` in its quad.
+//! for the tile at `(i, j)` in its quad. Every Y inversion here is the convention's one named flip of its language
+//! (TASK-M1-07; RQ-211): the WGSL `raster` calls `coords.wgsl`'s `flip_y` and `frag_uv`, which [`WGSL`] prepends, and
+//! [`Grid::cell`] and [`Grid::tile_pixels`] call their Rust twin, [`crate::coords::flip_y`].
 //!
 //! **The flat grid's index.** On this harness's flat grid, a sample's index in the buffers the harness fills is
 //! `(quad · N² + tile) · (E + 1) + copy` (applied per R-369). It is the flat grid's own index, for the synthetic
 //! harness, and not payload §0's `(quad, sample, copy)` → index map of the cache's buffers, which this module does not
 //! define. A pixel reads its tile's base sample, copy 0; the E copies are the resolve stage's.
+
+use crate::coords::flip_y;
 
 /// A flat grid of quads covering the target: `quads[0]` columns by `quads[1]` rows of quads, each `n` × `n` tiles
 /// (`N = SAMPLES_PER_QUAD_AXIS`), each tile `tile_px` pixels square, each sample with `e` ensemble copies.
@@ -88,7 +92,9 @@ impl Grid {
     pub fn cell(&self, x: u32, y: u32) -> Cell {
         let (_, height) = self.target();
         let column = x / self.tile_px;
-        let row = (height - 1 - y) / self.tile_px;
+        // Pixel row `y` lies between the framebuffer's edges `y` and `y + 1`; flipped, its Y-up row is the flip of the
+        // lower edge, `y + 1`.
+        let row = flip_y(y + 1, height) / self.tile_px;
         let quad_xy = [column / self.n, row / self.n];
         let tile_xy = [column % self.n, row % self.n];
         let quad = quad_xy[1] * self.quads[0] + quad_xy[0];
@@ -108,15 +114,19 @@ impl Grid {
         let t = self.tile_px;
         let column = quad_xy[0] * self.n + tile_xy[0];
         let row = quad_xy[1] * self.n + tile_xy[1];
-        let y1 = height - row * t;
+        // The tile's Y-up lower edge, `row · t` from the bottom, flipped to the framebuffer edge below its last pixel.
+        let y1 = flip_y(row * t, height);
         (column * t, y1 - t, column * t + t, y1)
     }
 }
 
 /// The fragment side's rasterisation: `raster(pos, quads, n, e, tile_px)`, `pos` the fragment's
 /// `@builtin(position).xy` (a pixel's centre), gives the pixel, the target, the screen-space `uv`, and the quad, tile
-/// and base sample it reads, with its within-quad and within-tile `uv`, each as [`Grid::cell`] gives them.
-pub const WGSL: &str = r"
+/// and base sample it reads, with its within-quad and within-tile `uv`, each as [`Grid::cell`] gives them. The
+/// convention's flip, `coords.wgsl` ([`crate::coords::WGSL`]), comes first: `raster` reads the post-flip coordinate.
+pub const WGSL: &str = concat!(
+    include_str!("../shaders/wgsl/lib/coords.wgsl"),
+    r"
 // ── The sample → tile rasterisation (canonical spec §8; TASK-M1-06): one sample per tile, no interpolation ──
 struct Raster {
     pixel: vec2<u32>,
@@ -136,17 +146,24 @@ struct Raster {
 fn raster(pos: vec2<f32>, quads: vec2<u32>, n: u32, e: u32, tile_px: u32) -> Raster {
     var r: Raster;
     r.target_dims = quads * (n * tile_px);
-    r.pixel = vec2<u32>(pos);
-    let cell = vec2<u32>(r.pixel.x, r.target_dims.y - 1u - r.pixel.y) / tile_px;
+    let dims = vec2<f32>(r.target_dims);
+    // Each float → int cast clamps in f32 first, into [0, dims − 1] (gpu_determinism_note, rule 3): a pixel centre is
+    // inside, so its integer part is unchanged, and a position off the target lands on its edge pixel.
+    let last = dims - vec2<f32>(1.0);
+    r.pixel = vec2<u32>(clamp(pos, vec2<f32>(0.0), last));
+    // The pixel's centre after the convention flip, in pixels from the bottom-left: its row, H − 1 − y, is the
+    // integer part of the flipped centre.
+    let up = vec2<f32>(pos.x, flip_y(pos.y, dims.y));
+    let cell = vec2<u32>(clamp(up, vec2<f32>(0.0), last)) / tile_px;
     r.quad_xy = cell / n;
     r.tile_xy = cell % n;
     r.quad = r.quad_xy.y * quads.x + r.quad_xy.x;
     r.tile = r.tile_xy.y * n + r.tile_xy.x;
     r.sample = (r.quad * n * n + r.tile) * (e + 1u); // the flat grid's index, not payload §0's map
-    let up = vec2<f32>(pos.x, f32(r.target_dims.y) - pos.y);
-    r.screen_uv = up / vec2<f32>(r.target_dims);
+    r.screen_uv = frag_uv(pos, dims);
     r.tile_uv = (up - vec2<f32>(cell * tile_px)) / f32(tile_px);
     r.quad_uv = (vec2<f32>(r.tile_xy) + r.tile_uv) / f32(n);
     return r;
 }
-";
+"
+);

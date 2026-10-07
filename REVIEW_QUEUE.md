@@ -9,84 +9,48 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-*Found by the physics review of PR #160 (TASK-M1-07, review 5438322479). Nothing is chosen; it goes to the human with
-REQ-TOOL-152's calibration at the M1 gate.*
+*Found applying R-395, from PR #160's evidence (physics review 5438875182; qa's
+`qa_uv_preset_reconstruction_global_form_depth_sweep`). Nothing is chosen; it goes to the human with REQ-TOOL-152's
+calibration at the M1 gate.*
 
-## RQ-242: REQ-TOOL-019's "no banding" has no depth range, and an f32 u bands at depth *(physics, REQ-TOOL-019, REQ-TOOL-152, REQ-DEC-031, TASK-M1-07, M5)*
-
-- **File, section:**
-  - `plan/requirements.yaml`, REQ-TOOL-019: "The UV preset … must reconstruct each sample's UV coordinate as deep_zoom
-    §1 writes it, u = c_u + h_u·(2t − 1) and v likewise, … for sampled quads with no banding (adjacent-sample deltas
-    smooth, not step-quantised, by the criterion REQ-TOOL-152 calibrates)."
-  - `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision": "Within-quad precision is full
-    f32 at any depth."
-  - `plan/requirements.yaml`, REQ-DEC-031: "… the GPU must compute sample positions as u = centre + half·(2t − 1) with
-    t = (i + 0.5)/N, never from the quad's min/max bounds." REQ-SCHED-067 uses the same centre-plus-half-width pattern.
-- **What was measured (PR #160):** on M1's flat grid every form is exact (departure 0). At depth 30, the f32 sum
-  c + h·(2t − 1), which is the coordinate view and the form REQ-DEC-031 names, bands like the global form (departure
-  1). c (f64) + δ stays exact (departure 0). qa's sweep (N = 6) shows the f32 sum's departure doubling per level
-  (N·2^(ℓ−24)), so at the proposed bound of 1/16 it reads "banded" from about ℓ = 19, just inside ℓ_switch = 20 (R-90).
-  §1's "full f32 at any depth" holds for t and δ, but not for a u formed in f32. The decoder is correct only because
-  §2 consumes δ, never u.
-- **The question (physics; it changes what M5 builds):**
-  - (a) Does REQ-TOOL-019's "no banding" apply to an f32 u only down to the depth where REQ-TOOL-152's bound is first
-    exceeded, or to the c (f64) + δ path at every depth?
-  - (b) Is §1's u carried on the GPU as (c, δ), and never as a global f32 u, past ℓ_switch? That would bear on
-    REQ-DEC-031's wording, REQ-SCHED-067 and TASK-M5-04's per-quad uniforms.
-- **Not blocked:** TASK-M1-07 meets REQ-TOOL-019's verify on M1's flat grid. The answer shapes M5.
-
-*Found by the physics review of PR #160 (TASK-M1-07, review 5438875182), with a point added by its code review
-(5439037360). Nothing is chosen; it goes to the human.*
-
-## RQ-257: `ctx.chart.slice_uv` has two readings, the position in the view or in the slice plane *(physics, R-97, TASK-M1-06, TASK-M2-25, REQ-COL-057)*
+## RQ-258: R-395's "no banding with absolute coordinates up to ℓ_switch" against REQ-TOOL-152's proposed bound at a non-dyadic N *(calibration, physics, R-395, R-90, REQ-TOOL-019, REQ-TOOL-152, TASK-M1-16, M1 gate)*
 
 - **File, section:**
-  - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract", the chart row of the lane table: "`slice_uv`
-    (vec2 in [0,1]²), `z` (the full 8-D latent at this pixel, chart triple applied), `chart_id`". That is all the
-    corpus says of the lane. (The phrase "on a flat grid tiling the slice" is from a qa test comment, not the docs.)
-  - `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they nest; each is right for
-    its job)", the UV row: "**UV / quad addressing** | `[0,1]²`, **unsigned** | bottom-left, **Y-up** (post-flip) the
-    sample position *in the current view*, which chooses the quads asked for; the quad identity `(depth,tx,ty)` and the
-    quadtree are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀` at the last
-    re-integrating event) — pan and zoom change which addresses are requested, never the addresses (R-97)"; and below
-    it, "`z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂        # the chart placement (chart/decoder contract)`", with "UV is the
-    unsigned `[0,1]` **address**; converting it places it as a **signed offset from the chart centre**, scaled by
-    zoom."
-  - `decisions.md` § "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*": "Quad addresses are
-    `(level, i, j)` in the slice plane's own frame, relative to the plane anchor: `z₀`'s value at the last
-    re-integrating event (R-92). In-plane pan and zoom change which addresses are requested, never the addresses
-    themselves. Conform deep_zoom §1."
-  - `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision": "`u = c_u + h_u · (2t − 1)
-    t = (i + 0.5)/N   (quad-local sample coord)`", where "The CPU (f64) computes per-quad **centre `c_u`** and
-    **half-width `h_u`**".
-- **The code:** TASK-M1-06 (merged) fills the lane in `crates/render/src/bind.rs` as
-  `(vec2<f32>(r.quad_xy) + r.quad_uv) / vec2<f32>(ctx_uniforms.quads)`, the grid tiling (lines 267–271 on main at
-  844b27f; lines 273–277 on PR #160's head 613cfda, unchanged by it). No TASK-M1-07 deliverable or acceptance test
-  reads it; the UV preset, the δ mode and `uv_preset_reconstruction` use `ctx.quad.*` and `ctx.screen.uv`.
-- **The two readings** (from the physics review, which chooses neither):
-  - **(a) The position in the current view.** The coordinate note's UV row defines UV as "the sample position *in the
-    current view*", and the chart placement z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂ maps it, "scaled by zoom". Under this
-    reading the grid-tiling formula is correct for the harness, whose grid is the view.
-  - **(b) The position in the slice plane.** R-97 puts quad addresses "in the slice plane's own frame, relative to the
-    plane anchor", and deep_zoom §1's u = c + h·(2t − 1) is the sample's coordinate in that frame. Under this reading
-    the lane must be `centre + half_width·(2·quad.uv − 1)` (REQ-TOOL-019 calls this "each sample's UV coordinate").
-  - The lane's name ("slice") and the existence of a separate `ctx.screen.uv` point toward (b); the coordinate note's
-    UV row points toward (a).
-- **Where they differ:** on any set that does not tile the slice from its origin. On `flat_at(.., 5, [7, 2])` (3 × 3
-  quads at depth 5 from origin cell (7, 2)), (b) gives the quad in column i a centre u of (7 + i + ½)/32, and (a)
-  gives (i + ½)/3. They agree only when the grid is exactly the slice's cells at its depth from the origin.
-- **Why it is the human's:** the docs do not define the lane, so neither formula can be required, and calling the
-  present one correct would choose (a). The choice decides where `ctx.chart.z` is placed per pixel in M2, so it is
-  physics that changes results (CLAUDE.md "When to ask the human"). It is not TASK-M1-07's to define under R-72: the
-  lane is TASK-M1-06's, and no TASK-M1-07 deliverable needs it.
-- **No test pins the lane where it matters** (code review 5439037360): qa's TASK-M1-06 test
-  (`crates/engine/tests/qa_TASK-M1-06.rs`, `ctx_lanes_qa_tile_and_quad_uv_are_y_up_and_exact`) now uses a square 4 × 4
-  grid at depth 2 from the origin, where (a) and (b) agree. No test checks `slice_uv` on a non-square or offset grid,
-  so a swapped width and height would go unnoticed. On a non-square grid the frames cannot tile the slice at any
-  depth, so no such fixture has one expected value until the meaning is settled.
-- **Needed:** a ruling on which space `ctx.chart.slice_uv` lives in, written into colour_composition §3. Then: the
-  lane conformed to it if (b), and a test of `slice_uv` on a non-square, offset grid (such as `flat_at(.., 5, [7, 2])`
-  with unequal columns and rows) added with the ruling.
-- **Waits:** TASK-M2-25, the first task whose fragment presets read `ctx.chart.z` per pixel (the DECODE and agreement
-  presets, and REQ-COL-057's definition of `ctx.chart.z` in colour_composition §3). At M1, `ctx.chart.z` is the
-  screen's single z (RQ-216, REQ-GUI-001's note), so nothing in M1 waits. TASK-M1-07 is not blocked.
+  - `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at
+    the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*", the human's words:
+    "REQ-TOOL-019 means no banding with absolute coordinates up to the deep-zoom switchover (ℓ_switch, R-90) … The M1
+    gate checks the first half."
+  - `decisions.md` § "R-90 — The decoder switchover trigger *(closes RQ-41)*": "Switch to the linearised decoder when
+    the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as an upper bound (whichever
+    comes first)."
+  - `docs/design/principia_memory_tiers.md` § "4. The six quality tiers", the tier table: `N~` is 8 (Potato, Low) or
+    16 (Medium to Extreme), above which the section says "`N~`/`depth~` are indicative"; and § "5. Controller levers,
+    ranked by impact": "**Custom mode** exposes `render_scale` (0.25–2.0; …), `N`, `MAX_REL_DEPTH`, E, and FTLE
+    directly", with no range given for `N`.
+  - `plan/requirements.yaml`, REQ-TOOL-152: the bound on "how far the adjacent-sample deltas … may depart from the exact
+    step 2h/N", "confirmed by the human at the M1 gate". PR #160 proposes `BANDING_BOUND = 1/16`
+    (`crates/render/src/coords.rs`, marked proposed, R-71).
+- **What was measured** (PR #160, and the same f32 arithmetic recomputed for this entry), the absolute coordinate
+  `c + h·(2t − 1)` in f32 near `u ≈ 0.6`, as the departure `max |Δ − 2h/N| / (2h/N)` at ℓ = 16 to 22:
+  - N = 6: 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 1.
+  - N = 12: 1/32, 1/16, 1/8, 1/4, 1/2, 1, 2.
+  - N = 8: 0 to ℓ = 20, then 1. N = 16: 0 to ℓ = 19, then 1.
+- **The conflict:** at a power-of-two N the sum is exact until adjacent samples collapse to one coordinate, and a
+  collapse makes the full decoder's adjacent ICs bitwise-identical, so R-90's switchover fires first: R-395's first
+  half holds. At a non-dyadic N the departure grows by graded steps, so at 1/16 it reads "banded" from ℓ = 19 at N = 6
+  and from ℓ = 18 at N = 12, before ℓ_switch = 20 and before any collapse that would fire the switchover. There, R-395's
+  first half and the proposed bound cannot both hold.
+- **Options seen:**
+  1. N is a power of two. The named tiers' indicative N already are (8 and 16); Custom mode would offer only powers of
+     two, a range the corpus does not give it now.
+  2. The bound is set at the gate so that no N the product offers exceeds it before ℓ_switch. That needs a cap on
+     Custom's N as well, which the corpus does not give: the bound needed grows with N, and departures exceed it with
+     no collapse (N = 12: 1/4 at ℓ = 19 and 1/2 at ℓ = 20; N = 24: 1/4 at ℓ = 18 and 1/2 at ℓ = 19, collapsing only at
+     ℓ = 20; N = 10: 1/4 at ℓ = 19 and 3/8 at ℓ = 20). Just before a collapse, with a step of 1 to 2 ulp, the departure
+     tends to 1, so this option is a bound and a cap on N together.
+  3. The switchover also fires where the absolute coordinate's departure first exceeds the bound, which adds a trigger
+     to R-90's two.
+  4. R-395's first half is checked at the named tiers' N only, and a Custom non-dyadic N is outside it.
+- **Applied meanwhile:** TASK-M1-16's sweep covers N = 8 and N = 16, where the ruling holds with no choice; a
+  non-dyadic N joins it once this is ruled. REQ-TOOL-152 carries `rq: RQ-258`.
+- **Waits:** the M1 gate's confirmation of REQ-TOOL-152. Nothing is blocked before it.

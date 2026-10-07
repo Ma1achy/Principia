@@ -16,36 +16,36 @@
 | SCHED | 95 |
 | REF | 50 |
 | RENDER | 83 |
-| COL | 61 |
+| COL | 62 |
 | GUI | 176 |
-| TOOL | 156 |
+| TOOL | 158 |
 | VAL | 180 |
 | PERF | 94 |
 | SYS | 80 |
-| **total** | **1338** |
+| **total** | **1341** |
 
-Of these: 110 calibration, 113 definition, 1115 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 110 calibration, 113 definition, 1118 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
 | M0 | 122 |
-| M1 | 92 |
+| M1 | 93 |
 | M2 | 158 |
 | M3 | 196 |
 | M4 | 104 |
-| M5 | 163 |
-| M6 | 154 |
+| M5 | 164 |
+| M6 | 155 |
 | M7 | 115 |
 | M8 | 234 |
 
 ## Sections
 
-1085 sections in 46 files: 894 yield at least one requirement; 191 yield none and are listed below with the reason.
+1088 sections in 46 files: 896 yield at least one requirement; 192 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 144 |
+| informative only | 145 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 32 |
 | rationale | 10 |
@@ -154,6 +154,7 @@ Of these: 110 calibration, 113 definition, 1115 obligation. Retired (kept for th
 | R-388 — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package | informative only | the human's ruling of 6 Oct 2026, numbered R-381 by the human and recorded as R-388 (R-381 taken; R-278): a process ruling applied in plan/OPERATIONS.md, plan/WORKFLOW.md, CLAUDE.md and .claude/agents/implementer.md; item 4's CI change is a follow-up ops task, REQ-VAL-149, REQ-VAL-180 and REQ-VAL-181 unchanged (R-376); changes no requirement |
 | R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)* | informative only | the human's ruling of 6 Oct 2026, a trial: at memory-pressure warning three agents unless the Mac is swapping, two while it is; swapping is more than 1000 vm_stat page-outs over the last minute (the orchestrator's proposal, applied per R-369 and logged; baseline 39/min and 2/min with 0 swap-outs at pressure 2 with two agents); R-262's cap of three stands; a daily log, and a revert to R-277 if timeouts or flakes rise; applied in CLAUDE.md and plan/OPERATIONS.md; replaces R-277's warning rule in part; changes no requirement |
 | R-393 — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)* | informative only | the human's acceptance of 6 Oct 2026 ("yeah i accept it"): R-388 item 4 is applied as nextest with cargo-mutants' own-package test selection kept; "plus genuine dependents" is not applied, since it rested on a wrong premise and would add tests (a ledger mutant ≈36 s → ≈20 min; a #149-sized shard ≈4–5 h against the 300-minute limit); implemented by the ops PR #156; amends R-388 in part; changes no requirement |
+| R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)* | informative only | the human's ruling of 7 Oct 2026: physics reviews TASK-M6-24 for the two R-72 definitions REQ-GUI-176 and REQ-GUI-177 only, code, qa and gui everything else; settles the conflict the orchestrator flagged with R-390's reviewer list; applied in plan/tasks.yaml and TASK-M6-24's notes; amends R-390 in part; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

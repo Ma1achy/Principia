@@ -827,3 +827,7 @@
   section: "R-393 — R-388 item 4 is applied as nextest with own-package selection; \"plus genuine dependents\" is not applied *(amends R-388)*"
   reason: informative only
   note: "the human's acceptance of 6 Oct 2026 (\"yeah i accept it\"): R-388 item 4 is applied as nextest with cargo-mutants' own-package test selection kept; \"plus genuine dependents\" is not applied, since it rested on a wrong premise and would add tests (a ledger mutant ≈36 s → ≈20 min; a #149-sized shard ≈4–5 h against the 300-minute limit); implemented by the ops PR #156; amends R-388 in part; changes no requirement"
+- file: decisions.md
+  section: "R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*"
+  reason: informative only
+  note: "the human's ruling of 7 Oct 2026: physics reviews TASK-M6-24 for the two R-72 definitions REQ-GUI-176 and REQ-GUI-177 only, code, qa and gui everything else; settles the conflict the orchestrator flagged with R-390's reviewer list; applied in plan/tasks.yaml and TASK-M6-24's notes; amends R-390 in part; changes no requirement"
