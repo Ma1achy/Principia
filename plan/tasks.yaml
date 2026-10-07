@@ -722,7 +722,7 @@
   title: The live shape readout, the lagged n̂ register and the closure fields
   depends_on: [TASK-M3-04, TASK-M3-07]
   needs: [REQ-INT-001, REQ-INT-003, REQ-CHART-036, REQ-PAY-009, REQ-GEN-008]
-  requirements: [REQ-INT-042, REQ-PAY-043, REQ-PAY-055, REQ-PAY-056, REQ-PAY-059, REQ-VAL-055, REQ-INT-082]
+  requirements: [REQ-INT-042, REQ-PAY-043, REQ-PAY-055, REQ-PAY-056, REQ-PAY-059, REQ-VAL-055, REQ-INT-082, REQ-INT-087, REQ-INT-088, REQ-INT-089]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M3-12

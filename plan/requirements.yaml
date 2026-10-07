@@ -3766,13 +3766,16 @@
     section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
   verify:
     method: unit test
     detail: "dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps, orbit_count matches a hand count, retrograde matches the L_z sign"
   rulings:
   - R-113
+  - R-397
   milestone: M3
-  note: Split from REQ-INT-001 (R-113, RQ-94).
+  note: "Split from REQ-INT-001 (R-113, RQ-94). R-397 (RQ-226): the march's pole hold keeps its reference in `_reserved` (REQ-INT-087, REQ-INT-088), and the march's θ̃ is independent of the dispatch split (REQ-INT-089)."
 - id: REQ-INT-083
   area: INT
   statement: "Each footprint's E+1 ensemble samples must be copy_index 0..E, copy 0 the un-jittered centre and copies 1..E at Halton (2,3) points 1..E centred (minus ½) and scaled to the footprint."
@@ -3856,6 +3859,63 @@
   - R-71
   - R-389
   milestone: M1
+- id: REQ-INT-087
+  area: INT
+  statement: "θ̃'s frozen pole reference must be stored in SimState's `_reserved`, in both stored variants and at every precision row, as a u16 code: a longitude λ ∈ [−π, π] encodes as c = ⌊λ'·65535/(2π) + ½⌋, λ' = λ or λ + 2π when λ < 0, with c = 65535 mapped to 0; code c decodes to c·2π/65535, less 2π when above π; 0xFFFF means no reference and is never an encode's result; the step count and the sentinel are the constants-register entries `theta_ref_steps` and `theta_ref_none`, hashed into the schema version."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel theta_ref_code: at f32 and f64, encode(decode(c)) = c for every code c in 0..=65534; decode(c) lies in (−π, π); over a sweep of λ including −π, −0, 0, π and the longitudes just below 2π (which encode to 0), the encode never returns 0xFFFF and decode(encode(λ)) differs from λ, mod 2π, by at most π/65535 plus the encode's round-off at that precision; cargo test -p ledger theta_ref_register: theta_ref_steps and theta_ref_none are register entries of value 65535, class achievable-maximum, citing R-397, both among the hashed stored-bits entries, and changing either's value changes the schema version; each with a registered negative control (R-176)"
+  rulings:
+  - R-389
+  - R-392
+  - R-397
+  milestone: M3
+  note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\")."
+- id: REQ-INT-088
+  area: INT
+  statement: "The kernel's march must keep θ̃'s pole hold in SimState alone: a fresh sample's `_reserved` is 0xFFFF; entering the pole disc from outside writes the code of the last longitude outside it; the exit adds wrap(exit longitude − decoded reference) into (−π, π], exactly ±π adding +π, and writes 0xFFFF back; an IC that starts inside the disc keeps 0xFFFF and adds nothing at its first exit (R-392); whether the sample is inside the hold is never stored but recomputed from the current state by the march's own disc test, on resume as on every step, and no descriptor bit is used."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
+  - file: decisions.md
+    section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel theta_hold_state: on synthetic configurations at f32 and f64, a fresh sample's _reserved is 0xFFFF for an IC inside the disc and one outside; outside the disc _reserved is 0xFFFF after every step; the entry step writes encode of the last longitude outside; the exit adds exactly wrap(exit longitude − decode(code)), a difference of exactly ±π adding +π, and writes 0xFFFF; an IC inside keeps 0xFFFF and adds nothing at its first exit; the inside test is the march's configuration disc test (disc_input) applied to the current state, and descriptor bits 10–15 stay zero; each with a registered negative control (R-176)"
+  rulings:
+  - R-389
+  - R-392
+  - R-397
+  milestone: M3
+  note: "R-397 (RQ-226); the lifecycle (0xFFFF outside the disc, written back on exit) is applied per R-369 and changes no θ̃; built by TASK-M3-11."
+- id: REQ-INT-089
+  area: INT
+  statement: "A march's θ̃ and `_reserved` must be bit-identical whether it runs in one dispatch or is split into k dispatches, each resuming from the stored SimState the previous one wrote, including splits inside a pole passage and inside the disc for an IC that starts there: the reference is quantised when it is stored, never held unquantised across steps within a dispatch."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
+  - file: docs/design/principia_dd_integrator.md
+    section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+  - file: decisions.md
+    section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel theta_resume_split: the same march, at f32 and f64, run as one call and as k ∈ {2, 3, 7} calls, each resuming from the stored SimState through the generated pack and unpack, with split points on a pole passage's entry step, strictly inside it and on its exit step, and inside the disc for an IC that starts there: θ̃'s bits and _reserved are identical for every split, and the trajectory crosses the disc at least once; a negative control that keeps the reference unquantised in a register within a dispatch fails it (R-176)"
+  rulings:
+  - R-389
+  - R-392
+  - R-397
+  milestone: M3
+  note: "R-397 (RQ-226): the reason RQ-226 exists; built by TASK-M3-11."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -4506,16 +4566,19 @@
   note: "R-59 D6 / R-40 retire the 136/88 B widths; the corpus now quotes 144 / 96 B (R-73)."
 - id: REQ-PAY-009
   area: PAY
-  statement: "The closure fields must be present unconditionally in both stored variants (not tier-gated), `closure_min` must be f32 (not f16), and the free `_reserved` u16 must not be spent without re-checking the alignment argument."
+  statement: "The closure fields must be present unconditionally in both stored variants (not tier-gated), `closure_min` must be f32 (not f16), and neither the u16 `_reserved` nor any new SimState member may be spent or added without re-checking the alignment argument; R-397 spends `_reserved` in place on θ̃'s frozen pole reference, so `SimStateFTLE` stays 144 B and `SimStateBase` 96 B, exactly packed, and any new member costs 8 B."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
   - file: docs/design/principia_dd_simstate_payload.md
     section: 1. `SimState` — the hot struct
+  - file: decisions.md
+    section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
   verify:
     method: review checklist
-    detail: "both variants carry closure_min: f32 and closure_step: u16; any ledger change touching _reserved includes a size/alignment recheck"
-  rulings: []
+    detail: "both variants carry closure_min: f32 and closure_step: u16; any ledger change touching _reserved includes a size/alignment recheck; R-397's recheck: _reserved: u16 at byte 142 of SimStateFTLE and 94 of SimStateBase, sizes 144 B and 96 B unchanged (18×8 and 12×8, no tail padding), so the next SimState member of any width up to 8 B costs 8 B (144 → 152, 96 → 104), and a later ledger change adding a member includes this recheck"
+  rulings:
+  - R-397
   milestone: M0
 - id: REQ-PAY-010
   area: PAY
