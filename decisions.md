@@ -6522,14 +6522,15 @@ plane, deep_zoom §1's `u = c + h·(2t − 1)`. The human replied, in their own 
   (R-97): `c + h·(2·ctx.quad.uv − 1)`, with `c` the quad's centre and `h` its half-width as the CPU computes them in
   f64 (deep_zoom §1's `u = c + h·(2t − 1)`, the same pattern). It is a vec2 in [0, 1]², post-flip Y-up, and in-plane pan
   and zoom never change it for a given sample; they change only which quads are drawn.
-- **A screen-relative position is a separate field.** The one `ctx` has is `ctx.screen.uv` (screenspace, vec2), and
-  it stays the only screen-relative lane. `slice_uv` is never a view or screen position.
+- **A screen-relative position is a separate, clearly named field.** Screen-relative positions are the screen lane's
+  fields, `ctx.screen.uv` (screenspace, vec2) and `ctx.screen.pixel`; `slice_uv` is never one, and never a view
+  position.
 - The coordinate note's UV row keeps its reading: UV as "the sample position *in the current view*" is what chooses
   the quads asked for. `ctx.chart.slice_uv` is not that view position; under R-394 it is the slice-plane position.
 
 *Applied per R-369 (mechanical consequences):*
-- colour_composition §3 gains a paragraph after the lane table defining `ctx.chart.slice_uv` and naming
-  `ctx.screen.uv` as the separate screen-relative field. The chart row is unchanged: its "vec2 in [0,1]²" holds under
+- colour_composition §3 gains a paragraph after the lane table defining `ctx.chart.slice_uv` and naming the screen
+  lane's fields, `ctx.screen.uv` and `ctx.screen.pixel`, as the separate screen-relative positions. The chart row is unchanged: its "vec2 in [0,1]²" holds under
   (b), and the paragraph sits apart from PR #160's edit of the quad row below it, so the two do not conflict.
 - The coordinate note's UV row, and deep_zoom's coordinate bullet that repeats it, each gain one sentence: the view
   reading is kept, and `ctx.chart.slice_uv` is the slice-plane position under R-394.
@@ -6548,11 +6549,12 @@ plane, deep_zoom §1's `u = c + h·(2t − 1)`. The human replied, in their own 
 
 Adds REQ-COL-063.
 
-## R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*
+## R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*
 *7 Oct 2026 · applied in `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision" (added
-paragraph), REQ-TOOL-019, REQ-DEC-031 and REQ-TOOL-152 (reqio), REQ-TOOL-158 (reqio, new), TASK-M1-07, TASK-M1-16,
-TASK-M5-04, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-242 archived) and
-`REVIEW_QUEUE.md` (RQ-258, open); built by TASK-M1-16 and TASK-M5-04*
+paragraph), REQ-TOOL-019, REQ-DEC-031 and REQ-TOOL-152 (reqio), REQ-TOOL-158 and REQ-TOOL-159 (reqio, new),
+TASK-M1-07, TASK-M1-16, TASK-M5-04, TASK-M6-08, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-242 archived) and `REVIEW_QUEUE.md` (RQ-258, open); built by TASK-M1-16,
+TASK-M5-04 and TASK-M6-08*
 
 The orchestrator put RQ-242 to the human: REQ-TOOL-019's "no banding" has no depth range, and PR #160 measured that
 deep_zoom §1's `u = c + h·(2t − 1)`, formed as an f32 sum, bands at depth like the global form, while `c` (f64) + `δ`
@@ -6569,8 +6571,9 @@ stays exact. The human replied, in their own words ("This is from me."):
   give bitwise-identical ICs), the UV coordinate may be formed as an absolute coordinate, `c + h·(2t − 1)` in f32, and
   must not band by REQ-TOOL-152's criterion. This is REQ-TOOL-019, narrowed to it, in the M1 gate.
 - **Beyond ℓ_switch**, the coordinate is carried as the per-quad local coordinates, the quad's centre `c` (f64 on the
-  CPU) and the f32 offset `δ = h·(2t − 1)`, never as an absolute f32 `u`, and must not band there. This is a new
-  requirement, REQ-TOOL-158, in M5.
+  CPU) and the f32 offset `δ = h·(2t − 1)`, never as an absolute f32 `u`, and must not band there. The human made it
+  an M5/M6 requirement, and it is split in two: REQ-TOOL-158 (M5), the per-quad local path itself, kernel and fragment;
+  and REQ-TOOL-159 (M6), the routing of every quad past ℓ_switch onto that path.
 - deep_zoom §1's "Within-quad precision is full f32 at any depth" stands: it holds for `t` and `δ`. An absolute `u`
   formed in f32 is bounded by ℓ_switch, which is where deep_zoom §2's linearised decoder already consumes `δ`.
 
@@ -6585,14 +6588,22 @@ stays exact. The human replied, in their own words ("This is from me."):
   adjacent deltas pass REQ-TOOL-152's criterion, or adjacent samples collapse to one coordinate, where R-90's
   switchover fires first. At these N the f32 sum is exact until it collapses (N = 8 to ℓ = 20; N = 16 to ℓ = 19,
   collapsing at ℓ = 20).
-- **A new requirement, REQ-TOOL-158 (M5)**, the second half, closed by **TASK-M5-04**, which owns the per-quad
-  uniforms and quad-local sample positions and REQ-DEC-031's depth-30 gate. TASK-M6-07 (the linearised decoder) and
-  TASK-M6-11 (REQ-SCHED-067's quad-relative relevance) build on it.
+- **The second half, split between M5 and M6** (the human's "M5/M6"), because which quads past ℓ_switch take the
+  per-quad local path is set by `DECODE_MODE` (REQ-DEC-037), built in M6 by TASK-M6-08:
+  - **REQ-TOOL-158 (M5, new)**, closed by **TASK-M5-04**, which owns the per-quad uniforms, the quad-local sample
+    positions and REQ-DEC-031's depth-30 gate: at depths 21 and 30 the δ steps pass REQ-TOOL-152's criterion, the
+    linear-mode (LIN) path forms no absolute f32 `u`, and, on the fragment side, the UV preset's quad-local
+    reconstruction from `ctx.quad.centre` and `δ` does not band while a negative fixture reading the absolute
+    `ctx.chart.slice_uv` does.
+  - **REQ-TOOL-159 (M6, new)**, closed by **TASK-M6-08**, which builds the switchover: every quad past ℓ_switch is
+    routed to that path, so none has its sample positions formed as an absolute f32 `u`.
+  - TASK-M6-07 (the linearised decoder) and TASK-M6-11 (REQ-SCHED-067's quad-relative relevance) build on them.
 - **REQ-DEC-031** gains a note citing R-395 and R-395 as a ruling. Its "the GPU must compute sample positions as
-  u = centre + half·(2t − 1)" does not contradict R-395 past ℓ_switch: its own verify (N distinct positions at depth
-  30 within one f32 ulp of `h`) is met only by `δ`, the form deep_zoom §2 consumes, so nothing it builds changes. The
-  note says that past ℓ_switch the position is carried as `(c, δ)` and never summed into an absolute f32 `u`.
-  REQ-SCHED-067 already computes relative to the quad centre and is unchanged.
+  u = centre + half·(2t − 1)" does not contradict R-395 past ℓ_switch, and needs no RQ: R-395 answers RQ-242's question
+  (b), which named REQ-DEC-031's wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch. (Its depth-30
+  verify alone would not: near the origin, below about `u ≈ 2^−10`, the absolute f32 sum is itself exact.) The note
+  says that past ℓ_switch the position is carried as `(c, δ)` and never summed into an absolute f32 `u`. REQ-SCHED-067
+  already computes relative to the quad centre and is unchanged.
 - **A conflict the ruling does not settle, filed as RQ-258 (open)**, for the human at the M1 gate with REQ-TOOL-152's
   calibration. At a non-dyadic N (Custom mode exposes N), the absolute coordinate's departure grows by graded steps:
   at PR #160's proposed bound, 1/16, it reads "banded" from ℓ = 19 at N = 6 and from ℓ = 18 at N = 12, before
@@ -6601,7 +6612,7 @@ stays exact. The human replied, in their own words ("This is from me."):
 - RQ-242 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
 - R-395 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Adds REQ-TOOL-158; REQ-TOOL-019's statement, verify detail, rulings and sources change; REQ-DEC-031 gains a note and a
+Adds REQ-TOOL-158 and REQ-TOOL-159; REQ-TOOL-019's statement, verify detail, rulings and sources change; REQ-DEC-031 gains a note and a
 ruling; REQ-TOOL-152 gains a note, a ruling and `rq: RQ-258`.
 
 ## R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*

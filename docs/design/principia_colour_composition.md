@@ -245,7 +245,8 @@ render-key.
 relative to the plane anchor (R-97): a vec2 in [0, 1]², post-flip Y-up, built from its quad's centre `c` and half-width
 `h` as the CPU computes them in f64, `ctx.chart.slice_uv = c + h · (2 · ctx.quad.uv − 1)`, the pattern of deep_zoom
 §1's `u = c + h·(2t − 1)`. In-plane pan and zoom never change it for a given sample; they change only which quads are
-drawn. It is not a screen or view position: the screen-relative position is `ctx.screen.uv`, a separate field. Formed
+drawn. It is not a screen or view position: screen-relative positions are the screen lane's fields, `ctx.screen.uv`
+and `ctx.screen.pixel`. Formed
 in f32 it is an absolute coordinate, which R-395 keeps free of banding only up to the deep-zoom switchover (ℓ_switch,
 R-90); past it a fragment works in the quad's local coordinates, `ctx.quad.centre` and the offset
 `h · (2 · ctx.quad.uv − 1)` from it.

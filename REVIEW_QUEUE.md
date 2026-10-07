@@ -48,15 +48,16 @@ calibration at the M1 gate.*
 
 - **File, section:**
   - `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at
-    the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*", the human's words:
+    the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*", the human's words:
     "REQ-TOOL-019 means no banding with absolute coordinates up to the deep-zoom switchover (ℓ_switch, R-90) … The M1
     gate checks the first half."
   - `decisions.md` § "R-90 — The decoder switchover trigger *(closes RQ-41)*": "Switch to the linearised decoder when
     the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as an upper bound (whichever
     comes first)."
   - `docs/design/principia_memory_tiers.md` § "4. The six quality tiers", the tier table: `N~` is 8 (Potato, Low) or
-    16 (Medium to Extreme); and § "5. Controller levers, ranked by impact": "**Custom mode** exposes `render_scale`
-    (0.25–2.0; …), `N`, `MAX_REL_DEPTH`, E, and FTLE directly".
+    16 (Medium to Extreme), above which the section says "`N~`/`depth~` are indicative"; and § "5. Controller levers,
+    ranked by impact": "**Custom mode** exposes `render_scale` (0.25–2.0; …), `N`, `MAX_REL_DEPTH`, E, and FTLE
+    directly", with no range given for `N`.
   - `plan/requirements.yaml`, REQ-TOOL-152: the bound on "how far the adjacent-sample deltas … may depart from the exact
     step 2h/N", "confirmed by the human at the M1 gate". PR #160 proposes `BANDING_BOUND = 1/16`
     (`crates/render/src/coords.rs`, marked proposed, R-71).
@@ -71,9 +72,13 @@ calibration at the M1 gate.*
   and from ℓ = 18 at N = 12, before ℓ_switch = 20 and before any collapse that would fire the switchover. There, R-395's
   first half and the proposed bound cannot both hold.
 - **Options seen:**
-  1. N is a power of two. The named tiers' N already are (8 and 16); Custom mode offers only powers of two.
-  2. The bound is set at the gate so that no N the product offers exceeds it before ℓ_switch; at N = 12 that is at
-     least 1/4 below ℓ = 20, and 1/2 if ℓ_switch itself is included.
+  1. N is a power of two. The named tiers' indicative N already are (8 and 16); Custom mode would offer only powers of
+     two, a range the corpus does not give it now.
+  2. The bound is set at the gate so that no N the product offers exceeds it before ℓ_switch. That needs a cap on
+     Custom's N as well, which the corpus does not give: the bound needed grows with N, and departures exceed it with
+     no collapse (N = 12: 1/4 at ℓ = 19 and 1/2 at ℓ = 20; N = 24: 1/4 at ℓ = 18 and 1/2 at ℓ = 19, collapsing only at
+     ℓ = 20; N = 10: 1/4 at ℓ = 19 and 3/8 at ℓ = 20). Just before a collapse, with a step of 1 to 2 ulp, the departure
+     tends to 1, so this option is a bound and a cap on N together.
   3. The switchover also fires where the absolute coordinate's departure first exceeds the bound, which adds a trigger
      to R-90's two.
   4. R-395's first half is checked at the named tiers' N only, and a Custom non-dyadic N is outside it.
