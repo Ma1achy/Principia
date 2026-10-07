@@ -1,6 +1,7 @@
 //! The coordinate convention (TASK-M1-07; principia_coordinate_conventions_note.md): the one framebuffer → UV flip, its
 //! Rust twin, the image export, and the coordinate presets drawn through the synthetic harness.
-//! - REQ-SYS-009: the WGSL flip, rendered at every row of a target, equals its Rust twin (`flip_twin_matches_wgsl_*`);
+//! - REQ-SYS-009: the WGSL flip, rendered at every row of a target, equals its Rust twin (`flip_twin_matches_wgsl_*`),
+//!   and the raster clamps each position in f32 before it casts it (`raster_clamps_*`; gpu_determinism_note, rule 3);
 //! - REQ-SYS-080: the coordinate view's exported PNG has its top-left pixel at UV (0, 1) and its bottom-left at (0, 0),
 //!   its rows written as the readback gives them (`export_orientation_*`);
 //! - REQ-TOOL-019, REQ-TOOL-152: the coordinate view reconstructs each sampled quad's UV coordinate as
@@ -136,6 +137,77 @@ negative_control!(
     "the identity is no flip",
     expected = "edge 0 of 1",
     check_integer_flip(|y, _| y)
+);
+
+/// The raster's clamps (gpu_determinism_note, rule 3): positions on, inside and off a 12 × 12 target of 2 × 2 quads
+/// of 2 × 2 tiles of 3 px, each with the pixel and quad `raster` must give it. A position is clamped into
+/// `[0, dims − 1]` before each cast, its pixel from the top-left and its quad from the flipped position, Y-up.
+const CLAMP_PROBES: [([f32; 2], [u32; 2], [u32; 2]); 9] = [
+    ([0.5, 0.5], [0, 0], [0, 1]),
+    ([11.5, 11.5], [11, 11], [1, 0]),
+    ([0.0, 0.0], [0, 0], [0, 1]),
+    ([11.0, 11.0], [11, 11], [1, 0]),
+    ([12.0, 12.0], [11, 11], [1, 0]),
+    ([-0.5, 12.5], [0, 11], [0, 0]),
+    ([12.5, -0.5], [11, 0], [1, 1]),
+    ([-5.0, -5.0], [0, 0], [0, 1]),
+    ([100.0, 100.0], [11, 11], [1, 0]),
+];
+
+/// The probe: `raster`, with each probe position in place of fragment `x`'s coordinate, writing its pixel and quad.
+fn clamp_module(raster_wgsl: &str) -> String {
+    let probes = CLAMP_PROBES
+        .iter()
+        .map(|(at, _, _)| format!("vec2<f32>({:?}, {:?})", at[0], at[1]))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "{raster_wgsl}\n@fragment\nfn clamp_fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {{\n    \
+         var probes = array<vec2<f32>, {}>({probes});\n    \
+         let r = raster(probes[u32(pos.x)], vec2<u32>(2u, 2u), 2u, 0u, 3u);\n    \
+         return vec4<u32>(r.pixel, r.quad_xy);\n}}\n",
+        CLAMP_PROBES.len()
+    )
+}
+
+/// Each probe's pixel and quad are the clamped ones.
+fn check_clamps(raster_wgsl: &str) {
+    let image = draw_bare(
+        &gpu(),
+        &clamp_module(raster_wgsl),
+        "clamp_fs",
+        Target {
+            width: CLAMP_PROBES.len() as u32,
+            height: 1,
+            format: wgpu::TextureFormat::Rgba32Uint,
+        },
+    );
+    for (i, (at, pixel, quad_xy)) in CLAMP_PROBES.iter().enumerate() {
+        let got = image.words(i as u32, 0);
+        assert_eq!(
+            [got[0], got[1], got[2], got[3]],
+            [pixel[0], pixel[1], quad_xy[0], quad_xy[1]],
+            "position {at:?}: raster gives pixel {:?} and quad {:?}, not {pixel:?} and {quad_xy:?}",
+            [got[0], got[1]],
+            [got[2], got[3]]
+        );
+    }
+}
+
+#[test]
+fn raster_clamps_before_it_casts() {
+    check_clamps(render::raster::WGSL);
+}
+
+negative_control!(
+    raster_clamps_before_it_casts,
+    "a raster casting the flipped position unclamped puts the target's top edge, flipped to y = H, in a row off the grid",
+    expected = "position [0.0, 0.0]: raster gives pixel [0, 0] and quad [0, 2]",
+    {
+        let clamped = "vec2<u32>(clamp(up, vec2<f32>(0.0), last))";
+        assert!(render::raster::WGSL.contains(clamped), "the raster's clamped cast");
+        check_clamps(&render::raster::WGSL.replace(clamped, "vec2<u32>(up)"))
+    }
 );
 
 // ── The harness and the presets ──────────────────────────────────────────────────────────────────────────────────

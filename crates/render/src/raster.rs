@@ -146,12 +146,15 @@ struct Raster {
 fn raster(pos: vec2<f32>, quads: vec2<u32>, n: u32, e: u32, tile_px: u32) -> Raster {
     var r: Raster;
     r.target_dims = quads * (n * tile_px);
-    r.pixel = vec2<u32>(pos);
     let dims = vec2<f32>(r.target_dims);
+    // Each float → int cast clamps in f32 first, into [0, dims − 1] (gpu_determinism_note, rule 3): a pixel centre is
+    // inside, so its integer part is unchanged, and a position off the target lands on its edge pixel.
+    let last = dims - vec2<f32>(1.0);
+    r.pixel = vec2<u32>(clamp(pos, vec2<f32>(0.0), last));
     // The pixel's centre after the convention flip, in pixels from the bottom-left: its row, H − 1 − y, is the
     // integer part of the flipped centre.
     let up = vec2<f32>(pos.x, flip_y(pos.y, dims.y));
-    let cell = vec2<u32>(up) / tile_px;
+    let cell = vec2<u32>(clamp(up, vec2<f32>(0.0), last)) / tile_px;
     r.quad_xy = cell / n;
     r.tile_xy = cell % n;
     r.quad = r.quad_xy.y * quads.x + r.quad_xy.x;
