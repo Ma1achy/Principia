@@ -6501,7 +6501,7 @@ Changes no requirement.
 ## R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
 *7 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "1" and § "2", `docs/design/principia_dd_integrator.md`
 § "3.7", `docs/design/principia_dd_generation_root.md` § "3.5" and § "3.8", `docs/contracts/principia_render_contract.md`
-§ "Unpack layer", `docs/design/principia_colour_composition.md` Appendix A, REQ-PAY-009 (reqio), REQ-INT-082 (reqio),
+§ "Unpack layer", `docs/contracts/principia_parity_contract.md` § "Tier B", `docs/design/principia_colour_composition.md` Appendix A, REQ-PAY-009 (reqio), REQ-INT-082 (reqio),
 REQ-INT-087 to REQ-INT-089 (reqio, new), TASK-M3-11, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
 `docs/archive/review_queue/M0.md` (RQ-226 archived) and `REVIEW_QUEUE.md`; built by TASK-M3-11*
 
@@ -6556,15 +6556,21 @@ carries the recheck (below).
 
 *Applied per R-369 (mechanical consequences and routine design choices):*
 - **The alignment recheck (REQ-PAY-009).** `_reserved` is spent in place, at byte 142 of `SimStateFTLE` and 94 of
-  `SimStateBase`. Both are exact multiples of their 8-byte alignment with no tail padding (144 = 18 × 8, 96 = 12 × 8),
-  so the struct sizes do not change, and **after this change any new field, of any width up to 8 B, costs 8 B**
-  (144 → 152, 96 → 104). At f64 the declared 4 B `_tail` stays as it is.
+  `SimStateBase`. At f32 both are exact multiples of their 8-byte alignment with no tail padding (144 = 18 × 8,
+  96 = 12 × 8), so the struct sizes do not change, and **at f32 any new field, of any width up to 8 B, now costs 8 B**
+  (144 → 152, 96 → 104). The f64 and DoubleF64 layouts keep their declared 4 B `_tail`: there a new u32 costs
+  nothing, and a new `Real` costs 8 B at f64 and 16 B at DoubleF64, so a new member is rechecked per precision row.
 - **The encode and decode, exactly.** Encode: `λ' = λ`, or `λ + 2π` when `λ < 0`; `c = ⌊λ' · 65535/(2π) + ½⌋`, and
   `c = 65535` becomes 0 (it is the longitude 2π ≡ 0), so the encode never yields the sentinel. Decode: `c · 2π/65535`,
   less 2π when it exceeds π, so the decoded reference lies in (−π, π) and the exit difference stays in [−2π, 2π], the
   domain `wrap` takes. 65535 is odd, so no code decodes to exactly π. `encode(decode(c)) = c` for every code, so a
   reference survives any number of resumes unchanged. The worst-case error is half a step plus the encode's
-  round-off at the kernel's `Real` (≈ 5e-7 rad at f32), inside the ruling's "≤ ~5e-5".
+  round-off at the kernel's `Real`, bounded by `2·ulp_Real(2π)` (9.5e-7 rad at f32, 1.8e-15 at f64; measured 4.6e-7
+  and 6.0e-16 by the physics review of #168), inside the ruling's "≤ ~5e-5".
+- **The parity tier.** `_reserved` is not Tier B: its code is rounded from the float longitude, so it is Tier N/S
+  with `θ̃`, and backends may differ by one code (mod 65535); only sentinel-or-code, from the comparison-only disc
+  test, is Tier B. The parity contract's Tier B paragraph says so beside the f16 display scalars (physics review
+  5441087488, F1).
 - **The exact-π case** (R-389) applies to the difference against the decoded reference: an exit whose
   `exit longitude − decoded reference` is exactly ±π adds +π.
 - **One semantics, split or not.** The march quantises the reference when it stores it, on entering the disc, and

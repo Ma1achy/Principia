@@ -106,10 +106,12 @@ free — but that also means **spending it later is not free**, since the next f
 
 **The recheck, on spending `_reserved` (R-397; REQ-PAY-009).** `_reserved` now holds `θ̃`'s frozen pole reference
 (§2). It is spent **in place**, at byte 142 of `SimStateFTLE` and byte 94 of `SimStateBase`, so neither size changes:
-`SimStateFTLE` is still **144 B** = 18×8 and `SimStateBase` **96 B** = 12×8, both exactly packed at their 8-byte
-alignment, with no tail padding left. So **any new field now costs 8 B**, whatever its width up to 8 B: the next one
-takes `SimStateFTLE` to 152 and `SimStateBase` to 104. At f64 the layouts below are unchanged (272 B and 176 B, the
-declared 4 B `_tail` as it was). The schema version changes with the ledger, as R-36 makes it (§2).
+at f32 `SimStateFTLE` is still **144 B** = 18×8 and `SimStateBase` **96 B** = 12×8, both exactly packed at their
+8-byte alignment, with no tail padding left. So **at f32 any new field now costs 8 B**, whatever its width up to 8 B:
+the next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104. The other precision rows keep their declared 4 B
+`_tail` (f64 272 B and 176 B; DoubleF64 520 B and 328 B, below): there a new u32 fills the tail at no cost, and a new
+`Real` costs 8 B at f64 and 16 B at DoubleF64. A new member's recheck is therefore made per precision row. The
+schema version changes with the ledger, as R-36 makes it (§2).
 
 **Why unconditional rather than tier-gated.** The FTLE split exists because the shadow is **48 B —
 55% of the 88 B base**, which justifies monomorphising. Closure is **8 B, 5.9%**. Gating it would
@@ -295,8 +297,15 @@ precision row (it is "u16, fixed", §1). No descriptor bit is used; `sample_desc
   the decoded code, whether or not the march was interrupted inside the hold, so `θ̃` and `_reserved` are
   bit-identical however the march is split into dispatches.
 - **The quantisation.** The decoded reference differs from the stored longitude by at most half a step, `π/65535 ≈
-  4.8e-5` rad, plus the encode's round-off at the kernel's `Real` (≈ 5e-7 rad at f32): at most ~5e-5 rad of `θ̃` per
-  pole passage. Steps outside the disc are not quantised.
+  4.8e-5` rad, plus the encode's round-off at the kernel's `Real`, bounded by `2·ulp_Real(2π)` (9.5e-7 rad at f32,
+  1.8e-15 at f64; measured 4.6e-7 and 6.0e-16): `|decode(encode(λ)) − λ|` (mod 2π) `≤ π/65535 + 2·ulp_Real(2π)`, at
+  most ~5e-5 rad of `θ̃` per pole passage. Steps outside the disc are not quantised.
+- **Parity tier (parity contract §2).** `_reserved` is **not** Tier B, unlike `closure_step` beside it: its code is
+  rounded from the float longitude, a runtime transcendental, so it belongs to Tier N/S with `θ̃`. Across backends
+  and precisions a code may differ by one (cyclically, mod 65535: 65534 and 0 are neighbours). Whether it holds the
+  sentinel 0xFFFF or a code follows from the comparison-only disc test (`ρ² < r_pole²·I²`), so that much is Tier B
+  and must match exactly. Within one backend and precision the field is deterministic, so a resumed march is
+  bit-identical to an unbroken one (above).
 - **The read side does not read it.** As a `_`-named member it has no ledger field entry: no read-side field, export
   field or catalogue view. It is march state, read only by the kernel. In the generated WGSL it is bits 16–31 of
   `closure_step_reserved` (R-343), for which no accessor is emitted.
