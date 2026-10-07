@@ -17,7 +17,7 @@ use std::path::Path;
 
 use ledger::gen::catalogue::{self, Accessor, View};
 use ledger::gen::{self, export, read, rust, wgsl, GenError, Generated};
-use ledger::schema::{EntryBuilder, FieldType, Ledger, Location, Range, Scale, Span};
+use ledger::schema::{Bound, EntryBuilder, FieldType, Ledger, Location, Range, Scale, Span};
 use naga::{Expression, Module, Statement, TypeInner};
 use validation::negative_control;
 
@@ -363,6 +363,199 @@ negative_control!(
         let entries = gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(catalogue::refused(&l.words, &entries).len(), 1);
     }
+);
+
+// ── The placeholder ramp, the probe and the header at their boundaries ───────────────────────────────────────────
+
+/// The payload ledger with `name`, a field of `width` bits at `packed_a`'s bit 10, its reserved span narrowed to the
+/// bits above it to 15, of `scale` over `range`.
+fn with_probe(name: &'static str, width: u32, scale: Scale, range: Range) -> Ledger {
+    let mut l = with_probe_bit(|_| {
+        EntryBuilder::new(name)
+            .location(Location::Packed {
+                word: "packed_a",
+                offset: 10,
+                width,
+            })
+            .ty(FieldType::UBits)
+            .scale(scale)
+            .range(range)
+            .provenance(ledger::schema::Provenance::Kernel)
+            .consumers(&[
+                ledger::schema::Consumer::Render,
+                ledger::schema::Consumer::Export,
+                ledger::schema::Consumer::Debug,
+            ])
+    });
+    let a = l
+        .words
+        .iter_mut()
+        .find(|w| w.name == "packed_a")
+        .expect("packed_a");
+    a.reserved = vec![Span {
+        offset: 10 + width,
+        width: 6 - width,
+    }];
+    l
+}
+
+/// The file at `path` generated from `ledger`.
+fn emitted(ledger: &Ledger, path: &str) -> String {
+    generate(ledger)
+        .into_iter()
+        .find(|f| f.path.to_string_lossy() == path)
+        .map(|f| f.contents)
+        .unwrap_or_else(|| panic!("nothing was generated at {path}"))
+}
+
+/// The view of `probe_bit` generated from `ledger` colours it with `ramp`.
+fn check_ramp(ledger: &Ledger, ramp: &str) {
+    let view = emitted(ledger, &format!("{}/probe_bit.wgsl", catalogue::DIR));
+    assert!(
+        view.contains(&format!("return {ramp};")),
+        "the view of `probe_bit` is not coloured with {ramp}:\n{view}"
+    );
+}
+
+#[test]
+fn view_ramp_of_a_wider_flag_compares_with_zero() {
+    let two_bits = with_probe("probe_bit", 2, Scale::Flag, Range::int(0, 1));
+    check_ramp(&two_bits, "dbg_flag(ctx.sample.probe_bit != 0u)");
+}
+
+negative_control!(
+    view_ramp_of_a_wider_flag_compares_with_zero,
+    "a one-bit flag is read as a `bool`, and is not compared with zero",
+    expected = "is not coloured with",
+    check_ramp(
+        &with_probe("probe_bit", 1, Scale::Flag, Range::int(0, 1)),
+        "dbg_flag(ctx.sample.probe_bit != 0u)"
+    )
+);
+
+/// The payload ledger with `field`'s range replaced by `range`.
+fn with_range(field: &str, range: Range) -> Ledger {
+    let mut l = ledger::layout();
+    let entry = l
+        .entries
+        .iter_mut()
+        .find(|e| e.name == Some(field))
+        .unwrap_or_else(|| panic!("no entry `{field}`"));
+    entry.range = Some(range);
+    l
+}
+
+/// `S`, an `f32` on a linear scale, its range closed at zero and at `hi`.
+fn closed_at(hi: f64) -> Ledger {
+    let range = Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Closed(hi),
+    };
+    with_range("S", range)
+}
+
+/// The view of `field` generated from `ledger` colours it with `ramp`.
+fn check_ramp_of(ledger: &Ledger, field: &str, ramp: &str) {
+    let view = emitted(ledger, &format!("{}/{field}.wgsl", catalogue::DIR));
+    assert!(
+        view.contains(&format!("return {ramp};")),
+        "the view of `{field}` is not coloured with {ramp}:\n{view}"
+    );
+}
+
+#[test]
+fn view_ramp_of_an_infinite_closed_bound_is_the_sentinel() {
+    check_ramp_of(
+        &closed_at(f64::INFINITY),
+        "S",
+        "dbg_sentinel(ctx.sample.S, ctx.frag_xy)",
+    );
+}
+
+negative_control!(
+    view_ramp_of_an_infinite_closed_bound_is_the_sentinel,
+    "a range closed at two finite ends is coloured over that range",
+    expected = "is not coloured with",
+    check_ramp_of(
+        &closed_at(1.0),
+        "S",
+        "dbg_sentinel(ctx.sample.S, ctx.frag_xy)"
+    )
+);
+
+/// The test of `field` generated from `ledger` stores `value`, and its control `altered`.
+fn check_probe(ledger: &Ledger, field: &str, value: u64, altered: u64) {
+    let tests = emitted(ledger, catalogue::TESTS_PATH);
+    let want = format!("pick(alter, \"{field}\", {value}, {altered})");
+    assert!(
+        tests.contains(&want),
+        "the probe does not store {value} in `{field}`, altered to {altered}"
+    );
+}
+
+#[test]
+fn view_probe_of_a_negative_bound_takes_the_width() {
+    let negative = with_range("closure_step", Range::int(-5, -1));
+    check_probe(&negative, "closure_step", 32768, 32769);
+}
+
+negative_control!(
+    view_probe_of_a_negative_bound_takes_the_width,
+    "a range ending at 3 is probed at its middle, not the width's",
+    expected = "the probe does not store",
+    check_probe(
+        &with_range("closure_step", Range::int(0, 3)),
+        "closure_step",
+        32768,
+        32769
+    )
+);
+
+/// The header comments of `views`, each view's lines after its first, `// ` and all: each is at most 120 columns,
+/// and none could have taken the next line's first word (the wrap is greedy).
+fn check_headers(views: &[String]) {
+    for view in views {
+        let lines: Vec<&str> = view
+            .lines()
+            .skip(1)
+            .take_while(|l| l.starts_with("// "))
+            .collect();
+        for pair in lines.windows(2) {
+            let next = pair[1]["// ".len()..].split(' ').next().unwrap_or("");
+            assert!(
+                pair[0].chars().count() + 1 + next.chars().count() > 120,
+                "a header line could have taken the next line's first word: {:?} then {next:?}",
+                pair[0]
+            );
+        }
+        for line in &lines {
+            assert!(
+                line.chars().count() <= 120,
+                "a header line is wider than 120 columns: {line:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn view_header_wraps_greedily_at_120_columns() {
+    let mut views: Vec<String> = views_of(&ledger::layout())
+        .into_iter()
+        .map(|v| v.wgsl)
+        .collect();
+    for k in 0..48 {
+        let name: &'static str = Box::leak(format!("probe_{}", "x".repeat(k)).into_boxed_str());
+        let ledger = with_probe(name, 1, Scale::Flag, Range::int(0, 1));
+        views.push(emitted(&ledger, &format!("{}/{name}.wgsl", catalogue::DIR)));
+    }
+    check_headers(&views);
+}
+
+negative_control!(
+    view_header_wraps_greedily_at_120_columns,
+    "a header wrapped before its line is full is not greedy",
+    expected = "could have taken the next line's first word",
+    check_headers(&["// generated\n// a\n// b\nfn colour() {}\n".to_owned()])
 );
 
 // ── REQ-TOOL-017: the shader and its test share the accessor ─────────────────────────────────────────────────────

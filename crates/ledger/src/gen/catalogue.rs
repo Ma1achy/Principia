@@ -465,10 +465,12 @@ fn probe(e: &Entry, k: usize, simstate: &Struct, ic: &Struct) -> Option<Probe> {
             })
         }
         Location::Scalar(_) => {
-            let (owner, member) = match simstate.members.iter().find(|m| m.name == n) {
-                Some(m) => ("s", m),
-                None => ("ic", ic.members.iter().find(|m| m.name == n)?),
-            };
+            let (owner, member) = simstate
+                .members
+                .iter()
+                .map(|m| ("s", m))
+                .chain(ic.members.iter().map(|m| ("ic", m)))
+                .find(|(_, m)| m.name == n)?;
             let (value, altered) = match member.storage {
                 Storage::Vec2x3 => (probe_vector(k, 0.0), probe_vector(k, 0.25)),
                 Storage::F32 => floats(probe_float(k, 0)),

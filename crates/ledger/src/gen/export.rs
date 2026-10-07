@@ -15,29 +15,24 @@ use std::path::PathBuf;
 
 use crate::gen::catalogue::{self, Read};
 use crate::gen::{rust, Generated};
-use crate::schema::{Entry, FieldType, Storage, Word};
+use crate::schema::{Entry, Storage, Word};
 
 /// Where the emitter writes, relative to the workspace root.
 pub const PATH: &str = "crates/engine/src/export/generated.rs";
 
 /// The Rust type `e` decodes to, and its value from `read`, `s`, `word` and `ic`, as [`catalogue::Read::rust`] reads
-/// it, a vector flattened.
+/// it: a vector, three `vec2<f32>` (`Vec2x3`, R-86), flattened to its six components; a stored member as its storage's
+/// Rust type.
 fn decoded(e: &Entry, r: &Read) -> (String, String) {
     let value = r.rust(e.name);
-    let k = match e.ty {
-        FieldType::Vector { k, .. } => k,
-        _ => 6,
-    };
     match r {
         Read::Member { wgsl, .. } => ((*wgsl).to_owned(), value),
-        Read::Vector => (format!("[f32; {k}]"), format!("flat({value})")),
+        Read::Vector
+        | Read::Stored {
+            storage: Storage::Vec2x3,
+        } => ("[f32; 6]".to_owned(), format!("flat({value})")),
         Read::Word { .. } => ("u32".to_owned(), value),
-        Read::Stored { storage } => match storage {
-            Storage::Vec2x3 => (format!("[f32; {k}]"), format!("flat({value})")),
-            Storage::F32 => ("f32".to_owned(), value),
-            Storage::U16 => ("u32".to_owned(), format!("u32::from({value})")),
-            _ => ("u32".to_owned(), value),
-        },
+        Read::Stored { storage } => (storage.rust(), value),
         Read::Ic => ("f32".to_owned(), value),
     }
 }
