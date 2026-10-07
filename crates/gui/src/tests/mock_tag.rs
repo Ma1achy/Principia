@@ -43,3 +43,33 @@ fn mock_tag_in_the_window_title() {
     assert_eq!(window_title(true), "principia · dev — mock engine");
     assert_eq!(window_title(false), "principia · dev");
 }
+
+/// `rect` lies within `band`, both in pixels.
+fn check_within(rect: [f64; 4], band: [f64; 4]) {
+    assert!(
+        band[0] <= rect[0] && rect[2] <= band[2] && band[1] <= rect[1] && rect[3] <= band[3],
+        "{rect:?} is not within {band:?}"
+    );
+}
+
+#[test]
+fn mock_tag_drawn_in_the_footer() {
+    use crate::layout::Layout;
+    let mut app = mock_app();
+    let mut headless = headless();
+    let names = super::support::names(&mut headless, &mut app);
+    let tag = names
+        .iter()
+        .find(|n| n.name == MOCK_TAG)
+        .and_then(|n| n.rect)
+        .expect("the tag is drawn");
+    let layout = Layout::new(headless.screen(), headless.pixels_per_point());
+    let px = |r: eframe::egui::Rect| {
+        let s = f64::from(headless.pixels_per_point());
+        [r.min.x, r.min.y, r.max.x, r.max.y].map(|v| f64::from(v) * s)
+    };
+    check_within(tag, px(layout.footer));
+    rejects("the tag read as in the top bar", || {
+        check_within(tag, px(layout.top_bar))
+    });
+}

@@ -113,3 +113,22 @@ fn cli_run_without_the_mock_feature_says_so() {
         assert_eq!(outcome, Err(NO_ENGINE.to_owned()));
     }
 }
+
+/// One pass of `ctx` running `pass`: the number of shapes it painted.
+fn shapes_painted(pass: impl FnMut(&mut eframe::egui::Ui)) -> usize {
+    let ctx = eframe::egui::Context::default();
+    let mut output = ctx.run_ui(Default::default(), pass);
+    output.textures_delta.clear();
+    output.shapes.len()
+}
+
+#[test]
+fn cli_eframe_draws_the_app_through_its_ui() {
+    let mut app = super::support::mock_app();
+    let mut frame = eframe::Frame::_new_kittest();
+    let painted = shapes_painted(|ui| eframe::App::ui(&mut app, ui, &mut frame));
+    assert!(painted > 0, "eframe's call drew nothing");
+    rejects("a pass that draws nothing", || {
+        assert!(shapes_painted(|_| {}) > 0, "drew nothing")
+    });
+}

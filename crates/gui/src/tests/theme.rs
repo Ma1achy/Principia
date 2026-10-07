@@ -3,6 +3,8 @@
 
 use eframe::egui::{self, FontFamily};
 
+use super::support::{real_app, rejects};
+use crate::app::clear_colour;
 use crate::theme::{fonts, install, UBUNTU_MONO};
 
 #[test]
@@ -25,4 +27,29 @@ fn theme_fonts_and_the_dark_theme() {
     output.textures_delta.clear();
     let families = ctx.fonts(|f| f.definitions().families.clone());
     assert_eq!(families[&FontFamily::Monospace][0], UBUNTU_MONO);
+}
+
+/// The window is cleared to `visuals`' darkest background, opaque.
+fn check_clear(visuals: &egui::Visuals, colour: egui::Color32) {
+    assert_eq!(
+        colour, visuals.extreme_bg_color,
+        "the clear colour is not the theme's darkest background"
+    );
+    assert_eq!(colour.a(), 255, "the clear colour is not opaque");
+}
+
+#[test]
+fn theme_clear_colour_is_the_dark_themes_darkest() {
+    let dark = egui::Visuals::dark();
+    check_clear(&dark, clear_colour(&dark));
+    // eframe reads it through the app, as gamma floats.
+    let app = real_app();
+    assert_eq!(
+        eframe::App::clear_color(&app, &dark),
+        dark.extreme_bg_color.to_normalized_gamma_f32()
+    );
+    rejects("a transparent clear colour", || {
+        check_clear(&dark, egui::Color32::TRANSPARENT)
+    });
+    rejects("the panel fill", || check_clear(&dark, dark.panel_fill));
 }

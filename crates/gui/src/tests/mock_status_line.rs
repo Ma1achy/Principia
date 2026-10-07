@@ -177,3 +177,137 @@ fn mock_status_line_top_bar_controls() {
         "the layer still shows: {hidden:?}"
     );
 }
+
+/// `point`, in points, lies inside `rect`, in pixels at `scale` pixels per point.
+fn check_on(rect: [f64; 4], point: eframe::egui::Pos2, scale: f64) {
+    let (x, y) = (f64::from(point.x) * scale, f64::from(point.y) * scale);
+    assert!(
+        rect[0] <= x && x <= rect[2] && rect[1] <= y && y <= rect[3],
+        "({x}, {y}) is not on the counts at {rect:?}"
+    );
+}
+
+#[test]
+fn mock_status_line_footer_click_lands_on_the_counts() {
+    use crate::capture::footer_point;
+    use crate::layout::Layout;
+    let mut app = mock_app();
+    let mut headless = headless();
+    let names = super::support::names(&mut headless, &mut app);
+    let counts = names
+        .iter()
+        .find(|n| n.name == "⚠ 0 · × 0 · console ▴")
+        .and_then(|n| n.rect)
+        .expect("the counts are drawn");
+    let footer = Layout::new(headless.screen(), headless.pixels_per_point()).footer;
+    let scale = f64::from(headless.pixels_per_point());
+    let point = footer_point(footer);
+    check_on(counts, point, scale);
+    rejects("the footer's left edge", || {
+        check_on(counts, eframe::egui::pos2(footer.min.x, point.y), scale)
+    });
+}
+
+/// The console window is open exactly when `open`, and the counts' arrow says so.
+fn check_console(texts: &[String], open: bool) {
+    let arrow = if open { "▾" } else { "▴" };
+    check_has(texts, &format!("⚠ 0 · × 0 · console {arrow}"));
+    assert_eq!(
+        texts.iter().any(|t| t == crate::console::TITLE),
+        open,
+        "the console window's presence: {texts:?}"
+    );
+}
+
+#[test]
+fn mock_status_line_console_window_closes_from_its_title_bar() {
+    let mut app = mock_app();
+    let mut headless = headless();
+    check_console(&frame_texts(&mut headless, &mut app), false);
+    click(&mut headless, &mut app, "⚠ 0 · × 0 · console ▴");
+    let opened = frame_texts(&mut headless, &mut app);
+    check_console(&opened, true);
+    click(&mut headless, &mut app, "Close window");
+    let closed = frame_texts(&mut headless, &mut app);
+    check_console(&closed, false);
+    rejects("the closed console read as open", || {
+        check_console(&closed, true)
+    });
+    rejects("the open console read as closed", || {
+        check_console(&opened, false)
+    });
+}
+
+/// The AccessKit toggled state of the node labelled `label` in `output`.
+fn toggled(
+    output: &eframe::egui::FullOutput,
+    label: &str,
+) -> Option<eframe::egui::accesskit::Toggled> {
+    let update = output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .expect("AccessKit is on");
+    update
+        .nodes
+        .iter()
+        .find(|(_, node)| node.label() == Some(label))
+        .and_then(|(_, node)| node.toggled())
+}
+
+/// The mode switch marks `on` selected and `off` not.
+fn check_mode(output: &eframe::egui::FullOutput, on: &str, off: &str) {
+    use eframe::egui::accesskit::Toggled;
+    assert_eq!(
+        toggled(output, on),
+        Some(Toggled::True),
+        "{on} not selected"
+    );
+    assert_eq!(toggled(output, off), Some(Toggled::False), "{off} selected");
+}
+
+#[test]
+fn mock_status_line_mode_switch_marks_the_mode_and_draws_its_page() {
+    use crate::layout::Layout;
+    let mut app = mock_app();
+    let mut headless = headless();
+    let explore = headless.frame(&mut app, Vec::new());
+    check_mode(&explore, "Explore", "Stain");
+    click(&mut headless, &mut app, "Stain");
+    let stain = headless.frame(&mut app, Vec::new());
+    check_mode(&stain, "Stain", "Explore");
+    rejects("the Stain page read as Explore", || {
+        check_mode(&stain, "Explore", "Stain")
+    });
+    // The Stain page's title is drawn on the page, below the top bar's switch.
+    let page = Layout::new(headless.screen(), headless.pixels_per_point()).page;
+    let s = f64::from(headless.pixels_per_point());
+    let on_page = |names: &[crate::headless::Name]| {
+        names.iter().any(|n| {
+            n.name == "Stain"
+                && n.rect.is_some_and(|r| {
+                    f64::from(page.min.x) * s <= r[0] && f64::from(page.min.y) * s <= r[1]
+                })
+        })
+    };
+    assert!(on_page(&headless.names(&stain)), "no Stain page title");
+    assert!(
+        !on_page(&headless.names(&explore)),
+        "a Stain page title on Explore"
+    );
+}
+
+#[test]
+fn mock_status_line_severity_colours() {
+    use crate::explore::footer::severity_colour;
+    use engine::contract::log::Severity;
+    let v = eframe::egui::Visuals::dark();
+    let colours = [Severity::Error, Severity::Warn, Severity::Info].map(|s| severity_colour(&v, s));
+    let check = |c: [eframe::egui::Color32; 3]| {
+        assert_eq!(c, [v.error_fg_color, v.warn_fg_color, v.weak_text_color()]);
+    };
+    check(colours);
+    rejects("errors in the warning colour", || {
+        check([v.warn_fg_color, v.warn_fg_color, v.weak_text_color()])
+    });
+}

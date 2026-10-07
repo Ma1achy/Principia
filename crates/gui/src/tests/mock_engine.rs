@@ -354,3 +354,61 @@ fn mock_engine_snapshots_throttled_to_the_interval() {
     let playing = headless.frame(&mut app, Vec::new());
     assert!(repaint_delay(&playing) <= Duration::from_secs_f64(1.0 / MOCK_TICK_HZ));
 }
+
+/// The playhead the app shows one frame, a quarter interval, after it sends `playhead(2.0, no_history)` itself.
+fn t_after_own_edit(no_history: bool) -> f64 {
+    use crate::app::SNAPSHOT_INTERVAL_S;
+    let mut app = super::support::real_app();
+    let mut headless = headless();
+    headless.set_frame_step(SNAPSHOT_INTERVAL_S / 4.0);
+    let _ = headless.frame(&mut app, Vec::new());
+    app.set_field(playhead(2.0, no_history));
+    let _ = headless.frame(&mut app, Vec::new());
+    app.snapshot().render.playhead.t
+}
+
+/// An undoable edit of the app's own is read at once; a no-history one waits for the next interval.
+fn check_own_edit_read(undoable: f64, no_history: f64) {
+    assert_eq!(
+        undoable, 2.0,
+        "the app's own undoable edit was not read at once"
+    );
+    assert_eq!(
+        no_history, 0.0,
+        "a no-history edit was read ahead of the interval"
+    );
+}
+
+#[test]
+fn mock_engine_app_reads_its_own_undoable_edit_at_once() {
+    check_own_edit_read(t_after_own_edit(false), t_after_own_edit(true));
+    rejects("both edits read at once", || check_own_edit_read(2.0, 2.0));
+    rejects("neither edit read at once", || {
+        check_own_edit_read(0.0, 0.0)
+    });
+}
+
+/// `clock` stands at one unit of `t` and one second.
+fn check_one_second(clock: &MockClock) {
+    assert!(
+        (clock.now() - 1.0).abs() < 1e-9,
+        "t after a second's ticks: {}",
+        clock.now()
+    );
+    assert_eq!(clock.elapsed_ms(), 1000);
+}
+
+#[test]
+fn mock_engine_clock_moves_one_unit_a_second() {
+    let ticked = |n: u32| {
+        let mut clock = MockClock::running();
+        for _ in 0..n {
+            clock.tick();
+        }
+        clock
+    };
+    check_one_second(&ticked(MOCK_TICK_HZ as u32));
+    rejects("half a second's ticks", || {
+        check_one_second(&ticked(MOCK_TICK_HZ as u32 / 2))
+    });
+}

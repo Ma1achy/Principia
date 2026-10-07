@@ -56,11 +56,6 @@ impl Headless {
         }
     }
 
-    /// The window's size in pixels.
-    pub fn size(&self) -> [u32; 2] {
-        self.size
-    }
-
     /// The pixels per point.
     pub fn pixels_per_point(&self) -> f32 {
         self.pixels_per_point
@@ -87,7 +82,6 @@ impl Headless {
             screen_rect: Some(self.screen()),
             time: Some(self.time),
             events,
-            focused: true,
             ..Default::default()
         };
         input

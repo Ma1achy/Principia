@@ -251,3 +251,21 @@ fn f3_toggle_mock_layout_tiles_the_window() {
         assert!((l.figure.min.x / screen.width() - 0.25).abs() < 0.01);
     }
 }
+
+#[test]
+fn f3_toggle_mock_backend_from_the_variable() {
+    use crate::mock::canvas::backend;
+    assert_eq!(backend(Some("metal")), Ok(wgpu::Backends::METAL));
+    assert_eq!(backend(Some("vulkan")), Ok(wgpu::Backends::VULKAN));
+    let platform = if cfg!(target_os = "macos") {
+        wgpu::Backends::METAL
+    } else {
+        wgpu::Backends::VULKAN
+    };
+    assert_eq!(backend(None), Ok(platform), "R-206's platform default");
+    let err = backend(Some("dx12")).expect_err("dx12 is not a backend here");
+    assert!(err.contains("PRIN_GPU_BACKEND=\"dx12\""), "{err}");
+    rejects("every backend for metal", || {
+        assert_eq!(backend(Some("metal")), Ok(wgpu::Backends::all()))
+    });
+}
