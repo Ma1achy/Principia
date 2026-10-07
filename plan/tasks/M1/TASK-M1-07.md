@@ -29,7 +29,7 @@ The earliest view of all: one internal orientation (bottom-left origin, Y-up) an
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
-- `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*"
+- `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/coords.wgsl`: the single framebuffer→UV flip, commented as the convention flip.
 - `crates/render/src/coords.rs`: the flip's Rust twin, named as the same flip, which picking and the CPU raster call; `flip_twin_matches_wgsl` holds the two equal (RQ-211).

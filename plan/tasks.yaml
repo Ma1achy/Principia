@@ -1121,7 +1121,7 @@
   milestone: M5
   title: "QuadRequest: flags, per-quad uniforms and quad-local sample positions"
   depends_on: [TASK-M5-03]
-  needs: [REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010, REQ-TOOL-152]
+  needs: [REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010, REQ-TOOL-152, REQ-TOOL-019]
   requirements: [REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
@@ -1393,8 +1393,8 @@
   milestone: M6
   title: "The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform"
   depends_on: [TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07]
-  needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077]
-  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038]
+  needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158]
+  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]
 - id: TASK-M6-09

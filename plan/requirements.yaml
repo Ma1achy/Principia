@@ -573,14 +573,14 @@
   - file: docs/design/principia_deep_zoom.md
     section: The precision split (the CPU/GPU seam, decode side)
   - file: decisions.md
-    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*"
+    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   verify:
     method: numerical gate
     detail: "at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel"
   rulings:
   - R-395
   milestone: M5
-  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 (RQ-242, PR #160's measurement); the formula defines the position. The depth-30 verify (N distinct positions within one f32 ulp of h) is met by δ, the form deep_zoom §2's x₀ + J_D·δ consumes, so nothing built changes. No banding through these coordinates is REQ-TOOL-158."
+  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin, below about u ≈ 2^−10, the absolute f32 sum is itself exact."
 - id: REQ-DEC-032
   area: DEC
   statement: "CPU quad centres/half-widths and the GPU quad-local sample coordinate must share the Y-up UV convention, with the single flip v = 1 − frag_coord.y/H at the framebuffer seam, so ICs are not mirrored within a quad."
@@ -11324,7 +11324,7 @@
   note: "RQ-234, decided per R-369: no value is chosen; the proposal decides, and the human confirms it at the M1 gate."
 - id: REQ-COL-063
   area: COL
-  statement: "ctx.chart.slice_uv must be the sample's position in the slice plane's own frame, relative to the plane anchor (R-97): c + h·(2·ctx.quad.uv − 1), with c the quad's centre and h its half-width as the CPU computes them in f64 (deep_zoom §1's u = c + h·(2t − 1)), a vec2 in [0, 1]², post-flip Y-up, unchanged by in-plane pan and zoom; it is never a screen or view position, which is the separate ctx.screen.uv (R-394)."
+  statement: "ctx.chart.slice_uv must be the sample's position in the slice plane's own frame, relative to the plane anchor (R-97): c + h·(2·ctx.quad.uv − 1), with c the quad's centre and h its half-width as the CPU computes them in f64 (deep_zoom §1's u = c + h·(2t − 1)), a vec2 in [0, 1]², post-flip Y-up, unchanged by in-plane pan and zoom; it is never a screen-relative position, those being the screen lane's separate fields, ctx.screen.uv and ctx.screen.pixel (R-394)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -11338,7 +11338,7 @@
     section: "R-97 — Quad addresses live in the slice plane *(closes RQ-57)*"
   verify:
     method: unit test
-    detail: "on flat_at(.., 5, [7, 2]) with unequal columns and rows (3 × 2), the quad in column i and row j gives ctx.chart.slice_uv = ((7 + i + ½)/32, (2 + j + ½)/32) at its centre and c ± h at its corners; the same quad inside a panned or zoomed grid (another origin or grid that contains its cell) gives the same slice_uv; a lane with width and height swapped, and the grid-tiling formula, each fail"
+    detail: "on flat_at(.., 5, [7, 2]) with unequal columns and rows (3 × 2), the quad in column i and row j gives ctx.chart.slice_uv = ((7 + i + ½)/32, (2 + j + ½)/32) at its centre and c ± h at its corners; the same quad inside a panned or zoomed grid (another origin or grid that contains its cell) gives the same slice_uv; across depths, the depth-6 child at cell (15, 5), read at quad.uv (0, 0), and its depth-5 parent at cell (7, 2), read at quad.uv (½, ½), the point they share, give the same slice_uv, (15/64, 5/64), bit for bit; a lane with width and height swapped, and the grid-tiling formula, each fail"
   rulings:
   - R-97
   - R-394
@@ -14460,7 +14460,7 @@
   - file: docs/design/principia_deep_zoom.md
     section: 1. Quad-local coordinates — UV precision
   - file: decisions.md
-    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*"
+    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   - file: decisions.md
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
   verify:
@@ -16443,7 +16443,7 @@
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
-    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*"
+    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   verify:
     method: unit test
     detail: "the proposal gives the criterion and its bound with the measured adjacent-sample deltas on M1's flat grid; `cargo test -p render uv_preset_reconstruction` applies it, and a negative fixture, a quad deep enough that deep_zoom §1's global form u_min + (u_max − u_min)·t bands in f32, fails it; confirmed by the human at the M1 gate and recorded in decisions.md"
@@ -16560,7 +16560,7 @@
   note: "RQ-235, as amended per code review 5438179638 (R-369): REQ-VAL-010's 'every vector field' stands, so r and p offer direction cosines; this definition supplies their colour."
 - id: REQ-TOOL-158
   area: TOOL
-  statement: "Beyond the deep-zoom switchover ℓ_switch (R-90), each sample's UV coordinate must be carried as the per-quad local coordinates, the quad's centre c (computed in f64 on the CPU, passed as an f32 uniform) and the f32 offset δ = h·(2t − 1), never summed into an absolute f32 u, and must show no banding there: adjacent-sample deltas pass REQ-TOOL-152's criterion at every depth past ℓ_switch (R-395)."
+  statement: "Beyond the deep-zoom switchover ℓ_switch (R-90), on the per-quad local path, each sample's UV coordinate must be carried as the per-quad local coordinates, the quad's centre c (computed in f64 on the CPU, passed as an f32 uniform) and the f32 offset δ = h·(2t − 1), never summed into an absolute f32 u, and must show no banding there, in the kernel and in the fragment's UV preset: adjacent-sample deltas pass REQ-TOOL-152's criterion at every depth past ℓ_switch (R-395). That every quad past ℓ_switch takes this path is REQ-TOOL-159."
   source:
   - file: docs/design/principia_deep_zoom.md
     section: 1. Quad-local coordinates — UV precision
@@ -16569,17 +16569,37 @@
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
   - file: decisions.md
-    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 *(closes RQ-242)*"
+    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   - file: decisions.md
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
   verify:
     method: numerical gate
-    detail: "at depths 21 and 30, past ℓ_switch, the N samples' quad-local offsets δ (f32, from the per-quad uniforms) step by 2h/N within REQ-TOOL-152's criterion and c (f64) + δ matches the f64 reference positions; a negative fixture that sums c + δ into an absolute f32 u fails the criterion; no kernel path for a quad past ℓ_switch forms an absolute f32 u"
+    detail: "at depths 21 and 30, past ℓ_switch: the N samples' quad-local offsets δ (f32, from the per-quad uniforms) step by 2h/N within REQ-TOOL-152's criterion and c (f64) + δ matches the f64 reference positions, and the linear-mode (DECODE_MODE = LIN) kernel path forms no absolute f32 u; a negative fixture that sums c + δ into an absolute f32 u fails the criterion; on the fragment side, the UV preset's quad-local reconstruction from ctx.quad.centre and δ = ctx.quad.half_width·(2·ctx.quad.uv − 1), fed the per-quad uniforms, passes the criterion on its δ deltas, and a negative fixture reading the absolute ctx.chart.slice_uv fails it"
   rulings:
   - R-90
   - R-395
   milestone: M5
-  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate (applied per R-369); TASK-M6-07's linearised decoder consumes δ."
+  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ."
+- id: REQ-TOOL-159
+  area: TOOL
+  statement: "Every quad deeper than the deep-zoom switchover ℓ_switch (R-90) must take the per-quad local path of REQ-TOOL-158 (DECODE_MODE = LIN, REQ-DEC-037), so that no quad past ℓ_switch has its sample positions formed as an absolute f32 u (R-395)."
+  source:
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
+  - file: decisions.md
+    section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
+  - file: decisions.md
+    section: R-90 — The decoder switchover trigger *(closes RQ-41)*
+  verify:
+    method: unit test
+    detail: "quads at depths 21 and 30 with distinct adjacent ICs (no collapse) are dispatched with DECODE_MODE = LIN and their sample positions come from c and δ only; a quad forced onto the full path at depth 21 fails the check; a quad at depth 20 or shallower may take the full path and form the absolute u (REQ-TOOL-019)"
+  rulings:
+  - R-90
+  - R-395
+  milestone: M6
+  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
