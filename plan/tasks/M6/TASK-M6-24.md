@@ -21,8 +21,7 @@ queue it hands the app (RQ-247). One conformance suite, defined once in the engi
 app shell looks, feels and behaves as `01_main.png` and the design notes give it: the window, F3 hiding and showing the
 egui layer, egui's dark theme with Ubuntu and Ubuntu Mono, the top bar, the footer with the "mock engine" tag and the
 console it opens, and the Explore page's regions, with nothing over the figure. gui's headless capture mode (R-274) runs
-the app on the mock, so `cargo xtask screenshot` reaches every track screen. It waits for the human's approval of two
-network fetches (Notes).
+the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 
 ## References
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
@@ -143,9 +142,10 @@ network fetches (Notes).
 - Review checklist (physics reviewer) of the log entry's definition — gui_state_contract §2 gives the entry's shape and its one event channel; the conformance suite checks one `contract` info entry per applied SetField on both engines; the footer's counts follow it (REQ-GUI-177).
 
 ## Notes
-- **Waits for the human's network approval (R-349).** Two fetches from outside the repo wait for the human: downloading
-  Ubuntu Mono from the Ubuntu font family's upstream release, and fetching `eframe` 0.36 into `~/.cargo` (RQ-251). The
-  task does not start before the human approves both; the orchestrator does neither.
+- **Fetches (dispatch requirement; RQ-251 as amended per R-369).** The implementer may fetch two things and nothing
+  else: `eframe` 0.36 through cargo (R-349 counts cargo filling its registry as a build's own cache write) and the
+  Ubuntu Mono release from the Ubuntu font family's upstream, committing the upstream release URL, the UFL 1.0 licence
+  text and the SHA-256 beside the font (a repo change). Neither waits for the human.
 - R-390, the GUI track: this task and TASK-M6-25 to TASK-M6-29 run in parallel with the physics and renderer chain, on
   spare agent slots (`plan/OPERATIONS.md` § "The GUI track (R-390)"), and merge without waiting for the gates of M1 to
   M5 (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"). It sits in M6 because TASK-M6-21 and TASK-M6-22
@@ -179,7 +179,11 @@ network fetches (Notes).
 - **The gui reviewer's § 8 here** (RQ-250): the reviewer checks the shell's own controls and marks (the top bar, the
   footer, the regions' placement, F3, the theme and fonts); the keyboard item applies from TASK-M6-25 on, and the
   artboard-marks item to each mark's own task.
-- **physics** reviews the two R-72 definitions, REQ-GUI-176 and REQ-GUI-177 (R-72; `plan/WORKFLOW.md` § "Task files").
+- **physics** is added only to approve the two R-72 definitions, REQ-GUI-176 and REQ-GUI-177: `plan/WORKFLOW.md` §
+  "Human checkpoints: the milestone gates" requires every definition requirement's doc change to merge with the
+  physics reviewer's approval. R-390's three reviewers, code, qa and gui, cover everything else. This is the gate rule
+  applied alongside R-390 ("Reviewers: code, qa and gui"), flagged for the human (applied per R-369); it changes
+  nothing that gets built.
 - Carrying the log entries in the profiler's schema-v1 stream stays TASK-M8-27's (REQ-GUI-126 on the real engine).
 - Pre-flight (R-388): RQ-243 to RQ-256, decided per R-369 (7 Oct 2026), shape this file's Goal, Deliverables,
   acceptance lines, Notes and References.
