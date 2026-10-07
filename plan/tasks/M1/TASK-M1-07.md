@@ -29,6 +29,7 @@ The earliest view of all: one internal orientation (bottom-left origin, Y-up) an
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
+- `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
 ## Deliverables
 - `crates/render/shaders/wgsl/lib/coords.wgsl`: the single framebuffer→UV flip, commented as the convention flip.
 - `crates/render/src/coords.rs`: the flip's Rust twin, named as the same flip, which picking and the CPU raster call; `flip_twin_matches_wgsl` holds the two equal (RQ-211).
@@ -60,3 +61,6 @@ The earliest view of all: one internal orientation (bottom-left origin, Y-up) an
 - Picking is checked by `picking_corners` alone: the golden runner binds no `RenderContext` and xtask may not depend on `engine` or `render` (systems_architecture §7.1), so `m1-coords` renders the view only (RQ-210).
 - Physics reviews this task for its definition requirements (REQ-SYS-080, REQ-TOOL-153), as it reviews TASK-M1-06's (RQ-212).
 - RQ-210 to RQ-216 decided per R-369 (`docs/archive/review_queue/M0.md`).
+- R-395 (RQ-242): REQ-TOOL-019 is narrowed to absolute coordinates up to ℓ_switch (R-90), and this task's flat-grid
+  test still closes it. The depth sweep to ℓ_switch R-395 adds to its verify is TASK-M1-16's acceptance line, since
+  this task was in review when R-395 was recorded (applied per R-369); no deliverable here changes.

@@ -2,8 +2,8 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057
-- **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14
-- **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001
+- **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16
+- **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1.7, PIT-9, PIT-5
 - **Size:** ~480 lines
@@ -29,6 +29,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 
+- `decisions.md` § "R-394 — `ctx.chart.slice_uv` is the sample's position in the slice plane, stable under pan and zoom; a screen-relative position is a separate field *(closes RQ-257)*"
 ## Deliverables
 - `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl` as snippets for the fragment assembler, emitted by the rust-gpu → SPIR-V → WGSL translation of the shared decode source (R-116); the build fails if either is edited by hand.
 - The DECODE and agreement presets in the preset library (`crates/render/src/presets/`), locked.
@@ -49,3 +50,6 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - RQ-84 ruled: R-116 (above). RQ-85 ruled: R-117 — the shape-sphere DECODE reference uses R-14's (θ, φ) map. RQ-94 ruled: R-113 — REQ-TOOL-011's DECODE row is this task's REQ-RENDER-027. RQ-95 ruled: R-113 (Gap G3 above).
 - Closes, for gaps the corpus leaves open: REQ-COL-057 (R-72 definition) (classification accepted by R-132).
 - R-297: the fragment may compile with fast-math and the compute kernel doesn't, so the agreement preset compares within a stated tolerance, not bit-exactly. TASK-M2-29 calibrates it (REQ-COL-060) and moves the agreement gate to it; until then this task's gate uses REQ-DEC-043's factor. R-297 amends R-133 here, and only here: `decode_preset_vs_decode_only` keeps REQ-DEC-043's factor.
+- R-394 (RQ-257): `ctx.chart.slice_uv` is the sample's position in the slice plane, `c + h·(2·ctx.quad.uv − 1)`,
+  stable under pan and zoom (REQ-COL-063). TASK-M1-16 conforms the lane, so this task, the first to place `ctx.chart.z`
+  per pixel, depends on it.
