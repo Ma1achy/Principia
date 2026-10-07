@@ -178,6 +178,14 @@ escape colours. A standalone escaper view is therefore this map **filtered to th
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
 mode admits (“just collisions”, “just body-2 escape”), not a distinct render mode.
 
+**The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
+the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
+`detail = 3` (payload § `sample_descriptor`, "3 means all three"; R-30; REQ-EVT-006). They are neither `running` nor
+`sim_failed`, so neither takes the grey or the invalid pattern, which stays NaN's (PIT-8). Each gets a swatch of its
+own, a calibration (R-71): proposed with its evidence by TASK-M1-10 (its OKLab separation from the nine classes, the
+running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. Until then the two swatches
+have no value here.
+
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
 outcome-state row inherits (that catalogue is out of scope here; this palette is the one piece of it
