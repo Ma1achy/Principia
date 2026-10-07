@@ -603,14 +603,20 @@ mod squared_edge_control {
 /// `M₀₁ = 0.7`.
 const DISC_MASSES: [[f64; 3]; 3] = [[1.0 / 3.0; 3], [0.5, 0.25, 0.25], [0.2, 0.5, 0.3]];
 
-/// A configuration with masses `m` whose shape point lies at polar radius about `eps` from the pole: bodies 0 and 1 at
-/// (0, 0) and (1, 0), body 2 off their centre of mass where `ρ̃ ⟂ λ̃` and `‖λ̃‖ = (1 + eps)‖ρ̃‖`, turned by `turn`.
+/// A configuration with masses `m` whose shape point lies at polar radius about `eps` from the pole: bodies 0 and 1
+/// at (0, 0) and (1, 0), body 2 off their centre of mass where `ρ̃ ⟂ λ̃` and `‖λ̃‖ = (1 + eps)‖ρ̃‖`; then the whole
+/// turned by `turn`, scaled by 1.7 and moved by (0.3, −0.7), so no coordinate is 0 or 1.
 fn near_pole(m: [f64; 3], eps: f64, turn: f64) -> [[f64; 2]; 3] {
     let (mu_rho, mu_lambda) = (m[0] * m[1] / (m[0] + m[1]), m[2] * (m[0] + m[1]));
     let l = (mu_rho / mu_lambda).sqrt() * (1.0 + eps);
     let x01 = m[1] / (m[0] + m[1]);
     let (c, s) = (turn.cos(), turn.sin());
-    [[0.0, 0.0], [1.0, 0.0], [x01 - s * l, c * l]]
+    [[0.0, 0.0], [1.0, 0.0], [x01, l]].map(|p| {
+        [
+            1.7 * (c * p[0] - s * p[1]) + 0.3,
+            1.7 * (s * p[0] + c * p[1]) - 0.7,
+        ]
+    })
 }
 
 /// Over configurations from the poles to the equator, at each mass set: [`disc_input`]'s `ρ²_I/I²` is the normalised
