@@ -54,6 +54,12 @@ fn check_scene(name: &str, field: &str, want: &str) {
     let s = named(name);
     assert_eq!(s.name, name);
     assert_eq!(s.field(), field, "`{name}`'s field");
+    let view = matches!(s.colouring, Colouring::View(_));
+    assert_eq!(
+        view,
+        !name.contains("ramp"),
+        "`{name}` is coloured by a view: {view}"
+    );
     assert_eq!(
         kinds(&s),
         want,
@@ -383,4 +389,52 @@ negative_control!(
     "the binary's ramp scene is not the view scene's render",
     expected = "not the format's",
     check_binary("length_ramp", "length_view")
+);
+
+/// Checks that scene `name`'s samples `from…` read `want`, each within `rel` of it, relative.
+fn check_values(name: &str, from: u32, want: &[f32], rel: f32) {
+    let s = named(name);
+    for (k, &w) in want.iter().enumerate() {
+        let i = from + k as u32;
+        let v = s.value(i).0;
+        assert!(
+            (v - w).abs() <= rel * w.abs(),
+            "`{name}` sample {i} reads {v}, not {w}"
+        );
+    }
+}
+
+/// `x` rounded to f16, as the payload stores it.
+fn f16(x: f32) -> f32 {
+    golden_scene::f16_bits_to_f32(golden_scene::f32_to_f16_bits(x))
+}
+
+/// The scenes' documented values: `ftle` is `S` (n = 100, dt = 0.01); `diffusion` at n = 2 is 0.6 and the next slope is
+/// negative; the f16 drifts and `d_min` are their values rounded to f16, `dLz_max` 0.6 of `dE_max`'s; the word lengths.
+#[test]
+fn golden_scene_values_are_the_scenes() {
+    check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.3, 2.1, 3.05], 1e-5);
+    check_values("diffusion", 2, &[0.6], 1e-5);
+    let slope = named("diffusion").value(3).0;
+    assert!(
+        slope < 0.0,
+        "`diffusion` sample 3 is a negative slope: {slope}"
+    );
+    let drifts = [3e-6f32, 4.5e-4, 7e-3, 0.06, 0.55, 4.0, 90.0];
+    check_values("de_max_failed", 1, &drifts.map(f16), 0.0);
+    check_values("dlz_max_failed", 1, &drifts.map(|v| f16(v * 0.6)), 0.0);
+    check_values("d_min", 4, &[2.5e-3f32, 0.07, 0.6, 1.7].map(f16), 0.0);
+    check_values(
+        "length_view",
+        0,
+        &[0.0, 9.0, 23.0, 38.0, 51.0, 64.0, 76.0, 127.0],
+        0.0,
+    );
+}
+
+negative_control!(
+    golden_scene_values_are_the_scenes,
+    "a positive slope where the scene has n = 2's 0.6 is not the scene's",
+    expected = "reads",
+    check_values("diffusion", 2, &[-0.6], 1e-5)
 );
