@@ -19,10 +19,15 @@ use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, S
 
 use self::clock::MockClock;
 
-/// The mock's frame summary: plausible values, as 01_main.png shows them (placeholder content, R-390).
+/// The mock's wall-clock frame time, in ms: a steady 60 Hz frame (placeholder content, R-390).
+pub const MOCK_FRAME_MS: f64 = 16.7;
+
+/// The mock's frame summary: plausible values (placeholder content, R-390). Every snapshot carries the same latest
+/// frame, a steady stream, so its fps is 1000 / that `frame_ms`, as gui_state_contract §2 defines it (REQ-GUI-176);
+/// 01_main.png's "60 fps · 4.1 ms" is illustrative (R-68).
 pub const MOCK_FRAME: FrameSummary = FrameSummary {
-    frame_ms: Some(4.1),
-    fps: Some(60.0),
+    frame_ms: Some(MOCK_FRAME_MS),
+    fps: Some(1000.0 / MOCK_FRAME_MS),
     quad_count: Some(1842),
     live_memory: Some(LiveMemory {
         heap_bytes: 148_000_000,

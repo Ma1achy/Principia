@@ -28,7 +28,7 @@ fn mock_status_line_after_two_edits_and_an_undo() {
     let texts = frame_texts(&mut headless, &mut app);
     check_has(
         &texts,
-        "t 12.40 · 60 fps · 4.1 ms · 1 842 quads · undo 2 / redo 0 · F3 hide",
+        "t 12.40 · 60 fps · 16.7 ms · 1 842 quads · undo 2 / redo 0 · F3 hide",
     );
     check_has(&texts, "GPU 464 MB · heap 148 MB");
     check_has(&texts, "? keys");
@@ -37,12 +37,12 @@ fn mock_status_line_after_two_edits_and_an_undo() {
     let texts = frame_texts(&mut headless, &mut app);
     check_has(
         &texts,
-        "t 1.00 · 60 fps · 4.1 ms · 1 842 quads · undo 1 / redo 1 · F3 hide",
+        "t 1.00 · 60 fps · 16.7 ms · 1 842 quads · undo 1 / redo 1 · F3 hide",
     );
     rejects("the status line before the undo", || {
         check_has(
             &texts,
-            "t 12.40 · 60 fps · 4.1 ms · 1 842 quads · undo 2 / redo 0 · F3 hide",
+            "t 12.40 · 60 fps · 16.7 ms · 1 842 quads · undo 2 / redo 0 · F3 hide",
         )
     });
 }
