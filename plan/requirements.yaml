@@ -10270,7 +10270,7 @@
   - R-79
   - R-132
   milestone: M1
-  note: "R-132: the default is REQ-COL-055's hatched pattern, replacing the corpus's 'fixed magenta'. RQ-232, decided per R-369: TASK-M1-09 builds the minimal FieldRamp over one ScalarField, a lin Compaction and the invalid lane (crates/render/src/colour/field_ramp.rs); one non-debug field ramp, d_min's, maps NaN and the sentinel to the invalid pattern while the debug view of the same field shows the stored value; TASK-M7-05 and TASK-M7-09 extend it."
+  note: "R-132: the default is REQ-COL-055's hatched pattern, replacing the corpus's 'fixed magenta'. RQ-232, decided per R-369: TASK-M1-09 builds the minimal FieldRamp over one ScalarField, a lin Compaction and the invalid lane (crates/render/src/colour/field_ramp.rs); the sentinel leg is a non-debug field ramp over the word length, whose stored sentinel 127 maps to the invalid pattern while the length debug view shows 127 literally; d_min's field ramp maps NaN to the invalid pattern and draws its unset value in R-280's grey, never the invalid pattern (amended per code review 5438179638); TASK-M7-05 and TASK-M7-09 extend it."
 - id: REQ-COL-002
   area: COL
   statement: "The outcome-state field's canonical default palette must be the nine-class table of colour_composition §1.4 (collision pair 2/1/0 → #DE2D2D/#2EBC4E/#3462E0, escape body 0/1/2 → #F0DE32/#E034C6/#30C8DC, bounded #141418, collision @ t=0 #F29620, degenerate #ECECF0), read from state plus the detail union with 'degenerate' = decode_failed and 'collision @ t=0' = a collision with t_end_step == 0, with running shown in neutral grey and sim_failed in the invalid colour, and must be user-editable."
@@ -16456,6 +16456,26 @@
   - R-245
   milestone: M1
   note: RQ-236, decided per R-369.
+- id: REQ-TOOL-157
+  area: TOOL
+  kind: definition
+  statement: "The colour rendering of a vector field's direction cosines (vᵢ/‖v‖) for k ≠ 3 — the stored r and p, vector(f32, 6), whose six cosines do not map to RGB as n's three do — must be defined in render contract Part 5 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 4. The occupant model — typed by signature, free inside
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "render contract Part 5 gives the k ≠ 3 direction-cosines rendering; the direction-cosines views of r and p draw it on synthetic states; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "RQ-235, as amended per code review 5438179638 (R-369): REQ-VAL-010's 'every vector field' stands, so r and p offer direction cosines; this definition supplies their colour."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -16617,7 +16637,7 @@
   rulings:
   - R-71
   milestone: M1
-  note: "Tolerance: REQ-VAL-122 (calibration). RQ-235, decided per R-369: 'as direction-cosines' applies to vector(f32, 3) fields, n the one; for k ≠ 3 (the stored r and p, vector(f32, 6)) the catalogue offers ‖·‖ alone; ‖n‖ = 1 is tested on n only. TASK-M1-12 adds n to ledger::payload as generation-root §3.8's worked entry."
+  note: "Tolerance: REQ-VAL-122 (calibration). RQ-235, decided per R-369 and amended per code review 5438179638: every vector field, n and the stored r and p (vector(f32, 6)) alike, offers both renderings; the colour of a k ≠ 3 vector's direction cosines is REQ-TOOL-157's definition; ‖n‖ = 1 is tested on n only. TASK-M1-12 adds n to ledger::payload as generation-root §3.8's worked entry."
 - id: REQ-VAL-011
   area: VAL
   statement: "The t_dmin round-trip view must verify the 16-bit absolute macro-step t_dmin quantisation."

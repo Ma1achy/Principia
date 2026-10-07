@@ -378,13 +378,13 @@
   title: Derived, live-shape, accumulator, word and ICDescriptor views
   depends_on: [TASK-M1-02, TASK-M1-09, TASK-M1-11]
   needs: [REQ-PAY-001, REQ-PAY-010, REQ-GEN-006]
-  requirements: [REQ-TOOL-010, REQ-TOOL-024, REQ-TOOL-025, REQ-VAL-010, REQ-VAL-011, REQ-VAL-122, REQ-TOOL-154, REQ-TOOL-155, REQ-TOOL-156]
+  requirements: [REQ-TOOL-010, REQ-TOOL-024, REQ-TOOL-025, REQ-VAL-010, REQ-VAL-011, REQ-VAL-122, REQ-TOOL-154, REQ-TOOL-155, REQ-TOOL-156, REQ-TOOL-157]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
 - id: TASK-M1-13
   milestone: M1
   title: Structural views over RenderQuad and the boundary overlay
-  depends_on: [TASK-M1-07, TASK-M1-08]
+  depends_on: [TASK-M1-07, TASK-M1-08, TASK-M1-09]
   needs: [REQ-PAY-002, REQ-SCHED-001, REQ-SYS-003]
   requirements: [REQ-TOOL-026, REQ-RENDER-024, REQ-TOOL-124]
   reviewers: [code, qa, physics]

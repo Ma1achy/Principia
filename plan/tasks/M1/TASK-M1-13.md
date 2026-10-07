@@ -2,11 +2,11 @@
 
 - **Milestone:** M1
 - **Closes:** REQ-TOOL-026, REQ-RENDER-024, REQ-TOOL-124
-- **Depends on:** TASK-M1-07, TASK-M1-08
+- **Depends on:** TASK-M1-07, TASK-M1-08, TASK-M1-09
 - **Needs (earlier milestones):** REQ-PAY-002, REQ-SCHED-001, REQ-SYS-003
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
-- **Size:** ~450 lines (~250 more if it is the first of TASK-M1-09 and TASK-M1-13 to start and builds RQ-229's harness case kind)
+- **Size:** ~450 lines
 
 ## Goal
 Structural views read quad metadata, not payload, over a synthetic `RenderQuad` set before any scheduler fills it: quad-depth, quad-state (loaded / pending / refinable / terminal / stale), coherence/impurity, ensemble spread (present iff contains-ensemble, read as the prelude's `has_ensemble()`, R-145), suspect fraction, priority score, cache age / ancestor gap, leaf outlines, fallback tint and pending hatch. They read `ctx.quad`, which this task extends with colour_composition §3's quad members, and the tile boundaries read `ctx.tile.uv` (RQ-238). The fallback tint (`ancestor_gap > 0`) and the pending hatch (`quad_state == 1`) are post occupants reading `ctx.quad`, not the Tier-3 path, which is TASK-M5-29's (RQ-239). The Tier-1 boundary overlay is an ordinary post node drawing from the quad-local and tile-local uv with the fwidth-based `edge_line`: constant pixel width at any quad size, depth and zoom, antialiased, serialising with the graph with editable width, opacity, colour and level.
@@ -34,7 +34,7 @@ Structural views read quad metadata, not payload, over a synthetic `RenderQuad` 
 - `crates/render/shaders/wgsl/frag/debug/`: `s_depth`, `s_state`, `s_impurity`, … as `ctx.quad` presets; the spread view reads `has_ensemble()` and draws the absence NaN's hatch when it is false (RQ-239).
 - `crates/render/shaders/wgsl/frag/post/`: the fallback tint (`ancestor_gap > 0`) and the pending hatch (`quad_state == 1`) as post occupants reading `ctx.quad` (RQ-239), styled by REQ-TOOL-124's definition.
 - Synthetic `RenderQuad` sets in `crates/engine/src/synthetic.rs` covering every quad-state and depths 3 and 20, with their deep_zoom §1 frames.
-- If no earlier task has built it (RQ-229): `cargo xtask golden`'s harness case kind and its `validation` binary, as TASK-M1-09's Deliverables describe it. Otherwise this task uses the case kind TASK-M1-09 built.
+- The golden suites use `cargo xtask golden`'s harness case kind, which TASK-M1-09 builds (RQ-229, as amended per code review 5438179638).
 - Golden fixtures `fixtures/golden/m1-structural/`, as harness cases, each case's `BASELINES.md` row citing R-369 and RQ-229, proposed and confirmed at the M1 gate; the structural debug views' cases also go in `fixtures/golden/debug-views/` (RQ-237).
 
 ## Acceptance tests
@@ -49,4 +49,4 @@ Structural views read quad metadata, not payload, over a synthetic `RenderQuad` 
 - The quad-state test at M1 is structural only; the "state transitions legal" assertion of debug plan §F needs the scheduler (M5).
 - Closes, for gaps the corpus leaves open: REQ-TOOL-124 (R-72 definition) (classification accepted by R-132).
 - RQ-229 and RQ-237 to RQ-241, decided per R-369 (7 Oct 2026): the harness case kind (RQ-229); the shared `debug-views` suite (RQ-237); the stain-context extension (RQ-238); the Tier-3 path left with TASK-M5-29 and `has_ensemble()` for "contains-ensemble" (RQ-239); physics as a reviewer, the two-raster-size width test, the persistence unit test and a hatch distinct from `debug_invalid` (RQ-240); the References (RQ-241).
-- The orchestrator resolves PR #160's and PR #161's conflict over the stain's `Ctx` when the second of them merges, before this task starts (RQ-238). This task cannot start early (R-388): two of its dependencies are unmerged.
+- The orchestrator resolves PR #160's and PR #161's conflict over the stain's `Ctx` when the second of them merges, before this task starts (RQ-238). This task cannot start early (R-388) while more than one of its dependencies is unmerged; once TASK-M1-07 and TASK-M1-08 have merged, it may start off TASK-M1-09's approved head.
