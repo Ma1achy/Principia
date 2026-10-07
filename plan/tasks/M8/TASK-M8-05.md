@@ -36,3 +36,10 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
 - R-390: TASK-M6-24 builds the shell on the mock engine and closes REQ-GUI-075; this task depends on it, wires the shell to the real engine (egui-wgpu on the engine's device and queue, the real status line, the real footer) and re-runs REQ-GUI-075's acceptance there. The console's layout is TASK-M6-28's on the mock (REQ-GUI-126) and TASK-M8-27's on the real engine.
+- RQ-243, RQ-247 and RQ-255, decided per R-369 (7 Oct 2026): TASK-M6-24's contract gives the snapshot an optional
+  frame summary (`frame_ms`, `fps`, `quad_count`, `live_memory { heap_bytes, gpu_bytes }`), `None` from the real
+  engine until this task wires its frame loop to fill it; this task keeps REQ-GUI-078 (`budget-bound`, which the mock
+  never binds) and may revise REQ-GUI-176's definition through the porting rule. The canvas is a separate engine-side
+  trait in `engine::contract`, outside the data contract; the real engine's implementation of it (its device and
+  queue, and drawing the figure into the app's pass) is this task's, for REQ-GUI-070. On the real engine the window
+  title and the footer carry no "mock engine" tag.

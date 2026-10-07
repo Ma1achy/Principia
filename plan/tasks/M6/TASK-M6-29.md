@@ -57,3 +57,5 @@ scope tree.
   (TASK-M8-20) and the rest of Stain mode (TASK-M8-19) stay with their tasks. TASK-M7-22 depends on this task and builds
   on its canvas.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- RQ-249, decided per R-369 (7 Oct 2026): TASK-M6-24's mode switch changes a `ViewUI` mode and shows an empty Stain
+  page frame; this task fills it.

@@ -58,3 +58,7 @@ it. This task proposes the repeat delay and rate and the base steps, the first t
 - Calibrations (R-71) proposed here: REQ-GUI-146 and REQ-GUI-158. Each is confirmed by the human at the M8 gate; an
   unconfirmed one blocks that gate.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- RQ-249 and RQ-250, decided per R-369 (7 Oct 2026): TASK-M6-24 leaves the breadcrumb's slot empty and Help's
+  "Keys (?)" disabled; this task fills the slot and enables the entry, which opens the `?` shortcuts. The gui
+  reviewer's § 8 keyboard item applies from this task on: it puts TASK-M6-24's top bar (its menus, the mode switch,
+  Overlays ▾, Run…, Profiler…, Export…) into the scope tree as scope 1, and `mock_keyboard` covers them.

@@ -67,3 +67,8 @@ the three panes and the one timeline).
   tab, TASK-M6-22 under R-152), and the Inspector (TASK-M8-14 onward).
 - Values follow R-68: the Run window's defaults and names are the contract's, not the artboard's (§G13).
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- RQ-245 and RQ-249, decided per R-369 (7 Oct 2026): TASK-M6-24 draws the Windows menu with each window and Console
+  disabled, Run…, Profiler… and Export… disabled, and a console window frame listing the log entries (REQ-GUI-177) as
+  plain rows; this task enables each entry as it builds its window, and builds the console's layout, filters, copy
+  and clear and its opening on an error over that frame, re-capturing `01_main/mock_warning` to show them. The
+  console's "clear" resets the footer's warning and error counts, which count from the session's start until then.

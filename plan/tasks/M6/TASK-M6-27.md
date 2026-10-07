@@ -80,3 +80,8 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
   and the compositor's trace layer; the hover path's fall-off here is a stand-in, not REQ-GUI-156's definition.
 - Calibrations (R-71) proposed here: REQ-GUI-157, confirmed by the human at the M8 gate.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- RQ-246, RQ-249 and RQ-250, decided per R-369 (7 Oct 2026): the clock that advances the playhead is the GUI's
+  (R-101), built by TASK-M6-24 over the mock's deterministic tick; Time's controls drive it through `ViewUI`'s
+  transport, and the mock reads no `ViewUI`. TASK-M6-24 draws Overlays ▾ with its count from the snapshot and an empty
+  menu; this task fills the menu. A menu the user opens is not a toast or label in G1's sense (01_main.png shows the
+  Overlays menu over the figure); nothing the app raises by itself is drawn there.
