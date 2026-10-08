@@ -438,3 +438,97 @@ negative_control!(
     expected = "reads",
     check_values("diffusion", 2, &[-0.6], 1e-5)
 );
+
+/// Checks that `d_min`'s NaN sample, 2, holds the f16 quiet NaN in its high half and keeps the low half of its word
+/// (its state, detail and pair) as the valid samples have it.
+fn check_nan_word(s: &Scene) {
+    let w = s.set.simstate(2).packed_a;
+    let valid = s.set.simstate(4).packed_a;
+    assert_eq!(
+        w >> 16,
+        0x7e00,
+        "`{}` sample 2's d_min bits: {w:#010x}",
+        s.name
+    );
+    assert_eq!(
+        w & 0xffff,
+        valid & 0xffff,
+        "`{}` sample 2's low half is not a valid sample's: {w:#010x}",
+        s.name
+    );
+}
+
+#[test]
+fn golden_scene_d_min_nan_keeps_its_word() {
+    check_nan_word(&named("d_min"));
+}
+
+negative_control!(
+    golden_scene_d_min_nan_keeps_its_word,
+    "a NaN sample whose low half is all ones is not the scene's",
+    expected = "low half is not a valid sample's",
+    {
+        let mut s = named("d_min");
+        let w = s.set.simstate(2).packed_a;
+        s.set.sample(2).packed_a(w | 0xffff);
+        check_nan_word(&s);
+    }
+);
+
+/// Checks that `s`'s twin reads sample 2 with the masses of its `ICDescriptor`: `energy_drift`, the read's one
+/// mass-dependent value, is the kernel's for those masses. Sample 2 is given a finite energy first.
+fn check_masses(mut s: Scene) {
+    s.set
+        .sample(2)
+        .r([[1.0, 0.0], [-0.5, 0.5], [-0.5, -0.5]])
+        .p([[0.0, 0.3], [0.2, -0.1], [-0.2, -0.2]])
+        .E_0(-1.0);
+    let ic = *s.set.ic(2);
+    let c = &s.context;
+    let params = kernel::payload::ReadParams {
+        dt_macro: c.dt_macro,
+        delta_0: c.delta_0,
+        n_renorm: c.n_renorm,
+        horizon_steps: c.horizon_steps,
+    };
+    let want = kernel::payload::sim_state_from_ftle(
+        s.set.simstate(2),
+        s.set.word(2),
+        true,
+        kernel::payload::canonical_nan(),
+        false,
+        [ic.m0, ic.m1, ic.m2],
+        &params,
+    )
+    .energy_drift;
+    let got = s.read(2).energy_drift;
+    assert!(
+        want.is_finite(),
+        "sample 2's energy drift is finite: {want}"
+    );
+    assert_eq!(
+        got.to_bits(),
+        want.to_bits(),
+        "`{}`'s twin reads an energy drift of {got}, not the sample's masses' {want}",
+        s.name
+    );
+}
+
+#[test]
+fn golden_scene_read_uses_the_sample_masses() {
+    check_masses(named("ftle"));
+}
+
+negative_control!(
+    golden_scene_read_uses_the_sample_masses,
+    "a sample whose masses are not the twin's thirds",
+    expected = "not the sample's masses'",
+    {
+        let mut s = named("ftle");
+        let ic = s.set.ic(2);
+        ic.m0 = 0.5;
+        ic.m1 = 0.25;
+        ic.m2 = 0.25;
+        check_masses(s);
+    }
+);
