@@ -2,7 +2,7 @@
 //! QuadReduction, the inspector and the animation/export runner (systems_architecture §7.1). Its typed
 //! surface lives in `src/contract/` (R-146, R-172).
 //!
-//! Skeleton (TASK-M0-16): the contract surfaces are declared, with no behaviour.
+//! The contract's state semantics are the state store's (TASK-M6-24, R-390); the rest is still a skeleton.
 
 /// The GUI-facing surface, defined once, in the engine crate (gui_state_contract §1): the typed
 /// [`SimConfig`](contract::sim_config::SimConfig), [`RenderState`](contract::render_state::RenderState) and
@@ -10,15 +10,24 @@
 /// GUI-sized [`Snapshot`](contract::snapshot::Snapshot). In: `set_field(path, value)`; out: a snapshot; both plain data.
 /// Beside them, profiler schema v1 ([`profile`](contract::profile), R-56), which the engine writes and `prin` and the
 /// dev GUI read. [`canonical`](contract::canonical) is the one canonical serialisation of `SimConfig` and
-/// `RenderState`, JCS (gui_state_contract §2, R-309, R-318).
+/// `RenderState`, JCS (gui_state_contract §2, R-309, R-318). The interface the GUI calls is
+/// [`EngineInterface`](contract::interface::EngineInterface), which the real engine's
+/// [`StateStore`](contract::store::StateStore) implements and [`conformance`](contract::conformance) checks; the
+/// [`log`](contract::log) entries ride in the snapshot; [`canvas`](contract::canvas) is §1's sanctioned exception (R-390,
+/// TASK-M6-24).
 pub mod contract {
     pub mod canonical;
+    pub mod canvas;
+    pub mod conformance;
     pub mod fast_math;
+    pub mod interface;
+    pub mod log;
     pub mod profile;
     pub mod render_state;
     pub mod set_field;
     pub mod sim_config;
     pub mod snapshot;
+    pub mod store;
     pub mod view_ui;
 
     /// A stain node's colour occupant as the occupant algebra's typed expression tree (colour_composition §1;
@@ -30,6 +39,7 @@ pub mod contract {
     #[cfg(test)]
     mod tests {
         mod canonical;
+        mod conformance;
         mod occupant;
         mod profile_v1;
     }
@@ -42,6 +52,14 @@ pub mod stain;
 /// The synthetic payload harness: CPU-filled `SimState`, word, `ICDescriptor` and `RenderQuad` buffers over a flat grid
 /// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06).
 pub mod synthetic;
+
+/// The coordinate presets: `uv_screen`, `uv_quad` and the coordinate view with its δ mode, as in-code stain graphs
+/// (colour_composition §6; TASK-M1-07).
+pub mod presets;
+
+/// Pointer picking: a canvas event through the convention's one flip to the post-flip UV, the picked quad and `z`
+/// (coordinate conventions note, path 2; TASK-M1-07).
+pub mod picking;
 
 /// The dispatch of the kernel's bring-up mode over the synthetic flat layout, natively at f64 and on the GPU at f32
 /// (colour_composition Appendix A; R-75; TASK-M1-11).

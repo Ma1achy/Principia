@@ -15,7 +15,10 @@
 //! vec3<f32>`; the compiled module is checked against them (REQ-RENDER-016). `OUT` has no occupant: it is `shade()`'s
 //! return. An occupant reads the read-side `SimState` by plain member access, `ctx.sample.ftle`, at every tier
 //! (lowering Part 3a), its wired fields as `ctx.inputs[k]`, and its uniforms as `uniforms.<name>`, declared in the
-//! file's header ([`Declaration`]; gui_state_contract §3).
+//! file's header ([`Declaration`]; gui_state_contract §3). It reads the pixel's post-flip UV as `ctx.screen.uv` and its
+//! sample's quad-local coordinate and quad as `ctx.quad.uv`, `ctx.quad.centre` and `ctx.quad.half_width`
+//! (colour_composition §3's lanes; deep_zoom §1's c and h), which `shade_at`'s caller fills from the raster and the
+//! per-quad frames (TASK-M1-07).
 //!
 //! **Identity** (render_gui_spec §13; colour_composition §4.1): a node whose occupant is None, or one of whose field
 //! inputs is absent, is the identity. A colour None gives the combiner white, so the combiner gives the greyscale of
@@ -1014,7 +1017,8 @@ fn label(occupant: &Occupant) -> String {
 }
 
 /// `shade(ctx)`, which walks the graph in backbone order: the sources, the colour and the brightness, the combiner,
-/// the post chain, `OUT`; and `shade_sample`, which reads sample `i` into a context and shades it.
+/// the post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen and quad lanes and shades
+/// it; and `shade_sample`, the same with those lanes absent (the absence NaN), for a pass that places no quad.
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1057,15 +1061,22 @@ fn shade(
     out.push_str(
         "    return out; // OUT\n}\n\n\
          // Sample `i` read through the generated read side into a context at pixel `frag_xy`, its `ICDescriptor` too\n\
-         // (`ctx.ic`, only the members the stain reads), and shaded. The read side's arguments are its own\n\
-         // (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
-         fn shade_sample(i: u32, frag_xy: vec2<f32>, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
+         // (`ctx.ic`, only the members the stain reads), with its screen and quad lanes, and shaded. The read side's\n\
+         // arguments are its own (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
+         fn shade_at(i: u32, frag_xy: vec2<f32>, screen: CtxScreen, quad: CtxQuad, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
          var ctx: Ctx;\n    \
          ctx.sample = sample_read(i, ensemble_spread, has_ensemble(), masses, params);\n    \
          ctx.ic = ic_read(i);\n    \
          ctx.frag_xy = frag_xy;\n    \
+         ctx.screen = screen;\n    \
+         ctx.quad = quad;\n    \
          ctx.params = params;\n    \
-         return shade(ctx);\n}\n",
+         return shade(ctx);\n}\n\n\
+         // Sample `i` shaded at pixel `frag_xy` where no raster places it in a target and a quad: its screen and quad\n\
+         // lanes hold the absence NaN, the canonical quiet NaN (`is_absent_nan`).\n\
+         fn shade_sample(i: u32, frag_xy: vec2<f32>, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
+         let absent = vec2<f32>(bitcast<f32>(0x7fc00000u));\n    \
+         return shade_at(i, frag_xy, CtxScreen(absent), CtxQuad(absent, absent, absent), ensemble_spread, masses, params);\n}\n",
     );
     out
 }

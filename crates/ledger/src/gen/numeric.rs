@@ -81,13 +81,13 @@ pub struct NumericView {
 
 /// The floor `ε` of a log view whose field has no ledger `floor`, as `dbg_log` takes it: 2⁻²⁴, f16's smallest positive
 /// subnormal, the register's `f16_min_subnormal`, below which no f16 latch stores a positive value (R-271). Proposed,
-/// R-71 (REQ-TOOL-158): the human confirms it at the M1 gate.
+/// R-71 (REQ-TOOL-160): the human confirms it at the M1 gate.
 pub fn log_floor() -> f64 {
     F16_MIN_SUBNORMAL.number()
 }
 
 /// The period of a cyclic view, in the field's unit: one turn, 2π, the period of an angle in radians (`rho_angle`).
-/// Defined, R-72 (REQ-TOOL-159), in render_gui_spec §10.1: the physics reviewer approves it.
+/// Defined, R-72 (REQ-TOOL-161), in render_gui_spec §10.1: the physics reviewer approves it.
 pub fn cyclic_period() -> f64 {
     std::f64::consts::TAU
 }

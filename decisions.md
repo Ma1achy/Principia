@@ -6158,6 +6158,9 @@ The human chose "Hold below a radius", then refined it verbatim:
 Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries `rq: RQ-225`.
 
 ## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
+*Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).*
+*Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
+gui, for REQ-GUI-176 and REQ-GUI-177 only.*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
 TASK-M6-29 (new), `plan/tasks.yaml` and twenty-three existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
@@ -6305,6 +6308,9 @@ and the human confirms it at its gate. A physics choice stays the human's (R-369
   (R-185; systems_architecture §7.1). The conformance suite is defined once, in the engine crate beside the contract;
   engine's tests run it against the real engine and gui's tests against the mock. Every case runs on both, none is
   skipped for either, and a case joins the suite only when both can run it.
+  *Amended per R-369 (7 Oct 2026; RQ-252 as amended, option (c)):* the mock is always compiled in the gui crate, the
+  `mock` feature choosing only which engine `main` runs; the crate map is still unchanged (R-185; systems_architecture
+  §7.1).
 - **The real engine's side.** The engine crate's contract gains the interface the GUI calls (`set_field`, the
   snapshot, undo and redo as requests, the events), and the real engine implements it as far as the conformance suite
   reaches. TASK-M8-01 and TASK-M8-03 keep every requirement they close, and TASK-M8-03 depends on TASK-M6-24.
@@ -6497,3 +6503,275 @@ REQ-VAL-180 and REQ-VAL-181 (R-376) are unchanged.
 - R-393 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-394 — `ctx.chart.slice_uv` is the sample's position in the slice plane, stable under pan and zoom; a screen-relative position is a separate field *(closes RQ-257)*
+*7 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "3. The `ctx` contract",
+`docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they nest; each is right for its
+job)" and `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)" (added
+sentences), REQ-COL-063 (reqio, new), TASK-M1-16 (new), TASK-M2-25, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-257 archived) and `REVIEW_QUEUE.md`; built by TASK-M1-16*
+
+The orchestrator put RQ-257 to the human: colour_composition §3 names the chart lane's `slice_uv` without defining it,
+and the corpus allows two readings, (a) the sample's position in the current view, or (b) its position in the slice
+plane, deep_zoom §1's `u = c + h·(2t − 1)`. The human replied, in their own words ("This is from me."):
+
+> RQ-257: (b). ctx.chart.slice_uv is position in the slice plane (from the square's centre and half-width), stable
+> under pan and zoom, consistent with R-97. Any screen-relative position is a separate, clearly named field.
+
+(Message of 7 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **`ctx.chart.slice_uv` is the sample's position in the slice plane's own frame**, relative to the plane anchor
+  (R-97): `c + h·(2·ctx.quad.uv − 1)`, with `c` the quad's centre and `h` its half-width as the CPU computes them in
+  f64 (deep_zoom §1's `u = c + h·(2t − 1)`, the same pattern). It is a vec2 in [0, 1]², post-flip Y-up, and in-plane pan
+  and zoom never change it for a given sample; they change only which quads are drawn.
+- **A screen-relative position is a separate, clearly named field.** Screen-relative positions are the screen lane's
+  fields, `ctx.screen.uv` (screenspace, vec2) and `ctx.screen.pixel`; `slice_uv` is never one, and never a view
+  position.
+- The coordinate note's UV row keeps its reading: UV as "the sample position *in the current view*" is what chooses
+  the quads asked for. `ctx.chart.slice_uv` is not that view position; under R-394 it is the slice-plane position.
+
+*Applied per R-369 (mechanical consequences):*
+- colour_composition §3 gains a paragraph after the lane table defining `ctx.chart.slice_uv` and naming the screen
+  lane's fields, `ctx.screen.uv` and `ctx.screen.pixel`, as the separate screen-relative positions. The chart row is unchanged: its "vec2 in [0,1]²" holds under
+  (b), and the paragraph sits apart from PR #160's edit of the quad row below it, so the two do not conflict.
+- The coordinate note's UV row, and deep_zoom's coordinate bullet that repeats it, each gain one sentence: the view
+  reading is kept, and `ctx.chart.slice_uv` is the slice-plane position under R-394.
+- **The code.** TASK-M1-06 (merged) fills the lane in `crates/render/src/bind.rs` as the grid tiling,
+  `(vec2<f32>(r.quad_xy) + r.quad_uv) / vec2<f32>(ctx_uniforms.quads)`, which is reading (a) on the harness's grid.
+  Under (b) it becomes `centre + half_width·(2·quad.uv − 1)` from the per-quad frames TASK-M1-07 binds (PR #160).
+  **A new task, TASK-M1-16** ("Conform ctx.chart.slice_uv to the slice plane (R-394)"), depending on TASK-M1-07,
+  conforms the lane and adds RQ-257's missing test: `slice_uv` on a non-square, offset grid (`flat_at(.., 5, [7, 2])`
+  with unequal columns and rows), whose quad in column `i` and row `j` has its centre at
+  `((7 + i + ½)/32, (2 + j + ½)/32)`, and the same quad giving the same `slice_uv` inside a panned or zoomed grid.
+  Reviewers: code, qa and physics. Adding the task to M1 is applied per R-369.
+- **A new requirement, REQ-COL-063 (M1)**, the lane's definition (R-72's form, now ruled), closed by TASK-M1-16.
+- TASK-M2-25, the first task whose presets place `ctx.chart.z` per pixel, depends on TASK-M1-16 and needs REQ-COL-063.
+- RQ-257 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-394 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-063.
+
+## R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*
+*7 Oct 2026 · applied in `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision" (added
+paragraph), REQ-TOOL-019, REQ-DEC-031 and REQ-TOOL-152 (reqio), REQ-TOOL-158 and REQ-TOOL-159 (reqio, new),
+TASK-M1-07, TASK-M1-16, TASK-M5-04, TASK-M6-08, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-242 archived) and `REVIEW_QUEUE.md` (RQ-258, open); built by TASK-M1-16,
+TASK-M5-04 and TASK-M6-08*
+
+The orchestrator put RQ-242 to the human: REQ-TOOL-019's "no banding" has no depth range, and PR #160 measured that
+deep_zoom §1's `u = c + h·(2t − 1)`, formed as an f32 sum, bands at depth like the global form, while `c` (f64) + `δ`
+stays exact. The human replied, in their own words ("This is from me."):
+
+> RQ-242: REQ-TOOL-019 means no banding with absolute coordinates up to the deep-zoom switchover (ℓ_switch, R-90),
+> and no banding beyond it through the per-quad local coordinates; the second half is an M5/M6 requirement. The M1
+> gate checks the first half.
+
+(Message of 7 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **Up to ℓ_switch** (R-90: `ℓ_switch = 20` as an upper bound, or earlier where the full decoder's adjacent samples
+  give bitwise-identical ICs), the UV coordinate may be formed as an absolute coordinate, `c + h·(2t − 1)` in f32, and
+  must not band by REQ-TOOL-152's criterion. This is REQ-TOOL-019, narrowed to it, in the M1 gate.
+- **Beyond ℓ_switch**, the coordinate is carried as the per-quad local coordinates, the quad's centre `c` (f64 on the
+  CPU) and the f32 offset `δ = h·(2t − 1)`, never as an absolute f32 `u`, and must not band there. The human made it
+  an M5/M6 requirement, and it is split in two: REQ-TOOL-158 (M5), the per-quad local path itself, kernel and fragment;
+  and REQ-TOOL-159 (M6), the routing of every quad past ℓ_switch onto that path.
+- deep_zoom §1's "Within-quad precision is full f32 at any depth" stands: it holds for `t` and `δ`. An absolute `u`
+  formed in f32 is bounded by ℓ_switch, which is where deep_zoom §2's linearised decoder already consumes `δ`.
+
+*Applied per R-369 (mechanical consequences):*
+- deep_zoom §1 gains a paragraph after "Why it works", citing R-395.
+- **REQ-TOOL-019** (reqio): its statement is narrowed to the first half; its verify detail gains the depth sweep to
+  ℓ_switch; R-395 joins its rulings and sources. TASK-M1-07 (PR #160) builds it on M1's flat grid, as before. The sweep
+  is TASK-M1-16's acceptance line, since TASK-M1-07 was in review when R-395 was recorded: it is the M1 gate's check of
+  the first half.
+- **The sweep.** At N = 8 and N = 16, the named tiers' N (memory_tiers' tier table), for every depth up to
+  `ℓ_switch = 20`, near `u ≈ 0.6` (the binade [0.5, 1), where f32's ulp is coarsest): the absolute coordinate's
+  adjacent deltas pass REQ-TOOL-152's criterion, or adjacent samples collapse to one coordinate, where R-90's
+  switchover fires first. At these N the f32 sum is exact until it collapses (N = 8 to ℓ = 20; N = 16 to ℓ = 19,
+  collapsing at ℓ = 20).
+- **The second half, split between M5 and M6** (the human's "M5/M6"), because which quads past ℓ_switch take the
+  per-quad local path is set by `DECODE_MODE` (REQ-DEC-037), built in M6 by TASK-M6-08:
+  - **REQ-TOOL-158 (M5, new)**, closed by **TASK-M5-04**, which owns the per-quad uniforms, the quad-local sample
+    positions and REQ-DEC-031's depth-30 gate: at depths 21 and 30 the δ steps pass REQ-TOOL-152's criterion, the
+    linear-mode (LIN) path forms no absolute f32 `u`, and, on the fragment side, the UV preset's quad-local
+    reconstruction from `ctx.quad.centre` and `δ` does not band while a negative fixture reading the absolute
+    `ctx.chart.slice_uv` does.
+  - **REQ-TOOL-159 (M6, new)**, closed by **TASK-M6-08**, which builds the switchover: every quad past ℓ_switch is
+    routed to that path, so none has its sample positions formed as an absolute f32 `u`.
+  - TASK-M6-07 (the linearised decoder) and TASK-M6-11 (REQ-SCHED-067's quad-relative relevance) build on them.
+- **REQ-DEC-031** gains a note citing R-395 and R-395 as a ruling. Its "the GPU must compute sample positions as
+  u = centre + half·(2t − 1)" does not contradict R-395 past ℓ_switch, and needs no RQ: R-395 answers RQ-242's question
+  (b), which named REQ-DEC-031's wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch. (Its depth-30
+  verify alone would not: near the origin, in the `k = 0` quad at any N, and for N = 8 at any `u` below 2^−10, the
+  absolute f32 sum is itself exact.) The note
+  says that past ℓ_switch the position is carried as `(c, δ)` and never summed into an absolute f32 `u`. REQ-SCHED-067
+  already computes relative to the quad centre and is unchanged.
+- **A conflict the ruling does not settle, filed as RQ-258 (open)**, for the human at the M1 gate with REQ-TOOL-152's
+  calibration. At a non-dyadic N (Custom mode exposes N), the absolute coordinate's departure grows by graded steps:
+  at PR #160's proposed bound, 1/16, it reads "banded" from ℓ = 19 at N = 6 and from ℓ = 18 at N = 12, before
+  ℓ_switch and before any collapse that would fire R-90's switchover. REQ-TOOL-152 carries `rq: RQ-258`; the sweep
+  covers N = 8 and N = 16 until it is ruled.
+- RQ-242 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-395 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-158 and REQ-TOOL-159; REQ-TOOL-019's statement, verify detail, rulings and sources change; REQ-DEC-031 gains a note and a
+ruling; REQ-TOOL-152 gains a note, a ruling and `rq: RQ-258`.
+
+## R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*
+*7 Oct 2026 · applied in `plan/tasks.yaml` (TASK-M6-24's reviewers), `plan/tasks/M6/TASK-M6-24.md` § "Notes" and
+`plan/rule_groups.yaml`*
+
+R-390 names the GUI track's reviewers as "code, qa and gui". TASK-M6-24 also closes two R-72 definition requirements,
+REQ-GUI-176 and REQ-GUI-177, which `plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" merges only with the
+physics reviewer's approval; PR #165 listed physics on the task and the orchestrator flagged the conflict with R-390's
+list. The human ruled, in their own words ("This is from me."):
+
+> Physics reviews TASK-M6-24 for REQ-GUI-176 and -177 only.
+
+(Message of 7 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:* TASK-M6-24's reviewers are code, qa, gui and physics. Physics reviews only REQ-GUI-176 (the
+snapshot's frame summary) and REQ-GUI-177 (the contract's log entry), the two R-72 definitions; code, qa and gui
+review everything else, as R-390 says. It settles the conflict the orchestrator flagged between R-390's three
+reviewers and the gate rule for definition requirements. TASK-M6-25 to TASK-M6-29 keep R-390's code, qa and gui.
+
+*Applied:*
+- TASK-M6-24's reviewer list already includes physics (PR #165); `plan/tasks.yaml` and the task file cite R-396 beside
+  it, with the scope "REQ-GUI-176 and -177 only". The task file's physics note gains R-396.
+- R-390 gains "Amended in part by R-396" and "Still in force" lines (R-292).
+- R-396 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
+*7 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "1" and § "2", `docs/design/principia_dd_integrator.md`
+§ "3.7", `docs/design/principia_dd_generation_root.md` § "3.5" and § "3.8", `docs/contracts/principia_render_contract.md`
+§ "Unpack layer", `docs/contracts/principia_parity_contract.md` § "Tier B", `docs/design/principia_colour_composition.md` Appendix A, REQ-PAY-009 (reqio), REQ-INT-082 (reqio),
+REQ-INT-087 to REQ-INT-089 (reqio, new), TASK-M3-11, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-226 archived) and `REVIEW_QUEUE.md`; built by TASK-M3-11*
+
+The orchestrator put RQ-226 to the human: R-389's pole hold stores a longitude on entering `r_pole`, and R-392's IC
+that starts inside has none, but the payload gives neither value a slot, so kept in kernel locals they are lost at a
+cached-state resume and `θ̃` would depend on how the march is split into dispatches. The human answered, and said
+"This is from me.":
+
+> RQ-226: use the spare bits, no size change (R-397).
+> - First check why closure_step's _reserved half is marked "do not
+>   spend". If the corpus reserves it for a named future use, stop and
+>   tell me; otherwise proceed.
+> - _reserved holds θ̃'s frozen reference longitude as a u16 (2π/65535
+>   steps); 0xFFFF means "no reference" (R-392's IC-starts-inside case).
+>   No descriptor bit is used.
+> - "Inside the hold" is recomputed from the current state on resume
+>   (ρ < r_pole), not stored.
+> - SimState's size is unchanged; the schema version updates as usual
+>   (R-36).
+> - R-389 and R-392 stand as written; document the quantisation (≤ ~5e-5
+>   rad per pole passage). Physics reviews.
+
+(Message of 7 Oct 2026; numbered R-397 by the human.)
+
+*The check the ruling asks for first.* The corpus names no future use for `_reserved`. Its "do not spend" is the
+alignment argument of payload § "Why 8 B costs the same as 4": "So the `u16 _reserved` is genuinely free — but that
+also means **spending it later is not free**, since the next field pushes to 152", and the struct's own comment says
+"do not spend it without re-checking the alignment argument below". REQ-PAY-009 says the same ("must not be spent
+without re-checking the alignment argument"; its verify: "any ledger change touching _reserved includes a
+size/alignment recheck"). No other file in `docs/`, `decisions.md`, `open-questions.md` or `plan/` reserves it for
+anything; R-343 and R-351 only name its WGSL home, `closure_step_reserved` bits 16–31. So the port proceeds, and it
+carries the recheck (below).
+
+*What it decides:*
+- **The slot.** `_reserved`, the u16 beside `closure_step`, holds `θ̃`'s frozen reference longitude, the longitude
+  R-389 stores on entering `√(n_u² + n_v²) < r_pole`. Both stored variants carry `θ̃` and `_reserved`
+  (`SimStateBase` drops only the shadow), so it applies to `SimStateFTLE` and `SimStateBase` alike, and to every
+  precision row (`_reserved` is "u16, fixed" at any `Real`, payload § 1).
+- **The code.** A longitude `λ` is stored as the code `c ∈ {0, …, 65534}` of `λ mod 2π ∈ [0, 2π)` in steps of
+  `2π/65535`; code `c` stands for the longitude `c · 2π/65535` (mod 2π). **0xFFFF (65535) means "no reference"**:
+  R-392's IC that starts inside the radius, which has none. No descriptor bit is used; `sample_descriptor`'s bits
+  10–15 stay reserved.
+- **"Inside the hold" is not stored.** A march that resumes from a stored `SimState` recomputes whether the sample is
+  inside the pole disc from the current state, `√(n_u² + n_v²) < r_pole`, by the same test the uninterrupted march
+  uses.
+- **The size.** `SimStateFTLE` stays 144 B and `SimStateBase` 96 B at f32 (and 272 B and 176 B at f64). The
+  schema version changes as R-36 makes it change: the ledger's content changes, so its hash does.
+- **R-389 and R-392 stand as written.** The stored longitude is now the code's longitude, so a pole passage's exit
+  delta `wrap(exit longitude − stored longitude)` carries the encode's rounding: at most half a step,
+  `π/65535 ≈ 4.8e-5` rad per pole passage (the human's "≤ ~5e-5"). Steps outside the disc are not quantised.
+- **Physics reviews** the task that builds it.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The alignment recheck (REQ-PAY-009).** `_reserved` is spent in place, at byte 142 of `SimStateFTLE` and 94 of
+  `SimStateBase`. At f32 both are exact multiples of their 8-byte alignment with no tail padding (144 = 18 × 8,
+  96 = 12 × 8), so the struct sizes do not change, and **at f32 any new field, of any width up to 8 B, now costs 8 B**
+  (144 → 152, 96 → 104). The f64 and DoubleF64 layouts keep their declared 4 B `_tail`: there a new u32 costs
+  nothing, and a new `Real` costs 8 B at f64 and 16 B at DoubleF64, so a new member is rechecked per precision row.
+- **The encode and decode, exactly.** Encode: `λ' = λ`, or `λ + 2π` when `λ < 0`; `c = ⌊λ' · 65535/(2π) + ½⌋`, and
+  `c = 65535` becomes 0 (it is the longitude 2π ≡ 0), so the encode never yields the sentinel. Decode: `c · 2π/65535`,
+  less 2π when it exceeds π, so the decoded reference lies in (−π, π) and the exit difference stays in [−2π, 2π], the
+  domain `wrap` takes. 65535 is odd, so no code decodes to exactly π. `encode(decode(c)) = c` for every code, so a
+  reference survives any number of resumes unchanged. The worst-case error is half a step plus the encode's
+  round-off at the kernel's `Real`, bounded by `4·ulp_Real(2π)` (1.9e-6 rad at f32, 3.6e-15 at f64; the worst over
+  evaluation orders measured 9.4e-7 and 1.9e-15 by the physics review of #168), inside the ruling's "≤ ~5e-5".
+- **The parity tier.** `_reserved` is not Tier B: its code is rounded from the float longitude, so it is Tier N/S
+  with `θ̃`: given the same entry state, backends may differ by one code (mod 65535), and along a trajectory by
+  more, within `θ̃`'s envelope. Sentinel-or-code, from the comparison-only disc test formed at the kernel's `Real`,
+  is Tier B across backends at the same `Real` only; across precisions it may differ at the disc edge. The one-code
+  allowance needs REQ-INT-086's `r_pole` above about 2e-3. The parity contract's Tier B paragraph says so beside
+  the f16 display scalars (physics reviews 5441087488, F1, and 5441219965, F4).
+- **The exact-π case** (R-389) applies to the difference against the decoded reference: an exit whose
+  `exit longitude − decoded reference` is exactly ±π adds +π.
+- **One semantics, split or not.** The march quantises the reference when it stores it, on entering the disc, and
+  every exit differences against the decoded code, whether or not the march was interrupted inside the hold. Kept
+  unquantised in a register within one dispatch, `θ̃` would differ with the dispatch split by up to the
+  quantisation, the dependence RQ-226 exists to remove.
+- **The stored value's lifecycle.** A fresh sample's `_reserved` is 0xFFFF, wherever its IC lies. Entering the disc
+  from outside writes the code of the last longitude outside it; the exit adds its delta and writes 0xFFFF back.
+  So outside the disc `_reserved` is always 0xFFFF, and inside it is either the entry's code or, for R-392's IC that
+  starts inside, 0xFFFF until its first exit (which adds nothing, R-392). A resumed march reads it with the
+  recomputed inside test: inside with a code, a reference; inside with 0xFFFF, R-392's case; outside, unused. This
+  gives `_reserved` one value for one trajectory and playhead, so a stored `SimState` is bit-identical however the
+  march was split. It changes no `θ̃`.
+- **The name stays `_reserved`.** The human's words keep it, and R-343 and R-351 name its WGSL home
+  `closure_step_reserved`; a rename would change both and every layout test that cites them. Its meaning is
+  documented where it is declared. As a `_`-named member it has no §3.8 field entry, so the read side, the export
+  decoder and the debug catalogue do not read it: it is march state, read only by the kernel. The fragment side
+  emits no accessor for bits 16–31.
+- **The schema version (R-36).** The step count and the sentinel are numbers that decide what the stored bits mean,
+  so they enter generation-root § 3.8's constants register as two entries, `theta_ref_steps` = 65535 and
+  `theta_ref_none` = 65535 (0xFFFF), class achievable-maximum (the u16's greatest value), citation R-397, and join the
+  entries hashed into the schema version (§ 3.8, "The hash"; R-251), seven from five. The kernel reads both from the
+  register (`cargo xtask lint constants`). The hash changes with them; no version is bumped by hand.
+- **The bring-up pattern and the synthetic harness.** colour_composition Appendix A keeps `_reserved = 0`: the
+  pattern is not physics (its `theta` is `32·i + 25`), and 0 is a valid code (reference 0 rad), so the readback
+  still tells a slot written one place off. The synthetic harness uploads whatever `SimState` its test builds,
+  `_reserved` included, and needs no change.
+- **The owning task is TASK-M3-11**, which runs `θ̃` in the kernel's march (REQ-INT-082) and already edits the ledger
+  with a schema-version change (REQ-VAL-055, REQ-PAY-059). It gains three requirements: **REQ-INT-087**, the u16
+  encode and decode and the sentinel; **REQ-INT-088**, the hold recomputed on resume from the current state, and the
+  lifecycle above; **REQ-INT-089**, a march's `θ̃` and `_reserved` bit-identical whether run in one dispatch or
+  resumed across `k`, with a resume inside a pole passage. REQ-INT-082 gains R-397 as a ruling, and REQ-PAY-009's
+  verify records the recheck. TASK-M3-11's reviewers already include physics.
+- **The qa files this touches (R-290).**
+  - TASK-M1-11's qa tests, `crates/kernel/tests/qa_TASK-M1-11.rs` (the unquantised hold rule at :84–94) and
+    `crates/kernel/tests/qa_TASK-M1-11_config.rs` (`expected` at :55–69, the f64 tolerance from :155,
+    `edge_check!(edge64, f64, 1e-12)` at :504), compare `kernel::shape::theta_step` and `theta_step_config` with the
+    unquantised hold at tolerances far below `π/65535`. They break only if TASK-M3-11 makes that helper in
+    `crates/kernel/src/shape.rs` quantise, a design choice R-397 leaves open, so they are not forced by the ruling.
+    If the march quantises on entry and keeps the helper, they stay untouched. If TASK-M3-11 quantises in the
+    helper, the changes to those files are qa-file changes its PR lists and justifies.
+  - TASK-M0-12's `crates/ledger/tests/qa_TASK-M0-12.rs:447–451` (`SECTION_3_8_HASHED`, five names, and its comment;
+    "five" in the module doc at :8) iterates its own five names, which stay hashed, so it still passes with seven
+    `STORED_BITS` and nothing forces a change. Its only commit is qa's (`f4cb7e8`), so extending it to seven is an
+    ordinary R-290 `M` by qa, with its reason, not a ruling-forced exception.
+  - The implementer's own `crates/ledger/tests/schema_version.rs:512–514` (`STORED_BITS.len() == REGISTER.len()`)
+    still passes at 7 = 7; only its message, "today all five register entries are hashed", goes stale, and
+    TASK-M3-11 updates it.
+- **Not a contradiction, noted:** TASK-M3-11's lagged `n̂` register (REQ-PAY-059) and departed bit (REQ-VAL-055)
+  are its own layout changes; R-397's "size unchanged" is about this slot, and the recheck above is what such a
+  field then costs.
+- RQ-226 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-397 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-392.
+
+Adds REQ-INT-087, REQ-INT-088 and REQ-INT-089; REQ-PAY-009's statement and verify and REQ-INT-082's rulings change.

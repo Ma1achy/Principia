@@ -44,5 +44,9 @@ mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_
 justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
 
 [[equivalent]]
+mutant = "crates/gui/src/explore/top_bar.rs:23:5: replace overlays_on -> u32 with 0"
+justification = "Overlays has no field yet (the overlay set has no toggle until its task, RQ-249), so the function's body is the constant 0 the mutant returns"
+
+[[equivalent]]
 mutant = "crates/validation/src/golden_scene.rs:237:32: replace | with ^ in d_min_samples"
 justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 only, so their ^ is their |"

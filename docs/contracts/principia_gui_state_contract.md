@@ -26,7 +26,7 @@ The boundary must stay a **data** boundary, not an **object** one — under *bot
 
 No GUI element ever holds sim logic, caches sim data, or computes anything the engine needs; it reads a snapshot and emits field edits, nothing more.
 
-**The mock engine and the conformance suite (R-390).** The dev GUI is built first against a mock engine: a test double of this surface, in the gui crate under its `mock` feature, which serves plausible snapshots, applies `SetField` with undo and redo (R-69), emits events and runs a fake clock so the playhead moves. One conformance suite, defined beside the surface in the engine crate, runs every case against both the mock and the real engine, and both pass it; a change to the surface goes through review and re-runs it for both. The mock earns no privilege: the GUI reaches it only through this surface, as it reaches the real engine.
+**The mock engine and the conformance suite (R-390).** The dev GUI is built first against a mock engine: a test double of this surface, in the gui crate, always compiled, the crate's `mock` feature choosing only that `main` runs on it (RQ-252 as amended per R-369), which serves plausible snapshots, applies `SetField` with undo and redo (R-69), emits events and runs a fake clock so the playhead moves. One conformance suite, defined beside the surface in the engine crate, runs every case against both the mock and the real engine, and both pass it; a change to the surface goes through review and re-runs it for both. The mock earns no privilege: the GUI reaches it only through this surface, as it reaches the real engine.
 
 ---
 
@@ -44,7 +44,8 @@ ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard 
                           kept orbits · inspector t_cursor · open windows · linked views for side by side (v2, R-106) ·
                           playback transport (play/pause/speed/loop — not undoable, not on the sim key, R-96; the
                           GUI's clock reads it and advances RenderState's playhead t each frame through a SetField
-                          marked "no history", R-101)
+                          marked "no history", R-101) · the mode switch's mode, Explore or Stain
+                          (render_gui_spec §G2; RQ-249)
                           — never read by the engine
 ```
 
@@ -64,6 +65,14 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 **The snapshot carries the events the GUI reports (R-54).** The precision warning is raised by events, not fixed depths: the snapshot carries, GUI-sized, whether `DECODE_SWITCHOVER` has fired on visible quads and whether `AT_F32_FLOOR` has been hit (`principia_deep_zoom.md` §2; scheduler contract Part 4). The console (render_gui_spec §G12) reads the same telemetry stream the profiler does.
 
 **The shell's fields (RQ-243, decided per R-369).** `RenderState`'s playhead is `Playhead { t: f64 }`, and its `SetField` path is `RenderField::Playhead`: the GUI's no-history clock advance (R-101) and a scrub (R-96) both write it. The snapshot's history is `History { undo_depth: u32, redo_depth: u32 }` (R-329). The snapshot carries a GUI-sized frame summary, named from the frame record (`principia_dd_telemetry_and_tiers.md` §5): `frame_ms`, `fps`, `quad_count` and `live_memory { heap_bytes, gpu_bytes }`, each optional and absent until the real engine's frame loop fills it, the GUI drawing "—" for an absent value. Their definitions against the frame record are written here by the task that adds them (R-72).
+
+**The frame summary's definitions (R-72; REQ-GUI-176; TASK-M6-24).** Each is read from the frame record (`principia_dd_telemetry_and_tiers.md` §5) and posted GUI-sized, never per frame:
+- `frame_ms` is the frame record's `frame_ms` at the latest frame: its wall-clock milliseconds.
+- `fps` is 1000 / the mean `frame_ms` of the frames since the previous snapshot. When no frame has completed since the previous snapshot, or that mean `frame_ms` is 0, `fps` is absent (the GUI draws "—"); it is not carried forward from an earlier snapshot.
+- `quad_count` is the frame record's `leaf_count` at the latest frame, a u64 as `leaf_count` is.
+- `live_memory { heap_bytes, gpu_bytes }` is the frame record's `live_memory` at the latest frame: `heap_bytes` its `heap` pool's `bytes`, `gpu_bytes` its `gpu` pool's `bytes`, each a u64. The `tile_cache` pool is not added to either: `heap` and `gpu` are the tracked memory outside the tile cache. The footer's memory readout, GPU and heap, shows these two.
+
+**The log entry (R-72; REQ-GUI-177; TASK-M6-24).** A log entry is `{ severity, at, source, message }`, plain data: `severity` is one of `error`, `warn` and `info`; `at` is the wall-clock time it was logged, in milliseconds since the Unix epoch, UTC, a u64 (R-329); `source` is one of `stain`, `integrator`, `quadtree`, `contract` and `app` (`principia_render_gui_spec.md` §G12's sources); `message` is one line of text. The snapshot carries, GUI-sized, the entries accumulated since the previous snapshot, oldest first, so each entry rides in exactly one snapshot, and the GUI reads them from each snapshot it receives: they add no crossing of the membrane, which carries only GUI-sized snapshots and single `set_field` edits (`principia_systems_architecture.md` §6, invariant 10). R-54's precision flags stay in the snapshot as flags. Every engine logs each `SetField` it applies as one `info` entry from `contract`, naming the field's path and its values before and after ("SetField Playhead.t 0 → 1.5", "(no history)" added for an edit so marked); the conformance suite checks it on every engine (R-390). The footer counts the `warn` and `error` entries since the session began, until the console's "clear" (`principia_render_gui_spec.md` §G12) resets them. Carrying the entries in profiler schema v1's stream is not part of this definition: schema v1 is unchanged.
 
 ---
 

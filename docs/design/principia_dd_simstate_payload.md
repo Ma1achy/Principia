@@ -73,8 +73,10 @@ struct SimStateFTLE {
                                   //   running minimum, NOT a history — two registers, no array.
     closure_step : u16,           // exact step index of the minimum — binary-parity surface, same
                                   //   convention as t_dmin_step. This is the period label.
-    _reserved    : u16,           // free under alignment (4 B and 8 B cost the same); do not spend
-                                  //   it without re-checking the alignment argument below.
+    _reserved    : u16,           // θ̃'s frozen pole reference (R-397): the longitude stored on entering the
+                                  //   pole disc, as a u16 code in steps of 2π/65535; 0xFFFF = "no reference"
+                                  //   (§2). Was free under alignment (4 B and 8 B cost the same); spent in place
+                                  //   after re-checking the alignment argument below: size unchanged.
     // GENERATED WGSL FORM (R-343): WGSL has no u16, so the generated unpack layer declares closure_step and
     //   _reserved as ONE member, closure_step_reserved : u32 (closure_step bits 0–15, _reserved bits 16–31),
     //   read through fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }. The stored bytes and
@@ -101,6 +103,15 @@ closure genuinely reaches ~1e-16.
 **Why 8 B costs the same as 4.** `SimStateFTLE` was 136 B = 17×8, exactly packed. Adding 4 B gives
 140, which pads to **144**; adding 8 B gives **144** as well. So the `u16 _reserved` is genuinely
 free — but that also means **spending it later is not free**, since the next field pushes to 152.
+
+**The recheck, on spending `_reserved` (R-397; REQ-PAY-009).** `_reserved` now holds `θ̃`'s frozen pole reference
+(§2). It is spent **in place**, at byte 142 of `SimStateFTLE` and byte 94 of `SimStateBase`, so neither size changes:
+at f32 `SimStateFTLE` is still **144 B** = 18×8 and `SimStateBase` **96 B** = 12×8, both exactly packed at their
+8-byte alignment, with no tail padding left. So **at f32 any new field now costs 8 B**, whatever its width up to 8 B:
+the next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104. The other precision rows keep their declared 4 B
+`_tail` (f64 272 B and 176 B; DoubleF64 520 B and 328 B, below): there a new u32 fills the tail at no cost, and a new
+`Real` costs 8 B at f64 and 16 B at DoubleF64. A new member's recheck is therefore made per precision row. The
+schema version changes with the ledger, as R-36 makes it (§2).
 
 **Why unconditional rather than tier-gated.** The FTLE split exists because the shadow is **48 B —
 55% of the 88 B base**, which justifies monomorphising. Closure is **8 B, 5.9%**. Gating it would
@@ -254,6 +265,55 @@ So Welford `n` (§4), current elapsed time (`step_count · dt_macro`), resume, a
 `t_dmin_step` = absolute macro-step index of closest approach (the old `t_dmin_frac`-needing-`t_end` form is gone — undefined mid-march). Display fraction derived with the `horizon_steps` uniform: `f32(t_end_step)/f32(horizon_steps)`, exactly 1 when `t_end_step == horizon_steps` and 0 when `horizon_steps` is 0 (§6, R-361). Exact indices → exact CPU/GPU **binary** parity (no rounding contract). `total_steps` redundant (`step_count` at termination *is* it).
 
 > **Enforced dispatch invariant: `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`.** Dispatch **refuses** a configuration with `⌈T/dt_macro⌉ > 65535` (R-86) — **not** a soft fallback. Long integrations that would exceed it must use a **coarser `dt_macro`**, **multiple march epochs**, or a future widened layout — the binary format stays single-meaning. (Schedules can reach ~2×10⁵ macro-steps, so this genuinely constrains `(T, dt_macro)` and the refusal must fire on violation.)
+
+### `_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)
+
+`θ̃`'s pole hold (dd_integrator §3.7; R-389, R-392) stores a longitude on entering the pole disc
+`√(n_u² + n_v²) < r_pole` and differences the exit longitude against it. The stored longitude persists across a
+cached-state resume in `_reserved`, the u16 beside `closure_step` (§1), in **both** stored variants and at every
+precision row (it is "u16, fixed", §1). No descriptor bit is used; `sample_descriptor`'s bits 10–15 stay reserved.
+
+| Code | Meaning |
+|---|---|
+| `0 … 65534` | the reference longitude `c · 2π/65535` (mod 2π): steps of `2π/65535` over [0, 2π) |
+| `0xFFFF` (65535) | **no reference**: outside the disc, and R-392's IC that starts inside it, until its first exit |
+
+- **Encode** (on entering the disc, of the last longitude outside it, `λ = atan2(n_v, n_u)` ∈ [−π, π]): `λ' = λ`, or
+  `λ + 2π` when `λ < 0`; `c = ⌊λ' · 65535/(2π) + ½⌋`, and `c = 65535` becomes 0 (the longitude 2π ≡ 0), so the encode
+  never yields the sentinel.
+- **Decode:** `c · 2π/65535`, less 2π when it exceeds π, so the reference lies in (−π, π) and the exit difference
+  `exit longitude − reference` lies in [−2π, 2π], the domain `wrap` takes. 65535 is odd, so no code decodes to exactly
+  π. `encode(decode(c)) = c` for every code, so a reference survives any number of resumes unchanged.
+- **The constants.** The step count `theta_ref_steps` = 65535 and the sentinel `theta_ref_none` = 65535 are
+  constants-register entries hashed into the schema version (generation-root §3.8; R-36), so the change of meaning
+  changes the version, as `last_symbol`'s assignment did.
+- **Lifecycle.** A fresh sample's `_reserved` is 0xFFFF, wherever its IC lies. Entering the disc from outside writes
+  the code; the exit adds `wrap(exit longitude − decode(c))` and writes 0xFFFF back. So outside the disc it is always
+  0xFFFF; inside, it is the entry's code, or 0xFFFF for R-392's IC that starts inside, whose first exit adds nothing.
+- **"Inside the hold" is not stored.** A resumed march recomputes it from the current state, `√(n_u² + n_v²) <
+  r_pole`, by the same test the uninterrupted march uses (dd_integrator §3.7). Inside with a code: a reference; inside
+  with 0xFFFF: R-392's case; outside: unused.
+- **One semantics, split or not.** The reference is quantised when it is stored, and every exit differences against
+  the decoded code, whether or not the march was interrupted inside the hold, so `θ̃` and `_reserved` are
+  bit-identical however the march is split into dispatches.
+- **The quantisation.** The decoded reference differs from the stored longitude by at most half a step, `π/65535 ≈
+  4.8e-5` rad, plus the encode's round-off at the kernel's `Real`, bounded by `4·ulp_Real(2π)` (1.9e-6 rad at f32,
+  3.6e-15 at f64; the worst measured over evaluation orders is 9.4e-7 and 1.9e-15): `|decode(encode(λ)) − λ|`
+  (mod 2π) `≤ π/65535 + 4·ulp_Real(2π)`, whatever order the encode and decode evaluate in, at most ~5e-5 rad of `θ̃`
+  per pole passage. Steps outside the disc are not quantised.
+- **Parity tier (parity contract §2).** `_reserved` is **not** Tier B, unlike `closure_step` beside it: its code is
+  rounded from the float longitude, a runtime transcendental, so it belongs to Tier N/S with `θ̃`. Given the same
+  entry state, backends may differ by one code (cyclically, mod 65535: 65534 and 0 are neighbours); along a full
+  trajectory the code follows `θ̃`'s Tier N/S envelope and may differ by more. Whether it holds the sentinel 0xFFFF
+  or a code follows from the comparison-only disc test (`ρ² < r_pole²·I²`), formed at the kernel's `Real`, not
+  position-quantised to f32: on identical stored state at the same `Real` it is Tier B across backends and must match
+  exactly; across precisions (CPU-f64 against GPU-f32) it is a branch decision at the disc edge that may differ. The
+  one-code allowance needs REQ-INT-086's `r_pole` above about 2e-3; the proposed 1e-2 satisfies it. Within one
+  backend and precision the field is deterministic, so a resumed march is
+  bit-identical to an unbroken one (above).
+- **The read side does not read it.** As a `_`-named member it has no ledger field entry: no read-side field, export
+  field or catalogue view. It is march state, read only by the kernel. In the generated WGSL it is bits 16–31 of
+  `closure_step_reserved` (R-343), for which no accessor is emitted.
 
 ---
 

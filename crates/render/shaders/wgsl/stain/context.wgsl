@@ -6,14 +6,31 @@
 // A field on a wire (render_gui_spec Part II §3): a scalar or categorical value in `.x`, a vector in `.xyz`.
 alias Field = vec4<f32>;
 
+// colour_composition §3's screen lane as the stain reads it: the pixel's post-flip UV in the target (TASK-M1-07).
+struct CtxScreen {
+    uv: vec2<f32>,
+}
+
+// colour_composition §3's quad lane as the stain reads it: the sample's quad-local coordinate `uv` (t, deep_zoom §1),
+// and the quad's `centre` and `half_width`, deep_zoom §1's per-quad c and h (the synthetic harness's at M1;
+// TASK-M1-07).
+struct CtxQuad {
+    uv: vec2<f32>,
+    centre: vec2<f32>,
+    half_width: vec2<f32>,
+}
+
 // What every node reads (render contract Part 1): the sample's read-side `SimState`, its `ICDescriptor` (`ic`, only
-// the members the stain reads filled; RQ-227), the pixel's position for the invalid hatch (`debug_invalid`), the node's
-// wired fields, `inputs[k]` its k-th field input, and the read side's arguments, `params`, the uniforms the sample was
-// read with, whose `horizon_steps` places a step index on `[0, horizon_steps]` (render_gui_spec §10.1; TASK-M1-09).
+// the members the stain reads filled; RQ-227), the pixel's position for the invalid hatch (`debug_invalid`), its
+// screen and quad lanes, the node's wired fields, `inputs[k]` its k-th field input, and the read side's arguments,
+// `params`, the uniforms the sample was read with, whose `horizon_steps` places a step index on `[0, horizon_steps]`
+// (render_gui_spec §10.1; TASK-M1-09).
 struct Ctx {
     sample: SimState,
     ic: ICDescriptor,
     frag_xy: vec2<f32>,
+    screen: CtxScreen,
+    quad: CtxQuad,
     inputs: array<Field, 4>,
     params: ReadParams,
 }

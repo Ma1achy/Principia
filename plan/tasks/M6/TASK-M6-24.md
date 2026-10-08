@@ -57,6 +57,7 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
 - `decisions.md` § "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
 - `decisions.md` § "R-329 — The header's core count is `cpu_cores_available`; no `usize` in a serialised type"
 
+- `decisions.md` § "R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*"
 ## Deliverables
 - `crates/engine/src/contract/`: the interface the GUI calls, as a trait — apply a `SetField`, read the latest
   snapshot, request undo and redo; the events are read from the snapshot — as plain data (gui_state_contract §1), with the real engine's
@@ -85,7 +86,8 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   membrane crossing is added (systems_architecture §6 invariant 10); R-54's flags stay in the snapshot; both engines
   log each applied `SetField` as an `info` entry from `contract`; the footer counts warnings and errors since the
   session began, until TASK-M6-28's "clear" resets them). Schema v1 is unchanged.
-- `crates/gui/src/mock/`: the mock engine, compiled under the `mock` feature and in gui's tests; the fake clock's time
+- `crates/gui/src/mock/`: the mock engine, always compiled, with the capture path, `MockSide` and `cli::mock`, the
+  `mock` feature choosing only which engine `main` runs (RQ-252 as amended per R-369); the fake clock's time
   source, a deterministic tick the app's clock reads, frozen at a fixed `t` in capture mode, its rate and `dt` named
   mock constants (placeholder content, not corpus values; RQ-246); the mock reads no `ViewUI`; its implementation of the
   canvas trait and its stand-in figure (smooth procedural noise, nothing from `workbench/`); a way for tests and the
@@ -125,9 +127,10 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   "01_main", "steps": [...] }`, whose steps are a closed list (`f3`, `raise_warning`, `raise_error`, `click_footer`);
   the runner spawns `cargo run --quiet -p gui --features mock -- capture --screen … --steps … --out <case dir>`, as
   `gate` spawns validation's binary, and reads the PNG and the names back. No crate depends on `gui`.
-- CI and configuration for the `mock` feature (RQ-252): `.github/workflows/ci.yml`'s `cargo nextest archive` and
-  `cargo clippy` steps gain `--features gui/mock`; `.cargo/mutants.toml` gains `features = ["gui/mock"]`;
-  `.config/nextest.toml` puts `screenshot_gui_surface` in the `ci-workspace` profile, and `xtask/tests/nextest.rs`
+- CI and configuration for the `mock` feature (RQ-252 as amended per R-369, option (c)): none. The mock is always
+  compiled, so qa's tests in `crates/gui/tests/`, clippy and cargo-mutants reach it without a flag;
+  `.github/workflows/ci.yml` changes no line, `.cargo/mutants.toml` gains no `features` key, and no qa pin on ci.yml's
+  text changes. `.config/nextest.toml` puts `screenshot_gui_surface` in the `ci-workspace` profile, and `xtask/tests/nextest.rs`
   still checks that the profiles together run every test. gui's GPU tests read `PRIN_GPU_BACKEND` as R-206 gives it
   and log the backend chosen.
 - Screenshot cases `01_main/mock_shell`, `01_main/mock_f3_off`, `01_main/mock_footer`, `01_main/mock_warning`.
@@ -195,6 +198,8 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   physics reviewer's approval. R-390's three reviewers, code, qa and gui, cover everything else. This is the gate rule
   applied alongside R-390 ("Reviewers: code, qa and gui"), flagged for the human (applied per R-369); it changes
   nothing that gets built.
+- **R-396** settles it: physics reviews this task for REQ-GUI-176 and -177 only, and code, qa and gui review everything
+  else. `plan/tasks.yaml` cites R-396 beside the reviewer list.
 - Carrying the log entries in the profiler's schema-v1 stream stays TASK-M8-27's (REQ-GUI-126 on the real engine).
 - Pre-flight (R-388): RQ-243 to RQ-256, decided per R-369 (7 Oct 2026), shape this file's Goal, Deliverables,
   acceptance lines, Notes and References.

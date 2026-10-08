@@ -1,9 +1,12 @@
 //! `SetField`, the typed edit `setField(path, value)` (gui_state_contract §1, §2): the only way in. A GUI emits it
 //! as plain data and never mutates engine state directly. Every `SimConfig` and `RenderState` edit is undoable
 //! (R-69); `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they
-//! name (R-133); at M0 there are none.
+//! name (R-133): the first is the playhead's, `RenderField::Playhead` (RQ-243).
+
+use crate::contract::render_state::Playhead;
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
+#[derive(Clone, Debug, PartialEq)]
 pub struct SetField {
     /// The field edited, and its new value.
     pub edit: Edit,
@@ -12,6 +15,7 @@ pub struct SetField {
 }
 
 /// The field path, by surface, carrying its value (gui_state_contract §2).
+#[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
     /// A `SimConfig` field: re-integrates.
     Sim(SimField),
@@ -19,8 +23,13 @@ pub enum Edit {
     Render(RenderField),
 }
 
-/// A `SimConfig` field with its value; no path is named at M0 (R-133).
+/// A `SimConfig` field with its value; no path is named yet (R-133).
+#[derive(Clone, Debug, PartialEq)]
 pub enum SimField {}
 
-/// A `RenderState` field with its value; no path is named at M0 (R-133).
-pub enum RenderField {}
+/// A `RenderState` field with its value (gui_state_contract §2; R-133).
+#[derive(Clone, Debug, PartialEq)]
+pub enum RenderField {
+    /// The playhead `t` (RQ-243): the GUI's no-history clock advance (R-101) and a scrub (R-96) both write it.
+    Playhead(Playhead),
+}

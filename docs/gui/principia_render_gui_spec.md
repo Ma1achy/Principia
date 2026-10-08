@@ -678,9 +678,9 @@ floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts
 `raw` is the field's value compacted per its ledger scale: `lin` and `diverging` the identity; `log`
 `1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on the fixed `[0, 1]`; `cyclic` `fract(x / period)` on the fixed
 `[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`. **The cyclic period is one turn, 2π:** a cyclic
-field is an angle in radians (REQ-TOOL-159). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
+field is an angle in radians (REQ-TOOL-161). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
 log floor ε** of a field with no ledger `floor` is a calibration, proposed 2⁻²⁴, f16's smallest positive subnormal
-(REQ-TOOL-158). `[lo, hi]` is the ledger range's finite ends; a step index's is `[0, horizon_steps]`; a `diverging`
+(REQ-TOOL-160). `[lo, hi]` is the ledger range's finite ends; a step index's is `[0, horizon_steps]`; a `diverging`
 field's range is symmetric about 0. An end with no finite bound takes the measured end, and a field whose ledger range
 is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,

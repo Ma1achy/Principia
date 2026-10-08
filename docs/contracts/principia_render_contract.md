@@ -173,6 +173,8 @@ other library file as the prelude's continuation, since it follows the prelude a
 
 **Per-member loads (R-378):** the generated read side loads only the stored members each field needs (`simstate_buffer[i].packed_a`, `simstate_buffer[i].S`, …), never the whole stored struct in one load, so unused data is never fetched on any backend; this replaces the whole-struct `sample_state(i)` above, and each buffer is still read only by the generated layer, at the same `i` for both. A word field likewise loads only the components of `word_buffer[i]` it needs (applied per R-369). The physics review confirms, from the compiled shader output, that a stain reading one field loads only that field's words.
 
+**`closure_step_reserved` bits 16–31 (R-397):** the `_reserved` half of the u32 above is `θ̃`'s frozen pole reference, a u16 code in steps of `2π/65535` with 0xFFFF for "no reference" (payload §2; dd_integrator §3.7). It is march state, read only by the kernel when a march resumes; as a `_`-named member it has no ledger field entry, so no accessor is emitted for it, the read side never loads it, and no debug view shows it. `closure_step(w)` still reads bits 0–15 only.
+
 ### Presentation layer (hand-written, small, reused by every debug view)
 
 ```wgsl

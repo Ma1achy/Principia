@@ -162,7 +162,7 @@ fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
             "{{\"frames\":{},",
-            "\"render\":{{\"overlays\":{{}},\"palette\":{{}},\"playhead\":{{}},\"stain_graph\":{{}}}},",
+            "\"render\":{{\"overlays\":{{}},\"palette\":{{}},\"playhead\":{{\"t\":0}},\"stain_graph\":{{}}}},",
             "\"scenario\":\"synthetic_frames\",",
             "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{}},\"integrator\":{{}},",
             "\"kernel_variant\":\"physics\",\"links\":{{}},",
