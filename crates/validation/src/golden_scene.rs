@@ -2,7 +2,7 @@
 //! TASK-M1-09): a scene is a synthetic payload set (`engine::synthetic`, TASK-M1-06), its context uniforms, and the
 //! colour occupant it is rendered through, a debug catalogue view or a field ramp, with the node's params. `cargo xtask
 //! golden` renders a case of the harness kind by spawning the `golden_harness` binary, which renders the scene named in
-//! the case's `case.json` through the render harness (`render::bind::stain_module` and `upload`) and writes the
+//! the case's `case.json` through the render harness (`render::bind::preset_module` and `upload`) and writes the
 //! `Rgba32Float` image; the runner quantises and compares it in its own pass, as for every case (REQ-VAL-138).
 //!
 //! Every scene is a row of samples, one quad each (`N = 1`, `E = 0`), each tile 8 px square, so sample `i` covers the
@@ -430,7 +430,7 @@ impl Scene {
         Ok(out)
     }
 
-    /// Renders the scene through the render harness (`render::bind::stain_module` and `upload`) into an
+    /// Renders the scene through the render harness (`render::bind::preset_module` and `upload`) into an
     /// `Rgba32Float` target, the colour node's uniform block holding its params ([`Scene::params`]) over its
     /// declared defaults, and returns each pixel's RGBA, rows from the top.
     pub fn render(
@@ -439,7 +439,7 @@ impl Scene {
         queue: &wgpu::Queue,
     ) -> Result<Vec<[f32; 4]>, String> {
         let fragment = assemble::assemble(&self.stain()?, Tier::FULL).map_err(|e| e.to_string())?;
-        let module = bind::stain_module(&fragment.source);
+        let module = bind::preset_module(&fragment.source);
         let bytes = self.set.bytes();
         let bound = bind::upload(device, &bytes.payload(), &self.context);
         let params = self.params()?;
@@ -510,7 +510,7 @@ impl Scene {
             queue,
             &Draw {
                 module: &module,
-                entry: bind::STAIN_ENTRY,
+                entry: bind::PRESET_ENTRY,
                 layouts: &[&layout, l1, l2],
                 groups: &[&group, g1, g2],
             },
