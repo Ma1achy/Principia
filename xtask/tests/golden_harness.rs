@@ -47,6 +47,12 @@ fn golden_harness_config_names_a_scene() {
         "`render.constants` is not a render field",
     );
     check_refused(
+        json!({ "harness": "ftle", "width": 64, "height": 8, "prepend": ["lib/coords.wgsl"] }),
+        "`render.prepend` is not a render field",
+    );
+    let prepended = json!({ "shader": "a.wgsl", "fragment": "f", "width": 1, "height": 1, "prepend": ["lib/coords.wgsl"] });
+    assert_eq!(config(prepended).map(|c| c.harness().is_none()), Ok(true));
+    check_refused(
         json!({ "harness": 3, "width": 64, "height": 8 }),
         "`render.harness` is not a string",
     );
