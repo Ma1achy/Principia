@@ -42,3 +42,7 @@ justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages
 [[equivalent]]
 mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_buffers"
 justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/validation/src/golden_scene.rs:237:32: replace | with ^ in d_min_samples"
+justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 only, so their ^ is their |"
