@@ -9342,6 +9342,8 @@
   - R-114
   - R-136
   milestone: M1
+  rq:
+  - RQ-260
   note: "R-114: render_gui_spec §10.1's `raw != raw` is dropped. R-113 (RQ-94): the node-inspector leg of RANGE_AUTO is in REQ-GUI-136's verify (M8). RQ-231, decided per R-369: raw is the field's compacted value per its ledger scale (lin identity, log the floor form as dbg_log places it, cyclic fract(x/period) on [0, 1] with ramp_twilight, diverging a symmetric range); an unbounded field defaults to RANGE_AUTO = 1; ramp is ramp_viridis; the drift views keep R-381's default; RANGE_AUTO is a u32 @uniform in the view's header, whose default the generator writes from the node's param and Declaration::parse reads back."
 - id: REQ-RENDER-023
   area: RENDER
@@ -10554,6 +10556,9 @@
     detail: "the default ramp registry returns the stated ramp and polarity per field role"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-259
+  - RQ-260
 - id: REQ-COL-017
   area: COL
   statement: "The combinators mix_const, mix_field, bandmask and site_overlay must exist as vec3(+ctx) → vec3 operations, and the physics overlay must be site_overlay over a SiteBlend with physics sites, vmf(κ) kernel, per-site colours and per-blob strength s."
@@ -11204,6 +11209,8 @@
   - R-71
   - R-96
   milestone: M1
+  rq:
+  - RQ-259
   note: "RQ-233, decided per R-369: proposed by TASK-M1-09, the first task that needs the grey (R-280's d_min view), as one named constant in the presentation layer (present.wgsl and its CPU mirror); TASK-M1-10 reads it."
 - id: REQ-COL-054
   area: COL
