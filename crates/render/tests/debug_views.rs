@@ -319,20 +319,6 @@ negative_control!(
     }
 );
 
-/// The live shape view before it hatched an undefined `n` or `θ̃`: mode 0 the raw `½(n + 1)`, mode 1 unguarded.
-const LIVE_SHAPE_UNGUARDED: &str = "// @uniform u_mode: u32 = 0 [0, 2]
-fn colour(ctx: Ctx) -> vec3<f32> {
-    let n = ctx.sample.n;
-    if (uniforms.u_mode == 0u) {
-        return 0.5 * (n + vec3<f32>(1.0));
-    }
-    if (uniforms.u_mode == 1u) {
-        return ramp_twilight(fract(ctx.sample.theta / 6.2831855));
-    }
-    return dbg_sentinel(length(n) - 1.0, ctx.frag_xy);
-}
-";
-
 /// Checks that the live shape view, `wgsl` at each mode, draws the hatch where its value is undefined, on the showcase
 /// set with three samples broken: sample 1 coincident at the origin (`I = 0`, so `n = 0/0`), sample 2's `θ̃` the absence NaN and
 /// sample 3's `+inf`. Modes 0 and 2 hatch sample 1, mode 1 samples 2 and 3; every other tile is no hatch.
@@ -384,7 +370,21 @@ negative_control!(
     debug_views_live_shape_hatches_undefined,
     "the view before its guards, which colours an undefined n and θ̃",
     expected = "mode 0: sample 1 draws a colour, not the hatch",
-    check_live_shape_undefined(LIVE_SHAPE_UNGUARDED)
+    // The live shape view before it hatched an undefined `n` or `θ̃`: mode 0 the raw `½(n + 1)`, mode 1 unguarded.
+    check_live_shape_undefined(
+        "// @uniform u_mode: u32 = 0 [0, 2]
+fn colour(ctx: Ctx) -> vec3<f32> {
+    let n = ctx.sample.n;
+    if (uniforms.u_mode == 0u) {
+        return 0.5 * (n + vec3<f32>(1.0));
+    }
+    if (uniforms.u_mode == 1u) {
+        return ramp_twilight(fract(ctx.sample.theta / 6.2831855));
+    }
+    return dbg_sentinel(length(n) - 1.0, ctx.frag_xy);
+}
+"
+    )
 );
 
 /// Checks the `last_symbol` view, `colouring`, on the showcase set: the empty word (sample 0) and the truncated word
