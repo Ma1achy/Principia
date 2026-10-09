@@ -420,7 +420,8 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 /// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or
 /// NaN; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words
 /// (one empty, one truncated) and `ICDescriptor`s, the masses positive and summing to 1, `θ̃` away from every
-/// multiple of 2π. A nonzero `nudge`, at most 6, moves the stepped samples' values a little and unevenly, so that no
+/// multiple of 2π. Each shadow sits `off = 10⁻⁶·(5 + 40·f)` from its state: `r_sh` ahead of `r` by `off` in body 0's
+/// x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in body 2's x. A nonzero `nudge`, at most 6, moves the stepped samples' values a little and unevenly, so that no
 /// auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on sample `i`'s index in the values' formulas, on `θ̃` and on
 /// `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to the first and third; `nudge·(i mod 3)` steps on
 /// `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`. The states and words are unchanged, and the sample stepped 3

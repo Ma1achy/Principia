@@ -1,7 +1,8 @@
 //! The debug views' scenes (`validation::golden_scene::debug_scene`; RQ-229, RQ-237; TASK-M1-12): each `debug-views`
 //! case renders, quantised to 8 bits as the golden runner's shader quantises it (clamped, `· 255`, half to even;
 //! R-287), to its checked-in reference, `fixtures/golden/debug-views/<case>/reference.png`, byte for byte; so each
-//! scene holds the samples its reference was made from. What the renders mean is `render/tests/debug_views.rs`'s.
+//! scene holds the samples its reference was made from; and the showcase's shadows sit off their states as documented,
+//! a displacement too small to show at 8 bits. What the renders mean is `render/tests/debug_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -103,4 +104,48 @@ negative_control!(
             debug_scene(c).unwrap_or_else(|e| panic!("{e}"))
         });
     }
+);
+
+/// Checks that each sample of the showcase sits its shadow off its state as `showcase` documents, `sign` the sense of
+/// each displacement (1 ahead, −1 behind): `r_sh` ahead of `r` in body 0's x and behind in body 1's y, `p_sh` ahead of
+/// `p` in body 2's x, every other component equal.
+fn check_shadows(sign: [f32; 3]) {
+    let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
+    let s = debug_scene(case).unwrap_or_else(|e| panic!("{e}"));
+    for i in 0..8 {
+        let st = s.set.simstate(i);
+        let mut dr = [[0f32; 2]; 3];
+        let mut dp = [[0f32; 2]; 3];
+        for b in 0..3 {
+            for c in 0..2 {
+                dr[b][c] = st.r_sh[b][c] - st.r[b][c];
+                dp[b][c] = st.p_sh[b][c] - st.p[b][c];
+            }
+        }
+        let moved = [dr[0][0], dr[1][1], dp[2][0]];
+        for (k, (d, s)) in moved.iter().zip(sign).enumerate() {
+            assert!(
+                d * s > 0.0,
+                "sample {i}: displacement {k} of the shadow is {d}, not of sign {s}"
+            );
+        }
+        (dr[0][0], dr[1][1], dp[2][0]) = (0.0, 0.0, 0.0);
+        assert_eq!(
+            (dr, dp),
+            ([[0.0; 2]; 3], [[0.0; 2]; 3]),
+            "sample {i}: another component moved"
+        );
+    }
+}
+
+#[test]
+fn debug_scenes_showcase_shadows_lead_and_trail() {
+    check_shadows([1.0, -1.0, 1.0]);
+}
+
+negative_control!(
+    debug_scenes_showcase_shadows_lead_and_trail,
+    "body 1's shadow expected ahead in y",
+    expected = "displacement 1 of the shadow",
+    check_shadows([1.0, 1.0, 1.0])
 );

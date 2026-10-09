@@ -1023,3 +1023,40 @@ negative_control!(
         check_undefined(&cases);
     }
 );
+
+/// Checks that `dbg_hash_u32` of each of `values` draws, on the GPU, `twin`'s colour of it.
+fn check_hash_u32(values: &[u32], twin: fn(u32) -> Rgb) {
+    let h = gpu();
+    for &v in values {
+        let wgsl = format!("fn colour(ctx: Ctx) -> vec3<f32> {{ return dbg_hash_u32({v}u); }}\n");
+        let s = row_scene("a hashed word", 1, Colouring::Probe(wgsl, Vec::new()))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let image = render(&h, &s);
+        check_tile(
+            &s,
+            &image,
+            0,
+            &|_| twin(v),
+            &format!("dbg_hash_u32({v})'s twin"),
+        );
+    }
+}
+
+#[test]
+fn word_hash_and_symbol_at_k_hash_u32_shares_the_byte_step() {
+    for v in [0u32, 1, 0xdead_beef, u32::MAX] {
+        assert_eq!(
+            present::dbg_hash_u32(v),
+            present::dbg_bytes_rgb(present::pcg(v)),
+            "dbg_hash_u32({v}) is not the PCG hash's byte step"
+        );
+    }
+    check_hash_u32(&[0, 1, 0xdead_beef, u32::MAX], present::dbg_hash_u32);
+}
+
+negative_control!(
+    word_hash_and_symbol_at_k_hash_u32_shares_the_byte_step,
+    "a twin that hashes the next word",
+    expected = "dbg_hash_u32(0)'s twin",
+    check_hash_u32(&[0], |v| present::dbg_hash_u32(v.wrapping_add(1)))
+);
