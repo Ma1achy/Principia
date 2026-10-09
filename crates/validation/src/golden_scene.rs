@@ -501,7 +501,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .closure_min(10f32.powf(at(-4.0, 0.6)))
             .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
             .state(STATES[k])
-            .detail(i % 4)
+            .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
             .saturated(i % 3 == 1)
             .dmin_pair(if i == 0 { 3 } else { i % 3 })
             .times(

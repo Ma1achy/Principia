@@ -8,7 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
-use validation::golden_scene::{debug_cases, debug_scene, scene, DebugCase, DEBUG_SUITE};
+use validation::golden_scene::{appended, debug_cases, debug_scene, scene, DebugCase, DEBUG_SUITE};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -148,4 +148,55 @@ negative_control!(
     "body 1's shadow expected ahead in y",
     expected = "displacement 1 of the shadow",
     check_shadows([1.0, 1.0, 1.0])
+);
+
+/// Checks `appended`'s last symbol: none for the empty word, nor for a word whose appends cancel back to it, and the
+/// last symbol appended otherwise; `last` is the reference.
+fn check_appended(last: fn(&[u32]) -> Option<u32>) {
+    for symbols in [
+        &[][..],
+        &[2, 3],
+        &[0, 1, 2, 3],
+        &[1],
+        &[0, 2, 3],
+        &[3, 3, 0],
+    ] {
+        let (word, got) = appended(symbols);
+        assert_eq!(
+            got,
+            last(symbols),
+            "{symbols:?}: the last symbol is {got:?}"
+        );
+        let empty = appended(&[]).0;
+        assert_eq!(
+            word == empty,
+            last(symbols).is_none(),
+            "{symbols:?}: the word is {word:?}"
+        );
+    }
+}
+
+/// The last symbol of `symbols` once freely reduced (`a = 0, A = 1, b = 2, B = 3`, each `s ^ 1` its inverse).
+fn reduced_last(symbols: &[u32]) -> Option<u32> {
+    let mut out: Vec<u32> = Vec::new();
+    for &s in symbols {
+        if out.last() == Some(&(s ^ 1)) {
+            out.pop();
+        } else {
+            out.push(s);
+        }
+    }
+    out.last().copied()
+}
+
+#[test]
+fn debug_scenes_appended_words_end_in_their_last_symbol() {
+    check_appended(reduced_last);
+}
+
+negative_control!(
+    debug_scenes_appended_words_end_in_their_last_symbol,
+    "a reference that does not reduce, so `bB` keeps its `B`",
+    expected = "[2, 3]: the last symbol is None",
+    check_appended(|s| s.last().copied())
 );
