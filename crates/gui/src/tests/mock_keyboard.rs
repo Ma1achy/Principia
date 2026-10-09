@@ -988,6 +988,23 @@ fn mock_keyboard_held_key_dropped_when_hidden_or_unfocused() {
     rejects("a held Tab that repeats", || only_top_bar(&repeating));
 }
 
+/// A frame the hidden layer does not run asks for no adjustment: the shown frame's, an arrow held on a value, is not
+/// reported again once F3 hides the layer.
+#[test]
+fn mock_keyboard_hidden_layer_reports_no_adjustment() {
+    let (mut app, mut h) = zoom_app();
+    let _ = h.frame(&mut app, vec![key_event(Key::ArrowUp, true)]);
+    let shown = app.keyboard.adjusted().len();
+    assert_eq!(shown, 1);
+    let check = |n: usize| assert_eq!(n, 0, "{n} adjustments reported with the layer hidden");
+    let _ = h.frame(&mut app, vec![key_event(Key::F3, true)]);
+    assert!(!app.shown);
+    check(app.keyboard.adjusted().len());
+    let _ = h.frame(&mut app, vec![key_event(Key::F3, false)]);
+    check(app.keyboard.adjusted().len());
+    rejects("the shown frame's adjustment", || check(shown));
+}
+
 // --- The `?` overlay takes the pointer --------------------------------------------------------------------------
 
 /// While the overlay is open no click reaches beneath: a click outside its frame, on Stain or on the footer, closes

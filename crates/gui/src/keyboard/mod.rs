@@ -202,8 +202,10 @@ impl Keyboard {
         }
     }
 
-    /// The layer is hidden (F3): it forgets the keys it took and holds, so none repeats once it is shown again.
+    /// The layer is hidden (F3): it forgets the keys it took and holds, so none repeats once it is shown again, and
+    /// a frame it does not run asks for no adjustment.
     pub fn stand_down(&mut self) {
+        self.adjusted.clear();
         self.pending.clear();
         self.down.clear();
         self.swallowed.clear();
