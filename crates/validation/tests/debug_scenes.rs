@@ -47,13 +47,13 @@ fn quantise(pixels: &[[f32; 4]]) -> Vec<u8> {
         .collect()
 }
 
-/// Checks that each of `cases`, rendered as `scene_of` builds it, is its reference byte for byte.
+/// Checks that each of `cases`, rendered as `scene_of` builds it, is its reference byte for byte, stopping at the
+/// first that is not.
 fn check_references(
     cases: &[DebugCase],
     scene_of: &dyn Fn(&'static DebugCase) -> validation::golden_scene::Scene,
 ) {
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
-    let mut differ = Vec::new();
     for c in cases {
         let case: &'static DebugCase = Box::leak(Box::new(c.clone()));
         let s = scene_of(case);
@@ -67,15 +67,12 @@ fn check_references(
             "`{}`: the reference is another size",
             c.name
         );
-        if quantise(&image) != want {
-            differ.push(c.name.clone());
-        }
+        assert!(
+            quantise(&image) == want,
+            "`{}`'s render differs from its reference",
+            c.name
+        );
     }
-    assert!(
-        differ.is_empty(),
-        "renders differing from their references: {}",
-        differ.join(", ")
-    );
 }
 
 #[test]
@@ -92,7 +89,7 @@ fn debug_scenes_render_their_references() {
 negative_control!(
     debug_scenes_render_their_references,
     "every case rendered at the next nudge",
-    expected = "renders differing from their references: accumulators-diffusion_slope",
+    expected = "`accumulators-diffusion_slope`'s render differs from its reference",
     {
         let cases: Vec<DebugCase> = debug_cases()
             .unwrap_or_else(|e| panic!("{e}"))

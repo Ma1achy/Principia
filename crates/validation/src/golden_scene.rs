@@ -453,7 +453,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
     for i in 0..8u32 {
         let k = i as usize;
         // Uneven over the samples, so that no auto range absorbs the nudge.
-        let t_nudge = if i > 0 { nudge * (i % 3) } else { 0 };
+        let t_nudge = nudge * (i % 3);
         let g = if i > 0 {
             0.0137 * (nudge * (1 + i % 3)) as f32
         } else {
