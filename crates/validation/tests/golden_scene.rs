@@ -757,3 +757,42 @@ negative_control!(
         render::colour::outcome::WGSL.to_owned()
     ))
 );
+
+/// Checks that scene `name`'s samples read `(state, detail)` as `want` gives them.
+fn check_codes(name: &str, want: &[(u32, u32)]) {
+    let s = named(name);
+    let got: Vec<(u32, u32)> = (0..s.context.grid.sample_count())
+        .map(|i| {
+            let r = s.read(i);
+            (r.state, r.detail)
+        })
+        .collect();
+    assert_eq!(got, want, "`{name}`'s states and details");
+}
+
+/// The raw `state` view's scene holds one sample per state, 0–5, each with a different `detail` code from its
+/// neighbours' (`i mod 4`), so the view's six colours are shown not to follow `detail`; the `detail` view's holds every
+/// code of each state with a meaning, then bounded and running.
+#[test]
+fn golden_scene_state_and_detail_samples() {
+    check_codes(
+        "state_view",
+        &[(0, 0), (1, 1), (2, 2), (3, 3), (4, 0), (5, 1)],
+    );
+    let mut want: Vec<(u32, u32)> = [0, 2, 4, 5]
+        .into_iter()
+        .flat_map(|s| (0..4).map(move |d| (s, d)))
+        .collect();
+    want.extend([(1, 2), (3, 1)]);
+    check_codes("detail_view", &want);
+}
+
+negative_control!(
+    golden_scene_state_and_detail_samples,
+    "the state view's samples taken to share detail code 0",
+    expected = "`state_view`'s states and details",
+    check_codes(
+        "state_view",
+        &[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
+    )
+);

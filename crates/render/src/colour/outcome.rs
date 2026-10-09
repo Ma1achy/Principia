@@ -133,15 +133,6 @@ pub fn shown(state: u32, detail: u32, t_end_step: u32) -> Shown {
     }
 }
 
-/// [`shown`]'s linear RGB at the pixel `frag_xy`, the swatches `swatches` (8-bit sRGB, in [`SWATCHES`]' order).
-pub fn colour(shown: Shown, swatches: &[[u8; 3]], frag_xy: [f64; 2]) -> Rgb {
-    match shown {
-        Shown::Swatch(k) => present::srgb8(swatches[k]),
-        Shown::Running => present::not_yet(),
-        Shown::Invalid => present::debug_invalid(frag_xy),
-    }
-}
-
 /// The default swatches' 8-bit sRGB colours, in [`SWATCHES`]' order.
 pub fn defaults() -> Vec<[u8; 3]> {
     SWATCHES.iter().map(|s| s.srgb8).collect()
