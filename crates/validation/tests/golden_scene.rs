@@ -17,7 +17,7 @@ fn named(name: &str) -> Scene {
     scene(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride.
+/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat.
 fn kind(l: Look) -> char {
     match l {
         Look::Invalid => 'I',
@@ -25,18 +25,19 @@ fn kind(l: Look) -> char {
         Look::NotYet => 'N',
         Look::Ramp { .. } => 'R',
         Look::Override => 'O',
+        Look::Flat(_) => 'F',
     }
 }
 
-/// The kinds of `s`'s eight samples.
+/// The kinds of `s`'s samples.
 fn kinds(s: &Scene) -> String {
-    (0..8)
+    (0..s.context.grid.sample_count())
         .map(|i| kind(s.look(i).unwrap_or_else(|e| panic!("{e}"))))
         .collect()
 }
 
 /// Each scene: its field and its samples' kinds.
-const SCENES: [(&str, &str, &str); 10] = [
+const SCENES: [(&str, &str, &str); 14] = [
     ("ftle", "ftle", "IIRRRRRR"),
     ("diffusion", "diffusion", "IIRRRRRR"),
     ("de_max_failed", "dE_max", "RRRRRRRR"),
@@ -47,6 +48,10 @@ const SCENES: [(&str, &str, &str); 10] = [
     ("length_ramp_override", "length", "RRRRRRRO"),
     ("d_min_ramp", "d_min", "NNIRRRRR"),
     ("d_min_ramp_override", "d_min", "NNORRRRR"),
+    ("outcome", "state", "FFFFFFFFFFFNIF"),
+    ("outcome_edited", "state", "FFFFFFFFFFFNIF"),
+    ("state_view", "state", "FFFFFF"),
+    ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
 ];
 
 /// Checks that scene `name` colours `field` and shows `want`'s kinds.
@@ -57,7 +62,7 @@ fn check_scene(name: &str, field: &str, want: &str) {
     let view = matches!(s.colouring, Colouring::View(_));
     assert_eq!(
         view,
-        !name.contains("ramp"),
+        !name.contains("ramp") && !name.starts_with("outcome"),
         "`{name}` is coloured by a view: {view}"
     );
     assert_eq!(
