@@ -446,6 +446,11 @@ fn check_detail(p: &Probe) {
         2,
         "`detail` does not read back the value stored",
     );
+    expect(
+        read.state,
+        3,
+        "`detail`'s key `state` does not read back the value stored",
+    );
 }
 
 #[test]
