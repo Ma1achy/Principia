@@ -6990,8 +6990,9 @@ human raised it from the M1 gate's list, with no RQ, in their own words ("This i
   which built the single ε R-401 replaces) to TASK-M1-17, which proposes the floors and builds them; TASK-M1-09's
   Closes line and a Notes line say so.
 - **The evidence**, per field: where its stored values fall under the proposed floor on M1's fixtures, and why the
-  floor sits where it does in the field's units, as REQ-TOOL-160's verify asked for the single ε. Where each floor
-  lives (the ledger's presentation metadata or a named constant per field) is TASK-M1-17's design choice, reviewed.
+  floor sits where it does in the field's units, as REQ-TOOL-160's verify asked for the single ε. Each floor is a
+  named presentation constant per field, read by the template; not §3.8's `floor?` key, which R-263 gives a sim-key
+  parameter (the drifts' `eps_E` and `eps_L`), since a display floor is not on the sim key.
 - The drifts' floors, `eps_E` and `eps_L` (sim-key parameters, R-263), are unchanged.
 - render_gui_spec §10.1's "proposed 2⁻²⁴" sentence is reworded to the per-field floors, citing R-401.
 - R-401 is in the "physics" group of `plan/rule_groups.yaml`, as the orchestrator grouped it.
