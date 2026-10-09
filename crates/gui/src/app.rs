@@ -231,10 +231,11 @@ impl<S: EngineSide> App<S> {
             return;
         }
         let mut actions = Actions::default();
-        let activated = self.keyboard.run(self.view.mode, &mut self.view.focus, now);
+        let activated = self
+            .keyboard
+            .run(&ctx, self.view.mode, &mut self.view.focus, now);
         for id in activated {
-            let place = self.keyboard.place_of(id);
-            explore::top_bar::activate(&ctx, id, place, &mut actions);
+            explore::top_bar::activate(id, &mut actions);
         }
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));

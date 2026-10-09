@@ -41,6 +41,9 @@ pub struct Scope {
     pub activates: bool,
     /// Where its ring is drawn.
     pub ring: Ring,
+    /// Whether it is a menu: its sub-scopes are the entries of a popup drawn from its widget, open while the focus is
+    /// in it.
+    pub menu: bool,
 }
 
 impl Scope {
@@ -52,7 +55,21 @@ impl Scope {
             arrows: Arrows::Siblings,
             activates: false,
             ring: Ring::Inside,
+            menu: false,
         }
+    }
+
+    /// A menu: Enter goes into its entries, registered under it, and opens it; Esc closes it, back to it.
+    pub const fn menu(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            menu: true,
+            ..Self::group(id, label)
+        }
+    }
+
+    /// A control drawn disabled: Enter does nothing on it.
+    pub const fn disabled(id: ScopeId, label: &'static str) -> Self {
+        Self::group(id, label)
     }
 
     /// A control that Enter activates.
@@ -224,6 +241,33 @@ impl ScopeTree {
     /// The rows the screens added to the `?` overlay, in registration order.
     pub fn shortcuts(&self) -> &[Shortcut] {
         &self.shortcuts
+    }
+
+    /// The parent of scope `id`: `None` for a big scope or an id the tree does not hold.
+    pub fn parent(&self, id: &str) -> Option<ScopeId> {
+        let i = self.index(id)?;
+        self.nodes[i].parent.map(|p| self.nodes[p].scope.id)
+    }
+
+    /// The path from a big scope down to scope `id`; empty for an id the tree does not hold.
+    pub fn path_to(&self, id: &str) -> Vec<String> {
+        let mut path = Vec::new();
+        let mut at = self.index(id);
+        while let Some(i) = at {
+            path.push(self.nodes[i].scope.id.to_owned());
+            at = self.nodes[i].parent;
+        }
+        path.reverse();
+        path
+    }
+
+    /// The menus, in registration order.
+    pub fn menus(&self) -> Vec<ScopeId> {
+        self.nodes
+            .iter()
+            .filter(|n| n.scope.menu)
+            .map(|n| n.scope.id)
+            .collect()
     }
 
     /// The scope `id`.

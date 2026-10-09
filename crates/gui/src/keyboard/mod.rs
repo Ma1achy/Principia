@@ -4,15 +4,17 @@
 //! breadcrumb (`explore::breadcrumb`), nothing else.
 //!
 //! The layer takes its keys from the raw input before egui sees them, so egui's own Tab and arrow focus never moves;
-//! it stands aside while an egui widget holds the keyboard (a text field) or a menu is open, which then has the keys.
-//! A key's release goes to whoever saw its press.
+//! it stands aside only while a text field holds the keyboard. A key's release goes to whoever saw its press. The
+//! menus are scopes too: the focus inside a menu opens it, and a menu the mouse opens takes the focus.
 
 pub mod keymap;
 pub mod overlay;
 pub mod repeat;
 pub mod scopes;
 
-use eframe::egui::{self, Event, Id, Key, Modifiers, PointerButton, RawInput, Rect, Response};
+use eframe::egui::{
+    self, Event, Id, Key, Modifiers, PointerButton, Popup, RawInput, Rect, Response,
+};
 use engine::contract::view_ui::{Focus, Mode};
 
 use keymap::Command;
@@ -59,6 +61,7 @@ pub struct Keyboard {
     /// Whether the `?` shortcuts overlay is open.
     pub shortcuts_open: bool,
     overlay_rect: Option<Rect>,
+    open_menu: Option<ScopeId>,
     adjusted: Vec<Adjust>,
 }
 
@@ -87,6 +90,7 @@ impl Keyboard {
             places: Vec::new(),
             shortcuts_open: false,
             overlay_rect: None,
+            open_menu: None,
             adjusted: Vec::new(),
         }
     }
@@ -107,15 +111,24 @@ impl Keyboard {
         }
     }
 
+    /// The menu the layer holds open, if any.
+    pub fn open_menu(&self) -> Option<ScopeId> {
+        self.open_menu
+    }
+
     /// Takes the table's keys out of `raw`, before egui's pass sees them, and the release of each key whose press it
-    /// took; the rest, and every key while an egui widget holds the keyboard or a menu is open (and the overlay is
-    /// closed), are egui's.
+    /// took; the rest, and every key while a text field holds the keyboard (and the overlay is closed), are egui's.
     /// The system's own repeats go with their press: the layer drops its own, as it repeats them itself. A lost
     /// window focus forgets the held keys. While the overlay is open it takes every click: a press outside its frame
     /// closes it.
     pub fn take_keys(&mut self, ctx: &egui::Context, raw: &mut RawInput) {
-        let aside = !self.shortcuts_open
-            && (ctx.memory(|m| m.focused().is_some()) || egui::Popup::is_any_open(ctx));
+        let aside = !self.shortcuts_open && ctx.text_edit_focused();
+        if !aside {
+            // A widget egui focused would draw itself active: the focus is the layer's alone.
+            if let Some(id) = ctx.memory(|m| m.focused()) {
+                ctx.memory_mut(|m| m.surrender_focus(id));
+            }
+        }
         let overlay = self.shortcuts_open.then_some(self.overlay_rect);
         let mut close_overlay = false;
         let Self {
@@ -203,9 +216,17 @@ impl Keyboard {
     }
 
     /// Runs the keys taken since the last frame, and the held key's repeats due by `now_s`, on `focus` in `mode`'s
-    /// tree. Returns the controls Enter activated; the adjustments are kept for [`Self::adjusted`].
-    pub fn run(&mut self, mode: Mode, focus: &mut Focus, now_s: f64) -> Vec<ScopeId> {
+    /// tree; follows a menu egui opened or closed since (the mouse's), and opens or closes the menus as the focus
+    /// leaves them. Returns the controls Enter activated; the adjustments are kept for [`Self::adjusted`].
+    pub fn run(
+        &mut self,
+        ctx: &egui::Context,
+        mode: Mode,
+        focus: &mut Focus,
+        now_s: f64,
+    ) -> Vec<ScopeId> {
         let now = repeat::millis(now_s);
+        self.follow_menus(ctx, mode, focus);
         let mut fired = Vec::new();
         for taken in std::mem::take(&mut self.pending) {
             let press = match taken {
@@ -249,13 +270,78 @@ impl Keyboard {
                 Mode::Explore => &self.explore,
                 Mode::Stain => &self.stain,
             };
+            let at_menu = self.open_menu.filter(|m| ends_at(&focus.path, m));
+            if command == Command::Back && at_menu.is_some() {
+                // Esc on an open menu's own control (one the mouse opened with nothing in it) closes it.
+                self.open_menu = None;
+                continue;
+            }
             match tree.navigate(&mut focus.path, command, keymap::multiplier(modifiers)) {
-                Outcome::Activate(id) => activated.push(id),
+                Outcome::Activate(id) => {
+                    activated.push(id);
+                    // An entry acts and its menu closes, the focus back on the menu, as a click on it does.
+                    if self.open_menu.is_some() && tree.parent(id) == self.open_menu {
+                        focus.path.pop();
+                        self.open_menu = None;
+                    }
+                }
                 Outcome::Adjust(adjust) => self.adjusted.push(adjust),
                 Outcome::None | Outcome::Moved => {}
             }
+            self.open_menu =
+                menu_holding(tree, &focus.path).or(at_menu.filter(|m| ends_at(&focus.path, m)));
         }
+        self.show_menus(ctx, mode);
         activated
+    }
+
+    /// The popup of menu `id`, drawn from its widget last frame.
+    fn popup_of(&self, id: &str) -> Option<Id> {
+        self.place_of(id)?.widget.map(|w| w.with("popup"))
+    }
+
+    /// A menu egui opened since the last frame (a click on it) takes the focus, on its first entry; one egui closed
+    /// (a click on an entry or outside it) gives the focus back to the menu's control.
+    fn follow_menus(&mut self, ctx: &egui::Context, mode: Mode, focus: &mut Focus) {
+        let tree = self.tree(mode);
+        let open = tree
+            .menus()
+            .into_iter()
+            .find(|m| self.popup_of(m).is_some_and(|p| Popup::is_id_open(ctx, p)));
+        if open == self.open_menu {
+            return;
+        }
+        match open {
+            Some(m) => {
+                focus.path = tree.path_to(m);
+                if let Some(first) = tree.children(Some(m)).first() {
+                    focus.path.push((*first).to_owned());
+                }
+            }
+            None => {
+                if let Some(m) = self.open_menu.filter(|m| focus.path.iter().any(|p| p == m)) {
+                    focus.path = tree.path_to(m);
+                }
+            }
+        }
+        self.open_menu = open;
+    }
+
+    /// Opens the menu the layer holds open, and closes every other.
+    fn show_menus(&self, ctx: &egui::Context, mode: Mode) {
+        for m in self.tree(mode).menus() {
+            let Some(popup) = self.popup_of(m) else {
+                continue;
+            };
+            let want = self.open_menu == Some(m);
+            if want != Popup::is_id_open(ctx, popup) {
+                if want {
+                    Popup::open_id(ctx, popup);
+                } else {
+                    Popup::close_id(ctx, popup);
+                }
+            }
+        }
     }
 
     /// The adjustments the arrows asked for this frame, in order, for the screens that own the values.
@@ -297,4 +383,18 @@ impl Keyboard {
             .find(|(i, _)| *i == id)
             .map(|(_, p)| *p)
     }
+}
+
+/// Whether `path` ends at scope `id`.
+fn ends_at(path: &[String], id: &str) -> bool {
+    path.last().is_some_and(|l| l == id)
+}
+
+/// The menu the focus is in: the innermost menu on `path` with one of its entries below it.
+fn menu_holding(tree: &ScopeTree, path: &[String]) -> Option<ScopeId> {
+    let above = path.len().saturating_sub(1);
+    path[..above]
+        .iter()
+        .rev()
+        .find_map(|id| tree.get(id).filter(|s| s.menu).map(|s| s.id))
 }

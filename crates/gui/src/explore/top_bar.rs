@@ -3,10 +3,12 @@
 //! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
+//! Each menu's entries are the menu's own sub-scopes: Enter opens it on its first entry, the arrows move between
+//! them, Enter on one acts as its click, and Esc closes the menu, back to its control.
 
 use eframe::egui::containers::menu::MenuButton;
 use eframe::egui::{
-    self, Align, Button, Layout as EguiLayout, Popup, Rect, Response, RichText, Ui, UiBuilder,
+    self, Align, Button, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
 };
 use engine::contract::render_state::Overlays;
 use engine::contract::snapshot::Snapshot;
@@ -14,7 +16,7 @@ use engine::contract::view_ui::Mode;
 
 use crate::app::Actions;
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
-use crate::keyboard::{Keyboard, Place};
+use crate::keyboard::Keyboard;
 
 /// The top bar's controls as keyboard scopes, in the order they are drawn: the menus, Overlays ▾, Run…, Profiler…,
 /// Export…, Help, and the mode switch's two sides.
@@ -34,24 +36,54 @@ pub const CONTROLS: [(ScopeId, &str); 10] = [
 /// The controls that open a menu.
 const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
 
-/// Joins the top bar to `tree` as big scope 1, its controls under it.
+/// The controls drawn disabled until their tasks: Enter does nothing on them.
+const DISABLED: [ScopeId; 3] = ["run", "profiler", "export"];
+
+/// File's Quit.
+pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
+/// View's entry that hides the layer, as F3 does.
+pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
+/// Help's entry that opens the `?` shortcuts (RQ-250).
+pub const KEYS: (ScopeId, &str) = ("help_keys", KEYS_ENTRY);
+/// The Windows menu's entries' scopes, one per [`WINDOWS`] name, each disabled until its task.
+pub const WINDOW_ENTRIES: [ScopeId; 5] = [
+    "windows_run",
+    "windows_profiler",
+    "windows_export",
+    "windows_display",
+    "windows_console",
+];
+
+/// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu.
+/// Overlays ▾ has no entry until the overlay set has its toggles, so Enter on it finds nothing to open.
 pub fn register(tree: &mut ScopeTree) {
     tree.register(None, Scope::group("top_bar", "Top bar"));
     for (id, label) in CONTROLS {
-        tree.register(Some("top_bar"), Scope::control(id, label));
+        let scope = if MENUS.contains(&id) {
+            Scope::menu(id, label)
+        } else if DISABLED.contains(&id) {
+            Scope::disabled(id, label)
+        } else {
+            Scope::control(id, label)
+        };
+        tree.register(Some("top_bar"), scope);
     }
+    tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
+    tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
+    for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
+        tree.register(Some("windows"), Scope::disabled(id, name));
+    }
+    tree.register(Some("help"), Scope::control(KEYS.0, KEYS.1));
 }
 
-/// Enter on control `id`, drawn at `place`: a menu opens; the mode switch switches; a disabled control does nothing.
-pub fn activate(ctx: &egui::Context, id: &str, place: Option<Place>, actions: &mut Actions) {
+/// Enter on control `id`, as its click: the mode switch switches, and a menu's entry acts.
+pub fn activate(id: &str, actions: &mut Actions) {
     match id {
         "explore" => actions.mode = Some(Mode::Explore),
         "stain" => actions.mode = Some(Mode::Stain),
-        menu if MENUS.contains(&menu) => {
-            if let Some(widget) = place.and_then(|p| p.widget) {
-                Popup::open_id(ctx, widget.with("popup"));
-            }
-        }
+        id if id == QUIT.0 => actions.quit = true,
+        id if id == HIDE.0 => actions.toggle_layer = true,
+        id if id == KEYS.0 => actions.shortcuts = true,
         _ => {}
     }
 }
@@ -131,20 +163,25 @@ pub fn show(
     };
     bar.label(RichText::new("principia · dev").strong());
     let file = menu(&mut bar, "File", &mut |ui| {
-        if ui.button("Quit").clicked() {
+        let quit = ui.button(QUIT.1);
+        if quit.clicked() {
             actions.quit = true;
         }
+        keyboard.place_widget(QUIT.0, &quit);
     });
     keyboard.place_widget("file", &file);
     let view = menu(&mut bar, "View", &mut |ui| {
-        if ui.button("F3 hide").clicked() {
+        let hide = ui.button(HIDE.1);
+        if hide.clicked() {
             actions.toggle_layer = true;
         }
+        keyboard.place_widget(HIDE.0, &hide);
     });
     keyboard.place_widget("view", &view);
     let windows = menu(&mut bar, "Windows", &mut |ui| {
-        for name in WINDOWS {
-            ui.add_enabled(false, Button::new(name));
+        for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
+            let entry = ui.add_enabled(false, Button::new(name));
+            keyboard.place_widget(id, &entry);
         }
     });
     keyboard.place_widget("windows", &windows);
@@ -160,10 +197,12 @@ pub fn show(
         keyboard.place_widget(id, &response);
     }
     let help = menu(&mut bar, "Help", &mut |ui| {
-        if ui.button(KEYS_ENTRY).clicked() {
+        let keys = ui.button(KEYS.1);
+        if keys.clicked() {
             actions.shortcuts = true;
             ui.close();
         }
+        keyboard.place_widget(KEYS.0, &keys);
     });
     keyboard.place_widget("help", &help);
     bar.separator();

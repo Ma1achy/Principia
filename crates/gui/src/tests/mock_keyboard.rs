@@ -235,39 +235,201 @@ fn mock_keyboard_mode_switch_drops_explore_focus() {
     });
 }
 
-/// Enter on a menu opens it; the menu then has the keys (Esc closes it, Tab moves nothing); a disabled control does
-/// nothing.
+/// Whether a name reading `name` is drawn in one more frame.
+fn drawn<S: crate::side::EngineSide>(
+    h: &mut Headless,
+    app: &mut crate::app::App<S>,
+    name: &str,
+) -> bool {
+    frame_texts(h, app).iter().any(|t| t == name)
+}
+
+/// The state of a menu walk: the focus, the menu the layer holds open, and whether egui shows Windows' "Display".
+type MenuState = (Vec<String>, Option<&'static str>, bool);
+
+fn menu_state(h: &mut Headless, app: &mut crate::app::App<crate::side::MockSide>) -> MenuState {
+    let path = focus(app).iter().map(|s| (*s).to_owned()).collect();
+    let display = drawn(h, app, "Display");
+    (path, app.keyboard.open_menu(), display)
+}
+
+fn state(path: &[&str], open: Option<&'static str>, display: bool) -> MenuState {
+    (
+        path.iter().map(|s| (*s).to_owned()).collect(),
+        open,
+        display,
+    )
+}
+
+/// Enter on a menu opens it on its first entry, with its breadcrumb and ring; the arrows move between its entries,
+/// stopping at either end; Enter on a disabled entry does nothing; Esc closes the menu, back to its control; and the
+/// layer keeps the keys after.
 #[test]
-fn mock_keyboard_enter_opens_a_menu() {
+fn mock_keyboard_menu_entries_are_scopes() {
+    let mut app = mock_app();
+    let mut h = headless();
+    keys(
+        &mut h,
+        &mut app,
+        &[
+            (Key::Tab, NONE),
+            (Key::Enter, NONE),
+            (Key::ArrowRight, NONE),
+            (Key::ArrowRight, NONE),
+        ],
+    );
+    let mut seen = vec![menu_state(&mut h, &mut app)];
+    press(&mut h, &mut app, Key::Enter, NONE);
+    seen.push(menu_state(&mut h, &mut app));
+    assert!(frame_texts(&mut h, &mut app).contains(&"Top bar › Windows › Run".to_owned()));
+    assert!(
+        app.keyboard.place_of("windows_run").is_some(),
+        "no ring's place on the entry"
+    );
+    for (key, n) in [
+        (Key::ArrowDown, 1),
+        (Key::ArrowDown, 4),
+        (Key::ArrowUp, 1),
+        (Key::Enter, 1),
+    ] {
+        for _ in 0..n {
+            press(&mut h, &mut app, key, NONE);
+        }
+        seen.push(menu_state(&mut h, &mut app));
+    }
+    press(&mut h, &mut app, Key::Escape, NONE);
+    seen.push(menu_state(&mut h, &mut app));
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    seen.push(menu_state(&mut h, &mut app));
+    let w = Some("windows");
+    let want = [
+        state(&["top_bar", "windows"], None, false),
+        state(&["top_bar", "windows", "windows_run"], w, true),
+        state(&["top_bar", "windows", "windows_profiler"], w, true),
+        // The arrows stop at the last entry.
+        state(&["top_bar", "windows", "windows_console"], w, true),
+        state(&["top_bar", "windows", "windows_display"], w, true),
+        // Display is disabled: Enter does nothing, the menu stays open.
+        state(&["top_bar", "windows", "windows_display"], w, true),
+        state(&["top_bar", "windows"], None, false),
+        state(&["top_bar", "overlays"], None, false),
+    ];
+    assert_eq!(seen, want);
+    let mut still_open = want.clone();
+    still_open[6].2 = true;
+    rejects("a menu Esc left open", || assert_eq!(seen, still_open));
+}
+
+/// Enter on an entry acts as its click and closes its menu, the focus back on the menu: Help's "Keys (?)" opens the
+/// shortcuts, View's "F3 hide" hides the layer.
+#[test]
+fn mock_keyboard_menu_entry_acts_and_closes() {
     let mut app = mock_app();
     let mut h = headless();
     keys(&mut h, &mut app, &[(Key::Tab, NONE), (Key::Enter, NONE)]);
-    assert!(!frame_texts(&mut h, &mut app).contains(&"Quit".to_owned()));
-    press(&mut h, &mut app, Key::Enter, NONE);
-    assert!(
-        frame_texts(&mut h, &mut app).contains(&"Quit".to_owned()),
-        "Enter on File opened no menu"
-    );
-    press(&mut h, &mut app, Key::Tab, NONE);
-    assert_eq!(
-        focus(&app),
-        ["top_bar", "file"],
-        "Tab moved the focus under a menu"
-    );
-    press(&mut h, &mut app, Key::Escape, NONE);
-    assert!(!frame_texts(&mut h, &mut app).contains(&"Quit".to_owned()));
-    assert_eq!(focus(&app), ["top_bar", "file"]);
-    // Run… is disabled: Enter does nothing.
-    for _ in 0..4 {
+    for _ in 0..7 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
     }
-    assert_eq!(focus(&app), ["top_bar", "run"]);
+    keys(&mut h, &mut app, &[(Key::Enter, NONE)]);
+    assert_eq!(focus(&app), ["top_bar", "help", "help_keys"]);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    assert!(app.keyboard.shortcuts_open);
+    assert_eq!(focus(&app), ["top_bar", "help"]);
+    assert_eq!(app.keyboard.open_menu(), None);
+    assert!(!drawn(&mut h, &mut app, KEYS_ENTRY), "Help is still open");
+    press(&mut h, &mut app, Key::Escape, NONE);
+    assert!(!app.keyboard.shortcuts_open);
+    for _ in 0..6 {
+        press(&mut h, &mut app, Key::ArrowLeft, NONE);
+    }
+    let hidden = |shown: bool| assert!(!shown, "View › F3 hide did not hide the layer");
+    let before = app.shown;
+    keys(&mut h, &mut app, &[(Key::Enter, NONE), (Key::Enter, NONE)]);
+    hidden(app.shown);
+    assert_eq!(focus(&app), ["top_bar", "view"]);
+    press(&mut h, &mut app, Key::F3, NONE);
+    assert!(app.shown);
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    // The layer still has the keys: Enter opens View again.
+    press(&mut h, &mut app, Key::Enter, NONE);
+    assert_eq!(focus(&app), ["top_bar", "view", "view_hide"]);
+    rejects("the layer shown, before the entry", || hidden(before));
+}
+
+/// Tab out of an open menu goes on to the next big scope and closes the menu.
+#[test]
+fn mock_keyboard_tab_leaves_a_menu() {
+    let mut app = mock_app();
+    let mut h = headless();
+    keys(
+        &mut h,
+        &mut app,
+        &[(Key::Tab, NONE), (Key::Enter, NONE), (Key::Enter, NONE)],
+    );
+    let closed = |quit_drawn: bool| assert!(!quit_drawn, "File stayed open after Tab");
+    let before = drawn(&mut h, &mut app, "Quit");
+    assert!(before);
+    press(&mut h, &mut app, Key::Tab, NONE);
+    assert_eq!(focus(&app), ["manifold_view"]);
+    assert_eq!(app.keyboard.open_menu(), None);
+    closed(drawn(&mut h, &mut app, "Quit"));
+    rejects("File open, before the Tab", || closed(before));
+}
+
+/// Clicks the control named `name`, then runs the frame that sees what the click did.
+fn mouse(h: &mut Headless, app: &mut crate::app::App<crate::side::MockSide>, name: &str) {
+    click(h, app, name);
+    let _ = h.frame(app, Vec::new());
+}
+
+/// A menu the mouse opens takes the focus, on its first entry, and follows §G3's keys; a click that closes it gives
+/// the focus back to its control, and the layer keeps the keys; Esc closes an open menu with no entries.
+#[test]
+fn mock_keyboard_mouse_opened_menu_follows_the_keys() {
+    let mut app = mock_app();
+    let mut h = headless();
+    mouse(&mut h, &mut app, "Windows");
+    assert_eq!(focus(&app), ["top_bar", "windows", "windows_run"]);
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    assert_eq!(focus(&app), ["top_bar", "windows", "windows_profiler"]);
+    assert!(drawn(&mut h, &mut app, "Display"), "↓ closed the menu");
+    press(&mut h, &mut app, Key::Escape, NONE);
+    assert_eq!(focus(&app), ["top_bar", "windows"]);
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    assert_eq!(focus(&app), ["top_bar", "overlays"]);
+    // A second click on File closes it: the focus goes back to File.
+    mouse(&mut h, &mut app, "File");
+    assert_eq!(focus(&app), ["top_bar", "file", "file_quit"]);
+    mouse(&mut h, &mut app, "File");
+    assert_eq!(focus(&app), ["top_bar", "file"]);
+    assert_eq!(app.keyboard.open_menu(), None);
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    assert_eq!(
+        focus(&app),
+        ["top_bar", "view"],
+        "egui's focus kept the keys"
+    );
+    // Overlays ▾ has no entries: clicked open, the focus is on it, and Esc closes it there.
+    let overlays = format!("Overlays ▾ {}", 0);
+    mouse(&mut h, &mut app, &overlays);
+    assert_eq!(focus(&app), ["top_bar", "overlays"]);
+    assert_eq!(app.keyboard.open_menu(), Some("overlays"));
+    press(&mut h, &mut app, Key::Escape, NONE);
+    assert_eq!(focus(&app), ["top_bar", "overlays"]);
+    assert_eq!(app.keyboard.open_menu(), None);
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    // Enter on it finds no entry to open.
     press(&mut h, &mut app, Key::Enter, NONE);
     assert!(!egui::Popup::is_any_open(&h.ctx));
-    press(&mut h, &mut app, Key::Escape, NONE);
-    assert_eq!(focus(&app), ["top_bar"]);
-    rejects("an open menu", || {
-        assert!(frame_texts(&mut h, &mut app).contains(&"Quit".to_owned()))
+    // Clicked open again, → leaves it, closing it.
+    mouse(&mut h, &mut app, &overlays);
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    assert_eq!(focus(&app), ["top_bar", "run"]);
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    rejects("a menu left open", || {
+        assert!(egui::Popup::is_any_open(&h.ctx))
     });
 }
 
@@ -658,6 +820,32 @@ fn key_raw(key: Key, pressed: bool) -> egui::RawInput {
     }
 }
 
+/// The layer stands aside only for a text field: a focused button takes no key from it, and loses egui's focus.
+#[test]
+fn mock_keyboard_steps_aside_only_for_text() {
+    let ctx = egui::Context::default();
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    bare_frame(&ctx, egui::RawInput::default(), Some("button"));
+    bare_frame(&ctx, egui::RawInput::default(), None);
+    assert!(ctx.memory(|m| m.focused().is_some()) && !ctx.text_edit_focused());
+    let mut raw = key_raw(Key::Tab, true);
+    keyboard.take_keys(&ctx, &mut raw);
+    let button_kept = raw.events.clone();
+    assert!(button_kept.is_empty(), "a focused button had the Tab");
+    assert_eq!(ctx.memory(|m| m.focused()), None);
+    let mut raw = key_raw(Key::Tab, false);
+    keyboard.take_keys(&ctx, &mut raw);
+    bare_frame(&ctx, egui::RawInput::default(), Some("text"));
+    bare_frame(&ctx, egui::RawInput::default(), None);
+    assert!(ctx.text_edit_focused());
+    let mut raw = key_raw(Key::Tab, true);
+    keyboard.take_keys(&ctx, &mut raw);
+    assert_eq!(raw.events.len(), 1, "the Tab was taken from a text field");
+    rejects("a Tab left to a focused button", || {
+        assert_eq!(button_kept.len(), 1)
+    });
+}
+
 /// A key's release goes to whoever saw its press: one egui saw (a text field had the keyboard) is egui's, though the
 /// field has lost the focus; one the layer took is the layer's, though a field has the focus now.
 #[test]
@@ -1000,6 +1188,21 @@ fn mock_keyboard_registration() {
     );
     assert!(stale.is_empty());
     assert_eq!(tree.labels(&["a".into(), "a1".into()]), ["A", "A1"]);
+    // Parents and paths; the menus.
+    assert_eq!(tree.parent("a1"), Some("a"));
+    assert_eq!(tree.parent("a"), None);
+    assert_eq!(tree.parent("zz"), None);
+    assert_eq!(tree.path_to("a1"), ["a", "a1"]);
+    assert_eq!(tree.path_to("b"), ["b"]);
+    assert_eq!(tree.path_to("zz"), Vec::<String>::new());
+    assert!(tree.menus().is_empty());
+    tree.register(Some("a"), Scope::menu("m", "M"));
+    tree.register(Some("m"), Scope::disabled("m1", "M1"));
+    assert_eq!(tree.menus(), ["m"]);
+    let (menu, disabled) = (*tree.get("m").unwrap(), *tree.get("m1").unwrap());
+    assert!(menu.menu && !menu.activates && !disabled.activates && !disabled.menu);
+    assert!(!tree.get("a1").unwrap().menu);
+    assert_eq!(tree.path_to("m1"), ["a", "m", "m1"]);
     let duplicate = std::panic::catch_unwind(|| {
         let mut t = ScopeTree::new();
         t.register(None, Scope::group("a", "A"));
@@ -1292,33 +1495,82 @@ fn mock_keyboard_places_are_the_frames() {
     });
 }
 
-/// Enter on a control that is not a menu opens no popup, though it is a widget with an id.
+/// Enter on a control acts as its click: the mode switch and the menus' entries act; a menu, a disabled control or
+/// entry, or an unknown id does nothing.
 #[test]
-fn mock_keyboard_activate_opens_only_menus() {
-    let ctx = egui::Context::default();
-    let widget = egui::Id::new("a control");
-    let place = Some(crate::keyboard::Place {
-        rect: egui::Rect::ZERO,
-        widget: Some(widget),
-    });
-    let mut actions = crate::app::Actions::default();
-    for id in ["run", "profiler", "export"] {
-        crate::explore::top_bar::activate(&ctx, id, place, &mut actions);
-        assert!(
-            !egui::Popup::is_id_open(&ctx, widget.with("popup")),
-            "{id} opened a popup"
-        );
+fn mock_keyboard_activate_acts_as_the_click() {
+    use crate::app::Actions;
+    use crate::explore::top_bar::{activate, HIDE, KEYS, QUIT};
+    let acts = |id: &str| {
+        let mut actions = Actions::default();
+        activate(id, &mut actions);
+        actions
+    };
+    let cases = [
+        (
+            "explore",
+            Actions {
+                mode: Some(Mode::Explore),
+                ..Default::default()
+            },
+        ),
+        (
+            "stain",
+            Actions {
+                mode: Some(Mode::Stain),
+                ..Default::default()
+            },
+        ),
+        (
+            QUIT.0,
+            Actions {
+                quit: true,
+                ..Default::default()
+            },
+        ),
+        (
+            HIDE.0,
+            Actions {
+                toggle_layer: true,
+                ..Default::default()
+            },
+        ),
+        (
+            KEYS.0,
+            Actions {
+                shortcuts: true,
+                ..Default::default()
+            },
+        ),
+    ];
+    for (id, want) in cases {
+        assert_eq!(acts(id), want, "{id}");
     }
-    assert_eq!(actions, crate::app::Actions::default());
-    crate::explore::top_bar::activate(&ctx, "help", place, &mut actions);
-    assert!(egui::Popup::is_id_open(&ctx, widget.with("popup")));
-    // A menu drawn as no widget opens nothing.
-    let ctx = egui::Context::default();
-    crate::explore::top_bar::activate(&ctx, "file", None, &mut actions);
-    assert!(!egui::Popup::is_any_open(&ctx));
-    rejects("a control that opened a popup", || {
-        let ctx = egui::Context::default();
-        crate::explore::top_bar::activate(&ctx, "file", place, &mut actions);
-        assert!(!egui::Popup::is_id_open(&ctx, widget.with("popup")));
+    for id in ["file", "help", "run", "windows_run", "nowhere"] {
+        assert_eq!(acts(id), Actions::default(), "{id}");
+    }
+    // The top bar's scopes: the menus, the disabled controls and entries that Enter does not activate.
+    let mut tree = ScopeTree::new();
+    crate::explore::top_bar::register(&mut tree);
+    assert_eq!(
+        tree.menus(),
+        ["file", "view", "windows", "overlays", "help"]
+    );
+    for id in [
+        "run",
+        "profiler",
+        "export",
+        "windows_run",
+        "windows_console",
+    ] {
+        assert!(!tree.get(id).unwrap().activates, "{id} activates");
+    }
+    for id in ["explore", "stain", QUIT.0, HIDE.0, KEYS.0] {
+        assert!(tree.get(id).unwrap().activates, "{id} does not activate");
+    }
+    assert_eq!(tree.children(Some("overlays")), Vec::<&str>::new());
+    let quit = acts(QUIT.0);
+    rejects("Quit that did nothing", || {
+        assert_eq!(quit, Actions::default())
     });
 }
