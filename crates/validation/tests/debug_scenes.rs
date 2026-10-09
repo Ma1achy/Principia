@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use validation::golden_scene::{
     appended, debug_cases, debug_scene, scene, shape, DebugCase, Scene, DEBUG_SUITE,
+    STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -300,22 +301,44 @@ negative_control!(
     check_distinct(&[])
 );
 
-/// Checks that each stepped showcase sample's current energy drift is within its latched maximum, `|ΔE|/dE_max` in
-/// (0, 1), and that the seven ratios spread over at least `spread` of the ramp, as the max-vs-final view draws them.
+/// Checks the showcase's drifts as the max-vs-final view draws them: each stepped sample's but the failed ones' current
+/// energy and angular-momentum drifts lie within their latched maxima, `|ΔE|/dE_max` and `|ΔL_z|/dLz_max` in (0, 1),
+/// the energy ratios spreading over at least `spread` of the ramp; the failed samples hold the defined latches, 0.0 and
+/// `d_min` `+inf` (payload §1, R-271); and the unstepped sample 0 has no drift and no Welford sums.
 fn check_drift_shares(spread: f32) {
     let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
     let s = debug_scene(case).unwrap_or_else(|e| panic!("{e}"));
-    let shares: Vec<f32> = (1..8)
-        .map(|i| {
-            let read = s.read(i);
-            let share = read.energy_drift.abs() / read.dE_max;
-            assert!(
-                share > 0.0 && share < 1.0,
-                "sample {i}: |ΔE|/dE_max is {share}"
+    let fresh = s.read(0);
+    assert_eq!(
+        [fresh.energy_drift, fresh.Lz_drift, fresh.mean_y, fresh.C_ty],
+        [0.0; 4],
+        "sample 0's drifts and Welford sums"
+    );
+    let failed = [STATE_SIM_FAILED, STATE_DECODE_FAILED];
+    let mut shares = Vec::new();
+    for i in 1..8 {
+        let read = s.read(i);
+        if failed.contains(&read.state) {
+            assert_eq!(
+                (read.dE_max, read.dLz_max, read.d_min),
+                (0.0, 0.0, f32::INFINITY),
+                "failed sample {i}'s latches"
             );
-            share
-        })
-        .collect();
+            continue;
+        }
+        let share = read.energy_drift.abs() / read.dE_max;
+        let lz_share = read.Lz_drift.abs() / read.dLz_max;
+        assert!(
+            share > 0.0 && share < 1.0 && lz_share > 0.0 && lz_share < 1.0,
+            "sample {i}: |ΔE|/dE_max is {share}, |ΔL_z|/dLz_max {lz_share}"
+        );
+        shares.push(share);
+    }
+    assert_eq!(
+        shares.len(),
+        5,
+        "the five stepped samples that did not fail"
+    );
     let (lo, hi) = shares
         .iter()
         .fold((f32::INFINITY, 0f32), |(l, h), &x| (l.min(x), h.max(x)));

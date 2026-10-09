@@ -61,12 +61,13 @@ use render::present::{self, Rgb};
 use render::raster::Grid;
 use render::registry::{self, Catalogue, Category, ZERO_SOURCE};
 
+use kernel::payload::diffusion_c_tt;
 /// The kernel's read side and f16 packing, for the render crate's tests, which reach the kernel only through this
 /// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness; and the word's append and symbol
 /// read (payload §3), for the word inspector's tests.
 pub use kernel::payload::{
     angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, hamiltonian,
-    shape, SimState, FGW_NO_SYMBOL, STATE_SIM_FAILED,
+    shape, SimState, FGW_NO_SYMBOL, STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
 pub use kernel::word::fgw_append;
 
@@ -270,11 +271,14 @@ pub struct Scene {
     pub colouring: Colouring,
 }
 
+/// The scenes' macro-step, `dt_macro`.
+const DT_MACRO: f32 = 0.01;
+
 /// The context every scene reads with: `dt_macro` 0.01, `δ₀` 10⁻⁶, a renormalisation every 16 steps, a horizon of
 /// 1000 steps, E = 0.
 fn context(grid: Grid) -> Context {
     Context {
-        dt_macro: 0.01,
+        dt_macro: DT_MACRO,
         delta_0: 1e-6,
         n_renorm: 16,
         horizon_steps: 1000,
@@ -512,14 +516,16 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 }
 
 /// The showcase set: eight samples whose every field differs from sample to sample (debug_tooling_plan
-/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or NaN;
-/// samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words (one
+/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or NaN,
+/// its drifts and Welford sums 0; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words (one
 /// empty, one truncated, three long enough to set the top limb) and `ICDescriptor`s, the masses positive and summing to
 /// 1, `θ̃` away from every multiple of 2π. Each continuous field takes the samples in its own order, so no two fields'
 /// renders coincide under an auto range. Each shadow sits `off = 0.2 + 0.05·j` (`j` its order's place) from its state:
 /// `r_sh` ahead of `r` by `off` in body 0's x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in
 /// body 2's x. Each stepped sample's current drifts lie within its latched maxima, `E_0 = H(r, p) − e` and `Lz_0 =
-/// L_z(r, p) − l` with `|e| < dE_max`, `|l| < dLz_max`, as a march leaves them. A nonzero `nudge`, at most 6, moves the
+/// L_z(r, p) − l` with `|e| < dE_max`, `|l| < dLz_max`, as a march leaves them, but the failed samples 4 and 5,
+/// whose latches are the defined `0.0` and `d_min` `+inf` (R-271). Each stepped sample's `C_ty` is its own slope times
+/// `C_tt(n)`, so the diffusion slopes spread whatever the step counts. A nonzero `nudge`, at most 6, moves the
 /// stepped samples' values a little and unevenly, so that no auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on
 /// sample `i`'s place in each order, on `θ̃` and on `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to
 /// the first and third; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`, `7919` times
@@ -564,6 +570,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
     const T_END: [u32; 8] = [0, 40, 100, 250, 37, 3, 999, 512];
     const THETA: [f32; 8] = [0.0, 3.5, -8.2, 15.9, -1.3, 0.4, 40.1, -22.7];
     const S: [f32; 8] = [0.0, 0.4, 1.7, 3.1, 0.9, 0.05, 6.2, 2.4];
+    const SLOPE: [f32; 8] = [0.0, -3.0, 1.2, -0.4, 4.0, 5.0, -0.05, 0.07];
     const WORDS: [&[u32]; 8] = [
         &[],
         &[0],
@@ -620,10 +627,28 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         m[2] += dm;
         // The latched maxima, and the current drifts within them, a share of each in (0, 1), alternating in sign.
         let de_max = at(0.03, 0.05, 13);
-        let dlz_max = at(0.02, 0.03, 14);
+        let dlz_max = at(0.03, 0.03, 14);
         let sign = [1.0, -1.0][k % 2];
-        let e_drift = sign * de_max * (f32::from(ORDER[15][k]) + 0.5 + g) / 8.2;
-        let lz_drift = -sign * dlz_max * (f32::from(ORDER[16][k]) + 0.5 + g) / 8.2;
+        // Sample 0 is unstepped: its energy and angular momentum are its own, no drift yet.
+        let (e_drift, lz_drift) = match i {
+            0 => (0.0, 0.0),
+            _ => (
+                sign * de_max * (f32::from(ORDER[15][k]) + 0.5 + g) / 8.2,
+                -sign * dlz_max * (f32::from(ORDER[16][k]) + 0.5 + g) / 8.2,
+            ),
+        };
+        // The Welford fit: none on the unstepped sample (payload §4: y is sampled after each completed step); else
+        // `C_ty` the sample's slope times `C_tt(n)` (the read side's own, `n = t_end_step`), so that each sample's
+        // slope, not its step count, sets its diffusion. `C_tt` grows as `n³`, so the slopes shrink as `n` grows,
+        // which keeps both the slopes and `C_ty` spread.
+        let n = T_END[k] + t_nudge;
+        let (mean_y, c_ty) = match i {
+            0 => (0.0, 0.0),
+            _ => (
+                at(0.25, -0.11, 17),
+                SLOPE[k] * (1.0 + 0.1 * g) * diffusion_c_tt(n, DT_MACRO),
+            ),
+        };
         // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
         // `payload`, spread across its range.
         let long = |cycle: [u32; 4], n: usize| (0..n).map(|j| cycle[j % 4]).collect::<Vec<u32>>();
@@ -642,8 +667,8 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .p_sh(p_sh)
             .S(S[k] + g)
             .theta(THETA[k] + g)
-            .mean_y(at(0.25, -0.11, 17))
-            .C_ty(at(-3.75e-4, 1.5e-4, 18))
+            .mean_y(mean_y)
+            .C_ty(c_ty)
             .E_0(hamiltonian(r, p, m) - e_drift)
             .Lz_0(angular_momentum_z(r, p) - lz_drift)
             .total_substeps(TOTAL_SUBSTEPS[k] + 7919 * t_nudge)
@@ -653,15 +678,16 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
             .saturated(i % 3 == 1)
             .dmin_pair(if i == 0 { 3 } else { i % 3 })
-            .times(
-                T_END[k] + t_nudge,
-                (T_END[k] + t_nudge) / 3 + nudge * (i % 2),
-            )
+            .times(n, n / 3 + nudge * (i % 2))
             .word_raw(word);
         if let Some(s) = last {
             sample.last_symbol(s);
         }
-        if i > 0 {
+        // A failed sample's latches are defined: `dE_max = dLz_max = 0.0`, `d_min = +inf` (payload §1, "Failed-state
+        // contents are defined"; R-271).
+        if STATES[k] == STATE_SIM_FAILED || STATES[k] == STATE_DECODE_FAILED {
+            sample.d_min(f32::INFINITY).drift_max(0.0, 0.0);
+        } else if i > 0 {
             let d = at(1.0, 1.0, 20);
             sample.d_min(0.02 * d * d).drift_max(de_max, dlz_max);
         }
