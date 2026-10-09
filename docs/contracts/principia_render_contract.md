@@ -183,6 +183,10 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
+fn dbg_hash_word(w: vec4u) -> vec3f             // whole free_group_word → hashed colour (R-72; REQ-TOOL-155)
+fn dbg_ternary(m: vec3f, frag_xy: vec2f) -> vec3f        // the three masses → ternary colour (R-72; REQ-TOOL-154)
+fn dbg_dircos3(v: vec3f, frag_xy: vec2f) -> vec3f        // a k = 3 vector's direction cosines, ½(v̂ + 1)
+fn dbg_dircos6(v: array<vec2f, 3>, frag_xy: vec2f) -> vec3f // a k = 6 vector's direction cosines (R-72; REQ-TOOL-157)
 fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as the word length's 127 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
 ```
 
@@ -207,6 +211,29 @@ with dd_colouring §3.1's sRGB transfer.
 - **`dbg_hash_u32(v)`:** the PCG hash (Jarzynski & Olano 2020, "Hash Functions for GPU Rendering", JCGT 9(3),
   `pcg_hash`): `state = v·747796405 + 2891336453`, `word = ((state >> ((state >> 28) + 4)) ^ state)·277803737`,
   `h = (word >> 22) ^ word`, all wrapping u32. Its low three bytes, low first, are the 8-bit sRGB red, green and blue.
+- **`dbg_hash_word(w)`, the whole-word hash (R-72; REQ-TOOL-155; TASK-M1-12):** the `free_group_word`, a `uint4`
+  `(x, y, z, w)` (payload §3), folds through `dbg_hash_u32`'s PCG hash, `pcg`, limb by limb from `x`:
+  `h = pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))`, all wrapping u32. `h` then takes `dbg_hash_u32`'s byte-to-RGB step: its low
+  three bytes, low first, are the 8-bit sRGB red, green and blue. Every bit of the word, its length included, enters
+  the fold, so the word-hash view (Part 6) colours whole words, not one limb. Like `dbg_hash_u32` it can give any
+  colour, never a pattern.
+- **`dbg_ternary(m, frag_xy)`, the ternary masses colour (R-72; REQ-TOOL-154; TASK-M1-12):** the `ICDescriptor`'s
+  masses `(m0, m1, m2)` as linear RGB scaled by `1/max(mᵢ)`: equal masses draw white, and each vertex, one mass alone,
+  its primary, `m0` red, `m1` green, `m2` blue. Where no mass is positive, or one is the absence NaN, the colour is
+  undefined and `debug_invalid(frag_xy)` is drawn.
+- **The direction cosines of a vector field (generation-root §3.8; TASK-M1-12):** for every `vector(type, k)` field the
+  catalogue offers two views, '‖·‖ as scalar', the field's generated view of `‖v‖`, and 'as direction-cosines', drawn
+  by the helper of its `k`. Where `‖v‖ > 0` fails, or a component is the absence NaN, the direction is undefined and
+  `debug_invalid(frag_xy)` is drawn.
+  - **`k = 3`, `dbg_dircos3(v, frag_xy)`** (`n`): `½(v̂ + 1)` as linear RGB, `v̂ = v/‖v‖`, the live shape view's
+    mode 0 (below).
+  - **`k ≠ 3`, `dbg_dircos6(v, frag_xy)` (R-72; REQ-TOOL-157; RQ-235 as amended per code review 5438179638):** the
+    direction cosines `cᵢ = vᵢ/‖v‖` of the `k` components, each squared, are summed into channel `⌊3i/k⌋`; the three
+    sums, which total 1, are linear RGB scaled by `1/max`, as the ternary masses are. For `k = 6`, `r`, `p` and their
+    shadows, the components are `(x, y)` per body, so channel `j` is body `j`'s share of `‖v‖²`: red body 0, green
+    body 1, blue body 2, equal shares white. The scale cancels `‖v‖²`, so the colour is `wⱼ/max(wⱼ)` with `wⱼ` body
+    `j`'s squared norm. A k = 6 vector has no three-channel sign, so the signs of the cosines are not shown; the
+    field's per-component views show them.
 - **`dbg_sentinel(x, frag_xy)`:** the absence NaN, tested by its exact bits against the canonical quiet NaN (`0x7FC00000`,
   lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as the word length's 127
   included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
@@ -266,6 +293,17 @@ with dd_colouring §3.1's sRGB transfer.
 | `times` (t_end_step, t_dmin_step — EXACT u16 indices) + derived (orbit_count/retrograde from theta; total_substeps_log2 from the u32) | unpack/derive layer | round-trip packed fields; derived match live source; fraction via horizon_steps uniform |
 | Live shape & accumulator views: current `n` → direction cosines / running `θ̃` → cyclic / \|n\|−1 error (flat-zero expected); FTLE-running `S/t`; diffusion slope from moments; drift max-vs-final; **live current-substep count → effort heatmap (animates: close encounters propagate in time)** | live state + accumulators | the live march itself — shape derivation, phase unwrapping, accumulator bookkeeping, substepper effort |
 | Word views: `fgw_reduced_length` (invalid-styled when truncated), symbol-at-k (scrubber), truncated sentinel, **whole-word hash** (`dbg_hash` of the uint4) | `free_group_word` | symbol packing — and the hash view renders **topological basins**: word boundaries are finer than outcome boundaries, so this is the Burrau topological-boundary diagnostic, free at debug level |
+
+**The word views' renderings (TASK-M1-12).**
+- **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word
+  truncated, the reduced-length view draws `debug_invalid(frag_xy)`, the hatch; elsewhere it draws
+  `fgw_reduced_length` by `dbg_lin` over `[0, fgw_capacity]`, `[0, 76]`. The raw `length` view still shows the stored
+  127 literally, on the ramp by `dbg_sentinel` (R-79, R-136).
+- **Symbol-at-k:** the slot `k`, `0` to `fgw_capacity − 1`, is the view's slider uniform; the symbol there,
+  `fgw_symbol(word, k)` (payload §3), draws by `dbg_cat(s, 4)`. A slot at or past the word's length, and every slot of
+  a truncated word, holds no symbol and draws the hatch.
+- **Truncated:** `fgw_truncated` by `dbg_flag`.
+- **Whole-word hash:** `dbg_hash_word` of the word (Part 5, REQ-TOOL-155).
 | Ensemble views (tier-gated): outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples (not a stored field), consumed live & aggregated to the quad | the ensemble/SSAA machinery (E Halton-(2,3)-offset copies per nominal sample) |
 | Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
 | Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
