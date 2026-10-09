@@ -68,8 +68,13 @@ replacing the single ε = 2⁻²⁴.
   `rho_ratio`, `r_min_pair_0`), each a named presentation constant in that field's units, read by the template; not
   §3.8's `floor?` key, which R-263 gives a sim-key parameter. The REQ-TOOL-160 proposal: each floor, its units, and its
   evidence (where the field's stored values fall under it on M1's fixtures, and why it sits there), attached to the PR.
+  The floors for `dE_max` and `dLz_max` are absolute, in the stored fields' own normalised units, since the corpus
+  defines both as absolute maxima (R-401's note), and the proposal says so. `closure_min` is a dimensionless chord on
+  the unit shape sphere, and its f32 precision floor of about 1e-7 (dd_simstate_payload § 1) is evidence for its
+  floor.
 - The REQ-COL-064 proposal: the stipple's pattern over the grey, its distinctness from the hatch, its lightness
-  contrast, and that no flat ramp colour reproduces a 4 × 4 block of it, attached to the PR.
+  contrast, and that no flat ramp colour reproduces a 4 × 4 block of it, attached to the PR. It states the pixel space
+  of `frag_xy` (physical or logical pixels) and shows the stipple resolved at the Mac's display scale factor.
 - Every golden the three rulings change re-rendered, `m1-numeric` and `m1-outcome` and any of TASK-M1-12's and
   TASK-M1-13's whose views change, each `BASELINES.md` row citing the ruling, proposed and confirmed at the M1 gate.
 - `crates/render/tests/uv_absolute_banding.rs`: the two comments (lines 14 and 177 at `ea1921d`) that call RQ-258 open
@@ -95,8 +100,10 @@ replacing the single ε = 2⁻²⁴.
   two signs on the two sides; a non-negative field is on viridis (REQ-RENDER-084).
 - Review checklist (gui, qa): the REQ-COL-064 proposal gives the stipple's pattern over REQ-COL-053's grey, shows it is
   dots, not the hatch's stripes, gives its lightness contrast, and shows that no flat colour of viridis, twilight,
-  grey or cool-warm reproduces a 4 × 4 block of it; the human confirms it at the M1 gate (REQ-COL-064).
-- Review checklist (physics): the REQ-TOOL-160 proposal gives each floor with its units and evidence; each declared
+  grey or cool-warm reproduces a 4 × 4 block of it; it states `frag_xy`'s pixel space and shows the stipple resolved
+  at the Mac's display scale factor; the human confirms it at the M1 gate (REQ-COL-064).
+- Review checklist (physics): the REQ-TOOL-160 proposal gives each floor with its units and evidence, the floors
+  for `dE_max` and `dLz_max` stated as absolute; each declared
   non-negative range cites its line; the human confirms the floors at the M1 gate (REQ-TOOL-160, REQ-RENDER-084).
 - `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden` — every other view renders as before.
 
@@ -118,3 +125,4 @@ replacing the single ε = 2⁻²⁴.
 - REQ-TOOL-160 moved here from TASK-M1-09, which built the single ε R-401 replaces. REQ-COL-053 (the grey's value)
   stays TASK-M1-09's; its proposal stands, and this task's stipple is measured over it.
 - R-398 asks nothing of this task beyond the two comments above; TASK-M1-16's `N = 6` fixture stays a negative control.
+- A declared lower bound can make a field's range fully bounded (e.g. `[0, 1]`); under render_gui_spec §10.1 that field then switches from `RANGE_AUTO = 1` to its fixed range. The implementer lists each such field in the PR and the reviewers check each (code review 5472057070 of PR #175).

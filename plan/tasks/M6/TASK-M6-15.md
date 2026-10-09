@@ -48,7 +48,7 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 - Review checklist (perf) — QualitySettings carries eps; the refinement policy reads eps from it; each tier row sets eps (REQ-PERF-037).
 - `cargo test -p engine tier_rows_populate` — each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each (REQ-PERF-035).
 - `cargo test -p engine custom_n_power_of_two` — Custom offers N as powers of two only, each within REQ-PERF-011's thread ceiling, and rejects any other value (R-398) (REQ-PERF-035).
-- `cargo test -p engine e_free_valued` — the ladder admits E = 2, 4, 5, 6; named tiers use 0/0/1/3/7/15 (REQ-PERF-045).
+- `cargo test -p engine e_free_valued` — the ladder admits E = 2, 4, 5, 6; named tiers use 0/0/1/3/7/15; every rung's N is a power of two (R-398) (REQ-PERF-045).
 - `cargo test -p engine default_tier_crude_specs` — the default-tier selector uses only the listed specs (REQ-PERF-042).
 - Review checklist (perf) — the tier config documents the rationale per default (REQ-PERF-043).
 - `cargo test -p engine preset_selector_one_struct` — all three modes write the same struct type; re-selecting Auto runs a fresh probe (REQ-GUI-015).

@@ -34,6 +34,7 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
 - `docs/gui/principia_render_gui_spec.md` § "12.1 Structural overlays and tile debug shaders"
 - `decisions.md` § "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-399 — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
 
 ## Deliverables
 - `crates/gui/src/explore/{time,legend,trajectory}.rs`, `crates/gui/src/explore/overlays_menu.rs` and
@@ -85,3 +86,4 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
   transport, and the mock reads no `ViewUI`. TASK-M6-24 draws Overlays ▾ with its count from the snapshot and an empty
   menu; this task fills the menu. A menu the user opens is not a toast or label in G1's sense (01_main.png shows the
   Overlays menu over the figure); nothing the app raises by itself is drawn there.
+- R-399 (9 Oct 2026; gui review 5472021685 of PR #175): this task's Legend frame draws the mock's `running` key as the "not yet" style, the neutral grey with a fine dot stipple, through `debug_not_yet` or its CPU mirror, not as one flat colour; `legend_swatches_equal_stain` (REQ-GUI-105) compares it as the style, as it compares `sim_failed`'s hatch (R-136), not as one colour.

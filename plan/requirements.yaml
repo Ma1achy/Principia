@@ -11462,7 +11462,7 @@
     section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
   verify:
     method: review checklist
-    detail: "the proposal gives the stipple's pattern (its dot spacing and the dots' colour) over REQ-COL-053's grey, shows it is dots, not the hatch's diagonal stripes, gives the lightness contrast that keeps it visible without colour vision, and shows that no flat colour of any prelude ramp (viridis, twilight, grey, cool-warm) reproduces a 4 × 4 block of it; confirmed by the human at the M1 gate and recorded in decisions.md"
+    detail: "the proposal gives the stipple's pattern (its dot spacing and the dots' colour) over REQ-COL-053's grey, shows it is dots, not the hatch's diagonal stripes, gives the lightness contrast that keeps it visible without colour vision, and shows that no flat colour of any prelude ramp (viridis, twilight, grey, cool-warm) reproduces a 4 × 4 block of it; confirmed by the human at the M1 gate and recorded in decisions.md; the proposal states the pixel space of frag_xy (physical or logical pixels) and shows the stipple resolved at the Mac's display scale factor"
   rulings:
   - R-71
   - R-390
@@ -11693,6 +11693,7 @@
   rulings:
   - R-129
   milestone: M6
+  note: "R-398: Custom's N control offers powers of two only (REQ-PERF-035)."
 - id: REQ-GUI-015
   area: GUI
   statement: "Quality must be a preset selector (Auto / named tier / Custom) populating one QualitySettings struct: Auto computes it by device characterisation and is re-runnable (re-selecting Auto or re-detect re-measures), a named tier looks it up and skips the probe, Custom lets the user set it."
@@ -13059,6 +13060,7 @@
   rulings:
   - R-53
   milestone: M8
+  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136)."
 - id: REQ-GUI-106
   area: GUI
   statement: "The legend must give each dimension its own key: categorical swatches with their shares of the view, a separate bar for brightness (or any second channel), ticks placed through the curve for number ramps (log-spaced for a log curve), a sphere key for direction fields, a colour square for coordinate maps, and line samples for post operations."
@@ -16734,7 +16736,7 @@
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
-  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, an error in the drifts' own measure for dE_max and dLz_max, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -16751,7 +16753,7 @@
   - R-71
   - R-401
   milestone: M1
-  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged."
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note)."
 - id: REQ-TOOL-161
   area: TOOL
   kind: definition
@@ -16795,7 +16797,7 @@
   - R-280
   - R-399
   milestone: M1
-  note: "R-399 (RQ-259), applied by TASK-M1-17 to the views TASK-M1-09 and TASK-M1-10 built flat; TASK-M7-05's and TASK-M7-09's extensions of FieldRamp inherit it."
+  note: "R-399 (RQ-259), applied by TASK-M1-17 to the views TASK-M1-09 and TASK-M1-10 built flat; TASK-M7-05's and TASK-M7-09's extensions of FieldRamp inherit it. The Legend's running swatch is drawn as the style too (TASK-M6-27, TASK-M8-22; REQ-GUI-105)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -20443,14 +20445,17 @@
     section: 8. Build-time settles (measure / specify once running)
   - file: docs/design/principia_dd_simstate_payload.md
     section: 7. Memory
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: benchmark
     detail: "device-characterisation runs record the thresholds and budget heuristics used"
   rulings:
   - R-4
   - R-40
+  - R-398
   milestone: M6
-  note: "R-40: the quality device keys off eps (telemetry §3.5's three-axis model, R-4)."
+  note: "R-40: the quality device keys off eps (telemetry §3.5's three-axis model, R-4). R-398: the ladder these runs measure has N a power of two at every rung."
 - id: REQ-PERF-039
   area: PERF
   statement: "The frame target must be 16.7 ms (60 fps) with 41.7 ms (24 fps) the hard floor: tier derivation solves for 16.7 ms first and falls back toward 41.7 ms only when nothing fits, recording that it did."
@@ -20649,10 +20654,13 @@
   source:
   - file: docs/design/principia_quality_device_note.md
     section: "\"Auto\" = device characterisation (three legs: limits · probe · info)"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "solve output for a mocked throughput matches the formula with headroom and clamping"
-  rulings: []
+    detail: "solve output for a mocked throughput matches the formula with headroom and clamping; the solved N is a power of two (R-398)"
+  rulings:
+  - R-398
   milestone: M6
 - id: REQ-PERF-054
   area: PERF
@@ -20662,11 +20670,15 @@
     section: Hard limits clamp EVERY preset (including custom)
   - file: docs/contracts/principia_gui_state_contract.md
     section: "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "High on a weak mocked device clamps down; Custom slider max equals the limit and the tooltip is present"
-  rulings: []
+    detail: "High on a weak mocked device clamps down; Custom slider max equals the limit and the tooltip is present; the clamp lands N on the largest power of two with N² ≤ the invocation ceiling, not ⌊√ceiling⌋: a mocked 384-invocation ceiling gives N = 16, not 19 (R-398)"
+  rulings:
+  - R-398
   milestone: M6
+  note: "R-398: N is a power of two, so the device clamp rounds down to a power of two."
 - id: REQ-PERF-055
   area: PERF
   statement: "The cache cap must be sized by the characterisation solve within the limits leg's hard ceiling."
@@ -21196,12 +21208,16 @@
     section: Open sub-questions (settle at implementation)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: review checklist
     detail: "the proposal states the rung count, each rung's preset and the unified/discrete budget heuristic, with the device-characterisation runs REQ-PERF-038 records; recorded in decisions.md"
   rulings:
   - R-71
+  - R-398
   milestone: M6
+  note: "R-398: every rung's preset has N a power of two."
 - id: REQ-PERF-091
   area: PERF
   kind: calibration

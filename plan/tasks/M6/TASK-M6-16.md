@@ -25,6 +25,7 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `docs/design/principia_quality_device_note.md` § "Open sub-questions (settle at implementation)"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 
 ## Deliverables
 - `crates/engine/src/quality/characterise.rs`: `Limits`, `Probe` (behind a `GpuTimer` trait: timestamp queries or batched wall-clock), `InfoPrior`, `solve()`; a mockable device interface for tests.
@@ -40,6 +41,7 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - `cargo test -p engine info_soft_prior` — fast probe + mobile-iGPU info → conservative defaults; no name-keyed table in the code (REQ-PERF-052).
 - `cargo test -p engine solve_formula` — solve output for a mocked throughput matches the formula with headroom and clamping (REQ-PERF-053).
 - `cargo test -p engine limits_clamp_every_preset` — High on a weak mocked device clamps down; Custom slider max equals the limit and the tooltip is present (REQ-PERF-054).
+- `cargo test -p engine n_clamp_power_of_two` — the solve and the clamp give a power-of-two N: a mocked 384-invocation ceiling yields N = 16, not ⌊√384⌋ = 19 (R-398) (REQ-PERF-053, REQ-PERF-054).
 - `cargo test -p engine cache_cap_from_solve` — cache_cap ≤ hard ceiling and derived from the solve (REQ-PERF-055).
 - `cargo test -p engine tier_inversion_order` — given synthetic throughput numbers the solver returns the expected three axes in order (REQ-PERF-041).
 - `cargo xtask bench tier-derivation-fallback` — on a device that cannot hold 16.7 ms, the derived tier records the fallback (REQ-PERF-039).
@@ -51,3 +53,4 @@ Auto is device characterisation: the limits leg reads `adapter.limits`, `navigat
 - Values the corpus leaves approximate with no calibration requirement: thermal headroom (~60–70%), the probe's percentile and dt count, the "wildly inconsistent" test — see Gaps. The boot-fit margin is REQ-PERF-093 (calibrated at M5, TASK-M5-10).
 - RQ-100 ruled: R-113 — the memory-fit margin REQ-PERF-048's boot fit uses is REQ-PERF-093, calibrated at M5 (TASK-M5-10).
 - Closes, for gaps the corpus leaves open: REQ-PERF-088 (R-71 calibration), REQ-PERF-090 (R-71 calibration) (classification accepted by R-132).
+- R-398 (9 Oct 2026; physics review 5472051445 of PR #175): N is a power of two wherever it is chosen, Auto's solve and the device clamp included; the clamp lands on the largest power of two with N² ≤ the invocation ceiling, and every rung's preset (REQ-PERF-090) has a power-of-two N.
