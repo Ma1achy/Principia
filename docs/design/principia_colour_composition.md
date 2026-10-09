@@ -183,8 +183,13 @@ the table either: **triple collision**, a collision with `detail = 3`, and **tri
 `detail = 3` (payload § `sample_descriptor`, "3 means all three"; R-30; REQ-EVT-006). They are neither `running` nor
 `sim_failed`, so neither takes the grey or the invalid pattern, which stays NaN's (PIT-8). Each gets a swatch of its
 own, a calibration (R-71): proposed with its evidence by TASK-M1-10 (its OKLab separation from the nine classes, the
-running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. Until then the two swatches
-have no value here.
+running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. **The proposed values
+(R-71; TASK-M1-10), until the human confirms them at the M1 gate:** triple collision, lavender `#D6A1FF`, OKLab
+lightness 0.792; triple ejection, navy `#000097`, OKLab lightness 0.306. Of the 8-bit sRGB colours, `#000097` is the
+one farthest in OKLab from its nearest of the nine classes, the running grey (`#4E4E4E`, itself proposed, REQ-COL-053)
+and the invalid pattern's two colours: 0.233, from bounded; `#D6A1FF` is the farthest from those and `#000097`: 0.204,
+from degenerate. The lighter goes to the collision and the darker to the ejection, as all three additive primaries
+mix toward white and all three subtractive primaries toward black.
 
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
