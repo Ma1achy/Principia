@@ -7050,7 +7050,7 @@ own words ("This is from me."):
 
 *What it decides:*
 - **`K_0` and `V_0` are one-signed, on viridis.** `K_0` is declared `[0, ∞)` and `V_0` `(−∞, 0]`; both are drawn on
-  viridis, mapped monotonically, `V_0`'s most negative value at the dark end (and `K_0`'s 0 there). RQ-261's option 1.
+  viridis, mapped monotonically, `V_0`'s most negative value at the dark end. RQ-261's option 1.
 - **Their `diverging` tags are removed:** their scale is `lin` (generation_root §3.6 changes).
 - **The tag must agree with the range.** A field carries the `diverging` scale only when its declared range spans zero
   (`lo < 0 < hi`, either end possibly unbounded), as R-400 (RQ-260) derives the diverging ramp from the range. This is
@@ -7059,9 +7059,19 @@ own words ("This is from me."):
   own units.
 
 *Applied per R-369 (mechanical consequences):*
-- **The map is the template's own.** Under `lin` the view places `range_norm(x, lo, hi, …)`, increasing in `x`, so
-  `lo` is at viridis's dark end, `t = 0`: `K_0`'s fixed 0, and `V_0`'s measured minimum, its most negative value. An
-  unbounded end takes the measured end (render_gui_spec §10.1), as for any field. No new mark or helper is needed.
+- **The map is the template's own.** Under `lin` the view places `range_norm(x, lo, hi, RANGE_AUTO, u_range)`,
+  increasing in `x` in either mode, so the range's low end is at viridis's dark end, `t = 0`. Which low end depends on
+  the mode (render_gui_spec §10.1). **Auto** (`RANGE_AUTO = 1`): `t = 0` is the measured minimum over the draw, so
+  `K_0`'s measured minimum and `V_0`'s most negative value are dark. **Fixed** (`RANGE_AUTO = 0`): the declared range
+  is used and "an end with no finite bound takes the measured end", so `K_0`'s `t = 0` is its declared 0 (its top the
+  measured maximum) and `V_0`'s is its measured minimum, again its most negative value (its top the declared 0; a
+  positive value clamps to `t = 1`). `V_0`'s most negative value is dark in both modes, as the human ruled; `K_0`'s 0
+  is dark only in fixed mode. No new mark or helper is needed.
+- **Open-ended ranges keep the auto default.** Since neither range has two finite ends, both views default to
+  `RANGE_AUTO = 1` (render_gui_spec §10.1, `crates/ledger/src/gen/numeric.rs`:154–155), as every unbounded field does.
+  R-403 does not change that default: §10.1's rule covers every unbounded field, so changing it for these two is a
+  change to a decision, and which mode a view opens in is a look choice, the human's to give as a ruling (R-390's
+  feedback rule); the ruling does not make it. The mapping is stated per mode instead (gui review 5472865383, F1).
 - **The check is a ledger gate.** A `diverging` entry whose declared range does not span zero fails generation, naming
   the field and its range, beside §3.8's "a field without a complete entry fails generation loudly" (the metadata gate,
   REQ-GEN-002). It is **REQ-GEN-033 (new, M1)**, closed by TASK-M1-17, whose acceptance lists the check and its
@@ -7075,7 +7085,10 @@ own words ("This is from me."):
   **REQ-PAY-035**'s statement's "`K_0`, `V_0` (diverging)" becomes their `lin` scales and ranges, and it gains R-403;
   TASK-M2-03, which closes it, gains a note.
 - **TASK-M1-17** applies it: its `K_0` and `V_0` deliverable follows R-403, it closes REQ-GEN-033 with an acceptance
-  line, and its Notes line on RQ-261 holding its merge becomes R-403's outcome. Its title stays.
+  line, and its Notes line on RQ-261 holding its merge becomes R-403's outcome. Its title stays. Its
+  `numeric_view_template` line (and REQ-RENDER-084's verify) tests the mapping in both modes and the views' default
+  `RANGE_AUTO = 1`; its `m1-numeric` golden shows `K_0` and `V_0` in the default mode, each with a `BASELINES.md` row
+  citing R-403, drawn from a physical `V_0 ≤ 0` (gui review 5472865383, F1 and F2).
 - R-401's note gains the human's confirmation.
 - RQ-261 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line; `REVIEW_QUEUE.md` has no open entry.
 - R-403 is in the "design" group of `plan/rule_groups.yaml`, with R-400.
