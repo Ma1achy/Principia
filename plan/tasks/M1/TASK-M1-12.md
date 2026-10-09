@@ -69,3 +69,4 @@ The fragment-computed views exist over the synthetic payload: live shape views (
 - RQ-101 ruled: R-122 — the Twilight data for the θ̃ view is the published matplotlib table (the prelude's, TASK-M1-03).
 - RQ-123 ruled: R-153 — the debug views are checked against golden images of their own, recorded at the M1 gate, not against artboards (REQ-TOOL-010). RQ-237 reads "recorded at the gate" as M0's rows were read: the reference is recorded in the PR and its row confirmed at the gate (R-376's precedent).
 - RQ-128 ruled: R-158 — the readings taken while applying R-141 to R-156 are accepted.
+- R-399, R-400 and R-401 (9 Oct 2026; the "not yet" stipple, the diverging ramp for a zero-spanning declared range, the per-field log floors) are applied by TASK-M1-17, not by this task, which finishes against the corpus as it was dispatched (applied per R-369).

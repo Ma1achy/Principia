@@ -33,6 +33,7 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "8. What this is not"
 - `docs/contracts/principia_gui_state_contract.md` § "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
 - `docs/contracts/principia_gui_state_contract.md` § "7. What a replacement GUI must honour (the teardown contract)"
+- `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 
 ## Deliverables
 - Doc change: `docs/design/principia_quality_device_note.md` § "The reframe: quality is a preset selector populating one settings struct" — the `eps`, frame-budget and hard-cap fields with types and owners, and the granularity at which `eps` varies (REQ-PERF-084).
@@ -46,6 +47,7 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 - `cargo test -p engine quality_keys_off_eps` — QualitySettings has the three axes; controller reports which binds; memory totals are computed from the generated payload width (REQ-PERF-067).
 - Review checklist (perf) — QualitySettings carries eps; the refinement policy reads eps from it; each tier row sets eps (REQ-PERF-037).
 - `cargo test -p engine tier_rows_populate` — each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each (REQ-PERF-035).
+- `cargo test -p engine custom_n_power_of_two` — Custom offers N as powers of two only, each within REQ-PERF-011's thread ceiling, and rejects any other value (R-398) (REQ-PERF-035).
 - `cargo test -p engine e_free_valued` — the ladder admits E = 2, 4, 5, 6; named tiers use 0/0/1/3/7/15 (REQ-PERF-045).
 - `cargo test -p engine default_tier_crude_specs` — the default-tier selector uses only the listed specs (REQ-PERF-042).
 - Review checklist (perf) — the tier config documents the rationale per default (REQ-PERF-043).
@@ -53,3 +55,4 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 
 ## Notes
 - Definition written: REQ-PERF-084. "Re-selecting Auto runs a fresh probe" (REQ-GUI-015) is asserted against a mocked probe; the probe itself is TASK-M6-16.
+- R-398 (9 Oct 2026) closes RQ-258: N is a power of two in every mode, Custom included (REQ-PERF-035's statement and verify).
