@@ -7026,6 +7026,9 @@ field's own units", and the view shows the stored field, so the floors for `dE_m
 stored fields' normalised units, and TASK-M1-17's proposal says so. It changes nothing that is built; the human is
 told in PR #175.
 
+*Confirmed by the human (R-403's message of 9 Oct 2026):* "Drift floors: no veto. Absolute, normalised, in the
+fields' own units, as applied." The absolute reading stands as applied; nothing else changes.
+
 Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no requirement.
 
 ## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
@@ -7142,3 +7145,73 @@ The `mutants` job dealt the whole workspace's mutants round-robin into 8 shards,
 - R-402 is in the "values" group of `plan/rule_groups.yaml`, with R-376.
 
 Changes REQ-VAL-150's statement, verify, sources, rulings and note.
+
+## R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
+*9 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)" (the field
+list's scales; a paragraph added) and § "3.8 Metadata schema (what every entry must carry)" (a paragraph added),
+`docs/design/principia_debug_tooling_plan.md` § "E. Payload field views — `ICDescriptor` (64 B) & the live-state
+block" (the table's scales), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
+`docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (sentences added),
+R-401's note (the human's confirmation), REQ-GEN-033 (reqio, new), REQ-RENDER-084 and REQ-PAY-035 (reqio),
+TASK-M1-17, TASK-M2-03 (a note), `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md`
+(RQ-261 archived) and `REVIEW_QUEUE.md`; built by TASK-M1-17*
+
+The orchestrator put RQ-261 to the human, with R-401's flagged note on the drifts' floors. The human replied, in their
+own words ("This is from me."):
+
+> RQ-261: option 1. K₀ and V₀ go on viridis over [0, ∞) and (−∞, 0], mapped
+> monotonically (V₀'s most negative value at the dark end). Remove their
+> diverging tags: per RQ-260, a field is diverging only when its declared
+> range spans zero, so the tag must agree with the range.
+> Drift floors: no veto. Absolute, normalised, in the fields' own units, as
+> applied.
+
+(Message of 9 Oct 2026.)
+
+*What it decides:*
+- **`K_0` and `V_0` are one-signed, on viridis.** `K_0` is declared `[0, ∞)` and `V_0` `(−∞, 0]`; both are drawn on
+  viridis, mapped monotonically, `V_0`'s most negative value at the dark end. RQ-261's option 1.
+- **Their `diverging` tags are removed:** their scale is `lin` (generation_root §3.6 changes).
+- **The tag must agree with the range.** A field carries the `diverging` scale only when its declared range spans zero
+  (`lo < 0 < hi`, either end possibly unbounded), as R-400 (RQ-260) derives the diverging ramp from the range. This is
+  a standing consistency rule on every ledger entry, not only on `K_0` and `V_0`.
+- **The drifts' floors:** no veto. R-401's absolute reading stands as applied: absolute, normalised, in the fields'
+  own units.
+
+*Applied per R-369 (mechanical consequences):*
+- **The map is the template's own.** Under `lin` the view places `range_norm(x, lo, hi, RANGE_AUTO, u_range)`,
+  increasing in `x` in either mode, so the range's low end is at viridis's dark end, `t = 0`. Which low end depends on
+  the mode (render_gui_spec §10.1). **Auto** (`RANGE_AUTO = 1`): `t = 0` is the measured minimum over the draw, so
+  `K_0`'s measured minimum and `V_0`'s most negative value are dark. **Fixed** (`RANGE_AUTO = 0`): the declared range
+  is used and "an end with no finite bound takes the measured end", so `K_0`'s `t = 0` is its declared 0 (its top the
+  measured maximum) and `V_0`'s is its measured minimum, again its most negative value (its top the declared 0; a
+  positive value clamps to `t = 1`). `V_0`'s most negative value is dark in both modes, as the human ruled; `K_0`'s 0
+  is dark only in fixed mode. No new mark or helper is needed.
+- **Open-ended ranges keep the auto default.** Since neither range has two finite ends, both views default to
+  `RANGE_AUTO = 1` (render_gui_spec §10.1, `crates/ledger/src/gen/numeric.rs`:154–155), as every unbounded field does.
+  R-403 does not change that default: §10.1's rule covers every unbounded field, so changing it for these two is a
+  change to a decision, and which mode a view opens in is a look choice, the human's to give as a ruling (R-390's
+  feedback rule); the ruling does not make it. The mapping is stated per mode instead (gui review 5472865383, F1).
+- **The check is a ledger gate.** A `diverging` entry whose declared range does not span zero fails generation, naming
+  the field and its range, beside §3.8's "a field without a complete entry fails generation loudly" (the metadata gate,
+  REQ-GEN-002). It is **REQ-GEN-033 (new, M1)**, closed by TASK-M1-17, whose acceptance lists the check and its
+  negative controls (a `diverging` entry over `[0, ∞)` and one over `(−∞, 0]` are refused; one over `(−∞, ∞)`
+  generates). A new requirement rather than a note on REQ-RENDER-084, since it checks the ledger, not the view.
+- **The other `diverging` fields span zero.** Every other `diverging` entry is declared over `(−∞, ∞)`:
+  `energy_drift` and `Lz_drift` (§3.8's worked entries, "signed", §3.4), and `E_0` and `Lz_0` (§3.4, no range, so the
+  ledger's unbounded default, `crates/ledger/src/payload.rs`:7), a total energy and an angular momentum of either sign.
+  None is one-sided, so nothing else changes and no RQ is filed.
+- **REQ-RENDER-084** loses `rq: RQ-261` and gains R-403, a sentence on `K_0` and `V_0`, a verify clause and a note.
+  **REQ-PAY-035**'s statement's "`K_0`, `V_0` (diverging)" becomes their `lin` scales and ranges, and it gains R-403;
+  TASK-M2-03, which closes it, gains a note.
+- **TASK-M1-17** applies it: its `K_0` and `V_0` deliverable follows R-403, it closes REQ-GEN-033 with an acceptance
+  line, and its Notes line on RQ-261 holding its merge becomes R-403's outcome. Its title stays. Its
+  `numeric_view_template` line (and REQ-RENDER-084's verify) tests the mapping in both modes and the views' default
+  `RANGE_AUTO = 1`; its `m1-numeric` golden shows `K_0` and `V_0` in the default mode, each with a `BASELINES.md` row
+  citing R-403, drawn from a physical `V_0 ≤ 0` (gui review 5472865383, F1 and F2).
+- R-401's note gains the human's confirmation.
+- RQ-261 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line; `REVIEW_QUEUE.md` has no open entry.
+- R-403 is in the "design" group of `plan/rule_groups.yaml`, with R-400.
+
+Adds REQ-GEN-033; REQ-RENDER-084's statement, verify, rulings, sources, note and `rq` and REQ-PAY-035's statement,
+rulings and note change.

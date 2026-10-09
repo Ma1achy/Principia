@@ -5030,12 +5030,14 @@
   note: "R-62 names the Jacobi magnitude fields rho_mag / lambda_mag; dd_decoder §3.6 says only 'ρ-magnitudes'"
 - id: REQ-PAY-035
   area: PAY
-  statement: "`ICDescriptor` must hold the 12 f32 fields `m0 m1 m2`, `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (cyclic), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log), produced at decode, plus 16 B of explicit padding to 64 B, and must not store E₀."
+  statement: "`ICDescriptor` must hold the 12 f32 fields `m0 m1 m2`, `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (cyclic), `K_0` (lin, [0, ∞)), `V_0` (lin, (−∞, 0]), `virial_ratio`, `r_min_pair_0` (log), produced at decode, plus 16 B of explicit padding to 64 B, and must not store E₀."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.6 `ICDescriptor` (12 × f32)
   - file: decisions.md
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
   verify:
     method: unit test
     detail: "generated ICDescriptor field names/types/scales; the 16 B padding is a declared member; size is 64 B"
@@ -5043,7 +5045,9 @@
   - R-22
   - R-62
   - R-86
+  - R-403
   milestone: M2
+  note: "R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], not diverging, since neither range spans zero; TASK-M1-17 changes their ledger entries."
 - id: REQ-PAY-036
   area: PAY
   statement: "The symbolic free-group word must live in a separate cold buffer (about 16 B per copy, mixed-radix, about 76 symbols, indexed identically to SimState), touched only on a branch-cut crossing and at resolve, never per step."
@@ -6535,6 +6539,28 @@
   - R-72
   - R-340
   milestone: M0
+- id: REQ-GEN-033
+  area: GEN
+  statement: "A ledger entry must carry the `diverging` scale only when its declared range spans zero (lo < 0 < hi, either end possibly unbounded), so the scale agrees with the range; an entry whose scale is `diverging` and whose declared range does not span zero must fail generation, naming the field and its range (R-403)."
+  source:
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.6 `ICDescriptor` (12 × f32)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger diverging_range: every `diverging` entry of the payload ledger declares a range that spans zero (energy_drift, Lz_drift, E_0, Lz_0), and K_0 and V_0 are lin; a fixture entry with scale diverging over [0, ∞), and one over (−∞, 0], each makes generation fail naming the field and its range (negative controls); one over (−∞, ∞) generates"
+  rulings:
+  - R-400
+  - R-403
+  milestone: M1
+  note: "R-403: the human's \"the tag must agree with the range\", a standing consistency rule on every ledger entry; applied per R-369 as a generation gate beside REQ-GEN-002's metadata gate. Every diverging entry but K_0 and V_0 already spans zero."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -10314,7 +10340,7 @@
   milestone: M0
 - id: REQ-RENDER-084
   area: RENDER
-  statement: "Each generated numeric debug field view whose field's declared ledger range spans zero (lo < 0 < hi, either end possibly unbounded) must draw on a diverging ramp centred at zero, the prelude's ramp_coolwarm from Moreland's cool-warm table (R-122), on the symmetric range [−M, M] with M = max(|lo|, |hi|) over the fixed ends or the measured ends under RANGE_AUTO, so 0 lands at the ramp's neutral midpoint, derived from the range with no signed-or-not mark in the ledger; a field whose declared range does not span zero keeps ramp_viridis (R-400). A field the corpus or its own definition makes non-negative must declare that lower bound in the ledger."
+  statement: "Each generated numeric debug field view whose field's declared ledger range spans zero (lo < 0 < hi, either end possibly unbounded) must draw on a diverging ramp centred at zero, the prelude's ramp_coolwarm from Moreland's cool-warm table (R-122), on the symmetric range [−M, M] with M = max(|lo|, |hi|) over the fixed ends or the measured ends under RANGE_AUTO, so 0 lands at the ramp's neutral midpoint, derived from the range with no signed-or-not mark in the ledger; a field whose declared range does not span zero keeps ramp_viridis (R-400). A field the corpus or its own definition makes non-negative must declare that lower bound in the ledger. K_0 must be declared [0, ∞) and V_0 (−∞, 0], both lin on ramp_viridis, mapped monotonically with V_0's most negative value at the dark end (R-403)."
   source:
   - file: decisions.md
     section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
@@ -10324,16 +10350,17 @@
     section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
   - file: decisions.md
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
   verify:
     method: unit test
-    detail: "cargo test -p ledger numeric_view_template: a zero-spanning field generates ramp_coolwarm on the symmetric range, fixed and auto, with 0 at t = ½; a field with lo ≥ 0 generates ramp_viridis; the cyclic field keeps ramp_twilight and the drifts R-381's view; the ledger gains no member; cargo test -p ledger declared_ranges: each field the corpus or its definition makes non-negative declares lo ≥ 0, each citing its line; cargo test -p render ramp_coolwarm: the ramp matches the checked-in table at its stops and t = ½ is its neutral; cargo xtask golden m1-numeric shows a zero-spanning field's 0 at the neutral"
+    detail: "cargo test -p ledger numeric_view_template: a zero-spanning field generates ramp_coolwarm on the symmetric range, fixed and auto, with 0 at t = ½; a field with lo ≥ 0 generates ramp_viridis; the cyclic field keeps ramp_twilight and the drifts R-381's view; the ledger gains no member; cargo test -p ledger declared_ranges: each field the corpus or its definition makes non-negative declares lo ≥ 0, each citing its line; cargo test -p render ramp_coolwarm: the ramp matches the checked-in table at its stops and t = ½ is its neutral; cargo xtask golden m1-numeric shows a zero-spanning field's 0 at the neutral; cargo test -p ledger numeric_view_template: K_0 over [0, ∞) and V_0 over (−∞, 0] generate ramp_viridis, increasing in the value in both modes, and both headers default to RANGE_AUTO = 1; under auto, t = 0 is the measured minimum (K_0's minimum and V_0's most negative value); under fixed, t = 0 is K_0's declared 0 and V_0's measured minimum, its unbounded end taking the measured end, and a positive V_0 clamps to t = 1; V_0's most negative value is at t = 0 in both modes (R-403); cargo xtask golden m1-numeric shows K_0 and V_0 on viridis in the default (auto) mode, the minimum of each dark, from a physical V_0 ≤ 0 (R-403)"
   rulings:
   - R-122
   - R-400
+  - R-403
   milestone: M1
-  rq:
-  - RQ-261
-  note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. K_0 and V_0 wait on RQ-261."
+  note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], on viridis, mapped monotonically, V_0's most negative value at the dark end; their diverging tags are removed, the tag agreeing with the range (REQ-GEN-033). Applied per R-369: open-ended ranges keep the auto default (render_gui_spec §10.1), so K_0's 0 is at t = 0 only in fixed mode; the mapping is tested per mode."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."

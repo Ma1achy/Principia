@@ -228,6 +228,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots. Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only. Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).
 - **R-399** — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
 - **R-400** — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
+- **R-403** — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
 
 ## Values
 

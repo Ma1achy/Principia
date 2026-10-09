@@ -684,6 +684,9 @@ log floor** of a field with no ledger `floor` is that field's own, `ε_f` in its
 evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-17); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
 smallest positive subnormal, which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
+A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
+the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped
+monotonically, `V_0`'s most negative value at the dark end.
 An end with no finite bound takes the measured end, and a field whose ledger range
 is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
