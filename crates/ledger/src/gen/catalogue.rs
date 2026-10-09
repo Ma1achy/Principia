@@ -209,12 +209,17 @@ impl View {
         test_name(self.field)
     }
 
-    /// The accessor symbols the view and its test reference: its field's ([`Read::accessors`]), and, for the union
-    /// [`UNION_FIELD`], its key's member [`UNION_KEY`], which the view switches on.
+    /// The accessor symbols the view and its test reference: its field's ([`Read::accessors`]); for the union
+    /// [`UNION_FIELD`], its key's member [`UNION_KEY`], which the view switches on; and for [`WORD_GATED`], the word
+    /// and the two word accessors its gate reads.
     pub fn accessors(&self) -> Vec<Accessor> {
         let mut out = self.read.accessors(self.field);
         if self.field == UNION_FIELD {
             out.push(Accessor::Member(UNION_KEY.to_owned()));
+        }
+        if self.field == WORD_GATED {
+            out.push(Accessor::Member("word".to_owned()));
+            out.extend(WORD_GATE.map(|f| Accessor::Function(f.to_owned())));
         }
         out
     }
@@ -645,13 +650,21 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
 /// is invalid, like every word-derived read (payload §3).
 pub const WORD_GATED: &str = "last_symbol";
 
+/// The word accessors [`WORD_GATED`]'s gate reads: the stored length, and the validity of the word's derivations.
+const WORD_GATE: [&str; 2] = ["fgw_length_raw", "fgw_reduced_length_valid"];
+
+/// The field whose probe sets [`WORD_GATED`]'s gate: the word's `length`.
+const GATE_FIELD: &str = "length";
+
 /// The placeholder view of `e`, read as `r`.
 fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let value = r.wgsl(e.name);
     let body = match r {
         Read::Member { wgsl, .. } if e.name == WORD_GATED => format!(
-            "let w = ctx.sample.word;\n    if (fgw_length_raw(w) == 0u || !fgw_reduced_length_valid(w)) {{\n        \
+            "let w = ctx.sample.word;\n    if ({}(w) == 0u || !{}(w)) {{\n        \
              return debug_invalid(ctx.frag_xy);\n    }}\n    return {};",
+            WORD_GATE[0],
+            WORD_GATE[1],
             ramp(e, &value, wgsl)
         ),
         Read::Vector { wgsl: VEC2X3, .. } => format!(
@@ -912,8 +925,14 @@ const NOT_DERIVED: &str = "is not its derived accessor's value";
 /// The check of view `v`'s field: read through the Rust twin of its view's accessor from `p`, it is the value the
 /// probe stored, or, for a derived field, the value its derived accessor gives from an unaltered probe. The union's
 /// view also reads its key, `key`, the key's name and probe: its check reads the key back too, so the view and its
-/// test reference the same members (REQ-TOOL-017).
-fn check(v: &View, stored: Option<&Probe>, key: Option<(&str, &Probe)>) -> String {
+/// test reference the same members (REQ-TOOL-017). [`WORD_GATED`]'s view also reads its gate, the word's length by
+/// `gate`'s probe: its check reads the gate back through the same word accessors.
+fn check(
+    v: &View,
+    stored: Option<&Probe>,
+    key: Option<(&str, &Probe)>,
+    gate: Option<&Probe>,
+) -> String {
     let n = v.field;
     let got = v.read.rust(n);
     let lower = n.to_lowercase();
@@ -985,6 +1004,19 @@ fn check(v: &View, stored: Option<&Probe>, key: Option<(&str, &Probe)>) -> Strin
                     format!("read.{k}"),
                     kp.value.clone(),
                     format!("\"`{n}`'s key `{k}` {NOT_STORED}\""),
+                ];
+                body.push('\n');
+                body.push_str(&call(4, "", "expect", &args));
+            }
+            if let Some(g) = gate {
+                let length: u32 = g.value.parse().unwrap_or(0);
+                let args = [
+                    format!(
+                        "{}(read.word) >= 1 && {}(read.word)",
+                        WORD_GATE[0], WORD_GATE[1]
+                    ),
+                    (length >= 1 && length != 127).to_string(),
+                    format!("\"`{n}`'s gate, the word's length {length}, {NOT_STORED}\""),
                 ];
                 body.push('\n');
                 body.push_str(&call(4, "", "expect", &args));
@@ -1063,7 +1095,16 @@ fn tests(entries: &[Entry], views: &[View]) -> String {
                 Some((ke.name, probes[kk].as_ref()?))
             })
             .flatten();
-        out.push_str(&check(v, probes[k].as_ref(), key));
+        let gate = (v.field == WORD_GATED)
+            .then(|| {
+                let (gk, _) = entries
+                    .iter()
+                    .enumerate()
+                    .find(|(_, e)| e.name == GATE_FIELD)?;
+                probes[gk].as_ref()
+            })
+            .flatten();
+        out.push_str(&check(v, probes[k].as_ref(), key, gate));
         let test = v.test();
         let lower = v.field.to_lowercase();
         let alter = altered_field(e);
