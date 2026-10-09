@@ -10,7 +10,9 @@
 //!   measurement, rerun with their colours, finds each farther from every palette entry than R-16's flat magenta
 //!   (`structural_styling_*`);
 //! - REQ-RENDER-024: `edge_line`'s pixel size reads `1 / cell size` across a cell edge, where §12.1's `fwidth(d)` reads
-//!   0 (`structural_edge_*`).
+//!   0 (`structural_edge_*`);
+//! - colour_composition §6: `s_impurity`'s ramp, the prelude's `ramp_magma`, reads the published magma table
+//!   (`structural_impurity_*`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -478,4 +480,41 @@ negative_control!(
         let spec: Vec<(f32, f32)> = got.iter().map(|&(_, s)| (s, s)).collect();
         check_straddle(&spec);
     }
+);
+
+// ── The s_impurity ramp ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Checks that `stops`, the prelude's magma as the CPU mirror reads it, is the published table the palette measurement
+/// reads (`tests/data/lut/magma.txt`), stop for stop.
+fn check_magma(stops: &[Rgb]) {
+    let published = palettes::table_stops(include_str!("data/lut/magma.txt"));
+    assert_eq!(published.len(), 256, "the published table's stops");
+    assert_eq!(
+        stops,
+        &published[..],
+        "the prelude's magma is not the published table"
+    );
+}
+
+#[test]
+fn structural_impurity_ramp_is_the_published_magma() {
+    check_magma(&present::magma_stops());
+    let [first, last] = [0.0, 1.0].map(present::ramp_magma);
+    assert_eq!(
+        first,
+        present::srgb_to_linear3([0.001462, 0.000466, 0.013866]),
+        "ramp_magma(0)"
+    );
+    assert_eq!(
+        last,
+        present::srgb_to_linear3([0.987053, 0.991438, 0.749504]),
+        "ramp_magma(1)"
+    );
+}
+
+negative_control!(
+    structural_impurity_ramp_is_the_published_magma,
+    "viridis read as magma is not the published magma",
+    expected = "the prelude's magma is not the published table",
+    check_magma(&present::viridis_stops())
 );

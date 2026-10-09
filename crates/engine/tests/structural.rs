@@ -2,13 +2,13 @@
 //! - REQ-RENDER-024: the graph holding the boundary overlay serialises, loads back to an equal graph with an equal
 //!   render key, and the overlay's width, opacity, colour and level are its params (`boundary_overlay_roundtrip`);
 //! - REQ-TOOL-026: every structural view, and the overlays after it, is a graph that lowers and assembles
-//!   (`structural_presets_*`); the structural sets cover every quad state, at depths 3 and 20 with their deep_zoom §1
-//!   frames (`structural_sets_*`).
+//!   (`structural_presets_*`), whose colour node is found under the overlays; the structural sets cover every quad
+//!   state, and a priority of each sign, at depths 3 and 20 with their deep_zoom §1 frames (`structural_sets_*`).
 //!
 //! Each test registers its negative control (R-176).
 
-use engine::stain::{NodeId, Occupant, StainGraph};
-use engine::structural::{boundaries, overlay, view, Level, VIEWS};
+use engine::stain::{NodeId, NodeKind, Occupant, StainGraph};
+use engine::structural::{boundaries, colour_node, overlay, view, Level, VIEWS};
 use engine::synthetic::{structural_record, Synthetic};
 use render::assemble::{assemble, Tier};
 use render::raster::Grid;
@@ -239,4 +239,71 @@ negative_control!(
         let f = set.quad_frame(1);
         assert_eq!(f.c, [0.75, 0.25], "quad 1's centre");
     }
+);
+
+/// Checks that `found`, in `g`, is a colour node: the view's, not its source and not a post.
+fn check_colour_node(g: &StainGraph, found: Option<NodeId>) {
+    let id = found.unwrap_or_else(|| panic!("no node feeds the combiner's colour"));
+    let kind = g.node(id).map(|n| n.kind);
+    assert_eq!(
+        kind,
+        Some(NodeKind::Colour),
+        "{id:?} is not the view's colour node"
+    );
+}
+
+#[test]
+fn structural_presets_colour_node_is_the_views() {
+    for id in VIEWS {
+        let mut g = view(id).unwrap_or_else(|e| panic!("{e}"));
+        check_colour_node(&g, colour_node(&g));
+        for post in ["fallback_tint", "edge_line"] {
+            overlay(&mut g, Occupant::Builtin(post.into())).unwrap_or_else(|e| panic!("{e}"));
+        }
+        check_colour_node(&g, colour_node(&g));
+    }
+}
+
+negative_control!(
+    structural_presets_colour_node_is_the_views,
+    "the view's source taken for its colour node fails",
+    expected = "is not the view's colour node",
+    {
+        let g = view("s_depth").expect("a view");
+        let source = g
+            .wires()
+            .into_iter()
+            .find(|w| w.to != NodeId(0))
+            .map(|w| w.from);
+        check_colour_node(&g, source);
+    }
+);
+
+/// Checks that `priorities`, the structural records' in order, hold the two negative priorities the sets carry.
+fn check_priority_signs(priorities: &[f32]) {
+    let negative: Vec<f32> = priorities.iter().copied().filter(|&p| p < 0.0).collect();
+    assert_eq!(
+        negative,
+        [-0.6, -1.25],
+        "the structural records' negative priorities"
+    );
+    assert!(priorities.iter().any(|&p| p > 0.0), "no positive priority");
+}
+
+#[test]
+fn structural_sets_carry_a_priority_of_each_sign() {
+    let priorities: Vec<f32> = (0..10).map(|q| structural_record(q).priority).collect();
+    check_priority_signs(&priorities);
+    assert_eq!(
+        structural_record(13),
+        structural_record(3),
+        "the records repeat every ten quads"
+    );
+}
+
+negative_control!(
+    structural_sets_carry_a_priority_of_each_sign,
+    "priorities all of one sign fail",
+    expected = "the structural records' negative priorities",
+    check_priority_signs(&[0.35, 2.75, 1.1, 0.6])
 );
