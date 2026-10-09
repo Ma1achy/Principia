@@ -41,6 +41,11 @@ u = c_u + h_u · (2t − 1)        t = (i + 0.5)/N   (quad-local sample coord)
 
 **Banding, absolute and quad-local (R-395).** The within-quad precision above is that of `t` and the offset `δ = h·(2t − 1)`. A `u` formed in f32 as the absolute sum `c + h·(2t − 1)` is not: as the depth grows its adjacent samples depart from the exact step `2h/N`, gradually at a non-dyadic `N`, as the global form's do, and at a power-of-two `N` not at all until they collapse to one coordinate at once. So REQ-TOOL-019's "no banding" holds with absolute coordinates only up to the decoder switchover (`ℓ_switch`, R-90), which the M1 gate checks, and beyond it through the per-quad local coordinates, `c` (f64 on the CPU, its f32 uniform on the GPU) and `δ`, never summed into an absolute f32 `u` (REQ-TOOL-158 at M5, the path; REQ-TOOL-159 at M6, the routing of every quad past `ℓ_switch` onto it); §2's linearised decoder already consumes `δ`.
 
+**`N` is a power of two (R-398)**, so the graded departure of a non-dyadic `N` never occurs: with `c = (2k + 1)·h` and
+`t = (i + ½)/N`, the absolute coordinate is `(2kN + 2i + 1)·h/N`, an f32 value while `h/N` is at least the ulp of `u`,
+and the f32 sum is exact until adjacent samples collapse together, where R-90's switchover fires on their
+bitwise-identical ICs. Near `u ≈ 0.6` that is through `ℓ = 20` for every `N ≤ 8`, and to `ℓ = 19` for `N = 16`.
+
 ---
 
 ## 2. Linearised decoder — IC precision
