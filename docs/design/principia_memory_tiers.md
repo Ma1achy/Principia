@@ -115,6 +115,11 @@ Quality is `render_scale / E / FTLE / word`. The bottom two tiers (Potato/Low) r
 `render_scale` instead; their `E` and `render_scale` values are calibrated (REQ-PERF-086, R-132). Until then the two rows,
 and every memory total that depends on them, are provisional; the totals are recomputed when the values land (R-137).
 
+**`N` is a power of two (R-398)** — at every tier, every internal rung and in Custom (§5). The sample coordinates
+`t = (i + ½)/N` are then dyadic, as the quadtree's centres and half-widths are, so the absolute UV coordinate formed in
+f32 is exact until adjacent samples collapse, where the decoder switchover fires (R-90, R-395). The tiers' `N~` above,
+8 and 16, already are; no rung or setting offers another value.
+
 **FTLE is on from Medium up, off for Potato/Low — a *compute* + *fidelity* boundary, not memory.** (render_scale already shrank the sample count so much that FTLE's memory cost is trivial — +6 MB at Potato, +0.1 GB at Medium@1080p — so memory is no longer the reason.) The reasons it stays gated at the bottom two tiers: (1) **compute** — FTLE is a *second full trajectory per sample* (the Benettin shadow), ~2× the integration work, and Potato/Low serve genuinely weak, *compute-bound* GPUs (a phone won't OOM at 0.02 GB — it'll chug on 2× the trajectories); (2) **fidelity match** — FTLE is a quantitative chaos measurement, and Potato/Low render at 0.25×/0.5× and upscale, so the measurement would be computed on a blurry quarter-res canvas where its fine structure can't be read. Medium at 0.75× is close enough to native *and* a laptop-dGPU tier (not a phone tier), so FTLE is both affordable and legible there. (Custom can force FTLE on at *any* render_scale — a curious weak-GPU user can enable it and accept the framerate hit; it's just off by default at the bottom.)
 
 **Extreme is `1.0×` native, not supersampled** *(provisional, R-137)*. 16× ensemble SSAA already handles the classification-edge aliasing that matters here; supersampling (`render_scale > 1`) on top would only clean second-order raster-grid aliasing at 2.25×+ the memory — not worth it, and it would make the tier's cost display-dependent (48 GB at 4K). So Extreme stays a fixed, predictable native 16×-SSAA preset that allocates cleanly on a 24 GB card even at 4K. Supersampling remains available as a **Custom-only** option for anyone who specifically wants raster-edge AA and has the VRAM (§5 / Custom slider).
@@ -195,6 +200,9 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 > **Memory is the hard clamp; compute is soft.** Available memory / `adapter.limits` sets the ceiling (exceed → allocation failure, crash). Within it, compute sets frame rate (exceed the budget → slower, graceful). Auto-mode picks the highest tier whose **total** (payload + render targets) fits with margin, then pulls **render_scale / E / refinement-floor** under *motion* to hold interactivity, restoring at rest.
 
 **Internal rungs are finer than the six names.** The ladder has ~8–12 rungs in total (R-89; quality/device note §3): the six named tiers are pinned rungs on it, and the rungs between them are unnamed internal steps (moving render_scale, E, and the refinement floor semi-independently) for smooth adaptation — the names are user-facing presets; the fine steps are numbers. **Custom mode** exposes `render_scale` (0.25–2.0; <1 performance, >1 supersampling), `N`, `MAX_REL_DEPTH`, E, and FTLE directly (arbiter off), plus the lock-to-native toggle.
+
+**Custom's `N` is a power of two (R-398)**, each within the one-workgroup-per-quad thread ceiling (`N² ≤`
+`maxComputeInvocationsPerWorkgroup`, REQ-PERF-011); it offers no other value.
 
 ---
 
