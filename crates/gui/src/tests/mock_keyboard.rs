@@ -470,6 +470,12 @@ fn mock_keyboard_repeat_boundaries() {
     assert_eq!(repeats_at(&[0]), [0]);
     let mut r = Repeat::default();
     assert_eq!(r.due(5000), None);
+    // Nothing new is no repeat at all, not a repeat of none.
+    r.press(Key::ArrowUp, NONE, t0);
+    assert_eq!(r.due(t0 + d - 1), None);
+    assert_eq!(r.due(t0 + d), Some((Key::ArrowUp, NONE, 1)));
+    assert_eq!(r.due(t0 + d), None);
+    let mut r = Repeat::default();
     assert_eq!(r.next_due_ms(), None);
     r.press(Key::ArrowUp, SHIFT, t0);
     assert!(r.holds(Key::ArrowUp) && !r.holds(Key::ArrowDown));
@@ -898,5 +904,140 @@ fn mock_keyboard_capture_steps() {
     );
     rejects("a step under another's name", || {
         check_steps_named(&[("tab", Step::ShiftTab)])
+    });
+}
+
+// --- What the frame loop and the layout rely on ------------------------------------------------------------------------
+
+/// The repaint the app asks for while a key is held: the held key's next repeat, `delay` seconds after the frame.
+fn check_repaint(delays: &[f64], want: &[f64]) {
+    assert_eq!(delays.len(), want.len());
+    for (got, want) in delays.iter().zip(want) {
+        assert!(
+            (got - want).abs() < 1e-6,
+            "repaint after {got} s, not {want} s"
+        );
+    }
+}
+
+#[test]
+fn mock_keyboard_held_key_asks_for_its_repeat() {
+    let mut app = mock_app();
+    let mut h = headless();
+    // Ten frames first, so the press falls at 1.25 s of input time.
+    for _ in 0..10 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    let down = Event::Key {
+        key: Key::ArrowDown,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: NONE,
+    };
+    let delay = |output: &egui::FullOutput| {
+        output.viewport_output[&egui::ViewportId::ROOT]
+            .repaint_delay
+            .as_secs_f64()
+    };
+    let pressed = h.frame(&mut app, vec![down]);
+    let held = h.frame(&mut app, Vec::new());
+    let delays = [delay(&pressed), delay(&held)];
+    // The repeat falls due at 1.75 s: 0.5 s after the press, 0.375 s after the next frame, less the 1/60 s egui takes
+    // off each repaint delay for the frame's own time.
+    let frame = 1.0 / 60.0;
+    check_repaint(&delays, &[0.5 - frame, 0.375 - frame]);
+    assert_eq!(app.keyboard.next_repeat_s(), Some(1.75));
+    rejects("a repaint at the press's time", || {
+        check_repaint(&delays, &[0.0, 0.0])
+    });
+}
+
+/// eframe's hook before each pass hands the raw input to the keyboard, which takes its keys out of it.
+#[test]
+fn mock_keyboard_eframe_hook_takes_the_keys() {
+    let mut app = mock_app();
+    let h = headless();
+    let tab = Event::Key {
+        key: Key::Tab,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: NONE,
+    };
+    let mut raw = egui::RawInput {
+        events: vec![tab.clone(), Event::Text("a".into())],
+        ..Default::default()
+    };
+    <crate::app::App<_> as eframe::App>::raw_input_hook(&mut app, &h.ctx, &mut raw);
+    assert_eq!(raw.events, vec![Event::Text("a".into())]);
+    rejects("the Tab left to egui", || {
+        assert_eq!(raw.events, vec![tab.clone(), Event::Text("a".into())])
+    });
+}
+
+/// The Manifold view's four sections: the panel inside a 12-point margin, below a 40-point title, split evenly with
+/// 8-point gaps.
+#[test]
+fn mock_keyboard_manifold_sections() {
+    let panel = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
+    let got = crate::explore::manifold_sections(panel);
+    let want = [52.0, 198.0, 344.0, 490.0]
+        .map(|y| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, 138.0)));
+    assert_eq!(got, want);
+    let moved = egui::Rect::from_min_max(egui::pos2(100.0, 50.0), egui::pos2(460.0, 690.0));
+    assert_eq!(
+        crate::explore::manifold_sections(moved),
+        want.map(|r| r.translate(egui::vec2(100.0, 50.0)))
+    );
+    rejects("sections without their gaps", || {
+        assert_eq!(got[1].min.y, 190.0)
+    });
+}
+
+/// Each frame's places are its own: after the switch to the Stain page, Explore's scopes are placed nowhere.
+#[test]
+fn mock_keyboard_places_are_the_frames() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    assert!(app.keyboard.place_of("figure").is_some());
+    click(&mut h, &mut app, "Stain");
+    let _ = h.frame(&mut app, Vec::new());
+    assert_eq!(app.keyboard.place_of("figure"), None);
+    assert!(app.keyboard.place_of("stain").is_some());
+    rejects("a stale place", || {
+        assert!(app.keyboard.place_of("figure").is_some())
+    });
+}
+
+/// Enter on a control that is not a menu opens no popup, though it is a widget with an id.
+#[test]
+fn mock_keyboard_activate_opens_only_menus() {
+    let ctx = egui::Context::default();
+    let widget = egui::Id::new("a control");
+    let place = Some(crate::keyboard::Place {
+        rect: egui::Rect::ZERO,
+        widget: Some(widget),
+    });
+    let mut actions = crate::app::Actions::default();
+    for id in ["run", "profiler", "export"] {
+        crate::explore::top_bar::activate(&ctx, id, place, &mut actions);
+        assert!(
+            !egui::Popup::is_id_open(&ctx, widget.with("popup")),
+            "{id} opened a popup"
+        );
+    }
+    assert_eq!(actions, crate::app::Actions::default());
+    crate::explore::top_bar::activate(&ctx, "help", place, &mut actions);
+    assert!(egui::Popup::is_id_open(&ctx, widget.with("popup")));
+    // A menu drawn as no widget opens nothing.
+    let ctx = egui::Context::default();
+    crate::explore::top_bar::activate(&ctx, "file", None, &mut actions);
+    assert!(!egui::Popup::is_any_open(&ctx));
+    rejects("a control that opened a popup", || {
+        let ctx = egui::Context::default();
+        crate::explore::top_bar::activate(&ctx, "file", place, &mut actions);
+        assert!(!egui::Popup::is_id_open(&ctx, widget.with("popup")));
     });
 }
