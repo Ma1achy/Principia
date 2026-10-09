@@ -2,7 +2,8 @@
 //! implementation:
 //! - REQ-GEN-009 (gui_state_contract §3; RQ-219): after codegen every ledger field's generated view is a registry
 //!   entry `{id, slot, source, category, uniformSchema, inputDomains}`, tagged debug, its slot `colour`, its source
-//!   the file, no uniforms and the one default input; nothing else is under the generated directory. Hand-written debug
+//!   the file, no uniforms but a numeric view's `RANGE_AUTO` and `u_range` (RQ-231, TASK-M1-09), and the one default
+//!   input; nothing else is under the generated directory. Hand-written debug
 //!   occupants and generated views surface through one scan, each debug occupant's slot the one slot function it
 //!   defines; a file in no slot directory, or a debug file defining other than one slot function, is refused.
 //! - REQ-TOOL-020 / R-378: each catalogue view, baked into a stain, assembles at the full and the base tier reading
@@ -21,7 +22,7 @@ use std::path::{Path, PathBuf};
 
 use ledger::gen::prelude;
 use naga::TypeInner;
-use render::assemble::{self, AssembleError, Kind, Node, Occupant, Stain, Tier};
+use render::assemble::{self, AssembleError, Kind, Node, Occupant, Stain, Tier, UniformType};
 use render::debug_bake::ViewGenerator;
 use render::registry::{self, Catalogue, Category, Entry, RegistryError};
 use validation::gpu::{BindingKind, GpuHarness};
@@ -59,6 +60,25 @@ fn ledger_fields() -> Vec<&'static str> {
         .collect()
 }
 
+/// The fields RQ-231's template colours, from the ledger's §3.8 metadata alone: a scalar field of scale `lin`, `log`,
+/// `cyclic` or `diverging` with no ledger `floor` (TASK-M1-09; the drifts keep R-381's view).
+fn numeric_fields() -> Vec<&'static str> {
+    use ledger::schema::{FieldType, Scale};
+    ledger::gen::validate(&ledger::layout())
+        .unwrap_or_else(|e| panic!("{e}"))
+        .into_iter()
+        .filter(|e| {
+            !matches!(e.ty, FieldType::Vector { .. })
+                && e.floor.is_none()
+                && matches!(
+                    e.scale,
+                    Scale::Lin | Scale::Log | Scale::Cyclic | Scale::Diverging
+                )
+        })
+        .map(|e| e.name)
+        .collect()
+}
+
 fn render_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
 }
@@ -66,7 +86,8 @@ fn render_dir() -> &'static Path {
 // ── REQ-GEN-009: every generated view is a debug registry entry ───────────────────────────────────────────────────
 
 /// `entries` hold, for each ledger field, exactly one debug entry of the `colour` slot whose source is its generated
-/// file, with no uniforms and the one default input; and no generated entry for anything else.
+/// file, with no uniforms but a numeric view's two (RQ-231) and the one default input; and no generated entry for
+/// anything else.
 fn check_registry(entries: &[Entry]) {
     let fields = ledger_fields();
     for f in &fields {
@@ -81,7 +102,26 @@ fn check_registry(entries: &[Entry]) {
         let text =
             std::fs::read_to_string(&file).unwrap_or_else(|e| panic!("{}: {e}", file.display()));
         assert_eq!(e.source, text, "`{id}`'s source is not its file");
-        assert!(e.uniform_schema.is_empty(), "`{id}` declares uniforms");
+        // RQ-231 (TASK-M1-09): a numeric view declares its `RANGE_AUTO` (u32, [0, 1]) and `u_range` (vec2<f32>);
+        // every other view declares none.
+        type Declared<'a> = (&'a str, UniformType, Option<(f64, f64)>);
+        let uniforms: Vec<Declared> = e
+            .uniform_schema
+            .iter()
+            .map(|u| (u.name.as_str(), u.ty, u.range))
+            .collect();
+        if numeric_fields().contains(f) {
+            assert_eq!(
+                uniforms,
+                [
+                    ("RANGE_AUTO", UniformType::U32, Some((0.0, 1.0))),
+                    ("u_range", UniformType::Vec2, None)
+                ],
+                "`{id}`, a numeric view, does not declare RANGE_AUTO and u_range alone"
+            );
+        } else {
+            assert!(uniforms.is_empty(), "`{id}` declares uniforms");
+        }
         assert_eq!(
             e.input_domains.len(),
             1,
@@ -146,6 +186,32 @@ mod qa_gen009_every_ledger_field_is_a_debug_colour_entry_tag {
                 .map(|mut e| {
                     if e.id == "debug/generated/K_0" {
                         e.category = Category::Slot;
+                    }
+                    e
+                })
+                .collect();
+            check_registry(&entries)
+        }
+    );
+}
+
+/// A numeric view declaring no uniforms (the pre-RQ-231 view) is caught (TASK-M1-09).
+#[cfg(feature = "controls")]
+mod qa_gen009_every_ledger_field_is_a_debug_colour_entry_numeric {
+    use super::*;
+
+    negative_control!(
+        qa_gen009_every_ledger_field_is_a_debug_colour_entry,
+        "an `ftle` view without RANGE_AUTO and u_range is caught",
+        expected =
+            "`debug/generated/ftle`, a numeric view, does not declare RANGE_AUTO and u_range alone",
+        {
+            let entries: Vec<Entry> = registry::registry()
+                .unwrap_or_else(|e| panic!("{e}"))
+                .into_iter()
+                .map(|mut e| {
+                    if e.id == "debug/generated/ftle" {
+                        e.uniform_schema.clear();
                     }
                     e
                 })

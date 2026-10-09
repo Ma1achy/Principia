@@ -323,8 +323,9 @@ negative_control!(
 );
 
 /// `xtask <args>` against a stand-in `cargo` (`CARGO`) that lists one test with its control, answers any run as that
-/// control tripping, and answers `run … -- build-kernel` with exit status `build`: whether xtask passed, its output,
-/// and each argument list the stand-in was called with.
+/// control tripping, answers `run … -- build-kernel` with exit status `build`, and hands a run of the golden harness's
+/// binary to the real cargo, since the golden step renders its harness cases through it (RQ-229; TASK-M1-09): whether
+/// xtask passed, its output, and each argument list the stand-in was called with.
 fn with_stand_in(case: &str, args: &[&str], build: u8) -> (bool, String, Vec<String>) {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_{case}"));
     let _ = fs::remove_dir_all(&dir);
@@ -338,13 +339,15 @@ if [ "$1" = metadata ]; then
   echo '{{"packages":[{{"name":"build_kernel_fake","features":{{"controls":[]}},"targets":[{{"doctest":false}}]}}]}}'
   exit 0
 fi
+case "$*" in *golden_harness*) exec '{real}' "$@";; esac
 for a in "$@"; do
   if [ "$a" = --list ]; then printf 'build_kernel_t::t: test\nbuild_kernel_t::t::negative_control: test\n'; exit 0; fi
   if [ "$a" = build-kernel ]; then exit {build}; fi
 done
 echo 'test build_kernel_t::t::negative_control - should panic ... ok'
 "#,
-            dir = dir.display()
+            dir = dir.display(),
+            real = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
         ),
     )
     .unwrap();

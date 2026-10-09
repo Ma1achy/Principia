@@ -7,6 +7,7 @@ pub mod bringup;
 pub mod control;
 pub mod convergence;
 pub mod gate;
+pub mod golden_scene;
 pub mod gpu;
 pub mod oklab;
 pub mod prop;
@@ -19,3 +20,7 @@ pub use engine::synthetic;
 /// The coordinate presets and the stain graph they are (TASK-M1-07), re-exported for the render crate's tests, as the
 /// harness is.
 pub use engine::{presets, stain};
+
+/// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
+/// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
+pub use render::assemble::{Declaration, UniformType};

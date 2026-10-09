@@ -2,7 +2,13 @@
 // The debug view of `t_end_step` (render contract Part 6; debug_tooling_plan §B–E): `times` bits 0–15, u-bits, scale
 // lin, range [0, 65535]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through
 // `SimState.t_end_step`; its test, `catalogue_view_t_end_step` in `crates/kernel/tests/catalogue_views/generated.rs`,
-// reads it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// reads it through their Rust twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec
+// §10.1, RQ-231): the NaN guard, the stored sentinel's line where the field has one, and the ramp, with `RANGE_AUTO`
+// and `u_range` its uniforms.
+// @uniform RANGE_AUTO: u32 = 0 [0, 1]
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
-    return dbg_lin(f32(ctx.sample.t_end_step), 0.0, 65535.0);
+    let raw = f32(ctx.sample.t_end_step);
+    if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }
+    return ramp_viridis(range_norm(raw, 0.0, f32(ctx.params.horizon_steps), uniforms.RANGE_AUTO != 0u, uniforms.u_range));
 }
