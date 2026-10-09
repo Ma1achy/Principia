@@ -5473,6 +5473,11 @@ the message's order, applied per R-204. That is how R-370 to R-372 were numbered
 CI only; REQ-SYS-065's statement names the pinned label.
 
 ## R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*
+*Amended in part by R-402 (the nightly full run's shards: each package's mutants dealt round-robin into shards sized
+on their measured cost, counted each run, under a 330-minute step limit).*
+*Still in force: all of it but its note on the nightly full run's shards: the six confirmed values stand, REQ-VAL-149's
+8 shards × 300 min for the per-PR run among them; R-402 sizes the nightly full run's shards and gives its step a
+330-minute limit.*
 *3 Oct 2026 · applied in the six requirements (reqio), `.github/workflows/mutants.yml`, `.github/workflows/nightly.yml`,
 `.cargo/mutants.toml`, `crates/validation/src/spawn.rs`, `crates/validation/src/prop.rs`, `xtask/src/golden.rs`,
 `fixtures/golden/BASELINES.md`, the forward lines of the rulings it amends, and `docs/archive/review_queue/M0.md`
@@ -7025,6 +7030,121 @@ told in PR #175.
 fields' own units, as applied." The absolute reading stands as applied; nothing else changes.
 
 Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no requirement.
+
+## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
+*9 Oct 2026 · applied in `.github/workflows/nightly.yml` (its `concurrency` group and jobs `mutants-plan`, `mutants`
+and `mutants-report`), `xtask/tests/qa_TASK-M0-19.rs` (`check_mutants`, a ruling-forced qa-file change), REQ-VAL-150
+(reqio), R-376's forward lines and `plan/rule_groups.yaml`*
+
+The human's message of 9 Oct 2026, which said "This is from me.", item 5:
+
+> 5. Fix the nightly full mutants run now on its own branch (shard it so each job fits GitHub's 6-hour limit); your
+> call how.
+
+(Numbered R-402 by the orchestrator, the number after those of the message's items 1 to 4, recorded separately.)
+
+*The evidence (the four nightlies before this ruling; `outcomes.json` from each shard's uploaded `mutants.out`).*
+The `mutants` job dealt the whole workspace's mutants round-robin into 8 shards, the per-PR count of REQ-VAL-149
+(R-376), with no step limit, under GitHub's 360-minute job limit. No nightly has finished it:
+
+| Run | Mutants | Per shard | Outcome | Tested |
+|---|---|---|---|---|
+| 37192432160 (4 Oct) | about 3,400 | 425–426 | all 8 cancelled at 360 min | 2,293 (67%) |
+| 37295168060 (5 Oct) | about 4,780 | 596–597 | all 8 cancelled at 360 min | 2,235 (47%) |
+| 37446623194 (6 Oct) | about 5,080 | 634–635 | all 8 cancelled at 360 min | 2,242 (44%) |
+| 37604801520 (7 Oct) | about 6,060 | 757 | shard 6 cancelled at 360 min, 276 of 757 tested; the other 7 died earlier, out of disk | — |
+
+- **The count.** `cargo mutants --list` over the workspace at `ea1921d` (9 Oct) gives 6,710 mutants: xtask 2,089,
+  render 1,812, ledger 922, engine 624, validation 572, kernel 358, gui 198, prin 135. It has doubled in five days.
+- **Where a shard's time went.** Each round-robin shard mutated every package, so its unmutated baseline ran every
+  package's tests (1,833 s in 7 Oct's shard 6, 1,300–2,240 s in the per-PR shards since), and REQ-VAL-180's
+  per-mutant timeout, 2.0 times the baseline's test time, came to about an hour (3,666 s). Shard 6's four timeouts, two
+  in ledger and two in render, took 4.1 of its 5.3 hours of mutant time; the ledger timed-out mutants' own package's
+  tests take about 75 s.
+- **What a mutant costs, by package,** under `.cargo/mutants.toml` today (nextest, the mutated package's tests, R-393),
+  from the per-PR shards since #156 and 7 Oct's shard 6: a caught xtask mutant takes 155 s on average (99 mutants,
+  the longest 734 s), and xtask's whole suite, which a surviving mutant runs, about 21–25 minutes (the gui-and-xtask
+  baselines of run 37940971171: 1,275 s and 1,422 s); a caught render mutant 43 s, its suite 4–7 minutes; ledger 17 s,
+  validation 19 s, engine 11 s, kernel 10 s, gui 5 s, prin 3 s. The 4 Oct run, the last to reach xtask, found 50 of
+  895 xtask mutants missed (5.6%) and 2 timed out.
+- **Survivors cluster by file.** Of the 4 Oct run's 50 xtask survivors, 35 are in `xtask/src/lint_constants.rs`
+  (lines 85–211), from only 126 of its 210 mutants tested; the file and its tests are unchanged since. A mutant that
+  survives runs its package's whole suite, about 22.5 minutes in xtask, so a shard that keeps a file's mutants
+  together inherits the cluster: dealt into consecutive slices of 40 (n = 168), the shard holding most of
+  lint_constants.rs (135) would carry 12 known survivors of its 25 already tested, about 440 minutes with the rest
+  at the expected rates, and three more slices 314–339: over the 330-minute step and the 360-minute job limit every
+  night. Uniform slices small enough to avoid it (about 14 mutants) would need about 480 shards, past a matrix's 256.
+- **The disk.** On 7 Oct, shards 0 to 3 lost their runner after 4.5 to 5.2 hours (shard 1's annotation: "No space left
+  on device"), and shards 4, 5 and 7 stopped on a shutdown signal after 1.1 to 3 hours, shard 7 after "You are running
+  out of disk space … Free space left: 28 MB"; each had 113 GB free when its run began. In each, the last line before
+  the end came 29 to 40 minutes earlier, so one mutant had been running that long, inside the hour-long timeout. What
+  filled the disk is not established.
+
+*What it decides:*
+- **Each package's mutants are dealt round-robin into shards, counted each run.** A first job, `mutants-plan`, lists
+  the workspace's mutants at the run's commit under `.cargo/mutants.toml` (`cargo mutants --list --json`, which builds
+  nothing) and counts them by package; package P takes `n_P = ⌈mutants in P / size_P⌉` shards, and the job
+  `(P, k)` runs `cargo mutants --package P --shard k/n_P --sharding round-robin`. The counts follow the workspace as
+  it grows. A matrix holds at most 256 jobs, so past that `mutants-plan` fails, naming R-402, and the sizing is
+  revisited; the run is never silently cut short.
+- **One package a shard.** A shard's baseline runs that package's tests alone, so REQ-VAL-180's timeout, unchanged at
+  2.0 times the baseline's test time with its 60 s floor, is the package's own: about 150 s for a ledger mutant rather
+  than 3,666 s.
+- **Round-robin within the package.** A file's mutants, and with them a cluster of survivors, are spread across the
+  package's shards rather than kept together: lint_constants.rs's 210 mutants put at most 3 into any of xtask's 84
+  shards, and no xtask shard holds more than 3 of the 4 Oct run's 50 survivors (31 shards hold 1, 8 hold 2, 1 holds 3).
+- **The sizes, from the measured costs.** Mutants a shard: **xtask 25**, render 200, validation 300, ledger, engine,
+  kernel, gui and prin 400; a package not listed takes xtask's 25, the most cautious. Each is set so the package's
+  slowest shard stays near 200 minutes under a pessimistic model: every shard's setup and baseline build (8 minutes)
+  and its package's suite as baseline; each mutant at the 4–7 Oct runs' recorded outcome where it has one (a survivor
+  costs the package's suite, a timeout twice it, a caught mutant the package's measured mean), and otherwise at
+  survival and timeout rates above those observed (xtask 8% and 1%, against 5.6% and 0.2% on 4 Oct, with a 25-minute
+  suite; validation 10%, ledger 3%, render 2%). Today that is 104 shards: xtask 84, render 10, ledger 3, engine 2,
+  validation 2, gui, kernel and prin 1 each.
+- **The worst shard, with margin.** Under that model the slowest shard is xtask's shard 39 of 84, at about 205 minutes
+  (3 known survivors, 17 mutants untested on 4 Oct taken at the pessimistic rates); the slowest of render and
+  validation are about 205 too, ledger's about 117. Against the run step's 330-minute limit that leaves about 125
+  minutes, and about 155 against GitHub's 360: room for five more xtask survivors in one shard than the model expects.
+  At the observed rates instead, the slowest xtask shard is about 175 minutes.
+- **A step limit of 330 minutes.** The run's step stops at 330 minutes, so a shard that would overrun still uploads
+  what it tested and fails, inside the job limit.
+- **The report.** `mutants-report` still fails when a shard did not finish (REQ-VAL-150). It now also fails when fewer
+  shards uploaded a report than `mutants-plan` dealt, or when the shards' own mutant lists (each `mutants.json`) do
+  not add up to the workspace's count, which is what makes the per-package shards a whole-workspace run.
+- **The per-PR run is unchanged.** REQ-VAL-149's 8 shards, round-robin, under a 300-minute step limit (R-376), stay in
+  `mutants.yml` as they are.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Per-package shards, not uniform slices or a fixed count.** Uniform slicing keeps clusters together (above);
+  uniform round-robin over the workspace mutates every package in every shard, so every timeout is the whole
+  workspace's hour. Sizes per package let the cheap packages run in few shards (each shard repeats its 8 minutes of
+  setup and its package's baseline) and the expensive one in many.
+- **At most 12 shards at once** (`max-parallel: 12`), the orchestrator's figure: 8 of a free account's 20 runners
+  stay with per-push and per-PR CI. The run is estimated at about 225 runner-hours a night at the observed rates
+  (about 257 under the pessimistic model), so about 19 hours from its 03:00 UTC start (about 21.5 pessimistic),
+  ending around 22:00 UTC, before the next start at 03:00.
+- **Two nightlies never overlap:** the workflow's `concurrency` group `nightly`, with `cancel-in-progress: false`. A
+  nightly started while one still runs waits rather than cancelling it, since a cancelled run's report is incomplete;
+  GitHub keeps at most one waiting, so a backlog cannot build up.
+- **`qa_TASK-M0-19.rs` changes (R-290, forced by this ruling).** Its `check_mutants` forbade `--package` on the
+  nightly's `cargo mutants` lines, its guard that the run covers the whole workspace. The file's every commit is qa's,
+  and R-402's per-package shards need `--package`, so the change is the ruling-forced exception: `--package` is
+  allowed only as `--package "$PACKAGE"`, in a job whose `PACKAGE` is its matrix entry, whose matrix a job deals from
+  an unnarrowed `cargo mutants --list`, and whose report checks the shards' mutants against that listing's total;
+  every other narrowing stays forbidden, on every line, the listing's included. The Linux and memory-cap checks now
+  apply to every job that runs `cargo mutants`, not only the first. Four negative controls are added: a shard on a
+  hard-coded package, a `PACKAGE` not from the matrix, a listing narrowed to one package, and a report that does not
+  add the shards up. No assertion is weakened.
+- **The free disk is logged** at the end of each shard's run (`df -h /`), so the next nightly shows whether the 7 Oct
+  disk exhaustion recurs. With package-sized timeouts a hung mutant now runs minutes, not an hour, outside xtask; if it
+  recurs, it is a finding of its own.
+- **REQ-VAL-150** gains R-402 among its sources and rulings, its statement the shard sizing and the report's failure
+  on an unfinished shard, its verify the checks above, and a note (reqio).
+- R-376 gains "Amended in part by R-402" and "Still in force" lines (R-292); its applied note on the nightly's shards
+  ("take no step limit") is what R-402 amends.
+- R-402 is in the "values" group of `plan/rule_groups.yaml`, with R-376.
+
+Changes REQ-VAL-150's statement, verify, sources, rulings and note.
 
 ## R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
 *9 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)" (the field
