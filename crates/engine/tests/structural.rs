@@ -262,6 +262,19 @@ fn structural_presets_colour_node_is_the_views() {
         }
         check_colour_node(&g, colour_node(&g));
     }
+    // The backbone alone, and the boundaries over it, feed the combiner nothing: no colour node, though OUT's port 0
+    // is wired.
+    let g = boundaries(Level::Both).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        colour_node(&g),
+        None,
+        "the boundaries over the backbone have a colour node"
+    );
+    assert_eq!(
+        colour_node(&StainGraph::new()),
+        None,
+        "the backbone has a colour node"
+    );
 }
 
 negative_control!(
