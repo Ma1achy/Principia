@@ -142,7 +142,7 @@ fn mock_keyboard_arrows_stop_at_the_first_sibling() {
     rejects("a focus that moved", || assert_eq!(focus(&app), ["legend"]));
 }
 
-// --- The top bar, scope 1 ---------------------------------------------------------------------------------------------
+// --- The top bar, scope 1 --------------------------------------------------------------------------------------------
 
 /// Enter on the top bar reaches its controls in the order they are drawn, each with its breadcrumb.
 fn top_bar_walk() -> Vec<(Vec<String>, bool)> {
@@ -385,7 +385,7 @@ fn mock_keyboard_base_steps_and_multipliers() {
     rejects("Alt as ×10", || assert_eq!(keymap::multiplier(ALT), 10.0));
 }
 
-// --- The key table ----------------------------------------------------------------------------------------------------
+// --- The key table ---------------------------------------------------------------------------------------------------
 
 #[test]
 fn mock_keyboard_key_table() {
@@ -440,7 +440,7 @@ fn mock_keyboard_key_table() {
     });
 }
 
-// --- Held keys: delay, then repeat ------------------------------------------------------------------------------------
+// --- Held keys: delay, then repeat -----------------------------------------------------------------------------------
 
 /// The repeats `due` gives, polled at each of `times`, after a press at 1000 ms.
 fn repeats_at(times: &[u64]) -> Vec<u64> {
@@ -589,7 +589,7 @@ fn mock_keyboard_held_tab_repeats() {
     });
 }
 
-// --- `?`: the shortcuts, over everything --------------------------------------------------------------------------------
+// --- `?`: the shortcuts, over everything -----------------------------------------------------------------------------
 
 fn check_overlay(texts: &[String]) {
     for name in [TITLE, CLOSE_HINT] {
@@ -661,7 +661,7 @@ fn mock_keyboard_hidden_layer_takes_no_key() {
     });
 }
 
-// --- The registration each later screen uses ---------------------------------------------------------------------------
+// --- The registration each later screen uses -------------------------------------------------------------------------
 
 #[test]
 fn mock_keyboard_registration() {
@@ -744,7 +744,7 @@ fn mock_keyboard_focus_in_view_ui() {
     rejects("a focus at start", || assert_eq!(focus(&app), ["top_bar"]));
 }
 
-// --- Before and after moving focus: only the ring and the breadcrumb change (REQ-GUI-098) ------------------------------
+// --- Before and after moving focus: only the ring and the breadcrumb change (REQ-GUI-098) ----------------------------
 
 fn canvas() -> Arc<MockCanvas> {
     Arc::new(MockCanvas::new().expect("a GPU adapter for the mock's canvas"))
@@ -907,7 +907,7 @@ fn mock_keyboard_capture_steps() {
     });
 }
 
-// --- What the frame loop and the layout rely on ------------------------------------------------------------------------
+// --- What the frame loop and the layout rely on ----------------------------------------------------------------------
 
 /// The repaint the app asks for while a key is held: the held key's next repeat, `delay` seconds after the frame.
 fn check_repaint(delays: &[f64], want: &[f64]) {

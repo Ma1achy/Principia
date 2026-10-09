@@ -1,5 +1,6 @@
 //! The `?` shortcuts overlay (render_gui_spec §G3, "? — shortcuts, over everything"): §G3's key table in a frame
-//! centred on the window, above every other layer, taking the pointer as well as the keys; Esc or `?` closes it. Help's "Keys (?)" opens it too (RQ-250).
+//! centred on the window, above every other layer, taking the pointer as well as the keys; Esc or `?` closes it.
+//! Help's "Keys (?)" opens it too (RQ-250).
 
 use eframe::egui::{self, Align2, Area, Frame, Grid, Id, Order, RichText};
 
