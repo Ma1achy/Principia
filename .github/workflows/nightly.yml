@@ -20,6 +20,12 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
 
+# Two nightlies never run at once (R-402): one started while another is still running waits for it, rather than
+# cancelling it, since a cancelled run's report is incomplete.
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -186,17 +192,22 @@ jobs:
       - name: cargo test -p xtask --features controls golden_halfway --doc
         run: cargo test -p xtask --features controls golden_halfway --doc
 
-  # How many shards the full mutants run takes (R-402; REQ-VAL-150): the workspace's mutants at this commit, listed
-  # under `.cargo/mutants.toml` as the shards will test them (a listing builds nothing), dealt into shards of at most
-  # 40, so that every shard finishes well inside GitHub's 360-minute job limit however the workspace grows. 40 is sized
-  # on the slowest package's mutants, xtask's, whose own tests take about 22 minutes: about 190 minutes a shard,
-  # baseline and setup included, against the step's 330-minute limit (R-402 gives the evidence). A matrix holds at most
-  # 256 jobs, so past 10,240 mutants this job fails, naming R-402, rather than cut the run short.
+  # How the full mutants run is sharded (R-402; REQ-VAL-150): the workspace's mutants at this commit, listed under
+  # `.cargo/mutants.toml` as the shards will test them (a listing builds nothing), counted by package, and each
+  # package's dealt round-robin into shards of at most its `PER_SHARD` mutants. A shard mutates one package, so its
+  # baseline runs that package's tests alone, and the per-mutant timeout, set from the baseline (REQ-VAL-180), is the
+  # package's own. Round-robin within a package spreads a file's mutants across its shards, so a file with many
+  # survivors (each one running the package's whole suite) cannot pile into one shard. The sizes are set on the
+  # measured cost of each package's mutants, with survivors and timeouts assumed above their observed rates (R-402
+  # gives the evidence): the slowest shard, xtask's, is estimated at about 205 minutes with setup and baseline, against
+  # the run step's 330-minute limit. A package not in the table takes xtask's size, the most cautious. A matrix holds at
+  # most 256 jobs, so past that this job fails, naming R-402, rather than cut the run short.
   mutants-plan:
     runs-on: ubuntu-24.04
     outputs:
-      n: ${{ steps.plan.outputs.n }}
-      shards: ${{ steps.plan.outputs.shards }}
+      jobs: ${{ steps.plan.outputs.jobs }}
+      total: ${{ steps.plan.outputs.total }}
+      matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins: the listing reads the workspace's metadata with it (R-169).
@@ -213,37 +224,50 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants@27.1.0
-      - name: cargo mutants --list (the full run's mutants, dealt into shards of at most 40)
+      - name: cargo mutants --list (the full run's mutants, dealt into shards by package)
         id: plan
+        env:
+          # Mutants per shard, by package (R-402).
+          PER_SHARD: '{"xtask": 25, "render": 200, "validation": 300, "ledger": 400, "engine": 400, "kernel": 400,
+            "gui": 400, "prin": 400}'
+          PER_SHARD_DEFAULT: "25"
         run: |
-          cargo mutants --list > "$RUNNER_TEMP/mutants.list"
-          total=$(wc -l < "$RUNNER_TEMP/mutants.list")
-          n=$(( (total + 39) / 40 ))
-          echo "the workspace has $total mutants: $n shards of at most 40 (R-402)"
-          if [ "$total" -eq 0 ]; then
-            echo "::error::cargo mutants listed no mutants over the workspace"
-            exit 1
-          fi
-          if [ "$n" -gt 256 ]; then
-            echo "::error::$total mutants need $n shards of 40, past a matrix's 256 jobs: revisit R-402's sizing"
-            exit 1
-          fi
-          echo "n=$n" >> "$GITHUB_OUTPUT"
-          echo "shards=[$(seq -s , 0 $(( n - 1 )))]" >> "$GITHUB_OUTPUT"
+          cargo mutants --list --json > "$RUNNER_TEMP/mutants.json"
+          python3 - "$RUNNER_TEMP/mutants.json" <<'PY'
+          import collections, json, math, os, sys
+          mutants = json.load(open(sys.argv[1]))
+          per = json.loads(os.environ["PER_SHARD"])
+          default = int(os.environ["PER_SHARD_DEFAULT"])
+          count = collections.Counter(m["package"] for m in mutants)
+          include = []
+          for package in sorted(count):
+              n = math.ceil(count[package] / per.get(package, default))
+              include += [{"package": package, "k": k, "n": n} for k in range(n)]
+              print(f"{package}: {count[package]} mutants, {n} shards of at most {per.get(package, default)}")
+          print(f"the workspace has {len(mutants)} mutants in {len(include)} shards (R-402)")
+          if not mutants:
+              print("::error::cargo mutants listed no mutants over the workspace")
+              sys.exit(1)
+          if len(include) > 256:
+              print(f"::error::{len(include)} shards, past a matrix's 256 jobs: revisit R-402's sizing")
+              sys.exit(1)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"jobs={len(include)}\ntotal={len(mutants)}\n")
+              out.write("matrix=" + json.dumps({"include": include}, separators=(",", ":")) + "\n")
+          PY
 
   # The full `cargo mutants` run over the workspace (R-196, R-198; REQ-VAL-150): every mutant, not only a diff's, in
-  # the `n` shards `mutants-plan` counts (R-402), each shard k of n with `--shard k/n`. The shards are consecutive
-  # slices of the mutant list (`--sharding slice`), which cargo-mutants orders package by package, so most shards
-  # mutate one package, and their baseline runs that package's tests alone; the per-mutant timeout, set from the
-  # baseline, is then the package's own, not the whole workspace's (an hour a hung mutant, as it was when a shard dealt
-  # round-robin mutated every package). Its exclusions are the per-PR job's, the one list in `.cargo/mutants.toml`,
-  # which `cargo mutants` reads from the workspace root; so are its two caps (R-348; REQ-VAL-179): the per-mutant
-  # timeout (REQ-VAL-180) and the per-process memory cap on the test processes (REQ-VAL-181), confirmed by the human at
-  # the M0 gate (R-376; R-71). Each shard uploads its `mutants.out`; `mutants-report` joins them. The nightly run is a
-  # report, not a gate (R-196): a survivor here is listed, and the job passes once every shard finished. REQ-VAL-149's
-  # 8 shards and 300-minute limit (R-376) size the per-PR `--in-diff` run only. Here the run's step stops at 330
-  # minutes, so a shard that would overrun GitHub's 360-minute job limit still uploads what it tested, and fails
-  # (R-402). At most 16 shards run at once, leaving the account's other runners to per-push and per-PR CI (R-402).
+  # the shards `mutants-plan` deals (R-402): each job runs shard k of n of one package's mutants, round-robin, and the
+  # jobs together cover every package `mutants-plan` listed, which `mutants-report` checks. Its exclusions are the
+  # per-PR job's, the one list in `.cargo/mutants.toml`, which `cargo mutants` reads from the workspace root; so are its
+  # two caps (R-348; REQ-VAL-179): the per-mutant timeout (REQ-VAL-180) and the per-process memory cap on the test
+  # processes (REQ-VAL-181), confirmed by the human at the M0 gate (R-376; R-71). Each shard uploads its
+  # `mutants.out`; `mutants-report` joins them. The nightly run is a report, not a gate (R-196): a survivor here is
+  # listed, and the job passes once every shard finished. REQ-VAL-149's 8 shards and 300-minute limit (R-376) size the
+  # per-PR `--in-diff` run only. Here the run's step stops at 330 minutes, so a shard that would overrun GitHub's
+  # 360-minute job limit still uploads what it tested, and fails (R-402). At most 12 shards run at once, leaving the
+  # account's other runners to per-push and per-PR CI; the run, about 225 runner-hours, then ends within about 19 to
+  # 22 hours of its 03:00 UTC start, before the next (R-402).
   mutants:
     runs-on: ubuntu-24.04
     needs: mutants-plan
@@ -251,9 +275,8 @@ jobs:
       PRIN_GPU_BACKEND: vulkan
     strategy:
       fail-fast: false
-      max-parallel: 16
-      matrix:
-        shard: ${{ fromJSON(needs.mutants-plan.outputs.shards) }}
+      max-parallel: 12
+      matrix: ${{ fromJSON(needs.mutants-plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - name: Free runner disk
@@ -298,34 +321,36 @@ jobs:
       # Debug info: line tables only, set for the whole workflow (R-374); `mutants.yml`'s note gives why.
       - name: cargo run --quiet --package xtask -- build-kernel
         run: cargo run --quiet --package xtask -- build-kernel
-      # The whole workspace's mutants, this shard's slice of them, under `.cargo/mutants.toml`'s exclusions and caps.
-      # Exit 0: none survived; 2: some survived; 3: some timed out; all three are a finished run, reported. The step
-      # stops at 330 minutes (R-402), so that the upload below still runs inside the job's 360; a stopped step fails
-      # the shard, and `mutants-report` with it. The free disk is logged at the end: on 7 Oct 2026 (run 37604801520)
-      # most shards ran out of disk part-way through a long-running mutant.
-      - name: cargo mutants --shard ${{ matrix.shard }}/${{ needs.mutants-plan.outputs.n }} (the full run)
+      # This shard's share of its package's mutants, under `.cargo/mutants.toml`'s exclusions and caps. Exit 0: none
+      # survived; 2: some survived; 3: some timed out; all three are a finished run, reported. The step stops at 330
+      # minutes (R-402), so that the upload below still runs inside the job's 360; a stopped step fails the shard, and
+      # `mutants-report` with it. The free disk is logged at the end: on 7 Oct 2026 (run 37604801520) most shards ran
+      # out of disk part-way through a long-running mutant.
+      - name: cargo mutants --package ${{ matrix.package }} --shard ${{ matrix.k }}/${{ matrix.n }} (the full run)
         timeout-minutes: 330
         env:
-          SHARD: ${{ matrix.shard }}/${{ needs.mutants-plan.outputs.n }}
+          PACKAGE: ${{ matrix.package }}
+          SHARD: ${{ matrix.k }}/${{ matrix.n }}
         run: |
           set +e
           start=$(date +%s)
-          cargo mutants --in-place --shard "$SHARD" --sharding slice -o "$RUNNER_TEMP"
+          cargo mutants --in-place --package "$PACKAGE" --shard "$SHARD" --sharding round-robin -o "$RUNNER_TEMP"
           code=$?
-          echo "cargo mutants shard $SHARD: exit $code, wall-clock $(( $(date +%s) - start )) s"
+          echo "cargo mutants $PACKAGE shard $SHARD: exit $code, wall-clock $(( $(date +%s) - start )) s"
           df -h /
           case $code in 0|2|3) ;; *) exit "$code" ;; esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mutants-nightly-shard-${{ matrix.shard }}
+          name: mutants-nightly-shard-${{ matrix.package }}-${{ matrix.k }}
           path: ${{ runner.temp }}/mutants.out
           if-no-files-found: ignore
 
   # The full run's report (REQ-VAL-150): every shard's caught, missed, unviable and timed-out mutants, as cargo-mutants
   # lists them in each shard's `caught.txt`, `missed.txt`, `unviable.txt` and `timeout.txt`, joined into one file and
-  # uploaded beside the shards' own reports. It fails when a shard did not finish, or when fewer shards uploaded a
-  # report than `mutants-plan` counted (R-402), so a cut-off run is never read as complete.
+  # uploaded beside the shards' own reports. It fails when a shard did not finish, when fewer shards uploaded a report
+  # than `mutants-plan` dealt, or when the shards' own mutant lists (`mutants.json`) do not add up to the workspace's
+  # count (R-402), so a cut-off or partial run is never read as complete.
   mutants-report:
     if: always()
     needs: [mutants-plan, mutants]
@@ -342,12 +367,19 @@ jobs:
             cat "$RUNNER_TEMP"/shards/*/"$kind.txt" 2>/dev/null | sort > "$RUNNER_TEMP/$kind.all"
             echo "$kind: $(wc -l < "$RUNNER_TEMP/$kind.all")" | tee -a "$report.head"
           done
-          expected="${{ needs.mutants-plan.outputs.n }}"
+          expected="${{ needs.mutants-plan.outputs.jobs }}"
+          total="${{ needs.mutants-plan.outputs.total }}"
           mkdir -p "$RUNNER_TEMP/shards"
-          uploaded=$(find "$RUNNER_TEMP/shards" -mindepth 1 -maxdepth 1 -type d -name 'mutants-nightly-shard-*' | wc -l)
+          uploaded=0
+          dealt=0
+          for d in "$RUNNER_TEMP"/shards/mutants-nightly-shard-*/; do
+            [ -f "$d/mutants.json" ] || continue
+            uploaded=$(( uploaded + 1 ))
+            dealt=$(( dealt + $(jq length "$d/mutants.json") ))
+          done
           {
             echo "cargo mutants, full workspace run (nightly), every shard"
-            echo "shards: $uploaded of ${expected:-?} uploaded a report"
+            echo "shards: $uploaded of ${expected:-?} uploaded a report, listing $dealt of ${total:-?} mutants"
             cat "$report.head"
             for kind in caught missed unviable timeout; do
               echo
@@ -359,8 +391,8 @@ jobs:
             echo "::error::a nightly mutants shard did not finish (result: ${{ needs.mutants.result }})"
             exit 1
           fi
-          if [ -z "$expected" ] || [ "$uploaded" -ne "$expected" ]; then
-            echo "::error::$uploaded nightly mutants shards uploaded a report, of ${expected:-an uncounted n} (R-402)"
+          if [ -z "$expected" ] || [ "$uploaded" -ne "$expected" ] || [ -z "$total" ] || [ "$dealt" -ne "$total" ]; then
+            echo "::error::$uploaded of ${expected:-?} shards reported, $dealt of ${total:-?} mutants (R-402)"
             exit 1
           fi
       - uses: actions/upload-artifact@v4

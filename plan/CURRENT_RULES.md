@@ -246,7 +246,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-382** — The L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2 *(closes RQ-207)*
 - **R-385** — Before the M7 gate, the hybrid embedding (`k = 25`) is re-measured on real rendered figures, and the 37.6 % raw low-bit error is reconciled with §5's ~8 %
 - **R-386** — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
-- **R-402** — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: shards of at most 40 mutants, counted each run, sliced package by package *(amends R-376 as it applies to the nightly full run's shards)*
+- **R-402** — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
 
 ## Process
 
