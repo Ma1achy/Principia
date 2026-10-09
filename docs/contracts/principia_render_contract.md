@@ -216,7 +216,10 @@ with dd_colouring §3.1's sRGB transfer.
   `h = pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))`, all wrapping u32. `h` then takes `dbg_hash_u32`'s byte-to-RGB step: its low
   three bytes, low first, are the 8-bit sRGB red, green and blue. Every bit of the word, its length included, enters
   the fold, so the word-hash view (Part 6) colours whole words, not one limb. Like `dbg_hash_u32` it can give any
-  colour, never a pattern.
+  colour, never a pattern. The word-hash view draws it only where `fgw_reduced_length_valid` holds: a truncated
+  word's retained prefix is not the reduced word, and every word derivation is invalid for it (payload §3), so there
+  the view draws `debug_invalid(frag_xy)`, the hatch, as the reduced-length and symbol-at-k views do (applied per
+  R-369; the physics reviewer approves this R-72 definition).
 - **`dbg_ternary(m, frag_xy)`, the ternary masses colour (R-72; REQ-TOOL-154; TASK-M1-12):** the `ICDescriptor`'s
   masses `(m0, m1, m2)` as linear RGB scaled by `1/max(mᵢ)`: equal masses draw white, and each vertex, one mass alone,
   its primary, `m0` red, `m1` green, `m2` blue. Where no mass is positive, or one is the absence NaN, the colour is

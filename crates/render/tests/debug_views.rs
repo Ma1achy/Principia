@@ -676,7 +676,8 @@ fn words_scene(colouring: Colouring) -> Scene {
 }
 
 /// Checks that `fold` gives each fixture word its own 24-bit colour, and that the word-hash view draws each word as
-/// `dbg_hash_word`, so distinct words take distinct colours on screen.
+/// `dbg_hash_word`, so distinct words take distinct colours on screen, but the truncated word, which draws the hatch
+/// (payload §3: word-derived quantities are invalid once truncated).
 fn check_hash(fold: fn([u32; 4]) -> u32) {
     let words = fixture_words();
     for (a, (wa, qa)) in words.iter().enumerate() {
@@ -690,15 +691,22 @@ fn check_hash(fold: fn([u32; 4]) -> u32) {
     }
     let s = words_scene(debug("debug/word/hash"));
     let image = render(&gpu(), &s);
+    let mut truncated = 0;
     for (i, (w, _)) in (0u32..).zip(&words) {
-        check_tile(
-            &s,
-            &image,
-            i,
-            &|_| present::dbg_hash_word(*w),
-            "the word's hash",
-        );
+        if golden_scene::fgw_length_raw(*w) == 127 {
+            truncated += 1;
+            check_tile(&s, &image, i, &present::debug_invalid, "the hatch");
+        } else {
+            check_tile(
+                &s,
+                &image,
+                i,
+                &|_| present::dbg_hash_word(*w),
+                "the word's hash",
+            );
+        }
     }
+    assert_eq!(truncated, 1, "the fixture's one truncated word");
 }
 
 #[test]
