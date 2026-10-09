@@ -18,6 +18,10 @@
 //! rasterisation, one sample per tile ([`raster`]); and the headless render-to-texture helper the golden tests render
 //! through ([`headless`]).
 //!
+//! The structural views and overlays (TASK-M1-13): the CPU mirror of the `ctx.quad` debug views, the boundary
+//! overlay, the fallback tint and the pending hatch ([`structural`]), whose WGSL lives in `shaders/wgsl/frag/debug/` and
+//! `shaders/wgsl/frag/post/`.
+//!
 //! The coordinate convention (TASK-M1-07): the one framebuffer → UV flip, `shaders/wgsl/lib/coords.wgsl` and its Rust
 //! twin ([`coords`]), which the raster, picking and the golden coordinate view call; and the image export, which
 //! writes the headless readback's rows as they come, top first ([`export`]).
@@ -49,3 +53,4 @@ pub mod pipeline_cache;
 pub mod present;
 pub mod raster;
 pub mod registry;
+pub mod structural;

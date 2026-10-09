@@ -367,7 +367,15 @@ fn golden_scene_binary_writes_the_render() {
         .lines()
         .map(str::to_owned)
         .collect();
-    assert_eq!(names, golden_scene::NAMES, "--list prints the scenes");
+    let all: Vec<&str> = golden_scene::NAMES
+        .iter()
+        .chain(&validation::structural_scene::NAMES)
+        .copied()
+        .collect();
+    assert_eq!(
+        names, all,
+        "--list prints the scenes, the structural ones after"
+    );
     for (args, why) in [
         (
             &["--scene", "no_such_scene"][..],

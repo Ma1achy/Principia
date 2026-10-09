@@ -718,7 +718,9 @@ R-280, R-399; REQ-COL-053, REQ-COL-064).
   `ramp_twilight(t)` read matplotlib's published tables (R-122), checked in under `crates/ledger/data/lut/` with their
   source named: matplotlib 3.8.0, `_cm_listed.py`, 256 and 510 stops. Stop `k` sits at `t = k/(N − 1)`, with `t`
   clamped to [0, 1]. The ramp interpolates linearly between stops in the tables' sRGB encoding, then decodes. A cyclic
-  caller passes `fract(·)` to `ramp_twilight`. `ramp_grey(t)` is OKLab `(t, 0, 0)`, `t` clamped: the colour slot's
+  caller passes `fract(·)` to `ramp_twilight`. `ramp_magma(t)` reads the same release's `_magma_data` table, 256
+  stops, under the same rules: the ramp of the `s_impurity` view (colour_composition §6; TASK-M1-13).
+  `ramp_grey(t)` is OKLab `(t, 0, 0)`, `t` clamped: the colour slot's
   None grey (colour_composition §4.1). `hue_wheel(t)` is OKLCH with L = 0.75 and C = 0.12 at hue `t` turns, periodic
   in `t`, and in gamut at every hue.
 - **`debug_invalid(frag_xy)`** draws the hatch defined in the render contract's presentation layer (Part 5;
@@ -794,6 +796,15 @@ so a line is the same width at any quad size, any depth, any zoom — and it ant
 Thresholding UV directly (`u < 0.01`) would instead give fat borders on coarse quads and hairlines on
 deep ones. The same expression on `ctx.tile.uv` gives tile boundaries; one node can composite both at
 different widths and opacities.
+
+*As built (TASK-M1-13; REQ-RENDER-024; applied per R-369):* the occupant
+`crates/render/shaders/wgsl/frag/post/edge_line.wgsl` converts to pixels with `fwidth(uv)` rather than `fwidth(d)`, each
+derivative taken modulo the cell (`dpdx(uv) − round(dpdx(uv))`, and so for `dpdy`), and divides each axis's edge
+distance by its own pixel size before taking the nearer. `fwidth(d)` reads 0 where a 2 × 2 pixel block straddles a cell
+edge, since `d` is equal on both sides, and so draws no line there. The wrapped derivative reads the pixel's size
+wherever a cell is at least 2 px wide. The width, `width_px`, is the line's full width across the edge at half
+coverage. The fallback tint and the pending hatch are post occupants reading `ctx.quad` at M1 (RQ-239); their styling
+is debug_tooling_plan §F's (REQ-TOOL-124), and the Tier-3 path below is TASK-M5-29's.
 
 Being an ordinary post node, the boundary overlay **serialises with the graph**, has editable width /
 opacity / colour / level, chains in post order, and composes over any field — with no display-bar

@@ -11,8 +11,8 @@
 //! - the colour-space maps the ramps need: `srgb_to_linear`, `linear_to_srgb`, `oklab_to_linear` and
 //!   `oklch_to_linear` (dd_colouring §3.1);
 //! - the ramps the M1 views need, each returning linear RGB, the colour slot's space (render contract Part 2):
-//!   `ramp_viridis` and `ramp_twilight` from matplotlib's published tables (R-122, [`luts`]), `ramp_grey` and
-//!   `hue_wheel`;
+//!   `ramp_viridis`, `ramp_twilight` and `ramp_magma` (the structural view `s_impurity`'s, colour_composition §6;
+//!   TASK-M1-13) from matplotlib's published tables (R-122, [`luts`]), `ramp_grey` and `hue_wheel`;
 //! - `debug_invalid(frag_xy)`, the hatched invalid pattern (R-132, R-136), its pattern and colours [`hatch`]'s, a
 //!   calibration proposed here (REQ-COL-055, R-71).
 //!
@@ -67,9 +67,10 @@ impl Lut {
     }
 }
 
-/// The published tables the prelude's LUT ramps read (R-122): matplotlib 3.8.0's `_viridis_data` and
-/// `_twilight_data`, transcribed verbatim into `crates/ledger/data/lut/`, each file naming its source.
-pub fn luts() -> [Lut; 2] {
+/// The published tables the prelude's LUT ramps read (R-122): matplotlib 3.8.0's `_viridis_data`, `_twilight_data`
+/// and `_magma_data`, transcribed verbatim into `crates/ledger/data/lut/`, each file naming its source. Magma is
+/// colour_composition §6's ramp for the structural view `s_impurity` (TASK-M1-13).
+pub fn luts() -> [Lut; 3] {
     [
         Lut {
             name: "viridis",
@@ -82,6 +83,12 @@ pub fn luts() -> [Lut; 2] {
             constant: "LUT_TWILIGHT",
             ramp: "ramp_twilight",
             data: include_str!("../../data/lut/twilight.txt"),
+        },
+        Lut {
+            name: "magma",
+            constant: "LUT_MAGMA",
+            ramp: "ramp_magma",
+            data: include_str!("../../data/lut/magma.txt"),
         },
     ]
 }
