@@ -17,13 +17,14 @@
 //! **Exhaustive by construction.** A field the fragment cannot read refuses generation, naming it ([`refused`]): a new
 //! ledger field appears in the catalogue or generation fails (seam 13; REQ-GEN-011).
 //!
-//! **The colouring.** A numeric field takes the two-line template ([`numeric`]; render_gui_spec §10.1, RQ-231,
-//! TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. The rest is a placeholder
-//! (TASK-M1-10 and TASK-M1-12 own it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and the drift
-//! fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`, which needs
-//! no range (render contract Part 5). A vector field shows its norm, `‖·‖`, the reduction §3.8 names (applied per
-//! R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp through
-//! `dbg_sentinel`, never as a class (R-136). The scale and range written in each view's header are the ledger's.
+//! **The colouring.** A numeric field takes the two-line template ([`numeric`](super::numeric); render_gui_spec §10.1,
+//! RQ-231, TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. The rest is a
+//! placeholder (TASK-M1-10 and TASK-M1-12 own it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and
+//! the drift fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`,
+//! which needs no range (render contract Part 5). A vector field shows its norm, `‖·‖`, the reduction §3.8 names
+//! (applied per R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp
+//! through `dbg_sentinel`, never as a class (R-136). The scale and range written in each view's header are the
+//! ledger's.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
