@@ -189,9 +189,9 @@ const QUAD_OWN: [(&str, &str, &str); 6] = [
     ("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
 ];
 
-/// colour_composition §3's quad lane: [`QUAD_OWN`]'s members, then each of [`QUAD_LANE`]'s, its type the ledger's
-/// `RenderQuad` member's, filled from the `RenderQuad` value `quad` names (`rc.quad` in the harness's lanes, the stain's
-/// `quad_read(r.quad)` in [`preset_module`]).
+/// colour_composition §3's quad lane: `QUAD_OWN`'s members (the lane's own), then each of [`QUAD_LANE`]'s, its type
+/// the ledger's `RenderQuad` member's, filled from the `RenderQuad` value `quad` names (`rc.quad` in the harness's
+/// lanes, the stain's `quad_read(r.quad)` in [`preset_module`]).
 pub fn quad_lane(quad: &str) -> Result<Vec<LaneMember>, String> {
     let mut out: Vec<LaneMember> = QUAD_OWN
         .iter()

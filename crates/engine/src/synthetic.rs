@@ -13,10 +13,12 @@
 //! them as f32, as deep_zoom §1's per-quad uniforms are passed; the scheduler's `QuadRequest` carries them from M5
 //! (TASK-M5-04).
 //!
-//! **The structural sets** (debug_tooling_plan §F; TASK-M1-13). [`Synthetic::structural`] fills each quad's
-//! `RenderQuad` metadata from [`structural_record`]'s table, every quad state among them, and places each quad at one of
-//! the depths it is given, at its grid column and row, with that depth's frame ([`Synthetic::place`]): what the
-//! structural views and overlays read before any scheduler fills a quad.
+//! **The structural sets** (debug_tooling_plan §F; TASK-M1-13).
+//! [`Synthetic::structural`](crate::synthetic::Synthetic::structural) fills each quad's `RenderQuad` metadata from
+//! [`structural_record`](crate::synthetic::structural_record)'s table, every quad state among them, and places each
+//! quad at one of the depths it is given, at its grid column and row, with that depth's frame
+//! ([`Synthetic::place`](crate::synthetic::Synthetic::place)): what the structural views and overlays read before any
+//! scheduler fills a quad.
 //!
 //! Every write goes through the generated layout: a sample's packed words through the generated pack routines
 //! (`kernel::payload`, payload §6), its word through `fgw_pack`, and a quad's members by their names in the ledger's
