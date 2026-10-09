@@ -170,6 +170,46 @@ pub const QUAD_LANE: [(&str, &str); 10] = [
     ("dominant_outcome", "dominant_outcome"),
 ];
 
+/// The quad lane's members that `RenderQuad` does not hold, each `(name, WGSL type, fill)`, in the lane's order, ahead of
+/// [`QUAD_LANE`]'s: the quad's index; its frame (colour_composition §3, R-72; deep_zoom §1's c and h), from one source,
+/// the per-quad frames the CPU computes in f64 and binds at [`FRAME_BINDING`], read as f32 (deep_zoom § "The precision
+/// split"), its top-left corner, Y-up, `c + (−h, +h)`; the sample's quad-local coordinate; the quad's valid sample
+/// count. Each fill reads the raster `r`, the frames or the context's uniforms, so the harness's lanes and the stain's
+/// quad lane ([`preset_module`]) fill them alike.
+const QUAD_OWN: [(&str, &str, &str); 6] = [
+    ("index", "u32", "r.quad"),
+    (
+        "tl",
+        "vec2<f32>",
+        "quad_frames[r.quad].xy + vec2<f32>(-1.0, 1.0) * quad_frames[r.quad].zw",
+    ),
+    ("centre", "vec2<f32>", "quad_frames[r.quad].xy"),
+    ("half_width", "vec2<f32>", "quad_frames[r.quad].zw"),
+    ("uv", "vec2<f32>", "r.quad_uv"),
+    ("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
+];
+
+/// colour_composition §3's quad lane: [`QUAD_OWN`]'s members, then each of [`QUAD_LANE`]'s, its type the ledger's
+/// `RenderQuad` member's, filled from the `RenderQuad` value `quad` names (`rc.quad` in the harness's lanes, the stain's
+/// `quad_read(r.quad)` in [`preset_module`]).
+pub fn quad_lane(quad: &str) -> Result<Vec<LaneMember>, String> {
+    let mut out: Vec<LaneMember> = QUAD_OWN
+        .iter()
+        .map(|&(name, ty, fill)| member(name, ty, fill))
+        .collect();
+    let rq = ledger::quad::render_quad();
+    for (lane, field) in QUAD_LANE {
+        let storage = rq
+            .members
+            .iter()
+            .find(|m| m.name == field)
+            .map(|m| m.storage)
+            .ok_or_else(|| format!("RenderQuad has no `{field}` for ctx.quad.{lane}"))?;
+        out.push(member(lane, wgsl_type(storage), format!("{quad}.{field}")));
+    }
+    Ok(out)
+}
+
 /// The read side's descriptor predicates, which the validity lane holds as `sd_<name>`, not the payload lane.
 const PREDICATES: [&str; 4] = [
     "is_resolved_outcome",
@@ -317,31 +357,7 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
         ),
         member("chart_id", "u32", "ctx_uniforms.chart_id"),
     ];
-    let mut quad = vec![
-        member("index", "u32", "r.quad"),
-        // The quad's frame (colour_composition §3, R-72; deep_zoom §1's c and h): one source, the per-quad frames the
-        // CPU computes in f64 and binds at FRAME_BINDING, read as f32 (deep_zoom § "The precision split"). The top-left
-        // corner, Y-up, is c + (−h, +h).
-        member(
-            "tl",
-            "vec2<f32>",
-            "quad_frames[r.quad].xy + vec2<f32>(-1.0, 1.0) * quad_frames[r.quad].zw",
-        ),
-        member("centre", "vec2<f32>", "quad_frames[r.quad].xy"),
-        member("half_width", "vec2<f32>", "quad_frames[r.quad].zw"),
-        member("uv", "vec2<f32>", "r.quad_uv"),
-        member("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
-    ];
-    let rq = ledger::quad::render_quad();
-    for (lane, field) in QUAD_LANE {
-        let storage = rq
-            .members
-            .iter()
-            .find(|m| m.name == field)
-            .map(|m| m.storage)
-            .ok_or_else(|| format!("RenderQuad has no `{field}` for ctx.quad.{lane}"))?;
-        quad.push(member(lane, wgsl_type(storage), format!("rc.quad.{field}")));
-    }
+    let quad = quad_lane("rc.quad")?;
     let tile = vec![
         member("tile_index", "u32", "r.tile"),
         member("sample_index", "u32", "r.sample"),
@@ -583,22 +599,32 @@ pub fn stain_module(assembled: &str) -> String {
 pub const PRESET_ENTRY: &str = "preset_harness_fs";
 
 /// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers, its
-/// screen and quad lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], with the per-quad
-/// frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile
-/// through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad.uv` the sample's quad-local coordinate
-/// and `ctx.quad.centre`, `ctx.quad.half_width` its quad's frame, and writes the colour with alpha 1. The presets
-/// (`engine::presets`) render through it.
+/// screen, quad and tile lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], with the
+/// per-quad frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile
+/// through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad` the quad lane ([`quad_lane`]: `uv` the
+/// sample's quad-local coordinate, `centre` and `half_width` its quad's frame, and the quad's `RenderQuad` members, read
+/// through `quad_read(r.quad)` by [`QUAD_LANE`]'s mapping; RQ-238) and `ctx.tile.uv` the within-tile coordinate, and
+/// writes the colour with alpha 1. The presets (`engine::presets`) render through it.
 pub fn preset_module(assembled: &str) -> String {
+    let [.., b] = buffers();
+    let mut quad = String::new();
+    let lane =
+        quad_lane("q").expect("QUAD_LANE names RenderQuad's members (ledger::quad::RENDER_QUAD)");
+    for m in lane {
+        let _ = write!(quad, "\n    quad.{} = {};", m.name, m.fill);
+    }
     format!(
         "{assembled}{}{}\n@fragment\nfn {PRESET_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
          let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
          let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
-         let frame = quad_frames[r.quad];\n    \
-         let quad = CtxQuad(r.quad_uv, frame.xy, frame.zw);\n    \
-         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
+         let q = {reader}(r.quad);\n    \
+         var quad: CtxQuad;{quad}\n    \
+         let tile = CtxTile(r.tile_uv);\n    \
+         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, tile, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
          return vec4<f32>(rgb, 1.0);\n}}\n",
         raster::WGSL,
         declarations(),
+        reader = b.reader,
     )
 }
 
