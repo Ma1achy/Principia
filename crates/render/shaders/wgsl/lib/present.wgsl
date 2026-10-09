@@ -66,11 +66,64 @@ fn dbg_pcg(v: u32) -> u32 {
     return (word >> 22u) ^ word;
 }
 
+// A hash's low three bytes, low first, as 8-bit sRGB red, green, blue: the byte-to-RGB step of the hashed colours.
+fn dbg_bytes_rgb(h: u32) -> vec3<f32> {
+    return dbg_srgb8(vec3<u32>(h & 255u, (h >> 8u) & 255u, (h >> 16u) & 255u));
+}
+
 // A raw word as a hashed colour ("is it changing at all"): the PCG hash's low three bytes as 8-bit sRGB red, green,
 // blue.
 fn dbg_hash_u32(v: u32) -> vec3<f32> {
-    let h = dbg_pcg(v);
-    return dbg_srgb8(vec3<u32>(h & 255u, (h >> 8u) & 255u, (h >> 16u) & 255u));
+    return dbg_bytes_rgb(dbg_pcg(v));
+}
+
+// The whole-word hash of a `free_group_word`, a `vec4<u32>` (R-72; REQ-TOOL-155): `dbg_pcg` folded over the four
+// limbs, `h = pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))`, then `dbg_hash_u32`'s byte-to-RGB step. Every bit of the word, its
+// length included, reaches the colour.
+fn dbg_hash_word(w: vec4<u32>) -> vec3<f32> {
+    return dbg_bytes_rgb(dbg_pcg(w.w ^ dbg_pcg(w.z ^ dbg_pcg(w.y ^ dbg_pcg(w.x)))));
+}
+
+// Whether any of three floats is the absence NaN, by its exact bits (lowering Part 3a).
+fn dbg_any_absent(v: vec3<f32>) -> bool {
+    return is_absent_nan(v.x) || is_absent_nan(v.y) || is_absent_nan(v.z);
+}
+
+// The ICDescriptor masses as one ternary colour (R-72; REQ-TOOL-154): `(m0, m1, m2)` as linear RGB scaled by
+// `1/max(mᵢ)`, so equal masses draw white and a vertex, one mass alone, its primary. Where no mass is positive, or one
+// is the absence NaN, the colour is undefined and the hatch is drawn.
+fn dbg_ternary(m: vec3<f32>, frag_xy: vec2<f32>) -> vec3<f32> {
+    let top = max(m.x, max(m.y, m.z));
+    if (dbg_any_absent(m) || !(top > 0.0)) {
+        return debug_invalid(frag_xy);
+    }
+    return m / top;
+}
+
+// The direction cosines of a 3-vector as a colour (`n`, k = 3; render contract Part 5, live shape views): `½(v̂ + 1)`
+// as linear RGB, `v̂ = v/‖v‖`. Where `‖v‖ > 0` fails, or a component is the absence NaN, the direction is undefined
+// and the hatch is drawn.
+fn dbg_dircos3(v: vec3<f32>, frag_xy: vec2<f32>) -> vec3<f32> {
+    let norm = length(v);
+    if (dbg_any_absent(v) || !(norm > 0.0)) {
+        return debug_invalid(frag_xy);
+    }
+    return 0.5 * (v / norm + vec3<f32>(1.0));
+}
+
+// The direction cosines of a k = 6 vector as a colour (`r`, `p`, the shadow; R-72; REQ-TOOL-157): the six cosines
+// `cᵢ = vᵢ/‖v‖` grouped by body, component `i` into channel `⌊3i/6⌋`, each channel the sum of its squared cosines,
+// the body's share of `‖v‖²`; the three shares, which sum to 1, as linear RGB scaled by `1/max`, as the ternary masses
+// are. The scale cancels `‖v‖²`, so the colour is `wᵢ/max(wᵢ)` with `wᵢ = ‖vᵢ‖²`, body `i`'s squared norm. Where
+// `‖v‖ > 0` fails, or a component is the absence NaN, the direction is undefined and the hatch is drawn.
+fn dbg_dircos6(v: array<vec2<f32>, 3>, frag_xy: vec2<f32>) -> vec3<f32> {
+    let w = vec3<f32>(dot(v[0], v[0]), dot(v[1], v[1]), dot(v[2], v[2]));
+    let absent = dbg_any_absent(vec3<f32>(v[0].x, v[1].x, v[2].x)) || dbg_any_absent(vec3<f32>(v[0].y, v[1].y, v[2].y));
+    let top = max(w.x, max(w.y, w.z));
+    if (absent || !(top > 0.0)) {
+        return debug_invalid(frag_xy);
+    }
+    return w / top;
 }
 
 // A stored value's place on the viridis ramp with no range: 0.5 + 0.5 · x/(1 + |x|), so every finite value has its own

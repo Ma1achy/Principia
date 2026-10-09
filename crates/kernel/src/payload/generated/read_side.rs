@@ -8,6 +8,10 @@ use spirv_std::num_traits::Float;
 
 use super::*;
 
+/// The shape-sphere point `n` of a configuration (integrator dd §3.7): the march's own map, the one Rust source of the
+/// read side's `n` (payload §5), re-exported so the read and its tests call it by this name.
+pub use crate::shape::shape;
+
 /// The canonical quiet NaN's f32 bits: sign 0, exponent all ones, the quiet bit alone in the significand (lowering
 /// Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
 pub const CANONICAL_QNAN_BITS: u32 = 0x7fc0_0000;
@@ -77,6 +81,7 @@ pub struct SimState {
     pub ensemble_spread: f32,
     pub energy_drift: f32,
     pub Lz_drift: f32,
+    pub n: [f32; 3],
 }
 
 /// The renormalisations completed by step `n`, `n / n_renorm` under the uniform schedule (payload §5); none when
@@ -260,6 +265,7 @@ pub fn sim_state_from_ftle(
         },
         energy_drift: energy_drift(s.r, s.p, masses, s.E_0),
         Lz_drift: Lz_drift(s.r, s.p, s.Lz_0),
+        n: shape(s.r, masses),
     }
 }
 
@@ -325,5 +331,6 @@ pub fn sim_state_from_base(
         },
         energy_drift: energy_drift(s.r, s.p, masses, s.E_0),
         Lz_drift: Lz_drift(s.r, s.p, s.Lz_0),
+        n: shape(s.r, masses),
     }
 }

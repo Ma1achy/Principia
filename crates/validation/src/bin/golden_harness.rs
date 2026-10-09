@@ -4,7 +4,7 @@
 //!
 //! `golden_harness --scene <name>`: renders the synthetic scene `name` (`validation::golden_scene`) on the backend
 //! `PRIN_GPU_BACKEND` names (R-206) into an `Rgba32Float` target and writes the float image (`golden_scene::MAGIC`'s
-//! format) to stdout. `golden_harness --list` prints the scenes.
+//! format) to stdout. `golden_harness --list` prints the scenes, `m1-numeric`'s then `debug-views`'s.
 
 use std::io::Write as _;
 use std::process::ExitCode;
@@ -16,6 +16,9 @@ fn run(args: &[&str]) -> Result<(), String> {
         ["--list"] => {
             for name in golden_scene::NAMES {
                 println!("{name}");
+            }
+            for case in golden_scene::debug_cases()? {
+                println!("{}", case.name);
             }
             Ok(())
         }

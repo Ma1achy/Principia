@@ -367,7 +367,10 @@ fn golden_scene_binary_writes_the_render() {
         .lines()
         .map(str::to_owned)
         .collect();
-    assert_eq!(names, golden_scene::NAMES, "--list prints the scenes");
+    let mut want: Vec<String> = golden_scene::NAMES.map(str::to_owned).to_vec();
+    let debug = golden_scene::debug_cases().unwrap_or_else(|e| panic!("{e}"));
+    want.extend(debug.iter().map(|c| c.name.clone()));
+    assert_eq!(names, want, "--list prints the scenes");
     for (args, why) in [
         (
             &["--scene", "no_such_scene"][..],
@@ -538,8 +541,10 @@ negative_control!(
     }
 );
 
-/// Checks that `s`, whose field `Scene::value` doesn't list, refuses to read it: its value, its look and its params
-/// (whose `u_range` is measured from the values) are each an error naming the field, never another field's reading.
+/// Checks that `s`, whose field `Scene::value` doesn't list, refuses to read it: its value and its look are each an
+/// error naming the field, never another field's reading, and its params measure nothing from it. Every field a
+/// numeric view colours is listed (TASK-M1-12), so an unlisted field is one with no numeric view, whose params hold
+/// no measured `u_range`.
 fn check_unlisted(s: &Scene, field: &str) {
     let why = format!("its field `{field}` has no read in `Scene::value`");
     match s.value(0) {
@@ -550,17 +555,19 @@ fn check_unlisted(s: &Scene, field: &str) {
         Ok(l) => panic!("`{}` shows `{field}` as {l:?}", s.name),
         Err(e) => assert!(e.contains(&why), "{e}"),
     }
-    match s.params() {
-        Ok(p) => panic!("`{}` measures `{field}`'s params as {p:?}", s.name),
-        Err(e) => assert!(e.contains(&why), "{e}"),
-    }
+    let params = s.params().unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        params.is_empty(),
+        "`{}` measures `{field}`'s params as {params:?}",
+        s.name
+    );
 }
 
 #[test]
 fn golden_scene_unlisted_field_is_an_error() {
     let mut s = named("ftle");
-    s.colouring = Colouring::View("closure_min");
-    check_unlisted(&s, "closure_min");
+    s.colouring = Colouring::View("state");
+    check_unlisted(&s, "state");
     for name in golden_scene::NAMES {
         let s = named(name);
         assert!(s.value(0).is_ok(), "`{name}` reads its own field");

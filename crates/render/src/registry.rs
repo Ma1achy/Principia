@@ -1,7 +1,13 @@
 //! The fragment side's occupant registry: the scanned filesystem (gui_state_contract §3). The registry is not a
-//! hand-maintained list: [`scan`] walks the hand-written occupants under `shaders/wgsl/frag/` ([`OCCUPANT_DIR`]) and the
-//! debug catalogue's generated views under `frag/debug/generated/` ([`GENERATED_DIR`], RQ-219), one entry per `.wgsl`
-//! file, `{id, slot, source, category, uniformSchema, inputDomains}`. Adding a file is the act of registering it.
+//! hand-maintained list: [`scan`] walks the hand-written occupants under `shaders/wgsl/frag/` ([`OCCUPANT_DIR`]), the
+//! debug catalogue's generated views under `frag/debug/generated/` ([`GENERATED_DIR`], RQ-219) and its generated
+//! reductions under `frag/debug/reductions/` ([`REDUCTIONS_DIR`]: each vector field's direction cosines and the ternary
+//! masses, TASK-M1-12), one entry per `.wgsl` file, `{id, slot, source, category, uniformSchema, inputDomains}`. Adding
+//! a file is the act of registering it.
+//!
+//! **A vector field's two reductions** (gui_state_contract §4; dd_generation_root §3.8): '‖·‖ as scalar' is its
+//! catalogue view, `debug/generated/<field>`, and 'as direction-cosines' is `debug/reductions/<field>_dircos`
+//! ([`vector_reductions`]).
 //!
 //! **Slot.** A file under a slot directory is that slot's occupant: `colour/`, `brightness/`, `combiner/` or `post/`.
 //! A file under either `debug/` is tagged [`Category::Debug`] (a filter tag, not a different mechanism), and its slot is
@@ -26,6 +32,24 @@ pub const OCCUPANT_DIR: &str = "shaders/wgsl/frag";
 
 /// The debug catalogue's generated views, relative to the render crate (RQ-219; `ledger::gen::catalogue::DIR`).
 pub const GENERATED_DIR: &str = "frag/debug/generated";
+
+/// The debug catalogue's generated reductions, relative to the render crate (`ledger::gen::catalogue::REDUCTIONS_DIR`).
+pub const REDUCTIONS_DIR: &str = "frag/debug/reductions";
+
+/// The names of a vector field's two reductions, as the GUI offers them (gui_state_contract §4).
+pub const REDUCTION_NAMES: [&str; 2] = ["‖·‖ as scalar", "as direction-cosines"];
+
+/// The registry ids of `field`'s two reductions, each with its name ([`REDUCTION_NAMES`]): '‖·‖ as scalar', the
+/// field's catalogue view, then 'as direction-cosines', its reduction view.
+pub fn vector_reductions(field: &str) -> [(&'static str, String); 2] {
+    [
+        (REDUCTION_NAMES[0], format!("debug/generated/{field}")),
+        (
+            REDUCTION_NAMES[1],
+            format!("debug/reductions/{field}_dircos"),
+        ),
+    ]
+}
 
 /// The slot directories and the slot each holds (gui_state_contract §3).
 const SLOTS: [(&str, Kind); 4] = [
@@ -98,11 +122,15 @@ impl fmt::Display for RegistryError {
 
 impl std::error::Error for RegistryError {}
 
-/// The registry of the render crate at `render`: every `.wgsl` file under its [`OCCUPANT_DIR`] and its
-/// [`GENERATED_DIR`], each an entry, sorted by id. A missing directory holds no file.
+/// The registry of the render crate at `render`: every `.wgsl` file under its [`OCCUPANT_DIR`], its [`GENERATED_DIR`]
+/// and its [`REDUCTIONS_DIR`], each an entry, sorted by id. A missing directory holds no file.
 pub fn scan(render: &Path) -> Result<Vec<Entry>, RegistryError> {
     let mut out = Vec::new();
-    for (root, prefix) in [(OCCUPANT_DIR, ""), (GENERATED_DIR, "debug/generated/")] {
+    for (root, prefix) in [
+        (OCCUPANT_DIR, ""),
+        (GENERATED_DIR, "debug/generated/"),
+        (REDUCTIONS_DIR, "debug/reductions/"),
+    ] {
         let root = render.join(root);
         let mut files = Vec::new();
         wgsl_files(&root, &mut files)?;

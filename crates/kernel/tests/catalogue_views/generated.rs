@@ -92,18 +92,18 @@ fn probe(alter: Option<&str>) -> Probe {
     );
     s.times = insert(s.times, pick(alter, "t_end_step", 32768, 32769), 0, 16);
     s.times = insert(s.times, pick(alter, "t_dmin_step", 32768, 32769), 16, 16);
-    ic.m0 = pick(alter, "m0", 7.0, 7.25);
-    ic.m1 = pick(alter, "m1", 7.25, 7.5);
-    ic.m2 = pick(alter, "m2", 7.5, 7.75);
-    ic.q_mass = pick(alter, "q_mass", 7.75, 8.0);
-    ic.rho_mag = pick(alter, "rho_mag", 8.0, 8.25);
-    ic.lambda_mag = pick(alter, "lambda_mag", 8.25, 8.5);
-    ic.rho_ratio = pick(alter, "rho_ratio", 8.5, 8.75);
-    ic.rho_angle = pick(alter, "rho_angle", 8.75, 9.0);
-    ic.K_0 = pick(alter, "K_0", 9.0, 9.25);
-    ic.V_0 = pick(alter, "V_0", 9.25, 9.5);
-    ic.virial_ratio = pick(alter, "virial_ratio", 9.5, 9.75);
-    ic.r_min_pair_0 = pick(alter, "r_min_pair_0", 9.75, 10.0);
+    ic.m0 = pick(alter, "m0", 7.25, 7.5);
+    ic.m1 = pick(alter, "m1", 7.5, 7.75);
+    ic.m2 = pick(alter, "m2", 7.75, 8.0);
+    ic.q_mass = pick(alter, "q_mass", 8.0, 8.25);
+    ic.rho_mag = pick(alter, "rho_mag", 8.25, 8.5);
+    ic.lambda_mag = pick(alter, "lambda_mag", 8.5, 8.75);
+    ic.rho_ratio = pick(alter, "rho_ratio", 8.75, 9.0);
+    ic.rho_angle = pick(alter, "rho_angle", 9.0, 9.25);
+    ic.K_0 = pick(alter, "K_0", 9.25, 9.5);
+    ic.V_0 = pick(alter, "V_0", 9.5, 9.75);
+    ic.virial_ratio = pick(alter, "virial_ratio", 9.75, 10.0);
+    ic.r_min_pair_0 = pick(alter, "r_min_pair_0", 10.0, 10.25);
     word[3] = insert(word[3], pick(alter, "payload", 16777216, 16777217), 0, 25);
     word[3] = insert(word[3], pick(alter, "length", 38, 39), 25, 7);
     let params = ReadParams {
@@ -743,12 +743,38 @@ negative_control!(
     check_diffusion(&probe(Some("C_ty")))
 );
 
+/// `n`, read through the Rust twin of its view's accessor, is the value its derived accessor gives from the unaltered probe.
+fn check_n(p: &Probe) {
+    let read = read(p);
+    let reference = probe(None);
+    let s = &reference.s;
+    let masses = [reference.ic.m0, reference.ic.m1, reference.ic.m2];
+    let expected: [f32; 3] = shape(s.r, masses);
+    expect(
+        read.n.map(f32::to_bits),
+        expected.map(f32::to_bits),
+        "`n` is not its derived accessor's value",
+    );
+}
+
+#[test]
+fn catalogue_view_n() {
+    check_n(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_n,
+    "a probe storing another `r` reads another `n`",
+    expected = "is not its derived accessor's value",
+    check_n(&probe(Some("r")))
+);
+
 /// `m0`, read through the Rust twin of its view's accessor, is the value the probe stored.
 fn check_m0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m0.to_bits(),
-        7.0_f32.to_bits(),
+        7.25_f32.to_bits(),
         "`m0` does not read back the value stored",
     );
 }
@@ -770,7 +796,7 @@ fn check_m1(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m1.to_bits(),
-        7.25_f32.to_bits(),
+        7.5_f32.to_bits(),
         "`m1` does not read back the value stored",
     );
 }
@@ -792,7 +818,7 @@ fn check_m2(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m2.to_bits(),
-        7.5_f32.to_bits(),
+        7.75_f32.to_bits(),
         "`m2` does not read back the value stored",
     );
 }
@@ -814,7 +840,7 @@ fn check_q_mass(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.q_mass.to_bits(),
-        7.75_f32.to_bits(),
+        8.0_f32.to_bits(),
         "`q_mass` does not read back the value stored",
     );
 }
@@ -836,7 +862,7 @@ fn check_rho_mag(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_mag.to_bits(),
-        8.0_f32.to_bits(),
+        8.25_f32.to_bits(),
         "`rho_mag` does not read back the value stored",
     );
 }
@@ -858,7 +884,7 @@ fn check_lambda_mag(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.lambda_mag.to_bits(),
-        8.25_f32.to_bits(),
+        8.5_f32.to_bits(),
         "`lambda_mag` does not read back the value stored",
     );
 }
@@ -880,7 +906,7 @@ fn check_rho_ratio(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_ratio.to_bits(),
-        8.5_f32.to_bits(),
+        8.75_f32.to_bits(),
         "`rho_ratio` does not read back the value stored",
     );
 }
@@ -902,7 +928,7 @@ fn check_rho_angle(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_angle.to_bits(),
-        8.75_f32.to_bits(),
+        9.0_f32.to_bits(),
         "`rho_angle` does not read back the value stored",
     );
 }
@@ -924,7 +950,7 @@ fn check_k_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.K_0.to_bits(),
-        9.0_f32.to_bits(),
+        9.25_f32.to_bits(),
         "`K_0` does not read back the value stored",
     );
 }
@@ -946,7 +972,7 @@ fn check_v_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.V_0.to_bits(),
-        9.25_f32.to_bits(),
+        9.5_f32.to_bits(),
         "`V_0` does not read back the value stored",
     );
 }
@@ -968,7 +994,7 @@ fn check_virial_ratio(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.virial_ratio.to_bits(),
-        9.5_f32.to_bits(),
+        9.75_f32.to_bits(),
         "`virial_ratio` does not read back the value stored",
     );
 }
@@ -990,7 +1016,7 @@ fn check_r_min_pair_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.r_min_pair_0.to_bits(),
-        9.75_f32.to_bits(),
+        10.0_f32.to_bits(),
         "`r_min_pair_0` does not read back the value stored",
     );
 }

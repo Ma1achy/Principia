@@ -25,6 +25,17 @@
 //!   node's override colour.
 //! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in the invalid pattern, then in the override
 //!   colour; the unset value in the grey either way (R-280).
+//!
+//! **The debug views' scenes** (`debug-views`; RQ-237, decided per R-369; R-153; TASK-M1-12): one per entry of the
+//! render registry tagged debug ([`debug_cases`]), named by its id less `debug/`, `/` read as `-`
+//! (`generated-theta`, `reductions-n_dircos`, `word-hash`), and two more of the live shape view, its modes 1 and 2
+//! (`live_shape-twilight`, `live_shape-norm_error`, the |n|−1 view, flat zero). A catalogue view is coloured as
+//! [`Colouring::View`], its `u_range` measured; every other debug view as [`Colouring::Debug`], its header's defaults
+//! but the params its case sets. Each renders the showcase set ([`showcase`]): eight samples whose every field differs
+//! from sample to sample, the first fresh; the ternary masses view renders its own ([`ternary_masses`]): equal masses,
+//! each vertex, and five mixes.
+
+use std::sync::OnceLock;
 
 use engine::synthetic::Synthetic;
 use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
@@ -37,13 +48,16 @@ use render::headless::{self, Draw, Target};
 use render::pipeline_cache::{block_layout, encode};
 use render::present::{self, Rgb};
 use render::raster::Grid;
-use render::registry::{self, Catalogue, ZERO_SOURCE};
+use render::registry::{self, Catalogue, Category, ZERO_SOURCE};
 
 /// The kernel's read side and f16 packing, for the render crate's tests, which reach the kernel only through this
-/// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness.
+/// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness; and the word's append and symbol
+/// read (payload §3), for the word inspector's tests.
 pub use kernel::payload::{
-    f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, SimState, STATE_SIM_FAILED,
+    f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, shape, SimState, FGW_NO_SYMBOL,
+    STATE_SIM_FAILED,
 };
+pub use kernel::word::fgw_append;
 
 /// The scenes, by name.
 pub const NAMES: [&str; 10] = [
@@ -74,6 +88,106 @@ pub enum Colouring {
     View(&'static str),
     /// A field ramp, its invalid colour overridden when `override_on`.
     Ramp { ramp: FieldRamp, override_on: bool },
+    /// A debug view of the registry other than a catalogue view, by its case ([`debug_cases`]): a reduction or a
+    /// hand-written view, its params the case's over its header's defaults.
+    Debug(&'static DebugCase),
+    /// A colour occupant's WGSL as given, with the params it sets over its header's defaults: a test's probe, which
+    /// writes a view's value rather than its colour.
+    Probe(String, Vec<(String, Vec<f64>)>),
+}
+
+/// A case of the `debug-views` suite: its name, the registry id of the view it renders, the params it sets, and the
+/// nudge of its [`showcase`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugCase {
+    pub name: String,
+    pub id: String,
+    pub params: Vec<(String, Vec<f64>)>,
+    pub nudge: u32,
+}
+
+/// The cases whose [`showcase`] is nudged, and by how much: each the least nudge that sets every channel of the case's
+/// render at least 0.01 of an 8-bit step from a rounding tie, so that its one reference holds on every backend (the
+/// numeric views' margin, `crates/render/tests/numeric_views.rs`). Every other case's nudge is 0.
+const NUDGES: &[(&str, u32)] = &[
+    ("derived-energy_drift", 1),
+    ("generated-E_0", 1),
+    ("generated-d_min", 2),
+    ("generated-energy_drift", 1),
+    ("generated-ftle", 2),
+    ("generated-m0", 1),
+    ("generated-m1", 1),
+    ("generated-m2", 1),
+    ("generated-p", 1),
+    ("generated-p_sh", 1),
+    ("generated-r", 3),
+    ("generated-r_min_pair_0", 1),
+    ("generated-r_sh", 3),
+    ("generated-rho_angle", 2),
+    ("generated-rho_ratio", 2),
+    ("generated-t_dmin_step", 2),
+    ("generated-t_end_step", 1),
+    ("generated-theta", 1),
+    ("live_shape", 1),
+    ("reductions-n_dircos", 1),
+    ("reductions-r_sh_dircos", 1),
+];
+
+/// The nudge of the case `name`, from [`NUDGES`].
+fn nudge(name: &str) -> u32 {
+    NUDGES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or(0, |&(_, k)| k)
+}
+
+/// The suite of the debug views' cases.
+pub const DEBUG_SUITE: &str = "debug-views";
+
+/// The registry id of the live shape view, which has two cases beyond its default's.
+const LIVE_SHAPE: &str = "debug/live_shape";
+
+/// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
+pub fn case_name(id: &str) -> String {
+    id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
+}
+
+/// The `debug-views` suite's cases, in id order: one per entry of the render registry tagged debug, its header's
+/// defaults, then the live shape view at `u_mode` 1, Twilight of `θ̃`, and 2, `‖n‖ − 1`, the view expected flat zero
+/// (render contract Part 5).
+pub fn debug_cases() -> Result<&'static [DebugCase], String> {
+    static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
+    CASES
+        .get_or_init(|| {
+            let entries = registry::registry().map_err(|e| e.to_string())?;
+            let mut out: Vec<DebugCase> = entries
+                .iter()
+                .filter(|e| e.category == Category::Debug)
+                .map(|e| {
+                    let name = case_name(&e.id);
+                    DebugCase {
+                        nudge: nudge(&name),
+                        name,
+                        id: e.id.clone(),
+                        params: Vec::new(),
+                    }
+                })
+                .collect();
+            for (mode, what) in [(1.0, "twilight"), (2.0, "norm_error")] {
+                let name = format!("{}-{what}", case_name(LIVE_SHAPE));
+                out.push(DebugCase {
+                    nudge: nudge(&name),
+                    name,
+                    id: LIVE_SHAPE.to_owned(),
+                    params: vec![("u_mode".to_owned(), vec![mode])],
+                });
+            }
+            out.sort_by(|a, b| a.name.cmp(&b.name));
+            Ok(out)
+        })
+        .as_ref()
+        .map(Vec::as_slice)
+        .map_err(Clone::clone)
 }
 
 /// What a scene shows at one sample.
@@ -138,6 +252,18 @@ fn row(samples: u32) -> Result<(Grid, Synthetic), String> {
     Ok((grid, Synthetic::flat(grid, 0)))
 }
 
+/// A scene of `samples` fresh samples in a row, each tile 8 px square, read with every scene's context, coloured by
+/// `colouring`: for a test that fills its own samples.
+pub fn row_scene(name: &'static str, samples: u32, colouring: Colouring) -> Result<Scene, String> {
+    let (grid, set) = row(samples)?;
+    Ok(Scene {
+        name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
 /// Sample `i` stepped `n` times with the shadow `δ₀` from the state, so `ftle = S/(n · dt)` (payload §5).
 fn stepped(set: &mut Synthetic, i: u32, n: u32, s: f32) {
     let mut sh = [[0.0f32; 2]; 3];
@@ -145,12 +271,16 @@ fn stepped(set: &mut Synthetic, i: u32, n: u32, s: f32) {
     set.sample(i).times(n, 0).S(s).r_sh(sh);
 }
 
-/// `name`'s scene, or why not.
+/// `name`'s scene, `m1-numeric`'s or `debug-views`'s, or why not.
 pub fn scene(name: &str) -> Result<Scene, String> {
+    if let Some(case) = debug_cases()?.iter().find(|c| c.name == name) {
+        return debug_scene(case);
+    }
     let name: &'static str = NAMES.iter().find(|n| **n == name).ok_or_else(|| {
         format!(
-            "no golden scene `{name}`; the scenes are {}",
-            NAMES.join(", ")
+            "no golden scene `{name}`; the scenes are {} and the debug views' ({})",
+            NAMES.join(", "),
+            DEBUG_SUITE
         )
     })?;
     let (grid, mut set) = row(8)?;
@@ -244,6 +374,178 @@ fn d_min_samples(set: &mut Synthetic) {
     }
 }
 
+/// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other as
+/// [`Colouring::Debug`]; the ternary masses over [`ternary_masses`], every other over [`showcase`].
+pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
+    let (grid, mut set) = row(8)?;
+    let colouring = match case.id.strip_prefix("debug/generated/") {
+        Some(field) => {
+            let l = ledger::payload::ledger();
+            let name = l
+                .entries
+                .iter()
+                .filter_map(|e| e.name)
+                .find(|n| *n == field)
+                .ok_or_else(|| format!("`{field}` is no ledger field"))?;
+            Colouring::View(name)
+        }
+        None => Colouring::Debug(case),
+    };
+    if case.id.ends_with(ledger::gen::catalogue::MASSES_TERNARY) {
+        ternary_masses(&mut set);
+    } else {
+        showcase(&mut set, case.nudge);
+    }
+    Ok(Scene {
+        name: &case.name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
+/// The word of the symbols `symbols` (codes `a = 0, A = 1, b = 2, B = 3`), appended in order from the empty word
+/// through the kernel's append (payload §3), and its last symbol, `None` for the empty word.
+pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
+    let mut w = kernel::payload::fgw_pack([0; 4], 0);
+    let (mut prev, mut a) = (FGW_NO_SYMBOL, 0);
+    for &s in symbols {
+        let next = fgw_append(w, prev, a, s);
+        (w, prev, a) = (next.word, next.prev, next.packed_a);
+    }
+    (w, (fgw_length_raw(w) > 0).then_some(prev))
+}
+
+/// The showcase set: eight samples whose every field differs from sample to sample (debug_tooling_plan
+/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or
+/// NaN; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words
+/// (one empty, one truncated) and `ICDescriptor`s, the masses positive and summing to 1, `θ̃` away from every
+/// multiple of 2π. A nonzero `nudge`, at most 6, moves the stepped samples' values a little and unevenly, so that no
+/// auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on sample `i`'s index in the values' formulas, on `θ̃` and on
+/// `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to the first and third; `nudge·(i mod 3)` steps on
+/// `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`. The states and words are unchanged, and the sample stepped 3
+/// times stays short of a completed renormalisation.
+pub fn showcase(set: &mut Synthetic, nudge: u32) {
+    const STATES: [u32; 8] = [3, 1, 0, 2, 4, 5, 1, 0];
+    const T_END: [u32; 8] = [0, 40, 100, 250, 37, 3, 999, 512];
+    const THETA: [f32; 8] = [0.0, 3.5, -8.2, 15.9, -1.3, 0.4, 40.1, -22.7];
+    const S: [f32; 8] = [0.0, 0.4, 1.7, 3.1, 0.9, 0.05, 6.2, 2.4];
+    const WORDS: [&[u32]; 8] = [
+        &[],
+        &[0],
+        &[0, 2, 1],
+        &[2, 2, 0, 3, 0],
+        &[1; 10],
+        &[0, 2, 0, 2, 1, 3, 1, 3, 0, 2, 0, 2, 1, 3, 1, 3, 0, 2],
+        &[0; 77],
+        &[3, 0, 2, 0, 3, 1, 2],
+    ];
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [0.5, 0.3, 0.2],
+        [0.2, 0.5, 0.3],
+        [0.3, 0.2, 0.5],
+        [0.6, 0.25, 0.15],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.4, 0.35, 0.25],
+    ];
+    for i in 0..8u32 {
+        let k = i as usize;
+        // Uneven over the samples, so that no auto range absorbs the nudge.
+        let t_nudge = if i > 0 { nudge * (i % 3) } else { 0 };
+        let g = if i > 0 {
+            0.0137 * (nudge * (1 + i % 3)) as f32
+        } else {
+            0.0
+        };
+        let f = i as f32 + g;
+        let r = [
+            [0.6 + 0.07 * f, -0.2 + 0.05 * f],
+            [-0.45 - 0.03 * f, 0.55 - 0.09 * f],
+            [-0.15 + 0.02 * f, -0.35 + 0.08 * f],
+        ];
+        let p = [
+            [0.1 - 0.04 * f, 0.3 + 0.02 * f],
+            [-0.25 + 0.06 * f, -0.05 - 0.03 * f],
+            [0.15 - 0.02 * f, -0.25 + 0.01 * f],
+        ];
+        let off = 1e-6 * (5.0 + 40.0 * f);
+        let mut r_sh = r;
+        r_sh[0][0] += off;
+        r_sh[1][1] -= 0.5 * off;
+        let mut p_sh = p;
+        p_sh[2][0] += 0.25 * off;
+        let mut m = MASSES[k];
+        let dm = 0.0011 * (nudge * (1 + i % 3)) as f32;
+        m[0] += dm;
+        m[1] -= 2.0 * dm;
+        m[2] += dm;
+        let (word, last) = appended(WORDS[k]);
+        let mut sample = set.sample(i);
+        sample
+            .r(r)
+            .p(p)
+            .r_sh(r_sh)
+            .p_sh(p_sh)
+            .S(S[k] + g)
+            .theta(THETA[k] + g)
+            .mean_y(0.25 - 0.11 * f)
+            .C_ty(1.5e-4 * (f - 2.5))
+            .E_0(-1.2 + 0.07 * f)
+            .Lz_0(0.3 - 0.06 * f)
+            .total_substeps([0, 1, 37, 1000, 65536, 3, 123_456, 999_999][k])
+            .closure_min(10f32.powf(-4.0 + 0.6 * f))
+            .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
+            .state(STATES[k])
+            .detail(i % 4)
+            .saturated(i % 3 == 1)
+            .dmin_pair(if i == 0 { 3 } else { i % 3 })
+            .times(
+                T_END[k] + t_nudge,
+                (T_END[k] + t_nudge) / 3 + nudge * (i % 2),
+            )
+            .word_raw(word);
+        if let Some(s) = last {
+            sample.last_symbol(s);
+        }
+        if i > 0 {
+            sample
+                .d_min(0.02 * f * f)
+                .drift_max(0.03 + 0.05 * f, 0.02 + 0.03 * f);
+        }
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+        ic.q_mass = 0.1 + 0.1 * f;
+        ic.rho_mag = 0.3 + 0.2 * f;
+        ic.lambda_mag = 0.9 - 0.08 * f;
+        ic.rho_ratio = 0.2 + 0.45 * f;
+        ic.rho_angle = 0.4 + 0.8 * f;
+        ic.K_0 = 0.15 + 0.09 * f;
+        ic.V_0 = -1.4 + 0.1 * f;
+        ic.virial_ratio = 0.3 + 0.2 * f;
+        ic.r_min_pair_0 = 0.05 + 0.12 * f;
+    }
+}
+
+/// The ternary masses view's set: equal masses (white), each vertex alone (its primary), then five mixes.
+pub fn ternary_masses(set: &mut Synthetic) {
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.5, 0.3, 0.2],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.45, 0.45, 0.1],
+    ];
+    for (i, m) in (0u32..).zip(MASSES) {
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+    }
+}
+
 impl Scene {
     /// The target's size.
     pub fn size(&self) -> (u32, u32) {
@@ -267,6 +569,13 @@ impl Scene {
                     .ok_or_else(|| format!("no registry entry `{id}`"))
             }
             Colouring::Ramp { ramp, .. } => Ok(ramp.wgsl()),
+            Colouring::Debug(case) => registry::registry()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .find(|e| e.id == case.id)
+                .map(|e| e.source)
+                .ok_or_else(|| format!("no registry entry `{}`", case.id)),
+            Colouring::Probe(wgsl, _) => Ok(wgsl.clone()),
         }
     }
 
@@ -291,10 +600,11 @@ impl Scene {
     }
 
     /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
-    /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: the fields the scenes
-    /// colour, `dmin_pair`, the word `length` and each f32 member of the sample's `ICDescriptor` (`Scene::ic_member`).
-    /// Any other field is an error, naming it, so that no scene reads, or measures its `u_range` from, a field it does
-    /// not colour (applied per R-369, qa review 5468844637).
+    /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: every field a numeric
+    /// view colours (`ledger::gen::numeric`), `dmin_pair`, and each f32 member of the sample's `ICDescriptor`
+    /// (`Scene::ic_member`). Any other field is an error, naming it, so that no scene reads, or measures its `u_range`
+    /// from, a field it does not colour (applied per R-369, qa review 5468844637); a debug view's scene has no field
+    /// and reads none.
     pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
         let read = self.read(i);
         Ok(match self.field() {
@@ -305,6 +615,18 @@ impl Scene {
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
             "length" => (fgw_length_raw(read.word) as f32, true),
+            "S" => (read.S, true),
+            "theta" => (read.theta, true),
+            "mean_y" => (read.mean_y, true),
+            "C_ty" => (read.C_ty, true),
+            "E_0" => (read.E_0, true),
+            "Lz_0" => (read.Lz_0, true),
+            "total_substeps" => (read.total_substeps as f32, true),
+            "closure_min" => (read.closure_min, true),
+            "closure_step" => (read.closure_step as f32, true),
+            "t_end_step" => (read.t_end_step as f32, true),
+            "t_dmin_step" => (read.t_dmin_step as f32, true),
+            "payload" => (kernel::payload::fgw_payload(read.word) as f32, true),
             other => match self.ic_member(i, other) {
                 Some(v) => (v, true),
                 None => {
@@ -335,9 +657,26 @@ impl Scene {
         Some(f32::from_le_bytes(ic.get(at..at + 4)?.try_into().ok()?))
     }
 
+    /// Sample `i`'s `ICDescriptor` masses `m0 m1 m2`, as the set uploads them and the fragment reads them (`ctx.ic`).
+    pub fn masses(&self, i: u32) -> [f32; 3] {
+        ["m0", "m1", "m2"].map(|m| self.ic_member(i, m).unwrap_or(f32::NAN))
+    }
+
+    /// Sample `i` as the fragment reads it: [`Scene::read`]'s read with the sample's own masses ([`Scene::masses`]),
+    /// which the read's `n` and `energy_drift` take.
+    pub fn read_own(&self, i: u32) -> SimState {
+        self.read_with(i, self.masses(i))
+    }
+
     /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
     /// FULL-tier read with no ensemble.
     pub fn read(&self, i: u32) -> SimState {
+        self.read_with(i, [1.0 / 3.0; 3])
+    }
+
+    /// Sample `i` through the kernel's read side with the masses `masses`: the scene's context, a FULL-tier read with
+    /// no ensemble.
+    fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
         let c = &self.context;
         let params = ReadParams {
             dt_macro: c.dt_macro,
@@ -351,16 +690,18 @@ impl Scene {
             true,
             canonical_nan(),
             false,
-            [1.0 / 3.0; 3],
+            masses,
             &params,
         )
     }
 
-    /// The scene's field.
+    /// The scene's field; a debug view's scene names its registry id.
     pub fn field(&self) -> &'static str {
         match &self.colouring {
             Colouring::View(f) => f,
             Colouring::Ramp { ramp, .. } => ramp.field.field,
+            Colouring::Debug(case) => &case.id,
+            Colouring::Probe(..) => "probe",
         }
     }
 
@@ -399,6 +740,8 @@ impl Scene {
                 "INVALID_OVERRIDE".to_owned(),
                 vec![f64::from(u32::from(*override_on))],
             )],
+            Colouring::Debug(case) => case.params.clone(),
+            Colouring::Probe(_, params) => params.clone(),
         })
     }
 
@@ -431,6 +774,9 @@ impl Scene {
                 RampShown::NotYet => Look::NotYet,
                 RampShown::Ramp(t) => Look::Ramp { twilight: false, t },
             }),
+            Colouring::Debug(_) | Colouring::Probe(..) => {
+                unreachable!("a debug view's or a probe's scene reads no value")
+            }
         }
     }
 

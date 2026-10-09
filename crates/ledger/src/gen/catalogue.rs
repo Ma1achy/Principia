@@ -21,10 +21,20 @@
 //! RQ-231, TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. The rest is a
 //! placeholder (TASK-M1-10 and TASK-M1-12 own it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and
 //! the drift fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`,
-//! which needs no range (render contract Part 5). A vector field shows its norm, `‖·‖`, the reduction §3.8 names
+//! which needs no range (render contract Part 5). A vector field's view shows its norm, `‖·‖`, the reduction §3.8 names
 //! (applied per R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp
 //! through `dbg_sentinel`, never as a class (R-136). The scale and range written in each view's header are the
 //! ledger's.
+//!
+//! **The reductions** (gui_state_contract §4; dd_generation_root §3.8; render contract Part 5; TASK-M1-12). A field's
+//! view is one per field; the views that reduce a field another way, or combine fields, are written beside them to
+//! [`REDUCTIONS_DIR`], which the registry scans too ([`reductions`]):
+//! - for every `vector(type, k)` field, '‖·‖ as scalar' is its view, and 'as direction-cosines' is
+//!   `<field>_dircos.wgsl`: for `k = 3` (`n`) `dbg_dircos3`, `½(v̂ + 1)` in RGB; for `k = 6` (`r`, `p`, the shadow)
+//!   `dbg_dircos6`, the squared cosines summed per body (REQ-TOOL-157). A vector the presentation layer has no
+//!   direction-cosines rendering for refuses generation, naming it ([`refused`]);
+//! - the `ICDescriptor` masses `m0 m1 m2` as one ternary colour, `masses_ternary.wgsl`, `dbg_ternary`
+//!   (REQ-TOOL-154; debug_tooling_plan §E).
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -43,6 +53,23 @@ pub const DIR: &str = "crates/render/frag/debug/generated";
 /// exclusion of every file named `generated.rs` from mutation covers it (R-196).
 pub const TESTS_PATH: &str = "crates/kernel/tests/catalogue_views/generated.rs";
 
+/// Where the reductions are written, relative to the workspace root: beside [`DIR`], not in it, since that directory
+/// holds exactly one view per field (REQ-TOOL-020).
+pub const REDUCTIONS_DIR: &str = "crates/render/frag/debug/reductions";
+
+/// The WGSL type of a stored vector, `vector(f32, 6)` as three `vec2<f32>` (R-86).
+pub const VEC2X3: &str = "array<vec2<f32>, 3>";
+
+/// The WGSL type of a derived 3-vector, `n` (dd_generation_root §3.8).
+pub const VEC3: &str = "vec3<f32>";
+
+/// The `ICDescriptor` masses the ternary view combines, in channel order (dd_generation_root §3.6; debug_tooling_plan
+/// §E).
+pub const MASSES: [&str; 3] = ["m0", "m1", "m2"];
+
+/// The ternary masses view's name, its file `masses_ternary.wgsl` under [`REDUCTIONS_DIR`].
+pub const MASSES_TERNARY: &str = "masses_ternary";
+
 /// The word buffer's `.w` (payload §3).
 const FGW_WORD: &str = "fgw_w";
 
@@ -52,8 +79,13 @@ pub enum Read {
     /// A scalar member of the read-side `SimState` under the field's name, of WGSL type `wgsl` (`f32`, `u32` or
     /// `bool`); `derived` when the read side computes it rather than unpacking it (payload §5).
     Member { wgsl: &'static str, derived: bool },
-    /// A vector member of the read-side `SimState` under the field's name, `array<vec2<f32>, 3>` (R-86).
-    Vector,
+    /// A vector member of the read-side `SimState` under the field's name, of Rust type `rust` and WGSL type `wgsl`:
+    /// stored, [`VEC2X3`] (R-86), or derived, `n`'s [`VEC3`].
+    Vector {
+        rust: &'static str,
+        wgsl: &'static str,
+        derived: bool,
+    },
     /// A field of the word buffer's `.w`, through its word accessor `accessor` over the read side's `word`.
     Word { accessor: &'static str },
     /// A member of the sample's `ICDescriptor` (dd_generation_root §3.6), `ctx.ic.<field>` (RQ-227).
@@ -73,7 +105,7 @@ impl Read {
     /// The accessor symbols the field's view and its test reference.
     pub fn accessors(&self, field: &str) -> Vec<Accessor> {
         match self {
-            Read::Member { .. } | Read::Vector => vec![Accessor::Member(field.to_owned())],
+            Read::Member { .. } | Read::Vector { .. } => vec![Accessor::Member(field.to_owned())],
             Read::Word { accessor, .. } => vec![
                 Accessor::Member("word".to_owned()),
                 Accessor::Function((*accessor).to_owned()),
@@ -85,7 +117,7 @@ impl Read {
     /// The field's value in WGSL, in a colour occupant whose context is `ctx` (render contract Part 1).
     pub fn wgsl(&self, field: &str) -> String {
         match self {
-            Read::Member { .. } | Read::Vector => format!("ctx.sample.{field}"),
+            Read::Member { .. } | Read::Vector { .. } => format!("ctx.sample.{field}"),
             Read::Word { accessor } => format!("{accessor}(ctx.sample.word)"),
             Read::Ic => format!("ctx.ic.{field}"),
         }
@@ -94,7 +126,7 @@ impl Read {
     /// The field's value in Rust, from the read-side `SimState` `read` and the sample's `ICDescriptor` `ic`.
     pub fn rust(&self, field: &str) -> String {
         match self {
-            Read::Member { .. } | Read::Vector => format!("read.{field}"),
+            Read::Member { .. } | Read::Vector { .. } => format!("read.{field}"),
             Read::Word { accessor } => format!("{accessor}(read.word)"),
             Read::Ic => format!("ic.{field}"),
         }
@@ -133,7 +165,11 @@ pub fn read(words: &[Word], entries: &[Entry], e: &Entry) -> Option<Read> {
                 wgsl: m.wgsl,
                 derived,
             }),
-            "array<vec2<f32>, 3>" => Some(Read::Vector),
+            VEC2X3 | VEC3 => Some(Read::Vector {
+                rust: m.rust,
+                wgsl: m.wgsl,
+                derived,
+            }),
             _ => None,
         };
     }
@@ -196,23 +232,115 @@ pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
         .collect()
 }
 
-/// A line for each entry the fragment has no read of: generation refuses it, naming the
-/// field (dd_generation_root §3.8: coverage is enforced, not hoped for).
+/// A line for each entry the fragment has no read of, and for each vector field the presentation layer has no
+/// direction-cosines rendering of: generation refuses it, naming the field (dd_generation_root §3.8: coverage is
+/// enforced, not hoped for; gui_state_contract §4: every vector offers both reductions).
 pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
     if !rust::declares(&crate::payload::structs(), words, entries) {
         return Vec::new();
     }
     entries
         .iter()
-        .filter(|e| read(words, entries, e).is_none())
-        .map(|e| {
-            format!(
+        .filter_map(|e| match read(words, entries, e) {
+            None => Some(format!(
                 "field `{}` has no debug view: the fragment's read side has no read of it (render contract Part 6; \
                  dd_generation_root §4, seam 13)",
                 e.name
-            )
+            )),
+            Some(r) if is_vector(e) && dircos(&r).is_none() => Some(format!(
+                "vector field `{}` has no direction-cosines view: the presentation layer renders the direction \
+                 cosines of a `vec3<f32>` or a `{VEC2X3}` only (gui_state_contract §4; render contract Part 5)",
+                e.name
+            )),
+            Some(_) => None,
         })
         .collect()
+}
+
+/// Whether `e` is a `vector(type, k)` field (dd_generation_root §3.8).
+fn is_vector(e: &Entry) -> bool {
+    matches!(e.ty, FieldType::Vector { .. })
+}
+
+/// The presentation layer's direction-cosines rendering of a vector read as `r`, or `None` for any other read: `n`'s
+/// `k = 3` as `dbg_dircos3`, a stored `k = 6` as `dbg_dircos6` (render contract Part 5; REQ-TOOL-157).
+fn dircos(r: &Read) -> Option<&'static str> {
+    match r {
+        Read::Vector { wgsl: VEC3, .. } => Some("dbg_dircos3"),
+        Read::Vector { wgsl: VEC2X3, .. } => Some("dbg_dircos6"),
+        _ => None,
+    }
+}
+
+/// One reduction view: its name, its file under [`REDUCTIONS_DIR`], the fields it reads and its WGSL.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Reduction {
+    /// The file's stem: `<field>_dircos` or [`MASSES_TERNARY`].
+    pub name: String,
+    /// The fields it reads, in order.
+    pub fields: Vec<&'static str>,
+    pub path: PathBuf,
+    pub wgsl: String,
+}
+
+/// The reductions of `entries` ([`REDUCTIONS_DIR`]): each vector field's 'as direction-cosines' view, in the ledger's
+/// order, then the ternary masses view when the three masses are `ICDescriptor` fields. Empty for a layout that
+/// declares none of the payload structs' members, as [`views`] is.
+pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
+    if !rust::declares(&crate::payload::structs(), words, entries) {
+        return Vec::new();
+    }
+    let mut out: Vec<Reduction> = entries
+        .iter()
+        .filter(|e| is_vector(e))
+        .filter_map(|e| {
+            let r = read(words, entries, e)?;
+            let helper = dircos(&r)?;
+            let name = format!("{}_dircos", e.name);
+            let text = format!(
+                "The 'as direction-cosines' view of the vector field `{field}` (gui_state_contract §4; \
+                 dd_generation_root §3.8), beside its '‖·‖ as scalar' view, `{DIR}/{field}.wgsl`. A colour occupant, it \
+                 reads the field through `SimState.{field}` and draws `{helper}`, render contract Part 5's rendering \
+                 of its direction cosines (REQ-TOOL-157).",
+                field = e.name
+            );
+            Some(Reduction {
+                path: PathBuf::from(format!("{REDUCTIONS_DIR}/{name}.wgsl")),
+                wgsl: format!(
+                    "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return {helper}({}, ctx.frag_xy);\n}}\n",
+                    generated_comment(&text),
+                    r.wgsl(e.name)
+                ),
+                name,
+                fields: vec![e.name],
+            })
+        })
+        .collect();
+    let masses: Vec<String> = MASSES
+        .iter()
+        .filter_map(|m| {
+            let e = entries.iter().find(|e| e.name == *m)?;
+            (read(words, entries, e)? == Read::Ic).then(|| Read::Ic.wgsl(m))
+        })
+        .collect();
+    if masses.len() == MASSES.len() {
+        let text = "The `ICDescriptor` masses `m0 m1 m2` as one ternary colour (debug_tooling_plan §E; render contract \
+                    Part 5): `dbg_ternary`, the masses as linear RGB scaled by `1/max(mᵢ)`, so equal masses draw white \
+                    and each vertex its primary (REQ-TOOL-154). A colour occupant, it reads the masses through \
+                    `ICDescriptor.m0`, `ICDescriptor.m1` and `ICDescriptor.m2`; it certifies the decoder, independent \
+                    of any integration.";
+        out.push(Reduction {
+            name: MASSES_TERNARY.to_owned(),
+            fields: MASSES.to_vec(),
+            path: PathBuf::from(format!("{REDUCTIONS_DIR}/{MASSES_TERNARY}.wgsl")),
+            wgsl: format!(
+                "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
+                generated_comment(text),
+                masses.join(", ")
+            ),
+        });
+    }
+    out
 }
 
 /// The emitter: each view's WGSL file, then the views' tests.
@@ -232,6 +360,10 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
         path: PathBuf::from(TESTS_PATH),
         contents: tests(entries, &views),
     });
+    out.extend(reductions(words, entries).into_iter().map(|r| Generated {
+        path: r.path,
+        contents: r.wgsl,
+    }));
     out
 }
 
@@ -347,10 +479,11 @@ pub fn numeric_view(
 fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let value = r.wgsl(e.name);
     let body = match r {
-        Read::Vector => format!(
+        Read::Vector { wgsl: VEC2X3, .. } => format!(
             "let v = {value};\n    return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), \
              ctx.frag_xy);"
         ),
+        Read::Vector { .. } => format!("return dbg_sentinel(length({value}), ctx.frag_xy);"),
         Read::Member { wgsl, .. } => format!("return {};", ramp(e, &value, wgsl)),
         Read::Ic => format!("return {};", ramp(e, &value, "f32")),
         Read::Word { .. } => format!("return {};", ramp(e, &value, "u32")),
@@ -401,19 +534,30 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
             Accessor::Function(f) => format!("`{f}`"),
         })
         .collect();
+    let reduction = if is_vector(e) {
+        " For a vector field it is the '‖·‖ as scalar' reduction; its 'as direction-cosines' view is \
+         `<field>_dircos.wgsl` in `crates/render/frag/debug/reductions/` (gui_state_contract §4)."
+    } else {
+        ""
+    };
     let text = format!(
         "The debug view of `{name}` (render contract Part 6; debug_tooling_plan §B–E): {location}, {ty}, scale {scale}, \
          range {lo}, {hi}. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field \
-         through {acc}; its test, `{test}` in `{TESTS_PATH}`, reads it through their Rust twins. {colouring}",
+         through {acc}; its test, `{test}` in `{TESTS_PATH}`, reads it through their Rust twins. {colouring}{reduction}",
         name = e.name,
         lo = bound(e.range.lo, true),
         hi = bound(e.range.hi, false),
         acc = accessors.join(" and "),
         test = test_name(e.name),
     );
+    generated_comment(&text)
+}
+
+/// The generated-file line, then `text` as line comments.
+fn generated_comment(text: &str) -> String {
     format!(
         "// Generated by `cargo xtask codegen` from the layout table (`crates/ledger/src/payload.rs`); do not edit.\n{}",
-        comment(&text, "// ")
+        comment(text, "// ")
     )
 }
 
@@ -589,6 +733,28 @@ fn check(v: &View, stored: Option<&Probe>) -> String {
     let lower = n.to_lowercase();
     let message = |what: &str| format!("\"`{n}` {what}\"");
     let (doc, body) = match (&v.read, stored) {
+        (
+            Read::Vector {
+                derived: true,
+                rust,
+                ..
+            },
+            _,
+        ) => {
+            let (locals, expr) = derived_locals(n);
+            let args = [
+                format!("{got}.map(f32::to_bits)"),
+                "expected.map(f32::to_bits)".to_owned(),
+                message(NOT_DERIVED),
+            ];
+            (
+                "is the value its derived accessor gives from the unaltered probe",
+                format!(
+                    "    let read = read(p);\n{locals}    let expected: {rust} = {expr};\n{}",
+                    call(4, "", "expect", &args)
+                ),
+            )
+        }
         (Read::Member { derived: true, .. }, _) => {
             let (locals, expr) = derived_locals(n);
             let args = [
@@ -700,7 +866,7 @@ fn tests(entries: &[Entry], views: &[View]) -> String {
         let lower = v.field.to_lowercase();
         let alter = altered_field(e);
         let expected = match v.read {
-            Read::Member { derived: true, .. } => NOT_DERIVED,
+            Read::Member { derived: true, .. } | Read::Vector { derived: true, .. } => NOT_DERIVED,
             _ => NOT_STORED,
         };
         let _ = write!(
