@@ -5929,6 +5929,7 @@
   - R-62
   - R-72
   milestone: M2
+  note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ."
 - id: REQ-PAY-089
   area: PAY
   statement: "QuadReduction must be sized from its member list (about 80 B) and then aligned."

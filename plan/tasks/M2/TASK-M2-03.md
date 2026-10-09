@@ -35,6 +35,7 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `docs/design/principia_dd_validation_orbits.md` § "1.3 Lagrange and Euler central configurations — the only analytic ones"
 - `docs/design/principia_dd_validation_orbits.md` § "5. Immediate action"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library"
 
 ## Deliverables
 - `crates/kernel/src/decode/momentum.rs` and `crates/kernel/src/decode/mod.rs` (the ordered decode entry, returning the canonical (m, r, p) seam type and the DEGENERATE tag).
@@ -60,3 +61,4 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - Gap G7: the ICDescriptor formulas for `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` are not in the corpus (dd_decoder §3.6 names "ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀"; ledger §3.6 lists the fields; neither gives a formula, nor whether `rho_mag` is ‖ρ‖ or ‖ρ̃‖). REQ-PAY-034's hand-computed values can't be written for those fields until this is ruled.
 - PIT-9: the Σpᵢ = 0 check cannot catch the crossed-factor swap at equal masses — the fuzz must draw unequal masses, and a swapped-factor control must fail.
 - Closes, for gaps the corpus leaves open: REQ-PAY-088 (R-72 definition) (classification accepted by R-132).
+- `rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ.
