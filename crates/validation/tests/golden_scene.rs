@@ -559,8 +559,8 @@ fn check_unlisted(s: &Scene, field: &str) {
 #[test]
 fn golden_scene_unlisted_field_is_an_error() {
     let mut s = named("ftle");
-    s.colouring = Colouring::View("rho_angle");
-    check_unlisted(&s, "rho_angle");
+    s.colouring = Colouring::View("closure_min");
+    check_unlisted(&s, "closure_min");
     for name in golden_scene::NAMES {
         let s = named(name);
         assert!(s.value(0).is_ok(), "`{name}` reads its own field");
@@ -572,4 +572,49 @@ negative_control!(
     "a scene of a listed field, which reads",
     expected = "reads `ftle` as",
     check_unlisted(&named("ftle"), "ftle")
+);
+
+/// Checks that `s`, coloured by the `ICDescriptor` member `rho_angle`, reads each sample's own value of it, as set.
+fn check_ic_reads(s: &Scene, want: &[f32]) {
+    for (i, &w) in want.iter().enumerate() {
+        let (v, gate) = s.value(i as u32).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            (v.to_bits(), gate),
+            (w.to_bits(), true),
+            "`rho_angle` sample {i} reads {v}, not {w}"
+        );
+    }
+}
+
+/// A scene of `rho_angle`, the sample `i`'s angle `0.25 + i`.
+fn rho_angle_scene() -> (Scene, Vec<f32>) {
+    let mut s = named("ftle");
+    s.colouring = Colouring::View("rho_angle");
+    let want: Vec<f32> = (0..8).map(|i| 0.25 + i as f32).collect();
+    for (i, &w) in want.iter().enumerate() {
+        s.set.ic(i as u32).rho_angle = w;
+    }
+    (s, want)
+}
+
+#[test]
+fn golden_scene_reads_ic_members() {
+    let (s, want) = rho_angle_scene();
+    check_ic_reads(&s, &want);
+    let params = s.params().unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(params.len(), 1, "a view's one param, `u_range`: {params:?}");
+    let mut s = named("ftle");
+    s.colouring = Colouring::View("_pad");
+    let e = s.value(0).expect_err("`_pad` is no f32 member, so no read");
+    assert!(e.contains("its field `_pad` has no read"), "{e}");
+}
+
+negative_control!(
+    golden_scene_reads_ic_members,
+    "angles other than the samples' own",
+    expected = "`rho_angle` sample 0 reads 0.25, not 1.25",
+    {
+        let (s, want) = rho_angle_scene();
+        check_ic_reads(&s, &want.iter().map(|w| w + 1.0).collect::<Vec<_>>());
+    }
 );

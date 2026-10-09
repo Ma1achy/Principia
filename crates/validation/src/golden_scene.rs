@@ -29,6 +29,7 @@
 use engine::synthetic::Synthetic;
 use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
 use ledger::gen::numeric::{NumericView, Shown as ViewShown};
+use ledger::schema::Storage;
 use render::assemble::{self, Kind, Node, Occupant, Stain, Tier};
 use render::bind::{self, Context};
 use render::colour::field_ramp::{override_default, FieldRamp, Shown as RampShown};
@@ -291,8 +292,9 @@ impl Scene {
 
     /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
     /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: the fields the scenes
-    /// colour, `dmin_pair` and the word `length`. Any other field is an error, naming it, so that no scene reads, or
-    /// measures its `u_range` from, a field it does not colour (applied per R-369, qa review 5468844637).
+    /// colour, `dmin_pair`, the word `length` and each f32 member of the sample's `ICDescriptor` ([`Scene::ic_member`]).
+    /// Any other field is an error, naming it, so that no scene reads, or measures its `u_range` from, a field it does
+    /// not colour (applied per R-369, qa review 5468844637).
     pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
         let read = self.read(i);
         Ok(match self.field() {
@@ -303,13 +305,34 @@ impl Scene {
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
             "length" => (fgw_length_raw(read.word) as f32, true),
-            other => {
-                return Err(format!(
-                    "golden scene `{}`: its field `{other}` has no read in `Scene::value`",
-                    self.name
-                ))
-            }
+            other => match self.ic_member(i, other) {
+                Some(v) => (v, true),
+                None => {
+                    return Err(format!(
+                        "golden scene `{}`: its field `{other}` has no read in `Scene::value`",
+                        self.name
+                    ))
+                }
+            },
         })
+    }
+
+    /// Sample `i`'s `ICDescriptor` member `name` as the set uploads it, an f32 at the ledger's offset for it
+    /// (`ledger::gen::rust::offsets`), which the fragment reads as `ctx.ic.<name>`; `None` unless `name` is an f32
+    /// member of `ICDescriptor`.
+    fn ic_member(&self, i: u32, name: &str) -> Option<f32> {
+        let s = ledger::payload::structs()
+            .into_iter()
+            .find(|s| s.name == "ICDescriptor")?;
+        let (offsets, size) = ledger::gen::rust::offsets(&s);
+        let (_, at) = s
+            .members
+            .iter()
+            .zip(offsets)
+            .find(|(m, _)| m.name == name && matches!(m.storage, Storage::F32))?;
+        let at = (i * size + at) as usize;
+        let ic = self.set.bytes().ic;
+        Some(f32::from_le_bytes(ic.get(at..at + 4)?.try_into().ok()?))
     }
 
     /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
