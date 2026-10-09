@@ -82,10 +82,13 @@ impl ScalarField {
             _ => e.name,
         };
         let lanes = crate::bind::lanes()?;
-        let in_lane = lanes
+        let validity_lane = lanes
             .iter()
-            .filter(|l| l.name == "validity")
-            .flat_map(|l| &l.members)
+            .find(|l| l.name == "validity")
+            .ok_or("the context has no validity lane")?;
+        let in_lane = validity_lane
+            .members
+            .iter()
             .any(|m| m.name == format!("{lane}_valid"));
         if !in_lane {
             return Err(format!(
