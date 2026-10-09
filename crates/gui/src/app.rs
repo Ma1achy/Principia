@@ -278,7 +278,8 @@ impl<S: EngineSide> App<S> {
         self.draw_ring(&ctx);
         self.apply(&ctx, actions);
         if self.keyboard.shortcuts_open {
-            crate::keyboard::overlay::show(&ctx);
+            let rows = self.keyboard.tree(self.view.mode).shortcuts();
+            crate::keyboard::overlay::show(&ctx, rows);
         }
     }
 

@@ -179,10 +179,14 @@ struct Node {
     parent: Option<usize>,
 }
 
-/// A tree of scopes, its children in registration order.
+/// A row of the `?` overlay: a key and its action.
+pub type Shortcut = (&'static str, &'static str);
+
+/// A tree of scopes, its children in registration order, and the rows its screens add to the `?` overlay.
 #[derive(Default)]
 pub struct ScopeTree {
     nodes: Vec<Node>,
+    shortcuts: Vec<Shortcut>,
 }
 
 impl ScopeTree {
@@ -210,6 +214,16 @@ impl ScopeTree {
                 .unwrap_or_else(|| panic!("no scope `{p}` to register `{}` under", scope.id))
         });
         self.nodes.push(Node { scope, parent });
+    }
+
+    /// Adds a row to the `?` overlay, after the global table's: a screen's own keys, registered with its scopes.
+    pub fn register_shortcut(&mut self, key: &'static str, action: &'static str) {
+        self.shortcuts.push((key, action));
+    }
+
+    /// The rows the screens added to the `?` overlay, in registration order.
+    pub fn shortcuts(&self) -> &[Shortcut] {
+        &self.shortcuts
     }
 
     /// The scope `id`.

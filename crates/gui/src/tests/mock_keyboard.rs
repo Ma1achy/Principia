@@ -630,6 +630,34 @@ fn mock_keyboard_shortcuts_over_everything_closed_by_esc() {
     rejects("an overlay without its rows", || check_overlay(&texts));
 }
 
+/// A screen adds its own rows to the `?` overlay through its tree's registration; F3 is among the global rows.
+#[test]
+fn mock_keyboard_screen_adds_shortcut_rows() {
+    let shown_rows = |register: bool| {
+        let mut app = mock_app();
+        if register {
+            app.keyboard
+                .tree_mut(Mode::Explore)
+                .register_shortcut("+ / −", "zoom in / out");
+        }
+        let mut h = headless();
+        press(&mut h, &mut app, Key::Questionmark, SHIFT);
+        frame_texts(&mut h, &mut app)
+    };
+    let check = |texts: &[String]| {
+        for name in ["+ / −", "zoom in / out", "F3", "hide / show the egui layer"] {
+            assert!(texts.iter().any(|t| t == name), "no `{name}`");
+        }
+    };
+    check(&shown_rows(true));
+    let mut tree = ScopeTree::new();
+    assert!(tree.shortcuts().is_empty());
+    tree.register_shortcut("a", "b");
+    assert_eq!(tree.shortcuts(), [("a", "b")]);
+    let without = shown_rows(false);
+    rejects("a row no screen registered", || check(&without));
+}
+
 /// Help's "Keys (?)" is enabled and opens the overlay (RQ-250).
 #[test]
 fn mock_keyboard_help_keys_opens_shortcuts() {

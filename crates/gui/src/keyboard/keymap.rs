@@ -84,8 +84,10 @@ pub fn repeats(command: Command) -> bool {
     )
 }
 
-/// The `?` overlay's rows: render_gui_spec §G3's table, key and action.
-pub const SHORTCUTS: [(&str, &str); 8] = [
+/// The `?` overlay's global rows: render_gui_spec §G3's table, key and action, then F3, which hides the layer
+/// (§G1, §G2's "F3 hide"). A screen adds its own rows through its tree's registration
+/// ([`ScopeTree::register_shortcut`](crate::keyboard::scopes::ScopeTree::register_shortcut)).
+pub const SHORTCUTS: [(&str, &str); 9] = [
     (
         "Tab / Shift+Tab",
         "next / previous big scope, in the numbered order",
@@ -97,4 +99,5 @@ pub const SHORTCUTS: [(&str, &str); 8] = [
     ("held keys", "delay, then repeat (the DAS / ARR model)"),
     ("Ctrl+Z", "undo, from the contract's history"),
     ("?", "shortcuts, over everything"),
+    ("F3", "hide / show the egui layer"),
 ];
