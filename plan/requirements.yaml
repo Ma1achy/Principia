@@ -9343,9 +9343,7 @@
   - R-114
   - R-136
   milestone: M1
-  rq:
-  - RQ-260
-  note: "R-114: render_gui_spec §10.1's `raw != raw` is dropped. R-113 (RQ-94): the node-inspector leg of RANGE_AUTO is in REQ-GUI-136's verify (M8). RQ-231, decided per R-369: raw is the field's compacted value per its ledger scale (lin identity, log the floor form as dbg_log places it, cyclic fract(x/period) on [0, 1] with ramp_twilight, diverging a symmetric range); an unbounded field defaults to RANGE_AUTO = 1; ramp is ramp_viridis; the drift views keep R-381's default; RANGE_AUTO is a u32 @uniform in the view's header, whose default the generator writes from the node's param and Declaration::parse reads back."
+  note: "R-114: render_gui_spec §10.1's `raw != raw` is dropped. R-113 (RQ-94): the node-inspector leg of RANGE_AUTO is in REQ-GUI-136's verify (M8). RQ-231, decided per R-369: raw is the field's compacted value per its ledger scale (lin identity, log the floor form as dbg_log places it, cyclic fract(x/period) on [0, 1] with ramp_twilight, diverging a symmetric range); an unbounded field defaults to RANGE_AUTO = 1; ramp is ramp_viridis; the drift views keep R-381's default; RANGE_AUTO is a u32 @uniform in the view's header, whose default the generator writes from the node's param and Declaration::parse reads back. R-400 (RQ-260) amends RQ-231's ramp: a field whose declared range spans zero is on ramp_coolwarm centred at zero, on a symmetric range (REQ-RENDER-084, TASK-M1-17); every other numeric field keeps ramp_viridis."
 - id: REQ-RENDER-023
   area: RENDER
   statement: "Debug fields must be raw: apart from the NaN guard there must be no validity masking, a failed-state sentinel being shown as its literal value."
@@ -10314,6 +10312,28 @@
   - R-352
   - R-353
   milestone: M0
+- id: REQ-RENDER-084
+  area: RENDER
+  statement: "Each generated numeric debug field view whose field's declared ledger range spans zero (lo < 0 < hi, either end possibly unbounded) must draw on a diverging ramp centred at zero, the prelude's ramp_coolwarm from Moreland's cool-warm table (R-122), on the symmetric range [−M, M] with M = max(|lo|, |hi|) over the fixed ends or the measured ends under RANGE_AUTO, so 0 lands at the ramp's neutral midpoint, derived from the range with no signed-or-not mark in the ledger; a field whose declared range does not span zero keeps ramp_viridis (R-400). A field the corpus or its own definition makes non-negative must declare that lower bound in the ledger."
+  source:
+  - file: decisions.md
+    section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: decisions.md
+    section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger numeric_view_template: a zero-spanning field generates ramp_coolwarm on the symmetric range, fixed and auto, with 0 at t = ½; a field with lo ≥ 0 generates ramp_viridis; the cyclic field keeps ramp_twilight and the drifts R-381's view; the ledger gains no member; cargo test -p ledger declared_ranges: each field the corpus or its definition makes non-negative declares lo ≥ 0, each citing its line; cargo test -p render ramp_coolwarm: the ramp matches the checked-in table at its stops and t = ½ is its neutral; cargo xtask golden m1-numeric shows a zero-spanning field's 0 at the neutral"
+  rulings:
+  - R-122
+  - R-400
+  milestone: M1
+  rq:
+  - RQ-261
+  note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. K_0 and V_0 wait on RQ-261."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -10361,6 +10381,8 @@
     section: R-77 — Replace-L, and the state palette *(closes RQ-28)*
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
   verify:
     method: golden image
     detail: "synthetic payload with one sample per class (a decode_failed sample, a collision with t_end_step == 0, a collision with t_end_step > 0 per pair, …) renders exactly these sRGB values; a triple collision and a triple ejection (detail = 3) render REQ-COL-062's two swatches; a running sample renders the neutral grey and a sim_failed sample the invalid colour; editing a swatch changes only that class"
@@ -10369,8 +10391,9 @@
   - R-68
   - R-77
   - R-96
+  - R-399
   milestone: M1
-  note: "Corpus hex codes win over artboard values (R-68). The neutral grey's value: REQ-COL-053 (calibration). RQ-234, decided per R-369: the two triple outcomes (detail = 3) are classes of their own, their swatches REQ-COL-062 (calibration)."
+  note: "Corpus hex codes win over artboard values (R-68). The neutral grey's value: REQ-COL-053 (calibration). RQ-234, decided per R-369: the two triple outcomes (detail = 3) are classes of their own, their swatches REQ-COL-062 (calibration). R-399: running is drawn in the \"not yet\" style, the neutral grey with a fine dot stipple; TASK-M1-10 builds the flat grey as dispatched and TASK-M1-17 applies the style (REQ-TOOL-162)."
 - id: REQ-COL-003
   area: COL
   statement: "ctx must expose the screen, chart, quad, tile/sample, payload and validity lanes listed in colour_composition §3, with a validity lane paired with every field."
@@ -10552,14 +10575,18 @@
     section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
   - file: docs/design/principia_colour_composition.md
     section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
+  - file: decisions.md
+    section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
   verify:
     method: unit test
     detail: "the default ramp registry returns the stated ramp and polarity per field role"
-  rulings: []
+  rulings:
+  - R-399
+  - R-400
   milestone: M7
-  rq:
-  - RQ-259
-  - RQ-260
+  note: "R-400 (RQ-260): a field is signed when its declared ledger range spans zero, with no signed-or-not mark; a field that can't be negative keeps its sequential ramp. R-399 (RQ-259): \"not yet\" is drawn in its stippled style, never a flat grey, so a greyscale default can't collide with it."
 - id: REQ-COL-017
   area: COL
   statement: "The combinators mix_const, mix_field, bandmask and site_overlay must exist as vec3(+ctx) → vec3 operations, and the physics overlay must be site_overlay over a SiteBlend with physics sites, vmf(κ) kernel, per-site colours and per-blob strength s."
@@ -11203,16 +11230,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: decisions.md
+    section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
   verify:
     method: review checklist
     detail: "the proposal shows the grey's OKLab lightness and its separation from bounded #141418, degenerate #ECECF0 and the other seven classes, from the invalid pattern's two colours (REQ-COL-055) and from REQ-COL-062's two triple-outcome swatches once proposed"
   rulings:
   - R-71
   - R-96
+  - R-399
   milestone: M1
-  rq:
-  - RQ-259
-  note: "RQ-233, decided per R-369: proposed by TASK-M1-09, the first task that needs the grey (R-280's d_min view), as one named constant in the presentation layer (present.wgsl and its CPU mirror); TASK-M1-10 reads it."
+  note: "RQ-233, decided per R-369: proposed by TASK-M1-09, the first task that needs the grey (R-280's d_min view), as one named constant in the presentation layer (present.wgsl and its CPU mirror); TASK-M1-10 reads it. R-399 (RQ-259): the grey is the \"not yet\" style's grey, drawn with a fine dot stipple from the pixel position (REQ-COL-064, the stipple's pattern; REQ-TOOL-162, the drawing; TASK-M1-17); PR #172's proposal of the grey stands for the M1 gate."
 - id: REQ-COL-054
   area: COL
   kind: definition
@@ -11417,6 +11445,30 @@
   - R-394
   milestone: M1
   note: "R-394 (RQ-257): reading (b). TASK-M1-06's grid tiling, (quad_xy + quad_uv) / quads, was reading (a); TASK-M1-16 conforms the lane and closes this."
+- id: REQ-COL-064
+  area: COL
+  kind: calibration
+  statement: "The \"not yet\" style's stipple (R-399) — the fine dot pattern from the pixel position that debug_not_yet(frag_xy: vec2<f32>) -> vec3<f32> draws over REQ-COL-053's neutral grey, for an unset d_min and for running samples alike, distinct from the invalid hatch's stripes and never one flat colour, so that it collides with no ramp — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the stipple's pattern (its dot spacing and the dots' colour) over REQ-COL-053's grey, shows it is dots, not the hatch's diagonal stripes, gives the lightness contrast that keeps it visible without colour vision, and shows that no flat colour of any prelude ramp (viridis, twilight, grey, cool-warm) reproduces a 4 × 4 block of it; confirmed by the human at the M1 gate and recorded in decisions.md; the proposal states the pixel space of frag_xy (physical or logical pixels) and shows the stipple resolved at the Mac's display scale factor"
+  rulings:
+  - R-71
+  - R-390
+  - R-399
+  milestone: M1
+  note: "R-399 (RQ-259): proposed by TASK-M1-17, which builds debug_not_yet in present.wgsl beside DBG_NOT_YET; applied per R-369, the helper's name and file."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -11641,6 +11693,7 @@
   rulings:
   - R-129
   milestone: M6
+  note: "R-398: Custom's N control offers powers of two only (REQ-PERF-035)."
 - id: REQ-GUI-015
   area: GUI
   statement: "Quality must be a preset selector (Auto / named tier / Custom) populating one QualitySettings struct: Auto computes it by device characterisation and is re-runnable (re-selecting Auto or re-detect re-measures), a named tier looks it up and skips the probe, Custom lets the user set it."
@@ -13007,6 +13060,7 @@
   rulings:
   - R-53
   milestone: M8
+  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136)."
 - id: REQ-GUI-106
   area: GUI
   statement: "The legend must give each dimension its own key: categorical swatches with their shares of the view, a separate bar for brightness (or any second channel), ticks placed through the curve for number ramps (log-spaced for a log curve), a sphere key for direction fields, a colour square for coordinate maps, and line samples for post operations."
@@ -14436,6 +14490,7 @@
   - R-271
   - R-280
   milestone: M1
+  note: "R-399: the \"not yet\" grey is drawn as R-399's non-flat style, the grey with a fine dot stipple from the pixel position (debug_not_yet(frag_xy)), distinct from the hatch; REQ-TOOL-162 (TASK-M1-17) applies it, and REQ-COL-064 is the stipple's pattern."
 - id: REQ-TOOL-013
   area: TOOL
   statement: "The kernel must keep exactly one debug mode — colour_composition Appendix A's bring-up mode — as a baked pre-built kernel variant (not a dispatch flag bit) that skips integration and writes its known pattern into the existing payload slots (no new buffers), and UV, DECODE and ROUNDTRIP must not be kernel variants."
@@ -14537,12 +14592,15 @@
     section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   - file: decisions.md
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "sampled quads' reconstructed (u, v) match c + h·(2t − 1), with c and h the synthetic harness's per-quad values from its own grid at M1; adjacent deltas pass REQ-TOOL-152's banding criterion, and its negative fixture fails it; and, the M1 gate's check of R-395's first half, at N = 8 and N = 16 for every depth up to ℓ_switch = 20 near u ≈ 0.6, the absolute f32 coordinate c + h·(2t − 1)'s adjacent deltas pass REQ-TOOL-152's criterion, or adjacent samples collapse to one coordinate, where R-90's switchover fires first (`cargo test -p render uv_absolute_no_banding_to_l_switch`, TASK-M1-16); a non-dyadic N waits on RQ-258"
+    detail: "sampled quads' reconstructed (u, v) match c + h·(2t − 1), with c and h the synthetic harness's per-quad values from its own grid at M1; adjacent deltas pass REQ-TOOL-152's banding criterion, and its negative fixture fails it; and, the M1 gate's check of R-395's first half, at N = 8 and N = 16 for every depth up to ℓ_switch = 20 near u ≈ 0.6, the absolute f32 coordinate c + h·(2t − 1)'s adjacent deltas pass REQ-TOOL-152's criterion, or adjacent samples collapse to one coordinate, where R-90's switchover fires first (`cargo test -p render uv_absolute_no_banding_to_l_switch`, TASK-M1-16); no N the product offers is non-dyadic (R-398), and a smaller power of two than 8 is exact wherever N = 8 is, so the sweep needs no other N; TASK-M1-16's N = 6 fixture is a negative control of the check only"
   rulings:
   - R-75
   - R-395
+  - R-398
   milestone: M1
   note: "RQ-214, decided per R-369: the formula is transcribed as deep_zoom §1 writes it (\"+\", not \"±\"); t is the quad-local sample coordinate and (u, v) the UV coordinate it reconstructs; at M1 the synthetic harness supplies c and h (the per-quad uniforms arrive with TASK-M5-04). R-395 (RQ-242): narrowed to absolute coordinates up to ℓ_switch, the half the M1 gate checks; TASK-M1-07 builds it on M1's flat grid, and the depth sweep to ℓ_switch is TASK-M1-16's acceptance line (applied per R-369: TASK-M1-07 was in review when R-395 was recorded)."
 - id: REQ-TOOL-020
@@ -14624,7 +14682,7 @@
   - R-245
   - R-280
   milestone: M1
-  note: "RQ-230, decided per R-369: a mechanical consequence of R-245 (no diffusion −1 sentinel) and R-280 (d_min's unset value takes the grey); the statement no longer names diffusion's −1."
+  note: "RQ-230, decided per R-369: a mechanical consequence of R-245 (no diffusion −1 sentinel) and R-280 (d_min's unset value takes the grey); the statement no longer names diffusion's −1. R-399: the \"not yet\" grey is drawn as R-399's non-flat style, the grey with a fine dot stipple from the pixel position (debug_not_yet(frag_xy)), distinct from the hatch; REQ-TOOL-162 (TASK-M1-17) applies it, and REQ-COL-064 is the stipple's pattern."
 - id: REQ-TOOL-024
   area: TOOL
   statement: "Derived views (orbit_count / retrograde from θ̃, the reduced crossing count, ftle = S_final/(step_count·dt) with the partial renorm finalised, current drift H(r,p) − E_0) must each be computed in the fragment and match a reference computed the same way."
@@ -16261,7 +16319,7 @@
   rulings:
   - R-280
   milestone: M1
-  note: "RQ-233, decided per R-369: the unset test is the bit test the harness's validity lane generates, or pa_d_min_is_unset on the packed word, never a float comparison (R-271, R-343 item 5); the grey's value is REQ-COL-053's, proposed by TASK-M1-09."
+  note: "RQ-233, decided per R-369: the unset test is the bit test the harness's validity lane generates, or pa_d_min_is_unset on the packed word, never a float comparison (R-271, R-343 item 5); the grey's value is REQ-COL-053's, proposed by TASK-M1-09. R-399: the \"not yet\" grey is drawn as R-399's non-flat style, the grey with a fine dot stipple from the pixel position (debug_not_yet(frag_xy)), distinct from the hatch; REQ-TOOL-162 (TASK-M1-17) applies it, and REQ-COL-064 is the stipple's pattern."
 - id: REQ-TOOL-138
   area: TOOL
   statement: "`cargo xtask codegen` must write a generated file only when its content differs from what is on disk, so an unchanged file keeps its modification time and forces no rebuild (R-284)."
@@ -16518,16 +16576,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
     detail: "the proposal gives the criterion and its bound with the measured adjacent-sample deltas on M1's flat grid; `cargo test -p render uv_preset_reconstruction` applies it, and a negative fixture, a quad deep enough that deep_zoom §1's global form u_min + (u_max − u_min)·t bands in f32, fails it; confirmed by the human at the M1 gate and recorded in decisions.md"
   rulings:
   - R-71
   - R-395
+  - R-398
   milestone: M1
-  rq:
-  - RQ-258
-  note: "RQ-214, decided per R-369. R-395: the bound the human confirms is the one REQ-TOOL-019's absolute-coordinate check applies up to ℓ_switch (R-90) and REQ-TOOL-158 applies past it; at a non-dyadic N the proposed 1/16 is exceeded before ℓ_switch (RQ-258, for the M1 gate)."
+  note: "RQ-214, decided per R-369. R-395: the bound the human confirms is the one REQ-TOOL-019's absolute-coordinate check applies up to ℓ_switch (R-90) and REQ-TOOL-158 applies past it; at a non-dyadic N the proposed 1/16 is exceeded before ℓ_switch (RQ-258, for the M1 gate). R-398 (RQ-258): N is a power of two at every tier and setting, so no N the product offers departs before its samples collapse; the bound itself stays a calibration for the M1 gate."
 - id: REQ-TOOL-153
   area: TOOL
   kind: definition
@@ -16677,7 +16736,7 @@
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
-  statement: "The ε floor of a log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε)) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -16685,13 +16744,16 @@
     section: "Presentation layer (hand-written, small, reused by every debug view)"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
   verify:
     method: unit test
-    detail: "the proposal gives ε with the place each log field's stored values take under it; `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with that ε; confirmed by the human at the M1 gate and recorded in decisions.md"
+    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md"
   rulings:
   - R-71
+  - R-401
   milestone: M1
-  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal)."
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note)."
 - id: REQ-TOOL-161
   area: TOOL
   kind: definition
@@ -16710,6 +16772,32 @@
   - R-72
   milestone: M1
   note: "Raised by TASK-M1-09: the ledger's cyclic scale carries no period. rho_angle's formula is REQ-PAY-088's (TASK-M2-03), which must give it in radians for this period to hold, or the period changes with it."
+- id: REQ-TOOL-162
+  area: TOOL
+  statement: "Every view that shows \"not yet\" — d_min's unset value (f16 +inf, tested by its bits, R-271) in its numeric debug view and its FieldRamp, and the outcome palette's running class — must draw it with debug_not_yet(frag_xy), the neutral grey with a fine dot stipple from the pixel position (R-399), never a flat grey, never the invalid hatch, which stays NaN's and sim_failed's, and never a place on the ramp (R-280)."
+  source:
+  - file: decisions.md
+    section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
+  - file: decisions.md
+    section: "R-280 — An unset `d_min` renders in the neutral \"not yet\" grey *(closes RQ-170)*"
+  - file: decisions.md
+    section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  verify:
+    method: golden image
+    detail: "cargo test -p render not_yet_style: over any 4 × 4 pixel block debug_not_yet takes at least two colours and differs from debug_invalid; cargo xtask golden m1-numeric: a forced-failure and an unstepped sample draw d_min in the style in the debug view and the FieldRamp, a NaN is hatched and a valid d_min sits on the ramp; cargo xtask golden m1-outcome: a running sample draws the style, the other classes unchanged"
+  rulings:
+  - R-96
+  - R-271
+  - R-280
+  - R-399
+  milestone: M1
+  note: "R-399 (RQ-259), applied by TASK-M1-17 to the views TASK-M1-09 and TASK-M1-10 built flat; TASK-M7-05's and TASK-M7-09's extensions of FieldRamp inherit it. The Legend's running swatch is drawn as the style too (TASK-M6-27, TASK-M8-22; REQ-GUI-105)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -20172,15 +20260,18 @@
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
   - file: decisions.md
     section: "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "each named preset's QualitySettings matches its row; the Ultra and Extreme rows are marked provisional in the config until REQ-PERF-086 is recorded (R-137)"
+    detail: "each named preset's QualitySettings matches its row; the Ultra and Extreme rows are marked provisional in the config until REQ-PERF-086 is recorded (R-137); each named tier's N is a power of two (R-398)"
   rulings:
   - R-43
   - R-132
   - R-137
+  - R-398
   milestone: M5
-  note: "The N column's 24 and 32 are subject to R-43; R-132 caps Ultra and Extreme at N = 16, their E and render scale calibrated by REQ-PERF-086."
+  note: "The N column's 24 and 32 are subject to R-43; R-132 caps Ultra and Extreme at N = 16, their E and render scale calibrated by REQ-PERF-086. R-398: N is a power of two; the named tiers' 8 and 16 already are."
 - id: REQ-PERF-027
   area: PERF
   statement: "FTLE must be on by default from Medium up and off for Potato and Low, and Custom must be able to force it on at any render_scale."
@@ -20291,7 +20382,7 @@
   milestone: M6
 - id: REQ-PERF-035
   area: PERF
-  statement: "SAMPLES_PER_QUAD_AXIS (N) and MAX_REL_DEPTH must both be tier-gated with a Custom override, and the quality tier must also gate the resident co-computations (ensemble copies and per-sample Benettin shadows)."
+  statement: "SAMPLES_PER_QUAD_AXIS (N) and MAX_REL_DEPTH must both be tier-gated with a Custom override, and the quality tier must also gate the resident co-computations (ensemble copies and per-sample Benettin shadows), and N must be a power of two at every tier and in the Custom override, which offers no other value (R-398)."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 6 — The settled policy
@@ -20299,11 +20390,17 @@
     section: 4. The six quality tiers
   - file: docs/design/principia_memory_tiers.md
     section: 5. Controller levers, ranked by impact
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
+  - file: docs/design/principia_quality_device_note.md
+    section: "The reframe: quality is a preset selector populating one settings struct"
   verify:
     method: unit test
-    detail: "each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each"
-  rulings: []
+    detail: "each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each; N is a power of two at every tier, and Custom offers powers of two only, each within REQ-PERF-011's thread ceiling (R-398)"
+  rulings:
+  - R-398
   milestone: M6
+  note: "R-398 (RQ-258): N is a power of two wherever it is chosen, so the sample coordinates are dyadic, as the quadtree's are."
 - id: REQ-PERF-036
   area: PERF
   statement: "E must be motion-gated by the quality controller via e_motion_gating: reduced (→0/1) during an active live march when the cost model says 2(E+1) trajectories per pixel is unaffordable, and full at rest and in export, with the gating threshold set by measurement on a working system."
@@ -20352,14 +20449,17 @@
     section: 8. Build-time settles (measure / specify once running)
   - file: docs/design/principia_dd_simstate_payload.md
     section: 7. Memory
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: benchmark
     detail: "device-characterisation runs record the thresholds and budget heuristics used"
   rulings:
   - R-4
   - R-40
+  - R-398
   milestone: M6
-  note: "R-40: the quality device keys off eps (telemetry §3.5's three-axis model, R-4)."
+  note: "R-40: the quality device keys off eps (telemetry §3.5's three-axis model, R-4). R-398: the ladder these runs measure has N a power of two at every rung."
 - id: REQ-PERF-039
   area: PERF
   statement: "The frame target must be 16.7 ms (60 fps) with 41.7 ms (24 fps) the hard floor: tier derivation solves for 16.7 ms first and falls back toward 41.7 ms only when nothing fits, recording that it did."
@@ -20558,10 +20658,13 @@
   source:
   - file: docs/design/principia_quality_device_note.md
     section: "\"Auto\" = device characterisation (three legs: limits · probe · info)"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "solve output for a mocked throughput matches the formula with headroom and clamping"
-  rulings: []
+    detail: "solve output for a mocked throughput matches the formula with headroom and clamping; the solved N is a power of two (R-398)"
+  rulings:
+  - R-398
   milestone: M6
 - id: REQ-PERF-054
   area: PERF
@@ -20571,11 +20674,15 @@
     section: Hard limits clamp EVERY preset (including custom)
   - file: docs/contracts/principia_gui_state_contract.md
     section: "6. Quality settings — preset selector over one struct (see `principia_quality_device_note.md`)"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: unit test
-    detail: "High on a weak mocked device clamps down; Custom slider max equals the limit and the tooltip is present"
-  rulings: []
+    detail: "High on a weak mocked device clamps down; Custom slider max equals the limit and the tooltip is present; the clamp lands N on the largest power of two with N² ≤ the invocation ceiling, not ⌊√ceiling⌋: a mocked 384-invocation ceiling gives N = 16, not 19 (R-398)"
+  rulings:
+  - R-398
   milestone: M6
+  note: "R-398: N is a power of two, so the device clamp rounds down to a power of two."
 - id: REQ-PERF-055
   area: PERF
   statement: "The cache cap must be sized by the characterisation solve within the limits leg's hard ceiling."
@@ -21105,12 +21212,16 @@
     section: Open sub-questions (settle at implementation)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   verify:
     method: review checklist
     detail: "the proposal states the rung count, each rung's preset and the unified/discrete budget heuristic, with the device-characterisation runs REQ-PERF-038 records; recorded in decisions.md"
   rulings:
   - R-71
+  - R-398
   milestone: M6
+  note: "R-398: every rung's preset has N a power of two."
 - id: REQ-PERF-091
   area: PERF
   kind: calibration

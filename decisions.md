@@ -736,10 +736,13 @@ boundaries for unregularised occupants and at sync boundaries for regularised on
 independent ground truth, with the legacy t = 30 set kept as a comparison.
 
 ## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
+*Amended in part by R-399 (`running`'s neutral grey is drawn in the "not yet" style: the grey with a fine dot stipple
+from the pixel position).*
 *25 Sep 2026 · applied in step 7 · last bullet withdrawn by R-106*
 *Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the
-properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`; the last bullet is
-withdrawn, the link ids being the chart's link functions (R-106).*
+properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`, with `running`'s
+neutral grey drawn in R-399's "not yet" style, the grey with a fine dot stipple; the last bullet is withdrawn, the link
+ids being the chart's link functions (R-106).*
 
 - Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
   neutral grey; `sim_failed` shows the invalid colour.
@@ -2731,6 +2734,10 @@ entries, and the schema version changes with the hashed ledger. The emitter read
 build is one of them (R-270).
 
 ## R-280 — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*
+*Amended in part by R-399 (the "not yet" grey is a non-flat style: the neutral grey with a fine dot stipple from the
+pixel position).*
+*Still in force: all of it, with the "not yet" grey drawn as R-399's style, the same for an unset `d_min` and for
+running samples; not the invalid hatch, not on the ramp.*
 *30 Sep 2026 · applied in payload §1, debug_tooling_plan §B, REQ-TOOL-012, REQ-TOOL-137 and TASK-M1-09*
 
 "RQ-170: option 3: an unset d_min renders in the neutral "not yet" style, the same grey as running samples (R-96).
@@ -6780,6 +6787,246 @@ carries the recheck (below).
 - R-397 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-392.
 
 Adds REQ-INT-087, REQ-INT-088 and REQ-INT-089; REQ-PAY-009's statement and verify and REQ-INT-082's rulings change.
+
+## R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
+*9 Oct 2026 · applied in `docs/design/principia_memory_tiers.md` § "4. The six quality tiers" and § "5. Controller
+levers, ranked by impact", `docs/design/principia_quality_device_note.md` § "The reframe: quality is a preset selector
+populating one settings struct", `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy" and
+`docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision" (added sentences), REQ-PERF-026,
+REQ-PERF-035, REQ-PERF-038, REQ-PERF-053, REQ-PERF-054, REQ-PERF-090, REQ-GUI-014, REQ-TOOL-019 and REQ-TOOL-152
+(reqio), TASK-M1-16, TASK-M5-02, TASK-M5-04, TASK-M6-15, TASK-M6-16, TASK-M6-22, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-258 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-02, TASK-M6-15 and
+TASK-M6-16*
+
+The orchestrator put RQ-258 to the human: at a non-dyadic `N` (Custom mode exposes `N`), the absolute coordinate
+`c + h·(2t − 1)` formed in f32 departs from the exact step by graded steps, so at PR #160's proposed bound it reads
+"banded" before ℓ_switch, where R-395 says it must not. The human replied, in their own words ("This is from me."):
+
+> 1. RQ-258: N is limited to powers of two (dyadic sample coordinates;
+>    matches the quadtree). Update every tier and setting that chooses N.
+
+(Message of 9 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **`N` (`SAMPLES_PER_QUAD_AXIS`) is a power of two wherever it is chosen:** the six named tiers, the controller's
+  internal rungs, Custom mode, and the uniform flat grid of the offline/export path, which takes the same `N`. The
+  sample coordinates `t = (i + ½)/N` are then dyadic rationals, as the quadtree's centres `c` and half-widths
+  `h = 2^−(ℓ+1)` are. RQ-258's option 1.
+- The named tiers' `N`, 8 and 16 (memory_tiers § 4, with R-132's cap at 16), already are. Custom mode offers powers of
+  two only, each within the one-workgroup-per-quad thread ceiling REQ-PERF-011 already asks for.
+- **R-395's first half then holds at every `N` the product offers.** At depth ℓ, with the quad centre `c = (2k + 1)·h`
+  and the offset `h·(2t − 1) = h·(2i + 1 − N)/N`, the exact coordinate is `m·h/N` with `m = 2kN + 2i + 1`, an odd
+  integer; below 1 it is an f32 value whenever `h/N ≥ 2^−24`, and then the f32 sum of two exact terms is exact. So
+  the adjacent deltas depart by 0 until `h/N` falls below the ulp of `u` (near `u ≈ 0.6`, `2^−24`), where adjacent
+  samples collapse together and R-90's switchover fires on their bitwise-identical ICs: through ℓ = 20 for every
+  `N ≤ 8`, and to ℓ = 19 for `N = 16`, which collapses at ℓ = 20 (R-395's own figures). The graded departure RQ-258
+  measured at `N = 6` and `N = 12` is no longer offered.
+- REQ-TOOL-152's bound itself stays a calibration, proposed by PR #160 and confirmed by the human at the M1 gate; this
+  ruling does not set it.
+
+*Applied per R-369 (mechanical consequences):*
+- memory_tiers § 4 gains a paragraph after the Ultra and Extreme cap, and § 5 a sentence after Custom mode's knobs;
+  quality_device_note's Custom bullet and the scheduler contract's resolution controls each gain a sentence;
+  deep_zoom § 1's banding paragraph gains one, citing R-398. The scheduler contract's "`N` ranges 8–32 across the six
+  tiers" is left as written: R-132 already caps it at 16, and the added sentence says so.
+- **REQ-PERF-035** (TASK-M6-15, Custom's override): its statement and verify gain "`N` is a power of two at every
+  tier and in Custom, which offers no other value". **REQ-PERF-026** (TASK-M5-02, the named tiers' rows): its verify
+  gains "each named tier's `N` is a power of two". Both gain R-398 as a ruling; the two task files' acceptance lines
+  and Notes follow.
+- **REQ-TOOL-019**: its verify's "a non-dyadic N waits on RQ-258" becomes "no `N` the product offers is non-dyadic
+  (R-398)"; R-398 joins its rulings. **The sweep stays at `N = 8` and `N = 16`**, the named tiers' `N`: a smaller power
+  of two has a coarser step `2h/N` on a coarser dyadic grid, so its sum is exact wherever `N = 8`'s is.
+- **REQ-TOOL-152**: `rq: RQ-258` is removed; its note gains that `N` is a power of two (R-398), so no offered `N`
+  departs before its collapse, and that the bound stays for the M1 gate.
+- **TASK-M1-16** (merged, PR #171) gains a Notes line: its `N = 6` fixture remains a negative control of the check
+  only, showing the check can fail; `N = 6` is no `N` the product offers. The comments in
+  `crates/render/tests/uv_absolute_banding.rs` (lines 14 and 177) that call RQ-258 open are refreshed by TASK-M1-17
+  (R-399–R-401's task, below), which is in M1 and touches the debug views next.
+- TASK-M5-04's note that "RQ-258 is open on a non-dyadic N" is updated to cite R-398.
+- **The automatic chooser and the device clamp** (physics review 5472051445 of PR #175): Auto's solve (REQ-PERF-053)
+  yields a power-of-two `N`, and the hard-limit clamp (REQ-PERF-054) lands `N` on the largest power of two with
+  `N² ≤` the invocation ceiling, not on `⌊√ceiling⌋`: a 384-invocation ceiling gives `N = 16`, not 19. Every rung of
+  the ladder (REQ-PERF-090, measured under REQ-PERF-038) has a power-of-two `N`. TASK-M6-16 closes these and gains
+  the reference, an acceptance assertion (a mocked 384-invocation ceiling yields `N = 16`) and a Notes line;
+  TASK-M6-15's ladder test `e_free_valued` also checks that each rung's `N` is a power of two. REQ-GUI-014 and
+  TASK-M6-22 (Custom's `N` control) gain a note.
+- RQ-258 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-398 is in the "physics" group of `plan/rule_groups.yaml`, with R-395.
+
+Adds no requirement; REQ-PERF-026's verify, REQ-PERF-035's statement and verify, REQ-PERF-053's verify and rulings,
+REQ-PERF-054's verify, rulings and note, REQ-PERF-038's and REQ-PERF-090's rulings and notes, REQ-GUI-014's note,
+REQ-TOOL-019's verify and rulings and REQ-TOOL-152's note, rulings and `rq` change.
+
+## R-399 — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
+*9 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or
+`f32`" and § "1.4 Categorical colour-assignment — the outcome-state default palette",
+`docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library",
+`docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug view)"
+and `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)"
+(added sentences), REQ-COL-053, REQ-COL-016, REQ-COL-002, REQ-TOOL-012, REQ-TOOL-023 and REQ-TOOL-137 (reqio),
+REQ-COL-064 and REQ-TOOL-162 (reqio, new), TASK-M1-17 (new), TASK-M1-09, TASK-M1-10, TASK-M1-12, TASK-M1-13,
+TASK-M1-14, TASK-M6-27, TASK-M8-22, REQ-GUI-105 (reqio), `plan/reviewers/gui.md`, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-259 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M1-17, TASK-M6-27 and TASK-M8-22*
+
+The orchestrator put RQ-259 to the human: every neutral grey is a point of `ramp_grey`, so the "not yet" grey
+(REQ-COL-053; PR #172 proposes `#4E4E4E`) equals a valid value on a greyscale field ramp, which colour_composition
+§1.2 makes the default for magnitude and diagnostic fields, though R-280 keeps the unset value off the ramp. The human
+replied, in their own words ("This is from me."):
+
+> 2. RQ-259: "not yet" (unset d_min, and running samples per R-96) is a
+>    non-flat style: neutral grey with a fine dot stipple from the pixel
+>    position, distinct from the invalid hatch's stripes. It can't collide
+>    with any ramp.
+
+(Message of 9 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **"Not yet" is one style, not a flat colour**: `d_min`'s unset value (f16 +inf, R-271, drawn per R-280) and
+  `running` samples (R-96) are drawn as the neutral grey with a fine dot stipple computed from the pixel position, as
+  the hatch is (R-136). RQ-259's option 3, for every view, whatever its ramp.
+- **It is distinct from the invalid hatch's stripes**: dots, not diagonal stripes. The hatch stays NaN's and
+  `sim_failed`'s (PIT-8, R-136); R-280's "not the invalid hatch, not the top of the ramp" stands.
+- **It can't collide with any ramp**: a ramp draws one flat colour for one value, and the style is never flat, so no
+  value on any ramp, greyscale included, and no user customisation of a ramp reads as "not yet".
+- The grey's value and the stipple's exact pattern are look values (R-390) and calibrations (R-71): proposed with
+  their evidence for the M1 gate and confirmed by the human. This ruling sets neither.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The helper.** The style is drawn by one presentation-layer function, `debug_not_yet(frag_xy: vec2<f32>) ->
+  vec3<f32>`, beside `debug_invalid(frag_xy)` and in the same file as `DBG_NOT_YET`, the grey (render contract
+  presentation layer; `crates/render/shaders/wgsl/lib/present.wgsl`). `DBG_NOT_YET` stays the grey's one named
+  constant (REQ-COL-053); the stipple's pattern is the new calibration.
+- **Where it is drawn:** every field view that shows `d_min`'s unset value (the generated numeric debug view and the
+  `d_min` `FieldRamp`, TASK-M1-09's), the outcome palette's `running` class (TASK-M1-10's occupant), and every later
+  view that shows "not yet" (TASK-M7-05's and TASK-M7-09's extensions of `FieldRamp` inherit it). **The Legend's
+  `running` swatch** is drawn as the style too, through `debug_not_yet` or its CPU mirror, not as one flat colour
+  (TASK-M6-27's frame, TASK-M8-22's evaluation); `legend_swatches_equal_stain` (REQ-GUI-105) compares it as the
+  style, as it compares `sim_failed`'s hatch (R-136) (gui review 5472021685 of PR #175). `plan/reviewers/gui.md`'s
+  legend item says so.
+- **REQ-COL-053** keeps the grey's value (it is the style's grey; PR #172's proposal stands for the gate); it gains
+  R-399 and a note, and loses `rq: RQ-259`. **REQ-COL-064 (new, M1, calibration)** is the stipple's pattern: proposed
+  with its evidence (its pattern, its distinctness from the hatch, its visibility over the grey, and that no flat ramp
+  colour reproduces it), confirmed at the M1 gate. **REQ-TOOL-162 (new, M1)** is the drawing: every view that shows
+  "not yet" draws `debug_not_yet(frag_xy)`, never a flat grey. REQ-TOOL-012, REQ-TOOL-023, REQ-TOOL-137 and REQ-COL-002
+  gain notes; REQ-COL-016 loses `rq: RQ-259` and gains R-399.
+- **The code.** TASK-M1-09 (merged, PR #172) built the flat grey; TASK-M1-10, TASK-M1-12 and TASK-M1-13 are being
+  built against the corpus as it stood and finish as dispatched. **A new task, TASK-M1-17** ("Conform the debug views
+  to R-399–R-401"), depending on TASK-M1-10, TASK-M1-12 and TASK-M1-13, applies R-399, R-400 and R-401 across every
+  numeric and field view, with acceptance tests and goldens updated; reviewers code, qa, physics and gui. TASK-M1-14
+  depends on it. Kept as one task: the three rulings touch the same template, presentation layer and goldens, and
+  splitting them would re-render the same goldens three times.
+- R-96 and R-280 gain "Amended in part by R-399" and "Still in force" lines (R-292).
+- RQ-259 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-399 is in the "design" group of `plan/rule_groups.yaml`, with R-96, R-280 and R-390.
+
+Adds REQ-COL-064 and REQ-TOOL-162; REQ-COL-053's rulings, note and `rq`, REQ-COL-016's rulings and `rq`, and
+REQ-TOOL-012's, REQ-TOOL-023's, REQ-TOOL-137's, REQ-COL-002's and REQ-GUI-105's notes change.
+
+## R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
+*9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
+`docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (added sentences),
+REQ-RENDER-022 and REQ-COL-016 (reqio), REQ-RENDER-084 (reqio, new), TASK-M1-17 (new), TASK-M7-07,
+`plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-260 archived) and `REVIEW_QUEUE.md`
+(RQ-261, open); built by TASK-M1-17*
+
+The orchestrator put RQ-260 to the human: RQ-231 item 3, decided per R-369, put every numeric debug view on viridis,
+the signed fields included, so zero lands mid-viridis, while colour_composition §1.2 gives signed fields
+diverging-through-neutral. The human replied, in their own words ("This is from me."):
+
+> 3. RQ-260: a diverging ramp, centred at zero, for every field whose
+>    declared ledger range spans zero; derived from the range, no new
+>    ledger mark. Fields that can't be negative keep viridis.
+
+(Message of 9 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **The ramp follows the declared range.** A numeric field view whose field's declared ledger range spans zero
+  (`lo < 0 < hi`, either end possibly unbounded) is drawn on a diverging ramp centred at zero: 0 at the ramp's neutral
+  midpoint. RQ-260's option 3, but derived from the range the ledger already declares, with no signed-or-not mark.
+- **A field that can't be negative keeps viridis**, as RQ-231 item 3 put it. RQ-231's item 3 (the orchestrator's,
+  per R-369) stands for every field whose range does not span zero, and gives way to this ruling where it does.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The ramp is `ramp_coolwarm`.** The corpus names it: render_gui_spec §10.1 lists `ramp_coolwarm` among the
+  prelude's ramps, and R-122 takes its data from Moreland's cool-warm table, whose midpoint is a neutral grey. So the
+  colours are not a look value for the gate. TASK-M1-17 checks the table in under `crates/ledger/data/lut/` with its
+  source named, as `ramp_viridis` and `ramp_twilight` are, and `ramp_coolwarm(t)` reads it as they read theirs;
+  TASK-M7-07's cool-warm LUT reads the same table.
+- **Centred at zero.** The range is made symmetric, `[−M, M]` with `M = max(|lo|, |hi|)` over the fixed range's ends
+  (or the measured ends under `RANGE_AUTO = 1`), so 0 maps to `t = ½`. This is RQ-231 item 1's rule for a
+  `diverging`-scale field, extended to every field whose range spans zero; an unbounded end takes the measured end, as
+  RQ-231 item 2 has it.
+- **The declared range is the ledger's `range`.** Where §3 gives a field no range the ledger declares (−∞, ∞)
+  (`crates/ledger/src/payload.rs`:7), which spans zero; a field the corpus gives a non-negative domain must not read
+  as signed by that default. So TASK-M1-17 declares the lower bound of each field whose domain the corpus or the
+  field's own definition makes non-negative (render_gui_spec §10.1's mass fraction `mᵢ ∈ [0,1]` and `|ρ| ∈ [0,1]`, for
+  example, and dd_decoder's `virial_ratio = 2K₀/|V₀|`), citing the line for each; the physics reviewer checks each. A
+  declared bound is a range, not a mark. Every other field takes its range as declared.
+- **What does not change:** the drift views keep R-381's view (their diverging ramp's three colours are TASK-M3-05's
+  definition, REQ-TOOL-149); the cyclic field keeps `ramp_twilight`; the log fields are positive; the helpers `dbg_lin`,
+  `dbg_log` and `dbg_sentinel` keep viridis (no field on a diverging ramp has a stored sentinel today).
+- colour_composition §1.2's default for signed fields (TASK-M7-05's registry, REQ-COL-016) reads "signed" the same way:
+  a field whose declared range spans zero. §1.2 gains a sentence; REQ-COL-016 gains R-400 and a note and loses
+  `rq: RQ-260`.
+- **A new requirement, REQ-RENDER-084 (M1)**, the rule, closed by TASK-M1-17; REQ-RENDER-022 gains a note and loses
+  `rq: RQ-260`.
+- **A conflict the ruling does not settle, filed as RQ-261 (open):** `K_0` and `V_0` carry the `diverging` scale
+  (generation_root §3.6), but `K_0` can't be negative and `V_0` can't be positive; the range rule and "fields that
+  can't be negative keep viridis" give different ramps for `K_0`, and nothing says which ramp a field that can't be
+  positive takes. REQ-RENDER-084 carries `rq: RQ-261`; TASK-M1-17's `K_0` and `V_0` views follow its ruling.
+- RQ-260 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
+- R-400 is in the "design" group of `plan/rule_groups.yaml`, with R-381 and R-390.
+
+Adds REQ-RENDER-084; REQ-RENDER-022's note and `rq` and REQ-COL-016's rulings and note change.
+
+## R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
+*9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
+reworded), REQ-TOOL-160 (reqio), TASK-M1-17 (new), TASK-M1-09, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
+by TASK-M1-17*
+
+REQ-TOOL-160 asks for "the ε floor" of every log-scaled numeric field view whose field has no ledger `floor`, one
+value, and TASK-M1-09 (PR #172) proposed and built 2⁻²⁴, f16's smallest positive subnormal, for all six fields. The
+human raised it from the M1 gate's list, with no RQ, in their own words ("This is from me."):
+
+> 4. The log floor: replace the single ε = 2⁻²⁴ with a per-field floor in
+>    each field's own units (distances, relative errors, the ratio),
+>    proposed with evidence for the M1 gate.
+
+(Message of 9 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **One floor per field.** Each log-scaled field view whose field has no ledger `floor` — `d_min`, `dE_max`,
+  `dLz_max`, `closure_min`, `rho_ratio` and `r_min_pair_0` — places `raw = 1 − 1/(1 + ln(1 + |x|/ε_f))` with its own
+  `ε_f`, the magnitude where its compression sets in, in that field's own units: a distance for the distances,
+  absolute and in the stored fields' own normalised units for `dE_max` and `dLz_max` (see the note below), and a
+  ratio for `rho_ratio`.
+- **The floors are calibrations (R-71):** proposed with their evidence for the M1 gate, confirmed by the human and
+  recorded in decisions.md. The single 2⁻²⁴ is no longer proposed.
+
+*Applied per R-369 (mechanical consequences):*
+- **REQ-TOOL-160** is amended in place (its id is permanent): its statement and verify ask for one floor per field,
+  each with its units and evidence; R-401 joins its rulings and sources. Its closing moves from TASK-M1-09 (merged,
+  which built the single ε R-401 replaces) to TASK-M1-17, which proposes the floors and builds them; TASK-M1-09's
+  Closes line and a Notes line say so.
+- **The evidence**, per field: where its stored values fall under the proposed floor on M1's fixtures, and why the
+  floor sits where it does in the field's units, as REQ-TOOL-160's verify asked for the single ε. Each floor is a
+  named presentation constant per field, read by the template; not §3.8's `floor?` key, which R-263 gives a sim-key
+  parameter (the drifts' `eps_E` and `eps_L`), since a display floor is not on the sim key.
+- The drifts' floors, `eps_E` and `eps_L` (sim-key parameters, R-263), are unchanged.
+- render_gui_spec §10.1's "proposed 2⁻²⁴" sentence is reworded to the per-field floors, citing R-401.
+- R-401 is in the "physics" group of `plan/rule_groups.yaml`, as the orchestrator grouped it.
+
+*Note: the drifts' units, flagged to the human (code review 5472057070 of PR #175).* The human's words list the
+units as "(distances, relative errors, the ratio)", but the corpus defines `dE_max` and `dLz_max` as absolute maxima:
+dd_simstate_payload § 2's "**Drift latches are ABSOLUTE maxima:** `dE_max = max_t |ΔE(t)|`, `dLz_max = max_t |ΔL_z(t)|`"
+and § 1's "absolute maxima / running min over the whole trajectory"; generation_root § 3.4 names them
+`delta_E_max_abs` and `delta_Lz_max_abs`. What was applied, per R-369: the ruling's operative clause is "in each
+field's own units", and the view shows the stored field, so the floors for `dE_max` and `dLz_max` are absolute, in the
+stored fields' normalised units, and TASK-M1-17's proposal says so. It changes nothing that is built; the human is
+told in PR #175.
+
+Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no requirement.
 
 ## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
 *9 Oct 2026 · applied in `.github/workflows/nightly.yml` (its `concurrency` group and jobs `mutants-plan`, `mutants`

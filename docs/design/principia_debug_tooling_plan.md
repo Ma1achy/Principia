@@ -54,6 +54,10 @@ One view + one test per field. Generated from the ledger, conformed to the paylo
 | **live current-substep count** *(live view, not a descriptor bit)* | **animated heatmap of substeps this macro-step** — read off the marching state | the substepper's live effort; close encounters propagate across the manifold in time (Part-5 live views) |
 | **whole-word hash** | `dbg_hash(w)` — "is it changing at all" | distinct words → distinct colours | 
 
+`d_min`'s unset value is drawn in the "not yet" style (R-399): the neutral grey of `running` samples with a fine dot
+stipple from the pixel position, `debug_not_yet(frag_xy)`, distinct from the invalid hatch's stripes, so no ramp value
+reads as it.
+
 ---
 
 ## C. Payload field views — `times` (u32), f16-packed scalars & `free_group_word` (separate buffer)

@@ -677,18 +677,22 @@ against the raw `state` field, not silently recoloured. NaN still goes to the in
 floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts, which keep R-381's `symlog` view.
 `raw` is the field's value compacted per its ledger scale: `lin` and `diverging` the identity; `log`
 `1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on the fixed `[0, 1]`; `cyclic` `fract(x / period)` on the fixed
-`[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`. **The cyclic period is one turn, 2π:** a cyclic
+`[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`, except for a field whose declared range spans zero,
+which is on `ramp_coolwarm` centred at zero (R-400; TASK-M1-17). **The cyclic period is one turn, 2π:** a cyclic
 field is an angle in radians (REQ-TOOL-161). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
-log floor ε** of a field with no ledger `floor` is a calibration, proposed 2⁻²⁴, f16's smallest positive subnormal
-(REQ-TOOL-160). `[lo, hi]` is the ledger range's finite ends; a step index's is `[0, horizon_steps]`; a `diverging`
-field's range is symmetric about 0. An end with no finite bound takes the measured end, and a field whose ledger range
+log floor** of a field with no ledger `floor` is that field's own, `ε_f` in its units, a calibration proposed with its
+evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-17); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
+smallest positive subnormal, which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
+`[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
+An end with no finite bound takes the measured end, and a field whose ledger range
 is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
 whose default the generator writes from the node's param and the assembler's declaration parser reads back, and
 `// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw`. Between the guard and the ramp, a
 stored sentinel shows as its literal value through `dbg_sentinel`, fed the compacted value (R-136, R-381), and
-`d_min`'s unset value, f16 +∞ tested by its bits, is drawn in `DBG_NOT_YET`, the neutral "not yet" grey of running
-samples (R-271, R-280; REQ-COL-053).
+`d_min`'s unset value, f16 +∞ tested by its bits, is drawn in the "not yet" style of running samples,
+`debug_not_yet(frag_xy)`: the neutral grey `DBG_NOT_YET` with a fine dot stipple from the pixel position (R-271,
+R-280, R-399; REQ-COL-053, REQ-COL-064).
 
 **The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
 `crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant
@@ -716,6 +720,12 @@ samples (R-271, R-280; REQ-COL-053).
   in `t`, and in gamut at every hue.
 - **`debug_invalid(frag_xy)`** draws the hatch defined in the render contract's presentation layer (Part 5;
   proposed, R-71, REQ-COL-055).
+
+**Added by R-399 and R-400 (TASK-M1-17).** `ramp_coolwarm(t)` reads Moreland's cool-warm table (R-122), checked in
+under `crates/ledger/data/lut/` with its source named, as `ramp_viridis` and `ramp_twilight` read theirs, and returns
+linear RGB; its midpoint, `t = ½`, is the table's neutral, where a zero-spanning field's 0 lands.
+`debug_not_yet(frag_xy)` draws the "not yet" style, `DBG_NOT_YET` with a fine dot stipple from the pixel position,
+defined beside the hatch in the render contract's presentation layer (proposed, R-71; REQ-COL-053, REQ-COL-064).
 
 ---
 
