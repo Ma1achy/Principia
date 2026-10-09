@@ -291,18 +291,25 @@ impl Scene {
 
     /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
     /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: the fields the scenes
-    /// colour, `dmin_pair` and the word `length` (any other field reads as `length`).
-    pub fn value(&self, i: u32) -> (f32, bool) {
+    /// colour, `dmin_pair` and the word `length`. Any other field is an error, naming it, so that no scene reads, or
+    /// measures its `u_range` from, a field it does not colour (applied per R-369, qa review 5468844637).
+    pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
         let read = self.read(i);
-        match self.field() {
+        Ok(match self.field() {
             "ftle" => (read.ftle, read.ftle_valid),
             "diffusion" => (read.diffusion, read.diffusion_slope_valid),
             "dE_max" => (read.dE_max, true),
             "dLz_max" => (read.dLz_max, true),
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
-            _ => (fgw_length_raw(read.word) as f32, true),
-        }
+            "length" => (fgw_length_raw(read.word) as f32, true),
+            other => {
+                return Err(format!(
+                    "golden scene `{}`: its field `{other}` has no read in `Scene::value`",
+                    self.name
+                ))
+            }
+        })
     }
 
     /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
@@ -335,9 +342,9 @@ impl Scene {
     }
 
     /// The scene's samples' read values, in order.
-    fn values(&self) -> Vec<f32> {
+    fn values(&self) -> Result<Vec<f32>, String> {
         (0..self.context.grid.sample_count())
-            .map(|i| self.value(i).0)
+            .map(|i| self.value(i).map(|(v, _)| v))
             .collect()
     }
 
@@ -362,7 +369,7 @@ impl Scene {
     pub fn params(&self) -> Result<Vec<(String, Vec<f64>)>, String> {
         Ok(match &self.colouring {
             Colouring::View(_) => match self.numeric_or_none()? {
-                Some(n) => vec![("u_range".to_owned(), n.measured(&self.values()).to_vec())],
+                Some(n) => vec![("u_range".to_owned(), n.measured(&self.values()?).to_vec())],
                 None => Vec::new(),
             },
             Colouring::Ramp { override_on, .. } => vec![(
@@ -376,7 +383,7 @@ impl Scene {
     /// ([`NumericView::shown`]) for a view, its `RANGE_AUTO` the header's default and its `u_range` the scene's
     /// ([`Scene::params`]); the field ramp's ([`FieldRamp::shown`]) for a ramp.
     pub fn look(&self, i: u32) -> Result<Look, String> {
-        let (v, gate) = self.value(i);
+        let (v, gate) = self.value(i)?;
         match &self.colouring {
             Colouring::View(f) => {
                 let n = self

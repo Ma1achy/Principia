@@ -113,7 +113,7 @@ fn check_failed_zero(s: &Scene, image: &[Rgb]) {
         "`{}`: sample 0 is failed",
         s.name
     );
-    let (v, _) = s.value(0);
+    let (v, _) = s.value(0).unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(v.to_bits(), 0, "`{}`: sample 0 stores 0.0", s.name);
     assert_eq!(look(s, 0), RAMP_AT_ZERO, "`{}`: 0.0's look", s.name);
     check_sample(s, image, 0, RAMP_AT_ZERO, "the ramp colour of 0.0");
@@ -143,7 +143,11 @@ negative_control!(
 /// view shows the stored value literally, masking nothing but NaN.
 fn check_d_min_failed_zero(s: &Scene, image: &[Rgb]) {
     assert_eq!(read(s, 3).state, STATE_SIM_FAILED, "sample 3 is failed");
-    assert_eq!(s.value(3).0.to_bits(), 0, "sample 3 stores 0.0");
+    assert_eq!(
+        s.value(3).unwrap_or_else(|e| panic!("{e}")).0.to_bits(),
+        0,
+        "sample 3 stores 0.0"
+    );
     let shown = look(s, 3);
     assert!(
         matches!(
@@ -236,7 +240,10 @@ fn dmin_pair_scene() -> Scene {
 fn check_sentinels(pair: (&Scene, &[Rgb]), length: (&Scene, &[Rgb])) {
     let (s, image) = pair;
     assert_eq!(read(s, 0).dmin_pair, 3, "`dmin_pair`'s 3 round-trips");
-    assert_eq!(s.value(0).0.to_bits(), 3.0f32.to_bits());
+    assert_eq!(
+        s.value(0).unwrap_or_else(|e| panic!("{e}")).0.to_bits(),
+        3.0f32.to_bits()
+    );
     check_sample(s, image, 0, Look::Literal(3.0), "the literal 3");
     let (s, image) = length;
     assert_eq!(

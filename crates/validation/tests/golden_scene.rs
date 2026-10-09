@@ -138,7 +138,7 @@ negative_control!(
 /// Checks that scene `name`'s `value` is the kernel read's `want` of each sample.
 fn check_value(s: &Scene, want: impl Fn(&kernel::payload::SimState) -> (f32, bool)) {
     for i in 0..8 {
-        let (v, gate) = s.value(i);
+        let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
         let (w, g) = want(&s.read(i));
         assert_eq!(
             (v.to_bits(), gate),
@@ -186,7 +186,9 @@ fn check_params(name: &str, want: &[(&str, Vec<f64>)]) {
 #[test]
 fn golden_scene_params_are_the_nodes() {
     let s = named("ftle");
-    let values: Vec<f32> = (0..8).map(|i| s.value(i).0).collect();
+    let values: Vec<f32> = (0..8)
+        .map(|i| s.value(i).unwrap_or_else(|e| panic!("{e}")).0)
+        .collect();
     assert_eq!(
         s.params().unwrap_or_else(|e| panic!("{e}")),
         vec![("u_range".to_owned(), vec![0.15f32.into(), 3.05f32.into()])],
@@ -396,7 +398,7 @@ fn check_values(name: &str, from: u32, want: &[f32], rel: f32) {
     let s = named(name);
     for (k, &w) in want.iter().enumerate() {
         let i = from + k as u32;
-        let v = s.value(i).0;
+        let v = s.value(i).unwrap_or_else(|e| panic!("{e}")).0;
         assert!(
             (v - w).abs() <= rel * w.abs(),
             "`{name}` sample {i} reads {v}, not {w}"
@@ -415,7 +417,10 @@ fn f16(x: f32) -> f32 {
 fn golden_scene_values_are_the_scenes() {
     check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.3, 2.1, 3.05], 1e-5);
     check_values("diffusion", 2, &[0.6], 1e-5);
-    let slope = named("diffusion").value(3).0;
+    let slope = named("diffusion")
+        .value(3)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .0;
     assert!(
         slope < 0.0,
         "`diffusion` sample 3 is a negative slope: {slope}"
@@ -531,4 +536,40 @@ negative_control!(
         ic.m2 = 0.25;
         check_masses(s);
     }
+);
+
+/// Checks that `s`, whose field `Scene::value` doesn't list, refuses to read it: its value, its look and its params
+/// (whose `u_range` is measured from the values) are each an error naming the field, never another field's reading.
+fn check_unlisted(s: &Scene, field: &str) {
+    let why = format!("its field `{field}` has no read in `Scene::value`");
+    match s.value(0) {
+        Ok(v) => panic!("`{}` reads `{field}` as {v:?}", s.name),
+        Err(e) => assert!(e.contains(&why), "{e}"),
+    }
+    match s.look(0) {
+        Ok(l) => panic!("`{}` shows `{field}` as {l:?}", s.name),
+        Err(e) => assert!(e.contains(&why), "{e}"),
+    }
+    match s.params() {
+        Ok(p) => panic!("`{}` measures `{field}`'s params as {p:?}", s.name),
+        Err(e) => assert!(e.contains(&why), "{e}"),
+    }
+}
+
+#[test]
+fn golden_scene_unlisted_field_is_an_error() {
+    let mut s = named("ftle");
+    s.colouring = Colouring::View("rho_angle");
+    check_unlisted(&s, "rho_angle");
+    for name in golden_scene::NAMES {
+        let s = named(name);
+        assert!(s.value(0).is_ok(), "`{name}` reads its own field");
+    }
+}
+
+negative_control!(
+    golden_scene_unlisted_field_is_an_error,
+    "a scene of a listed field, which reads",
+    expected = "reads `ftle` as",
+    check_unlisted(&named("ftle"), "ftle")
 );
