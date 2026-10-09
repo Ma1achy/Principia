@@ -1,0 +1,10 @@
+{
+  "render": { "harness": "threshold_q64", "width": 16, "height": 16 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "fail",
+  "lines": {
+    "row_4": { "from": [0, 4], "to": [15, 4] },
+    "column_4": { "from": [4, 0], "to": [4, 15] }
+  }
+}

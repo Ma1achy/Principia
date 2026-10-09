@@ -468,99 +468,124 @@ impl Scene {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Result<Vec<[f32; 4]>, String> {
-        let fragment = assemble::assemble(&self.stain()?, Tier::FULL).map_err(|e| e.to_string())?;
-        let module = bind::preset_module(&fragment.source);
-        let bytes = self.set.bytes();
-        let bound = bind::upload(device, &bytes.payload(), &self.context);
         let params = self.params()?;
-        use wgpu::util::DeviceExt;
-        let buffer = |bytes: &[u8]| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("golden scene uniforms"),
-                contents: bytes,
-                usage: wgpu::BufferUsages::UNIFORM,
-            })
-        };
-        let words: Vec<u8> = ledger::gen::prelude::uniform_words(self.context.grid.e)
-            .iter()
-            .flat_map(|w| w.to_le_bytes())
-            .collect();
-        let first = ledger::gen::prelude::uniforms_binding();
-        let mut buffers = vec![(first.binding, buffer(&words))];
-        for block in &fragment.uniforms {
-            let (offsets, size) = block_layout(&block.uniforms);
-            let mut contents = vec![0u8; size as usize];
-            for (u, &at) in block.uniforms.iter().zip(&offsets) {
-                let value = params
-                    .iter()
-                    .find(|(name, _)| *name == u.name)
-                    .map_or(&u.default, |(_, v)| v);
-                if !u.admits(value) {
-                    return Err(format!("{value:?} is not a value of `{}`", u.name));
-                }
-                let v = encode(u.ty, value);
-                contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
-            }
-            buffers.push((block.binding, buffer(&contents)));
-        }
-        let entries: Vec<wgpu::BindGroupLayoutEntry> = buffers
-            .iter()
-            .map(|(binding, _)| wgpu::BindGroupLayoutEntry {
-                binding: *binding,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            })
-            .collect();
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("golden scene uniforms"),
-            entries: &entries,
-        });
-        let group_entries: Vec<wgpu::BindGroupEntry> = buffers
-            .iter()
-            .map(|(binding, b)| wgpu::BindGroupEntry {
-                binding: *binding,
-                resource: b.as_entire_binding(),
-            })
-            .collect();
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("golden scene uniforms"),
-            layout: &layout,
-            entries: &group_entries,
-        });
-        let [_, l1, l2] = bound.layout_refs();
-        let [_, g1, g2] = bound.group_refs();
-        let (width, height) = self.size();
-        let image = headless::render(
+        render_stain(
             device,
             queue,
-            &Draw {
-                module: &module,
-                entry: bind::PRESET_ENTRY,
-                layouts: &[&layout, l1, l2],
-                groups: &[&group, g1, g2],
+            &self.stain()?,
+            &self.set,
+            &self.context,
+            &|_, name| {
+                params
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone())
             },
-            Target {
-                width,
-                height,
-                format: wgpu::TextureFormat::Rgba32Float,
-            },
-        )?;
-        Ok(image
-            .bytes
-            .as_chunks::<16>()
-            .0
-            .iter()
-            .map(|p| {
-                let (c, _) = p.as_chunks::<4>();
-                [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
-            })
-            .collect())
+        )
     }
+}
+
+/// Renders `stain` over `set` with `context` through the render harness (`render::bind::preset_module` and `upload`)
+/// into an `Rgba32Float` target the size of `context`'s grid, and returns each pixel's RGBA, rows from the top. Each
+/// node's uniform block holds `param(node, name)` for each of its uniforms, `node` its place in the canonical stain
+/// (`render::assemble::UniformBlock::node`), or the uniform's declared default where that is `None`; a value the
+/// uniform does not admit is refused.
+pub fn render_stain(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+) -> Result<Vec<[f32; 4]>, String> {
+    let fragment = assemble::assemble(stain, Tier::FULL).map_err(|e| e.to_string())?;
+    let module = bind::preset_module(&fragment.source);
+    let bytes = set.bytes();
+    let bound = bind::upload(device, &bytes.payload(), context);
+    use wgpu::util::DeviceExt;
+    let buffer = |bytes: &[u8]| {
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("golden scene uniforms"),
+            contents: bytes,
+            usage: wgpu::BufferUsages::UNIFORM,
+        })
+    };
+    let words: Vec<u8> = ledger::gen::prelude::uniform_words(context.grid.e)
+        .iter()
+        .flat_map(|w| w.to_le_bytes())
+        .collect();
+    let first = ledger::gen::prelude::uniforms_binding();
+    let mut buffers = vec![(first.binding, buffer(&words))];
+    for block in &fragment.uniforms {
+        let (offsets, size) = block_layout(&block.uniforms);
+        let mut contents = vec![0u8; size as usize];
+        for (u, &at) in block.uniforms.iter().zip(&offsets) {
+            let value = param(block.node, &u.name).unwrap_or_else(|| u.default.clone());
+            if !u.admits(&value) {
+                return Err(format!("{value:?} is not a value of `{}`", u.name));
+            }
+            let v = encode(u.ty, &value);
+            contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
+        }
+        buffers.push((block.binding, buffer(&contents)));
+    }
+    let entries: Vec<wgpu::BindGroupLayoutEntry> = buffers
+        .iter()
+        .map(|(binding, _)| wgpu::BindGroupLayoutEntry {
+            binding: *binding,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        })
+        .collect();
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("golden scene uniforms"),
+        entries: &entries,
+    });
+    let group_entries: Vec<wgpu::BindGroupEntry> = buffers
+        .iter()
+        .map(|(binding, b)| wgpu::BindGroupEntry {
+            binding: *binding,
+            resource: b.as_entire_binding(),
+        })
+        .collect();
+    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("golden scene uniforms"),
+        layout: &layout,
+        entries: &group_entries,
+    });
+    let [_, l1, l2] = bound.layout_refs();
+    let [_, g1, g2] = bound.group_refs();
+    let (width, height) = context.grid.target();
+    let image = headless::render(
+        device,
+        queue,
+        &Draw {
+            module: &module,
+            entry: bind::PRESET_ENTRY,
+            layouts: &[&layout, l1, l2],
+            groups: &[&group, g1, g2],
+        },
+        Target {
+            width,
+            height,
+            format: wgpu::TextureFormat::Rgba32Float,
+        },
+    )?;
+    Ok(image
+        .bytes
+        .as_chunks::<16>()
+        .0
+        .iter()
+        .map(|p| {
+            let (c, _) = p.as_chunks::<4>();
+            [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
+        })
+        .collect())
 }
 
 /// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):
