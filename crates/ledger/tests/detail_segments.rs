@@ -16,9 +16,12 @@ const SEGMENTS: [(&str, u32, u32); 4] = [
     ("decode_failed", 5, 13),
 ];
 
+/// A segment as the checks compare it: its state's name, its code, and each class's `(detail, class)`.
+type Keyed = (&'static str, u32, Vec<(u32, u32)>);
+
 /// Checks that `segment` keys each state code 0–7 as `want` does: its state's name, code and four classes from its
 /// first, the detail codes 0–3 in order, or none.
-fn check_segments(segment: impl Fn(u32) -> Option<(&'static str, u32, Vec<(u32, u32)>)>) {
+fn check_segments(segment: impl Fn(u32) -> Option<Keyed>) {
     for code in 0..8 {
         let want = SEGMENTS
             .iter()
@@ -29,7 +32,7 @@ fn check_segments(segment: impl Fn(u32) -> Option<(&'static str, u32, Vec<(u32, 
 }
 
 /// The ledger's segment of state `code`, as (state, code, [(detail, class)]).
-fn ledger_segment(code: u32) -> Option<(&'static str, u32, Vec<(u32, u32)>)> {
+fn ledger_segment(code: u32) -> Option<Keyed> {
     detail_segment(code).map(|s| {
         (
             s.state,
