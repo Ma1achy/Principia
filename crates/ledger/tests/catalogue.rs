@@ -860,3 +860,23 @@ negative_control!(
         &listing()
     )
 );
+
+/// Checks `gate` against `last_symbol`'s validity (payload §2: meaningful iff `length ≥ 1 && length ≠ 127`) at the
+/// boundaries: the empty word, one symbol, a full word of 76, 126, and the truncated 127.
+fn check_word_gate(gate: fn(u32) -> bool) {
+    for (length, holds) in [(0, false), (1, true), (76, true), (126, true), (127, false)] {
+        assert_eq!(gate(length), holds, "the gate at length {length}");
+    }
+}
+
+#[test]
+fn last_symbol_gate_is_a_nonempty_untruncated_word() {
+    check_word_gate(catalogue::word_gate_holds);
+}
+
+negative_control!(
+    last_symbol_gate_is_a_nonempty_untruncated_word,
+    "a gate that admits the empty word",
+    expected = "the gate at length 0",
+    check_word_gate(|length| length != 127)
+);

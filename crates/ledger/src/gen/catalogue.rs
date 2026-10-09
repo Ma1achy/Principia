@@ -653,6 +653,12 @@ pub const WORD_GATED: &str = "last_symbol";
 /// The word accessors [`WORD_GATED`]'s gate reads: the stored length, and the validity of the word's derivations.
 const WORD_GATE: [&str; 2] = ["fgw_length_raw", "fgw_reduced_length_valid"];
 
+/// Whether [`WORD_GATED`]'s gate holds for a word of stored length `length`: `length ≥ 1 && length ≠ 127`, a
+/// nonempty word that is not truncated (payload §2).
+pub fn word_gate_holds(length: u32) -> bool {
+    length >= 1 && length != 127
+}
+
 /// The field whose probe sets [`WORD_GATED`]'s gate: the word's `length`.
 const GATE_FIELD: &str = "length";
 
@@ -1015,7 +1021,7 @@ fn check(
                         "{}(read.word) >= 1 && {}(read.word)",
                         WORD_GATE[0], WORD_GATE[1]
                     ),
-                    (length >= 1 && length != 127).to_string(),
+                    word_gate_holds(length).to_string(),
                     format!("\"`{n}`'s gate, the word's length {length}, {NOT_STORED}\""),
                 ];
                 body.push('\n');
